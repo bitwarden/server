@@ -552,7 +552,8 @@ namespace Bit.Core.Services
             }
         }
 
-        public async Task<Tuple<Organization, OrganizationUser>> SignUpAsync(OrganizationSignup signup)
+        public async Task<Tuple<Organization, OrganizationUser>> SignUpAsync(OrganizationSignup signup,
+            bool provider = false)
         {
             var plan = StaticStore.Plans.FirstOrDefault(p => p.Type == signup.Plan && !p.Disabled);
             if (plan == null)
@@ -560,7 +561,11 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Plan not found.");
             }
 
-            await ValidateSignUpPoliciesAsync(signup.Owner.Id);
+            if (!provider)
+            {
+                await ValidateSignUpPoliciesAsync(signup.Owner.Id);
+            }
+
             ValidateOrganizationUpgradeParameters(plan, signup);
 
             var organization = new Organization
@@ -614,7 +619,8 @@ namespace Bit.Core.Services
                     signup.PremiumAccessAddon, signup.TaxInfo);
             }
 
-            var returnValue = await SignUpAsync(organization, signup.Owner.Id, signup.OwnerKey, signup.CollectionName, true);
+            var ownerId = provider ? signup.Owner.Id : default;
+            var returnValue = await SignUpAsync(organization, ownerId, signup.OwnerKey, signup.CollectionName, true);
             await _referenceEventService.RaiseEventAsync(
                 new ReferenceEvent(ReferenceEventType.Signup, organization)
                 {
@@ -725,20 +731,6 @@ namespace Bit.Core.Services
                 await _organizationRepository.CreateAsync(organization);
                 await _applicationCacheService.UpsertOrganizationAbilityAsync(organization);
 
-                var orgUser = new OrganizationUser
-                {
-                    OrganizationId = organization.Id,
-                    UserId = ownerId,
-                    Key = ownerKey,
-                    Type = OrganizationUserType.Owner,
-                    Status = OrganizationUserStatusType.Confirmed,
-                    AccessAll = true,
-                    CreationDate = organization.CreationDate,
-                    RevisionDate = organization.CreationDate
-                };
-
-                await _organizationUserRepository.CreateAsync(orgUser);
-
                 if (!string.IsNullOrWhiteSpace(collectionName))
                 {
                     var defaultCollection = new Collection
@@ -751,11 +743,29 @@ namespace Bit.Core.Services
                     await _collectionRepository.CreateAsync(defaultCollection);
                 }
 
-                // push
-                var deviceIds = await GetUserDeviceIdsAsync(orgUser.UserId.Value);
-                await _pushRegistrationService.AddUserRegistrationOrganizationAsync(deviceIds,
-                    organization.Id.ToString());
-                await _pushNotificationService.PushSyncOrgKeysAsync(ownerId);
+                OrganizationUser orgUser = null;
+                if (ownerId != default)
+                {
+                    orgUser = new OrganizationUser
+                    {
+                        OrganizationId = organization.Id,
+                        UserId = ownerId,
+                        Key = ownerKey,
+                        Type = OrganizationUserType.Owner,
+                        Status = OrganizationUserStatusType.Confirmed,
+                        AccessAll = true,
+                        CreationDate = organization.CreationDate,
+                        RevisionDate = organization.CreationDate
+                    };
+
+                    await _organizationUserRepository.CreateAsync(orgUser);
+                    
+                    // push
+                    var deviceIds = await GetUserDeviceIdsAsync(orgUser.UserId.Value);
+                    await _pushRegistrationService.AddUserRegistrationOrganizationAsync(deviceIds,
+                        organization.Id.ToString());
+                    await _pushNotificationService.PushSyncOrgKeysAsync(ownerId);
+                }
 
                 return new Tuple<Organization, OrganizationUser>(organization, orgUser);
             }

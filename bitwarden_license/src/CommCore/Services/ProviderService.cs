@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Bit.Core.Enums;
 using Bit.Core.Enums.Provider;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Business;
 using Bit.Core.Models.Business.Provider;
 using Bit.Core.Models.Table;
 using Bit.Core.Models.Table.Provider;
@@ -27,17 +28,19 @@ namespace Bit.CommCore.Services
         private readonly IProviderOrganizationRepository _providerOrganizationRepository;
         private readonly IUserRepository _userRepository;
         private readonly IUserService _userService;
+        private readonly IOrganizationService _organizationService;
 
         public ProviderService(IProviderRepository providerRepository, IProviderUserRepository providerUserRepository,
             IProviderOrganizationRepository providerOrganizationRepository, IUserRepository userRepository,
-            IUserService userService, IMailService mailService, IDataProtectionProvider dataProtectionProvider,
-            IEventService eventService, GlobalSettings globalSettings)
+            IUserService userService, IOrganizationService organizationService, IMailService mailService,
+            IDataProtectionProvider dataProtectionProvider, IEventService eventService, GlobalSettings globalSettings)
         {
             _providerRepository = providerRepository;
             _providerUserRepository = providerUserRepository;
             _providerOrganizationRepository = providerOrganizationRepository;
             _userRepository = userRepository;
             _userService = userService;
+            _organizationService = organizationService;
             _mailService = mailService;
             _eventService = eventService;
             _globalSettings = globalSettings;
@@ -342,6 +345,21 @@ namespace Bit.CommCore.Services
             };
             
             await _providerOrganizationRepository.CreateAsync(providerOrganization);
+        }
+
+        public async Task<ProviderOrganization> CreateOrganizationAsync(Guid providerId, OrganizationSignup organizationSignup, User user)
+        {
+            var (organisation, _) = await _organizationService.SignUpAsync(organizationSignup);
+            
+            var providerOrganization = new ProviderOrganization
+            {
+                ProviderId = providerId,
+                OrganizationId = organisation.Id,
+                Key = organizationSignup.OwnerKey,
+            };
+
+            await _providerOrganizationRepository.CreateAsync(providerOrganization);
+            return providerOrganization;
         }
 
         // TODO: Implement this

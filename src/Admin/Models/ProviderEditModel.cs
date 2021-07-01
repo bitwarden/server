@@ -8,6 +8,8 @@ namespace Bit.Admin.Models
 {
     public class ProviderEditModel : ProviderViewModel
     {
+        public ProviderEditModel() { }
+
         public ProviderEditModel(Provider provider, IEnumerable<ProviderUserUserDetails> providerUsers)
             : base(provider, providerUsers)
         {
@@ -17,8 +19,6 @@ namespace Bit.Admin.Models
             Enabled = provider.Enabled;
         }
 
-        public string Administrators { get; set; }
-
         public bool Enabled { get; set; }
 
         public string BillingEmail { get; set; }
@@ -26,5 +26,15 @@ namespace Bit.Admin.Models
         public string BusinessName { get; set; }
 
         public string Name { get; set; }
+        
+        public Provider ToProvider(Provider existingProvider)
+        {
+            existingProvider.Name = Name;
+            existingProvider.BusinessName = BusinessName;
+            existingProvider.BillingEmail = BillingEmail?.ToLowerInvariant()?.Trim();
+            //existingProvider.UseEvents = UseEvents;
+            existingProvider.Enabled = Enabled;
+            return existingProvider;
+        }
     }
 }

@@ -115,6 +115,20 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
+        public async Task<IEnumerable<ProviderUserOrganizationDetails>> GetManyOrganizationDetailsByUserAsync(Guid userId,
+            ProviderUserStatusType? status = null)
+        {
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<ProviderUserOrganizationDetails>(
+                    "[dbo].[ProviderUserProviderOrganizationDetails_ReadByUserIdStatus]",
+                    new { UserId = userId, Status = status },
+                    commandType: CommandType.StoredProcedure);
+
+                return results.ToList();
+            }
+        }
+
         public async Task DeleteManyAsync(IEnumerable<Guid> providerUserIds)
         {
             using (var connection = new SqlConnection(ConnectionString))

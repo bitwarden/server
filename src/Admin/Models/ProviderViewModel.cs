@@ -8,6 +8,8 @@ namespace Bit.Admin.Models
 {
     public class ProviderViewModel
     {
+        public ProviderViewModel() { }
+
         public ProviderViewModel(Provider provider, IEnumerable<ProviderUserUserDetails> providerUsers)
         {
             Provider = provider;

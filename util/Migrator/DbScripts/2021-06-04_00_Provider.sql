@@ -1266,3 +1266,96 @@ LEFT JOIN
     [dbo].[ProviderOrganization] PO ON PO.[OrganizationId] = O.[Id]
 LEFT JOIN
     [dbo].[Provider] P ON P.[Id] = PO.[ProviderId]
+GO
+
+IF OBJECT_ID('[dbo].[ProviderOrganization_ReadByUserId]') IS NOT NULL
+    BEGIN
+        DROP PROCEDURE [dbo].[ProviderOrganization_ReadByUserId]
+    END
+GO
+
+CREATE PROCEDURE [dbo].[ProviderOrganization_ReadByUserId]
+@UserId UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    SELECT
+        PO.*
+    FROM
+        [dbo].[ProviderOrganizationView] PO
+            INNER JOIN
+        [dbo].[Provider] P ON PO.[ProviderId] = P.[Id]
+            INNER JOIN
+        [dbo].[ProviderUser] PU ON P.[Id] = PU.[ProviderId]
+    WHERE
+        PU.[UserId] = @UserId
+END
+GO
+
+IF EXISTS(SELECT * FROM sys.views WHERE [Name] = 'ProviderUserProviderOrganizationDetailsView')
+    BEGIN
+        DROP VIEW [dbo].[ProviderUserProviderOrganizationDetailsView];
+    END
+GO
+
+CREATE VIEW [dbo].[ProviderUserProviderOrganizationDetailsView]
+AS
+SELECT
+    PU.[UserId],
+    PO.[OrganizationId],
+    O.[Name],
+    O.[Enabled],
+    O.[UsePolicies],
+    O.[UseSso],
+    O.[UseGroups],
+    O.[UseDirectory],
+    O.[UseEvents],
+    O.[UseTotp],
+    O.[Use2fa],
+    O.[UseApi],
+    O.[UseResetPassword],
+    O.[SelfHost],
+    O.[UsersGetPremium],
+    O.[Seats],
+    O.[MaxCollections],
+    O.[MaxStorageGb],
+    O.[Identifier],
+    PO.[Key],
+    O.[PublicKey],
+    O.[PrivateKey],
+    PU.[Status],
+    PU.[Type],
+    PO.[ProviderId],
+    P.[Name] ProviderName
+FROM
+    [dbo].[ProviderUser] PU
+INNER JOIN
+    [dbo].[ProviderOrganization] PO ON PO.[ProviderId] = PU.[ProviderId]
+INNER JOIN
+    [dbo].[Organization] O ON O.[Id] = PO.[OrganizationId]
+INNER JOIN
+    [dbo].[Provider] P ON P.[Id] = PU.[ProviderId]
+GO
+
+IF OBJECT_ID('[dbo].[ProviderUserProviderOrganizationDetails_ReadByUserIdStatus]') IS NOT NULL
+    BEGIN
+        DROP PROCEDURE [dbo].[ProviderUserProviderOrganizationDetails_ReadByUserIdStatus]
+    END
+GO
+
+CREATE PROCEDURE [dbo].[ProviderUserProviderOrganizationDetails_ReadByUserIdStatus]
+    @UserId UNIQUEIDENTIFIER,
+    @Status TINYINT
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    SELECT
+        *
+    FROM
+        [dbo].[ProviderUserProviderOrganizationDetailsView]
+    WHERE
+        [UserId] = @UserId
+    AND (@Status IS NULL OR [Status] = @Status)
+END
