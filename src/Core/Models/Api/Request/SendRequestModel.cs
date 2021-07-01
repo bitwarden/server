@@ -130,4 +130,10 @@ namespace Bit.Core.Models.Api
             return existingSend;
         }
     }
+
+    public class SendWithIdRequestModel : SendRequestModel
+    {
+        [Required]
+        public Guid? Id { get; set; }
+    }
 }

@@ -52,6 +52,7 @@ namespace Bit.Core.Services
         private readonly ICurrentContext _currentContext;
         private readonly GlobalSettings _globalSettings;
         private readonly IOrganizationService _organizationService;
+        private readonly ISendRepository _sendRepository;
 
         public UserService(
             IUserRepository userRepository,
@@ -79,7 +80,8 @@ namespace Bit.Core.Services
             IFido2 fido2,
             ICurrentContext currentContext,
             GlobalSettings globalSettings,
-            IOrganizationService organizationService)
+            IOrganizationService organizationService,
+            ISendRepository sendRepository)
             : base(
                   store,
                   optionsAccessor,
@@ -113,6 +115,7 @@ namespace Bit.Core.Services
             _currentContext = currentContext;
             _globalSettings = globalSettings;
             _organizationService = organizationService;
+            _sendRepository = sendRepository;
         }
 
         public Guid? GetProperUserId(ClaimsPrincipal principal)
@@ -726,7 +729,7 @@ namespace Bit.Core.Services
         }
 
         public async Task<IdentityResult> UpdateKeyAsync(User user, string masterPassword, string key, string privateKey,
-            IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders)
+            IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders, IEnumerable<Send> sends)
         {
             if (user == null)
             {
@@ -739,9 +742,9 @@ namespace Bit.Core.Services
                 user.SecurityStamp = Guid.NewGuid().ToString();
                 user.Key = key;
                 user.PrivateKey = privateKey;
-                if (ciphers.Any() || folders.Any())
+                if (ciphers.Any() || folders.Any() || sends.Any())
                 {
-                    await _cipherRepository.UpdateUserKeysAndCiphersAsync(user, ciphers, folders);
+                    await _cipherRepository.UpdateUserKeysAndCiphersAsync(user, ciphers, folders, sends);
                 }
                 else
                 {

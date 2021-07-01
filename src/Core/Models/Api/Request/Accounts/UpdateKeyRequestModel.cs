@@ -12,6 +12,7 @@ namespace Bit.Core.Models.Api
         public IEnumerable<CipherWithIdRequestModel> Ciphers { get; set; }
         [Required]
         public IEnumerable<FolderWithIdRequestModel> Folders { get; set; }
+        public IEnumerable<SendWithIdRequestModel> Sends { get; set; }
         [Required]
         public string PrivateKey { get; set; }
         [Required]
