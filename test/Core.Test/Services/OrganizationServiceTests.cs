@@ -15,6 +15,7 @@ using Bit.Core.Enums;
 using Bit.Core.Test.AutoFixture.Attributes;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using System.Text.Json;
+using Bit.Core.Context;
 using Bit.Core.Test.AutoFixture.OrganizationUserFixtures;
 using Organization = Bit.Core.Models.Table.Organization;
 using OrganizationUser = Bit.Core.Models.Table.OrganizationUser;
@@ -44,6 +45,7 @@ namespace Bit.Core.Test.Services
                 .Returns(existingUsers);
             sutProvider.GetDependency<IOrganizationUserRepository>().GetCountByOrganizationIdAsync(org.Id)
                 .Returns(existingUsers.Count);
+            sutProvider.GetDependency<ICurrentContext>().ManageUsers(org.Id).Returns(true);
 
             await sutProvider.Sut.ImportAsync(org.Id, userId, null, newUsers, null, false);
 
@@ -93,6 +95,8 @@ namespace Bit.Core.Test.Services
                 .Returns(existingUsers.Count);
             sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(reInvitedUser.Id)
                 .Returns(new OrganizationUser { Id = reInvitedUser.Id });
+            var currentContext = sutProvider.GetDependency<ICurrentContext>();
+            currentContext.ManageUsers(org.Id).Returns(true);
 
             await sutProvider.Sut.ImportAsync(org.Id, userId, null, newUsers, null, false);
 
@@ -195,10 +199,10 @@ namespace Bit.Core.Test.Services
             OrganizationUser invitor, SutProvider<OrganizationService> sutProvider)
         {
             var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-            var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+            var currentContext = sutProvider.GetDependency<ICurrentContext>();
 
             organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
-            organizationUserRepository.GetManyByUserAsync(invitor.Id).Returns(new List<OrganizationUser> { invitor });
+            currentContext.OrganizationAdmin(organization.Id).Returns(true);
 
             var exception = await Assert.ThrowsAsync<BadRequestException>(
                 () => sutProvider.Sut.InviteUserAsync(organization.Id, invitor.UserId, null, invite));
@@ -208,16 +212,16 @@ namespace Bit.Core.Test.Services
         [Theory]
         [OrganizationInviteAutoData(
             inviteeUserType: (int)OrganizationUserType.Custom,
-            invitorUserType: (int)OrganizationUserType.Admin
+            invitorUserType: (int)OrganizationUserType.User
         )]
         public async Task InviteUser_NonAdminConfiguringAdmin_Throws(Organization organization, OrganizationUserInvite invite,
             OrganizationUser invitor, SutProvider<OrganizationService> sutProvider)
         {
             var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-            var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+            var currentContext = sutProvider.GetDependency<ICurrentContext>();
 
             organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
-            organizationUserRepository.GetManyByUserAsync(invitor.Id).Returns(new List<OrganizationUser> { invitor });
+            currentContext.OrganizationUser(organization.Id).Returns(true);
 
             var exception = await Assert.ThrowsAsync<BadRequestException>(
                 () => sutProvider.Sut.InviteUserAsync(organization.Id, invitor.UserId, null, invite));
@@ -239,10 +243,11 @@ namespace Bit.Core.Test.Services
                 });
 
             var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-            var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+            var currentContext = sutProvider.GetDependency<ICurrentContext>();
 
             organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
-            organizationUserRepository.GetManyByUserAsync(invitor.UserId.Value).Returns(new List<OrganizationUser> { invitor });
+            currentContext.OrganizationCustom(organization.Id).Returns(true);
+            currentContext.ManageUsers(organization.Id).Returns(false);
 
             var exception = await Assert.ThrowsAsync<BadRequestException>(
                 () => sutProvider.Sut.InviteUserAsync(organization.Id, invitor.UserId, null, invite));
@@ -264,10 +269,11 @@ namespace Bit.Core.Test.Services
                 });
 
             var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-            var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+            var currentContext = sutProvider.GetDependency<ICurrentContext>();
 
             organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
-            organizationUserRepository.GetManyByUserAsync(invitor.UserId.Value).Returns(new List<OrganizationUser> { invitor });
+            currentContext.OrganizationCustom(organization.Id).Returns(true);
+            currentContext.ManageUsers(organization.Id).Returns(true);
 
             var exception = await Assert.ThrowsAsync<BadRequestException>(
                 () => sutProvider.Sut.InviteUserAsync(organization.Id, invitor.UserId, null, invite));
@@ -284,11 +290,10 @@ namespace Bit.Core.Test.Services
         {
             invite.Permissions = null;
             var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-            var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
-            var eventService = sutProvider.GetDependency<IEventService>();
+            var currentContext = sutProvider.GetDependency<ICurrentContext>();
 
             organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
-            organizationUserRepository.GetManyByUserAsync(invitor.UserId.Value).Returns(new List<OrganizationUser> { invitor });
+            currentContext.OrganizationOwner(organization.Id).Returns(true);
 
             await sutProvider.Sut.InviteUserAsync(organization.Id, invitor.UserId, null, invite);
         }
@@ -308,11 +313,10 @@ namespace Bit.Core.Test.Services
                 });
 
             var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-            var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
-            var eventService = sutProvider.GetDependency<IEventService>();
+            var currentContext = sutProvider.GetDependency<ICurrentContext>();
 
             organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
-            organizationUserRepository.GetManyByUserAsync(invitor.UserId.Value).Returns(new List<OrganizationUser> { invitor });
+            currentContext.ManageUsers(organization.Id).Returns(true);
 
             await sutProvider.Sut.InviteUserAsync(organization.Id, invitor.UserId, null, invite);
         }
@@ -347,6 +351,7 @@ namespace Bit.Core.Test.Services
             SutProvider<OrganizationService> sutProvider)
         {
             var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+            var currentContext = sutProvider.GetDependency<ICurrentContext>();
 
             newUserData.Id = oldUserData.Id;
             newUserData.UserId = oldUserData.UserId;
@@ -354,7 +359,7 @@ namespace Bit.Core.Test.Services
             organizationUserRepository.GetByIdAsync(oldUserData.Id).Returns(oldUserData);
             organizationUserRepository.GetManyByOrganizationAsync(savingUser.OrganizationId, OrganizationUserType.Owner)
                 .Returns(new List<OrganizationUser> { savingUser });
-            organizationUserRepository.GetManyByUserAsync(savingUser.UserId.Value).Returns(new List<OrganizationUser> { savingUser });
+            currentContext.OrganizationOwner(savingUser.OrganizationId).Returns(true);
 
             await sutProvider.Sut.SaveUserAsync(newUserData, savingUser.UserId, collections);
         }
@@ -391,10 +396,11 @@ namespace Bit.Core.Test.Services
             SutProvider<OrganizationService> sutProvider)
         {
             var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+            var currentContext = sutProvider.GetDependency<ICurrentContext>();
             
             organizationUser.OrganizationId = deletingUser.OrganizationId;
             organizationUserRepository.GetByIdAsync(organizationUser.Id).Returns(organizationUser);
-            organizationUserRepository.GetManyByUserAsync(deletingUser.UserId.Value).Returns(new[] { deletingUser });
+            currentContext.OrganizationAdmin(deletingUser.OrganizationId).Returns(true);
 
             var exception = await Assert.ThrowsAsync<BadRequestException>(
                 () => sutProvider.Sut.DeleteUserAsync(deletingUser.OrganizationId, organizationUser.Id, deletingUser.UserId));
@@ -426,13 +432,14 @@ namespace Bit.Core.Test.Services
             SutProvider<OrganizationService> sutProvider)
         {
             var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+            var currentContext = sutProvider.GetDependency<ICurrentContext>();
             
             organizationUser.OrganizationId = deletingUser.OrganizationId;
             organizationUserRepository.GetByIdAsync(organizationUser.Id).Returns(organizationUser);
             organizationUserRepository.GetByIdAsync(deletingUser.Id).Returns(deletingUser);
-            organizationUserRepository.GetManyByUserAsync(deletingUser.UserId.Value).Returns(new[] { deletingUser });
             organizationUserRepository.GetManyByOrganizationAsync(deletingUser.OrganizationId, OrganizationUserType.Owner)
                 .Returns(new[] {deletingUser, organizationUser});
+            currentContext.OrganizationOwner(deletingUser.OrganizationId).Returns(true);
 
             await sutProvider.Sut.DeleteUserAsync(deletingUser.OrganizationId, organizationUser.Id, deletingUser.UserId);
         }
@@ -510,15 +517,16 @@ namespace Bit.Core.Test.Services
             SutProvider<OrganizationService> sutProvider)
         {
             var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
-            
+            var currentContext = sutProvider.GetDependency<ICurrentContext>();
+
             orgUser1.OrganizationId = orgUser2.OrganizationId = deletingUser.OrganizationId;
             var organizationUsers = new[] { orgUser1, orgUser2 };
             var organizationUserIds = organizationUsers.Select(u => u.Id);
             organizationUserRepository.GetManyAsync(default).ReturnsForAnyArgs(organizationUsers);
             organizationUserRepository.GetByIdAsync(deletingUser.Id).Returns(deletingUser);
-            organizationUserRepository.GetManyByUserAsync(deletingUser.UserId.Value).Returns(new[] { deletingUser });
             organizationUserRepository.GetManyByOrganizationAsync(deletingUser.OrganizationId, OrganizationUserType.Owner)
                 .Returns(new[] {deletingUser, orgUser1});
+            currentContext.OrganizationOwner(deletingUser.OrganizationId).Returns(true);
 
             await sutProvider.Sut.DeleteUsersAsync(deletingUser.OrganizationId, organizationUserIds, deletingUser.UserId);
         }
