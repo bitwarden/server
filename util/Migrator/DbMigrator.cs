@@ -39,18 +39,19 @@ namespace Bit.Migrator
                 {
                     databaseName = "vault";
                 }
+                var commandBuilder = new SqlCommandBuilder();
+                var databaseNameQuoted = new SqlCommandBuilder().QuoteIdentifier(databaseName);
                 var command = new SqlCommand(
-                    "IF ((SELECT COUNT(1) FROM sys.databases WHERE [name] = '" + databaseName + "') = 0) " +
-                    "CREATE DATABASE [" + databaseName + "];", connection);
-                //command.Parameters.Add("@DatabaseName", System.Data.SqlDbType.VarChar);
-                //command.Parameters["@DatabaseName"].Value = databaseName;
-                //command.Parameters.AddWithValue("@DatabaseName", databaseName);
+                    "IF ((SELECT COUNT(1) FROM sys.databases WHERE [name] = '@DatabaseName') = 0) " +
+                    "CREATE DATABASE " + databaseNameQuoted + ";", connection);
+                command.Parameters.Add("@DatabaseName", System.Data.SqlDbType.VarChar);
+                command.Parameters["@DatabaseName"].Value = databaseName;
                 command.Connection.Open();
                 command.ExecuteNonQuery();
 
                 command.CommandText = "IF ((SELECT DATABASEPROPERTYEX([name], 'IsAutoClose') " +
-                    "FROM sys.databases WHERE [name] = '" + databaseName + "') = 1) " +
-                    "ALTER DATABASE [" + databaseName + "] SET AUTO_CLOSE OFF;";
+                    "FROM sys.databases WHERE [name] = '@DatabaseName') = 1) " +
+                    "ALTER DATABASE " + databaseNameQuoted + " SET AUTO_CLOSE OFF;";
                 command.ExecuteNonQuery();
             }
 
