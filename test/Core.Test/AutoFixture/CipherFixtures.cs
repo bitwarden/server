@@ -79,7 +79,6 @@ namespace Bit.Core.Test.AutoFixture.CipherFixtures
                 .Without(e => e.Favorites)
                 .Without(e => e.Folders));
             //
-            
             var serializerOptions = new JsonSerializerOptions(){
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase
             };

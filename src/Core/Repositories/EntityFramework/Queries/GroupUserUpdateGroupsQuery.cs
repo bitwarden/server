@@ -18,7 +18,7 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
         }
     }
 
-    public class GroupUserUpdateGroupsInsertQuery: IQuery<GroupUser>
+    public class GroupUserUpdateGroupsInsertQuery : IQuery<GroupUser>
     {
         private readonly Guid _organizationUserId;
         private readonly IEnumerable<Guid> _groupIds;
@@ -49,7 +49,7 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
         }
     }
 
-    public class GroupUserUpdateGroupsDeleteQuery: IQuery<GroupUser>
+    public class GroupUserUpdateGroupsDeleteQuery : IQuery<GroupUser>
     {
         private readonly Guid _organizationUserId;
         private readonly IEnumerable<Guid> _groupIds;

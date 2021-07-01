@@ -50,7 +50,8 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
         public async Task<IEnumerable<EfModel.CollectionUser>> BuildInMemory(DatabaseContext dbContext)
         {
             var data = await Run(dbContext).ToListAsync();
-            var collectionUsers = data.Select(x => new EfModel.CollectionUser(){ 
+            var collectionUsers = data.Select(x => new EfModel.CollectionUser()
+            { 
                 CollectionId = _collectionId,
                 OrganizationUserId = x.Id,
                 ReadOnly = _users.FirstOrDefault(u => u.Id.Equals(x.Id)).ReadOnly,
@@ -89,7 +90,7 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
                 CollectionId = _collectionId,
                 OrganizationUserId = x.OrganizationUserId,
                 ReadOnly = _users.FirstOrDefault(u => u.Id.Equals(x.OrganizationUserId)).ReadOnly,
-                HidePasswords = _users.FirstOrDefault(u => u.Id.Equals(x.OrganizationUserId)).HidePasswords
+                HidePasswords = _users.FirstOrDefault(u => u.Id.Equals(x.OrganizationUserId)).HidePasswords,
             });
             return collectionUsers;
         }

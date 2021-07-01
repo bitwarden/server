@@ -75,7 +75,7 @@ namespace Bit.Core.Utilities
             {
                 if (string.IsNullOrWhiteSpace(connectionString))
                 {
-                    throw new Exception($"Database provider type {provider.ToString()} was selected but no connection string was found.");
+                    throw new Exception($"Database provider type {provider} was selected but no connection string was found.");
                 }
                 LinqToDBForEFTools.Initialize();
                 services.AddAutoMapper(typeof(EntityFrameworkRepos.UserRepository));

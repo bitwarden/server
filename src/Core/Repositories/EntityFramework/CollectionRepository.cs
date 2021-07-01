@@ -107,7 +107,7 @@ namespace Bit.Core.Repositories.EntityFramework
                     { 
                         Id = cg.GroupId,
                         ReadOnly = cg.ReadOnly,
-                        HidePasswords = cg.HidePasswords 
+                        HidePasswords = cg.HidePasswords, 
                     };
                 var configurations = await query.ToArrayAsync();
                 return new Tuple<CollectionDetails, ICollection<SelectionReadOnly>>(collection, configurations);
@@ -189,7 +189,8 @@ namespace Bit.Core.Repositories.EntityFramework
                     .AsNoTracking()
                     .ToListAsync();
                 var insert = union.Where(x => x.cg == null && groupsInOrg.Any(c => x.g.Id == c.Id))
-                    .Select(x => new EfModel.CollectionGroup {
+                    .Select(x => new EfModel.CollectionGroup 
+                    {
                         CollectionId = collection.Id,
                         GroupId = x.g.Id,
                         ReadOnly = groups.FirstOrDefault(g => g.Id == x.g.Id).ReadOnly,
@@ -202,7 +203,8 @@ namespace Bit.Core.Repositories.EntityFramework
                         (x.cg.ReadOnly != groups.FirstOrDefault(g => g.Id == x.g.Id).ReadOnly || 
                         x.cg.HidePasswords != groups.FirstOrDefault(g => g.Id == x.g.Id).HidePasswords)
                     )
-                    .Select(x => new EfModel.CollectionGroup {
+                    .Select(x => new EfModel.CollectionGroup 
+                    {
                         CollectionId = collection.Id, 
                         GroupId = x.g.Id,
                         ReadOnly = groups.FirstOrDefault(g => g.Id == x.g.Id).ReadOnly,
@@ -213,7 +215,8 @@ namespace Bit.Core.Repositories.EntityFramework
                         x => x.g == null && 
                         x.cg.CollectionId == collection.Id
                     )
-                    .Select(x => new EfModel.CollectionGroup { 
+                    .Select(x => new EfModel.CollectionGroup 
+                    { 
                         CollectionId = collection.Id, GroupId = x.cg.GroupId
                     })
                     .ToList();

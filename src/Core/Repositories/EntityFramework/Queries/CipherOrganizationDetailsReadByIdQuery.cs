@@ -33,7 +33,7 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
                     CreationDate = c.CreationDate,
                     RevisionDate = c.RevisionDate,
                     DeletedDate = c.DeletedDate, 
-                    OrganizationUseTotp = o.UseTotp
+                    OrganizationUseTotp = o.UseTotp,
                 };
             return query;
         }

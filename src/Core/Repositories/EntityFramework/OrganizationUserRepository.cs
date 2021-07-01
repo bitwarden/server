@@ -387,5 +387,7 @@ namespace Bit.Core.Repositories.EntityFramework
             await CreateManyAsync(createUsers);
             await ReplaceManyAsync(replaceUsers);
         }
+
+        Task<ICollection<string>> IOrganizationUserRepository.SelectKnownEmailsAsync(Guid organizationId, IEnumerable<string> emails, bool onlyRegisteredUsers) => throw new NotImplementedException();
     }
 }

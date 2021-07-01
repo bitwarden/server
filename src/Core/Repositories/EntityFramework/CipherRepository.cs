@@ -145,7 +145,7 @@ namespace Bit.Core.Repositories.EntityFramework
                         await dbContext.BulkCopyAsync(base.DefaultBulkCopyOptions, collectionCipherEntities);
                     }
                 }
-                await UserBumpAccountRevisionDateByOrganizationId(ciphers.FirstOrDefault().OrganizationId.Value);
+                await UserBumpAccountRevisionDateByOrganizationId(ciphers.First().OrganizationId.Value);
             }
         }
 
@@ -308,7 +308,7 @@ namespace Bit.Core.Repositories.EntityFramework
                             FolderId = c.FolderId,
                             Edit = true,
                             ViewPassword = true,
-                            OrganizationUseTotp = false
+                            OrganizationUseTotp = false,
                         };
                 }
                 var ciphers = await cipherDetailsView.ToListAsync();

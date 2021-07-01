@@ -21,7 +21,8 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
                 where ou.Type == OrganizationUserType.Owner &&
                 ou.Status == OrganizationUserStatusType.Confirmed
                 group ou by ou.OrganizationId into g
-                select new { 
+                select new 
+                { 
                     OrgUser = g.Select(x => new {x.UserId, x.Id}).FirstOrDefault(), ConfirmedOwnerCount = g.Count() 
                 };
                     

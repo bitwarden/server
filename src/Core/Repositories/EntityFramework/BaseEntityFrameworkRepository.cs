@@ -121,19 +121,14 @@ namespace Bit.Core.Repositories.EntityFramework
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
-                var ciphers = await dbContext.Ciphers
-                    .Where(e => e.UserId == null && e.OrganizationId == organizationId)
+                var attachments = await dbContext.Ciphers
+                    .Where(e => e.UserId == null &&
+                        e.OrganizationId == organizationId &&
+                        !string.IsNullOrWhiteSpace(e.Attachments))
+                    .Select(e => e.Attachments)
                     .ToListAsync();
-                var storage = ciphers.Sum(e => 
-                {
-                    if (string.IsNullOrWhiteSpace(e.Attachments))
-                    {
-                        return 0;
-                    }
-
-                    return JsonDocument.Parse(e.Attachments)?.RootElement.EnumerateArray()
-                        .Sum(p => p.GetProperty("Size").GetInt64()) ?? 0;
-                });
+                var storage = attachments.Sum(e => JsonDocument.Parse(e)?.RootElement.EnumerateArray()
+                    .Sum(p => p.GetProperty("Size").GetInt64()) ?? 0);
                 var organization = new EfModel.Organization
                 {
                     Id = organizationId,
@@ -153,19 +148,15 @@ namespace Bit.Core.Repositories.EntityFramework
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
-                var ciphers = await dbContext.Ciphers
-                    .Where(e => e.UserId.HasValue && e.UserId.Value == userId && e.OrganizationId == null)
+                var attachments = await dbContext.Ciphers
+                    .Where(e => e.UserId.HasValue &&
+                        e.UserId.Value == userId &&
+                        e.OrganizationId == null &&
+                        !string.IsNullOrWhiteSpace(e.Attachments))
+                    .Select(e => e.Attachments)
                     .ToListAsync();
-                var storage = ciphers.Sum(e => 
-                {
-                    if (string.IsNullOrWhiteSpace(e.Attachments))
-                    {
-                        return 0;
-                    }
-
-                    return JsonDocument.Parse(e.Attachments)?.RootElement.EnumerateArray()
-                        .Sum(p => p.GetProperty("Size").GetInt64()) ?? 0;
-                });
+                var storage = attachments.Sum(e => JsonDocument.Parse(e)?.RootElement.EnumerateArray()
+                    .Sum(p => p.GetProperty("Size").GetInt64()) ?? 0);
                 var user = new EfModel.User
                 {
                     Id = userId,
@@ -186,6 +177,10 @@ namespace Bit.Core.Repositories.EntityFramework
             {
                 var dbContext = GetDatabaseContext(scope);
                 var entity = await dbContext.Users.FindAsync(user.Id);
+                if (entity == null)
+                {
+                    return;
+                }
                 entity.SecurityStamp = user.SecurityStamp;
                 entity.Key = user.Key;
                 entity.PrivateKey = user.PrivateKey;

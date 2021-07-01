@@ -32,7 +32,7 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
                     Favorite = _userId.HasValue && c.Favorites != null && c.Favorites.Contains($"\"{_userId}\":true"),
                     FolderId = (_ignoreFolders || !_userId.HasValue || c.Folders == null || !c.Folders.Contains(_userId.Value.ToString())) ? 
                         null : 
-                        CoreHelpers.LoadClassFromJsonData<Dictionary<Guid, Guid>>(c.Folders)[_userId.Value]
+                        CoreHelpers.LoadClassFromJsonData<Dictionary<Guid, Guid>>(c.Folders)[_userId.Value],
                 };
             return query;
         }
