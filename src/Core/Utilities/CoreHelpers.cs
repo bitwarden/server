@@ -739,7 +739,8 @@ namespace Bit.Core.Utilities
         }
 
         public static List<KeyValuePair<string, string>> BuildIdentityClaims(User user, ICollection<CurrentContentOrganization> orgs,
-            ICollection<CurrentContentProvider> providers, bool isPremium)
+            ICollection<CurrentContentProvider> providers, ICollection<CurrentContentProviderOrganization> providerOrganizations,
+            bool isPremium)
         {
             var claims = new List<KeyValuePair<string, string>>()
             {
@@ -871,6 +872,14 @@ namespace Bit.Core.Utilities
                             }
                             break;
                     }
+                }
+            }
+
+            if (providerOrganizations.Any())
+            {
+                foreach (var po in providerOrganizations)
+                {
+                    claims.Add(new KeyValuePair<string, string>("providerorguser", po.OrganizationId.ToString()));
                 }
             }
             

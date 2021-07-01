@@ -26,6 +26,7 @@ namespace Bit.Core.IdentityServer
         private readonly ICurrentContext _currentContext;
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly IProviderUserRepository _providerUserRepository;
+        private readonly IProviderOrganizationRepository _providerOrganizationRepository;
 
         public ClientStore(
             IInstallationRepository installationRepository,
@@ -36,7 +37,8 @@ namespace Bit.Core.IdentityServer
             ILicensingService licensingService,
             ICurrentContext currentContext,
             IOrganizationUserRepository organizationUserRepository,
-            IProviderUserRepository providerUserRepository)
+            IProviderUserRepository providerUserRepository,
+            IProviderOrganizationRepository providerOrganizationRepository)
         {
             _installationRepository = installationRepository;
             _organizationRepository = organizationRepository;
@@ -47,6 +49,7 @@ namespace Bit.Core.IdentityServer
             _currentContext = currentContext;
             _organizationUserRepository = organizationUserRepository;
             _providerUserRepository = providerUserRepository;
+            _providerOrganizationRepository = providerOrganizationRepository;
         }
 
         public async Task<Client> FindClientByIdAsync(string clientId)
@@ -142,8 +145,9 @@ namespace Bit.Core.IdentityServer
                         }; 
                         var orgs = await _currentContext.OrganizationMembershipAsync(_organizationUserRepository, user.Id);
                         var providers = await _currentContext.ProviderMembershipAsync(_providerUserRepository, user.Id);
+                        var providerOrganizations = await _currentContext.ProviderOrganizationMembershipAsync(_providerOrganizationRepository, user.Id);
                         var isPremium = await _licensingService.ValidateUserPremiumAsync(user);
-                        foreach (var claim in CoreHelpers.BuildIdentityClaims(user, orgs, providers, isPremium))
+                        foreach (var claim in CoreHelpers.BuildIdentityClaims(user, orgs, providers, providerOrganizations, isPremium))
                         {
                             var upperValue = claim.Value.ToUpperInvariant();
                             var isBool = upperValue == "TRUE" || upperValue == "FALSE";

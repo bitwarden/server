@@ -27,6 +27,7 @@ namespace Bit.Core.Context
         public virtual string IpAddress { get; set; }
         public virtual List<CurrentContentOrganization> Organizations { get; set; }
         public virtual List<CurrentContentProvider> Providers { get; set; }
+        public virtual List<CurrentContentProviderOrganization> ProviderOrganizations { get; set; }
         public virtual Guid? InstallationId { get; set; }
         public virtual Guid? OrganizationId { get; set; }
         public virtual bool CloudflareWorkerProxied { get; set; }
@@ -197,6 +198,16 @@ namespace Bit.Core.Context
                         Permissions = SetOrganizationPermissionsFromClaims(c.Value, claimsDict)
                     }));
             }
+
+            if (claimsDict.ContainsKey("providerorguser"))
+            {
+                organizations.AddRange(claimsDict["providerorguser"].Select(c =>
+                    new CurrentContentOrganization
+                    {
+                        Id = new Guid(c.Value),
+                        Type = OrganizationUserType.Owner,
+                    }));
+            }
             
             return organizations;
         }
@@ -247,7 +258,9 @@ namespace Bit.Core.Context
 
         public bool OrganizationOwner(Guid orgId)
         {
-            return Organizations?.Any(o => o.Id == orgId && o.Type == OrganizationUserType.Owner) ?? false;
+            var owner = Organizations?.Any(o => o.Id == orgId && o.Type == OrganizationUserType.Owner) ?? false;
+            var provider = ProviderOrganizations?.Any(po => po.OrganizationId == orgId) ?? false;
+            return owner || provider;
         }
 
         public bool OrganizationCustom(Guid orgId)
@@ -368,6 +381,17 @@ namespace Bit.Core.Context
                     .Select(ou => new CurrentContentProvider(ou)).ToList();
             }
             return Providers;
+        }
+        
+        public async Task<ICollection<CurrentContentProviderOrganization>> ProviderOrganizationMembershipAsync(
+            IProviderOrganizationRepository providerOrganizationRepository, Guid userId)
+        {
+            if (ProviderOrganizations == null)
+            {
+                var userProviderOrganizations = await providerOrganizationRepository.GetManyByUserIdAsync(userId);
+                ProviderOrganizations = userProviderOrganizations.Select(po => new CurrentContentProviderOrganization(po)).ToList();
+            }
+            return ProviderOrganizations;
         }
 
         private string GetClaimValue(Dictionary<string, IEnumerable<Claim>> claims, string type)

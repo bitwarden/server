@@ -58,5 +58,8 @@ namespace Bit.Core.Context
 
         Task<ICollection<CurrentContentProvider>> ProviderMembershipAsync(
             IProviderUserRepository providerUserRepository, Guid userId);
+
+        Task<ICollection<CurrentContentProviderOrganization>> ProviderOrganizationMembershipAsync(
+            IProviderOrganizationRepository providerOrganizationRepository, Guid userId);
     }
 }

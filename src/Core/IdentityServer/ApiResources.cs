@@ -24,6 +24,7 @@ namespace Bit.Core.IdentityServer
                     "orgcustom",
                     "providerprovideradmin",
                     "providerserviceuser",
+                    "providerorguser",
                 }),
                 new ApiResource("internal", new string[] { JwtClaimTypes.Subject }),
                 new ApiResource("api.push", new string[] { JwtClaimTypes.Subject }),
