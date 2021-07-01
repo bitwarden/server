@@ -9,6 +9,7 @@ using EfModel = Bit.Core.Models.EntityFramework;
 using Microsoft.Extensions.DependencyInjection;
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
+using Bit.Core.Models.Data;
 
 namespace Bit.Core.Repositories.EntityFramework
 {
@@ -18,6 +19,8 @@ namespace Bit.Core.Repositories.EntityFramework
         public ProviderRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
             : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.Providers)
         { }
+
+        public Task<ICollection<ProviderAbility>> GetManyAbilitiesAsync() => throw new NotImplementedException();
 
         public async Task<ICollection<Provider>> SearchAsync(string name, string userEmail, int skip, int take)
         {

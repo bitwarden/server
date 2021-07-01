@@ -10,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using AutoMapper;
 using Bit.Core.Enums.Provider;
 using Microsoft.EntityFrameworkCore;
+using Bit.Core.Models.Data;
 
 namespace Bit.Core.Repositories.EntityFramework
 {
@@ -69,5 +70,11 @@ namespace Bit.Core.Repositories.EntityFramework
                 await dbContext.SaveChangesAsync();
             }
         }
+
+        public Task<ICollection<ProviderUser>> GetManyByUserAsync(Guid userId) => throw new NotImplementedException();
+        public Task<ProviderUser> GetByProviderUserAsync(Guid providerId, Guid userId) => throw new NotImplementedException();
+        public Task<ICollection<ProviderUserUserDetails>> GetManyDetailsByProviderAsync(Guid providerId) => throw new NotImplementedException();
+        public Task<ICollection<ProviderUserProviderDetails>> GetManyDetailsByUserAsync(Guid userId, ProviderUserStatusType? status = null) => throw new NotImplementedException();
+        public Task<IEnumerable<ProviderUserPublicKey>> GetManyPublicKeysByProviderUserAsync(Guid providerId, IEnumerable<Guid> Ids) => throw new NotImplementedException();
     }
 }
