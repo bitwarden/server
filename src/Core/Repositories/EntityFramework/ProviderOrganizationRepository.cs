@@ -8,6 +8,8 @@ using EfModel = Bit.Core.Models.EntityFramework;
 using Microsoft.Extensions.DependencyInjection;
 using AutoMapper;
 using Bit.Core.Models.Data;
+using Bit.Core.Repositories.EntityFramework.Queries;
+using Microsoft.EntityFrameworkCore;
 
 namespace Bit.Core.Repositories.EntityFramework
 {
@@ -18,6 +20,15 @@ namespace Bit.Core.Repositories.EntityFramework
             : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.ProviderOrganizations)
         { }
 
-        public Task<ICollection<ProviderOrganizationOrganizationDetails>> GetManyDetailsByProviderAsync(Guid providerId) => throw new NotImplementedException();
+        public async Task<ICollection<ProviderOrganizationOrganizationDetails>> GetManyDetailsByProviderAsync(Guid providerId)
+        {
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var query = new ProviderOrganizationOrganizationDetailsReadByProviderIdQuery(providerId);
+                var data = await query.Run(dbContext).ToListAsync();
+                return data;
+            }
+        }
     }
 }

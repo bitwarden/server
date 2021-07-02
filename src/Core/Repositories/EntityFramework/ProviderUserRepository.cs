@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Bit.Core.Models.Table.Provider;
-using Bit.Core.Repositories.EntityFramework;
 using TableModel = Bit.Core.Models.Table;
 using EfModel = Bit.Core.Models.EntityFramework;
 using Microsoft.Extensions.DependencyInjection;
@@ -11,6 +10,7 @@ using AutoMapper;
 using Bit.Core.Enums.Provider;
 using Microsoft.EntityFrameworkCore;
 using Bit.Core.Models.Data;
+using Bit.Core.Repositories.EntityFramework.Queries;
 
 namespace Bit.Core.Repositories.EntityFramework
 {
@@ -71,10 +71,74 @@ namespace Bit.Core.Repositories.EntityFramework
             }
         }
 
-        public Task<ICollection<ProviderUser>> GetManyByUserAsync(Guid userId) => throw new NotImplementedException();
-        public Task<ProviderUser> GetByProviderUserAsync(Guid providerId, Guid userId) => throw new NotImplementedException();
-        public Task<ICollection<ProviderUserUserDetails>> GetManyDetailsByProviderAsync(Guid providerId) => throw new NotImplementedException();
-        public Task<ICollection<ProviderUserProviderDetails>> GetManyDetailsByUserAsync(Guid userId, ProviderUserStatusType? status = null) => throw new NotImplementedException();
-        public Task<IEnumerable<ProviderUserPublicKey>> GetManyPublicKeysByProviderUserAsync(Guid providerId, IEnumerable<Guid> Ids) => throw new NotImplementedException();
+        public async Task<ICollection<ProviderUser>> GetManyByUserAsync(Guid userId) 
+        {
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var query = from pu in dbContext.ProviderUsers
+                    where pu.UserId == userId
+                    select pu;
+                return await query.ToArrayAsync();
+            }
+        }
+        public async Task<ProviderUser> GetByProviderUserAsync(Guid providerId, Guid userId)
+        {
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var query = from pu in dbContext.ProviderUsers
+                    where pu.UserId == userId &&
+                        pu.ProviderId == providerId
+                    select pu;
+                return await query.FirstOrDefaultAsync();
+            }
+        }
+        public async Task<ICollection<ProviderUserUserDetails>> GetManyDetailsByProviderAsync(Guid providerId) 
+        {
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var view = from pu in dbContext.ProviderUsers
+                    join u in dbContext.Users
+                        on pu.UserId equals u.Id into u_g
+                    from u in u_g.DefaultIfEmpty()
+                    select new {pu, u};
+                var data = await view.Where(e => e.pu.ProviderId == providerId).Select(e => new ProviderUserUserDetails 
+                {
+                    Id = e.pu.Id,
+                    UserId = e.pu.UserId,
+                    ProviderId = e.pu.ProviderId,
+                    Name = e.u.Name,
+                    Email = e.u.Email ?? e.pu.Email,
+                    Status = e.pu.Status,
+                    Type = e.pu.Type,
+                    Permissions = e.pu.Permissions,
+                }).ToArrayAsync();
+                return data;
+            }
+        }
+
+        public async Task<ICollection<ProviderUserProviderDetails>> GetManyDetailsByUserAsync(Guid userId, ProviderUserStatusType? status = null)
+        {
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var query = new ProviderUserProviderDetailsReadByUserIdStatusQuery(userId, status);
+                var data = await query.Run(dbContext).ToArrayAsync();
+                return data;
+            }
+        }
+
+        public async Task<IEnumerable<ProviderUserPublicKey>> GetManyPublicKeysByProviderUserAsync(Guid providerId, IEnumerable<Guid> Ids) 
+        {
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var query = new UserReadPublicKeysByProviderUserIdsQuery(providerId, Ids);
+                var data = await query.Run(dbContext).ToListAsync();
+                return data;
+            }
+        }
     }
 }

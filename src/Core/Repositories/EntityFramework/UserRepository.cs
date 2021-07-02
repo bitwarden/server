@@ -138,9 +138,14 @@ namespace Bit.Core.Repositories.EntityFramework
             }
         }
 
-        public Task<IEnumerable<User>> GetManyAsync(IEnumerable<Guid> ids)
+        public async Task<IEnumerable<User>> GetManyAsync(IEnumerable<Guid> ids)
         {
-            throw new NotImplementedException();
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var users = dbContext.Users.Where(x => ids.Contains(x.Id));
+                return await users.ToListAsync();
+            }
         }
     }
 }

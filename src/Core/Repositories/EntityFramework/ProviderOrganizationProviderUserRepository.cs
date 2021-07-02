@@ -16,10 +16,5 @@ namespace Bit.Core.Repositories.EntityFramework
         public ProviderOrganizationProviderUserRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
             : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.ProviderOrganizationProviderUsers)
         { }
-
-        public Task CreateAsync(Provider obj) => throw new NotImplementedException();
-        public Task DeleteAsync(Provider obj) => throw new NotImplementedException();
-        public Task ReplaceAsync(Provider obj) => throw new NotImplementedException();
-        public Task UpsertAsync(Provider obj) => throw new NotImplementedException();
     }
 }
