@@ -31,7 +31,7 @@ namespace Bit.Core.Models.Api
             PrivateKey = user.PrivateKey;
             SecurityStamp = user.SecurityStamp;
             Organizations = organizationsUserDetails?.Select(o => new ProfileOrganizationResponseModel(o));
-            Providers = providerUserDetails?.Select(p => new ProfileProviderResponseModel(p));
+            Providers = providerUserDetails?.Where(p => p.Enabled).Select(p => new ProfileProviderResponseModel(p));
             ProviderOrganizations =
                 providerUserOrganizationDetails?.Select(po => new ProfileProviderOrganizationResponseModel(po));
         }
