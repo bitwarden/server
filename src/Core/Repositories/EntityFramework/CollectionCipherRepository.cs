@@ -125,14 +125,14 @@ namespace Bit.Core.Repositories.EntityFramework
                     .Select(x => new EfModel.CollectionCipher
                     {
                         CollectionId = x.s.CollectionId,
-                        CipherId = x.s.CipherId
+                        CipherId = x.s.CipherId,
                     });
                 var delete = union
                     .Where(x => x.s == null && x.t.CipherId == cipherId && collectionIds.Contains(x.t.CollectionId))
                     .Select(x => new EfModel.CollectionCipher
                     {
                         CollectionId = x.t.CollectionId,
-                        CipherId = x.t.CipherId
+                        CipherId = x.t.CipherId,
                     });
                 await dbContext.AddRangeAsync(insert);
                 dbContext.RemoveRange(delete);
@@ -175,14 +175,14 @@ namespace Bit.Core.Repositories.EntityFramework
                     .Select(x => new EfModel.CollectionCipher 
                     {
                         CollectionId = x.s.CollectionId,
-                        CipherId = x.s.CipherId
+                        CipherId = x.s.CipherId,
                     });
                 var delete = union
                     .Where(x => x.s == null && x.t.CipherId == cipherId)
                     .Select(x => new EfModel.CollectionCipher
                     {
                         CollectionId = x.t.CollectionId,
-                        CipherId = x.t.CipherId
+                        CipherId = x.t.CipherId,
                     });
                 await dbContext.AddRangeAsync(insert);
                 dbContext.RemoveRange(delete);
@@ -232,7 +232,7 @@ namespace Bit.Core.Repositories.EntityFramework
                     select new EfModel.CollectionCipher
                     {
                         CollectionId = collectionId,
-                        CipherId = cipherId
+                        CipherId = cipherId,
                     };
                 await dbContext.AddRangeAsync(insertData);
                 await UserBumpAccountRevisionDateByOrganizationId(organizationId);

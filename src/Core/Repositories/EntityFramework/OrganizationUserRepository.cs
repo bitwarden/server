@@ -36,7 +36,7 @@ namespace Bit.Core.Repositories.EntityFramework
                     CollectionId = y.Id,
                     OrganizationUserId = organizationUser.Id,
                     ReadOnly = y.ReadOnly,
-                    HidePasswords = y.HidePasswords
+                    HidePasswords = y.HidePasswords,
                 });
                 await dbContext.CollectionUsers.AddRangeAsync(collectionUsers);
                 await dbContext.SaveChangesAsync();
@@ -91,7 +91,7 @@ namespace Bit.Core.Repositories.EntityFramework
                 {
                     Id = cu.CollectionId,
                     ReadOnly = cu.ReadOnly,
-                    HidePasswords = cu.HidePasswords
+                    HidePasswords = cu.HidePasswords,
                 }); 
                 return new Tuple<OrganizationUser, ICollection<SelectionReadOnly>>(
                     organizationUser, collections.ToList());
@@ -171,7 +171,7 @@ namespace Bit.Core.Repositories.EntityFramework
                 {
                    Id = cu.CollectionId,
                    ReadOnly = cu.ReadOnly,
-                   HidePasswords = cu.HidePasswords
+                   HidePasswords = cu.HidePasswords,
                 }).ToListAsync();
                 return new Tuple<OrganizationUserUserDetails, ICollection<SelectionReadOnly>>(organizationUserUserDetails, collections);
             }
@@ -286,7 +286,7 @@ namespace Bit.Core.Repositories.EntityFramework
                     .Select(x => new OrganizationUserPublicKey() 
                     {
                        Id = x.ou.Id,
-                       PublicKey = x.u.PublicKey
+                       PublicKey = x.u.PublicKey,
                     }).ToListAsync();
                 return data;
             }

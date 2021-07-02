@@ -35,7 +35,7 @@ namespace Bit.Core.Repositories.EntityFramework
                     CollectionId = y.Id,
                     GroupId = grp.Id,
                     ReadOnly = y.ReadOnly,
-                    HidePasswords = y.HidePasswords
+                    HidePasswords = y.HidePasswords,
                 });
                 await dbContext.CollectionGroups.AddRangeAsync(collectionGroups);
                 await dbContext.SaveChangesAsync();
@@ -70,7 +70,7 @@ namespace Bit.Core.Repositories.EntityFramework
                 {
                     Id = c.CollectionId,
                     ReadOnly = c.ReadOnly,
-                    HidePasswords = c.HidePasswords
+                    HidePasswords = c.HidePasswords,
                 }).ToList(); 
                 return new Tuple<Group, ICollection<SelectionReadOnly>>(
                     grp, collections);

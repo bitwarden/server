@@ -103,7 +103,7 @@ namespace Bit.Core.Repositories.EntityFramework
                     RevisionDate = ea.RevisionDate,
                     GranteeName = ea.GranteeName,
                     GranteeEmail = ea.GranteeEmail,
-                    GrantorEmail = ea.GrantorEmail
+                    GrantorEmail = ea.GrantorEmail,
                 }).ToListAsync(); 
                 return notifies;
             }

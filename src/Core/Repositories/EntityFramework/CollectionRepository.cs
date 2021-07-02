@@ -42,7 +42,7 @@ namespace Bit.Core.Repositories.EntityFramework
                         CollectionId = obj.Id,
                         GroupId = g.Id,
                         ReadOnly = g.ReadOnly,
-                        HidePasswords = g.HidePasswords
+                        HidePasswords = g.HidePasswords,
                     });
                 await dbContext.AddRangeAsync(collectionGroups);
                 await dbContext.SaveChangesAsync();
@@ -89,7 +89,7 @@ namespace Bit.Core.Repositories.EntityFramework
                 {
                     Id = cg.GroupId,
                     ReadOnly = cg.ReadOnly,
-                    HidePasswords = cg.HidePasswords
+                    HidePasswords = cg.HidePasswords,
                 }).ToList();
                 return new Tuple<Collection, ICollection<SelectionReadOnly>>(collection, selectionReadOnlys);
             }
@@ -157,7 +157,7 @@ namespace Bit.Core.Repositories.EntityFramework
                 {
                     Id = cu.OrganizationUserId,
                     ReadOnly = cu.ReadOnly,
-                    HidePasswords = cu.HidePasswords
+                    HidePasswords = cu.HidePasswords,
                 }).ToArray();
             }
         }
@@ -194,7 +194,7 @@ namespace Bit.Core.Repositories.EntityFramework
                         CollectionId = collection.Id,
                         GroupId = x.g.Id,
                         ReadOnly = groups.FirstOrDefault(g => g.Id == x.g.Id).ReadOnly,
-                        HidePasswords = groups.FirstOrDefault(g => g.Id == x.g.Id).HidePasswords
+                        HidePasswords = groups.FirstOrDefault(g => g.Id == x.g.Id).HidePasswords,
                     }).ToList();
                 var update = union
                     .Where(
@@ -208,7 +208,7 @@ namespace Bit.Core.Repositories.EntityFramework
                         CollectionId = collection.Id, 
                         GroupId = x.g.Id,
                         ReadOnly = groups.FirstOrDefault(g => g.Id == x.g.Id).ReadOnly,
-                        HidePasswords = groups.FirstOrDefault(g => g.Id == x.g.Id).HidePasswords
+                        HidePasswords = groups.FirstOrDefault(g => g.Id == x.g.Id).HidePasswords,
                     });
                 var delete = union
                     .Where(
@@ -217,7 +217,8 @@ namespace Bit.Core.Repositories.EntityFramework
                     )
                     .Select(x => new EfModel.CollectionGroup 
                     { 
-                        CollectionId = collection.Id, GroupId = x.cg.GroupId
+                        CollectionId = collection.Id, 
+                        GroupId = x.cg.GroupId,
                     })
                     .ToList();
                 
