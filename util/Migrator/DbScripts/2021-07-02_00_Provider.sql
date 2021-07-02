@@ -1097,7 +1097,8 @@ SELECT
     PU.[Status],
     PU.[Type],
     P.[Enabled],
-    PU.[Permissions]
+    PU.[Permissions],
+    P.[UseEvents]
 FROM
     [dbo].[ProviderUser] PU
 LEFT JOIN
@@ -1122,8 +1123,8 @@ BEGIN
     FROM
         [dbo].[ProviderUserProviderDetailsView]
     WHERE
-            [UserId] = @UserId
-      AND (@Status IS NULL OR [Status] = @Status)
+        [UserId] = @UserId
+    AND (@Status IS NULL OR [Status] = @Status)
 END
 GO
 
