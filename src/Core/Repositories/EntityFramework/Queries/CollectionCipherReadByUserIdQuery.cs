@@ -39,8 +39,8 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
                 where g.AccessAll && cg.GroupId == gu.GroupId  &&
                     ou.Status == OrganizationUserStatusType.Confirmed &&
                     (ou.AccessAll || cu.CollectionId != null || g.AccessAll || cg.CollectionId != null)
-                select new { cc, c, ou, cu, gu, g, cg };
-                return query.Select(x => x.cc);
+                select cc;
+                return query;
         }
     }
 }

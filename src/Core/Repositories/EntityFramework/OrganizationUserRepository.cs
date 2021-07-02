@@ -86,12 +86,12 @@ namespace Bit.Core.Repositories.EntityFramework
                         on ou.Id equals cu.OrganizationUserId
                     where !ou.AccessAll && 
                         ou.Id == id
-                    select new { ou, cu }).ToListAsync();
-                var collections = query.Select(c => new SelectionReadOnly
+                    select cu).ToListAsync();
+                var collections = query.Select(cu => new SelectionReadOnly
                 {
-                    Id = c.cu.CollectionId,
-                    ReadOnly = c.cu.ReadOnly,
-                    HidePasswords = c.cu.HidePasswords
+                    Id = cu.CollectionId,
+                    ReadOnly = cu.ReadOnly,
+                    HidePasswords = cu.HidePasswords
                 }); 
                 return new Tuple<OrganizationUser, ICollection<SelectionReadOnly>>(
                     organizationUser, collections.ToList());
@@ -166,12 +166,12 @@ namespace Bit.Core.Repositories.EntityFramework
                 var query = from ou in dbContext.OrganizationUsers
                     join cu in dbContext.CollectionUsers on ou.Id equals cu.OrganizationUserId
                     where !ou.AccessAll && ou.Id == id
-                    select new {ou, cu};
-                var collections = await query.Select(x => new SelectionReadOnly
+                    select cu;
+                var collections = await query.Select(cu => new SelectionReadOnly
                 {
-                   Id = x.cu.CollectionId,
-                   ReadOnly = x.cu.ReadOnly,
-                   HidePasswords = x.cu.HidePasswords
+                   Id = cu.CollectionId,
+                   ReadOnly = cu.ReadOnly,
+                   HidePasswords = cu.HidePasswords
                 }).ToListAsync();
                 return new Tuple<OrganizationUserUserDetails, ICollection<SelectionReadOnly>>(organizationUserUserDetails, collections);
             }

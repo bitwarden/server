@@ -47,8 +47,8 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
                         cg.CollectionId != null ||
                         ou.AccessAll ||
                         g.AccessAll)
-                select new { u, ou, cc, cu, gu, g, cg};
-            return query.Select(x => x.u);
+                select u;
+            return query;
         }
     }
 }

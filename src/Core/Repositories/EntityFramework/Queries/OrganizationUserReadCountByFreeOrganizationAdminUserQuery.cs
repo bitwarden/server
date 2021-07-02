@@ -24,9 +24,9 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
                     (ou.Type == OrganizationUserType.Owner || ou.Type == OrganizationUserType.Admin) &&
                     o.PlanType == PlanType.Free &&
                     ou.Status == OrganizationUserStatusType.Confirmed
-                select new { ou, o };
+                select ou;
                                 
-            return query.Select(x => x.ou);
+            return query;
         }
     }
 }

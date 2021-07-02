@@ -113,8 +113,8 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
             var deleteQuery = from cu in dbContext.CollectionUsers
                 where !dbContext.Users.Any(
                     u => u.Id == cu.OrganizationUserId)
-                select new { cu };
-            return deleteQuery.Select(x => x.cu);
+            select cu;
+            return deleteQuery;
         }
     }
 }

@@ -54,7 +54,7 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
                     o.Enabled &&
                     ou.Status == OrganizationUserStatusType.Confirmed &&
                     (ou.AccessAll || !cu.ReadOnly || g.AccessAll || !cg.ReadOnly)
-                select new { c, o, ou, cu, gu, g, cg }.c.Id;
+                select c.Id;
 
             if (!availibleCollections.Any())
             {

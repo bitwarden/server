@@ -100,8 +100,8 @@ namespace Bit.Core.Repositories.EntityFramework
                     join g in dbContext.Groups
                         on gu.GroupId equals g.Id
                     where g.OrganizationId == organizationId
-                    select new { gu, g };
-                var groupUsers = await query.Select(x => x.gu).ToListAsync();
+                    select gu;
+                var groupUsers = await query.ToListAsync();
                 return Mapper.Map<List<TableModel.GroupUser>>(groupUsers);
             }
         }

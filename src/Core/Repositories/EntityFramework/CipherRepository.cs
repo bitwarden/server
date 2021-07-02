@@ -204,8 +204,8 @@ namespace Bit.Core.Repositories.EntityFramework
                     join c in dbContext.Collections
                         on cc.CollectionId equals c.Id
                     where c.OrganizationId == organizationId
-                    select new { cc, c };
-                dbContext.RemoveRange(collectionCiphers.Select(x => x.cc));
+                    select cc;
+                dbContext.RemoveRange(collectionCiphers);
 
                 var ciphers = from c in dbContext.Ciphers
                     where c.OrganizationId == organizationId
@@ -338,8 +338,8 @@ namespace Bit.Core.Repositories.EntityFramework
                     join c in cipherEntities
                         on ucd.Id equals c.Id
                     where ucd.Edit
-                    select new { ucd, c };
-                await idsToMove.Select(x => x.c).ForEachAsync(cipher => 
+                    select c;
+                await idsToMove.ForEachAsync(cipher => 
                 {
                     var foldersJson = string.IsNullOrWhiteSpace(cipher.Folders) ? 
                         new JObject() :
@@ -479,10 +479,10 @@ namespace Bit.Core.Repositories.EntityFramework
                     join c in cipherEntitiesToCheck
                         on ucd.Id equals c.Id
                     where ucd.Edit && ucd.DeletedDate == null
-                    select new { ucd, c };
+                    select c;
 
                 var utcNow = DateTime.UtcNow;
-                var cipherIdsToModify = query.Select(x => x.c.Id);
+                var cipherIdsToModify = query.Select(c => c.Id);
                 var cipherEntitiesToModify = dbContext.Ciphers.Where(x => cipherIdsToModify.Contains(x.Id));
                 if (action == CipherStateAction.HardDelete)
                 {
@@ -499,15 +499,15 @@ namespace Bit.Core.Repositories.EntityFramework
                 }
 
                 var orgIds = query
-                    .Where(x => x.c.OrganizationId.HasValue)
-                    .GroupBy(x => x.c.OrganizationId).Select(x => x.Key);
+                    .Where(c => c.OrganizationId.HasValue)
+                    .GroupBy(c => c.OrganizationId).Select(x => x.Key);
 
                 foreach (var orgId in orgIds)
                 {
                     await OrganizationUpdateStorage(orgId.Value);
                     await UserBumpAccountRevisionDateByOrganizationId(orgId.Value);
                 }
-                if (query.Any(x => x.c.UserId.HasValue && !string.IsNullOrWhiteSpace(x.c.Attachments)))
+                if (query.Any(c => c.UserId.HasValue && !string.IsNullOrWhiteSpace(c.Attachments)))
                 {
                     await UserUpdateStorage(userId);
                 }

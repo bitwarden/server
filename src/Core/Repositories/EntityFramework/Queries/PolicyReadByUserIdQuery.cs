@@ -25,9 +25,9 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
                 where ou.UserId == _userId &&
                     ou.Status == OrganizationUserStatusType.Confirmed &&
                     o.Enabled == true
-                select new { p, ou, o };
+                select p;
                                 
-            return query.Select(x => x.p);
+            return query;
         }
     }
 }

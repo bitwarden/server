@@ -101,8 +101,8 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
             var deleteQuery = from cu in dbContext.CollectionUsers
                 where !_collections.Any(
                     c => c.Id == cu.CollectionId)
-                select new { cu };
-            return deleteQuery.Select(x => x.cu);
+                select cu;
+            return deleteQuery;
         }
     }
 }

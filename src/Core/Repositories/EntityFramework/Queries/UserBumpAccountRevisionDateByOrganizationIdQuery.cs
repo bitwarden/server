@@ -22,9 +22,9 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
                     on u.Id equals ou.UserId
                 where ou.OrganizationId == _organizationId &&
                     ou.Status == OrganizationUserStatusType.Confirmed
-                select new { u, ou };
+                select u;
                         
-            return query.Select(x => x.u);
+            return query;
         }
     }
 }

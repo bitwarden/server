@@ -44,8 +44,8 @@ namespace Bit.Core.Repositories.EntityFramework
                     join c in dbContext.Collections 
                         on cc.CollectionId equals c.Id
                     where c.OrganizationId == organizationId
-                    select new { cc, c }).ToArrayAsync();
-                return data.Select(x => x.cc).ToArray();
+                    select cc).ToArrayAsync();
+                return data;
             }
         }
 

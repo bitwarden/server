@@ -51,8 +51,8 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
                 (!c.UserId.HasValue && ou.Status == OrganizationUserStatusType.Confirmed && o.Enabled &&
                 (ou.AccessAll || cu.CollectionId != null || g.AccessAll || cg.CollectionId != null)))) &&
                 (c.UserId.HasValue || ou.AccessAll || !cu.ReadOnly || g.AccessAll || !cg.ReadOnly)
-                select new { c, o, ou, cc, cu, gu, g, cg };
-            return query.Select(x => x.c);
+                select c;
+            return query;
         }
     }
 }

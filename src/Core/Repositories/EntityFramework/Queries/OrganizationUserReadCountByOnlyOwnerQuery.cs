@@ -31,9 +31,9 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
                     on owner.OrgUser.Id equals ou.Id
                 where owner.OrgUser.UserId == _userId &&
                     owner.ConfirmedOwnerCount == 1
-                select new { owner, ou };
+                select ou;
                                 
-            return query.Select(x => x.ou);
+            return query;
         }
     }
 }

@@ -26,8 +26,8 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
                 where ea.GrantorId == _grantorId &&
                     ((!_onlyRegisteredUsers && (ea.Email == _email || u.Email == _email))
                      || (_onlyRegisteredUsers && u.Email == _email))
-                select new { ea, u };
-            return query.Select(x => x.ea);
+                select ea;
+            return query;
         }
     }
 }
