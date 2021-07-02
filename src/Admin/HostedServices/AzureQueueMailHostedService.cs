@@ -35,9 +35,10 @@ namespace Bit.Admin.HostedServices
             _mailService = mailService;
             _globalSettings = globalSettings;
 
-            var jsonSettings = new JsonSerializerSettings();
-            jsonSettings.Converters.Add(new EncodedStringConverter());
-            _jsonSerializer = JsonSerializer.Create(jsonSettings);
+            _jsonSerializer = JsonSerializer.Create(new JsonSerializerSettings
+            {
+                Converters = new[] { new EncodedStringConverter() },
+            });
         }
 
         public Task StartAsync(CancellationToken cancellationToken)
