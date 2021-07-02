@@ -5,13 +5,18 @@ using System.Text;
 public class EncodedStringConverter : JsonConverter
 {
     public override bool CanConvert(Type objectType) => objectType == typeof(string);
+
     public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
     {
         if (reader.TokenType == JsonToken.Null)
+        {
             return null;
+        }
+
         string value = reader.Value as string;
         return System.Net.WebUtility.HtmlDecode(value);
     }
+
     public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
     {
         if (value == null)
