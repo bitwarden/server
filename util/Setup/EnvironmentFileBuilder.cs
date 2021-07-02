@@ -62,7 +62,7 @@ namespace Bit.Setup
             var dbConnectionString = new SqlConnectionStringBuilder
             {
                 DataSource = "tcp:mssql,1433",
-                InitialCatalog = _context.Install?.Database,
+                InitialCatalog = _context.Install?.Database ?? "vault",
                 UserID = "sa",
                 Password = dbPassword,
                 MultipleActiveResultSets = false,
