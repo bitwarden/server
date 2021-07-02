@@ -296,9 +296,16 @@ jobs:
         run: dotnet tool restore
 
       - name: Make Docker stub
+        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc'
         run: |
+          if [[ "${{ github.ref }}" == "rc" ]]; then
+            SETUP_IMAGE="bitwarden/setup:rc"
+          else
+            SETUP_IMAGE="bitwarden/setup:dev"
+          fi
+
           STUB_OUTPUT=$(pwd)/docker-stub
-          docker run -i --rm --name setup -v $STUB_OUTPUT:/bitwarden bitwarden/setup:dev \
+          docker run -i --rm --name setup -v $STUB_OUTPUT:/bitwarden $SETUP_IMAGE \
             dotnet Setup.dll -stub 1 -install 1 -domain bitwarden.example.com -os lin
           sudo chown -R $(whoami):$(whoami) $STUB_OUTPUT
           rm -rf $STUB_OUTPUT/letsencrypt
