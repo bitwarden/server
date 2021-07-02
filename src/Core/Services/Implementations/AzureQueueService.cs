@@ -1,9 +1,7 @@
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Threading.Tasks;
 using Azure.Storage.Queues;
-using IdentityServer4.Extensions;
 using Microsoft.EntityFrameworkCore.Internal;
 using Newtonsoft.Json;
 
@@ -18,13 +16,10 @@ namespace Bit.Core.Services
         {
             _queueClient = queueClient;
             _jsonSettings = jsonSettings;
+            _jsonSettings.Converters.Add(new EncodedStringConverter());
         }
 
-        public async Task CreateAsync(T message)
-        {
-            var json = JsonConvert.SerializeObject(message, _jsonSettings);
-            await _queueClient.SendMessageAsync(json);
-        }
+        public async Task CreateAsync(T message) => await CreateManyAsync(new[] { message });
 
         public async Task CreateManyAsync(IEnumerable<T> messages)
         {
@@ -33,25 +28,21 @@ namespace Bit.Core.Services
                 return;
             }
 
-            if (!messages.Skip(1).Any())
-            {
-                await CreateAsync(messages.First());
-                return;
-            }
-
-            foreach (var json in SerializeMany(messages, _jsonSettings))
+            foreach (var json in SerializeMany(messages))
             {
                 await _queueClient.SendMessageAsync(json);
             }
         }
 
 
-        protected IEnumerable<string> SerializeMany(IEnumerable<T> messages, JsonSerializerSettings jsonSettings)
+        private IEnumerable<string> SerializeMany(IEnumerable<T> messages)
         {
+            string SerializeMessage(T message) => JsonConvert.SerializeObject(message, _jsonSettings);
+
             var messagesLists = new List<List<T>> { new List<T>() };
             var strings = new List<string>();
             var ListMessageLength = 2; // to account for json array brackets "[]"
-            foreach (var (message, jsonEvent) in messages.Select(e => (e, JsonConvert.SerializeObject(e, jsonSettings))))
+            foreach (var (message, jsonEvent) in messages.Select(m => (m, SerializeMessage(m))))
             {
 
                 var messageLength = jsonEvent.Length + 1; // To account for json array comma
@@ -66,7 +57,7 @@ namespace Bit.Core.Services
                     ListMessageLength += messageLength;
                 }
             }
-            return messagesLists.Select(l => JsonConvert.SerializeObject(l, jsonSettings));
+            return messagesLists.Select(l => JsonConvert.SerializeObject(l, _jsonSettings));
         }
     }
 }
