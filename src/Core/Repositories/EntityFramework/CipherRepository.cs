@@ -611,7 +611,7 @@ namespace Bit.Core.Repositories.EntityFramework
             }
         }
 
-        public async Task UpdateUserKeysAndCiphersAsync(User user, IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders)
+        public async Task UpdateUserKeysAndCiphersAsync(User user, IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders, IEnumerable<Send> sends)
         {
             using (var scope = ServiceScopeFactory.CreateScope())
             {
@@ -621,6 +621,8 @@ namespace Bit.Core.Repositories.EntityFramework
                 await dbContext.BulkCopyAsync(base.DefaultBulkCopyOptions, cipherEntities);
                 var folderEntities = Mapper.Map<List<EfModel.Folder>>(folders);
                 await dbContext.BulkCopyAsync(base.DefaultBulkCopyOptions, folderEntities);
+                var sendEntities = Mapper.Map<List<EfModel.Send>>(sends);
+                await dbContext.BulkCopyAsync(base.DefaultBulkCopyOptions, sendEntities);
                 await dbContext.SaveChangesAsync();
             }
         }
@@ -636,6 +638,5 @@ namespace Bit.Core.Repositories.EntityFramework
                 await ReplaceAsync(cipher);
             }
         }
-
     }
 }
