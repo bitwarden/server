@@ -12,6 +12,7 @@ using Azure.Storage.Queues.Models;
 using System.Linq;
 using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
+using Bit.Core.Utilities;
 
 namespace Bit.Admin.HostedServices
 {

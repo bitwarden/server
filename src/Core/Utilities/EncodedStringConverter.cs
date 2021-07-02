@@ -1,40 +1,35 @@
 using System;
 using Newtonsoft.Json;
-using System.Text;
 
-public class EncodedStringConverter : JsonConverter
+namespace Bit.Core.Utilities
 {
-    public override bool CanConvert(Type objectType) => objectType == typeof(string);
-
-    public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+    public class EncodedStringConverter : JsonConverter
     {
-        if (reader.TokenType == JsonToken.Null)
-        {
-            return null;
-        }
+        public override bool CanConvert(Type objectType) => objectType == typeof(string);
 
-        string value = reader.Value as string;
-        return System.Net.WebUtility.HtmlDecode(value);
-    }
-
-    public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
-    {
-        if (value == null)
+        public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
         {
-            if (serializer.NullValueHandling == NullValueHandling.Include)
+            if (reader.TokenType == JsonToken.Null)
             {
-                writer.WriteNull();
+                return existingValue;
             }
-            return;
+
+            var value = reader.Value as string;
+            return System.Net.WebUtility.HtmlDecode(value);
         }
 
-        var s = (string)value;
-
-        if (Encoding.UTF8.GetByteCount(s) != s.Length)
+        public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
         {
-            s = System.Net.WebUtility.HtmlEncode(s);
-        }
+            if (value == null)
+            {
+                if (serializer.NullValueHandling == NullValueHandling.Include)
+                {
+                    writer.WriteNull();
+                }
+                return;
+            }
 
-        writer.WriteValue(s);
+            writer.WriteValue(System.Net.WebUtility.HtmlEncode((string)value));
+        }
     }
 }

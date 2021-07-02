@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Azure.Storage.Queues;
+using Bit.Core.Utilities;
 using Microsoft.EntityFrameworkCore.Internal;
 using Newtonsoft.Json;
 
@@ -16,7 +17,10 @@ namespace Bit.Core.Services
         {
             _queueClient = queueClient;
             _jsonSettings = jsonSettings;
-            _jsonSettings.Converters.Add(new EncodedStringConverter());
+            if (!_jsonSettings.Converters.Any(c => c.GetType() == typeof(EncodedStringConverter)))
+            {
+                _jsonSettings.Converters.Add(new EncodedStringConverter());
+            }
         }
 
         public async Task CreateAsync(T message) => await CreateManyAsync(new[] { message });

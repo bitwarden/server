@@ -12,6 +12,7 @@ using Microsoft.Extensions.Logging;
 using Azure.Storage.Queues;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Bit.Core.Utilities;
 
 namespace Bit.EventsProcessor
 {
