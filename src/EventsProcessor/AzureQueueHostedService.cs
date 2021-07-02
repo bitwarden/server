@@ -4,7 +4,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Bit.Core;
-using Bit.Core.Utilities;
 using Bit.Core.Models.Data;
 using Bit.Core.Services;
 using Microsoft.Extensions.Configuration;
@@ -97,22 +96,11 @@ namespace Bit.EventsProcessor
             _logger.LogWarning("Done processing.");
         }
 
-        public async Task ProcessQueueMessageAsync(string messageB64, CancellationToken cancellationToken)
+        public async Task ProcessQueueMessageAsync(string message, CancellationToken cancellationToken)
         {
-            if (_eventWriteService == null || messageB64 == null || messageB64.Length == 0)
+            if (_eventWriteService == null || message == null || message.Length == 0)
             {
                 return;
-            }
-
-            // Jul 1 2021: Catch needed for now until all messages are guaranteed to be B64 strings
-            string message;
-            try
-            {
-                message = CoreHelpers.Base64DecodeString(messageB64);
-            }
-            catch (FormatException)
-            {
-                message = messageB64;
             }
 
             try
