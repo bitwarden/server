@@ -21,15 +21,15 @@ $qFlag = ""
 $quietPullFlag = ""
 $certbotHttpPort = "80"
 $certbotHttpsPort = "443"
-if($env:BITWARDEN_QUIET -eq "true") {
+if ($env:BITWARDEN_QUIET -eq "true") {
     $setupQuiet = 1
     $qFlag = " -q"
     $quietPullFlag = " --quiet-pull"
 }
-if("${env:BITWARDEN_CERTBOT_HTTP_PORT}" -ne "") {
+if ("${env:BITWARDEN_CERTBOT_HTTP_PORT}" -ne "") {
     $certbotHttpPort = $env:BITWARDEN_CERTBOT_HTTP_PORT
 }
-if("${env:BITWARDEN_CERTBOT_HTTPS_PORT}" -ne "") {
+if ("${env:BITWARDEN_CERTBOT_HTTPS_PORT}" -ne "") {
     $certbotHttpsPort = $env:BITWARDEN_CERTBOT_HTTPS_PORT
 }
 
@@ -53,7 +53,7 @@ function Install() {
         if ($letsEncrypt -eq "y") {
             Write-Host "(!) " -f cyan -nonewline
             [string]$email = $( Read-Host ("Enter your email address (Let's Encrypt will send you certificate " +
-                "expiration reminders)") )
+                    "expiration reminders)") )
             echo ""
     
             $letsEncryptPath = "${outputDir}/letsencrypt"
@@ -61,18 +61,26 @@ function Install() {
                 New-Item -ItemType directory -Path $letsEncryptPath | Out-Null
             }
             Invoke-Expression ("docker pull{0} certbot/certbot" -f "") #TODO: qFlag
-            $certbotExp = "docker run -it --rm --name certbot -p ${certbotHttpsPort}:443 -p ${certbotHttpPort}:80 " +`
-                "-v ${outputDir}/letsencrypt:/etc/letsencrypt/ certbot/certbot " +`
-                "certonly{0} --standalone --noninteractive --agree-tos --preferred-challenges http " +`
+            $certbotExp = "docker run -it --rm --name certbot -p ${certbotHttpsPort}:443 -p ${certbotHttpPort}:80 " + `
+                "-v ${outputDir}/letsencrypt:/etc/letsencrypt/ certbot/certbot " + `
+                "certonly{0} --standalone --noninteractive --agree-tos --preferred-challenges http " + `
                 "--email ${email} -d ${domain} --logs-dir /etc/letsencrypt/logs"
             Invoke-Expression ($certbotExp -f $qFlag)
         }
+    }
+
+    Write-Host "(!) " -f cyan -nonewline
+    [string]$database = $( Read-Host "Enter the database name for your Bitwarden instance (ex. vault): ")
+    echo ""
+
+    if ($database -eq "") {
+        $database = "vault"
     }
     
     Pull-Setup
     docker run -it --rm --name setup -v ${outputDir}:/bitwarden bitwarden/setup:$coreVersion `
         dotnet Setup.dll -install 1 -domain ${domain} -letsencrypt ${letsEncrypt} `
-        -os win -corev $coreVersion -webv $webVersion -q $setupQuiet
+        -os win -corev $coreVersion -webv $webVersion -q $setupQuiet -dbname "$database"
 }
 
 function Docker-Compose-Up {
@@ -137,8 +145,8 @@ function Docker-Prune {
 function Update-Lets-Encrypt {
     if (Test-Path -Path "${outputDir}\letsencrypt\live") {
         Invoke-Expression ("docker pull{0} certbot/certbot" -f "") #TODO: qFlag
-        $certbotExp = "docker run -it --rm --name certbot -p ${certbotHttpsPort}:443 -p ${certbotHttpPort}:80 " +`
-            "-v ${outputDir}/letsencrypt:/etc/letsencrypt/ certbot/certbot " +`
+        $certbotExp = "docker run -it --rm --name certbot -p ${certbotHttpsPort}:443 -p ${certbotHttpPort}:80 " + `
+            "-v ${outputDir}/letsencrypt:/etc/letsencrypt/ certbot/certbot " + `
             "renew{0} --logs-dir /etc/letsencrypt/logs" -f $qFlag
         Invoke-Expression $certbotExp
     }
@@ -147,8 +155,8 @@ function Update-Lets-Encrypt {
 function Force-Update-Lets-Encrypt {
     if (Test-Path -Path "${outputDir}\letsencrypt\live") {
         Invoke-Expression ("docker pull{0} certbot/certbot" -f "") #TODO: qFlag
-        $certbotExp = "docker run -it --rm --name certbot -p ${certbotHttpsPort}:443 -p ${certbotHttpPort}:80 " +`
-            "-v ${outputDir}/letsencrypt:/etc/letsencrypt/ certbot/certbot " +`
+        $certbotExp = "docker run -it --rm --name certbot -p ${certbotHttpsPort}:443 -p ${certbotHttpPort}:80 " + `
+            "-v ${outputDir}/letsencrypt:/etc/letsencrypt/ certbot/certbot " + `
             "renew{0} --logs-dir /etc/letsencrypt/logs --force-renew" -f $qFlag
         Invoke-Expression $certbotExp
     }
@@ -200,7 +208,7 @@ function Pull-Setup {
 }
 
 function Write-Line($str) {
-    if($env:BITWARDEN_QUIET -ne "true") {
+    if ($env:BITWARDEN_QUIET -ne "true") {
         Write-Host $str
     }
 }
