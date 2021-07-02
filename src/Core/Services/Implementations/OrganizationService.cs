@@ -1061,7 +1061,7 @@ namespace Bit.Core.Services
             {
                 foreach (var type in inviteTypes)
                 {
-                    ValidateOrganizationUserUpdatePermissions(organizationId, type, null);
+                    await ValidateOrganizationUserUpdatePermissions(organizationId, type, null);
                 }
             }
 
@@ -1168,7 +1168,7 @@ namespace Bit.Core.Services
 
             if (invitingUserId.HasValue && invite.Type.HasValue)
             {
-                ValidateOrganizationUserUpdatePermissions(organizationId, invite.Type.Value, null);
+                await ValidateOrganizationUserUpdatePermissions(organizationId, invite.Type.Value, null);
             }
 
             if (organization.Seats.HasValue)
@@ -1542,7 +1542,7 @@ namespace Bit.Core.Services
 
             if (savingUserId.HasValue)
             {
-                ValidateOrganizationUserUpdatePermissions(user.OrganizationId, user.Type, originalUser.Type);
+                await ValidateOrganizationUserUpdatePermissions(user.OrganizationId, user.Type, originalUser.Type);
             }
 
             if (user.Type != OrganizationUserType.Owner &&
@@ -1574,7 +1574,7 @@ namespace Bit.Core.Services
             }
 
             if (orgUser.Type == OrganizationUserType.Owner && deletingUserId.HasValue &&
-                !_currentContext.OrganizationOwner(organizationId))
+                !await _currentContext.OrganizationOwner(organizationId))
             {
                 throw new BadRequestException("Only owners can delete other owners.");
             }
@@ -1636,7 +1636,7 @@ namespace Bit.Core.Services
             var deletingUserIsOwner = false;
             if (deletingUserId.HasValue)
             {
-                deletingUserIsOwner = _currentContext.OrganizationOwner(organizationId);
+                deletingUserIsOwner = await _currentContext.OrganizationOwner(organizationId);
             }
 
             var result = new List<Tuple<OrganizationUser, string>>();
@@ -1686,7 +1686,7 @@ namespace Bit.Core.Services
         {
             if (loggedInUserId.HasValue)
             {
-                ValidateOrganizationUserUpdatePermissions(organizationUser.OrganizationId, organizationUser.Type, null);
+                await ValidateOrganizationUserUpdatePermissions(organizationUser.OrganizationId, organizationUser.Type, null);
             }
             await _organizationUserRepository.UpdateGroupsAsync(organizationUser.Id, groupIds);
             await _eventService.LogOrganizationUserEventAsync(organizationUser,
@@ -1971,7 +1971,7 @@ namespace Bit.Core.Services
 
         public async Task<Organization> UpdateOrganizationKeysAsync(Guid orgId, string publicKey, string privateKey)
         {
-            if (_currentContext.ManageResetPassword(orgId))
+            if (await _currentContext.ManageResetPassword(orgId))
             {
                 throw new UnauthorizedAccessException();
             }
@@ -2082,10 +2082,10 @@ namespace Bit.Core.Services
             }
         }
 
-        private void ValidateOrganizationUserUpdatePermissions(Guid organizationId, OrganizationUserType newType,
+        private async Task ValidateOrganizationUserUpdatePermissions(Guid organizationId, OrganizationUserType newType,
             OrganizationUserType? oldType)
         {
-            if (_currentContext.OrganizationOwner(organizationId))
+            if (await _currentContext.OrganizationOwner(organizationId))
             {
                 return;
             }
@@ -2095,7 +2095,7 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Only an Owner can configure another Owner's account.");
             }
 
-            if (_currentContext.OrganizationAdmin(organizationId))
+            if (await _currentContext.OrganizationAdmin(organizationId))
             {
                 return;
             }
@@ -2105,7 +2105,7 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Only Owners and Admins can configure Custom accounts.");
             }
 
-            if (!_currentContext.ManageUsers(organizationId))
+            if (!await _currentContext.ManageUsers(organizationId))
             {
                 throw new BadRequestException("Your account does not have permission to manage users.");
             }

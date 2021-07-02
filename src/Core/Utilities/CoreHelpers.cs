@@ -24,6 +24,7 @@ using Bit.Core.Models.Table;
 using IdentityModel;
 using System.Text.Json;
 using Bit.Core.Enums.Provider;
+using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace Bit.Core.Utilities
 {
@@ -739,8 +740,7 @@ namespace Bit.Core.Utilities
         }
 
         public static List<KeyValuePair<string, string>> BuildIdentityClaims(User user, ICollection<CurrentContentOrganization> orgs,
-            ICollection<CurrentContentProvider> providers, ICollection<CurrentContentProviderOrganization> providerOrganizations,
-            bool isPremium)
+            ICollection<CurrentContentProvider> providers, bool isPremium)
         {
             var claims = new List<KeyValuePair<string, string>>()
             {
@@ -875,14 +875,6 @@ namespace Bit.Core.Utilities
                 }
             }
 
-            if (providerOrganizations.Any())
-            {
-                foreach (var po in providerOrganizations)
-                {
-                    claims.Add(new KeyValuePair<string, string>("providerorguser", po.OrganizationId.ToString()));
-                }
-            }
-            
             return claims;
         }
 

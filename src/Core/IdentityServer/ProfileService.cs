@@ -50,8 +50,7 @@ namespace Bit.Core.IdentityServer
                 var isPremium = await _licensingService.ValidateUserPremiumAsync(user);
                 var orgs = await _currentContext.OrganizationMembershipAsync(_organizationUserRepository, user.Id);
                 var providers = await _currentContext.ProviderMembershipAsync(_providerUserRepository, user.Id);
-                var providerOrganizations = await _currentContext.ProviderOrganizationMembershipAsync(_providerOrganizationRepository, user.Id);
-                foreach (var claim in CoreHelpers.BuildIdentityClaims(user, orgs, providers, providerOrganizations, isPremium))
+                foreach (var claim in CoreHelpers.BuildIdentityClaims(user, orgs, providers, isPremium))
                 {
                     var upperValue = claim.Value.ToUpperInvariant();
                     var isBool = upperValue == "TRUE" || upperValue == "FALSE";
