@@ -23,7 +23,8 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
                 from p in p_g.DefaultIfEmpty()
                 where pu.UserId == _userId && (_status == null || pu.Status == _status)
                 select new { pu, p };
-            return query.Select(x => new ProviderUserProviderDetails() {
+            return query.Select(x => new ProviderUserProviderDetails() 
+            {
                 UserId = x.pu.UserId,
                 ProviderId = x.pu.ProviderId,
                 Name =  x.p.Name,

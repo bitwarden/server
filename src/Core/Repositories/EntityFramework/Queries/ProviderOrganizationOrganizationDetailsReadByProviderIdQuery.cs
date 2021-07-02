@@ -19,7 +19,8 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
                     on po.OrganizationId equals o.Id
                 where po.ProviderId == _providerId
                 select new { po, o };
-            return query.Select(x => new ProviderOrganizationOrganizationDetails() {
+            return query.Select(x => new ProviderOrganizationOrganizationDetails() 
+            {
                 Id = x.po.Id,
                 ProviderId = x.po.ProviderId,
                 OrganizationId  = x.po.OrganizationId,
@@ -27,7 +28,7 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
                 Key = x.po.Key,
                 Settings = x.po.Settings,
                 CreationDate = x.po.CreationDate,
-                RevisionDate = x.po.RevisionDate
+                RevisionDate = x.po.RevisionDate,
             });
         }
     }

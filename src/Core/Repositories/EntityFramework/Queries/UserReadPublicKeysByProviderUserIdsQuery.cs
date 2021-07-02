@@ -31,7 +31,7 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
             return query.Select(x => new ProviderUserPublicKey
             {
                 Id = x.pu.Id,
-                PublicKey = x.u.PublicKey
+                PublicKey = x.u.PublicKey,
             });
         }
     }
