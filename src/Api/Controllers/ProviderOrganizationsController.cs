@@ -70,6 +70,11 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
+            if (!_currentContext.ManageProviderOrganizations(providerId))
+            {
+                throw new NotFoundException();
+            }
+
             var plan = StaticStore.Plans.FirstOrDefault(plan => plan.Type == model.PlanType);
             if (!(plan is {LegacyYear: null}))
             {
