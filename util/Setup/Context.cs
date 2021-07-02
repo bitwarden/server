@@ -149,6 +149,7 @@ namespace Bit.Setup
             public bool SelfSignedCert { get; set; }
             public string IdentityCertPassword { get; set; }
             public string Domain { get; set; }
+            public string Database { get; set; }
         }
     }
 }
