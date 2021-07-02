@@ -314,10 +314,12 @@ jobs:
           cd docker-stub; zip -r ../docker-stub.zip *; cd ..
 
       - name: Upload Docker stub artifact
+        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc'
         uses: actions/upload-artifact@ee69f02b3dfdecd58bb31b4d133da38ba6fe3700
         with:
           name: docker-stub.zip
           path: ./docker-stub.zip
+          if-no-files-found: error
 
       - name: Build Swagger
         run: |
@@ -341,3 +343,4 @@ jobs:
         with:
           name: swagger.json
           path: ./swagger.json
+          if-no-files-found: error
