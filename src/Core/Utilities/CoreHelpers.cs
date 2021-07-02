@@ -24,7 +24,6 @@ using Bit.Core.Models.Table;
 using IdentityModel;
 using System.Text.Json;
 using Bit.Core.Enums.Provider;
-using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace Bit.Core.Utilities
 {
@@ -874,7 +873,7 @@ namespace Bit.Core.Utilities
                     }
                 }
             }
-
+            
             return claims;
         }
 

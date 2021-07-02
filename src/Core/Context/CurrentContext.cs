@@ -249,13 +249,12 @@ namespace Bit.Core.Context
         public async Task<bool> OrganizationAdmin(Guid orgId)
         {
             return await OrganizationOwner(orgId) ||
-                   (Organizations?.Any(o => o.Id == orgId && (o.Type == OrganizationUserType.Admin)) ?? false);
+                   (Organizations?.Any(o => o.Id == orgId && o.Type == OrganizationUserType.Admin) ?? false);
         }
 
         public async Task<bool> OrganizationOwner(Guid orgId)
         {
-            var owner = Organizations?.Any(o => o.Id == orgId && o.Type == OrganizationUserType.Owner) ?? false;
-            if (owner)
+            if (Organizations?.Any(o => o.Id == orgId && o.Type == OrganizationUserType.Owner) ?? false)
             {
                 return true;
             }
