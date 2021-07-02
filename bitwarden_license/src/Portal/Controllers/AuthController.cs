@@ -2,17 +2,21 @@
 using Bit.Portal.Utilities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Bit.Core.Settings;
 
 namespace Bit.Portal.Controllers
 {
     public class AuthController : Controller
     {
         private readonly EnterprisePortalTokenSignInManager _signInManager;
+        private readonly GlobalSettings _globalSettings;
 
         public AuthController(
-            EnterprisePortalTokenSignInManager signInManager)
+            EnterprisePortalTokenSignInManager signInManager,
+            GlobalSettings globalSettings)
         {
             _signInManager = signInManager;
+            _globalSettings = globalSettings;
         }
 
         [HttpGet("~/login")]
@@ -58,6 +62,13 @@ namespace Bit.Portal.Controllers
         public IActionResult AccessDenied()
         {
             return View();
+        }
+
+        [HttpGet("~/vault")]
+        public async Task<RedirectResult> Vault()
+        {
+            await _signInManager.SignOutAsync();
+            return Redirect(_globalSettings.BaseServiceUri.Vault);
         }
     }
 }
