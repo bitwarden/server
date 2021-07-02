@@ -12,11 +12,13 @@ using Microsoft.Extensions.Logging;
 using Azure.Storage.Queues;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Bit.Core.Utilities;
 
 namespace Bit.EventsProcessor
 {
     public class AzureQueueHostedService : IHostedService, IDisposable
     {
+        private readonly JsonSerializer _jsonSerializer;
         private readonly ILogger<AzureQueueHostedService> _logger;
         private readonly IConfiguration _configuration;
 
@@ -31,6 +33,11 @@ namespace Bit.EventsProcessor
         {
             _logger = logger;
             _configuration = configuration;
+
+            _jsonSerializer = JsonSerializer.Create(new JsonSerializerSettings
+            {
+                Converters = new[] { new EncodedStringConverter() },
+            });
         }
 
         public Task StartAsync(CancellationToken cancellationToken)
@@ -111,7 +118,7 @@ namespace Bit.EventsProcessor
                 var token = JToken.Parse(message);
                 if (token is JArray)
                 {
-                    var indexedEntities = token.ToObject<List<EventMessage>>()
+                    var indexedEntities = token.ToObject<List<EventMessage>>(_jsonSerializer)
                         .SelectMany(e => EventTableEntity.IndexEvent(e));
                     events.AddRange(indexedEntities);
                 }
