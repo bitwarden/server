@@ -24,6 +24,7 @@ using Bit.Core.Models.Table;
 using IdentityModel;
 using System.Text.Json;
 using Bit.Core.Enums.Provider;
+using Newtonsoft.Json.Linq;
 
 namespace Bit.Core.Utilities
 {
@@ -875,6 +876,11 @@ namespace Bit.Core.Utilities
             }
             
             return claims;
+        }
+
+        public static JProperty GetJProperty(JObject obj, string name)
+        {
+            return obj.Properties().FirstOrDefault(p => string.Equals(name, p.Name, StringComparison.InvariantCultureIgnoreCase));
         }
 
         public static T LoadClassFromJsonData<T>(string jsonData) where T : new()

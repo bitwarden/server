@@ -1,9 +1,10 @@
 using System;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace Bit.Core.Utilities
 {
-    public class EncodedStringConverter : JsonConverter
+    public class EncodedStringConverter : CircularJsonConverter
     {
         public override bool CanConvert(Type objectType) => objectType == typeof(string);
 
@@ -13,9 +14,16 @@ namespace Bit.Core.Utilities
             {
                 return existingValue;
             }
+            else if (reader.TokenType == JsonToken.String)
+            {
+                return reader.Value.ToString();
+            }
 
-            var value = reader.Value as string;
-            return System.Net.WebUtility.HtmlDecode(value);
+            var o = JObject.Load(reader);
+            var property = CoreHelpers.GetJProperty(o, nameof(EncodedString.v));
+
+            var value = property.Value.ToString();
+            return CoreHelpers.Base64DecodeString(value);
         }
 
         public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
@@ -29,7 +37,15 @@ namespace Bit.Core.Utilities
                 return;
             }
 
-            writer.WriteValue(System.Net.WebUtility.HtmlEncode((string)value));
+            RemoveConverterAndAct(serializer, () =>
+            {
+                serializer.Serialize(writer, new EncodedString { v = CoreHelpers.Base64EncodeString((string)value) });
+            });
         }
+    }
+
+    public class EncodedString
+    {
+        public string v { get; set; }
     }
 }
