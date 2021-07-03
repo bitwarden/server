@@ -38,7 +38,7 @@ namespace Bit.Admin.HostedServices
 
             _jsonSerializer = JsonSerializer.Create(new JsonSerializerSettings
             {
-                Converters = new[] { new EncodedStringConverter() },
+                Converters = new JsonConverter[] { new MailQueueMessageConverter(), new EncodedStringConverter() }
             });
         }
 
@@ -79,14 +79,14 @@ namespace Bit.Admin.HostedServices
                         var token = JToken.Parse(message.MessageText);
                         if (token is JArray)
                         {
-                            foreach (var mailQueueMessage in token.ToObject<List<MailQueueMessage>>(_jsonSerializer))
+                            foreach (var mailQueueMessage in token.ToObject<List<IMailQueueMessage>>(_jsonSerializer))
                             {
                                 await _mailService.SendEnqueuedMailMessageAsync(mailQueueMessage);
                             }
                         }
                         else if (token is JObject)
                         {
-                            var mailQueueMessage = token.ToObject<MailQueueMessage>();
+                            var mailQueueMessage = token.ToObject<IMailQueueMessage>();
                             await _mailService.SendEnqueuedMailMessageAsync(mailQueueMessage);
                         }
                     }
