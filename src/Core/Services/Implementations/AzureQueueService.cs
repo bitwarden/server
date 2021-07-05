@@ -17,10 +17,6 @@ namespace Bit.Core.Services
         {
             _queueClient = queueClient;
             _jsonSettings = jsonSettings;
-            if (!_jsonSettings.Converters.Any(c => c.GetType() == typeof(EncodedStringConverter)))
-            {
-                _jsonSettings.Converters.Add(new EncodedStringConverter());
-            }
         }
 
         public async Task CreateAsync(T message) => await CreateManyAsync(new[] { message });
@@ -41,23 +37,22 @@ namespace Bit.Core.Services
 
         private IEnumerable<string> SerializeMany(IEnumerable<T> messages)
         {
-            string SerializeMessage(T message) => JsonConvert.SerializeObject(message, _jsonSettings);
+            string SerializeMessage(T message) => CoreHelpers.Base64EncodeString(JsonConvert.SerializeObject(message, _jsonSettings));
 
-            var messagesLists = new List<List<T>> { new List<T>() };
+            var messagesLists = new List<List<string>> { new List<string>() };
             var strings = new List<string>();
             var ListMessageLength = 2; // to account for json array brackets "[]"
-            foreach (var (message, jsonEvent) in messages.Select(m => (m, SerializeMessage(m))))
+            foreach (var encodedMessage in messages.Select(SerializeMessage))
             {
-
-                var messageLength = jsonEvent.Length + 1; // To account for json array comma
+                var messageLength = encodedMessage.Length + 3; // To account for json array comma and quotation marks
                 if (ListMessageLength + messageLength > _queueClient.MessageMaxBytes)
                 {
-                    messagesLists.Add(new List<T> { message });
+                    messagesLists.Add(new List<string> { encodedMessage });
                     ListMessageLength = 2 + messageLength;
                 }
                 else
                 {
-                    messagesLists.Last().Add(message);
+                    messagesLists.Last().Add(encodedMessage);
                     ListMessageLength += messageLength;
                 }
             }
