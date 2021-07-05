@@ -23,7 +23,7 @@ namespace Bit.Core.Models.Table
         public string BillingEmail { get; set; }
         public string Plan { get; set; }
         public PlanType PlanType { get; set; }
-        public short? Seats { get; set; }
+        public int? Seats { get; set; }
         public short? MaxCollections { get; set; }
         public bool UsePolicies { get; set; }
         public bool UseSso { get; set; }
@@ -33,6 +33,7 @@ namespace Bit.Core.Models.Table
         public bool UseTotp { get; set; }
         public bool Use2fa { get; set; }
         public bool UseApi { get; set; }
+        public bool UseResetPassword { get; set; }
         public bool SelfHost { get; set; }
         public bool UsersGetPremium { get; set; }
         public long? Storage { get; set; }
@@ -44,6 +45,8 @@ namespace Bit.Core.Models.Table
         public bool Enabled { get; set; } = true;
         public string LicenseKey { get; set; }
         public string ApiKey { get; set; }
+        public string PublicKey { get; set; }
+        public string PrivateKey { get; set; }
         public string TwoFactorProviders { get; set; }
         public DateTime? ExpirationDate { get; set; }
         public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;

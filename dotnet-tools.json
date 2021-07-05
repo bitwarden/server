@@ -7,6 +7,18 @@
       "commands": [
         "swagger"
       ]
+    },
+    "coverlet.console": {
+      "version": "3.0.3",
+      "commands": [
+        "coverlet"
+      ]
+    },
+    "dotnet-reportgenerator-globaltool": {
+      "version": "4.8.8",
+      "commands": [
+        "reportgenerator"
+      ]
     }
   }
 }

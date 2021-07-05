@@ -9,6 +9,8 @@ using System.Net;
 using Bit.Core.Utilities;
 using System.Linq;
 using System.Reflection;
+using Bit.Core.Models.Mail.Provider;
+using Bit.Core.Models.Table.Provider;
 using HandlebarsDotNet;
 
 namespace Bit.Core.Services
@@ -19,6 +21,7 @@ namespace Bit.Core.Services
 
         private readonly GlobalSettings _globalSettings;
         private readonly IMailDeliveryService _mailDeliveryService;
+        private readonly IMailEnqueuingService _mailEnqueuingService;
         private readonly Dictionary<string, Func<object, string>> _templateCache =
             new Dictionary<string, Func<object, string>>();
 
@@ -26,10 +29,12 @@ namespace Bit.Core.Services
 
         public HandlebarsMailService(
             GlobalSettings globalSettings,
-            IMailDeliveryService mailDeliveryService)
+            IMailDeliveryService mailDeliveryService,
+            IMailEnqueuingService mailEnqueuingService)
         {
             _globalSettings = globalSettings;
             _mailDeliveryService = mailDeliveryService;
+            _mailEnqueuingService = mailEnqueuingService;
         }
 
         public async Task SendVerifyEmailEmailAsync(string email, Guid userId, string token)
@@ -168,23 +173,32 @@ namespace Bit.Core.Services
             await _mailDeliveryService.SendEmailAsync(message);
         }
 
-        public async Task SendOrganizationInviteEmailAsync(string organizationName, OrganizationUser orgUser, string token)
+        public Task SendOrganizationInviteEmailAsync(string organizationName, OrganizationUser orgUser, string token) =>
+            BulkSendOrganizationInviteEmailAsync(organizationName, new[] { (orgUser, token) });
+
+        public async Task BulkSendOrganizationInviteEmailAsync(string organizationName, IEnumerable<(OrganizationUser orgUser, string token)> invites)
         {
-            var message = CreateDefaultMessage($"Join {organizationName}", orgUser.Email);
-            var model = new OrganizationUserInvitedViewModel
+            MailQueueMessage CreateMessage(string email, object model)
             {
-                OrganizationName = CoreHelpers.SanitizeForEmail(organizationName),
-                Email = WebUtility.UrlEncode(orgUser.Email),
-                OrganizationId = orgUser.OrganizationId.ToString(),
-                OrganizationUserId = orgUser.Id.ToString(),
-                Token = WebUtility.UrlEncode(token),
-                OrganizationNameUrlEncoded = WebUtility.UrlEncode(organizationName),
-                WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
-                SiteName = _globalSettings.SiteName
-            };
-            await AddMessageContentAsync(message, "OrganizationUserInvited", model);
-            message.Category = "OrganizationUserInvited";
-            await _mailDeliveryService.SendEmailAsync(message);
+                var message = CreateDefaultMessage($"Join {organizationName}", email);
+                return new MailQueueMessage(message, "OrganizationUserInvited", model);
+            }
+
+            var messageModels = invites.Select(invite => CreateMessage(invite.orgUser.Email,
+                new OrganizationUserInvitedViewModel
+                {
+                    OrganizationName = CoreHelpers.SanitizeForEmail(organizationName),
+                    Email = WebUtility.UrlEncode(invite.orgUser.Email),
+                    OrganizationId = invite.orgUser.OrganizationId.ToString(),
+                    OrganizationUserId = invite.orgUser.Id.ToString(),
+                    Token = WebUtility.UrlEncode(invite.token),
+                    OrganizationNameUrlEncoded = WebUtility.UrlEncode(organizationName),
+                    WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+                    SiteName = _globalSettings.SiteName,
+                }
+            ));
+
+            await EnqueueMailAsync(messageModels);
         }
 
         public async Task SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(string organizationName, string email)
@@ -340,6 +354,34 @@ namespace Bit.Core.Services
             message.Category = "OrganizationUserRemovedForPolicySingleOrg";
             await _mailDeliveryService.SendEmailAsync(message);
         }
+
+        public async Task SendEnqueuedMailMessageAsync(IMailQueueMessage queueMessage)
+        {
+            var message = CreateDefaultMessage(queueMessage.Subject, queueMessage.ToEmails);
+            message.BccEmails = queueMessage.BccEmails;
+            message.Category = queueMessage.Category;
+            await AddMessageContentAsync(message, queueMessage.TemplateName, queueMessage.Model);
+            await _mailDeliveryService.SendEmailAsync(message);
+        }
+        
+        public async Task SendAdminResetPasswordEmailAsync(string email, string userName, string orgName)
+        {
+            var message = CreateDefaultMessage("Master Password Has Been Changed", email);
+            var model = new AdminResetPasswordViewModel()
+            {
+                UserName = CoreHelpers.SanitizeForEmail(userName),
+                OrgName = CoreHelpers.SanitizeForEmail(orgName),
+            };
+            await AddMessageContentAsync(message, "AdminResetPassword", model);
+            message.Category = "AdminResetPassword";
+            await _mailDeliveryService.SendEmailAsync(message);
+        }
+
+        private Task EnqueueMailAsync(IMailQueueMessage queueMessage) =>
+            _mailEnqueuingService.EnqueueAsync(queueMessage, SendEnqueuedMailMessageAsync);
+
+        private Task EnqueueMailAsync(IEnumerable<IMailQueueMessage> queueMessages) =>
+            _mailEnqueuingService.EnqueueManyAsync(queueMessages, SendEnqueuedMailMessageAsync);
 
         private MailMessage CreateDefaultMessage(string subject, string toEmail)
         {
@@ -604,6 +646,55 @@ namespace Bit.Core.Services
             };
             await AddMessageContentAsync(message, "EmergencyAccessRecoveryTimedOut", model);
             message.Category = "EmergencyAccessRecoveryTimedOut";
+            await _mailDeliveryService.SendEmailAsync(message);
+        }
+        
+        public async Task SendProviderSetupInviteEmailAsync(Provider provider, string token, string email)
+        {
+            var message = CreateDefaultMessage($"Create a Provider", email);
+            var model = new ProviderSetupInviteViewModel
+            {
+                WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+                SiteName = _globalSettings.SiteName,
+                ProviderId = provider.Id.ToString(),
+                Email = email,
+                Token = token,
+            };
+            await AddMessageContentAsync(message, "Provider.ProviderSetupInvite", model);
+            message.Category = "ProviderSetupInvite";
+            await _mailDeliveryService.SendEmailAsync(message);
+        }
+
+        public async Task SendProviderInviteEmailAsync(string providerName, ProviderUser providerUser, string token, string email)
+        {
+            var message = CreateDefaultMessage($"Join {providerName}", email);
+            var model = new ProviderUserInvitedViewModel
+            {
+                ProviderName = CoreHelpers.SanitizeForEmail(providerName),
+                Email = WebUtility.UrlDecode(providerUser.Email),
+                ProviderId = providerUser.ProviderId.ToString(),
+                ProviderUserId = providerUser.Id.ToString(),
+                ProviderNameUrlEncoded = WebUtility.UrlEncode(providerName),
+                Token = token,
+                WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+                SiteName = _globalSettings.SiteName,
+            };
+            await AddMessageContentAsync(message, "Provider.ProviderUserInvited", model);
+            message.Category = "ProviderSetupInvite";
+            await _mailDeliveryService.SendEmailAsync(message);
+        }
+
+        public async Task SendProviderConfirmedEmailAsync(string providerName, string email)
+        {
+            var message = CreateDefaultMessage($"You Have Been Confirmed To {providerName}", email);
+            var model = new ProviderUserConfirmedViewModel
+            {
+                ProviderName = CoreHelpers.SanitizeForEmail(providerName),
+                WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+                SiteName = _globalSettings.SiteName
+            };
+            await AddMessageContentAsync(message, "Provider.ProviderUserConfirmed", model);
+            message.Category = "ProviderUserConfirmed";
             await _mailDeliveryService.SendEmailAsync(message);
         }
     }

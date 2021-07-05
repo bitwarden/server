@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Security.Claims;
 using System.Threading.Tasks;
@@ -21,6 +21,9 @@ namespace Bit.Core.Context
         List<CurrentContentOrganization> Organizations { get; set; }
         Guid? InstallationId { get; set; }
         Guid? OrganizationId { get; set; }
+        bool IsBot { get; set; }
+        bool MaybeBot { get; set; }
+        int? BotScore { get; set; }
 
         Task BuildAsync(HttpContext httpContext, GlobalSettings globalSettings);
         Task BuildAsync(ClaimsPrincipal user, GlobalSettings globalSettings);
@@ -44,8 +47,16 @@ namespace Bit.Core.Context
         bool ManageSso(Guid orgId);
         bool ManageUsers(Guid orgId);
         bool ManageResetPassword(Guid orgId);
+        bool ProviderProviderAdmin(Guid providerId);
+        bool ProviderUser(Guid providerId);
+        bool ManageProviderUsers(Guid providerId);
+        bool AccessProviderOrganizations(Guid providerId);
+        bool ManageProviderOrganizations(Guid providerId);
 
         Task<ICollection<CurrentContentOrganization>> OrganizationMembershipAsync(
             IOrganizationUserRepository organizationUserRepository, Guid userId);
+
+        Task<ICollection<CurrentContentProvider>> ProviderMembershipAsync(
+            IProviderUserRepository providerUserRepository, Guid userId);
     }
 }

@@ -16,9 +16,22 @@ namespace Bit.Core.Repositories.SqlServer
 {
     public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IOrganizationUserRepository
     {
+        /// <summary>
+        /// For use with methods with TDS stream issues.
+        /// This has been observed in Linux-hosted SqlServers with large table-valued-parameters
+        /// https://github.com/dotnet/SqlClient/issues/54
+        /// </summary>
+        private string _marsConnectionString;
+
         public OrganizationUserRepository(GlobalSettings globalSettings)
             : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
-        { }
+        {
+            var builder = new SqlConnectionStringBuilder(ConnectionString)
+            {
+                MultipleActiveResultSets = true,
+            };
+            _marsConnectionString = builder.ToString();
+        }
 
         public OrganizationUserRepository(string connectionString, string readOnlyConnectionString)
             : base(connectionString, readOnlyConnectionString)
@@ -73,6 +86,22 @@ namespace Bit.Core.Repositories.SqlServer
                     commandType: CommandType.StoredProcedure);
 
                 return result;
+            }
+        }
+
+        public async Task<ICollection<string>> SelectKnownEmailsAsync(Guid organizationId, IEnumerable<string> emails,
+            bool onlyRegisteredUsers)
+        {
+            var emailsTvp = emails.ToArrayTVP("Email");
+            using (var connection = new SqlConnection(_marsConnectionString))
+            {
+                var result = await connection.QueryAsync<string>(
+                    "[dbo].[OrganizationUser_SelectKnownEmails]",
+                    new { OrganizationId = organizationId, Emails = emailsTvp, OnlyUsers = onlyRegisteredUsers },
+                    commandType: CommandType.StoredProcedure);
+
+                // Return as a list to avoid timing out the sql connection
+                return result.ToList();
             }
         }
 
@@ -260,6 +289,19 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
         
+        public async Task<ICollection<OrganizationUser>> GetManyAsync(IEnumerable<Guid> Ids)
+        {
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<OrganizationUser>(
+                    "[dbo].[OrganizationUser_ReadByIds]",
+                    new { Ids = Ids.ToGuidIdArrayTVP() },
+                    commandType: CommandType.StoredProcedure);
+
+                return results.ToList();
+            }
+        }
+        
         public async Task<OrganizationUser> GetByOrganizationEmailAsync(Guid organizationId, string email)
         {
             using (var connection = new SqlConnection(ConnectionString))
@@ -270,6 +312,88 @@ namespace Bit.Core.Repositories.SqlServer
                     commandType: CommandType.StoredProcedure);
 
                 return results.SingleOrDefault();
+            }
+        }
+
+        public async Task DeleteManyAsync(IEnumerable<Guid> organizationUserIds)
+        {
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                await connection.ExecuteAsync("[dbo].[OrganizationUser_DeleteByIds]",
+                    new { Ids = organizationUserIds.ToGuidIdArrayTVP() }, commandType: CommandType.StoredProcedure);
+            }
+        }
+
+        public async Task UpsertManyAsync(IEnumerable<OrganizationUser> organizationUsers)
+        {
+            var createUsers = new List<OrganizationUser>();
+            var replaceUsers = new List<OrganizationUser>();
+            foreach (var organizationUser in organizationUsers)
+            {
+                if (organizationUser.Id.Equals(default))
+                {
+                    createUsers.Add(organizationUser);
+                }
+                else
+                {
+                    replaceUsers.Add(organizationUser);
+                }
+            }
+
+            await CreateManyAsync(createUsers);
+            await ReplaceManyAsync(replaceUsers);
+        }
+
+        public async Task CreateManyAsync(IEnumerable<OrganizationUser> organizationUsers)
+        {
+            if (!organizationUsers.Any())
+            {
+                return;
+            }
+
+            foreach(var organizationUser in organizationUsers)
+            {
+                organizationUser.SetNewId();
+            }
+
+            var orgUsersTVP = organizationUsers.ToTvp();
+            using (var connection = new SqlConnection(_marsConnectionString))
+            {
+                var results = await connection.ExecuteAsync(
+                    $"[{Schema}].[{Table}_CreateMany]",
+                    new { OrganizationUsersInput = orgUsersTVP },
+                    commandType: CommandType.StoredProcedure);
+            }
+        }
+
+        public async Task ReplaceManyAsync(IEnumerable<OrganizationUser> organizationUsers)
+        {
+            if (!organizationUsers.Any())
+            {
+                return;
+            }
+
+            var orgUsersTVP = organizationUsers.ToTvp();
+            using (var connection = new SqlConnection(_marsConnectionString))
+            {
+                var results = await connection.ExecuteAsync(
+                    $"[{Schema}].[{Table}_UpdateMany]",
+                    new { OrganizationUsersInput = orgUsersTVP },
+                    commandType: CommandType.StoredProcedure);
+            }
+        }
+
+        public async Task<IEnumerable<OrganizationUserPublicKey>> GetManyPublicKeysByOrganizationUserAsync(
+            Guid organizationId, IEnumerable<Guid> Ids)
+        {
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<OrganizationUserPublicKey>(
+                    "[dbo].[User_ReadPublicKeysByOrganizationUserIds]",
+                    new { OrganizationId = organizationId, OrganizationUserIds = Ids.ToGuidIdArrayTVP() },
+                    commandType: CommandType.StoredProcedure);
+
+                return results.ToList();
             }
         }
     }

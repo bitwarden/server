@@ -23,6 +23,7 @@ using Microsoft.Azure.Storage.Blob;
 using Bit.Core.Models.Table;
 using IdentityModel;
 using System.Text.Json;
+using Bit.Core.Enums.Provider;
 
 namespace Bit.Core.Utilities
 {
@@ -143,6 +144,55 @@ namespace Bit.Core.Utilities
                     row[hidePasswordsColumn] = value.HidePasswords;
                     table.Rows.Add(row);
                 }
+            }
+
+            return table;
+        }
+
+        public static DataTable ToTvp(this IEnumerable<OrganizationUser> orgUsers)
+        {
+            var table = new DataTable();
+            table.SetTypeName("[dbo].[OrganizationUserType]");
+
+            var columnData = new List<(string name, Type type, Func<OrganizationUser, object> getter)>
+            {
+                (nameof(OrganizationUser.Id), typeof(Guid), ou => ou.Id),
+                (nameof(OrganizationUser.OrganizationId), typeof(Guid), ou => ou.OrganizationId),
+                (nameof(OrganizationUser.UserId), typeof(Guid), ou => ou.UserId),
+                (nameof(OrganizationUser.Email), typeof(string), ou => ou.Email),
+                (nameof(OrganizationUser.Key), typeof(string), ou => ou.Key),
+                (nameof(OrganizationUser.Status), typeof(byte), ou => ou.Status),
+                (nameof(OrganizationUser.Type), typeof(byte), ou => ou.Type),
+                (nameof(OrganizationUser.AccessAll), typeof(bool), ou => ou.AccessAll),
+                (nameof(OrganizationUser.ExternalId), typeof(string), ou => ou.ExternalId),
+                (nameof(OrganizationUser.CreationDate), typeof(DateTime), ou => ou.CreationDate),
+                (nameof(OrganizationUser.RevisionDate), typeof(DateTime), ou => ou.RevisionDate),
+                (nameof(OrganizationUser.Permissions), typeof(string), ou => ou.Permissions),
+                (nameof(OrganizationUser.ResetPasswordKey), typeof(string), ou => ou.ResetPasswordKey),
+            };
+
+            foreach (var (name, type, getter) in columnData)
+            {
+                var column = new DataColumn(name, type);
+                table.Columns.Add(column);
+            }
+
+            foreach (var orgUser in orgUsers ?? new OrganizationUser[] { })
+            {
+                var row = table.NewRow();
+                foreach (var (name, type, getter) in columnData)
+                {
+                    var val = getter(orgUser);
+                    if (val == null)
+                    {
+                        row[name] = DBNull.Value;
+                    }
+                    else
+                    {
+                        row[name] = val;
+                    }
+                }
+                table.Rows.Add(row);
             }
 
             return table;
@@ -688,7 +738,8 @@ namespace Bit.Core.Utilities
             return configDict;
         }
 
-        public static List<KeyValuePair<string, string>> BuildIdentityClaims(User user, ICollection<CurrentContentOrganization> orgs, bool isPremium)
+        public static List<KeyValuePair<string, string>> BuildIdentityClaims(User user, ICollection<CurrentContentOrganization> orgs,
+            ICollection<CurrentContentProvider> providers, bool isPremium)
         {
             var claims = new List<KeyValuePair<string, string>>()
             {
@@ -800,6 +851,29 @@ namespace Bit.Core.Utilities
                     }
                 }
             }
+            
+            if (providers.Any())
+            {
+                foreach (var group in providers.GroupBy(o => o.Type))
+                {
+                    switch (group.Key)
+                    {
+                        case ProviderUserType.ProviderAdmin:
+                            foreach (var provider in group)
+                            {
+                                claims.Add(new KeyValuePair<string, string>("providerprovideradmin", provider.Id.ToString()));
+                            }
+                            break;
+                        case ProviderUserType.ServiceUser:
+                            foreach (var provider in group)
+                            {
+                                claims.Add(new KeyValuePair<string, string>("providerserviceuser", provider.Id.ToString()));
+                            }
+                            break;
+                    }
+                }
+            }
+            
             return claims;
         }
 

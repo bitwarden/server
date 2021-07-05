@@ -9,14 +9,24 @@ on:
 
 jobs:
   setup:
+    name: Setup
     runs-on: ubuntu-latest
     outputs:
       release_upload_url: ${{ steps.create_release.outputs.upload_url }}
       release_version: ${{ steps.create_tags.outputs.package_version }}
       tag_version: ${{ steps.create_tags.outputs.tag_version }}
     steps:
+      - name: Branch check
+        run: |
+          if [[ "$GITHUB_REF" != "refs/heads/rc" ]]; then
+            echo "==================================="
+            echo "[!] Can only release from rc branch"
+            echo "==================================="
+            exit 1
+          fi
+
       - name: Checkout repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
 
       - name: Create Release Vars
         id: create_tags
@@ -43,18 +53,37 @@ jobs:
 
       - name: Create Draft Release
         id: create_release
-        uses: actions/create-release@v1
+        uses: actions/create-release@0cb9c9b65d5d1901c1f53e5e66eaf4afd303e70e
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ env.RELEASE_TAG_NAME }}
-          release_name: ${{ env.RELEASE_NAME }}
+          release_name: Version ${{ env.RELEASE_NAME }}
           draft: true
           prerelease: false
 
   release:
+    name: Release
     runs-on: ubuntu-latest
     needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        service_name:
+          - admin
+          - api
+          - attachments
+          - events
+          - icons
+          - identity
+          - k8s-proxy
+          - mssql
+          - nginx
+          - notifications
+          - portal
+          - server
+          - setup
+          - sso
     env:
       RELEASE_VERSION: ${{ needs.setup.outputs.release_version }}
       TAG_VERSION: ${{ needs.setup.outputs.tag_version }}
@@ -63,12 +92,8 @@ jobs:
         run: |
           whoami
           docker --version
-          Write-Output "GitHub ref: $env:GITHUB_REF"
-          Write-Output "GitHub event: $env:GITHUB_EVENT"
-        shell: pwsh
-        env:
-          GITHUB_REF: ${{ github.ref }}
-          GITHUB_EVENT: ${{ github.event_name }}
+          echo "GitHub ref: $GITHUB_REF"
+          echo "GitHub event: $GITHUB_EVENT"
 
       - name: Login to Azure
         uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a
@@ -82,24 +107,10 @@ jobs:
           keyvault: "bitwarden-prod-kv"
           secrets: "docker-password, 
                     docker-username,
-                    dct-delegate-repo-passphrase,
-                    dct-delegate-key,
-                    dct-repo-server-key,
-                    dct-repo-attachments-key,
-                    dct-repo-admin-key,
-                    dct-repo-nginx-key,
-                    dct-repo-k8sproxy-key,
-                    dct-repo-sso-key,
-                    dct-repo-api-key,
-                    dct-repo-portal-key,
-                    dct-repo-setup-key,
-                    dct-repo-notifications-key,
-                    dct-repo-events-key,
-                    dct-repo-web-key,
-                    dct-repo-icons-key,
-                    dct-repo-identity-key"
+                    dct-delegate-2-repo-passphrase,
+                    dct-delegate-2-key"
 
-      - name: Log into docker
+      - name: Log into Docker
         if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc'
         run: echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
         env:
@@ -107,126 +118,63 @@ jobs:
           DOCKER_PASSWORD: ${{ steps.retrieve-secrets.outputs.docker-password }}
 
       - name: Setup Docker Trust
+        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc'
         run: |
           mkdir -p ~/.docker/trust/private
 
           echo "$DCT_DELEGATE_KEY" > ~/.docker/trust/private/$DCT_DELEGATION_KEY_ID.key
-          echo "$DCT_REPO_API_KEY" > ~/.docker/trust/private/$DCT_REPO_API_ID.key
-          echo "$DCT_REPO_IDENTITY_KEY" > ~/.docker/trust/private/$DCT_REPO_IDENTITY_ID.key
-          echo "$DCT_REPO_SERVER_KEY" > ~/.docker/trust/private/$DCT_REPO_SERVER_ID.key
-          echo "$DCT_REPO_ATTACHMENTS_KEY" > ~/.docker/trust/private/$DCT_REPO_ATTACHMENTS_ID.key
-          echo "$DCT_REPO_ICONS_KEY" > ~/.docker/trust/private/$DCT_REPO_ICONS_ID.key
-          echo "$DCT_REPO_NOTIFICATIONS_KEY" > ~/.docker/trust/private/$DCT_REPO_NOTIFICATIONS_ID.key
-          echo "$DCT_REPO_EVENTS_KEY" > ~/.docker/trust/private/$DCT_REPO_EVENTS_ID.key
-          echo "$DCT_REPO_ADMIN_KEY" > ~/.docker/trust/private/$DCT_REPO_ADMIN_ID.key
-          echo "$DCT_REPO_NGINX_KEY" > ~/.docker/trust/private/$DCT_REPO_NGINX_ID.key
-          echo "$DCT_REPO_K8SPROXY_KEY" > ~/.docker/trust/private/$DCT_REPO_K8SPROXY_ID.key
-          echo "$DCT_REPO_SSO_KEY" > ~/.docker/trust/private/$DCT_REPO_SSO_ID.key
-          echo "$DCT_REPO_PORTAL_KEY" > ~/.docker/trust/private/$DCT_REPO_PORTAL_ID.key
-          echo "$DCT_REPO_MSSQL_KEY" > ~/.docker/trust/private/$DCT_REPO_MSSQL_ID.key
-          echo "$DCT_REPO_SETUP_KEY" > ~/.docker/trust/private/$DCT_REPO_SETUP_ID.key
         env:
-          DCT_DELEGATION_KEY_ID: "5702b22123e058cbd96a7a43000cb981ae98ef3f2f4aa34138ab3dc1d011e446"
-          DCT_REPO_API_ID: "525fa3e70b84669c9fe489c5a3d0974898d14c0807b19447242c60ed8d4ca766"
-          DCT_REPO_IDENTITY_ID: "084da6ea47ba1c4f34c2870a78a17739cd5df50359d2c2c7616822632df726d3"
-          DCT_REPO_SERVER_ID: "ffbee21a1a71854a1c1310df4f5aded41726dd90d61050a6256168cd9268b1ee"
-          DCT_REPO_ATTACHMENTS_ID: "e40fbcb5b273ad601c00ea905ca326ab68b395f17a46a8530e0ddd7d12bd4240"
-          DCT_REPO_ICONS_ID: "0d3f5c6854610bd3d9b9c0a6851fe525b057976b46cb0f47de3942cf3b0be394"
-          DCT_REPO_NOTIFICATIONS_ID: "1bf8d22352ec65a6c9b9282c454462240e0a1eb78bff03b65b5a4b7887599ab2"
-          DCT_REPO_EVENTS_ID: "1020320052e6247f3c5fbfc2a3bfb0efc7e247f8a5a187dc03f60848359ac7c9"
-          DCT_REPO_ADMIN_ID: "c5d80db8745fcd7a1510c3fba5c65582cfc2453d2b1eeb292abe79eb1351cf5c"
-          DCT_REPO_NGINX_ID: "bf3d3247f5c2be73bbe830cddbae445c29e4fcc9e2fb4b4d39abf86a2740098b"
-          DCT_REPO_K8SPROXY_ID: "bdad34c1202b2bbf8a460b66da08b2c1c1eea5864b29508782c00da145eb1fcd"
-          DCT_REPO_SSO_ID: "97a5f6d29b255ff709ec63faad27c2f76246f006563bf3ecbb71547325c05815"
-          DCT_REPO_PORTAL_ID: "4f358aa0a41c9a6650f5d2f907c2de418df34ddf3ee45e0994be7cc2dcd0b56e"
-          DCT_REPO_MSSQL_ID: "30a44d7efbe48d30ed06abef003d2d8990205dad6a034617cddc03548f8c084e"
-          DCT_REPO_SETUP_ID: "2932fb9c39b7eacf4418c7c9ee4c823f973c426412ddd64d7f9f0b6f940b8428"
-          DCT_DELEGATE_KEY: ${{ steps.retrieve-secrets.outputs.dct-delegate-key }}
-          DCT_REPO_API_KEY: ${{ steps.retrieve-secrets.outputs.dct-repo-api-key }}
-          DCT_REPO_IDENTITY_KEY: ${{ steps.retrieve-secrets.outputs.dct-repo-identity-key }}
-          DCT_REPO_SERVER_KEY: ${{ steps.retrieve-secrets.outputs.dct-repo-server-key }}
-          DCT_REPO_ATTACHMENTS_KEY: ${{ steps.retrieve-secrets.outputs.dct-repo-attachments-key }}
-          DCT_REPO_ICONS_KEY: ${{ steps.retrieve-secrets.outputs.dct-repo-icons-key }}
-          DCT_REPO_NOTIFICATIONS_KEY: ${{ steps.retrieve-secrets.outputs.dct-repo-notifications-key }}
-          DCT_REPO_EVENTS_KEY: ${{ steps.retrieve-secrets.outputs.dct-repo-events-key }}
-          DCT_REPO_ADMIN_KEY: ${{ steps.retrieve-secrets.outputs.dct-repo-admin-key }}
-          DCT_REPO_NGINX_KEY: ${{ steps.retrieve-secrets.outputs.dct-repo-nginx-key }}
-          DCT_REPO_K8SPROXY_KEY: ${{ steps.retrieve-secrets.outputs.dct-repo-k8sproxy-key }}
-          DCT_REPO_SSO_KEY: ${{ steps.retrieve-secrets.outputs.dct-repo-sso-key }}
-          DCT_REPO_PORTAL_KEY: ${{ steps.retrieve-secrets.outputs.dct-repo-portal-key }}
-          DCT_REPO_MSSQL_KEY: ${{ steps.retrieve-secrets.outputs.dct-repo-mssql-key }}
-          DCT_REPO_SETUP_KEY: ${{ steps.retrieve-secrets.outputs.dct-repo-setup-key }}
+          DCT_DELEGATION_KEY_ID: "c9bde8ec820701516491e5e03d3a6354e7bd66d05fa3df2b0062f68b116dc59c"
+          DCT_DELEGATE_KEY: ${{ steps.retrieve-secrets.outputs.dct-delegate-2-key }}
           
       - name: Checkout repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
+
+      - name: Pull Docker images
+        run: |
+          docker pull bitwarden/${{ matrix.service_name }}:rc
+        env:
+          DOCKER_CONTENT_TRUST: 1
+
+      - name: Re-tag Docker images
+        run: |
+          docker tag bitwarden/${{ matrix.service_name }}:rc bitwarden/${{ matrix.service_name }}:latest
+          docker tag bitwarden/${{ matrix.service_name }}:rc bitwarden/${{ matrix.service_name }}:$RELEASE_VERSION
+
+      - name: List Docker images
+        run: docker images
+
+      - name: Push Docker images
+        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc'
+        run: |
+          docker push bitwarden/${{ matrix.service_name }}:latest
+          docker push bitwarden/${{ matrix.service_name }}:$RELEASE_VERSION
+        env:
+          DOCKER_CONTENT_TRUST: 1
+          DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ steps.retrieve-secrets.outputs.dct-delegate-2-repo-passphrase }}
+
+      - name: Log out of Docker
+        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc'
+        run: docker logout
+
+
+  upload:
+    name: Upload
+    runs-on: ubuntu-latest
+    needs: 
+      - setup
+      - release
+    env:
+      RELEASE_VERSION: ${{ needs.setup.outputs.release_version }}
+      TAG_VERSION: ${{ needs.setup.outputs.tag_version }}
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
 
       - name: Restore
         run: dotnet tool restore
 
-      - name: pull docker images
-        run: |
-          docker pull bitwarden/api:rc
-          docker pull bitwarden/identity:rc
-          docker pull bitwarden/server:rc
-          docker pull bitwarden/attachments:rc
-          docker pull bitwarden/icons:rc
-          docker pull bitwarden/notifications:rc
-          docker pull bitwarden/events:rc
-          docker pull bitwarden/admin:rc
-          docker pull bitwarden/nginx:rc
-          docker pull bitwarden/nginx:rc
-          docker pull bitwarden/sso:rc
-          docker pull bitwarden/portal:rc
-          docker pull bitwarden/mssql:rc
-          docker pull bitwarden/setup:rc
-        env:
-          DOCKER_CONTENT_TRUST: 1
-
-
-      - name: re-tag docker images
-        run: |
-          tags=( latest beta ${RELEASE_VERSION} )
-          for TAG in "${tags[@]}"
-          do
-            docker tag bitwarden/api:rc bitwarden/api:$TAG
-            docker tag bitwarden/identity:rc bitwarden/identity:$TAG
-            docker tag bitwarden/server:rc bitwarden/server:$TAG
-            docker tag bitwarden/attachments:rc bitwarden/attachments:$TAG
-            docker tag bitwarden/icons:rc bitwarden/icons:$TAG
-            docker tag bitwarden/notifications:rc bitwarden/notifications:$TAG
-            docker tag bitwarden/events:rc bitwarden/events:$TAG
-            docker tag bitwarden/admin:rc bitwarden/admin:$TAG
-            docker tag bitwarden/nginx:rc bitwarden/nginx:$TAG
-            docker tag bitwarden/nginx:rc bitwarden/k8s-proxy:$TAG
-            docker tag bitwarden/sso:rc bitwarden/sso:$TAG
-            docker tag bitwarden/portal:rc bitwarden/portal:$TAG
-            docker tag bitwarden/mssql:rc bitwarden/mssql:$TAG
-            docker tag bitwarden/setup:rc bitwarden/setup:$TAG
-          done 
-
-      - name: List docker images
-        run: docker images
-
-      - name: Push beta images
-        run: ./build.sh push beta
-        env:
-          DOCKER_CONTENT_TRUST: 1
-          DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ steps.retrieve-secrets.outputs.dct-delegate-repo-passphrase }}
-
-      - name: Push latest images
-        run: ./build.sh push latest
-        env:
-          DOCKER_CONTENT_TRUST: 1
-          DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ steps.retrieve-secrets.outputs.dct-delegate-repo-passphrase }}
-
-      - name: Push version images
-        run: ./build.sh push $($env:$RELEASE_VERSION)
-        shell: pwsh
-        env:
-          DOCKER_CONTENT_TRUST: 1
-          DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ steps.retrieve-secrets.outputs.dct-delegate-repo-passphrase }}
-
-      - name: Make docker stub
+      - name: Make Docker stub
         run: |
           STUB_OUTPUT=$(pwd)/docker-stub
           docker run -i --rm --name setup -v $STUB_OUTPUT:/bitwarden bitwarden/setup:dev \
@@ -237,48 +185,42 @@ jobs:
           touch $STUB_OUTPUT/env/uid.env
           cd docker-stub; zip -r ../docker-stub.zip *; cd ..
 
-      - name: Upload docker stub artifact
-        uses: actions/upload-artifact@v2
+      - name: Upload Docker stub artifact
+        uses: actions/upload-artifact@ee69f02b3dfdecd58bb31b4d133da38ba6fe3700
         with:
           name: docker-stub.zip
           path: ./docker-stub.zip
 
-      - name: Build swagger
+      - name: Build Swagger
         run: |
           cd ./src/Api
           echo "Restore"
-          dotnet restore "Api.csproj"
+          dotnet restore
           echo "Clean"
-          dotnet clean "Api.csproj" -c "Release" -o "obj/Docker/publish/Api"
+          dotnet clean -c "Release" -o obj/build-output/publish
           echo "Publish"
-          dotnet publish "Api.csproj" -c "Release" -o "obj/Docker/publish/Api"
+          dotnet publish -c "Release" -o obj/build-output/publish
 
-          dotnet swagger tofile --output ../../swagger.json --host https://api.bitwarden.com `
-            ./obj/Docker/publish/Api/Api.dll public
+          dotnet swagger tofile --output ../../swagger.json --host https://api.bitwarden.com \
+            ./obj/build-output/publish/Api.dll public
           cd ../..
-        shell: pwsh
         env:
           ASPNETCORE_ENVIRONMENT: Production
           swaggerGen: 'True'
 
-      - name: Upload swagger artifact
-        uses: actions/upload-artifact@v2
+      - name: Upload Swagger artifact
+        uses: actions/upload-artifact@ee69f02b3dfdecd58bb31b4d133da38ba6fe3700
         with:
           name: swagger.json
           path: ./swagger.json
 
-      - name: Log out of docker
-        run: docker logout
-
       - name: Upload release assets
         if: github.event_name == 'release'
         run: |
-          hub release edit `
-            -a ./swagger.json `
-            -a ./docker-stub.zip `
-            -m "Version $($env:RELEASE_VERSION)" `
-            $env:RELEASE_TAG_NAME
-        shell: pwsh
+          hub release edit \
+            -a ./swagger.json \
+            -a ./docker-stub.zip \
+            -m "" \
+            $TAG_VERSION
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-

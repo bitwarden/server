@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Http;
 using Bit.Core.Repositories;
 using System.Threading.Tasks;
 using System.Security.Claims;
+using Bit.Core.Enums.Provider;
 using Bit.Core.Utilities;
 using Bit.Core.Models.Data;
 using Bit.Core.Settings;
@@ -25,8 +26,13 @@ namespace Bit.Core.Context
         public virtual DeviceType? DeviceType { get; set; }
         public virtual string IpAddress { get; set; }
         public virtual List<CurrentContentOrganization> Organizations { get; set; }
+        public virtual List<CurrentContentProvider> Providers { get; set; }
         public virtual Guid? InstallationId { get; set; }
         public virtual Guid? OrganizationId { get; set; }
+        public virtual bool CloudflareWorkerProxied { get; set; }
+        public virtual bool IsBot { get; set; }
+        public virtual bool MaybeBot { get; set; }
+        public virtual int? BotScore { get; set; }
 
         public async virtual Task BuildAsync(HttpContext httpContext, GlobalSettings globalSettings)
         {
@@ -48,6 +54,27 @@ namespace Bit.Core.Context
                 Enum.TryParse(httpContext.Request.Headers["Device-Type"].ToString(), out DeviceType dType))
             {
                 DeviceType = dType;
+            }
+
+            if (!BotScore.HasValue && httpContext.Request.Headers.ContainsKey("X-Cf-Bot-Score") &&
+                int.TryParse(httpContext.Request.Headers["X-Cf-Bot-Score"], out var parsedBotScore))
+            {
+                BotScore = parsedBotScore;
+            }
+
+            if (httpContext.Request.Headers.ContainsKey("X-Cf-Worked-Proxied"))
+            {
+                CloudflareWorkerProxied = httpContext.Request.Headers["X-Cf-Worked-Proxied"] == "1";
+            }
+
+            if (httpContext.Request.Headers.ContainsKey("X-Cf-Is-Bot"))
+            {
+                IsBot = httpContext.Request.Headers["X-Cf-Is-Bot"] == "1";
+            }
+
+            if (httpContext.Request.Headers.ContainsKey("X-Cf-Maybe-Bot"))
+            {
+                MaybeBot = httpContext.Request.Headers["X-Cf-Maybe-Bot"] == "1";
             }
         }
 
@@ -102,10 +129,19 @@ namespace Bit.Core.Context
 
             DeviceIdentifier = GetClaimValue(claimsDict, "device");
 
-            Organizations = new List<CurrentContentOrganization>();
+            Organizations = GetOrganizations(claimsDict, orgApi);
+
+            Providers = GetProviders(claimsDict);
+            
+            return Task.FromResult(0);
+        }
+
+        private List<CurrentContentOrganization> GetOrganizations(Dictionary<string, IEnumerable<Claim>> claimsDict, bool orgApi)
+        {
+            var organizations = new List<CurrentContentOrganization>();
             if (claimsDict.ContainsKey("orgowner"))
             {
-                Organizations.AddRange(claimsDict["orgowner"].Select(c =>
+                organizations.AddRange(claimsDict["orgowner"].Select(c =>
                     new CurrentContentOrganization
                     {
                         Id = new Guid(c.Value),
@@ -114,7 +150,7 @@ namespace Bit.Core.Context
             }
             else if (orgApi && OrganizationId.HasValue)
             {
-                Organizations.Add(new CurrentContentOrganization
+                organizations.Add(new CurrentContentOrganization
                 {
                     Id = OrganizationId.Value,
                     Type = OrganizationUserType.Owner
@@ -123,7 +159,7 @@ namespace Bit.Core.Context
 
             if (claimsDict.ContainsKey("orgadmin"))
             {
-                Organizations.AddRange(claimsDict["orgadmin"].Select(c =>
+                organizations.AddRange(claimsDict["orgadmin"].Select(c =>
                     new CurrentContentOrganization
                     {
                         Id = new Guid(c.Value),
@@ -133,7 +169,7 @@ namespace Bit.Core.Context
 
             if (claimsDict.ContainsKey("orguser"))
             {
-                Organizations.AddRange(claimsDict["orguser"].Select(c =>
+                organizations.AddRange(claimsDict["orguser"].Select(c =>
                     new CurrentContentOrganization
                     {
                         Id = new Guid(c.Value),
@@ -143,7 +179,7 @@ namespace Bit.Core.Context
 
             if (claimsDict.ContainsKey("orgmanager"))
             {
-                Organizations.AddRange(claimsDict["orgmanager"].Select(c =>
+                organizations.AddRange(claimsDict["orgmanager"].Select(c =>
                     new CurrentContentOrganization
                     {
                         Id = new Guid(c.Value),
@@ -153,7 +189,7 @@ namespace Bit.Core.Context
 
             if (claimsDict.ContainsKey("orgcustom"))
             {
-                Organizations.AddRange(claimsDict["orgcustom"].Select(c =>
+                organizations.AddRange(claimsDict["orgcustom"].Select(c =>
                     new CurrentContentOrganization
                     {
                         Id = new Guid(c.Value),
@@ -161,8 +197,34 @@ namespace Bit.Core.Context
                         Permissions = SetOrganizationPermissionsFromClaims(c.Value, claimsDict)
                     }));
             }
+            
+            return organizations;
+        }
+        
+        private List<CurrentContentProvider> GetProviders(Dictionary<string, IEnumerable<Claim>> claimsDict)
+        {
+            var providers = new List<CurrentContentProvider>();
+            if (claimsDict.ContainsKey("providerprovideradmin"))
+            {
+                providers.AddRange(claimsDict["providerprovideradmin"].Select(c =>
+                    new CurrentContentProvider
+                    {
+                        Id = new Guid(c.Value),
+                        Type = ProviderUserType.ProviderAdmin
+                    }));
+            }
 
-            return Task.FromResult(0);
+            if (claimsDict.ContainsKey("providerserviceuser"))
+            {
+                providers.AddRange(claimsDict["providerserviceuser"].Select(c =>
+                    new CurrentContentProvider
+                    {
+                        Id = new Guid(c.Value),
+                        Type = ProviderUserType.ServiceUser
+                    }));
+            }
+
+            return providers;
         }
 
         public bool OrganizationUser(Guid orgId)
@@ -192,71 +254,96 @@ namespace Bit.Core.Context
         {
             return Organizations?.Any(o => o.Id == orgId && o.Type == OrganizationUserType.Custom) ?? false;
         }
-        
+
         public bool AccessBusinessPortal(Guid orgId)
         {
-            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId 
+            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
                         && (o.Permissions?.AccessBusinessPortal ?? false)) ?? false);
         }
 
         public bool AccessEventLogs(Guid orgId)
         {
-            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId 
+            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
                         && (o.Permissions?.AccessEventLogs ?? false)) ?? false);
         }
 
         public bool AccessImportExport(Guid orgId)
         {
-            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId 
+            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
                         && (o.Permissions?.AccessImportExport ?? false)) ?? false);
         }
 
         public bool AccessReports(Guid orgId)
         {
-            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId 
+            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
                         && (o.Permissions?.AccessReports ?? false)) ?? false);
         }
 
         public bool ManageAllCollections(Guid orgId)
         {
-            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId 
+            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
                         && (o.Permissions?.ManageAllCollections ?? false)) ?? false);
         }
 
         public bool ManageAssignedCollections(Guid orgId)
         {
-            return OrganizationManager(orgId) || (Organizations?.Any(o => o.Id == orgId 
+            return OrganizationManager(orgId) || (Organizations?.Any(o => o.Id == orgId
                         && (o.Permissions?.ManageAssignedCollections ?? false)) ?? false);
         }
 
         public bool ManageGroups(Guid orgId)
         {
-            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId 
+            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
                         && (o.Permissions?.ManageGroups ?? false)) ?? false);
         }
 
         public bool ManagePolicies(Guid orgId)
         {
-            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId 
+            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
                         && (o.Permissions?.ManagePolicies ?? false)) ?? false);
         }
 
         public bool ManageSso(Guid orgId)
         {
-            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId 
+            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
                         && (o.Permissions?.ManageSso ?? false)) ?? false);
         }
 
         public bool ManageUsers(Guid orgId)
         {
-            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId 
+            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
                         && (o.Permissions?.ManageUsers ?? false)) ?? false);
         }
-        
+
         public bool ManageResetPassword(Guid orgId)
         {
-            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId 
+            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
                         && (o.Permissions?.ManageResetPassword ?? false)) ?? false);
+        }
+
+        public bool ProviderProviderAdmin(Guid providerId)
+        {
+            return Providers?.Any(o => o.Id == providerId && o.Type == ProviderUserType.ProviderAdmin) ?? false;
+        }
+
+        public bool ManageProviderUsers(Guid providerId)
+        {
+            return ProviderProviderAdmin(providerId);
+        }
+
+        public bool AccessProviderOrganizations(Guid providerId)
+        {
+            return ProviderUser(providerId);
+        }
+
+        public bool ManageProviderOrganizations(Guid providerId)
+        {
+            return ProviderProviderAdmin(providerId);
+        }
+
+        public bool ProviderUser(Guid providerId)
+        {
+            return Providers?.Any(o => o.Id == providerId) ?? false;
         }
 
         public async Task<ICollection<CurrentContentOrganization>> OrganizationMembershipAsync(
@@ -269,6 +356,18 @@ namespace Bit.Core.Context
                     .Select(ou => new CurrentContentOrganization(ou)).ToList();
             }
             return Organizations;
+        }
+        
+        public async Task<ICollection<CurrentContentProvider>> ProviderMembershipAsync(
+            IProviderUserRepository providerUserRepository, Guid userId)
+        {
+            if (Providers == null)
+            {
+                var userProviders = await providerUserRepository.GetManyByUserAsync(userId);
+                Providers = userProviders.Where(ou => ou.Status == ProviderUserStatusType.Confirmed)
+                    .Select(ou => new CurrentContentProvider(ou)).ToList();
+            }
+            return Providers;
         }
 
         private string GetClaimValue(Dictionary<string, IEnumerable<Claim>> claims, string type)
@@ -283,9 +382,9 @@ namespace Bit.Core.Context
 
         private Permissions SetOrganizationPermissionsFromClaims(string organizationId, Dictionary<string, IEnumerable<Claim>> claimsDict)
         {
-            bool hasClaim(string claimKey) 
+            bool hasClaim(string claimKey)
             {
-                return claimsDict.ContainsKey(claimKey) ? 
+                return claimsDict.ContainsKey(claimKey) ?
                     claimsDict[claimKey].Any(x => x.Value == organizationId) : false;
             }
 

@@ -40,8 +40,10 @@ namespace Bit.Core.Models.Api
             UseTotp = organization.UseTotp;
             Use2fa = organization.Use2fa;
             UseApi = organization.UseApi;
+            UseResetPassword = organization.UseResetPassword;
             UsersGetPremium = organization.UsersGetPremium;
             SelfHost = organization.SelfHost;
+            HasPublicAndPrivateKeys = organization.PublicKey != null && organization.PrivateKey != null;
         }
 
         public string Id { get; set; }
@@ -56,7 +58,7 @@ namespace Bit.Core.Models.Api
         public string BillingEmail { get; set; }
         public PlanResponseModel Plan { get; set; }
         public PlanType PlanType { get; set; }
-        public short? Seats { get; set; }
+        public int? Seats { get; set; }
         public short? MaxCollections { get; set; }
         public short? MaxStorageGb { get; set; }
         public bool UsePolicies { get; set; }
@@ -67,8 +69,10 @@ namespace Bit.Core.Models.Api
         public bool UseTotp { get; set; }
         public bool Use2fa { get; set; }
         public bool UseApi { get; set; }
+        public bool UseResetPassword { get; set; }
         public bool UsersGetPremium { get; set; }
         public bool SelfHost { get; set; }
+        public bool HasPublicAndPrivateKeys { get; set; }
     }
 
     public class OrganizationSubscriptionResponseModel : OrganizationResponseModel

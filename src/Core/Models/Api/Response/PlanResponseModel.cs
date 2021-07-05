@@ -39,6 +39,7 @@ namespace Bit.Core.Models.Api
             HasTotp = plan.HasTotp;
             Has2fa = plan.Has2fa;
             HasSso = plan.HasSso;
+            HasResetPassword = plan.HasResetPassword;
             UsersGetPremium = plan.UsersGetPremium;
             UpgradeSortOrder = plan.UpgradeSortOrder;
             DisplaySortOrder = plan.DisplaySortOrder;
@@ -66,7 +67,7 @@ namespace Bit.Core.Models.Api
         public short? MaxUsers { get; set; }
 
         public bool HasAdditionalSeatsOption { get; set; }
-        public short? MaxAdditionalSeats { get; set; }
+        public int? MaxAdditionalSeats { get; set; }
         public bool HasAdditionalStorageOption { get; set; }
         public short? MaxAdditionalStorage { get; set; }
         public bool HasPremiumAccessOption { get; set; }
@@ -81,6 +82,7 @@ namespace Bit.Core.Models.Api
         public bool Has2fa { get; set; }
         public bool HasApi { get; set; }
         public bool HasSso { get; set; }
+        public bool HasResetPassword { get; set; }
         public bool UsersGetPremium { get; set; }
 
         public int UpgradeSortOrder { get; set; }

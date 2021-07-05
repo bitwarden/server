@@ -23,7 +23,6 @@ namespace Bit.Core.Test.Services
         private readonly ICipherRepository _cipherRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly IOrganizationRepository _organizationRepository;
-        private readonly IU2fRepository _u2fRepository;
         private readonly IMailService _mailService;
         private readonly IPushNotificationService _pushService;
         private readonly IUserStore<User> _userStore;
@@ -46,6 +45,7 @@ namespace Bit.Core.Test.Services
         private readonly CurrentContext _currentContext;
         private readonly GlobalSettings _globalSettings;
         private readonly IOrganizationService _organizationService;
+        private readonly ISendRepository _sendRepository;
 
         public UserServiceTests()
         {
@@ -53,7 +53,6 @@ namespace Bit.Core.Test.Services
             _cipherRepository = Substitute.For<ICipherRepository>();
             _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
             _organizationRepository = Substitute.For<IOrganizationRepository>();
-            _u2fRepository = Substitute.For<IU2fRepository>();
             _mailService = Substitute.For<IMailService>();
             _pushService = Substitute.For<IPushNotificationService>();
             _userStore = Substitute.For<IUserStore<User>>();
@@ -76,13 +75,13 @@ namespace Bit.Core.Test.Services
             _currentContext = new CurrentContext();
             _globalSettings = new GlobalSettings();
             _organizationService = Substitute.For<IOrganizationService>();
+            _sendRepository = Substitute.For<ISendRepository>();
 
             _sut = new UserService(
                 _userRepository,
                 _cipherRepository,
                 _organizationUserRepository,
                 _organizationRepository,
-                _u2fRepository,
                 _mailService,
                 _pushService,
                 _userStore,
@@ -104,7 +103,8 @@ namespace Bit.Core.Test.Services
                 _fido2,
                 _currentContext,
                 _globalSettings,
-                _organizationService
+                _organizationService,
+                _sendRepository
             );
         }
 

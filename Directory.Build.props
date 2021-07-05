@@ -1,0 +1,9 @@
+﻿<Project>
+
+	<PropertyGroup>
+		<Version>1.41.5</Version>
+		<TargetFramework>netcoreapp3.1</TargetFramework>
+		<RootNamespace>Bit.$(MSBuildProjectName)</RootNamespace>
+	</PropertyGroup>
+
+</Project>

@@ -51,8 +51,7 @@ namespace Bit.Portal.Controllers
             }
             
             var policies = await _policyRepository.GetManyByOrganizationIdAsync(orgId.Value);
-            var selectedOrgUseSso = _enterprisePortalCurrentContext.SelectedOrganizationDetails.UseSso;
-            return View(new PoliciesModel(policies, selectedOrgUseSso));
+            return View(new PoliciesModel(policies, _enterprisePortalCurrentContext.SelectedOrganizationDetails));
         }
         
         [HttpGet("/edit/{type}")]
@@ -138,6 +137,7 @@ namespace Bit.Portal.Controllers
                 case PolicyType.PersonalOwnership:
                 case PolicyType.DisableSend:
                 case PolicyType.SendOptions:
+                case PolicyType.ResetPassword:
                     break;
                 
                 case PolicyType.SingleOrg:

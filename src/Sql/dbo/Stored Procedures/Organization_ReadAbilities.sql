@@ -7,7 +7,7 @@ BEGIN
         [Id],
         [UseEvents],
         [Use2fa],
-        CASE 
+        CASE
         WHEN [Use2fa] = 1 AND [TwoFactorProviders] IS NOT NULL AND [TwoFactorProviders] != '{}' THEN
             1
         ELSE
@@ -15,6 +15,7 @@ BEGIN
         END AS [Using2fa],
         [UsersGetPremium],
         [UseSso],
+        [UseResetPassword],
         [Enabled]
     FROM
         [dbo].[Organization]

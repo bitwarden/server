@@ -24,9 +24,6 @@ namespace Bit.Core.Services
         Task SendMasterPasswordHintAsync(string email);
         Task SendTwoFactorEmailAsync(User user);
         Task<bool> VerifyTwoFactorEmailAsync(User user, string token);
-        Task<U2fRegistration> StartU2fRegistrationAsync(User user);
-        Task<bool> DeleteU2fKeyAsync(User user, int id);
-        Task<bool> CompleteU2fRegistrationAsync(User user, int id, string name, string deviceResponse);
         Task<CredentialCreateOptions> StartWebAuthnRegistrationAsync(User user);
         Task<bool> DeleteWebAuthnKeyAsync(User user, int id);
         Task<bool> CompleteWebAuthRegistrationAsync(User user, int value, string name, AuthenticatorAttestationRawResponse attestationResponse);
@@ -37,11 +34,11 @@ namespace Bit.Core.Services
             string token, string key);
         Task<IdentityResult> ChangePasswordAsync(User user, string masterPassword, string newMasterPassword, string key);
         Task<IdentityResult> SetPasswordAsync(User user, string newMasterPassword, string key, string orgIdentifier = null);
-        Task<IdentityResult> AdminResetPasswordAsync(User user, string newMasterPassword, string key);
+        Task<IdentityResult> AdminResetPasswordAsync(OrganizationUserType type, Guid orgId, Guid id, string newMasterPassword, string key);
         Task<IdentityResult> ChangeKdfAsync(User user, string masterPassword, string newMasterPassword, string key,
             KdfType kdf, int kdfIterations);
         Task<IdentityResult> UpdateKeyAsync(User user, string masterPassword, string key, string privateKey,
-            IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders);
+            IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders, IEnumerable<Send> sends);
         Task<IdentityResult> RefreshSecurityStampAsync(User user, string masterPasswordHash);
         Task UpdateTwoFactorProviderAsync(User user, TwoFactorProviderType type, bool setEnabled = true);
         Task DisableTwoFactorProviderAsync(User user, TwoFactorProviderType type,

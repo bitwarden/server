@@ -7,6 +7,7 @@ using System.Linq;
 using System.Collections.Generic;
 using Bit.Core.Models.Table;
 using Bit.Core.Context;
+using Bit.Core.Models.Table.Provider;
 using Bit.Core.Settings;
 
 namespace Bit.Core.Services
@@ -178,24 +179,31 @@ namespace Bit.Core.Services
         }
 
         public async Task LogOrganizationUserEventAsync(OrganizationUser organizationUser, EventType type,
-            DateTime? date = null)
+            DateTime? date = null) =>
+            await LogOrganizationUserEventsAsync(new[] { (organizationUser, type, date) });
+
+        public async Task LogOrganizationUserEventsAsync(IEnumerable<(OrganizationUser, EventType, DateTime?)> events)
         {
             var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
-            if (!CanUseEvents(orgAbilities, organizationUser.OrganizationId))
+            var eventMessages = new List<IEvent>();
+            foreach (var (organizationUser, type, date) in events)
             {
-                return;
+                if (!CanUseEvents(orgAbilities, organizationUser.OrganizationId))
+                {
+                    continue;
+                }
+                eventMessages.Add(new EventMessage
+                {
+                    OrganizationId = organizationUser.OrganizationId,
+                    UserId = organizationUser.UserId,
+                    OrganizationUserId = organizationUser.Id,
+                    Type = type,
+                    ActingUserId = _currentContext?.UserId,
+                    Date = date.GetValueOrDefault(DateTime.UtcNow)
+                });
             }
 
-            var e = new EventMessage(_currentContext)
-            {
-                OrganizationId = organizationUser.OrganizationId,
-                UserId = organizationUser.UserId,
-                OrganizationUserId = organizationUser.Id,
-                Type = type,
-                ActingUserId = _currentContext?.UserId,
-                Date = date.GetValueOrDefault(DateTime.UtcNow)
-            };
-            await _eventWriteService.CreateAsync(e);
+            await _eventWriteService.CreateManyAsync(eventMessages);
         }
 
         public async Task LogOrganizationEventAsync(Organization organization, EventType type, DateTime? date = null)
@@ -215,10 +223,45 @@ namespace Bit.Core.Services
             await _eventWriteService.CreateAsync(e);
         }
 
+        public async Task LogProviderUserEventAsync(ProviderUser providerUser, EventType type, DateTime? date = null)
+        {
+            await LogProviderUsersEventAsync(new[] { (providerUser, type, date) });
+        }
+
+        public async Task LogProviderUsersEventAsync(IEnumerable<(ProviderUser, EventType, DateTime?)> events)
+        {
+            var providerAbilities = await _applicationCacheService.GetProviderAbilitiesAsync();
+            var eventMessages = new List<IEvent>();
+            foreach (var (providerUser, type, date) in events)
+            {
+                if (!CanUseProviderEvents(providerAbilities, providerUser.ProviderId))
+                {
+                    continue;
+                }
+                eventMessages.Add(new EventMessage
+                {
+                    ProviderId = providerUser.ProviderId,
+                    UserId = providerUser.UserId,
+                    ProviderUserId = providerUser.Id,
+                    Type = type,
+                    ActingUserId = _currentContext?.UserId,
+                    Date = date.GetValueOrDefault(DateTime.UtcNow)
+                });
+            }
+
+            await _eventWriteService.CreateManyAsync(eventMessages);
+        }
+
         private bool CanUseEvents(IDictionary<Guid, OrganizationAbility> orgAbilities, Guid orgId)
         {
             return orgAbilities != null && orgAbilities.ContainsKey(orgId) &&
                 orgAbilities[orgId].Enabled && orgAbilities[orgId].UseEvents;
+        }
+        
+        private bool CanUseProviderEvents(IDictionary<Guid, ProviderAbility> providerAbilities, Guid providerId)
+        {
+            return providerAbilities != null && providerAbilities.ContainsKey(providerId) &&
+                   providerAbilities[providerId].Enabled && providerAbilities[providerId].UseEvents;
         }
     }
 }

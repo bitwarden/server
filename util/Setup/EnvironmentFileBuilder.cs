@@ -62,7 +62,7 @@ namespace Bit.Setup
             var dbConnectionString = new SqlConnectionStringBuilder
             {
                 DataSource = "tcp:mssql,1433",
-                InitialCatalog = "vault",
+                InitialCatalog = _context.Install?.Database ?? "vault",
                 UserID = "sa",
                 Password = dbPassword,
                 MultipleActiveResultSets = false,
@@ -75,7 +75,7 @@ namespace Bit.Setup
             _globalOverrideValues = new Dictionary<string, string>
             {
                 ["globalSettings__baseServiceUri__vault"] = _context.Config.Url,
-                ["globalSettings__sqlServer__connectionString"] = $"\"{dbConnectionString}\"",
+                ["globalSettings__sqlServer__connectionString"] = $"'{dbConnectionString}'",
                 ["globalSettings__identityServer__certificatePassword"] = _context.Install?.IdentityCertPassword,
                 ["globalSettings__internalIdentityKey"] = _context.Stub ? "RANDOM_IDENTITY_KEY" :
                     Helpers.SecureRandomString(64, alpha: true, numeric: true),

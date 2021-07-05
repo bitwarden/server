@@ -11,6 +11,7 @@ using Bit.Core.Services;
 using Bit.Core.Context;
 using Bit.Api.Utilities;
 using Bit.Core.Models.Business;
+using Bit.Core.Models.Data;
 using Bit.Core.Utilities;
 using Bit.Core.Settings;
 
@@ -27,7 +28,6 @@ namespace Bit.Api.Controllers
         private readonly IPaymentService _paymentService;
         private readonly ICurrentContext _currentContext;
         private readonly GlobalSettings _globalSettings;
-        private readonly IPolicyRepository _policyRepository;
 
         public OrganizationsController(
             IOrganizationRepository organizationRepository,
@@ -36,8 +36,7 @@ namespace Bit.Api.Controllers
             IUserService userService,
             IPaymentService paymentService,
             ICurrentContext currentContext,
-            GlobalSettings globalSettings,
-            IPolicyRepository policyRepository)
+            GlobalSettings globalSettings)
         {
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
@@ -46,7 +45,6 @@ namespace Bit.Api.Controllers
             _paymentService = paymentService;
             _currentContext = currentContext;
             _globalSettings = globalSettings;
-            _policyRepository = policyRepository;
         }
 
         [HttpGet("{id}")]
@@ -162,22 +160,6 @@ namespace Bit.Api.Controllers
                 throw new Exception("Invalid plan selected.");
             }
 
-            var policies = await _policyRepository.GetManyByUserIdAsync(user.Id);
-            var orgUsers = await _organizationUserRepository.GetManyByUserAsync(user.Id);
-
-            var orgsWithSingleOrgPolicy = policies.Where(p => p.Enabled && p.Type == PolicyType.SingleOrg)
-                .Select(p => p.OrganizationId);
-            var blockedBySingleOrgPolicy = orgUsers.Any(ou => ou.Type != OrganizationUserType.Owner &&
-                                                        ou.Type != OrganizationUserType.Admin &&
-                                                        ou.Status != OrganizationUserStatusType.Invited &&
-                                                        orgsWithSingleOrgPolicy.Contains(ou.OrganizationId));
-
-            if (blockedBySingleOrgPolicy)
-            {
-                throw new Exception("You may not create an organization. You belong to an organization " +
-                    "which has a policy that prohibits you from being a member of any other organization.");
-            }
-
             var organizationSignup = model.ToOrganizationSignup(user);
             var result = await _organizationService.SignUpAsync(organizationSignup);
             return new OrganizationResponseModel(result.Item1);
@@ -199,14 +181,8 @@ namespace Bit.Api.Controllers
                 throw new BadRequestException("Invalid license");
             }
 
-            var policies = await _policyRepository.GetManyByUserIdAsync(user.Id);
-            if (policies.Any(policy => policy.Enabled && policy.Type == PolicyType.SingleOrg))
-            {
-                throw new Exception("You may not create an organization. You belong to an organization " +
-                     "which has a policy that prohibits you from being a member of any other organization.");
-            }
-
-            var result = await _organizationService.SignUpAsync(license, user, model.Key, model.CollectionName);
+            var result = await _organizationService.SignUpAsync(license, user, model.Key,
+                model.CollectionName, model.Keys?.PublicKey, model.Keys?.EncryptedPrivateKey);
             return new OrganizationResponseModel(result.Item1);
         }
 
@@ -417,7 +393,7 @@ namespace Bit.Api.Controllers
         [HttpPost("{id}/import")]
         public async Task Import(string id, [FromBody]ImportOrganizationUsersRequestModel model)
         {
-            if (!_globalSettings.SelfHosted &&
+            if (!_globalSettings.SelfHosted && !model.LargeImport &&
                 (model.Groups.Count() > 2000 || model.Users.Count(u => !u.Deleted) > 2000))
             {
                 throw new BadRequestException("You cannot import this much data at once.");
@@ -553,6 +529,31 @@ namespace Bit.Api.Controllers
                 BillingAddressCountry = model.Country,
             };
             await _paymentService.SaveTaxInfoAsync(organization, taxInfo);
+        }
+        
+        [HttpGet("{id}/keys")]
+        public async Task<OrganizationKeysResponseModel> GetKeys(string id)
+        {
+            var org = await _organizationRepository.GetByIdAsync(new Guid(id));
+            if (org == null)
+            {
+                throw new NotFoundException();
+            }
+
+            return new OrganizationKeysResponseModel(org);
+        }
+        
+        [HttpPost("{id}/keys")]
+        public async Task<OrganizationKeysResponseModel> PostKeys(string id, [FromBody]OrganizationKeysRequestModel model)
+        {
+            var user = await _userService.GetUserByPrincipalAsync(User);
+            if (user == null)
+            {
+                throw new UnauthorizedAccessException();
+            }
+
+            var org = await _organizationService.UpdateOrganizationKeysAsync(new Guid(id), model.PublicKey, model.EncryptedPrivateKey);
+            return new OrganizationKeysResponseModel(org);
         }
     }
 }

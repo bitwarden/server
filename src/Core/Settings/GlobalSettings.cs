@@ -10,8 +10,8 @@ namespace Bit.Core.Settings
         public GlobalSettings()
         {
             BaseServiceUri = new BaseServiceUriSettings(this);
-            Attachment = new FileStorageSettings(this, "attchments", "attchments");
-            Send = new FileStorageSettings(this, "attchments/send", "attchments/send");
+            Attachment = new FileStorageSettings(this, "attachments", "attachments");
+            Send = new FileStorageSettings(this, "attachments/send", "attachments/send");
             DataProtection = new DataProtectionSettings(this);
         }
 
@@ -40,6 +40,7 @@ namespace Bit.Core.Settings
         public virtual bool DisableEmailNewDevice { get; set; }
         public virtual int OrganizationInviteExpirationHours { get; set; } = 120; // 5 days
         public virtual string EventGridKey { get; set; }
+        public virtual CaptchaSettings Captcha { get; set; } = new CaptchaSettings();
         public virtual InstallationSettings Installation { get; set; } = new InstallationSettings();
         public virtual BaseServiceUriSettings BaseServiceUri { get; set; }
         public virtual SqlSettings SqlServer { get; set; } = new SqlSettings();
@@ -272,9 +273,25 @@ namespace Bit.Core.Settings
 
         public class MailSettings
         {
+            private ConnectionStringSettings _connectionStringSettings;
+            public string ConnectionString
+            {
+                get => _connectionStringSettings?.ConnectionString;
+                set
+                {
+                    if (_connectionStringSettings == null)
+                    {
+                        _connectionStringSettings = new ConnectionStringSettings();
+                    }
+                    _connectionStringSettings.ConnectionString = value;
+                }
+            }
             public string ReplyToEmail { get; set; }
             public string AmazonConfigSetName { get; set; }
             public SmtpSettings Smtp { get; set; } = new SmtpSettings();
+            public string PostalDomain { get; set; }
+            public string PostalApiKey { get; set; }
+            public int? PostalPercentage { get; set; }
 
             public class SmtpSettings
             {
@@ -449,6 +466,12 @@ namespace Bit.Core.Settings
         public class SsoSettings
         {
             public int CacheLifetimeInSeconds { get; set; } = 60;
+        }
+
+        public class CaptchaSettings
+        {
+            public string HCaptchaSecretKey { get; set; }
+            public string HCaptchaSiteKey { get; set; }
         }
     }
 }

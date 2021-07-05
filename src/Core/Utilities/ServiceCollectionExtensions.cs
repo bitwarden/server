@@ -85,6 +85,10 @@ namespace Bit.Core.Utilities
                 services.AddSingleton<ISendRepository, SqlServerRepos.SendRepository>();
                 services.AddSingleton<ITaxRateRepository, SqlServerRepos.TaxRateRepository>();
                 services.AddSingleton<IEmergencyAccessRepository, SqlServerRepos.EmergencyAccessRepository>();
+                services.AddSingleton<IProviderRepository, SqlServerRepos.ProviderRepository>();
+                services.AddSingleton<IProviderUserRepository, SqlServerRepos.ProviderUserRepository>();
+                services.AddSingleton<IProviderOrganizationRepository, SqlServerRepos.ProviderOrganizationRepository>();
+                services.AddSingleton<IProviderOrganizationProviderUserRepository, SqlServerRepos.ProviderOrganizationProviderUserRepository>();
             }
 
             if (globalSettings.SelfHosted)
@@ -116,7 +120,7 @@ namespace Bit.Core.Utilities
             services.AddScoped<ICollectionService, CollectionService>();
             services.AddScoped<IGroupService, GroupService>();
             services.AddScoped<IPolicyService, PolicyService>();
-            services.AddScoped<Services.IEventService, EventService>();
+            services.AddScoped<IEventService, EventService>();
             services.AddScoped<IEmergencyAccessService, EmergencyAccessService>();
             services.AddSingleton<IDeviceService, DeviceService>();
             services.AddSingleton<IAppleIapService, AppleIapService>();
@@ -143,7 +147,13 @@ namespace Bit.Core.Utilities
                 services.AddSingleton<IApplicationCacheService, InMemoryApplicationCacheService>();
             }
 
-            if (CoreHelpers.SettingHasValue(globalSettings.Amazon?.AccessKeySecret))
+            var awsConfigured = CoreHelpers.SettingHasValue(globalSettings.Amazon?.AccessKeySecret);
+            if (!globalSettings.SelfHosted && awsConfigured &&
+                CoreHelpers.SettingHasValue(globalSettings.Mail?.PostalApiKey))
+            {
+                services.AddSingleton<IMailDeliveryService, MultiServiceMailDeliveryService>();
+            }
+            else if (awsConfigured)
             {
                 services.AddSingleton<IMailDeliveryService, AmazonSesMailDeliveryService>();
             }
@@ -184,6 +194,15 @@ namespace Bit.Core.Utilities
             else
             {
                 services.AddSingleton<IBlockIpService, NoopBlockIpService>();
+            }
+
+            if (!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Mail.ConnectionString))
+            {
+                services.AddSingleton<IMailEnqueuingService, AzureQueueMailService>();
+            }
+            else
+            {
+                services.AddSingleton<IMailEnqueuingService, BlockingMailEnqueuingService>();
             }
 
             if (!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Events.ConnectionString))
@@ -233,6 +252,21 @@ namespace Bit.Core.Utilities
             {
                 services.AddSingleton<IReferenceEventService, AzureQueueReferenceEventService>();
             }
+
+            if (!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Captcha?.HCaptchaSecretKey) &&
+                CoreHelpers.SettingHasValue(globalSettings.Captcha?.HCaptchaSiteKey))
+            {
+                services.AddSingleton<ICaptchaValidationService, HCaptchaValidationService>();
+            }
+            else
+            {
+                services.AddSingleton<ICaptchaValidationService, NoopCaptchaValidationService>();
+            }
+        }
+
+        public static void AddOosServices(this IServiceCollection services)
+        {
+            services.AddScoped<IProviderService, NoopProviderService>();
         }
 
         public static void AddNoopServices(this IServiceCollection services)
@@ -505,7 +539,7 @@ namespace Bit.Core.Utilities
         {
             mvc.Services.AddTransient<IViewLocalizer, I18nViewLocalizer>();
             return mvc.AddViewLocalization(options => options.ResourcesPath = "Resources")
-                .AddDataAnnotationsLocalization(options => 
+                .AddDataAnnotationsLocalization(options =>
                     options.DataAnnotationLocalizerProvider = (type, factory) =>
                     {
                         var assemblyName = new AssemblyName(typeof(SharedResources).GetTypeInfo().Assembly.FullName);

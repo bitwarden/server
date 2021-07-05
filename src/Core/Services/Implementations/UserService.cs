@@ -18,7 +18,6 @@ using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Utilities;
 using Bit.Core.Settings;
-using U2F.Core.Exceptions;
 using System.IO;
 using Newtonsoft.Json;
 using Microsoft.AspNetCore.DataProtection;
@@ -36,7 +35,6 @@ namespace Bit.Core.Services
         private readonly ICipherRepository _cipherRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly IOrganizationRepository _organizationRepository;
-        private readonly IU2fRepository _u2fRepository;
         private readonly IMailService _mailService;
         private readonly IPushNotificationService _pushService;
         private readonly IdentityErrorDescriber _identityErrorDescriber;
@@ -54,13 +52,13 @@ namespace Bit.Core.Services
         private readonly ICurrentContext _currentContext;
         private readonly GlobalSettings _globalSettings;
         private readonly IOrganizationService _organizationService;
+        private readonly ISendRepository _sendRepository;
 
         public UserService(
             IUserRepository userRepository,
             ICipherRepository cipherRepository,
             IOrganizationUserRepository organizationUserRepository,
             IOrganizationRepository organizationRepository,
-            IU2fRepository u2fRepository,
             IMailService mailService,
             IPushNotificationService pushService,
             IUserStore<User> store,
@@ -82,7 +80,8 @@ namespace Bit.Core.Services
             IFido2 fido2,
             ICurrentContext currentContext,
             GlobalSettings globalSettings,
-            IOrganizationService organizationService)
+            IOrganizationService organizationService,
+            ISendRepository sendRepository)
             : base(
                   store,
                   optionsAccessor,
@@ -98,7 +97,6 @@ namespace Bit.Core.Services
             _cipherRepository = cipherRepository;
             _organizationUserRepository = organizationUserRepository;
             _organizationRepository = organizationRepository;
-            _u2fRepository = u2fRepository;
             _mailService = mailService;
             _pushService = pushService;
             _identityOptions = optionsAccessor?.Value ?? new IdentityOptions();
@@ -117,6 +115,7 @@ namespace Bit.Core.Services
             _currentContext = currentContext;
             _globalSettings = globalSettings;
             _organizationService = organizationService;
+            _sendRepository = sendRepository;
         }
 
         public Guid? GetProperUserId(ClaimsPrincipal principal)
@@ -367,133 +366,6 @@ namespace Bit.Core.Services
                 "2faEmail:" + email, token);
         }
 
-        public async Task<U2fRegistration> StartU2fRegistrationAsync(User user)
-        {
-            await _u2fRepository.DeleteManyByUserIdAsync(user.Id);
-            var reg = U2fLib.StartRegistration(CoreHelpers.U2fAppIdUrl(_globalSettings));
-            await _u2fRepository.CreateAsync(new U2f
-            {
-                AppId = reg.AppId,
-                Challenge = reg.Challenge,
-                Version = reg.Version,
-                UserId = user.Id,
-                CreationDate = DateTime.UtcNow
-            });
-
-            return new U2fRegistration
-            {
-                AppId = reg.AppId,
-                Challenge = reg.Challenge,
-                Version = reg.Version
-            };
-        }
-
-        public async Task<bool> CompleteU2fRegistrationAsync(User user, int id, string name, string deviceResponse)
-        {
-            if (string.IsNullOrWhiteSpace(deviceResponse))
-            {
-                return false;
-            }
-
-            var challenges = await _u2fRepository.GetManyByUserIdAsync(user.Id);
-            if (!challenges?.Any() ?? true)
-            {
-                return false;
-            }
-
-            var registerResponse = BaseModel.FromJson<RegisterResponse>(deviceResponse);
-
-            try
-            {
-                var challenge = challenges.OrderBy(i => i.Id).Last(i => i.KeyHandle == null);
-                var startedReg = new StartedRegistration(challenge.Challenge, challenge.AppId);
-                var reg = U2fLib.FinishRegistration(startedReg, registerResponse);
-
-                await _u2fRepository.DeleteManyByUserIdAsync(user.Id);
-
-                // Add device
-                var providers = user.GetTwoFactorProviders();
-                if (providers == null)
-                {
-                    providers = new Dictionary<TwoFactorProviderType, TwoFactorProvider>();
-                }
-                var provider = user.GetTwoFactorProvider(TwoFactorProviderType.U2f);
-                if (provider == null)
-                {
-                    provider = new TwoFactorProvider();
-                }
-                if (provider.MetaData == null)
-                {
-                    provider.MetaData = new Dictionary<string, object>();
-                }
-
-                if (provider.MetaData.Count >= 5)
-                {
-                    // Can only register up to 5 keys
-                    return false;
-                }
-
-                var keyId = $"Key{id}";
-                if (provider.MetaData.ContainsKey(keyId))
-                {
-                    provider.MetaData.Remove(keyId);
-                }
-
-                provider.Enabled = true;
-                provider.MetaData.Add(keyId, new TwoFactorProvider.U2fMetaData
-                {
-                    Name = name,
-                    KeyHandle = reg.KeyHandle == null ? null : Utils.ByteArrayToBase64String(reg.KeyHandle),
-                    PublicKey = reg.PublicKey == null ? null : Utils.ByteArrayToBase64String(reg.PublicKey),
-                    Certificate = reg.AttestationCert == null ? null : Utils.ByteArrayToBase64String(reg.AttestationCert),
-                    Compromised = false,
-                    Counter = reg.Counter
-                });
-
-                if (providers.ContainsKey(TwoFactorProviderType.U2f))
-                {
-                    providers.Remove(TwoFactorProviderType.U2f);
-                }
-
-                providers.Add(TwoFactorProviderType.U2f, provider);
-                user.SetTwoFactorProviders(providers);
-                await UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.U2f);
-                return true;
-            }
-            catch (U2fException e)
-            {
-                Logger.LogError(e, "Complete U2F registration error.");
-                return false;
-            }
-        }
-
-        public async Task<bool> DeleteU2fKeyAsync(User user, int id)
-        {
-            var providers = user.GetTwoFactorProviders();
-            if (providers == null)
-            {
-                return false;
-            }
-
-            var keyName = $"Key{id}";
-            var provider = user.GetTwoFactorProvider(TwoFactorProviderType.U2f);
-            if (!provider?.MetaData?.ContainsKey(keyName) ?? true)
-            {
-                return false;
-            }
-
-            if (provider.MetaData.Count < 2)
-            {
-                return false;
-            }
-
-            provider.MetaData.Remove(keyName);
-            providers[TwoFactorProviderType.U2f] = provider;
-            user.SetTwoFactorProviders(providers);
-            await UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.U2f);
-            return true;
-        }
-
         public async Task<CredentialCreateOptions> StartWebAuthnRegistrationAsync(User user)
         {
             var providers = user.GetTwoFactorProviders();
@@ -526,7 +398,13 @@ namespace Bit.Core.Services
                 .Select(k => new TwoFactorProvider.WebAuthnData((dynamic)k.Value).Descriptor)
                 .ToList();
 
-            var options = _fido2.RequestNewCredential(fidoUser, excludeCredentials, AuthenticatorSelection.Default, AttestationConveyancePreference.None);
+            var authenticatorSelection = new AuthenticatorSelection
+            {
+                AuthenticatorAttachment = null,
+                RequireResidentKey = false,
+                UserVerification = UserVerificationRequirement.Discouraged
+            };
+            var options = _fido2.RequestNewCredential(fidoUser, excludeCredentials, authenticatorSelection, AttestationConveyancePreference.None);
 
             provider.MetaData["pending"] = options.ToJson();
             providers[TwoFactorProviderType.WebAuthn] = provider;
@@ -751,8 +629,59 @@ namespace Bit.Core.Services
             return IdentityResult.Success;
         }
         
-        public async Task<IdentityResult> AdminResetPasswordAsync(User user, string newMasterPassword, string key)
+        public async Task<IdentityResult> AdminResetPasswordAsync(OrganizationUserType callingUserType, Guid orgId, Guid id, string newMasterPassword, string key)
         {
+            // Org must be able to use reset password
+            var org = await _organizationRepository.GetByIdAsync(orgId);
+            if (org == null || !org.UseResetPassword)
+            {
+                throw new BadRequestException("Organization does not allow password reset.");
+            }
+            
+            // Enterprise policy must be enabled 
+            var resetPasswordPolicy =
+                await _policyRepository.GetByOrganizationIdTypeAsync(orgId, PolicyType.ResetPassword);
+            if (resetPasswordPolicy == null || !resetPasswordPolicy.Enabled)
+            {
+                throw new BadRequestException("Organization does not have the password reset policy enabled.");
+            }
+            
+            // Org User must be confirmed and have a ResetPasswordKey
+            var orgUser = await _organizationUserRepository.GetByIdAsync(id);
+            if (orgUser == null || orgUser.Status != OrganizationUserStatusType.Confirmed ||
+                orgUser.OrganizationId != orgId || string.IsNullOrEmpty(orgUser.ResetPasswordKey) ||
+                !orgUser.UserId.HasValue)
+            {
+                throw new BadRequestException("Organization User not valid");
+            }
+            
+            // Calling User must be of higher/equal user type to reset user's password
+            var canAdjustPassword = false;
+            switch (callingUserType)
+            {
+                case OrganizationUserType.Owner:
+                    canAdjustPassword = true;
+                    break;
+                case OrganizationUserType.Admin:
+                    canAdjustPassword = orgUser.Type != OrganizationUserType.Owner;
+                    break;
+                case OrganizationUserType.Custom:
+                    canAdjustPassword = orgUser.Type != OrganizationUserType.Owner &&
+                        orgUser.Type != OrganizationUserType.Admin;
+                    break;
+            }
+
+            if (!canAdjustPassword)
+            {
+                throw new BadRequestException("Calling user does not have permission to reset this user's master password");
+            }
+
+            var user = await GetUserByIdAsync(orgUser.UserId.Value);
+            if (user == null)
+            {
+                throw new NotFoundException();
+            }
+            
             var result = await UpdatePasswordHash(user, newMasterPassword);
             if (!result.Succeeded)
             {
@@ -763,7 +692,8 @@ namespace Bit.Core.Services
             user.Key = key;
 
             await _userRepository.ReplaceAsync(user);
-            await _eventService.LogUserEventAsync(user.Id, EventType.User_ChangedPassword);
+            await _mailService.SendAdminResetPasswordEmailAsync(user.Email, user.Name ?? user.Email, org.Name);
+            await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_AdminResetPassword);
             await _pushService.PushLogOutAsync(user.Id);
 
             return IdentityResult.Success;
@@ -799,7 +729,7 @@ namespace Bit.Core.Services
         }
 
         public async Task<IdentityResult> UpdateKeyAsync(User user, string masterPassword, string key, string privateKey,
-            IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders)
+            IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders, IEnumerable<Send> sends)
         {
             if (user == null)
             {
@@ -812,9 +742,9 @@ namespace Bit.Core.Services
                 user.SecurityStamp = Guid.NewGuid().ToString();
                 user.Key = key;
                 user.PrivateKey = privateKey;
-                if (ciphers.Any() || folders.Any())
+                if (ciphers.Any() || folders.Any() || sends.Any())
                 {
-                    await _cipherRepository.UpdateUserKeysAndCiphersAsync(user, ciphers, folders);
+                    await _cipherRepository.UpdateUserKeysAndCiphersAsync(user, ciphers, folders, sends);
                 }
                 else
                 {
