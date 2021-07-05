@@ -12,18 +12,15 @@ namespace Bit.Core.Test.Services
         private readonly InMemoryServiceBusApplicationCacheService _sut;
 
         private readonly IOrganizationRepository _organizationRepository;
-        private readonly IProviderRepository _providerRepository;
         private readonly GlobalSettings _globalSettings;
 
         public InMemoryServiceBusApplicationCacheServiceTests()
         {
             _organizationRepository = Substitute.For<IOrganizationRepository>();
-            _providerRepository = Substitute.For<IProviderRepository>();
             _globalSettings = new GlobalSettings();
 
             _sut = new InMemoryServiceBusApplicationCacheService(
                 _organizationRepository,
-                _providerRepository,
                 _globalSettings
             );
         }

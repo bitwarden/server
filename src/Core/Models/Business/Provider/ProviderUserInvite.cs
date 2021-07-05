@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using Bit.Core.Enums.Provider;
-using Bit.Core.Models.Api;
 using Bit.Core.Models.Data;
 
 namespace Bit.Core.Models.Business.Provider
@@ -9,11 +8,8 @@ namespace Bit.Core.Models.Business.Provider
     {
         public IEnumerable<string> Emails { get; set; }
         public ProviderUserType Type { get; set; }
+        public Permissions Permissions { get; set; }
 
-        public ProviderUserInvite(ProviderUserInviteRequestModel requestModel)
-        {
-            Emails = requestModel.Emails;
-            Type = requestModel.Type.Value;
-        }
+        public ProviderUserInvite() {}
     }
 }

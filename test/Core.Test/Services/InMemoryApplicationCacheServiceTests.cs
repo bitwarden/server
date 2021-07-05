@@ -11,14 +11,12 @@ namespace Bit.Core.Test.Services
         private readonly InMemoryApplicationCacheService _sut;
 
         private readonly IOrganizationRepository _organizationRepository;
-        private readonly IProviderRepository _providerRepository;
 
         public InMemoryApplicationCacheServiceTests()
         {
             _organizationRepository = Substitute.For<IOrganizationRepository>();
-            _providerRepository = Substitute.For<IProviderRepository>();
 
-            _sut = new InMemoryApplicationCacheService(_organizationRepository, _providerRepository);
+            _sut = new InMemoryApplicationCacheService(_organizationRepository);
         }
 
         // Remove this test when we add actual tests. It only proves that

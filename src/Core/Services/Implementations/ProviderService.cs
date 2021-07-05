@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Bit.Core.Enums;
 using Bit.Core.Enums.Provider;
@@ -9,12 +10,11 @@ using Bit.Core.Models.Business.Provider;
 using Bit.Core.Models.Table;
 using Bit.Core.Models.Table.Provider;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.DataProtection;
 
-namespace Bit.CommCore.Services
+namespace Bit.Core.Services
 {
     public class ProviderService : IProviderService
     {
@@ -24,18 +24,15 @@ namespace Bit.CommCore.Services
         private readonly GlobalSettings _globalSettings;
         private readonly IProviderRepository _providerRepository;
         private readonly IProviderUserRepository _providerUserRepository;
-        private readonly IProviderOrganizationRepository _providerOrganizationRepository;
         private readonly IUserRepository _userRepository;
         private readonly IUserService _userService;
 
         public ProviderService(IProviderRepository providerRepository, IProviderUserRepository providerUserRepository,
-            IProviderOrganizationRepository providerOrganizationRepository, IUserRepository userRepository,
-            IUserService userService, IMailService mailService, IDataProtectionProvider dataProtectionProvider,
-            IEventService eventService, GlobalSettings globalSettings)
+            IUserRepository userRepository, IUserService userService, IMailService mailService,
+            IDataProtectionProvider dataProtectionProvider, IEventService eventService, GlobalSettings globalSettings)
         {
             _providerRepository = providerRepository;
             _providerUserRepository = providerUserRepository;
-            _providerOrganizationRepository = providerOrganizationRepository;
             _userRepository = userRepository;
             _userService = userService;
             _mailService = mailService;
@@ -58,21 +55,12 @@ namespace Bit.CommCore.Services
                 Enabled = true,
             };
             await _providerRepository.CreateAsync(provider);
-
-            var providerUser = new ProviderUser
-            {
-                ProviderId = provider.Id,
-                UserId = owner.Id,
-                Type = ProviderUserType.ProviderAdmin,
-                Status = ProviderUserStatusType.Confirmed,
-            };
-            await _providerUserRepository.CreateAsync(providerUser);
-
+            
             var token = _dataProtector.Protect($"ProviderSetupInvite {provider.Id} {owner.Email} {CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow)}");
             await _mailService.SendProviderSetupInviteEmailAsync(provider, token, owner.Email);
         }
 
-        public async Task<Provider> CompleteSetupAsync(Provider provider, Guid ownerUserId, string token, string key)
+        public async Task CompleteSetupAsync(Provider provider, Guid ownerUserId, string token, string key)
         {
             var owner = await _userService.GetUserByIdAsync(ownerUserId);
             if (owner == null)
@@ -80,29 +68,23 @@ namespace Bit.CommCore.Services
                 throw new BadRequestException("Invalid owner.");
             }
 
-            if (provider.Status != ProviderStatusType.Pending)
-            {
-                throw new BadRequestException("Provider is already setup.");
-            }
-
             if (!CoreHelpers.TokenIsValid("ProviderSetupInvite", _dataProtector, token, owner.Email, provider.Id, _globalSettings))
             {
                 throw new BadRequestException("Invalid token.");
             }
-
-            var providerUser = await _providerUserRepository.GetByProviderUserAsync(provider.Id, ownerUserId);
-            if (!(providerUser is {Type: ProviderUserType.ProviderAdmin}))
-            {
-                throw new BadRequestException("Invalid owner.");
-            }
-
-            provider.Status = ProviderStatusType.Created;
+            
             await _providerRepository.UpsertAsync(provider);
+            
+            var providerUser = new ProviderUser
+            {
+                ProviderId = provider.Id,
+                UserId = owner.Id,
+                Key = key,
+                Status = ProviderUserStatusType.Confirmed,
+                Type = ProviderUserType.ProviderAdmin,
+            };
 
-            providerUser.Key = key;
-            await _providerUserRepository.ReplaceAsync(providerUser);
-
-            return provider;
+            await _providerUserRepository.CreateAsync(providerUser);
         }
 
         public async Task UpdateAsync(Provider provider, bool updateBilling = false)
@@ -146,6 +128,14 @@ namespace Bit.CommCore.Services
                     CreationDate = DateTime.UtcNow,
                     RevisionDate = DateTime.UtcNow,
                 };
+
+                if (invite.Permissions != null)
+                {
+                    providerUser.Permissions = JsonSerializer.Serialize(invite.Permissions, new JsonSerializerOptions
+                    {
+                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                    });
+                }
 
                 await _providerUserRepository.CreateAsync(providerUser);
 
@@ -332,17 +322,8 @@ namespace Bit.CommCore.Services
             return result;
         }
 
-        public async Task AddOrganization(Guid providerId, Guid organizationId, Guid addingUserId, string key)
-        {
-            var providerOrganization = new ProviderOrganization
-            {
-                ProviderId = providerId,
-                OrganizationId = organizationId,
-                Key = key,
-            };
-            
-            await _providerOrganizationRepository.CreateAsync(providerOrganization);
-        }
+        // TODO: Implement this
+        public Task AddOrganization(Guid providerId, Guid organizationId, Guid addingUserId, string key) => throw new NotImplementedException();
 
         // TODO: Implement this
         public Task RemoveOrganization(Guid providerOrganizationId, Guid removingUserId) => throw new NotImplementedException();

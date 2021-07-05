@@ -28,7 +28,7 @@ BEGIN
         BEGIN
         BEGIN TRANSACTION ProviderUser_DeleteMany_PUs
 
-        DELETE TOP(@BatchSize) PU
+        DELETE TOP(@BatchSize) OU
         FROM
             [dbo].[ProviderUser] PU
         INNER JOIN

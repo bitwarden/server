@@ -30,9 +30,12 @@ namespace Bit.Api.Test.Controllers
         private readonly ISsoUserRepository _ssoUserRepository;
         private readonly IUserRepository _userRepository;
         private readonly IUserService _userService;
+<<<<<<< HEAD
         private readonly ISendRepository _sendRepository;
         private readonly ISendService _sendService;
         private readonly IProviderUserRepository _providerUserRepository;
+=======
+>>>>>>> parent of 43f72711 ([Provider] Setup provider (#1378))
 
         public AccountsControllerTests()
         {
@@ -42,7 +45,6 @@ namespace Bit.Api.Test.Controllers
             _folderRepository = Substitute.For<IFolderRepository>();
             _organizationService = Substitute.For<IOrganizationService>();
             _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
-            _providerUserRepository = Substitute.For<IProviderUserRepository>();
             _paymentService = Substitute.For<IPaymentService>();
             _globalSettings = new GlobalSettings();
             _sendRepository = Substitute.For<ISendRepository>();
@@ -53,7 +55,6 @@ namespace Bit.Api.Test.Controllers
                 _folderRepository,
                 _organizationService,
                 _organizationUserRepository,
-                _providerUserRepository,
                 _paymentService,
                 _ssoUserRepository,
                 _userRepository,

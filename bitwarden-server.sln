@@ -61,16 +61,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Portal", "bitwarden_license
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sso", "bitwarden_license\src\Sso\Sso.csproj", "{4866AF64-6640-4C65-A662-A31E02FF9064}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Icons.Test", "test\Icons.Test\Icons.Test.csproj", "{C7BA2255-C1B1-4789-8BB9-C27540DA6FB8}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CommCore", "bitwarden_license\src\CommCore\CommCore.csproj", "{EDC0D688-D58C-4CE1-AA07-3606AC6874B8}"
-	ProjectSection(ProjectDependencies) = postProject
-		{3973D21B-A692-4B60-9B70-3631C057423A} = {3973D21B-A692-4B60-9B70-3631C057423A}
-	EndProjectSection
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CommCore.Test", "bitwarden_license\test\CmmCore.Test\CommCore.Test.csproj", "{0E99A21B-684B-4C59-9831-90F775CAB6F7}"
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test - Bitwarden License", "test - Bitwarden License", "{287CFF34-BBDB-4BC4-AF88-1E19A5A4679B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Icons.Test", "test\Icons.Test\Icons.Test.csproj", "{C7BA2255-C1B1-4789-8BB9-C27540DA6FB8}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -152,14 +143,6 @@ Global
 		{C7BA2255-C1B1-4789-8BB9-C27540DA6FB8}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C7BA2255-C1B1-4789-8BB9-C27540DA6FB8}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C7BA2255-C1B1-4789-8BB9-C27540DA6FB8}.Release|Any CPU.Build.0 = Release|Any CPU
-		{EDC0D688-D58C-4CE1-AA07-3606AC6874B8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{EDC0D688-D58C-4CE1-AA07-3606AC6874B8}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{EDC0D688-D58C-4CE1-AA07-3606AC6874B8}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{EDC0D688-D58C-4CE1-AA07-3606AC6874B8}.Release|Any CPU.Build.0 = Release|Any CPU
-		{0E99A21B-684B-4C59-9831-90F775CAB6F7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{0E99A21B-684B-4C59-9831-90F775CAB6F7}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{0E99A21B-684B-4C59-9831-90F775CAB6F7}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{0E99A21B-684B-4C59-9831-90F775CAB6F7}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -183,8 +166,6 @@ Global
 		{BA852F18-852F-4154-973B-77D577B8CA04} = {4FDB6543-F68B-4202-9EA6-7FEA984D2D0A}
 		{4866AF64-6640-4C65-A662-A31E02FF9064} = {4FDB6543-F68B-4202-9EA6-7FEA984D2D0A}
 		{C7BA2255-C1B1-4789-8BB9-C27540DA6FB8} = {DD5BD056-4AAE-43EF-BBD2-0B569B8DA84F}
-		{EDC0D688-D58C-4CE1-AA07-3606AC6874B8} = {4FDB6543-F68B-4202-9EA6-7FEA984D2D0A}
-		{0E99A21B-684B-4C59-9831-90F775CAB6F7} = {287CFF34-BBDB-4BC4-AF88-1E19A5A4679B}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {E01CBF68-2E20-425F-9EDB-E0A6510CA92F}

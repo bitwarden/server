@@ -14,8 +14,8 @@ namespace Bit.Core.Models.Table.Provider
         public ProviderUserStatusType Status { get; set; }
         public ProviderUserType Type { get; set; }
         public string Permissions { get; set; }
-        public DateTime CreationDate { get; set; } = DateTime.UtcNow;
-        public DateTime RevisionDate { get; set; } = DateTime.UtcNow;
+        public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
+        public DateTime RevisionDate { get; internal set; } = DateTime.UtcNow;
 
         public void SetNewId()
         {

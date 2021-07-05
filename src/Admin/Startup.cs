@@ -13,10 +13,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Stripe;
 
-#if !OSS
-using Bit.CommCore.Utilities;
-#endif
-
 namespace Bit.Admin
 {
     public class Startup
@@ -69,12 +65,6 @@ namespace Bit.Admin
             // Services
             services.AddBaseServices();
             services.AddDefaultServices(globalSettings);
-            
-            #if OSS
-                services.AddOosServices();
-            #else
-                services.AddCommCoreServices();
-            #endif
 
             // Mvc
             services.AddMvc(config =>

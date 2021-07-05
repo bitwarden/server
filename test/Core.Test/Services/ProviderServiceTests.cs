@@ -2,8 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Bit.CommCore.Test.AutoFixture.ProviderUserFixtures;
-using Bit.CommCore.Services;
 using Bit.Core.Enums;
 using Bit.Core.Enums.Provider;
 using Bit.Core.Exceptions;
@@ -14,13 +12,14 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture;
 using Bit.Core.Test.AutoFixture.Attributes;
+using Bit.Core.Test.AutoFixture.ProviderUserFixtures;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.DataProtection;
 using NSubstitute;
 using Xunit;
 using ProviderUser = Bit.Core.Models.Table.Provider.ProviderUser;
 
-namespace Bit.CommCore.Test.Services
+namespace Bit.Core.Test.Services
 {
     public class ProviderServiceTests
     {
@@ -63,33 +62,27 @@ namespace Bit.CommCore.Test.Services
                 () => sutProvider.Sut.CompleteSetupAsync(provider, user.Id, default, default));
             Assert.Contains("Invalid token.", exception.Message);
         }
-
+        
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
-        public async Task CompleteSetupAsync_Success(User user, Provider provider, string key,
-            [ProviderUser(ProviderUserStatusType.Confirmed, ProviderUserType.ProviderAdmin)]ProviderUser providerUser,
+        public async Task CompleteSetupAsync_Success(User user, Provider provider,
             SutProvider<ProviderService> sutProvider)
         {
-            providerUser.ProviderId = provider.Id;
-            providerUser.UserId = user.Id;
             var userService = sutProvider.GetDependency<IUserService>();
             userService.GetUserByIdAsync(user.Id).Returns(user);
-
-            var providerUserRepository = sutProvider.GetDependency<IProviderUserRepository>();
-            providerUserRepository.GetByProviderUserAsync(provider.Id, user.Id).Returns(providerUser);
 
             var dataProtectionProvider = DataProtectionProvider.Create("ApplicationName");
             var protector = dataProtectionProvider.CreateProtector("ProviderServiceDataProtector");
             sutProvider.GetDependency<IDataProtectionProvider>().CreateProtector("ProviderServiceDataProtector")
                 .Returns(protector);
             sutProvider.Create();
-            
-            var token = protector.Protect($"ProviderSetupInvite {provider.Id} {user.Email} {CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow)}");
 
-            await sutProvider.Sut.CompleteSetupAsync(provider, user.Id, token, key);
+            var token = protector.Protect($"ProviderSetupInvite {provider.Id} {user.Email} {CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow)}");
+            
+            await sutProvider.Sut.CompleteSetupAsync(provider, user.Id, token, default);
 
             await sutProvider.GetDependency<IProviderRepository>().Received().UpsertAsync(provider);
             await sutProvider.GetDependency<IProviderUserRepository>().Received()
-                .ReplaceAsync(Arg.Is<ProviderUser>(pu => pu.UserId == user.Id && pu.ProviderId == provider.Id && pu.Key == key));
+                .CreateAsync(Arg.Is<ProviderUser>(pu => pu.UserId == user.Id && pu.ProviderId == provider.Id));
         }
         
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]

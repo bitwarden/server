@@ -13,8 +13,6 @@ Each service is built and run separately. The Bitwarden clients can use differen
 
 This means that you don't need to run all services locally for a development environment. You can run only those services that you intend to modify, and use Bitwarden.com or a self-hosted instance for all other services required.
 
-By default some of the services depends on the Bitwarden licensed `CommCore`, however it can easily be disabled by including the `/p:DefineConstants="OSS"` as an argument to `dotnet`.
-
 # Local Development Environment Setup
 
 This guide will show you how to set up the Api, Identity and SQL projects for development. These are the minimum projects for any development work. You may need to set up additional projects depending on the changes you want to make.

@@ -27,16 +27,10 @@ SELECT
     OU.[Status],
     OU.[Type],
     SU.[ExternalId] SsoExternalId,
-    OU.[Permissions],
-    PO.[ProviderId],
-    P.[Name] ProviderName
+    OU.[Permissions]
 FROM
     [dbo].[OrganizationUser] OU
 INNER JOIN
     [dbo].[Organization] O ON O.[Id] = OU.[OrganizationId]
 LEFT JOIN
     [dbo].[SsoUser] SU ON SU.[UserId] = OU.[UserId] AND SU.[OrganizationId] = OU.[OrganizationId]
-LEFT JOIN
-    [dbo].[ProviderOrganization] PO ON PO.[OrganizationId] = O.[Id]
-LEFT JOIN
-    [dbo].[Provider] P ON P.[Id] = PO.[ProviderId]

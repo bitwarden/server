@@ -23,7 +23,6 @@ using Microsoft.Azure.Storage.Blob;
 using Bit.Core.Models.Table;
 using IdentityModel;
 using System.Text.Json;
-using Bit.Core.Enums.Provider;
 
 namespace Bit.Core.Utilities
 {
@@ -738,8 +737,7 @@ namespace Bit.Core.Utilities
             return configDict;
         }
 
-        public static List<KeyValuePair<string, string>> BuildIdentityClaims(User user, ICollection<CurrentContentOrganization> orgs,
-            ICollection<CurrentContentProvider> providers, bool isPremium)
+        public static List<KeyValuePair<string, string>> BuildIdentityClaims(User user, ICollection<CurrentContentOrganization> orgs, bool isPremium)
         {
             var claims = new List<KeyValuePair<string, string>>()
             {
@@ -851,29 +849,6 @@ namespace Bit.Core.Utilities
                     }
                 }
             }
-            
-            if (providers.Any())
-            {
-                foreach (var group in providers.GroupBy(o => o.Type))
-                {
-                    switch (group.Key)
-                    {
-                        case ProviderUserType.ProviderAdmin:
-                            foreach (var provider in group)
-                            {
-                                claims.Add(new KeyValuePair<string, string>("providerprovideradmin", provider.Id.ToString()));
-                            }
-                            break;
-                        case ProviderUserType.ServiceUser:
-                            foreach (var provider in group)
-                            {
-                                claims.Add(new KeyValuePair<string, string>("providerserviceuser", provider.Id.ToString()));
-                            }
-                            break;
-                    }
-                }
-            }
-            
             return claims;
         }
 

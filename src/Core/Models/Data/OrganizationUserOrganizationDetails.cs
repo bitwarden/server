@@ -32,7 +32,5 @@ namespace Bit.Core.Models.Data
         public string ResetPasswordKey { get; set; }
         public string PublicKey { get; set; }
         public string PrivateKey { get; set; }
-        public Guid? ProviderId { get; set; }
-        public string ProviderName { get; set; }
     }
 }

@@ -16,9 +16,8 @@ namespace Bit.Core.Services
 
         public InMemoryServiceBusApplicationCacheService(
             IOrganizationRepository organizationRepository,
-            IProviderRepository providerRepository,
             GlobalSettings globalSettings)
-            : base(organizationRepository, providerRepository)
+            : base(organizationRepository)
         {
             _subName = CoreHelpers.GetApplicationCacheServiceBusSubcriptionName(globalSettings);
             _topicClient = new TopicClient(globalSettings.ServiceBus.ConnectionString,
