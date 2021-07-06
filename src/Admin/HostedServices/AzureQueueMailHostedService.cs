@@ -38,7 +38,7 @@ namespace Bit.Admin.HostedServices
 
             _jsonSerializer = JsonSerializer.Create(new JsonSerializerSettings
             {
-                Converters = new JsonConverter[] { new MailQueueMessageConverter(), new EncodedStringConverter() }
+                Converters = new JsonConverter[] { new MailQueueMessageConverter() }
             });
         }
 

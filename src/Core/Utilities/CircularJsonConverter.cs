@@ -9,7 +9,10 @@ namespace Bit.Core.Utilities
         public void RemoveConverterAndAct(JsonSerializer serializer, Action action)
         {
             var (converter, index) = serializer.Converters.Select((c, i) => (c, i)).FirstOrDefault(t => t.Item1.GetType() == this.GetType());
-            serializer.Converters.RemoveAt(index);
+            if (converter != null)
+            {
+                serializer.Converters.RemoveAt(index);
+            }
 
             action();
 

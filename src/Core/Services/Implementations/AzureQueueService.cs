@@ -17,10 +17,6 @@ namespace Bit.Core.Services
         {
             _queueClient = queueClient;
             _jsonSettings = jsonSettings;
-            if (!_jsonSettings.Converters.Any(c => c.GetType() == typeof(EncodedStringConverter)))
-            {
-                _jsonSettings.Converters.Add(new EncodedStringConverter());
-            }
         }
 
         public async Task CreateAsync(T message) => await CreateManyAsync(new[] { message });

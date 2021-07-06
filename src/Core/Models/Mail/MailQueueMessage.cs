@@ -1,12 +1,14 @@
 using System;
 using System.Collections.Generic;
-using System.Reflection;
+using Bit.Core.Utilities;
+using Newtonsoft.Json;
 
 namespace Bit.Core.Models.Mail
 {
     public class MailQueueMessage : IMailQueueMessage
     {
         public Type ModelType => Model?.GetType();
+        [JsonConverter(typeof(EncodedStringConverter))]
         public string Subject { get; set; }
         public IEnumerable<string> ToEmails { get; set; }
         public IEnumerable<string> BccEmails { get; set; }
@@ -29,6 +31,7 @@ namespace Bit.Core.Models.Mail
 
     public class MailQueueMessage<T> : IMailQueueMessage
     {
+        [JsonConverter(typeof(EncodedStringConverter))]
         public string Subject { get; set; }
         public IEnumerable<string> ToEmails { get; set; }
         public IEnumerable<string> BccEmails { get; set; }
