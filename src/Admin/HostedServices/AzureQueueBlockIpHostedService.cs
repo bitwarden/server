@@ -6,6 +6,7 @@ using Bit.Core.Settings;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Azure.Storage.Queues;
+using Bit.Core.Utilities;
 
 namespace Bit.Admin.HostedServices
 {
@@ -35,7 +36,7 @@ namespace Bit.Admin.HostedServices
                     {
                         try
                         {
-                            await BlockIpAsync(message.MessageText, cancellationToken);
+                            await BlockIpAsync(message.DecodeMessageText(), cancellationToken);
                         }
                         catch (Exception e)
                         {
@@ -52,7 +53,7 @@ namespace Bit.Admin.HostedServices
                     {
                         try
                         {
-                            await UnblockIpAsync(message.MessageText, cancellationToken);
+                            await UnblockIpAsync(message.DecodeMessageText(), cancellationToken);
                         }
                         catch (Exception e)
                         {
