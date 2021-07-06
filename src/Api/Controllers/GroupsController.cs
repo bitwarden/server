@@ -59,9 +59,9 @@ namespace Bit.Api.Controllers
         {
             var orgIdGuid = new Guid(orgId);
             var canAccess = await _currentContext.ManageGroups(orgIdGuid) ||
-                            await _currentContext.ManageAssignedCollections(orgIdGuid) ||
-                            await _currentContext.ManageAllCollections(orgIdGuid) ||
-                            await _currentContext.ManageUsers(orgIdGuid);
+                await _currentContext.ManageAssignedCollections(orgIdGuid) ||
+                await _currentContext.ManageAllCollections(orgIdGuid) ||
+                await _currentContext.ManageUsers(orgIdGuid);
 
             if (!canAccess)
             {

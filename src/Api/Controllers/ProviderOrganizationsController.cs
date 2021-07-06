@@ -75,12 +75,6 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            var plan = StaticStore.Plans.FirstOrDefault(plan => plan.Type == model.PlanType);
-            if (!(plan is {LegacyYear: null}))
-            {
-                throw new Exception("Invalid plan selected.");
-            }
-
             var organizationSignup = model.ToOrganizationSignup(user);
             var result = await _providerService.CreateOrganizationAsync(providerId, organizationSignup, user);
             return new ProviderOrganizationResponseModel(result);

@@ -555,8 +555,13 @@ namespace Bit.Core.Services
         public async Task<Tuple<Organization, OrganizationUser>> SignUpAsync(OrganizationSignup signup,
             bool provider = false)
         {
-            var plan = StaticStore.Plans.FirstOrDefault(p => p.Type == signup.Plan && !p.Disabled);
-            if (plan == null)
+            var plan = StaticStore.Plans.FirstOrDefault(p => p.Type == signup.Plan);
+            if (!(plan is {LegacyYear: null}))
+            {
+                throw new BadRequestException("Invalid plan selected.");
+            }
+
+            if (plan.Disabled)
             {
                 throw new BadRequestException("Plan not found.");
             }
@@ -759,8 +764,7 @@ namespace Bit.Core.Services
                     };
 
                     await _organizationUserRepository.CreateAsync(orgUser);
-                    
-                    // push
+
                     var deviceIds = await GetUserDeviceIdsAsync(orgUser.UserId.Value);
                     await _pushRegistrationService.AddUserRegistrationOrganizationAsync(deviceIds,
                         organization.Id.ToString());
@@ -1982,7 +1986,7 @@ namespace Bit.Core.Services
             {
                 throw new BadRequestException("Organization Keys already exist");
             }
-            
+
             // Update org with generated public/private key
             org.PublicKey = publicKey;
             org.PrivateKey = privateKey;
