@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using Azure.Storage.Queues;
 using Bit.Core.Utilities;
@@ -73,7 +74,8 @@ namespace Bit.Core.Services
 
             foreach (var message in serializedMessages)
             {
-                if (calculateByteSize(messagesListSize, message.Length) > _queueClient.MessageMaxBytes)
+                var messageSize = Encoding.UTF8.GetByteCount(message);
+                if (calculateByteSize(messagesListSize, messageSize) > _queueClient.MessageMaxBytes)
                 {
                     yield return getArrayString();
                     messagesListSize = 0;
@@ -81,7 +83,7 @@ namespace Bit.Core.Services
                 }
 
                 messagesList.Add(message);
-                messagesListSize += message.Length;
+                messagesListSize += messageSize;
             }
 
             if (messagesList.Any())
