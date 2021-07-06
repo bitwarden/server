@@ -46,7 +46,8 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
                     c.OrganizationId == _organizationUser.OrganizationId &&
                     !t.Any()
                 select c).AsEnumerable();
-            return insertQuery.Select(x => new CollectionUser(){ 
+            return insertQuery.Select(x => new CollectionUser
+            { 
                 CollectionId = x.Id,
                 OrganizationUserId = _organizationUser.Id,
                 ReadOnly = _collections.FirstOrDefault(c => c.Id == x.Id).ReadOnly,
@@ -76,7 +77,8 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
             updateQuery = updateQuery.Where(cu => 
                 cu.target.ReadOnly == _collections.FirstOrDefault(u => u.Id == cu.target.CollectionId).ReadOnly &&
                 cu.target.HidePasswords == _collections.FirstOrDefault(u => u.Id == cu.target.CollectionId).HidePasswords);
-            return updateQuery.Select(x => new CollectionUser(){ 
+            return updateQuery.Select(x => new CollectionUser
+            { 
                 CollectionId = x.target.CollectionId,
                 OrganizationUserId = _organizationUser.Id,
                 ReadOnly = x.target.ReadOnly,
