@@ -6,7 +6,6 @@ using Bit.Core.Settings;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Azure.Storage.Queues;
-using Bit.Core.Utilities;
 
 namespace Bit.Admin.HostedServices
 {
