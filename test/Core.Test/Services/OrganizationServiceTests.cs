@@ -699,5 +699,47 @@ namespace Bit.Core.Test.Services
             Assert.Contains("User does not have two-step login enabled.", result[1].Item2);
             Assert.Contains("User is a member of another organization.", result[2].Item2);
         }
+
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public async Task UpdateOrganizationKeysAsync_WithoutManageResetPassword_Throws(Guid orgId, string publicKey,
+            string privateKey, SutProvider<OrganizationService> sutProvider)
+        {
+            var currentContext = Substitute.For<ICurrentContext>();
+            currentContext.ManageResetPassword(orgId).Returns(false);
+
+            await Assert.ThrowsAsync<UnauthorizedAccessException>(
+                () => sutProvider.Sut.UpdateOrganizationKeysAsync(orgId, publicKey, privateKey));
+        }
+
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public async Task UpdateOrganizationKeysAsync_KeysAlreadySet_Throws(Organization org, string publicKey,
+            string privateKey, SutProvider<OrganizationService> sutProvider)
+        {
+            var currentContext = sutProvider.GetDependency<ICurrentContext>();
+            currentContext.ManageResetPassword(org.Id).Returns(true);
+
+            var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+            organizationRepository.GetByIdAsync(org.Id).Returns(org);
+
+            var exception = await Assert.ThrowsAsync<BadRequestException>(
+                () => sutProvider.Sut.UpdateOrganizationKeysAsync(org.Id, publicKey, privateKey));
+            Assert.Contains("Organization Keys already exist", exception.Message);
+        }
+
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public async Task UpdateOrganizationKeysAsync_KeysAlreadySet_Success(Organization org, string publicKey,
+            string privateKey, SutProvider<OrganizationService> sutProvider)
+        {
+            org.PublicKey = null;
+            org.PrivateKey = null;
+
+            var currentContext = sutProvider.GetDependency<ICurrentContext>();
+            currentContext.ManageResetPassword(org.Id).Returns(true);
+
+            var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+            organizationRepository.GetByIdAsync(org.Id).Returns(org);
+
+            await sutProvider.Sut.UpdateOrganizationKeysAsync(org.Id, publicKey, privateKey);
+        }
     }
 }
