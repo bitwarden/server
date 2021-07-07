@@ -36,7 +36,7 @@ namespace Bit.Admin.HostedServices
                     {
                         try
                         {
-                            await BlockIpAsync(message.DecodeMessageText(), cancellationToken);
+                            await BlockIpAsync(message.MessageText, cancellationToken);
                         }
                         catch (Exception e)
                         {
@@ -53,7 +53,7 @@ namespace Bit.Admin.HostedServices
                     {
                         try
                         {
-                            await UnblockIpAsync(message.DecodeMessageText(), cancellationToken);
+                            await UnblockIpAsync(message.MessageText, cancellationToken);
                         }
                         catch (Exception e)
                         {
