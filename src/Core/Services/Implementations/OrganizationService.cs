@@ -15,8 +15,6 @@ using Bit.Core.Settings;
 using System.IO;
 using Newtonsoft.Json;
 using System.Text.Json;
-using Bit.Core.Models.Api;
-using JsonSerializer = System.Text.Json.JsonSerializer;
 using Bit.Core.Context;
 
 namespace Bit.Core.Services
