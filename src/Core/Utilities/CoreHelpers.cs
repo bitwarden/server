@@ -23,6 +23,10 @@ using Microsoft.Azure.Storage.Blob;
 using Bit.Core.Models.Table;
 using IdentityModel;
 using System.Text.Json;
+using Bit.Core.Enums.Provider;
+using Azure.Storage.Queues;
+using Azure.Storage.Queues.Models;
+using System.Threading;
 
 namespace Bit.Core.Utilities
 {
@@ -875,6 +879,23 @@ namespace Bit.Core.Utilities
             }
             list.Add(item);
             return list;
+        }
+
+        public static string DecodeMessageText(this QueueMessage message)
+        {
+            var text = message?.MessageText;
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return text;
+            }
+            try
+            {
+                return Base64DecodeString(text);
+            }
+            catch
+            {
+                return text;
+            }
         }
     }
 }
