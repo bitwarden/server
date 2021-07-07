@@ -16,9 +16,22 @@ namespace Bit.Core.Repositories.SqlServer
 {
     public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IOrganizationUserRepository
     {
+        /// <summary>
+        /// For use with methods with TDS stream issues.
+        /// This has been observed in Linux-hosted SqlServers with large table-valued-parameters
+        /// https://github.com/dotnet/SqlClient/issues/54
+        /// </summary>
+        private string _marsConnectionString;
+
         public OrganizationUserRepository(GlobalSettings globalSettings)
             : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
-        { }
+        {
+            var builder = new SqlConnectionStringBuilder(ConnectionString)
+            {
+                MultipleActiveResultSets = true,
+            };
+            _marsConnectionString = builder.ToString();
+        }
 
         public OrganizationUserRepository(string connectionString, string readOnlyConnectionString)
             : base(connectionString, readOnlyConnectionString)
@@ -76,14 +89,15 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
-        public async Task<IEnumerable<string>> SelectKnownEmailsAsync(Guid organizationId, IEnumerable<string> emails,
+        public async Task<ICollection<string>> SelectKnownEmailsAsync(Guid organizationId, IEnumerable<string> emails,
             bool onlyRegisteredUsers)
         {
-            using (var connection = new SqlConnection(ConnectionString))
+            var emailsTvp = emails.ToArrayTVP("Email");
+            using (var connection = new SqlConnection(_marsConnectionString))
             {
                 var result = await connection.QueryAsync<string>(
                     "[dbo].[OrganizationUser_SelectKnownEmails]",
-                    new { OrganizationId = organizationId, Emails = emails.ToArrayTVP("Email"), OnlyUsers = onlyRegisteredUsers },
+                    new { OrganizationId = organizationId, Emails = emailsTvp, OnlyUsers = onlyRegisteredUsers },
                     commandType: CommandType.StoredProcedure);
 
                 // Return as a list to avoid timing out the sql connection
@@ -342,11 +356,12 @@ namespace Bit.Core.Repositories.SqlServer
                 organizationUser.SetNewId();
             }
 
-            using (var connection = new SqlConnection(ConnectionString))
+            var orgUsersTVP = organizationUsers.ToTvp();
+            using (var connection = new SqlConnection(_marsConnectionString))
             {
                 var results = await connection.ExecuteAsync(
                     $"[{Schema}].[{Table}_CreateMany]",
-                    new { OrganizationUsersInput = organizationUsers.ToTvp() },
+                    new { OrganizationUsersInput = orgUsersTVP },
                     commandType: CommandType.StoredProcedure);
             }
         }
@@ -358,11 +373,12 @@ namespace Bit.Core.Repositories.SqlServer
                 return;
             }
 
-            using (var connection = new SqlConnection(ConnectionString))
+            var orgUsersTVP = organizationUsers.ToTvp();
+            using (var connection = new SqlConnection(_marsConnectionString))
             {
                 var results = await connection.ExecuteAsync(
                     $"[{Schema}].[{Table}_UpdateMany]",
-                    new { OrganizationUsersInput = organizationUsers.ToTvp() },
+                    new { OrganizationUsersInput = orgUsersTVP },
                     commandType: CommandType.StoredProcedure);
             }
         }

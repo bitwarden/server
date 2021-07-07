@@ -58,6 +58,6 @@ namespace Bit.Core.Services
             bool overwriteExisting);
         Task RotateApiKeyAsync(Organization organization);
         Task DeleteSsoUserAsync(Guid userId, Guid? organizationId);
-        Task<Organization> UpdateOrganizationKeysAsync(Guid userId, Guid orgId, string publicKey, string privateKey);
+        Task<Organization> UpdateOrganizationKeysAsync(Guid orgId, string publicKey, string privateKey);
     }
 }

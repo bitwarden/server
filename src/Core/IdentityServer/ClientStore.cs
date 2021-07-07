@@ -25,6 +25,7 @@ namespace Bit.Core.IdentityServer
         private readonly ILicensingService _licensingService;
         private readonly ICurrentContext _currentContext;
         private readonly IOrganizationUserRepository _organizationUserRepository;
+        private readonly IProviderUserRepository _providerUserRepository;
 
         public ClientStore(
             IInstallationRepository installationRepository,
@@ -34,7 +35,8 @@ namespace Bit.Core.IdentityServer
             StaticClientStore staticClientStore,
             ILicensingService licensingService,
             ICurrentContext currentContext,
-            IOrganizationUserRepository organizationUserRepository)
+            IOrganizationUserRepository organizationUserRepository,
+            IProviderUserRepository providerUserRepository)
         {
             _installationRepository = installationRepository;
             _organizationRepository = organizationRepository;
@@ -44,6 +46,7 @@ namespace Bit.Core.IdentityServer
             _licensingService = licensingService; 
             _currentContext = currentContext;
             _organizationUserRepository = organizationUserRepository;
+            _providerUserRepository = providerUserRepository;
         }
 
         public async Task<Client> FindClientByIdAsync(string clientId)
@@ -138,8 +141,9 @@ namespace Bit.Core.IdentityServer
                             new ClientClaim(JwtClaimTypes.AuthenticationMethod, "Application", "external")
                         }; 
                         var orgs = await _currentContext.OrganizationMembershipAsync(_organizationUserRepository, user.Id);
+                        var providers = await _currentContext.ProviderMembershipAsync(_providerUserRepository, user.Id);
                         var isPremium = await _licensingService.ValidateUserPremiumAsync(user);
-                        foreach (var claim in CoreHelpers.BuildIdentityClaims(user, orgs, isPremium))
+                        foreach (var claim in CoreHelpers.BuildIdentityClaims(user, orgs, providers, isPremium))
                         {
                             var upperValue = claim.Value.ToUpperInvariant();
                             var isBool = upperValue == "TRUE" || upperValue == "FALSE";

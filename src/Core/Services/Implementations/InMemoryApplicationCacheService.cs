@@ -11,20 +11,30 @@ namespace Bit.Core.Services
     public class InMemoryApplicationCacheService : IApplicationCacheService
     {
         private readonly IOrganizationRepository _organizationRepository;
+        private readonly IProviderRepository _providerRepository;
         private DateTime _lastOrgAbilityRefresh = DateTime.MinValue;
         private IDictionary<Guid, OrganizationAbility> _orgAbilities;
         private TimeSpan _orgAbilitiesRefreshInterval = TimeSpan.FromMinutes(10);
 
+        private IDictionary<Guid, ProviderAbility> _providerAbilities;
+
         public InMemoryApplicationCacheService(
-            IOrganizationRepository organizationRepository)
+            IOrganizationRepository organizationRepository, IProviderRepository providerRepository)
         {
             _organizationRepository = organizationRepository;
+            _providerRepository = providerRepository;
         }
 
         public virtual async Task<IDictionary<Guid, OrganizationAbility>> GetOrganizationAbilitiesAsync()
         {
             await InitOrganizationAbilitiesAsync();
             return _orgAbilities;
+        }
+
+        public virtual async Task<IDictionary<Guid, ProviderAbility>> GetProviderAbilitiesAsync()
+        {
+            await InitProviderAbilitiesAsync();
+            return _providerAbilities;
         }
 
         public virtual async Task UpsertOrganizationAbilityAsync(Organization organization)
@@ -59,6 +69,17 @@ namespace Bit.Core.Services
             {
                 var abilities = await _organizationRepository.GetManyAbilitiesAsync();
                 _orgAbilities = abilities.ToDictionary(a => a.Id);
+                _lastOrgAbilityRefresh = now;
+            }
+        }
+        
+        private async Task InitProviderAbilitiesAsync()
+        {
+            var now = DateTime.UtcNow;
+            if (_providerAbilities == null || (now - _lastOrgAbilityRefresh) > _orgAbilitiesRefreshInterval)
+            {
+                var abilities = await _providerRepository.GetManyAbilitiesAsync();
+                _providerAbilities = abilities.ToDictionary(a => a.Id);
                 _lastOrgAbilityRefresh = now;
             }
         }

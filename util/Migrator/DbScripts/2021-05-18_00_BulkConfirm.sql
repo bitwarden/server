@@ -42,9 +42,9 @@ BEGIN
         U.[PublicKey]
     FROM
         @OrganizationUserIds OUIDs
-            INNER JOIN
+    INNER JOIN
         [dbo].[OrganizationUser] OU ON OUIDs.Id = OU.Id AND OU.[Status] = 1 -- Accepted
-            INNER JOIN
+    INNER JOIN
         [dbo].[User] U ON OU.UserId = U.Id
     WHERE
             OU.OrganizationId = @OrganizationId
