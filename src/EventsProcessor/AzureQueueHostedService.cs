@@ -18,7 +18,6 @@ namespace Bit.EventsProcessor
 {
     public class AzureQueueHostedService : IHostedService, IDisposable
     {
-        private readonly JsonSerializer _jsonSerializer;
         private readonly ILogger<AzureQueueHostedService> _logger;
         private readonly IConfiguration _configuration;
 
@@ -33,11 +32,6 @@ namespace Bit.EventsProcessor
         {
             _logger = logger;
             _configuration = configuration;
-
-            _jsonSerializer = JsonSerializer.Create(new JsonSerializerSettings
-            {
-                Converters = new[] { new EncodedStringConverter() },
-            });
         }
 
         public Task StartAsync(CancellationToken cancellationToken)
@@ -84,7 +78,7 @@ namespace Bit.EventsProcessor
                     {
                         foreach (var message in messages.Value)
                         {
-                            await ProcessQueueMessageAsync(message.MessageText, cancellationToken);
+                            await ProcessQueueMessageAsync(message.DecodeMessageText(), cancellationToken);
                             await _queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt);
                         }
                     }
@@ -118,7 +112,7 @@ namespace Bit.EventsProcessor
                 var token = JToken.Parse(message);
                 if (token is JArray)
                 {
-                    var indexedEntities = token.ToObject<List<EventMessage>>(_jsonSerializer)
+                    var indexedEntities = token.ToObject<List<EventMessage>>()
                         .SelectMany(e => EventTableEntity.IndexEvent(e));
                     events.AddRange(indexedEntities);
                 }
