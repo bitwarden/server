@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using Azure.Storage.Queues;
 using Bit.Core.Utilities;
@@ -17,13 +18,14 @@ namespace Bit.Core.Services
         {
             _queueClient = queueClient;
             _jsonSettings = jsonSettings;
-            if (!_jsonSettings.Converters.Any(c => c.GetType() == typeof(EncodedStringConverter)))
-            {
-                _jsonSettings.Converters.Add(new EncodedStringConverter());
-            }
         }
 
-        public async Task CreateAsync(T message) => await CreateManyAsync(new[] { message });
+        public async Task CreateAsync(T message)
+        {
+            var json = JsonConvert.SerializeObject(message, _jsonSettings);
+            var base64 = CoreHelpers.Base64EncodeString(json);
+            await _queueClient.SendMessageAsync(base64);
+        }
 
         public async Task CreateManyAsync(IEnumerable<T> messages)
         {
@@ -32,36 +34,62 @@ namespace Bit.Core.Services
                 return;
             }
 
-            foreach (var json in SerializeMany(messages))
+            if (!messages.Skip(1).Any())
+            {
+                await CreateAsync(messages.First());
+                return;
+            }
+
+            foreach (var json in SerializeMany(messages, _jsonSettings))
             {
                 await _queueClient.SendMessageAsync(json);
             }
         }
 
-
-        private IEnumerable<string> SerializeMany(IEnumerable<T> messages)
+        protected IEnumerable<string> SerializeMany(IEnumerable<T> messages, JsonSerializerSettings jsonSettings)
         {
-            string SerializeMessage(T message) => JsonConvert.SerializeObject(message, _jsonSettings);
+            // Calculate Base-64 encoded text with padding
+            int getBase64Size(int byteCount) => ((4 * byteCount / 3) + 3) & ~3;
 
-            var messagesLists = new List<List<T>> { new List<T>() };
-            var strings = new List<string>();
-            var ListMessageLength = 2; // to account for json array brackets "[]"
-            foreach (var (message, jsonEvent) in messages.Select(m => (m, SerializeMessage(m))))
+            var messagesList = new List<string>();
+            var messagesListSize = 0;
+            
+            int calculateByteSize(int totalSize, int toAdd) =>
+                // Calculate the total length this would be w/ "[]" and commas
+                getBase64Size(totalSize + toAdd + messagesList.Count + 2);
+
+            // Format the final array string, i.e. [{...},{...}]
+            string getArrayString()
             {
-
-                var messageLength = jsonEvent.Length + 1; // To account for json array comma
-                if (ListMessageLength + messageLength > _queueClient.MessageMaxBytes)
+                if (messagesList.Count == 1)
                 {
-                    messagesLists.Add(new List<T> { message });
-                    ListMessageLength = 2 + messageLength;
+                    return CoreHelpers.Base64EncodeString(messagesList[0]);
                 }
-                else
-                {
-                    messagesLists.Last().Add(message);
-                    ListMessageLength += messageLength;
-                }
+                return CoreHelpers.Base64EncodeString(
+                    string.Concat("[", string.Join(',', messagesList), "]"));
             }
-            return messagesLists.Select(l => JsonConvert.SerializeObject(l, _jsonSettings));
+            
+            var serializedMessages = messages.Select(message =>
+                JsonConvert.SerializeObject(message, jsonSettings));
+
+            foreach (var message in serializedMessages)
+            {
+                var messageSize = Encoding.UTF8.GetByteCount(message);
+                if (calculateByteSize(messagesListSize, messageSize) > _queueClient.MessageMaxBytes)
+                {
+                    yield return getArrayString();
+                    messagesListSize = 0;
+                    messagesList.Clear();
+                }
+
+                messagesList.Add(message);
+                messagesListSize += messageSize;
+            }
+
+            if (messagesList.Any())
+            {
+                yield return getArrayString();
+            }
         }
     }
 }
