@@ -111,14 +111,17 @@ namespace Bit.Core.Models.Api
 
     public class OrganizationUserPublicKeyResponseModel : ResponseModel
     {
-        public OrganizationUserPublicKeyResponseModel(Guid id, string key,
-            string obj = "organizationUserPublicKeyResponseModel") : base(obj)
+        public OrganizationUserPublicKeyResponseModel(Guid id, Guid userId,
+            string key, string obj = "organizationUserPublicKeyResponseModel") :
+            base(obj)
         {
             Id = id;
+            UserId = userId;
             Key = key;
         }
 
         public Guid Id { get; set; }
+        public Guid UserId { get; set; }
         public string Key { get; set; }
     }
 

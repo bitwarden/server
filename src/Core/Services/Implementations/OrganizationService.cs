@@ -1975,7 +1975,7 @@ namespace Bit.Core.Services
 
         public async Task<Organization> UpdateOrganizationKeysAsync(Guid orgId, string publicKey, string privateKey)
         {
-            if (await _currentContext.ManageResetPassword(orgId))
+            if (!await _currentContext.ManageResetPassword(orgId))
             {
                 throw new UnauthorizedAccessException();
             }

@@ -219,7 +219,7 @@ namespace Bit.Api.Controllers
             }
 
             var result = await _organizationUserRepository.GetManyPublicKeysByOrganizationUserAsync(orgGuidId, model.Ids);
-            var responses = result.Select(r => new OrganizationUserPublicKeyResponseModel(r.Id, r.PublicKey)).ToList();
+            var responses = result.Select(r => new OrganizationUserPublicKeyResponseModel(r.Id, r.UserId, r.PublicKey)).ToList();
             return new ListResponseModel<OrganizationUserPublicKeyResponseModel>(responses);
         }
 
