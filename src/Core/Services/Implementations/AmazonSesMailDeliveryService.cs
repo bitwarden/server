@@ -121,7 +121,7 @@ namespace Bit.Core.Services
             }
             catch (Exception e)
             {
-                _logger.LogWarning(e, "Failed to send email. Re-retying...");
+                _logger.LogWarning(e, "Failed to send email. Retrying...");
                 await SendAsync(request, true);
                 throw e;
             }
