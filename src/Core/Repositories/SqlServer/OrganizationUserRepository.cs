@@ -271,11 +271,6 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
-        public class OrganizationUserWithCollections : OrganizationUser
-        {
-            public DataTable Collections { get; set; }
-        }
-
         public async Task<ICollection<OrganizationUser>> GetManyByManyUsersAsync(IEnumerable<Guid> userIds)
         {
             using (var connection = new SqlConnection(ConnectionString))

@@ -1,25 +1,17 @@
 ﻿using System.Collections.Generic;
-using System.Text.Json;
 using AutoMapper;
 
 namespace Bit.Core.Models.EntityFramework
 {
     public class Organization : Table.Organization
     {
-        private JsonDocument _twoFactorProvidersJson;
-
-        public ICollection<Cipher> Ciphers { get; set; }
-        
-        [IgnoreMap]
-        public JsonDocument TwoFactorProvidersJson
-        {
-            get => _twoFactorProvidersJson;
-            set
-            {
-                TwoFactorProviders = value?.ToString();
-                _twoFactorProvidersJson = value;
-            }
-        }
+        public virtual ICollection<Cipher> Ciphers { get; set; }
+        public virtual ICollection<OrganizationUser> OrganizationUsers { get; set; }
+        public virtual ICollection<Group> Groups { get; set; }
+        public virtual ICollection<Policy> Policies { get; set; }
+        public virtual ICollection<SsoConfig> SsoConfigs { get; set; }
+        public virtual ICollection<SsoUser> SsoUsers { get; set; }
+        public virtual ICollection<Transaction> Transactions { get; set; }
     }
 
     public class OrganizationMapperProfile : Profile

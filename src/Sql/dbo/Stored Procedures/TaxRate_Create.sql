@@ -1,5 +1,5 @@
 CREATE PROCEDURE [dbo].[TaxRate_Create]
-    @Id VARCHAR(40),
+    @Id VARCHAR(40) OUTPUT,
     @Country VARCHAR(50),
     @State VARCHAR(2),
     @PostalCode VARCHAR(10),

@@ -1,5 +1,5 @@
 ﻿CREATE PROCEDURE [dbo].[Group_Create]
-    @Id UNIQUEIDENTIFIER,
+    @Id UNIQUEIDENTIFIER OUTPUT,
     @OrganizationId UNIQUEIDENTIFIER,
     @Name NVARCHAR(100),
     @AccessAll BIT,

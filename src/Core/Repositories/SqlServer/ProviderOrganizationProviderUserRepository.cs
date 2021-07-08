@@ -4,7 +4,7 @@ using Bit.Core.Settings;
 
 namespace Bit.Core.Repositories.SqlServer
 {
-    public class ProviderOrganizationProviderUserRepository : Repository<Provider, Guid>, IProviderOrganizationProviderUserRepository
+    public class ProviderOrganizationProviderUserRepository : Repository<ProviderOrganizationProviderUser, Guid>, IProviderOrganizationProviderUserRepository
     {
         public ProviderOrganizationProviderUserRepository(GlobalSettings globalSettings)
             : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.ComponentModel.DataAnnotations;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Utilities;
@@ -36,6 +37,7 @@ namespace Bit.Core.Models.Table
         public Guid? GroupId { get; set; }
         public Guid? OrganizationUserId { get; set; }
         public DeviceType? DeviceType { get; set; }
+        [MaxLength(50)]
         public string IpAddress { get; set; }
         public Guid? ActingUserId { get; set; }
 
