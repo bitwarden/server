@@ -28,7 +28,7 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
                 ExternalId = x.ou.ExternalId,
                 SsoExternalId = x.su.ExternalId,
                 Permissions = x.ou.Permissions,
-                ResetPasswordKey = x.ou.ResetPasswordKey
+                ResetPasswordKey = x.ou.ResetPasswordKey,
             });
         }
     }

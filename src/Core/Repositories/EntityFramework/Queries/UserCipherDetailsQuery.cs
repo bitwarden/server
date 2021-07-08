@@ -68,7 +68,7 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
                     null,
                 Edit = true,
                 ViewPassword = true,
-                OrganizationUseTotp = false
+                OrganizationUseTotp = false,
             });
             return union;
         }

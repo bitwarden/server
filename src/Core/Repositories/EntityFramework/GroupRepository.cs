@@ -157,7 +157,7 @@ namespace Bit.Core.Repositories.EntityFramework
                     select new EfModel.GroupUser
                     {
                         GroupId = groupId,
-                        OrganizationUserId = ou.Id
+                        OrganizationUserId = ou.Id,
                     };
                await dbContext.AddRangeAsync(insert);
 

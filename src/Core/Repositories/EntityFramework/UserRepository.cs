@@ -111,7 +111,7 @@ namespace Bit.Core.Repositories.EntityFramework
                 var user = new EFModel.User
                 {
                     Id = id,
-                    RenewalReminderDate = renewalReminderDate
+                    RenewalReminderDate = renewalReminderDate,
                 };
                 var set = GetDbSet(dbContext);
                 set.Attach(user);

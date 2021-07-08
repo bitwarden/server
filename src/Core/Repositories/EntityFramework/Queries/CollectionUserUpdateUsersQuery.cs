@@ -55,7 +55,7 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
                 CollectionId = _collectionId,
                 OrganizationUserId = x.Id,
                 ReadOnly = _users.FirstOrDefault(u => u.Id.Equals(x.Id)).ReadOnly,
-                HidePasswords = _users.FirstOrDefault(u => u.Id.Equals(x.Id)).HidePasswords
+                HidePasswords = _users.FirstOrDefault(u => u.Id.Equals(x.Id)).HidePasswords,
             });
             return collectionUsers;
         }

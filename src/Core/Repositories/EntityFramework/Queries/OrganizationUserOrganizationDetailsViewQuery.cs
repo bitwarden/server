@@ -41,7 +41,7 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
                 SsoExternalId = x.su.ExternalId,
                 Permissions = x.ou.Permissions,
                 PublicKey = x.o.PublicKey,
-                PrivateKey = x.o.PrivateKey
+                PrivateKey = x.o.PrivateKey,
             });
         }
     }
