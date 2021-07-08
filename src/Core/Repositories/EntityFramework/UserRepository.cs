@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Bit.Core.Models.Table;
+using System.Text.Json;
 
 namespace Bit.Core.Repositories.EntityFramework
 {
@@ -23,7 +24,8 @@ namespace Bit.Core.Repositories.EntityFramework
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
-                return await GetDbSet(dbContext).FirstOrDefaultAsync(e => e.Email == email);
+                var entity = await GetDbSet(dbContext).FirstOrDefaultAsync(e => e.Email == email);
+                return Mapper.Map<TableModel.User>(entity);
             }
         }
 
@@ -46,11 +48,23 @@ namespace Bit.Core.Repositories.EntityFramework
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
-                var users = await GetDbSet(dbContext)
-                    .Where(e => email == null || e.Email.StartsWith(email))
-                    .OrderBy(e => e.Email)
-                    .Skip(skip).Take(take)
-                    .ToListAsync();
+                List<EFModel.User> users;
+                if (dbContext.Database.IsNpgsql())
+                {
+                    users = await GetDbSet(dbContext)
+                        .Where(e => e.Email == null || 
+                            EF.Functions.ILike(EF.Functions.Collate(e.Email, "default"), "a%"))
+                        .OrderBy(e => e.Email)
+                        .Skip(skip).Take(take)
+                        .ToListAsync();
+                }
+                else {
+                    users = await GetDbSet(dbContext)
+                        .Where(e => email == null || e.Email.StartsWith(email))
+                        .OrderBy(e => e.Email)
+                        .Skip(skip).Take(take)
+                        .ToListAsync();
+                }
                 return Mapper.Map<List<TableModel.User>>(users);
             }
         }
@@ -86,25 +100,7 @@ namespace Bit.Core.Repositories.EntityFramework
 
         public async Task UpdateStorageAsync(Guid id)
         {
-            using (var scope = ServiceScopeFactory.CreateScope())
-            {
-                var dbContext = GetDatabaseContext(scope);
-                var ciphers = await dbContext.Ciphers.Where(e => e.UserId == id).ToListAsync();
-                var storage = ciphers.Sum(e => e.AttachmentsJson?.RootElement.EnumerateArray()
-                    .Sum(p => p.GetProperty("Size").GetInt64()) ?? 0);
-                var user = new EFModel.User
-                {
-                    Id = id,
-                    RevisionDate = DateTime.UtcNow,
-                    Storage = storage,
-                };
-                var set = GetDbSet(dbContext);
-                set.Attach(user);
-                var entry = dbContext.Entry(user);
-                entry.Property(e => e.RevisionDate).IsModified = true;
-                entry.Property(e => e.Storage).IsModified = true;
-                await dbContext.SaveChangesAsync();
-            }
+            await base.UserUpdateStorage(id);
         }
 
         public async Task UpdateRenewalReminderDateAsync(Guid id, DateTime renewalReminderDate)
@@ -115,7 +111,7 @@ namespace Bit.Core.Repositories.EntityFramework
                 var user = new EFModel.User
                 {
                     Id = id,
-                    RenewalReminderDate = renewalReminderDate
+                    RenewalReminderDate = renewalReminderDate,
                 };
                 var set = GetDbSet(dbContext);
                 set.Attach(user);
@@ -124,14 +120,32 @@ namespace Bit.Core.Repositories.EntityFramework
             }
         }
 
-        public Task<User> GetBySsoUserAsync(string externalId, Guid? organizationId)
+        public async Task<User> GetBySsoUserAsync(string externalId, Guid? organizationId)
         {
-            throw new NotImplementedException();
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var ssoUser = await dbContext.SsoUsers.SingleOrDefaultAsync(e =>
+                    e.OrganizationId == organizationId && e.ExternalId == externalId);
+                
+                if (ssoUser == null)
+                {
+                    return null;
+                }
+
+                var entity = await dbContext.Users.SingleOrDefaultAsync(e => e.Id == ssoUser.UserId);
+                return Mapper.Map<TableModel.User>(entity);
+            }
         }
 
-        public Task<IEnumerable<User>> GetManyAsync(IEnumerable<Guid> ids)
+        public async Task<IEnumerable<User>> GetManyAsync(IEnumerable<Guid> ids)
         {
-            throw new NotImplementedException();
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var users = dbContext.Users.Where(x => ids.Contains(x.Id));
+                return await users.ToListAsync();
+            }
         }
     }
 }

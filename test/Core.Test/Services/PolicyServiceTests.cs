@@ -8,6 +8,7 @@ using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture;
 using Bit.Core.Test.AutoFixture.Attributes;
 using Bit.Core.Test.AutoFixture.OrganizationUserFixtures;
+using PolicyFixtures = Bit.Core.Test.AutoFixture.PolicyFixtures;
 using NSubstitute;
 using Xunit;
 
@@ -16,7 +17,7 @@ namespace Bit.Core.Test.Services
     public class PolicyServiceTests
     {
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
-        public async Task SaveAsync_OrganizationDoesNotExist_ThrowsBadRequest([Policy(Enums.PolicyType.DisableSend)] Core.Models.Table.Policy policy, SutProvider<PolicyService> sutProvider)
+        public async Task SaveAsync_OrganizationDoesNotExist_ThrowsBadRequest([PolicyFixtures.Policy(Enums.PolicyType.DisableSend)] Core.Models.Table.Policy policy, SutProvider<PolicyService> sutProvider)
         {
             SetupOrg(sutProvider, policy.OrganizationId, null);
 
@@ -38,7 +39,7 @@ namespace Bit.Core.Test.Services
         }
 
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
-        public async Task SaveAsync_OrganizationCannotUsePolicies_ThrowsBadRequest([Policy(Enums.PolicyType.DisableSend)] Core.Models.Table.Policy policy, SutProvider<PolicyService> sutProvider)
+        public async Task SaveAsync_OrganizationCannotUsePolicies_ThrowsBadRequest([PolicyFixtures.Policy(Enums.PolicyType.DisableSend)] Core.Models.Table.Policy policy, SutProvider<PolicyService> sutProvider)
         {
             var orgId = Guid.NewGuid();
 
@@ -65,7 +66,7 @@ namespace Bit.Core.Test.Services
         }
 
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
-        public async Task SaveAsync_SingleOrg_RequireSsoEnabled_ThrowsBadRequest([Policy(Enums.PolicyType.SingleOrg)] Core.Models.Table.Policy policy, SutProvider<PolicyService> sutProvider)
+        public async Task SaveAsync_SingleOrg_RequireSsoEnabled_ThrowsBadRequest([PolicyFixtures.Policy(Enums.PolicyType.SingleOrg)] Core.Models.Table.Policy policy, SutProvider<PolicyService> sutProvider)
         {
             policy.Enabled = false;
 
@@ -97,7 +98,7 @@ namespace Bit.Core.Test.Services
         }
 
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
-        public async Task SaveAsync_RequireSsoPolicy_NotEnabled_ThrowsBadRequestAsync([Policy(Enums.PolicyType.RequireSso)] Core.Models.Table.Policy policy, SutProvider<PolicyService> sutProvider)
+        public async Task SaveAsync_RequireSsoPolicy_NotEnabled_ThrowsBadRequestAsync([PolicyFixtures.Policy(Enums.PolicyType.RequireSso)] Core.Models.Table.Policy policy, SutProvider<PolicyService> sutProvider)
         {
             policy.Enabled = true;
 
@@ -129,7 +130,7 @@ namespace Bit.Core.Test.Services
         }
 
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
-        public async Task SaveAsync_NewPolicy_Created([Policy(Enums.PolicyType.MasterPassword)] Core.Models.Table.Policy policy, SutProvider<PolicyService> sutProvider)
+        public async Task SaveAsync_NewPolicy_Created([PolicyFixtures.Policy(Enums.PolicyType.MasterPassword)] Core.Models.Table.Policy policy, SutProvider<PolicyService> sutProvider)
         {
             policy.Id = default;
 
@@ -154,7 +155,7 @@ namespace Bit.Core.Test.Services
         }
 
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
-        public async Task SaveAsync_ExistingPolicy_UpdateTwoFactor([Policy(Enums.PolicyType.TwoFactorAuthentication)] Core.Models.Table.Policy policy, SutProvider<PolicyService> sutProvider)
+        public async Task SaveAsync_ExistingPolicy_UpdateTwoFactor([PolicyFixtures.Policy(Enums.PolicyType.TwoFactorAuthentication)] Core.Models.Table.Policy policy, SutProvider<PolicyService> sutProvider)
         {
             // If the policy that this is updating isn't enabled then do some work now that the current one is enabled
 
@@ -223,7 +224,7 @@ namespace Bit.Core.Test.Services
         }
 
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
-        public async Task SaveAsync_ExistingPolicy_UpdateSingleOrg([Policy(Enums.PolicyType.TwoFactorAuthentication)] Core.Models.Table.Policy policy, SutProvider<PolicyService> sutProvider)
+        public async Task SaveAsync_ExistingPolicy_UpdateSingleOrg([PolicyFixtures.Policy(Enums.PolicyType.TwoFactorAuthentication)] Core.Models.Table.Policy policy, SutProvider<PolicyService> sutProvider)
         {
             // If the policy that this is updating isn't enabled then do some work now that the current one is enabled
 

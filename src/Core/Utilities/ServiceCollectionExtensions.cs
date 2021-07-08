@@ -18,6 +18,7 @@ using Bit.Core.Utilities;
 using IdentityModel;
 using IdentityServer4.AccessTokenValidation;
 using IdentityServer4.Configuration;
+using LinqToDB.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
@@ -46,55 +47,106 @@ namespace Bit.Core.Utilities
     {
         public static void AddSqlServerRepositories(this IServiceCollection services, GlobalSettings globalSettings)
         {
-            var usePostgreSql = CoreHelpers.SettingHasValue(globalSettings.PostgreSql?.ConnectionString);
-            var useEf = usePostgreSql;
+            var selectedDatabaseProvider = globalSettings.DatabaseProvider;
+            var provider = SupportedDatabaseProviders.SqlServer;
+            var connectionString = string.Empty;
+            if (!string.IsNullOrWhiteSpace(selectedDatabaseProvider))
+            {
+                switch (selectedDatabaseProvider.ToLowerInvariant())
+                {
+                    case "postgres":
+                    case "postgresql":
+                        provider = SupportedDatabaseProviders.Postgres;
+                        connectionString = globalSettings.PostgreSql.ConnectionString;
+                        break;
+                    case "mysql":
+                    case "mariadb":
+                        provider = SupportedDatabaseProviders.MySql;
+                        connectionString = globalSettings.MySql.ConnectionString;
+                        break;
+                    default:
+                        break;
+                }
+            }
+
+            var useEf = (provider != SupportedDatabaseProviders.SqlServer);
 
             if (useEf)
             {
+                if (string.IsNullOrWhiteSpace(connectionString))
+                {
+                    throw new Exception($"Database provider type {provider} was selected but no connection string was found.");
+                }
+                LinqToDBForEFTools.Initialize();
                 services.AddAutoMapper(typeof(EntityFrameworkRepos.UserRepository));
                 services.AddDbContext<EntityFrameworkRepos.DatabaseContext>(options =>
                 {
-                    if (usePostgreSql)
+                    if (provider == SupportedDatabaseProviders.Postgres)
                     {
-                        options.UseNpgsql(globalSettings.PostgreSql.ConnectionString);
+                        options.UseNpgsql(connectionString);
+                    } 
+                    else if (provider == SupportedDatabaseProviders.MySql)
+                    {
+                        options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString));
                     }
                 });
+                services.AddSingleton<ICipherRepository, EntityFrameworkRepos.CipherRepository>();
+                services.AddSingleton<ICollectionCipherRepository, EntityFrameworkRepos.CollectionCipherRepository>();
+                services.AddSingleton<ICollectionRepository, EntityFrameworkRepos.CollectionRepository>();
+                services.AddSingleton<IDeviceRepository, EntityFrameworkRepos.DeviceRepository>();
+                services.AddSingleton<IEmergencyAccessRepository, EntityFrameworkRepos.EmergencyAccessRepository>();
+                services.AddSingleton<IFolderRepository, EntityFrameworkRepos.FolderRepository>();
+                services.AddSingleton<IGrantRepository, EntityFrameworkRepos.GrantRepository>();
+                services.AddSingleton<IGroupRepository, EntityFrameworkRepos.GroupRepository>();
+                services.AddSingleton<IInstallationRepository, EntityFrameworkRepos.InstallationRepository>();
+                services.AddSingleton<IMaintenanceRepository, EntityFrameworkRepos.MaintenanceRepository>();
+                services.AddSingleton<IOrganizationRepository, EntityFrameworkRepos.OrganizationRepository>();
+                services.AddSingleton<IOrganizationUserRepository, EntityFrameworkRepos.OrganizationUserRepository>();
+                services.AddSingleton<IPolicyRepository, EntityFrameworkRepos.PolicyRepository>();
+                services.AddSingleton<ISendRepository, EntityFrameworkRepos.SendRepository>();
+                services.AddSingleton<ISsoConfigRepository, EntityFrameworkRepos.SsoConfigRepository>();
+                services.AddSingleton<ISsoUserRepository, EntityFrameworkRepos.SsoUserRepository>();
+                services.AddSingleton<ITaxRateRepository, EntityFrameworkRepos.TaxRateRepository>();
+                services.AddSingleton<ITransactionRepository, EntityFrameworkRepos.TransactionRepository>();
+                services.AddSingleton<IU2fRepository, EntityFrameworkRepos.U2fRepository>();
                 services.AddSingleton<IUserRepository, EntityFrameworkRepos.UserRepository>();
-                //services.AddSingleton<ICipherRepository, EntityFrameworkRepos.CipherRepository>();
-                //services.AddSingleton<IOrganizationRepository, EntityFrameworkRepos.OrganizationRepository>();
+                services.AddSingleton<IProviderRepository, EntityFrameworkRepos.ProviderRepository>();
+                services.AddSingleton<IProviderUserRepository, EntityFrameworkRepos.ProviderUserRepository>();
+                services.AddSingleton<IProviderOrganizationRepository, EntityFrameworkRepos.ProviderOrganizationRepository>();
             }
             else
             {
-                services.AddSingleton<IUserRepository, SqlServerRepos.UserRepository>();
                 services.AddSingleton<ICipherRepository, SqlServerRepos.CipherRepository>();
-                services.AddSingleton<IDeviceRepository, SqlServerRepos.DeviceRepository>();
-                services.AddSingleton<IGrantRepository, SqlServerRepos.GrantRepository>();
-                services.AddSingleton<IOrganizationRepository, SqlServerRepos.OrganizationRepository>();
-                services.AddSingleton<IOrganizationUserRepository, SqlServerRepos.OrganizationUserRepository>();
-                services.AddSingleton<ICollectionRepository, SqlServerRepos.CollectionRepository>();
-                services.AddSingleton<IFolderRepository, SqlServerRepos.FolderRepository>();
                 services.AddSingleton<ICollectionCipherRepository, SqlServerRepos.CollectionCipherRepository>();
+                services.AddSingleton<ICollectionRepository, SqlServerRepos.CollectionRepository>();
+                services.AddSingleton<IDeviceRepository, SqlServerRepos.DeviceRepository>();
+                services.AddSingleton<IEmergencyAccessRepository, SqlServerRepos.EmergencyAccessRepository>();
+                services.AddSingleton<IFolderRepository, SqlServerRepos.FolderRepository>();
+                services.AddSingleton<IGrantRepository, SqlServerRepos.GrantRepository>();
                 services.AddSingleton<IGroupRepository, SqlServerRepos.GroupRepository>();
-                services.AddSingleton<IU2fRepository, SqlServerRepos.U2fRepository>();
                 services.AddSingleton<IInstallationRepository, SqlServerRepos.InstallationRepository>();
                 services.AddSingleton<IMaintenanceRepository, SqlServerRepos.MaintenanceRepository>();
-                services.AddSingleton<ITransactionRepository, SqlServerRepos.TransactionRepository>();
+                services.AddSingleton<IOrganizationRepository, SqlServerRepos.OrganizationRepository>();
+                services.AddSingleton<IOrganizationUserRepository, SqlServerRepos.OrganizationUserRepository>();
                 services.AddSingleton<IPolicyRepository, SqlServerRepos.PolicyRepository>();
+                services.AddSingleton<ISendRepository, SqlServerRepos.SendRepository>();
                 services.AddSingleton<ISsoConfigRepository, SqlServerRepos.SsoConfigRepository>();
                 services.AddSingleton<ISsoUserRepository, SqlServerRepos.SsoUserRepository>();
-                services.AddSingleton<ISendRepository, SqlServerRepos.SendRepository>();
                 services.AddSingleton<ITaxRateRepository, SqlServerRepos.TaxRateRepository>();
                 services.AddSingleton<IEmergencyAccessRepository, SqlServerRepos.EmergencyAccessRepository>();
                 services.AddSingleton<IProviderRepository, SqlServerRepos.ProviderRepository>();
                 services.AddSingleton<IProviderUserRepository, SqlServerRepos.ProviderUserRepository>();
                 services.AddSingleton<IProviderOrganizationRepository, SqlServerRepos.ProviderOrganizationRepository>();
+                services.AddSingleton<ITransactionRepository, SqlServerRepos.TransactionRepository>();
+                services.AddSingleton<IU2fRepository, SqlServerRepos.U2fRepository>();
+                services.AddSingleton<IUserRepository, SqlServerRepos.UserRepository>();
             }
 
             if (globalSettings.SelfHosted)
             {
                 if (useEf)
                 {
-                    // TODO
+                    services.AddSingleton<IEventRepository, EntityFrameworkRepos.EventRepository>();
                 }
                 else
                 {

@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace Bit.Portal.Models
+namespace Bit.Core.Models.Data
 {
     public class ResetPasswordDataModel
     {

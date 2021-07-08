@@ -4,6 +4,7 @@ using AutoFixture;
 using AutoFixture.Kernel;
 using System.Reflection;
 using System.Linq;
+using Bit.Core.Test.AutoFixture.GlobalSettingsFixtures;
 
 namespace Bit.Core.Test.AutoFixture
 {

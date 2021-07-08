@@ -1,5 +1,5 @@
 ﻿CREATE PROCEDURE [dbo].[Collection_Create]
-    @Id UNIQUEIDENTIFIER,
+    @Id UNIQUEIDENTIFIER OUTPUT,
     @OrganizationId UNIQUEIDENTIFIER,
     @Name VARCHAR(MAX),
     @ExternalId NVARCHAR(300),
