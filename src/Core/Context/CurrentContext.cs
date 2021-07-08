@@ -12,15 +12,16 @@ using Bit.Core.Utilities;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Table.Provider;
 using Bit.Core.Settings;
+using Microsoft.EntityFrameworkCore.Internal;
 
 namespace Bit.Core.Context
 {
     public class CurrentContext : ICurrentContext
     {
-        private readonly IProviderOrganizationRepository _providerOrganizationRepository;
+        private readonly IProviderUserRepository _providerUserRepository;
         private bool _builtHttpContext;
         private bool _builtClaimsPrincipal;
-        private ICollection<ProviderOrganization> _providerOrganizations;
+        private IEnumerable<ProviderUserOrganizationDetails> _providerUserOrganizations;
 
         public virtual HttpContext HttpContext { get; set; }
         public virtual Guid? UserId { get; set; }
@@ -37,9 +38,9 @@ namespace Bit.Core.Context
         public virtual bool MaybeBot { get; set; }
         public virtual int? BotScore { get; set; }
 
-        public CurrentContext(IProviderOrganizationRepository providerOrganizationRepository)
+        public CurrentContext(IProviderUserRepository providerUserRepository)
         {
-            _providerOrganizationRepository = providerOrganizationRepository;
+            _providerUserRepository = providerUserRepository;
         }
 
         public async virtual Task BuildAsync(HttpContext httpContext, GlobalSettings globalSettings)
@@ -343,7 +344,12 @@ namespace Bit.Core.Context
             return Providers?.Any(o => o.Id == providerId && o.Type == ProviderUserType.ProviderAdmin) ?? false;
         }
 
-        public bool ManageProviderUsers(Guid providerId)
+        public bool ProviderManageUsers(Guid providerId)
+        {
+            return ProviderProviderAdmin(providerId);
+        }
+
+        public bool ProviderAccessEventLogs(Guid providerId)
         {
             return ProviderProviderAdmin(providerId);
         }
@@ -361,6 +367,19 @@ namespace Bit.Core.Context
         public bool ProviderUser(Guid providerId)
         {
             return Providers?.Any(o => o.Id == providerId) ?? false;
+        }
+
+        public async Task<Guid?> ProviderIdForOrg(Guid orgId)
+        {
+            if (Organizations.Any(org => org.Id == orgId))
+            {
+                return null;
+            }
+
+            var po = (await GetProviderOrganizations())
+                .FirstOrDefault(po => po.OrganizationId == orgId);
+
+            return po.ProviderId;
         }
 
         public async Task<ICollection<CurrentContentOrganization>> OrganizationMembershipAsync(
@@ -421,14 +440,14 @@ namespace Bit.Core.Context
             };
         }
 
-        private async Task<ICollection<ProviderOrganization>> GetProviderOrganizations()
+        private async Task<IEnumerable<ProviderUserOrganizationDetails>> GetProviderOrganizations()
         {
-            if (_providerOrganizations == null)
+            if (_providerUserOrganizations == null)
             {
-                _providerOrganizations = await _providerOrganizationRepository.GetManyByUserIdAsync(UserId.Value);
+                _providerUserOrganizations = await _providerUserRepository.GetManyOrganizationDetailsByUserAsync(UserId.Value, ProviderUserStatusType.Confirmed);
             }
 
-            return _providerOrganizations;
+            return _providerUserOrganizations;
         }
     }
 }

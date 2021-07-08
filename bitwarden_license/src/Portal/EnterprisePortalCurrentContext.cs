@@ -15,8 +15,8 @@ namespace Bit.Portal
     {
         private readonly IServiceProvider _serviceProvider;
 
-        public EnterprisePortalCurrentContext(IProviderOrganizationRepository providerOrganizationRepository,
-            IServiceProvider serviceProvider) : base(providerOrganizationRepository)
+        public EnterprisePortalCurrentContext(IProviderUserRepository providerUserRepository,
+            IServiceProvider serviceProvider) : base(providerUserRepository)
         {
             _serviceProvider = serviceProvider;
         }

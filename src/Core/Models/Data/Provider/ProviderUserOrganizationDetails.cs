@@ -33,6 +33,7 @@ namespace Bit.Core.Models.Data
         public string PublicKey { get; set; }
         public string PrivateKey { get; set; }
         public Guid? ProviderId { get; set; }
+        public Guid? ProviderUserId { get; set; }
         public string ProviderName { get; set; }
     }
 }

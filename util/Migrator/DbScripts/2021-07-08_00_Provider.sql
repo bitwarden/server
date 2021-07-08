@@ -1328,6 +1328,7 @@ SELECT
     PU.[Status],
     PU.[Type],
     PO.[ProviderId],
+    PU.[Id] ProviderUserId,
     P.[Name] ProviderName
 FROM
     [dbo].[ProviderUser] PU

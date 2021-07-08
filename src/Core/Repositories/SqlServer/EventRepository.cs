@@ -52,6 +52,20 @@ namespace Bit.Core.Repositories.SqlServer
                 }, startDate, endDate, pageOptions);
         }
 
+        public async Task<PagedResult<IEvent>> GetManyByProviderAsync(Guid providerId,
+            DateTime startDate, DateTime endDate, PageOptions pageOptions)
+        {
+            return await GetManyAsync($"[{Schema}].[Event_ReadPageByProviderId]",
+                new Dictionary<string, object>
+                {
+                    ["@ProviderId"] = providerId
+                }, startDate, endDate, pageOptions);
+        }
+
+        public Task<PagedResult<IEvent>> GetManyByProviderActingUserAsync(Guid providerId, Guid actingUserId, DateTime startDate, DateTime endDate,
+            PageOptions pageOptions) =>
+            throw new NotImplementedException();
+
         public async Task<PagedResult<IEvent>> GetManyByCipherAsync(Cipher cipher, DateTime startDate, DateTime endDate,
             PageOptions pageOptions)
         {

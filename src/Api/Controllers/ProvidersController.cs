@@ -5,6 +5,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Api;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Settings;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -18,14 +19,16 @@ namespace Bit.Api.Controllers
         private readonly IProviderRepository _providerRepository;
         private readonly IProviderService _providerService;
         private readonly ICurrentContext _currentContext;
+        private readonly GlobalSettings _globalSettings;
 
         public ProvidersController(IUserService userService, IProviderRepository providerRepository,
-            IProviderService providerService, ICurrentContext currentContext)
+            IProviderService providerService, ICurrentContext currentContext, GlobalSettings globalSettings)
         {
             _userService = userService;
             _providerRepository = providerRepository;
             _providerService = providerService;
             _currentContext = currentContext;
+            _globalSettings = globalSettings;
         }
         
         [HttpGet("{id:guid}")]
@@ -42,6 +45,25 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
+            return new ProviderResponseModel(provider);
+        }
+        
+        [HttpPut("{id:guid}")]
+        [HttpPost("{id:guid}")]
+        public async Task<ProviderResponseModel> Put(Guid id, [FromBody]ProviderUpdateRequestModel model)
+        {
+            if (!_currentContext.ProviderProviderAdmin(id))
+            {
+                throw new NotFoundException();
+            }
+
+            var provider = await _providerRepository.GetByIdAsync(id);
+            if (provider == null)
+            {
+                throw new NotFoundException();
+            }
+
+            await _providerService.UpdateAsync(model.ToProvider(provider, _globalSettings));
             return new ProviderResponseModel(provider);
         }
         

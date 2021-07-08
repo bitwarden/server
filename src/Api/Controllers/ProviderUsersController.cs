@@ -38,7 +38,7 @@ namespace Bit.Api.Controllers
         public async Task<ProviderUserResponseModel> Get(Guid providerId, Guid id)
         {
             var providerUser = await _providerUserRepository.GetByIdAsync(id);
-            if (providerUser == null || !_currentContext.ManageProviderUsers(providerUser.ProviderId))
+            if (providerUser == null || !_currentContext.ProviderManageUsers(providerUser.ProviderId))
             {
                 throw new NotFoundException();
             }
@@ -49,7 +49,7 @@ namespace Bit.Api.Controllers
         [HttpGet("")]
         public async Task<ListResponseModel<ProviderUserUserDetailsResponseModel>> Get(Guid providerId)
         {
-            if (!_currentContext.ManageProviderUsers(providerId))
+            if (!_currentContext.ProviderManageUsers(providerId))
             {
                 throw new NotFoundException();
             }
@@ -62,7 +62,7 @@ namespace Bit.Api.Controllers
         [HttpPost("invite")]
         public async Task Invite(Guid providerId, [FromBody]ProviderUserInviteRequestModel model)
         {
-            if (!_currentContext.ManageProviderUsers(providerId))
+            if (!_currentContext.ProviderManageUsers(providerId))
             {
                 throw new NotFoundException();
             }
@@ -74,7 +74,7 @@ namespace Bit.Api.Controllers
         [HttpPost("reinvite")]
         public async Task<ListResponseModel<ProviderUserBulkResponseModel>> BulkReinvite(Guid providerId, [FromBody]ProviderUserBulkRequestModel model)
         {
-            if (!_currentContext.ManageProviderUsers(providerId))
+            if (!_currentContext.ProviderManageUsers(providerId))
             {
                 throw new NotFoundException();
             }
@@ -88,7 +88,7 @@ namespace Bit.Api.Controllers
         [HttpPost("{id:guid}/reinvite")]
         public async Task Reinvite(Guid providerId, Guid id)
         {
-            if (!_currentContext.ManageProviderUsers(providerId))
+            if (!_currentContext.ProviderManageUsers(providerId))
             {
                 throw new NotFoundException();
             }
@@ -112,7 +112,7 @@ namespace Bit.Api.Controllers
         [HttpPost("{id:guid}/confirm")]
         public async Task Confirm(Guid providerId, Guid id, [FromBody]ProviderUserConfirmRequestModel model)
         {
-            if (!_currentContext.ManageProviderUsers(providerId))
+            if (!_currentContext.ProviderManageUsers(providerId))
             {
                 throw new NotFoundException();
             }
@@ -125,7 +125,7 @@ namespace Bit.Api.Controllers
         public async Task<ListResponseModel<ProviderUserBulkResponseModel>> BulkConfirm(Guid providerId,
             [FromBody]ProviderUserBulkConfirmRequestModel model)
         {
-            if (!_currentContext.ManageProviderUsers(providerId))
+            if (!_currentContext.ProviderManageUsers(providerId))
             {
                 throw new NotFoundException();
             }
@@ -140,7 +140,7 @@ namespace Bit.Api.Controllers
         [HttpPost("public-keys")]
         public async Task<ListResponseModel<ProviderUserPublicKeyResponseModel>> UserPublicKeys(Guid providerId, [FromBody]ProviderUserBulkRequestModel model)
         {
-            if (!_currentContext.ManageProviderUsers(providerId))
+            if (!_currentContext.ProviderManageUsers(providerId))
             {
                 throw new NotFoundException();
             }
@@ -154,7 +154,7 @@ namespace Bit.Api.Controllers
         [HttpPost("{id:guid}")]
         public async Task Put(Guid providerId, Guid id, [FromBody]ProviderUserUpdateRequestModel model)
         {
-            if (!_currentContext.ManageProviderUsers(providerId))
+            if (!_currentContext.ProviderManageUsers(providerId))
             {
                 throw new NotFoundException();
             }
@@ -173,7 +173,7 @@ namespace Bit.Api.Controllers
         [HttpPost("{id:guid}/delete")]
         public async Task Delete(Guid providerId, Guid id)
         {
-            if (!_currentContext.ManageProviderUsers(providerId))
+            if (!_currentContext.ProviderManageUsers(providerId))
             {
                 throw new NotFoundException();
             }
@@ -186,7 +186,7 @@ namespace Bit.Api.Controllers
         [HttpPost("delete")]
         public async Task<ListResponseModel<ProviderUserBulkResponseModel>> BulkDelete(Guid providerId, [FromBody]ProviderUserBulkRequestModel model)
         {
-            if (!_currentContext.ManageProviderUsers(providerId))
+            if (!_currentContext.ProviderManageUsers(providerId))
             {
                 throw new NotFoundException();
             }
