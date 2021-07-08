@@ -107,6 +107,7 @@ CREATE TABLE "Provider" (
     "BusinessTaxNumber" text NULL,
     "BillingEmail" text NULL,
     "Status" smallint NOT NULL,
+    "UseEvents" boolean NOT NULL,
     "Enabled" boolean NOT NULL,
     "CreationDate" timestamp without time zone NOT NULL,
     "RevisionDate" timestamp without time zone NOT NULL,
@@ -489,6 +490,8 @@ CREATE INDEX "IX_Transaction_UserId" ON "Transaction" ("UserId");
 CREATE INDEX "IX_U2f_UserId" ON "U2f" ("UserId");
 
 INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
-VALUES ('20210617163014_Postgres_Init', '5.0.5');
+VALUES ('20210708191531_Init', '5.0.5');
 
 COMMIT;
+
+
