@@ -1121,31 +1121,6 @@ LEFT JOIN
     [dbo].[Provider] P ON P.[Id] = PO.[ProviderId]
 GO
 
-IF OBJECT_ID('[dbo].[ProviderOrganization_ReadByUserId]') IS NOT NULL
-    BEGIN
-        DROP PROCEDURE [dbo].[ProviderOrganization_ReadByUserId]
-    END
-GO
-
-CREATE PROCEDURE [dbo].[ProviderOrganization_ReadByUserId]
-@UserId UNIQUEIDENTIFIER
-AS
-BEGIN
-    SET NOCOUNT ON
-
-    SELECT
-        PO.*
-    FROM
-        [dbo].[ProviderOrganizationView] PO
-            INNER JOIN
-        [dbo].[Provider] P ON PO.[ProviderId] = P.[Id]
-            INNER JOIN
-        [dbo].[ProviderUser] PU ON P.[Id] = PU.[ProviderId]
-    WHERE
-        PU.[UserId] = @UserId
-END
-GO
-
 IF EXISTS(SELECT * FROM sys.views WHERE [Name] = 'ProviderUserProviderOrganizationDetailsView')
     BEGIN
         DROP VIEW [dbo].[ProviderUserProviderOrganizationDetailsView];
@@ -1242,5 +1217,11 @@ GO
 IF OBJECT_ID('[dbo].[ProviderOrganizationProviderUser]') IS NOT NULL
     BEGIN
         DROP TABLE [dbo].[ProviderOrganizationProviderUser];
+    END
+GO
+
+IF OBJECT_ID('[dbo].[ProviderOrganization_ReadByUserId]') IS NOT NULL
+    BEGIN
+        DROP PROCEDURE [dbo].[ProviderOrganization_ReadByUserId]
     END
 GO
