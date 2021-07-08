@@ -687,154 +687,6 @@ BEGIN
 END
 GO
 
-IF OBJECT_ID('[dbo].[ProviderOrganizationProviderUser]') IS NULL
-BEGIN
-    CREATE TABLE [dbo].[ProviderOrganizationProviderUser] (
-        [Id]                     UNIQUEIDENTIFIER    NOT NULL,
-        [ProviderOrganizationId] UNIQUEIDENTIFIER    NOT NULL,
-        [ProviderUserId]         UNIQUEIDENTIFIER    NULL,
-        [Type]                   TINYINT             NOT NULL,
-        [Permissions]            NVARCHAR (MAX)      NULL,
-        [CreationDate]           DATETIME2 (7)       NOT NULL,
-        [RevisionDate]           DATETIME2 (7)       NOT NULL,
-        CONSTRAINT [PK_ProviderOrganizationProviderUser] PRIMARY KEY CLUSTERED ([Id] ASC),
-        CONSTRAINT [FK_ProviderOrganizationProviderUser_Provider] FOREIGN KEY ([ProviderOrganizationId]) REFERENCES [dbo].[ProviderOrganization] ([Id]) ON DELETE CASCADE,
-        CONSTRAINT [FK_ProviderOrganizationProviderUser_User] FOREIGN KEY ([ProviderUserId]) REFERENCES [dbo].[ProviderUser] ([Id])
-    );
-END
-GO
-
-IF OBJECT_ID('[dbo].[ProviderOrganizationProviderUser_Create]') IS NOT NULL
-BEGIN
-    DROP PROCEDURE [dbo].[ProviderOrganizationProviderUser_Create]
-END
-GO
-
-CREATE PROCEDURE [dbo].[ProviderOrganizationProviderUser_Create]
-    @Id UNIQUEIDENTIFIER,
-    @ProviderOrganizationId UNIQUEIDENTIFIER,
-    @ProviderUserId UNIQUEIDENTIFIER,
-    @Type TINYINT,
-    @Permissions NVARCHAR(MAX),
-    @CreationDate DATETIME2(7),
-    @RevisionDate DATETIME2(7)
-AS
-BEGIN
-    SET NOCOUNT ON
-
-    INSERT INTO [dbo].[ProviderOrganizationProviderUser]
-    (
-        [Id],
-        [ProviderOrganizationId],
-        [ProviderUserId],
-        [Type],
-        [Permissions],
-        [CreationDate],
-        [RevisionDate]
-    )
-    VALUES
-    (
-        @Id,
-        @ProviderOrganizationId,
-        @ProviderUserId,
-        @Type,
-        @Permissions,
-        @CreationDate,
-        @RevisionDate
-    )
-END
-GO
-
-IF OBJECT_ID('[dbo].[ProviderOrganizationProviderUser_DeleteById]') IS NOT NULL
-BEGIN
-    DROP PROCEDURE [dbo].[ProviderOrganizationProviderUser_DeleteById]
-END
-GO
-
-CREATE PROCEDURE [dbo].[ProviderOrganizationProviderUser_DeleteById]
-@Id UNIQUEIDENTIFIER
-AS
-BEGIN
-    SET NOCOUNT ON
-
-    BEGIN TRANSACTION POPU_DeleteById
-
-        DECLARE @ProviderUserId UNIQUEIDENTIFIER
-
-        SELECT
-            @ProviderUserId = [ProviderUserId]
-        FROM
-            [dbo].[ProviderOrganizationProviderUser]
-        WHERE
-            [Id] = @Id
-
-        DELETE
-        FROM
-            [dbo].[ProviderOrganizationProviderUser]
-        WHERE
-            [Id] = @Id
-
-        EXEC [dbo].[User_BumpAccountRevisionDateByProviderUserId] @ProviderUserId
-
-    COMMIT TRANSACTION POPU_DeleteById
-END
-GO
-
-IF OBJECT_ID('[dbo].[ProviderOrganizationProviderUser_ReadById]') IS NOT NULL
-BEGIN
-    DROP PROCEDURE [dbo].[ProviderOrganizationProviderUser_ReadById]
-END
-GO
-
-CREATE PROCEDURE [dbo].[ProviderOrganizationProviderUser_ReadById]
-    @Id UNIQUEIDENTIFIER
-AS
-BEGIN
-    SET NOCOUNT ON
-
-    SELECT
-        *
-    FROM
-        [dbo].[ProviderOrganizationProviderUser]
-    WHERE
-        [Id] = @Id
-END
-GO
-
-IF OBJECT_ID('[dbo].[ProviderOrganizationProviderUser_Update]') IS NOT NULL
-BEGIN
-    DROP PROCEDURE [dbo].[ProviderOrganizationProviderUser_Update]
-END
-GO
-
-CREATE PROCEDURE [dbo].[ProviderOrganizationProviderUser_Update]
-    @Id UNIQUEIDENTIFIER,
-    @ProviderOrganizationId UNIQUEIDENTIFIER,
-    @ProviderUserId UNIQUEIDENTIFIER,
-    @Type TINYINT,
-    @Permissions NVARCHAR(MAX),
-    @CreationDate DATETIME2(7),
-    @RevisionDate DATETIME2(7)
-AS
-BEGIN
-    SET NOCOUNT ON
-
-    UPDATE
-        [dbo].[ProviderOrganizationProviderUser]
-    SET
-        [ProviderOrganizationId] = @ProviderOrganizationId,
-        [ProviderUserId] = @ProviderUserId,
-        [Type] = @Type,
-        [Permissions] = @Permissions,
-        [CreationDate] = @CreationDate,
-        [RevisionDate] = @RevisionDate
-    WHERE
-        [Id] = @Id
-
-    EXEC [dbo].[User_BumpAccountRevisionDateByProviderUserId] @ProviderUserId
-END
-GO
-
 IF OBJECT_ID('[dbo].[ProviderUser_ReadCountByProviderIdEmail]') IS NOT NULL
     BEGIN
         DROP PROCEDURE [dbo].[ProviderUser_ReadCountByProviderIdEmail]
@@ -1361,3 +1213,34 @@ BEGIN
         [UserId] = @UserId
     AND (@Status IS NULL OR [Status] = @Status)
 END
+GO
+
+IF OBJECT_ID('[dbo].[ProviderOrganizationProviderUser_Create]') IS NOT NULL
+    BEGIN
+        DROP PROCEDURE [dbo].[ProviderOrganizationProviderUser_Create]
+    END
+GO
+
+IF OBJECT_ID('[dbo].[ProviderOrganizationProviderUser_Update]') IS NOT NULL
+    BEGIN
+        DROP PROCEDURE [dbo].[ProviderOrganizationProviderUser_Update]
+    END
+GO
+
+IF OBJECT_ID('[dbo].[ProviderOrganizationProviderUser_DeleteById]') IS NOT NULL
+    BEGIN
+        DROP PROCEDURE [dbo].[ProviderOrganizationProviderUser_DeleteById]
+    END
+GO
+
+IF OBJECT_ID('[dbo].[ProviderOrganizationProviderUser_ReadById]') IS NOT NULL
+    BEGIN
+        DROP PROCEDURE [dbo].[ProviderOrganizationProviderUser_ReadById]
+    END
+GO
+
+IF OBJECT_ID('[dbo].[ProviderOrganizationProviderUser]') IS NOT NULL
+    BEGIN
+        DROP TABLE [dbo].[ProviderOrganizationProviderUser];
+    END
+GO

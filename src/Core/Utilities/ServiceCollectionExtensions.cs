@@ -88,7 +88,6 @@ namespace Bit.Core.Utilities
                 services.AddSingleton<IProviderRepository, SqlServerRepos.ProviderRepository>();
                 services.AddSingleton<IProviderUserRepository, SqlServerRepos.ProviderUserRepository>();
                 services.AddSingleton<IProviderOrganizationRepository, SqlServerRepos.ProviderOrganizationRepository>();
-                services.AddSingleton<IProviderOrganizationProviderUserRepository, SqlServerRepos.ProviderOrganizationProviderUserRepository>();
             }
 
             if (globalSettings.SelfHosted)
