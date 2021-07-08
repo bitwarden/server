@@ -373,8 +373,11 @@ namespace Bit.Api.Controllers
                 OrganizationUserStatusType.Confirmed);
             var providerUserDetails = await _providerUserRepository.GetManyDetailsByUserAsync(user.Id,
                 ProviderUserStatusType.Confirmed);
+            var providerUserOrganizationDetails =
+                await _providerUserRepository.GetManyOrganizationDetailsByUserAsync(user.Id,
+                    ProviderUserStatusType.Confirmed);
             var response = new ProfileResponseModel(user, organizationUserDetails, providerUserDetails,
-                await _userService.TwoFactorIsEnabledAsync(user));
+                providerUserOrganizationDetails, await _userService.TwoFactorIsEnabledAsync(user));
             return response;
         }
 
@@ -399,7 +402,7 @@ namespace Bit.Api.Controllers
             }
 
             await _userService.SaveUserAsync(model.ToUser(user));
-            var response = new ProfileResponseModel(user, null, null, await _userService.TwoFactorIsEnabledAsync(user));
+            var response = new ProfileResponseModel(user, null, null, null, await _userService.TwoFactorIsEnabledAsync(user));
             return response;
         }
 
@@ -550,7 +553,7 @@ namespace Bit.Api.Controllers
                     BillingAddressCountry = model.Country,
                     BillingAddressPostalCode = model.PostalCode,
                 });
-            var profile = new ProfileResponseModel(user, null, null, await _userService.TwoFactorIsEnabledAsync(user));
+            var profile = new ProfileResponseModel(user, null, null, null, await _userService.TwoFactorIsEnabledAsync(user));
             return new PaymentResponseModel
             {
                 UserProfile = profile,

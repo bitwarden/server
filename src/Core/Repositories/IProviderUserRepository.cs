@@ -17,6 +17,7 @@ namespace Bit.Core.Repositories
         Task<ICollection<ProviderUserUserDetails>> GetManyDetailsByProviderAsync(Guid providerId);
         Task<ICollection<ProviderUserProviderDetails>> GetManyDetailsByUserAsync(Guid userId,
             ProviderUserStatusType? status = null);
+        Task<IEnumerable<ProviderUserOrganizationDetails>> GetManyOrganizationDetailsByUserAsync(Guid userId, ProviderUserStatusType? status = null);
         Task DeleteManyAsync(IEnumerable<Guid> userIds);
         Task<IEnumerable<ProviderUserPublicKey>> GetManyPublicKeysByProviderUserAsync(Guid providerId, IEnumerable<Guid> Ids);
     }

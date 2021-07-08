@@ -31,22 +31,22 @@ namespace Bit.Core.Context
         Task SetContextAsync(ClaimsPrincipal user);
 
 
-        bool OrganizationUser(Guid orgId);
-        bool OrganizationManager(Guid orgId);
-        bool OrganizationAdmin(Guid orgId);
-        bool OrganizationOwner(Guid orgId);
-        bool OrganizationCustom(Guid orgId);
-        bool AccessBusinessPortal(Guid orgId);
-        bool AccessEventLogs(Guid orgId);
-        bool AccessImportExport(Guid orgId);
-        bool AccessReports(Guid orgId);
-        bool ManageAllCollections(Guid orgId);
-        bool ManageAssignedCollections(Guid orgId);
-        bool ManageGroups(Guid orgId);
-        bool ManagePolicies(Guid orgId);
-        bool ManageSso(Guid orgId);
-        bool ManageUsers(Guid orgId);
-        bool ManageResetPassword(Guid orgId);
+        Task<bool> OrganizationUser(Guid orgId);
+        Task<bool> OrganizationManager(Guid orgId);
+        Task<bool> OrganizationAdmin(Guid orgId);
+        Task<bool> OrganizationOwner(Guid orgId);
+        Task<bool> OrganizationCustom(Guid orgId);
+        Task<bool> AccessBusinessPortal(Guid orgId);
+        Task<bool> AccessEventLogs(Guid orgId);
+        Task<bool> AccessImportExport(Guid orgId);
+        Task<bool> AccessReports(Guid orgId);
+        Task<bool> ManageAllCollections(Guid orgId);
+        Task<bool> ManageAssignedCollections(Guid orgId);
+        Task<bool> ManageGroups(Guid orgId);
+        Task<bool> ManagePolicies(Guid orgId);
+        Task<bool> ManageSso(Guid orgId);
+        Task<bool> ManageUsers(Guid orgId);
+        Task<bool> ManageResetPassword(Guid orgId);
         bool ProviderProviderAdmin(Guid providerId);
         bool ProviderUser(Guid providerId);
         bool ManageProviderUsers(Guid providerId);

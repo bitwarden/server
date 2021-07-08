@@ -100,11 +100,6 @@ namespace Bit.Api.Controllers
         [HttpPost("{id:guid}/accept")]
         public async Task Accept(Guid providerId, Guid id, [FromBody]ProviderUserAcceptRequestModel model)
         {
-            if (!_currentContext.ManageProviderUsers(providerId))
-            {
-                throw new NotFoundException();
-            }
-            
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)
             {

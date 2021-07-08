@@ -19,15 +19,17 @@ namespace Bit.Admin.Controllers
         private readonly IProviderRepository _providerRepository;
         private readonly IProviderUserRepository _providerUserRepository;
         private readonly GlobalSettings _globalSettings;
+        private readonly IApplicationCacheService _applicationCacheService;
         private readonly IProviderService _providerService;
 
         public ProvidersController(IProviderRepository providerRepository, IProviderUserRepository providerUserRepository,
-            IProviderService providerService, GlobalSettings globalSettings)
+            IProviderService providerService, GlobalSettings globalSettings, IApplicationCacheService applicationCacheService)
         {
             _providerRepository = providerRepository;
             _providerUserRepository = providerUserRepository;
             _providerService = providerService;
             _globalSettings = globalSettings;
+            _applicationCacheService = applicationCacheService;
         }
         
         public async Task<IActionResult> Index(string name = null, string userEmail = null, int page = 1, int count = 25)
@@ -100,6 +102,23 @@ namespace Bit.Admin.Controllers
 
             var users = await _providerUserRepository.GetManyDetailsByProviderAsync(id);
             return View(new ProviderEditModel(provider, users));
+        }
+        
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [SelfHosted(NotSelfHostedOnly = true)]
+        public async Task<IActionResult> Edit(Guid id, ProviderEditModel model)
+        {
+            var provider = await _providerRepository.GetByIdAsync(id);
+            if (provider == null)
+            {
+                return RedirectToAction("Index");
+            }
+
+            model.ToProvider(provider);
+            await _providerRepository.ReplaceAsync(provider);
+            await _applicationCacheService.UpsertProviderAbilityAsync(provider);
+            return RedirectToAction("Edit", new { id });
         }
         
         [HttpPost]
