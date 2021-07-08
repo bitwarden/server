@@ -44,11 +44,6 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
-        public override Task<U2f> GetByIdAsync(int id)
-        {
-            throw new NotSupportedException();
-        }
-
         public override Task ReplaceAsync(U2f obj)
         {
             throw new NotSupportedException();
