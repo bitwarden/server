@@ -608,7 +608,7 @@ namespace Bit.Core.Services
                 RevisionDate = DateTime.UtcNow,
             };
 
-            if (plan.Type == PlanType.Free)
+            if (plan.Type == PlanType.Free && !provider)
             {
                 var adminCount =
                     await _organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(signup.Owner.Id);
@@ -617,14 +617,14 @@ namespace Bit.Core.Services
                     throw new BadRequestException("You can only be an admin of one free organization.");
                 }
             }
-            else
+            else if (plan.Type != PlanType.Free)
             {
                 await _paymentService.PurchaseOrganizationAsync(organization, signup.PaymentMethodType.Value,
                     signup.PaymentToken, plan, signup.AdditionalStorageGb, signup.AdditionalSeats,
                     signup.PremiumAccessAddon, signup.TaxInfo);
             }
 
-            var ownerId = provider ? signup.Owner.Id : default;
+            var ownerId = provider ? default : signup.Owner.Id;
             var returnValue = await SignUpAsync(organization, ownerId, signup.OwnerKey, signup.CollectionName, true);
             await _referenceEventService.RaiseEventAsync(
                 new ReferenceEvent(ReferenceEventType.Signup, organization)
@@ -1184,6 +1184,12 @@ namespace Bit.Core.Services
                     throw new BadRequestException("You have reached the maximum number of users " +
                         $"({organization.Seats.Value}) for this organization.");
                 }
+            }
+
+            var invitedIsOwner = invite.Type is OrganizationUserType.Owner;
+            if (!invitedIsOwner && !await HasConfirmedOwnersExceptAsync(organizationId, new Guid[] {}))
+            {
+                throw new BadRequestException("Organization must have at least one confirmed owner.");
             }
 
             var orgUsers = new List<OrganizationUser>();

@@ -349,8 +349,8 @@ namespace Bit.CommCore.Services
 
         public async Task<ProviderOrganization> CreateOrganizationAsync(Guid providerId, OrganizationSignup organizationSignup, User user)
         {
-            var (organization, _) = await _organizationService.SignUpAsync(organizationSignup);
-            
+            var (organization, _) = await _organizationService.SignUpAsync(organizationSignup, true);
+
             var providerOrganization = new ProviderOrganization
             {
                 ProviderId = providerId,
