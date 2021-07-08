@@ -68,6 +68,9 @@ namespace Bit.Api.Controllers
                 OrganizationUserStatusType.Confirmed);
             var providerUserDetails = await _providerUserRepository.GetManyDetailsByUserAsync(user.Id,
                 ProviderUserStatusType.Confirmed);
+            var providerUserOrganizationDetails =
+                await _providerUserRepository.GetManyOrganizationDetailsByUserAsync(user.Id,
+                    ProviderUserStatusType.Confirmed);
             var hasEnabledOrgs = organizationUserDetails.Any(o => o.Enabled);
             var folders = await _folderRepository.GetManyByUserIdAsync(user.Id);
             var ciphers = await _cipherRepository.GetManyByUserIdAsync(user.Id, hasEnabledOrgs);
@@ -86,8 +89,8 @@ namespace Bit.Api.Controllers
 
             var userTwoFactorEnabled = await _userService.TwoFactorIsEnabledAsync(user);
             var response = new SyncResponseModel(_globalSettings, user, userTwoFactorEnabled, organizationUserDetails,
-                providerUserDetails, folders, collections, ciphers, collectionCiphersGroupDict, excludeDomains,
-                policies, sends);
+                providerUserDetails, providerUserOrganizationDetails, folders, collections, ciphers,
+                collectionCiphersGroupDict, excludeDomains, policies, sends);
             return response;
         }
     }

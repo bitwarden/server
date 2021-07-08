@@ -63,7 +63,7 @@ namespace Bit.Api.Controllers
         public async Task<ListResponseModel<TwoFactorProviderResponseModel>> GetOrganization(string id)
         {
             var orgIdGuid = new Guid(id);
-            if (!_currentContext.OrganizationAdmin(orgIdGuid))
+            if (!await _currentContext.OrganizationAdmin(orgIdGuid))
             {
                 throw new NotFoundException();
             }
@@ -169,7 +169,7 @@ namespace Bit.Api.Controllers
             var user = await CheckAsync(model.MasterPasswordHash, false);
 
             var orgIdGuid = new Guid(id);
-            if (!_currentContext.ManagePolicies(orgIdGuid))
+            if (!await _currentContext.ManagePolicies(orgIdGuid))
             {
                 throw new NotFoundException();
             }
@@ -192,7 +192,7 @@ namespace Bit.Api.Controllers
             var user = await CheckAsync(model.MasterPasswordHash, false);
 
             var orgIdGuid = new Guid(id);
-            if (!_currentContext.ManagePolicies(orgIdGuid))
+            if (!await _currentContext.ManagePolicies(orgIdGuid))
             {
                 throw new NotFoundException();
             }
@@ -332,7 +332,7 @@ namespace Bit.Api.Controllers
             var user = await CheckAsync(model.MasterPasswordHash, false);
 
             var orgIdGuid = new Guid(id);
-            if (!_currentContext.ManagePolicies(orgIdGuid))
+            if (!await _currentContext.ManagePolicies(orgIdGuid))
             {
                 throw new NotFoundException();
             }

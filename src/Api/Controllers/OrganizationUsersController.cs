@@ -49,7 +49,7 @@ namespace Bit.Api.Controllers
         public async Task<OrganizationUserDetailsResponseModel> Get(string orgId, string id)
         {
             var organizationUser = await _organizationUserRepository.GetByIdWithCollectionsAsync(new Guid(id));
-            if (organizationUser == null || !_currentContext.ManageUsers(organizationUser.Item1.OrganizationId))
+            if (organizationUser == null || !await _currentContext.ManageUsers(organizationUser.Item1.OrganizationId))
             {
                 throw new NotFoundException();
             }
@@ -61,9 +61,9 @@ namespace Bit.Api.Controllers
         public async Task<ListResponseModel<OrganizationUserUserDetailsResponseModel>> Get(string orgId)
         {
             var orgGuidId = new Guid(orgId);
-            if (!_currentContext.ManageAssignedCollections(orgGuidId) &&
-                !_currentContext.ManageGroups(orgGuidId) &&
-                !_currentContext.ManageUsers(orgGuidId))
+            if (!await _currentContext.ManageAssignedCollections(orgGuidId) &&
+                !await _currentContext.ManageGroups(orgGuidId) &&
+                !await _currentContext.ManageUsers(orgGuidId))
             {
                 throw new NotFoundException();
             }
@@ -79,8 +79,8 @@ namespace Bit.Api.Controllers
         public async Task<IEnumerable<string>> GetGroups(string orgId, string id)
         {
             var organizationUser = await _organizationUserRepository.GetByIdAsync(new Guid(id));
-            if (organizationUser == null || (!_currentContext.ManageGroups(organizationUser.OrganizationId) &&
-                                             !_currentContext.ManageUsers(organizationUser.OrganizationId)))
+            if (organizationUser == null || (!await _currentContext.ManageGroups(organizationUser.OrganizationId) &&
+                                             !await _currentContext.ManageUsers(organizationUser.OrganizationId)))
             {
                 throw new NotFoundException();
             }
@@ -95,7 +95,7 @@ namespace Bit.Api.Controllers
         {
             // Make sure the calling user can reset passwords for this org
             var orgGuidId = new Guid(orgId);
-            if (!_currentContext.ManageResetPassword(orgGuidId))
+            if (!await _currentContext.ManageResetPassword(orgGuidId))
             {
                 throw new NotFoundException();
             }
@@ -128,7 +128,7 @@ namespace Bit.Api.Controllers
         public async Task Invite(string orgId, [FromBody]OrganizationUserInviteRequestModel model)
         {
             var orgGuidId = new Guid(orgId);
-            if (!_currentContext.ManageUsers(orgGuidId))
+            if (!await _currentContext.ManageUsers(orgGuidId))
             {
                 throw new NotFoundException();
             }
@@ -141,7 +141,7 @@ namespace Bit.Api.Controllers
         public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkReinvite(string orgId, [FromBody]OrganizationUserBulkRequestModel model)
         {
             var orgGuidId = new Guid(orgId);
-            if (!_currentContext.ManageUsers(orgGuidId))
+            if (!await _currentContext.ManageUsers(orgGuidId))
             {
                 throw new NotFoundException();
             }
@@ -156,7 +156,7 @@ namespace Bit.Api.Controllers
         public async Task Reinvite(string orgId, string id)
         {
             var orgGuidId = new Guid(orgId);
-            if (!_currentContext.ManageUsers(orgGuidId))
+            if (!await _currentContext.ManageUsers(orgGuidId))
             {
                 throw new NotFoundException();
             }
@@ -181,7 +181,7 @@ namespace Bit.Api.Controllers
         public async Task Confirm(string orgId, string id, [FromBody]OrganizationUserConfirmRequestModel model)
         {
             var orgGuidId = new Guid(orgId);
-            if (!_currentContext.ManageUsers(orgGuidId))
+            if (!await _currentContext.ManageUsers(orgGuidId))
             {
                 throw new NotFoundException();
             }
@@ -196,7 +196,7 @@ namespace Bit.Api.Controllers
             [FromBody]OrganizationUserBulkConfirmRequestModel model)
         {
             var orgGuidId = new Guid(orgId);
-            if (!_currentContext.ManageUsers(orgGuidId))
+            if (!await _currentContext.ManageUsers(orgGuidId))
             {
                 throw new NotFoundException();
             }
@@ -213,7 +213,7 @@ namespace Bit.Api.Controllers
         public async Task<ListResponseModel<OrganizationUserPublicKeyResponseModel>> UserPublicKeys(string orgId, [FromBody]OrganizationUserBulkRequestModel model)
         {
             var orgGuidId = new Guid(orgId);
-            if (!_currentContext.ManageUsers(orgGuidId))
+            if (!await _currentContext.ManageUsers(orgGuidId))
             {
                 throw new NotFoundException();
             }
@@ -228,7 +228,7 @@ namespace Bit.Api.Controllers
         public async Task Put(string orgId, string id, [FromBody]OrganizationUserUpdateRequestModel model)
         {
             var orgGuidId = new Guid(orgId);
-            if (!_currentContext.ManageUsers(orgGuidId))
+            if (!await _currentContext.ManageUsers(orgGuidId))
             {
                 throw new NotFoundException();
             }
@@ -249,7 +249,7 @@ namespace Bit.Api.Controllers
         public async Task PutGroups(string orgId, string id, [FromBody]OrganizationUserUpdateGroupsRequestModel model)
         {
             var orgGuidId = new Guid(orgId);
-            if (!_currentContext.ManageUsers(orgGuidId))
+            if (!await _currentContext.ManageUsers(orgGuidId))
             {
                 throw new NotFoundException();
             }
@@ -278,7 +278,7 @@ namespace Bit.Api.Controllers
             var orgGuidId = new Guid(orgId);
             
             // Calling user must have Manage Reset Password permission
-            if (!_currentContext.ManageResetPassword(orgGuidId))
+            if (!await _currentContext.ManageResetPassword(orgGuidId))
             {
                 throw new NotFoundException();
             }
@@ -310,7 +310,7 @@ namespace Bit.Api.Controllers
         public async Task Delete(string orgId, string id)
         {
             var orgGuidId = new Guid(orgId);
-            if (!_currentContext.ManageUsers(orgGuidId))
+            if (!await _currentContext.ManageUsers(orgGuidId))
             {
                 throw new NotFoundException();
             }
@@ -324,7 +324,7 @@ namespace Bit.Api.Controllers
         public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkDelete(string orgId, [FromBody]OrganizationUserBulkRequestModel model)
         {
             var orgGuidId = new Guid(orgId);
-            if (!_currentContext.ManageUsers(orgGuidId))
+            if (!await _currentContext.ManageUsers(orgGuidId))
             {
                 throw new NotFoundException();
             }

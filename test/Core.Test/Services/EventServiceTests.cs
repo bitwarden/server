@@ -23,7 +23,7 @@ namespace Bit.Core.Test.Services
             _eventWriteService = Substitute.For<IEventWriteService>();
             _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
             _applicationCacheService = Substitute.For<IApplicationCacheService>();
-            _currentContext = new CurrentContext();
+            _currentContext = new CurrentContext(null);
             _globalSettings = new GlobalSettings();
 
             _sut = new EventService(

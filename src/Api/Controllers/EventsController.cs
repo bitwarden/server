@@ -61,7 +61,7 @@ namespace Bit.Api.Controllers
             var canView = false;
             if (cipher.OrganizationId.HasValue)
             {
-                canView = _currentContext.AccessEventLogs(cipher.OrganizationId.Value);
+                canView = await _currentContext.AccessEventLogs(cipher.OrganizationId.Value);
             }
             else if (cipher.UserId.HasValue)
             {
@@ -86,7 +86,7 @@ namespace Bit.Api.Controllers
             [FromQuery]DateTime? start = null, [FromQuery]DateTime? end = null, [FromQuery]string continuationToken = null)
         {
             var orgId = new Guid(id);
-            if (!_currentContext.AccessEventLogs(orgId))
+            if (!await _currentContext.AccessEventLogs(orgId))
             {
                 throw new NotFoundException();
             }
@@ -104,7 +104,7 @@ namespace Bit.Api.Controllers
         {
             var organizationUser = await _organizationUserRepository.GetByIdAsync(new Guid(id));
             if (organizationUser == null || !organizationUser.UserId.HasValue ||
-                !_currentContext.AccessEventLogs(organizationUser.OrganizationId))
+                !await _currentContext.AccessEventLogs(organizationUser.OrganizationId))
             {
                 throw new NotFoundException();
             }

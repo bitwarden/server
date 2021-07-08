@@ -13,5 +13,6 @@ namespace Bit.Core.Models.Data
         public ProviderUserType Type { get; set; }
         public bool Enabled { get; set; }
         public string Permissions { get; set; }
+        public bool UseEvents { get; set; }
     }
 }

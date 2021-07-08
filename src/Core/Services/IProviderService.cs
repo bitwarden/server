@@ -2,6 +2,7 @@
 using Bit.Core.Models.Table;
 using System.Collections.Generic;
 using System;
+using Bit.Core.Models.Business;
 using Bit.Core.Models.Business.Provider;
 using Bit.Core.Models.Table.Provider;
 
@@ -24,8 +25,7 @@ namespace Bit.Core.Services
             Guid deletingUserId);
 
         Task AddOrganization(Guid providerId, Guid organizationId, Guid addingUserId, string key);
+        Task<ProviderOrganization> CreateOrganizationAsync(Guid providerId, OrganizationSignup organizationSignup, User user);
         Task RemoveOrganization(Guid providerOrganizationId, Guid removingUserId);
-        
-        // TODO: Figure out how ProviderOrganizationProviderUsers should be managed
     }
 }

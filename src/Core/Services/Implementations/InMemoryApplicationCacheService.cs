@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
+using Bit.Core.Models.Table.Provider;
 using Bit.Core.Repositories;
 
 namespace Bit.Core.Services
@@ -35,6 +36,21 @@ namespace Bit.Core.Services
         {
             await InitProviderAbilitiesAsync();
             return _providerAbilities;
+        }
+        
+        public virtual async Task UpsertProviderAbilityAsync(Provider provider)
+        {
+            await InitProviderAbilitiesAsync();
+            var newAbility = new ProviderAbility(provider);
+
+            if (_providerAbilities.ContainsKey(provider.Id))
+            {
+                _providerAbilities[provider.Id] = newAbility;
+            }
+            else
+            {
+                _providerAbilities.Add(provider.Id, newAbility);
+            }
         }
 
         public virtual async Task UpsertOrganizationAbilityAsync(Organization organization)

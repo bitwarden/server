@@ -70,6 +70,8 @@
   </ItemGroup>
   <ItemGroup>
     <Build Include="dbo\Stored Procedures\EmergencyAccessDetails_ReadByIdGrantorId.sql" />
+    <Build Include="dbo\Stored Procedures\ProviderOrganization_ReadByUserId.sql" />
+    <Build Include="dbo\Stored Procedures\ProviderUserProviderOrganizationDetails_ReadByUserIdStatus.sql" />
     <Build Include="dbo\Stored Procedures\SsoConfig_Create.sql" />
     <Build Include="dbo\Stored Procedures\SsoConfig_ReadByIdentifier.sql" />
     <Build Include="dbo\Stored Procedures\SsoConfig_ReadByOrganizationId.sql" />
@@ -93,6 +95,7 @@
     <Build Include="dbo\Views\GrantView.sql" />
     <Build Include="dbo\Views\ProviderOrganizationOrganizationDetailsView.sql" />
     <Build Include="dbo\Views\ProviderUserProviderDetailsView.sql" />
+    <Build Include="dbo\Views\ProviderUserProviderOrganizationDetailsView.sql" />
     <Build Include="dbo\Views\SsoConfigView.sql" />
     <Build Include="dbo\Views\UserView.sql" />
     <Build Include="dbo\Views\U2fView.sql" />
