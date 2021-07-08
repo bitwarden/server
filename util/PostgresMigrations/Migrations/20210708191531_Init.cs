@@ -2,9 +2,9 @@
 using Microsoft.EntityFrameworkCore.Migrations;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
-namespace Bit.EntityFrameworkMigrations.Migrations
+namespace Bit.PostgresMigrations.Migrations
 {
-    public partial class Postgres_Init : Migration
+    public partial class Init : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)
         {
@@ -133,6 +133,7 @@ namespace Bit.EntityFrameworkMigrations.Migrations
                     BusinessTaxNumber = table.Column<string>(type: "text", nullable: true),
                     BillingEmail = table.Column<string>(type: "text", nullable: true),
                     Status = table.Column<byte>(type: "smallint", nullable: false),
+                    UseEvents = table.Column<bool>(type: "boolean", nullable: false),
                     Enabled = table.Column<bool>(type: "boolean", nullable: false),
                     CreationDate = table.Column<DateTime>(type: "timestamp without time zone", nullable: false),
                     RevisionDate = table.Column<DateTime>(type: "timestamp without time zone", nullable: false)

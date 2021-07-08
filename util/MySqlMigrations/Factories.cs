@@ -26,42 +26,15 @@ namespace MySqlMigrations
         {
             var globalSettings = GlobalSettingsFactory.GlobalSettings;
             var optionsBuilder = new DbContextOptionsBuilder<DatabaseContext>();
-
-            var selectedDatabaseProvider = globalSettings.DatabaseProvider;
-            var provider = SupportedDatabaseProviders.Postgres;
-            var connectionString = string.Empty;
-            if (!string.IsNullOrWhiteSpace(selectedDatabaseProvider))
+            var connectionString = globalSettings.MySql?.ConnectionString;
+            if (string.IsNullOrWhiteSpace(connectionString))
             {
-                switch (selectedDatabaseProvider.ToLowerInvariant())
-                {
-                    case "postgres":
-                    case "postgresql":
-                        provider = SupportedDatabaseProviders.Postgres;
-                        connectionString = globalSettings.PostgreSql.ConnectionString;
-                        break;
-                    case "mysql":
-                    case "mariadb":
-                        provider = SupportedDatabaseProviders.MySql;
-                        connectionString = globalSettings.MySql.ConnectionString;
-                        break;
-                    default:
-                        throw new Exception("No database provider selected");
-                        break;
-                }
+                throw new Exception("No MySql connection string found.");
             }
-            if (provider.Equals(SupportedDatabaseProviders.Postgres))
-            {
-                optionsBuilder.UseNpgsql(
-                    connectionString,  
-                    b => b.MigrationsAssembly("PostgresMigrations"));
-            }
-            else if (provider.Equals(SupportedDatabaseProviders.MySql))
-            {
-                optionsBuilder.UseMySql(
-                    connectionString, 
-                    ServerVersion.AutoDetect(connectionString),
-                    b => b.MigrationsAssembly("MySqlMigrations"));
-            }
+            optionsBuilder.UseMySql(
+                connectionString, 
+                ServerVersion.AutoDetect(connectionString),
+                b => b.MigrationsAssembly("MySqlMigrations"));
             return new DatabaseContext(optionsBuilder.Options);
         }
     }

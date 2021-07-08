@@ -140,5 +140,10 @@ namespace Bit.Core.Repositories.EntityFramework
                 return data;
             }
         }
+
+        public Task<IEnumerable<ProviderUserOrganizationDetails>> GetManyOrganizationDetailsByUserAsync(Guid userId, ProviderUserStatusType? status = null)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

@@ -20,6 +20,11 @@ namespace Bit.Core.Repositories.EntityFramework
             : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.ProviderOrganizations)
         { }
 
+        public Task<ICollection<ProviderOrganization>> GetManyByUserIdAsync(Guid userId)
+        {
+            throw new NotImplementedException();
+        }
+
         public async Task<ICollection<ProviderOrganizationOrganizationDetails>> GetManyDetailsByProviderAsync(Guid providerId)
         {
             using (var scope = ServiceScopeFactory.CreateScope())
