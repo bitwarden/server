@@ -1728,6 +1728,17 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Organization does not have the password reset policy enabled.");
             }
             
+            // Block the user from withdrawal if auto enrollment is enabled
+            if (resetPasswordKey == null && resetPasswordPolicy.Data != null)
+            {
+                var data = JsonConvert.DeserializeObject<ResetPasswordDataModel>(resetPasswordPolicy.Data);
+
+                if (data?.AutoEnrollEnabled ?? false)
+                {
+                    throw new BadRequestException("Due to an Enterprise Policy, you are not allowed to withdraw from Password Reset.");
+                }
+            }
+            
             orgUser.ResetPasswordKey = resetPasswordKey;
             await _organizationUserRepository.ReplaceAsync(orgUser);
             await _eventService.LogOrganizationUserEventAsync(orgUser, resetPasswordKey != null ?
