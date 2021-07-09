@@ -3,7 +3,6 @@ using System.Data;
 using System.Data.SqlClient;
 using System.Reflection;
 using System.Threading;
-using Amazon.Runtime.Internal.Util;
 using Bit.Core;
 using DbUp;
 using Microsoft.Extensions.Logging;
