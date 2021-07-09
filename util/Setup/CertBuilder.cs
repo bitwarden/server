@@ -77,7 +77,7 @@ namespace Bit.Setup
             Helpers.Exec("openssl req -x509 -newkey rsa:4096 -sha256 -nodes -keyout identity.key " +
                 "-out identity.crt -subj \"/CN=Bitwarden IdentityServer\" -days 36500");
             Helpers.Exec("openssl pkcs12 -export -out /bitwarden/identity/identity.pfx -inkey identity.key " +
-                $"-in identity.crt -certfile identity.crt -passout pass:{_context.Install.IdentityCertPassword}");
+                $"-in identity.crt -passout pass:{_context.Install.IdentityCertPassword}");
 
             Helpers.WriteLine(_context);
 
