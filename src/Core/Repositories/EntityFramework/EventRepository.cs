@@ -53,6 +53,10 @@ namespace Bit.Core.Repositories.EntityFramework
             }
         }
 
+        public Task<PagedResult<IEvent>> GetManyByProviderActingUserAsync(Guid providerId, Guid actingUserId, DateTime startDate, DateTime endDate,
+            PageOptions pageOptions) =>
+            throw new NotImplementedException();
+
         public async Task<PagedResult<IEvent>> GetManyByCipherAsync(Cipher cipher, DateTime startDate, DateTime endDate, PageOptions pageOptions)
         {
             DateTime? beforeDate = null;
@@ -102,6 +106,8 @@ namespace Bit.Core.Repositories.EntityFramework
                 return result;
             }
         }
+
+        public Task<PagedResult<IEvent>> GetManyByProviderAsync(Guid providerId, DateTime startDate, DateTime endDate, PageOptions pageOptions) => throw new NotImplementedException();
 
         public async Task<PagedResult<IEvent>> GetManyByOrganizationAsync(Guid organizationId, DateTime startDate, DateTime endDate, PageOptions pageOptions)
         {
