@@ -3,16 +3,15 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Azure.Storage.Queues;
 using Bit.Core;
 using Bit.Core.Models.Data;
 using Bit.Core.Services;
+using Bit.Core.Utilities;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Azure.Storage.Queues;
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using Bit.Core.Utilities;
 
 namespace Bit.EventsProcessor
 {
@@ -104,35 +103,24 @@ namespace Bit.EventsProcessor
                 return;
             }
 
-            try
-            {
-                _logger.LogInformation("Processing message.");
-                var events = new List<IEvent>();
+            _logger.LogInformation("Processing message.");
+            var events = new List<IEvent>();
 
-                var token = JToken.Parse(message);
-                if (token is JArray)
-                {
-                    var indexedEntities = token.ToObject<List<EventMessage>>()
-                        .SelectMany(e => EventTableEntity.IndexEvent(e));
-                    events.AddRange(indexedEntities);
-                }
-                else if (token is JObject)
-                {
-                    var eventMessage = token.ToObject<EventMessage>();
-                    events.AddRange(EventTableEntity.IndexEvent(eventMessage));
-                }
+            var token = JToken.Parse(message);
+            if (token is JArray)
+            {
+                var indexedEntities = token.ToObject<List<EventMessage>>()
+                    .SelectMany(e => EventTableEntity.IndexEvent(e));
+                events.AddRange(indexedEntities);
+            }
+            else if (token is JObject)
+            {
+                var eventMessage = token.ToObject<EventMessage>();
+                events.AddRange(EventTableEntity.IndexEvent(eventMessage));
+            }
 
-                await _eventWriteService.CreateManyAsync(events);
-                _logger.LogInformation("Processed message.");
-            }
-            catch (JsonReaderException)
-            {
-                _logger.LogError("JsonReaderException: Unable to parse message.");
-            }
-            catch (JsonSerializationException)
-            {
-                _logger.LogError("JsonSerializationException: Unable to serialize token.");
-            }
+            await _eventWriteService.CreateManyAsync(events);
+            _logger.LogInformation("Processed message.");
         }
     }
 }
