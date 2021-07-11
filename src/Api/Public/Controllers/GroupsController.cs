@@ -87,8 +87,12 @@ namespace Bit.Api.Public.Controllers
         public async Task<IActionResult> List()
         {
             var groups = await _groupRepository.GetManyByOrganizationIdAsync(_currentContext.OrganizationId.Value);
-            // TODO: Get all CollectionGroup associations for the organization and marry them up here for the response.
-            var groupResponses = groups.Select(g => new GroupResponseModel(g, null));
+            var groupResponses = new List<GroupResponseModel>();
+            foreach (var group in groups)
+            {
+                var groupWithCollections = await _groupRepository.GetByIdWithCollectionsAsync(group.Id);
+                groupResponses.Add(new GroupResponseModel(group, groupWithCollections.Item2));
+            }
             var response = new ListResponseModel<GroupResponseModel>(groupResponses);
             return new JsonResult(response);
         }
