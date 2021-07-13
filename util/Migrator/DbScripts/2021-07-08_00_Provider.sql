@@ -146,7 +146,7 @@ END
 GO
 
 CREATE PROCEDURE [dbo].[Provider_Create]
-    @Id UNIQUEIDENTIFIER,
+    @Id UNIQUEIDENTIFIER OUTPUT,
     @Name NVARCHAR(50),
     @BusinessName NVARCHAR(50),
     @BusinessAddress1 NVARCHAR(50),
@@ -341,7 +341,7 @@ END
 GO
 
 CREATE PROCEDURE [dbo].[ProviderUser_Create]
-    @Id UNIQUEIDENTIFIER,
+    @Id UNIQUEIDENTIFIER OUTPUT,
     @ProviderId UNIQUEIDENTIFIER,
     @UserId UNIQUEIDENTIFIER,
     @Email NVARCHAR(256),
@@ -564,7 +564,7 @@ END
 GO
 
 CREATE PROCEDURE [dbo].[ProviderOrganization_Create]
-    @Id UNIQUEIDENTIFIER,
+    @Id UNIQUEIDENTIFIER OUTPUT,
     @ProviderId UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
     @Key VARCHAR(MAX),

@@ -1,5 +1,5 @@
 ﻿CREATE PROCEDURE [dbo].[Provider_Create]
-    @Id UNIQUEIDENTIFIER,
+    @Id UNIQUEIDENTIFIER OUTPUT,
     @Name NVARCHAR(50),
     @BusinessName NVARCHAR(50),
     @BusinessAddress1 NVARCHAR(50),

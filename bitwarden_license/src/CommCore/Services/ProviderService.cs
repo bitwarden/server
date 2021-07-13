@@ -362,9 +362,23 @@ namespace Bit.CommCore.Services
             return providerOrganization;
         }
 
-        // TODO: Implement this
-        public Task RemoveOrganization(Guid providerOrganizationId, Guid removingUserId) => throw new NotImplementedException();
-        
+        public async Task RemoveOrganization(Guid providerId, Guid providerOrganizationId, Guid removingUserId)
+        {
+            var providerOrganization = await _providerOrganizationRepository.GetByIdAsync(providerOrganizationId);
+
+            if (providerOrganization == null || providerOrganization.ProviderId != providerId)
+            {
+                throw new BadRequestException("Invalid organization");
+            }
+            
+            if (!await _organizationService.HasConfirmedOwnersExceptAsync(providerOrganization.OrganizationId, new Guid[] {}))
+            {
+                throw new BadRequestException("Organization needs to have at least one confirmed owner");
+            }
+
+            await _providerOrganizationRepository.DeleteAsync(providerOrganization);
+        }
+
         private async Task SendInviteAsync(ProviderUser providerUser, Provider provider)
         {
             var nowMillis = CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow);
