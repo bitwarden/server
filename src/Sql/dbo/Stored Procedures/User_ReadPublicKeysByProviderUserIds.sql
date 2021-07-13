@@ -7,6 +7,7 @@ BEGIN
 
     SELECT
         PU.[Id],
+        PU.[UserId],
         U.[PublicKey]
     FROM
         @ProviderUserIds PUIDs

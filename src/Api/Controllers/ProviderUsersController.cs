@@ -146,7 +146,7 @@ namespace Bit.Api.Controllers
             }
 
             var result = await _providerUserRepository.GetManyPublicKeysByProviderUserAsync(providerId, model.Ids);
-            var responses = result.Select(r => new ProviderUserPublicKeyResponseModel(r.Id, r.PublicKey)).ToList();
+            var responses = result.Select(r => new ProviderUserPublicKeyResponseModel(r.Id, r.UserId, r.PublicKey)).ToList();
             return new ListResponseModel<ProviderUserPublicKeyResponseModel>(responses);
         }
 
