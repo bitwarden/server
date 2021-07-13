@@ -144,10 +144,15 @@ namespace Bit.Setup
                 $"-passin pass:{_context.Install.IdentityCertPassword} 2> /dev/null | grep -c \"\\-----BEGIN CERTIFICATE----\"", true);
             if (int.TryParse(certCountString, out var certCount) && certCount > 1)
             {
-                Helpers.Exec("openssl req -x509 -newkey rsa:4096 -sha256 -nodes -keyout identity.key -out identity.crt " +
-                             "-subj \"/CN=Bitwarden IdentityServer\" -days 36500 > /dev/null 2>&1");
+                // Extract key from identity.pfx
+                Helpers.Exec("openssl pkcs12 -in /bitwarden/identity/identity.pfx -nocerts -nodes -out identity.key " +
+                    $"-passin pass:{_context.Install.IdentityCertPassword} > /dev/null 2>&1");
+                // Extract certificate from identity.pfx
+                Helpers.Exec("openssl pkcs12 -in /bitwarden/identity/identity.pfx -clcerts -nokeys -out identity.crt " +
+                    $"-passin pass:{_context.Install.IdentityCertPassword} > /dev/null 2>&1");
+                // Create new PKCS12 bag with certificate and key
                 Helpers.Exec("openssl pkcs12 -export -out /bitwarden/identity/identity.pfx -inkey identity.key " +
-                             $"-in identity.crt -passout pass:{_context.Install.IdentityCertPassword} > /dev/null 2>&1");
+                    $"-in identity.crt -passout pass:{_context.Install.IdentityCertPassword} > /dev/null 2>&1");
             }
 
             if (_context.Parameters.ContainsKey("db"))
