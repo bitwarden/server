@@ -25,6 +25,7 @@ namespace Bit.Core.Services
         }
 
         public bool ServiceEnabled => true;
+        public string SiteKey => _globalSettings.Captcha.HCaptchaSiteKey;
 
         public async Task<bool> ValidateCaptchaResponseAsync(string captchResponse, string clientIpAddress)
         {
@@ -43,7 +44,7 @@ namespace Bit.Core.Services
                 {
                     { "response", captchResponse.TrimStart("hcaptcha|".ToCharArray()) },
                     { "secret", _globalSettings.Captcha.HCaptchaSecretKey },
-                    { "sitekey", _globalSettings.Captcha.HCaptchaSiteKey },
+                    { "sitekey", SiteKey },
                     { "remoteip", clientIpAddress }
                 })
             };

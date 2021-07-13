@@ -62,10 +62,11 @@ namespace Bit.Core.IdentityServer
 
             if (_captchaValidationService.ServiceEnabled && _currentContext.IsBot)
             {
-                var captchaResponse = context.Request.Raw["CaptchaResponse"]?.ToString();
+                var captchaResponse = context.Request.Raw["captchaResponse"]?.ToString();
                 if (string.IsNullOrWhiteSpace(captchaResponse))
                 {
-                    context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant, "Captcha required.");
+                    context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant, "Captcha required.",
+                        new Dictionary<string, object> { { "HCaptcha_SiteKey", _captchaValidationService.SiteKey } });
                     return;
                 }
 
