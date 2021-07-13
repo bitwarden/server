@@ -1226,3 +1226,164 @@ IF OBJECT_ID('[dbo].[ProviderOrganization_ReadByUserId]') IS NOT NULL
         DROP PROCEDURE [dbo].[ProviderOrganization_ReadByUserId]
     END
 GO
+
+IF COL_LENGTH('[dbo].[OrganizationUser]', 'ResetPasswordKey') IS NULL
+    BEGIN
+        ALTER TABLE
+            [dbo].[OrganizationUser]
+            ADD
+                [ResetPasswordKey] VARCHAR(MAX) NULL
+    END
+GO
+
+IF COL_LENGTH('[dbo].[Event]', 'ProviderId') IS NULL
+    BEGIN
+        ALTER TABLE
+            [dbo].[Event]
+        ADD
+            [ProviderId] UNIQUEIDENTIFIER NULL
+    END
+GO
+
+IF COL_LENGTH('[dbo].[Event]', 'ProviderUserId') IS NULL
+    BEGIN
+        ALTER TABLE
+            [dbo].[Event]
+        ADD
+            [ProviderUserId] UNIQUEIDENTIFIER NULL
+    END
+GO
+
+IF OBJECT_ID('[dbo].[Event_Create]') IS NOT NULL
+    BEGIN
+        DROP PROCEDURE [dbo].[Event_Create]
+    END
+GO
+
+CREATE PROCEDURE [dbo].[Event_Create]
+    @Id UNIQUEIDENTIFIER OUTPUT,
+    @Type INT,
+    @UserId UNIQUEIDENTIFIER,
+    @OrganizationId UNIQUEIDENTIFIER,
+    @ProviderId UNIQUEIDENTIFIER,
+    @CipherId UNIQUEIDENTIFIER,
+    @CollectionId UNIQUEIDENTIFIER,
+    @PolicyId UNIQUEIDENTIFIER,
+    @GroupId UNIQUEIDENTIFIER,
+    @OrganizationUserId UNIQUEIDENTIFIER,
+    @ProviderUserId UNIQUEIDENTIFIER,
+    @ActingUserId UNIQUEIDENTIFIER,
+    @DeviceType SMALLINT,
+    @IpAddress VARCHAR(50),
+    @Date DATETIME2(7)
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    INSERT INTO [dbo].[Event]
+    (
+        [Id],
+        [Type],
+        [UserId],
+        [OrganizationId],
+        [ProviderId],
+        [CipherId],
+        [CollectionId],
+        [PolicyId],
+        [GroupId],
+        [OrganizationUserId],
+        [ProviderUserId],
+        [ActingUserId],
+        [DeviceType],
+        [IpAddress],
+        [Date]
+    )
+    VALUES
+    (
+        @Id,
+        @Type,
+        @UserId,
+        @OrganizationId,
+        @ProviderId,
+        @CipherId,
+        @CollectionId,
+        @PolicyId,
+        @GroupId,
+        @OrganizationUserId,
+        @ProviderUserId,
+        @ActingUserId,
+        @DeviceType,
+        @IpAddress,
+        @Date
+    )
+END
+GO
+
+IF OBJECT_ID('[dbo].[EventView]') IS NOT NULL
+    BEGIN
+        EXECUTE sp_refreshview N'[dbo].[EventView]';
+    END
+GO
+
+IF OBJECT_ID('[dbo].[Event_ReadPageByProviderId]') IS NOT NULL
+    BEGIN
+        DROP PROCEDURE [dbo].[Event_ReadPageByProviderId]
+    END
+GO
+
+CREATE PROCEDURE [dbo].[Event_ReadPageByProviderId]
+    @ProviderId UNIQUEIDENTIFIER,
+    @StartDate DATETIME2(7),
+    @EndDate DATETIME2(7),
+    @BeforeDate DATETIME2(7),
+    @PageSize INT
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    SELECT
+        *
+    FROM
+        [dbo].[EventView]
+    WHERE
+        [Date] >= @StartDate
+        AND (@BeforeDate IS NOT NULL OR [Date] <= @EndDate)
+        AND (@BeforeDate IS NULL OR [Date] < @BeforeDate)
+        AND [Providerid] = @ProviderId
+    ORDER BY [Date] DESC
+    OFFSET 0 ROWS
+    FETCH NEXT @PageSize ROWS ONLY
+END
+GO
+
+IF OBJECT_ID('[dbo].[Event_ReadPageByProviderIdActingUserId]') IS NOT NULL
+    BEGIN
+        DROP PROCEDURE [dbo].[Event_ReadPageByProviderIdActingUserId]
+    END
+GO
+
+CREATE PROCEDURE [dbo].[Event_ReadPageByProviderIdActingUserId]
+    @ProviderId UNIQUEIDENTIFIER,
+    @ActingUserId UNIQUEIDENTIFIER,
+    @StartDate DATETIME2(7),
+    @EndDate DATETIME2(7),
+    @BeforeDate DATETIME2(7),
+    @PageSize INT
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    SELECT
+        *
+    FROM
+        [dbo].[EventView]
+    WHERE
+        [Date] >= @StartDate
+        AND (@BeforeDate IS NOT NULL OR [Date] <= @EndDate)
+        AND (@BeforeDate IS NULL OR [Date] < @BeforeDate)
+        AND [ProviderId] = @ProviderId
+        AND [ActingUserId] = @ActingUserId
+    ORDER BY [Date] DESC
+    OFFSET 0 ROWS
+    FETCH NEXT @PageSize ROWS ONLY
+END

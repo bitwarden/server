@@ -70,6 +70,8 @@
   </ItemGroup>
   <ItemGroup>
     <Build Include="dbo\Stored Procedures\EmergencyAccessDetails_ReadByIdGrantorId.sql" />
+    <Build Include="dbo\Stored Procedures\Event_ReadPageByProviderId.sql" />
+    <Build Include="dbo\Stored Procedures\Event_ReadPageByProviderIdActingUserId.sql" />
     <Build Include="dbo\Stored Procedures\ProviderUserProviderOrganizationDetails_ReadByUserIdStatus.sql" />
     <Build Include="dbo\Stored Procedures\SsoConfig_Create.sql" />
     <Build Include="dbo\Stored Procedures\SsoConfig_ReadByIdentifier.sql" />
