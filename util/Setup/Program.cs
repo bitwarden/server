@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Globalization;
 using System.Net.Http;
-using LinqToDB.Tools;
 
 namespace Bit.Setup
 {
