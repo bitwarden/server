@@ -57,6 +57,7 @@ namespace Bit.Core.Models.Table
         public int KdfIterations { get; set; } = 5000;
         public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
         public DateTime RevisionDate { get; internal set; } = DateTime.UtcNow;
+        public bool ForceResetPassword { get; set; }
 
         public void SetNewId()
         {
