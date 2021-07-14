@@ -3,11 +3,11 @@ DECLARE @DatabaseName varchar(100)
 SET @DatabaseName = 'vault'
 
 -- Database name without spaces for saving the backup files.
-DELCARE @DatabaseNameSafe varchar(100)
+DECLARE @DatabaseNameSafe varchar(100)
 SET @DatabaseNameSafe = 'vault'
 
 DECLARE @BackupFile varchar(100)
-SET @BackupFile = '/etc/bitwarden/mssql/backups/' + @DatabaseNameSafe + '_FULL_$(now).BAK'
+SET @BackupFile = '/etc/bitwarden/database/backups/' + @DatabaseNameSafe + '_FULL_$(now).BAK'
 
 DECLARE @BackupName varchar(100)
 SET @BackupName = @DatabaseName + ' full backup for $(now)'

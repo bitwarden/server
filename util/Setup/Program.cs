@@ -15,6 +15,7 @@ namespace Bit.Setup
         public static void Main(string[] args)
         {
             CultureInfo.DefaultThreadCurrentCulture = new CultureInfo("en-US");
+            Helpers.RegisterTemplateHelpers();
 
             _context = new Context
             {
@@ -78,6 +79,10 @@ namespace Bit.Setup
             if (_context.Parameters.ContainsKey("dbname"))
             {
                 _context.Install.Database = _context.Parameters["dbname"];
+            }
+            if (_context.Parameters.ContainsKey("dbtype"))
+            {
+                _context.Config.DatabaseDockerType = _context.Parameters["dbtype"];
             }
 
             if (_context.Stub)
@@ -175,15 +180,19 @@ namespace Bit.Setup
                 Helpers.WriteLine(_context, "Migrating database.");
                 var vaultConnectionString = Helpers.GetValueFromEnvFile("global",
                     "globalSettings__sqlServer__connectionString");
-                var migrator = new DbMigrator(vaultConnectionString, null);
-                var success = migrator.MigrateMsSqlDatabase(false);
-                if (success)
+                // TODO: Add in other database types and how to migrate them here.
+                if (_context.Config.DatabaseDockerType == "mssql")
                 {
-                    Helpers.WriteLine(_context, "Migration successful.");
-                }
-                else
-                {
-                    Helpers.WriteLine(_context, "Migration failed.");
+                    var migrator = new DbMigrator(vaultConnectionString, null);
+                    var success = migrator.MigrateMsSqlDatabase(false);
+                    if (success)
+                    {
+                        Helpers.WriteLine(_context, "Migration successful.");
+                    }
+                    else
+                    {
+                        Helpers.WriteLine(_context, "Migration failed.");
+                    }
                 }
             }
             catch (SqlException e)

@@ -76,11 +76,19 @@ function Install() {
     if ($database -eq "") {
         $database = "vault"
     }
+
+    Write-Host "(!) " -f cyan -nonewline
+    [string]$databaseType = $( Read-Host "Enter the database type for your Bitwarden instance (mssql, mysql, postgresql): ")
+    echo ""
+
+    if ($databaseType -eq "") {
+        $databaseType = "mssql"
+    }
     
     Pull-Setup
     docker run -it --rm --name setup -v ${outputDir}:/bitwarden bitwarden/setup:$coreVersion `
         dotnet Setup.dll -install 1 -domain ${domain} -letsencrypt ${letsEncrypt} `
-        -os win -corev $coreVersion -webv $webVersion -q $setupQuiet -dbname "$database"
+        -os win -corev $coreVersion -webv $webVersion -q $setupQuiet -dbname "$database" -dbtype $databaseType
 }
 
 function Docker-Compose-Up {
@@ -120,13 +128,13 @@ function Docker-Compose-Volumes {
     Create-Dir "logs/events"
     Create-Dir "logs/icons"
     Create-Dir "logs/identity"
-    Create-Dir "logs/mssql"
+    Create-Dir "logs/database"
     Create-Dir "logs/nginx"
     Create-Dir "logs/notifications"
     Create-Dir "logs/sso"
     Create-Dir "logs/portal"
-    Create-Dir "mssql/backups"
-    Create-Dir "mssql/data"
+    Create-Dir "database/backups"
+    Create-Dir "database/data"
 }
 
 function Create-Dir($str) {
@@ -165,8 +173,8 @@ function Force-Update-Lets-Encrypt {
 function Update-Database {
     Pull-Setup
     Docker-Compose-Files
-    $mssqlId = docker-compose ps -q mssql
-    docker run -it --rm --name setup --network container:$mssqlId `
+    $databaseId = docker-compose ps -q database
+    docker run -it --rm --name setup --network container:$databaseId `
         -v ${outputDir}:/bitwarden bitwarden/setup:$coreVersion `
         dotnet Setup.dll -update 1 -db 1 -os win -corev $coreVersion -webv $webVersion -q $setupQuiet
     Write-Line "Database update complete"

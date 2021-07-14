@@ -181,6 +181,24 @@ namespace Bit.Setup
             Console.ResetColor();
         }
 
+        public static void RegisterTemplateHelpers()
+        {
+            HandlebarsDotNet.Handlebars.RegisterHelper("StringEqualityBlockHelper", (output, options, context, arguments) =>
+            {
+                if (arguments.Length != 2)
+                {
+                    throw new HandlebarsDotNet.HandlebarsException("{{#StringEqualityBlockHelper}} helper must have exactly two arguments");
+                }
+
+                var left = arguments[0] as string;
+                var right = arguments[1] as string;
+                Console.WriteLine("LEFT: " + left);
+                Console.WriteLine("RIGHT: " + right);
+                if (left == right) options.Template(output, context);
+                else options.Inverse(output, context);
+            });
+        }
+
         public static Func<object, string> ReadTemplate(string templateName)
         {
             var assembly = typeof(Helpers).GetTypeInfo().Assembly;

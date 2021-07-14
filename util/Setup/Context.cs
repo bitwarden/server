@@ -61,10 +61,10 @@ namespace Bit.Setup
                             continue;
                         }
 
-                        if (paramParts[0] == "# Parameter:MssqlDataDockerVolume" &&
-                            bool.TryParse(paramParts[1], out var mssqlDataDockerVolume))
+                        if (paramParts[0] == "# Parameter:DatabaseDockerVolume" &&
+                            bool.TryParse(paramParts[1], out var databaseDockerVolume))
                         {
-                            Config.DatabaseDockerVolume = mssqlDataDockerVolume;
+                            Config.DatabaseDockerVolume = databaseDockerVolume;
                             continue;
                         }
 

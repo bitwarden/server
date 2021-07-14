@@ -16,23 +16,63 @@
 version: '{{{ComposeVersion}}}'
 
 services:
-  mssql:
+{{#StringEqualityBlockHelper DatabaseDockerType "mssql"}}
+  db:
     image: bitwarden/mssql:{{{CoreVersion}}}
-    container_name: bitwarden-mssql
+    container_name: bitwarden-database
     restart: always
     stop_grace_period: 60s
     volumes:
-{{#if MssqlDataDockerVolume}}
-      - mssql_data:/var/opt/mssql/data
+{{#if DatabaseDockerVolume}}
+      - database_data:/var/opt/mssql/data
 {{else}}
-      - ../mssql/data:/var/opt/mssql/data
+      - ../database/data:/var/opt/mssql/data
 {{/if}}
-      - ../logs/mssql:/var/opt/mssql/log
-      - ../mssql/backups:/etc/bitwarden/mssql/backups
+      - ../logs/database:/var/opt/mssql/log
+      - ../database/backups:/etc/bitwarden/mssql/backups
     env_file:
-      - mssql.env
+      - database.env
       - ../env/uid.env
-      - ../env/mssql.override.env
+      - ../env/database.override.env
+{{/StringEqualityBlockHelper}}
+{{#StringEqualityBlockHelper DatabaseDockerType "mysql"}}
+  db:
+    image: bitwarden/mysql:{{{CoreVersion}}}
+    container_name: bitwarden-database
+    restart: always
+    stop_grace_period: 60s
+    volumes:
+{{#if DatabaseDockerVolume}}
+      - database_data:/var/opt/mssql/data
+{{else}}
+      - ../database/data:/var/opt/mssql/data
+{{/if}}
+      - ../logs/database:/var/opt/mssql/log
+      - ../database/backups:/etc/bitwarden/mssql/backups
+    env_file:
+      - database.env
+      - ../env/uid.env
+      - ../env/database.override.env
+{{/StringEqualityBlockHelper}}
+{{#StringEqualityBlockHelper DatabaseDockerType "postgresql"}}
+  db:
+    image: bitwarden/postgresql:{{{CoreVersion}}}
+    container_name: bitwarden-database
+    restart: always
+    stop_grace_period: 60s
+    volumes:
+{{#if DatabaseDockerVolume}}
+      - database_data:/var/opt/mssql/data
+{{else}}
+      - ../database/data:/var/opt/mssql/data
+{{/if}}
+      - ../logs/database:/var/opt/mssql/log
+      - ../database/backups:/etc/bitwarden/mssql/backups
+    env_file:
+      - database.env
+      - ../env/uid.env
+      - ../env/database.override.env
+{{/StringEqualityBlockHelper}}
 
   web:
     image: bitwarden/web:{{{WebVersion}}}
@@ -212,10 +252,10 @@ services:
     networks:
       - default
       - public
-{{#if MssqlDataDockerVolume}}
+{{#if DatabaseDockerVolume}}
 
 volumes:
-  mssql_data:
+  database_data:
 {{/if}}
 
 networks:
