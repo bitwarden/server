@@ -126,7 +126,6 @@ namespace Bit.Core.Services
                 }
             }
 
-            var provider = await GetProviderIdAsync(cipher.OrganizationId);
             return new EventMessage(_currentContext)
             {
                 OrganizationId = cipher.OrganizationId,
@@ -134,7 +133,7 @@ namespace Bit.Core.Services
                 CipherId = cipher.Id,
                 Type = type,
                 ActingUserId = _currentContext?.UserId,
-                ProviderId = provider,
+                ProviderId = await GetProviderIdAsync(cipher.OrganizationId),
                 Date = date.GetValueOrDefault(DateTime.UtcNow)
             };
         }
@@ -147,14 +146,13 @@ namespace Bit.Core.Services
                 return;
             }
 
-            var provider = await GetProviderIdAsync(collection.OrganizationId);
             var e = new EventMessage(_currentContext)
             {
                 OrganizationId = collection.OrganizationId,
                 CollectionId = collection.Id,
                 Type = type,
                 ActingUserId = _currentContext?.UserId,
-                ProviderId = provider,
+                ProviderId = await GetProviderIdAsync(collection.OrganizationId),
                 Date = date.GetValueOrDefault(DateTime.UtcNow)
             };
             await _eventWriteService.CreateAsync(e);
@@ -168,14 +166,13 @@ namespace Bit.Core.Services
                 return;
             }
 
-            var provider = await GetProviderIdAsync(@group.OrganizationId);
             var e = new EventMessage(_currentContext)
             {
                 OrganizationId = group.OrganizationId,
                 GroupId = group.Id,
                 Type = type,
                 ActingUserId = _currentContext?.UserId,
-                ProviderId = provider,
+                ProviderId = await GetProviderIdAsync(@group.OrganizationId),
                 Date = date.GetValueOrDefault(DateTime.UtcNow)
             };
             await _eventWriteService.CreateAsync(e);
@@ -189,14 +186,13 @@ namespace Bit.Core.Services
                 return;
             }
 
-            var provider = await GetProviderIdAsync(policy.OrganizationId);
             var e = new EventMessage(_currentContext)
             {
                 OrganizationId = policy.OrganizationId,
                 PolicyId = policy.Id,
                 Type = type,
                 ActingUserId = _currentContext?.UserId,
-                ProviderId = provider,
+                ProviderId = await GetProviderIdAsync(policy.OrganizationId),
                 Date = date.GetValueOrDefault(DateTime.UtcNow)
             };
             await _eventWriteService.CreateAsync(e);
@@ -216,14 +212,13 @@ namespace Bit.Core.Services
                 {
                     continue;
                 }
-                
-                var provider = await GetProviderIdAsync(organizationUser.OrganizationId);
+
                 eventMessages.Add(new EventMessage
                 {
                     OrganizationId = organizationUser.OrganizationId,
                     UserId = organizationUser.UserId,
                     OrganizationUserId = organizationUser.Id,
-                    ProviderId = provider,
+                    ProviderId = await GetProviderIdAsync(organizationUser.OrganizationId),
                     Type = type,
                     ActingUserId = _currentContext?.UserId,
                     Date = date.GetValueOrDefault(DateTime.UtcNow)
@@ -240,11 +235,10 @@ namespace Bit.Core.Services
                 return;
             }
 
-            var provider = await GetProviderIdAsync(organization.Id);
             var e = new EventMessage(_currentContext)
             {
                 OrganizationId = organization.Id,
-                ProviderId = provider,
+                ProviderId = await GetProviderIdAsync(organization.Id),
                 Type = type,
                 ActingUserId = _currentContext?.UserId,
                 Date = date.GetValueOrDefault(DateTime.UtcNow)
