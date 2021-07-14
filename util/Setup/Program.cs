@@ -136,6 +136,25 @@ namespace Bit.Setup
 
         private static void Update()
         {
+            // This portion of code checks for multiple certs in the Identity.pfx PKCS12 bag.  If found, it generates
+            // a new cert and bag to replace the old Identity.pfx.  This fixes an issue that came up as a result of
+            // moving the project to .NET 5.
+            _context.Install.IdentityCertPassword = Helpers.GetValueFromEnvFile("global", "globalSettings__identityServer__certificatePassword");
+            var certCountString = Helpers.Exec("openssl pkcs12 -nokeys -info -in /bitwarden/identity/identity.pfx " + 
+                $"-passin pass:{_context.Install.IdentityCertPassword} 2> /dev/null | grep -c \"\\-----BEGIN CERTIFICATE----\"", true);
+            if (int.TryParse(certCountString, out var certCount) && certCount > 1)
+            {
+                // Extract key from identity.pfx
+                Helpers.Exec("openssl pkcs12 -in /bitwarden/identity/identity.pfx -nocerts -nodes -out identity.key " +
+                    $"-passin pass:{_context.Install.IdentityCertPassword} > /dev/null 2>&1");
+                // Extract certificate from identity.pfx
+                Helpers.Exec("openssl pkcs12 -in /bitwarden/identity/identity.pfx -clcerts -nokeys -out identity.crt " +
+                    $"-passin pass:{_context.Install.IdentityCertPassword} > /dev/null 2>&1");
+                // Create new PKCS12 bag with certificate and key
+                Helpers.Exec("openssl pkcs12 -export -out /bitwarden/identity/identity.pfx -inkey identity.key " +
+                    $"-in identity.crt -passout pass:{_context.Install.IdentityCertPassword} > /dev/null 2>&1");
+            }
+
             if (_context.Parameters.ContainsKey("db"))
             {
                 MigrateDatabase();
