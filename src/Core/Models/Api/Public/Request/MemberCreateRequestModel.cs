@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using Bit.Core.Models.Table;
+using Bit.Core.Utilities;
 
 namespace Bit.Core.Models.Api.Public
 {
@@ -12,7 +13,7 @@ namespace Bit.Core.Models.Api.Public
         /// </summary>
         /// <example>jsmith@example.com</example>
         [Required]
-        [EmailAddress]
+        [StrictEmailAddress]
         public string Email { get; set; }
 
         public override OrganizationUser ToOrganizationUser(OrganizationUser existingUser)
@@ -22,7 +23,8 @@ namespace Bit.Core.Models.Api.Public
 
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {
-            if (Email.Contains(" ") || Email.Contains("<"))
+            var strictEmailAttribute = new StrictEmailAddressAttribute();
+            if (!strictEmailAttribute.IsValid(Email))
             {
                 yield return new ValidationResult($"Email is not valid.",
                     new string[] { nameof(Email) });

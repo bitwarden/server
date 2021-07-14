@@ -8,7 +8,7 @@ namespace Bit.Core.Utilities
     {
         protected override ValidationResult IsValid(object value, ValidationContext validationContext)
         {
-            var emailAttribute = new EmailAddressAttribute();
+            var strictEmailAttribute = new StrictEmailAddressAttribute();
             var emails = value as IList<string>;
 
             if (!emails?.Any() ?? true)
@@ -24,7 +24,7 @@ namespace Bit.Core.Utilities
             for (var i = 0; i < emails.Count(); i++)
             {
                 var email = emails.ElementAt(i);
-                if (!emailAttribute.IsValid(email) || email.Contains(" ") || email.Contains("<"))
+                if (!strictEmailAttribute.IsValid(email))
                 {
                     return new ValidationResult($"Email #{i + 1} is not valid.");
                 }
