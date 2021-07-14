@@ -108,7 +108,7 @@ jobs:
             base_path: ./util
             docker_repo: bitwarden
           - service_name: MsSql
-            base_path: ./util
+            base_path: ./util/Databases
             docker_repo: bitwarden
           - service_name: MySQL
             base_path: ./util/Databases
