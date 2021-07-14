@@ -1387,3 +1387,24 @@ BEGIN
     OFFSET 0 ROWS
     FETCH NEXT @PageSize ROWS ONLY
 END
+GO
+
+IF OBJECT_ID('[dbo].[ProviderOrganization_ReadByOrganizationId]') IS NOT NULL
+    BEGIN
+        DROP PROCEDURE [dbo].[ProviderOrganization_ReadByOrganizationId]
+    END
+GO
+
+CREATE PROCEDURE [dbo].[ProviderOrganization_ReadByOrganizationId]
+@OrganizationId UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    SELECT
+        *
+    FROM
+        [dbo].[ProviderOrganizationView]
+    WHERE
+        [OrganizationId] = @OrganizationId
+END

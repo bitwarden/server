@@ -337,13 +337,19 @@ namespace Bit.CommCore.Services
 
         public async Task AddOrganization(Guid providerId, Guid organizationId, Guid addingUserId, string key)
         {
+            var po = await _providerOrganizationRepository.GetByOrganizationId(organizationId);
+            if (po != null)
+            {
+                throw new BadRequestException("Organization already belongs to a provider.");
+            }
+
             var providerOrganization = new ProviderOrganization
             {
                 ProviderId = providerId,
                 OrganizationId = organizationId,
                 Key = key,
             };
-            
+
             await _providerOrganizationRepository.CreateAsync(providerOrganization);
         }
 

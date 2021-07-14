@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using System.Linq;
 using TableModel = Bit.Core.Models.Table;
 using EfModel = Bit.Core.Models.EntityFramework;
 using Microsoft.Extensions.DependencyInjection;
 using AutoMapper;
 using Bit.Core.Models.Data;
+using Bit.Core.Models.Table.Provider;
 using Bit.Core.Repositories.EntityFramework.Queries;
 using Microsoft.EntityFrameworkCore;
 
@@ -27,6 +29,13 @@ namespace Bit.Core.Repositories.EntityFramework
                 var data = await query.Run(dbContext).ToListAsync();
                 return data;
             }
+        }
+
+        public async Task<ProviderOrganization> GetByOrganizationId(Guid organizationId)
+        {
+            using var scope = ServiceScopeFactory.CreateScope();
+            var dbContext = GetDatabaseContext(scope);
+            return await GetDbSet(dbContext).Where(po => po.OrganizationId == organizationId).FirstOrDefaultAsync();
         }
     }
 }
