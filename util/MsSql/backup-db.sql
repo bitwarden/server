@@ -3,7 +3,7 @@ DECLARE @DatabaseName varchar(100)
 SET @DatabaseName = 'vault'
 
 -- Database name without spaces for saving the backup files.
-DELCARE @DatabaseNameSafe varchar(100)
+DECLARE @DatabaseNameSafe varchar(100)
 SET @DatabaseNameSafe = 'vault'
 
 DECLARE @BackupFile varchar(100)
