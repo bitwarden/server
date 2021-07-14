@@ -141,9 +141,19 @@ namespace Bit.Core.Repositories.EntityFramework
             }
         }
 
-        public Task<IEnumerable<ProviderUserOrganizationDetails>> GetManyOrganizationDetailsByUserAsync(Guid userId, ProviderUserStatusType? status = null)
+        public async Task<IEnumerable<ProviderUserOrganizationDetails>> GetManyOrganizationDetailsByUserAsync(Guid userId, ProviderUserStatusType? status = null)
         {
-            throw new NotImplementedException();
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var view = new ProviderUserOrganizationDetailsViewQuery();
+                var query = from ou in view.Run(dbContext)
+                    where ou.UserId == userId &&
+                          (status == null || ou.Status == status)
+                    select ou;
+                var organizationUsers = await query.ToListAsync();
+                return organizationUsers;
+            }
         }
     }
 }

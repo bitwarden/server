@@ -1,4 +1,5 @@
 ﻿using System;
+using Bit.Core.Enums.Provider;
 
 namespace Bit.Core.Models.Data
 {
@@ -19,17 +20,14 @@ namespace Bit.Core.Models.Data
         public bool UseBusinessPortal => UsePolicies || UseSso;
         public bool SelfHost { get; set; }
         public bool UsersGetPremium { get; set; }
-        public int Seats { get; set; }
-        public int MaxCollections { get; set; }
+        public int? Seats { get; set; }
+        public short? MaxCollections { get; set; }
         public short? MaxStorageGb { get; set; }
         public string Key { get; set; }
-        public Enums.OrganizationUserStatusType Status { get; set; }
-        public Enums.OrganizationUserType Type { get; set; }
+        public ProviderUserStatusType Status { get; set; }
+        public ProviderUserType Type { get; set; }
         public bool Enabled { get; set; }
-        public string SsoExternalId { get; set; }
         public string Identifier { get; set; }
-        public string Permissions { get; set; }
-        public string ResetPasswordKey { get; set; }
         public string PublicKey { get; set; }
         public string PrivateKey { get; set; }
         public Guid? ProviderId { get; set; }
