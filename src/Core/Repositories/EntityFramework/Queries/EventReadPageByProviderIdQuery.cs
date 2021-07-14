@@ -29,7 +29,7 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
                 where e.Date >= _startDate &&
                 (_beforeDate != null || e.Date <= _endDate) &&
                 (_beforeDate == null || e.Date < _beforeDate.Value) &&
-                e.ProviderId == _providerId
+                e.ProviderId == _providerId && e.OrganizationId == null
                 orderby e.Date descending
                 select e;
             return q.Skip(0).Take(_pageOptions.PageSize);
