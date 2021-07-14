@@ -15,7 +15,8 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
                     on ea.GrantorId equals grantor.Id into grantor_g
                 from grantor in grantor_g.DefaultIfEmpty()
                 select new {ea, grantee, grantor};
-            return query.Select(x => new EmergencyAccessDetails() {
+            return query.Select(x => new EmergencyAccessDetails 
+            {
                 Id = x.ea.Id,
                 GrantorId = x.ea.GrantorId,
                 GranteeId = x.ea.GranteeId,
@@ -31,7 +32,7 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
                 GranteeName = x.grantee.Name,
                 GranteeEmail = x.grantee.Email,
                 GrantorName = x.grantor.Name,
-                GrantorEmail = x.grantor.Email
+                GrantorEmail = x.grantor.Email,
             });
         }
     }

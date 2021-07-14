@@ -17,6 +17,7 @@ namespace Bit.Core.Models.Api
             Enabled = provider.Enabled;
             Permissions = CoreHelpers.LoadClassFromJsonData<Permissions>(provider.Permissions);
             UserId = provider.UserId?.ToString();
+            UseEvents = provider.UseEvents;
         }
 
         public string Id { get; set; }
@@ -27,5 +28,6 @@ namespace Bit.Core.Models.Api
         public bool Enabled { get; set; }
         public Permissions Permissions { get; set; }
         public string UserId { get; set; }
+        public bool UseEvents { get; set; }
     }
 }

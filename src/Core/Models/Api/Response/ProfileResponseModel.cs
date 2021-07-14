@@ -3,7 +3,6 @@ using Bit.Core.Models.Table;
 using System.Collections.Generic;
 using System.Linq;
 using Bit.Core.Models.Data;
-using Bit.Core.Services;
 
 namespace Bit.Core.Models.Api
 {
@@ -11,7 +10,9 @@ namespace Bit.Core.Models.Api
     {
         public ProfileResponseModel(User user,
             IEnumerable<OrganizationUserOrganizationDetails> organizationsUserDetails,
-            IEnumerable<ProviderUserProviderDetails> providerUserDetails, bool twoFactorEnabled) : base("profile")
+            IEnumerable<ProviderUserProviderDetails> providerUserDetails,
+            IEnumerable<ProviderUserOrganizationDetails> providerUserOrganizationDetails,
+            bool twoFactorEnabled) : base("profile")
         {
             if (user == null)
             {
@@ -30,7 +31,9 @@ namespace Bit.Core.Models.Api
             PrivateKey = user.PrivateKey;
             SecurityStamp = user.SecurityStamp;
             Organizations = organizationsUserDetails?.Select(o => new ProfileOrganizationResponseModel(o));
-            Providers = providerUserDetails?.Select(p => new ProfileProviderResponseModel(p));
+            Providers = providerUserDetails?.Where(p => p.Enabled).Select(p => new ProfileProviderResponseModel(p));
+            ProviderOrganizations =
+                providerUserOrganizationDetails?.Select(po => new ProfileProviderOrganizationResponseModel(po));
         }
 
         public string Id { get; set; }
@@ -46,5 +49,6 @@ namespace Bit.Core.Models.Api
         public string SecurityStamp { get; set; }
         public IEnumerable<ProfileOrganizationResponseModel> Organizations { get; set; }
         public IEnumerable<ProfileProviderResponseModel> Providers { get; set; }
+        public IEnumerable<ProfileProviderOrganizationResponseModel> ProviderOrganizations { get; set; }
     }
 }

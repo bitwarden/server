@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Data;
 using System.Data.SqlClient;
 using System.Reflection;
 using System.Threading;
@@ -39,18 +40,17 @@ namespace Bit.Migrator
                 {
                     databaseName = "vault";
                 }
-                var commandBuilder = new SqlCommandBuilder();
+
                 var databaseNameQuoted = new SqlCommandBuilder().QuoteIdentifier(databaseName);
                 var command = new SqlCommand(
-                    "IF ((SELECT COUNT(1) FROM sys.databases WHERE [name] = '@DatabaseName') = 0) " +
+                    "IF ((SELECT COUNT(1) FROM sys.databases WHERE [name] = @DatabaseName) = 0) " +
                     "CREATE DATABASE " + databaseNameQuoted + ";", connection);
-                command.Parameters.Add("@DatabaseName", System.Data.SqlDbType.VarChar);
-                command.Parameters["@DatabaseName"].Value = databaseName;
+                command.Parameters.Add("@DatabaseName", SqlDbType.VarChar).Value = databaseName;
                 command.Connection.Open();
                 command.ExecuteNonQuery();
 
                 command.CommandText = "IF ((SELECT DATABASEPROPERTYEX([name], 'IsAutoClose') " +
-                    "FROM sys.databases WHERE [name] = '@DatabaseName') = 1) " +
+                    "FROM sys.databases WHERE [name] = @DatabaseName) = 1) " +
                     "ALTER DATABASE " + databaseNameQuoted + " SET AUTO_CLOSE OFF;";
                 command.ExecuteNonQuery();
             }

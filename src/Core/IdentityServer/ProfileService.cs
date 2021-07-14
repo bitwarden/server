@@ -19,6 +19,7 @@ namespace Bit.Core.IdentityServer
         private readonly IUserService _userService;
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly IProviderUserRepository _providerUserRepository;
+        private readonly IProviderOrganizationRepository _providerOrganizationRepository;
         private readonly ILicensingService _licensingService;
         private readonly ICurrentContext _currentContext;
 
@@ -26,12 +27,14 @@ namespace Bit.Core.IdentityServer
             IUserService userService,
             IOrganizationUserRepository organizationUserRepository,
             IProviderUserRepository providerUserRepository,
+            IProviderOrganizationRepository providerOrganizationRepository,
             ILicensingService licensingService,
             ICurrentContext currentContext)
         {
             _userService = userService;
             _organizationUserRepository = organizationUserRepository;
             _providerUserRepository = providerUserRepository;
+            _providerOrganizationRepository = providerOrganizationRepository;
             _licensingService = licensingService;
             _currentContext = currentContext;
         }

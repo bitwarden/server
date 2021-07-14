@@ -42,9 +42,10 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
                     on g.Id equals gie.Id
                 where !dbContext.GroupUsers.Any(gu => _groupIds.Contains(gu.GroupId) && gu.OrganizationUserId == _organizationUserId)
                 select g;
-            return query.Select(x => new GroupUser() {
+            return query.Select(x => new GroupUser 
+            {
                 GroupId = x.Id,
-                OrganizationUserId = _organizationUserId
+                OrganizationUserId = _organizationUserId,
             });
         }
     }

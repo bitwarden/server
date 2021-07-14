@@ -6,6 +6,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Api;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -57,6 +58,26 @@ namespace Bit.Api.Controllers
             var userId = _userService.GetProperUserId(User).Value;
 
             await _providerService.AddOrganization(providerId, model.OrganizationId, userId, model.Key);
+        }
+
+        [HttpPost("")]
+        [SelfHosted(NotSelfHostedOnly = true)]
+        public async Task<ProviderOrganizationResponseModel> Post(Guid providerId, [FromBody]OrganizationCreateRequestModel model)
+        {
+            var user = await _userService.GetUserByPrincipalAsync(User);
+            if (user == null)
+            {
+                throw new UnauthorizedAccessException();
+            }
+
+            if (!_currentContext.ManageProviderOrganizations(providerId))
+            {
+                throw new NotFoundException();
+            }
+
+            var organizationSignup = model.ToOrganizationSignup(user);
+            var result = await _providerService.CreateOrganizationAsync(providerId, organizationSignup, user);
+            return new ProviderOrganizationResponseModel(result);
         }
     }
 }

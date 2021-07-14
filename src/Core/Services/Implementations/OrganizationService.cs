@@ -552,15 +552,25 @@ namespace Bit.Core.Services
             }
         }
 
-        public async Task<Tuple<Organization, OrganizationUser>> SignUpAsync(OrganizationSignup signup)
+        public async Task<Tuple<Organization, OrganizationUser>> SignUpAsync(OrganizationSignup signup,
+            bool provider = false)
         {
-            var plan = StaticStore.Plans.FirstOrDefault(p => p.Type == signup.Plan && !p.Disabled);
-            if (plan == null)
+            var plan = StaticStore.Plans.FirstOrDefault(p => p.Type == signup.Plan);
+            if (!(plan is {LegacyYear: null}))
+            {
+                throw new BadRequestException("Invalid plan selected.");
+            }
+
+            if (plan.Disabled)
             {
                 throw new BadRequestException("Plan not found.");
             }
 
-            await ValidateSignUpPoliciesAsync(signup.Owner.Id);
+            if (!provider)
+            {
+                await ValidateSignUpPoliciesAsync(signup.Owner.Id);
+            }
+
             ValidateOrganizationUpgradeParameters(plan, signup);
 
             var organization = new Organization
@@ -598,7 +608,7 @@ namespace Bit.Core.Services
                 RevisionDate = DateTime.UtcNow,
             };
 
-            if (plan.Type == PlanType.Free)
+            if (plan.Type == PlanType.Free && !provider)
             {
                 var adminCount =
                     await _organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(signup.Owner.Id);
@@ -607,14 +617,15 @@ namespace Bit.Core.Services
                     throw new BadRequestException("You can only be an admin of one free organization.");
                 }
             }
-            else
+            else if (plan.Type != PlanType.Free)
             {
                 await _paymentService.PurchaseOrganizationAsync(organization, signup.PaymentMethodType.Value,
                     signup.PaymentToken, plan, signup.AdditionalStorageGb, signup.AdditionalSeats,
                     signup.PremiumAccessAddon, signup.TaxInfo);
             }
 
-            var returnValue = await SignUpAsync(organization, signup.Owner.Id, signup.OwnerKey, signup.CollectionName, true);
+            var ownerId = provider ? default : signup.Owner.Id;
+            var returnValue = await SignUpAsync(organization, ownerId, signup.OwnerKey, signup.CollectionName, true);
             await _referenceEventService.RaiseEventAsync(
                 new ReferenceEvent(ReferenceEventType.Signup, organization)
                 {
@@ -725,20 +736,6 @@ namespace Bit.Core.Services
                 await _organizationRepository.CreateAsync(organization);
                 await _applicationCacheService.UpsertOrganizationAbilityAsync(organization);
 
-                var orgUser = new OrganizationUser
-                {
-                    OrganizationId = organization.Id,
-                    UserId = ownerId,
-                    Key = ownerKey,
-                    Type = OrganizationUserType.Owner,
-                    Status = OrganizationUserStatusType.Confirmed,
-                    AccessAll = true,
-                    CreationDate = organization.CreationDate,
-                    RevisionDate = organization.CreationDate
-                };
-
-                await _organizationUserRepository.CreateAsync(orgUser);
-
                 if (!string.IsNullOrWhiteSpace(collectionName))
                 {
                     var defaultCollection = new Collection
@@ -751,11 +748,28 @@ namespace Bit.Core.Services
                     await _collectionRepository.CreateAsync(defaultCollection);
                 }
 
-                // push
-                var deviceIds = await GetUserDeviceIdsAsync(orgUser.UserId.Value);
-                await _pushRegistrationService.AddUserRegistrationOrganizationAsync(deviceIds,
-                    organization.Id.ToString());
-                await _pushNotificationService.PushSyncOrgKeysAsync(ownerId);
+                OrganizationUser orgUser = null;
+                if (ownerId != default)
+                {
+                    orgUser = new OrganizationUser
+                    {
+                        OrganizationId = organization.Id,
+                        UserId = ownerId,
+                        Key = ownerKey,
+                        Type = OrganizationUserType.Owner,
+                        Status = OrganizationUserStatusType.Confirmed,
+                        AccessAll = true,
+                        CreationDate = organization.CreationDate,
+                        RevisionDate = organization.CreationDate
+                    };
+
+                    await _organizationUserRepository.CreateAsync(orgUser);
+
+                    var deviceIds = await GetUserDeviceIdsAsync(orgUser.UserId.Value);
+                    await _pushRegistrationService.AddUserRegistrationOrganizationAsync(deviceIds,
+                        organization.Id.ToString());
+                    await _pushNotificationService.PushSyncOrgKeysAsync(ownerId);
+                }
 
                 return new Tuple<Organization, OrganizationUser>(organization, orgUser);
             }
@@ -1051,7 +1065,7 @@ namespace Bit.Core.Services
             {
                 foreach (var type in inviteTypes)
                 {
-                    ValidateOrganizationUserUpdatePermissions(organizationId, type, null);
+                    await ValidateOrganizationUserUpdatePermissions(organizationId, type, null);
                 }
             }
 
@@ -1158,7 +1172,7 @@ namespace Bit.Core.Services
 
             if (invitingUserId.HasValue && invite.Type.HasValue)
             {
-                ValidateOrganizationUserUpdatePermissions(organizationId, invite.Type.Value, null);
+                await ValidateOrganizationUserUpdatePermissions(organizationId, invite.Type.Value, null);
             }
 
             if (organization.Seats.HasValue)
@@ -1170,6 +1184,12 @@ namespace Bit.Core.Services
                     throw new BadRequestException("You have reached the maximum number of users " +
                         $"({organization.Seats.Value}) for this organization.");
                 }
+            }
+
+            var invitedIsOwner = invite.Type is OrganizationUserType.Owner;
+            if (!invitedIsOwner && !await HasConfirmedOwnersExceptAsync(organizationId, new Guid[] {}))
+            {
+                throw new BadRequestException("Organization must have at least one confirmed owner.");
             }
 
             var orgUsers = new List<OrganizationUser>();
@@ -1532,7 +1552,7 @@ namespace Bit.Core.Services
 
             if (savingUserId.HasValue)
             {
-                ValidateOrganizationUserUpdatePermissions(user.OrganizationId, user.Type, originalUser.Type);
+                await ValidateOrganizationUserUpdatePermissions(user.OrganizationId, user.Type, originalUser.Type);
             }
 
             if (user.Type != OrganizationUserType.Owner &&
@@ -1564,7 +1584,7 @@ namespace Bit.Core.Services
             }
 
             if (orgUser.Type == OrganizationUserType.Owner && deletingUserId.HasValue &&
-                !_currentContext.OrganizationOwner(organizationId))
+                !await _currentContext.OrganizationOwner(organizationId))
             {
                 throw new BadRequestException("Only owners can delete other owners.");
             }
@@ -1626,7 +1646,7 @@ namespace Bit.Core.Services
             var deletingUserIsOwner = false;
             if (deletingUserId.HasValue)
             {
-                deletingUserIsOwner = _currentContext.OrganizationOwner(organizationId);
+                deletingUserIsOwner = await _currentContext.OrganizationOwner(organizationId);
             }
 
             var result = new List<Tuple<OrganizationUser, string>>();
@@ -1676,7 +1696,7 @@ namespace Bit.Core.Services
         {
             if (loggedInUserId.HasValue)
             {
-                ValidateOrganizationUserUpdatePermissions(organizationUser.OrganizationId, organizationUser.Type, null);
+                await ValidateOrganizationUserUpdatePermissions(organizationUser.OrganizationId, organizationUser.Type, null);
             }
             await _organizationUserRepository.UpdateGroupsAsync(organizationUser.Id, groupIds);
             await _eventService.LogOrganizationUserEventAsync(organizationUser,
@@ -1706,6 +1726,17 @@ namespace Bit.Core.Services
             if (resetPasswordPolicy == null || !resetPasswordPolicy.Enabled)
             {
                 throw new BadRequestException("Organization does not have the password reset policy enabled.");
+            }
+            
+            // Block the user from withdrawal if auto enrollment is enabled
+            if (resetPasswordKey == null && resetPasswordPolicy.Data != null)
+            {
+                var data = JsonConvert.DeserializeObject<ResetPasswordDataModel>(resetPasswordPolicy.Data);
+
+                if (data?.AutoEnrollEnabled ?? false)
+                {
+                    throw new BadRequestException("Due to an Enterprise Policy, you are not allowed to withdraw from Password Reset.");
+                }
             }
             
             orgUser.ResetPasswordKey = resetPasswordKey;
@@ -1961,7 +1992,7 @@ namespace Bit.Core.Services
 
         public async Task<Organization> UpdateOrganizationKeysAsync(Guid orgId, string publicKey, string privateKey)
         {
-            if (_currentContext.ManageResetPassword(orgId))
+            if (!await _currentContext.ManageResetPassword(orgId))
             {
                 throw new UnauthorizedAccessException();
             }
@@ -1972,7 +2003,7 @@ namespace Bit.Core.Services
             {
                 throw new BadRequestException("Organization Keys already exist");
             }
-            
+
             // Update org with generated public/private key
             org.PublicKey = publicKey;
             org.PrivateKey = privateKey;
@@ -2072,10 +2103,10 @@ namespace Bit.Core.Services
             }
         }
 
-        private void ValidateOrganizationUserUpdatePermissions(Guid organizationId, OrganizationUserType newType,
+        private async Task ValidateOrganizationUserUpdatePermissions(Guid organizationId, OrganizationUserType newType,
             OrganizationUserType? oldType)
         {
-            if (_currentContext.OrganizationOwner(organizationId))
+            if (await _currentContext.OrganizationOwner(organizationId))
             {
                 return;
             }
@@ -2085,7 +2116,7 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Only an Owner can configure another Owner's account.");
             }
 
-            if (_currentContext.OrganizationAdmin(organizationId))
+            if (await _currentContext.OrganizationAdmin(organizationId))
             {
                 return;
             }
@@ -2095,7 +2126,7 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Only Owners and Admins can configure Custom accounts.");
             }
 
-            if (!_currentContext.ManageUsers(organizationId))
+            if (!await _currentContext.ManageUsers(organizationId))
             {
                 throw new BadRequestException("Your account does not have permission to manage users.");
             }

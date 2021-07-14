@@ -297,7 +297,7 @@ namespace Bit.Core.Services
             grantor.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>());
             await _userRepository.ReplaceAsync(grantor);
 
-            // Remove grantor from all organisations unless Owner
+            // Remove grantor from all organizations unless Owner
             var orgUser = await _organizationUserRepository.GetManyByUserAsync(grantor.Id);
             foreach (var o in orgUser)
             {

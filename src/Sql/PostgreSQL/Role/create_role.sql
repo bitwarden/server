@@ -1,2 +1,0 @@
--- Example command to create the standard bitwarden user role in an existing postgreSQL instance 
--- CREATE ROLE bitwarden NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT LOGIN PASSWORD 'bitwarden';

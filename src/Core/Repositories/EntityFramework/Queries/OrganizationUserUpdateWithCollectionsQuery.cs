@@ -82,7 +82,7 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
                 CollectionId = x.target.CollectionId,
                 OrganizationUserId = _organizationUser.Id,
                 ReadOnly = x.target.ReadOnly,
-                HidePasswords = x.target.HidePasswords
+                HidePasswords = x.target.HidePasswords,
             }).AsQueryable();
         }
     }

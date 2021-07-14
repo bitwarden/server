@@ -189,6 +189,21 @@ namespace Bit.Core.Test.Services
             await Assert.ThrowsAsync<NotFoundException>(
                 () => sutProvider.Sut.InviteUserAsync(organization.Id, invitor.UserId, null, invite));
         }
+        
+        [Theory]
+        [OrganizationInviteAutoData(
+            inviteeUserType: (int)OrganizationUserType.Admin,
+            invitorUserType: (int)OrganizationUserType.Owner
+        )]
+        public async Task InviteUser_NoOwner_Throws(Organization organization, OrganizationUser invitor,
+            OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
+        {
+            sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+            sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(organization.Id).Returns(true);
+            var exception = await Assert.ThrowsAsync<BadRequestException>(
+                () => sutProvider.Sut.InviteUserAsync(organization.Id, invitor.UserId, null, invite));
+            Assert.Contains("Organization must have at least one confirmed owner.", exception.Message);
+        }
 
         [Theory]
         [OrganizationInviteAutoData(
@@ -289,10 +304,14 @@ namespace Bit.Core.Test.Services
             OrganizationUser invitor, SutProvider<OrganizationService> sutProvider)
         {
             invite.Permissions = null;
+            invitor.Status = OrganizationUserStatusType.Confirmed;
             var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+            var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
             var currentContext = sutProvider.GetDependency<ICurrentContext>();
 
             organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
+            organizationUserRepository.GetManyByOrganizationAsync(organization.Id, OrganizationUserType.Owner)
+                .Returns(new [] {invitor});
             currentContext.OrganizationOwner(organization.Id).Returns(true);
 
             await sutProvider.Sut.InviteUserAsync(organization.Id, invitor.UserId, null, invite);
@@ -304,7 +323,9 @@ namespace Bit.Core.Test.Services
             invitorUserType: (int)OrganizationUserType.Custom
         )]
         public async Task InviteUser_Passes(Organization organization, OrganizationUserInvite invite,
-            OrganizationUser invitor, SutProvider<OrganizationService> sutProvider)
+            OrganizationUser invitor,
+            [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)]OrganizationUser owner,
+            SutProvider<OrganizationService> sutProvider)
         {
             invitor.Permissions = JsonSerializer.Serialize(new Permissions() { ManageUsers = true },
                 new JsonSerializerOptions
@@ -313,9 +334,12 @@ namespace Bit.Core.Test.Services
                 });
 
             var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+            var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
             var currentContext = sutProvider.GetDependency<ICurrentContext>();
 
             organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
+            organizationUserRepository.GetManyByOrganizationAsync(organization.Id, OrganizationUserType.Owner)
+                .Returns(new [] {owner});
             currentContext.ManageUsers(organization.Id).Returns(true);
 
             await sutProvider.Sut.InviteUserAsync(organization.Id, invitor.UserId, null, invite);
@@ -699,6 +723,48 @@ namespace Bit.Core.Test.Services
             Assert.Contains("", result[0].Item2);
             Assert.Contains("User does not have two-step login enabled.", result[1].Item2);
             Assert.Contains("User is a member of another organization.", result[2].Item2);
+        }
+
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public async Task UpdateOrganizationKeysAsync_WithoutManageResetPassword_Throws(Guid orgId, string publicKey,
+            string privateKey, SutProvider<OrganizationService> sutProvider)
+        {
+            var currentContext = Substitute.For<ICurrentContext>();
+            currentContext.ManageResetPassword(orgId).Returns(false);
+
+            await Assert.ThrowsAsync<UnauthorizedAccessException>(
+                () => sutProvider.Sut.UpdateOrganizationKeysAsync(orgId, publicKey, privateKey));
+        }
+
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public async Task UpdateOrganizationKeysAsync_KeysAlreadySet_Throws(Organization org, string publicKey,
+            string privateKey, SutProvider<OrganizationService> sutProvider)
+        {
+            var currentContext = sutProvider.GetDependency<ICurrentContext>();
+            currentContext.ManageResetPassword(org.Id).Returns(true);
+
+            var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+            organizationRepository.GetByIdAsync(org.Id).Returns(org);
+
+            var exception = await Assert.ThrowsAsync<BadRequestException>(
+                () => sutProvider.Sut.UpdateOrganizationKeysAsync(org.Id, publicKey, privateKey));
+            Assert.Contains("Organization Keys already exist", exception.Message);
+        }
+
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public async Task UpdateOrganizationKeysAsync_KeysAlreadySet_Success(Organization org, string publicKey,
+            string privateKey, SutProvider<OrganizationService> sutProvider)
+        {
+            org.PublicKey = null;
+            org.PrivateKey = null;
+
+            var currentContext = sutProvider.GetDependency<ICurrentContext>();
+            currentContext.ManageResetPassword(org.Id).Returns(true);
+
+            var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+            organizationRepository.GetByIdAsync(org.Id).Returns(org);
+
+            await sutProvider.Sut.UpdateOrganizationKeysAsync(org.Id, publicKey, privateKey);
         }
     }
 }
