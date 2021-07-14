@@ -78,6 +78,8 @@ jobs:
           - identity
           - k8s-proxy
           - mssql
+          - mysql
+          - postgresql
           - nginx
           - notifications
           - portal

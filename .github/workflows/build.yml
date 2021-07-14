@@ -110,6 +110,12 @@ jobs:
           - service_name: MsSql
             base_path: ./util
             docker_repo: bitwarden
+          - service_name: MySQL
+            base_path: ./util/Databases
+            docker_repo: bitwarden
+          - service_name: PostgreSQL
+            base_path: ./util/Databases
+            docker_repo: bitwarden
           - service_name: Nginx
             base_path: ./util
             docker_repo: bitwarden
