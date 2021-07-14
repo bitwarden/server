@@ -49,6 +49,7 @@ namespace Bit.Core.Repositories.EntityFramework
                 var dbContext = GetDatabaseContext(scope);
                 var tableEvents = entities.Select(e => e as Event ?? new Event(e));
                 var entityEvents = Mapper.Map<List<EfModel.Event>>(tableEvents);
+                entityEvents.ForEach(e => e.SetNewId());
                 await dbContext.BulkCopyAsync(entityEvents);
             }
         }

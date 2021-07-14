@@ -33,7 +33,7 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
                 MaxCollections = x.o.MaxCollections,
                 MaxStorageGb = x.o.MaxStorageGb,
                 Identifier = x.o.Identifier,
-                Key = x.pu.Key,
+                Key = x.po.Key,
                 Status = x.pu.Status,
                 Type = x.pu.Type,
                 PublicKey = x.o.PublicKey,
