@@ -4,6 +4,7 @@ using System.ComponentModel.DataAnnotations;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Table;
+using Bit.Core.Utilities;
 using Newtonsoft.Json;
 
 namespace Bit.Core.Models.Api
@@ -13,7 +14,7 @@ namespace Bit.Core.Models.Api
         [StringLength(50)]
         public string Name { get; set; }
         [Required]
-        [EmailAddress]
+        [StrictEmailAddress]
         [StringLength(256)]
         public string Email { get; set; }
         [Required]
