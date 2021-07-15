@@ -106,14 +106,12 @@ jobs:
                     dct-delegate-2-key"
 
       - name: Log into Docker
-        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc'
         run: echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
         env:
           DOCKER_USERNAME: ${{ steps.retrieve-secrets.outputs.docker-username }}
           DOCKER_PASSWORD: ${{ steps.retrieve-secrets.outputs.docker-password }}
 
       - name: Setup Docker Trust
-        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc'
         run: |
           mkdir -p ~/.docker/trust/private
 
@@ -140,7 +138,6 @@ jobs:
         run: docker images
 
       - name: Push Docker images
-        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc'
         run: |
           docker push bitwarden/${{ matrix.service_name }}:latest
           docker push bitwarden/${{ matrix.service_name }}:$PACKAGE_VERSION
@@ -149,7 +146,6 @@ jobs:
           DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ steps.retrieve-secrets.outputs.dct-delegate-2-repo-passphrase }}
 
       - name: Log out of Docker
-        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc'
         run: docker logout
 
 
