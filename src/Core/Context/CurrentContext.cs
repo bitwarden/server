@@ -379,7 +379,7 @@ namespace Bit.Core.Context
             var po = (await GetProviderOrganizations())
                 .FirstOrDefault(po => po.OrganizationId == orgId);
 
-            return po.ProviderId;
+            return po?.ProviderId;
         }
 
         public async Task<ICollection<CurrentContentOrganization>> OrganizationMembershipAsync(
