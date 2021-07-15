@@ -179,5 +179,10 @@ namespace Bit.Core.Services
         {
             return Task.FromResult(0);
         }
+
+        public Task SendProviderUserRemoved(string providerName, string email)
+        {
+            return Task.FromResult(0);
+        }
     }
 }
