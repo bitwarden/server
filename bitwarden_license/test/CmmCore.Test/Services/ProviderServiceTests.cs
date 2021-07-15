@@ -360,7 +360,8 @@ namespace Bit.CommCore.Test.Services
                 providerUser.ProviderId = provider.Id;
             }
             providerUsers.Last().ProviderId = default;
-            
+
+            sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
             var providerUserRepository = sutProvider.GetDependency<IProviderUserRepository>();
             providerUserRepository.GetManyAsync(default).ReturnsForAnyArgs(providerUsers);
             providerUserRepository.GetManyByProviderAsync(default, default).ReturnsForAnyArgs(new ProviderUser[] {});
@@ -383,7 +384,8 @@ namespace Bit.CommCore.Test.Services
                 providerUser.ProviderId = provider.Id;
             }
             providerUsers.Last().ProviderId = default;
-            
+
+            sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
             var providerUserRepository = sutProvider.GetDependency<IProviderUserRepository>();
             providerUserRepository.GetManyAsync(default).ReturnsForAnyArgs(providerUsers);
             providerUserRepository.GetManyByProviderAsync(default, default).ReturnsForAnyArgs(new[] {remainingOwner});

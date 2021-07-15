@@ -259,7 +259,7 @@ namespace Bit.CommCore.Services
 
                     await _providerUserRepository.ReplaceAsync(providerUser);
                     events.Add((providerUser, EventType.ProviderUser_Confirmed, null));
-                    await _mailService.SendOrganizationConfirmedEmailAsync(provider.Name, user.Email);
+                    await _mailService.SendProviderConfirmedEmailAsync(provider.Name, user.Email);
                     result.Add(Tuple.Create(providerUser, ""));
                 }
                 catch (BadRequestException e)
@@ -293,7 +293,17 @@ namespace Bit.CommCore.Services
         public async Task<List<Tuple<ProviderUser, string>>> DeleteUsersAsync(Guid providerId,
             IEnumerable<Guid> providerUserIds, Guid deletingUserId)
         {
+            var provider = await _providerRepository.GetByIdAsync(providerId);
+
+            if (provider == null)
+            {
+                throw new NotFoundException();
+            }
+
             var providerUsers = await _providerUserRepository.GetManyAsync(providerUserIds);
+            var users = await _userRepository.GetManyAsync(providerUsers.Where(pu => pu.UserId.HasValue)
+                .Select(pu => pu.UserId.Value));
+            var keyedUsers = users.ToDictionary(u => u.Id);
 
             if (!await HasConfirmedProviderAdminExceptAsync(providerId, providerUserIds))
             {
@@ -318,6 +328,13 @@ namespace Bit.CommCore.Services
                     }
 
                     events.Add((providerUser, EventType.ProviderUser_Removed, null));
+
+                    var user = keyedUsers.GetValueOrDefault(providerUser.UserId.GetValueOrDefault());
+                    var email = user == null ? providerUser.Email : user.Email;
+                    if (!string.IsNullOrWhiteSpace(providerUser.Email))
+                    {
+                        await _mailService.SendProviderUserRemoved(provider.Name, email);
+                    }
 
                     result.Add(Tuple.Create(providerUser, ""));
                     deletedUserIds.Add(providerUser.Id);
