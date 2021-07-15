@@ -11,7 +11,7 @@ namespace Bit.Core.Models.Api
     public class ProviderUserInviteRequestModel
     {
         [Required]
-        [EmailAddressList]
+        [StrictEmailAddressList]
         public IEnumerable<string> Emails { get; set; }
         [Required]
         public ProviderUserType? Type { get; set; }

@@ -12,7 +12,7 @@ namespace Bit.Core.Models.Api
     public class OrganizationUserInviteRequestModel
     {
         [Required]
-        [EmailAddressList]
+        [StrictEmailAddressList]
         public IEnumerable<string> Emails { get; set; }
         [Required]
         public Enums.OrganizationUserType? Type { get; set; }

@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace Bit.Core.Utilities
 {
-    public class EmailAddressListAttribute : ValidationAttribute
+    public class StrictEmailAddressListAttribute : ValidationAttribute
     {
         protected override ValidationResult IsValid(object value, ValidationContext validationContext)
         {
