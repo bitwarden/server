@@ -79,5 +79,18 @@ namespace Bit.Api.Controllers
             var result = await _providerService.CreateOrganizationAsync(providerId, organizationSignup, user);
             return new ProviderOrganizationResponseModel(result);
         }
+
+        [HttpDelete("{id:guid}")]
+        [HttpPost("{id:guid}/delete")]
+        public async Task Delete(Guid providerId, Guid id)
+        {
+            if (!_currentContext.ManageProviderOrganizations(providerId))
+            {
+                throw new NotFoundException();
+            }
+
+            var userId = _userService.GetProperUserId(User);
+            await _providerService.RemoveOrganization(providerId, id, userId.Value);
+        }
     }
 }

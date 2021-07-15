@@ -34,16 +34,16 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
-        public async Task<ICollection<ProviderOrganization>> GetManyByUserIdAsync(Guid userId)
+        public async Task<ProviderOrganization> GetByOrganizationId(Guid organizationId)
         {
             using (var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.QueryAsync<ProviderOrganization>(
-                    "[dbo].[ProviderOrganization_ReadByUserId]",
-                    new { UserId = userId },
+                    "[dbo].[ProviderOrganization_ReadByOrganizationId]",
+                    new { OrganizationId = organizationId },
                     commandType: CommandType.StoredProcedure);
 
-                return results.ToList();
+                return results.SingleOrDefault();
             }
         }
     }

@@ -16,6 +16,7 @@ namespace Bit.Core.Services
     {
         private readonly IEventWriteService _eventWriteService;
         private readonly IOrganizationUserRepository _organizationUserRepository;
+        private readonly IProviderUserRepository _providerUserRepository;
         private readonly IApplicationCacheService _applicationCacheService;
         private readonly ICurrentContext _currentContext;
         private readonly GlobalSettings _globalSettings;
@@ -23,12 +24,14 @@ namespace Bit.Core.Services
         public EventService(
             IEventWriteService eventWriteService,
             IOrganizationUserRepository organizationUserRepository,
+            IProviderUserRepository providerUserRepository,
             IApplicationCacheService applicationCacheService,
             ICurrentContext currentContext,
             GlobalSettings globalSettings)
         {
             _eventWriteService = eventWriteService;
             _organizationUserRepository = organizationUserRepository;
+            _providerUserRepository = providerUserRepository;
             _applicationCacheService = applicationCacheService;
             _currentContext = currentContext;
             _globalSettings = globalSettings;
@@ -58,10 +61,23 @@ namespace Bit.Core.Services
                     Type = type,
                     Date = DateTime.UtcNow
                 });
+            
+            var providerAbilities = await _applicationCacheService.GetProviderAbilitiesAsync();
+            var providers = await _currentContext.ProviderMembershipAsync(_providerUserRepository, userId);
+            var providerEvents = providers.Where(o => CanUseProviderEvents(providerAbilities, o.Id))
+                .Select(p => new EventMessage(_currentContext)
+                {
+                    ProviderId = p.Id,
+                    UserId = userId,
+                    ActingUserId = userId,
+                    Type = type,
+                    Date = DateTime.UtcNow
+                });
 
-            if (orgEvents.Any())
+            if (orgEvents.Any() || providerEvents.Any())
             {
                 events.AddRange(orgEvents);
+                events.AddRange(providerEvents);
                 await _eventWriteService.CreateManyAsync(events);
             }
             else
@@ -117,6 +133,7 @@ namespace Bit.Core.Services
                 CipherId = cipher.Id,
                 Type = type,
                 ActingUserId = _currentContext?.UserId,
+                ProviderId = await GetProviderIdAsync(cipher.OrganizationId),
                 Date = date.GetValueOrDefault(DateTime.UtcNow)
             };
         }
@@ -135,6 +152,7 @@ namespace Bit.Core.Services
                 CollectionId = collection.Id,
                 Type = type,
                 ActingUserId = _currentContext?.UserId,
+                ProviderId = await GetProviderIdAsync(collection.OrganizationId),
                 Date = date.GetValueOrDefault(DateTime.UtcNow)
             };
             await _eventWriteService.CreateAsync(e);
@@ -154,6 +172,7 @@ namespace Bit.Core.Services
                 GroupId = group.Id,
                 Type = type,
                 ActingUserId = _currentContext?.UserId,
+                ProviderId = await GetProviderIdAsync(@group.OrganizationId),
                 Date = date.GetValueOrDefault(DateTime.UtcNow)
             };
             await _eventWriteService.CreateAsync(e);
@@ -173,6 +192,7 @@ namespace Bit.Core.Services
                 PolicyId = policy.Id,
                 Type = type,
                 ActingUserId = _currentContext?.UserId,
+                ProviderId = await GetProviderIdAsync(policy.OrganizationId),
                 Date = date.GetValueOrDefault(DateTime.UtcNow)
             };
             await _eventWriteService.CreateAsync(e);
@@ -192,11 +212,13 @@ namespace Bit.Core.Services
                 {
                     continue;
                 }
+
                 eventMessages.Add(new EventMessage
                 {
                     OrganizationId = organizationUser.OrganizationId,
                     UserId = organizationUser.UserId,
                     OrganizationUserId = organizationUser.Id,
+                    ProviderId = await GetProviderIdAsync(organizationUser.OrganizationId),
                     Type = type,
                     ActingUserId = _currentContext?.UserId,
                     Date = date.GetValueOrDefault(DateTime.UtcNow)
@@ -216,6 +238,7 @@ namespace Bit.Core.Services
             var e = new EventMessage(_currentContext)
             {
                 OrganizationId = organization.Id,
+                ProviderId = await GetProviderIdAsync(organization.Id),
                 Type = type,
                 ActingUserId = _currentContext?.UserId,
                 Date = date.GetValueOrDefault(DateTime.UtcNow)
@@ -250,6 +273,16 @@ namespace Bit.Core.Services
             }
 
             await _eventWriteService.CreateManyAsync(eventMessages);
+        }
+        
+        private async Task<Guid?> GetProviderIdAsync(Guid? orgId)
+        {
+            if (_currentContext == null || !orgId.HasValue)
+            {
+                return null;
+            }
+
+            return await _currentContext.ProviderIdForOrg(orgId.Value);
         }
 
         private bool CanUseEvents(IDictionary<Guid, OrganizationAbility> orgAbilities, Guid orgId)

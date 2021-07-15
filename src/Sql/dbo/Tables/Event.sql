@@ -12,6 +12,8 @@
     [DeviceType]            SMALLINT         NULL,
     [IpAddress]             VARCHAR(50)      NULL,
     [Date]                  DATETIME2 (7)    NOT NULL,
+    [ProviderId]            UNIQUEIDENTIFIER NULL,
+    [ProviderUserId]        UNIQUEIDENTIFIER NULL,
     CONSTRAINT [PK_Event] PRIMARY KEY CLUSTERED ([Id] ASC)
 );
 

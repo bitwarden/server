@@ -9,6 +9,6 @@ namespace Bit.Core.Repositories
     public interface IProviderOrganizationRepository : IRepository<ProviderOrganization, Guid>
     {
         Task<ICollection<ProviderOrganizationOrganizationDetails>> GetManyDetailsByProviderAsync(Guid providerId);
-        Task<ICollection<ProviderOrganization>> GetManyByUserIdAsync(Guid userId);
+        Task<ProviderOrganization> GetByOrganizationId(Guid organizationId);
     }
 }

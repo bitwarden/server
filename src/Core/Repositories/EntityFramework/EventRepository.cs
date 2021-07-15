@@ -49,6 +49,7 @@ namespace Bit.Core.Repositories.EntityFramework
                 var dbContext = GetDatabaseContext(scope);
                 var tableEvents = entities.Select(e => e as Event ?? new Event(e));
                 var entityEvents = Mapper.Map<List<EfModel.Event>>(tableEvents);
+                entityEvents.ForEach(e => e.SetNewId());
                 await dbContext.BulkCopyAsync(entityEvents);
             }
         }
@@ -90,6 +91,57 @@ namespace Bit.Core.Repositories.EntityFramework
             {
                 var dbContext = GetDatabaseContext(scope);
                 var query = new EventReadPageByOrganizationIdActingUserIdQuery(organizationId, actingUserId,
+                    startDate, endDate, beforeDate, pageOptions);
+                var events = await query.Run(dbContext).ToListAsync();
+
+                var result = new PagedResult<IEvent>();
+                if (events.Any() && events.Count >= pageOptions.PageSize)
+                {
+                    result.ContinuationToken = events.Last().Date.ToBinary().ToString();
+                }
+                result.Data.AddRange(events);
+                return result;
+            }
+        }
+
+        public async Task<PagedResult<IEvent>> GetManyByProviderAsync(Guid providerId, DateTime startDate, DateTime endDate, PageOptions pageOptions)
+        {
+            DateTime? beforeDate = null;
+            if (!string.IsNullOrWhiteSpace(pageOptions.ContinuationToken) &&
+                long.TryParse(pageOptions.ContinuationToken, out var binaryDate))
+            {
+                beforeDate = DateTime.SpecifyKind(DateTime.FromBinary(binaryDate), DateTimeKind.Utc);
+            }
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var query = new EventReadPageByProviderIdQuery(providerId, startDate,
+                    endDate, beforeDate, pageOptions);
+                var events = await query.Run(dbContext).ToListAsync();
+
+                var result = new PagedResult<IEvent>();
+                if (events.Any() && events.Count >= pageOptions.PageSize)
+                {
+                    result.ContinuationToken = events.Last().Date.ToBinary().ToString();
+                }
+                result.Data.AddRange(events);
+                return result;
+            }
+        }
+
+        public async Task<PagedResult<IEvent>> GetManyByProviderActingUserAsync(Guid providerId, Guid actingUserId,
+            DateTime startDate, DateTime endDate, PageOptions pageOptions)
+        {
+            DateTime? beforeDate = null;
+            if (!string.IsNullOrWhiteSpace(pageOptions.ContinuationToken) &&
+                long.TryParse(pageOptions.ContinuationToken, out var binaryDate))
+            {
+                beforeDate = DateTime.SpecifyKind(DateTime.FromBinary(binaryDate), DateTimeKind.Utc);
+            }
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var query = new EventReadPageByProviderIdActingUserIdQuery(providerId, actingUserId,
                     startDate, endDate, beforeDate, pageOptions);
                 var events = await query.Run(dbContext).ToListAsync();
 
