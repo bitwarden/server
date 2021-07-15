@@ -331,7 +331,7 @@ namespace Bit.CommCore.Services
 
                     var user = keyedUsers.GetValueOrDefault(providerUser.UserId.GetValueOrDefault());
                     var email = user == null ? providerUser.Email : user.Email;
-                    if (!string.IsNullOrWhiteSpace(providerUser.Email))
+                    if (!string.IsNullOrWhiteSpace(email))
                     {
                         await _mailService.SendProviderUserRemoved(provider.Name, email);
                     }
