@@ -31,7 +31,6 @@ namespace Bit.Core.Repositories.EntityFramework
         public DbSet<Provider> Providers { get; set; }
         public DbSet<ProviderUser> ProviderUsers { get; set; }
         public DbSet<ProviderOrganization> ProviderOrganizations { get; set; }
-        public DbSet<ProviderOrganizationProviderUser> ProviderOrganizationProviderUsers { get; set; }
         public DbSet<Send> Sends { get; set; }
         public DbSet<SsoConfig> SsoConfigs { get; set; }
         public DbSet<SsoUser> SsoUsers { get; set; }
@@ -61,7 +60,6 @@ namespace Bit.Core.Repositories.EntityFramework
             var eProvider = builder.Entity<Provider>();
             var eProviderUser = builder.Entity<ProviderUser>();
             var eProviderOrganization = builder.Entity<ProviderOrganization>();
-            var eProviderOrganizationProviderUser = builder.Entity<ProviderOrganizationProviderUser>();
             var eSend = builder.Entity<Send>();
             var eSsoConfig = builder.Entity<SsoConfig>();
             var eSsoUser = builder.Entity<SsoUser>();
@@ -83,7 +81,6 @@ namespace Bit.Core.Repositories.EntityFramework
             eProvider.Property(c => c.Id).ValueGeneratedNever();
             eProviderUser.Property(c => c.Id).ValueGeneratedNever();
             eProviderOrganization.Property(c => c.Id).ValueGeneratedNever();
-            eProviderOrganizationProviderUser.Property(c => c.Id).ValueGeneratedNever();
             eSend.Property(c => c.Id).ValueGeneratedNever();
             eTransaction.Property(c => c.Id).ValueGeneratedNever();
             eUser.Property(c => c.Id).ValueGeneratedNever();
@@ -123,7 +120,6 @@ namespace Bit.Core.Repositories.EntityFramework
             eProvider.ToTable(nameof(Provider));
             eProviderUser.ToTable(nameof(ProviderUser));
             eProviderOrganization.ToTable(nameof(ProviderOrganization));
-            eProviderOrganizationProviderUser.ToTable(nameof(ProviderOrganizationProviderUser));
             eSend.ToTable(nameof(Send));
             eSsoConfig.ToTable(nameof(SsoConfig));
             eSsoUser.ToTable(nameof(SsoUser));

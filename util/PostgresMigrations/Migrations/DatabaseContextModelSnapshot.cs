@@ -278,6 +278,12 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<Guid?>("PolicyId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("ProviderId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ProviderUserId")
+                        .HasColumnType("uuid");
+
                     b.Property<int>("Type")
                         .HasColumnType("integer");
 
@@ -735,38 +741,6 @@ namespace Bit.PostgresMigrations.Migrations
                     b.HasIndex("ProviderId");
 
                     b.ToTable("ProviderOrganization");
-                });
-
-            modelBuilder.Entity("Bit.Core.Models.EntityFramework.Provider.ProviderOrganizationProviderUser", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreationDate")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<string>("Permissions")
-                        .HasColumnType("text");
-
-                    b.Property<Guid>("ProviderOrganizationId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("ProviderUserId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("RevisionDate")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<byte>("Type")
-                        .HasColumnType("smallint");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ProviderOrganizationId");
-
-                    b.HasIndex("ProviderUserId");
-
-                    b.ToTable("ProviderOrganizationProviderUser");
                 });
 
             modelBuilder.Entity("Bit.Core.Models.EntityFramework.Provider.ProviderUser", b =>
@@ -1360,25 +1334,6 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Navigation("Organization");
 
                     b.Navigation("Provider");
-                });
-
-            modelBuilder.Entity("Bit.Core.Models.EntityFramework.Provider.ProviderOrganizationProviderUser", b =>
-                {
-                    b.HasOne("Bit.Core.Models.EntityFramework.Provider.ProviderOrganization", "ProviderOrganization")
-                        .WithMany()
-                        .HasForeignKey("ProviderOrganizationId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Bit.Core.Models.EntityFramework.Provider.ProviderUser", "ProviderUser")
-                        .WithMany()
-                        .HasForeignKey("ProviderUserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("ProviderOrganization");
-
-                    b.Navigation("ProviderUser");
                 });
 
             modelBuilder.Entity("Bit.Core.Models.EntityFramework.Provider.ProviderUser", b =>

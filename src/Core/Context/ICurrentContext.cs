@@ -49,7 +49,8 @@ namespace Bit.Core.Context
         Task<bool> ManageResetPassword(Guid orgId);
         bool ProviderProviderAdmin(Guid providerId);
         bool ProviderUser(Guid providerId);
-        bool ManageProviderUsers(Guid providerId);
+        bool ProviderManageUsers(Guid providerId);
+        bool ProviderAccessEventLogs(Guid providerId);
         bool AccessProviderOrganizations(Guid providerId);
         bool ManageProviderOrganizations(Guid providerId);
 
@@ -58,5 +59,7 @@ namespace Bit.Core.Context
 
         Task<ICollection<CurrentContentProvider>> ProviderMembershipAsync(
             IProviderUserRepository providerUserRepository, Guid userId);
+
+        Task<Guid?> ProviderIdForOrg(Guid orgId);
     }
 }

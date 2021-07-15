@@ -44,6 +44,19 @@ namespace Bit.Core.Repositories.TableStorage
                 $"ActingUserId={actingUserId}__Date={{0}}", startDate, endDate, pageOptions);
         }
 
+        public async Task<PagedResult<IEvent>> GetManyByProviderAsync(Guid providerId,
+            DateTime startDate, DateTime endDate, PageOptions pageOptions)
+        {
+            return await GetManyAsync($"ProviderId={providerId}", "Date={0}", startDate, endDate, pageOptions);
+        }
+
+        public async Task<PagedResult<IEvent>> GetManyByProviderActingUserAsync(Guid providerId, Guid actingUserId,
+            DateTime startDate, DateTime endDate, PageOptions pageOptions)
+        {
+            return await GetManyAsync($"ProviderId={providerId}",
+                $"ActingUserId={actingUserId}__Date={{0}}", startDate, endDate, pageOptions);
+        }
+
         public async Task<PagedResult<IEvent>> GetManyByCipherAsync(Cipher cipher, DateTime startDate, DateTime endDate,
             PageOptions pageOptions)
         {

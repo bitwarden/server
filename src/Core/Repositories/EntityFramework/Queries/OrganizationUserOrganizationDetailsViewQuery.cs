@@ -12,8 +12,12 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
                 join o in dbContext.Organizations on ou.OrganizationId equals o.Id
                 join su in dbContext.SsoUsers on ou.UserId equals su.UserId into su_g
                 from su in su_g.DefaultIfEmpty()
+                join po in dbContext.ProviderOrganizations on o.Id equals po.OrganizationId into po_g
+                from po in po_g.DefaultIfEmpty()
+                join p in dbContext.Providers on po.ProviderId equals p.Id into p_g
+                from p in p_g.DefaultIfEmpty()
                 where ((su == null || !su.OrganizationId.HasValue) || su.OrganizationId == ou.OrganizationId)
-                select new { ou, o, su };
+                select new { ou, o, su, p };
             return query.Select(x => new OrganizationUserOrganizationDetails 
             {
                 OrganizationId = x.ou.OrganizationId,
@@ -42,6 +46,8 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
                 Permissions = x.ou.Permissions,
                 PublicKey = x.o.PublicKey,
                 PrivateKey = x.o.PrivateKey,
+                ProviderId = x.p.Id,
+                ProviderName = x.p.Name,
             });
         }
     }

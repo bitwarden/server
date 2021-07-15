@@ -10,21 +10,21 @@ namespace Bit.Notifications
     [Authorize("Application")]
     public class NotificationsHub : Microsoft.AspNetCore.SignalR.Hub
     {
-        private readonly IProviderOrganizationRepository _providerOrganizationRepository;
+        private readonly IProviderUserRepository _providerUserRepository;
         private readonly ConnectionCounter _connectionCounter;
         private readonly GlobalSettings _globalSettings;
 
-        public NotificationsHub(IProviderOrganizationRepository providerOrganizationRepository,
+        public NotificationsHub(IProviderUserRepository providerUserRepository,
             ConnectionCounter connectionCounter, GlobalSettings globalSettings)
         {
-            _providerOrganizationRepository = providerOrganizationRepository;
+            _providerUserRepository = providerUserRepository;
             _connectionCounter = connectionCounter;
             _globalSettings = globalSettings;
         }
 
         public override async Task OnConnectedAsync()
         {
-            var currentContext = new CurrentContext(_providerOrganizationRepository);
+            var currentContext = new CurrentContext(_providerUserRepository);
             await currentContext.BuildAsync(Context.User, _globalSettings);
             if (currentContext.Organizations != null)
             {
@@ -39,7 +39,7 @@ namespace Bit.Notifications
 
         public override async Task OnDisconnectedAsync(Exception exception)
         {
-            var currentContext = new CurrentContext(_providerOrganizationRepository);
+            var currentContext = new CurrentContext(_providerUserRepository);
             await currentContext.BuildAsync(Context.User, _globalSettings);
             if (currentContext.Organizations != null)
             {

@@ -70,7 +70,9 @@
   </ItemGroup>
   <ItemGroup>
     <Build Include="dbo\Stored Procedures\EmergencyAccessDetails_ReadByIdGrantorId.sql" />
-    <Build Include="dbo\Stored Procedures\ProviderOrganization_ReadByUserId.sql" />
+    <Build Include="dbo\Stored Procedures\Event_ReadPageByProviderId.sql" />
+    <Build Include="dbo\Stored Procedures\Event_ReadPageByProviderIdActingUserId.sql" />
+    <Build Include="dbo\Stored Procedures\ProviderOrganization_ReadByOrganizationId.sql" />
     <Build Include="dbo\Stored Procedures\ProviderUserProviderOrganizationDetails_ReadByUserIdStatus.sql" />
     <Build Include="dbo\Stored Procedures\SsoConfig_Create.sql" />
     <Build Include="dbo\Stored Procedures\SsoConfig_ReadByIdentifier.sql" />
@@ -363,10 +365,5 @@
     <Build Include="dbo\Stored Procedures\ProviderOrganizationOrganizationDetails_ReadByProviderId.sql" />
     <Build Include="dbo\Stored Procedures\User_BumpAccountRevisionDateByProviderId.sql" />
     <Build Include="dbo\Stored Procedures\User_BumpAccountRevisionDateByProviderUserId.sql" />
-    <Build Include="dbo\Tables\ProviderOrganizationProviderUser.sql" />
-    <Build Include="dbo\Stored Procedures\ProviderOrganizationProviderUser_Create.sql" />
-    <Build Include="dbo\Stored Procedures\ProviderOrganizationProviderUser_DeleteById.sql" />
-    <Build Include="dbo\Stored Procedures\ProviderOrganizationProviderUser_ReadById.sql" />
-    <Build Include="dbo\Stored Procedures\ProviderOrganizationProviderUser_Update.sql" />
   </ItemGroup>
 </Project>

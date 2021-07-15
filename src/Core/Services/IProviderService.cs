@@ -26,6 +26,6 @@ namespace Bit.Core.Services
 
         Task AddOrganization(Guid providerId, Guid organizationId, Guid addingUserId, string key);
         Task<ProviderOrganization> CreateOrganizationAsync(Guid providerId, OrganizationSignup organizationSignup, User user);
-        Task RemoveOrganization(Guid providerOrganizationId, Guid removingUserId);
+        Task RemoveOrganization(Guid providerId, Guid providerOrganizationId, Guid removingUserId);
     }
 }

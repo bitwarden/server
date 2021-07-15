@@ -33,6 +33,7 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
                 Type = x.pu.Type,
                 Enabled = x.p.Enabled,
                 Permissions = x.pu.Permissions,
+                UseEvents = x.p.UseEvents,
             });
         }
     }

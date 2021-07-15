@@ -1,12 +1,14 @@
 ﻿using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Utilities;
+
 namespace Bit.Core.Models.Api
 {
     public class ProfileOrganizationResponseModel : ResponseModel
     {
-        public ProfileOrganizationResponseModel(OrganizationUserOrganizationDetails organization)
-            : base("profileOrganization")
+        public ProfileOrganizationResponseModel(string str) : base(str) {}
+
+        public ProfileOrganizationResponseModel(OrganizationUserOrganizationDetails organization) : this("profileOrganization")
         {
             Id = organization.OrganizationId.ToString();
             Name = organization.Name;

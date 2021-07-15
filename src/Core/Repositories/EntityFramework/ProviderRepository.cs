@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Bit.Core.Models.Table.Provider;
-using Bit.Core.Repositories.EntityFramework;
 using TableModel = Bit.Core.Models.Table;
 using EfModel = Bit.Core.Models.EntityFramework;
 using Microsoft.Extensions.DependencyInjection;
@@ -13,14 +12,12 @@ using Bit.Core.Models.Data;
 
 namespace Bit.Core.Repositories.EntityFramework
 {
-    public class ProviderRepository : Repository<TableModel.Provider.Provider, EfModel.Provider.Provider, Guid>, IProviderRepository
+    public class ProviderRepository : Repository<Provider, EfModel.Provider.Provider, Guid>, IProviderRepository
     {
 
         public ProviderRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
-            : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.Providers)
+            : base(serviceScopeFactory, mapper, context => context.Providers)
         { }
-
-        public Task<ICollection<ProviderAbility>> GetManyAbilitiesAsync() => throw new NotImplementedException();
 
         public async Task<ICollection<Provider>> SearchAsync(string name, string userEmail, int skip, int take)
         {
@@ -41,7 +38,23 @@ namespace Bit.Core.Repositories.EntityFramework
                     where string.IsNullOrWhiteSpace(name) || p.Name.Contains(name)
                     orderby p.CreationDate descending
                     select new { p }).Skip(skip).Take(take).Select(x => x.p);
-                return await query.ToArrayAsync();
+                var providers = await query.ToArrayAsync();
+                return Mapper.Map<List<Provider>>(providers);
+            }
+        }
+
+        public async Task<ICollection<ProviderAbility>> GetManyAbilitiesAsync()
+        {
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                return await GetDbSet(dbContext)
+                    .Select(e => new ProviderAbility
+                    {
+                        Enabled = e.Enabled,
+                        Id = e.Id,
+                        UseEvents = e.UseEvents,
+                    }).ToListAsync();
             }
         }
     }

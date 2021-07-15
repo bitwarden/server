@@ -113,7 +113,6 @@ namespace Bit.Core.Utilities
                 services.AddSingleton<IProviderRepository, EntityFrameworkRepos.ProviderRepository>();
                 services.AddSingleton<IProviderUserRepository, EntityFrameworkRepos.ProviderUserRepository>();
                 services.AddSingleton<IProviderOrganizationRepository, EntityFrameworkRepos.ProviderOrganizationRepository>();
-                services.AddSingleton<IProviderOrganizationProviderUserRepository, EntityFrameworkRepos.ProviderOrganizationProviderUserRepository>();
             }
             else
             {
@@ -138,7 +137,6 @@ namespace Bit.Core.Utilities
                 services.AddSingleton<IProviderRepository, SqlServerRepos.ProviderRepository>();
                 services.AddSingleton<IProviderUserRepository, SqlServerRepos.ProviderUserRepository>();
                 services.AddSingleton<IProviderOrganizationRepository, SqlServerRepos.ProviderOrganizationRepository>();
-                services.AddSingleton<IProviderOrganizationProviderUserRepository, SqlServerRepos.ProviderOrganizationProviderUserRepository>();
                 services.AddSingleton<ITransactionRepository, SqlServerRepos.TransactionRepository>();
                 services.AddSingleton<IU2fRepository, SqlServerRepos.U2fRepository>();
                 services.AddSingleton<IUserRepository, SqlServerRepos.UserRepository>();

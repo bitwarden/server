@@ -65,14 +65,16 @@ namespace Bit.Core.Models.Api
 
     public class ProviderUserPublicKeyResponseModel : ResponseModel
     {
-        public ProviderUserPublicKeyResponseModel(Guid id, string key,
+        public ProviderUserPublicKeyResponseModel(Guid id, Guid userId, string key,
             string obj = "providerUserPublicKeyResponseModel") : base(obj)
         {
             Id = id;
+            UserId = userId;
             Key = key;
         }
 
         public Guid Id { get; set; }
+        public Guid UserId { get; set; }
         public string Key { get; set; }
     }
 
