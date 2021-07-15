@@ -697,5 +697,19 @@ namespace Bit.Core.Services
             message.Category = "ProviderUserConfirmed";
             await _mailDeliveryService.SendEmailAsync(message);
         }
+
+        public async Task SendProviderUserRemoved(string providerName, string email)
+        {
+            var message = CreateDefaultMessage($"You Have Been Removed from {providerName}", email);
+            var model = new ProviderUserRemovedViewModel
+            {
+                ProviderName = CoreHelpers.SanitizeForEmail(providerName),
+                WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+                SiteName = _globalSettings.SiteName
+            };
+            await AddMessageContentAsync(message, "Provider.ProviderUserRemoved", model);
+            message.Category = "ProviderUserRemoved";
+            await _mailDeliveryService.SendEmailAsync(message);
+        }
     }
 }
