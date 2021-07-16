@@ -30,7 +30,7 @@ namespace Bit.Core.Models.Api
             Key = user.Key;
             PrivateKey = user.PrivateKey;
             SecurityStamp = user.SecurityStamp;
-            ForcePasswordReset = user.ForceResetPassword;
+            ForcePasswordReset = user.ForcePasswordReset;
             Organizations = organizationsUserDetails?.Select(o => new ProfileOrganizationResponseModel(o));
             Providers = providerUserDetails?.Where(p => p.Enabled).Select(p => new ProfileProviderResponseModel(p));
             ProviderOrganizations =
