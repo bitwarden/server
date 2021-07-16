@@ -389,5 +389,21 @@ namespace Bit.Core.Repositories.EntityFramework
         }
 
         Task<ICollection<string>> IOrganizationUserRepository.SelectKnownEmailsAsync(Guid organizationId, IEnumerable<string> emails, bool onlyRegisteredUsers) => throw new NotImplementedException();
+
+        public async Task<IEnumerable<OrganizationUserUserDetails>> GetManyByRoleAsync(Guid organizationId, OrganizationUserType baseRole)
+        {
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var query = dbContext.OrganizationUsers
+                    .Include(e => e.User)
+                    .Where(e => e.OrganizationId.Equals(organizationId) && e.Type <= baseRole)
+                    .Select(e => new OrganizationUserUserDetails() {
+                        Id = e.Id,
+                        Email = e.Email ?? e.User.Email
+                    });
+                return await query.ToListAsync();
+            }
+        }
     }
 }

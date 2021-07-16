@@ -391,5 +391,18 @@ namespace Bit.Core.Repositories.SqlServer
                 return results.ToList();
             }
         }
+
+        public async Task<IEnumerable<OrganizationUserUserDetails>> GetManyByRoleAsync(Guid organizationId, OrganizationUserType baseRole)
+        {
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<OrganizationUserUserDetails>(
+                    "[dbo].[OrganizationUser_ReadByRole]",
+                    new { OrganizationId = organizationId, BaseRole = baseRole },
+                    commandType: CommandType.StoredProcedure);
+
+                return results.ToList();
+            }
+        }
     }
 }
