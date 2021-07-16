@@ -1,10 +1,10 @@
-﻿IF OBJECT_ID('[dbo].[OrganizationUser_ReadByRole]') IS NOT NULL
+﻿IF OBJECT_ID('[dbo].[OrganizationUser_ReadByMinimumRole]') IS NOT NULL
 BEGIN
-    DROP PROCEDURE [dbo].[OrganizationUser_ReadByRole]
+    DROP PROCEDURE [dbo].[OrganizationUser_ReadByMinimumRole]
 END
 GO
 
-CREATE PROCEDURE [dbo].[OrganizationUser_ReadByRole]
+CREATE PROCEDURE [dbo].[OrganizationUser_ReadByMinimumRole]
     @OrganizationId UNIQUEIDENTIFIER,
     @BaseRole TINYINT
 AS

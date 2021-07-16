@@ -1427,7 +1427,7 @@ namespace Bit.Core.Services
             await _mailService.SendOrganizationAcceptedEmailAsync(
                 (await _organizationRepository.GetByIdAsync(orgUser.OrganizationId)),
                 user.Email,
-                (await _organizationUserRepository.GetManyByRoleAsync(orgUser.OrganizationId, OrganizationUserType.Admin)).Select(a => a.Email).Distinct());
+                (await _organizationUserRepository.GetManyByMinimumRoleAsync(orgUser.OrganizationId, OrganizationUserType.Admin)).Select(a => a.Email).Distinct());
             return orgUser;
         }
 

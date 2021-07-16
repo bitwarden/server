@@ -392,7 +392,7 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
-        public async Task<IEnumerable<OrganizationUserUserDetails>> GetManyByRoleAsync(Guid organizationId, OrganizationUserType baseRole)
+        public async Task<IEnumerable<OrganizationUserUserDetails>> GetManyByMinimumRoleAsync(Guid organizationId, OrganizationUserType baseRole)
         {
             using (var connection = new SqlConnection(ConnectionString))
             {

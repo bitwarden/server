@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[OrganizationUser_ReadByRole]
+CREATE PROCEDURE [dbo].[OrganizationUser_ReadByMinimumRole]
     @OrganizationId UNIQUEIDENTIFIER,
     @BaseRole TINYINT
 AS

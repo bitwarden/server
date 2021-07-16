@@ -390,7 +390,7 @@ namespace Bit.Core.Repositories.EntityFramework
 
         Task<ICollection<string>> IOrganizationUserRepository.SelectKnownEmailsAsync(Guid organizationId, IEnumerable<string> emails, bool onlyRegisteredUsers) => throw new NotImplementedException();
 
-        public async Task<IEnumerable<OrganizationUserUserDetails>> GetManyByRoleAsync(Guid organizationId, OrganizationUserType baseRole)
+        public async Task<IEnumerable<OrganizationUserUserDetails>> GetManyByMinimumRoleAsync(Guid organizationId, OrganizationUserType baseRole)
         {
             using (var scope = ServiceScopeFactory.CreateScope())
             {
