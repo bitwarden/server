@@ -15,6 +15,9 @@ do
 
   # Do a new backup
   /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P ${SA_PASSWORD} -i /backup-db.sql
+  
+  # Update latest backup symlink
+  ln -sf /etc/bitwarden/mssql/backups/vault_FULL_`echo $now`.BAK /etc/bitwarden/mssql/backups/vault_FULL_latest.BAK
 
   # Delete backup files older than 30 days
   grep -B1 "BACKUP DATABASE successfully" /var/opt/mssql/log/errorlog | grep -q _$now.BAK &&
