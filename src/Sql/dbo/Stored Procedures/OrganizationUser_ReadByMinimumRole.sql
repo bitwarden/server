@@ -1,6 +1,6 @@
 CREATE PROCEDURE [dbo].[OrganizationUser_ReadByMinimumRole]
     @OrganizationId UNIQUEIDENTIFIER,
-    @BaseRole TINYINT
+    @MinRole TINYINT
 AS
 BEGIN
     SET NOCOUNT ON
@@ -11,5 +11,5 @@ BEGIN
         [dbo].[OrganizationUserUserDetailsView]
     WHERE
         OrganizationId = @OrganizationId 
-        AND [Type] <= @BaseRole
+        AND [Type] <= @MinRole
 END
