@@ -18,7 +18,7 @@ do
 
   # Delete backup files older than 30 days
   grep -B1 "BACKUP DATABASE successfully" /var/opt/mssql/log/errorlog | grep -q _$now.BAK &&
-  find /etc/bitwarden/mssql/backups/ -mindepth 1 -type f -name '*.BAK' -mtime +32 -delete
+  find /etc/bitwarden/database/backups/ -mindepth 1 -type f -name '*.BAK' -mtime +32 -delete
 
   # Break if called manually (without loop option)
   [ "$1" != "loop" ] && break

@@ -49,7 +49,8 @@ namespace Bit.Setup
                 {
                     ComposeVersion = context.Config.ComposeVersion;
                 }
-                MssqlDataDockerVolume = context.Config.DatabaseDockerVolume;
+                DatabaseDockerType = context.Config.DatabaseDockerType;
+                DatabaseDockerVolume = context.Config.DatabaseDockerVolume;
                 HttpPort = context.Config.HttpPort;
                 HttpsPort = context.Config.HttpsPort;
                 if (!string.IsNullOrWhiteSpace(context.CoreVersion))
@@ -63,7 +64,8 @@ namespace Bit.Setup
             }
 
             public string ComposeVersion { get; set; } = "3";
-            public bool MssqlDataDockerVolume { get; set; }
+            public string DatabaseDockerType { get; set; } = "mssql";
+            public bool DatabaseDockerVolume { get; set; }
             public string HttpPort { get; set; }
             public string HttpsPort { get; set; }
             public bool HasPort => !string.IsNullOrWhiteSpace(HttpPort) || !string.IsNullOrWhiteSpace(HttpsPort);

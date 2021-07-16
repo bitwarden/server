@@ -11,9 +11,9 @@ namespace Bit.Setup
         private readonly Context _context;
 
         private IDictionary<string, string> _globalValues;
-        private IDictionary<string, string> _mssqlValues;
+        private IDictionary<string, string> _databaseValues;
         private IDictionary<string, string> _globalOverrideValues;
-        private IDictionary<string, string> _mssqlOverrideValues;
+        private IDictionary<string, string> _databaseOverrideValues;
 
         public EnvironmentFileBuilder(Context context)
         {
@@ -25,12 +25,25 @@ namespace Bit.Setup
                 ["globalSettings__baseServiceUri__vault"] = "http://localhost",
                 ["globalSettings__pushRelayBaseUri"] = "https://push.bitwarden.com",
             };
-            _mssqlValues = new Dictionary<string, string>
+            _databaseValues = new Dictionary<string, string>();
+            if (_context.Config.DatabaseDockerType == "mssql")
             {
-                ["ACCEPT_EULA"] = "Y",
-                ["MSSQL_PID"] = "Express",
-                ["SA_PASSWORD"] = "SECRET",
-            };
+                _databaseValues.Add("ACCEPT_EULA", "Y");
+                _databaseValues.Add("MSSQL_PID", "Express");
+                _databaseValues.Add("SA_PASSWORD", "SECRET");
+            }
+            else if (_context.Config.DatabaseDockerType == "mysql")
+            {
+                // TODO: Add values specific to running a MySQL container.
+            }
+            else if (_context.Config.DatabaseDockerType == "postgresql")
+            {
+                // TODO: ADD values specific to running a PostgreSQL container.
+            }
+            else
+            {
+                // TODO: What should we do if the value doesn't match? Assume MSSQL?
+            }
         }
 
         public void BuildForInstaller()
@@ -44,7 +57,7 @@ namespace Bit.Setup
         {
             Init();
             LoadExistingValues(_globalOverrideValues, "/bitwarden/env/global.override.env");
-            LoadExistingValues(_mssqlOverrideValues, "/bitwarden/env/mssql.override.env");
+            LoadExistingValues(_databaseOverrideValues, "/bitwarden/env/database.override.env");
 
             if (_context.Config.PushNotifications &&
                 _globalOverrideValues.ContainsKey("globalSettings__pushRelayBaseUri") &&
@@ -103,7 +116,7 @@ namespace Bit.Setup
                 _globalOverrideValues.Add("globalSettings__pushRelayBaseUri", "REPLACE");
             }
 
-            _mssqlOverrideValues = new Dictionary<string, string>
+            _databaseOverrideValues = new Dictionary<string, string>
             {
                 ["SA_PASSWORD"] = dbPassword,
             };
@@ -159,11 +172,11 @@ namespace Bit.Setup
             }
             Helpers.Exec("chmod 600 /bitwarden/docker/global.env");
 
-            using (var sw = File.CreateText("/bitwarden/docker/mssql.env"))
+            using (var sw = File.CreateText("/bitwarden/docker/database.env"))
             {
-                sw.Write(template(new TemplateModel(_mssqlValues)));
+                sw.Write(template(new TemplateModel(_databaseValues)));
             }
-            Helpers.Exec("chmod 600 /bitwarden/docker/mssql.env");
+            Helpers.Exec("chmod 600 /bitwarden/docker/database.env");
 
             Helpers.WriteLine(_context, "Building docker environment override files.");
             Directory.CreateDirectory("/bitwarden/env/");
@@ -173,11 +186,11 @@ namespace Bit.Setup
             }
             Helpers.Exec("chmod 600 /bitwarden/env/global.override.env");
 
-            using (var sw = File.CreateText("/bitwarden/env/mssql.override.env"))
+            using (var sw = File.CreateText("/bitwarden/env/database.override.env"))
             {
-                sw.Write(template(new TemplateModel(_mssqlOverrideValues)));
+                sw.Write(template(new TemplateModel(_databaseOverrideValues)));
             }
-            Helpers.Exec("chmod 600 /bitwarden/env/mssql.override.env");
+            Helpers.Exec("chmod 600 /bitwarden/env/database.override.env");
 
             // Empty uid env file. Only used on Linux hosts.
             if (!File.Exists("/bitwarden/env/uid.env"))

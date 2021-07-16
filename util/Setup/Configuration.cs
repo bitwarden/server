@@ -86,11 +86,14 @@ namespace Bit.Setup
             "app live sync.")]
         public bool PushNotifications { get; set; } = true;
 
-        [Description("Use a docker volume (`mssql_data`) instead of a host-mapped volume for the persisted " +
+        [Description("Use a docker volume (`database_data`) instead of a host-mapped volume for the persisted " +
             "database.\n" +
             "WARNING: Changing this value will cause you to lose access to the existing persisted database.\n" +
             "Learn more: https://docs.docker.com/storage/volumes/")]
         public bool DatabaseDockerVolume { get; set; }
+
+        [Description("Database type that will be used. (\"mssql\", \"mysql\", or \"postgresql\".")]
+        public string DatabaseDockerType { get; set; }
 
         [Description("Defines \"real\" IPs in nginx.conf. Useful for defining proxy servers that forward the \n" +
             "client IP address.\n" +
