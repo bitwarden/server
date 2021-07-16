@@ -391,5 +391,18 @@ namespace Bit.Core.Repositories.SqlServer
                 return results.ToList();
             }
         }
+
+        public async Task<IEnumerable<OrganizationUserUserDetails>> GetManyByMinimumRoleAsync(Guid organizationId, OrganizationUserType minRole)
+        {
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<OrganizationUserUserDetails>(
+                    "[dbo].[OrganizationUser_ReadByMinimumRole]",
+                    new { OrganizationId = organizationId, MinRole = minRole },
+                    commandType: CommandType.StoredProcedure);
+
+                return results.ToList();
+            }
+        }
     }
 }

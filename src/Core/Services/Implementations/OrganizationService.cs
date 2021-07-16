@@ -1425,7 +1425,10 @@ namespace Bit.Core.Services
 
             await _organizationUserRepository.ReplaceAsync(orgUser);
 
-            // TODO: send notification emails to org admins and accepting user?
+            await _mailService.SendOrganizationAcceptedEmailAsync(
+                (await _organizationRepository.GetByIdAsync(orgUser.OrganizationId)),
+                user.Email,
+                (await _organizationUserRepository.GetManyByMinimumRoleAsync(orgUser.OrganizationId, OrganizationUserType.Admin)).Select(a => a.Email).Distinct());
             return orgUser;
         }
 

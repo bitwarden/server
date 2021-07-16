@@ -20,8 +20,7 @@ namespace Bit.Core.Services
         Task SendMasterPasswordHintEmailAsync(string email, string hint);
         Task SendOrganizationInviteEmailAsync(string organizationName, OrganizationUser orgUser, ExpiringToken token);
         Task BulkSendOrganizationInviteEmailAsync(string organizationName, IEnumerable<(OrganizationUser orgUser, ExpiringToken token)> invites);
-        Task SendOrganizationAcceptedEmailAsync(string organizationName, string userEmail,
-            IEnumerable<string> adminEmails);
+        Task SendOrganizationAcceptedEmailAsync(Organization organization, string userIdentifier, IEnumerable<string> adminEmails);
         Task SendOrganizationConfirmedEmailAsync(string organizationName, string email);
         Task SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(string organizationName, string email);
         Task SendPasswordlessSignInAsync(string returnUrl, string token, string email);

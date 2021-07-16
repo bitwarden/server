@@ -35,7 +35,7 @@ namespace Bit.Core.Services
             return Task.FromResult(0);
         }
 
-        public Task SendOrganizationAcceptedEmailAsync(string organizationName, string userEmail, IEnumerable<string> adminEmails)
+        public Task SendOrganizationAcceptedEmailAsync(Organization organization, string userIdentifier, IEnumerable<string> adminEmails)
         {
             return Task.FromResult(0);
         }
