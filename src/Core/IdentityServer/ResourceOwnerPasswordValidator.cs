@@ -60,6 +60,8 @@ namespace Bit.Core.IdentityServer
             //    return;
             //}
 
+            await ValidateAsync(context, context.Request);
+
             if (_captchaValidationService.ServiceEnabled && _currentContext.IsBot)
             {
                 var captchaResponse = context.Request.Raw["captchaResponse"]?.ToString();
@@ -70,16 +72,17 @@ namespace Bit.Core.IdentityServer
                     return;
                 }
 
-                var captchaValid = await _captchaValidationService.ValidateCaptchaResponseAsync(captchaResponse,
-                    _currentContext.IpAddress);
-                if (!captchaValid)
+                if (context.Result.IsError || !(bool)context.Result.CustomResponse["TwoFactorVerified"])
                 {
-                    await BuildErrorResultAsync("Captcha is invalid.", false, context, null);
-                    return;
+                    var captchaValid = await _captchaValidationService.ValidateCaptchaResponseAsync(captchaResponse,
+                        _currentContext.IpAddress);
+                    if (!captchaValid)
+                    {
+                        await BuildErrorResultAsync("Captcha is invalid.", false, context, null);
+                        return;
+                    }
                 }
             }
-
-            await ValidateAsync(context, context.Request);
         }
 
         protected async override Task<(User, bool)> ValidateContextAsync(ResourceOwnerPasswordValidationContext context)
