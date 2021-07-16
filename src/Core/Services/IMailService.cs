@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System;
 using Bit.Core.Models.Mail;
 using Bit.Core.Models.Table.Provider;
+using Bit.Core.Models.Business;
 
 namespace Bit.Core.Services
 {
@@ -17,8 +18,8 @@ namespace Bit.Core.Services
         Task SendTwoFactorEmailAsync(string email, string token);
         Task SendNoMasterPasswordHintEmailAsync(string email);
         Task SendMasterPasswordHintEmailAsync(string email, string hint);
-        Task SendOrganizationInviteEmailAsync(string organizationName, OrganizationUser orgUser, string token);
-        Task BulkSendOrganizationInviteEmailAsync(string organizationName, IEnumerable<(OrganizationUser orgUser, string token)> invites);
+        Task SendOrganizationInviteEmailAsync(string organizationName, OrganizationUser orgUser, ExpiringToken token);
+        Task BulkSendOrganizationInviteEmailAsync(string organizationName, IEnumerable<(OrganizationUser orgUser, ExpiringToken token)> invites);
         Task SendOrganizationAcceptedEmailAsync(string organizationName, string userEmail,
             IEnumerable<string> adminEmails);
         Task SendOrganizationConfirmedEmailAsync(string organizationName, string email);

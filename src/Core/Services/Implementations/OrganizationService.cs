@@ -1289,15 +1289,16 @@ namespace Bit.Core.Services
             string MakeToken(OrganizationUser orgUser) =>
                 _dataProtector.Protect($"OrganizationUserInvite {orgUser.Id} {orgUser.Email} {CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow)}");
             await _mailService.BulkSendOrganizationInviteEmailAsync(organization.Name,
-                orgUsers.Select(o => (o, MakeToken(o))));
+                orgUsers.Select(o => (o, new ExpiringToken(MakeToken(o), DateTime.UtcNow))));
         }
 
         private async Task SendInviteAsync(OrganizationUser orgUser, Organization organization)
         {
-            var nowMillis = CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow);
+            var now = DateTime.UtcNow;
+            var nowMillis = CoreHelpers.ToEpocMilliseconds(now);
             var token = _dataProtector.Protect(
                 $"OrganizationUserInvite {orgUser.Id} {orgUser.Email} {nowMillis}");
-            await _mailService.SendOrganizationInviteEmailAsync(organization.Name, orgUser, token);
+            await _mailService.SendOrganizationInviteEmailAsync(organization.Name, orgUser, new ExpiringToken(token, now));
         }
 
         public async Task<OrganizationUser> AcceptUserAsync(Guid organizationUserId, User user, string token,
