@@ -15,4 +15,9 @@
     CONSTRAINT [PK_EmergencyAccess] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_EmergencyAccess_GrantorId] FOREIGN KEY ([GrantorId]) REFERENCES [dbo].[User] ([Id]),
     CONSTRAINT [FK_EmergencyAccess_GranteeId] FOREIGN KEY ([GranteeId]) REFERENCES [dbo].[User] ([Id])
-)
+);
+
+
+GO
+CREATE NONCLUSTERED INDEX [IX_EmergencyAccess_GrantorId]
+    ON [dbo].[EmergencyAccess] ([GrantorId]);
