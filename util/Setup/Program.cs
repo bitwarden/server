@@ -193,7 +193,7 @@ namespace Bit.Setup
             {
                 Helpers.WriteLine(_context, "Migrating database.");
                 var vaultConnectionString = Helpers.GetValueFromEnvFile("global",
-                    "globalSettings__sqlServer__connectionString");
+                    "globalSettings__sqlServer__connectionString").Replace("\\\"", "\"");
                 var migrator = new DbMigrator(vaultConnectionString, null);
                 var success = migrator.MigrateMsSqlDatabase(false);
                 if (success)
