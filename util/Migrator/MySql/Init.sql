@@ -22,7 +22,7 @@ CREATE TABLE `Event` (
     `IpAddress` character varying(50) NULL,
     `ActingUserId` uuid NULL,
     CONSTRAINT `PK_Event` PRIMARY KEY (`Id`)
-);
+) ENGINE=InnoDB;
 
 CREATE TABLE `Grant` (
     `Key` character varying(200) NOT NULL,
@@ -36,7 +36,7 @@ CREATE TABLE `Grant` (
     `ConsumedDate` timestamp without time zone NULL,
     `Data` text NULL,
     CONSTRAINT `PK_Grant` PRIMARY KEY (`Key`)
-);
+) ENGINE=InnoDB;
 
 CREATE TABLE `Installation` (
     `Id` uuid NOT NULL,
@@ -45,7 +45,7 @@ CREATE TABLE `Installation` (
     `Enabled` boolean NOT NULL,
     `CreationDate` timestamp without time zone NOT NULL,
     CONSTRAINT `PK_Installation` PRIMARY KEY (`Id`)
-);
+) ENGINE=InnoDB;
 
 CREATE TABLE `Organization` (
     `Id` uuid NOT NULL,
@@ -89,7 +89,7 @@ CREATE TABLE `Organization` (
     `CreationDate` timestamp without time zone NOT NULL,
     `RevisionDate` timestamp without time zone NOT NULL,
     CONSTRAINT `PK_Organization` PRIMARY KEY (`Id`)
-);
+) ENGINE=InnoDB;
 
 CREATE TABLE `Provider` (
     `Id` uuid NOT NULL,
@@ -106,7 +106,7 @@ CREATE TABLE `Provider` (
     `CreationDate` timestamp without time zone NOT NULL,
     `RevisionDate` timestamp without time zone NOT NULL,
     CONSTRAINT `PK_Provider` PRIMARY KEY (`Id`)
-);
+) ENGINE=InnoDB;
 
 CREATE TABLE `TaxRate` (
     `Id` character varying(40) NOT NULL,
@@ -116,7 +116,7 @@ CREATE TABLE `TaxRate` (
     `Rate` numeric NOT NULL,
     `Active` boolean NOT NULL,
     CONSTRAINT `PK_TaxRate` PRIMARY KEY (`Id`)
-);
+) ENGINE=InnoDB;
 
 CREATE TABLE `User` (
     `Id` uuid NOT NULL,
@@ -151,7 +151,7 @@ CREATE TABLE `User` (
     `CreationDate` timestamp without time zone NOT NULL,
     `RevisionDate` timestamp without time zone NOT NULL,
     CONSTRAINT `PK_User` PRIMARY KEY (`Id`)
-);
+) ENGINE=InnoDB;
 
 CREATE TABLE `Collection` (
     `Id` uuid NOT NULL,
@@ -162,7 +162,7 @@ CREATE TABLE `Collection` (
     `RevisionDate` timestamp without time zone NOT NULL,
     CONSTRAINT `PK_Collection` PRIMARY KEY (`Id`),
     CONSTRAINT `FK_Collection_Organization_OrganizationId` FOREIGN KEY (`OrganizationId`) REFERENCES `Organization` (`Id`) ON DELETE CASCADE
-);
+) ENGINE=InnoDB;
 
 CREATE TABLE `Group` (
     `Id` uuid NOT NULL,
@@ -174,7 +174,7 @@ CREATE TABLE `Group` (
     `RevisionDate` timestamp without time zone NOT NULL,
     CONSTRAINT `PK_Group` PRIMARY KEY (`Id`),
     CONSTRAINT `FK_Group_Organization_OrganizationId` FOREIGN KEY (`OrganizationId`) REFERENCES `Organization` (`Id`) ON DELETE CASCADE
-);
+) ENGINE=InnoDB;
 
 CREATE TABLE `Policy` (
     `Id` uuid NOT NULL,
@@ -186,7 +186,7 @@ CREATE TABLE `Policy` (
     `RevisionDate` timestamp without time zone NOT NULL,
     CONSTRAINT `PK_Policy` PRIMARY KEY (`Id`),
     CONSTRAINT `FK_Policy_Organization_OrganizationId` FOREIGN KEY (`OrganizationId`) REFERENCES `Organization` (`Id`) ON DELETE CASCADE
-);
+) ENGINE=InnoDB;
 
 CREATE TABLE `SsoConfig` (
     `Id` bigint NOT NULL,
@@ -197,7 +197,7 @@ CREATE TABLE `SsoConfig` (
     `RevisionDate` timestamp without time zone NOT NULL,
     CONSTRAINT `PK_SsoConfig` PRIMARY KEY (`Id`),
     CONSTRAINT `FK_SsoConfig_Organization_OrganizationId` FOREIGN KEY (`OrganizationId`) REFERENCES `Organization` (`Id`) ON DELETE CASCADE
-);
+) ENGINE=InnoDB;
 
 CREATE TABLE `ProviderOrganization` (
     `Id` uuid NOT NULL,
@@ -210,7 +210,7 @@ CREATE TABLE `ProviderOrganization` (
     CONSTRAINT `PK_ProviderOrganization` PRIMARY KEY (`Id`),
     CONSTRAINT `FK_ProviderOrganization_Organization_OrganizationId` FOREIGN KEY (`OrganizationId`) REFERENCES `Organization` (`Id`) ON DELETE CASCADE,
     CONSTRAINT `FK_ProviderOrganization_Provider_ProviderId` FOREIGN KEY (`ProviderId`) REFERENCES `Provider` (`Id`) ON DELETE CASCADE
-);
+) ENGINE=InnoDB;
 
 CREATE TABLE `Cipher` (
     `Id` uuid NOT NULL,
@@ -228,7 +228,7 @@ CREATE TABLE `Cipher` (
     CONSTRAINT `PK_Cipher` PRIMARY KEY (`Id`),
     CONSTRAINT `FK_Cipher_Organization_OrganizationId` FOREIGN KEY (`OrganizationId`) REFERENCES `Organization` (`Id`) ON DELETE RESTRICT,
     CONSTRAINT `FK_Cipher_User_UserId` FOREIGN KEY (`UserId`) REFERENCES `User` (`Id`) ON DELETE RESTRICT
-);
+) ENGINE=InnoDB;
 
 CREATE TABLE `Device` (
     `Id` uuid NOT NULL,
@@ -241,7 +241,7 @@ CREATE TABLE `Device` (
     `RevisionDate` timestamp without time zone NOT NULL,
     CONSTRAINT `PK_Device` PRIMARY KEY (`Id`),
     CONSTRAINT `FK_Device_User_UserId` FOREIGN KEY (`UserId`) REFERENCES `User` (`Id`) ON DELETE CASCADE
-);
+) ENGINE=InnoDB;
 
 CREATE TABLE `EmergencyAccess` (
     `Id` uuid NOT NULL,
@@ -259,7 +259,7 @@ CREATE TABLE `EmergencyAccess` (
     CONSTRAINT `PK_EmergencyAccess` PRIMARY KEY (`Id`),
     CONSTRAINT `FK_EmergencyAccess_User_GranteeId` FOREIGN KEY (`GranteeId`) REFERENCES `User` (`Id`) ON DELETE RESTRICT,
     CONSTRAINT `FK_EmergencyAccess_User_GrantorId` FOREIGN KEY (`GrantorId`) REFERENCES `User` (`Id`) ON DELETE CASCADE
-);
+) ENGINE=InnoDB;
 
 CREATE TABLE `Folder` (
     `Id` uuid NOT NULL,
@@ -269,7 +269,7 @@ CREATE TABLE `Folder` (
     `RevisionDate` timestamp without time zone NOT NULL,
     CONSTRAINT `PK_Folder` PRIMARY KEY (`Id`),
     CONSTRAINT `FK_Folder_User_UserId` FOREIGN KEY (`UserId`) REFERENCES `User` (`Id`) ON DELETE CASCADE
-);
+) ENGINE=InnoDB;
 
 CREATE TABLE `OrganizationUser` (
     `Id` uuid NOT NULL,
@@ -288,7 +288,7 @@ CREATE TABLE `OrganizationUser` (
     CONSTRAINT `PK_OrganizationUser` PRIMARY KEY (`Id`),
     CONSTRAINT `FK_OrganizationUser_Organization_OrganizationId` FOREIGN KEY (`OrganizationId`) REFERENCES `Organization` (`Id`) ON DELETE CASCADE,
     CONSTRAINT `FK_OrganizationUser_User_UserId` FOREIGN KEY (`UserId`) REFERENCES `User` (`Id`) ON DELETE RESTRICT
-);
+) ENGINE=InnoDB;
 
 CREATE TABLE `ProviderUser` (
     `Id` uuid NOT NULL,
@@ -304,7 +304,7 @@ CREATE TABLE `ProviderUser` (
     CONSTRAINT `PK_ProviderUser` PRIMARY KEY (`Id`),
     CONSTRAINT `FK_ProviderUser_Provider_ProviderId` FOREIGN KEY (`ProviderId`) REFERENCES `Provider` (`Id`) ON DELETE CASCADE,
     CONSTRAINT `FK_ProviderUser_User_UserId` FOREIGN KEY (`UserId`) REFERENCES `User` (`Id`) ON DELETE RESTRICT
-);
+) ENGINE=InnoDB;
 
 CREATE TABLE `Send` (
     `Id` uuid NOT NULL,
@@ -325,7 +325,7 @@ CREATE TABLE `Send` (
     CONSTRAINT `PK_Send` PRIMARY KEY (`Id`),
     CONSTRAINT `FK_Send_Organization_OrganizationId` FOREIGN KEY (`OrganizationId`) REFERENCES `Organization` (`Id`) ON DELETE RESTRICT,
     CONSTRAINT `FK_Send_User_UserId` FOREIGN KEY (`UserId`) REFERENCES `User` (`Id`) ON DELETE RESTRICT
-);
+) ENGINE=InnoDB;
 
 CREATE TABLE `SsoUser` (
     `Id` bigint NOT NULL,
@@ -336,7 +336,7 @@ CREATE TABLE `SsoUser` (
     CONSTRAINT `PK_SsoUser` PRIMARY KEY (`Id`),
     CONSTRAINT `FK_SsoUser_Organization_OrganizationId` FOREIGN KEY (`OrganizationId`) REFERENCES `Organization` (`Id`) ON DELETE RESTRICT,
     CONSTRAINT `FK_SsoUser_User_UserId` FOREIGN KEY (`UserId`) REFERENCES `User` (`Id`) ON DELETE CASCADE
-);
+) ENGINE=InnoDB;
 
 CREATE TABLE `Transaction` (
     `Id` uuid NOT NULL,
@@ -354,7 +354,7 @@ CREATE TABLE `Transaction` (
     CONSTRAINT `PK_Transaction` PRIMARY KEY (`Id`),
     CONSTRAINT `FK_Transaction_Organization_OrganizationId` FOREIGN KEY (`OrganizationId`) REFERENCES `Organization` (`Id`) ON DELETE RESTRICT,
     CONSTRAINT `FK_Transaction_User_UserId` FOREIGN KEY (`UserId`) REFERENCES `User` (`Id`) ON DELETE RESTRICT
-);
+) ENGINE=InnoDB;
 
 CREATE TABLE `U2f` (
     `Id` integer NOT NULL,
@@ -366,7 +366,7 @@ CREATE TABLE `U2f` (
     `CreationDate` timestamp without time zone NOT NULL,
     CONSTRAINT `PK_U2f` PRIMARY KEY (`Id`),
     CONSTRAINT `FK_U2f_User_UserId` FOREIGN KEY (`UserId`) REFERENCES `User` (`Id`) ON DELETE CASCADE
-);
+) ENGINE=InnoDB;
 
 CREATE TABLE `CollectionGroups` (
     `CollectionId` uuid NOT NULL,
@@ -376,7 +376,7 @@ CREATE TABLE `CollectionGroups` (
     CONSTRAINT `PK_CollectionGroups` PRIMARY KEY (`CollectionId`, `GroupId`),
     CONSTRAINT `FK_CollectionGroups_Collection_CollectionId` FOREIGN KEY (`CollectionId`) REFERENCES `Collection` (`Id`) ON DELETE CASCADE,
     CONSTRAINT `FK_CollectionGroups_Group_GroupId` FOREIGN KEY (`GroupId`) REFERENCES `Group` (`Id`) ON DELETE CASCADE
-);
+) ENGINE=InnoDB;
 
 CREATE TABLE `CollectionCipher` (
     `CollectionId` uuid NOT NULL,
@@ -384,7 +384,7 @@ CREATE TABLE `CollectionCipher` (
     CONSTRAINT `PK_CollectionCipher` PRIMARY KEY (`CollectionId`, `CipherId`),
     CONSTRAINT `FK_CollectionCipher_Cipher_CipherId` FOREIGN KEY (`CipherId`) REFERENCES `Cipher` (`Id`) ON DELETE CASCADE,
     CONSTRAINT `FK_CollectionCipher_Collection_CollectionId` FOREIGN KEY (`CollectionId`) REFERENCES `Collection` (`Id`) ON DELETE CASCADE
-);
+) ENGINE=InnoDB;
 
 CREATE TABLE `CollectionUsers` (
     `CollectionId` uuid NOT NULL,
@@ -396,7 +396,7 @@ CREATE TABLE `CollectionUsers` (
     CONSTRAINT `FK_CollectionUsers_Collection_CollectionId` FOREIGN KEY (`CollectionId`) REFERENCES `Collection` (`Id`) ON DELETE CASCADE,
     CONSTRAINT `FK_CollectionUsers_OrganizationUser_OrganizationUserId` FOREIGN KEY (`OrganizationUserId`) REFERENCES `OrganizationUser` (`Id`) ON DELETE CASCADE,
     CONSTRAINT `FK_CollectionUsers_User_UserId` FOREIGN KEY (`UserId`) REFERENCES `User` (`Id`) ON DELETE RESTRICT
-);
+) ENGINE=InnoDB;
 
 CREATE TABLE `GroupUser` (
     `GroupId` uuid NOT NULL,
@@ -406,7 +406,7 @@ CREATE TABLE `GroupUser` (
     CONSTRAINT `FK_GroupUser_Group_GroupId` FOREIGN KEY (`GroupId`) REFERENCES `Group` (`Id`) ON DELETE CASCADE,
     CONSTRAINT `FK_GroupUser_OrganizationUser_OrganizationUserId` FOREIGN KEY (`OrganizationUserId`) REFERENCES `OrganizationUser` (`Id`) ON DELETE CASCADE,
     CONSTRAINT `FK_GroupUser_User_UserId` FOREIGN KEY (`UserId`) REFERENCES `User` (`Id`) ON DELETE RESTRICT
-);
+) ENGINE=InnoDB;
 
 CREATE TABLE `ProviderOrganizationProviderUser` (
     `Id` uuid NOT NULL,
@@ -419,7 +419,7 @@ CREATE TABLE `ProviderOrganizationProviderUser` (
     CONSTRAINT `PK_ProviderOrganizationProviderUser` PRIMARY KEY (`Id`),
     CONSTRAINT `FK_ProviderOrganizationProviderUser_ProviderOrganization_Provi~` FOREIGN KEY (`ProviderOrganizationId`) REFERENCES `ProviderOrganization` (`Id`) ON DELETE CASCADE,
     CONSTRAINT `FK_ProviderOrganizationProviderUser_ProviderUser_ProviderUserId` FOREIGN KEY (`ProviderUserId`) REFERENCES `ProviderUser` (`Id`) ON DELETE CASCADE
-);
+) ENGINE=InnoDB;
 
 CREATE INDEX `IX_Cipher_OrganizationId` ON `Cipher` (`OrganizationId`);
 
