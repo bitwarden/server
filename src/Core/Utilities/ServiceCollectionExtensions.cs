@@ -306,7 +306,7 @@ namespace Bit.Core.Utilities
                 services.AddSingleton<IReferenceEventService, AzureQueueReferenceEventService>();
             }
 
-            if (!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Captcha?.HCaptchaSecretKey) &&
+            if (CoreHelpers.SettingHasValue(globalSettings.Captcha?.HCaptchaSecretKey) &&
                 CoreHelpers.SettingHasValue(globalSettings.Captcha?.HCaptchaSiteKey))
             {
                 services.AddSingleton<ICaptchaValidationService, HCaptchaValidationService>();
