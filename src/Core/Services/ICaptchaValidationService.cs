@@ -6,6 +6,7 @@ namespace Bit.Core.Services
     {
         bool ServiceEnabled { get; }
         string SiteKey { get; }
+        bool RequireCaptcha { get; }
         Task<bool> ValidateCaptchaResponseAsync(string captchResponse, string clientIpAddress);
     }
 }

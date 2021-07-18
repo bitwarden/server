@@ -62,7 +62,7 @@ namespace Bit.Core.IdentityServer
 
             await ValidateAsync(context, context.Request);
 
-            if (_captchaValidationService.ServiceEnabled && _currentContext.IsBot)
+            if (_captchaValidationService.ServiceEnabled && (_currentContext.IsBot || _captchaValidationService.RequireCaptcha))
             {
                 var twoFactorVerified = context.Result.CustomResponse.ContainsKey("TwoFactorVerified") ?
                     (bool)context.Result.CustomResponse["TwoFactorVerified"] :
@@ -70,7 +70,7 @@ namespace Bit.Core.IdentityServer
                 var captchaResponse = context.Request.Raw["captchaResponse"]?.ToString();
                 if (string.IsNullOrWhiteSpace(captchaResponse) && !twoFactorVerified)
                 {
-                    context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant, "Captcha required.",
+                    context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant, "Captcha required. Please refresh and try again",
                         new Dictionary<string, object> { { "HCaptcha_SiteKey", _captchaValidationService.SiteKey } });
                     return;
                 }

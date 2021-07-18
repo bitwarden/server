@@ -26,6 +26,7 @@ namespace Bit.Core.Services
 
         public bool ServiceEnabled => true;
         public string SiteKey => _globalSettings.Captcha.HCaptchaSiteKey;
+        public bool RequireCaptcha => _globalSettings.Captcha.RequireCaptcha;
 
         public async Task<bool> ValidateCaptchaResponseAsync(string captchResponse, string clientIpAddress)
         {
