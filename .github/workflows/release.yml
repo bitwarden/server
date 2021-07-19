@@ -215,7 +215,6 @@ jobs:
           path: ./swagger.json
 
       - name: Upload release assets
-        if: github.event_name == 'release'
         run: |
           hub release edit \
             -a ./swagger.json \
