@@ -88,7 +88,8 @@ namespace Bit.CommCore.Services
                 throw new BadRequestException("Provider is already setup.");
             }
 
-            if (!CoreHelpers.TokenIsValid("ProviderSetupInvite", _dataProtector, token, owner.Email, provider.Id, _globalSettings))
+            if (!CoreHelpers.TokenIsValid("ProviderSetupInvite", _dataProtector, token, owner.Email, provider.Id,
+                _globalSettings.OrganizationInviteExpirationHours))
             {
                 throw new BadRequestException("Invalid token.");
             }
@@ -196,7 +197,8 @@ namespace Bit.CommCore.Services
                 throw new BadRequestException("Already accepted.");
             }
 
-            if (!CoreHelpers.TokenIsValid("ProviderUserInvite", _dataProtector, token, user.Email, providerUser.Id, _globalSettings))
+            if (!CoreHelpers.TokenIsValid("ProviderUserInvite", _dataProtector, token, user.Email, providerUser.Id,
+                _globalSettings.OrganizationInviteExpirationHours))
             {
                 throw new BadRequestException("Invalid token.");
             }
