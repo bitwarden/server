@@ -21,7 +21,6 @@ namespace Bit.Core.IdentityServer
         private readonly IUserService _userService;
         private readonly ICurrentContext _currentContext;
         private readonly ICaptchaValidationService _captchaValidationService;
-
         public ResourceOwnerPasswordValidator(
             UserManager<User> userManager,
             IDeviceRepository deviceRepository,
@@ -60,31 +59,35 @@ namespace Bit.Core.IdentityServer
             //    return;
             //}
 
-            await ValidateAsync(context, context.Request);
-
+            string bypassToken = null;
             if (_captchaValidationService.ServiceEnabled && (_currentContext.IsBot || _captchaValidationService.RequireCaptcha))
             {
-                var twoFactorVerified = context.Result.CustomResponse.ContainsKey("TwoFactorVerified") ?
-                    (bool)context.Result.CustomResponse["TwoFactorVerified"] :
-                    false;
+                var user = await _userManager.FindByEmailAsync(context.UserName.ToLowerInvariant());
                 var captchaResponse = context.Request.Raw["captchaResponse"]?.ToString();
-                if (string.IsNullOrWhiteSpace(captchaResponse) && !twoFactorVerified)
+
+                if (string.IsNullOrWhiteSpace(captchaResponse))
                 {
                     context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant, "Captcha required.",
-                        new Dictionary<string, object> { { "HCaptcha_SiteKey", _captchaValidationService.SiteKey } });
+                        new Dictionary<string, object> {
+                            { "HCaptcha_SiteKey", _captchaValidationService.SiteKey },
+                        });
                     return;
                 }
 
-                if (context.Result.IsError || !twoFactorVerified)
+                var captchaValid = _captchaValidationService.ValidateCaptchaBypassToken(captchaResponse, user) ||
+                    await _captchaValidationService.ValidateCaptchaResponseAsync(captchaResponse, _currentContext.IpAddress);
+                if (!captchaValid)
                 {
-                    var captchaValid = await _captchaValidationService.ValidateCaptchaResponseAsync(captchaResponse,
-                        _currentContext.IpAddress);
-                    if (!captchaValid)
-                    {
-                        await BuildErrorResultAsync("Captcha is invalid. Please refresh and try again", false, context, null);
-                        return;
-                    }
+                    await BuildErrorResultAsync("Captcha is invalid. Please refresh and try again", false, context, null);
+                    return;
                 }
+                bypassToken = _captchaValidationService.GenerateCaptchaBypassToken(user);
+            }
+
+            await ValidateAsync(context, context.Request);
+            if (context.Result.CustomResponse != null && bypassToken != null)
+            {
+                context.Result.CustomResponse["HCaptcha_BypassKey"] = bypassToken;
             }
         }
 
