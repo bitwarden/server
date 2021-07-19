@@ -70,7 +70,7 @@ namespace Bit.Core.IdentityServer
                 var captchaResponse = context.Request.Raw["captchaResponse"]?.ToString();
                 if (string.IsNullOrWhiteSpace(captchaResponse) && !twoFactorVerified)
                 {
-                    context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant, "Captcha required. Please refresh and try again",
+                    context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant, "Captcha required.",
                         new Dictionary<string, object> { { "HCaptcha_SiteKey", _captchaValidationService.SiteKey } });
                     return;
                 }
@@ -81,7 +81,7 @@ namespace Bit.Core.IdentityServer
                         _currentContext.IpAddress);
                     if (!captchaValid)
                     {
-                        await BuildErrorResultAsync("Captcha is invalid.", false, context, null);
+                        await BuildErrorResultAsync("Captcha is invalid. Please refresh and try again", false, context, null);
                         return;
                     }
                 }
