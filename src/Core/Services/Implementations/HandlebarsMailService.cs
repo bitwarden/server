@@ -12,6 +12,7 @@ using System.Reflection;
 using Bit.Core.Models.Mail.Provider;
 using Bit.Core.Models.Table.Provider;
 using HandlebarsDotNet;
+using Bit.Core.Models.Business;
 
 namespace Bit.Core.Services
 {
@@ -143,14 +144,15 @@ namespace Bit.Core.Services
             await _mailDeliveryService.SendEmailAsync(message);
         }
 
-        public async Task SendOrganizationAcceptedEmailAsync(string organizationName, string userEmail,
+        public async Task SendOrganizationAcceptedEmailAsync(Organization organization, string userIdentifier,
             IEnumerable<string> adminEmails)
         {
-            var message = CreateDefaultMessage($"User {userEmail} Has Accepted Invite", adminEmails);
+            var message = CreateDefaultMessage($"Action Required: {userIdentifier} Needs to Be Confirmed", adminEmails);
             var model = new OrganizationUserAcceptedViewModel
             {
-                OrganizationName = CoreHelpers.SanitizeForEmail(organizationName),
-                UserEmail = userEmail,
+                OrganizationId = organization.Id,
+                OrganizationName = CoreHelpers.SanitizeForEmail(organization.Name),
+                UserIdentifier = userIdentifier,
                 WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
                 SiteName = _globalSettings.SiteName
             };
@@ -173,10 +175,10 @@ namespace Bit.Core.Services
             await _mailDeliveryService.SendEmailAsync(message);
         }
 
-        public Task SendOrganizationInviteEmailAsync(string organizationName, OrganizationUser orgUser, string token) =>
+        public Task SendOrganizationInviteEmailAsync(string organizationName, OrganizationUser orgUser, ExpiringToken token) =>
             BulkSendOrganizationInviteEmailAsync(organizationName, new[] { (orgUser, token) });
 
-        public async Task BulkSendOrganizationInviteEmailAsync(string organizationName, IEnumerable<(OrganizationUser orgUser, string token)> invites)
+        public async Task BulkSendOrganizationInviteEmailAsync(string organizationName, IEnumerable<(OrganizationUser orgUser, ExpiringToken token)> invites)
         {
             MailQueueMessage CreateMessage(string email, object model)
             {
@@ -191,7 +193,8 @@ namespace Bit.Core.Services
                     Email = WebUtility.UrlEncode(invite.orgUser.Email),
                     OrganizationId = invite.orgUser.OrganizationId.ToString(),
                     OrganizationUserId = invite.orgUser.Id.ToString(),
-                    Token = WebUtility.UrlEncode(invite.token),
+                    Token = WebUtility.UrlEncode(invite.token.Token),
+                    ExpirationDate = $"{invite.token.ExpirationDate.ToLongDateString()} {invite.token.ExpirationDate.ToShortTimeString()} UTC",
                     OrganizationNameUrlEncoded = WebUtility.UrlEncode(organizationName),
                     WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
                     SiteName = _globalSettings.SiteName,
