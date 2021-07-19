@@ -129,7 +129,7 @@ namespace Bit.Core.IdentityServer
                     await BuildErrorResultAsync("No device information provided.", false, context, user);
                     return;
                 }
-                await BuildSuccessResultAsync(user, context, device, twoFactorRequest && twoFactorRemember, twoFactorRequest);
+                await BuildSuccessResultAsync(user, context, device, twoFactorRequest && twoFactorRemember);
             }
             else
             {
@@ -142,7 +142,7 @@ namespace Bit.Core.IdentityServer
 
         protected abstract Task<(User, bool)> ValidateContextAsync(T context);
 
-        protected async Task BuildSuccessResultAsync(User user, T context, Device device, bool sendRememberToken, bool twoFactorVerified)
+        protected async Task BuildSuccessResultAsync(User user, T context, Device device, bool sendRememberToken)
         {
             await _eventService.LogUserEventAsync(user.Id, EventType.User_LoggedIn);
 
@@ -167,7 +167,6 @@ namespace Bit.Core.IdentityServer
             customResponse.Add("ResetMasterPassword", string.IsNullOrWhiteSpace(user.MasterPassword));
             customResponse.Add("Kdf", (byte)user.Kdf);
             customResponse.Add("KdfIterations", user.KdfIterations);
-            customResponse.Add("TwoFactorVerified", twoFactorVerified);
 
             if (sendRememberToken)
             {
