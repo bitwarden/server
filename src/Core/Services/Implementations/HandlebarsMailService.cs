@@ -151,7 +151,7 @@ namespace Bit.Core.Services
             var model = new OrganizationUserAcceptedViewModel
             {
                 OrganizationId = organization.Id,
-                OrganizationName = CoreHelpers.SanitizeForEmail(organization.Name),
+                OrganizationName = organization.Name,
                 UserIdentifier = userIdentifier,
                 WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
                 SiteName = _globalSettings.SiteName
@@ -166,7 +166,7 @@ namespace Bit.Core.Services
             var message = CreateDefaultMessage($"You Have Been Confirmed To {organizationName}", email);
             var model = new OrganizationUserConfirmedViewModel
             {
-                OrganizationName = CoreHelpers.SanitizeForEmail(organizationName),
+                OrganizationName = organizationName,
                 WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
                 SiteName = _globalSettings.SiteName
             };
@@ -189,7 +189,7 @@ namespace Bit.Core.Services
             var messageModels = invites.Select(invite => CreateMessage(invite.orgUser.Email,
                 new OrganizationUserInvitedViewModel
                 {
-                    OrganizationName = CoreHelpers.SanitizeForEmail(organizationName),
+                    OrganizationName = organizationName,
                     Email = WebUtility.UrlEncode(invite.orgUser.Email),
                     OrganizationId = invite.orgUser.OrganizationId.ToString(),
                     OrganizationUserId = invite.orgUser.Id.ToString(),
@@ -209,7 +209,7 @@ namespace Bit.Core.Services
             var message = CreateDefaultMessage($"You have been removed from {organizationName}", email);
             var model = new OrganizationUserRemovedForPolicyTwoStepViewModel
             {
-                OrganizationName = CoreHelpers.SanitizeForEmail(organizationName),
+                OrganizationName = organizationName,
                 WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
                 SiteName = _globalSettings.SiteName
             };
@@ -349,7 +349,7 @@ namespace Bit.Core.Services
             var message = CreateDefaultMessage($"You have been removed from {organizationName}", email);
             var model = new OrganizationUserRemovedForPolicySingleOrgViewModel
             {
-                OrganizationName = CoreHelpers.SanitizeForEmail(organizationName),
+                OrganizationName = organizationName,
                 WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
                 SiteName = _globalSettings.SiteName
             };
