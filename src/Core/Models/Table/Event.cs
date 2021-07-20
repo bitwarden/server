@@ -23,7 +23,7 @@ namespace Bit.Core.Models.Table
             GroupId = e.GroupId;
             OrganizationUserId = e.OrganizationUserId;
             ProviderUserId = e.ProviderUserId;
-            ProviderOrganizationId = e.ProviderUserId;
+            ProviderOrganizationId = e.ProviderOrganizationId;
             DeviceType = e.DeviceType;
             IpAddress = e.IpAddress;
             ActingUserId = e.ActingUserId;
