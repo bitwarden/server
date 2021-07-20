@@ -24,6 +24,7 @@ namespace Bit.Core.Models.Api
             PolicyId = ev.PolicyId;
             OrganizationUserId = ev.OrganizationUserId;
             ProviderUserId = ev.ProviderUserId;
+            ProviderOrganizationId = ev.ProviderOrganizationId;
             ActingUserId = ev.ActingUserId;
             Date = ev.Date;
             DeviceType = ev.DeviceType;
@@ -40,6 +41,7 @@ namespace Bit.Core.Models.Api
         public Guid? PolicyId { get; set; }
         public Guid? OrganizationUserId { get; set; }
         public Guid? ProviderUserId { get; set; }
+        public Guid? ProviderOrganizationId { get; set; }
         public Guid? ActingUserId { get; set; }
         public DateTime Date { get; set; }
         public DeviceType? DeviceType { get; set; }

@@ -27,6 +27,7 @@ namespace Bit.Core.Models.Data
         public Guid? PolicyId { get; set; }
         public Guid? OrganizationUserId { get; set; }
         public Guid? ProviderUserId { get; set; }
+        public Guid? ProviderOrganizationId { get; set; }
         public Guid? ActingUserId { get; set; }
         public DeviceType? DeviceType { get; set; }
         public string IpAddress { get; set; }

@@ -23,6 +23,7 @@ namespace Bit.Core.Models.Data
             GroupId = e.GroupId;
             OrganizationUserId = e.OrganizationUserId;
             ProviderUserId = e.ProviderUserId;
+            ProviderOrganizationId = e.ProviderOrganizationId;
             DeviceType = e.DeviceType;
             IpAddress = e.IpAddress;
             ActingUserId = e.ActingUserId;
@@ -39,6 +40,7 @@ namespace Bit.Core.Models.Data
         public Guid? GroupId { get; set; }
         public Guid? OrganizationUserId { get; set; }
         public Guid? ProviderUserId { get; set; }
+        public Guid? ProviderOrganizationId { get; set; }
         public DeviceType? DeviceType { get; set; }
         public string IpAddress { get; set; }
         public Guid? ActingUserId { get; set; }

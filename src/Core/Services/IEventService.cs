@@ -20,6 +20,6 @@ namespace Bit.Core.Services
         Task LogOrganizationEventAsync(Organization organization, EventType type, DateTime? date = null);
         Task LogProviderUserEventAsync(ProviderUser providerUser, EventType type, DateTime? date = null);
         Task LogProviderUsersEventAsync(IEnumerable<(ProviderUser, EventType, DateTime?)> events);
-
+        Task LogProviderOrganizationEventAsync(ProviderOrganization providerOrganization, EventType type, DateTime? date = null);
     }
 }

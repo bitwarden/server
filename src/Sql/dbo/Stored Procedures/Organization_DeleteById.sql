@@ -53,6 +53,12 @@ BEGIN
 
     DELETE
     FROM
+         [dbo].[ProviderOrganization]
+    WHERE
+        [OrganizationId] = @Id
+
+    DELETE
+    FROM
         [dbo].[Organization]
     WHERE
         [Id] = @Id

@@ -58,5 +58,9 @@
         ProviderUser_Confirmed = 1801,
         ProviderUser_Updated = 1802,
         ProviderUser_Removed = 1803,
+
+        ProviderOrganization_Created = 1900,
+        ProviderOrganization_Added = 1901,
+        ProviderOrganization_Removed = 1902
     }
 }
