@@ -30,7 +30,7 @@
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
     @ApiKey VARCHAR(30),
-    @ForcePasswordReset BIT
+    @ForcePasswordReset BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON
