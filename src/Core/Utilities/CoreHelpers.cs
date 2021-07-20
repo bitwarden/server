@@ -555,12 +555,20 @@ namespace Bit.Core.Utilities
             return sb.ToString();
         }
 
-        public static string SanitizeForEmail(string value)
+        public static string SanitizeForEmail(string value, bool htmlEncode = true)
         {
-            var cleanedValue = value.Replace("@", "[at]")
-                .Replace("http://", string.Empty)
-                .Replace("https://", string.Empty);
-            return HttpUtility.HtmlEncode(cleanedValue);
+            var cleanedValue = value.Replace("@", "[at]");
+            var regexOptions = RegexOptions.CultureInvariant |
+                RegexOptions.Singleline |
+                RegexOptions.IgnoreCase;
+            cleanedValue = Regex.Replace(cleanedValue, @"(\.\w)",
+                    m => string.Concat("[dot]", m.ToString().Last()), regexOptions);
+            while (Regex.IsMatch(cleanedValue, @"((^|\b)(\w*)://)", regexOptions))
+            {
+                cleanedValue = Regex.Replace(cleanedValue, @"((^|\b)(\w*)://)",
+                    string.Empty, regexOptions);
+            }
+            return htmlEncode ? HttpUtility.HtmlEncode(cleanedValue) : cleanedValue;
         }
 
         public static string DateTimeToTableStorageKey(DateTime? date = null)
