@@ -354,12 +354,6 @@ namespace Bit.CommCore.Services
 
         public async Task AddOrganization(Guid providerId, Guid organizationId, Guid addingUserId, string key)
         {
-            var provider = await _providerRepository.GetByIdAsync(providerId);
-            if (provider == null)
-            {
-                throw new BadRequestException("Invalid provider.");
-            }
-
             var po = await _providerOrganizationRepository.GetByOrganizationId(organizationId);
             if (po != null)
             {
@@ -374,17 +368,11 @@ namespace Bit.CommCore.Services
             };
 
             await _providerOrganizationRepository.CreateAsync(providerOrganization);
-            await _eventService.LogProviderEventAsync(provider, EventType.ProviderOrganization_Added);
+            await _eventService.LogProviderOrganizationEventAsync(providerOrganization, EventType.ProviderOrganization_Added);
         }
 
         public async Task<ProviderOrganization> CreateOrganizationAsync(Guid providerId, OrganizationSignup organizationSignup, User user)
         {
-            var provider = await _providerRepository.GetByIdAsync(providerId);
-            if (provider == null)
-            {
-                throw new BadRequestException("Invalid provider.");
-            }
-
             var (organization, _) = await _organizationService.SignUpAsync(organizationSignup, true);
 
             var providerOrganization = new ProviderOrganization
@@ -395,19 +383,13 @@ namespace Bit.CommCore.Services
             };
 
             await _providerOrganizationRepository.CreateAsync(providerOrganization);
-            await _eventService.LogProviderEventAsync(provider, EventType.ProviderOrganization_Created);
+            await _eventService.LogProviderOrganizationEventAsync(providerOrganization, EventType.ProviderOrganization_Created);
 
             return providerOrganization;
         }
 
         public async Task RemoveOrganization(Guid providerId, Guid providerOrganizationId, Guid removingUserId)
         {
-            var provider = await _providerRepository.GetByIdAsync(providerId);
-            if (provider == null)
-            {
-                throw new BadRequestException("Invalid provider.");
-            }
-
             var providerOrganization = await _providerOrganizationRepository.GetByIdAsync(providerOrganizationId);
             if (providerOrganization == null || providerOrganization.ProviderId != providerId)
             {
@@ -420,7 +402,7 @@ namespace Bit.CommCore.Services
             }
 
             await _providerOrganizationRepository.DeleteAsync(providerOrganization);
-            await _eventService.LogProviderEventAsync(provider, EventType.ProviderOrganization_Removed);
+            await _eventService.LogProviderOrganizationEventAsync(providerOrganization, EventType.ProviderOrganization_Removed);
         }
 
         private async Task SendInviteAsync(ProviderUser providerUser, Provider provider)

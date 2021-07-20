@@ -401,17 +401,6 @@ namespace Bit.CommCore.Test.Services
         }
 
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
-        public async Task AddOrganization_ProviderIsInvalid_Throws(Provider provider, Organization organization,
-            User user, string key, SutProvider<ProviderService> sutProvider)
-        {
-            sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).ReturnsNull();
-
-            var exception = await Assert.ThrowsAsync<BadRequestException>(
-                () => sutProvider.Sut.AddOrganization(provider.Id, organization.Id, user.Id, key));
-            Assert.Equal("Invalid provider.", exception.Message);
-        }
-
-        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
         public async Task AddOrganization_OrganizationAlreadyBelongsToAProvider_Throws(Provider provider,
             Organization organization, ProviderOrganization po, User user, string key,
             SutProvider<ProviderService> sutProvider)
@@ -438,18 +427,8 @@ namespace Bit.CommCore.Test.Services
 
             await providerOrganizationRepository.ReceivedWithAnyArgs().CreateAsync(default);
             await sutProvider.GetDependency<IEventService>()
-                .Received().LogProviderEventAsync(provider, EventType.ProviderOrganization_Added);
-        }
-
-        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
-        public async Task CreateOrganizationAsync_ProviderIsInvalid_Throws(Provider provider,
-            OrganizationSignup organizationSignup, User user, SutProvider<ProviderService> sutProvider)
-        {
-            sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).ReturnsNull();
-
-            var exception = await Assert.ThrowsAsync<BadRequestException>(
-                () => sutProvider.Sut.CreateOrganizationAsync(provider.Id, organizationSignup, user));
-            Assert.Equal("Invalid provider.", exception.Message);
+                .Received().LogProviderOrganizationEventAsync(Arg.Any<ProviderOrganization>(),
+                    EventType.ProviderOrganization_Added);
         }
 
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
@@ -461,22 +440,13 @@ namespace Bit.CommCore.Test.Services
             sutProvider.GetDependency<IOrganizationService>().SignUpAsync(organizationSignup, true)
                 .Returns(Tuple.Create(organization, null as OrganizationUser));
 
-            await sutProvider.Sut.CreateOrganizationAsync(provider.Id, organizationSignup, user);
+            var providerOrganization =
+                await sutProvider.Sut.CreateOrganizationAsync(provider.Id, organizationSignup, user);
 
             await providerOrganizationRepository.ReceivedWithAnyArgs().CreateAsync(default);
             await sutProvider.GetDependency<IEventService>()
-                .Received().LogProviderEventAsync(provider, EventType.ProviderOrganization_Created);
-        }
-
-        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
-        public async Task RemoveOrganization_ProviderIsInvalid_Throws(Provider provider,
-            ProviderOrganization providerOrganization, User user, SutProvider<ProviderService> sutProvider)
-        {
-            sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).ReturnsNull();
-
-            var exception = await Assert.ThrowsAsync<BadRequestException>(
-                () => sutProvider.Sut.RemoveOrganization(provider.Id, providerOrganization.Id, user.Id));
-            Assert.Equal("Invalid provider.", exception.Message);
+                .Received().LogProviderOrganizationEventAsync(providerOrganization,
+                    EventType.ProviderOrganization_Created);
         }
 
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
@@ -484,7 +454,8 @@ namespace Bit.CommCore.Test.Services
             ProviderOrganization providerOrganization, User user, SutProvider<ProviderService> sutProvider)
         {
             sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
-            sutProvider.GetDependency<IProviderOrganizationRepository>().GetByIdAsync(providerOrganization.Id).ReturnsNull();
+            sutProvider.GetDependency<IProviderOrganizationRepository>().GetByIdAsync(providerOrganization.Id)
+                .ReturnsNull();
 
             var exception = await Assert.ThrowsAsync<BadRequestException>(
                 () => sutProvider.Sut.RemoveOrganization(provider.Id, providerOrganization.Id, user.Id));
@@ -534,7 +505,7 @@ namespace Bit.CommCore.Test.Services
             await sutProvider.Sut.RemoveOrganization(provider.Id, providerOrganization.Id, user.Id);
             await providerOrganizationRepository.Received().DeleteAsync(providerOrganization);
             await sutProvider.GetDependency<IEventService>().Received()
-                .LogProviderEventAsync(provider, EventType.ProviderOrganization_Removed);
+                .LogProviderOrganizationEventAsync(providerOrganization, EventType.ProviderOrganization_Removed);
         }
     }
 }

@@ -275,16 +275,19 @@ namespace Bit.Core.Services
             await _eventWriteService.CreateManyAsync(eventMessages);
         }
 
-        public async Task LogProviderEventAsync(Provider provider, EventType type, DateTime? date = null)
+        public async Task LogProviderOrganizationEventAsync(ProviderOrganization providerOrganization, EventType type,
+            DateTime? date = null)
         {
-            if (!provider.Enabled || !provider.UseEvents)
+            var providerAbilities = await _applicationCacheService.GetProviderAbilitiesAsync();
+            if (!CanUseProviderEvents(providerAbilities, providerOrganization.ProviderId))
             {
                 return;
             }
 
             var e = new EventMessage(_currentContext)
             {
-                ProviderId = provider.Id,
+                ProviderId = providerOrganization.ProviderId,
+                ProviderOrganizationId = providerOrganization.Id,
                 Type = type,
                 ActingUserId = _currentContext?.UserId,
                 Date = date.GetValueOrDefault(DateTime.UtcNow)
