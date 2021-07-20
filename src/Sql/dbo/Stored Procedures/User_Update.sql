@@ -29,7 +29,8 @@
     @KdfIterations INT,
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
-    @ApiKey VARCHAR(30)
+    @ApiKey VARCHAR(30),
+    @ForcePasswordReset BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON
@@ -66,7 +67,8 @@ BEGIN
         [KdfIterations] = @KdfIterations,
         [CreationDate] = @CreationDate,
         [RevisionDate] = @RevisionDate,
-        [ApiKey] = @ApiKey
+        [ApiKey] = @ApiKey,
+        [ForcePasswordReset] = @ForcePasswordReset
     WHERE
         [Id] = @Id
 END
