@@ -18,7 +18,7 @@ namespace Bit.Core.Utilities
                 return false;
             }
 
-            var illegalChars = @"[\s<>()]|[.,;]$";
+            var illegalChars = @"[\s<>();]|[.,]$";
             if (Regex.IsMatch(emailAddress, illegalChars))
             {
                 return false;
