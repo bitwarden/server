@@ -107,7 +107,21 @@ namespace Bit.Core.Repositories.SqlServer
                 // Return distinct Id results.
                 return results
                     .GroupBy(c => c.Id)
-                    .Select(c => c.First())
+                    .Select(grouping =>
+                    { 
+                        var first = grouping.First();
+                        if (first.HidePasswords)
+                        {
+                            first.HidePasswords = !grouping.Any(c => !c.HidePasswords);
+                        }
+
+                        if (first.ReadOnly)
+                        {
+                            first.ReadOnly = !grouping.Any(c => !c.ReadOnly);
+                        }
+                        
+                        return first;
+                    })
                     .ToList();
             }
         }
