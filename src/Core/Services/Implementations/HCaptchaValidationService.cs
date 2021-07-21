@@ -15,6 +15,7 @@ namespace Bit.Core.Services
     {
         private const double TokenLifetimeInHours = (double)5 / 60; // 5 minutes
         private const string TokenName = "CaptchaBypassToken";
+        private const string TokenClearTextPrefix = "BWCaptchaBypass_";
         private readonly ILogger<HCaptchaValidationService> _logger;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly GlobalSettings _globalSettings;
@@ -36,10 +37,12 @@ namespace Bit.Core.Services
         public string SiteKey => _globalSettings.Captcha.HCaptchaSiteKey;
         public bool RequireCaptcha => _globalSettings.Captcha.RequireCaptcha;
 
-        public string GenerateCaptchaBypassToken(User user) => _dataProtector.Protect(CaptchaBypassTokenContent(user));
+        public string GenerateCaptchaBypassToken(User user) =>
+            $"{TokenClearTextPrefix}{_dataProtector.Protect(CaptchaBypassTokenContent(user))}";
         public bool ValidateCaptchaBypassToken(string encryptedToken, User user) =>
-            user != null && CoreHelpers.TokenIsValid(TokenName, _dataProtector, encryptedToken, user.Email, user.Id,
-            TokenLifetimeInHours);
+            encryptedToken.StartsWith(TokenClearTextPrefix) && user != null &&
+            CoreHelpers.TokenIsValid(TokenName, _dataProtector, encryptedToken[TokenClearTextPrefix.Length..],
+            user.Email, user.Id, TokenLifetimeInHours);
 
         public async Task<bool> ValidateCaptchaResponseAsync(string captchResponse, string clientIpAddress)
         {
@@ -87,8 +90,8 @@ namespace Bit.Core.Services
         private static string CaptchaBypassTokenContent(User user) =>
             string.Join(' ', new object[] {
                 TokenName,
-                user.Id,
-                user.Email,
+                user?.Id,
+                user?.Email,
                 CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow.AddHours(TokenLifetimeInHours))
             });
     }

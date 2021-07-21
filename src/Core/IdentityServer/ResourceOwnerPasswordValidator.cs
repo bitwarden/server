@@ -87,7 +87,7 @@ namespace Bit.Core.IdentityServer
             await ValidateAsync(context, context.Request);
             if (context.Result.CustomResponse != null && bypassToken != null)
             {
-                context.Result.CustomResponse["HCaptcha_BypassKey"] = bypassToken;
+                context.Result.CustomResponse["CaptchaBypassToken"] = bypassToken;
             }
         }
 
