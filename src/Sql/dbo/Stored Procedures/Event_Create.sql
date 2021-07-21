@@ -10,7 +10,7 @@
     @GroupId UNIQUEIDENTIFIER,
     @OrganizationUserId UNIQUEIDENTIFIER,
     @ProviderUserId UNIQUEIDENTIFIER,
-    @ProviderOrganizationId UNIQUEIDENTIFIER,
+    @ProviderOrganizationId UNIQUEIDENTIFIER = null,
     @ActingUserId UNIQUEIDENTIFIER,
     @DeviceType SMALLINT,
     @IpAddress VARCHAR(50),

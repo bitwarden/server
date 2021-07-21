@@ -61,6 +61,6 @@
 
         ProviderOrganization_Created = 1900,
         ProviderOrganization_Added = 1901,
-        ProviderOrganization_Removed = 1902
+        ProviderOrganization_Removed = 1902,
     }
 }

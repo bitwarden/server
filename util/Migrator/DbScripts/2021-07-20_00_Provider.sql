@@ -1281,7 +1281,7 @@ CREATE PROCEDURE [dbo].[Event_Create]
     @GroupId UNIQUEIDENTIFIER,
     @OrganizationUserId UNIQUEIDENTIFIER,
     @ProviderUserId UNIQUEIDENTIFIER,
-    @ProviderOrganizationId UNIQUEIDENTIFIER,
+    @ProviderOrganizationId UNIQUEIDENTIFIER = null,
     @ActingUserId UNIQUEIDENTIFIER,
     @DeviceType SMALLINT,
     @IpAddress VARCHAR(50),
@@ -1429,7 +1429,7 @@ IF OBJECT_ID('[dbo].[Organization_DeleteById]') IS NOT NULL
 GO
 
 CREATE PROCEDURE [dbo].[Organization_DeleteById]
-@Id UNIQUEIDENTIFIER
+    @Id UNIQUEIDENTIFIER
 AS
 BEGIN
     SET NOCOUNT ON
@@ -1446,7 +1446,7 @@ BEGIN
                     [dbo].[Cipher]
                 WHERE
                     [UserId] IS NULL
-                  AND [OrganizationId] = @Id
+                    AND [OrganizationId] = @Id
 
                 SET @BatchSize = @@ROWCOUNT
 
@@ -1459,13 +1459,13 @@ BEGIN
         FROM
             [dbo].[SsoUser]
         WHERE
-                [OrganizationId] = @Id
+            [OrganizationId] = @Id
 
         DELETE
         FROM
             [dbo].[SsoConfig]
         WHERE
-                [OrganizationId] = @Id
+            [OrganizationId] = @Id
 
         DELETE CU
         FROM
@@ -1473,25 +1473,25 @@ BEGIN
                 INNER JOIN
             [dbo].[OrganizationUser] OU ON [CU].[OrganizationUserId] = [OU].[Id]
         WHERE
-                [OU].[OrganizationId] = @Id
+            [OU].[OrganizationId] = @Id
 
         DELETE
         FROM
             [dbo].[OrganizationUser]
         WHERE
-                [OrganizationId] = @Id
+            [OrganizationId] = @Id
 
         DELETE
         FROM
             [dbo].[ProviderOrganization]
         WHERE
-                [OrganizationId] = @Id
+            [OrganizationId] = @Id
 
         DELETE
         FROM
             [dbo].[Organization]
         WHERE
-                [Id] = @Id
+            [Id] = @Id
 
     COMMIT TRANSACTION Organization_DeleteById
 END
