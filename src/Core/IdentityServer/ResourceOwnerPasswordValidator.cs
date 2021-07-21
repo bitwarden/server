@@ -60,7 +60,7 @@ namespace Bit.Core.IdentityServer
             //}
 
             string bypassToken = null;
-            if (_captchaValidationService.ServiceEnabled && (_currentContext.IsBot || _captchaValidationService.RequireCaptcha))
+            if (_captchaValidationService.RequireCaptchaValidation(_currentContext))
             {
                 var user = await _userManager.FindByEmailAsync(context.UserName.ToLowerInvariant());
                 var captchaResponse = context.Request.Raw["captchaResponse"]?.ToString();
@@ -69,7 +69,7 @@ namespace Bit.Core.IdentityServer
                 {
                     context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant, "Captcha required.",
                         new Dictionary<string, object> {
-                            { "HCaptcha_SiteKey", _captchaValidationService.SiteKey },
+                            { _captchaValidationService.SiteKeyResponseKeyName, _captchaValidationService.SiteKey },
                         });
                     return;
                 }

@@ -16,13 +16,13 @@ namespace Bit.Core.Utilities
             var currentContext = context.HttpContext.RequestServices.GetRequiredService<ICurrentContext>();
             var captchaValidationService = context.HttpContext.RequestServices.GetRequiredService<ICaptchaValidationService>();
 
-            if (captchaValidationService.ServiceEnabled && (currentContext.IsBot || captchaValidationService.RequireCaptcha))
+            if (captchaValidationService.RequireCaptchaValidation(currentContext))
             {
                 var captchaResponse = (context.ActionArguments[ModelParameterName] as ICaptchaProtectedModel)?.CaptchaResponse;
 
                 if (string.IsNullOrWhiteSpace(captchaResponse))
                 {
-                    throw new BadRequestException("HCaptcha_SiteKey", captchaValidationService.SiteKey);
+                    throw new BadRequestException(captchaValidationService.SiteKeyResponseKeyName, captchaValidationService.SiteKey);
                 }
 
                 var captchaValid = captchaValidationService.ValidateCaptchaResponseAsync(captchaResponse,
