@@ -115,7 +115,8 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Emergency Access not valid.");
             }
 
-            if (!CoreHelpers.TokenIsValid("EmergencyAccessInvite", _dataProtector, token, user.Email, emergencyAccessId, _globalSettings))
+            if (!CoreHelpers.TokenIsValid("EmergencyAccessInvite", _dataProtector, token, user.Email, emergencyAccessId,
+                _globalSettings.OrganizationInviteExpirationHours))
             {
                 throw new BadRequestException("Invalid token.");
             }

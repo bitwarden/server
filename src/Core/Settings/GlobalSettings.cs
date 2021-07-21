@@ -473,6 +473,7 @@ namespace Bit.Core.Settings
 
         public class CaptchaSettings
         {
+            public bool RequireCaptcha { get; set; } = false;
             public string HCaptchaSecretKey { get; set; }
             public string HCaptchaSiteKey { get; set; }
         }
