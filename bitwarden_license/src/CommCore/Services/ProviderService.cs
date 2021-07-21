@@ -368,6 +368,7 @@ namespace Bit.CommCore.Services
             };
 
             await _providerOrganizationRepository.CreateAsync(providerOrganization);
+            await _eventService.LogProviderOrganizationEventAsync(providerOrganization, EventType.ProviderOrganization_Added);
         }
 
         public async Task<ProviderOrganization> CreateOrganizationAsync(Guid providerId, OrganizationSignup organizationSignup, User user)
@@ -382,24 +383,26 @@ namespace Bit.CommCore.Services
             };
 
             await _providerOrganizationRepository.CreateAsync(providerOrganization);
+            await _eventService.LogProviderOrganizationEventAsync(providerOrganization, EventType.ProviderOrganization_Created);
+
             return providerOrganization;
         }
 
         public async Task RemoveOrganization(Guid providerId, Guid providerOrganizationId, Guid removingUserId)
         {
             var providerOrganization = await _providerOrganizationRepository.GetByIdAsync(providerOrganizationId);
-
             if (providerOrganization == null || providerOrganization.ProviderId != providerId)
             {
-                throw new BadRequestException("Invalid organization");
+                throw new BadRequestException("Invalid organization.");
             }
-            
+
             if (!await _organizationService.HasConfirmedOwnersExceptAsync(providerOrganization.OrganizationId, new Guid[] {}))
             {
-                throw new BadRequestException("Organization needs to have at least one confirmed owner");
+                throw new BadRequestException("Organization needs to have at least one confirmed owner.");
             }
 
             await _providerOrganizationRepository.DeleteAsync(providerOrganization);
+            await _eventService.LogProviderOrganizationEventAsync(providerOrganization, EventType.ProviderOrganization_Removed);
         }
 
         private async Task SendInviteAsync(ProviderUser providerUser, Provider provider)
