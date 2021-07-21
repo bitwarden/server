@@ -17,6 +17,7 @@ using Microsoft.Azure.EventGrid.Models;
 using Bit.Core.Models.Data;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using Bit.Core;
 
 namespace Bit.Api.Controllers
 {
@@ -652,7 +653,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("{id}/attachment")]
-        [RequestSizeLimit(105_906_176)]
+        [RequestSizeLimit(Constants.FileSize101mb)]
         [DisableFormValueModelBinding]
         public async Task<CipherResponseModel> PostAttachment(string id)
         {
@@ -676,7 +677,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("{id}/attachment-admin")]
-        [RequestSizeLimit(105_906_176)]
+        [RequestSizeLimit(Constants.FileSize101mb)]
         [DisableFormValueModelBinding]
         public async Task<CipherMiniResponseModel> PostAttachmentAdmin(string id)
         {
@@ -709,7 +710,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("{id}/attachment/{attachmentId}/share")]
-        [RequestSizeLimit(105_906_176)]
+        [RequestSizeLimit(Constants.FileSize101mb)]
         [DisableFormValueModelBinding]
         public async Task PostAttachmentShare(string id, string attachmentId, Guid organizationId)
         {
@@ -805,7 +806,7 @@ namespace Bit.Api.Controllers
                 throw new BadRequestException("Invalid content.");
             }
 
-            if (Request.ContentLength > 105906176) // 101 MB, give em' 1 extra MB for cushion
+            if (Request.ContentLength > Constants.FileSize101mb)
             {
                 throw new BadRequestException("Max file size is 100 MB.");
             }
