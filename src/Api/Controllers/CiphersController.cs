@@ -623,7 +623,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("{id}/attachment/{attachmentId}")]
-        [DisableRequestSizeLimit]
+        [RequestSizeLimit(Constants.FileSize501mb)]
         [DisableFormValueModelBinding]
         public async Task PostFileForExistingAttachment(string id, string attachmentId)
         {
