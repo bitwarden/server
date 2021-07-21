@@ -1049,6 +1049,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<string>("ExcludedGlobalEquivalentDomains")
                         .HasColumnType("text");
 
+                    b.Property<bool>("ForcePasswordReset")
+                        .HasColumnType("boolean");
+
                     b.Property<byte?>("Gateway")
                         .HasColumnType("smallint");
 
