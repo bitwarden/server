@@ -714,5 +714,17 @@ namespace Bit.Core.Services
             message.Category = "ProviderUserRemoved";
             await _mailDeliveryService.SendEmailAsync(message);
         }
+        
+        public async Task SendUpdatedTempPasswordEmailAsync(string email, string userName)
+        {
+            var message = CreateDefaultMessage("Master Password Has Been Changed", email);
+            var model = new UpdateTempPasswordViewModel()
+            {
+                UserName = CoreHelpers.SanitizeForEmail(userName)
+            };
+            await AddMessageContentAsync(message, "UpdatedTempPassword", model);
+            message.Category = "UpdatedTempPassword";
+            await _mailDeliveryService.SendEmailAsync(message);
+        }
     }
 }

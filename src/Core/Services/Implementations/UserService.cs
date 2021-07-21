@@ -690,10 +690,36 @@ namespace Bit.Core.Services
 
             user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
             user.Key = key;
+            user.ForcePasswordReset = true;
 
             await _userRepository.ReplaceAsync(user);
             await _mailService.SendAdminResetPasswordEmailAsync(user.Email, user.Name ?? user.Email, org.Name);
             await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_AdminResetPassword);
+            await _pushService.PushLogOutAsync(user.Id);
+
+            return IdentityResult.Success;
+        }
+        
+        public async Task<IdentityResult> UpdateTempPasswordAsync(User user, string newMasterPassword, string key)
+        {
+            if (!user.ForcePasswordReset)
+            {
+                throw new BadRequestException("User does not have a temporary password to update.");
+            }
+            
+            var result = await UpdatePasswordHash(user, newMasterPassword);
+            if (!result.Succeeded)
+            {
+                return result;
+            }
+
+            user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
+            user.ForcePasswordReset = false;
+            user.Key = key;
+
+            await _userRepository.ReplaceAsync(user);
+            await _mailService.SendUpdatedTempPasswordEmailAsync(user.Email, user.Name ?? user.Email);
+            await _eventService.LogUserEventAsync(user.Id, EventType.User_UpdatedTempPassword);
             await _pushService.PushLogOutAsync(user.Id);
 
             return IdentityResult.Success;
