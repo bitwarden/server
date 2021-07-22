@@ -797,5 +797,28 @@ namespace Bit.Api.Controllers
                 return response;
             }
         }
+        
+        [HttpPost("update-temp-password")]
+        public async Task PostUpdateTempPasswordAsync([FromBody]UpdateTempPasswordRequestModel model)
+        {
+            var user = await _userService.GetUserByPrincipalAsync(User);
+            if (user == null)
+            {
+                throw new UnauthorizedAccessException();
+            }
+
+            var result = await _userService.UpdateTempPasswordAsync(user, model.NewMasterPasswordHash, model.Key);
+            if (result.Succeeded)
+            {
+                return;
+            }
+
+            foreach (var error in result.Errors)
+            {
+                ModelState.AddModelError(string.Empty, error.Description);
+            }
+
+            throw new BadRequestException(ModelState);
+        }
     }
 }
