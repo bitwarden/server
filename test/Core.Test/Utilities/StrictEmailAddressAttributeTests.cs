@@ -28,6 +28,7 @@ namespace Bit.Core.Test.Utilities
         [InlineData("\"   \"hello@world.com")]  // leading spaces in quotes
         [InlineData("hello@world.com\"    \"")] // trailing spaces in quotes
         [InlineData("hel\"   \"lo@world.com")]  // local-part spaces in quotes
+        [InlineData("hello there@world.com")]   // unescaped unquoted spaces
         [InlineData("Hello World <hello@world.com>")]    // friendly from
         [InlineData("<hello@world.com>")]       // wrapped angle brackets
         [InlineData("hello(comment)there@world.com")]   // comment
@@ -35,6 +36,9 @@ namespace Bit.Core.Test.Utilities
         [InlineData(".hello@world.com")]        // leading period
         [InlineData("hello@world.com;")]        // trailing semicolon
         [InlineData(";hello@world.com")]        // leading semicolon
+        [InlineData("hello@world.com; hello@world.com")]    // semicolon separated list
+        [InlineData("hello@world.com, hello@world.com")]    // comma separated list
+
         public void IsValid_ReturnsFalseWhenInvalid(string email)
         {
             var sut = new StrictEmailAddressAttribute();
