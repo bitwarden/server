@@ -21,7 +21,7 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
                 join p in dbContext.Providers
                     on pu.ProviderId equals p.Id into p_g
                 from p in p_g.DefaultIfEmpty()
-                where pu.UserId == _userId && (_status == null || pu.Status == _status)
+                where pu.UserId == _userId && p.Status != ProviderStatusType.Pending && (_status == null || pu.Status == _status)
                 select new { pu, p };
             return query.Select(x => new ProviderUserProviderDetails() 
             {
@@ -34,6 +34,7 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
                 Enabled = x.p.Enabled,
                 Permissions = x.pu.Permissions,
                 UseEvents = x.p.UseEvents,
+                ProviderStatus = x.p.Status,
             });
         }
     }

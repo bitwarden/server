@@ -9,7 +9,8 @@ SELECT
     PU.[Type],
     P.[Enabled],
     PU.[Permissions],
-    P.[UseEvents]
+    P.[UseEvents],
+    P.[Status] ProviderStatus
 FROM
     [dbo].[ProviderUser] PU
 LEFT JOIN
