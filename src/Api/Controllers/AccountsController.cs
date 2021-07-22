@@ -83,6 +83,7 @@ namespace Bit.Api.Controllers
 
         [HttpPost("register")]
         [AllowAnonymous]
+        [CaptchaProtected]
         public async Task PostRegister([FromBody]RegisterRequestModel model)
         {
             var result = await _userService.RegisterUserAsync(model.ToUser(), model.MasterPasswordHash,

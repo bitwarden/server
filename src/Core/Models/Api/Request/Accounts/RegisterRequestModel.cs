@@ -9,7 +9,7 @@ using Newtonsoft.Json;
 
 namespace Bit.Core.Models.Api
 {
-    public class RegisterRequestModel : IValidatableObject
+    public class RegisterRequestModel : IValidatableObject, ICaptchaProtectedModel
     {
         [StringLength(50)]
         public string Name { get; set; }
@@ -22,6 +22,7 @@ namespace Bit.Core.Models.Api
         public string MasterPasswordHash { get; set; }
         [StringLength(50)]
         public string MasterPasswordHint { get; set; }
+        public string CaptchaResponse { get; set; }
         public string Key { get; set; }
         public KeysRequestModel Keys { get; set; }
         public string Token { get; set; }
