@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Bit.Core.Settings;
+using Bit.Core.Enums;
 
 namespace Bit.Core.IdentityServer
 {
@@ -11,12 +12,12 @@ namespace Bit.Core.IdentityServer
         {
             ApiClients = new List<Client>
             {
-                new ApiClient(globalSettings, "mobile", 90, 1),
-                new ApiClient(globalSettings, "web", 30, 1),
-                new ApiClient(globalSettings, "browser", 30, 1),
-                new ApiClient(globalSettings, "desktop", 30, 1),
-                new ApiClient(globalSettings, "cli", 30, 1),
-                new ApiClient(globalSettings, "connector", 30, 24)
+                new ApiClient(globalSettings, BitwardenClient.Mobile, 90, 1),
+                new ApiClient(globalSettings, BitwardenClient.Web, 30, 1),
+                new ApiClient(globalSettings, BitwardenClient.Browser, 30, 1),
+                new ApiClient(globalSettings, BitwardenClient.Desktop, 30, 1),
+                new ApiClient(globalSettings, BitwardenClient.Cli, 30, 1),
+                new ApiClient(globalSettings, BitwardenClient.DirectoryConnector, 30, 24)
             }.ToDictionary(c => c.ClientId);
         }
 

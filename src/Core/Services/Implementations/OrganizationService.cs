@@ -1972,6 +1972,12 @@ namespace Bit.Core.Services
                     }
                 }
             }
+            
+            if (_currentContext.ClientId == BitwardenClient.DirectoryConnector)
+            {
+                await _referenceEventService.RaiseEventAsync(
+                    new ReferenceEvent(ReferenceEventType.DirectorySynced, organization));
+            }
         }
 
         public async Task RotateApiKeyAsync(Organization organization)
