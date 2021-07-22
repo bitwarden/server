@@ -11,5 +11,6 @@ BEGIN
         [dbo].[ProviderUserProviderDetailsView]
     WHERE
         [UserId] = @UserId
+        AND [ProviderStatus] != 0 -- Not Pending
         AND (@Status IS NULL OR [Status] = @Status)
 END
