@@ -185,5 +185,10 @@ namespace Bit.Core.Services
         {
             return Task.FromResult(0);
         }
+        
+        public Task SendUpdatedTempPasswordEmailAsync(string email, string userName)
+        {
+            return Task.FromResult(0);
+        }
     }
 }
