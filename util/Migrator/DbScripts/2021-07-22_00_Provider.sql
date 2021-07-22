@@ -950,7 +950,8 @@ SELECT
     PU.[Type],
     P.[Enabled],
     PU.[Permissions],
-    P.[UseEvents]
+    P.[UseEvents],
+    P.[Status] ProviderStatus
 FROM
     [dbo].[ProviderUser] PU
 LEFT JOIN
@@ -976,7 +977,8 @@ BEGIN
         [dbo].[ProviderUserProviderDetailsView]
     WHERE
         [UserId] = @UserId
-    AND (@Status IS NULL OR [Status] = @Status)
+        AND [ProviderStatus] != 0 -- Not Pending
+        AND (@Status IS NULL OR [Status] = @Status)
 END
 GO
 
