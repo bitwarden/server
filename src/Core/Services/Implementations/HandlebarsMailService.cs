@@ -660,8 +660,8 @@ namespace Bit.Core.Services
                 WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
                 SiteName = _globalSettings.SiteName,
                 ProviderId = provider.Id.ToString(),
-                Email = email,
-                Token = token,
+                Email = WebUtility.UrlEncode(email),
+                Token = WebUtility.UrlEncode(token),
             };
             await AddMessageContentAsync(message, "Provider.ProviderSetupInvite", model);
             message.Category = "ProviderSetupInvite";
@@ -674,11 +674,11 @@ namespace Bit.Core.Services
             var model = new ProviderUserInvitedViewModel
             {
                 ProviderName = CoreHelpers.SanitizeForEmail(providerName),
-                Email = WebUtility.UrlDecode(providerUser.Email),
+                Email = WebUtility.UrlEncode(providerUser.Email),
                 ProviderId = providerUser.ProviderId.ToString(),
                 ProviderUserId = providerUser.Id.ToString(),
                 ProviderNameUrlEncoded = WebUtility.UrlEncode(providerName),
-                Token = token,
+                Token = WebUtility.UrlEncode(token),
                 WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
                 SiteName = _globalSettings.SiteName,
             };
