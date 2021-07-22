@@ -1,6 +1,5 @@
-﻿using System;
-using System.ComponentModel.DataAnnotations;
-using System.Text.RegularExpressions;
+﻿using System.ComponentModel.DataAnnotations;
+using MimeKit;
 
 namespace Bit.Core.Utilities
 {
@@ -18,12 +17,19 @@ namespace Bit.Core.Utilities
                 return false;
             }
 
-            var illegalChars = @"[\s<>()]";
-            if (Regex.IsMatch(emailAddress, illegalChars))
+            try
+            {
+                var parsedEmailAddress = MailboxAddress.Parse(emailAddress).Address;
+                if (parsedEmailAddress != emailAddress)
+                {
+                    return false;
+                }
+            }
+            catch (ParseException e)
             {
                 return false;
             }
-             
+
             return new EmailAddressAttribute().IsValid(emailAddress);
         }
     }
