@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading.Tasks;
+using Bit.Core.Context;
 using Bit.Core.Models.Table;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
@@ -33,9 +34,8 @@ namespace Bit.Core.Services
             _dataProtector = dataProtectorProvider.CreateProtector("CaptchaServiceDataProtector");
         }
 
-        public bool ServiceEnabled => true;
+        public string SiteKeyResponseKeyName => "HCaptcha_SiteKey";
         public string SiteKey => _globalSettings.Captcha.HCaptchaSiteKey;
-        public bool RequireCaptcha => _globalSettings.Captcha.RequireCaptcha;
 
         public string GenerateCaptchaBypassToken(User user) =>
             $"{TokenClearTextPrefix}{_dataProtector.Protect(CaptchaBypassTokenContent(user))}";
@@ -44,9 +44,9 @@ namespace Bit.Core.Services
             CoreHelpers.TokenIsValid(TokenName, _dataProtector, encryptedToken[TokenClearTextPrefix.Length..],
             user.Email, user.Id, TokenLifetimeInHours);
 
-        public async Task<bool> ValidateCaptchaResponseAsync(string captchResponse, string clientIpAddress)
+        public async Task<bool> ValidateCaptchaResponseAsync(string captchaResponse, string clientIpAddress)
         {
-            if (string.IsNullOrWhiteSpace(captchResponse))
+            if (string.IsNullOrWhiteSpace(captchaResponse))
             {
                 return false;
             }
@@ -59,7 +59,7 @@ namespace Bit.Core.Services
                 RequestUri = new Uri("https://hcaptcha.com/siteverify"),
                 Content = new FormUrlEncodedContent(new Dictionary<string, string>
                 {
-                    { "response", captchResponse.TrimStart("hcaptcha|".ToCharArray()) },
+                    { "response", captchaResponse.TrimStart("hcaptcha|".ToCharArray()) },
                     { "secret", _globalSettings.Captcha.HCaptchaSecretKey },
                     { "sitekey", SiteKey },
                     { "remoteip", clientIpAddress }
@@ -86,6 +86,9 @@ namespace Bit.Core.Services
             dynamic jsonResponse = JsonConvert.DeserializeObject(responseContent);
             return (bool)jsonResponse.success;
         }
+
+        public bool RequireCaptchaValidation(ICurrentContext currentContext) =>
+            currentContext.IsBot || _globalSettings.Captcha.ForceCaptchaRequired;
 
         private static string CaptchaBypassTokenContent(User user) =>
             string.Join(' ', new object[] {
