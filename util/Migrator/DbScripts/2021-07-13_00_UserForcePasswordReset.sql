@@ -11,7 +11,7 @@ GO
 UPDATE
     [dbo].[User]
 SET
-    [ForcePasswordReset] = FALSE
+    [ForcePasswordReset] = 0
 WHERE
     [ForcePasswordReset] IS NULL
 GO
