@@ -1,7 +1,5 @@
 using System.Linq;
-using Bit.Core.Models.EntityFramework;
 using System;
-using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 
 namespace Bit.Core.Repositories.EntityFramework.Queries
