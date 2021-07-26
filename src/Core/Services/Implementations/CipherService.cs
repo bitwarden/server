@@ -13,6 +13,7 @@ using Bit.Core.Enums;
 using Bit.Core.Utilities;
 using Bit.Core.Settings;
 using Bit.Core.Models.Api;
+using Bit.Core.Models.Business;
 
 namespace Bit.Core.Services
 {
@@ -34,6 +35,7 @@ namespace Bit.Core.Services
         private readonly IPolicyRepository _policyRepository;
         private readonly GlobalSettings _globalSettings;
         private const long _fileSizeLeeway = 1024L * 1024L; // 1MB 
+        private readonly IReferenceEventService _referenceEventService;
 
         public CipherService(
             ICipherRepository cipherRepository,
@@ -48,7 +50,8 @@ namespace Bit.Core.Services
             IEventService eventService,
             IUserService userService,
             IPolicyRepository policyRepository,
-            GlobalSettings globalSettings)
+            GlobalSettings globalSettings,
+            IReferenceEventService referenceEventService)
         {
             _cipherRepository = cipherRepository;
             _folderRepository = folderRepository;
@@ -63,6 +66,7 @@ namespace Bit.Core.Services
             _userService = userService;
             _policyRepository = policyRepository;
             _globalSettings = globalSettings;
+            _referenceEventService = referenceEventService;
         }
 
         public async Task SaveAsync(Cipher cipher, Guid savingUserId, DateTime? lastKnownRevisionDate,
@@ -727,17 +731,17 @@ namespace Bit.Core.Services
             IEnumerable<KeyValuePair<int, int>> collectionRelationships,
             Guid importingUserId)
         {
-            if (collections.Count > 0)
+            var org = collections.Count > 0 ?
+                await _organizationRepository.GetByIdAsync(collections[0].OrganizationId) :
+                await _organizationRepository.GetByIdAsync(ciphers.FirstOrDefault(c => c.OrganizationId.HasValue).OrganizationId.Value);
+
+            if (collections.Count > 0 && org != null && org.MaxCollections.HasValue)
             {
-                var org = await _organizationRepository.GetByIdAsync(collections[0].OrganizationId);
-                if (org != null && org.MaxCollections.HasValue)
+                var collectionCount = await _collectionRepository.GetCountByOrganizationIdAsync(org.Id);
+                if (org.MaxCollections.Value < (collectionCount + collections.Count))
                 {
-                    var collectionCount = await _collectionRepository.GetCountByOrganizationIdAsync(org.Id);
-                    if (org.MaxCollections.Value < (collectionCount + collections.Count))
-                    {
-                        throw new BadRequestException("This organization can only have a maximum of " +
-                            $"{org.MaxCollections.Value} collections.");
-                    }
+                    throw new BadRequestException("This organization can only have a maximum of " +
+                        $"{org.MaxCollections.Value} collections.");
                 }
             }
 
@@ -777,6 +781,13 @@ namespace Bit.Core.Services
 
             // push
             await _pushService.PushSyncVaultAsync(importingUserId);
+
+
+            if (org != null)
+            {
+                await _referenceEventService.RaiseEventAsync(
+                    new ReferenceEvent(ReferenceEventType.VaultImported, org));
+            }
         }
 
         public async Task SoftDeleteAsync(Cipher cipher, Guid deletingUserId, bool orgAdmin = false)
