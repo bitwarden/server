@@ -305,6 +305,8 @@ namespace Bit.Core.Services
                     {
                         PlanName = newPlan.Name,
                         PlanType = newPlan.Type,
+                        OldPlanName = existingPlan.Name,
+                        OldPlanType = existingPlan.Type,
                         Seats = organization.Seats,
                         Storage = organization.MaxStorageGb,
                     });
