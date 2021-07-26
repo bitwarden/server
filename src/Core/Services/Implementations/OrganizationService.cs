@@ -1177,9 +1177,9 @@ namespace Bit.Core.Services
                 await ValidateOrganizationUserUpdatePermissions(organizationId, invite.Type.Value, null);
             }
 
+            var userCount = await _organizationUserRepository.GetCountByOrganizationIdAsync(organizationId);
             if (organization.Seats.HasValue)
             {
-                var userCount = await _organizationUserRepository.GetCountByOrganizationIdAsync(organizationId);
                 var availableSeats = organization.Seats.Value - userCount;
                 if (availableSeats < invite.Emails.Count())
                 {
@@ -1245,7 +1245,8 @@ namespace Bit.Core.Services
             await _referenceEventService.RaiseEventAsync(
                 new ReferenceEvent(ReferenceEventType.InvitedUsers, organization)
                 {
-                    Users = orgUserInvitedCount
+                    Users = orgUserInvitedCount,
+                    FirstInvite = userCount < 2
                 });
 
             return orgUsers;
