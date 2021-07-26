@@ -5,6 +5,8 @@ using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using System.Collections.Generic;
 using Bit.Core.Models.Data;
+using Bit.Core.Models.Business;
+using Bit.Core.Enums;
 
 namespace Bit.Core.Services
 {
@@ -14,17 +16,20 @@ namespace Bit.Core.Services
         private readonly IOrganizationRepository _organizationRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly IGroupRepository _groupRepository;
+        private readonly IReferenceEventService _referenceEventService;
 
         public GroupService(
             IEventService eventService,
             IOrganizationRepository organizationRepository,
             IOrganizationUserRepository organizationUserRepository,
-            IGroupRepository groupRepository)
+            IGroupRepository groupRepository,
+            IReferenceEventService referenceEventService)
         {
             _eventService = eventService;
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
             _groupRepository = groupRepository;
+            _referenceEventService = referenceEventService;
         }
 
         public async Task SaveAsync(Group group, IEnumerable<SelectionReadOnly> collections = null)
@@ -54,6 +59,10 @@ namespace Bit.Core.Services
                 }
 
                 await _eventService.LogGroupEventAsync(group, Enums.EventType.Group_Created);
+                if ((await _groupRepository.GetManyByOrganizationIdAsync(org.Id)).Count.Equals(1))
+                {
+                    await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.FirstGroupCreated, org));
+                }
             }
             else
             {
