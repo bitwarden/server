@@ -87,6 +87,12 @@ namespace Bit.Core.Services
                         cipher.UserId = savingUserId;
                     }
                     await _cipherRepository.CreateAsync(cipher, collectionIds);
+
+                    if ((await _cipherRepository.GetManyByOrganizationIdAsync(cipher.OrganizationId.Value)).Count < 1)
+                    {
+                        await _referenceEventService.RaiseEventAsync(
+                            new ReferenceEvent(ReferenceEventType.FirstSecretAdded, await _organizationRepository.GetByIdAsync(cipher.OrganizationId.Value)));
+                    }
                 }
                 else
                 {
