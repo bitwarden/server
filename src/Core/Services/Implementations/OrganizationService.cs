@@ -499,14 +499,15 @@ namespace Bit.Core.Services
                 });
             }
 
-            organization.Seats = (short?)newSeatTotal;
             await _referenceEventService.RaiseEventAsync(
                 new ReferenceEvent(ReferenceEventType.AdjustSeats, organization)
                 {
                     PlanName = plan.Name,
                     PlanType = plan.Type,
-                    Seats = organization.Seats,
+                    Seats = newSeatTotal,
+                    PreviousSeats = organization.Seats
                 });
+            organization.Seats = (short?)newSeatTotal;
             await ReplaceAndUpdateCache(organization);
             return paymentIntentClientSecret;
         }
