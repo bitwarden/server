@@ -115,7 +115,8 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Emergency Access not valid.");
             }
 
-            if (!CoreHelpers.TokenIsValid("EmergencyAccessInvite", _dataProtector, token, user.Email, emergencyAccessId, _globalSettings))
+            if (!CoreHelpers.TokenIsValid("EmergencyAccessInvite", _dataProtector, token, user.Email, emergencyAccessId,
+                _globalSettings.OrganizationInviteExpirationHours))
             {
                 throw new BadRequestException("Invalid token.");
             }
@@ -297,7 +298,7 @@ namespace Bit.Core.Services
             grantor.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>());
             await _userRepository.ReplaceAsync(grantor);
 
-            // Remove grantor from all organisations unless Owner
+            // Remove grantor from all organizations unless Owner
             var orgUser = await _organizationUserRepository.GetManyByUserAsync(grantor.Id);
             foreach (var o in orgUser)
             {

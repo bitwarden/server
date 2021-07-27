@@ -18,7 +18,6 @@ namespace Bit.Admin.HostedServices
 {
     public class AzureQueueMailHostedService : IHostedService
     {
-        private readonly JsonSerializer _jsonSerializer;
         private readonly ILogger<AzureQueueMailHostedService> _logger;
         private readonly GlobalSettings _globalSettings;
         private readonly IMailService _mailService;
@@ -35,11 +34,6 @@ namespace Bit.Admin.HostedServices
             _logger = logger;
             _mailService = mailService;
             _globalSettings = globalSettings;
-
-            _jsonSerializer = JsonSerializer.Create(new JsonSerializerSettings
-            {
-                Converters = new[] { new EncodedStringConverter() },
-            });
         }
 
         public Task StartAsync(CancellationToken cancellationToken)
@@ -76,10 +70,10 @@ namespace Bit.Admin.HostedServices
                 {
                     try
                     {
-                        var token = JToken.Parse(message.MessageText);
+                        var token = JToken.Parse(message.DecodeMessageText());
                         if (token is JArray)
                         {
-                            foreach (var mailQueueMessage in token.ToObject<List<MailQueueMessage>>(_jsonSerializer))
+                            foreach (var mailQueueMessage in token.ToObject<List<MailQueueMessage>>())
                             {
                                 await _mailService.SendEnqueuedMailMessageAsync(mailQueueMessage);
                             }

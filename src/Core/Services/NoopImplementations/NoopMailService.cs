@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Bit.Core.Models.Business;
 using Bit.Core.Models.Mail;
 using Bit.Core.Models.Table;
 using Bit.Core.Models.Table.Provider;
@@ -34,7 +35,7 @@ namespace Bit.Core.Services
             return Task.FromResult(0);
         }
 
-        public Task SendOrganizationAcceptedEmailAsync(string organizationName, string userEmail, IEnumerable<string> adminEmails)
+        public Task SendOrganizationAcceptedEmailAsync(Organization organization, string userIdentifier, IEnumerable<string> adminEmails)
         {
             return Task.FromResult(0);
         }
@@ -44,12 +45,12 @@ namespace Bit.Core.Services
             return Task.FromResult(0);
         }
 
-        public Task SendOrganizationInviteEmailAsync(string organizationName, OrganizationUser orgUser, string token)
+        public Task SendOrganizationInviteEmailAsync(string organizationName, OrganizationUser orgUser, ExpiringToken token)
         {
             return Task.FromResult(0);
         }
 
-        public Task BulkSendOrganizationInviteEmailAsync(string organizationName, IEnumerable<(OrganizationUser orgUser, string token)> invites)
+        public Task BulkSendOrganizationInviteEmailAsync(string organizationName, IEnumerable<(OrganizationUser orgUser, ExpiringToken token)> invites)
         {
             return Task.FromResult(0);
         }
@@ -176,6 +177,16 @@ namespace Bit.Core.Services
         }
 
         public Task SendProviderConfirmedEmailAsync(string providerName, string email)
+        {
+            return Task.FromResult(0);
+        }
+
+        public Task SendProviderUserRemoved(string providerName, string email)
+        {
+            return Task.FromResult(0);
+        }
+        
+        public Task SendUpdatedTempPasswordEmailAsync(string email, string userName)
         {
             return Task.FromResult(0);
         }

@@ -7,6 +7,7 @@ BEGIN
 
     SELECT
         OU.[Id],
+        OU.[UserId],
         U.[PublicKey]
     FROM
         @OrganizationUserIds OUIDs

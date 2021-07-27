@@ -122,7 +122,7 @@ END
 GO
 
 CREATE PROCEDURE [dbo].[Provider_Create]
-    @Id UNIQUEIDENTIFIER,
+    @Id UNIQUEIDENTIFIER OUTPUT,
     @Name NVARCHAR(50),
     @BusinessName NVARCHAR(50),
     @BusinessAddress1 NVARCHAR(50),
@@ -312,7 +312,7 @@ END
 GO
 
 CREATE PROCEDURE [dbo].[ProviderUser_Create]
-    @Id UNIQUEIDENTIFIER,
+    @Id UNIQUEIDENTIFIER OUTPUT,
     @ProviderId UNIQUEIDENTIFIER,
     @UserId UNIQUEIDENTIFIER,
     @Email NVARCHAR(256),
@@ -535,7 +535,7 @@ END
 GO
 
 CREATE PROCEDURE [dbo].[ProviderOrganization_Create]
-    @Id UNIQUEIDENTIFIER,
+    @Id UNIQUEIDENTIFIER OUTPUT,
     @ProviderId UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
     @Key VARCHAR(MAX),
@@ -655,154 +655,6 @@ BEGIN
         [dbo].[ProviderOrganizationView]
     WHERE
         [Id] = @Id
-END
-GO
-
-IF OBJECT_ID('[dbo].[ProviderOrganizationProviderUser]') IS NULL
-BEGIN
-    CREATE TABLE [dbo].[ProviderOrganizationProviderUser] (
-        [Id]                     UNIQUEIDENTIFIER    NOT NULL,
-        [ProviderOrganizationId] UNIQUEIDENTIFIER    NOT NULL,
-        [ProviderUserId]         UNIQUEIDENTIFIER    NULL,
-        [Type]                   TINYINT             NOT NULL,
-        [Permissions]            NVARCHAR (MAX)      NULL,
-        [CreationDate]           DATETIME2 (7)       NOT NULL,
-        [RevisionDate]           DATETIME2 (7)       NOT NULL,
-        CONSTRAINT [PK_ProviderOrganizationProviderUser] PRIMARY KEY CLUSTERED ([Id] ASC),
-        CONSTRAINT [FK_ProviderOrganizationProviderUser_Provider] FOREIGN KEY ([ProviderOrganizationId]) REFERENCES [dbo].[ProviderOrganization] ([Id]) ON DELETE CASCADE,
-        CONSTRAINT [FK_ProviderOrganizationProviderUser_User] FOREIGN KEY ([ProviderUserId]) REFERENCES [dbo].[ProviderUser] ([Id])
-    );
-END
-GO
-
-IF OBJECT_ID('[dbo].[ProviderOrganizationProviderUser_Create]') IS NOT NULL
-BEGIN
-    DROP PROCEDURE [dbo].[ProviderOrganizationProviderUser_Create]
-END
-GO
-
-CREATE PROCEDURE [dbo].[ProviderOrganizationProviderUser_Create]
-    @Id UNIQUEIDENTIFIER,
-    @ProviderOrganizationId UNIQUEIDENTIFIER,
-    @ProviderUserId UNIQUEIDENTIFIER,
-    @Type TINYINT,
-    @Permissions NVARCHAR(MAX),
-    @CreationDate DATETIME2(7),
-    @RevisionDate DATETIME2(7)
-AS
-BEGIN
-    SET NOCOUNT ON
-
-    INSERT INTO [dbo].[ProviderOrganizationProviderUser]
-    (
-        [Id],
-        [ProviderOrganizationId],
-        [ProviderUserId],
-        [Type],
-        [Permissions],
-        [CreationDate],
-        [RevisionDate]
-    )
-    VALUES
-    (
-        @Id,
-        @ProviderOrganizationId,
-        @ProviderUserId,
-        @Type,
-        @Permissions,
-        @CreationDate,
-        @RevisionDate
-    )
-END
-GO
-
-IF OBJECT_ID('[dbo].[ProviderOrganizationProviderUser_DeleteById]') IS NOT NULL
-BEGIN
-    DROP PROCEDURE [dbo].[ProviderOrganizationProviderUser_DeleteById]
-END
-GO
-
-CREATE PROCEDURE [dbo].[ProviderOrganizationProviderUser_DeleteById]
-@Id UNIQUEIDENTIFIER
-AS
-BEGIN
-    SET NOCOUNT ON
-
-    BEGIN TRANSACTION POPU_DeleteById
-
-        DECLARE @ProviderUserId UNIQUEIDENTIFIER
-
-        SELECT
-            @ProviderUserId = [ProviderUserId]
-        FROM
-            [dbo].[ProviderOrganizationProviderUser]
-        WHERE
-            [Id] = @Id
-
-        DELETE
-        FROM
-            [dbo].[ProviderOrganizationProviderUser]
-        WHERE
-            [Id] = @Id
-
-        EXEC [dbo].[User_BumpAccountRevisionDateByProviderUserId] @ProviderUserId
-
-    COMMIT TRANSACTION POPU_DeleteById
-END
-GO
-
-IF OBJECT_ID('[dbo].[ProviderOrganizationProviderUser_ReadById]') IS NOT NULL
-BEGIN
-    DROP PROCEDURE [dbo].[ProviderOrganizationProviderUser_ReadById]
-END
-GO
-
-CREATE PROCEDURE [dbo].[ProviderOrganizationProviderUser_ReadById]
-    @Id UNIQUEIDENTIFIER
-AS
-BEGIN
-    SET NOCOUNT ON
-
-    SELECT
-        *
-    FROM
-        [dbo].[ProviderOrganizationProviderUser]
-    WHERE
-        [Id] = @Id
-END
-GO
-
-IF OBJECT_ID('[dbo].[ProviderOrganizationProviderUser_Update]') IS NOT NULL
-BEGIN
-    DROP PROCEDURE [dbo].[ProviderOrganizationProviderUser_Update]
-END
-GO
-
-CREATE PROCEDURE [dbo].[ProviderOrganizationProviderUser_Update]
-    @Id UNIQUEIDENTIFIER,
-    @ProviderOrganizationId UNIQUEIDENTIFIER,
-    @ProviderUserId UNIQUEIDENTIFIER,
-    @Type TINYINT,
-    @Permissions NVARCHAR(MAX),
-    @CreationDate DATETIME2(7),
-    @RevisionDate DATETIME2(7)
-AS
-BEGIN
-    SET NOCOUNT ON
-
-    UPDATE
-        [dbo].[ProviderOrganizationProviderUser]
-    SET
-        [ProviderOrganizationId] = @ProviderOrganizationId,
-        [ProviderUserId] = @ProviderUserId,
-        [Type] = @Type,
-        [Permissions] = @Permissions,
-        [CreationDate] = @CreationDate,
-        [RevisionDate] = @RevisionDate
-    WHERE
-        [Id] = @Id
-
-    EXEC [dbo].[User_BumpAccountRevisionDateByProviderUserId] @ProviderUserId
 END
 GO
 
@@ -984,3 +836,638 @@ BEGIN
         END
 END
 GO
+<<<<<<< HEAD:util/Migrator/DbScripts/2021-05-26_00_Provider.sql
+=======
+
+IF OBJECT_ID('[dbo].[ProviderUser_ReadByProviderIdUserId]') IS NOT NULL
+    BEGIN
+        DROP PROCEDURE [dbo].[ProviderUser_ReadByProviderIdUserId]
+    END
+GO
+
+CREATE PROCEDURE [dbo].[ProviderUser_ReadByProviderIdUserId]
+    @ProviderId UNIQUEIDENTIFIER,
+    @UserId UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    SELECT
+        *
+    FROM
+        [dbo].[ProviderUserView]
+    WHERE
+            [ProviderId] = @ProviderId
+      AND [UserId] = @UserId
+END
+GO
+
+IF EXISTS(SELECT * FROM sys.views WHERE [Name] = 'ProviderUserUserDetailsView')
+    BEGIN
+        DROP VIEW [dbo].[ProviderUserUserDetailsView];
+    END
+GO
+
+CREATE VIEW [dbo].[ProviderUserUserDetailsView]
+AS
+SELECT
+    PU.[Id],
+    PU.[UserId],
+    PU.[ProviderId],
+    U.[Name],
+    ISNULL(U.[Email], PU.[Email]) Email,
+    PU.[Status],
+    PU.[Type],
+    PU.[Permissions]
+FROM
+    [dbo].[ProviderUser] PU
+LEFT JOIN
+    [dbo].[User] U ON U.[Id] = PU.[UserId]
+GO
+
+IF OBJECT_ID('[dbo].[ProviderUserUserDetails_ReadByProviderId]') IS NOT NULL
+    BEGIN
+        DROP PROCEDURE [dbo].[ProviderUserUserDetails_ReadByProviderId]
+    END
+GO
+
+CREATE PROCEDURE [dbo].[ProviderUserUserDetails_ReadByProviderId]
+@ProviderId UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    SELECT
+        *
+    FROM
+        [dbo].[ProviderUserUserDetailsView]
+    WHERE
+        [ProviderId] = @ProviderId
+END
+GO
+
+IF EXISTS(SELECT * FROM sys.views WHERE [Name] = 'ProviderUserProviderDetailsView')
+    BEGIN
+        DROP VIEW [dbo].[ProviderUserProviderDetailsView];
+    END
+GO
+
+CREATE VIEW [dbo].[ProviderUserProviderDetailsView]
+AS
+SELECT
+    PU.[UserId],
+    PU.[ProviderId],
+    P.[Name],
+    PU.[Key],
+    PU.[Status],
+    PU.[Type],
+    P.[Enabled],
+    PU.[Permissions],
+    P.[UseEvents],
+    P.[Status] ProviderStatus
+FROM
+    [dbo].[ProviderUser] PU
+LEFT JOIN
+    [dbo].[Provider] P ON P.[Id] = PU.[ProviderId]
+GO
+
+IF OBJECT_ID('[dbo].[ProviderUserProviderDetails_ReadByUserIdStatus]') IS NOT NULL
+    BEGIN
+        DROP PROCEDURE [dbo].[ProviderUserProviderDetails_ReadByUserIdStatus]
+    END
+GO
+
+CREATE PROCEDURE [dbo].[ProviderUserProviderDetails_ReadByUserIdStatus]
+    @UserId UNIQUEIDENTIFIER,
+    @Status TINYINT
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    SELECT
+        *
+    FROM
+        [dbo].[ProviderUserProviderDetailsView]
+    WHERE
+        [UserId] = @UserId
+        AND [ProviderStatus] != 0 -- Not Pending
+        AND (@Status IS NULL OR [Status] = @Status)
+END
+GO
+
+IF OBJECT_ID('[dbo].[Provider_ReadAbilities]') IS NOT NULL
+    BEGIN
+        DROP PROCEDURE [dbo].[Provider_ReadAbilities]
+    END
+GO
+
+CREATE PROCEDURE [dbo].[Provider_ReadAbilities]
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    SELECT
+        [Id],
+        [UseEvents],
+        [Enabled]
+    FROM
+        [dbo].[Provider]
+END
+GO
+
+IF OBJECT_ID('[dbo].[User_ReadPublicKeysByProviderUserIds]') IS NOT NULL
+    BEGIN
+        DROP PROCEDURE [dbo].[User_ReadPublicKeysByProviderUserIds]
+    END
+GO
+
+CREATE PROCEDURE [dbo].[User_ReadPublicKeysByProviderUserIds]
+    @ProviderId UNIQUEIDENTIFIER,
+    @ProviderUserIds [dbo].[GuidIdArray] READONLY
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    SELECT
+        PU.[Id],
+        PU.[UserId],
+        U.[PublicKey]
+    FROM
+        @ProviderUserIds PUIDs
+            INNER JOIN
+        [dbo].[ProviderUser] PU ON PUIDs.Id = PU.Id AND PU.[Status] = 1 -- Accepted
+            INNER JOIN
+        [dbo].[User] U ON PU.UserId = U.Id
+    WHERE
+            PU.ProviderId = @ProviderId
+END
+GO
+
+IF EXISTS(SELECT * FROM sys.views WHERE [Name] = 'ProviderOrganizationOrganizationDetailsView')
+    BEGIN
+        DROP VIEW [dbo].[ProviderOrganizationOrganizationDetailsView];
+    END
+GO
+
+CREATE VIEW [dbo].[ProviderOrganizationOrganizationDetailsView]
+AS
+SELECT
+    PO.[Id],
+    PO.[ProviderId],
+    PO.[OrganizationId],
+    O.[Name] OrganizationName,
+    PO.[Key],
+    PO.[Settings],
+    PO.[CreationDate],
+    PO.[RevisionDate]
+FROM
+    [dbo].[ProviderOrganization] PO
+LEFT JOIN
+    [dbo].[Organization] O ON O.[Id] = PO.[OrganizationId]
+GO
+
+IF OBJECT_ID('[dbo].[ProviderOrganizationOrganizationDetails_ReadByProviderId]') IS NOT NULL
+    BEGIN
+        DROP PROCEDURE [dbo].[ProviderOrganizationOrganizationDetails_ReadByProviderId]
+    END
+GO
+
+CREATE PROCEDURE [dbo].[ProviderOrganizationOrganizationDetails_ReadByProviderId]
+    @ProviderId UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    SELECT
+        *
+    FROM
+        [dbo].[ProviderOrganizationOrganizationDetailsView]
+    WHERE
+        [ProviderId] = @ProviderId
+END
+GO
+
+IF EXISTS(SELECT * FROM sys.views WHERE [Name] = 'OrganizationUserOrganizationDetailsView')
+    BEGIN
+        DROP VIEW [dbo].[OrganizationUserOrganizationDetailsView];
+    END
+GO
+
+CREATE VIEW [dbo].[OrganizationUserOrganizationDetailsView]
+AS
+SELECT
+    OU.[UserId],
+    OU.[OrganizationId],
+    O.[Name],
+    O.[Enabled],
+    O.[UsePolicies],
+    O.[UseSso],
+    O.[UseGroups],
+    O.[UseDirectory],
+    O.[UseEvents],
+    O.[UseTotp],
+    O.[Use2fa],
+    O.[UseApi],
+    O.[UseResetPassword],
+    O.[SelfHost],
+    O.[UsersGetPremium],
+    O.[Seats],
+    O.[MaxCollections],
+    O.[MaxStorageGb],
+    O.[Identifier],
+    OU.[Key],
+    OU.[ResetPasswordKey],
+    O.[PublicKey],
+    O.[PrivateKey],
+    OU.[Status],
+    OU.[Type],
+    SU.[ExternalId] SsoExternalId,
+    OU.[Permissions],
+    PO.[ProviderId],
+    P.[Name] ProviderName
+FROM
+    [dbo].[OrganizationUser] OU
+INNER JOIN
+    [dbo].[Organization] O ON O.[Id] = OU.[OrganizationId]
+LEFT JOIN
+    [dbo].[SsoUser] SU ON SU.[UserId] = OU.[UserId] AND SU.[OrganizationId] = OU.[OrganizationId]
+LEFT JOIN
+    [dbo].[ProviderOrganization] PO ON PO.[OrganizationId] = O.[Id]
+LEFT JOIN
+    [dbo].[Provider] P ON P.[Id] = PO.[ProviderId]
+GO
+
+IF EXISTS(SELECT * FROM sys.views WHERE [Name] = 'ProviderUserProviderOrganizationDetailsView')
+    BEGIN
+        DROP VIEW [dbo].[ProviderUserProviderOrganizationDetailsView];
+    END
+GO
+
+CREATE VIEW [dbo].[ProviderUserProviderOrganizationDetailsView]
+AS
+SELECT
+    PU.[UserId],
+    PO.[OrganizationId],
+    O.[Name],
+    O.[Enabled],
+    O.[UsePolicies],
+    O.[UseSso],
+    O.[UseGroups],
+    O.[UseDirectory],
+    O.[UseEvents],
+    O.[UseTotp],
+    O.[Use2fa],
+    O.[UseApi],
+    O.[UseResetPassword],
+    O.[SelfHost],
+    O.[UsersGetPremium],
+    O.[Seats],
+    O.[MaxCollections],
+    O.[MaxStorageGb],
+    O.[Identifier],
+    PO.[Key],
+    O.[PublicKey],
+    O.[PrivateKey],
+    PU.[Status],
+    PU.[Type],
+    PO.[ProviderId],
+    PU.[Id] ProviderUserId,
+    P.[Name] ProviderName
+FROM
+    [dbo].[ProviderUser] PU
+INNER JOIN
+    [dbo].[ProviderOrganization] PO ON PO.[ProviderId] = PU.[ProviderId]
+INNER JOIN
+    [dbo].[Organization] O ON O.[Id] = PO.[OrganizationId]
+INNER JOIN
+    [dbo].[Provider] P ON P.[Id] = PU.[ProviderId]
+GO
+
+IF OBJECT_ID('[dbo].[ProviderUserProviderOrganizationDetails_ReadByUserIdStatus]') IS NOT NULL
+    BEGIN
+        DROP PROCEDURE [dbo].[ProviderUserProviderOrganizationDetails_ReadByUserIdStatus]
+    END
+GO
+
+CREATE PROCEDURE [dbo].[ProviderUserProviderOrganizationDetails_ReadByUserIdStatus]
+    @UserId UNIQUEIDENTIFIER,
+    @Status TINYINT
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    SELECT
+        *
+    FROM
+        [dbo].[ProviderUserProviderOrganizationDetailsView]
+    WHERE
+        [UserId] = @UserId
+    AND (@Status IS NULL OR [Status] = @Status)
+END
+GO
+
+IF OBJECT_ID('[dbo].[ProviderOrganizationProviderUser_Create]') IS NOT NULL
+    BEGIN
+        DROP PROCEDURE [dbo].[ProviderOrganizationProviderUser_Create]
+    END
+GO
+
+IF OBJECT_ID('[dbo].[ProviderOrganizationProviderUser_Update]') IS NOT NULL
+    BEGIN
+        DROP PROCEDURE [dbo].[ProviderOrganizationProviderUser_Update]
+    END
+GO
+
+IF OBJECT_ID('[dbo].[ProviderOrganizationProviderUser_DeleteById]') IS NOT NULL
+    BEGIN
+        DROP PROCEDURE [dbo].[ProviderOrganizationProviderUser_DeleteById]
+    END
+GO
+
+IF OBJECT_ID('[dbo].[ProviderOrganizationProviderUser_ReadById]') IS NOT NULL
+    BEGIN
+        DROP PROCEDURE [dbo].[ProviderOrganizationProviderUser_ReadById]
+    END
+GO
+
+IF OBJECT_ID('[dbo].[ProviderOrganizationProviderUser]') IS NOT NULL
+    BEGIN
+        DROP TABLE [dbo].[ProviderOrganizationProviderUser];
+    END
+GO
+
+IF OBJECT_ID('[dbo].[ProviderOrganization_ReadByUserId]') IS NOT NULL
+    BEGIN
+        DROP PROCEDURE [dbo].[ProviderOrganization_ReadByUserId]
+    END
+GO
+
+IF COL_LENGTH('[dbo].[OrganizationUser]', 'ResetPasswordKey') IS NULL
+    BEGIN
+        ALTER TABLE
+            [dbo].[OrganizationUser]
+            ADD
+                [ResetPasswordKey] VARCHAR(MAX) NULL
+    END
+GO
+
+IF COL_LENGTH('[dbo].[Event]', 'ProviderId') IS NULL
+    BEGIN
+        ALTER TABLE
+            [dbo].[Event]
+        ADD
+            [ProviderId] UNIQUEIDENTIFIER NULL
+    END
+GO
+
+IF COL_LENGTH('[dbo].[Event]', 'ProviderUserId') IS NULL
+    BEGIN
+        ALTER TABLE
+            [dbo].[Event]
+        ADD
+            [ProviderUserId] UNIQUEIDENTIFIER NULL
+    END
+GO
+
+IF COL_LENGTH('[dbo].[Event]', 'ProviderOrganizationId') IS NULL
+    BEGIN
+        ALTER TABLE
+            [dbo].[Event]
+        ADD
+            [ProviderOrganizationId] UNIQUEIDENTIFIER NULL
+    END
+GO
+
+IF OBJECT_ID('[dbo].[Event_Create]') IS NOT NULL
+    BEGIN
+        DROP PROCEDURE [dbo].[Event_Create]
+    END
+GO
+
+CREATE PROCEDURE [dbo].[Event_Create]
+    @Id UNIQUEIDENTIFIER OUTPUT,
+    @Type INT,
+    @UserId UNIQUEIDENTIFIER,
+    @OrganizationId UNIQUEIDENTIFIER,
+    @ProviderId UNIQUEIDENTIFIER,
+    @CipherId UNIQUEIDENTIFIER,
+    @CollectionId UNIQUEIDENTIFIER,
+    @PolicyId UNIQUEIDENTIFIER,
+    @GroupId UNIQUEIDENTIFIER,
+    @OrganizationUserId UNIQUEIDENTIFIER,
+    @ProviderUserId UNIQUEIDENTIFIER,
+    @ProviderOrganizationId UNIQUEIDENTIFIER = null,
+    @ActingUserId UNIQUEIDENTIFIER,
+    @DeviceType SMALLINT,
+    @IpAddress VARCHAR(50),
+    @Date DATETIME2(7)
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    INSERT INTO [dbo].[Event]
+    (
+        [Id],
+        [Type],
+        [UserId],
+        [OrganizationId],
+        [ProviderId],
+        [CipherId],
+        [CollectionId],
+        [PolicyId],
+        [GroupId],
+        [OrganizationUserId],
+        [ProviderUserId],
+        [ProviderOrganizationId],
+        [ActingUserId],
+        [DeviceType],
+        [IpAddress],
+        [Date]
+    )
+    VALUES
+    (
+        @Id,
+        @Type,
+        @UserId,
+        @OrganizationId,
+        @ProviderId,
+        @CipherId,
+        @CollectionId,
+        @PolicyId,
+        @GroupId,
+        @OrganizationUserId,
+        @ProviderUserId,
+        @ProviderOrganizationId,
+        @ActingUserId,
+        @DeviceType,
+        @IpAddress,
+        @Date
+    )
+END
+GO
+
+IF OBJECT_ID('[dbo].[EventView]') IS NOT NULL
+    BEGIN
+        EXECUTE sp_refreshview N'[dbo].[EventView]';
+    END
+GO
+
+IF OBJECT_ID('[dbo].[Event_ReadPageByProviderId]') IS NOT NULL
+    BEGIN
+        DROP PROCEDURE [dbo].[Event_ReadPageByProviderId]
+    END
+GO
+
+CREATE PROCEDURE [dbo].[Event_ReadPageByProviderId]
+    @ProviderId UNIQUEIDENTIFIER,
+    @StartDate DATETIME2(7),
+    @EndDate DATETIME2(7),
+    @BeforeDate DATETIME2(7),
+    @PageSize INT
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    SELECT
+        *
+    FROM
+        [dbo].[EventView]
+    WHERE
+        [Date] >= @StartDate
+        AND (@BeforeDate IS NOT NULL OR [Date] <= @EndDate)
+        AND (@BeforeDate IS NULL OR [Date] < @BeforeDate)
+        AND [Providerid] = @ProviderId
+    ORDER BY [Date] DESC
+    OFFSET 0 ROWS
+    FETCH NEXT @PageSize ROWS ONLY
+END
+GO
+
+IF OBJECT_ID('[dbo].[Event_ReadPageByProviderIdActingUserId]') IS NOT NULL
+    BEGIN
+        DROP PROCEDURE [dbo].[Event_ReadPageByProviderIdActingUserId]
+    END
+GO
+
+CREATE PROCEDURE [dbo].[Event_ReadPageByProviderIdActingUserId]
+    @ProviderId UNIQUEIDENTIFIER,
+    @ActingUserId UNIQUEIDENTIFIER,
+    @StartDate DATETIME2(7),
+    @EndDate DATETIME2(7),
+    @BeforeDate DATETIME2(7),
+    @PageSize INT
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    SELECT
+        *
+    FROM
+        [dbo].[EventView]
+    WHERE
+        [Date] >= @StartDate
+        AND (@BeforeDate IS NOT NULL OR [Date] <= @EndDate)
+        AND (@BeforeDate IS NULL OR [Date] < @BeforeDate)
+        AND [ProviderId] = @ProviderId
+        AND [ActingUserId] = @ActingUserId
+    ORDER BY [Date] DESC
+    OFFSET 0 ROWS
+    FETCH NEXT @PageSize ROWS ONLY
+END
+GO
+
+IF OBJECT_ID('[dbo].[ProviderOrganization_ReadByOrganizationId]') IS NOT NULL
+    BEGIN
+        DROP PROCEDURE [dbo].[ProviderOrganization_ReadByOrganizationId]
+    END
+GO
+
+CREATE PROCEDURE [dbo].[ProviderOrganization_ReadByOrganizationId]
+@OrganizationId UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    SELECT
+        *
+    FROM
+        [dbo].[ProviderOrganizationView]
+    WHERE
+        [OrganizationId] = @OrganizationId
+END
+GO
+
+IF OBJECT_ID('[dbo].[Organization_DeleteById]') IS NOT NULL
+    BEGIN
+        DROP PROCEDURE [dbo].[Organization_DeleteById]
+    END
+GO
+
+CREATE PROCEDURE [dbo].[Organization_DeleteById]
+    @Id UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationId] @Id
+
+    DECLARE @BatchSize INT = 100
+    WHILE @BatchSize > 0
+        BEGIN
+            BEGIN TRANSACTION Organization_DeleteById_Ciphers
+
+                DELETE TOP(@BatchSize)
+                FROM
+                    [dbo].[Cipher]
+                WHERE
+                    [UserId] IS NULL
+                    AND [OrganizationId] = @Id
+
+                SET @BatchSize = @@ROWCOUNT
+
+            COMMIT TRANSACTION Organization_DeleteById_Ciphers
+        END
+
+    BEGIN TRANSACTION Organization_DeleteById
+
+        DELETE
+        FROM
+            [dbo].[SsoUser]
+        WHERE
+            [OrganizationId] = @Id
+
+        DELETE
+        FROM
+            [dbo].[SsoConfig]
+        WHERE
+            [OrganizationId] = @Id
+
+        DELETE CU
+        FROM
+            [dbo].[CollectionUser] CU
+                INNER JOIN
+            [dbo].[OrganizationUser] OU ON [CU].[OrganizationUserId] = [OU].[Id]
+        WHERE
+            [OU].[OrganizationId] = @Id
+
+        DELETE
+        FROM
+            [dbo].[OrganizationUser]
+        WHERE
+            [OrganizationId] = @Id
+
+        DELETE
+        FROM
+            [dbo].[ProviderOrganization]
+        WHERE
+            [OrganizationId] = @Id
+
+        DELETE
+        FROM
+            [dbo].[Organization]
+        WHERE
+            [Id] = @Id
+
+    COMMIT TRANSACTION Organization_DeleteById
+END
+>>>>>>> 545d5f942b1a2d210c9488c669d700d01d2c1aeb:util/Migrator/DbScripts/2021-07-22_00_Provider.sql

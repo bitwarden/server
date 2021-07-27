@@ -1,5 +1,5 @@
 ﻿CREATE PROCEDURE [dbo].[ProviderOrganization_Create]
-    @Id UNIQUEIDENTIFIER,
+    @Id UNIQUEIDENTIFIER OUTPUT,
     @ProviderId UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
     @Key VARCHAR(MAX),

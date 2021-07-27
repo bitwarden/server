@@ -271,11 +271,6 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
-        public class OrganizationUserWithCollections : OrganizationUser
-        {
-            public DataTable Collections { get; set; }
-        }
-
         public async Task<ICollection<OrganizationUser>> GetManyByManyUsersAsync(IEnumerable<Guid> userIds)
         {
             using (var connection = new SqlConnection(ConnectionString))
@@ -391,6 +386,19 @@ namespace Bit.Core.Repositories.SqlServer
                 var results = await connection.QueryAsync<OrganizationUserPublicKey>(
                     "[dbo].[User_ReadPublicKeysByOrganizationUserIds]",
                     new { OrganizationId = organizationId, OrganizationUserIds = Ids.ToGuidIdArrayTVP() },
+                    commandType: CommandType.StoredProcedure);
+
+                return results.ToList();
+            }
+        }
+
+        public async Task<IEnumerable<OrganizationUserUserDetails>> GetManyByMinimumRoleAsync(Guid organizationId, OrganizationUserType minRole)
+        {
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<OrganizationUserUserDetails>(
+                    "[dbo].[OrganizationUser_ReadByMinimumRole]",
+                    new { OrganizationId = organizationId, MinRole = minRole },
                     commandType: CommandType.StoredProcedure);
 
                 return results.ToList();

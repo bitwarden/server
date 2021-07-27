@@ -52,10 +52,8 @@ namespace Bit.Notifications
             // SignalR
             var signalRServerBuilder = services.AddSignalR().AddMessagePackProtocol(options =>
             {
-                options.FormatterResolvers = new List<MessagePack.IFormatterResolver>()
-                {
-                    MessagePack.Resolvers.ContractlessStandardResolver.Instance
-                };
+                options.SerializerOptions = MessagePack.MessagePackSerializerOptions.Standard
+                    .WithResolver(MessagePack.Resolvers.ContractlessStandardResolver.Instance);
             });
             if (CoreHelpers.SettingHasValue(globalSettings.Notifications?.RedisConnectionString))
             {

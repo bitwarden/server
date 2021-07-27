@@ -4,16 +4,17 @@ using System.ComponentModel.DataAnnotations;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Table;
+using Bit.Core.Utilities;
 using Newtonsoft.Json;
 
 namespace Bit.Core.Models.Api
 {
-    public class RegisterRequestModel : IValidatableObject
+    public class RegisterRequestModel : IValidatableObject, ICaptchaProtectedModel
     {
         [StringLength(50)]
         public string Name { get; set; }
         [Required]
-        [EmailAddress]
+        [StrictEmailAddress]
         [StringLength(256)]
         public string Email { get; set; }
         [Required]
@@ -21,6 +22,7 @@ namespace Bit.Core.Models.Api
         public string MasterPasswordHash { get; set; }
         [StringLength(50)]
         public string MasterPasswordHint { get; set; }
+        public string CaptchaResponse { get; set; }
         public string Key { get; set; }
         public KeysRequestModel Keys { get; set; }
         public string Token { get; set; }

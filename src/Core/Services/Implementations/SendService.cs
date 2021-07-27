@@ -284,7 +284,7 @@ namespace Bit.Core.Services
 
             foreach (var policy in policies.Where(p => p.Enabled && p.Type == PolicyType.DisableSend))
             {
-                if (!_currentContext.ManagePolicies(policy.OrganizationId))
+                if (!await _currentContext.ManagePolicies(policy.OrganizationId))
                 {
                     throw new BadRequestException("Due to an Enterprise Policy, you are only able to delete an existing Send.");
                 }
@@ -292,8 +292,13 @@ namespace Bit.Core.Services
 
             if (send.HideEmail.GetValueOrDefault())
             {
-                foreach (var policy in policies.Where(p => p.Enabled && p.Type == PolicyType.SendOptions && !_currentContext.ManagePolicies(p.OrganizationId)))
+                foreach (var policy in policies.Where(p => p.Enabled && p.Type == PolicyType.SendOptions))
                 {
+                    if (await _currentContext.ManagePolicies(policy.OrganizationId))
+                    {
+                        continue;
+                    }
+
                     SendOptionsPolicyData data = null;
                     if (policy.Data != null)
                     {

@@ -43,8 +43,11 @@ namespace Bit.Core.Settings
         public virtual CaptchaSettings Captcha { get; set; } = new CaptchaSettings();
         public virtual InstallationSettings Installation { get; set; } = new InstallationSettings();
         public virtual BaseServiceUriSettings BaseServiceUri { get; set; }
+        public virtual string DatabaseProvider { get; set; }
         public virtual SqlSettings SqlServer { get; set; } = new SqlSettings();
         public virtual SqlSettings PostgreSql { get; set; } = new SqlSettings();
+        public virtual SqlSettings MySql { get; set; } = new SqlSettings();
+        public virtual SqlSettings Sqlite { get; set; } = new SqlSettings();
         public virtual MailSettings Mail { get; set; } = new MailSettings();
         public virtual ConnectionStringSettings Storage { get; set; } = new ConnectionStringSettings();
         public virtual ConnectionStringSettings Events { get; set; } = new ConnectionStringSettings();
@@ -470,6 +473,7 @@ namespace Bit.Core.Settings
 
         public class CaptchaSettings
         {
+            public bool ForceCaptchaRequired { get; set; } = false;
             public string HCaptchaSecretKey { get; set; }
             public string HCaptchaSiteKey { get; set; }
         }

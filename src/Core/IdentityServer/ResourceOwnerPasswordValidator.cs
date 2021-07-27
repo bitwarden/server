@@ -21,7 +21,6 @@ namespace Bit.Core.IdentityServer
         private readonly IUserService _userService;
         private readonly ICurrentContext _currentContext;
         private readonly ICaptchaValidationService _captchaValidationService;
-
         public ResourceOwnerPasswordValidator(
             UserManager<User> userManager,
             IDeviceRepository deviceRepository,
@@ -60,25 +59,36 @@ namespace Bit.Core.IdentityServer
             //    return;
             //}
 
-            if (_captchaValidationService.ServiceEnabled && _currentContext.IsBot)
+            string bypassToken = null;
+            if (_captchaValidationService.RequireCaptchaValidation(_currentContext))
             {
-                var captchaResponse = context.Request.Raw["CaptchaResponse"]?.ToString();
+                var user = await _userManager.FindByEmailAsync(context.UserName.ToLowerInvariant());
+                var captchaResponse = context.Request.Raw["captchaResponse"]?.ToString();
+
                 if (string.IsNullOrWhiteSpace(captchaResponse))
                 {
-                    context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant, "Captcha required.");
+                    context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant, "Captcha required.",
+                        new Dictionary<string, object> {
+                            { _captchaValidationService.SiteKeyResponseKeyName, _captchaValidationService.SiteKey },
+                        });
                     return;
                 }
 
-                var captchaValid = await _captchaValidationService.ValidateCaptchaResponseAsync(captchaResponse,
-                    _currentContext.IpAddress);
+                var captchaValid = _captchaValidationService.ValidateCaptchaBypassToken(captchaResponse, user) ||
+                    await _captchaValidationService.ValidateCaptchaResponseAsync(captchaResponse, _currentContext.IpAddress);
                 if (!captchaValid)
                 {
-                    await BuildErrorResultAsync("Captcha is invalid.", false, context, null);
+                    await BuildErrorResultAsync("Captcha is invalid. Please refresh and try again", false, context, null);
                     return;
                 }
+                bypassToken = _captchaValidationService.GenerateCaptchaBypassToken(user);
             }
 
             await ValidateAsync(context, context.Request);
+            if (context.Result.CustomResponse != null && bypassToken != null)
+            {
+                context.Result.CustomResponse["CaptchaBypassToken"] = bypassToken;
+            }
         }
 
         protected async override Task<(User, bool)> ValidateContextAsync(ResourceOwnerPasswordValidationContext context)

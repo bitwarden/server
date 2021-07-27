@@ -45,13 +45,13 @@ namespace Bit.Api.Controllers
         public async Task<CollectionGroupDetailsResponseModel> GetDetails(string orgId, string id)
         {
             var orgIdGuid = new Guid(orgId);
-            if (!ManageAnyCollections(orgIdGuid) && !_currentContext.ManageUsers(orgIdGuid))
+            if (!await ManageAnyCollections(orgIdGuid) && !await _currentContext.ManageUsers(orgIdGuid))
             {
                 throw new NotFoundException();
             }
 
             var idGuid = new Guid(id);
-            if (_currentContext.ManageAllCollections(orgIdGuid))
+            if (await _currentContext.ManageAllCollections(orgIdGuid))
             {
                 var collectionDetails = await _collectionRepository.GetByIdWithGroupsAsync(idGuid);
                 if (collectionDetails?.Item1 == null || collectionDetails.Item1.OrganizationId != orgIdGuid)
@@ -76,7 +76,7 @@ namespace Bit.Api.Controllers
         public async Task<ListResponseModel<CollectionResponseModel>> Get(string orgId)
         {
             var orgIdGuid = new Guid(orgId);
-            if (!_currentContext.ManageAllCollections(orgIdGuid) && !_currentContext.ManageUsers(orgIdGuid))
+            if (!await _currentContext.ManageAllCollections(orgIdGuid) && !await _currentContext.ManageUsers(orgIdGuid))
             {
                 throw new NotFoundException();
             }
@@ -108,14 +108,14 @@ namespace Bit.Api.Controllers
         public async Task<CollectionResponseModel> Post(string orgId, [FromBody]CollectionRequestModel model)
         {
             var orgIdGuid = new Guid(orgId);
-            if (!ManageAnyCollections(orgIdGuid))
+            if (!await ManageAnyCollections(orgIdGuid))
             {
                 throw new NotFoundException();
             }
 
             var collection = model.ToCollection(orgIdGuid);
             await _collectionService.SaveAsync(collection, model.Groups?.Select(g => g.ToSelectionReadOnly()),
-                !_currentContext.ManageAllCollections(orgIdGuid) ? _currentContext.UserId : null);
+                !await _currentContext.ManageAllCollections(orgIdGuid) ? _currentContext.UserId : null);
             return new CollectionResponseModel(collection);
         }
 
@@ -154,12 +154,12 @@ namespace Bit.Api.Controllers
 
         private async Task<Collection> GetCollectionAsync(Guid id, Guid orgId)
         {
-            if (!ManageAnyCollections(orgId))
+            if (!await ManageAnyCollections(orgId))
             {
                 throw new NotFoundException();
             }
 
-            var collection = _currentContext.OrganizationAdmin(orgId) ?
+            var collection = await _currentContext.OrganizationAdmin(orgId) ?
                 await _collectionRepository.GetByIdAsync(id) :
                 await _collectionRepository.GetByIdAsync(id, _currentContext.UserId.Value);
             if (collection == null || collection.OrganizationId != orgId)
@@ -170,9 +170,9 @@ namespace Bit.Api.Controllers
             return collection;
         }
 
-        private bool ManageAnyCollections(Guid orgId)
+        private async Task<bool> ManageAnyCollections(Guid orgId)
         {
-            return _currentContext.ManageAssignedCollections(orgId) || _currentContext.ManageAllCollections(orgId);
+            return await _currentContext.ManageAssignedCollections(orgId) || await _currentContext.ManageAllCollections(orgId);
         }
     }
 }

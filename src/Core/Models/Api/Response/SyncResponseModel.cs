@@ -15,6 +15,11 @@ namespace Bit.Core.Models.Api
             User user,
             bool userTwoFactorEnabled,
             IEnumerable<OrganizationUserOrganizationDetails> organizationUserDetails,
+<<<<<<< HEAD
+=======
+            IEnumerable<ProviderUserProviderDetails> providerUserDetails,
+            IEnumerable<ProviderUserOrganizationDetails> providerUserOrganizationDetails,
+>>>>>>> 545d5f942b1a2d210c9488c669d700d01d2c1aeb
             IEnumerable<Folder> folders,
             IEnumerable<CollectionDetails> collections,
             IEnumerable<CipherDetails> ciphers,
@@ -24,7 +29,12 @@ namespace Bit.Core.Models.Api
             IEnumerable<Send> sends)
             : base("sync")
         {
+<<<<<<< HEAD
             Profile = new ProfileResponseModel(user, organizationUserDetails, userTwoFactorEnabled);
+=======
+            Profile = new ProfileResponseModel(user, organizationUserDetails, providerUserDetails,
+                providerUserOrganizationDetails, userTwoFactorEnabled);
+>>>>>>> 545d5f942b1a2d210c9488c669d700d01d2c1aeb
             Folders = folders.Select(f => new FolderResponseModel(f));
             Ciphers = ciphers.Select(c => new CipherDetailsResponseModel(c, globalSettings, collectionCiphersDict));
             Collections = collections?.Select(

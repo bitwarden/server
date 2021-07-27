@@ -25,6 +25,11 @@ namespace Bit.Core.Models.Data
         public Guid? GroupId { get; set; }
         public Guid? PolicyId { get; set; }
         public Guid? OrganizationUserId { get; set; }
+<<<<<<< HEAD
+=======
+        public Guid? ProviderUserId { get; set; }
+        public Guid? ProviderOrganizationId { get; set; }
+>>>>>>> 545d5f942b1a2d210c9488c669d700d01d2c1aeb
         public Guid? ActingUserId { get; set; }
         public DeviceType? DeviceType { get; set; }
         public string IpAddress { get; set; }

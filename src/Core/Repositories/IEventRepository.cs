@@ -14,6 +14,10 @@ namespace Bit.Core.Repositories
             PageOptions pageOptions);
         Task<PagedResult<IEvent>> GetManyByOrganizationActingUserAsync(Guid organizationId, Guid actingUserId,
             DateTime startDate, DateTime endDate, PageOptions pageOptions);
+        Task<PagedResult<IEvent>> GetManyByProviderAsync(Guid providerId, DateTime startDate, DateTime endDate,
+            PageOptions pageOptions);
+        Task<PagedResult<IEvent>> GetManyByProviderActingUserAsync(Guid providerId, Guid actingUserId,
+            DateTime startDate, DateTime endDate, PageOptions pageOptions);
         Task<PagedResult<IEvent>> GetManyByCipherAsync(Cipher cipher, DateTime startDate, DateTime endDate,
             PageOptions pageOptions);
         Task CreateAsync(IEvent e);

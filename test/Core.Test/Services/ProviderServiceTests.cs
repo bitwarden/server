@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Bit.Core.Enums;
 using Bit.Core.Enums.Provider;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Business;
 using Bit.Core.Models.Business.Provider;
 using Bit.Core.Models.Table;
 using Bit.Core.Models.Table.Provider;
@@ -16,6 +17,7 @@ using Bit.Core.Test.AutoFixture.ProviderUserFixtures;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.DataProtection;
 using NSubstitute;
+using NSubstitute.ReturnsExtensions;
 using Xunit;
 using ProviderUser = Bit.Core.Models.Table.Provider.ProviderUser;
 
@@ -353,7 +355,8 @@ namespace Bit.Core.Test.Services
                 providerUser.ProviderId = provider.Id;
             }
             providerUsers.Last().ProviderId = default;
-            
+
+            sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
             var providerUserRepository = sutProvider.GetDependency<IProviderUserRepository>();
             providerUserRepository.GetManyAsync(default).ReturnsForAnyArgs(providerUsers);
             providerUserRepository.GetManyByProviderAsync(default, default).ReturnsForAnyArgs(new ProviderUser[] {});
@@ -376,7 +379,8 @@ namespace Bit.Core.Test.Services
                 providerUser.ProviderId = provider.Id;
             }
             providerUsers.Last().ProviderId = default;
-            
+
+            sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
             var providerUserRepository = sutProvider.GetDependency<IProviderUserRepository>();
             providerUserRepository.GetManyAsync(default).ReturnsForAnyArgs(providerUsers);
             providerUserRepository.GetManyByProviderAsync(default, default).ReturnsForAnyArgs(new[] {remainingOwner});
@@ -387,6 +391,114 @@ namespace Bit.Core.Test.Services
             Assert.Equal("You cannot remove yourself.", result[0].Item2);
             Assert.Equal("", result[1].Item2);
             Assert.Equal("Invalid user.", result[2].Item2);
+        }
+
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public async Task AddOrganization_OrganizationAlreadyBelongsToAProvider_Throws(Provider provider,
+            Organization organization, ProviderOrganization po, User user, string key,
+            SutProvider<ProviderService> sutProvider)
+        {
+            po.OrganizationId = organization.Id;
+            sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
+            sutProvider.GetDependency<IProviderOrganizationRepository>().GetByOrganizationId(organization.Id)
+                .Returns(po);
+
+            var exception = await Assert.ThrowsAsync<BadRequestException>(
+                () => sutProvider.Sut.AddOrganization(provider.Id, organization.Id, user.Id, key));
+            Assert.Equal("Organization already belongs to a provider.", exception.Message);
+        }
+
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public async Task AddOrganization_Success(Provider provider, Organization organization, User user, string key,
+            SutProvider<ProviderService> sutProvider)
+        {
+            sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
+            var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
+            providerOrganizationRepository.GetByOrganizationId(organization.Id).ReturnsNull();
+
+            await sutProvider.Sut.AddOrganization(provider.Id, organization.Id, user.Id, key);
+
+            await providerOrganizationRepository.ReceivedWithAnyArgs().CreateAsync(default);
+            await sutProvider.GetDependency<IEventService>()
+                .Received().LogProviderOrganizationEventAsync(Arg.Any<ProviderOrganization>(),
+                    EventType.ProviderOrganization_Added);
+        }
+
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public async Task CreateOrganizationAsync_Success(Provider provider, OrganizationSignup organizationSignup,
+            Organization organization, User user, SutProvider<ProviderService> sutProvider)
+        {
+            sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
+            var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
+            sutProvider.GetDependency<IOrganizationService>().SignUpAsync(organizationSignup, true)
+                .Returns(Tuple.Create(organization, null as OrganizationUser));
+
+            var providerOrganization =
+                await sutProvider.Sut.CreateOrganizationAsync(provider.Id, organizationSignup, user);
+
+            await providerOrganizationRepository.ReceivedWithAnyArgs().CreateAsync(default);
+            await sutProvider.GetDependency<IEventService>()
+                .Received().LogProviderOrganizationEventAsync(providerOrganization,
+                    EventType.ProviderOrganization_Created);
+        }
+
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public async Task RemoveOrganization_ProviderOrganizationIsInvalid_Throws(Provider provider,
+            ProviderOrganization providerOrganization, User user, SutProvider<ProviderService> sutProvider)
+        {
+            sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
+            sutProvider.GetDependency<IProviderOrganizationRepository>().GetByIdAsync(providerOrganization.Id)
+                .ReturnsNull();
+
+            var exception = await Assert.ThrowsAsync<BadRequestException>(
+                () => sutProvider.Sut.RemoveOrganization(provider.Id, providerOrganization.Id, user.Id));
+            Assert.Equal("Invalid organization.", exception.Message);
+        }
+
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public async Task RemoveOrganization_ProviderOrganizationBelongsToWrongProvider_Throws(Provider provider,
+            ProviderOrganization providerOrganization, User user, SutProvider<ProviderService> sutProvider)
+        {
+            sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
+            sutProvider.GetDependency<IProviderOrganizationRepository>().GetByIdAsync(providerOrganization.Id)
+                .Returns(providerOrganization);
+
+            var exception = await Assert.ThrowsAsync<BadRequestException>(
+                () => sutProvider.Sut.RemoveOrganization(provider.Id, providerOrganization.Id, user.Id));
+            Assert.Equal("Invalid organization.", exception.Message);
+        }
+
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public async Task RemoveOrganization_HasNoOwners_Throws(Provider provider,
+            ProviderOrganization providerOrganization, User user, SutProvider<ProviderService> sutProvider)
+        {
+            providerOrganization.ProviderId = provider.Id;
+            sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
+            sutProvider.GetDependency<IProviderOrganizationRepository>().GetByIdAsync(providerOrganization.Id)
+                .Returns(providerOrganization);
+            sutProvider.GetDependency<IOrganizationService>().HasConfirmedOwnersExceptAsync(default, default)
+                .ReturnsForAnyArgs(false);
+
+            var exception = await Assert.ThrowsAsync<BadRequestException>(
+                () => sutProvider.Sut.RemoveOrganization(provider.Id, providerOrganization.Id, user.Id));
+            Assert.Equal("Organization needs to have at least one confirmed owner.", exception.Message);
+        }
+
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public async Task RemoveOrganization_Success(Provider provider,
+            ProviderOrganization providerOrganization, User user, SutProvider<ProviderService> sutProvider)
+        {
+            providerOrganization.ProviderId = provider.Id;
+            sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
+            var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
+            providerOrganizationRepository.GetByIdAsync(providerOrganization.Id).Returns(providerOrganization);
+            sutProvider.GetDependency<IOrganizationService>().HasConfirmedOwnersExceptAsync(default, default)
+                .ReturnsForAnyArgs(true);
+
+            await sutProvider.Sut.RemoveOrganization(provider.Id, providerOrganization.Id, user.Id);
+            await providerOrganizationRepository.Received().DeleteAsync(providerOrganization);
+            await sutProvider.GetDependency<IEventService>().Received()
+                .LogProviderOrganizationEventAsync(providerOrganization, EventType.ProviderOrganization_Removed);
         }
     }
 }

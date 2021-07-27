@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System;
 using Bit.Core.Models.Mail;
 using Bit.Core.Models.Table.Provider;
+using Bit.Core.Models.Business;
 
 namespace Bit.Core.Services
 {
@@ -17,10 +18,9 @@ namespace Bit.Core.Services
         Task SendTwoFactorEmailAsync(string email, string token);
         Task SendNoMasterPasswordHintEmailAsync(string email);
         Task SendMasterPasswordHintEmailAsync(string email, string hint);
-        Task SendOrganizationInviteEmailAsync(string organizationName, OrganizationUser orgUser, string token);
-        Task BulkSendOrganizationInviteEmailAsync(string organizationName, IEnumerable<(OrganizationUser orgUser, string token)> invites);
-        Task SendOrganizationAcceptedEmailAsync(string organizationName, string userEmail,
-            IEnumerable<string> adminEmails);
+        Task SendOrganizationInviteEmailAsync(string organizationName, OrganizationUser orgUser, ExpiringToken token);
+        Task BulkSendOrganizationInviteEmailAsync(string organizationName, IEnumerable<(OrganizationUser orgUser, ExpiringToken token)> invites);
+        Task SendOrganizationAcceptedEmailAsync(Organization organization, string userIdentifier, IEnumerable<string> adminEmails);
         Task SendOrganizationConfirmedEmailAsync(string organizationName, string email);
         Task SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(string organizationName, string email);
         Task SendPasswordlessSignInAsync(string returnUrl, string token, string email);
@@ -45,5 +45,7 @@ namespace Bit.Core.Services
         Task SendProviderSetupInviteEmailAsync(Provider provider, string token, string email);
         Task SendProviderInviteEmailAsync(string providerName, ProviderUser providerUser, string token, string email);
         Task SendProviderConfirmedEmailAsync(string providerName, string email);
+        Task SendProviderUserRemoved(string providerName, string email);
+        Task SendUpdatedTempPasswordEmailAsync(string email, string userName);
     }
 }
