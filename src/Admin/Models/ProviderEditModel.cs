@@ -18,7 +18,6 @@ namespace Bit.Admin.Models
             BusinessName = provider.BusinessName;
             BillingEmail = provider.BillingEmail;
             Enabled = provider.Enabled;
-            UseEvents = provider.UseEvents;
         }
 
         public bool Enabled { get; set; }
@@ -26,14 +25,12 @@ namespace Bit.Admin.Models
         public string BusinessName { get; set; }
         public string Name { get; set; }
         [Display(Name = "Events")]
-        public bool UseEvents { get; set; }
         
         public Provider ToProvider(Provider existingProvider)
         {
             existingProvider.Name = Name;
             existingProvider.BusinessName = BusinessName;
             existingProvider.BillingEmail = BillingEmail?.ToLowerInvariant()?.Trim();
-            existingProvider.UseEvents = UseEvents;
             existingProvider.Enabled = Enabled;
             return existingProvider;
         }
