@@ -145,8 +145,7 @@ function dockerPrune() {
 function preventLetsEncryptRandomSleepOnRenew() {
     if [ -f "${OUTPUT_DIR}/config.yml" ]
     then
-        grep -E "^lets_encrypt_no_random_sleep_on_renew: true" "${OUTPUT_DIR}/config.yml" 2>&1 >/dev/null
-        if [ "$?" -eq 0 ]
+        if grep -q -E "^lets_encrypt_no_random_sleep_on_renew: true" "${OUTPUT_DIR}/config.yml"
         then
             echo '--no-random-sleep-on-renew'
         fi
