@@ -9,14 +9,18 @@ using System.Threading.Tasks;
 using System.Security.Claims;
 using Bit.Core.Utilities;
 using Bit.Core.Models.Data;
+using Bit.Core.Models.Table.Provider;
 using Bit.Core.Settings;
+using Microsoft.EntityFrameworkCore.Internal;
 
 namespace Bit.Core.Context
 {
     public class CurrentContext : ICurrentContext
     {
+        private readonly IProviderUserRepository _providerUserRepository;
         private bool _builtHttpContext;
         private bool _builtClaimsPrincipal;
+        private IEnumerable<ProviderUserOrganizationDetails> _providerUserOrganizations;
 
         public virtual HttpContext HttpContext { get; set; }
         public virtual Guid? UserId { get; set; }
@@ -31,6 +35,11 @@ namespace Bit.Core.Context
         public virtual bool IsBot { get; set; }
         public virtual bool MaybeBot { get; set; }
         public virtual int? BotScore { get; set; }
+
+        public CurrentContext(IProviderUserRepository providerUserRepository)
+        {
+            _providerUserRepository = providerUserRepository;
+        }
 
         public async virtual Task BuildAsync(HttpContext httpContext, GlobalSettings globalSettings)
         {
@@ -186,104 +195,178 @@ namespace Bit.Core.Context
                         Permissions = SetOrganizationPermissionsFromClaims(c.Value, claimsDict)
                     }));
             }
+<<<<<<< HEAD
+=======
+
+            return organizations;
+        }
+        
+        private List<CurrentContentProvider> GetProviders(Dictionary<string, IEnumerable<Claim>> claimsDict)
+        {
+            var providers = new List<CurrentContentProvider>();
+            if (claimsDict.ContainsKey("providerprovideradmin"))
+            {
+                providers.AddRange(claimsDict["providerprovideradmin"].Select(c =>
+                    new CurrentContentProvider
+                    {
+                        Id = new Guid(c.Value),
+                        Type = ProviderUserType.ProviderAdmin
+                    }));
+            }
+>>>>>>> 545d5f942b1a2d210c9488c669d700d01d2c1aeb
 
             return Task.FromResult(0);
         }
 
-        public bool OrganizationUser(Guid orgId)
+        public async Task<bool> OrganizationUser(Guid orgId)
         {
-            return Organizations?.Any(o => o.Id == orgId) ?? false;
+            return (Organizations?.Any(o => o.Id == orgId) ?? false) || await OrganizationOwner(orgId);
         }
 
-        public bool OrganizationManager(Guid orgId)
+        public async Task<bool> OrganizationManager(Guid orgId)
         {
-            return Organizations?.Any(o => o.Id == orgId &&
-                (o.Type == OrganizationUserType.Owner || o.Type == OrganizationUserType.Admin ||
-                    o.Type == OrganizationUserType.Manager)) ?? false;
+            return await OrganizationAdmin(orgId) ||
+                   (Organizations?.Any(o => o.Id == orgId && o.Type == OrganizationUserType.Manager) ?? false);
         }
 
-        public bool OrganizationAdmin(Guid orgId)
+        public async Task<bool> OrganizationAdmin(Guid orgId)
         {
-            return Organizations?.Any(o => o.Id == orgId &&
-                (o.Type == OrganizationUserType.Owner || o.Type == OrganizationUserType.Admin)) ?? false;
+            return await OrganizationOwner(orgId) ||
+                   (Organizations?.Any(o => o.Id == orgId && o.Type == OrganizationUserType.Admin) ?? false);
         }
 
-        public bool OrganizationOwner(Guid orgId)
+        public async Task<bool> OrganizationOwner(Guid orgId)
         {
-            return Organizations?.Any(o => o.Id == orgId && o.Type == OrganizationUserType.Owner) ?? false;
+            if (Organizations?.Any(o => o.Id == orgId && o.Type == OrganizationUserType.Owner) ?? false)
+            {
+                return true;
+            }
+
+            if (Providers.Any())
+            {
+                return (await GetProviderOrganizations()).Any(po => po.OrganizationId == orgId);
+            }
+
+            return false;
         }
 
-        public bool OrganizationCustom(Guid orgId)
+        public Task<bool> OrganizationCustom(Guid orgId)
         {
-            return Organizations?.Any(o => o.Id == orgId && o.Type == OrganizationUserType.Custom) ?? false;
+            return Task.FromResult(Organizations?.Any(o => o.Id == orgId && o.Type == OrganizationUserType.Custom) ?? false);
         }
 
-        public bool AccessBusinessPortal(Guid orgId)
+        public async Task<bool> AccessBusinessPortal(Guid orgId)
         {
-            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
+            return await OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
                         && (o.Permissions?.AccessBusinessPortal ?? false)) ?? false);
         }
 
-        public bool AccessEventLogs(Guid orgId)
+        public async Task<bool> AccessEventLogs(Guid orgId)
         {
-            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
+            return await OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
                         && (o.Permissions?.AccessEventLogs ?? false)) ?? false);
         }
 
-        public bool AccessImportExport(Guid orgId)
+        public async Task<bool> AccessImportExport(Guid orgId)
         {
-            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
+            return await OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
                         && (o.Permissions?.AccessImportExport ?? false)) ?? false);
         }
 
-        public bool AccessReports(Guid orgId)
+        public async Task<bool> AccessReports(Guid orgId)
         {
-            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
+            return await OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
                         && (o.Permissions?.AccessReports ?? false)) ?? false);
         }
 
-        public bool ManageAllCollections(Guid orgId)
+        public async Task<bool> ManageAllCollections(Guid orgId)
         {
-            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
+            return await OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
                         && (o.Permissions?.ManageAllCollections ?? false)) ?? false);
         }
 
-        public bool ManageAssignedCollections(Guid orgId)
+        public async Task<bool> ManageAssignedCollections(Guid orgId)
         {
-            return OrganizationManager(orgId) || (Organizations?.Any(o => o.Id == orgId
+            return await OrganizationManager(orgId) || (Organizations?.Any(o => o.Id == orgId
                         && (o.Permissions?.ManageAssignedCollections ?? false)) ?? false);
         }
 
-        public bool ManageGroups(Guid orgId)
+        public async Task<bool> ManageGroups(Guid orgId)
         {
-            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
+            return await OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
                         && (o.Permissions?.ManageGroups ?? false)) ?? false);
         }
 
-        public bool ManagePolicies(Guid orgId)
+        public async Task<bool> ManagePolicies(Guid orgId)
         {
-            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
+            return await OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
                         && (o.Permissions?.ManagePolicies ?? false)) ?? false);
         }
 
-        public bool ManageSso(Guid orgId)
+        public async Task<bool> ManageSso(Guid orgId)
         {
-            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
+            return await OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
                         && (o.Permissions?.ManageSso ?? false)) ?? false);
         }
 
-        public bool ManageUsers(Guid orgId)
+        public async Task<bool> ManageUsers(Guid orgId)
         {
-            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
+            return await OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
                         && (o.Permissions?.ManageUsers ?? false)) ?? false);
         }
 
-        public bool ManageResetPassword(Guid orgId)
+        public async Task<bool> ManageResetPassword(Guid orgId)
         {
-            return OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
+            return await OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
                         && (o.Permissions?.ManageResetPassword ?? false)) ?? false);
         }
 
+<<<<<<< HEAD
+=======
+        public bool ProviderProviderAdmin(Guid providerId)
+        {
+            return Providers?.Any(o => o.Id == providerId && o.Type == ProviderUserType.ProviderAdmin) ?? false;
+        }
+
+        public bool ProviderManageUsers(Guid providerId)
+        {
+            return ProviderProviderAdmin(providerId);
+        }
+
+        public bool ProviderAccessEventLogs(Guid providerId)
+        {
+            return ProviderProviderAdmin(providerId);
+        }
+
+        public bool AccessProviderOrganizations(Guid providerId)
+        {
+            return ProviderUser(providerId);
+        }
+
+        public bool ManageProviderOrganizations(Guid providerId)
+        {
+            return ProviderProviderAdmin(providerId);
+        }
+
+        public bool ProviderUser(Guid providerId)
+        {
+            return Providers?.Any(o => o.Id == providerId) ?? false;
+        }
+
+        public async Task<Guid?> ProviderIdForOrg(Guid orgId)
+        {
+            if (Organizations.Any(org => org.Id == orgId))
+            {
+                return null;
+            }
+
+            var po = (await GetProviderOrganizations())
+                .FirstOrDefault(po => po.OrganizationId == orgId);
+
+            return po?.ProviderId;
+        }
+
+>>>>>>> 545d5f942b1a2d210c9488c669d700d01d2c1aeb
         public async Task<ICollection<CurrentContentOrganization>> OrganizationMembershipAsync(
             IOrganizationUserRepository organizationUserRepository, Guid userId)
         {
@@ -328,6 +411,16 @@ namespace Bit.Core.Context
                 ManageUsers = hasClaim("manageusers"),
                 ManageResetPassword = hasClaim("manageresetpassword")
             };
+        }
+
+        private async Task<IEnumerable<ProviderUserOrganizationDetails>> GetProviderOrganizations()
+        {
+            if (_providerUserOrganizations == null)
+            {
+                _providerUserOrganizations = await _providerUserRepository.GetManyOrganizationDetailsByUserAsync(UserId.Value, ProviderUserStatusType.Confirmed);
+            }
+
+            return _providerUserOrganizations;
         }
     }
 }

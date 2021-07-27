@@ -11,6 +11,10 @@ namespace Bit.Core.Models.Api
     public class OrganizationUserInviteRequestModel : IValidatableObject
     {
         [Required]
+<<<<<<< HEAD
+=======
+        [StrictEmailAddressList]
+>>>>>>> 545d5f942b1a2d210c9488c669d700d01d2c1aeb
         public IEnumerable<string> Emails { get; set; }
         [Required]
         public Enums.OrganizationUserType? Type { get; set; }

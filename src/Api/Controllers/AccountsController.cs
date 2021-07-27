@@ -79,6 +79,7 @@ namespace Bit.Api.Controllers
 
         [HttpPost("register")]
         [AllowAnonymous]
+        [CaptchaProtected]
         public async Task PostRegister([FromBody]RegisterRequestModel model)
         {
             var result = await _userService.RegisterUserAsync(model.ToUser(), model.MasterPasswordHash,
@@ -367,8 +368,18 @@ namespace Bit.Api.Controllers
 
             var organizationUserDetails = await _organizationUserRepository.GetManyDetailsByUserAsync(user.Id,
                 OrganizationUserStatusType.Confirmed);
+<<<<<<< HEAD
             var response = new ProfileResponseModel(user, organizationUserDetails,
                 await _userService.TwoFactorIsEnabledAsync(user));
+=======
+            var providerUserDetails = await _providerUserRepository.GetManyDetailsByUserAsync(user.Id,
+                ProviderUserStatusType.Confirmed);
+            var providerUserOrganizationDetails =
+                await _providerUserRepository.GetManyOrganizationDetailsByUserAsync(user.Id,
+                    ProviderUserStatusType.Confirmed);
+            var response = new ProfileResponseModel(user, organizationUserDetails, providerUserDetails,
+                providerUserOrganizationDetails, await _userService.TwoFactorIsEnabledAsync(user));
+>>>>>>> 545d5f942b1a2d210c9488c669d700d01d2c1aeb
             return response;
         }
 
@@ -393,7 +404,11 @@ namespace Bit.Api.Controllers
             }
 
             await _userService.SaveUserAsync(model.ToUser(user));
+<<<<<<< HEAD
             var response = new ProfileResponseModel(user, null, await _userService.TwoFactorIsEnabledAsync(user));
+=======
+            var response = new ProfileResponseModel(user, null, null, null, await _userService.TwoFactorIsEnabledAsync(user));
+>>>>>>> 545d5f942b1a2d210c9488c669d700d01d2c1aeb
             return response;
         }
 
@@ -544,7 +559,11 @@ namespace Bit.Api.Controllers
                     BillingAddressCountry = model.Country,
                     BillingAddressPostalCode = model.PostalCode,
                 });
+<<<<<<< HEAD
             var profile = new ProfileResponseModel(user, null, await _userService.TwoFactorIsEnabledAsync(user));
+=======
+            var profile = new ProfileResponseModel(user, null, null, null, await _userService.TwoFactorIsEnabledAsync(user));
+>>>>>>> 545d5f942b1a2d210c9488c669d700d01d2c1aeb
             return new PaymentResponseModel
             {
                 UserProfile = profile,
@@ -787,6 +806,29 @@ namespace Bit.Api.Controllers
                 var response = new ApiKeyResponseModel(user);
                 return response;
             }
+        }
+        
+        [HttpPost("update-temp-password")]
+        public async Task PostUpdateTempPasswordAsync([FromBody]UpdateTempPasswordRequestModel model)
+        {
+            var user = await _userService.GetUserByPrincipalAsync(User);
+            if (user == null)
+            {
+                throw new UnauthorizedAccessException();
+            }
+
+            var result = await _userService.UpdateTempPasswordAsync(user, model.NewMasterPasswordHash, model.Key);
+            if (result.Succeeded)
+            {
+                return;
+            }
+
+            foreach (var error in result.Errors)
+            {
+                ModelState.AddModelError(string.Empty, error.Description);
+            }
+
+            throw new BadRequestException(ModelState);
         }
     }
 }

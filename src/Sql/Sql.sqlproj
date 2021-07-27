@@ -70,6 +70,10 @@
   </ItemGroup>
   <ItemGroup>
     <Build Include="dbo\Stored Procedures\EmergencyAccessDetails_ReadByIdGrantorId.sql" />
+    <Build Include="dbo\Stored Procedures\Event_ReadPageByProviderId.sql" />
+    <Build Include="dbo\Stored Procedures\Event_ReadPageByProviderIdActingUserId.sql" />
+    <Build Include="dbo\Stored Procedures\ProviderOrganization_ReadByOrganizationId.sql" />
+    <Build Include="dbo\Stored Procedures\ProviderUserProviderOrganizationDetails_ReadByUserIdStatus.sql" />
     <Build Include="dbo\Stored Procedures\SsoConfig_Create.sql" />
     <Build Include="dbo\Stored Procedures\SsoConfig_ReadByIdentifier.sql" />
     <Build Include="dbo\Stored Procedures\SsoConfig_ReadByOrganizationId.sql" />
@@ -90,6 +94,12 @@
     <Build Include="dbo\Tables\OrganizationUser.sql" />
     <Build Include="dbo\Tables\Organization.sql" />
     <Build Include="dbo\Views\GrantView.sql" />
+<<<<<<< HEAD
+=======
+    <Build Include="dbo\Views\ProviderOrganizationOrganizationDetailsView.sql" />
+    <Build Include="dbo\Views\ProviderUserProviderDetailsView.sql" />
+    <Build Include="dbo\Views\ProviderUserProviderOrganizationDetailsView.sql" />
+>>>>>>> 545d5f942b1a2d210c9488c669d700d01d2c1aeb
     <Build Include="dbo\Views\SsoConfigView.sql" />
     <Build Include="dbo\Views\UserView.sql" />
     <Build Include="dbo\Views\U2fView.sql" />
@@ -351,10 +361,5 @@
     <Build Include="dbo\Stored Procedures\ProviderOrganization_ReadById.sql" />
     <Build Include="dbo\Stored Procedures\User_BumpAccountRevisionDateByProviderId.sql" />
     <Build Include="dbo\Stored Procedures\User_BumpAccountRevisionDateByProviderUserId.sql" />
-    <Build Include="dbo\Tables\ProviderOrganizationProviderUser.sql" />
-    <Build Include="dbo\Stored Procedures\ProviderOrganizationProviderUser_Create.sql" />
-    <Build Include="dbo\Stored Procedures\ProviderOrganizationProviderUser_DeleteById.sql" />
-    <Build Include="dbo\Stored Procedures\ProviderOrganizationProviderUser_ReadById.sql" />
-    <Build Include="dbo\Stored Procedures\ProviderOrganizationProviderUser_Update.sql" />
   </ItemGroup>
 </Project>

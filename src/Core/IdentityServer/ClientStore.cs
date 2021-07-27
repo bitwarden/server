@@ -25,6 +25,11 @@ namespace Bit.Core.IdentityServer
         private readonly ILicensingService _licensingService;
         private readonly ICurrentContext _currentContext;
         private readonly IOrganizationUserRepository _organizationUserRepository;
+<<<<<<< HEAD
+=======
+        private readonly IProviderUserRepository _providerUserRepository;
+        private readonly IProviderOrganizationRepository _providerOrganizationRepository;
+>>>>>>> 545d5f942b1a2d210c9488c669d700d01d2c1aeb
 
         public ClientStore(
             IInstallationRepository installationRepository,
@@ -34,7 +39,13 @@ namespace Bit.Core.IdentityServer
             StaticClientStore staticClientStore,
             ILicensingService licensingService,
             ICurrentContext currentContext,
+<<<<<<< HEAD
             IOrganizationUserRepository organizationUserRepository)
+=======
+            IOrganizationUserRepository organizationUserRepository,
+            IProviderUserRepository providerUserRepository,
+            IProviderOrganizationRepository providerOrganizationRepository)
+>>>>>>> 545d5f942b1a2d210c9488c669d700d01d2c1aeb
         {
             _installationRepository = installationRepository;
             _organizationRepository = organizationRepository;
@@ -44,6 +55,11 @@ namespace Bit.Core.IdentityServer
             _licensingService = licensingService; 
             _currentContext = currentContext;
             _organizationUserRepository = organizationUserRepository;
+<<<<<<< HEAD
+=======
+            _providerUserRepository = providerUserRepository;
+            _providerOrganizationRepository = providerOrganizationRepository;
+>>>>>>> 545d5f942b1a2d210c9488c669d700d01d2c1aeb
         }
 
         public async Task<Client> FindClientByIdAsync(string clientId)

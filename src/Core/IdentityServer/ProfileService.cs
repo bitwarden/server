@@ -18,17 +18,32 @@ namespace Bit.Core.IdentityServer
     {
         private readonly IUserService _userService;
         private readonly IOrganizationUserRepository _organizationUserRepository;
+<<<<<<< HEAD
+=======
+        private readonly IProviderUserRepository _providerUserRepository;
+        private readonly IProviderOrganizationRepository _providerOrganizationRepository;
+>>>>>>> 545d5f942b1a2d210c9488c669d700d01d2c1aeb
         private readonly ILicensingService _licensingService;
         private readonly ICurrentContext _currentContext;
 
         public ProfileService(
             IUserService userService,
             IOrganizationUserRepository organizationUserRepository,
+<<<<<<< HEAD
+=======
+            IProviderUserRepository providerUserRepository,
+            IProviderOrganizationRepository providerOrganizationRepository,
+>>>>>>> 545d5f942b1a2d210c9488c669d700d01d2c1aeb
             ILicensingService licensingService,
             ICurrentContext currentContext)
         {
             _userService = userService;
             _organizationUserRepository = organizationUserRepository;
+<<<<<<< HEAD
+=======
+            _providerUserRepository = providerUserRepository;
+            _providerOrganizationRepository = providerOrganizationRepository;
+>>>>>>> 545d5f942b1a2d210c9488c669d700d01d2c1aeb
             _licensingService = licensingService;
             _currentContext = currentContext;
         }

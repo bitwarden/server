@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Bit.Core.Enums;
 using Bit.Core.Enums.Provider;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Business;
 using Bit.Core.Models.Business.Provider;
 using Bit.Core.Models.Table;
 using Bit.Core.Models.Table.Provider;
@@ -26,15 +27,22 @@ namespace Bit.Core.Services
         private readonly IProviderUserRepository _providerUserRepository;
         private readonly IUserRepository _userRepository;
         private readonly IUserService _userService;
+        private readonly IOrganizationService _organizationService;
 
         public ProviderService(IProviderRepository providerRepository, IProviderUserRepository providerUserRepository,
+<<<<<<< HEAD:src/Core/Services/Implementations/ProviderService.cs
             IUserRepository userRepository, IUserService userService, IMailService mailService,
+=======
+            IProviderOrganizationRepository providerOrganizationRepository, IUserRepository userRepository,
+            IUserService userService, IOrganizationService organizationService, IMailService mailService,
+>>>>>>> 545d5f942b1a2d210c9488c669d700d01d2c1aeb:bitwarden_license/src/CommCore/Services/ProviderService.cs
             IDataProtectionProvider dataProtectionProvider, IEventService eventService, GlobalSettings globalSettings)
         {
             _providerRepository = providerRepository;
             _providerUserRepository = providerUserRepository;
             _userRepository = userRepository;
             _userService = userService;
+            _organizationService = organizationService;
             _mailService = mailService;
             _eventService = eventService;
             _globalSettings = globalSettings;
@@ -68,7 +76,17 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Invalid owner.");
             }
 
+<<<<<<< HEAD:src/Core/Services/Implementations/ProviderService.cs
             if (!CoreHelpers.TokenIsValid("ProviderSetupInvite", _dataProtector, token, owner.Email, provider.Id, _globalSettings))
+=======
+            if (provider.Status != ProviderStatusType.Pending)
+            {
+                throw new BadRequestException("Provider is already setup.");
+            }
+
+            if (!CoreHelpers.TokenIsValid("ProviderSetupInvite", _dataProtector, token, owner.Email, provider.Id,
+                _globalSettings.OrganizationInviteExpirationHours))
+>>>>>>> 545d5f942b1a2d210c9488c669d700d01d2c1aeb:bitwarden_license/src/CommCore/Services/ProviderService.cs
             {
                 throw new BadRequestException("Invalid token.");
             }
@@ -183,7 +201,8 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Already accepted.");
             }
 
-            if (!CoreHelpers.TokenIsValid("ProviderUserInvite", _dataProtector, token, user.Email, providerUser.Id, _globalSettings))
+            if (!CoreHelpers.TokenIsValid("ProviderUserInvite", _dataProtector, token, user.Email, providerUser.Id,
+                _globalSettings.OrganizationInviteExpirationHours))
             {
                 throw new BadRequestException("Invalid token.");
             }
@@ -246,7 +265,7 @@ namespace Bit.Core.Services
 
                     await _providerUserRepository.ReplaceAsync(providerUser);
                     events.Add((providerUser, EventType.ProviderUser_Confirmed, null));
-                    await _mailService.SendOrganizationConfirmedEmailAsync(provider.Name, user.Email);
+                    await _mailService.SendProviderConfirmedEmailAsync(provider.Name, user.Email);
                     result.Add(Tuple.Create(providerUser, ""));
                 }
                 catch (BadRequestException e)
@@ -280,7 +299,17 @@ namespace Bit.Core.Services
         public async Task<List<Tuple<ProviderUser, string>>> DeleteUsersAsync(Guid providerId,
             IEnumerable<Guid> providerUserIds, Guid deletingUserId)
         {
+            var provider = await _providerRepository.GetByIdAsync(providerId);
+
+            if (provider == null)
+            {
+                throw new NotFoundException();
+            }
+
             var providerUsers = await _providerUserRepository.GetManyAsync(providerUserIds);
+            var users = await _userRepository.GetManyAsync(providerUsers.Where(pu => pu.UserId.HasValue)
+                .Select(pu => pu.UserId.Value));
+            var keyedUsers = users.ToDictionary(u => u.Id);
 
             if (!await HasConfirmedProviderAdminExceptAsync(providerId, providerUserIds))
             {
@@ -306,6 +335,13 @@ namespace Bit.Core.Services
 
                     events.Add((providerUser, EventType.ProviderUser_Removed, null));
 
+                    var user = keyedUsers.GetValueOrDefault(providerUser.UserId.GetValueOrDefault());
+                    var email = user == null ? providerUser.Email : user.Email;
+                    if (!string.IsNullOrWhiteSpace(email))
+                    {
+                        await _mailService.SendProviderUserRemoved(provider.Name, email);
+                    }
+
                     result.Add(Tuple.Create(providerUser, ""));
                     deletedUserIds.Add(providerUser.Id);
                 }
@@ -322,12 +358,64 @@ namespace Bit.Core.Services
             return result;
         }
 
+<<<<<<< HEAD:src/Core/Services/Implementations/ProviderService.cs
         // TODO: Implement this
         public Task AddOrganization(Guid providerId, Guid organizationId, Guid addingUserId, string key) => throw new NotImplementedException();
+=======
+        public async Task AddOrganization(Guid providerId, Guid organizationId, Guid addingUserId, string key)
+        {
+            var po = await _providerOrganizationRepository.GetByOrganizationId(organizationId);
+            if (po != null)
+            {
+                throw new BadRequestException("Organization already belongs to a provider.");
+            }
 
-        // TODO: Implement this
-        public Task RemoveOrganization(Guid providerOrganizationId, Guid removingUserId) => throw new NotImplementedException();
-        
+            var providerOrganization = new ProviderOrganization
+            {
+                ProviderId = providerId,
+                OrganizationId = organizationId,
+                Key = key,
+            };
+
+            await _providerOrganizationRepository.CreateAsync(providerOrganization);
+            await _eventService.LogProviderOrganizationEventAsync(providerOrganization, EventType.ProviderOrganization_Added);
+        }
+
+        public async Task<ProviderOrganization> CreateOrganizationAsync(Guid providerId, OrganizationSignup organizationSignup, User user)
+        {
+            var (organization, _) = await _organizationService.SignUpAsync(organizationSignup, true);
+
+            var providerOrganization = new ProviderOrganization
+            {
+                ProviderId = providerId,
+                OrganizationId = organization.Id,
+                Key = organizationSignup.OwnerKey,
+            };
+
+            await _providerOrganizationRepository.CreateAsync(providerOrganization);
+            await _eventService.LogProviderOrganizationEventAsync(providerOrganization, EventType.ProviderOrganization_Created);
+
+            return providerOrganization;
+        }
+
+        public async Task RemoveOrganization(Guid providerId, Guid providerOrganizationId, Guid removingUserId)
+        {
+            var providerOrganization = await _providerOrganizationRepository.GetByIdAsync(providerOrganizationId);
+            if (providerOrganization == null || providerOrganization.ProviderId != providerId)
+            {
+                throw new BadRequestException("Invalid organization.");
+            }
+
+            if (!await _organizationService.HasConfirmedOwnersExceptAsync(providerOrganization.OrganizationId, new Guid[] {}))
+            {
+                throw new BadRequestException("Organization needs to have at least one confirmed owner.");
+            }
+
+            await _providerOrganizationRepository.DeleteAsync(providerOrganization);
+            await _eventService.LogProviderOrganizationEventAsync(providerOrganization, EventType.ProviderOrganization_Removed);
+        }
+>>>>>>> 545d5f942b1a2d210c9488c669d700d01d2c1aeb:bitwarden_license/src/CommCore/Services/ProviderService.cs
+
         private async Task SendInviteAsync(ProviderUser providerUser, Provider provider)
         {
             var nowMillis = CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow);

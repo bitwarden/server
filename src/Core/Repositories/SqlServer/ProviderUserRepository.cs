@@ -61,6 +61,50 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
         
+<<<<<<< HEAD
+=======
+        public async Task<ICollection<ProviderUserUserDetails>> GetManyDetailsByProviderAsync(Guid providerId)
+        {
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<ProviderUserUserDetails>(
+                    "[dbo].[ProviderUserUserDetails_ReadByProviderId]",
+                    new { ProviderId = providerId },
+                    commandType: CommandType.StoredProcedure);
+
+                return results.ToList();
+            }
+        }
+
+        public async Task<ICollection<ProviderUserProviderDetails>> GetManyDetailsByUserAsync(Guid userId,
+            ProviderUserStatusType? status = null)
+        {
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<ProviderUserProviderDetails>(
+                    "[dbo].[ProviderUserProviderDetails_ReadByUserIdStatus]",
+                    new { UserId = userId, Status = status },
+                    commandType: CommandType.StoredProcedure);
+
+                return results.ToList();
+            }
+        }
+
+        public async Task<IEnumerable<ProviderUserOrganizationDetails>> GetManyOrganizationDetailsByUserAsync(Guid userId,
+            ProviderUserStatusType? status = null)
+        {
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<ProviderUserOrganizationDetails>(
+                    "[dbo].[ProviderUserProviderOrganizationDetails_ReadByUserIdStatus]",
+                    new { UserId = userId, Status = status },
+                    commandType: CommandType.StoredProcedure);
+
+                return results.ToList();
+            }
+        }
+
+>>>>>>> 545d5f942b1a2d210c9488c669d700d01d2c1aeb
         public async Task DeleteManyAsync(IEnumerable<Guid> providerUserIds)
         {
             using (var connection = new SqlConnection(ConnectionString))

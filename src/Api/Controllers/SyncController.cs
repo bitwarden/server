@@ -62,6 +62,14 @@ namespace Bit.Api.Controllers
 
             var organizationUserDetails = await _organizationUserRepository.GetManyDetailsByUserAsync(user.Id,
                 OrganizationUserStatusType.Confirmed);
+<<<<<<< HEAD
+=======
+            var providerUserDetails = await _providerUserRepository.GetManyDetailsByUserAsync(user.Id,
+                ProviderUserStatusType.Confirmed);
+            var providerUserOrganizationDetails =
+                await _providerUserRepository.GetManyOrganizationDetailsByUserAsync(user.Id,
+                    ProviderUserStatusType.Confirmed);
+>>>>>>> 545d5f942b1a2d210c9488c669d700d01d2c1aeb
             var hasEnabledOrgs = organizationUserDetails.Any(o => o.Enabled);
             var folders = await _folderRepository.GetManyByUserIdAsync(user.Id);
             var ciphers = await _cipherRepository.GetManyByUserIdAsync(user.Id, hasEnabledOrgs);
@@ -80,7 +88,12 @@ namespace Bit.Api.Controllers
 
             var userTwoFactorEnabled = await _userService.TwoFactorIsEnabledAsync(user);
             var response = new SyncResponseModel(_globalSettings, user, userTwoFactorEnabled, organizationUserDetails,
+<<<<<<< HEAD
                 folders, collections, ciphers, collectionCiphersGroupDict, excludeDomains, policies, sends);
+=======
+                providerUserDetails, providerUserOrganizationDetails, folders, collections, ciphers,
+                collectionCiphersGroupDict, excludeDomains, policies, sends);
+>>>>>>> 545d5f942b1a2d210c9488c669d700d01d2c1aeb
             return response;
         }
     }
