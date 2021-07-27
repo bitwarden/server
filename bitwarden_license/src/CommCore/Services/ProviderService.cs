@@ -59,6 +59,7 @@ namespace Bit.CommCore.Services
             {
                 Status = ProviderStatusType.Pending,
                 Enabled = true,
+                UseEvents = true,
             };
             await _providerRepository.CreateAsync(provider);
 
