@@ -133,5 +133,12 @@ namespace Bit.Admin.Controllers
 
             return RedirectToAction("Index");
         }
+
+        public async Task<IActionResult> ResendInvite(Guid userId, Guid providerId)
+        {
+            await _providerService.ResendProviderSetupInviteEmailAsync(providerId, userId);
+            TempData["InviteResentTo"] = userId;
+            return RedirectToAction("Edit", new { id = providerId });
+        }
     }
 }

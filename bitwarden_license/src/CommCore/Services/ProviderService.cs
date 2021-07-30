@@ -120,8 +120,7 @@ namespace Bit.CommCore.Services
             await _providerRepository.ReplaceAsync(provider);
         }
 
-        public async Task<List<ProviderUser>> InviteUserAsync(Guid providerId, Guid invitingUserId,
-            ProviderUserInvite invite)
+        public async Task<List<ProviderUser>> InviteUserAsync(Guid providerId, ProviderUserInvite invite)
         {
             var provider = await _providerRepository.GetByIdAsync(providerId);
             if (provider == null || invite?.Emails == null || !invite.Emails.Any())
@@ -163,8 +162,7 @@ namespace Bit.CommCore.Services
             return providerUsers;
         }
 
-        public async Task<List<Tuple<ProviderUser, string>>> ResendInvitesAsync(Guid providerId, Guid invitingUserId,
-            IEnumerable<Guid> providerUsersId)
+        public async Task<List<Tuple<ProviderUser, string>>> ResendInvitesAsync(Guid providerId, IEnumerable<Guid> providerUsersId)
         {
             var providerUsers = await _providerUserRepository.GetManyAsync(providerUsersId);
             var provider = await _providerRepository.GetByIdAsync(providerId);
@@ -406,6 +404,23 @@ namespace Bit.CommCore.Services
 
             await _providerOrganizationRepository.DeleteAsync(providerOrganization);
             await _eventService.LogProviderOrganizationEventAsync(providerOrganization, EventType.ProviderOrganization_Removed);
+        }
+
+        public async Task ResendProviderSetupInviteEmailAsync(Guid providerId, Guid userId)
+        {
+            var provider = await _providerRepository.GetByIdAsync(providerId);
+            var owner = await _userRepository.GetByIdAsync(userId);
+            if (owner == null)
+            {
+                throw new BadRequestException("Invalid owner.");
+            }
+            await SendProviderSetupInviteEmailAsync(provider, owner.Email);
+        }
+
+        private async Task SendProviderSetupInviteEmailAsync(Provider provider, string ownerEmail)
+        {
+            var token = _dataProtector.Protect($"ProviderSetupInvite {provider.Id} {ownerEmail} {CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow)}");
+            await _mailService.SendProviderSetupInviteEmailAsync(provider, token, ownerEmail);
         }
 
         private async Task SendInviteAsync(ProviderUser providerUser, Provider provider)

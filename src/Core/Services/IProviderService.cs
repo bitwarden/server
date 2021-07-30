@@ -14,9 +14,8 @@ namespace Bit.Core.Services
         Task<Provider> CompleteSetupAsync(Provider provider, Guid ownerUserId, string token, string key);
         Task UpdateAsync(Provider provider, bool updateBilling = false);
 
-        Task<List<ProviderUser>> InviteUserAsync(Guid providerId, Guid invitingUserId, ProviderUserInvite providerUserInvite);
-        Task<List<Tuple<ProviderUser, string>>> ResendInvitesAsync(Guid providerId, Guid invitingUserId,
-            IEnumerable<Guid> providerUsersId);
+        Task<List<ProviderUser>> InviteUserAsync(Guid providerId, ProviderUserInvite providerUserInvite);
+        Task<List<Tuple<ProviderUser, string>>> ResendInvitesAsync(Guid providerId, IEnumerable<Guid> providerUsersId);
         Task<ProviderUser> AcceptUserAsync(Guid providerUserId, User user, string token);
         Task<List<Tuple<ProviderUser, string>>> ConfirmUsersAsync(Guid providerId, Dictionary<Guid, string> keys, Guid confirmingUserId);
 
@@ -27,5 +26,6 @@ namespace Bit.Core.Services
         Task AddOrganization(Guid providerId, Guid organizationId, Guid addingUserId, string key);
         Task<ProviderOrganization> CreateOrganizationAsync(Guid providerId, OrganizationSignup organizationSignup, User user);
         Task RemoveOrganization(Guid providerId, Guid providerOrganizationId, Guid removingUserId);
+        Task ResendProviderSetupInviteEmailAsync(Guid providerId, Guid userId);
     }
 }

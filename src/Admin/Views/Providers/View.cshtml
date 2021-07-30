@@ -7,6 +7,7 @@
 
 <h2>Information</h2>
 @await Html.PartialAsync("_ViewInformation", Model)
+@await Html.PartialAsync("Admins", Model)
 <form asp-action="Delete" asp-route-id="@Model.Provider.Id"
       onsubmit="return confirm('Are you sure you want to delete this provider (@Model.Provider.Name)?')">
     <button class="btn btn-danger" type="submit">Delete</button>

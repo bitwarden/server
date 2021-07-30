@@ -14,17 +14,11 @@ namespace Bit.Admin.Models
         {
             Provider = provider;
             UserCount = providerUsers.Count();
-
-            ProviderAdmins = string.Join(", ",
-                providerUsers
-                    .Where(u => u.Type == ProviderUserType.ProviderAdmin && u.Status == ProviderUserStatusType.Confirmed)
-                    .Select(u => u.Email));
+            ProviderAdmins = providerUsers.Where(u => u.Type == ProviderUserType.ProviderAdmin);
         }
 
         public int UserCount { get; set; }
-
         public Provider Provider { get; set; }
-        
-        public string ProviderAdmins { get; set; }
+        public IEnumerable<ProviderUserUserDetails> ProviderAdmins { get; set; }
     }
 }
