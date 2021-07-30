@@ -71,9 +71,7 @@ namespace Bit.CommCore.Services
                 Status = ProviderUserStatusType.Confirmed,
             };
             await _providerUserRepository.CreateAsync(providerUser);
-
-            var token = _dataProtector.Protect($"ProviderSetupInvite {provider.Id} {owner.Email} {CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow)}");
-            await _mailService.SendProviderSetupInviteEmailAsync(provider, token, owner.Email);
+            await SendProviderSetupInviteEmailAsync(provider, owner.Email);
         }
 
         public async Task<Provider> CompleteSetupAsync(Provider provider, Guid ownerUserId, string token, string key)
