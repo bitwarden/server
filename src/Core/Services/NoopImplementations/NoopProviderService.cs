@@ -29,7 +29,7 @@ namespace Bit.Core.Services
         public Task<List<Tuple<ProviderUser, string>>> DeleteUsersAsync(Guid providerId, IEnumerable<Guid> providerUserIds, Guid deletingUserId) => throw new NotImplementedException();
 
         public Task AddOrganization(Guid providerId, Guid organizationId, Guid addingUserId, string key) => throw new NotImplementedException();
-        public Task<ProviderOrganization> CreateOrganizationAsync(Guid providerId, OrganizationSignup organizationSignup, User user) => throw new NotImplementedException();
+        public Task<ProviderOrganization> CreateOrganizationAsync(Guid providerId, OrganizationSignup organizationSignup, string clientOwnerEmail, User user) => throw new NotImplementedException();
 
         public Task RemoveOrganization(Guid providerId, Guid providerOrganizationId, Guid removingUserId) => throw new NotImplementedException();
     }
