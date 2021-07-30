@@ -115,7 +115,7 @@ namespace Bit.CommCore.Test.Services
         {
             provider.Id = default;
             
-            await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.InviteUserAsync(provider.Id, default, default));
+            await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.InviteUserAsync(provider.Id, default));
         }
         
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
@@ -127,7 +127,7 @@ namespace Bit.CommCore.Test.Services
 
             providerUserInvite.Emails = null;
             
-            await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.InviteUserAsync(provider.Id, default, providerUserInvite));
+            await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.InviteUserAsync(provider.Id, providerUserInvite));
         }
         
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
@@ -139,7 +139,7 @@ namespace Bit.CommCore.Test.Services
             var providerUserRepository = sutProvider.GetDependency<IProviderUserRepository>();
             providerUserRepository.GetCountByProviderAsync(default, default, default).ReturnsForAnyArgs(1);
 
-            var result = await sutProvider.Sut.InviteUserAsync(provider.Id, default, providerUserInvite);
+            var result = await sutProvider.Sut.InviteUserAsync(provider.Id, providerUserInvite);
             Assert.Empty(result);
         }
         
@@ -152,7 +152,7 @@ namespace Bit.CommCore.Test.Services
             var providerUserRepository = sutProvider.GetDependency<IProviderUserRepository>();
             providerUserRepository.GetCountByProviderAsync(default, default, default).ReturnsForAnyArgs(0);
 
-            var result = await sutProvider.Sut.InviteUserAsync(provider.Id, default, providerUserInvite);
+            var result = await sutProvider.Sut.InviteUserAsync(provider.Id, providerUserInvite);
             Assert.Equal(providerUserInvite.Emails.Count(), result.Count);
             Assert.True(result.TrueForAll(pu => pu.Status == ProviderUserStatusType.Invited), "Status must be invited");
             Assert.True(result.TrueForAll(pu => pu.ProviderId == provider.Id), "Provider Id must be correct");
@@ -175,7 +175,7 @@ namespace Bit.CommCore.Test.Services
             var providerUserRepository = sutProvider.GetDependency<IProviderUserRepository>();
             providerUserRepository.GetManyAsync(default).ReturnsForAnyArgs(providerUsers.ToList());
 
-            var result = await sutProvider.Sut.ResendInvitesAsync(provider.Id, default, providerUsers.Select(pu => pu.Id));
+            var result = await sutProvider.Sut.ResendInvitesAsync(provider.Id, providerUsers.Select(pu => pu.Id));
             Assert.Equal("", result[0].Item2);
             Assert.Equal("User invalid.", result[1].Item2);
             Assert.Equal("User invalid.", result[2].Item2);
@@ -197,7 +197,7 @@ namespace Bit.CommCore.Test.Services
             var providerUserRepository = sutProvider.GetDependency<IProviderUserRepository>();
             providerUserRepository.GetManyAsync(default).ReturnsForAnyArgs(providerUsers.ToList());
 
-            var result = await sutProvider.Sut.ResendInvitesAsync(provider.Id, default, providerUsers.Select(pu => pu.Id));
+            var result = await sutProvider.Sut.ResendInvitesAsync(provider.Id, providerUsers.Select(pu => pu.Id));
             Assert.True(result.All(r => r.Item2 == ""));
         }
 
