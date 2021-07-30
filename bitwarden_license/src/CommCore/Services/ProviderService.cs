@@ -7,6 +7,7 @@ using Bit.Core.Enums.Provider;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Business.Provider;
+using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
 using Bit.Core.Models.Table.Provider;
 using Bit.Core.Repositories;
@@ -374,7 +375,8 @@ namespace Bit.CommCore.Services
             await _eventService.LogProviderOrganizationEventAsync(providerOrganization, EventType.ProviderOrganization_Added);
         }
 
-        public async Task<ProviderOrganization> CreateOrganizationAsync(Guid providerId, OrganizationSignup organizationSignup, User user)
+        public async Task<ProviderOrganization> CreateOrganizationAsync(Guid providerId,
+            OrganizationSignup organizationSignup, string clientOwnerEmail, User user)
         {
             var (organization, _) = await _organizationService.SignUpAsync(organizationSignup, true);
 
@@ -387,6 +389,15 @@ namespace Bit.CommCore.Services
 
             await _providerOrganizationRepository.CreateAsync(providerOrganization);
             await _eventService.LogProviderOrganizationEventAsync(providerOrganization, EventType.ProviderOrganization_Created);
+
+            await _organizationService.InviteUserAsync(organization.Id, user.Id, null, new OrganizationUserInvite
+            {
+                Emails = new[] { clientOwnerEmail },
+                AccessAll = true,
+                Type = OrganizationUserType.Owner,
+                Permissions = null,
+                Collections = Array.Empty<SelectionReadOnly>(),
+            });
 
             return providerOrganization;
         }

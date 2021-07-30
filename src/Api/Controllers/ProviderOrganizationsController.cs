@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Api;
+using Bit.Core.Models.Api.Request;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
@@ -62,7 +63,7 @@ namespace Bit.Api.Controllers
 
         [HttpPost("")]
         [SelfHosted(NotSelfHostedOnly = true)]
-        public async Task<ProviderOrganizationResponseModel> Post(Guid providerId, [FromBody]OrganizationCreateRequestModel model)
+        public async Task<ProviderOrganizationResponseModel> Post(Guid providerId, [FromBody] ProviderOrganizationCreateRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)
@@ -75,8 +76,8 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            var organizationSignup = model.ToOrganizationSignup(user);
-            var result = await _providerService.CreateOrganizationAsync(providerId, organizationSignup, user);
+            var organizationSignup = model.OrganizationCreateRequest.ToOrganizationSignup(user);
+            var result = await _providerService.CreateOrganizationAsync(providerId, organizationSignup, model.ClientOwnerEmail, user);
             return new ProviderOrganizationResponseModel(result);
         }
 

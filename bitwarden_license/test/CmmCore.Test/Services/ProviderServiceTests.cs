@@ -433,7 +433,7 @@ namespace Bit.CommCore.Test.Services
 
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
         public async Task CreateOrganizationAsync_Success(Provider provider, OrganizationSignup organizationSignup,
-            Organization organization, User user, SutProvider<ProviderService> sutProvider)
+            Organization organization, string clientOwnerEmail, User user, SutProvider<ProviderService> sutProvider)
         {
             sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
             var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
@@ -441,12 +441,19 @@ namespace Bit.CommCore.Test.Services
                 .Returns(Tuple.Create(organization, null as OrganizationUser));
 
             var providerOrganization =
-                await sutProvider.Sut.CreateOrganizationAsync(provider.Id, organizationSignup, user);
+                await sutProvider.Sut.CreateOrganizationAsync(provider.Id, organizationSignup, clientOwnerEmail, user);
 
             await providerOrganizationRepository.ReceivedWithAnyArgs().CreateAsync(default);
             await sutProvider.GetDependency<IEventService>()
                 .Received().LogProviderOrganizationEventAsync(providerOrganization,
                     EventType.ProviderOrganization_Created);
+            await sutProvider.GetDependency<IOrganizationService>()
+                .Received().InviteUserAsync(organization.Id, user.Id, null,
+                Arg.Is<OrganizationUserInvite>(
+                    i => i.Emails.Count() == 1 &&
+                    i.Emails.First() == clientOwnerEmail &&
+                    i.Type == OrganizationUserType.Owner &&
+                    i.AccessAll));
         }
 
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
