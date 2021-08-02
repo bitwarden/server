@@ -70,8 +70,8 @@ namespace Bit.Core.Repositories.EntityFramework
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
-                var query = new UserCollectionDetailsQuery(userId);
-                var collection = await query.Run(dbContext).FirstOrDefaultAsync();
+                var query = new CollectionReadByIdUserId(id, userId).Run(dbContext);
+                var collection = await query.FirstOrDefaultAsync();
                 return collection;
             }
         }
@@ -138,9 +138,9 @@ namespace Bit.Core.Repositories.EntityFramework
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
-                var query = new UserCollectionDetailsQuery(userId).Run(dbContext);
-                var data = await query.ToListAsync();
-                return data.GroupBy(c => c.Id).Select(c => c.First()).ToList();
+                var query = new CollectionReadByUserId(userId).Run(dbContext);
+                var collections = await query.ToListAsync();
+                return collections;
             }
         }
 
