@@ -52,7 +52,7 @@ namespace Bit.Core.Models.Api
         [EncryptedStringLength(1000)]
         public string Username { get; set; }
         [EncryptedString]
-        [EncryptedStringLength(1000)]
+        [EncryptedStringLength(5000)]
         public string Password { get; set; }
         public DateTime? PasswordRevisionDate { get; set; }
         [EncryptedString]
