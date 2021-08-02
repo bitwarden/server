@@ -700,7 +700,7 @@ namespace Bit.Core.Services
             return IdentityResult.Success;
         }
         
-        public async Task<IdentityResult> UpdateTempPasswordAsync(User user, string newMasterPassword, string key)
+        public async Task<IdentityResult> UpdateTempPasswordAsync(User user, string newMasterPassword, string key, string hint)
         {
             if (!user.ForcePasswordReset)
             {
@@ -716,6 +716,7 @@ namespace Bit.Core.Services
             user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
             user.ForcePasswordReset = false;
             user.Key = key;
+            user.MasterPasswordHint = hint;
 
             await _userRepository.ReplaceAsync(user);
             await _mailService.SendUpdatedTempPasswordEmailAsync(user.Email, user.Name ?? user.Email);
