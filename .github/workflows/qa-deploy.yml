@@ -199,6 +199,7 @@ jobs:
           echo "::set-output name=webapp-name::$webapp_name"
 
       - name: Stop App Service
+        if: false
         env:
           AZURE_RESOURCE_GROUP: "bw-qa-env"
         run: az webapp stop --name ${{ steps.retrieve-secrets.outputs.webapp-name }} --resource-group $AZURE_RESOURCE_GROUP
@@ -211,6 +212,7 @@ jobs:
           package: ./${{ matrix.name }}.zip
 
       - name: Start App Service
+        if: false
         env:
           AZURE_RESOURCE_GROUP: "bw-qa-env"
         run: az webapp start --name ${{ steps.retrieve-secrets.outputs.webapp-name }} --resource-group $AZURE_RESOURCE_GROUP
