@@ -148,6 +148,7 @@ jobs:
         run: |
           echo "Running database migrations..."
           for f in `ls -v ./*.sql`; do
+            echo "Executing file: ${f}..."
             sqlcmd -S $MSSQL_HOST -d vault -U $MSSQL_USER -P $MSSQL_PASS -I -i $f
           done;        
 
