@@ -13,6 +13,10 @@ UPDATE
 SET
     [Kdf] = 0,
     [KdfIterations] = 5000
+WHERE
+    [Kdf] IS NULL
+OR
+    [KdfIterations] IS NULL
 GO
 
 ALTER TABLE
