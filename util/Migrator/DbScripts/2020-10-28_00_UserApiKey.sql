@@ -51,6 +51,8 @@ UPDATE
     [dbo].[User]
 SET
     [ApiKey] = (SELECT [dbo].[SecureRandomString]())
+WHERE
+    [ApiKey] IS NULL
 GO
 
 -- Change dbo.User.ApiKey to not null to enforece all future users to have one on create
