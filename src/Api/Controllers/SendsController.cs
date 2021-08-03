@@ -19,6 +19,7 @@ using Bit.Core.Models.Table;
 using Newtonsoft.Json;
 using Bit.Core.Models.Data;
 using Microsoft.Extensions.Logging;
+using Bit.Core;
 
 namespace Bit.Api.Controllers
 {
@@ -166,7 +167,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("file")]
-        [RequestSizeLimit(105_906_176)]
+        [RequestSizeLimit(Constants.FileSize101mb)]
         [DisableFormValueModelBinding]
         public async Task<SendResponseModel> PostFile()
         {
@@ -175,7 +176,7 @@ namespace Bit.Api.Controllers
                 throw new BadRequestException("Invalid content.");
             }
 
-            if (Request.ContentLength > 105906176) // 101 MB, give em' 1 extra MB for cushion
+            if (Request.ContentLength > Constants.FileSize101mb)
             {
                 throw new BadRequestException("Max file size is 100 MB.");
             }
@@ -249,7 +250,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("{id}/file/{fileId}")]
-        [DisableRequestSizeLimit]
+        [RequestSizeLimit(Constants.FileSize501mb)]
         [DisableFormValueModelBinding]
         public async Task PostFileForExistingSend(string id, string fileId)
         {
@@ -258,7 +259,7 @@ namespace Bit.Api.Controllers
                 throw new BadRequestException("Invalid content.");
             }
 
-            if (Request.ContentLength > 105906176 && !_globalSettings.SelfHosted) // 101 MB, give em' 1 extra MB for cushion
+            if (Request.ContentLength > Constants.FileSize101mb && !_globalSettings.SelfHosted)
             {
                 throw new BadRequestException("Max file size for direct upload is 100 MB.");
             }
