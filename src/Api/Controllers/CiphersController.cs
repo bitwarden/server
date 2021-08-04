@@ -230,7 +230,7 @@ namespace Bit.Api.Controllers
             var providerId = await _currentContext.ProviderIdForOrg(orgIdGuid);
             if (providerId.HasValue)
             {
-                await _providerService.LogProviderAccessToOrganization(orgIdGuid);
+                await _providerService.LogProviderAccessToOrganizationAsync(orgIdGuid);
             }
             return new ListResponseModel<CipherMiniDetailsResponseModel>(responses);
         }

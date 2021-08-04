@@ -405,7 +405,7 @@ namespace Bit.CommCore.Services
             return providerOrganization;
         }
 
-        public async Task RemoveOrganization(Guid providerId, Guid providerOrganizationId, Guid removingUserId)
+        public async Task RemoveOrganizationAsync(Guid providerId, Guid providerOrganizationId, Guid removingUserId)
         {
             var providerOrganization = await _providerOrganizationRepository.GetByIdAsync(providerOrganizationId);
             if (providerOrganization == null || providerOrganization.ProviderId != providerId)
@@ -422,12 +422,23 @@ namespace Bit.CommCore.Services
             await _eventService.LogProviderOrganizationEventAsync(providerOrganization, EventType.ProviderOrganization_Removed);
         }
 
-        public async Task LogProviderAccessToOrganization(Guid organizationId)
+        public async Task LogProviderAccessToOrganizationAsync(Guid organizationId)
         {
+            if (organizationId == default)
+            {
+                return;
+            }
+
             var providerOrganization = await _providerOrganizationRepository.GetByOrganizationId(organizationId);
             var organization = await _organizationRepository.GetByIdAsync(organizationId);
-            await _eventService.LogProviderOrganizationEventAsync(providerOrganization, EventType.ProviderOrganization_VaultAccessed);
-            await _eventService.LogOrganizationEventAsync(organization, EventType.Organization_VaultAccessed);
+            if (providerOrganization != null)
+            {
+                await _eventService.LogProviderOrganizationEventAsync(providerOrganization, EventType.ProviderOrganization_VaultAccessed);
+            }
+            if (organization != null)
+            {
+                await _eventService.LogOrganizationEventAsync(organization, EventType.Organization_VaultAccessed);
+            }
         }
 
 
