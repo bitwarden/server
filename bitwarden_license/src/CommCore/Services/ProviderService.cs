@@ -413,7 +413,7 @@ namespace Bit.CommCore.Services
                 throw new BadRequestException("Invalid organization.");
             }
 
-            if (!await _organizationService.HasConfirmedOwnersExceptAsync(providerOrganization.OrganizationId, new Guid[] {}))
+            if (!await _organizationService.HasConfirmedOwnersExceptAsync(providerOrganization.OrganizationId, new Guid[] { }, includeProvider: false))
             {
                 throw new BadRequestException("Organization needs to have at least one confirmed owner.");
             }

@@ -490,7 +490,7 @@ namespace Bit.CommCore.Test.Services
             sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
             sutProvider.GetDependency<IProviderOrganizationRepository>().GetByIdAsync(providerOrganization.Id)
                 .Returns(providerOrganization);
-            sutProvider.GetDependency<IOrganizationService>().HasConfirmedOwnersExceptAsync(default, default)
+            sutProvider.GetDependency<IOrganizationService>().HasConfirmedOwnersExceptAsync(default, default, default)
                 .ReturnsForAnyArgs(false);
 
             var exception = await Assert.ThrowsAsync<BadRequestException>(
@@ -506,7 +506,7 @@ namespace Bit.CommCore.Test.Services
             sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
             var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
             providerOrganizationRepository.GetByIdAsync(providerOrganization.Id).Returns(providerOrganization);
-            sutProvider.GetDependency<IOrganizationService>().HasConfirmedOwnersExceptAsync(default, default)
+            sutProvider.GetDependency<IOrganizationService>().HasConfirmedOwnersExceptAsync(default, default, default)
                 .ReturnsForAnyArgs(true);
 
             await sutProvider.Sut.RemoveOrganization(provider.Id, providerOrganization.Id, user.Id);

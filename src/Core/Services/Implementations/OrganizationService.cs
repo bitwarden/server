@@ -1689,11 +1689,16 @@ namespace Bit.Core.Services
             return result;
         }
 
-        public async Task<bool> HasConfirmedOwnersExceptAsync(Guid organizationId, IEnumerable<Guid> organizationUsersId)
+        public async Task<bool> HasConfirmedOwnersExceptAsync(Guid organizationId, IEnumerable<Guid> organizationUsersId, bool includeProvider = true)
         {
             var confirmedOwners = await GetConfirmedOwnersAsync(organizationId);
             var confirmedOwnersIds = confirmedOwners.Select(u => u.Id);
-            return confirmedOwnersIds.Except(organizationUsersId).Any() || (await _currentContext.ProviderIdForOrg(organizationId)).HasValue;
+            bool hasOtherOwner = confirmedOwnersIds.Except(organizationUsersId).Any();
+            if (!hasOtherOwner && includeProvider)
+            {
+                return (await _currentContext.ProviderIdForOrg(organizationId)).HasValue;
+            }
+            return hasOtherOwner;
         }
 
         public async Task UpdateUserGroupsAsync(OrganizationUser organizationUser, IEnumerable<Guid> groupIds, Guid? loggedInUserId)
