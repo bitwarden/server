@@ -1693,7 +1693,7 @@ namespace Bit.Core.Services
         {
             var confirmedOwners = await GetConfirmedOwnersAsync(organizationId);
             var confirmedOwnersIds = confirmedOwners.Select(u => u.Id);
-            return confirmedOwnersIds.Except(organizationUsersId).Any();
+            return confirmedOwnersIds.Except(organizationUsersId).Any() || (await _currentContext.ProviderIdForOrg(organizationId)).HasValue;
         }
 
         public async Task UpdateUserGroupsAsync(OrganizationUser organizationUser, IEnumerable<Guid> groupIds, Guid? loggedInUserId)

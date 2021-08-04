@@ -29,6 +29,7 @@ namespace Bit.Api.Controllers
         private readonly ICipherService _cipherService;
         private readonly IUserService _userService;
         private readonly IAttachmentStorageService _attachmentStorageService;
+        private readonly IProviderService _providerService;
         private readonly ICurrentContext _currentContext;
         private readonly ILogger<CiphersController> _logger;
         private readonly GlobalSettings _globalSettings;
@@ -39,6 +40,7 @@ namespace Bit.Api.Controllers
             ICipherService cipherService,
             IUserService userService,
             IAttachmentStorageService attachmentStorageService,
+            IProviderService providerService,
             ICurrentContext currentContext,
             ILogger<CiphersController> logger,
             GlobalSettings globalSettings)
@@ -48,6 +50,7 @@ namespace Bit.Api.Controllers
             _cipherService = cipherService;
             _userService = userService;
             _attachmentStorageService = attachmentStorageService;
+            _providerService = providerService;
             _currentContext = currentContext;
             _logger = logger;
             _globalSettings = globalSettings;
@@ -223,6 +226,12 @@ namespace Bit.Api.Controllers
 
             var responses = ciphers.Select(c => new CipherMiniDetailsResponseModel(c, _globalSettings,
                 collectionCiphersGroupDict));
+
+            var providerId = await _currentContext.ProviderIdForOrg(orgIdGuid);
+            if (providerId.HasValue)
+            {
+                await _providerService.LogProviderAccessToOrganization(orgIdGuid);
+            }
             return new ListResponseModel<CipherMiniDetailsResponseModel>(responses);
         }
 

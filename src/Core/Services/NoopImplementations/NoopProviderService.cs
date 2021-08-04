@@ -32,5 +32,6 @@ namespace Bit.Core.Services
         public Task<ProviderOrganization> CreateOrganizationAsync(Guid providerId, OrganizationSignup organizationSignup, string clientOwnerEmail, User user) => throw new NotImplementedException();
 
         public Task RemoveOrganization(Guid providerId, Guid providerOrganizationId, Guid removingUserId) => throw new NotImplementedException();
+        public Task LogProviderAccessToOrganization(Guid organizationId) => throw new NotImplementedException();
     }
 }
