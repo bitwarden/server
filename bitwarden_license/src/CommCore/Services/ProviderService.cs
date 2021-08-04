@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Enums.Provider;
 using Bit.Core.Exceptions;
@@ -29,11 +30,12 @@ namespace Bit.CommCore.Services
         private readonly IUserRepository _userRepository;
         private readonly IUserService _userService;
         private readonly IOrganizationService _organizationService;
+        private readonly ICurrentContext _currentContext;
 
         public ProviderService(IProviderRepository providerRepository, IProviderUserRepository providerUserRepository,
             IProviderOrganizationRepository providerOrganizationRepository, IUserRepository userRepository,
             IUserService userService, IOrganizationService organizationService, IMailService mailService,
-            IDataProtectionProvider dataProtectionProvider, IEventService eventService, GlobalSettings globalSettings)
+            IDataProtectionProvider dataProtectionProvider, IEventService eventService, GlobalSettings globalSettings, ICurrentContext currentContext)
         {
             _providerRepository = providerRepository;
             _providerUserRepository = providerUserRepository;
@@ -45,6 +47,7 @@ namespace Bit.CommCore.Services
             _eventService = eventService;
             _globalSettings = globalSettings;
             _dataProtector = dataProtectionProvider.CreateProtector("ProviderServiceDataProtector");
+            _currentContext = currentContext;
         }
 
         public async Task CreateAsync(string ownerEmail)
@@ -118,20 +121,28 @@ namespace Bit.CommCore.Services
             await _providerRepository.ReplaceAsync(provider);
         }
 
-        public async Task<List<ProviderUser>> InviteUserAsync(Guid providerId, ProviderUserInvite invite)
+        public async Task<List<ProviderUser>> InviteUserAsync(ProviderUserInvite<string> invite)
         {
-            var provider = await _providerRepository.GetByIdAsync(providerId);
-            if (provider == null || invite?.Emails == null || !invite.Emails.Any())
+            if (!_currentContext.ProviderManageUsers(invite.ProviderId))
+            {
+                throw new BadRequestException("Invalid permissions.");
+            }
+
+            var emails = invite?.UserIdentifiers;
+            var invitingUser = await _providerUserRepository.GetByProviderUserAsync(invite.ProviderId, invite.InvitingUserId);
+
+            var provider = await _providerRepository.GetByIdAsync(invite.ProviderId);
+            if (provider == null || emails == null || !emails.Any())
             {
                 throw new NotFoundException();
             }
 
             var providerUsers = new List<ProviderUser>();
-            foreach (var email in invite.Emails)
+            foreach (var email in emails)
             {
                 // Make sure user is not already invited
                 var existingProviderUserCount =
-                    await _providerUserRepository.GetCountByProviderAsync(providerId, email, false);
+                    await _providerUserRepository.GetCountByProviderAsync(invite.ProviderId, email, false);
                 if (existingProviderUserCount > 0)
                 {
                     continue;
@@ -139,7 +150,7 @@ namespace Bit.CommCore.Services
 
                 var providerUser = new ProviderUser
                 {
-                    ProviderId = providerId,
+                    ProviderId = invite.ProviderId,
                     UserId = null,
                     Email = email.ToLowerInvariant(),
                     Key = null,
@@ -160,15 +171,20 @@ namespace Bit.CommCore.Services
             return providerUsers;
         }
 
-        public async Task<List<Tuple<ProviderUser, string>>> ResendInvitesAsync(Guid providerId, IEnumerable<Guid> providerUsersId)
+        public async Task<List<Tuple<ProviderUser, string>>> ResendInvitesAsync(ProviderUserInvite<Guid> invite)
         {
-            var providerUsers = await _providerUserRepository.GetManyAsync(providerUsersId);
-            var provider = await _providerRepository.GetByIdAsync(providerId);
+            if (!_currentContext.ProviderManageUsers(invite.ProviderId))
+            {
+                throw new BadRequestException("Invalid permissions.");
+            }
+
+            var providerUsers = await _providerUserRepository.GetManyAsync(invite.UserIdentifiers);
+            var provider = await _providerRepository.GetByIdAsync(invite.ProviderId);
 
             var result = new List<Tuple<ProviderUser, string>>();
             foreach (var providerUser in providerUsers)
             {
-                if (providerUser.Status != ProviderUserStatusType.Invited || providerUser.ProviderId != providerId)
+                if (providerUser.Status != ProviderUserStatusType.Invited || providerUser.ProviderId != invite.ProviderId)
                 {
                     result.Add(Tuple.Create(providerUser, "User invalid."));
                     continue;
@@ -404,10 +420,10 @@ namespace Bit.CommCore.Services
             await _eventService.LogProviderOrganizationEventAsync(providerOrganization, EventType.ProviderOrganization_Removed);
         }
 
-        public async Task ResendProviderSetupInviteEmailAsync(Guid providerId, Guid userId)
+        public async Task ResendProviderSetupInviteEmailAsync(Guid providerId, Guid ownerId)
         {
             var provider = await _providerRepository.GetByIdAsync(providerId);
-            var owner = await _userRepository.GetByIdAsync(userId);
+            var owner = await _userRepository.GetByIdAsync(ownerId);
             if (owner == null)
             {
                 throw new BadRequestException("Invalid owner.");

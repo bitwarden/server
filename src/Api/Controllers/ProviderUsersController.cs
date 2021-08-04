@@ -67,8 +67,14 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            var userId = _userService.GetProperUserId(User);
-            await _providerService.InviteUserAsync(providerId, userId.Value, new ProviderUserInvite(model));
+            var invite = new ProviderUserInvite<string>
+            {
+                UserIdentifiers = model.Emails,
+                Type = model.Type.Value,
+                InvitingUserId =_userService.GetProperUserId(User).Value,
+                ProviderId = providerId
+            };
+            await _providerService.InviteUserAsync(invite);
         }
         
         [HttpPost("reinvite")]
@@ -79,8 +85,13 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            var userId = _userService.GetProperUserId(User);
-            var result = await _providerService.ResendInvitesAsync(providerId, userId.Value, model.Ids);
+            var invite = new ProviderUserInvite<Guid> 
+            {
+                UserIdentifiers = model.Ids,
+                ProviderId = providerId,
+                InvitingUserId = _userService.GetProperUserId(User).Value
+            };
+            var result = await _providerService.ResendInvitesAsync(invite);
             return new ListResponseModel<ProviderUserBulkResponseModel>(
                 result.Select(t => new ProviderUserBulkResponseModel(t.Item1.Id, t.Item2)));
         }
@@ -93,8 +104,13 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            var userId = _userService.GetProperUserId(User);
-            await _providerService.ResendInvitesAsync(providerId, userId.Value, new [] { id });
+            var invite = new ProviderUserInvite<Guid>
+            {
+                UserIdentifiers = new [] { id },
+                ProviderId = providerId,
+                InvitingUserId = _userService.GetProperUserId(User).Value
+            };
+            await _providerService.ResendInvitesAsync(invite);
         }
 
         [HttpPost("{id:guid}/accept")]

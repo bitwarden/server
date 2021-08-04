@@ -16,9 +16,9 @@ namespace Bit.Core.Services
 
         public Task UpdateAsync(Provider provider, bool updateBilling = false) => throw new NotImplementedException();
 
-        public Task<List<ProviderUser>> InviteUserAsync(Guid providerId, ProviderUserInvite providerUserInvite) => throw new NotImplementedException();
+        public Task<List<ProviderUser>> InviteUserAsync(ProviderUserInvite<string> invite) => throw new NotImplementedException();
 
-        public Task<List<Tuple<ProviderUser, string>>> ResendInvitesAsync(Guid providerId, IEnumerable<Guid> providerUsersId) => throw new NotImplementedException();
+        public Task<List<Tuple<ProviderUser, string>>> ResendInvitesAsync(ProviderUserInvite<Guid> invite) => throw new NotImplementedException();
 
         public Task<ProviderUser> AcceptUserAsync(Guid providerUserId, User user, string token) => throw new NotImplementedException();
 

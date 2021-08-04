@@ -134,10 +134,10 @@ namespace Bit.Admin.Controllers
             return RedirectToAction("Index");
         }
 
-        public async Task<IActionResult> ResendInvite(Guid userId, Guid providerId)
+        public async Task<IActionResult> ResendInvite(Guid ownerId, Guid providerId)
         {
-            await _providerService.ResendProviderSetupInviteEmailAsync(providerId, userId);
-            TempData["InviteResentTo"] = userId;
+            await _providerService.ResendProviderSetupInviteEmailAsync(providerId, ownerId);
+            TempData["InviteResentTo"] = ownerId;
             return RedirectToAction("Edit", new { id = providerId });
         }
     }
