@@ -799,8 +799,8 @@ namespace Bit.Api.Controllers
             }
         }
         
-        [HttpPost("update-temp-password")]
-        public async Task PostUpdateTempPasswordAsync([FromBody]UpdateTempPasswordRequestModel model)
+        [HttpPut("update-temp-password")]
+        public async Task PutUpdateTempPasswordAsync([FromBody]UpdateTempPasswordRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)
@@ -808,7 +808,7 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
-            var result = await _userService.UpdateTempPasswordAsync(user, model.NewMasterPasswordHash, model.Key);
+            var result = await _userService.UpdateTempPasswordAsync(user, model.NewMasterPasswordHash, model.Key, model.MasterPasswordHint);
             if (result.Succeeded)
             {
                 return;
