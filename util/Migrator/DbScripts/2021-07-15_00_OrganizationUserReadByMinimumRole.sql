@@ -17,5 +17,6 @@ BEGIN
         [dbo].[OrganizationUserUserDetailsView]
     WHERE
         OrganizationId = @OrganizationId 
+        AND Status = 2
         AND [Type] <= @MinRole
 END
