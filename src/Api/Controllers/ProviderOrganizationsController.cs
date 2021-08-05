@@ -91,7 +91,7 @@ namespace Bit.Api.Controllers
             }
 
             var userId = _userService.GetProperUserId(User);
-            await _providerService.RemoveOrganization(providerId, id, userId.Value);
+            await _providerService.RemoveOrganizationAsync(providerId, id, userId.Value);
         }
     }
 }

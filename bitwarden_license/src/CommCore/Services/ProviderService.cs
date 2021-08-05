@@ -27,6 +27,7 @@ namespace Bit.CommCore.Services
         private readonly IProviderRepository _providerRepository;
         private readonly IProviderUserRepository _providerUserRepository;
         private readonly IProviderOrganizationRepository _providerOrganizationRepository;
+        private readonly IOrganizationRepository _organizationRepository;
         private readonly IUserRepository _userRepository;
         private readonly IUserService _userService;
         private readonly IOrganizationService _organizationService;
@@ -34,11 +35,13 @@ namespace Bit.CommCore.Services
         public ProviderService(IProviderRepository providerRepository, IProviderUserRepository providerUserRepository,
             IProviderOrganizationRepository providerOrganizationRepository, IUserRepository userRepository,
             IUserService userService, IOrganizationService organizationService, IMailService mailService,
-            IDataProtectionProvider dataProtectionProvider, IEventService eventService, GlobalSettings globalSettings)
+            IDataProtectionProvider dataProtectionProvider, IEventService eventService,
+            IOrganizationRepository organizationRepository, GlobalSettings globalSettings)
         {
             _providerRepository = providerRepository;
             _providerUserRepository = providerUserRepository;
             _providerOrganizationRepository = providerOrganizationRepository;
+            _organizationRepository = organizationRepository;
             _userRepository = userRepository;
             _userService = userService;
             _organizationService = organizationService;
@@ -402,7 +405,7 @@ namespace Bit.CommCore.Services
             return providerOrganization;
         }
 
-        public async Task RemoveOrganization(Guid providerId, Guid providerOrganizationId, Guid removingUserId)
+        public async Task RemoveOrganizationAsync(Guid providerId, Guid providerOrganizationId, Guid removingUserId)
         {
             var providerOrganization = await _providerOrganizationRepository.GetByIdAsync(providerOrganizationId);
             if (providerOrganization == null || providerOrganization.ProviderId != providerId)
@@ -410,7 +413,7 @@ namespace Bit.CommCore.Services
                 throw new BadRequestException("Invalid organization.");
             }
 
-            if (!await _organizationService.HasConfirmedOwnersExceptAsync(providerOrganization.OrganizationId, new Guid[] {}))
+            if (!await _organizationService.HasConfirmedOwnersExceptAsync(providerOrganization.OrganizationId, new Guid[] { }, includeProvider: false))
             {
                 throw new BadRequestException("Organization needs to have at least one confirmed owner.");
             }
@@ -418,6 +421,26 @@ namespace Bit.CommCore.Services
             await _providerOrganizationRepository.DeleteAsync(providerOrganization);
             await _eventService.LogProviderOrganizationEventAsync(providerOrganization, EventType.ProviderOrganization_Removed);
         }
+
+        public async Task LogProviderAccessToOrganizationAsync(Guid organizationId)
+        {
+            if (organizationId == default)
+            {
+                return;
+            }
+
+            var providerOrganization = await _providerOrganizationRepository.GetByOrganizationId(organizationId);
+            var organization = await _organizationRepository.GetByIdAsync(organizationId);
+            if (providerOrganization != null)
+            {
+                await _eventService.LogProviderOrganizationEventAsync(providerOrganization, EventType.ProviderOrganization_VaultAccessed);
+            }
+            if (organization != null)
+            {
+                await _eventService.LogOrganizationEventAsync(organization, EventType.Organization_VaultAccessed);
+            }
+        }
+
 
         private async Task SendInviteAsync(ProviderUser providerUser, Provider provider)
         {
