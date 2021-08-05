@@ -120,7 +120,7 @@ namespace Bit.CommCore.Services
         {
             if (provider.Id == default)
             {
-                throw new ApplicationException("Cannot create provider this way.");
+                throw new ArgumentException("Cannot create provider this way.");
             }
 
             await _providerRepository.ReplaceAsync(provider);
@@ -130,7 +130,7 @@ namespace Bit.CommCore.Services
         {
             if (!_currentContext.ProviderManageUsers(invite.ProviderId))
             {
-                throw new BadRequestException("Invalid permissions.");
+                throw new InvalidOperationException("Invalid permissions.");
             }
 
             var emails = invite?.UserIdentifiers;
