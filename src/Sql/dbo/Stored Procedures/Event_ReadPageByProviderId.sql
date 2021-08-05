@@ -16,7 +16,7 @@ BEGIN
         [Date] >= @StartDate
         AND (@BeforeDate IS NOT NULL OR [Date] <= @EndDate)
         AND (@BeforeDate IS NULL OR [Date] < @BeforeDate)
-        AND [Providerid] = @ProviderId
+        AND [ProviderId] = @ProviderId
     ORDER BY [Date] DESC
     OFFSET 0 ROWS
     FETCH NEXT @PageSize ROWS ONLY

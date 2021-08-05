@@ -16,9 +16,9 @@ namespace Bit.Core.Services
 
         public Task UpdateAsync(Provider provider, bool updateBilling = false) => throw new NotImplementedException();
 
-        public Task<List<ProviderUser>> InviteUserAsync(Guid providerId, Guid invitingUserId, ProviderUserInvite providerUserInvite) => throw new NotImplementedException();
+        public Task<List<ProviderUser>> InviteUserAsync(ProviderUserInvite<string> invite) => throw new NotImplementedException();
 
-        public Task<List<Tuple<ProviderUser, string>>> ResendInvitesAsync(Guid providerId, Guid invitingUserId, IEnumerable<Guid> providerUsersId) => throw new NotImplementedException();
+        public Task<List<Tuple<ProviderUser, string>>> ResendInvitesAsync(ProviderUserInvite<Guid> invite) => throw new NotImplementedException();
 
         public Task<ProviderUser> AcceptUserAsync(Guid providerUserId, User user, string token) => throw new NotImplementedException();
 
@@ -29,9 +29,13 @@ namespace Bit.Core.Services
         public Task<List<Tuple<ProviderUser, string>>> DeleteUsersAsync(Guid providerId, IEnumerable<Guid> providerUserIds, Guid deletingUserId) => throw new NotImplementedException();
 
         public Task AddOrganization(Guid providerId, Guid organizationId, Guid addingUserId, string key) => throw new NotImplementedException();
+        
         public Task<ProviderOrganization> CreateOrganizationAsync(Guid providerId, OrganizationSignup organizationSignup, string clientOwnerEmail, User user) => throw new NotImplementedException();
 
         public Task RemoveOrganizationAsync(Guid providerId, Guid providerOrganizationId, Guid removingUserId) => throw new NotImplementedException();
+        
         public Task LogProviderAccessToOrganizationAsync(Guid organizationId) => throw new NotImplementedException();
+        
+        public Task ResendProviderSetupInviteEmailAsync(Guid providerId, Guid userId) => throw new NotImplementedException();
     }
 }
