@@ -8,6 +8,7 @@ using Bit.Core.Enums.Provider;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Business.Provider;
+using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
 using Bit.Core.Models.Table.Provider;
 using Bit.Core.Repositories;
@@ -27,6 +28,7 @@ namespace Bit.CommCore.Services
         private readonly IProviderRepository _providerRepository;
         private readonly IProviderUserRepository _providerUserRepository;
         private readonly IProviderOrganizationRepository _providerOrganizationRepository;
+        private readonly IOrganizationRepository _organizationRepository;
         private readonly IUserRepository _userRepository;
         private readonly IUserService _userService;
         private readonly IOrganizationService _organizationService;
@@ -35,11 +37,14 @@ namespace Bit.CommCore.Services
         public ProviderService(IProviderRepository providerRepository, IProviderUserRepository providerUserRepository,
             IProviderOrganizationRepository providerOrganizationRepository, IUserRepository userRepository,
             IUserService userService, IOrganizationService organizationService, IMailService mailService,
-            IDataProtectionProvider dataProtectionProvider, IEventService eventService, GlobalSettings globalSettings, ICurrentContext currentContext)
+            IDataProtectionProvider dataProtectionProvider, IEventService eventService,
+            IOrganizationRepository organizationRepository, GlobalSettings globalSettings,
+            ICurrentContext currentContext)
         {
             _providerRepository = providerRepository;
             _providerUserRepository = providerUserRepository;
             _providerOrganizationRepository = providerOrganizationRepository;
+            _organizationRepository = organizationRepository;
             _userRepository = userRepository;
             _userService = userService;
             _organizationService = organizationService;
@@ -386,7 +391,8 @@ namespace Bit.CommCore.Services
             await _eventService.LogProviderOrganizationEventAsync(providerOrganization, EventType.ProviderOrganization_Added);
         }
 
-        public async Task<ProviderOrganization> CreateOrganizationAsync(Guid providerId, OrganizationSignup organizationSignup, User user)
+        public async Task<ProviderOrganization> CreateOrganizationAsync(Guid providerId,
+            OrganizationSignup organizationSignup, string clientOwnerEmail, User user)
         {
             var (organization, _) = await _organizationService.SignUpAsync(organizationSignup, true);
 
@@ -400,10 +406,19 @@ namespace Bit.CommCore.Services
             await _providerOrganizationRepository.CreateAsync(providerOrganization);
             await _eventService.LogProviderOrganizationEventAsync(providerOrganization, EventType.ProviderOrganization_Created);
 
+            await _organizationService.InviteUserAsync(organization.Id, user.Id, null, new OrganizationUserInvite
+            {
+                Emails = new[] { clientOwnerEmail },
+                AccessAll = true,
+                Type = OrganizationUserType.Owner,
+                Permissions = null,
+                Collections = Array.Empty<SelectionReadOnly>(),
+            });
+
             return providerOrganization;
         }
 
-        public async Task RemoveOrganization(Guid providerId, Guid providerOrganizationId, Guid removingUserId)
+        public async Task RemoveOrganizationAsync(Guid providerId, Guid providerOrganizationId, Guid removingUserId)
         {
             var providerOrganization = await _providerOrganizationRepository.GetByIdAsync(providerOrganizationId);
             if (providerOrganization == null || providerOrganization.ProviderId != providerId)
@@ -411,7 +426,7 @@ namespace Bit.CommCore.Services
                 throw new BadRequestException("Invalid organization.");
             }
 
-            if (!await _organizationService.HasConfirmedOwnersExceptAsync(providerOrganization.OrganizationId, new Guid[] {}))
+            if (!await _organizationService.HasConfirmedOwnersExceptAsync(providerOrganization.OrganizationId, new Guid[] { }, includeProvider: false))
             {
                 throw new BadRequestException("Organization needs to have at least one confirmed owner.");
             }
@@ -435,6 +450,25 @@ namespace Bit.CommCore.Services
         {
             var token = _dataProtector.Protect($"ProviderSetupInvite {provider.Id} {ownerEmail} {CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow)}");
             await _mailService.SendProviderSetupInviteEmailAsync(provider, token, ownerEmail);
+        }
+
+        public async Task LogProviderAccessToOrganizationAsync(Guid organizationId)
+        {
+            if (organizationId == default)
+            {
+                return;
+            }
+
+            var providerOrganization = await _providerOrganizationRepository.GetByOrganizationId(organizationId);
+            var organization = await _organizationRepository.GetByIdAsync(organizationId);
+            if (providerOrganization != null)
+            {
+                await _eventService.LogProviderOrganizationEventAsync(providerOrganization, EventType.ProviderOrganization_VaultAccessed);
+            }
+            if (organization != null)
+            {
+                await _eventService.LogOrganizationEventAsync(organization, EventType.Organization_VaultAccessed);
+            }
         }
 
         private async Task SendInviteAsync(ProviderUser providerUser, Provider provider)

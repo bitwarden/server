@@ -17,6 +17,7 @@ using Microsoft.Azure.EventGrid.Models;
 using Bit.Core.Models.Data;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using Bit.Core;
 
 namespace Bit.Api.Controllers
 {
@@ -29,6 +30,7 @@ namespace Bit.Api.Controllers
         private readonly ICipherService _cipherService;
         private readonly IUserService _userService;
         private readonly IAttachmentStorageService _attachmentStorageService;
+        private readonly IProviderService _providerService;
         private readonly ICurrentContext _currentContext;
         private readonly ILogger<CiphersController> _logger;
         private readonly GlobalSettings _globalSettings;
@@ -39,6 +41,7 @@ namespace Bit.Api.Controllers
             ICipherService cipherService,
             IUserService userService,
             IAttachmentStorageService attachmentStorageService,
+            IProviderService providerService,
             ICurrentContext currentContext,
             ILogger<CiphersController> logger,
             GlobalSettings globalSettings)
@@ -48,6 +51,7 @@ namespace Bit.Api.Controllers
             _cipherService = cipherService;
             _userService = userService;
             _attachmentStorageService = attachmentStorageService;
+            _providerService = providerService;
             _currentContext = currentContext;
             _logger = logger;
             _globalSettings = globalSettings;
@@ -223,6 +227,12 @@ namespace Bit.Api.Controllers
 
             var responses = ciphers.Select(c => new CipherMiniDetailsResponseModel(c, _globalSettings,
                 collectionCiphersGroupDict));
+
+            var providerId = await _currentContext.ProviderIdForOrg(orgIdGuid);
+            if (providerId.HasValue)
+            {
+                await _providerService.LogProviderAccessToOrganizationAsync(orgIdGuid);
+            }
             return new ListResponseModel<CipherMiniDetailsResponseModel>(responses);
         }
 
@@ -622,7 +632,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("{id}/attachment/{attachmentId}")]
-        [DisableRequestSizeLimit]
+        [RequestSizeLimit(Constants.FileSize501mb)]
         [DisableFormValueModelBinding]
         public async Task PostFileForExistingAttachment(string id, string attachmentId)
         {
@@ -652,7 +662,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("{id}/attachment")]
-        [RequestSizeLimit(105_906_176)]
+        [RequestSizeLimit(Constants.FileSize101mb)]
         [DisableFormValueModelBinding]
         public async Task<CipherResponseModel> PostAttachment(string id)
         {
@@ -676,7 +686,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("{id}/attachment-admin")]
-        [RequestSizeLimit(105_906_176)]
+        [RequestSizeLimit(Constants.FileSize101mb)]
         [DisableFormValueModelBinding]
         public async Task<CipherMiniResponseModel> PostAttachmentAdmin(string id)
         {
@@ -709,7 +719,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("{id}/attachment/{attachmentId}/share")]
-        [RequestSizeLimit(105_906_176)]
+        [RequestSizeLimit(Constants.FileSize101mb)]
         [DisableFormValueModelBinding]
         public async Task PostAttachmentShare(string id, string attachmentId, Guid organizationId)
         {
@@ -805,7 +815,7 @@ namespace Bit.Api.Controllers
                 throw new BadRequestException("Invalid content.");
             }
 
-            if (Request.ContentLength > 105906176) // 101 MB, give em' 1 extra MB for cushion
+            if (Request.ContentLength > Constants.FileSize101mb)
             {
                 throw new BadRequestException("Max file size is 100 MB.");
             }

@@ -21,7 +21,9 @@ namespace Bit.Admin.Models
         }
 
         public bool Enabled { get; set; }
+        [Display(Name = "Billing Email")]
         public string BillingEmail { get; set; }
+        [Display(Name = "Business Name")]
         public string BusinessName { get; set; }
         public string Name { get; set; }
         [Display(Name = "Events")]

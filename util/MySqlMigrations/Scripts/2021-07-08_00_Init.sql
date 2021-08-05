@@ -24,7 +24,7 @@ CREATE TABLE `Event` (
     `IpAddress` varchar(50) CHARACTER SET utf8mb4 NULL,
     `ActingUserId` char(36) COLLATE ascii_general_ci NULL,
     CONSTRAINT `PK_Event` PRIMARY KEY (`Id`)
-) CHARACTER SET utf8mb4;
+) ENGINE=InnoDB CHARACTER SET utf8mb4;
 
 CREATE TABLE `Grant` (
     `Key` varchar(200) CHARACTER SET utf8mb4 NOT NULL,
@@ -38,7 +38,7 @@ CREATE TABLE `Grant` (
     `ConsumedDate` datetime(6) NULL,
     `Data` longtext CHARACTER SET utf8mb4 NULL,
     CONSTRAINT `PK_Grant` PRIMARY KEY (`Key`)
-) CHARACTER SET utf8mb4;
+) ENGINE=InnoDB CHARACTER SET utf8mb4;
 
 CREATE TABLE `Installation` (
     `Id` char(36) COLLATE ascii_general_ci NOT NULL,
@@ -47,7 +47,7 @@ CREATE TABLE `Installation` (
     `Enabled` tinyint(1) NOT NULL,
     `CreationDate` datetime(6) NOT NULL,
     CONSTRAINT `PK_Installation` PRIMARY KEY (`Id`)
-) CHARACTER SET utf8mb4;
+) ENGINE=InnoDB CHARACTER SET utf8mb4;
 
 CREATE TABLE `Organization` (
     `Id` char(36) COLLATE ascii_general_ci NOT NULL,
@@ -91,7 +91,7 @@ CREATE TABLE `Organization` (
     `CreationDate` datetime(6) NOT NULL,
     `RevisionDate` datetime(6) NOT NULL,
     CONSTRAINT `PK_Organization` PRIMARY KEY (`Id`)
-) CHARACTER SET utf8mb4;
+) ENGINE=InnoDB CHARACTER SET utf8mb4;
 
 CREATE TABLE `Provider` (
     `Id` char(36) COLLATE ascii_general_ci NOT NULL,
@@ -108,7 +108,7 @@ CREATE TABLE `Provider` (
     `CreationDate` datetime(6) NOT NULL,
     `RevisionDate` datetime(6) NOT NULL,
     CONSTRAINT `PK_Provider` PRIMARY KEY (`Id`)
-) CHARACTER SET utf8mb4;
+) ENGINE=InnoDB CHARACTER SET utf8mb4;
 
 CREATE TABLE `TaxRate` (
     `Id` varchar(40) CHARACTER SET utf8mb4 NOT NULL,
@@ -118,7 +118,7 @@ CREATE TABLE `TaxRate` (
     `Rate` decimal(65,30) NOT NULL,
     `Active` tinyint(1) NOT NULL,
     CONSTRAINT `PK_TaxRate` PRIMARY KEY (`Id`)
-) CHARACTER SET utf8mb4;
+) ENGINE=InnoDB CHARACTER SET utf8mb4;
 
 CREATE TABLE `User` (
     `Id` char(36) COLLATE ascii_general_ci NOT NULL,
@@ -153,7 +153,7 @@ CREATE TABLE `User` (
     `CreationDate` datetime(6) NOT NULL,
     `RevisionDate` datetime(6) NOT NULL,
     CONSTRAINT `PK_User` PRIMARY KEY (`Id`)
-) CHARACTER SET utf8mb4;
+) ENGINE=InnoDB CHARACTER SET utf8mb4;
 
 CREATE TABLE `Collection` (
     `Id` char(36) COLLATE ascii_general_ci NOT NULL,
@@ -164,7 +164,7 @@ CREATE TABLE `Collection` (
     `RevisionDate` datetime(6) NOT NULL,
     CONSTRAINT `PK_Collection` PRIMARY KEY (`Id`),
     CONSTRAINT `FK_Collection_Organization_OrganizationId` FOREIGN KEY (`OrganizationId`) REFERENCES `Organization` (`Id`) ON DELETE CASCADE
-) CHARACTER SET utf8mb4;
+) ENGINE=InnoDB CHARACTER SET utf8mb4;
 
 CREATE TABLE `Group` (
     `Id` char(36) COLLATE ascii_general_ci NOT NULL,
@@ -176,7 +176,7 @@ CREATE TABLE `Group` (
     `RevisionDate` datetime(6) NOT NULL,
     CONSTRAINT `PK_Group` PRIMARY KEY (`Id`),
     CONSTRAINT `FK_Group_Organization_OrganizationId` FOREIGN KEY (`OrganizationId`) REFERENCES `Organization` (`Id`) ON DELETE CASCADE
-) CHARACTER SET utf8mb4;
+) ENGINE=InnoDB CHARACTER SET utf8mb4;
 
 CREATE TABLE `Policy` (
     `Id` char(36) COLLATE ascii_general_ci NOT NULL,
@@ -188,7 +188,7 @@ CREATE TABLE `Policy` (
     `RevisionDate` datetime(6) NOT NULL,
     CONSTRAINT `PK_Policy` PRIMARY KEY (`Id`),
     CONSTRAINT `FK_Policy_Organization_OrganizationId` FOREIGN KEY (`OrganizationId`) REFERENCES `Organization` (`Id`) ON DELETE CASCADE
-) CHARACTER SET utf8mb4;
+) ENGINE=InnoDB CHARACTER SET utf8mb4;
 
 CREATE TABLE `SsoConfig` (
     `Id` bigint NOT NULL AUTO_INCREMENT,
@@ -199,7 +199,7 @@ CREATE TABLE `SsoConfig` (
     `RevisionDate` datetime(6) NOT NULL,
     CONSTRAINT `PK_SsoConfig` PRIMARY KEY (`Id`),
     CONSTRAINT `FK_SsoConfig_Organization_OrganizationId` FOREIGN KEY (`OrganizationId`) REFERENCES `Organization` (`Id`) ON DELETE CASCADE
-) CHARACTER SET utf8mb4;
+) ENGINE=InnoDB CHARACTER SET utf8mb4;
 
 CREATE TABLE `ProviderOrganization` (
     `Id` char(36) COLLATE ascii_general_ci NOT NULL,
@@ -212,7 +212,7 @@ CREATE TABLE `ProviderOrganization` (
     CONSTRAINT `PK_ProviderOrganization` PRIMARY KEY (`Id`),
     CONSTRAINT `FK_ProviderOrganization_Organization_OrganizationId` FOREIGN KEY (`OrganizationId`) REFERENCES `Organization` (`Id`) ON DELETE CASCADE,
     CONSTRAINT `FK_ProviderOrganization_Provider_ProviderId` FOREIGN KEY (`ProviderId`) REFERENCES `Provider` (`Id`) ON DELETE CASCADE
-) CHARACTER SET utf8mb4;
+) ENGINE=InnoDB CHARACTER SET utf8mb4;
 
 CREATE TABLE `Cipher` (
     `Id` char(36) COLLATE ascii_general_ci NOT NULL,
@@ -230,7 +230,7 @@ CREATE TABLE `Cipher` (
     CONSTRAINT `PK_Cipher` PRIMARY KEY (`Id`),
     CONSTRAINT `FK_Cipher_Organization_OrganizationId` FOREIGN KEY (`OrganizationId`) REFERENCES `Organization` (`Id`) ON DELETE RESTRICT,
     CONSTRAINT `FK_Cipher_User_UserId` FOREIGN KEY (`UserId`) REFERENCES `User` (`Id`) ON DELETE RESTRICT
-) CHARACTER SET utf8mb4;
+) ENGINE=InnoDB CHARACTER SET utf8mb4;
 
 CREATE TABLE `Device` (
     `Id` char(36) COLLATE ascii_general_ci NOT NULL,
@@ -243,7 +243,7 @@ CREATE TABLE `Device` (
     `RevisionDate` datetime(6) NOT NULL,
     CONSTRAINT `PK_Device` PRIMARY KEY (`Id`),
     CONSTRAINT `FK_Device_User_UserId` FOREIGN KEY (`UserId`) REFERENCES `User` (`Id`) ON DELETE CASCADE
-) CHARACTER SET utf8mb4;
+) ENGINE=InnoDB CHARACTER SET utf8mb4;
 
 CREATE TABLE `EmergencyAccess` (
     `Id` char(36) COLLATE ascii_general_ci NOT NULL,
@@ -261,7 +261,7 @@ CREATE TABLE `EmergencyAccess` (
     CONSTRAINT `PK_EmergencyAccess` PRIMARY KEY (`Id`),
     CONSTRAINT `FK_EmergencyAccess_User_GranteeId` FOREIGN KEY (`GranteeId`) REFERENCES `User` (`Id`) ON DELETE RESTRICT,
     CONSTRAINT `FK_EmergencyAccess_User_GrantorId` FOREIGN KEY (`GrantorId`) REFERENCES `User` (`Id`) ON DELETE CASCADE
-) CHARACTER SET utf8mb4;
+) ENGINE=InnoDB CHARACTER SET utf8mb4;
 
 CREATE TABLE `Folder` (
     `Id` char(36) COLLATE ascii_general_ci NOT NULL,
@@ -271,7 +271,7 @@ CREATE TABLE `Folder` (
     `RevisionDate` datetime(6) NOT NULL,
     CONSTRAINT `PK_Folder` PRIMARY KEY (`Id`),
     CONSTRAINT `FK_Folder_User_UserId` FOREIGN KEY (`UserId`) REFERENCES `User` (`Id`) ON DELETE CASCADE
-) CHARACTER SET utf8mb4;
+) ENGINE=InnoDB CHARACTER SET utf8mb4;
 
 CREATE TABLE `OrganizationUser` (
     `Id` char(36) COLLATE ascii_general_ci NOT NULL,
@@ -290,7 +290,7 @@ CREATE TABLE `OrganizationUser` (
     CONSTRAINT `PK_OrganizationUser` PRIMARY KEY (`Id`),
     CONSTRAINT `FK_OrganizationUser_Organization_OrganizationId` FOREIGN KEY (`OrganizationId`) REFERENCES `Organization` (`Id`) ON DELETE CASCADE,
     CONSTRAINT `FK_OrganizationUser_User_UserId` FOREIGN KEY (`UserId`) REFERENCES `User` (`Id`) ON DELETE RESTRICT
-) CHARACTER SET utf8mb4;
+) ENGINE=InnoDB CHARACTER SET utf8mb4;
 
 CREATE TABLE `ProviderUser` (
     `Id` char(36) COLLATE ascii_general_ci NOT NULL,
@@ -306,7 +306,7 @@ CREATE TABLE `ProviderUser` (
     CONSTRAINT `PK_ProviderUser` PRIMARY KEY (`Id`),
     CONSTRAINT `FK_ProviderUser_Provider_ProviderId` FOREIGN KEY (`ProviderId`) REFERENCES `Provider` (`Id`) ON DELETE CASCADE,
     CONSTRAINT `FK_ProviderUser_User_UserId` FOREIGN KEY (`UserId`) REFERENCES `User` (`Id`) ON DELETE RESTRICT
-) CHARACTER SET utf8mb4;
+) ENGINE=InnoDB CHARACTER SET utf8mb4;
 
 CREATE TABLE `Send` (
     `Id` char(36) COLLATE ascii_general_ci NOT NULL,
@@ -327,7 +327,7 @@ CREATE TABLE `Send` (
     CONSTRAINT `PK_Send` PRIMARY KEY (`Id`),
     CONSTRAINT `FK_Send_Organization_OrganizationId` FOREIGN KEY (`OrganizationId`) REFERENCES `Organization` (`Id`) ON DELETE RESTRICT,
     CONSTRAINT `FK_Send_User_UserId` FOREIGN KEY (`UserId`) REFERENCES `User` (`Id`) ON DELETE RESTRICT
-) CHARACTER SET utf8mb4;
+) ENGINE=InnoDB CHARACTER SET utf8mb4;
 
 CREATE TABLE `SsoUser` (
     `Id` bigint NOT NULL AUTO_INCREMENT,
@@ -338,7 +338,7 @@ CREATE TABLE `SsoUser` (
     CONSTRAINT `PK_SsoUser` PRIMARY KEY (`Id`),
     CONSTRAINT `FK_SsoUser_Organization_OrganizationId` FOREIGN KEY (`OrganizationId`) REFERENCES `Organization` (`Id`) ON DELETE RESTRICT,
     CONSTRAINT `FK_SsoUser_User_UserId` FOREIGN KEY (`UserId`) REFERENCES `User` (`Id`) ON DELETE CASCADE
-) CHARACTER SET utf8mb4;
+) ENGINE=InnoDB CHARACTER SET utf8mb4;
 
 CREATE TABLE `Transaction` (
     `Id` char(36) COLLATE ascii_general_ci NOT NULL,
@@ -356,7 +356,7 @@ CREATE TABLE `Transaction` (
     CONSTRAINT `PK_Transaction` PRIMARY KEY (`Id`),
     CONSTRAINT `FK_Transaction_Organization_OrganizationId` FOREIGN KEY (`OrganizationId`) REFERENCES `Organization` (`Id`) ON DELETE RESTRICT,
     CONSTRAINT `FK_Transaction_User_UserId` FOREIGN KEY (`UserId`) REFERENCES `User` (`Id`) ON DELETE RESTRICT
-) CHARACTER SET utf8mb4;
+) ENGINE=InnoDB CHARACTER SET utf8mb4;
 
 CREATE TABLE `U2f` (
     `Id` int NOT NULL AUTO_INCREMENT,
@@ -368,7 +368,7 @@ CREATE TABLE `U2f` (
     `CreationDate` datetime(6) NOT NULL,
     CONSTRAINT `PK_U2f` PRIMARY KEY (`Id`),
     CONSTRAINT `FK_U2f_User_UserId` FOREIGN KEY (`UserId`) REFERENCES `User` (`Id`) ON DELETE CASCADE
-) CHARACTER SET utf8mb4;
+) ENGINE=InnoDB CHARACTER SET utf8mb4;
 
 CREATE TABLE `CollectionGroups` (
     `CollectionId` char(36) COLLATE ascii_general_ci NOT NULL,
@@ -378,7 +378,7 @@ CREATE TABLE `CollectionGroups` (
     CONSTRAINT `PK_CollectionGroups` PRIMARY KEY (`CollectionId`, `GroupId`),
     CONSTRAINT `FK_CollectionGroups_Collection_CollectionId` FOREIGN KEY (`CollectionId`) REFERENCES `Collection` (`Id`) ON DELETE CASCADE,
     CONSTRAINT `FK_CollectionGroups_Group_GroupId` FOREIGN KEY (`GroupId`) REFERENCES `Group` (`Id`) ON DELETE CASCADE
-) CHARACTER SET utf8mb4;
+) ENGINE=InnoDB CHARACTER SET utf8mb4;
 
 CREATE TABLE `CollectionCipher` (
     `CollectionId` char(36) COLLATE ascii_general_ci NOT NULL,
@@ -386,7 +386,7 @@ CREATE TABLE `CollectionCipher` (
     CONSTRAINT `PK_CollectionCipher` PRIMARY KEY (`CollectionId`, `CipherId`),
     CONSTRAINT `FK_CollectionCipher_Cipher_CipherId` FOREIGN KEY (`CipherId`) REFERENCES `Cipher` (`Id`) ON DELETE CASCADE,
     CONSTRAINT `FK_CollectionCipher_Collection_CollectionId` FOREIGN KEY (`CollectionId`) REFERENCES `Collection` (`Id`) ON DELETE CASCADE
-) CHARACTER SET utf8mb4;
+) ENGINE=InnoDB CHARACTER SET utf8mb4;
 
 CREATE TABLE `CollectionUsers` (
     `CollectionId` char(36) COLLATE ascii_general_ci NOT NULL,
@@ -398,7 +398,7 @@ CREATE TABLE `CollectionUsers` (
     CONSTRAINT `FK_CollectionUsers_Collection_CollectionId` FOREIGN KEY (`CollectionId`) REFERENCES `Collection` (`Id`) ON DELETE CASCADE,
     CONSTRAINT `FK_CollectionUsers_OrganizationUser_OrganizationUserId` FOREIGN KEY (`OrganizationUserId`) REFERENCES `OrganizationUser` (`Id`) ON DELETE CASCADE,
     CONSTRAINT `FK_CollectionUsers_User_UserId` FOREIGN KEY (`UserId`) REFERENCES `User` (`Id`) ON DELETE RESTRICT
-) CHARACTER SET utf8mb4;
+) ENGINE=InnoDB CHARACTER SET utf8mb4;
 
 CREATE TABLE `GroupUser` (
     `GroupId` char(36) COLLATE ascii_general_ci NOT NULL,
@@ -408,7 +408,7 @@ CREATE TABLE `GroupUser` (
     CONSTRAINT `FK_GroupUser_Group_GroupId` FOREIGN KEY (`GroupId`) REFERENCES `Group` (`Id`) ON DELETE CASCADE,
     CONSTRAINT `FK_GroupUser_OrganizationUser_OrganizationUserId` FOREIGN KEY (`OrganizationUserId`) REFERENCES `OrganizationUser` (`Id`) ON DELETE CASCADE,
     CONSTRAINT `FK_GroupUser_User_UserId` FOREIGN KEY (`UserId`) REFERENCES `User` (`Id`) ON DELETE RESTRICT
-) CHARACTER SET utf8mb4;
+) ENGINE=InnoDB CHARACTER SET utf8mb4;
 
 CREATE TABLE `ProviderOrganizationProviderUser` (
     `Id` char(36) COLLATE ascii_general_ci NOT NULL,
@@ -421,7 +421,7 @@ CREATE TABLE `ProviderOrganizationProviderUser` (
     CONSTRAINT `PK_ProviderOrganizationProviderUser` PRIMARY KEY (`Id`),
     CONSTRAINT `FK_ProviderOrganizationProviderUser_ProviderOrganization_Provid~` FOREIGN KEY (`ProviderOrganizationId`) REFERENCES `ProviderOrganization` (`Id`) ON DELETE CASCADE,
     CONSTRAINT `FK_ProviderOrganizationProviderUser_ProviderUser_ProviderUserId` FOREIGN KEY (`ProviderUserId`) REFERENCES `ProviderUser` (`Id`) ON DELETE CASCADE
-) CHARACTER SET utf8mb4;
+) ENGINE=InnoDB CHARACTER SET utf8mb4;
 
 CREATE INDEX `IX_Cipher_OrganizationId` ON `Cipher` (`OrganizationId`);
 

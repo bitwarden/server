@@ -16,7 +16,7 @@ namespace Bit.Core.Models.Api
         }
 
         [EncryptedString]
-        [EncryptedStringLength(2000)]
+        [EncryptedStringLength(5000)]
         [Required]
         public string Password { get; set; }
         [Required]

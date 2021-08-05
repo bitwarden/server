@@ -455,7 +455,7 @@ namespace Bit.CommCore.Test.Services
 
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
         public async Task CreateOrganizationAsync_Success(Provider provider, OrganizationSignup organizationSignup,
-            Organization organization, User user, SutProvider<ProviderService> sutProvider)
+            Organization organization, string clientOwnerEmail, User user, SutProvider<ProviderService> sutProvider)
         {
             sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
             var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
@@ -463,12 +463,19 @@ namespace Bit.CommCore.Test.Services
                 .Returns(Tuple.Create(organization, null as OrganizationUser));
 
             var providerOrganization =
-                await sutProvider.Sut.CreateOrganizationAsync(provider.Id, organizationSignup, user);
+                await sutProvider.Sut.CreateOrganizationAsync(provider.Id, organizationSignup, clientOwnerEmail, user);
 
             await providerOrganizationRepository.ReceivedWithAnyArgs().CreateAsync(default);
             await sutProvider.GetDependency<IEventService>()
                 .Received().LogProviderOrganizationEventAsync(providerOrganization,
                     EventType.ProviderOrganization_Created);
+            await sutProvider.GetDependency<IOrganizationService>()
+                .Received().InviteUserAsync(organization.Id, user.Id, null,
+                Arg.Is<OrganizationUserInvite>(
+                    i => i.Emails.Count() == 1 &&
+                    i.Emails.First() == clientOwnerEmail &&
+                    i.Type == OrganizationUserType.Owner &&
+                    i.AccessAll));
         }
 
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
@@ -480,7 +487,7 @@ namespace Bit.CommCore.Test.Services
                 .ReturnsNull();
 
             var exception = await Assert.ThrowsAsync<BadRequestException>(
-                () => sutProvider.Sut.RemoveOrganization(provider.Id, providerOrganization.Id, user.Id));
+                () => sutProvider.Sut.RemoveOrganizationAsync(provider.Id, providerOrganization.Id, user.Id));
             Assert.Equal("Invalid organization.", exception.Message);
         }
 
@@ -493,7 +500,7 @@ namespace Bit.CommCore.Test.Services
                 .Returns(providerOrganization);
 
             var exception = await Assert.ThrowsAsync<BadRequestException>(
-                () => sutProvider.Sut.RemoveOrganization(provider.Id, providerOrganization.Id, user.Id));
+                () => sutProvider.Sut.RemoveOrganizationAsync(provider.Id, providerOrganization.Id, user.Id));
             Assert.Equal("Invalid organization.", exception.Message);
         }
 
@@ -505,11 +512,11 @@ namespace Bit.CommCore.Test.Services
             sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
             sutProvider.GetDependency<IProviderOrganizationRepository>().GetByIdAsync(providerOrganization.Id)
                 .Returns(providerOrganization);
-            sutProvider.GetDependency<IOrganizationService>().HasConfirmedOwnersExceptAsync(default, default)
+            sutProvider.GetDependency<IOrganizationService>().HasConfirmedOwnersExceptAsync(default, default, default)
                 .ReturnsForAnyArgs(false);
 
             var exception = await Assert.ThrowsAsync<BadRequestException>(
-                () => sutProvider.Sut.RemoveOrganization(provider.Id, providerOrganization.Id, user.Id));
+                () => sutProvider.Sut.RemoveOrganizationAsync(provider.Id, providerOrganization.Id, user.Id));
             Assert.Equal("Organization needs to have at least one confirmed owner.", exception.Message);
         }
 
@@ -521,10 +528,10 @@ namespace Bit.CommCore.Test.Services
             sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
             var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
             providerOrganizationRepository.GetByIdAsync(providerOrganization.Id).Returns(providerOrganization);
-            sutProvider.GetDependency<IOrganizationService>().HasConfirmedOwnersExceptAsync(default, default)
+            sutProvider.GetDependency<IOrganizationService>().HasConfirmedOwnersExceptAsync(default, default, default)
                 .ReturnsForAnyArgs(true);
 
-            await sutProvider.Sut.RemoveOrganization(provider.Id, providerOrganization.Id, user.Id);
+            await sutProvider.Sut.RemoveOrganizationAsync(provider.Id, providerOrganization.Id, user.Id);
             await providerOrganizationRepository.Received().DeleteAsync(providerOrganization);
             await sutProvider.GetDependency<IEventService>().Received()
                 .LogProviderOrganizationEventAsync(providerOrganization, EventType.ProviderOrganization_Removed);
