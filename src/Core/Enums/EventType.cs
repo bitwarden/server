@@ -52,6 +52,7 @@
         Organization_Updated = 1600,
         Organization_PurgedVault = 1601,
         // Organization_ClientExportedVault = 1602,
+        Organization_VaultAccessed = 1603,
 
         Policy_Updated = 1700,
         
@@ -63,5 +64,6 @@
         ProviderOrganization_Created = 1900,
         ProviderOrganization_Added = 1901,
         ProviderOrganization_Removed = 1902,
+        ProviderOrganization_VaultAccessed = 1903,
     }
 }
