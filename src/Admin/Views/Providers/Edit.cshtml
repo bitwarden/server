@@ -1,4 +1,4 @@
-@model ProviderEditModel
+﻿@model ProviderEditModel
 @{
     ViewData["Title"] = "Provider: " + Model.Provider.Name;
 }
@@ -40,10 +40,4 @@
 @await Html.PartialAsync("Organizations", Model)
 <div class="d-flex mt-4">
     <button type="submit" class="btn btn-primary" form="edit-form">Save</button>
-    <div class="ml-auto d-flex">
-        <form asp-action="Delete" asp-route-id="@Model.Provider.Id"
-              onsubmit="return confirm('Are you sure you want to delete this provider (@Model.Provider.Name)?')">
-            <button class="btn btn-danger" type="submit">Delete</button>
-        </form>
-    </div>
 </div>

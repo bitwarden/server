@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Bit.Admin.Models;
@@ -124,19 +124,6 @@ namespace Bit.Admin.Controllers
             await _providerRepository.ReplaceAsync(provider);
             await _applicationCacheService.UpsertProviderAbilityAsync(provider);
             return RedirectToAction("Edit", new { id });
-        }
-        
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Delete(Guid id)
-        {
-            var provider = await _providerRepository.GetByIdAsync(id);
-            if (provider != null)
-            {
-                await _providerRepository.DeleteAsync(provider);
-            }
-
-            return RedirectToAction("Index");
         }
 
         public async Task<IActionResult> ResendInvite(Guid ownerId, Guid providerId)
