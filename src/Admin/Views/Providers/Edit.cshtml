@@ -1,4 +1,4 @@
-﻿@model ProviderEditModel
+@model ProviderEditModel
 @{
     ViewData["Title"] = "Provider: " + Model.Provider.Name;
 }
@@ -17,10 +17,6 @@
                 <input type="text" class="form-control" asp-for="Name" required>
             </div>
         </div>
-    </div>
-    <div class="form-check mb-3">
-        <input type="checkbox" class="form-check-input" asp-for="Enabled">
-        <label class="form-check-label" asp-for="Enabled"></label>
     </div>
     <h2>Business Information</h2>
     <div class="row">
@@ -41,6 +37,7 @@
         </div>
     </div>
 </form>
+@await Html.PartialAsync("Organizations", Model)
 <div class="d-flex mt-4">
     <button type="submit" class="btn btn-primary" form="edit-form">Save</button>
     <div class="ml-auto d-flex">
