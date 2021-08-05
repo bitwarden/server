@@ -60,7 +60,7 @@ namespace Bit.CommCore.Services
             var owner = await _userRepository.GetByEmailAsync(ownerEmail);
             if (owner == null)
             {
-                throw new BadRequestException("Invalid owner.");
+                throw new BadRequestException("Invalid owner. Owner must be an existing Bitwarden user.");
             }
 
             var provider = new Provider
