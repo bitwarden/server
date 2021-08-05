@@ -12,4 +12,28 @@ namespace Bit.Core.Models.Business.Provider
         public Guid InvitingUserId { get; set; }
         public Guid ProviderId { get; set; }
     }
+
+    public static class ProviderUserInviteFactory
+    {
+        public static ProviderUserInvite<string> CreateIntialInvite(IEnumerable<string> inviteeEmails, ProviderUserType type, Guid invitingUserId, Guid providerId)
+        {
+            return new ProviderUserInvite<string>
+            {
+                UserIdentifiers = inviteeEmails,
+                Type = type,
+                InvitingUserId = invitingUserId,
+                ProviderId = providerId
+            };
+        }
+
+        public static ProviderUserInvite<Guid> CreateReinvite(IEnumerable<Guid> inviteeUserIds, Guid invitingUserId, Guid providerId)
+        {
+            return new ProviderUserInvite<Guid>
+            {
+                UserIdentifiers = inviteeUserIds,
+                InvitingUserId = invitingUserId,
+                ProviderId = providerId
+            };
+        }
+    }
 }

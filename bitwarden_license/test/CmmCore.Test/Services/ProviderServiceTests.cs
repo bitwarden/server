@@ -21,6 +21,7 @@ using NSubstitute;
 using NSubstitute.ReturnsExtensions;
 using Xunit;
 using ProviderUser = Bit.Core.Models.Table.Provider.ProviderUser;
+using Bit.Core.Context;
 
 namespace Bit.CommCore.Test.Services
 {
@@ -115,6 +116,13 @@ namespace Bit.CommCore.Test.Services
         {            
             await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.InviteUserAsync(invite));
         }
+
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public async Task InviteUserAsync_InvalidPermissions_Throws(ProviderUserInvite<string> invite, SutProvider<ProviderService> sutProvider)
+        {            
+            sutProvider.GetDependency<ICurrentContext>().ProviderManageUsers(invite.ProviderId).Returns(false);
+            await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.InviteUserAsync(invite));
+        }
         
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
         public async Task InviteUserAsync_EmailsInvalid_Throws(Provider provider, ProviderUserInvite<string> providerUserInvite,
@@ -156,6 +164,12 @@ namespace Bit.CommCore.Test.Services
             Assert.True(result.TrueForAll(pu => pu.ProviderId == providerUserInvite.ProviderId), "Provider Id must be correct");
         }
         
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public async Task ResendInviteUserAsync_InvalidPermissions_Throws(ProviderUserInvite<Guid> invite, SutProvider<ProviderService> sutProvider)
+        {            
+            sutProvider.GetDependency<ICurrentContext>().ProviderManageUsers(invite.ProviderId).Returns(false);
+            await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.ResendInvitesAsync(invite));
+        }
         
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
         public async Task ResendInvitesAsync_Errors(Provider provider,

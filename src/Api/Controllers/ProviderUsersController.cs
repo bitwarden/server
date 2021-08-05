@@ -67,13 +67,8 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            var invite = new ProviderUserInvite<string>
-            {
-                UserIdentifiers = model.Emails,
-                Type = model.Type.Value,
-                InvitingUserId =_userService.GetProperUserId(User).Value,
-                ProviderId = providerId
-            };
+            var invite = ProviderUserInviteFactory.CreateIntialInvite(model.Emails, model.Type.Value,
+                _userService.GetProperUserId(User).Value, providerId);
             await _providerService.InviteUserAsync(invite);
         }
         
@@ -85,12 +80,7 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            var invite = new ProviderUserInvite<Guid> 
-            {
-                UserIdentifiers = model.Ids,
-                ProviderId = providerId,
-                InvitingUserId = _userService.GetProperUserId(User).Value
-            };
+            var invite = ProviderUserInviteFactory.CreateReinvite(model.Ids, _userService.GetProperUserId(User).Value, providerId);
             var result = await _providerService.ResendInvitesAsync(invite);
             return new ListResponseModel<ProviderUserBulkResponseModel>(
                 result.Select(t => new ProviderUserBulkResponseModel(t.Item1.Id, t.Item2)));
@@ -104,12 +94,8 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            var invite = new ProviderUserInvite<Guid>
-            {
-                UserIdentifiers = new [] { id },
-                ProviderId = providerId,
-                InvitingUserId = _userService.GetProperUserId(User).Value
-            };
+            var invite = ProviderUserInviteFactory.CreateReinvite(new [] { id },
+                _userService.GetProperUserId(User).Value, providerId);
             await _providerService.ResendInvitesAsync(invite);
         }
 
