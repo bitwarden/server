@@ -6,7 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="NewRelic.Agent" Version="8.30.0" />
+    <PackageReference Include="NewRelic.Azure.WebSites.x64" Version="8.41.0" />
   </ItemGroup>
 
   <ItemGroup>
