@@ -8,6 +8,7 @@ using Bit.Core.Models.Api;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Core.Context;
+using Bit.Core.Utilities;
 using Bit.Api.Utilities;
 using System.Collections.Generic;
 using Bit.Core.Models.Table;
@@ -585,7 +586,7 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            if (request.FileSize > CipherService.MAX_FILE_SIZE && !_globalSettings.SelfHosted)
+            if (request.FileSize > CipherService.MAX_FILE_SIZE)
             {
                 throw new BadRequestException($"Max file size is {CipherService.MAX_FILE_SIZE_READABLE}.");
             }
@@ -623,6 +624,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("{id}/attachment/{attachmentId}")]
+        [SelfHosted(SelfHostedOnly = true)]
         [RequestSizeLimit(Constants.FileSize501mb)]
         [DisableFormValueModelBinding]
         public async Task PostFileForExistingAttachment(string id, string attachmentId)
@@ -630,11 +632,6 @@ namespace Bit.Api.Controllers
             if (!Request?.ContentType.Contains("multipart/") ?? true)
             {
                 throw new BadRequestException("Invalid content.");
-            }
-
-            if (!_globalSettings.SelfHosted)
-            {
-                throw new BadRequestException("Invalid endpoint for non self-hosted servers.");
             }
 
             var userId = _userService.GetProperUserId(User).Value;
@@ -653,6 +650,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("{id}/attachment")]
+        [Obsolete("Deprecated Attachments API", false)]
         [RequestSizeLimit(Constants.FileSize101mb)]
         [DisableFormValueModelBinding]
         public async Task<CipherResponseModel> PostAttachment(string id)
@@ -804,11 +802,6 @@ namespace Bit.Api.Controllers
             if (!Request?.ContentType.Contains("multipart/") ?? true)
             {
                 throw new BadRequestException("Invalid content.");
-            }
-
-            if (Request.ContentLength > Constants.FileSize101mb)
-            {
-                throw new BadRequestException("Max file size is 100 MB.");
             }
         }
     }

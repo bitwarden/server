@@ -167,6 +167,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("file")]
+        [Obsolete("Deprecated File Send API", false)]
         [RequestSizeLimit(Constants.FileSize101mb)]
         [DisableFormValueModelBinding]
         public async Task<SendResponseModel> PostFile()
@@ -174,11 +175,6 @@ namespace Bit.Api.Controllers
             if (!Request?.ContentType.Contains("multipart/") ?? true)
             {
                 throw new BadRequestException("Invalid content.");
-            }
-
-            if (Request.ContentLength > Constants.FileSize101mb)
-            {
-                throw new BadRequestException("Max file size is 100 MB.");
             }
 
             Send send = null;
@@ -250,6 +246,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("{id}/file/{fileId}")]
+        [SelfHosted(SelfHostedOnly = true)]
         [RequestSizeLimit(Constants.FileSize501mb)]
         [DisableFormValueModelBinding]
         public async Task PostFileForExistingSend(string id, string fileId)
@@ -257,11 +254,6 @@ namespace Bit.Api.Controllers
             if (!Request?.ContentType.Contains("multipart/") ?? true)
             {
                 throw new BadRequestException("Invalid content.");
-            }
-
-            if (Request.ContentLength > Constants.FileSize101mb && !_globalSettings.SelfHosted)
-            {
-                throw new BadRequestException("Max file size for direct upload is 100 MB.");
             }
 
             var send = await _sendRepository.GetByIdAsync(new Guid(id));
