@@ -1488,8 +1488,8 @@ namespace Bit.Core.Services
                 var orgUsers = keyedOrganizationUsers.GetValueOrDefault(user.Id, new List<OrganizationUser>());
                 try
                 {
-                    if (organization.PlanType == PlanType.Free && orgUser.Type == OrganizationUserType.Admin
-                        || orgUser.Type == OrganizationUserType.Owner)
+                    if (organization.PlanType == PlanType.Free && (orgUser.Type == OrganizationUserType.Admin
+                        || orgUser.Type == OrganizationUserType.Owner))
                     {
                         // Since free organizations only supports a few users there is not much point in avoiding N+1 queries for this.
                         var adminCount = await _organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(user.Id);
