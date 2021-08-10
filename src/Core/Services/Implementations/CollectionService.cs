@@ -81,10 +81,7 @@ namespace Bit.Core.Services
                 }
 
                 await _eventService.LogCollectionEventAsync(collection, Enums.EventType.Collection_Created);
-                if ((await _collectionRepository.GetManyByOrganizationIdAsync(org.Id)).Count.Equals(1))
-                {
-                    await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.FirstCollectionCreated, org));
-                }
+                await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.CollectionCreated, org));
             }
             else
             {

@@ -59,10 +59,7 @@ namespace Bit.Core.Services
                 }
 
                 await _eventService.LogGroupEventAsync(group, Enums.EventType.Group_Created);
-                if ((await _groupRepository.GetManyByOrganizationIdAsync(org.Id)).Count.Equals(1))
-                {
-                    await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.FirstGroupCreated, org));
-                }
+                await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.GroupCreated, org));
             }
             else
             {

@@ -32,12 +32,12 @@ namespace Bit.Core.Enums
         DirectorySynced,
         [EnumMember(Value = "vault-imported")]
         VaultImported,
-        [EnumMember(Value = "first-secret-added")]
-        FirstSecretAdded,
-        [EnumMember(Value = "first-group-created")]
-        FirstGroupCreated,
-        [EnumMember(Value = "first-collection-created")]
-        FirstCollectionCreated,
+        [EnumMember(Value = "secret-added")]
+        SecretAdded,
+        [EnumMember(Value = "group-created")]
+        GroupCreated,
+        [EnumMember(Value = "collection-created")]
+        CollectionCreated,
         [EnumMember(Value = "sales-assisted")]
         SalesAssisted
     }

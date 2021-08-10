@@ -57,7 +57,5 @@ namespace Bit.Core.Models.Business
         public int? MaxAccessCount { get; set; }
 
         public bool? HasPassword { get; set; }
-
-        public bool? FirstInvite { get; set; }
     }
 }
