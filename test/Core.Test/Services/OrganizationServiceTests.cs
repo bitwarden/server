@@ -21,7 +21,6 @@ using Organization = Bit.Core.Models.Table.Organization;
 using OrganizationUser = Bit.Core.Models.Table.OrganizationUser;
 using Policy = Bit.Core.Models.Table.Policy;
 using Bit.Core.Test.AutoFixture.PolicyFixtures;
-using LinqToDB;
 
 namespace Bit.Core.Test.Services
 {
@@ -589,7 +588,7 @@ namespace Bit.Core.Test.Services
         [Theory]
         [InlineCustomAutoData(new[] { typeof(SutProviderCustomization) }, OrganizationUserType.Admin)]
         [InlineCustomAutoData(new[] { typeof(SutProviderCustomization) }, OrganizationUserType.Owner)]
-        public async Task ConfirmUserToFree_AlreadyFreeAdminOrOwner_Throws(PlanType planType, OrganizationUserType userType, Organization org, OrganizationUser confirmingUser,
+        public async Task ConfirmUserToFree_AlreadyFreeAdminOrOwner_Throws(OrganizationUserType userType, Organization org, OrganizationUser confirmingUser,
             [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser orgUser, User user,
             string key, SutProvider<OrganizationService> sutProvider)
         {
