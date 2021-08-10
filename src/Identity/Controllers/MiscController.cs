@@ -1,7 +1,7 @@
 ﻿using System;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Bit.Admin.Controllers
+namespace Bit.Identity.Controllers
 {
     public class MiscController : Controller
     {
