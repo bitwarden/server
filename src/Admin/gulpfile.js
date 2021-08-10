@@ -44,8 +44,12 @@ function lib() {
             dest: paths.libDir + 'font-awesome/fonts'
         },
         {
-            src: paths.npmDir + 'jquery/dist/jquery.slim*',
+            src: paths.npmDir + 'jquery/dist/jquery.*',
             dest: paths.libDir + 'jquery'
+        },
+        {
+            src: paths.npmDir + 'toastr/build/*',
+            dest: paths.libDir + 'toastr'
         },
     ];
 

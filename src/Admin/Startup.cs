@@ -125,6 +125,10 @@ namespace Bit.Admin
             {
                 app.UseDeveloperExceptionPage();
             }
+            else
+            {
+                app.UseExceptionHandler("/error");
+            }
 
             app.UseStaticFiles();
             app.UseRouting();

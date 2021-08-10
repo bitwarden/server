@@ -18,20 +18,23 @@ namespace Bit.Admin.Controllers
     {
         private readonly IProviderRepository _providerRepository;
         private readonly IProviderUserRepository _providerUserRepository;
+        private readonly IProviderOrganizationRepository _providerOrganizationRepository;
         private readonly GlobalSettings _globalSettings;
         private readonly IApplicationCacheService _applicationCacheService;
         private readonly IProviderService _providerService;
 
         public ProvidersController(IProviderRepository providerRepository, IProviderUserRepository providerUserRepository,
-            IProviderService providerService, GlobalSettings globalSettings, IApplicationCacheService applicationCacheService)
+            IProviderOrganizationRepository providerOrganizationRepository, IProviderService providerService,
+            GlobalSettings globalSettings, IApplicationCacheService applicationCacheService)
         {
             _providerRepository = providerRepository;
             _providerUserRepository = providerUserRepository;
+            _providerOrganizationRepository = providerOrganizationRepository;
             _providerService = providerService;
             _globalSettings = globalSettings;
             _applicationCacheService = applicationCacheService;
         }
-        
+
         public async Task<IActionResult> Index(string name = null, string userEmail = null, int page = 1, int count = 25)
         {
             if (page < 1)
@@ -57,7 +60,7 @@ namespace Bit.Admin.Controllers
                 SelfHosted = _globalSettings.SelfHosted
             });
         }
-        
+
         public IActionResult Create(string ownerEmail = null)
         {
             return View(new CreateProviderModel
@@ -65,7 +68,7 @@ namespace Bit.Admin.Controllers
                 OwnerEmail = ownerEmail
             });
         }
-        
+
         [HttpPost]
         public async Task<IActionResult> Create(CreateProviderModel model)
         {
@@ -78,7 +81,7 @@ namespace Bit.Admin.Controllers
 
             return RedirectToAction("Index");
         }
-        
+
         public async Task<IActionResult> View(Guid id)
         {
             var provider = await _providerRepository.GetByIdAsync(id);
@@ -88,9 +91,10 @@ namespace Bit.Admin.Controllers
             }
 
             var users = await _providerUserRepository.GetManyDetailsByProviderAsync(id);
-            return View(new ProviderViewModel(provider, users));
+            var providerOrganizations = await _providerOrganizationRepository.GetManyDetailsByProviderAsync(id);
+            return View(new ProviderViewModel(provider, users, providerOrganizations));
         }
-        
+
         [SelfHosted(NotSelfHostedOnly = true)]
         public async Task<IActionResult> Edit(Guid id)
         {
@@ -101,9 +105,10 @@ namespace Bit.Admin.Controllers
             }
 
             var users = await _providerUserRepository.GetManyDetailsByProviderAsync(id);
-            return View(new ProviderEditModel(provider, users));
+            var providerOrganizations = await _providerOrganizationRepository.GetManyDetailsByProviderAsync(id);
+            return View(new ProviderEditModel(provider, users, providerOrganizations));
         }
-        
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         [SelfHosted(NotSelfHostedOnly = true)]
@@ -119,19 +124,6 @@ namespace Bit.Admin.Controllers
             await _providerRepository.ReplaceAsync(provider);
             await _applicationCacheService.UpsertProviderAbilityAsync(provider);
             return RedirectToAction("Edit", new { id });
-        }
-        
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Delete(Guid id)
-        {
-            var provider = await _providerRepository.GetByIdAsync(id);
-            if (provider != null)
-            {
-                await _providerRepository.DeleteAsync(provider);
-            }
-
-            return RedirectToAction("Index");
         }
 
         public async Task<IActionResult> ResendInvite(Guid ownerId, Guid providerId)
