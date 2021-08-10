@@ -9,6 +9,8 @@ using Bit.Core.Models.Table;
 using Bit.Core.Utilities;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bit.Core.Models.Business;
+using Bit.Core.Enums;
 
 namespace Bit.Admin.Controllers
 {
@@ -24,6 +26,7 @@ namespace Bit.Admin.Controllers
         private readonly IPaymentService _paymentService;
         private readonly IApplicationCacheService _applicationCacheService;
         private readonly GlobalSettings _globalSettings;
+        private readonly IReferenceEventService _referenceEventService;
 
         public OrganizationsController(
             IOrganizationRepository organizationRepository,
@@ -34,7 +37,8 @@ namespace Bit.Admin.Controllers
             IPolicyRepository policyRepository,
             IPaymentService paymentService,
             IApplicationCacheService applicationCacheService,
-            GlobalSettings globalSettings)
+            GlobalSettings globalSettings,
+            IReferenceEventService referenceEventService)
         {
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
@@ -45,6 +49,7 @@ namespace Bit.Admin.Controllers
             _paymentService = paymentService;
             _applicationCacheService = applicationCacheService;
             _globalSettings = globalSettings;
+            _referenceEventService = referenceEventService;
         }
 
         public async Task<IActionResult> Index(string name = null, string userEmail = null, bool? paid = null,
@@ -140,6 +145,7 @@ namespace Bit.Admin.Controllers
             model.ToOrganization(organization);
             await _organizationRepository.ReplaceAsync(organization);
             await _applicationCacheService.UpsertOrganizationAbilityAsync(organization);
+            await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.SalesAssisted, organization));
             return RedirectToAction("Edit", new { id });
         }
 

@@ -5,6 +5,8 @@ using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using System.Collections.Generic;
 using Bit.Core.Models.Data;
+using Bit.Core.Models.Business;
+using Bit.Core.Enums;
 
 namespace Bit.Core.Services
 {
@@ -16,6 +18,7 @@ namespace Bit.Core.Services
         private readonly ICollectionRepository _collectionRepository;
         private readonly IUserRepository _userRepository;
         private readonly IMailService _mailService;
+        private readonly IReferenceEventService _referenceEventService;
 
         public CollectionService(
             IEventService eventService,
@@ -23,7 +26,8 @@ namespace Bit.Core.Services
             IOrganizationUserRepository organizationUserRepository,
             ICollectionRepository collectionRepository,
             IUserRepository userRepository,
-            IMailService mailService)
+            IMailService mailService,
+            IReferenceEventService referenceEventService)
         {
             _eventService = eventService;
             _organizationRepository = organizationRepository;
@@ -31,6 +35,7 @@ namespace Bit.Core.Services
             _collectionRepository = collectionRepository;
             _userRepository = userRepository;
             _mailService = mailService;
+            _referenceEventService = referenceEventService;
         }
 
         public async Task SaveAsync(Collection collection, IEnumerable<SelectionReadOnly> groups = null,
@@ -76,6 +81,7 @@ namespace Bit.Core.Services
                 }
 
                 await _eventService.LogCollectionEventAsync(collection, Enums.EventType.Collection_Created);
+                await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.CollectionCreated, org));
             }
             else
             {
