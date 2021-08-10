@@ -11,5 +11,6 @@ BEGIN
         [dbo].[OrganizationUserUserDetailsView]
     WHERE
         OrganizationId = @OrganizationId 
+        AND Status = 2 -- 2 = Confirmed 
         AND [Type] <= @MinRole
 END

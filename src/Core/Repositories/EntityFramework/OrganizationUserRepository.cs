@@ -397,7 +397,9 @@ namespace Bit.Core.Repositories.EntityFramework
                 var dbContext = GetDatabaseContext(scope);
                 var query = dbContext.OrganizationUsers
                     .Include(e => e.User)
-                    .Where(e => e.OrganizationId.Equals(organizationId) && e.Type <= minRole)
+                    .Where(e => e.OrganizationId.Equals(organizationId) && 
+                        e.Type <= minRole &&
+                        e.Status == OrganizationUserStatusType.Confirmed)
                     .Select(e => new OrganizationUserUserDetails() {
                         Id = e.Id,
                         Email = e.Email ?? e.User.Email
