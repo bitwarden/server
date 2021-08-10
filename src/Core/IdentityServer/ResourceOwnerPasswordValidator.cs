@@ -10,6 +10,7 @@ using Bit.Core.Services;
 using Bit.Core.Identity;
 using Bit.Core.Context;
 using Bit.Core.Settings;
+using Bit.Core.Utilities;
 using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.IdentityServer
@@ -50,9 +51,7 @@ namespace Bit.Core.IdentityServer
         public async Task ValidateAsync(ResourceOwnerPasswordValidationContext context)
         {
             // Uncomment whenever we want to require the `auth-email` header
-            //
-            //if (!_currentContext.HttpContext.Request.Headers.ContainsKey("Auth-Email") ||
-            //    _currentContext.HttpContext.Request.Headers["Auth-Email"] != context.UserName)
+            //if (!AuthEmailHeaderIsValid(context))
             //{
             //    context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant,
             //        "Auth-Email header invalid.");
@@ -134,6 +133,34 @@ namespace Bit.Core.IdentityServer
             Dictionary<string, object> customResponse)
         {
             context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant, customResponse: customResponse);
+        }
+
+        private bool AuthEmailHeaderIsValid(ResourceOwnerPasswordValidationContext context)
+        {
+            if (!_currentContext.HttpContext.Request.Headers.ContainsKey("Auth-Email"))
+            {
+                return false;
+            }
+            else
+            {
+                try
+                {
+                    var authEmailHeader = _currentContext.HttpContext.Request.Headers["Auth-Email"];
+                    var authEmailDecoded = CoreHelpers.Base64UrlDecodeString(authEmailHeader);
+
+                    if (authEmailDecoded != context.UserName)
+                    {
+                        return false;
+                    }
+                }
+                catch (System.Exception e) when (e is System.InvalidOperationException || e is System.FormatException)
+                {
+                    // Invalid B64 encoding
+                    return false;
+                }
+            }
+
+            return true;
         }
     }
 }
