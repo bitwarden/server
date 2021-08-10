@@ -40,7 +40,9 @@ namespace Bit.Core.Test.Utilities
         [InlineData("hello@world.com, hello@world.com")]    // comma separated list
         [InlineData("hellothere@worldcom")]                 // dotless domain
         [InlineData("hello.there@worldcom")]                // dotless domain
-        [InlineData("hellothere@.worldcom")]                // dotless domain
+        [InlineData("hellothere@.worldcom")]                // domain beginning with dot
+        [InlineData("hellothere@worldcom.")]                // domain ending in dot
+        [InlineData("hellothere@world.com-")]               // domain ending in hyphen
         public void IsValid_ReturnsFalseWhenInvalid(string email)
         {
             var sut = new StrictEmailAddressAttribute();

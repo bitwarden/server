@@ -31,7 +31,7 @@ namespace Bit.Core.Utilities
                 return false;
             }
 
-            if (!Regex.IsMatch(emailAddress, @"@.+\."))
+            if (!Regex.IsMatch(emailAddress, @"@.+\.[A-Za-z0-9]+$"))
             {
                 return false;
             }
