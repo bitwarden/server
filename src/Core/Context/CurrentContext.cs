@@ -37,6 +37,7 @@ namespace Bit.Core.Context
         public virtual bool IsBot { get; set; }
         public virtual bool MaybeBot { get; set; }
         public virtual int? BotScore { get; set; }
+        public virtual string ClientId { get; set; }
 
         public CurrentContext(IProviderUserRepository providerUserRepository)
         {
@@ -114,19 +115,19 @@ namespace Bit.Core.Context
                 UserId = subIdGuid;
             }
 
-            var clientId = GetClaimValue(claimsDict, "client_id");
+            ClientId = GetClaimValue(claimsDict, "client_id");
             var clientSubject = GetClaimValue(claimsDict, "client_sub");
             var orgApi = false;
             if (clientSubject != null)
             {
-                if (clientId?.StartsWith("installation.") ?? false)
+                if (ClientId?.StartsWith("installation.") ?? false)
                 {
                     if (Guid.TryParse(clientSubject, out var idGuid))
                     {
                         InstallationId = idGuid;
                     }
                 }
-                else if (clientId?.StartsWith("organization.") ?? false)
+                else if (ClientId?.StartsWith("organization.") ?? false)
                 {
                     if (Guid.TryParse(clientSubject, out var idGuid))
                     {

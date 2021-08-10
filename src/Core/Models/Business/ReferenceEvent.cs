@@ -42,7 +42,12 @@ namespace Bit.Core.Models.Business
 
         public PlanType? PlanType { get; set; }
 
+        public string OldPlanName { get; set; }
+
+        public PlanType? OldPlanType { get; set; }
+
         public int? Seats { get; set; }
+        public int? PreviousSeats { get; set; }
 
         public short? Storage { get; set; }
 

@@ -24,7 +24,7 @@ namespace Bit.Core.Context
         bool IsBot { get; set; }
         bool MaybeBot { get; set; }
         int? BotScore { get; set; }
-
+        string ClientId { get; set; }
         Task BuildAsync(HttpContext httpContext, GlobalSettings globalSettings);
         Task BuildAsync(ClaimsPrincipal user, GlobalSettings globalSettings);
 

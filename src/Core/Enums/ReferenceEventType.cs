@@ -28,5 +28,17 @@ namespace Bit.Core.Enums
         SendCreated,
         [EnumMember(Value = "send-accessed")]
         SendAccessed,
+        [EnumMember(Value = "organization-imported")]
+        DirectorySynced,
+        [EnumMember(Value = "vault-imported")]
+        VaultImported,
+        [EnumMember(Value = "secret-added")]
+        CipherCreated,
+        [EnumMember(Value = "group-created")]
+        GroupCreated,
+        [EnumMember(Value = "collection-created")]
+        CollectionCreated,
+        [EnumMember(Value = "sales-assisted")]
+        SalesAssisted
     }
 }

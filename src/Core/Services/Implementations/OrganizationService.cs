@@ -305,6 +305,8 @@ namespace Bit.Core.Services
                     {
                         PlanName = newPlan.Name,
                         PlanType = newPlan.Type,
+                        OldPlanName = existingPlan.Name,
+                        OldPlanType = existingPlan.Type,
                         Seats = organization.Seats,
                         Storage = organization.MaxStorageGb,
                     });
@@ -497,14 +499,15 @@ namespace Bit.Core.Services
                 });
             }
 
-            organization.Seats = (short?)newSeatTotal;
             await _referenceEventService.RaiseEventAsync(
                 new ReferenceEvent(ReferenceEventType.AdjustSeats, organization)
                 {
                     PlanName = plan.Name,
                     PlanType = plan.Type,
-                    Seats = organization.Seats,
+                    Seats = newSeatTotal,
+                    PreviousSeats = organization.Seats
                 });
+            organization.Seats = (short?)newSeatTotal;
             await ReplaceAndUpdateCache(organization);
             return paymentIntentClientSecret;
         }
@@ -1976,6 +1979,12 @@ namespace Bit.Core.Services
                             existingGroupUsers.ContainsKey(group.Id) ? existingGroupUsers[group.Id] : null);
                     }
                 }
+            }
+            
+            if (_currentContext.ClientId == BitwardenClient.DirectoryConnector)
+            {
+                await _referenceEventService.RaiseEventAsync(
+                    new ReferenceEvent(ReferenceEventType.DirectorySynced, organization));
             }
         }
 
