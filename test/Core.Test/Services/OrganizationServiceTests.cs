@@ -584,10 +584,12 @@ namespace Bit.Core.Test.Services
                 () => sutProvider.Sut.ConfirmUserAsync(confirmingUser.OrganizationId, orgUser.Id, key, confirmingUser.Id, userService));
             Assert.Contains("User not valid.", exception.Message);
         }
-        
-        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
-        public async Task ConfirmUser_AlreadyAdmin(Organization org, OrganizationUser confirmingUser,
-            [OrganizationUser(OrganizationUserStatusType.Accepted, OrganizationUserType.Admin)]OrganizationUser orgUser, User user,
+
+        [Theory]
+        [InlineCustomAutoData(new[] { typeof(SutProviderCustomization) }, OrganizationUserType.Admin)]
+        [InlineCustomAutoData(new[] { typeof(SutProviderCustomization) }, OrganizationUserType.Owner)]
+        public async Task ConfirmUserToFree_AlreadyFreeAdminOrOwner_Throws(OrganizationUserType userType, Organization org, OrganizationUser confirmingUser,
+            [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser orgUser, User user,
             string key, SutProvider<OrganizationService> sutProvider)
         {
             var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
@@ -598,6 +600,7 @@ namespace Bit.Core.Test.Services
             org.PlanType = PlanType.Free;
             orgUser.OrganizationId = confirmingUser.OrganizationId = org.Id;
             orgUser.UserId = user.Id;
+            orgUser.Type = userType;
             organizationUserRepository.GetManyAsync(default).ReturnsForAnyArgs(new[] {orgUser});
             organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(orgUser.UserId.Value).Returns(1);
             organizationRepository.GetByIdAsync(org.Id).Returns(org);
@@ -607,6 +610,55 @@ namespace Bit.Core.Test.Services
                 () => sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id, userService));
             Assert.Contains("User can only be an admin of one free organization.", exception.Message);
         }
+
+        [Theory]
+        [InlineCustomAutoData(new[] { typeof(SutProviderCustomization) }, PlanType.Custom, OrganizationUserType.Admin)]
+        [InlineCustomAutoData(new[] { typeof(SutProviderCustomization) }, PlanType.Custom, OrganizationUserType.Owner)]
+        [InlineCustomAutoData(new[] { typeof(SutProviderCustomization) }, PlanType.EnterpriseAnnually, OrganizationUserType.Admin)]
+        [InlineCustomAutoData(new[] { typeof(SutProviderCustomization) }, PlanType.EnterpriseAnnually, OrganizationUserType.Owner)]
+        [InlineCustomAutoData(new[] { typeof(SutProviderCustomization) }, PlanType.EnterpriseAnnually2019, OrganizationUserType.Admin)]
+        [InlineCustomAutoData(new[] { typeof(SutProviderCustomization) }, PlanType.EnterpriseAnnually2019, OrganizationUserType.Owner)]
+        [InlineCustomAutoData(new[] { typeof(SutProviderCustomization) }, PlanType.EnterpriseMonthly, OrganizationUserType.Admin)]
+        [InlineCustomAutoData(new[] { typeof(SutProviderCustomization) }, PlanType.EnterpriseMonthly, OrganizationUserType.Owner)]
+        [InlineCustomAutoData(new[] { typeof(SutProviderCustomization) }, PlanType.EnterpriseMonthly2019, OrganizationUserType.Admin)]
+        [InlineCustomAutoData(new[] { typeof(SutProviderCustomization) }, PlanType.EnterpriseMonthly2019, OrganizationUserType.Owner)]
+        [InlineCustomAutoData(new[] { typeof(SutProviderCustomization) }, PlanType.FamiliesAnnually, OrganizationUserType.Admin)]
+        [InlineCustomAutoData(new[] { typeof(SutProviderCustomization) }, PlanType.FamiliesAnnually, OrganizationUserType.Owner)]
+        [InlineCustomAutoData(new[] { typeof(SutProviderCustomization) }, PlanType.FamiliesAnnually2019, OrganizationUserType.Admin)]
+        [InlineCustomAutoData(new[] { typeof(SutProviderCustomization) }, PlanType.FamiliesAnnually2019, OrganizationUserType.Owner)]
+        [InlineCustomAutoData(new[] { typeof(SutProviderCustomization) }, PlanType.TeamsAnnually, OrganizationUserType.Admin)]
+        [InlineCustomAutoData(new[] { typeof(SutProviderCustomization) }, PlanType.TeamsAnnually, OrganizationUserType.Owner)]
+        [InlineCustomAutoData(new[] { typeof(SutProviderCustomization) }, PlanType.TeamsAnnually2019, OrganizationUserType.Admin)]
+        [InlineCustomAutoData(new[] { typeof(SutProviderCustomization) }, PlanType.TeamsAnnually2019, OrganizationUserType.Owner)]
+        [InlineCustomAutoData(new[] { typeof(SutProviderCustomization) }, PlanType.TeamsMonthly, OrganizationUserType.Admin)]
+        [InlineCustomAutoData(new[] { typeof(SutProviderCustomization) }, PlanType.TeamsMonthly, OrganizationUserType.Owner)]
+        [InlineCustomAutoData(new[] { typeof(SutProviderCustomization) }, PlanType.TeamsMonthly2019, OrganizationUserType.Admin)]
+        [InlineCustomAutoData(new[] { typeof(SutProviderCustomization) }, PlanType.TeamsMonthly2019, OrganizationUserType.Owner)]
+        public async Task ConfirmUserToNonFree_AlreadyFreeAdminOrOwner_DoesNotThrow(PlanType planType, OrganizationUserType orgUserType, Organization org, OrganizationUser confirmingUser,
+            [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser orgUser, User user,
+            string key, SutProvider<OrganizationService> sutProvider)
+        {
+            var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+            var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+            var userService = Substitute.For<IUserService>();
+            var userRepository = sutProvider.GetDependency<IUserRepository>();
+
+            org.PlanType = planType;
+            orgUser.OrganizationId = confirmingUser.OrganizationId = org.Id;
+            orgUser.UserId = user.Id;
+            orgUser.Type = orgUserType;
+            organizationUserRepository.GetManyAsync(default).ReturnsForAnyArgs(new[] { orgUser });
+            organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(orgUser.UserId.Value).Returns(1);
+            organizationRepository.GetByIdAsync(org.Id).Returns(org);
+            userRepository.GetManyAsync(default).ReturnsForAnyArgs(new[] { user });
+
+            await sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id, userService);
+
+            await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Confirmed);
+            await sutProvider.GetDependency<IMailService>().Received(1).SendOrganizationConfirmedEmailAsync(org.Name, user.Email);
+            await organizationUserRepository.Received(1).ReplaceManyAsync(Arg.Is<List<OrganizationUser>>(users => users.Contains(orgUser) && users.Count == 1));
+        }
+
 
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
         public async Task ConfirmUser_SingleOrgPolicy(Organization org, OrganizationUser confirmingUser,

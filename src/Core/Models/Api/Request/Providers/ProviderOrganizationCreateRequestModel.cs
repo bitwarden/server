@@ -6,6 +6,7 @@ namespace Bit.Core.Models.Api.Request
     public class ProviderOrganizationCreateRequestModel
     {
         [Required]
+        [StringLength(256)]
         [StrictEmailAddress]
         public string ClientOwnerEmail { get; set; }
         [Required]

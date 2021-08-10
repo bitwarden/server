@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Text.RegularExpressions;
 using MimeKit;
 
 namespace Bit.Core.Utilities
@@ -25,7 +26,12 @@ namespace Bit.Core.Utilities
                     return false;
                 }
             }
-            catch (ParseException e)
+            catch (ParseException)
+            {
+                return false;
+            }
+
+            if (!Regex.IsMatch(emailAddress, @"@.+\.[A-Za-z0-9]+$"))
             {
                 return false;
             }

@@ -21,6 +21,8 @@ namespace Bit.CommCore.Services
 {
     public class ProviderService : IProviderService
     {
+        public static PlanType[] ProviderDisllowedOrganizationTypes = new[] { PlanType.Free, PlanType.FamiliesAnnually, PlanType.FamiliesAnnually2019 };
+
         private readonly IDataProtector _dataProtector;
         private readonly IMailService _mailService;
         private readonly IEventService _eventService;
@@ -380,6 +382,9 @@ namespace Bit.CommCore.Services
                 throw new BadRequestException("Organization already belongs to a provider.");
             }
 
+            var organization = await _organizationRepository.GetByIdAsync(organizationId);
+            ThrowOnInvalidPlanType(organization.PlanType);
+
             var providerOrganization = new ProviderOrganization
             {
                 ProviderId = providerId,
@@ -394,6 +399,8 @@ namespace Bit.CommCore.Services
         public async Task<ProviderOrganization> CreateOrganizationAsync(Guid providerId,
             OrganizationSignup organizationSignup, string clientOwnerEmail, User user)
         {
+            ThrowOnInvalidPlanType(organizationSignup.Plan);
+
             var (organization, _) = await _organizationService.SignUpAsync(organizationSignup, true);
 
             var providerOrganization = new ProviderOrganization
@@ -486,6 +493,14 @@ namespace Bit.CommCore.Services
             var confirmedOwners = providerAdmins.Where(o => o.Status == ProviderUserStatusType.Confirmed);
             var confirmedOwnersIds = confirmedOwners.Select(u => u.Id);
             return confirmedOwnersIds.Except(providerUserIds).Any();
+        }
+
+        private void ThrowOnInvalidPlanType(PlanType requestedType)
+        {
+            if (ProviderDisllowedOrganizationTypes.Contains(requestedType))
+            {
+                throw new BadRequestException($"Providers cannot manage organizations with the requested plan type ({requestedType}). Only Teams and Enterprise accounts are allowed.");
+            }
         }
     }
 }
