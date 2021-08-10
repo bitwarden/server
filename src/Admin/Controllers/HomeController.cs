@@ -29,6 +29,13 @@ namespace Bit.Admin.Controllers
                 CurrentVersion = Core.Utilities.CoreHelpers.GetVersion()
             });
         }
+        
+        [HttpGet("~/alive")]
+        [HttpGet("~/now")]
+        public DateTime Get()
+        {
+            return DateTime.UtcNow;
+        }
 
         public IActionResult Error()
         {
