@@ -89,7 +89,7 @@ namespace Bit.Core.Services
                     await _cipherRepository.CreateAsync(cipher, collectionIds);
 
                     await _referenceEventService.RaiseEventAsync(
-                        new ReferenceEvent(ReferenceEventType.SecretAdded, await _organizationRepository.GetByIdAsync(cipher.OrganizationId.Value)));
+                        new ReferenceEvent(ReferenceEventType.CipherCreated, await _organizationRepository.GetByIdAsync(cipher.OrganizationId.Value)));
                 }
                 else
                 {

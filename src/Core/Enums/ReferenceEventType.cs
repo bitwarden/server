@@ -33,7 +33,7 @@ namespace Bit.Core.Enums
         [EnumMember(Value = "vault-imported")]
         VaultImported,
         [EnumMember(Value = "secret-added")]
-        SecretAdded,
+        CipherCreated,
         [EnumMember(Value = "group-created")]
         GroupCreated,
         [EnumMember(Value = "collection-created")]
