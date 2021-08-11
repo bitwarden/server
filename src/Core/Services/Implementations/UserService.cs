@@ -127,11 +127,6 @@ namespace Bit.Core.Services
 
             return userIdGuid;
         }
-        public override string GetUserName(ClaimsPrincipal principal)
-        {
-            return base.GetUserName(principal);
-        }
-
         public async Task<User> GetUserByIdAsync(string userId)
         {
             if (_currentContext?.User != null &&
