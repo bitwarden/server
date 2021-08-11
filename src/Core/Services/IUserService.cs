@@ -73,5 +73,6 @@ namespace Bit.Core.Services
         Task<string> GenerateEnterprisePortalSignInTokenAsync(User user);
         Task<string> GenerateSignInTokenAsync(User user, string purpose);
         Task RotateApiKeyAsync(User user);
+        string GetUserName(ClaimsPrincipal principal);
     }
 }
