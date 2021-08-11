@@ -127,6 +127,7 @@ namespace Bit.Core.Services
 
             return userIdGuid;
         }
+        
         public async Task<User> GetUserByIdAsync(string userId)
         {
             if (_currentContext?.User != null &&
