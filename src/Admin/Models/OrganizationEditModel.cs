@@ -107,6 +107,7 @@ namespace Bit.Admin.Models
         public string LicenseKey { get; set; }
         [Display(Name = "Expiration Date")]
         public DateTime? ExpirationDate { get; set; }
+        public bool SalesAssistedTrialStarted { get; set; }
 
         public Organization ToOrganization(Organization existingOrganization)
         {
