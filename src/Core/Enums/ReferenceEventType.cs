@@ -38,7 +38,7 @@ namespace Bit.Core.Enums
         GroupCreated,
         [EnumMember(Value = "collection-created")]
         CollectionCreated,
-        [EnumMember(Value = "sales-assisted")]
-        SalesAssisted
+        [EnumMember(Value = "organization-edited-by-admin")]
+        OrganizationEditedByAdmin
     }
 }
