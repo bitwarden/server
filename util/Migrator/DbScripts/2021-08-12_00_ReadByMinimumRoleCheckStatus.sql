@@ -1,4 +1,4 @@
-﻿IF OBJECT_ID('[dbo].[OrganizationUser_ReadByMinimumRole]') IS NOT NULL
+IF OBJECT_ID('[dbo].[OrganizationUser_ReadByMinimumRole]') IS NOT NULL
 BEGIN
     DROP PROCEDURE [dbo].[OrganizationUser_ReadByMinimumRole]
 END
@@ -17,5 +17,6 @@ BEGIN
         [dbo].[OrganizationUserUserDetailsView]
     WHERE
         OrganizationId = @OrganizationId 
+        AND Status = 2
         AND [Type] <= @MinRole
 END
