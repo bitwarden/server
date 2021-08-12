@@ -690,7 +690,11 @@ namespace Bit.Core.Services
 
             user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
             user.Key = key;
-            user.ForcePasswordReset = true;
+            
+            /* 
+            The reset password flow is disabled for the August 2021 release.
+            user.ForcePasswordReset = true; 
+            */
 
             await _userRepository.ReplaceAsync(user);
             await _mailService.SendAdminResetPasswordEmailAsync(user.Email, user.Name ?? user.Email, org.Name);
