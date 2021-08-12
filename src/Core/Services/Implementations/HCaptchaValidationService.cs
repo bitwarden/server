@@ -39,10 +39,9 @@ namespace Bit.Core.Services
 
         public string GenerateCaptchaBypassToken(User user) =>
             $"{TokenClearTextPrefix}{_dataProtector.Protect(CaptchaBypassTokenContent(user))}";
-        public bool ValidateCaptchaBypassToken(string encryptedToken, User user) =>
-            encryptedToken.StartsWith(TokenClearTextPrefix) && user != null &&
-            CoreHelpers.TokenIsValid(TokenName, _dataProtector, encryptedToken[TokenClearTextPrefix.Length..],
-            user.Email, user.Id, TokenLifetimeInHours);
+
+        public bool ValidateCaptchaBypassToken(string bypassToken, User user) =>
+            TokenIsApiKey(bypassToken, user) || TokenIsCaptchaBypassToken(bypassToken, user);
 
         public async Task<bool> ValidateCaptchaResponseAsync(string captchaResponse, string clientIpAddress)
         {
@@ -97,5 +96,13 @@ namespace Bit.Core.Services
                 user?.Email,
                 CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow.AddHours(TokenLifetimeInHours))
             });
+
+        private static bool TokenIsApiKey(string bypassToken, User user) =>
+            !string.IsNullOrWhiteSpace(bypassToken) && user != null && user.ApiKey == bypassToken;
+        private bool TokenIsCaptchaBypassToken(string encryptedToken, User user) =>
+            encryptedToken.StartsWith(TokenClearTextPrefix) && user != null &&
+            CoreHelpers.TokenIsValid(TokenName, _dataProtector, encryptedToken[TokenClearTextPrefix.Length..],
+            user.Email, user.Id, TokenLifetimeInHours);
+
     }
 }
