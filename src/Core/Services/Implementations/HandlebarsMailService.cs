@@ -395,7 +395,7 @@ namespace Bit.Core.Services
         {
             return new MailMessage
             {
-                ToEmails = toEmails.Select((string toEmail) => CoreHelpers.PunyEncode(toEmail)),
+                ToEmails = toEmails,
                 Subject = subject,
                 MetaData = new Dictionary<string, object>()
             };
