@@ -37,6 +37,9 @@ namespace Bit.Setup
             "Learn more: https://docs.docker.com/compose/compose-file/compose-versioning/")]
         public string ComposeVersion { get; set; }
 
+        [Description("Configure Nginx for Captcha.")]
+        public bool Captcha { get; set; } = false;
+
         [Description("Configure Nginx for SSL.")]
         public bool Ssl { get; set; } = true;
 

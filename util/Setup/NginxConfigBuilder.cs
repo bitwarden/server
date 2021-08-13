@@ -68,6 +68,7 @@ namespace Bit.Setup
 
             public TemplateModel(Context context)
             {
+                Captcha = context.Config.Captcha;
                 Ssl = context.Config.Ssl;
                 Domain = context.Config.Domain;
                 Url = context.Config.Url;
@@ -114,6 +115,7 @@ namespace Bit.Setup
                 }
             }
 
+            public bool Captcha { get; set; }
             public bool Ssl { get; set; }
             public string Domain { get; set; }
             public string Url { get; set; }
