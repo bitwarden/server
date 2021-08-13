@@ -220,6 +220,7 @@ namespace Bit.Core.Test.Utilities
 
         [Theory]
         [InlineData("bücher.com", "xn--bcher-kva.com")]
+        [InlineData("bücher.cömé", "xn--bcher-kva.xn--cm-cja4c")]
         [InlineData("hello@bücher.com", "hello@xn--bcher-kva.com")]
         [InlineData("hello@world.cömé", "hello@world.xn--cm-cja4c")]
         [InlineData("hello@bücher.cömé", "hello@xn--bcher-kva.xn--cm-cja4c")]
@@ -234,6 +235,7 @@ namespace Bit.Core.Test.Utilities
 
         [Theory]
         [InlineData("bücher.com", "xn--bcher-kva.com")]
+        [InlineData("bücher.cömé", "xn--bcher-kva.xn--cm-cja4c")]
         [InlineData("hello@bücher.com", "hello@xn--bcher-kva.com")]
         [InlineData("hello@world.cömé", "hello@world.xn--cm-cja4c")]
         [InlineData("hello@bücher.cömé", "hello@xn--bcher-kva.xn--cm-cja4c")]
