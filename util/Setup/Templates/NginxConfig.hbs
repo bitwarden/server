@@ -114,6 +114,16 @@ server {
     proxy_pass http://web:5000/sso-connector.html;
   }
 
+{{#if Captcha}}
+  location = /captcha-connector.html {
+    proxy_pass http://web:5000/captcha-connector.html;
+  }
+  
+  location = /captcha-mobile-connector.html {
+    proxy_pass http://web:5000/captcha-mobile-connector.html;
+  }
+{{/if}}
+
   location /attachments/ {
     proxy_pass http://attachments:5000/;
   }
