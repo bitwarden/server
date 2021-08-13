@@ -514,31 +514,6 @@ namespace Bit.Core.Utilities
             }
         }
 
-        public static string PunyDecode(string text)
-        {
-            if (text == "")
-            {
-                return "";
-            }
-
-            if (text == null)
-            {
-                return null;
-            }
-
-            if (!text.Contains("@"))
-            {
-                // Assume domain name or non-email address
-                var idn = new IdnMapping();
-                return idn.GetUnicode(text);
-            }
-            else
-            {
-                // Assume email address
-                return MailboxAddress.DecodeAddrspec(text);
-            }
-        }
-
         public static string FormatLicenseSignatureValue(object val)
         {
             if (val == null)
