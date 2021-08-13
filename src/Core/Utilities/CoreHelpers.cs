@@ -488,6 +488,18 @@ namespace Bit.Core.Utilities
             return Convert.FromBase64String(output);
         }
 
+        public static string PunyEncode(string text)
+        {
+            var idn = new IdnMapping();
+            return idn.GetAscii(text);
+        }
+
+        public static string PunyDecode(string text)
+        {
+            var idn = new IdnMapping();
+            return idn.GetUnicode(text);
+        }
+
         public static string FormatLicenseSignatureValue(object val)
         {
             if (val == null)

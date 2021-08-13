@@ -216,5 +216,23 @@ namespace Bit.Core.Test.Utilities
             // Assert
             Assert.Equal(startingUri, newUri.ToString());
         }
+
+        [Theory]
+        [InlineData("bücher.com", "xn--bcher-kva.com")]
+        [InlineData("ascii.com", "ascii.com")]
+        public void PunyEncode_Success(string text, string expected)
+        {
+            var actual = CoreHelpers.PunyEncode(text);
+            Assert.Equal(actual, expected);
+        }
+
+        [Theory]
+        [InlineData("xn--bcher-kva.com", "bücher.com")]
+        [InlineData("ascii.com", "ascii.com")]
+        public void PunyDecode_Success(string text, string expected)
+        {
+            var actual = CoreHelpers.PunyDecode(text);
+            Assert.Equal(actual, expected);
+        }
     }
 }
