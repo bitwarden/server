@@ -39,7 +39,7 @@ namespace Bit.Core.Utilities
             * Allows any char in second-level domain name, including unicode and symbols
             * Requires at least one period (.) separating SLD from TLD
             * Must end in a letter (including unicode)
-            See the unit tests for examples of what is intended to be allowed.
+            See the unit tests for examples of what is allowed.
             **/
             var emailFormat = @"[\x00-\x7F]+@.+\.\p{L}+$";
             if (!Regex.IsMatch(emailAddress, emailFormat))
