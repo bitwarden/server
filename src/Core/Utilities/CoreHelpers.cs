@@ -555,7 +555,7 @@ namespace Bit.Core.Utilities
             return sb.ToString();
         }
 
-        public static string SanitizeForEmail(string value, bool htmlEncode = true)
+        public static string SanitizeForEmail(string value, bool htmlEncode = false)
         {
             var cleanedValue = value.Replace("@", "[at]");
             var regexOptions = RegexOptions.CultureInvariant |
