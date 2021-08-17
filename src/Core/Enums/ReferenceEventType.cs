@@ -32,7 +32,7 @@ namespace Bit.Core.Enums
         DirectorySynced,
         [EnumMember(Value = "vault-imported")]
         VaultImported,
-        [EnumMember(Value = "secret-added")]
+        [EnumMember(Value = "cipher-created")]
         CipherCreated,
         [EnumMember(Value = "group-created")]
         GroupCreated,
