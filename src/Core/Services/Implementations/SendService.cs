@@ -130,6 +130,11 @@ namespace Bit.Core.Services
 
             var data = JsonConvert.DeserializeObject<SendFileData>(send.Data);
 
+            if (data.Validated)
+            {
+                throw new BadRequestException("File has already been uploaded.");
+            }
+
             await _sendFileStorageService.UploadNewFileAsync(stream, send, data.Id);
 
             if (!await ValidateSendFile(send))
