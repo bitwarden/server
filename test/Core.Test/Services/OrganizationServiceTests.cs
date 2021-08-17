@@ -79,6 +79,7 @@ namespace Bit.Core.Test.Services
             List<ImportedOrganizationUser> newUsers)
         {
             org.UseDirectory = true;
+            org.Seats = newUsers.Count + existingUsers.Count + 1;
             var reInvitedUser = existingUsers.First();
             reInvitedUser.ExternalId = null;
             newUsers.Add(new ImportedOrganizationUser
