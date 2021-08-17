@@ -60,6 +60,6 @@ namespace Bit.Core.Models.Business
 
         public string EventRaisedByUser { get; set; }
 
-        public bool SalesAssistedTrialStarted { get; set; }
+        public bool? SalesAssistedTrialStarted { get; set; }
     }
 }
