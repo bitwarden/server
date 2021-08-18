@@ -555,7 +555,7 @@ namespace Bit.Core.Utilities
             return sb.ToString();
         }
 
-        public static string SanitizeForEmail(string value, bool htmlEncode = false)
+        public static string SanitizeForEmail(string value)
         {
             var cleanedValue = value.Replace("@", "[at]");
             var regexOptions = RegexOptions.CultureInvariant |
@@ -568,7 +568,7 @@ namespace Bit.Core.Utilities
                 cleanedValue = Regex.Replace(cleanedValue, @"((^|\b)(\w*)://)",
                     string.Empty, regexOptions);
             }
-            return htmlEncode ? HttpUtility.HtmlEncode(cleanedValue) : cleanedValue;
+            return cleanedValue;
         }
 
         public static string DateTimeToTableStorageKey(DateTime? date = null)
