@@ -513,7 +513,8 @@ namespace Bit.Core.Services
                     var previewInvoice = await invoiceService.UpcomingAsync(new UpcomingInvoiceOptions
                     {
                         Customer = customer.Id,
-                        SubscriptionItems = ToInvoiceSubscriptionItemOptions(subCreateOptions.Items)
+                        SubscriptionItems = ToInvoiceSubscriptionItemOptions(subCreateOptions.Items),
+                        SubscriptionDefaultTaxRates = subCreateOptions.DefaultTaxRates,
                     });
 
                     if (previewInvoice.AmountDue > 0)
@@ -599,7 +600,8 @@ namespace Bit.Core.Services
                     var previewInvoice = await invoiceService.UpcomingAsync(new UpcomingInvoiceOptions
                     {
                         Customer = customer.Id,
-                        SubscriptionItems = ToInvoiceSubscriptionItemOptions(subCreateOptions.Items)
+                        SubscriptionItems = ToInvoiceSubscriptionItemOptions(subCreateOptions.Items),
+                        SubscriptionDefaultTaxRates = subCreateOptions.DefaultTaxRates,
                     });
                     if (previewInvoice.AmountDue > 0)
                     {
