@@ -3,7 +3,7 @@ CREATE PROCEDURE [dbo].[TaxRate_Create]
     @Country VARCHAR(50),
     @State VARCHAR(2),
     @PostalCode VARCHAR(10),
-    @Rate DECIMAL(5,2),
+    @Rate DECIMAL(6,3),
     @Active BIT
 AS
 BEGIN
