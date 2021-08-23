@@ -34,7 +34,7 @@ SCRIPTS_DIR="$OUTPUT/scripts"
 GITHUB_BASE_URL="https://raw.githubusercontent.com/bitwarden/server/master"
 
 # Please do not create pull requests modifying the version numbers.
-COREVERSION="1.42.1"
+COREVERSION="1.42.2"
 WEBVERSION="2.22.1"
 
 echo "bitwarden.sh version $COREVERSION"
