@@ -441,7 +441,7 @@ namespace Bit.Core.Context
             };
         }
 
-        private async Task<IEnumerable<ProviderUserOrganizationDetails>> GetProviderOrganizations()
+        protected async Task<IEnumerable<ProviderUserOrganizationDetails>> GetProviderOrganizations()
         {
             if (_providerUserOrganizations == null)
             {
