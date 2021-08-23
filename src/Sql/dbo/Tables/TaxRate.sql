@@ -3,7 +3,7 @@ CREATE TABLE [dbo].[TaxRate] (
     [Country]           VARCHAR(50)         NOT NULL,
     [State]             VARCHAR(2)          NULL,
     [PostalCode]        VARCHAR(10)         NOT NULL,
-    [Rate]              DECIMAL(5,2)        NOT NULL,
+    [Rate]              DECIMAL(6,3)        NOT NULL,
     [Active]            BIT                 NOT NULL,
     CONSTRAINT [PK_TaxRate] PRIMARY KEY CLUSTERED ([Id] ASC)
 );
