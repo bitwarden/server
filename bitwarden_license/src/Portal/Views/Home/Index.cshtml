@@ -18,14 +18,4 @@
             </a>
         </div>
     }
-
-    @if (EnterprisePortalCurrentContext.SelectedOrganizationDetails.UsePolicies &&
-         EnterprisePortalCurrentContext.CanManagePoliciesForSelectedOrganization)
-    {
-        <div class="col">
-            <a class="card p-5 border border-primary" asp-area="" asp-controller="Policies" asp-action="Index">
-                <h2 class="card-title text-center">@i18nService.T("Policies")</h2>
-            </a>
-        </div>
-    }
 </div>
