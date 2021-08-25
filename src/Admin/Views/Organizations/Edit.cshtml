@@ -20,6 +20,7 @@
                 document.getElementById('@(nameof(Model.Seats))').value = '10';
                 document.getElementById('@(nameof(Model.MaxCollections))').value = '';
                 document.getElementById('@(nameof(Model.MaxStorageGb))').value = '1';
+                document.getElementById('@(nameof(Model.MaxAutoscaleSeats))').value = '@Model.MaxAutoscaleSeats';
                 // Features
                 document.getElementById('@(nameof(Model.UsePolicies))').checked = true;
                 document.getElementById('@(nameof(Model.UseSso))').checked = true;
@@ -31,6 +32,7 @@
                 document.getElementById('@(nameof(Model.Use2fa))').checked = true;
                 document.getElementById('@(nameof(Model.UseApi))').checked = true;
                 document.getElementById('@(nameof(Model.SelfHost))').checked = true;
+                document.getElementById('@(nameof(Model.EnableSeatAutoscaling))').checked = '@Model.EnableSeatAutoscaling';
                 // Licensing
                 document.getElementById('@(nameof(Model.LicenseKey))').value = '@Model.RandomLicenseKey';
                 document.getElementById('@(nameof(Model.ExpirationDate))').value = '@Model.FourteenDayExpirationDate';
@@ -144,6 +146,14 @@
             </div>
         </div>
     </div>
+    <div class="row">
+        <div class="col-4">
+            <div class="form-group">
+                <label asp-for="MaxAutoscaleSeats"></label>
+                <input type="number" class="form-control" asp-for="MaxAutoscaleSeats" min="1">
+            </div>
+        </div>
+    </div>
     <h2>Features</h2>
     <div class="form-check">
         <input type="checkbox" class="form-check-input" asp-for="UseTotp">
@@ -185,9 +195,13 @@
         <input type="checkbox" class="form-check-input" asp-for="UseResetPassword">
         <label class="form-check-label" asp-for="UseResetPassword"></label>
     </div>
-    <div class="form-check mb-3">
+    <div class="form-check">
         <input type="checkbox" class="form-check-input" asp-for="UsersGetPremium">
         <label class="form-check-label" asp-for="UsersGetPremium"></label>
+    </div>
+    <div class="form-check mb-3">
+        <input type="checkbox" class="form-check-input" asp-for="EnableSeatAutoscaling">
+        <label class="form-check-label" asp-for="EnableSeatAutoscaling"></label>
     </div>
     <h2>Licensing</h2>
     <div class="row">
