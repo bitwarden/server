@@ -127,5 +127,41 @@ namespace Bit.Core.Services
             await _policyRepository.UpsertAsync(policy);
             await _eventService.LogPolicyEventAsync(policy, Enums.EventType.Policy_Updated);
         }
+
+        public async Task<bool> PolicyAppliesToUserAsync(PolicyType policyType, Guid userId,
+            Func<Policy, bool> policyFilter)
+        {
+            if (policyFilter == null)
+            {
+                policyFilter = policy => true;
+            }
+
+            var policies = await _policyRepository.GetManyByUserIdAsync(userId);
+            var orgUsers = await _organizationUserRepository.GetManyByUserAsync(userId);
+
+            var enabledPolicies = policies
+                .Where(p => p.Enabled && p.Type == policyType && policyFilter(p))
+                .Select(p => p.OrganizationId)
+                .ToHashSet();
+
+            return orgUsers.Any(ou =>
+                !ou.IsExemptFromPolicies &&
+                ou.Status != OrganizationUserStatusType.Invited &&
+                enabledPolicies.Contains(ou.OrganizationId));
+        }
+
+        public async Task<bool> PolicyAppliesToUserAsync(PolicyType policyType, Guid userId, Guid organizationId,
+            bool includeInvitedUsers = false)
+        {
+            var policy = await _policyRepository.GetByOrganizationIdTypeAsync(organizationId, policyType);
+            var allOrgUsers = await _organizationUserRepository.GetManyByUserAsync(userId);
+            var orgUser = allOrgUsers.FirstOrDefault(ou => ou.OrganizationId == organizationId);
+
+            return policy != null &&
+                policy.Enabled &&
+                orgUser != null &&
+                !orgUser.IsExemptFromPolicies &&
+                includeInvitedUsers ? true : orgUser.Status != OrganizationUserStatusType.Invited;
+        }
     }
 }

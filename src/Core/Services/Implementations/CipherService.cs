@@ -32,7 +32,7 @@ namespace Bit.Core.Services
         private readonly IAttachmentStorageService _attachmentStorageService;
         private readonly IEventService _eventService;
         private readonly IUserService _userService;
-        private readonly IPolicyRepository _policyRepository;
+        private readonly IPolicyService _policyService;
         private readonly GlobalSettings _globalSettings;
         private const long _fileSizeLeeway = 1024L * 1024L; // 1MB 
         private readonly IReferenceEventService _referenceEventService;
@@ -49,7 +49,7 @@ namespace Bit.Core.Services
             IAttachmentStorageService attachmentStorageService,
             IEventService eventService,
             IUserService userService,
-            IPolicyRepository policyRepository,
+            IPolicyService policyService,
             GlobalSettings globalSettings,
             IReferenceEventService referenceEventService)
         {
@@ -64,7 +64,7 @@ namespace Bit.Core.Services
             _attachmentStorageService = attachmentStorageService;
             _eventService = eventService;
             _userService = userService;
-            _policyRepository = policyRepository;
+            _policyService = policyService;
             _globalSettings = globalSettings;
             _referenceEventService = referenceEventService;
         }
@@ -139,19 +139,10 @@ namespace Bit.Core.Services
                 else
                 {
                     // Make sure the user can save new ciphers to their personal vault
-                    var userPolicies = await _policyRepository.GetManyByUserIdAsync(savingUserId);
-                    if (userPolicies != null)
+                    var blockPersonalOwnership = await _policyService.PolicyAppliesToUserAsync(PolicyType.PersonalOwnership, savingUserId, null);
+                    if (blockPersonalOwnership)
                     {
-                        foreach (var policy in userPolicies.Where(p => p.Enabled && p.Type == PolicyType.PersonalOwnership))
-                        {
-                            var org = await _organizationUserRepository.GetDetailsByUserAsync(savingUserId, policy.OrganizationId,
-                                OrganizationUserStatusType.Confirmed);
-                            if (org != null && org.Enabled && org.UsePolicies
-                               && org.Type != OrganizationUserType.Admin && org.Type != OrganizationUserType.Owner)
-                            {
-                                throw new BadRequestException("Due to an Enterprise Policy, you are restricted from saving items to your personal vault.");
-                            }
-                        }
+                        throw new BadRequestException("Due to an Enterprise Policy, you are restricted from saving items to your personal vault.");
                     }
                     await _cipherRepository.CreateAsync(cipher);
                 }

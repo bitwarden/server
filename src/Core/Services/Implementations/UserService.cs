@@ -1303,11 +1303,11 @@ namespace Bit.Core.Services
             if (twoFactorPolicies.Any())
             {
                 var userOrgs = await _organizationUserRepository.GetManyByUserAsync(user.Id);
-                var ownerOrgs = userOrgs.Where(o => o.Type == OrganizationUserType.Owner)
+                var exemptUserOrgs = userOrgs.Where(o => o.IsExemptFromPolicies)
                     .Select(o => o.OrganizationId).ToHashSet();
                 foreach (var policy in twoFactorPolicies)
                 {
-                    if (!ownerOrgs.Contains(policy.OrganizationId))
+                    if (!exemptUserOrgs.Contains(policy.OrganizationId))
                     {
                         await organizationService.DeleteUserAsync(policy.OrganizationId, user.Id);
                         var organization = await _organizationRepository.GetByIdAsync(policy.OrganizationId);

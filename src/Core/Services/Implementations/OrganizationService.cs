@@ -43,6 +43,7 @@ namespace Bit.Core.Services
         private readonly GlobalSettings _globalSettings;
         private readonly ITaxRateRepository _taxRateRepository;
         private readonly ICurrentContext _currentContext;
+        private readonly IPolicyService _policyService;
 
         public OrganizationService(
             IOrganizationRepository organizationRepository,
@@ -66,7 +67,8 @@ namespace Bit.Core.Services
             IReferenceEventService referenceEventService,
             GlobalSettings globalSettings,
             ITaxRateRepository taxRateRepository,
-            ICurrentContext currentContext)
+            ICurrentContext currentContext,
+            IPolicyService policyService)
         {
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
@@ -90,6 +92,7 @@ namespace Bit.Core.Services
             _globalSettings = globalSettings;
             _taxRateRepository = taxRateRepository;
             _currentContext = currentContext;
+            _policyService = policyService;
         }
 
         public async Task ReplacePaymentMethodAsync(Guid organizationId, string paymentToken,
@@ -642,15 +645,7 @@ namespace Bit.Core.Services
 
         private async Task ValidateSignUpPoliciesAsync(Guid ownerId)
         {
-            var policies = await _policyRepository.GetManyByUserIdAsync(ownerId);
-            var orgUsers = await _organizationUserRepository.GetManyByUserAsync(ownerId);
-
-            var orgsWithSingleOrgPolicy = policies.Where(p => p.Enabled && p.Type == PolicyType.SingleOrg)
-                .Select(p => p.OrganizationId);
-            var blockedBySingleOrgPolicy = orgUsers.Any(ou => ou is {Type: OrganizationUserType.Owner} &&
-                                                              ou.Type != OrganizationUserType.Admin &&
-                                                              ou.Status != OrganizationUserStatusType.Invited &&
-                                                              orgsWithSingleOrgPolicy.Contains(ou.OrganizationId));
+            var blockedBySingleOrgPolicy = await _policyService.PolicyAppliesToUserAsync(PolicyType.SingleOrg, ownerId, null);
             if (blockedBySingleOrgPolicy)
             {
                 throw new BadRequestException("You may not create an organization. You belong to an organization " +
@@ -1378,45 +1373,26 @@ namespace Bit.Core.Services
                 }
             }
 
-            bool notExempt(OrganizationUser organizationUser)
-            {
-                return organizationUser.Type != OrganizationUserType.Owner &&
-                        organizationUser.Type != OrganizationUserType.Admin;
-            }
-
-            var allOrgUsers = await _organizationUserRepository.GetManyByUserAsync(user.Id);
-
             // Enforce Single Organization Policy of organization user is trying to join
-            var thisSingleOrgPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(orgUser.OrganizationId, PolicyType.SingleOrg);
-            if (thisSingleOrgPolicy != null &&
-                thisSingleOrgPolicy.Enabled &&
-                notExempt(orgUser) &&
-                allOrgUsers.Any(ou => ou.OrganizationId != orgUser.OrganizationId))
+            var blockedBySingleOrgPolicy = await _policyService.PolicyAppliesToUserAsync(PolicyType.SingleOrg, user.Id,
+                orgUser.OrganizationId, true);
+            if (blockedBySingleOrgPolicy)
             {
                 throw new BadRequestException("You may not join this organization until you leave or remove " +
                     "all other organizations.");
             }
 
             // Enforce Single Organization Policy of other organizations user is a member of
-            var policies = await _policyRepository.GetManyByUserIdAsync(user.Id);
-
-            var orgsWithSingleOrgPolicy = policies.Where(p => p.Enabled && p.Type == PolicyType.SingleOrg)
-                .Select(p => p.OrganizationId);
-            var blockedBySingleOrgPolicy = allOrgUsers.Any(ou => notExempt(ou) &&
-                ou.Status != OrganizationUserStatusType.Invited &&
-                orgsWithSingleOrgPolicy.Contains(ou.OrganizationId));
-
-            if (blockedBySingleOrgPolicy)
+            var blockedByAnotherSingleOrgPolicy = await _policyService.PolicyAppliesToUserAsync(PolicyType.SingleOrg, user.Id, null);
+            if (blockedByAnotherSingleOrgPolicy)
             {
                 throw new BadRequestException("You cannot join this organization because you are a member of " +
-                    "an organization which forbids it");
+                    "another organization which forbids it");
             }
 
-            var twoFactorPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(orgUser.OrganizationId, PolicyType.TwoFactorAuthentication);
-            if (!await userService.TwoFactorIsEnabledAsync(user) &&
-                twoFactorPolicy != null &&
-                twoFactorPolicy.Enabled &&
-                notExempt(orgUser))
+            var blockedByTwoFactorPolicy = await _policyService.PolicyAppliesToUserAsync(PolicyType.TwoFactorAuthentication,
+                user.Id, orgUser.OrganizationId, true);
+            if (blockedByTwoFactorPolicy)
             {
                 throw new BadRequestException("You cannot join this organization until you enable " +
                     "two-step login on your user account.");

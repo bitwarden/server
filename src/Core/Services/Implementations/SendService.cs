@@ -21,7 +21,7 @@ namespace Bit.Core.Services
         public const string MAX_FILE_SIZE_READABLE = "500 MB";
         private readonly ISendRepository _sendRepository;
         private readonly IUserRepository _userRepository;
-        private readonly IPolicyRepository _policyRepository;
+        private readonly IPolicyService _policyService;
         private readonly IUserService _userService;
         private readonly IOrganizationRepository _organizationRepository;
         private readonly ISendFileStorageService _sendFileStorageService;
@@ -42,13 +42,13 @@ namespace Bit.Core.Services
             IPushNotificationService pushService,
             IReferenceEventService referenceEventService,
             GlobalSettings globalSettings,
-            IPolicyRepository policyRepository,
+            IPolicyService policyService,
             ICurrentContext currentContext)
         {
             _sendRepository = sendRepository;
             _userRepository = userRepository;
             _userService = userService;
-            _policyRepository = policyRepository;
+            _policyService = policyService;
             _organizationRepository = organizationRepository;
             _sendFileStorageService = sendFileStorageService;
             _passwordHasher = passwordHasher;
@@ -280,40 +280,30 @@ namespace Bit.Core.Services
                 return;
             }
 
-            var policies = await _policyRepository.GetManyByUserIdAsync(userId.Value);
-
-            if (policies == null)
+            var blockedByDisableSendPolicy = await _policyService.PolicyAppliesToUserAsync(PolicyType.DisableSend, userId.Value, null);
+            if (blockedByDisableSendPolicy)
             {
-                return;
-            }
-
-            foreach (var policy in policies.Where(p => p.Enabled && p.Type == PolicyType.DisableSend))
-            {
-                if (!await _currentContext.ManagePolicies(policy.OrganizationId))
-                {
-                    throw new BadRequestException("Due to an Enterprise Policy, you are only able to delete an existing Send.");
-                }
+                throw new BadRequestException("Due to an Enterprise Policy, you are only able to delete an existing Send.");
             }
 
             if (send.HideEmail.GetValueOrDefault())
             {
-                foreach (var policy in policies.Where(p => p.Enabled && p.Type == PolicyType.SendOptions))
+                static bool filterForDisableHideEmail(Policy policy)
                 {
-                    if (await _currentContext.ManagePolicies(policy.OrganizationId))
-                    {
-                        continue;
-                    }
-
                     SendOptionsPolicyData data = null;
                     if (policy.Data != null)
                     {
                         data = JsonConvert.DeserializeObject<SendOptionsPolicyData>(policy.Data);
                     }
 
-                    if (data?.DisableHideEmail ?? false)
-                    {
-                        throw new BadRequestException("Due to an Enterprise Policy, you are not allowed to hide your email address from recipients when creating or editing a Send.");
-                    }
+                    return data?.DisableHideEmail ?? false;
+                }
+
+                var blockedByDisableHideEmailPolicy = await _policyService.PolicyAppliesToUserAsync(PolicyType.SendOptions,
+                    userId.Value, filterForDisableHideEmail);
+                if (blockedByDisableHideEmailPolicy)
+                {
+                    throw new BadRequestException("Due to an Enterprise Policy, you are not allowed to hide your email address from recipients when creating or editing a Send.");
                 }
             }
         }
