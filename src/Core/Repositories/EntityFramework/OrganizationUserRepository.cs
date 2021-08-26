@@ -20,7 +20,7 @@ namespace Bit.Core.Repositories.EntityFramework
             : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.OrganizationUsers)
         { }
 
-        public async Task CreateAsync(OrganizationUser obj, IEnumerable<SelectionReadOnly> collections)
+        public async Task<Guid> CreateAsync(OrganizationUser obj, IEnumerable<SelectionReadOnly> collections)
         {
             var organizationUser = await base.CreateAsync(obj);
             using (var scope = ServiceScopeFactory.CreateScope())
@@ -41,13 +41,15 @@ namespace Bit.Core.Repositories.EntityFramework
                 await dbContext.CollectionUsers.AddRangeAsync(collectionUsers);
                 await dbContext.SaveChangesAsync();
             }
+
+            return organizationUser.Id;
         }
 
-        public async Task CreateManyAsync(IEnumerable<OrganizationUser> organizationUsers)
+        public async Task<ICollection<Guid>> CreateManyAsync(IEnumerable<OrganizationUser> organizationUsers)
         {
             if (!organizationUsers.Any())
             {
-                return;
+                return new List<Guid>();
             }
 
             foreach (var organizationUser in organizationUsers)
@@ -61,6 +63,8 @@ namespace Bit.Core.Repositories.EntityFramework
                 var entities = Mapper.Map<List<EfModel.OrganizationUser>>(organizationUsers);
                 await dbContext.AddRangeAsync(entities);
             }
+
+            return organizationUsers.Select(u => u.Id).ToList();
         }
 
         public async Task DeleteManyAsync(IEnumerable<Guid> organizationUserIds)

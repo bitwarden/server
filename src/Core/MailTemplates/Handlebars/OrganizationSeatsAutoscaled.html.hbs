@@ -1,0 +1,41 @@
+﻿{{#>FullHtmlLayout}}
+<table width="100%" cellpadding="0" cellspacing="0"
+    style="margin: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: none;">
+    <tr
+        style="margin: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: none;">
+        <td class="content-block"
+            style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; margin: 0; -webkit-font-smoothing: antialiased; padding: 0 0 10px; -webkit-text-size-adjust: none;"
+            valign="top">
+            {{OrganizationName}} seat count has been automatically increased to {{CurrentSeatCount}}.
+            Your organization is currently configured to purchase seats {{#if LimitedAutoscaling}}up to a maximum of
+            {{MaxSeatCount}}{{/if}} to accommodate all invites.
+        </td>
+    </tr>
+    <tr
+        style="margin: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: none;">
+        <td class="content-block"
+            style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; margin: 0; -webkit-font-smoothing: antialiased; padding: 0 0 10px; -webkit-text-size-adjust: none;"
+            valign="top">
+            To update your autoscale settings:
+            <ol>
+                <li>Log in to your <a
+                        href="https://vault.bitwarden.com/#/organizations/{{{OrganizationId}}}/settings/subscription">Web
+                        Vault</a> and open your Organization.</li>
+                <li>Open the <b>Settings</b> tab and select <b>Subscription</b> from the left-hand menu.</li>
+                <li>Click the <b>Autoscale Seats</b> button.</li>
+                <li>Update your preferences.</li>
+                <li>Click <b>Submit</b>.</li>
+            </ol>
+        </td>
+    </tr>
+    <tr
+        style="margin: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: none;">
+        <td class="content-block last"
+            style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; margin: 0; -webkit-font-smoothing: antialiased; padding: 0; -webkit-text-size-adjust: none;"
+            valign="top">
+            For more information, please refer to the following help article: <a
+                href="https://bitwarden.com/help/article/managing-users/#autoscale">https://bitwarden.com/help/article/managing-users/#autoscale</a>
+        </td>
+    </tr>
+</table>
+{{/FullHtmlLayout}}

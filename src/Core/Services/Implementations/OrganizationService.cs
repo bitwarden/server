@@ -40,7 +40,7 @@ namespace Bit.Core.Services
         private readonly ISsoConfigRepository _ssoConfigRepository;
         private readonly ISsoUserRepository _ssoUserRepository;
         private readonly IReferenceEventService _referenceEventService;
-        private readonly GlobalSettings _globalSettings;
+        private readonly IGlobalSettings _globalSettings;
         private readonly ITaxRateRepository _taxRateRepository;
         private readonly ICurrentContext _currentContext;
 
@@ -64,7 +64,7 @@ namespace Bit.Core.Services
             ISsoConfigRepository ssoConfigRepository,
             ISsoUserRepository ssoUserRepository,
             IReferenceEventService referenceEventService,
-            GlobalSettings globalSettings,
+            IGlobalSettings globalSettings,
             ITaxRateRepository taxRateRepository,
             ICurrentContext currentContext)
         {
@@ -347,7 +347,48 @@ namespace Bit.Core.Services
             return secret;
         }
 
-        public async Task<string> AdjustSeatsAsync(Guid organizationId, int seatAdjustment)
+        public async Task UpdateAutoscaling(Guid organizationId, bool enableAutoscaling, int? maxAutoscaleSeats)
+        {
+            var organization = await GetOrgById(organizationId);
+            if (organization == null)
+            {
+                throw new NotFoundException();
+            }
+
+            if (enableAutoscaling &&
+                maxAutoscaleSeats.HasValue &&
+                organization.Seats.HasValue &&
+                maxAutoscaleSeats.Value < organization.Seats.Value)
+            {
+                throw new BadRequestException($"Cannot set max seat autoscaling below current seat count.");
+            }
+
+            var plan = StaticStore.Plans.FirstOrDefault(p => p.Type == organization.PlanType);
+            if (plan == null)
+            {
+                throw new BadRequestException("Existing plan not found.");
+            }
+
+            if (!plan.AllowSeatAutoscale && enableAutoscaling)
+            {
+                throw new BadRequestException("Your plan does not allow seat autoscaling.");
+            }
+
+            if (plan.MaxUsers.HasValue && maxAutoscaleSeats.HasValue &&
+                maxAutoscaleSeats > plan.MaxUsers)
+            {
+                throw new BadRequestException(string.Concat($"Your plan has a seat limit of {plan.MaxUsers}, ",
+                    $"but you have specified a max autoscale count of {maxAutoscaleSeats}.",
+                    "Reduce your max autoscale seat count."));
+            }
+
+            organization.EnableSeatAutoscaling = enableAutoscaling;
+            organization.MaxAutoscaleSeats = maxAutoscaleSeats;
+
+            await ReplaceAndUpdateCache(organization);
+        }
+
+        public async Task<string> AdjustSeatsAsync(Guid organizationId, int seatAdjustment, DateTime? prorationDate = null)
         {
             var organization = await GetOrgById(organizationId);
             if (organization == null)
@@ -412,7 +453,7 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Subscription not found.");
             }
 
-            var prorationDate = DateTime.UtcNow;
+            prorationDate ??= DateTime.UtcNow;
             var seatItem = sub.Items?.Data?.FirstOrDefault(i => i.Plan.Id == plan.StripeSeatPlanId);
             // Retain original collection method
             var collectionMethod = sub.CollectionMethod;
@@ -1053,11 +1094,12 @@ namespace Bit.Core.Services
             await UpdateAsync(organization);
         }
 
-        private async Task<List<OrganizationUser>> InviteUsersAsync(Guid organizationId, Guid? invitingUserId,
+        public async Task<List<OrganizationUser>> InviteUsersAsync(Guid organizationId, Guid? invitingUserId,
             IEnumerable<(OrganizationUserInvite invite, string externalId)> invites)
         {
             var organization = await GetOrgById(organizationId);
-            if (organization == null || invites.Any(i => i.invite.Emails == null || i.externalId == null))
+            var initialSeatCount = organization.Seats;
+            if (organization == null || invites.Any(i => i.invite.Emails == null))
             {
                 throw new NotFoundException();
             }
@@ -1072,23 +1114,34 @@ namespace Bit.Core.Services
                 }
             }
 
+            var newSeatsRequired = 0;
+            var existingEmails = new HashSet<string>(await _organizationUserRepository.SelectKnownEmailsAsync(
+                organizationId, invites.SelectMany(i => i.invite.Emails), false), StringComparer.InvariantCultureIgnoreCase);
             if (organization.Seats.HasValue)
             {
                 var userCount = await _organizationUserRepository.GetCountByOrganizationIdAsync(organizationId);
                 var availableSeats = organization.Seats.Value - userCount;
-                if (availableSeats < invites.Select(i => i.invite.Emails.Count()).Sum())
-                {
-                    throw new BadRequestException("You have reached the maximum number of users " +
-                        $"({organization.Seats.Value}) for this organization.");
-                }
+                newSeatsRequired = invites.Sum(i => i.invite.Emails.Count()) - existingEmails.Count() - availableSeats;
             }
 
+            var (canScale, failureReason) = await CanScaleAsync(organization, newSeatsRequired);
+            if (!canScale)
+            {
+                throw new BadRequestException(failureReason);
+            }
+
+            var invitedAreAllOwners = invites.All(i => i.invite.Type == OrganizationUserType.Owner);
+            if (!invitedAreAllOwners && !await HasConfirmedOwnersExceptAsync(organizationId, new Guid[] { }))
+            {
+                throw new BadRequestException("Organization must have at least one confirmed owner.");
+            }
+
+
             var orgUsers = new List<OrganizationUser>();
+            var limitedCollectionOrgUsers = new List<(OrganizationUser, IEnumerable<SelectionReadOnly>)>();
             var orgUserInvitedCount = 0;
             var exceptions = new List<Exception>();
             var events = new List<(OrganizationUser, EventType, DateTime?)>();
-            var existingEmails = new HashSet<string>(await _organizationUserRepository.SelectKnownEmailsAsync(
-                organizationId, invites.SelectMany(i => i.invite.Emails), false), StringComparer.InvariantCultureIgnoreCase);
             foreach (var (invite, externalId) in invites)
             {
                 foreach (var email in invite.Emails)
@@ -1125,11 +1178,14 @@ namespace Bit.Core.Services
 
                         if (!orgUser.AccessAll && invite.Collections.Any())
                         {
-                            throw new Exception("Bulk invite does not support limited collection invites");
+                            limitedCollectionOrgUsers.Add((orgUser, invite.Collections));
+                        }
+                        else
+                        {
+                            orgUsers.Add(orgUser);
                         }
 
                         events.Add((orgUser, EventType.OrganizationUser_Invited, DateTime.UtcNow));
-                        orgUsers.Add(orgUser);
                         orgUserInvitedCount++;
                     }
                     catch (Exception e)
@@ -1139,9 +1195,21 @@ namespace Bit.Core.Services
                 }
             }
 
+            if (exceptions.Any())
+            {
+                throw new AggregateException("One or more errors occurred while inviting users.", exceptions);
+            }
+
+            var prorationDate = DateTime.UtcNow;
             try
             {
                 await _organizationUserRepository.CreateManyAsync(orgUsers);
+                foreach (var (orgUser, collections) in limitedCollectionOrgUsers)
+                {
+                    await _organizationUserRepository.CreateAsync(orgUser, collections);
+                }
+
+                await AutoAddSeatsAsync(organization, newSeatsRequired, prorationDate);
                 await SendInvitesAsync(orgUsers, organization);
                 await _eventService.LogOrganizationUserEventsAsync(events);
 
@@ -1153,6 +1221,16 @@ namespace Bit.Core.Services
             }
             catch (Exception e)
             {
+                // Revert any added users.
+                var invitedOrgUserIds = orgUsers.Select(u => u.Id).Concat(limitedCollectionOrgUsers.Select(u => u.Item1.Id));
+                await _organizationUserRepository.DeleteManyAsync(invitedOrgUserIds);
+                var currentSeatCount = (await _organizationRepository.GetByIdAsync(organization.Id)).Seats;
+
+                if (initialSeatCount.HasValue && currentSeatCount.HasValue && currentSeatCount.Value != initialSeatCount.Value)
+                {
+                    await AdjustSeatsAsync(organization.Id, initialSeatCount.Value - currentSeatCount.Value, prorationDate);
+                }
+
                 exceptions.Add(e);
             }
 
@@ -1160,94 +1238,6 @@ namespace Bit.Core.Services
             {
                 throw new AggregateException("One or more errors occurred while inviting users.", exceptions);
             }
-
-            return orgUsers;
-        }
-
-        public async Task<List<OrganizationUser>> InviteUserAsync(Guid organizationId, Guid? invitingUserId,
-            string externalId, OrganizationUserInvite invite)
-        {
-            var organization = await GetOrgById(organizationId);
-            if (organization == null || invite?.Emails == null)
-            {
-                throw new NotFoundException();
-            }
-
-            if (invitingUserId.HasValue && invite.Type.HasValue)
-            {
-                await ValidateOrganizationUserUpdatePermissions(organizationId, invite.Type.Value, null);
-            }
-
-            if (organization.Seats.HasValue)
-            {
-                var userCount = await _organizationUserRepository.GetCountByOrganizationIdAsync(organizationId);
-                var availableSeats = organization.Seats.Value - userCount;
-                if (availableSeats < invite.Emails.Count())
-                {
-                    throw new BadRequestException("You have reached the maximum number of users " +
-                        $"({organization.Seats.Value}) for this organization.");
-                }
-            }
-
-            var invitedIsOwner = invite.Type is OrganizationUserType.Owner;
-            if (!invitedIsOwner && !await HasConfirmedOwnersExceptAsync(organizationId, new Guid[] {}))
-            {
-                throw new BadRequestException("Organization must have at least one confirmed owner.");
-            }
-
-            var orgUsers = new List<OrganizationUser>();
-            var orgUserInvitedCount = 0;
-            foreach (var email in invite.Emails)
-            {
-                // Make sure user is not already invited
-                var existingOrgUserCount = await _organizationUserRepository.GetCountByOrganizationAsync(
-                    organizationId, email, false);
-                if (existingOrgUserCount > 0)
-                {
-                    continue;
-                }
-
-                var orgUser = new OrganizationUser
-                {
-                    OrganizationId = organizationId,
-                    UserId = null,
-                    Email = email.ToLowerInvariant(),
-                    Key = null,
-                    Type = invite.Type.Value,
-                    Status = OrganizationUserStatusType.Invited,
-                    AccessAll = invite.AccessAll,
-                    ExternalId = externalId,
-                    CreationDate = DateTime.UtcNow,
-                    RevisionDate = DateTime.UtcNow,
-                };
-
-                if (invite.Permissions != null)
-                {
-                    orgUser.Permissions = System.Text.Json.JsonSerializer.Serialize(invite.Permissions, new JsonSerializerOptions
-                    {
-                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                    });
-                }
-
-                if (!orgUser.AccessAll && invite.Collections.Any())
-                {
-                    await _organizationUserRepository.CreateAsync(orgUser, invite.Collections);
-                }
-                else
-                {
-                    await _organizationUserRepository.CreateAsync(orgUser);
-                }
-
-                await SendInviteAsync(orgUser, organization);
-                await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Invited);
-                orgUsers.Add(orgUser);
-                orgUserInvitedCount++;
-            }
-            await _referenceEventService.RaiseEventAsync(
-                new ReferenceEvent(ReferenceEventType.InvitedUsers, organization)
-                {
-                    Users = orgUserInvitedCount
-                });
 
             return orgUsers;
         }
@@ -1524,6 +1514,64 @@ namespace Bit.Core.Services
             return result;
         }
 
+        internal async Task<(bool canScale, string failureReason)> CanScaleAsync(Organization organization, int seatsToAdd)
+        {
+            var failureReason = "";
+            if (_globalSettings.SelfHosted)
+            {
+                failureReason = "Cannot autoscale on self-hosted instance.";
+                return (false, failureReason);
+            }
+
+            if (!await _currentContext.ManageUsers(organization.Id))
+            {
+                failureReason = "Cannot manage organization users.";
+                return (false, failureReason);
+            }
+            // if (!await _currentContext.OrganizationOwner(organization.Id))
+            // {
+            //     failureReason = "Only organization owners can autoscale seats.";
+            //     return (false, failureReason);
+            // }
+
+            if (seatsToAdd < 1)
+            {
+                return (true, failureReason);
+            }
+
+            if (!organization.EnableSeatAutoscaling)
+            {
+                return (false, "Cannot scale organization seats. Auto scale is disabled.");
+            }
+
+            if (organization.Seats.HasValue &&
+                organization.MaxAutoscaleSeats.HasValue &&
+                organization.MaxAutoscaleSeats.Value < organization.Seats.Value + seatsToAdd)
+            {
+                return (false, $"Cannot scale organization seats beyond {organization.MaxAutoscaleSeats}.");
+            }
+
+            return (true, failureReason);
+        }
+
+        private async Task AutoAddSeatsAsync(Organization organization, int seatsToAdd, DateTime? prorationDate = null)
+        {
+            if (seatsToAdd < 1)
+            {
+                return;
+            }
+
+            var (canScale, failureMessage) = await CanScaleAsync(organization, seatsToAdd);
+            if (!canScale)
+            {
+                throw new BadRequestException(failureMessage);
+            }
+
+            await AdjustSeatsAsync(organization.Id, seatsToAdd, prorationDate);
+            var ownerEmails = (await _organizationUserRepository.GetManyByMinimumRoleAsync(organization.Id, OrganizationUserType.Owner)).Select(u => u.Email).Distinct();
+            await _mailService.SendOrganizationAutoscaledEmailAsync(organization, ownerEmails);
+        }
+
         private async Task CheckPolicies(ICollection<Policy> policies, Guid organizationId, User user,
             ICollection<OrganizationUser> userOrgs, IUserService userService)
         {
@@ -1791,7 +1839,8 @@ namespace Bit.Core.Services
                 AccessAll = accessAll,
                 Collections = collections,
             };
-            var results = await InviteUserAsync(organizationId, invitingUserId, externalId, invite);
+            var results = await InviteUsersAsync(organizationId, invitingUserId,
+                new (OrganizationUserInvite, string)[] { (invite, externalId) });
             var result = results.FirstOrDefault();
             if (result == null)
             {
@@ -1884,11 +1933,6 @@ namespace Bit.Core.Services
                     var userCount = await _organizationUserRepository.GetCountByOrganizationIdAsync(organizationId);
                     seatsAvailable = organization.Seats.Value - userCount;
                     enoughSeatsAvailable = seatsAvailable >= usersToAdd.Count;
-                }
-
-                if (!enoughSeatsAvailable)
-                {
-                    throw new BadRequestException($"Organization does not have enough seats available. Need {usersToAdd.Count} but {seatsAvailable} available.");
                 }
 
                 var userInvites = new List<(OrganizationUserInvite, string)>();

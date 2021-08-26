@@ -144,6 +144,22 @@ namespace Bit.Core.Services
             await _mailDeliveryService.SendEmailAsync(message);
         }
 
+        public async Task SendOrganizationAutoscaledEmailAsync(Organization organization, IEnumerable<string> ownerEmails)
+        {
+            var message = CreateDefaultMessage($"{organization.Name} Seat Count Automatically Increased", ownerEmails);
+            var model = new OrganizationSeatsAutoscaledViewModel
+            {
+                OrganizationId = organization.Id,
+                OrganizationName = organization.Name,
+                CurrentSeatCount = organization.Seats.Value,
+                MaxAutoscaleSeatCount = organization.MaxAutoscaleSeats,
+            };
+
+            await AddMessageContentAsync(message, "OrganizationSeatsAutoscaled", model);
+            message.Category = "OrganizationSeatsAutoscaled";
+            await _mailDeliveryService.SendEmailAsync(message);
+        }
+
         public async Task SendOrganizationAcceptedEmailAsync(Organization organization, string userIdentifier,
             IEnumerable<string> adminEmails)
         {
