@@ -244,6 +244,19 @@ namespace Bit.Api.Controllers
             };
         }
 
+        [HttpPost("{id}/autoscale")]
+        [SelfHosted(NotSelfHostedOnly = true)]
+        public async Task PostSeatAutoscale(string id, [FromBody] OrganizationSeatAutoscaleRequestModel model)
+        {
+            var orgIdGuid = new Guid(id);
+            if (!await _currentContext.OrganizationOwner(orgIdGuid))
+            {
+                throw new NotFoundException();
+            }
+
+            await _organizationService.UpdateAutoscaling(orgIdGuid, model.EnableSeatAutoscaling, model.MaxAutoscaleSeats);
+        }
+
         [HttpPost("{id}/seat")]
         [SelfHosted(NotSelfHostedOnly = true)]
         public async Task<PaymentResponseModel> PostSeat(string id, [FromBody]OrganizationSeatRequestModel model)
