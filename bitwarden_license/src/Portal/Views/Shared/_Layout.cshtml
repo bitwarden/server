@@ -31,22 +31,11 @@
             {
                 <div class="collapse navbar-collapse" id="navbarCollapse">
                     <ul class="navbar-nav mr-auto">
-                        @if (EnterprisePortalCurrentContext.SelectedOrganizationDetails.UseSso &&
-                             EnterprisePortalCurrentContext.CanManagePoliciesForSelectedOrganization)
+                        @if (EnterprisePortalCurrentContext.SelectedOrganizationDetails.UseSso)
                         {
                             <li class="nav-item">
                                 <a class="nav-link" asp-area="" asp-controller="Sso" asp-action="Index">
                                     @i18nService.T("SingleSignOn")
-                                </a>
-                            </li>
-                        }
-
-                        @if (EnterprisePortalCurrentContext.SelectedOrganizationDetails.UsePolicies &&
-                             EnterprisePortalCurrentContext.CanManagePoliciesForSelectedOrganization)
-                        {
-                            <li class="nav-item">
-                                <a class="nav-link" asp-area="" asp-controller="Policies" asp-action="Index">
-                                    @i18nService.T("Policies")
                                 </a>
                             </li>
                         }

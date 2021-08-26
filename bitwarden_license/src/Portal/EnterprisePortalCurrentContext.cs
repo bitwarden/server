@@ -39,9 +39,6 @@ namespace Bit.Portal
         public bool OwnerForSelectedOrganization =>
             SelectedOrganizationDetails?.Type == Core.Enums.OrganizationUserType.Owner;
 
-        public bool CanManagePoliciesForSelectedOrganization =>
-            AdminForSelectedOrganization || SelectedOrganizationDetailsPermissions.ManagePolicies == true;
-
         public bool CanManageSsoForSelectedOrganization =>
             AdminForSelectedOrganization || SelectedOrganizationDetailsPermissions.ManageSso == true;
 
