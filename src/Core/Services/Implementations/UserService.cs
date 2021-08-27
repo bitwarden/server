@@ -1303,6 +1303,7 @@ namespace Bit.Core.Services
             if (twoFactorPolicies.Any())
             {
                 var userOrgs = await _organizationUserRepository.GetManyByUserAsync(user.Id);
+                // TODO
                 var exemptUserOrgs = userOrgs.Where(o => o.IsExemptFromPolicies)
                     .Select(o => o.OrganizationId).ToHashSet();
                 foreach (var policy in twoFactorPolicies)

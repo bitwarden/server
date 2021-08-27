@@ -280,7 +280,7 @@ namespace Bit.Core.Services
                 return;
             }
 
-            var blockedByDisableSendPolicy = await _policyService.PolicyAppliesToUserAsync(PolicyType.DisableSend, userId.Value, null);
+            var blockedByDisableSendPolicy = await _policyService.PolicyAppliesToCurrentUserAsync(PolicyType.DisableSend, null);
             if (blockedByDisableSendPolicy)
             {
                 throw new BadRequestException("Due to an Enterprise Policy, you are only able to delete an existing Send.");
@@ -299,8 +299,8 @@ namespace Bit.Core.Services
                     return data?.DisableHideEmail ?? false;
                 }
 
-                var blockedByDisableHideEmailPolicy = await _policyService.PolicyAppliesToUserAsync(PolicyType.SendOptions,
-                    userId.Value, filterForDisableHideEmail);
+                var blockedByDisableHideEmailPolicy = await _policyService.PolicyAppliesToCurrentUserAsync(PolicyType.SendOptions,
+                    filterForDisableHideEmail);
                 if (blockedByDisableHideEmailPolicy)
                 {
                     throw new BadRequestException("Due to an Enterprise Policy, you are not allowed to hide your email address from recipients when creating or editing a Send.");

@@ -645,7 +645,7 @@ namespace Bit.Core.Services
 
         private async Task ValidateSignUpPoliciesAsync(Guid ownerId)
         {
-            var blockedBySingleOrgPolicy = await _policyService.PolicyAppliesToUserAsync(PolicyType.SingleOrg, ownerId, null);
+            var blockedBySingleOrgPolicy = await _policyService.PolicyAppliesToCurrentUserAsync(PolicyType.SingleOrg, null);
             if (blockedBySingleOrgPolicy)
             {
                 throw new BadRequestException("You may not create an organization. You belong to an organization " +
@@ -1374,7 +1374,7 @@ namespace Bit.Core.Services
             }
 
             // Enforce Single Organization Policy of organization user is trying to join
-            var blockedBySingleOrgPolicy = await _policyService.PolicyAppliesToUserAsync(PolicyType.SingleOrg, user.Id,
+            var blockedBySingleOrgPolicy = await _policyService.PolicyAppliesToCurrentUserAsync(PolicyType.SingleOrg,
                 orgUser.OrganizationId, true);
             if (blockedBySingleOrgPolicy)
             {
@@ -1383,15 +1383,15 @@ namespace Bit.Core.Services
             }
 
             // Enforce Single Organization Policy of other organizations user is a member of
-            var blockedByAnotherSingleOrgPolicy = await _policyService.PolicyAppliesToUserAsync(PolicyType.SingleOrg, user.Id, null);
+            var blockedByAnotherSingleOrgPolicy = await _policyService.PolicyAppliesToCurrentUserAsync(PolicyType.SingleOrg, null);
             if (blockedByAnotherSingleOrgPolicy)
             {
                 throw new BadRequestException("You cannot join this organization because you are a member of " +
                     "another organization which forbids it");
             }
 
-            var blockedByTwoFactorPolicy = await _policyService.PolicyAppliesToUserAsync(PolicyType.TwoFactorAuthentication,
-                user.Id, orgUser.OrganizationId, true);
+            var blockedByTwoFactorPolicy = await _policyService.PolicyAppliesToCurrentUserAsync(PolicyType.TwoFactorAuthentication,
+                orgUser.OrganizationId, true);
             if (blockedByTwoFactorPolicy)
             {
                 throw new BadRequestException("You cannot join this organization until you enable " +

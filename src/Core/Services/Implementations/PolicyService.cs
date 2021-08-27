@@ -6,6 +6,7 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
+using Bit.Core.Context;
 
 namespace Bit.Core.Services
 {
@@ -16,19 +17,22 @@ namespace Bit.Core.Services
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly IPolicyRepository _policyRepository;
         private readonly IMailService _mailService;
+        private readonly ICurrentContext _currentContext;
 
         public PolicyService(
             IEventService eventService,
             IOrganizationRepository organizationRepository,
             IOrganizationUserRepository organizationUserRepository,
             IPolicyRepository policyRepository,
-            IMailService mailService)
+            IMailService mailService,
+            ICurrentContext currentContext)
         {
             _eventService = eventService;
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
             _policyRepository = policyRepository;
             _mailService = mailService;
+            _currentContext = currentContext;
         }
 
         public async Task SaveAsync(Policy policy, IUserService userService, IOrganizationService organizationService,
@@ -128,7 +132,7 @@ namespace Bit.Core.Services
             await _eventService.LogPolicyEventAsync(policy, Enums.EventType.Policy_Updated);
         }
 
-        public async Task<bool> PolicyAppliesToUserAsync(PolicyType policyType, Guid userId,
+        public async Task<bool> PolicyAppliesToCurrentUserAsync(PolicyType policyType,
             Func<Policy, bool> policyFilter)
         {
             if (policyFilter == null)
@@ -136,6 +140,7 @@ namespace Bit.Core.Services
                 policyFilter = policy => true;
             }
 
+            var userId = _currentContext.UserId.Value;
             var policies = await _policyRepository.GetManyByUserIdAsync(userId);
             var orgUsers = await _organizationUserRepository.GetManyByUserAsync(userId);
 
@@ -144,24 +149,34 @@ namespace Bit.Core.Services
                 .Select(p => p.OrganizationId)
                 .ToHashSet();
 
-            return orgUsers.Any(ou =>
-                !ou.IsExemptFromPolicies &&
+            var orgUsersWithPolicies = orgUsers.Where(ou =>
                 ou.Status != OrganizationUserStatusType.Invited &&
                 enabledPolicies.Contains(ou.OrganizationId));
+            
+            if (!orgUsersWithPolicies.Any())
+            {
+                return false;
+            }
+
+            var exemptFromPolicies = await Task.WhenAll(orgUsersWithPolicies
+                .Select(ou => _currentContext.ExemptFromPolicies(ou.OrganizationId))
+                .ToArray());
+
+            return exemptFromPolicies.Any(exempt => false);
         }
 
-        public async Task<bool> PolicyAppliesToUserAsync(PolicyType policyType, Guid userId, Guid organizationId,
+        public async Task<bool> PolicyAppliesToCurrentUserAsync(PolicyType policyType, Guid organizationId,
             bool includeInvitedUsers = false)
         {
+            var userId = _currentContext.UserId.Value;
             var policy = await _policyRepository.GetByOrganizationIdTypeAsync(organizationId, policyType);
             var allOrgUsers = await _organizationUserRepository.GetManyByUserAsync(userId);
             var orgUser = allOrgUsers.FirstOrDefault(ou => ou.OrganizationId == organizationId);
 
             return policy != null &&
                 policy.Enabled &&
-                orgUser != null &&
-                !orgUser.IsExemptFromPolicies &&
-                includeInvitedUsers ? true : orgUser.Status != OrganizationUserStatusType.Invited;
+                await _currentContext.ExemptFromPolicies(organizationId) &&
+                includeInvitedUsers ? true : orgUser != null && orgUser.Status != OrganizationUserStatusType.Invited;
         }
     }
 }

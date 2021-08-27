@@ -10,8 +10,8 @@ namespace Bit.Core.Services
         Task SaveAsync(Policy policy, IUserService userService, IOrganizationService organizationService,
             Guid? savingUserId);
 
-        Task<bool> PolicyAppliesToUserAsync(PolicyType policyType, Guid userId, Func<Policy, bool> policyFilter);
-        Task<bool> PolicyAppliesToUserAsync(PolicyType policyType, Guid userId, Guid organizationId,
+        Task<bool> PolicyAppliesToCurrentUserAsync(PolicyType policyType, Func<Policy, bool> policyFilter);
+        Task<bool> PolicyAppliesToCurrentUserAsync(PolicyType policyType, Guid organizationId,
             bool includeInvitedUsers);
     }
 }

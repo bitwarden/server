@@ -139,7 +139,7 @@ namespace Bit.Core.Services
                 else
                 {
                     // Make sure the user can save new ciphers to their personal vault
-                    var blockPersonalOwnership = await _policyService.PolicyAppliesToUserAsync(PolicyType.PersonalOwnership, savingUserId, null);
+                    var blockPersonalOwnership = await _policyService.PolicyAppliesToCurrentUserAsync(PolicyType.PersonalOwnership, null);
                     if (blockPersonalOwnership)
                     {
                         throw new BadRequestException("Due to an Enterprise Policy, you are restricted from saving items to your personal vault.");

@@ -22,14 +22,6 @@ namespace Bit.Core.Models.Table
         public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
         public DateTime RevisionDate { get; internal set; } = DateTime.UtcNow;
         public string Permissions { get; set; }
-        public bool IsExemptFromPolicies
-        {
-            get
-            {
-                return Type == OrganizationUserType.Admin || Type == OrganizationUserType.Owner;
-            }
-        }
-
         public void SetNewId()
         {
             Id = CoreHelpers.GenerateComb();
