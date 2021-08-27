@@ -44,13 +44,6 @@ jobs:
                 ;;
             esac
           else
-            if [[ "$GITHUB_REF" != "refs/heads/rc" ]]; then
-              echo "==================================="
-              echo "[!] Can only deploy from rc branch"
-              echo "==================================="
-              exit 1
-            fi
-            
             TAG_VERSION=$(echo ${{ github.ref }} | cut -d "/" -f 3)
             PKG_VERSION=${TAG_VERSION:1}
 
