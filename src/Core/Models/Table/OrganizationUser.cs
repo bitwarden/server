@@ -22,6 +22,7 @@ namespace Bit.Core.Models.Table
         public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
         public DateTime RevisionDate { get; internal set; } = DateTime.UtcNow;
         public string Permissions { get; set; }
+        
         public void SetNewId()
         {
             Id = CoreHelpers.GenerateComb();
