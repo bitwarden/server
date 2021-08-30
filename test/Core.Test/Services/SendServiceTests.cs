@@ -57,7 +57,7 @@ namespace Bit.Core.Test.Services
 
         // SendOptionsPolicy.DisableHideEmail check
         // Filtering the policy data is too closely tied to implementation logic, so we just check to make sure
-        // the policyService is called
+        // the SendOptions policy is checked
 
         [Theory]
         [InlineUserSendAutoData(SendType.File)]
