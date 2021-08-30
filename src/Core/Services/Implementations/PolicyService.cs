@@ -153,14 +153,13 @@ namespace Bit.Core.Services
             }
 
             var orgUsers = await _organizationUserRepository.GetManyByUserAsync(userId);
-            var orgUsersWithPolicies = orgUsers;
             
-            if (!orgUsersWithPolicies.Any())
+            if (!orgUsers.Any())
             {
                 return false;
             }
 
-            var checkExemptionTasks = orgUsersWithPolicies
+            var checkExemptionTasks = orgUsers
                 .Where(ou =>
                     ou.Status >= OrganizationUserStatusType.Accepted &&
                     enabledPolicies.Contains(ou.OrganizationId))
