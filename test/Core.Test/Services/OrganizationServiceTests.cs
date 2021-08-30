@@ -831,8 +831,8 @@ namespace Bit.Core.Test.Services
         }
 
         [Theory]
-        [InlinePaidOrganizationAutoData(PlanType.EnterpriseAnnually, new object[] { "Cannot set max seat autoscaling below current seat count", 1, 0, 2 })]
-        [InlinePaidOrganizationAutoData(PlanType.EnterpriseAnnually, new object[] { "Cannot set max seat autoscaling below updated seat count", 6, -1, 6 })]
+        [InlinePaidOrganizationAutoData(PlanType.EnterpriseAnnually, new object[] { "Cannot set max seat autoscaling below seat count", 1, 0, 2 })]
+        [InlinePaidOrganizationAutoData(PlanType.EnterpriseAnnually, new object[] { "Cannot set max seat autoscaling below seat count", 4, -1, 6 })]
         [InlineFreeOrganizationAutoData("Your plan does not allow seat autoscaling", 10, 0, null)]
         public async Task UpdateSubscription_BadInputThrows(string expectedMessage,
             int? maxAutoscaleSeats, int seatAdjustment, int? currentSeats, Organization organization, SutProvider<OrganizationService> sutProvider)

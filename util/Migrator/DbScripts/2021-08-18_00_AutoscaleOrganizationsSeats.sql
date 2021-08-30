@@ -1,5 +1,5 @@
 -- Add Autoscaling columns to Organization and OrganizationView
-IF COL_LENGTH('[dbo].[Organization]', 'EnableSeatAutoscaling') IS NULL
+IF COL_LENGTH('[dbo].[Organization]', 'OwnersNotifiedOfAutoscaling') IS NULL
 BEGIN
 ALTER TABLE
     [dbo].[Organization]
@@ -268,7 +268,7 @@ BEGIN
         [ExpirationDate] = @ExpirationDate,
         [CreationDate] = @CreationDate,
         [RevisionDate] = @RevisionDate,
-        [OwnersNotifiedOfAutoscaling] = @EnableSeatAutoscaling,
+        [OwnersNotifiedOfAutoscaling] = @OwnersNotifiedOfAutoscaling,
         [MaxAutoscaleSeats] = @MaxAutoscaleSeats
     WHERE
         [Id] = @Id

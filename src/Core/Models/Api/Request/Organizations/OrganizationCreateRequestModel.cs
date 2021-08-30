@@ -40,7 +40,6 @@ namespace Bit.Core.Models.Api
         public string BillingAddressPostalCode { get; set; }
         [StringLength(2)]
         public string BillingAddressCountry { get; set; }
-        public bool EnableSeatAutoscaling { get; set; }
         public int? MaxAutoscaleSeats { get; set; }
 
         public virtual OrganizationSignup ToOrganizationSignup(User user)
@@ -54,7 +53,6 @@ namespace Bit.Core.Models.Api
                 PaymentMethodType = PaymentMethodType,
                 PaymentToken = PaymentToken,
                 AdditionalSeats = AdditionalSeats,
-                EnableSeatAutoscaling = EnableSeatAutoscaling,
                 MaxAutoscaleSeats = MaxAutoscaleSeats,
                 AdditionalStorageGb = AdditionalStorageGb.GetValueOrDefault(0),
                 PremiumAccessAddon = PremiumAccessAddon,
