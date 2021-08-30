@@ -22,6 +22,7 @@ using OrganizationUser = Bit.Core.Models.Table.OrganizationUser;
 using Policy = Bit.Core.Models.Table.Policy;
 using Bit.Core.Test.AutoFixture.PolicyFixtures;
 using Bit.Core.Settings;
+using AutoFixture.Xunit2;
 
 namespace Bit.Core.Test.Services
 {
@@ -822,39 +823,45 @@ namespace Bit.Core.Test.Services
         }
 
         [Theory]
-        [InlinePaidOrganizationAutoData("", true, null, null)]
-        [InlinePaidOrganizationAutoData("Cannot set max seat autoscaling below current seat count", true, 1, 2)]
-        [InlineFreeOrganizationAutoData("Your plan does not allow seat autoscaling", true, null, null)]
-        public async Task UpdateAutoscaling_BadInputThrows(string expectedMessage, bool enableAutoscaling,
-            int? maxAutoscaleSeats, int? currentSeats, Organization organization, SutProvider<OrganizationService> sutProvider)
+        [InlinePaidOrganizationAutoData(PlanType.EnterpriseAnnually, new object[] { "Cannot set max seat autoscaling below current seat count", 1, 0, 2 })]
+        [InlinePaidOrganizationAutoData(PlanType.EnterpriseAnnually, new object[] { "Cannot set max seat autoscaling below updated seat count", 6, -1, 6 })]
+        [InlineFreeOrganizationAutoData("Your plan does not allow seat autoscaling", 10, 0, null)]
+        public async Task UpdateSubscription_BadInputThrows(string expectedMessage,
+            int? maxAutoscaleSeats, int seatAdjustment, int? currentSeats, Organization organization, SutProvider<OrganizationService> sutProvider)
         {
             organization.Seats = currentSeats;
             sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
 
-            var exception = await Assert.ThrowsAsync<Exception>(() => sutProvider.Sut.UpdateAutoscaling(organization.Id, enableAutoscaling,
-                maxAutoscaleSeats));
+            var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSubscription(organization.Id,
+                seatAdjustment, maxAutoscaleSeats));
 
             Assert.Contains(expectedMessage, exception.Message);
         }
 
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public async Task UpdateSubscription_NoOrganization_Throws(Guid organizationId, SutProvider<OrganizationService> sutProvider)
+        {
+            sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId).Returns((Organization)null);
+
+            await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.UpdateSubscription(organizationId, 0, null));
+        }
+
         [Theory]
-        [InlinePaidOrganizationAutoData(true, 0, 100, null, true, "")]
-        [InlinePaidOrganizationAutoData(true, 0, 100, 100, true, "")]
-        [InlinePaidOrganizationAutoData(true, 0, null, 100, true, "")]
-        [InlinePaidOrganizationAutoData(true, 1, 100, null, true, "")]
-        [InlinePaidOrganizationAutoData(true, 1, 100, 100, false, "Cannot scale organization seats beyond 100")]
-        [InlinePaidOrganizationAutoData(false, 1, 100, null, false, "Cannot scale organization seats. Auto scale is disabled")]
-        public async Task CanScale(bool enableAutoscale, int seatsToAdd, int? currentSeats, int? maxAutoscaleSeats,
+        [InlinePaidOrganizationAutoData(0, 100, null, true, "")]
+        [InlinePaidOrganizationAutoData(0, 100, 100, true, "")]
+        [InlinePaidOrganizationAutoData(0, null, 100, true, "")]
+        [InlinePaidOrganizationAutoData(1, 100, null, true, "")]
+        [InlinePaidOrganizationAutoData(1, 100, 100, false, "Cannot invite new users. Seat limit has been reached")]
+        public async Task CanScale(int seatsToAdd, int? currentSeats, int? maxAutoscaleSeats,
             bool expectedResult, string expectedFailureMessage, Organization organization,
             SutProvider<OrganizationService> sutProvider)
         {
-            organization.EnableSeatAutoscaling = enableAutoscale;
             organization.Seats = currentSeats;
             organization.MaxAutoscaleSeats = maxAutoscaleSeats;
+            sutProvider.GetDependency<ICurrentContext>().ManageUsers(organization.Id).Returns(true);
 
             var (result, failureMessage) = await sutProvider.Sut.CanScaleAsync(organization, seatsToAdd);
 
-            Assert.Equal(expectedResult, result);
             if (expectedFailureMessage == string.Empty)
             {
                 Assert.Empty(failureMessage);
@@ -863,6 +870,7 @@ namespace Bit.Core.Test.Services
             {
                 Assert.Contains(expectedFailureMessage, failureMessage);
             }
+            Assert.Equal(expectedResult, result);
         }
 
         [Theory, PaidOrganizationAutoData]
@@ -880,7 +888,6 @@ namespace Bit.Core.Test.Services
         public async Task CanScale_FailsIfCannotManageUsers(Organization organization,
             SutProvider<OrganizationService> sutProvider)
         {
-            organization.EnableSeatAutoscaling = true;
             organization.MaxAutoscaleSeats = null;
             sutProvider.GetDependency<ICurrentContext>().ManageUsers(organization.Id).Returns(false);
 

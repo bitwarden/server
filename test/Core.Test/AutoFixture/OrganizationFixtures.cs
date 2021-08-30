@@ -150,6 +150,10 @@ namespace Bit.Core.Test.AutoFixture.OrganizationFixtures
 
     internal class InlinePaidOrganizationAutoDataAttribute : InlineCustomAutoDataAttribute
     {
+        public InlinePaidOrganizationAutoDataAttribute(PlanType planType, object[] values) : base(
+            new ICustomization[] { new SutProviderCustomization(), new PaidOrganization { CheckedPlanType = planType } }, values)
+        { }
+
         public InlinePaidOrganizationAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
             typeof(PaidOrganization) }, values)
         { }

@@ -67,7 +67,7 @@ namespace Bit.Core.Models.Table
         public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
         public DateTime RevisionDate { get; internal set; } = DateTime.UtcNow;
         public int? MaxAutoscaleSeats { get; set; } = null;
-        public bool EnableSeatAutoscaling { get; set; } = true;
+        public bool OwnersNotifiedOfAutoscaling { get; set; } = false;
 
         public void SetNewId()
         {

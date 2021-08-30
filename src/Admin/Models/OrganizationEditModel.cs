@@ -28,7 +28,6 @@ namespace Bit.Admin.Models
             PlanType = org.PlanType;
             Plan = org.Plan;
             Seats = org.Seats;
-            EnableSeatAutoscaling = org.EnableSeatAutoscaling;
             MaxAutoscaleSeats = org.MaxAutoscaleSeats;
             MaxCollections = org.MaxCollections;
             UsePolicies = org.UsePolicies;
@@ -71,8 +70,6 @@ namespace Bit.Admin.Models
         public string Plan { get; set; }
         [Display(Name = "Seats")]
         public int? Seats { get; set; }
-        [Display(Name = "Seat Autoscaling")]
-        public bool EnableSeatAutoscaling { get; set; }
         [Display(Name = "Max. Autoscale Seats")]
         public int? MaxAutoscaleSeats { get; set; }
         [Display(Name = "Max. Collections")]
@@ -142,7 +139,6 @@ namespace Bit.Admin.Models
             existingOrganization.Enabled = Enabled;
             existingOrganization.LicenseKey = LicenseKey;
             existingOrganization.ExpirationDate = ExpirationDate;
-            existingOrganization.EnableSeatAutoscaling = EnableSeatAutoscaling;
             existingOrganization.MaxAutoscaleSeats = MaxAutoscaleSeats;
             return existingOrganization;
         }

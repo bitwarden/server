@@ -244,9 +244,9 @@ namespace Bit.Api.Controllers
             };
         }
 
-        [HttpPost("{id}/autoscale")]
+        [HttpPost("{id}/subscription")]
         [SelfHosted(NotSelfHostedOnly = true)]
-        public async Task PostSeatAutoscale(string id, [FromBody] OrganizationSeatAutoscaleRequestModel model)
+        public async Task PostSubscription(string id, [FromBody] OrganizationSubscriptionUpdateRequestModel model)
         {
             var orgIdGuid = new Guid(id);
             if (!await _currentContext.OrganizationOwner(orgIdGuid))
@@ -254,7 +254,7 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            await _organizationService.UpdateAutoscaling(orgIdGuid, model.EnableSeatAutoscaling, model.MaxAutoscaleSeats);
+            await _organizationService.UpdateSubscription(orgIdGuid, model.SeatAdjustment, model.MaxAutoscaleSeats);
         }
 
         [HttpPost("{id}/seat")]

@@ -32,7 +32,6 @@
                 document.getElementById('@(nameof(Model.Use2fa))').checked = true;
                 document.getElementById('@(nameof(Model.UseApi))').checked = true;
                 document.getElementById('@(nameof(Model.SelfHost))').checked = true;
-                document.getElementById('@(nameof(Model.EnableSeatAutoscaling))').checked = '@Model.EnableSeatAutoscaling';
                 // Licensing
                 document.getElementById('@(nameof(Model.LicenseKey))').value = '@Model.RandomLicenseKey';
                 document.getElementById('@(nameof(Model.ExpirationDate))').value = '@Model.FourteenDayExpirationDate';
@@ -198,10 +197,6 @@
     <div class="form-check">
         <input type="checkbox" class="form-check-input" asp-for="UsersGetPremium">
         <label class="form-check-label" asp-for="UsersGetPremium"></label>
-    </div>
-    <div class="form-check mb-3">
-        <input type="checkbox" class="form-check-input" asp-for="EnableSeatAutoscaling">
-        <label class="form-check-label" asp-for="EnableSeatAutoscaling"></label>
     </div>
     <h2>Licensing</h2>
     <div class="row">

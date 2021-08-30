@@ -30,7 +30,6 @@ namespace Bit.Core.Models.Api
             Plan = new PlanResponseModel(Utilities.StaticStore.Plans.FirstOrDefault(plan => plan.Type == organization.PlanType));
             PlanType = organization.PlanType;
             Seats = organization.Seats;
-            EnableSeatAutoscaling = organization.EnableSeatAutoscaling;
             MaxAutoscaleSeats = organization.MaxAutoscaleSeats;
             MaxCollections = organization.MaxCollections;
             MaxStorageGb = organization.MaxStorageGb;
@@ -61,7 +60,6 @@ namespace Bit.Core.Models.Api
         public PlanResponseModel Plan { get; set; }
         public PlanType PlanType { get; set; }
         public int? Seats { get; set; }
-        public bool EnableSeatAutoscaling { get; set; }
         public int? MaxAutoscaleSeats { get; set; } = null;
         public short? MaxCollections { get; set; }
         public short? MaxStorageGb { get; set; }

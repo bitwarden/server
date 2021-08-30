@@ -347,7 +347,7 @@ namespace Bit.Core.Services
             return secret;
         }
 
-        public async Task UpdateAutoscaling(Guid organizationId, bool enableAutoscaling, int? maxAutoscaleSeats)
+        public async Task UpdateSubscription(Guid organizationId, int seatAdjustment, int? maxAutoscaleSeats)
         {
             var organization = await GetOrgById(organizationId);
             if (organization == null)
@@ -355,8 +355,27 @@ namespace Bit.Core.Services
                 throw new NotFoundException();
             }
 
-            if (enableAutoscaling &&
-                maxAutoscaleSeats.HasValue &&
+            var newSeatCount = organization.Seats + seatAdjustment;
+            var newMaxAutoscaleSeats = maxAutoscaleSeats ?? organization.MaxAutoscaleSeats;
+            if (newMaxAutoscaleSeats.HasValue & newSeatCount < newMaxAutoscaleSeats.Value)
+            {
+                throw new BadRequestException("Cannot set max seat autoscaling below updated seat count.");
+            }
+
+            if (seatAdjustment != 0)
+            {
+                await AdjustSeatsAsync(organization, seatAdjustment);
+            }
+            if (newMaxAutoscaleSeats != organization.MaxAutoscaleSeats)
+            {
+                await UpdateAutoscalingAsync(organization, maxAutoscaleSeats);
+            }
+        }
+
+        private async Task UpdateAutoscalingAsync(Organization organization, int? maxAutoscaleSeats)
+        {
+
+            if (maxAutoscaleSeats.HasValue &&
                 organization.Seats.HasValue &&
                 maxAutoscaleSeats.Value < organization.Seats.Value)
             {
@@ -369,7 +388,7 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Existing plan not found.");
             }
 
-            if (!plan.AllowSeatAutoscale && enableAutoscaling)
+            if (!plan.AllowSeatAutoscale)
             {
                 throw new BadRequestException("Your plan does not allow seat autoscaling.");
             }
@@ -382,7 +401,6 @@ namespace Bit.Core.Services
                     "Reduce your max autoscale seat count."));
             }
 
-            organization.EnableSeatAutoscaling = enableAutoscaling;
             organization.MaxAutoscaleSeats = maxAutoscaleSeats;
 
             await ReplaceAndUpdateCache(organization);
@@ -396,6 +414,11 @@ namespace Bit.Core.Services
                 throw new NotFoundException();
             }
 
+            return await AdjustSeatsAsync(organization, seatAdjustment, prorationDate);
+        }
+
+        private async Task<string> AdjustSeatsAsync(Organization organization, int seatAdjustment, DateTime? prorationDate = null)
+        {
             if (string.IsNullOrWhiteSpace(organization.GatewayCustomerId))
             {
                 throw new BadRequestException("No payment method found.");
@@ -1228,7 +1251,7 @@ namespace Bit.Core.Services
 
                 if (initialSeatCount.HasValue && currentSeatCount.HasValue && currentSeatCount.Value != initialSeatCount.Value)
                 {
-                    await AdjustSeatsAsync(organization.Id, initialSeatCount.Value - currentSeatCount.Value, prorationDate);
+                    await AdjustSeatsAsync(organization, initialSeatCount.Value - currentSeatCount.Value, prorationDate);
                 }
 
                 exceptions.Add(e);
@@ -1539,16 +1562,11 @@ namespace Bit.Core.Services
                 return (true, failureReason);
             }
 
-            if (!organization.EnableSeatAutoscaling)
-            {
-                return (false, "Cannot scale organization seats. Auto scale is disabled.");
-            }
-
             if (organization.Seats.HasValue &&
                 organization.MaxAutoscaleSeats.HasValue &&
                 organization.MaxAutoscaleSeats.Value < organization.Seats.Value + seatsToAdd)
             {
-                return (false, $"Cannot scale organization seats beyond {organization.MaxAutoscaleSeats}.");
+                return (false, $"Cannot invite new users. Seat limit has been reached.");
             }
 
             return (true, failureReason);
@@ -1567,9 +1585,15 @@ namespace Bit.Core.Services
                 throw new BadRequestException(failureMessage);
             }
 
-            await AdjustSeatsAsync(organization.Id, seatsToAdd, prorationDate);
+            await AdjustSeatsAsync(organization, seatsToAdd, prorationDate);
             var ownerEmails = (await _organizationUserRepository.GetManyByMinimumRoleAsync(organization.Id, OrganizationUserType.Owner)).Select(u => u.Email).Distinct();
-            await _mailService.SendOrganizationAutoscaledEmailAsync(organization, ownerEmails);
+
+            if (!organization.OwnersNotifiedOfAutoscaling)
+            {
+                await _mailService.SendOrganizationAutoscaledEmailAsync(organization, ownerEmails);
+                organization.OwnersNotifiedOfAutoscaling = true;
+                await _organizationRepository.UpsertAsync(organization);
+            }
         }
 
         private async Task CheckPolicies(ICollection<Policy> policies, Guid organizationId, User user,

@@ -4,7 +4,7 @@ BEGIN
 ALTER TABLE
     [dbo].[Organization]
     ADD
-    [EnableSeatAutoscaling] BIT NOT NULL DEFAULT 1
+    [OwnersNotifiedOfAutoscaling] BIT NOT NULL DEFAULT 0
 END
 GO
 
@@ -73,7 +73,7 @@ CREATE PROCEDURE [dbo].[Organization_Create]
     @ExpirationDate DATETIME2(7),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
-    @EnableSeatAutoscaling BIT,
+    @OwnersNotifiedOfAutoscaling BIT,
     @MaxAutoscaleSeats INT
 AS
 BEGIN
@@ -121,7 +121,7 @@ BEGIN
         [ExpirationDate],
         [CreationDate],
         [RevisionDate],
-        [EnableSeatAutoscaling],
+        [OwnersNotifiedOfAutoscaling],
         [MaxAutoscaleSeats]
     )
     VALUES
@@ -166,7 +166,7 @@ BEGIN
         @ExpirationDate,
         @CreationDate,
         @RevisionDate,
-        @EnableSeatAutoscaling,
+        @OwnersNotifiedOfAutoscaling,
         @MaxAutoscaleSeats
     )
 END
@@ -220,7 +220,7 @@ CREATE PROCEDURE [dbo].[Organization_Update]
     @ExpirationDate DATETIME2(7),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
-    @EnableSeatAutoscaling BIT,
+    @OwnersNotifiedOfAutoscaling BIT,
     @MaxAutoscaleSeats INT
 AS
 BEGIN
@@ -268,7 +268,7 @@ BEGIN
         [ExpirationDate] = @ExpirationDate,
         [CreationDate] = @CreationDate,
         [RevisionDate] = @RevisionDate,
-        [EnableSeatAutoscaling] = @EnableSeatAutoscaling,
+        [OwnersNotifiedOfAutoscaling] = @EnableSeatAutoscaling,
         [MaxAutoscaleSeats] = @MaxAutoscaleSeats
     WHERE
         [Id] = @Id
