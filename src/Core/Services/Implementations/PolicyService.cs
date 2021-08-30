@@ -169,7 +169,7 @@ namespace Bit.Core.Services
 
             var exemptionStatus = await Task.WhenAll(checkExemptionTasks);
 
-            return exemptionStatus.Any(exempt => false);
+            return exemptionStatus.Any(exempt => !exempt);
         }
 
         public async Task<bool> PolicyAppliesToCurrentUserAsync(PolicyType policyType, Guid organizationId,
@@ -182,7 +182,7 @@ namespace Bit.Core.Services
 
             return policy != null &&
                 policy.Enabled &&
-                await _currentContext.ExemptFromPolicies(organizationId) &&
+                !await _currentContext.ExemptFromPolicies(organizationId) &&
                 includeInvitedUsers ? true : orgUser != null && orgUser.Status != OrganizationUserStatusType.Invited;
         }
     }
