@@ -42,11 +42,15 @@ namespace Bit.Core.Test.Services
             });
             var expectedNewUsersCount = newUsers.Count - 1;
 
+            existingUsers.First().Type = OrganizationUserType.Owner;
+
             sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(org.Id).Returns(org);
             sutProvider.GetDependency<IOrganizationUserRepository>().GetManyDetailsByOrganizationAsync(org.Id)
                 .Returns(existingUsers);
             sutProvider.GetDependency<IOrganizationUserRepository>().GetCountByOrganizationIdAsync(org.Id)
                 .Returns(existingUsers.Count);
+            sutProvider.GetDependency<IOrganizationUserRepository>().GetManyByOrganizationAsync(org.Id, OrganizationUserType.Owner)
+                .Returns(existingUsers.Select(u => new OrganizationUser { Status = OrganizationUserStatusType.Confirmed, Type = OrganizationUserType.Owner, Id = u.Id }).ToList());
             sutProvider.GetDependency<ICurrentContext>().ManageUsers(org.Id).Returns(true);
 
             await sutProvider.Sut.ImportAsync(org.Id, userId, null, newUsers, null, false);
@@ -98,6 +102,8 @@ namespace Bit.Core.Test.Services
                 .Returns(existingUsers.Count);
             sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(reInvitedUser.Id)
                 .Returns(new OrganizationUser { Id = reInvitedUser.Id });
+            sutProvider.GetDependency<IOrganizationUserRepository>().GetManyByOrganizationAsync(org.Id, OrganizationUserType.Owner)
+                .Returns(existingUsers.Select(u => new OrganizationUser { Status = OrganizationUserStatusType.Confirmed, Type = OrganizationUserType.Owner, Id = u.Id }).ToList());
             var currentContext = sutProvider.GetDependency<ICurrentContext>();
             currentContext.ManageUsers(org.Id).Returns(true);
 
@@ -203,6 +209,7 @@ namespace Bit.Core.Test.Services
         {
             sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
             sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(organization.Id).Returns(true);
+            sutProvider.GetDependency<ICurrentContext>().ManageUsers(organization.Id).Returns(true);
             var exception = await Assert.ThrowsAsync<BadRequestException>(
                 () => sutProvider.Sut.InviteUsersAsync(organization.Id, invitor.UserId, new (OrganizationUserInvite, string)[] { (invite, null) }));
             Assert.Contains("Organization must have at least one confirmed owner.", exception.Message);
@@ -316,6 +323,7 @@ namespace Bit.Core.Test.Services
             organizationUserRepository.GetManyByOrganizationAsync(organization.Id, OrganizationUserType.Owner)
                 .Returns(new [] {invitor});
             currentContext.OrganizationOwner(organization.Id).Returns(true);
+            currentContext.ManageUsers(organization.Id).Returns(true);
 
             await sutProvider.Sut.InviteUsersAsync(organization.Id, invitor.UserId, new (OrganizationUserInvite, string)[] { (invite, null) });
         }
