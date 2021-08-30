@@ -1299,24 +1299,37 @@ namespace Bit.Core.Services
         private async Task CheckPoliciesOnTwoFactorRemovalAsync(User user, IOrganizationService organizationService)
         {
             var policies = await _policyRepository.GetManyByUserIdAsync(user.Id);
-            var twoFactorPolicies = policies.Where(p => p.Type == PolicyType.TwoFactorAuthentication && p.Enabled);
-            if (twoFactorPolicies.Any())
+            var orgsWithTwoFactorPolicies = policies
+                .Where(p => p.Enabled && p.Type == PolicyType.TwoFactorAuthentication)
+                .Select(p => p.OrganizationId)
+                .ToHashSet();
+
+            if (!orgsWithTwoFactorPolicies.Any())
             {
-                var userOrgs = await _organizationUserRepository.GetManyByUserAsync(user.Id);
-                // TODO
-                var exemptUserOrgs = userOrgs.Where(o => o.IsExemptFromPolicies)
-                    .Select(o => o.OrganizationId).ToHashSet();
-                foreach (var policy in twoFactorPolicies)
+                return;
+            }
+
+            async Task removeOrgUser(OrganizationUser ou)
+            {
+                var userIsExempt = await _currentContext.ExemptFromPolicies(ou.OrganizationId);
+                if (!userIsExempt)
                 {
-                    if (!exemptUserOrgs.Contains(policy.OrganizationId))
-                    {
-                        await organizationService.DeleteUserAsync(policy.OrganizationId, user.Id);
-                        var organization = await _organizationRepository.GetByIdAsync(policy.OrganizationId);
-                        await _mailService.SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(
-                            organization.Name, user.Email);
-                    }
+                    await organizationService.DeleteUserAsync(ou.OrganizationId, user.Id);
+                    var organization = await _organizationRepository.GetByIdAsync(ou.OrganizationId);
+                    await _mailService.SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(
+                        organization.Name, user.Email);
                 }
             }
+
+            var orgUsers = await _organizationUserRepository.GetManyByUserAsync(user.Id);
+            var removeOrgUserTasks = orgUsers
+                .Where(ou => 
+                    ou.Status >= OrganizationUserStatusType.Accepted &&
+                    orgsWithTwoFactorPolicies.Contains(ou.OrganizationId))
+                .Select(removeOrgUser)
+                .ToArray();
+
+            await Task.WhenAll(removeOrgUserTasks);
         }
 
         public override async Task<IdentityResult> ConfirmEmailAsync(User user, string token)

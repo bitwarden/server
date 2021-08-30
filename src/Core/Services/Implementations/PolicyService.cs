@@ -142,27 +142,34 @@ namespace Bit.Core.Services
 
             var userId = _currentContext.UserId.Value;
             var policies = await _policyRepository.GetManyByUserIdAsync(userId);
-            var orgUsers = await _organizationUserRepository.GetManyByUserAsync(userId);
-
             var enabledPolicies = policies
                 .Where(p => p.Enabled && p.Type == policyType && policyFilter(p))
                 .Select(p => p.OrganizationId)
                 .ToHashSet();
 
-            var orgUsersWithPolicies = orgUsers.Where(ou =>
-                ou.Status != OrganizationUserStatusType.Invited &&
-                enabledPolicies.Contains(ou.OrganizationId));
+            if (!enabledPolicies.Any())
+            {
+                return false;
+            }
+
+            var orgUsers = await _organizationUserRepository.GetManyByUserAsync(userId);
+            var orgUsersWithPolicies = orgUsers;
             
             if (!orgUsersWithPolicies.Any())
             {
                 return false;
             }
 
-            var exemptFromPolicies = await Task.WhenAll(orgUsersWithPolicies
+            var checkExemptionTasks = orgUsersWithPolicies
+                .Where(ou =>
+                    ou.Status >= OrganizationUserStatusType.Accepted &&
+                    enabledPolicies.Contains(ou.OrganizationId))
                 .Select(ou => _currentContext.ExemptFromPolicies(ou.OrganizationId))
-                .ToArray());
+                .ToArray();
 
-            return exemptFromPolicies.Any(exempt => false);
+            var exemptionStatus = await Task.WhenAll(checkExemptionTasks);
+
+            return exemptionStatus.Any(exempt => false);
         }
 
         public async Task<bool> PolicyAppliesToCurrentUserAsync(PolicyType policyType, Guid organizationId,
