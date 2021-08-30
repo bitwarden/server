@@ -1,6 +1,7 @@
 ﻿using System;
 using Bit.Core.Enums;
 using Bit.Core.Utilities;
+using Newtonsoft.Json;
 
 namespace Bit.Core.Models.Table
 {
@@ -17,6 +18,15 @@ namespace Bit.Core.Models.Table
         public void SetNewId()
         {
             Id = CoreHelpers.GenerateComb();
+        }
+
+        public T getDataModel<T>()
+        {
+            if (Data == null)
+            {
+                return default(T);
+            }
+            return JsonConvert.DeserializeObject<T>(Data);
         }
     }
 }
