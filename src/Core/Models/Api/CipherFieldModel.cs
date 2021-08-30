@@ -19,7 +19,7 @@ namespace Bit.Core.Models.Api
         public FieldType Type { get; set; }
         [EncryptedStringLength(1000)]
         public string Name { get; set; }
-        [EncryptedStringLength(5000)]
+        [EncryptedStringLength(15000)]
         public string Value { get; set; }
     }
 }
