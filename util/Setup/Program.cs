@@ -106,9 +106,6 @@ namespace Bit.Setup
             var appIdBuilder = new AppIdBuilder(_context);
             appIdBuilder.Build();
 
-            var assetLinksBuilder = new AssetLinksBuilder(_context);
-            assetLinksBuilder.Build();
-
             var dockerComposeBuilder = new DockerComposeBuilder(_context);
             dockerComposeBuilder.BuildForInstaller();
 
@@ -300,9 +297,6 @@ namespace Bit.Setup
 
             var appIdBuilder = new AppIdBuilder(_context);
             appIdBuilder.Build();
-
-            var assetLinksBuilder = new AssetLinksBuilder(_context);
-            assetLinksBuilder.Build();
 
             var dockerComposeBuilder = new DockerComposeBuilder(_context);
             dockerComposeBuilder.BuildForUpdater();
