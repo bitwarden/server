@@ -183,7 +183,7 @@ namespace Bit.Core.Services
             return policy != null &&
                 policy.Enabled &&
                 !await _currentContext.ExemptFromPolicies(organizationId) &&
-                includeInvitedUsers ? true : orgUser != null && orgUser.Status != OrganizationUserStatusType.Invited;
+                includeInvitedUsers ? true : orgUser != null && orgUser.Status >= OrganizationUserStatusType.Accepted;
         }
     }
 }
