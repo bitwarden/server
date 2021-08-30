@@ -1374,17 +1374,19 @@ namespace Bit.Core.Services
             }
 
             // Enforce Single Organization Policy of organization user is trying to join
-            var blockedBySingleOrgPolicy = await _policyService.PolicyAppliesToCurrentUserAsync(PolicyType.SingleOrg,
+            var allOrgUsers = await _organizationUserRepository.GetManyByUserAsync(user.Id);
+            var hasOtherOrgs = allOrgUsers.Any(ou => ou.OrganizationId != orgUser.OrganizationId);
+            var singleOrgPolicyApplies = await _policyService.PolicyAppliesToCurrentUserAsync(PolicyType.SingleOrg,
                 orgUser.OrganizationId, true);
-            if (blockedBySingleOrgPolicy)
+            if (singleOrgPolicyApplies && hasOtherOrgs)
             {
                 throw new BadRequestException("You may not join this organization until you leave or remove " +
                     "all other organizations.");
             }
 
             // Enforce Single Organization Policy of other organizations user is a member of
-            var blockedByAnotherSingleOrgPolicy = await _policyService.PolicyAppliesToCurrentUserAsync(PolicyType.SingleOrg, null);
-            if (blockedByAnotherSingleOrgPolicy)
+            var anotherSingleOrgPolicyApplies = await _policyService.PolicyAppliesToCurrentUserAsync(PolicyType.SingleOrg, null);
+            if (anotherSingleOrgPolicyApplies)
             {
                 throw new BadRequestException("You cannot join this organization because you are a member of " +
                     "another organization which forbids it");
