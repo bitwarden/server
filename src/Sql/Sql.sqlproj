@@ -132,6 +132,7 @@
     <Build Include="dbo\Stored Procedures\OrganizationUser_ReadByUserId.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUser_ReadCountByFreeOrganizationAdminUser.sql" />
     <Build Include="dbo\Stored Procedures\User_ReadAccountRevisionDateById.sql" />
+    <Build Include="dbo\Stored Procedures\OrganizationUser_ReadByMinimumRole.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUser_ReadCountByOrganizationId.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUser_ReadCountByOnlyOwner.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUser_SelectKnownEmails.sql" />
