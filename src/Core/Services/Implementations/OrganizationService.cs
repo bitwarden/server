@@ -356,8 +356,7 @@ namespace Bit.Core.Services
             }
 
             var newSeatCount = organization.Seats + seatAdjustment;
-            var newMaxAutoscaleSeats = maxAutoscaleSeats ?? organization.MaxAutoscaleSeats;
-            if (newMaxAutoscaleSeats.HasValue & newSeatCount > newMaxAutoscaleSeats.Value)
+            if (maxAutoscaleSeats.HasValue && newSeatCount > maxAutoscaleSeats.Value)
             {
                 throw new BadRequestException("Cannot set max seat autoscaling below seat count.");
             }
@@ -366,7 +365,7 @@ namespace Bit.Core.Services
             {
                 await AdjustSeatsAsync(organization, seatAdjustment);
             }
-            if (newMaxAutoscaleSeats != organization.MaxAutoscaleSeats)
+            if (maxAutoscaleSeats != organization.MaxAutoscaleSeats)
             {
                 await UpdateAutoscalingAsync(organization, maxAutoscaleSeats);
             }
