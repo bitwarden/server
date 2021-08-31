@@ -10,6 +10,8 @@ namespace Bit.Core.Test.Utilities
         [InlineData("hello@world.planet.com")]  // subdomain
         [InlineData("hello+1@world.com")]       // alias
         [InlineData("hello.there@world.com")]   // period in local-part
+        [InlineData("hello@wörldé.com")]        // unicode domain
+        [InlineData("hello@world.cömé")]        // unicode top-level domain
         public void IsValid_ReturnsTrueWhenValid(string email)
         {
             var sut = new StrictEmailAddressAttribute();
@@ -43,6 +45,7 @@ namespace Bit.Core.Test.Utilities
         [InlineData("hellothere@.worldcom")]                // domain beginning with dot
         [InlineData("hellothere@worldcom.")]                // domain ending in dot
         [InlineData("hellothere@world.com-")]               // domain ending in hyphen
+        [InlineData("héllö@world.com")]                     // unicode in local-part
         public void IsValid_ReturnsFalseWhenInvalid(string email)
         {
             var sut = new StrictEmailAddressAttribute();

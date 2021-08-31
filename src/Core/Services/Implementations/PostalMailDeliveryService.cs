@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using Newtonsoft.Json;
 using Microsoft.AspNetCore.Hosting;
 using System.Text;
+using Bit.Core.Utilities;
 
 namespace Bit.Core.Services
 {
@@ -25,13 +26,16 @@ namespace Bit.Core.Services
             IWebHostEnvironment hostingEnvironment,
             IHttpClientFactory clientFactory)
         {
+            var postalDomain = CoreHelpers.PunyEncode(globalSettings.Mail.PostalDomain);
+            var replyToEmail = CoreHelpers.PunyEncode(globalSettings.Mail.ReplyToEmail);
+
             _globalSettings = globalSettings;
             _logger = logger;
             _clientFactory = clientFactory;
             _baseTag = $"Env_{hostingEnvironment.EnvironmentName}-" +
                 $"Server_{globalSettings.ProjectName?.Replace(' ', '_')}";
-            _from = $"\"{globalSettings.SiteName}\" <no-reply@{_globalSettings.Mail.PostalDomain}>";
-            _reply = $"\"{globalSettings.SiteName}\" <{globalSettings.Mail.ReplyToEmail}>";
+            _from = $"\"{globalSettings.SiteName}\" <no-reply@{postalDomain}>";
+            _reply = $"\"{globalSettings.SiteName}\" <{replyToEmail}>";
         }
 
         public async Task SendEmailAsync(Models.Mail.MailMessage message)
@@ -50,7 +54,7 @@ namespace Bit.Core.Services
             };
             foreach (var address in message.ToEmails)
             {
-                request.to.Add(address);
+                request.to.Add(CoreHelpers.PunyEncode(address));
             }
 
             if (message.BccEmails != null)
@@ -58,7 +62,7 @@ namespace Bit.Core.Services
                 request.bcc = new List<string>();
                 foreach (var address in message.BccEmails)
                 {
-                    request.bcc.Add(address);
+                    request.bcc.Add(CoreHelpers.PunyEncode(address));
                 }
             }
 
