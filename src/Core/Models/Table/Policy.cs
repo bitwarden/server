@@ -1,7 +1,6 @@
 ﻿using System;
 using Bit.Core.Enums;
 using Bit.Core.Utilities;
-using Newtonsoft.Json;
 
 namespace Bit.Core.Models.Table
 {
