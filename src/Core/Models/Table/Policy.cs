@@ -19,14 +19,5 @@ namespace Bit.Core.Models.Table
         {
             Id = CoreHelpers.GenerateComb();
         }
-
-        public T getDataModel<T>()
-        {
-            if (Data == null)
-            {
-                return default(T);
-            }
-            return JsonConvert.DeserializeObject<T>(Data);
-        }
     }
 }

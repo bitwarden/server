@@ -10,6 +10,7 @@ using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
+using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Identity;
 using Newtonsoft.Json;
 
@@ -289,7 +290,7 @@ namespace Bit.Core.Services
             if (send.HideEmail.GetValueOrDefault())
             {
                 var blockedByDisableHideEmailPolicy = await _policyService.PolicyAppliesToCurrentUserAsync(PolicyType.SendOptions,
-                    policy => policy.getDataModel<SendOptionsPolicyData>()?.DisableHideEmail ?? false);
+                    policy => CoreHelpers.LoadClassFromJsonData<SendOptionsPolicyData>()?.DisableHideEmail ?? false);
                 if (blockedByDisableHideEmailPolicy)
                 {
                     throw new BadRequestException("Due to an Enterprise Policy, you are not allowed to hide your email address from recipients when creating or editing a Send.");
