@@ -519,6 +519,9 @@ namespace Bit.Sso.Controllers
                 await _organizationUserRepository.ReplaceAsync(orgUser);
             }
             
+            // Delete any stale user record to be safe
+            await DeleteExistingSsoUserRecord(existingUser.Id, orgId, orgUser);
+
             // Create sso user record
             await CreateSsoUserRecord(providerUserId, user.Id, orgId);
             
