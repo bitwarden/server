@@ -44,7 +44,7 @@ namespace Bit.Sso.Controllers
         private readonly IUserService _userService;
         private readonly II18nService _i18nService;
         private readonly UserManager<User> _userManager;
-        private readonly EventService _eventService;
+        private readonly Core.Services.IEventService _eventService;
 
         public AccountController(
             IAuthenticationSchemeProvider schemeProvider,
@@ -60,7 +60,7 @@ namespace Bit.Sso.Controllers
             IUserService userService,
             II18nService i18nService,
             UserManager<User> userManager,
-            EventService eventService)
+            Core.Services.IEventService eventService)
         {
             _schemeProvider = schemeProvider;
             _clientStore = clientStore;
@@ -457,8 +457,7 @@ namespace Bit.Sso.Controllers
                     throw new Exception(_i18nService.T("UserAlreadyInvited", email, organization.Name)); 
                 }
 
-                // Delete any existing SsoUser
-                // Sometimes the providerId in the claim can change and we need to make sure we're not creating duplicate entries
+                // Delete existing SsoUser (if any) - avoids error if providerId has changed and the sso link is stale
                 await DeleteExistingSsoUserRecord(existingUser.Id, orgId, orgUser);
 
                 // Accepted or Confirmed - create SSO link and return;
