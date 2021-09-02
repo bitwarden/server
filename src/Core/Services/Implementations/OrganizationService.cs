@@ -16,6 +16,7 @@ using System.IO;
 using Newtonsoft.Json;
 using System.Text.Json;
 using Bit.Core.Context;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Services
 {
@@ -43,6 +44,8 @@ namespace Bit.Core.Services
         private readonly IGlobalSettings _globalSettings;
         private readonly ITaxRateRepository _taxRateRepository;
         private readonly ICurrentContext _currentContext;
+        private readonly ILogger<OrganizationService> _logger;
+
 
         public OrganizationService(
             IOrganizationRepository organizationRepository,
@@ -66,7 +69,8 @@ namespace Bit.Core.Services
             IReferenceEventService referenceEventService,
             IGlobalSettings globalSettings,
             ITaxRateRepository taxRateRepository,
-            ICurrentContext currentContext)
+            ICurrentContext currentContext,
+            ILogger<OrganizationService> logger)
         {
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
@@ -90,6 +94,7 @@ namespace Bit.Core.Services
             _globalSettings = globalSettings;
             _taxRateRepository = taxRateRepository;
             _currentContext = currentContext;
+            _logger = logger;
         }
 
         public async Task ReplacePaymentMethodAsync(Guid organizationId, string paymentToken,
@@ -416,7 +421,7 @@ namespace Bit.Core.Services
             return await AdjustSeatsAsync(organization, seatAdjustment, prorationDate);
         }
 
-        private async Task<string> AdjustSeatsAsync(Organization organization, int seatAdjustment, DateTime? prorationDate = null)
+        private async Task<string> AdjustSeatsAsync(Organization organization, int seatAdjustment, DateTime? prorationDate = null, IEnumerable<string> ownerEmails = null)
         {
             if (string.IsNullOrWhiteSpace(organization.GatewayCustomerId))
             {
@@ -572,6 +577,24 @@ namespace Bit.Core.Services
                 });
             organization.Seats = (short?)newSeatTotal;
             await ReplaceAndUpdateCache(organization);
+
+            if (organization.Seats.HasValue && organization.MaxAutoscaleSeats.HasValue && organization.Seats == organization.MaxAutoscaleSeats)
+            {
+                try
+                {
+                    if (ownerEmails == null)
+                    {
+                        ownerEmails = (await _organizationUserRepository.GetManyByMinimumRoleAsync(organization.Id,
+                            OrganizationUserType.Owner)).Select(u => u.Email).Distinct();
+                    }
+                    await _mailService.SendOrganizationMaxSeatLimitReachedEmailAsync(organization, organization.MaxAutoscaleSeats.Value, ownerEmails);
+                }
+                catch (Exception e)
+                {
+                    _logger.LogError(e, "Error encountered notifying organization owners of seat limit reached.");
+                }
+            }
+
             return paymentIntentClientSecret;
         }
 
@@ -1573,7 +1596,7 @@ namespace Bit.Core.Services
 
         private async Task AutoAddSeatsAsync(Organization organization, int seatsToAdd, DateTime? prorationDate = null)
         {
-            if (seatsToAdd < 1)
+            if (seatsToAdd < 1 || !organization.Seats.HasValue)
             {
                 return;
             }
@@ -1584,12 +1607,15 @@ namespace Bit.Core.Services
                 throw new BadRequestException(failureMessage);
             }
 
-            await AdjustSeatsAsync(organization, seatsToAdd, prorationDate);
-            var ownerEmails = (await _organizationUserRepository.GetManyByMinimumRoleAsync(organization.Id, OrganizationUserType.Owner)).Select(u => u.Email).Distinct();
+            var ownerEmails = (await _organizationUserRepository.GetManyByMinimumRoleAsync(organization.Id,
+                OrganizationUserType.Owner)).Select(u => u.Email).Distinct();
+
+            await AdjustSeatsAsync(organization, seatsToAdd, prorationDate, ownerEmails);
 
             if (!organization.OwnersNotifiedOfAutoscaling)
             {
-                await _mailService.SendOrganizationAutoscaledEmailAsync(organization, ownerEmails);
+                await _mailService.SendOrganizationAutoscaledEmailAsync(organization, organization.Seats.Value + seatsToAdd,
+                    ownerEmails);
                 organization.OwnersNotifiedOfAutoscaling = true;
                 await _organizationRepository.UpsertAsync(organization);
             }
