@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[SsoUser_ReadyByUserIdOrganizationId]
+CREATE PROCEDURE [dbo].[SsoUser_ReadByUserIdOrganizationId]
     @UserId UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER
 AS
