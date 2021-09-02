@@ -889,7 +889,18 @@ namespace Bit.Core.Services
                     if (cardPaymentMethodId == null)
                     {
                         // We're going to delete this draft invoice, it can't be paid
-                        await invoiceService.DeleteAsync(invoice.Id);
+                        try
+                        {
+                            await invoiceService.DeleteAsync(invoice.Id);
+                        }
+                        catch
+                        {
+                            await invoiceService.FinalizeInvoiceAsync(invoice.Id, new InvoiceFinalizeOptions
+                            {
+                                AutoAdvance = false
+                            });
+                            await invoiceService.VoidInvoiceAsync(invoice.Id);
+                        }
                         throw new BadRequestException("No payment method is available.");
                     }
                 }
