@@ -4,10 +4,10 @@ name: Workflow Linter
 on:
   push:
     branches: add-workflow-linter
- #   branches-ignore:
- #     - 'l10n_master'
- #     - 'gh-pages'
- # workflow_dispatch:
+#   branches-ignore:
+#     - 'l10n_master'
+#     - 'gh-pages'
+# workflow_dispatch:
 #   inputs: {}
 
 jobs:
