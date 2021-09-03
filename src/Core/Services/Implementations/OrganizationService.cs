@@ -432,7 +432,7 @@ namespace Bit.Core.Services
                 },
                 ProrationBehavior = "always_invoice",
                 CollectionMethod = "send_invoice",
-                DaysUntilDue = sub.DaysUntilDue ?? 1,
+                DaysUntilDue = daysUntilDue ?? 1,
                 ProrationDate = prorationDate,
             };
 
