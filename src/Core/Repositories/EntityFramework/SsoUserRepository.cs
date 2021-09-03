@@ -24,5 +24,16 @@ namespace Bit.Core.Repositories.EntityFramework
                 await dbContext.SaveChangesAsync();
             }
         }
+
+        public async Task<TableModel.SsoUser> GetByUserIdOrganizationIdAsync(Guid organizationId, Guid userId)
+        {
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var entity = await GetDbSet(dbContext)
+                    .FirstOrDefaultAsync(e => e.OrganizationId == organizationId && e.UserId == userId);
+                return entity;
+            }
+        }
     }
 }
