@@ -414,8 +414,9 @@ namespace Bit.Core.Services
 
             var prorationDate = DateTime.UtcNow;
             var seatItem = sub.Items?.Data?.FirstOrDefault(i => i.Plan.Id == plan.StripeSeatPlanId);
-            // Retain original collection method
+            // Retain original collection method and days util due
             var collectionMethod = sub.CollectionMethod;
+            var daysUntilDue = sub.DaysUntilDue;
 
             var subUpdateOptions = new SubscriptionUpdateOptions
             {
@@ -430,8 +431,8 @@ namespace Bit.Core.Services
                     }
                 },
                 ProrationBehavior = "always_invoice",
-                DaysUntilDue = 1,
                 CollectionMethod = "send_invoice",
+                DaysUntilDue = daysUntilDue ?? 1,
                 ProrationDate = prorationDate,
             };
 
@@ -485,17 +486,19 @@ namespace Bit.Core.Services
                         //  being applied forward to the next month's invoice
                         ProrationBehavior = "none",
                         CollectionMethod = collectionMethod,
+                        DaysUntilDue = daysUntilDue,
                     });
                     throw;
                 }
             }
 
-            // Change back the subscription collection method
-            if (collectionMethod != "send_invoice")
+            // Change back the subscription collection method and/or days until due
+            if (collectionMethod != "send_invoice" || daysUntilDue == null)
             {
                 await subscriptionService.UpdateAsync(sub.Id, new SubscriptionUpdateOptions
                 {
                     CollectionMethod = collectionMethod,
+                    DaysUntilDue = daysUntilDue,
                 });
             }
 
