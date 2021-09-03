@@ -25,7 +25,7 @@ namespace Bit.Core.Repositories.EntityFramework
             }
         }
 
-        public async Task<TableModel.SsoUser> GetByUserIdOrganizationId(Guid organizationId, Guid userId)
+        public async Task<TableModel.SsoUser> GetByUserIdOrganizationIdAsync(Guid organizationId, Guid userId)
         {
             using (var scope = ServiceScopeFactory.CreateScope())
             {

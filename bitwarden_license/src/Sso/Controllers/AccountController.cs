@@ -576,7 +576,7 @@ namespace Bit.Sso.Controllers
 
         private async Task DeleteExistingSsoUserRecord(Guid userId, Guid orgId, OrganizationUser orgUser)
         {
-            var existingSsoUser = await _ssoUserRepository.GetByUserIdOrganizationId(orgId, userId);
+            var existingSsoUser = await _ssoUserRepository.GetByUserIdOrganizationIdAsync(orgId, userId);
             if (existingSsoUser != null)
             {
                 await _ssoUserRepository.DeleteAsync(userId, orgId);
