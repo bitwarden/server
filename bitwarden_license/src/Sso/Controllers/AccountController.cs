@@ -44,6 +44,7 @@ namespace Bit.Sso.Controllers
         private readonly IUserService _userService;
         private readonly II18nService _i18nService;
         private readonly UserManager<User> _userManager;
+        private readonly Core.Services.IEventService _eventService;
 
         public AccountController(
             IAuthenticationSchemeProvider schemeProvider,
@@ -58,7 +59,8 @@ namespace Bit.Sso.Controllers
             IPolicyRepository policyRepository,
             IUserService userService,
             II18nService i18nService,
-            UserManager<User> userManager)
+            UserManager<User> userManager,
+            Core.Services.IEventService eventService)
         {
             _schemeProvider = schemeProvider;
             _clientStore = clientStore;
@@ -73,6 +75,7 @@ namespace Bit.Sso.Controllers
             _userService = userService;
             _i18nService = i18nService;
             _userManager = userManager;
+            _eventService = eventService;
         }
         
         [HttpGet]
@@ -453,7 +456,10 @@ namespace Bit.Sso.Controllers
                     // Org User is invited - they must manually accept the invite via email and authenticate with MP
                     throw new Exception(_i18nService.T("UserAlreadyInvited", email, organization.Name)); 
                 }
-                
+
+                // Delete existing SsoUser (if any) - avoids error if providerId has changed and the sso link is stale
+                await DeleteExistingSsoUserRecord(existingUser.Id, orgId, orgUser);
+
                 // Accepted or Confirmed - create SSO link and return;
                 await CreateSsoUserRecord(providerUserId, existingUser.Id, orgId);
                 return existingUser;
@@ -513,6 +519,9 @@ namespace Bit.Sso.Controllers
                 await _organizationUserRepository.ReplaceAsync(orgUser);
             }
             
+            // Delete any stale user record to be safe
+            await DeleteExistingSsoUserRecord(existingUser.Id, orgId, orgUser);
+
             // Create sso user record
             await CreateSsoUserRecord(providerUserId, user.Id, orgId);
             
@@ -565,6 +574,15 @@ namespace Bit.Sso.Controllers
             return null;
         }
 
+        private async Task DeleteExistingSsoUserRecord(Guid userId, Guid orgId, OrganizationUser orgUser)
+        {
+            var existingSsoUser = await _ssoUserRepository.GetByUserIdOrganizationIdAsync(orgId, userId);
+            if (existingSsoUser != null)
+            {
+                await _ssoUserRepository.DeleteAsync(userId, orgId);
+                await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_ResetSsoLink);
+            }
+        }
         private async Task CreateSsoUserRecord(string providerUserId, Guid userId, Guid orgId)
         {
             var ssoUser = new SsoUser

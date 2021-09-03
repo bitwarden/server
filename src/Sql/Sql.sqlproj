@@ -299,6 +299,7 @@
     <Build Include="dbo\Stored Procedures\User_ReadBySsoUserOrganizationIdExternalId.sql" />
     <Build Include="dbo\Stored Procedures\SsoUser_Update.sql" />
     <Build Include="dbo\Stored Procedures\SsoUser_ReadById.sql" />
+    <Build Include="dbo\Stored Procedures\SsoUser_ReadByUserIdOrganizationId.sql" />
     <Build Include="dbo\Stored Procedures\Cipher_DeleteByIdsOrganizationId.sql" />
     <Build Include="dbo\Stored Procedures\Cipher_SoftDeleteByIdsOrganizationId.sql" />
     <Build Include="dbo\Stored Procedures\Organization_ReadByIdentifier.sql" />
