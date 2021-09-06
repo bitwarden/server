@@ -17,22 +17,19 @@ namespace Bit.Core.Services
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly IPolicyRepository _policyRepository;
         private readonly IMailService _mailService;
-        private readonly ICurrentContext _currentContext;
 
         public PolicyService(
             IEventService eventService,
             IOrganizationRepository organizationRepository,
             IOrganizationUserRepository organizationUserRepository,
             IPolicyRepository policyRepository,
-            IMailService mailService,
-            ICurrentContext currentContext)
+            IMailService mailService)
         {
             _eventService = eventService;
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
             _policyRepository = policyRepository;
             _mailService = mailService;
-            _currentContext = currentContext;
         }
 
         public async Task SaveAsync(Policy policy, IUserService userService, IOrganizationService organizationService,

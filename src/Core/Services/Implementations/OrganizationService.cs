@@ -43,7 +43,6 @@ namespace Bit.Core.Services
         private readonly GlobalSettings _globalSettings;
         private readonly ITaxRateRepository _taxRateRepository;
         private readonly ICurrentContext _currentContext;
-        private readonly IPolicyService _policyService;
 
         public OrganizationService(
             IOrganizationRepository organizationRepository,
@@ -68,7 +67,6 @@ namespace Bit.Core.Services
             GlobalSettings globalSettings,
             ITaxRateRepository taxRateRepository,
             ICurrentContext currentContext,
-            IPolicyService policyService)
         {
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
@@ -92,7 +90,6 @@ namespace Bit.Core.Services
             _globalSettings = globalSettings;
             _taxRateRepository = taxRateRepository;
             _currentContext = currentContext;
-            _policyService = policyService;
         }
 
         public async Task ReplacePaymentMethodAsync(Guid organizationId, string paymentToken,
