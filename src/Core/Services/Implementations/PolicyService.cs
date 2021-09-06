@@ -131,59 +131,5 @@ namespace Bit.Core.Services
             await _policyRepository.UpsertAsync(policy);
             await _eventService.LogPolicyEventAsync(policy, Enums.EventType.Policy_Updated);
         }
-
-        public async Task<bool> PolicyAppliesToCurrentUserAsync(PolicyType policyType,
-            Func<Policy, bool> policyFilter)
-        {
-            if (policyFilter == null)
-            {
-                policyFilter = policy => true;
-            }
-
-            var userId = _currentContext.UserId.Value;
-            var policies = await _policyRepository.GetManyByUserIdAsync(userId);
-            var enabledPolicies = policies
-                .Where(p => p.Enabled && p.Type == policyType && policyFilter(p))
-                .Select(p => p.OrganizationId)
-                .ToHashSet();
-
-            if (!enabledPolicies.Any())
-            {
-                return false;
-            }
-
-            var orgUsers = await _organizationUserRepository.GetManyByUserAsync(userId);
-            
-            if (!orgUsers.Any())
-            {
-                return false;
-            }
-
-            var checkExemptionTasks = orgUsers
-                .Where(ou =>
-                    ou.Status >= OrganizationUserStatusType.Accepted &&
-                    enabledPolicies.Contains(ou.OrganizationId))
-                .Select(ou => _currentContext.ExemptFromPolicies(ou.OrganizationId))
-                .ToArray();
-
-            var exemptionStatus = await Task.WhenAll(checkExemptionTasks);
-
-            return exemptionStatus.Any(exempt => !exempt);
-        }
-
-        public async Task<bool> PolicyAppliesToCurrentUserAsync(PolicyType policyType, Guid organizationId,
-            bool includeInvitedUsers = false)
-        {
-            var userId = _currentContext.UserId.Value;
-            var policy = await _policyRepository.GetByOrganizationIdTypeAsync(organizationId, policyType);
-            var allOrgUsers = await _organizationUserRepository.GetManyByUserAsync(userId);
-            var orgUser = allOrgUsers.FirstOrDefault(ou => ou.OrganizationId == organizationId);
-
-            return policy != null &&
-                policy.Enabled &&
-                orgUser != null &&
-                !await _currentContext.ExemptFromPolicies(organizationId) &&
-                includeInvitedUsers ? true : orgUser.Status >= OrganizationUserStatusType.Accepted;
-        }
     }
 }

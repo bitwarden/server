@@ -22,9 +22,9 @@ namespace Bit.Core.Services
         public const string MAX_FILE_SIZE_READABLE = "500 MB";
         private readonly ISendRepository _sendRepository;
         private readonly IUserRepository _userRepository;
-        private readonly IPolicyService _policyService;
         private readonly IUserService _userService;
         private readonly IOrganizationRepository _organizationRepository;
+        private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly ISendFileStorageService _sendFileStorageService;
         private readonly IPasswordHasher<User> _passwordHasher;
         private readonly IPushNotificationService _pushService;
@@ -38,19 +38,19 @@ namespace Bit.Core.Services
             IUserRepository userRepository,
             IUserService userService,
             IOrganizationRepository organizationRepository,
+            IOrganizationUserRepository organizationUserRepository,
             ISendFileStorageService sendFileStorageService,
             IPasswordHasher<User> passwordHasher,
             IPushNotificationService pushService,
             IReferenceEventService referenceEventService,
             GlobalSettings globalSettings,
-            IPolicyService policyService,
             ICurrentContext currentContext)
         {
             _sendRepository = sendRepository;
             _userRepository = userRepository;
             _userService = userService;
-            _policyService = policyService;
             _organizationRepository = organizationRepository;
+            _organizationUserRepository = organizationUserRepository;
             _sendFileStorageService = sendFileStorageService;
             _passwordHasher = passwordHasher;
             _pushService = pushService;
@@ -281,20 +281,22 @@ namespace Bit.Core.Services
                 return;
             }
 
-            var blockedByDisableSendPolicy = await _policyService.PolicyAppliesToCurrentUserAsync(PolicyType.DisableSend, null);
-            if (blockedByDisableSendPolicy)
+            var disableSendOrgUsers = await _organizationUserRepository.GetManyByApplicablePolicyTypeAsync(userId.Value,
+                PolicyType.DisableSend);
+            if (disableSendOrgUsers.Any())
             {
                 throw new BadRequestException("Due to an Enterprise Policy, you are only able to delete an existing Send.");
             }
 
             if (send.HideEmail.GetValueOrDefault())
             {
-                var blockedByDisableHideEmailPolicy = await _policyService.PolicyAppliesToCurrentUserAsync(PolicyType.SendOptions,
-                    policy => CoreHelpers.LoadClassFromJsonData<SendOptionsPolicyData>()?.DisableHideEmail ?? false);
-                if (blockedByDisableHideEmailPolicy)
-                {
-                    throw new BadRequestException("Due to an Enterprise Policy, you are not allowed to hide your email address from recipients when creating or editing a Send.");
-                }
+                // TODO
+                // var blockedByDisableHideEmailPolicy = await _policyService.PolicyAppliesToCurrentUserAsync(PolicyType.SendOptions,
+                //     policy => CoreHelpers.LoadClassFromJsonData<SendOptionsPolicyData>()?.DisableHideEmail ?? false);
+                // if (blockedByDisableHideEmailPolicy)
+                // {
+                //     throw new BadRequestException("Due to an Enterprise Policy, you are not allowed to hide your email address from recipients when creating or editing a Send.");
+                // }
             }
         }
 
