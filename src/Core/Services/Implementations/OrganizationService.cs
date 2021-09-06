@@ -66,7 +66,7 @@ namespace Bit.Core.Services
             IReferenceEventService referenceEventService,
             GlobalSettings globalSettings,
             ITaxRateRepository taxRateRepository,
-            ICurrentContext currentContext,
+            ICurrentContext currentContext)
         {
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
