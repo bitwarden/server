@@ -406,7 +406,7 @@ namespace Bit.Core.Repositories.SqlServer
         }
 
         public async Task<List<OrganizationUserUserDetails>> GetManyByApplicablePolicyTypeAsync(Guid userId,
-            PolicyType policyType, OrganizationUserStatusType minStatus = OrganizationUserStatusType.Accepted)
+            PolicyType policyType, OrganizationUserStatusType minStatus)
         {
             using (var connection = new SqlConnection(ConnectionString))
             {
