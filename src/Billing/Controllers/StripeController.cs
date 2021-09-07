@@ -99,7 +99,7 @@ namespace Bit.Billing.Controllers
                 return new BadRequestResult();
             }
 
-            if (_hostingEnvironment.IsProduction() && !parsedEvent.Livemode)
+            if ((_hostingEnvironment.IsProduction() || _hostingEnvironment.IsEnvironment("QA")) && !parsedEvent.Livemode)
             {
                 _logger.LogWarning("Getting test events in production.");
                 return new BadRequestResult();
