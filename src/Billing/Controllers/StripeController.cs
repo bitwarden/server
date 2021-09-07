@@ -99,10 +99,14 @@ namespace Bit.Billing.Controllers
                 return new BadRequestResult();
             }
 
-            if ((_hostingEnvironment.IsProduction() || _hostingEnvironment.IsEnvironment("QA")) && !parsedEvent.Livemode)
+            if (_hostingEnvironment.IsProduction() && !parsedEvent.Livemode)
             {
                 _logger.LogWarning("Getting test events in production.");
                 return new BadRequestResult();
+            }
+            else if (_hostingEnvironment.IsEnvironment("QA"))
+            {
+                _logger.LogWarning("Getting events in QA.");
             }
 
             var subDeleted = parsedEvent.Type.Equals("customer.subscription.deleted");
