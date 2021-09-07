@@ -11,7 +11,7 @@ namespace Bit.Core.Repositories
         Task<Policy> GetByOrganizationIdTypeAsync(Guid organizationId, PolicyType type);
         Task<ICollection<Policy>> GetManyByOrganizationIdAsync(Guid organizationId);
         Task<ICollection<Policy>> GetManyByUserIdAsync(Guid userId);
-        Task<ICollection<Policy>> GetManyByTypeApplicableToUser(Guid userId, PolicyType policyType,
+        Task<ICollection<Policy>> GetManyByTypeApplicableToUserIdAsync(Guid userId, PolicyType policyType,
             OrganizationUserStatusType minStatus = OrganizationUserStatusType.Accepted);
     }
 }
