@@ -58,5 +58,19 @@ namespace Bit.Core.Repositories.SqlServer
                 return results.ToList();
             }
         }
+
+        public async Task<ICollection<Policy>> GetManyByTypeApplicableToUserIdAsync(Guid userId, PolicyType policyType,
+            OrganizationUserStatusType minStatus) 
+        {
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<Policy>(
+                    $"[{Schema}].[{Table}_ReadByTypeApplicableToUser]",
+                    new { UserId = userId, PolicyType = policyType, MinimumStatus = minStatus },
+                    commandType: CommandType.StoredProcedure);
+
+                return results.ToList();
+            }
+        }
     }
 }

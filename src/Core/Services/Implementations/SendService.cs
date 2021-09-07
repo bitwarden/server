@@ -25,6 +25,7 @@ namespace Bit.Core.Services
         private readonly IUserService _userService;
         private readonly IOrganizationRepository _organizationRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
+        private readonly IPolicyRepository _policyRepository;
         private readonly ISendFileStorageService _sendFileStorageService;
         private readonly IPasswordHasher<User> _passwordHasher;
         private readonly IPushNotificationService _pushService;
@@ -39,6 +40,7 @@ namespace Bit.Core.Services
             IUserService userService,
             IOrganizationRepository organizationRepository,
             IOrganizationUserRepository organizationUserRepository,
+            IPolicyRepository policyRepository,
             ISendFileStorageService sendFileStorageService,
             IPasswordHasher<User> passwordHasher,
             IPushNotificationService pushService,
@@ -51,6 +53,7 @@ namespace Bit.Core.Services
             _userService = userService;
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
+            _policyRepository = policyRepository;
             _sendFileStorageService = sendFileStorageService;
             _passwordHasher = passwordHasher;
             _pushService = pushService;
@@ -290,13 +293,16 @@ namespace Bit.Core.Services
 
             if (send.HideEmail.GetValueOrDefault())
             {
-                // TODO
-                // var blockedByDisableHideEmailPolicy = await _policyService.PolicyAppliesToCurrentUserAsync(PolicyType.SendOptions,
-                //     policy => CoreHelpers.LoadClassFromJsonData<SendOptionsPolicyData>()?.DisableHideEmail ?? false);
-                // if (blockedByDisableHideEmailPolicy)
-                // {
-                //     throw new BadRequestException("Due to an Enterprise Policy, you are not allowed to hide your email address from recipients when creating or editing a Send.");
-                // }
+                var applicableSendOptionsPolicies = await _policyRepository.GetManyByTypeApplicableToUserIdAsync(userId.Value, PolicyType.SendOptions);
+                foreach (var policy in applicableSendOptionsPolicies)
+                {
+                    var data = CoreHelpers.LoadClassFromJsonData<SendOptionsPolicyData>(policy.Data);
+                    if (data?.DisableHideEmail ?? false)
+                    {
+                        throw new BadRequestException("Due to an Enterprise Policy, you are not allowed to hide your email address from recipients when creating or editing a Send.");
+                    }
+
+                }
             }
         }
 
