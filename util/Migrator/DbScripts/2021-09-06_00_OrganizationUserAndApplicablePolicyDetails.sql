@@ -1,3 +1,5 @@
+-- TODO: copy to SQL project once code is settled
+
 -- Table valued function that matches orgUsers with policies that apply to them
 IF OBJECT_ID('[dbo].[OrganizationUserAndApplicablePolicyDetails]') IS NOT NULL
 BEGIN
