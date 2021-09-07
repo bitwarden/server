@@ -54,5 +54,12 @@ namespace Bit.Core.Repositories.EntityFramework
                 return Mapper.Map<List<TableModel.Policy>>(results);
             }
         }
+
+        public async Task<ICollection<Policy>> GetManyByTypeApplicableToUserIdAsync(Guid userId, PolicyType policyType,
+                    OrganizationUserStatusType minStatus)
+        {
+            // TODO
+            return await Task.FromResult(new List<Policy>());
+        }
     }
 }

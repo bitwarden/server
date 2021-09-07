@@ -407,5 +407,11 @@ namespace Bit.Core.Repositories.EntityFramework
                 return await query.ToListAsync();
             }
         }
+        public async Task<List<OrganizationUserUserDetails>> GetManyByApplicablePolicyTypeAsync(Guid userId,
+            PolicyType policyType, OrganizationUserStatusType minStatus)
+        {
+            // TODO
+            return await Task.FromResult(new List<OrganizationUserUserDetails>());
+        }
     }
 }
