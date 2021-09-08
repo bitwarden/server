@@ -68,23 +68,37 @@ namespace Bit.Core.Jobs
             {
                 foreach (var (job, trigger) in Jobs)
                 {
-                    var dupeT = await _scheduler.GetTrigger(trigger.Key);
-                    if (dupeT != null)
+                    for (var retry = 0; retry < 10; retry++)
                     {
-                        await _scheduler.RescheduleJob(trigger.Key, trigger);
+                        // There's a race condition when starting multiple containers simultaneously, retry until it succeeds..
+                        try
+                        {
+                            var dupeT = await _scheduler.GetTrigger(trigger.Key);
+                            if (dupeT != null)
+                            {
+                                await _scheduler.RescheduleJob(trigger.Key, trigger);
+                            }
+
+                            var jobDetail = JobBuilder.Create(job)
+                                .WithIdentity(job.FullName)
+                                .Build();
+
+                            var dupeJ = await _scheduler.GetJobDetail(jobDetail.Key);
+                            if (dupeJ != null)
+                            {
+                                await _scheduler.DeleteJob(jobDetail.Key);
+                            }
+
+                            await _scheduler.ScheduleJob(jobDetail, trigger);
+                            break;
+                        }
+                        catch (Exception e)
+                        {
+                            _logger.LogWarning($"Exception while trying to schedule job: {job.FullName}, {e}");
+                            var random = new Random();
+                            Thread.Sleep(random.Next(50, 250));
+                        }
                     }
-
-                    var jobDetail = JobBuilder.Create(job)
-                        .WithIdentity(job.FullName)
-                        .Build();
-
-                    var dupeJ = await _scheduler.GetJobDetail(jobDetail.Key);
-                    if (dupeJ != null)
-                    {
-                        await _scheduler.DeleteJob(jobDetail.Key);
-                    }
-
-                    await _scheduler.ScheduleJob(jobDetail, trigger);
                 }
             }
 
