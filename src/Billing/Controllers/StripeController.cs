@@ -104,10 +104,6 @@ namespace Bit.Billing.Controllers
                 _logger.LogWarning("Getting test events in production.");
                 return new BadRequestResult();
             }
-            else if (_hostingEnvironment.IsEnvironment("QA"))
-            {
-                _logger.LogWarning("Getting events in QA.");
-            }
 
             var subDeleted = parsedEvent.Type.Equals("customer.subscription.deleted");
             var subUpdated = parsedEvent.Type.Equals("customer.subscription.updated");

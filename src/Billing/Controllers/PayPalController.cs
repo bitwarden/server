@@ -48,7 +48,7 @@ namespace Bit.Billing.Controllers
         [HttpPost("ipn")]
         public async Task<IActionResult> PostIpn()
         {
-            _logger.LogInformation("PayPal webhook has been hit.");
+            _logger.LogDebug("PayPal webhook has been hit.");
             if (HttpContext?.Request?.Query == null)
             {
                 return new BadRequestResult();
