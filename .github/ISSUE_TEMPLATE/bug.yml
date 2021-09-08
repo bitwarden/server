@@ -55,7 +55,7 @@ body:
     id: environment
     attributes:
       label: Environment
-      description: Which environment (Cloud / Self-Hosted) are you experiencing the issue on?
+      description: Which environment (Cloud / Self-Hosted) are you using?
       multiple: true
       options:
         - Cloud (bitwarden.com)
@@ -66,7 +66,7 @@ body:
     id: environment-details
     attributes:
       label: Environment Details
-      description: If Self-Hosted please provide some additional environment details
+      description: If Self-Hosted please provide some additional environment details.
       placeholder: |
         - Operating system: [e.g. Windows 10, Mac OS Catalina]
         - Environment: [e.g. Docker, EKS, ECS, K8S]
