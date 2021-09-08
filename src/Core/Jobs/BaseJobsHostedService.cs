@@ -15,6 +15,8 @@ namespace Bit.Core.Jobs
 {
     public abstract class BaseJobsHostedService : IHostedService, IDisposable
     {
+        private const int MaximumJobRetries = 10;
+
         private readonly IServiceProvider _serviceProvider;
         private readonly ILogger<JobListener> _listenerLogger;
         protected readonly ILogger _logger;
@@ -68,7 +70,7 @@ namespace Bit.Core.Jobs
             {
                 foreach (var (job, trigger) in Jobs)
                 {
-                    for (var retry = 0; retry < 10; retry++)
+                    for (var retry = 0; retry < MaximumJobRetries; retry++)
                     {
                         // There's a race condition when starting multiple containers simultaneously, retry until it succeeds..
                         try
@@ -94,6 +96,11 @@ namespace Bit.Core.Jobs
                         }
                         catch (Exception e)
                         {
+                            if (retry == MaximumJobRetries - 1)
+                            {
+                                throw new Exception("Job failed to start after 10 retries.");
+                            }
+
                             _logger.LogWarning($"Exception while trying to schedule job: {job.FullName}, {e}");
                             var random = new Random();
                             Thread.Sleep(random.Next(50, 250));
