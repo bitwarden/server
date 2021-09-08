@@ -48,6 +48,7 @@ namespace Bit.Billing.Controllers
         [HttpPost("ipn")]
         public async Task<IActionResult> PostIpn()
         {
+            _logger.LogDebug("PayPal webhook has been hit.");
             if (HttpContext?.Request?.Query == null)
             {
                 return new BadRequestResult();
@@ -57,6 +58,7 @@ namespace Bit.Billing.Controllers
                 HttpContext.Request.Query["key"].ToString() : null;
             if (key != _billingSettings.PayPal.WebhookKey)
             {
+                _logger.LogWarning("PayPal webhook key is incorrect or does not exist.");
                 return new BadRequestResult();
             }
 
