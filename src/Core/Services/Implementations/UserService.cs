@@ -52,7 +52,7 @@ namespace Bit.Core.Services
         private readonly ICurrentContext _currentContext;
         private readonly GlobalSettings _globalSettings;
         private readonly IOrganizationService _organizationService;
-        private readonly ISendRepository _sendRepository;
+        private readonly IProviderUserRepository _providerUserRepository;
 
         public UserService(
             IUserRepository userRepository,
@@ -81,7 +81,7 @@ namespace Bit.Core.Services
             ICurrentContext currentContext,
             GlobalSettings globalSettings,
             IOrganizationService organizationService,
-            ISendRepository sendRepository)
+            IProviderUserRepository providerUserRepository)
             : base(
                   store,
                   optionsAccessor,
@@ -115,7 +115,7 @@ namespace Bit.Core.Services
             _currentContext = currentContext;
             _globalSettings = globalSettings;
             _organizationService = organizationService;
-            _sendRepository = sendRepository;
+            _providerUserRepository = providerUserRepository;
         }
 
         public Guid? GetProperUserId(ClaimsPrincipal principal)
@@ -219,6 +219,15 @@ namespace Bit.Core.Services
                         Description = "You must leave or delete any organizations that you are the only owner of first."
                     });
                 }
+            }
+
+            var onlyOwnerProviderCount = await _providerUserRepository.GetCountByOnlyOwnerAsync(user.Id);
+            if (onlyOwnerProviderCount > 0)
+            {
+                return IdentityResult.Failed(new IdentityError
+                {
+                    Description = "You must leave or delete any providers that you are the only owner of first."
+                });
             }
 
             if (!string.IsNullOrWhiteSpace(user.GatewaySubscriptionId))

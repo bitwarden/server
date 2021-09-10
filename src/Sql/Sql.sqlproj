@@ -74,6 +74,7 @@
     <Build Include="dbo\Stored Procedures\Event_ReadPageByProviderIdActingUserId.sql" />
     <Build Include="dbo\Stored Procedures\ProviderOrganization_ReadByOrganizationId.sql" />
     <Build Include="dbo\Stored Procedures\ProviderUserProviderOrganizationDetails_ReadByUserIdStatus.sql" />
+    <Build Include="dbo\Stored Procedures\ProviderUser_ReadCountByOnlyOwner.sql" />
     <Build Include="dbo\Stored Procedures\SsoConfig_Create.sql" />
     <Build Include="dbo\Stored Procedures\SsoConfig_ReadByIdentifier.sql" />
     <Build Include="dbo\Stored Procedures\SsoConfig_ReadByOrganizationId.sql" />
