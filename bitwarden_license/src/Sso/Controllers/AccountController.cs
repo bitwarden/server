@@ -520,7 +520,7 @@ namespace Bit.Sso.Controllers
             }
             
             // Delete any stale user record to be safe
-            await DeleteExistingSsoUserRecord(existingUser.Id, orgId, orgUser);
+            await DeleteExistingSsoUserRecord(user.Id, orgId, orgUser);
 
             // Create sso user record
             await CreateSsoUserRecord(providerUserId, user.Id, orgId);
