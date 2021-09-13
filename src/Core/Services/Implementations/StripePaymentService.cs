@@ -106,7 +106,7 @@ namespace Bit.Core.Services
 
             if (taxInfo != null && !string.IsNullOrWhiteSpace(taxInfo.BillingAddressCountry) && !string.IsNullOrWhiteSpace(taxInfo.BillingAddressPostalCode))
             {
-                var taxRateSearch = new TaxRate()
+                var taxRateSearch = new TaxRate
                 {
                     Country = taxInfo.BillingAddressCountry,
                     PostalCode = taxInfo.BillingAddressPostalCode
@@ -221,7 +221,7 @@ namespace Bit.Core.Services
 
             if (taxInfo != null && !string.IsNullOrWhiteSpace(taxInfo.BillingAddressCountry) && !string.IsNullOrWhiteSpace(taxInfo.BillingAddressPostalCode))
             {
-                var taxRateSearch = new TaxRate()
+                var taxRateSearch = new TaxRate
                 {
                     Country = taxInfo.BillingAddressCountry,
                     PostalCode = taxInfo.BillingAddressPostalCode
