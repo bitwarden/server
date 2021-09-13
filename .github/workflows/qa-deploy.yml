@@ -205,8 +205,20 @@ jobs:
           echo "::add-mask::$webapp_name"
           echo "::set-output name=webapp-name::$webapp_name"
 
+      - name: Stop App Service
+        if: false
+        env:
+          AZURE_RESOURCE_GROUP: "bw-qa-env"
+        run: az webapp stop --name ${{ steps.retrieve-secrets.outputs.webapp-name }} --resource-group $AZURE_RESOURCE_GROUP
+
       - name: Deploy App
         uses: azure/webapps-deploy@798e43877120eda6a2a690a4f212c545e586ae31
         with:
           app-name: ${{ steps.retrieve-secrets.outputs.webapp-name }}
           package: ./${{ matrix.name }}.zip
+
+      - name: Start App Service
+        if: false
+        env:
+          AZURE_RESOURCE_GROUP: "bw-qa-env"
+        run: az webapp start --name ${{ steps.retrieve-secrets.outputs.webapp-name }} --resource-group $AZURE_RESOURCE_GROUP
