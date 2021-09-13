@@ -13,6 +13,7 @@ using Bit.Core.Settings;
 using Microsoft.Extensions.Logging;
 using StripeTaxRate = Stripe.TaxRate;
 using TaxRate = Bit.Core.Models.Table.TaxRate;
+using StaticStore = Bit.Core.Models.StaticStore;
 
 namespace Bit.Core.Services
 {
@@ -54,7 +55,7 @@ namespace Bit.Core.Services
         }
 
         public async Task<string> PurchaseOrganizationAsync(Organization org, PaymentMethodType paymentMethodType,
-            string paymentToken, Models.StaticStore.Plan plan, short additionalStorageGb,
+            string paymentToken, StaticStore.Plan plan, short additionalStorageGb,
             int additionalSeats, bool premiumAccessAddon, TaxInfo taxInfo)
         {
             var customerService = new CustomerService();
@@ -201,7 +202,7 @@ namespace Bit.Core.Services
             }
         }
 
-        public async Task<string> UpgradeFreeOrganizationAsync(Organization org, Models.StaticStore.Plan plan,
+        public async Task<string> UpgradeFreeOrganizationAsync(Organization org, StaticStore.Plan plan,
             short additionalStorageGb, int additionalSeats, bool premiumAccessAddon, TaxInfo taxInfo)
         {
             if (!string.IsNullOrWhiteSpace(org.GatewaySubscriptionId))
@@ -693,8 +694,7 @@ namespace Bit.Core.Services
         }
 
         private async Task<string> FinalizeSubscriptionChangeAsync(IStorableSubscriber storableSubscriber,
-            SubscriptionUpdateItemOptionsGenerator updateItemOptionsGenerator,
-            SubscriptionUpdateItemOptionsGenerator revertItemOptionsGenerator)
+            SubscriptionUpdate subscriptionUpdate)
         {
             var subscriptionService = new SubscriptionService();
             var sub = await subscriptionService.GetAsync(storableSubscriber.GatewaySubscriptionId);
@@ -707,7 +707,7 @@ namespace Bit.Core.Services
             var collectionMethod = sub.CollectionMethod;
             var daysUntilDue = sub.DaysUntilDue;
             var chargeNow = collectionMethod == "charge_automatically";
-            var updatedItemOptions = updateItemOptionsGenerator(sub);
+            var updatedItemOptions = subscriptionUpdate.UpgradeItemOptions(sub);
 
             var subUpdateOptions = new SubscriptionUpdateOptions
             {
@@ -767,7 +767,7 @@ namespace Bit.Core.Services
                     // Need to revert the subscription
                     await subscriptionService.UpdateAsync(sub.Id, new SubscriptionUpdateOptions
                     {
-                        Items = new List<SubscriptionItemOptions> { revertItemOptionsGenerator(sub) },
+                        Items = new List<SubscriptionItemOptions> { subscriptionUpdate.RevertItemOptions(sub) },
                         // This proration behavior prevents a false "credit" from
                         //  being applied forward to the next month's invoice
                         ProrationBehavior = "none",
@@ -789,46 +789,17 @@ namespace Bit.Core.Services
             }
 
             return paymentIntentClientSecret;
-
         }
 
-        private delegate SubscriptionItemOptions SubscriptionUpdateItemOptionsGenerator(Subscription sub);
-
-        public Task<string> AdjustSeatsAsync(Organization organization, Bit.Core.Models.StaticStore.Plan plan, int additionalSeats)
+        public Task<string> AdjustSeatsAsync(Organization organization, StaticStore.Plan plan, int additionalSeats)
         {
-            string SeatItemId(Subscription sub) => sub.Items?.Data?.FirstOrDefault(i => i.Plan.Id == plan.StripeSeatPlanId)?.Id;
-            return FinalizeSubscriptionChangeAsync(organization, sub => new SubscriptionItemOptions
-            {
-                Id = SeatItemId(sub),
-                Plan = plan.StripeSeatPlanId,
-                Quantity = additionalSeats,
-                Deleted = (SeatItemId(sub) != null && additionalSeats == 0) ? true : (bool?)null,
-            }, sub => new SubscriptionItemOptions
-            {
-                Id = sub.Items?.Data?.FirstOrDefault(i => i.Plan.Id == plan.StripeSeatPlanId)?.Id,
-                Plan = plan.StripeSeatPlanId,
-                Quantity = organization.Seats,
-                Deleted = SeatItemId(sub) != null ? true : (bool?)null,
-            });
+            return FinalizeSubscriptionChangeAsync(organization, new SeatSubscriptionUpdate(organization, plan, additionalSeats));
         }
 
         public Task<string> AdjustStorageAsync(IStorableSubscriber storableSubscriber, int additionalStorage,
             string storagePlanId)
         {
-            SubscriptionItem StorageItem(Subscription sub) => sub.Items?.Data?.FirstOrDefault(i => i.Plan.Id == storagePlanId);
-            return FinalizeSubscriptionChangeAsync(storableSubscriber, sub => new SubscriptionItemOptions
-            {
-                Id = StorageItem(sub)?.Id,
-                Plan = storagePlanId,
-                Quantity = additionalStorage,
-                Deleted = (StorageItem(sub)?.Id != null && additionalStorage == 0) ? true : (bool?)null,
-            }, sub => new SubscriptionItemOptions
-            {
-                Id = StorageItem(sub).Id,
-                Plan = storagePlanId,
-                Quantity = StorageItem(sub)?.Quantity ?? 0,
-                Deleted = StorageItem(sub)?.Id != null ? true : (bool?)null,
-            });
+            return FinalizeSubscriptionChangeAsync(storableSubscriber, new StorageSubscriptionUpdate(storagePlanId, additionalStorage));
         }
 
         public async Task CancelAndRecoverChargesAsync(ISubscriber subscriber)
@@ -1709,10 +1680,10 @@ namespace Bit.Core.Services
             {
                 return;
             }
-            
+
             var stripeTaxRateService = new TaxRateService();
             var updatedStripeTaxRate = await stripeTaxRateService.UpdateAsync(
-                    taxRate.Id, 
+                    taxRate.Id,
                     new TaxRateUpdateOptions() { Active = false }
             );
             if (!updatedStripeTaxRate.Active)

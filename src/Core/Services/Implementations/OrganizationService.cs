@@ -357,7 +357,7 @@ namespace Bit.Core.Services
 
             if (organization.Seats == null)
             {
-                throw new BadRequestException("Organization is not seat limits, no need to adjust seats");
+                throw new BadRequestException("Organization has no seat limit, no need to adjust seats");
             }
 
             if (string.IsNullOrWhiteSpace(organization.GatewayCustomerId))
