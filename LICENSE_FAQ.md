@@ -36,7 +36,7 @@ Any individual or organization considering offering Bitwarden "as a service" mus
 
 ***What rights do I receive under the "Source Available" Bitwarden License?*** 
 
-Users of software licensed under the Bitwarden License receive a right to use the software source code for non-production purposes of internal development and internal testing. The right to use the software in a production environment, or environments directly supporting production, requires a paid Bitwarden subscription. This approach is modeled on the licensing approaches taken by other successful open source companies including Elastic (NYSE: ESTC) and Confluent.
+Users of software licensed under the Bitwarden License receive a right to use the software source code for non-production purposes of internal development and internal testing. The right to use the software in a production environment, or environments directly supporting production, requires a paid Bitwarden subscription. This approach is modeled on the licensing approaches taken by other successful open source companies including Elastic (NYSE: ESTC) and Confluent (NASDAQ: CFLT).
 
 ***Is Bitwarden open source?***
 
