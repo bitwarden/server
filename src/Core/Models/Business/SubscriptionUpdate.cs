@@ -11,7 +11,7 @@ namespace Bit.Core.Models.Business
 
         public abstract SubscriptionItemOptions RevertItemOptions(Subscription subscription);
         public abstract SubscriptionItemOptions UpgradeItemOptions(Subscription subscription);
-        protected SubscriptionItem SubscriptionItem(Subscription subscription) =>
+        public SubscriptionItem SubscriptionItem(Subscription subscription) =>
             subscription.Items?.Data?.FirstOrDefault(i => i.Plan.Id == PlanId);
     }
 
