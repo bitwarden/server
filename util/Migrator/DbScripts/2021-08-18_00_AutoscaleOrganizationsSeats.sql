@@ -4,7 +4,7 @@ BEGIN
 ALTER TABLE
     [dbo].[Organization]
     ADD
-    [OwnersNotifiedOfAutoscaling] BIT NOT NULL DEFAULT 0
+    [OwnersNotifiedOfAutoscaling] DATETIME2(7) NULL
 END
 GO
 
@@ -73,7 +73,7 @@ CREATE PROCEDURE [dbo].[Organization_Create]
     @ExpirationDate DATETIME2(7),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
-    @OwnersNotifiedOfAutoscaling BIT,
+    @OwnersNotifiedOfAutoscaling DATETIME2(7),
     @MaxAutoscaleSeats INT
 AS
 BEGIN
@@ -220,7 +220,7 @@ CREATE PROCEDURE [dbo].[Organization_Update]
     @ExpirationDate DATETIME2(7),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
-    @OwnersNotifiedOfAutoscaling BIT,
+    @OwnersNotifiedOfAutoscaling DATETIME2(7),
     @MaxAutoscaleSeats INT
 AS
 BEGIN

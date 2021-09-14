@@ -1523,11 +1523,11 @@ namespace Bit.Core.Services
 
             await AdjustSeatsAsync(organization, seatsToAdd, prorationDate, ownerEmails);
 
-            if (!organization.OwnersNotifiedOfAutoscaling)
+            if (!organization.OwnersNotifiedOfAutoscaling.HasValue)
             {
                 await _mailService.SendOrganizationAutoscaledEmailAsync(organization, organization.Seats.Value + seatsToAdd,
                     ownerEmails);
-                organization.OwnersNotifiedOfAutoscaling = true;
+                organization.OwnersNotifiedOfAutoscaling = DateTime.UtcNow;
                 await _organizationRepository.UpsertAsync(organization);
             }
         }
