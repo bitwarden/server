@@ -32,6 +32,7 @@
                 document.getElementById('@(nameof(Model.Use2fa))').checked = true;
                 document.getElementById('@(nameof(Model.UseApi))').checked = true;
                 document.getElementById('@(nameof(Model.SelfHost))').checked = true;
+                document.getElementById('@(nameof(Model.UseResetPassword))').checked = true;
                 // Licensing
                 document.getElementById('@(nameof(Model.LicenseKey))').value = '@Model.RandomLicenseKey';
                 document.getElementById('@(nameof(Model.ExpirationDate))').value = '@Model.FourteenDayExpirationDate';
@@ -194,7 +195,7 @@
         <input type="checkbox" class="form-check-input" asp-for="UseResetPassword">
         <label class="form-check-label" asp-for="UseResetPassword"></label>
     </div>
-    <div class="form-check">
+    <div class="form-check mb-3">
         <input type="checkbox" class="form-check-input" asp-for="UsersGetPremium">
         <label class="form-check-label" asp-for="UsersGetPremium"></label>
     </div>

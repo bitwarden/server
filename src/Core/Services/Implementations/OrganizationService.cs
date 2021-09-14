@@ -246,14 +246,14 @@ namespace Bit.Core.Services
                         $"Disable your SSO configuration.");
                 }
             }
-            
+
             if (!newPlan.HasResetPassword && organization.UseResetPassword)
             {
                 var resetPasswordPolicy =
                     await _policyRepository.GetByOrganizationIdTypeAsync(organization.Id, PolicyType.ResetPassword);
                 if (resetPasswordPolicy != null && resetPasswordPolicy.Enabled)
                 {
-                    throw new BadRequestException("Your new plan does not allow the Password Reset feature. " + 
+                    throw new BadRequestException("Your new plan does not allow the Password Reset feature. " +
                         "Disable your Password Reset policy.");
                 }
             }
@@ -423,6 +423,11 @@ namespace Bit.Core.Services
 
         private async Task<string> AdjustSeatsAsync(Organization organization, int seatAdjustment, DateTime? prorationDate = null, IEnumerable<string> ownerEmails = null)
         {
+            if (organization.Seats == null)
+            {
+                throw new BadRequestException("Organization has no seat limit, no need to adjust seats");
+            }
+
             if (string.IsNullOrWhiteSpace(organization.GatewayCustomerId))
             {
                 throw new BadRequestException("No payment method found.");
@@ -444,7 +449,7 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Plan does not allow additional seats.");
             }
 
-            var newSeatTotal = organization.Seats + seatAdjustment;
+            var newSeatTotal = organization.Seats.Value + seatAdjustment;
             if (plan.BaseSeats > newSeatTotal)
             {
                 throw new BadRequestException($"Plan has a minimum of {plan.BaseSeats} seats.");
@@ -472,101 +477,7 @@ namespace Bit.Core.Services
                 }
             }
 
-            var subscriptionItemService = new SubscriptionItemService();
-            var subscriptionService = new SubscriptionService();
-            var sub = await subscriptionService.GetAsync(organization.GatewaySubscriptionId);
-            if (sub == null)
-            {
-                throw new BadRequestException("Subscription not found.");
-            }
-
-            prorationDate ??= DateTime.UtcNow;
-            var seatItem = sub.Items?.Data?.FirstOrDefault(i => i.Plan.Id == plan.StripeSeatPlanId);
-            // Retain original collection method
-            var collectionMethod = sub.CollectionMethod;
-
-            var subUpdateOptions = new SubscriptionUpdateOptions
-            {
-                Items = new List<SubscriptionItemOptions>
-                {
-                    new SubscriptionItemOptions
-                    {
-                        Id = seatItem?.Id,
-                        Plan = plan.StripeSeatPlanId,
-                        Quantity = additionalSeats,
-                        Deleted = (seatItem?.Id != null && additionalSeats == 0) ? true : (bool?)null
-                    }
-                },
-                ProrationBehavior = "always_invoice",
-                DaysUntilDue = 1,
-                CollectionMethod = "send_invoice",
-                ProrationDate = prorationDate,
-            };
-
-            var customer = await new CustomerService().GetAsync(sub.CustomerId);
-            if (!string.IsNullOrWhiteSpace(customer?.Address?.Country)
-                    && !string.IsNullOrWhiteSpace(customer?.Address?.PostalCode))
-            {
-                var taxRates = await _taxRateRepository.GetByLocationAsync(
-                    new Bit.Core.Models.Table.TaxRate()
-                    {
-                        Country = customer.Address.Country,
-                        PostalCode = customer.Address.PostalCode
-                    }
-                );
-                var taxRate = taxRates.FirstOrDefault();
-                if (taxRate != null && !sub.DefaultTaxRates.Any(x => x.Equals(taxRate.Id)))
-                {
-                    subUpdateOptions.DefaultTaxRates = new List<string>(1)
-                    {
-                        taxRate.Id
-                    };
-                }
-            }
-
-            var subResponse = await subscriptionService.UpdateAsync(sub.Id, subUpdateOptions);
-
-            string paymentIntentClientSecret = null;
-            if (additionalSeats > 0)
-            {
-                try
-                {
-                    paymentIntentClientSecret = await (_paymentService as StripePaymentService)
-                        .PayInvoiceAfterSubscriptionChangeAsync(organization, subResponse.LatestInvoiceId);
-                }
-                catch
-                {
-                    // Need to revert the subscription
-                    await subscriptionService.UpdateAsync(sub.Id, new SubscriptionUpdateOptions
-                    {
-                        Items = new List<SubscriptionItemOptions>
-                        {
-                            new SubscriptionItemOptions
-                            {
-                                Id = seatItem?.Id,
-                                Plan = plan.StripeSeatPlanId,
-                                Quantity = organization.Seats,
-                                Deleted = seatItem?.Id == null ? true : (bool?)null
-                            }
-                        },
-                        // This proration behavior prevents a false "credit" from
-                        //  being applied forward to the next month's invoice
-                        ProrationBehavior = "none",
-                        CollectionMethod = collectionMethod,
-                    });
-                    throw;
-                }
-            }
-
-            // Change back the subscription collection method
-            if (collectionMethod != "send_invoice")
-            {
-                await subscriptionService.UpdateAsync(sub.Id, new SubscriptionUpdateOptions
-                {
-                    CollectionMethod = collectionMethod,
-                });
-            }
-
+            var paymentIntentClientSecret = await _paymentService.AdjustSeatsAsync(organization, plan, additionalSeats);
             await _referenceEventService.RaiseEventAsync(
                 new ReferenceEvent(ReferenceEventType.AdjustSeats, organization)
                 {
@@ -645,7 +556,7 @@ namespace Bit.Core.Services
             bool provider = false)
         {
             var plan = StaticStore.Plans.FirstOrDefault(p => p.Type == signup.Plan);
-            if (!(plan is {LegacyYear: null}))
+            if (!(plan is { LegacyYear: null }))
             {
                 throw new BadRequestException("Invalid plan selected.");
             }
@@ -733,7 +644,7 @@ namespace Bit.Core.Services
 
             var orgsWithSingleOrgPolicy = policies.Where(p => p.Enabled && p.Type == PolicyType.SingleOrg)
                 .Select(p => p.OrganizationId);
-            var blockedBySingleOrgPolicy = orgUsers.Any(ou => ou is {Type: OrganizationUserType.Owner} &&
+            var blockedBySingleOrgPolicy = orgUsers.Any(ou => ou is { Type: OrganizationUserType.Owner } &&
                                                               ou.Type != OrganizationUserType.Admin &&
                                                               ou.Status != OrganizationUserStatusType.Invited &&
                                                               orgsWithSingleOrgPolicy.Contains(ou.OrganizationId));
@@ -961,14 +872,14 @@ namespace Bit.Core.Services
                         $"Your new license does not allow for the use of SSO. Disable your SSO configuration.");
                 }
             }
-            
+
             if (!license.UseResetPassword && organization.UseResetPassword)
             {
                 var resetPasswordPolicy =
                     await _policyRepository.GetByOrganizationIdTypeAsync(organization.Id, PolicyType.ResetPassword);
                 if (resetPasswordPolicy != null && resetPasswordPolicy.Enabled)
                 {
-                    throw new BadRequestException("Your new license does not allow the Password Reset feature. " 
+                    throw new BadRequestException("Your new license does not allow the Password Reset feature. "
                         + "Disable your Password Reset policy.");
                 }
             }
@@ -1473,7 +1384,7 @@ namespace Bit.Core.Services
         public async Task<OrganizationUser> ConfirmUserAsync(Guid organizationId, Guid organizationUserId, string key,
             Guid confirmingUserId, IUserService userService)
         {
-            var result = await ConfirmUsersAsync(organizationId, new Dictionary<Guid, string>() {{organizationUserId, key}},
+            var result = await ConfirmUsersAsync(organizationId, new Dictionary<Guid, string>() { { organizationUserId, key } },
                 confirmingUserId, userService);
 
             if (!result.Any())
@@ -1488,7 +1399,7 @@ namespace Bit.Core.Services
             }
             return orgUser;
         }
-        
+
         public async Task<List<Tuple<OrganizationUser, string>>> ConfirmUsersAsync(Guid organizationId, Dictionary<Guid, string> keys,
             Guid confirmingUserId, IUserService userService)
         {
@@ -1503,7 +1414,7 @@ namespace Bit.Core.Services
             }
 
             var validOrganizationUserIds = validOrganizationUsers.Select(u => u.UserId.Value).ToList();
-            
+
             var organization = await GetOrgById(organizationId);
             var policies = await _policyRepository.GetManyByOrganizationIdAsync(organizationId);
             var usersOrgs = await _organizationUserRepository.GetManyByManyUsersAsync(validOrganizationUserIds);
@@ -1541,7 +1452,7 @@ namespace Bit.Core.Services
                     orgUser.Status = OrganizationUserStatusType.Confirmed;
                     orgUser.Key = keys[orgUser.Id];
                     orgUser.Email = null;
-                
+
                     await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Confirmed);
                     await _mailService.SendOrganizationConfirmedEmailAsync(organization.Name, user.Email);
                     await DeleteAndPushUserRegistrationAsync(organizationId, user.Id);
@@ -1660,7 +1571,7 @@ namespace Bit.Core.Services
             }
 
             if (user.Type != OrganizationUserType.Owner &&
-                !await HasConfirmedOwnersExceptAsync(user.OrganizationId, new[] {user.Id}))
+                !await HasConfirmedOwnersExceptAsync(user.OrganizationId, new[] { user.Id }))
             {
                 throw new BadRequestException("Organization must have at least one confirmed owner.");
             }
@@ -1693,7 +1604,7 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Only owners can delete other owners.");
             }
 
-            if (!await HasConfirmedOwnersExceptAsync(organizationId, new[] {organizationUserId}))
+            if (!await HasConfirmedOwnersExceptAsync(organizationId, new[] { organizationUserId }))
             {
                 throw new BadRequestException("Organization must have at least one confirmed owner.");
             }
@@ -1715,7 +1626,7 @@ namespace Bit.Core.Services
                 throw new NotFoundException();
             }
 
-            if (!await HasConfirmedOwnersExceptAsync(organizationId, new[] {orgUser.Id}))
+            if (!await HasConfirmedOwnersExceptAsync(organizationId, new[] { orgUser.Id }))
             {
                 throw new BadRequestException("Organization must have at least one confirmed owner.");
             }
@@ -1816,12 +1727,12 @@ namespace Bit.Core.Services
         {
             // Org User must be the same as the calling user and the organization ID associated with the user must match passed org ID
             var orgUser = await _organizationUserRepository.GetByOrganizationAsync(organizationId, organizationUserId);
-            if (!callingUserId.HasValue || orgUser == null || orgUser.UserId != callingUserId.Value || 
+            if (!callingUserId.HasValue || orgUser == null || orgUser.UserId != callingUserId.Value ||
                 orgUser.OrganizationId != organizationId)
             {
                 throw new BadRequestException("User not valid.");
             }
-            
+
             // Make sure the organization has the ability to use password reset
             var org = await _organizationRepository.GetByIdAsync(organizationId);
             if (org == null || !org.UseResetPassword)
@@ -1836,7 +1747,7 @@ namespace Bit.Core.Services
             {
                 throw new BadRequestException("Organization does not have the password reset policy enabled.");
             }
-            
+
             // Block the user from withdrawal if auto enrollment is enabled
             if (resetPasswordKey == null && resetPasswordPolicy.Data != null)
             {
@@ -1847,7 +1758,7 @@ namespace Bit.Core.Services
                     throw new BadRequestException("Due to an Enterprise Policy, you are not allowed to withdraw from Password Reset.");
                 }
             }
-            
+
             orgUser.ResetPasswordKey = resetPasswordKey;
             await _organizationUserRepository.ReplaceAsync(orgUser);
             await _eventService.LogOrganizationUserEventAsync(orgUser, resetPasswordKey != null ?
@@ -2073,7 +1984,7 @@ namespace Bit.Core.Services
                     }
                 }
             }
-            
+
             await _referenceEventService.RaiseEventAsync(
                 new ReferenceEvent(ReferenceEventType.DirectorySynced, organization));
         }
@@ -2116,7 +2027,7 @@ namespace Bit.Core.Services
             org.PublicKey = publicKey;
             org.PrivateKey = privateKey;
             await UpdateAsync(org);
-            
+
             return org;
         }
 

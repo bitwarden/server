@@ -1,3 +1,4 @@
+---
 name: Release
 
 on:
@@ -13,7 +14,6 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       release_upload_url: ${{ steps.create_release.outputs.upload_url }}
-      release_version: ${{ steps.create_tags.outputs.package_version }}
       tag_version: ${{ steps.create_tags.outputs.tag_version }}
     steps:
       - name: Branch check
@@ -66,11 +66,10 @@ jobs:
   upload:
     name: Upload
     runs-on: ubuntu-latest
-    needs: 
+    needs:
       - setup
     env:
-      RELEASE_VERSION: ${{ needs.setup.outputs.release_version }}
-      TAG_VERSION: ${{ needs.setup.outputs.tag_version }}
+      _TAG_VERSION: ${{ needs.setup.outputs.tag_version }}
     steps:
       - name: Checkout repo
         uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
@@ -124,6 +123,6 @@ jobs:
             -a ./swagger.json \
             -a ./docker-stub.zip \
             -m "" \
-            $TAG_VERSION
+            $_TAG_VERSION
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -13,6 +13,7 @@ namespace Bit.Core.Services
         private readonly GlobalSettings _globalSettings;
         private readonly ILogger<MailKitSmtpMailDeliveryService> _logger;
         private readonly string _replyDomain;
+        private readonly string _replyEmail;
 
         public MailKitSmtpMailDeliveryService(
             GlobalSettings globalSettings,
@@ -22,9 +23,12 @@ namespace Bit.Core.Services
             {
                 throw new ArgumentNullException(nameof(globalSettings.Mail.Smtp.Host));
             }
-            if (globalSettings.Mail?.ReplyToEmail?.Contains("@") ?? false)
+
+            _replyEmail = CoreHelpers.PunyEncode(globalSettings.Mail?.ReplyToEmail);
+
+            if (_replyEmail.Contains("@"))
             {
-                _replyDomain = globalSettings.Mail.ReplyToEmail.Split('@')[1];
+                _replyDomain = _replyEmail.Split('@')[1];
             }
 
             _globalSettings = globalSettings;
@@ -34,7 +38,7 @@ namespace Bit.Core.Services
         public async Task SendEmailAsync(Models.Mail.MailMessage message)
         {
             var mimeMessage = new MimeMessage();
-            mimeMessage.From.Add(new MailboxAddress(_globalSettings.SiteName, _globalSettings.Mail.ReplyToEmail));
+            mimeMessage.From.Add(new MailboxAddress(_globalSettings.SiteName, _replyEmail));
             mimeMessage.Subject = message.Subject;
             if (!string.IsNullOrWhiteSpace(_replyDomain))
             {
@@ -43,14 +47,16 @@ namespace Bit.Core.Services
 
             foreach (var address in message.ToEmails)
             {
-                mimeMessage.To.Add(MailboxAddress.Parse(address));
+                var punyencoded = CoreHelpers.PunyEncode(address);
+                mimeMessage.To.Add(MailboxAddress.Parse(punyencoded));
             }
 
             if (message.BccEmails != null)
             {
                 foreach (var address in message.BccEmails)
                 {
-                    mimeMessage.Bcc.Add(MailboxAddress.Parse(address));
+                    var punyencoded = CoreHelpers.PunyEncode(address);
+                    mimeMessage.Bcc.Add(MailboxAddress.Parse(punyencoded));
                 }
             }
 

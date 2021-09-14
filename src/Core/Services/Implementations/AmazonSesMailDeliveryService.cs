@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Bit.Core.Models.Mail;
 using Bit.Core.Settings;
+using Bit.Core.Utilities;
 using System.Linq;
 using Amazon.SimpleEmail;
 using Amazon;
@@ -54,11 +55,13 @@ namespace Bit.Core.Services
                 throw new ArgumentNullException(nameof(globalSettings.Amazon.Region));
             }
 
+            var replyToEmail = CoreHelpers.PunyEncode(globalSettings.Mail.ReplyToEmail);
+
             _globalSettings = globalSettings;
             _hostingEnvironment = hostingEnvironment;
             _logger = logger;
             _client = amazonSimpleEmailService;
-            _source = $"\"{globalSettings.SiteName}\" <{globalSettings.Mail.ReplyToEmail}>";
+            _source = $"\"{globalSettings.SiteName}\" <{replyToEmail}>";
             _senderTag = $"Server_{globalSettings.ProjectName?.Replace(' ', '_')}";
             if (!string.IsNullOrWhiteSpace(_globalSettings.Mail.AmazonConfigSetName))
             {
@@ -79,7 +82,9 @@ namespace Bit.Core.Services
                 Source = _source,
                 Destination = new Destination
                 {
-                    ToAddresses = message.ToEmails.ToList()
+                    ToAddresses = message.ToEmails
+                        .Select(email => CoreHelpers.PunyEncode(email))
+                        .ToList()
                 },
                 Message = new Message
                 {
@@ -107,7 +112,9 @@ namespace Bit.Core.Services
 
             if (message.BccEmails?.Any() ?? false)
             {
-                request.Destination.BccAddresses = message.BccEmails.ToList();
+                request.Destination.BccAddresses = message.BccEmails
+                    .Select(email => CoreHelpers.PunyEncode(email))
+                    .ToList();
             }
 
             if (!string.IsNullOrWhiteSpace(message.Category))

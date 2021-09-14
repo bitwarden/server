@@ -13,7 +13,7 @@ BEGIN
 ALTER TABLE
     [dbo].[Organization]
     ADD
-    [MaxAutoscaleSeats] VARCHAR(MAX) NULL
+    [MaxAutoscaleSeats] INT NULL
 END
 GO
 

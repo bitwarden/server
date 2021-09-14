@@ -27,6 +27,7 @@ using Bit.Core.Enums.Provider;
 using Azure.Storage.Queues;
 using Azure.Storage.Queues.Models;
 using System.Threading;
+using MimeKit;
 
 namespace Bit.Core.Utilities
 {
@@ -486,6 +487,31 @@ namespace Bit.Core.Utilities
 
             // Standard base64 decoder
             return Convert.FromBase64String(output);
+        }
+
+        public static string PunyEncode(string text)
+        {
+            if (text == "")
+            {
+                return "";
+            }
+
+            if (text == null)
+            {
+                return null;
+            }
+
+            if (!text.Contains("@"))
+            {
+                // Assume domain name or non-email address
+                var idn = new IdnMapping();
+                return idn.GetAscii(text);
+            }
+            else
+            {
+                // Assume email address
+                return MailboxAddress.EncodeAddrspec(text);
+            }
         }
 
         public static string FormatLicenseSignatureValue(object val)
