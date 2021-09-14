@@ -72,5 +72,19 @@ namespace Bit.Core.Repositories.SqlServer
                 return results.ToList();
             }
         }
+
+        public async Task<int> GetCountByTypeApplicableToUserIdAsync(Guid userId, PolicyType policyType,
+            OrganizationUserStatusType minStatus) 
+        {
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                var result = await connection.ExecuteScalarAsync<int>(
+                    $"[{Schema}].[{Table}_CountByTypeApplicableToUser]",
+                    new { UserId = userId, PolicyType = policyType, MinimumStatus = minStatus },
+                    commandType: CommandType.StoredProcedure);
+
+                return result;
+            }
+        }
     }
 }

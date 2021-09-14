@@ -6,7 +6,6 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
-using Bit.Core.Context;
 
 namespace Bit.Core.Services
 {

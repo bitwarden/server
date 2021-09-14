@@ -1298,13 +1298,13 @@ namespace Bit.Core.Services
 
         private async Task CheckPoliciesOnTwoFactorRemovalAsync(User user, IOrganizationService organizationService)
         {
-            var twoFactorOrgUsers = await _organizationUserRepository.GetManyByApplicablePolicyTypeAsync(user.Id,
+            var twoFactorPolicies = await _policyRepository.GetManyByTypeApplicableToUserIdAsync(user.Id,
                 PolicyType.TwoFactorAuthentication);
 
-            var removeOrgUserTasks = twoFactorOrgUsers.Select(async ou =>
+            var removeOrgUserTasks = twoFactorPolicies.Select(async p =>
             {
-                await organizationService.DeleteUserAsync(ou.OrganizationId, user.Id);
-                var organization = await _organizationRepository.GetByIdAsync(ou.OrganizationId);
+                await organizationService.DeleteUserAsync(p.OrganizationId, user.Id);
+                var organization = await _organizationRepository.GetByIdAsync(p.OrganizationId);
                 await _mailService.SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(
                     organization.Name, user.Email);
             }).ToArray();

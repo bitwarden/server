@@ -61,5 +61,12 @@ namespace Bit.Core.Repositories.EntityFramework
             // TODO
             return await Task.FromResult(new List<Policy>());
         }
+
+        public async Task<int> GetCountByTypeApplicableToUserIdAsync(Guid userId, PolicyType policyType,
+                    OrganizationUserStatusType minStatus)
+        {
+            // TODO
+            return await Task.FromResult(0);
+        }
     }
 }

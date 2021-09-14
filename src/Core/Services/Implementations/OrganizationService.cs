@@ -642,8 +642,8 @@ namespace Bit.Core.Services
 
         private async Task ValidateSignUpPoliciesAsync(Guid ownerId)
         {
-            var singleOrgOrgUsers = await _organizationUserRepository.GetManyByApplicablePolicyTypeAsync(ownerId, PolicyType.SingleOrg);
-            if (singleOrgOrgUsers.Any())
+            var singleOrgPolicyCount = await _policyRepository.GetCountByTypeApplicableToUserIdAsync(ownerId, PolicyType.SingleOrg);
+            if (singleOrgPolicyCount > 0)
             {
                 throw new BadRequestException("You may not create an organization. You belong to an organization " +
                     "which has a policy that prohibits you from being a member of any other organization.");
@@ -1373,17 +1373,19 @@ namespace Bit.Core.Services
             // Enforce Single Organization Policy of organization user is trying to join
             var allOrgUsers = await _organizationUserRepository.GetManyByUserAsync(user.Id);
             var hasOtherOrgs = allOrgUsers.Any(ou => ou.OrganizationId != orgUser.OrganizationId);
-            var singleOrgOrgUsers = await _organizationUserRepository.GetManyByApplicablePolicyTypeAsync(user.Id,
+            var invitedSingleOrgPolicies = await _policyRepository.GetManyByTypeApplicableToUserIdAsync(user.Id,
                 PolicyType.SingleOrg, OrganizationUserStatusType.Invited);
 
-            if (hasOtherOrgs && singleOrgOrgUsers.Any(ou => ou.OrganizationId == orgUser.OrganizationId))
+            if (hasOtherOrgs && invitedSingleOrgPolicies.Any(p => p.OrganizationId == orgUser.OrganizationId))
             {
                 throw new BadRequestException("You may not join this organization until you leave or remove " +
                     "all other organizations.");
             }
 
             // Enforce Single Organization Policy of other organizations user is a member of
-            if (singleOrgOrgUsers.Any(ou => ou.Status >= OrganizationUserStatusType.Accepted))
+            var singleOrgPolicyCount = await _policyRepository.GetCountByTypeApplicableToUserIdAsync(user.Id,
+                PolicyType.SingleOrg);
+            if (singleOrgPolicyCount > 0)
             {
                 throw new BadRequestException("You cannot join this organization because you are a member of " +
                     "another organization which forbids it");
@@ -1392,9 +1394,9 @@ namespace Bit.Core.Services
             // Enforce Two Factor Authentication Policy of organization user is trying to join
             if (!await userService.TwoFactorIsEnabledAsync(user))
             {
-                var twoFactorOrgUsers = await _organizationUserRepository.GetManyByApplicablePolicyTypeAsync(user.Id,
+                var invitedTwoFactorPolicies = await _policyRepository.GetManyByTypeApplicableToUserIdAsync(user.Id,
                     PolicyType.TwoFactorAuthentication, OrganizationUserStatusType.Invited);
-                if (twoFactorOrgUsers.Any(ou => ou.OrganizationId == orgUser.OrganizationId))
+                if (invitedTwoFactorPolicies.Any(p => p.OrganizationId == orgUser.OrganizationId))
                 {
                     throw new BadRequestException("You cannot join this organization until you enable " +
                         "two-step login on your user account.");

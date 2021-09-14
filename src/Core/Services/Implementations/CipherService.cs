@@ -26,12 +26,12 @@ namespace Bit.Core.Services
         private readonly ICollectionRepository _collectionRepository;
         private readonly IUserRepository _userRepository;
         private readonly IOrganizationRepository _organizationRepository;
-        private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly ICollectionCipherRepository _collectionCipherRepository;
         private readonly IPushNotificationService _pushService;
         private readonly IAttachmentStorageService _attachmentStorageService;
         private readonly IEventService _eventService;
         private readonly IUserService _userService;
+        private readonly IPolicyRepository _policyRepository;
         private readonly GlobalSettings _globalSettings;
         private const long _fileSizeLeeway = 1024L * 1024L; // 1MB 
         private readonly IReferenceEventService _referenceEventService;
@@ -42,12 +42,12 @@ namespace Bit.Core.Services
             ICollectionRepository collectionRepository,
             IUserRepository userRepository,
             IOrganizationRepository organizationRepository,
-            IOrganizationUserRepository organizationUserRepository,
             ICollectionCipherRepository collectionCipherRepository,
             IPushNotificationService pushService,
             IAttachmentStorageService attachmentStorageService,
             IEventService eventService,
             IUserService userService,
+            IPolicyRepository policyRepository,
             GlobalSettings globalSettings,
             IReferenceEventService referenceEventService)
         {
@@ -56,12 +56,12 @@ namespace Bit.Core.Services
             _collectionRepository = collectionRepository;
             _userRepository = userRepository;
             _organizationRepository = organizationRepository;
-            _organizationUserRepository = organizationUserRepository;
             _collectionCipherRepository = collectionCipherRepository;
             _pushService = pushService;
             _attachmentStorageService = attachmentStorageService;
             _eventService = eventService;
             _userService = userService;
+            _policyRepository = policyRepository;
             _globalSettings = globalSettings;
             _referenceEventService = referenceEventService;
         }
@@ -136,9 +136,9 @@ namespace Bit.Core.Services
                 else
                 {
                     // Make sure the user can save new ciphers to their personal vault
-                    var personalOwnershipOrgUsers = await _organizationUserRepository.GetManyByApplicablePolicyTypeAsync(savingUserId,
+                    var personalOwnershipPolicyCount = await _policyRepository.GetCountByTypeApplicableToUserIdAsync(savingUserId,
                         PolicyType.PersonalOwnership);
-                    if (personalOwnershipOrgUsers.Any())
+                    if (personalOwnershipPolicyCount > 0)
                     {
                         throw new BadRequestException("Due to an Enterprise Policy, you are restricted from saving items to your personal vault.");
                     }

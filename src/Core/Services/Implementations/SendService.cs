@@ -22,10 +22,9 @@ namespace Bit.Core.Services
         public const string MAX_FILE_SIZE_READABLE = "500 MB";
         private readonly ISendRepository _sendRepository;
         private readonly IUserRepository _userRepository;
+        private readonly IPolicyRepository _policyRepository;
         private readonly IUserService _userService;
         private readonly IOrganizationRepository _organizationRepository;
-        private readonly IOrganizationUserRepository _organizationUserRepository;
-        private readonly IPolicyRepository _policyRepository;
         private readonly ISendFileStorageService _sendFileStorageService;
         private readonly IPasswordHasher<User> _passwordHasher;
         private readonly IPushNotificationService _pushService;
@@ -39,21 +38,19 @@ namespace Bit.Core.Services
             IUserRepository userRepository,
             IUserService userService,
             IOrganizationRepository organizationRepository,
-            IOrganizationUserRepository organizationUserRepository,
-            IPolicyRepository policyRepository,
             ISendFileStorageService sendFileStorageService,
             IPasswordHasher<User> passwordHasher,
             IPushNotificationService pushService,
             IReferenceEventService referenceEventService,
             GlobalSettings globalSettings,
+            IPolicyRepository policyRepository,
             ICurrentContext currentContext)
         {
             _sendRepository = sendRepository;
             _userRepository = userRepository;
             _userService = userService;
-            _organizationRepository = organizationRepository;
-            _organizationUserRepository = organizationUserRepository;
             _policyRepository = policyRepository;
+            _organizationRepository = organizationRepository;
             _sendFileStorageService = sendFileStorageService;
             _passwordHasher = passwordHasher;
             _pushService = pushService;
@@ -284,17 +281,17 @@ namespace Bit.Core.Services
                 return;
             }
 
-            var disableSendOrgUsers = await _organizationUserRepository.GetManyByApplicablePolicyTypeAsync(userId.Value,
+            var disableSendPolicyCount = await _policyRepository.GetCountByTypeApplicableToUserIdAsync(userId.Value,
                 PolicyType.DisableSend);
-            if (disableSendOrgUsers.Any())
+            if (disableSendPolicyCount > 0)
             {
                 throw new BadRequestException("Due to an Enterprise Policy, you are only able to delete an existing Send.");
             }
 
             if (send.HideEmail.GetValueOrDefault())
             {
-                var applicableSendOptionsPolicies = await _policyRepository.GetManyByTypeApplicableToUserIdAsync(userId.Value, PolicyType.SendOptions);
-                foreach (var policy in applicableSendOptionsPolicies)
+                var sendOptionsPolicies = await _policyRepository.GetManyByTypeApplicableToUserIdAsync(userId.Value, PolicyType.SendOptions);
+                foreach (var policy in sendOptionsPolicies)
                 {
                     var data = CoreHelpers.LoadClassFromJsonData<SendOptionsPolicyData>(policy.Data);
                     if (data?.DisableHideEmail ?? false)
