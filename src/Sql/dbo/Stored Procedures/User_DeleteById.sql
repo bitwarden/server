@@ -65,6 +65,13 @@ BEGIN
     WHERE
         [UserId] = @Id
 
+    -- Delete provider users
+    DELETE
+    FROM
+        [dbo].[ProviderUser]
+    WHERE
+        [UserId] = @Id
+
     -- Delete U2F logins
     DELETE
     FROM
