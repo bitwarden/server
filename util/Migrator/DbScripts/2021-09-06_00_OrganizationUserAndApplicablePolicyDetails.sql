@@ -56,6 +56,7 @@ BEGIN
     SELECT *
     FROM [dbo].[PolicyDetailsByUser](@UserId, @PolicyType, @MinimumStatus)
 END
+GO
 
 -- Policy_CountByTypeApplicableToUser
 IF OBJECT_ID('[dbo].[Policy_CountByTypeApplicableToUser]') IS NOT NULL
@@ -72,6 +73,6 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    COUNT(1)
+    SELECT COUNT(1)
     FROM [dbo].[PolicyDetailsByUser](@UserId, @PolicyType, @MinimumStatus)
 END
