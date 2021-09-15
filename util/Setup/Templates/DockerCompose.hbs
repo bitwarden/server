@@ -66,6 +66,9 @@ services:
       - global.env
       - ../env/uid.env
       - ../env/global.override.env
+    networks:
+      - default
+      - public
 
   identity:
     image: bitwarden/identity:{{{CoreVersion}}}
@@ -80,6 +83,9 @@ services:
       - global.env
       - ../env/uid.env
       - ../env/global.override.env
+    networks:
+      - default
+      - public
 
   sso:
     image: bitwarden/sso:{{{CoreVersion}}}
@@ -94,6 +100,9 @@ services:
       - global.env
       - ../env/uid.env
       - ../env/global.override.env
+    networks:
+      - default
+      - public
 
   admin:
     image: bitwarden/admin:{{{CoreVersion}}}
@@ -109,6 +118,9 @@ services:
       - global.env
       - ../env/uid.env
       - ../env/global.override.env
+    networks:
+      - default
+      - public
 
   portal:
     image: bitwarden/portal:{{{CoreVersion}}}
@@ -124,6 +136,9 @@ services:
       - global.env
       - ../env/uid.env
       - ../env/global.override.env
+    networks:
+      - default
+      - public
 
   icons:
     image: bitwarden/icons:{{{CoreVersion}}}
@@ -135,6 +150,9 @@ services:
     env_file:
       - global.env
       - ../env/uid.env
+    networks:
+      - default
+      - public
 
   notifications:
     image: bitwarden/notifications:{{{CoreVersion}}}
@@ -147,6 +165,9 @@ services:
       - global.env
       - ../env/uid.env
       - ../env/global.override.env
+    networks:
+      - default
+      - public
 
   events:
     image: bitwarden/events:{{{CoreVersion}}}
@@ -159,6 +180,9 @@ services:
       - global.env
       - ../env/uid.env
       - ../env/global.override.env
+    networks:
+      - default
+      - public
 
   nginx:
     image: bitwarden/nginx:{{{CoreVersion}}}
@@ -185,6 +209,9 @@ services:
       - ../logs/nginx:/var/log/nginx
     env_file:
       - ../env/uid.env
+    networks:
+      - default
+      - public
 {{#if MssqlDataDockerVolume}}
 
 volumes:
@@ -193,4 +220,6 @@ volumes:
 
 networks:
   default:
-    name: bitwarden_default
+    internal: true
+  public:
+    internal: false
