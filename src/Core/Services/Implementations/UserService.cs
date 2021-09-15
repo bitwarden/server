@@ -216,7 +216,7 @@ namespace Bit.Core.Services
                 {
                     return IdentityResult.Failed(new IdentityError
                     {
-                        Description = "You must leave or delete any organizations that you are the only owner of first."
+                        Description = "Cannot delete this user because it is the sole owner of at least one organization. Please delete these organizations or upgrade another user.",
                     });
                 }
             }
@@ -226,7 +226,7 @@ namespace Bit.Core.Services
             {
                 return IdentityResult.Failed(new IdentityError
                 {
-                    Description = "You must leave or delete any providers that you are the only owner of first."
+                    Description = "Cannot delete this user because it is the sole owner of at least one provider. Please delete these providers or upgrade another user.",
                 });
             }
 

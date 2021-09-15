@@ -16,22 +16,23 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
 
         public IQueryable<ProviderUser> Run(DatabaseContext dbContext)
         {
-            var owners = from ou in dbContext.ProviderUsers
-                where ou.Type == ProviderUserType.ProviderAdmin &&
-                ou.Status == ProviderUserStatusType.Confirmed
-                group ou by ou.ProviderId into g
+            var owners = from pu in dbContext.ProviderUsers
+                where pu.Type == ProviderUserType.ProviderAdmin &&
+                    pu.Status == ProviderUserStatusType.Confirmed
+                group pu by pu.ProviderId into g
                 select new 
                 { 
-                    OrgUser = g.Select(x => new {x.UserId, x.Id}).FirstOrDefault(), ConfirmedOwnerCount = g.Count() 
+                    ProviderUser = g.Select(x => new {x.UserId, x.Id}).FirstOrDefault(),
+                    ConfirmedOwnerCount = g.Count(),
                 };
-                    
+
             var query = from owner in owners
-                join ou in dbContext.ProviderUsers
-                    on owner.OrgUser.Id equals ou.Id
-                where owner.OrgUser.UserId == _userId &&
+                join pu in dbContext.ProviderUsers
+                    on owner.ProviderUser.Id equals pu.Id
+                where owner.ProviderUser.UserId == _userId &&
                     owner.ConfirmedOwnerCount == 1
-                select ou;
-                                
+                select pu;
+
             return query;
         }
     }
