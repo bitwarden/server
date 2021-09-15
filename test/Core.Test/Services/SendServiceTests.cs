@@ -12,24 +12,23 @@ using Bit.Core.Test.AutoFixture;
 using Bit.Core.Test.AutoFixture.SendFixtures;
 using NSubstitute;
 using Xunit;
-using Newtonsoft.Json;
+using System.Text.Json;
 
 namespace Bit.Core.Test.Services
 {
     public class SendServiceTests
     {
-        // Disable Send policy check
-
         private void SaveSendAsync_Setup(SendType sendType, bool disableSendPolicyAppliesToUser,
-            SutProvider<SendService> sutProvider, Send send, bool hideSendEmail = false)
+            SutProvider<SendService> sutProvider, Send send)
         {
             send.Id = default;
             send.Type = sendType;
-            send.HideEmail = hideSendEmail;
 
-            sutProvider.GetDependency<IPolicyService>().PolicyAppliesToCurrentUserAsync(PolicyType.DisableSend,
-                null).Returns(disableSendPolicyAppliesToUser);
+            sutProvider.GetDependency<IPolicyRepository>().GetCountByTypeApplicableToUserIdAsync(
+                Arg.Any<Guid>(), PolicyType.DisableSend).Returns(disableSendPolicyAppliesToUser ? 1 : 0);
         }
+
+        // Disable Send policy check
 
         [Theory]
         [InlineUserSendAutoData(SendType.File)]
@@ -55,22 +54,53 @@ namespace Bit.Core.Test.Services
             await sutProvider.GetDependency<ISendRepository>().Received(1).CreateAsync(send);
         }
 
-        // SendOptionsPolicy.DisableHideEmail check
-        // Filtering the policy data is too closely tied to implementation logic, so we just check to make sure
-        // the SendOptions policy is checked
+        // Send Options Policy - Disable Hide Email check
+
+        private void SaveSendAsync_HideEmail_Setup(bool disableHideEmailAppliesToUser,
+            SutProvider<SendService> sutProvider, Send send, Policy policy)
+        {
+            send.HideEmail = true;
+
+            var sendOptions = new SendOptionsPolicyData
+            {
+                DisableHideEmail = disableHideEmailAppliesToUser
+            };
+            policy.Data = JsonSerializer.Serialize(sendOptions, new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            });
+
+            sutProvider.GetDependency<IPolicyRepository>().GetManyByTypeApplicableToUserIdAsync(
+                Arg.Any<Guid>(), PolicyType.SendOptions).Returns(new List<Policy>
+                {
+                    policy,
+                });
+        }
 
         [Theory]
         [InlineUserSendAutoData(SendType.File)]
         [InlineUserSendAutoData(SendType.Text)]
-        public async void SaveSendAsync_DisableHideEmail_IsChecked(SendType sendType,
-            SutProvider<SendService> sutProvider, Send send, List<Policy> policies)
+        public async void SaveSendAsync_DisableHideEmail_Applies_throws(SendType sendType,
+            SutProvider<SendService> sutProvider, Send send, Policy policy)
         {
-            SaveSendAsync_Setup(sendType, disableSendPolicyAppliesToUser: false, sutProvider, send, hideSendEmail: true);
+            SaveSendAsync_Setup(sendType, false, sutProvider, send);
+            SaveSendAsync_HideEmail_Setup(true, sutProvider, send, policy);
+
+            await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SaveSendAsync(send));
+        }
+
+        [Theory]
+        [InlineUserSendAutoData(SendType.File)]
+        [InlineUserSendAutoData(SendType.Text)]
+        public async void SaveSendAsync_DisableHideEmail_DoesntApply_success(SendType sendType,
+            SutProvider<SendService> sutProvider, Send send, Policy policy)
+        {
+            SaveSendAsync_Setup(sendType, false, sutProvider, send);
+            SaveSendAsync_HideEmail_Setup(false, sutProvider, send, policy);
 
             await sutProvider.Sut.SaveSendAsync(send);
 
-            await sutProvider.GetDependency<IPolicyService>().Received(1).PolicyAppliesToCurrentUserAsync(PolicyType.SendOptions,
-                Arg.Any<Func<Policy, bool>>());
+            await sutProvider.GetDependency<ISendRepository>().Received(1).CreateAsync(send);
         }
     }
 }
