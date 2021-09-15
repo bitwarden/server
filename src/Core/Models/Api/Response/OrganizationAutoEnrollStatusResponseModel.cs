@@ -4,13 +4,13 @@ namespace Bit.Core.Models.Api.Response
 {
     public class OrganizationAutoEnrollStatusResponseModel : ResponseModel
     {
-        public OrganizationAutoEnrollStatusResponseModel(Guid orgId, bool autoEnrollEnabled) : base("organizationAutoEnrollStatus")
+        public OrganizationAutoEnrollStatusResponseModel(Guid orgId, bool resetPasswordEnabled) : base("organizationAutoEnrollStatus")
         {
             Id = orgId.ToString();
-            AutoEnrollEnabled = autoEnrollEnabled;
+            ResetPasswordEnabled = resetPasswordEnabled;
         }
         
         public string Id { get; set; }
-        public bool AutoEnrollEnabled { get; set; }
+        public bool ResetPasswordEnabled { get; set; }
     }
 }
