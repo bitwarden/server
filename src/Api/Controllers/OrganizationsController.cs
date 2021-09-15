@@ -152,8 +152,20 @@ namespace Bit.Api.Controllers
         [HttpGet("{identifier}/auto-enroll-status")]
         public async Task<OrganizationAutoEnrollStatusResponseModel> GetAutoEnrollStatus(string identifier)
         {
+            var user = await _userService.GetUserByPrincipalAsync(User);
+            if (user == null)
+            {
+                throw new UnauthorizedAccessException();
+            }
+            
             var organization = await _organizationRepository.GetByIdentifierAsync(identifier);
             if (organization == null)
+            {
+                throw new NotFoundException();
+            }
+
+            var organizationUser = await _organizationUserRepository.GetByOrganizationAsync(organization.Id, user.Id);
+            if (organizationUser == null)
             {
                 throw new NotFoundException();
             }
