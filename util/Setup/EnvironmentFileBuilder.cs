@@ -75,7 +75,7 @@ namespace Bit.Setup
             _globalOverrideValues = new Dictionary<string, string>
             {
                 ["globalSettings__baseServiceUri__vault"] = _context.Config.Url,
-                ["globalSettings__sqlServer__connectionString"] = $"'{dbConnectionString}'",
+                ["globalSettings__sqlServer__connectionString"] = $"\"{dbConnectionString.Replace("\"", "\\\"")}\"",
                 ["globalSettings__identityServer__certificatePassword"] = _context.Install?.IdentityCertPassword,
                 ["globalSettings__internalIdentityKey"] = _context.Stub ? "RANDOM_IDENTITY_KEY" :
                     Helpers.SecureRandomString(64, alpha: true, numeric: true),
@@ -142,7 +142,7 @@ namespace Bit.Setup
                 }
                 else
                 {
-                    _values.Add(lineParts[0], value);
+                    _values.Add(lineParts[0], value.Replace("\\\"", "\""));
                 }
             }
         }
