@@ -677,26 +677,13 @@ namespace Bit.Core.Services
         {
             var userId = folders.FirstOrDefault()?.UserId ?? ciphers.FirstOrDefault()?.UserId;
 
-            // Check user is allowed to import to personal vault
-            if (userId.HasValue)
+            // Make sure the user can save new ciphers to their personal vault
+            var personalOwnershipPolicyCount = await _policyRepository.GetCountByTypeApplicableToUserIdAsync(userId.Value,
+                PolicyType.PersonalOwnership);
+            if (personalOwnershipPolicyCount > 0)
             {
-                var policies = await _policyRepository.GetManyByUserIdAsync(userId.Value);
-                var allOrgUsers = await _organizationUserRepository.GetManyByUserAsync(userId.Value);
-
-                var orgsWithBlockingPolicy = policies
-                    .Where(p => p.Enabled && p.Type == PolicyType.PersonalOwnership)
-                    .Select(p => p.OrganizationId);
-                var blockedByPolicy = allOrgUsers.Any(ou => 
-                    ou.Type != OrganizationUserType.Owner &&
-                    ou.Type != OrganizationUserType.Admin &&
-                    ou.Status != OrganizationUserStatusType.Invited &&
-                    orgsWithBlockingPolicy.Contains(ou.OrganizationId));
-
-                if (blockedByPolicy)
-                {
-                    throw new BadRequestException("You cannot import items into your personal vault because you are " +
-                        "a member of an organization which forbids it.");
-                }
+                throw new BadRequestException("You cannot import items into your personal vault because you are " +
+                    "a member of an organization which forbids it.");
             }
 
             foreach (var cipher in ciphers)
