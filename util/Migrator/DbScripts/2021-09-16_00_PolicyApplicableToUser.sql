@@ -1,13 +1,11 @@
--- TODO: copy to SQL project once code is settled
-
--- PolicyDetailsByUser
-IF OBJECT_ID('[dbo].[PolicyDetailsByUser]') IS NOT NULL
+-- PolicyApplicableToUser
+IF OBJECT_ID('[dbo].[PolicyApplicableToUser]') IS NOT NULL
 BEGIN
-    DROP FUNCTION [dbo].[PolicyDetailsByUser]
+    DROP FUNCTION [dbo].[PolicyApplicableToUser]
 END
 GO
 
-CREATE FUNCTION [dbo].[PolicyDetailsByUser]
+CREATE FUNCTION [dbo].[PolicyApplicableToUser]
 (
     @UserId UNIQUEIDENTIFIER,
     @PolicyType TINYINT,
@@ -54,7 +52,7 @@ BEGIN
     SET NOCOUNT ON
 
     SELECT *
-    FROM [dbo].[PolicyDetailsByUser](@UserId, @PolicyType, @MinimumStatus)
+    FROM [dbo].[PolicyApplicableToUser](@UserId, @PolicyType, @MinimumStatus)
 END
 GO
 
@@ -74,5 +72,5 @@ BEGIN
     SET NOCOUNT ON
 
     SELECT COUNT(1)
-    FROM [dbo].[PolicyDetailsByUser](@UserId, @PolicyType, @MinimumStatus)
+    FROM [dbo].[PolicyApplicableToUser](@UserId, @PolicyType, @MinimumStatus)
 END
