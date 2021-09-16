@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Bit.Core.Utilities;
 using Bit.Core.Models.Table;
 
 namespace Bit.Core.Models.Api.Request
@@ -6,7 +7,7 @@ namespace Bit.Core.Models.Api.Request
     public class EmergencyAccessInviteRequestModel
     {
         [Required]
-        [EmailAddress]
+        [StrictEmailAddress]
         [StringLength(256)]
         public string Email { get; set; }
         [Required]

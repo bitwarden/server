@@ -155,5 +155,11 @@ namespace Bit.Core.Repositories.EntityFramework
                 return organizationUsers;
             }
         }
+
+        public async Task<int> GetCountByOnlyOwnerAsync(Guid userId)
+        {
+            var query = new ProviderUserReadCountByOnlyOwnerQuery(userId);
+            return await GetCountFromQuery(query);
+        }
     }
 }

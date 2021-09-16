@@ -52,7 +52,7 @@ namespace Bit.Core.Services
         private readonly ICurrentContext _currentContext;
         private readonly GlobalSettings _globalSettings;
         private readonly IOrganizationService _organizationService;
-        private readonly ISendRepository _sendRepository;
+        private readonly IProviderUserRepository _providerUserRepository;
 
         public UserService(
             IUserRepository userRepository,
@@ -81,7 +81,7 @@ namespace Bit.Core.Services
             ICurrentContext currentContext,
             GlobalSettings globalSettings,
             IOrganizationService organizationService,
-            ISendRepository sendRepository)
+            IProviderUserRepository providerUserRepository)
             : base(
                   store,
                   optionsAccessor,
@@ -115,7 +115,7 @@ namespace Bit.Core.Services
             _currentContext = currentContext;
             _globalSettings = globalSettings;
             _organizationService = organizationService;
-            _sendRepository = sendRepository;
+            _providerUserRepository = providerUserRepository;
         }
 
         public Guid? GetProperUserId(ClaimsPrincipal principal)
@@ -216,9 +216,18 @@ namespace Bit.Core.Services
                 {
                     return IdentityResult.Failed(new IdentityError
                     {
-                        Description = "You must leave or delete any organizations that you are the only owner of first."
+                        Description = "Cannot delete this user because it is the sole owner of at least one organization. Please delete these organizations or upgrade another user.",
                     });
                 }
+            }
+
+            var onlyOwnerProviderCount = await _providerUserRepository.GetCountByOnlyOwnerAsync(user.Id);
+            if (onlyOwnerProviderCount > 0)
+            {
+                return IdentityResult.Failed(new IdentityError
+                {
+                    Description = "Cannot delete this user because it is the sole owner of at least one provider. Please delete these providers or upgrade another user.",
+                });
             }
 
             if (!string.IsNullOrWhiteSpace(user.GatewaySubscriptionId))
@@ -690,11 +699,7 @@ namespace Bit.Core.Services
 
             user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
             user.Key = key;
-            
-            /* 
-            The reset password flow is disabled for the August 2021 release.
-            user.ForcePasswordReset = true; 
-            */
+            user.ForcePasswordReset = true;
 
             await _userRepository.ReplaceAsync(user);
             await _mailService.SendAdminResetPasswordEmailAsync(user.Email, user.Name ?? user.Email, org.Name);

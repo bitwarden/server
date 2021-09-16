@@ -74,6 +74,7 @@
     <Build Include="dbo\Stored Procedures\Event_ReadPageByProviderIdActingUserId.sql" />
     <Build Include="dbo\Stored Procedures\ProviderOrganization_ReadByOrganizationId.sql" />
     <Build Include="dbo\Stored Procedures\ProviderUserProviderOrganizationDetails_ReadByUserIdStatus.sql" />
+    <Build Include="dbo\Stored Procedures\ProviderUser_ReadCountByOnlyOwner.sql" />
     <Build Include="dbo\Stored Procedures\SsoConfig_Create.sql" />
     <Build Include="dbo\Stored Procedures\SsoConfig_ReadByIdentifier.sql" />
     <Build Include="dbo\Stored Procedures\SsoConfig_ReadByOrganizationId.sql" />
@@ -132,6 +133,7 @@
     <Build Include="dbo\Stored Procedures\OrganizationUser_ReadByUserId.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUser_ReadCountByFreeOrganizationAdminUser.sql" />
     <Build Include="dbo\Stored Procedures\User_ReadAccountRevisionDateById.sql" />
+    <Build Include="dbo\Stored Procedures\OrganizationUser_ReadByMinimumRole.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUser_ReadCountByOrganizationId.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUser_ReadCountByOnlyOwner.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUser_SelectKnownEmails.sql" />
@@ -299,6 +301,7 @@
     <Build Include="dbo\Stored Procedures\User_ReadBySsoUserOrganizationIdExternalId.sql" />
     <Build Include="dbo\Stored Procedures\SsoUser_Update.sql" />
     <Build Include="dbo\Stored Procedures\SsoUser_ReadById.sql" />
+    <Build Include="dbo\Stored Procedures\SsoUser_ReadByUserIdOrganizationId.sql" />
     <Build Include="dbo\Stored Procedures\Cipher_DeleteByIdsOrganizationId.sql" />
     <Build Include="dbo\Stored Procedures\Cipher_SoftDeleteByIdsOrganizationId.sql" />
     <Build Include="dbo\Stored Procedures\Organization_ReadByIdentifier.sql" />

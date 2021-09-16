@@ -1,3 +1,4 @@
+---
 name: Build
 
 on:
@@ -173,7 +174,7 @@ jobs:
         uses: Azure/get-keyvault-secrets@80ccd3fafe5662407cc2e55f202ee34bfff8c403
         with:
           keyvault: "bitwarden-prod-kv"
-          secrets: "docker-password, 
+          secrets: "docker-password,
                     docker-username,
                     dct-delegate-2-repo-passphrase,
                     dct-delegate-2-key"

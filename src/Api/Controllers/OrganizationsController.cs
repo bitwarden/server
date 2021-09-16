@@ -10,10 +10,12 @@ using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Core.Context;
 using Bit.Api.Utilities;
+using Bit.Core.Models.Api.Response;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
 using Bit.Core.Utilities;
 using Bit.Core.Settings;
+using Newtonsoft.Json;
 
 namespace Bit.Api.Controllers
 {
@@ -23,6 +25,7 @@ namespace Bit.Api.Controllers
     {
         private readonly IOrganizationRepository _organizationRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
+        private readonly IPolicyRepository _policyRepository;
         private readonly IOrganizationService _organizationService;
         private readonly IUserService _userService;
         private readonly IPaymentService _paymentService;
@@ -32,6 +35,7 @@ namespace Bit.Api.Controllers
         public OrganizationsController(
             IOrganizationRepository organizationRepository,
             IOrganizationUserRepository organizationUserRepository,
+            IPolicyRepository policyRepository,
             IOrganizationService organizationService,
             IUserService userService,
             IPaymentService paymentService,
@@ -40,6 +44,7 @@ namespace Bit.Api.Controllers
         {
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
+            _policyRepository = policyRepository;
             _organizationService = organizationService;
             _userService = userService;
             _paymentService = paymentService;
@@ -142,6 +147,38 @@ namespace Bit.Api.Controllers
                 OrganizationUserStatusType.Confirmed);
             var responses = organizations.Select(o => new ProfileOrganizationResponseModel(o));
             return new ListResponseModel<ProfileOrganizationResponseModel>(responses);
+        }
+        
+        [HttpGet("{identifier}/auto-enroll-status")]
+        public async Task<OrganizationAutoEnrollStatusResponseModel> GetAutoEnrollStatus(string identifier)
+        {
+            var user = await _userService.GetUserByPrincipalAsync(User);
+            if (user == null)
+            {
+                throw new UnauthorizedAccessException();
+            }
+            
+            var organization = await _organizationRepository.GetByIdentifierAsync(identifier);
+            if (organization == null)
+            {
+                throw new NotFoundException();
+            }
+
+            var organizationUser = await _organizationUserRepository.GetByOrganizationAsync(organization.Id, user.Id);
+            if (organizationUser == null)
+            {
+                throw new NotFoundException();
+            }
+
+            var resetPasswordPolicy =
+                await _policyRepository.GetByOrganizationIdTypeAsync(organization.Id, PolicyType.ResetPassword);
+            if (resetPasswordPolicy == null || !resetPasswordPolicy.Enabled || resetPasswordPolicy.Data == null)
+            {
+                return new OrganizationAutoEnrollStatusResponseModel(organization.Id, false);
+            }
+            
+            var data = JsonConvert.DeserializeObject<ResetPasswordDataModel>(resetPasswordPolicy.Data);
+            return new OrganizationAutoEnrollStatusResponseModel(organization.Id, data?.AutoEnrollEnabled ?? false);
         }
 
         [HttpPost("")]

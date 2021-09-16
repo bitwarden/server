@@ -1,8 +1,9 @@
+---
 name: QA Deploy
 
 on:
   workflow_dispatch:
-    inputs: 
+    inputs:
       migrateDb:
         required: true
         default: "true"
@@ -12,6 +13,7 @@ on:
 
 jobs:
   build:
+    name: Build
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -154,13 +156,14 @@ jobs:
           for f in `ls -v ./*.sql`; do
             echo "Executing file: ${f}..."
             sqlcmd -S $MSSQL_HOST -d vault -U $MSSQL_USER -P $MSSQL_PASS -I -i $f
-          done;        
+          done;
 
 
   deploy:
+    name: Deploy
     runs-on: ubuntu-latest
     if: always()
-    needs: 
+    needs:
       - reset-db
       - update-db
     strategy:
@@ -196,15 +199,26 @@ jobs:
       - name: Retrieve secrets
         id: retrieve-secrets
         env:
-           VAULT_NAME: "bitwarden-qa-kv"
+          VAULT_NAME: "bitwarden-qa-kv"
         run: |
           webapp_name=$(az keyvault secret show --vault-name $VAULT_NAME --name appservices-${{ steps.setup.outputs.name_lower }}-webapp-name --query value --output tsv)
           echo "::add-mask::$webapp_name"
           echo "::set-output name=webapp-name::$webapp_name"
 
+      - name: Stop App Service
+        if: false
+        env:
+          AZURE_RESOURCE_GROUP: "bw-qa-env"
+        run: az webapp stop --name ${{ steps.retrieve-secrets.outputs.webapp-name }} --resource-group $AZURE_RESOURCE_GROUP
+
       - name: Deploy App
         uses: azure/webapps-deploy@798e43877120eda6a2a690a4f212c545e586ae31
         with:
-          app-name: ${{ steps.retrieve-secrets.outputs.webapp-name }} 
-          slot-name: "staging"
+          app-name: ${{ steps.retrieve-secrets.outputs.webapp-name }}
           package: ./${{ matrix.name }}.zip
+
+      - name: Start App Service
+        if: false
+        env:
+          AZURE_RESOURCE_GROUP: "bw-qa-env"
+        run: az webapp start --name ${{ steps.retrieve-secrets.outputs.webapp-name }} --resource-group $AZURE_RESOURCE_GROUP

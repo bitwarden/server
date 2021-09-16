@@ -45,7 +45,7 @@ namespace Bit.Core.Test.Services
         private readonly CurrentContext _currentContext;
         private readonly GlobalSettings _globalSettings;
         private readonly IOrganizationService _organizationService;
-        private readonly ISendRepository _sendRepository;
+        private readonly IProviderUserRepository _providerUserRepository;
 
         public UserServiceTests()
         {
@@ -75,7 +75,7 @@ namespace Bit.Core.Test.Services
             _currentContext = new CurrentContext(null);
             _globalSettings = new GlobalSettings();
             _organizationService = Substitute.For<IOrganizationService>();
-            _sendRepository = Substitute.For<ISendRepository>();
+            _providerUserRepository = Substitute.For<IProviderUserRepository>();
 
             _sut = new UserService(
                 _userRepository,
@@ -104,7 +104,7 @@ namespace Bit.Core.Test.Services
                 _currentContext,
                 _globalSettings,
                 _organizationService,
-                _sendRepository
+                _providerUserRepository
             );
         }
 

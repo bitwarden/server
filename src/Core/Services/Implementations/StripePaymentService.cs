@@ -13,6 +13,7 @@ using Bit.Core.Settings;
 using Microsoft.Extensions.Logging;
 using StripeTaxRate = Stripe.TaxRate;
 using TaxRate = Bit.Core.Models.Table.TaxRate;
+using StaticStore = Bit.Core.Models.StaticStore;
 
 namespace Bit.Core.Services
 {
@@ -54,7 +55,7 @@ namespace Bit.Core.Services
         }
 
         public async Task<string> PurchaseOrganizationAsync(Organization org, PaymentMethodType paymentMethodType,
-            string paymentToken, Models.StaticStore.Plan plan, short additionalStorageGb,
+            string paymentToken, StaticStore.Plan plan, short additionalStorageGb,
             int additionalSeats, bool premiumAccessAddon, TaxInfo taxInfo)
         {
             var customerService = new CustomerService();
@@ -106,7 +107,7 @@ namespace Bit.Core.Services
 
             if (taxInfo != null && !string.IsNullOrWhiteSpace(taxInfo.BillingAddressCountry) && !string.IsNullOrWhiteSpace(taxInfo.BillingAddressPostalCode))
             {
-                var taxRateSearch = new TaxRate() 
+                var taxRateSearch = new TaxRate
                 {
                     Country = taxInfo.BillingAddressCountry,
                     PostalCode = taxInfo.BillingAddressPostalCode
@@ -201,7 +202,7 @@ namespace Bit.Core.Services
             }
         }
 
-        public async Task<string> UpgradeFreeOrganizationAsync(Organization org, Models.StaticStore.Plan plan,
+        public async Task<string> UpgradeFreeOrganizationAsync(Organization org, StaticStore.Plan plan,
             short additionalStorageGb, int additionalSeats, bool premiumAccessAddon, TaxInfo taxInfo)
         {
             if (!string.IsNullOrWhiteSpace(org.GatewaySubscriptionId))
@@ -221,7 +222,7 @@ namespace Bit.Core.Services
 
             if (taxInfo != null && !string.IsNullOrWhiteSpace(taxInfo.BillingAddressCountry) && !string.IsNullOrWhiteSpace(taxInfo.BillingAddressPostalCode))
             {
-                var taxRateSearch = new TaxRate() 
+                var taxRateSearch = new TaxRate
                 {
                     Country = taxInfo.BillingAddressCountry,
                     PostalCode = taxInfo.BillingAddressPostalCode
@@ -445,8 +446,8 @@ namespace Bit.Core.Services
                 Quantity = 1,
             });
 
-            if (!string.IsNullOrWhiteSpace(taxInfo?.BillingAddressCountry) 
-                    && !string.IsNullOrWhiteSpace(taxInfo?.BillingAddressPostalCode)) 
+            if (!string.IsNullOrWhiteSpace(taxInfo?.BillingAddressCountry)
+                    && !string.IsNullOrWhiteSpace(taxInfo?.BillingAddressPostalCode))
             {
                 var taxRates = await _taxRateRepository.GetByLocationAsync(
                     new Bit.Core.Models.Table.TaxRate()
@@ -458,9 +459,9 @@ namespace Bit.Core.Services
                 var taxRate = taxRates.FirstOrDefault();
                 if (taxRate != null)
                 {
-                    subCreateOptions.DefaultTaxRates = new List<string>(1) 
-                    { 
-                        taxRate.Id 
+                    subCreateOptions.DefaultTaxRates = new List<string>(1)
+                    {
+                        taxRate.Id
                     };
                 }
             }
@@ -692,8 +693,8 @@ namespace Bit.Core.Services
             }).ToList();
         }
 
-        public async Task<string> AdjustStorageAsync(IStorableSubscriber storableSubscriber, int additionalStorage,
-            string storagePlanId)
+        private async Task<string> FinalizeSubscriptionChangeAsync(IStorableSubscriber storableSubscriber,
+            SubscriptionUpdate subscriptionUpdate)
         {
             var subscriptionService = new SubscriptionService();
             var sub = await subscriptionService.GetAsync(storableSubscriber.GatewaySubscriptionId);
@@ -703,30 +704,22 @@ namespace Bit.Core.Services
             }
 
             var prorationDate = DateTime.UtcNow;
-            var storageItem = sub.Items?.FirstOrDefault(i => i.Plan.Id == storagePlanId);
-            // Retain original collection method
             var collectionMethod = sub.CollectionMethod;
+            var daysUntilDue = sub.DaysUntilDue;
+            var chargeNow = collectionMethod == "charge_automatically";
+            var updatedItemOptions = subscriptionUpdate.UpgradeItemOptions(sub);
 
             var subUpdateOptions = new SubscriptionUpdateOptions
             {
-                Items = new List<SubscriptionItemOptions>
-                {
-                    new SubscriptionItemOptions
-                    {
-                        Id = storageItem?.Id,
-                        Plan = storagePlanId,
-                        Quantity = additionalStorage,
-                        Deleted = (storageItem?.Id != null && additionalStorage == 0) ? true : (bool?)null
-                    }
-                },
+                Items = new List<SubscriptionItemOptions> { updatedItemOptions },
                 ProrationBehavior = "always_invoice",
-                DaysUntilDue = 1,
+                DaysUntilDue = daysUntilDue ?? 1,
                 CollectionMethod = "send_invoice",
                 ProrationDate = prorationDate,
             };
 
             var customer = await new CustomerService().GetAsync(sub.CustomerId);
-            if (!string.IsNullOrWhiteSpace(customer?.Address?.Country) 
+            if (!string.IsNullOrWhiteSpace(customer?.Address?.Country)
                     && !string.IsNullOrWhiteSpace(customer?.Address?.PostalCode))
             {
                 var taxRates = await _taxRateRepository.GetByLocationAsync(
@@ -739,9 +732,9 @@ namespace Bit.Core.Services
                 var taxRate = taxRates.FirstOrDefault();
                 if (taxRate != null && !sub.DefaultTaxRates.Any(x => x.Equals(taxRate.Id)))
                 {
-                    subUpdateOptions.DefaultTaxRates = new List<string>(1) 
-                    { 
-                        taxRate.Id 
+                    subUpdateOptions.DefaultTaxRates = new List<string>(1)
+                    {
+                        taxRate.Id
                     };
                 }
             }
@@ -749,48 +742,64 @@ namespace Bit.Core.Services
             var subResponse = await subscriptionService.UpdateAsync(sub.Id, subUpdateOptions);
 
             string paymentIntentClientSecret = null;
-            if (additionalStorage > 0)
+            if (updatedItemOptions.Quantity > 0)
             {
                 try
                 {
-                    paymentIntentClientSecret = await PayInvoiceAfterSubscriptionChangeAsync(
-                        storableSubscriber, subResponse?.LatestInvoiceId);
+                    if (chargeNow)
+                    {
+                        paymentIntentClientSecret = await PayInvoiceAfterSubscriptionChangeAsync(
+                            storableSubscriber, subResponse?.LatestInvoiceId);
+                    }
+                    else
+                    {
+                        var invoiceService = new InvoiceService();
+                        var invoice = await invoiceService.FinalizeInvoiceAsync(subResponse.LatestInvoiceId, new InvoiceFinalizeOptions
+                        {
+                            AutoAdvance = false,
+                        });
+                        await invoiceService.SendInvoiceAsync(invoice.Id, new InvoiceSendOptions());
+                        paymentIntentClientSecret = null;
+                    }
                 }
                 catch
                 {
                     // Need to revert the subscription
                     await subscriptionService.UpdateAsync(sub.Id, new SubscriptionUpdateOptions
                     {
-                        Items = new List<SubscriptionItemOptions>
-                        {
-                            new SubscriptionItemOptions
-                            {
-                                Id = storageItem?.Id,
-                                Plan = storagePlanId,
-                                Quantity = storageItem?.Quantity ?? 0,
-                                Deleted = (storageItem?.Id == null || (storageItem?.Quantity ?? 0) == 0)
-                                    ? true : (bool?)null
-                            }
-                        },
+                        Items = new List<SubscriptionItemOptions> { subscriptionUpdate.RevertItemOptions(sub) },
                         // This proration behavior prevents a false "credit" from
                         //  being applied forward to the next month's invoice
                         ProrationBehavior = "none",
                         CollectionMethod = collectionMethod,
+                        DaysUntilDue = daysUntilDue,
                     });
                     throw;
                 }
             }
 
-            // Change back the subscription collection method
-            if (collectionMethod != "send_invoice")
+            // Change back the subscription collection method and/or days until due
+            if (collectionMethod != "send_invoice" || daysUntilDue == null)
             {
                 await subscriptionService.UpdateAsync(sub.Id, new SubscriptionUpdateOptions
                 {
                     CollectionMethod = collectionMethod,
+                    DaysUntilDue = daysUntilDue,
                 });
             }
 
             return paymentIntentClientSecret;
+        }
+
+        public Task<string> AdjustSeatsAsync(Organization organization, StaticStore.Plan plan, int additionalSeats)
+        {
+            return FinalizeSubscriptionChangeAsync(organization, new SeatSubscriptionUpdate(organization, plan, additionalSeats));
+        }
+
+        public Task<string> AdjustStorageAsync(IStorableSubscriber storableSubscriber, int additionalStorage,
+            string storagePlanId)
+        {
+            return FinalizeSubscriptionChangeAsync(storableSubscriber, new StorageSubscriptionUpdate(storagePlanId, additionalStorage));
         }
 
         public async Task CancelAndRecoverChargesAsync(ISubscriber subscriber)
@@ -889,7 +898,18 @@ namespace Bit.Core.Services
                     if (cardPaymentMethodId == null)
                     {
                         // We're going to delete this draft invoice, it can't be paid
-                        await invoiceService.DeleteAsync(invoice.Id);
+                        try
+                        {
+                            await invoiceService.DeleteAsync(invoice.Id);
+                        }
+                        catch
+                        {
+                            await invoiceService.FinalizeInvoiceAsync(invoice.Id, new InvoiceFinalizeOptions
+                            {
+                                AutoAdvance = false
+                            });
+                            await invoiceService.VoidInvoiceAsync(invoice.Id);
+                        }
                         throw new BadRequestException("No payment method is available.");
                     }
                 }
@@ -1660,10 +1680,10 @@ namespace Bit.Core.Services
             {
                 return;
             }
-            
+
             var stripeTaxRateService = new TaxRateService();
             var updatedStripeTaxRate = await stripeTaxRateService.UpdateAsync(
-                    taxRate.Id, 
+                    taxRate.Id,
                     new TaxRateUpdateOptions() { Active = false }
             );
             if (!updatedStripeTaxRate.Active)

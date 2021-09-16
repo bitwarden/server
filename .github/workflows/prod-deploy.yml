@@ -1,3 +1,4 @@
+---
 name: Prod Deploy
 
 on:
@@ -12,22 +13,16 @@ on:
 
 jobs:
   setup:
+    name: Setup
     runs-on: ubuntu-latest
     outputs:
       package_version: ${{ steps.create_tags.outputs.package_version }}
       tag_version: ${{ steps.create_tags.outputs.tag_version }}
     steps:
-      - name: Branch check
-        run: |
-          if [[ "$GITHUB_REF" != "refs/heads/rc" ]]; then
-            echo "==================================="
-            echo "[!] Can only deploy from rc branch"
-            echo "==================================="
-            exit 1
-          fi
-
       - name: Checkout Repo
         uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
+        with:
+          ref: rc
 
       - name: Create Deploy version vars
         id: create_tags
@@ -60,7 +55,7 @@ jobs:
         env:
           RELEASE_TAG_NAME_INPUT: ${{ github.event.inputs.release_tag_name_input }}
 
-      - name: test outputs
+      - name: Test outputs
         run: |
           echo "Package Version: ${{ steps.create_tags.outputs.package_version }}"
           echo "Tag Version: ${{ steps.create_tags.outputs.tag_version }}"
@@ -89,8 +84,7 @@ jobs:
           - setup
           - sso
     env:
-      PACKAGE_VERSION: ${{ needs.setup.outputs.package_version }}
-      TAG_VERSION: ${{ needs.setup.outputs.tag_version }}
+      _PACKAGE_VERSION: ${{ needs.setup.outputs.package_version }}
     steps:
       - name: Print environment
         run: |
@@ -109,7 +103,7 @@ jobs:
         uses: Azure/get-keyvault-secrets@80ccd3fafe5662407cc2e55f202ee34bfff8c403
         with:
           keyvault: "bitwarden-prod-kv"
-          secrets: "docker-password, 
+          secrets: "docker-password,
                     docker-username,
                     dct-delegate-2-repo-passphrase,
                     dct-delegate-2-key"
@@ -128,7 +122,7 @@ jobs:
         env:
           DCT_DELEGATION_KEY_ID: "c9bde8ec820701516491e5e03d3a6354e7bd66d05fa3df2b0062f68b116dc59c"
           DCT_DELEGATE_KEY: ${{ steps.retrieve-secrets.outputs.dct-delegate-2-key }}
-          
+
       - name: Checkout repo
         uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
 
@@ -141,7 +135,7 @@ jobs:
       - name: Re-tag Docker images
         run: |
           docker tag bitwarden/${{ matrix.service_name }}:rc bitwarden/${{ matrix.service_name }}:latest
-          docker tag bitwarden/${{ matrix.service_name }}:rc bitwarden/${{ matrix.service_name }}:$PACKAGE_VERSION
+          docker tag bitwarden/${{ matrix.service_name }}:rc bitwarden/${{ matrix.service_name }}:$_PACKAGE_VERSION
 
       - name: List Docker images
         run: docker images
@@ -149,7 +143,7 @@ jobs:
       - name: Push Docker images
         run: |
           docker push bitwarden/${{ matrix.service_name }}:latest
-          docker push bitwarden/${{ matrix.service_name }}:$PACKAGE_VERSION
+          docker push bitwarden/${{ matrix.service_name }}:$_PACKAGE_VERSION
         env:
           DOCKER_CONTENT_TRUST: 1
           DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ steps.retrieve-secrets.outputs.dct-delegate-2-repo-passphrase }}
@@ -159,6 +153,7 @@ jobs:
 
 
   build:
+    name: Build
     runs-on: ubuntu-latest
     needs: setup
     strategy:
@@ -185,13 +180,12 @@ jobs:
           - name: Identity
             base_path: .
     env:
-      PKG_VERSION: ${{ needs.setup.outputs.package_version }}
-      TAG_VERSION: ${{ needs.setup.outputs.tag_version }}
+      _TAG_VERSION: ${{ needs.setup.outputs.tag_version }}
     steps:
       - name: Checkout repo
         uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
         with:
-          ref: ${{ env.TAG_VERSION }}
+          ref: ${{ env._TAG_VERSION }}
 
       - name: Set up Node
         uses: actions/setup-node@46071b5c7a2e0c34e49c3cb8a0e792e86e18d5ea
@@ -209,7 +203,7 @@ jobs:
           npm --version
           gulp --version
 
-      - name: load env vars
+      - name: Load env vars
         run: |
           echo "Base Path: ${BASE_PATH}"
           echo "Name: ${NAME}"
@@ -262,6 +256,7 @@ jobs:
 
 
   deploy-identity:
+    name: Deploy Identity
     runs-on: ubuntu-latest
     needs: build
     steps:
@@ -280,19 +275,20 @@ jobs:
         uses: Azure/get-keyvault-secrets@80ccd3fafe5662407cc2e55f202ee34bfff8c403
         with:
           keyvault: "bitwarden-prod-kv"
-          secrets: "appservices-identity-webapp-name, 
+          secrets: "appservices-identity-webapp-name,
                     appservices-identity-webapp-publish-profile"
 
       - name: Deploy Identity
         uses: azure/webapps-deploy@798e43877120eda6a2a690a4f212c545e586ae31
         with:
-          app-name: ${{ steps.retrieve-secrets.outputs.appservices-identity-webapp-name }} 
+          app-name: ${{ steps.retrieve-secrets.outputs.appservices-identity-webapp-name }}
           slot-name: "staging"
-          publish-profile: ${{ steps.retrieve-secrets.outputs.appservices-identity-webapp-publish-profile }} 
+          publish-profile: ${{ steps.retrieve-secrets.outputs.appservices-identity-webapp-publish-profile }}
           package: ./Identity.zip
 
 
   deploy-api:
+    name: Deploy API
     runs-on: ubuntu-latest
     needs: build
     steps:
@@ -311,19 +307,20 @@ jobs:
         uses: Azure/get-keyvault-secrets@80ccd3fafe5662407cc2e55f202ee34bfff8c403
         with:
           keyvault: "bitwarden-prod-kv"
-          secrets: "appservices-api-webapp-name, 
+          secrets: "appservices-api-webapp-name,
                     appservices-api-webapp-publish-profile"
 
       - name: Deploy Api
         uses: azure/webapps-deploy@798e43877120eda6a2a690a4f212c545e586ae31
         with:
-          app-name: ${{ steps.retrieve-secrets.outputs.appservices-api-webapp-name }} 
+          app-name: ${{ steps.retrieve-secrets.outputs.appservices-api-webapp-name }}
           slot-name: "staging"
-          publish-profile: ${{ steps.retrieve-secrets.outputs.appservices-api-webapp-publish-profile }} 
+          publish-profile: ${{ steps.retrieve-secrets.outputs.appservices-api-webapp-publish-profile }}
           package: ./Api.zip
 
 
   deploy-billing:
+    name: Deploy Billing
     runs-on: ubuntu-latest
     needs: build
     steps:
@@ -342,19 +339,20 @@ jobs:
         uses: Azure/get-keyvault-secrets@80ccd3fafe5662407cc2e55f202ee34bfff8c403
         with:
           keyvault: "bitwarden-prod-kv"
-          secrets: "appservices-billing-webapp-name, 
+          secrets: "appservices-billing-webapp-name,
                     appservices-billing-webapp-publish-profile"
 
       - name: Deploy Billing
         uses: azure/webapps-deploy@798e43877120eda6a2a690a4f212c545e586ae31
         with:
-          app-name: ${{ steps.retrieve-secrets.outputs.appservices-billing-webapp-name }} 
+          app-name: ${{ steps.retrieve-secrets.outputs.appservices-billing-webapp-name }}
           slot-name: "staging"
-          publish-profile: ${{ steps.retrieve-secrets.outputs.appservices-billing-webapp-publish-profile }} 
+          publish-profile: ${{ steps.retrieve-secrets.outputs.appservices-billing-webapp-publish-profile }}
           package: ./Billing.zip
 
 
   deploy-events:
+    name: Deploy Events
     runs-on: ubuntu-latest
     needs: build
     steps:
@@ -373,19 +371,20 @@ jobs:
         uses: Azure/get-keyvault-secrets@80ccd3fafe5662407cc2e55f202ee34bfff8c403
         with:
           keyvault: "bitwarden-prod-kv"
-          secrets: "appservices-events-webapp-name, 
+          secrets: "appservices-events-webapp-name,
                     appservices-events-webapp-publish-profile"
 
       - name: Deploy Events
         uses: azure/webapps-deploy@798e43877120eda6a2a690a4f212c545e586ae31
         with:
-          app-name: ${{ steps.retrieve-secrets.outputs.appservices-events-webapp-name }} 
+          app-name: ${{ steps.retrieve-secrets.outputs.appservices-events-webapp-name }}
           slot-name: "staging"
-          publish-profile: ${{ steps.retrieve-secrets.outputs.appservices-events-webapp-publish-profile }} 
+          publish-profile: ${{ steps.retrieve-secrets.outputs.appservices-events-webapp-publish-profile }}
           package: ./Events.zip
 
 
   deploy-sso:
+    name: Deploy SSO
     runs-on: ubuntu-latest
     needs: build
     steps:
@@ -404,19 +403,20 @@ jobs:
         uses: Azure/get-keyvault-secrets@80ccd3fafe5662407cc2e55f202ee34bfff8c403
         with:
           keyvault: "bitwarden-prod-kv"
-          secrets: "appservices-sso-webapp-name, 
+          secrets: "appservices-sso-webapp-name,
                     appservices-sso-webapp-publish-profile"
 
       - name: Deploy SSO
         uses: azure/webapps-deploy@798e43877120eda6a2a690a4f212c545e586ae31
         with:
-          app-name: ${{ steps.retrieve-secrets.outputs.appservices-sso-webapp-name }} 
+          app-name: ${{ steps.retrieve-secrets.outputs.appservices-sso-webapp-name }}
           slot-name: "staging"
-          publish-profile: ${{ steps.retrieve-secrets.outputs.appservices-sso-webapp-publish-profile }} 
+          publish-profile: ${{ steps.retrieve-secrets.outputs.appservices-sso-webapp-publish-profile }}
           package: ./Sso.zip
 
 
   deploy-portal:
+    name: Deploy Portal
     runs-on: ubuntu-latest
     needs: build
     steps:
@@ -435,19 +435,20 @@ jobs:
         uses: Azure/get-keyvault-secrets@80ccd3fafe5662407cc2e55f202ee34bfff8c403
         with:
           keyvault: "bitwarden-prod-kv"
-          secrets: "appservices-portal-webapp-name, 
+          secrets: "appservices-portal-webapp-name,
                     appservices-portal-webapp-publish-profile"
 
       - name: Deploy Portal
         uses: azure/webapps-deploy@798e43877120eda6a2a690a4f212c545e586ae31
         with:
-          app-name: ${{ steps.retrieve-secrets.outputs.appservices-portal-webapp-name }} 
+          app-name: ${{ steps.retrieve-secrets.outputs.appservices-portal-webapp-name }}
           slot-name: "staging"
-          publish-profile: ${{ steps.retrieve-secrets.outputs.appservices-portal-webapp-publish-profile }} 
+          publish-profile: ${{ steps.retrieve-secrets.outputs.appservices-portal-webapp-publish-profile }}
           package: ./Portal.zip
 
 
   deploy-admin:
+    name: Deploy Admin
     runs-on: ubuntu-latest
     needs: build
     steps:
@@ -466,14 +467,13 @@ jobs:
         uses: Azure/get-keyvault-secrets@80ccd3fafe5662407cc2e55f202ee34bfff8c403
         with:
           keyvault: "bitwarden-prod-kv"
-          secrets: "appservices-admin-webapp-name, 
+          secrets: "appservices-admin-webapp-name,
                     appservices-admin-webapp-publish-profile"
 
       - name: Deploy Admin
         uses: azure/webapps-deploy@798e43877120eda6a2a690a4f212c545e586ae31
         with:
-          app-name: ${{ steps.retrieve-secrets.outputs.appservices-admin-webapp-name }} 
+          app-name: ${{ steps.retrieve-secrets.outputs.appservices-admin-webapp-name }}
           slot-name: "staging"
-          publish-profile: ${{ steps.retrieve-secrets.outputs.appservices-admin-webapp-publish-profile }} 
+          publish-profile: ${{ steps.retrieve-secrets.outputs.appservices-admin-webapp-publish-profile }}
           package: ./Admin.zip
-

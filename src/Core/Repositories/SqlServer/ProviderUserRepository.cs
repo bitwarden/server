@@ -151,5 +151,18 @@ namespace Bit.Core.Repositories.SqlServer
                 return results.ToList();
             }
         }
+
+        public async Task<int> GetCountByOnlyOwnerAsync(Guid userId)
+        {
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.ExecuteScalarAsync<int>(
+                    "[dbo].[ProviderUser_ReadCountByOnlyOwner]",
+                    new { UserId = userId },
+                    commandType: CommandType.StoredProcedure);
+
+                return results;
+            }
+        }
     }
 }
