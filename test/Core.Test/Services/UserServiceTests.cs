@@ -1,17 +1,21 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using Bit.Core.Context;
+using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bit.Core.Test.AutoFixture;
+using Fido2NetLib;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using NSubstitute;
+using System.Collections.Generic;
+using System.Linq;
+using System;
 using Xunit;
-using Fido2NetLib;
-using Bit.Core.Context;
+using Bit.Core.Test.AutoFixture.Attributes;
 
 namespace Bit.Core.Test.Services
 {
@@ -108,12 +112,67 @@ namespace Bit.Core.Test.Services
             );
         }
 
-        // Remove this test when we add actual tests. It only proves that
-        // we've properly constructed the system under test.
-        [Fact]
-        public void ServiceExists()
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public async void DeleteAsync_PotentialOrphanedOrg_OneOwnedOrg_Throws(User user, OrganizationUserOrganizationDetails org,
+            SutProvider<UserService> sutProvider)
         {
-            Assert.NotNull(_sut);
+            var organizationUserRepo = sutProvider.GetDependency<IOrganizationUserRepository>();
+
+            // user is the owner of one organization
+            organizationUserRepo.GetCountByOnlyOwnerAsync(user.Id).Returns(1);
+
+            // user is only in one organization at all
+            organizationUserRepo.GetManyDetailsByUserAsync(user.Id, Enums.OrganizationUserStatusType.Confirmed).Returns(
+                new OrganizationUserOrganizationDetails[] { org }
+            );
+
+            // there is still somebody else in the org
+            organizationUserRepo.GetCountByOrganizationIdAsync(org.OrganizationId).Returns(2); 
+
+            var result = await sutProvider.Sut.DeleteAsync(user);
+            Assert.True(result.Errors.Any(error => error.Description.Contains("organization")));
+        }
+
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public async void DeleteAsync_PotentialOrphanedOrg_MultipleOwnedOrgs_Throws(User user, ICollection<OrganizationUserOrganizationDetails> orgs,
+            SutProvider<UserService> sutProvider)
+        {
+            var organizationUserRepo = sutProvider.GetDependency<IOrganizationUserRepository>();
+
+            // user is the owner of multiple organizations
+            organizationUserRepo.GetCountByOnlyOwnerAsync(user.Id).Returns(2);
+
+            var result = await sutProvider.Sut.DeleteAsync(user);
+            Assert.True(result.Errors.Any(error => error.Description.Contains("organization")));
+        }
+
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public async void DeleteAsync_PotentialOrphanedProvider_Throws(User user, SutProvider<UserService> sutProvider)
+        {
+            // Skipping previous validation
+            var organizationUserRepo = sutProvider.GetDependency<IOrganizationUserRepository>();
+            organizationUserRepo.GetCountByOnlyOwnerAsync(user.Id).Returns(0);
+
+            // User is the only owner of at least one provider
+            var providerUserRepo = sutProvider.GetDependency<IProviderUserRepository>();
+            providerUserRepo.GetCountByOnlyOwnerAsync(user.Id).Returns(1);
+
+            var result = await sutProvider.Sut.DeleteAsync(user);
+            Assert.True(result.Errors.Any(error => error.Description.Contains("provider")));
+        }
+
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public async void DeleteAsync_Works(User user, SutProvider<UserService> sutProvider)
+        {
+            // Skipping previous validations
+            var organizationUserRepo = sutProvider.GetDependency<IOrganizationUserRepository>();
+            var providerUserRepo = sutProvider.GetDependency<IProviderUserRepository>();
+            organizationUserRepo.GetCountByOnlyOwnerAsync(user.Id).Returns(0);
+            providerUserRepo.GetCountByOnlyOwnerAsync(user.Id).Returns(0);
+            //
+
+            var result = await sutProvider.Sut.DeleteAsync(user);
+            Assert.True(!result.Errors.Any());
         }
     }
 }
