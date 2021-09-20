@@ -29,24 +29,34 @@ Some settings can be customized by modifying the `dev/.env` file.
 
 ```bash
 # We recommend running the following command when developing for self-hosted
-docker compose --profiles mssql --profiles mail
+docker compose --profile mssql --profile mail
 
 # We also provide a storage profile which uses Azurite to emulate some services used by the cloud instance
 #  Usually only needed by internal Bitwarden developers
-docker compose --profiles storage
+docker compose --profile cloud --profile mail
 ```
 
 ### SQL Server
 
-To setup and migrate the development database (`vault_dev`) please run `dev/migrate.ps1`. After writing a new migration please re-run the script again to apply it.
+We recommend changing the `MSSQL_PASSWORD` variable in `dev/.env` to avoid exposing the sqlserver with a dummy password. Note changing this after first running docker compose may require a re-creation of the storage volume. Stop the running containers and run `docker volume rm bitwardenserver_mssql_dev_data`
 
-We recommend changing the `MSSQL_PASSWORD` variable in `dev/.env` to avoid exposing the sqlserver with a dummy password.
+We provide a helper script which will create the development database `vault_dev` and also run all migrations. This commad should be run after starting docker the first time, as well as after syncing against upstream and after creating a new migration.
+
+```powershell
+.\dev\migrate.ps1
+```
 
 ### Azurite
 
 [Azurite](https://github.com/Azure/Azurite) is a emulator for Azure Storage API and supports Blob, Queues and Table storage. We use it to avoid a hard dependency on online services for cloud development.
 
-To bootstrap the local Azurite instance please run `dev/setup_azurite.ps1`.
+To bootstrap the local Azurite instance please run the following command:
+```powershell
+.\dev\setup_azurite.ps1
+
+# This script requires the Az module, which can be installed using
+Install-Module -Name Az -Scope CurrentUser -Repository PSGallery -Force
+```
 
 ### Mailcatcher
 
@@ -82,7 +92,7 @@ C3A6CECAD3DB580F91A52FC9C767FE780300D8AB  CN=Bitwarden Data Protection Dev
 
 We provide a helper script which will generate the certificates and add them to the keychain.
 
-* **Note:** You should update the Trust options for each certificate to `always trust` using *Keychain Access*.
+**Note:** You should update the Trust options for each certificate to `always trust` using *Keychain Access*.
 
 ```bash
 ./create_certificates_mac.sh
@@ -101,8 +111,8 @@ Start by copying the `secret.json.example` file to `secret.json` and modify the 
 ```powershell
 .\setup_secrets.ps1
 
-# Clear secrets before applying the new settings
-.\setup_secrets.ps1 --clear 1
+# The script also supports an optional flag which removes all existing settings before re-applying them
+.\setup_secrets.ps1 -clear 1
 ```
 
 ### Manually creating and modifying
@@ -112,8 +122,6 @@ It is also possible to manually creata and modify the user secrets using either 
 ### User Secrets - Other
 
 **selfhosted**: It is highly recommended that you use the `selfHosted: true` setting when running a local development environment. This tells the system not to use cloud services, assuming that you are running your own local SQL instance. 
-
-Alternatively, there are emulators that allow you to run local dev instances of various Azure and/or AWS services (e.g. local-stack), or you can use your own Azure accounts for provisioning the necessary services and set the connection strings accordingly. These are outside the scope of this guide.
 
 **sqlServer__connectionString**: this provides the information required for the Server to connect to the SQL instance. See the example connection string below.
 
