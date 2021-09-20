@@ -80,21 +80,17 @@ C3A6CECAD3DB580F91A52FC9C767FE780300D8AB  CN=Bitwarden Data Protection Dev
 
 #### MacOS
 
-We provide a helper script which will generate the certificates but they need to be manually added to the users keychain.
+We provide a helper script which will generate the certificates and add them to the keychain.
+
+* **Note:** You should update the Trust options for each certificate to `always trust` using *Keychain Access*.
 
 ```bash
-./create_certificates_openssl.sh
-```
+./create_certificates_mac.sh
 
-1. Install the .pfx files by double-clicking on them and entering the password when prompted. 
-   * On MacOS, this will add them to your keychain. You should update the Trust options for each certificate to `always trust`.
-2. Get the SHA1 thumbprint for the Identity and Data Protection certificates
-    * press Command + Spacebar to open the Spotlight search
-    * type "keychain access" and press enter
-    * find the "Bitwarden Data Protection Dev" and "Bitwarden Identity Server Dev" certificates
-    * select each certificate and click the "i" (information) button
-    * find the SHA-1 fingerprint in the list of properties
-3. Add the SHA1 thumbprints of both certificates to your user secrets for the Api and Identity projects. (See the example user secrets file below.)
+Certificate fingerprints:
+Identity Server Dev: 0BE8A0072214AB37C6928968752F698EEC3A68B5
+Data Protection Dev: C3A6CECAD3DB580F91A52FC9C767FE780300D8AB
+```
 
 ### Automated Helper script
 
