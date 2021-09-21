@@ -183,10 +183,9 @@ jobs:
 
       - name: Upload service artifact
         uses: actions/upload-artifact@ee69f02b3dfdecd58bb31b4d133da38ba6fe3700
-        working-directory: ${{ matrix.base_path }}/${{ matrix.service_name }}
         with:
-          name: ${{ matrix.service_name }}.zip
-          path: ${{ matrix.service_name }}.zip
+          name: ${{ matrix.base_path }}/${{ matrix.service_name }}/${{ matrix.service_name }}.zip
+          path: ${{ matrix.base_path }}/${{ matrix.service_name }}/${{ matrix.service_name }}.zip
           if-no-files-found: error
 
 
