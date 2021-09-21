@@ -718,7 +718,7 @@ namespace Bit.Core.Services
                 ProrationDate = prorationDate,
             };
 
-            if (subscriptionUpdate.UpdateNeeded(sub))
+            if (!subscriptionUpdate.UpdateNeeded(sub))
             {
                 // No need to update subscription, quantity matches
                 return null;
