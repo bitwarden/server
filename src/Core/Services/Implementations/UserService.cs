@@ -191,14 +191,15 @@ namespace Bit.Core.Services
 
         public override async Task<IdentityResult> DeleteAsync(User user)
         {
-            var canUserBeDeleted = await CanUserBeDeleted(user);
-            if (!canUserBeDeleted.value)
+            try 
             {
-                return IdentityResult.Failed(new IdentityError { Description = canUserBeDeleted.message });
+                await DeleteUser(user);
+                return IdentityResult.Success;
             }
-
-            await DeleteUser(user);
-            return IdentityResult.Success;
+            catch (InvalidOperationException exception)
+            {
+                return IdentityResult.Failed(new IdentityError { Description = exception.Message });
+            }
         }
 
         public async Task<IdentityResult> DeleteAsync(User user, string token)
@@ -1296,24 +1297,15 @@ namespace Bit.Core.Services
             await _userRepository.ReplaceAsync(user);
         }
 
-        private async Task<(bool value, string message)> CanUserBeDeleted(User user)
+        private async Task VerifyUserCanBeDeleted(User user)
         {
-            var blockedByOrg = await IsUserDeleteBlockedByOrg(user);
-            if (blockedByOrg.value)
-            {
-                return (false, blockedByOrg.message);
-            }
-
-            var blockedByProvider = await IsUserDeleteBlockedByProvider(user);
-            if (blockedByProvider.value)
-            {
-                return (false, blockedByProvider.message);
-            }
-            return (true, string.Empty);
+            await CheckIsUserDeleteBlockedByOrg(user);
+            await CheckIsUserDeleteBlockedByProvider(user);
         }
 
         private async Task DeleteUser(User user)
         {
+            await VerifyUserCanBeDeleted(user);
             // user.Premium already exists on the model. Is that safe to use here instead of checking GatewaySubscriptionId?
             if (!string.IsNullOrWhiteSpace(user.GatewaySubscriptionId)) 
             {
@@ -1325,24 +1317,20 @@ namespace Bit.Core.Services
             await _pushService.PushLogOutAsync(user.Id);
         }
 
-        private async Task<(bool value, string message)> IsUserDeleteBlockedByOrg(User user)
+        private async Task CheckIsUserDeleteBlockedByOrg(User user)
         {
-            if (!await UserIsTheOnlyOwnerOfAnyOrg(user))
+            if (await UserIsTheOnlyOwnerOfAnyOrg(user))
             {
-                return (false, string.Empty);
+                await TryDeleteUsersLastOrg(user);
             }
-
-            var tryDeleteUsersLastOrg = await TryDeleteUsersLastOrg(user);
-            return tryDeleteUsersLastOrg.deleted ?
-                (false, string.Empty) :
-                (true, tryDeleteUsersLastOrg.message);
         }
 
-        private async Task<(bool value, string message)> IsUserDeleteBlockedByProvider(User user)
+        private async Task CheckIsUserDeleteBlockedByProvider(User user)
         {
-            return await _providerUserRepository.GetCountByOnlyOwnerAsync(user.Id) > 0 ?
-                (true, "Cannot delete this user because it is the sole owner of at least one provider. Please delete these providers or upgrade another user.") :
-                (false, string.Empty);
+            if (await _providerUserRepository.GetCountByOnlyOwnerAsync(user.Id) > 0)
+            {
+                throw new InvalidOperationException("Cannot delete this user because it is the sole owner of at least one provider. Please delete these providers or upgrade another user.");
+            }
         }
 
         // Why do we use this?
@@ -1360,45 +1348,42 @@ namespace Bit.Core.Services
             return await _organizationUserRepository.GetCountByOnlyOwnerAsync(user.Id) > 0;
         }
 
-        private async Task<(bool value, string message)> OrgCanBeDeleted(Organization org)
-        {
-            if (org == null || org.Enabled || !string.IsNullOrWhiteSpace(org.GatewaySubscriptionId))
-            {
-                return (false, "Cannot delete this organization because it is active.");
-            }
-
-            var organizationUserCount = await _organizationUserRepository.GetCountByOrganizationIdAsync(org.Id);
-            return organizationUserCount <= 1 ? 
-                (true, string.Empty) :
-                (false, "Cannot delete this user because it is the sole owner of at least one organization. Please delete these organizations or upgrade another user.");
-        }
-
-        private async Task<(bool deleted, string message)> TryDeleteUsersLastOrg(User user)
+        private async Task TryDeleteUsersLastOrg(User user)
         {
             var allUsersOrgs = await _organizationUserRepository.GetManyDetailsByUserAsync(user.Id,
                 OrganizationUserStatusType.Confirmed);
 
             // Business logic that needs documentation
             // We only allow deleting one org when deleting a user.
-            // Even if the user is the last person in two orgs, it seems like we exit safely if they are in two orgs.
+            // Even if the user is the last person in two orgs, it seems like we break if they are in two orgs.
             if (allUsersOrgs.Count != 1)
             {
                 // this isn't the user's last org, so do nothing and block the delete operation
-                return (false, "Cannot delete this user because they are in more than one organization. Please leave these organizations to continue.");
+                throw new InvalidOperationException("Cannot delete this user because they are in more than one organization. Please leave these organizations to continue.");
             }
             //
 
-            return await TryDeleteOrg(await _organizationRepository.GetByIdAsync(allUsersOrgs.First().OrganizationId));
+            await TryDeleteOrg(await _organizationRepository.GetByIdAsync(allUsersOrgs.First().OrganizationId));
         }
 
-        private async Task<(bool deleted, string message)> TryDeleteOrg(Organization organization)
+        private async Task TryDeleteOrg(Organization organization)
         {
-            var orgCanBeDeleted = await OrgCanBeDeleted(organization);
-            if (orgCanBeDeleted.value)
+            await VerifyOrgCanBeDeleted(organization);
+            await _organizationRepository.DeleteAsync(organization);
+        }
+
+        private async Task VerifyOrgCanBeDeleted(Organization org)
+        {
+            if (org == null || org.Enabled || !string.IsNullOrWhiteSpace(org.GatewaySubscriptionId))
             {
-                await _organizationRepository.DeleteAsync(organization);
+                throw new InvalidOperationException("Cannot delete this organization because it is active.");
             }
-            return orgCanBeDeleted;
+
+            var organizationUserCount = await _organizationUserRepository.GetCountByOrganizationIdAsync(org.Id);
+            if (await _organizationUserRepository.GetCountByOrganizationIdAsync(org.Id) > 1)
+            {
+                throw new InvalidOperationException("Cannot delete this user because it is the sole owner of at least one organization. Please delete these organizations or upgrade another user.");
+            }
         }
     }
 }
