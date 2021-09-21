@@ -3,14 +3,16 @@ using System;
 using Bit.Core.Repositories.EntityFramework;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace Bit.MySqlMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    partial class DatabaseContextModelSnapshot : ModelSnapshot
+    [Migration("20210921200227_SplitManageCollectionsPermissions")]
+    partial class SplitManageCollectionsPermissions
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -276,6 +278,9 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasColumnType("char(36)");
 
                     b.Property<Guid?>("ProviderId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid?>("ProviderOrganizationId")
                         .HasColumnType("char(36)");
 
                     b.Property<Guid?>("ProviderUserId")

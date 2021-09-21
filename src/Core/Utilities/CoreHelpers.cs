@@ -242,6 +242,17 @@ namespace Bit.Core.Utilities
             }
         }
 
+        public static string GetEmbeddedSqlAsync(string file)
+        {
+            var assembly = Assembly.GetCallingAssembly();
+            var resourceName = assembly.GetManifestResourceNames().Single(n => n.EndsWith(file));
+            using (var stream = assembly.GetManifestResourceStream(resourceName))
+            using (var reader = new StreamReader(stream))
+            {
+                return reader.ReadToEnd();
+            }
+        }
+
         public async static Task<X509Certificate2> GetBlobCertificateAsync(CloudStorageAccount cloudStorageAccount,
             string container, string file, string password)
         {

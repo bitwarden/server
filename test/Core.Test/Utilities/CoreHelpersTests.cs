@@ -4,6 +4,7 @@ using System.Linq;
 using Bit.Core.Utilities;
 using Xunit;
 using MimeKit;
+using System.Reflection;
 
 namespace Bit.Core.Test.Utilities
 {
@@ -231,6 +232,13 @@ namespace Bit.Core.Test.Utilities
         {
             var actual = CoreHelpers.PunyEncode(text);
             Assert.Equal(expected, actual);
+        }
+
+        [Fact]
+        public void GetEmbeddedSqlAsync_Success()
+        {
+            var fileContents = CoreHelpers.GetEmbeddedSqlAsync("data.embeddedResource.txt");
+            Assert.Equal("Contents of embeddedResource.txt\n", fileContents);
         }
     }
 }

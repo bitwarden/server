@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Icons.Test", "Icons.Test\Ic
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Api.Test", "Api.Test\Api.Test.csproj", "{2B29139A-E3B5-4A44-8A85-1593ACB797CC}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Data.Test", "Data.Test\Data.Test.csproj", "{E965F4F7-6DAA-412F-9765-35F06FE5FAFA}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -58,5 +60,17 @@ Global
 		{2B29139A-E3B5-4A44-8A85-1593ACB797CC}.Release|x64.Build.0 = Release|Any CPU
 		{2B29139A-E3B5-4A44-8A85-1593ACB797CC}.Release|x86.ActiveCfg = Release|Any CPU
 		{2B29139A-E3B5-4A44-8A85-1593ACB797CC}.Release|x86.Build.0 = Release|Any CPU
+		{E965F4F7-6DAA-412F-9765-35F06FE5FAFA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E965F4F7-6DAA-412F-9765-35F06FE5FAFA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E965F4F7-6DAA-412F-9765-35F06FE5FAFA}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{E965F4F7-6DAA-412F-9765-35F06FE5FAFA}.Debug|x64.Build.0 = Debug|Any CPU
+		{E965F4F7-6DAA-412F-9765-35F06FE5FAFA}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{E965F4F7-6DAA-412F-9765-35F06FE5FAFA}.Debug|x86.Build.0 = Debug|Any CPU
+		{E965F4F7-6DAA-412F-9765-35F06FE5FAFA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E965F4F7-6DAA-412F-9765-35F06FE5FAFA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E965F4F7-6DAA-412F-9765-35F06FE5FAFA}.Release|x64.ActiveCfg = Release|Any CPU
+		{E965F4F7-6DAA-412F-9765-35F06FE5FAFA}.Release|x64.Build.0 = Release|Any CPU
+		{E965F4F7-6DAA-412F-9765-35F06FE5FAFA}.Release|x86.ActiveCfg = Release|Any CPU
+		{E965F4F7-6DAA-412F-9765-35F06FE5FAFA}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
