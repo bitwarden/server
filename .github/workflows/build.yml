@@ -83,47 +83,30 @@ jobs:
         include:
           - service_name: Admin
             base_path: ./src
-            dotnet: true
             gulp: true
           - service_name: Api
             base_path: ./src
-            dotnet: true
-          - service_name: Attachments
-            base_path: ./util
+          - service_name: Billing
+            base_path: ./src
           - service_name: Events
             base_path: ./src
-            dotnet: true
           - service_name: EventsProcessor
             base_path: ./src
-            dotnet: true
           - service_name: Icons
             base_path: ./src
-            dotnet: true
           - service_name: Identity
             base_path: ./src
-            dotnet: true
-          - service_name: K8S-Proxy
-            base_path: ./util
-          - service_name: MsSql
-            base_path: ./util
-          - service_name: Nginx
-            base_path: ./util
           - service_name: Notifications
             base_path: ./src
-            dotnet: true
           - service_name: Portal
             base_path: ./bitwarden_license/src
-            dotnet: true
             gulp: true
           - service_name: Server
             base_path: ./util
-            dotnet: true
           - service_name: Setup
             base_path: ./util
-            dotnet: true
           - service_name: Sso
             base_path: ./bitwarden_license/src
-            dotnet: true
             gulp: true
     steps:
       - name: Checkout repo
@@ -155,7 +138,6 @@ jobs:
           npm install -g gulp
 
       - name: Restore/Clean service
-        if: ${{ matrix.dotnet }}
         working-directory: ${{ matrix.base_path }}/${{ matrix.service_name }}
         run: |
           echo "Restore"
@@ -171,7 +153,6 @@ jobs:
           gulp --gulpfile gulpfile.js build
 
       - name: Publish service
-        if: ${{ matrix.dotnet }}
         working-directory: ${{ matrix.base_path }}/${{ matrix.service_name }}
         run: |
           echo "Publish"
@@ -181,8 +162,10 @@ jobs:
           zip -r ${{ matrix.service_name }}.zip .
           mv ${{ matrix.service_name }}.zip ../../../
 
+          pwd
+          ls -atlh ../../../
+
       - name: Upload service artifact
-        if: ${{ matrix.dotnet }}
         uses: actions/upload-artifact@ee69f02b3dfdecd58bb31b4d133da38ba6fe3700
         with:
           name: ${{ matrix.base_path }}/${{ matrix.service_name }}.zip
@@ -205,6 +188,10 @@ jobs:
           - service_name: Api
             base_path: ./src
             docker_repo: bitwarden
+            dotnet: true
+          - service_name: Billing
+            base_path: ./src
+            docker_repo: bitwardenqa.azurecr.io
             dotnet: true
           - service_name: Attachments
             base_path: ./util
