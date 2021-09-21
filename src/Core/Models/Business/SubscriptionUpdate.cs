@@ -13,6 +13,9 @@ namespace Bit.Core.Models.Business
         public abstract SubscriptionItemOptions UpgradeItemOptions(Subscription subscription);
         public SubscriptionItem SubscriptionItem(Subscription subscription) =>
             subscription.Items?.Data?.FirstOrDefault(i => i.Plan.Id == PlanId);
+
+        public bool UpdateNeeded(Subscription subscription) =>
+            (SubscriptionItem(subscription)?.Quantity ?? 0) != (UpgradeItemOptions(subscription).Quantity ?? 0);
     }
 
 
