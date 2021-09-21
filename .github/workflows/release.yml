@@ -3,18 +3,15 @@ name: Release
 
 on:
   workflow_dispatch:
-    inputs:
-      release_tag_name_input:
-        description: "Release Tag Name <X.X.X>"
-        required: true
+    inputs: {}
 
 jobs:
   setup:
     name: Setup
     runs-on: ubuntu-20.04
     outputs:
-      release_upload_url: ${{ steps.create_release.outputs.upload_url }}
-      tag_version: ${{ steps.create_tags.outputs.tag_version }}
+      release_version: ${{ steps.version.outputs.package }}
+      tag_version: ${{ steps.version.outputs.tag }}
     steps:
       - name: Branch check
         run: |
@@ -28,28 +25,21 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
 
-      - name: Create Release Vars
-        id: create_tags
+      - name: Check Release Version
+        id: version
         run: |
-          case "${RELEASE_TAG_NAME_INPUT:0:1}" in
-            v)
-              echo "RELEASE_NAME=${RELEASE_TAG_NAME_INPUT:1}" >> $GITHUB_ENV
-              echo "RELEASE_TAG_NAME=$RELEASE_TAG_NAME_INPUT" >> $GITHUB_ENV
-              echo "::set-output name=package_version::${RELEASE_TAG_NAME_INPUT:1}"
-              echo "::set-output name=tag_version::$RELEASE_TAG_NAME_INPUT"
-              ;;
-            [0-9])
-              echo "RELEASE_NAME=$RELEASE_TAG_NAME_INPUT" >> $GITHUB_ENV
-              echo "RELEASE_TAG_NAME=v$RELEASE_TAG_NAME_INPUT" >> $GITHUB_ENV
-              echo "::set-output name=package_version::$RELEASE_TAG_NAME_INPUT"
-              echo "::set-output name=tag_version::v$RELEASE_TAG_NAME_INPUT"
-              ;;
-            *)
-              exit 1
-              ;;
-          esac
-        env:
-          RELEASE_TAG_NAME_INPUT: ${{ github.event.inputs.release_tag_name_input }}
+          version=$( grep -o "<Version>.*</Version>" Directory.Build.props | grep -o "[0-9]*\.[0-9]*\.[0-9]*")
+          previous_release_tag_version=$(
+            curl -sL https://api.github.com/repos/$GITHUB_REPOSITORY/releases/latest | jq -r ".tag_name"
+          )
+
+          if [ "v$version" == "$previous_release_tag_version" ]; then
+            echo "[!] Already released v$version. Please bump version to continue"
+            exit 1
+          fi
+
+          echo "::set-output name=package::$version"
+          echo "::set-output name=tag::v$version"
 
       - name: Create Draft Release
         id: create_release
@@ -63,8 +53,8 @@ jobs:
           prerelease: false
 
 
-  upload:
-    name: Upload
+  build-assets:
+    name: Build release assets
     runs-on: ubuntu-20.04
     needs:
       - setup
@@ -117,12 +107,29 @@ jobs:
           name: swagger.json
           path: ./swagger.json
 
-      - name: Upload release assets
-        run: |
-          hub release edit \
-            -a ./swagger.json \
-            -a ./docker-stub.zip \
-            -m "" \
-            $_TAG_VERSION
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  release:
+    name: Create GitHub Release
+    if: false
+    runs-on: ubuntu-20.04
+    needs:
+      - setup
+      - build-assets
+    steps:
+      - name: Download latest RC Production build
+        uses: dawidd6/action-download-artifact@b9571484721e8187f1fd08147b497129f8972c74  # v2.14.0
+        with:
+          workflow: build.yml
+          workflow_conclusion: success
+          branch: rc
+          name: prod-build-artifact.zip
+
+      - name: Create release
+        uses: ncipollo/release-action@95215a3cb6e6a1908b3c44e00b4fdb15548b1e09
+        with:
+          artifacts: prod-build-artifact.zip
+          commit: ${{ github.sha }}
+          tag: "${{ needs.setup.outputs.tag_version }}"
+          name: "Version ${{ needs.setup.outputs.release_version }}"
+          body: "<insert release notes here>"
+          token: ${{ secrets.GITHUB_TOKEN }}
