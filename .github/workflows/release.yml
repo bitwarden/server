@@ -11,7 +11,7 @@ on:
 jobs:
   setup:
     name: Setup
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     outputs:
       release_upload_url: ${{ steps.create_release.outputs.upload_url }}
       tag_version: ${{ steps.create_tags.outputs.tag_version }}
@@ -65,7 +65,7 @@ jobs:
 
   upload:
     name: Upload
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     needs:
       - setup
     env:

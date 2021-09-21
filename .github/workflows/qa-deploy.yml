@@ -14,7 +14,7 @@ on:
 jobs:
   build:
     name: Build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     strategy:
       fail-fast: false
       matrix:
@@ -113,7 +113,7 @@ jobs:
   reset-db:
     name: Reset Database
     if: ${{ github.event.inputs.resetDb == 'true' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     needs: build
     steps:
       - name: Reset Test Data - Stub
@@ -125,7 +125,7 @@ jobs:
   update-db:
     name: Update Database
     if: ${{ github.event.inputs.migrateDb == 'true' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     needs: build
     steps:
       - name: Checkout repo
@@ -161,7 +161,7 @@ jobs:
 
   deploy:
     name: Deploy
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     if: always()
     needs:
       - reset-db
