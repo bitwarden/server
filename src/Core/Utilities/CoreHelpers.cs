@@ -1,4 +1,4 @@
-using Bit.Core.Models.Data;
+﻿using Bit.Core.Models.Data;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -838,60 +838,14 @@ namespace Bit.Core.Utilities
                             foreach (var org in group)
                             {
                                 claims.Add(new KeyValuePair<string, string>("orgcustom", org.Id.ToString()));
+                                foreach (var (permissionGenerator, claimName) in org.Permissions.ClaimsMap)
+                                {
+                                    if (!permissionGenerator())
+                                    {
+                                        continue;
+                                    }
 
-                                if (org.Permissions.AccessBusinessPortal)
-                                {
-                                    claims.Add(new KeyValuePair<string, string>("accessbusinessportal", org.Id.ToString()));
-                                }
-
-                                if (org.Permissions.AccessEventLogs)
-                                {
-                                    claims.Add(new KeyValuePair<string, string>("accesseventlogs", org.Id.ToString()));
-                                }
-
-                                if (org.Permissions.AccessImportExport)
-                                {
-                                    claims.Add(new KeyValuePair<string, string>("accessimportexport", org.Id.ToString()));
-                                }
-
-                                if (org.Permissions.AccessReports)
-                                {
-                                    claims.Add(new KeyValuePair<string, string>("accessreports", org.Id.ToString()));
-                                }
-
-                                if (org.Permissions.ManageAllCollections)
-                                {
-                                    claims.Add(new KeyValuePair<string, string>("manageallcollections", org.Id.ToString()));
-                                }
-
-                                if (org.Permissions.ManageAssignedCollections)
-                                {
-                                    claims.Add(new KeyValuePair<string, string>("manageassignedcollections", org.Id.ToString()));
-                                }
-
-                                if (org.Permissions.ManageGroups)
-                                {
-                                    claims.Add(new KeyValuePair<string, string>("managegroups", org.Id.ToString()));
-                                }
-
-                                if (org.Permissions.ManagePolicies)
-                                {
-                                    claims.Add(new KeyValuePair<string, string>("managepolicies", org.Id.ToString()));
-                                }
-
-                                if (org.Permissions.ManageSso)
-                                {
-                                    claims.Add(new KeyValuePair<string, string>("managesso", org.Id.ToString()));
-                                }
-
-                                if (org.Permissions.ManageUsers)
-                                {
-                                    claims.Add(new KeyValuePair<string, string>("manageusers", org.Id.ToString()));
-                                }
-                                
-                                if (org.Permissions.ManageResetPassword)
-                                {
-                                    claims.Add(new KeyValuePair<string, string>("manageresetpassword", org.Id.ToString()));
+                                    claims.Add(new KeyValuePair<string, string>(claimName, org.Id.ToString()));
                                 }
                             }
                             break;

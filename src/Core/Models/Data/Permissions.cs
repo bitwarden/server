@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using Newtonsoft.Json;
 
 namespace Bit.Core.Models.Data 
 {
@@ -22,5 +24,24 @@ namespace Bit.Core.Models.Data
         public bool ManageSso { get; set; }
         public bool ManageUsers { get; set; }
         public bool ManageResetPassword { get; set; }
+
+        [JsonIgnore]
+        public List<(Func<bool> Permission, string ClaimName)> ClaimsMap => new()
+        {
+            (() => AccessBusinessPortal, "accessbusinessportal"),
+            (() => AccessEventLogs, "accesseventlogs"),
+            (() => AccessImportExport, "accessimportexport"),
+            (() => AccessReports, "accessreports"),
+            (() => CreateNewCollections, "createnewcollections"),
+            (() => EditAnyCollection, "editanycollection"),
+            (() => DeleteAnyCollection, "deleteanycollection"),
+            (() => EditAssignedCollections, "editassignedcollections"),
+            (() => DeleteAssignedCollections, "deleteassignedcollections"),
+            (() => ManageGroups, "managegroups"),
+            (() => ManagePolicies, "managepolicies"),
+            (() => ManageSso, "managesso"),
+            (() => ManageUsers, "manageusers"),
+            (() => ManageResetPassword, "manageresetpassword"),
+        };
     }
 }
