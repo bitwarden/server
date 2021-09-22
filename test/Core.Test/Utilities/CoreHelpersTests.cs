@@ -3,8 +3,15 @@ using System.Collections.Generic;
 using System.Linq;
 using Bit.Core.Utilities;
 using Xunit;
-using MimeKit;
-using System.Reflection;
+using Bit.Core.Test.AutoFixture.Attributes;
+using Bit.Core.Test.AutoFixture.UserFixtures;
+using IdentityModel;
+using Bit.Core.Enums.Provider;
+using Bit.Core.Models.Table;
+using Bit.Core.Context;
+using AutoFixture;
+using Bit.Core.Test.AutoFixture;
+using Bit.Core.Enums;
 
 namespace Bit.Core.Test.Utilities
 {
@@ -151,11 +158,11 @@ namespace Bit.Core.Test.Utilities
         [Fact]
         public void CloneObject_Success()
         {
-            var orignial = new { Message = "Message" };
+            var original = new { Message = "Message" };
 
-            var copy = CoreHelpers.CloneObject(orignial);
+            var copy = CoreHelpers.CloneObject(original);
 
-            Assert.Equal(orignial.Message, copy.Message);
+            Assert.Equal(original.Message, copy.Message);
         }
 
         [Fact]
@@ -235,10 +242,195 @@ namespace Bit.Core.Test.Utilities
         }
 
         [Fact]
-        public void GetEmbeddedSqlAsync_Success()
+        public void GetEmbeddedResourceContentsAsync_Success()
         {
-            var fileContents = CoreHelpers.GetEmbeddedSqlAsync("data.embeddedResource.txt");
+            var fileContents = CoreHelpers.GetEmbeddedResourceContentsAsync("data.embeddedResource.txt");
             Assert.Equal("Contents of embeddedResource.txt\n", fileContents);
         }
+
+        [Theory, CustomAutoData(typeof(UserFixture))]
+        public void BuildIdentityClaims_BaseClaims_Success(User user, bool isPremium)
+        {
+            var expected = new Dictionary<string, string>
+            {
+                { "premium", isPremium ? "true" : "false" },
+                { JwtClaimTypes.Email, user.Email },
+                { JwtClaimTypes.EmailVerified, user.EmailVerified ? "true" : "false" },
+                { JwtClaimTypes.Name, user.Name },
+                { "sstamp", user.SecurityStamp },
+            }.ToList();
+
+            var actual = CoreHelpers.BuildIdentityClaims(user, Array.Empty<CurrentContentOrganization>(),
+                Array.Empty<CurrentContentProvider>(), isPremium);
+
+            foreach (var claim in expected)
+            {
+                Assert.Contains(claim, actual);
+            }
+            Assert.Equal(expected.Count, actual.Count);
+        }
+
+        [Theory, CustomAutoData(typeof(UserFixture))]
+        public void BuildIdentityClaims_OrganizationClaims_Success(User user)
+        {
+            var fixture = new Fixture().WithAutoNSubstitutions();
+            var orgs = new List<CurrentContentOrganization>();
+            foreach (var providerUserType in Enum.GetValues<OrganizationUserType>())
+            {
+                var org = fixture.Create<CurrentContentOrganization>();
+                org.Type = providerUserType;
+                orgs.Add(org);
+            }
+
+            var claims = new List<KeyValuePair<string, string>>();
+
+            // Orgs that this user belongs to
+            if (orgs.Any())
+            {
+                foreach (var group in orgs.GroupBy(o => o.Type))
+                {
+                    switch (group.Key)
+                    {
+                        case Enums.OrganizationUserType.Owner:
+                            foreach (var org in group)
+                            {
+                                claims.Add(new KeyValuePair<string, string>("orgowner", org.Id.ToString()));
+                            }
+                            break;
+                        case Enums.OrganizationUserType.Admin:
+                            foreach (var org in group)
+                            {
+                                claims.Add(new KeyValuePair<string, string>("orgadmin", org.Id.ToString()));
+                            }
+                            break;
+                        case Enums.OrganizationUserType.Manager:
+                            foreach (var org in group)
+                            {
+                                claims.Add(new KeyValuePair<string, string>("orgmanager", org.Id.ToString()));
+                            }
+                            break;
+                        case Enums.OrganizationUserType.User:
+                            foreach (var org in group)
+                            {
+                                claims.Add(new KeyValuePair<string, string>("orguser", org.Id.ToString()));
+                            }
+                            break;
+                        case Enums.OrganizationUserType.Custom:
+                            foreach (var org in group)
+                            {
+                                claims.Add(new KeyValuePair<string, string>("orgcustom", org.Id.ToString()));
+
+                                if (org.Permissions.AccessBusinessPortal)
+                                {
+                                    claims.Add(new KeyValuePair<string, string>("accessbusinessportal", org.Id.ToString()));
+                                }
+
+                                if (org.Permissions.AccessEventLogs)
+                                {
+                                    claims.Add(new KeyValuePair<string, string>("accesseventlogs", org.Id.ToString()));
+                                }
+
+                                if (org.Permissions.AccessImportExport)
+                                {
+                                    claims.Add(new KeyValuePair<string, string>("accessimportexport", org.Id.ToString()));
+                                }
+
+                                if (org.Permissions.AccessReports)
+                                {
+                                    claims.Add(new KeyValuePair<string, string>("accessreports", org.Id.ToString()));
+                                }
+
+                                if (org.Permissions.ManageAllCollections)
+                                {
+                                    claims.Add(new KeyValuePair<string, string>("manageallcollections", org.Id.ToString()));
+                                }
+
+                                if (org.Permissions.ManageAssignedCollections)
+                                {
+                                    claims.Add(new KeyValuePair<string, string>("manageassignedcollections", org.Id.ToString()));
+                                }
+
+                                if (org.Permissions.ManageGroups)
+                                {
+                                    claims.Add(new KeyValuePair<string, string>("managegroups", org.Id.ToString()));
+                                }
+
+                                if (org.Permissions.ManagePolicies)
+                                {
+                                    claims.Add(new KeyValuePair<string, string>("managepolicies", org.Id.ToString()));
+                                }
+
+                                if (org.Permissions.ManageSso)
+                                {
+                                    claims.Add(new KeyValuePair<string, string>("managesso", org.Id.ToString()));
+                                }
+
+                                if (org.Permissions.ManageUsers)
+                                {
+                                    claims.Add(new KeyValuePair<string, string>("manageusers", org.Id.ToString()));
+                                }
+
+                                if (org.Permissions.ManageResetPassword)
+                                {
+                                    claims.Add(new KeyValuePair<string, string>("manageresetpassword", org.Id.ToString()));
+                                }
+                            }
+                            break;
+                        default:
+                            break;
+                    }
+                }
+            }
+
+            var actual = CoreHelpers.BuildIdentityClaims(user, orgs, Array.Empty<CurrentContentProvider>(), false);
+            foreach (var claim in claims)
+            {
+                Assert.Contains(claim, actual);
+            }
+        }
+
+        [Theory, CustomAutoData(typeof(UserFixture))]
+        public void BuildIdentityClaims_ProviderClaims_Success(User user)
+        {
+            var fixture = new Fixture().WithAutoNSubstitutions();
+            var providers = new List<CurrentContentProvider>();
+            foreach (var providerUserType in Enum.GetValues<ProviderUserType>())
+            {
+                var provider = fixture.Create<CurrentContentProvider>();
+                provider.Type = providerUserType;
+                providers.Add(provider);
+            }
+
+            var claims = new List<KeyValuePair<string, string>>();
+
+            if (providers.Any())
+            {
+                foreach (var group in providers.GroupBy(o => o.Type))
+                {
+                    switch (group.Key)
+                    {
+                        case ProviderUserType.ProviderAdmin:
+                            foreach (var provider in group)
+                            {
+                                claims.Add(new KeyValuePair<string, string>("providerprovideradmin", provider.Id.ToString()));
+                            }
+                            break;
+                        case ProviderUserType.ServiceUser:
+                            foreach (var provider in group)
+                            {
+                                claims.Add(new KeyValuePair<string, string>("providerserviceuser", provider.Id.ToString()));
+                            }
+                            break;
+                    }
+                }
+            }
+
+            var actual = CoreHelpers.BuildIdentityClaims(user, Array.Empty<CurrentContentOrganization>(), providers, false);
+            foreach (var claim in claims)
+            {
+                Assert.Contains(claim, actual);
+            }
+        }
+
     }
 }

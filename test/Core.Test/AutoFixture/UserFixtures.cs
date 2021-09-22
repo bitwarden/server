@@ -2,8 +2,6 @@ using AutoFixture;
 using TableModel = Bit.Core.Models.Table;
 using Bit.Core.Test.AutoFixture.Attributes;
 using Bit.Core.Test.AutoFixture.GlobalSettingsFixtures;
-using AutoMapper;
-using Bit.Core.Models.EntityFramework;
 using Bit.Core.Models;
 using System.Collections.Generic;
 using Bit.Core.Enums;
@@ -15,11 +13,11 @@ using Bit.Core.Test.AutoFixture.EntityFrameworkRepositoryFixtures;
 
 namespace Bit.Core.Test.AutoFixture.UserFixtures
 {
-    internal class UserBuilder: ISpecimenBuilder
+    internal class UserBuilder : ISpecimenBuilder
     {
         public object Create(object request, ISpecimenContext context)
         {
-            if (context == null) 
+            if (context == null)
             {
                 throw new ArgumentNullException(nameof(context));
             }
@@ -49,19 +47,27 @@ namespace Bit.Core.Test.AutoFixture.UserFixtures
         }
     }
 
-   internal class EfUser: ICustomization 
-   {
-      public void Customize(IFixture fixture)
-      {
-        fixture.Customizations.Add(new IgnoreVirtualMembersCustomization());
-        fixture.Customizations.Add(new GlobalSettingsBuilder());
-        fixture.Customizations.Add(new UserBuilder());
-        fixture.Customizations.Add(new OrganizationBuilder());
-        fixture.Customizations.Add(new EfRepositoryListBuilder<UserRepository>());
-        fixture.Customizations.Add(new EfRepositoryListBuilder<SsoUserRepository>());
-        fixture.Customizations.Add(new EfRepositoryListBuilder<OrganizationRepository>());
-      }
-   }
+    internal class UserFixture : ICustomization
+    {
+        public virtual void Customize(IFixture fixture)
+        {
+            fixture.Customizations.Add(new IgnoreVirtualMembersCustomization());
+            fixture.Customizations.Add(new GlobalSettingsBuilder());
+            fixture.Customizations.Add(new UserBuilder());
+            fixture.Customizations.Add(new OrganizationBuilder());
+        }
+    }
+
+    internal class EfUser : UserFixture
+    {
+        public override void Customize(IFixture fixture)
+        {
+            base.Customize(fixture);
+            fixture.Customizations.Add(new EfRepositoryListBuilder<UserRepository>());
+            fixture.Customizations.Add(new EfRepositoryListBuilder<SsoUserRepository>());
+            fixture.Customizations.Add(new EfRepositoryListBuilder<OrganizationRepository>());
+        }
+    }
 
     internal class EfUserAutoDataAttribute : CustomAutoDataAttribute
     {
