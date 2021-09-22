@@ -11,7 +11,7 @@ namespace Bit.MySqlMigrations.Migrations
 
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.Sql(CoreHelpers.GetEmbeddedSqlAsync(_scriptLocation));
+            migrationBuilder.Sql(CoreHelpers.GetEmbeddedResourceContentsAsync(_scriptLocation));
         }
 
         protected override void Down(MigrationBuilder migrationBuilder)

@@ -3,8 +3,8 @@ CREATE OR REPLACE FUNCTION updatePermissionsJson(permissions jsonb) returns json
 	DECLARE manageAssignedCollections jsonb := COALESCE(jsonb_extract_path(permissions, 'manageAssignedCollections'), 'false');
 
 	DECLARE createNewCollections jsonb := COALESCE(jsonb_extract_path(permissions, 'createNewCollections'), manageAllCollections);
-	DECLARE editAllCollections jsonb := COALESCE(jsonb_extract_path(permissions, 'editAllCollections'), manageAllCollections);
-	DECLARE deleteAllCollections jsonb := COALESCE(jsonb_extract_path(permissions, 'deleteAllCollections'), manageAllCollections);
+	DECLARE editAnyCollection jsonb := COALESCE(jsonb_extract_path(permissions, 'editAnyCollection'), manageAllCollections);
+	DECLARE deleteAnyCollection jsonb := COALESCE(jsonb_extract_path(permissions, 'deleteAnyCollection'), manageAllCollections);
 
 	DECLARE editAssignedCollections jsonb := COALESCE(jsonb_extract_path(permissions, 'editAssignedCollections'), manageAssignedCollections);
 	DECLARE deleteAssignedCollections jsonb := COALESCE(jsonb_extract_path(permissions, 'deleteAssignedCollections'), manageAssignedCollections);
@@ -16,9 +16,9 @@ CREATE OR REPLACE FUNCTION updatePermissionsJson(permissions jsonb) returns json
 					jsonb_set(
 						jsonb_set(
 							jsonb_set(permissions, '{createNewCollections}', createNewCollections),
-							'{editAllCollections}', editAllCollections
+							'{editAnyCollection}', editAnyCollection
 						),
-						'{deleteAllCollections}', deleteAllCollections
+						'{deleteAnyCollection}', deleteAnyCollection
 					), '{editAssignedCollections}', editAssignedCollections
 				),
 				'{deleteAssignedCollections}', deleteAssignedCollections

@@ -18,8 +18,8 @@ SET `Permissions` =
 	JSON_REMOVE(
 		JSON_INSERT(`Permissions`,
 			'$.createNewCollections', IFNULL(JSON_EXTRACT(`Permissions`, '$.manageAllCollections'), 'false'),
-			'$.editAllCollections', IFNULL(JSON_EXTRACT(`Permissions`, '$.manageAllCollections'), 'false'),
-			'$.deleteAllCollections', IFNULL(JSON_EXTRACT(`Permissions`, '$.manageAllCollections'), 'false')
+			'$.editAnyCollection', IFNULL(JSON_EXTRACT(`Permissions`, '$.manageAllCollections'), 'false'),
+			'$.deleteAnyCollection', IFNULL(JSON_EXTRACT(`Permissions`, '$.manageAllCollections'), 'false')
 		),
 		'$.manageAllCollections'
 	)

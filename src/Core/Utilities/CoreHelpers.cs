@@ -1,4 +1,4 @@
-﻿using Bit.Core.Models.Data;
+using Bit.Core.Models.Data;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -242,7 +242,7 @@ namespace Bit.Core.Utilities
             }
         }
 
-        public static string GetEmbeddedSqlAsync(string file)
+        public static string GetEmbeddedResourceContentsAsync(string file)
         {
             var assembly = Assembly.GetCallingAssembly();
             var resourceName = assembly.GetManifestResourceNames().Single(n => n.EndsWith(file));

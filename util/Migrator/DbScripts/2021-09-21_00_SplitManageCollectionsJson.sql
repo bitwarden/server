@@ -23,9 +23,9 @@ SET [Permissions] =
                 JSON_MODIFY(
                     [Permissions], '$.createNewCollections', ISNULL(JSON_VALUE([Permissions], '$.manageAllCollections'), 'false')
                 ),
-                '$.editAllCollections', ISNULL(JSON_VALUE([Permissions], '$.manageAllCollections'), 'false')
+                '$.editAnyCollection', ISNULL(JSON_VALUE([Permissions], '$.manageAllCollections'), 'false')
             ),
-            '$.deleteAllCollections', ISNULL(JSON_VALUE([Permissions], '$.manageAllCollections'), 'false')
+            '$.deleteAnyCollection', ISNULL(JSON_VALUE([Permissions], '$.manageAllCollections'), 'false')
         ),
         '$.manageAllCollections', NULL
     )
