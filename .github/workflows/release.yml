@@ -41,17 +41,6 @@ jobs:
           echo "::set-output name=package::$version"
           echo "::set-output name=tag::v$version"
 
-      - name: Create Draft Release
-        id: create_release
-        uses: actions/create-release@0cb9c9b65d5d1901c1f53e5e66eaf4afd303e70e
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ env.RELEASE_TAG_NAME }}
-          release_name: Version ${{ env.RELEASE_NAME }}
-          draft: true
-          prerelease: false
-
 
   build-assets:
     name: Build release assets
@@ -133,3 +122,4 @@ jobs:
           name: "Version ${{ needs.setup.outputs.release_version }}"
           body: "<insert release notes here>"
           token: ${{ secrets.GITHUB_TOKEN }}
+          draft: true
