@@ -40,13 +40,21 @@ build_dotnet() {
 # Build a .NET docker container
 # Arguments: 
 #   1 - Name of the project
+#   2 - Directory where the project lives
 ##############################
 build_docker() {
   local project_name=$1
+  local project_dir=$2
   
   echo "Building docker image for: $project_name"
-  #echo -e "\nBuilding docker image"
-  #docker build -t bitwarden/$(echo $project_name | awk '{print lower($0)}') "build/$project_name"
+  echo -e "\nBuilding docker image"
+  if [ -f $project_dir/entrypoint.sh ]; then
+    cp $project_dir/entrypoint.sh "build/$project_name"
+  fi
+  docker build \
+    -f docker/$project_name/Dockerfile \
+    -t bitwarden/$(echo $project_name | awk '{print tolower($0)}') \
+    "build/$project_name"
 }
 
 ##############################
@@ -64,7 +72,7 @@ build() {
   build_dotnet $project_name $project_dir
   
   if [[ $build_docker -eq 1 ]]; then
-    build_docker $project_name
+    build_docker $project_name $project_dir
   fi
 }
 
@@ -92,11 +100,15 @@ case "$PROJECT" in
   api | Api) build "Api" $BUILD_DOCKER "$PWD/src/Api" ;;
   billing | Billing) build "Billing" $BUILD_DOCKER "$PWD/src/Billing" ;;
   events | Events) build "Events" $BUILD_DOCKER "$PWD/src/Events" ;;
+  eventsprocessor | EventsProcessor) build "EventsProcessor" $BUILD_DOCKER "$PWD/src/EventsProcessor" ;;
+  icons | Icons) build "Identity" $BUILD_DOCKER "$PWD/src/Identity" ;;
   identity | Identity) build "Identity" $BUILD_DOCKER "$PWD/src/Identity" ;;
+  notifications | Notifications) build "Notfications" $BUILD_DOCKER "$PWD/src/Notifications" ;;
   portal | Portal) build "Portal" $BUILD_DOCKER "$PWD/bitwarden_license/src/Portal" ;;
   sso | Sso) build "Sso" $BUILD_DOCKER "$PWD/bitwarden_license/src/Sso" ;;
+  server | Server) build "Server" $BUILD_DOCKER "$PWD/util/Server" ;;
+  setup | Setup) build "Setup" $BUILD_DOCKER "$PWD/util/Setup" ;;
   * | "")
-    echo "building all"
     build "Admin" $BUILD_DOCKER "$PWD/src/Admin"
     build "Api" $BUILD_DOCKER "$PWD/src/Api"
     build "Billing" $BUILD_DOCKER "$PWD/src/Billing"
@@ -104,5 +116,7 @@ case "$PROJECT" in
     build "Identity" $BUILD_DOCKER "$PWD/src/Identity"
     build "Portal" $BUILD_DOCKER "$PWD/bitwarden_license/src/Portal"
     build "Sso" $BUILD_DOCKER "$PWD/bitwarden_license/src/Sso"
+    build "Server" $BUILD_DOCKER "$PWD/util/Server"
+    build "Setup" $BUILD_DOCKER "$PWD/util/Setup"
     ;;
 esac
