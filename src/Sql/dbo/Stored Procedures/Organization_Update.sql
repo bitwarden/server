@@ -38,7 +38,9 @@
     @TwoFactorProviders NVARCHAR(MAX),
     @ExpirationDate DATETIME2(7),
     @CreationDate DATETIME2(7),
-    @RevisionDate DATETIME2(7)
+    @RevisionDate DATETIME2(7),
+    @OwnersNotifiedOfAutoscaling DATETIME2(7),
+    @MaxAutoscaleSeats INT
 AS
 BEGIN
     SET NOCOUNT ON
@@ -84,7 +86,9 @@ BEGIN
         [TwoFactorProviders] = @TwoFactorProviders,
         [ExpirationDate] = @ExpirationDate,
         [CreationDate] = @CreationDate,
-        [RevisionDate] = @RevisionDate
+        [RevisionDate] = @RevisionDate,
+        [OwnersNotifiedOfAutoscaling] = @OwnersNotifiedOfAutoscaling,
+        [MaxAutoscaleSeats] = @MaxAutoscaleSeats
     WHERE
         [Id] = @Id
 END

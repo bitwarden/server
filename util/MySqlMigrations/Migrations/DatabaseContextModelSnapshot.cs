@@ -15,7 +15,7 @@ namespace Bit.MySqlMigrations.Migrations
 #pragma warning disable 612, 618
             modelBuilder
                 .HasAnnotation("Relational:MaxIdentifierLength", 64)
-                .HasAnnotation("ProductVersion", "5.0.5");
+                .HasAnnotation("ProductVersion", "5.0.9");
 
             modelBuilder.Entity("Bit.Core.Models.EntityFramework.Cipher", b =>
                 {
@@ -278,6 +278,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<Guid?>("ProviderId")
                         .HasColumnType("char(36)");
 
+                    b.Property<Guid?>("ProviderOrganizationId")
+                        .HasColumnType("char(36)");
+
                     b.Property<Guid?>("ProviderUserId")
                         .HasColumnType("char(36)");
 
@@ -500,6 +503,9 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("varchar(100)");
 
+                    b.Property<int?>("MaxAutoscaleSeats")
+                        .HasColumnType("int");
+
                     b.Property<short?>("MaxCollections")
                         .HasColumnType("smallint");
 
@@ -509,6 +515,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<string>("Name")
                         .HasMaxLength(50)
                         .HasColumnType("varchar(50)");
+
+                    b.Property<DateTime?>("OwnersNotifiedOfAutoscaling")
+                        .HasColumnType("datetime(6)");
 
                     b.Property<string>("Plan")
                         .HasMaxLength(50)
