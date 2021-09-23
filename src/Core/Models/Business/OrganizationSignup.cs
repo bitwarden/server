@@ -12,5 +12,6 @@ namespace Bit.Core.Models.Business
         public string CollectionName { get; set; }
         public PaymentMethodType? PaymentMethodType { get; set; }
         public string PaymentToken { get; set; }
+        public int? MaxAutoscaleSeats { get; set; } = null;
     }
 }

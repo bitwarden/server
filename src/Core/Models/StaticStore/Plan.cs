@@ -15,6 +15,7 @@ namespace Bit.Core.Models.StaticStore
         public short? BaseStorageGb { get; set; }
         public short? MaxCollections { get; set; }
         public short? MaxUsers { get; set; }
+        public bool AllowSeatAutoscale { get; set; }
 
         public bool HasAdditionalSeatsOption { get; set; }
         public int? MaxAdditionalSeats { get; set; }

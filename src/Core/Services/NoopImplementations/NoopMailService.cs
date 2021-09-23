@@ -35,6 +35,16 @@ namespace Bit.Core.Services
             return Task.FromResult(0);
         }
 
+        public Task SendOrganizationMaxSeatLimitReachedEmailAsync(Organization organization, int maxSeatCount, IEnumerable<string> ownerEmails)
+        {
+            return Task.FromResult(0);
+        }
+
+        public Task SendOrganizationAutoscaledEmailAsync(Organization organization, int initialSeatCount, IEnumerable<string> ownerEmails)
+        {
+            return Task.FromResult(0);
+        }
+
         public Task SendOrganizationAcceptedEmailAsync(Organization organization, string userIdentifier, IEnumerable<string> adminEmails)
         {
             return Task.FromResult(0);

@@ -28,8 +28,8 @@ namespace Bit.Core.Repositories
             OrganizationUserStatusType? status = null);
         Task UpdateGroupsAsync(Guid orgUserId, IEnumerable<Guid> groupIds);
         Task UpsertManyAsync(IEnumerable<OrganizationUser> organizationUsers);
-        Task CreateAsync(OrganizationUser obj, IEnumerable<SelectionReadOnly> collections);
-        Task CreateManyAsync(IEnumerable<OrganizationUser> organizationIdUsers);
+        Task<Guid> CreateAsync(OrganizationUser obj, IEnumerable<SelectionReadOnly> collections);
+        Task<ICollection<Guid>> CreateManyAsync(IEnumerable<OrganizationUser> organizationIdUsers);
         Task ReplaceAsync(OrganizationUser obj, IEnumerable<SelectionReadOnly> collections);
         Task ReplaceManyAsync(IEnumerable<OrganizationUser> organizationUsers);
         Task<ICollection<OrganizationUser>> GetManyByManyUsersAsync(IEnumerable<Guid> userIds);

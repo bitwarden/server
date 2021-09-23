@@ -718,6 +718,12 @@ namespace Bit.Core.Services
                 ProrationDate = prorationDate,
             };
 
+            if (!subscriptionUpdate.UpdateNeeded(sub))
+            {
+                // No need to update subscription, quantity matches
+                return null;
+            }
+
             var customer = await new CustomerService().GetAsync(sub.CustomerId);
             if (!string.IsNullOrWhiteSpace(customer?.Address?.Country)
                     && !string.IsNullOrWhiteSpace(customer?.Address?.PostalCode))
