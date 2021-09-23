@@ -20,14 +20,14 @@ set -e
 # Arguments: 
 #   1 - Name of the project
 #   2 - Directory where the project lives
-#   3 - .NET Project file
 ##############################
 build_dotnet() {
   local project_name=$1
   local project_dir=$2
-  local project_file=$3
 
-  echo -e "\nBuilding app"
+  local project_file="$project_name.csproj"
+
+  echo -e "\n## Building $project_name"
   echo "=====Restore====="
   dotnet restore "$project_dir/$project_file"
   echo "=====Clean====="
@@ -43,27 +43,25 @@ build_dotnet() {
 ##############################
 build_docker() {
   local project_name=$1
-
+  
   echo "Building docker image for: $project_name"
   #echo -e "\nBuilding docker image"
   #docker build -t bitwarden/$(echo $project_name | awk '{print lower($0)}') "build/$project_name"
 }
 
 ##############################
-# Build the Api project
+# Build a .NET docker container
 # Arguments: 
-#   1 - project name
-#   2 - Build the docker container
+#   1 - Name of the project
+#   2 - Build Docker flag
+#   3 - Director where project lives
 ##############################
-api() {
-  local build_docker=$1
+build() {
+  local project_name=$1
+  local build_docker=$2
+  local project_dir=$3
 
-  local project_name="Api"
-  local project_dir="$PWD/src/Api"
-  local project_file="Api.csproj"
-  
-  echo -e "\n## Building API"
-  build_dotnet $project_name $project_dir $project_file
+  build_dotnet $project_name $project_dir
   
   if [[ $build_docker -eq 1 ]]; then
     build_docker $project_name
@@ -71,7 +69,10 @@ api() {
 }
 
 # Get command
-PROJECT=$1; shift
+PROJECT=$1;
+if [ "$PROJECT" != "" ]; then
+  shift
+fi
 
 # Get Params
 BUILD_DOCKER=0
@@ -85,6 +86,23 @@ while [ ! $# -eq 0 ]; do
   shift
 done
 
+# Run script
 case "$PROJECT" in
-  api | Api) api $BUILD_DOCKER ;;
+  admin | Admin) build "Admin" $BUILD_DOCKER "$PWD/src/Admin" ;;
+  api | Api) build "Api" $BUILD_DOCKER "$PWD/src/Api" ;;
+  billing | Billing) build "Billing" $BUILD_DOCKER "$PWD/src/Billing" ;;
+  events | Events) build "Events" $BUILD_DOCKER "$PWD/src/Events" ;;
+  identity | Identity) build "Identity" $BUILD_DOCKER "$PWD/src/Identity" ;;
+  portal | Portal) build "Portal" $BUILD_DOCKER "$PWD/bitwarden_license/src/Portal" ;;
+  sso | Sso) build "Sso" $BUILD_DOCKER "$PWD/bitwarden_license/src/Sso" ;;
+  * | "")
+    echo "building all"
+    build "Admin" $BUILD_DOCKER "$PWD/src/Admin"
+    build "Api" $BUILD_DOCKER "$PWD/src/Api"
+    build "Billing" $BUILD_DOCKER "$PWD/src/Billing"
+    build "Events" $BUILD_DOCKER "$PWD/src/Events"
+    build "Identity" $BUILD_DOCKER "$PWD/src/Identity"
+    build "Portal" $BUILD_DOCKER "$PWD/bitwarden_license/src/Portal"
+    build "Sso" $BUILD_DOCKER "$PWD/bitwarden_license/src/Sso"
+    ;;
 esac
