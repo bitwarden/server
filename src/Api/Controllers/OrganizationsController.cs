@@ -281,6 +281,19 @@ namespace Bit.Api.Controllers
             };
         }
 
+        [HttpPost("{id}/subscription")]
+        [SelfHosted(NotSelfHostedOnly = true)]
+        public async Task PostSubscription(string id, [FromBody] OrganizationSubscriptionUpdateRequestModel model)
+        {
+            var orgIdGuid = new Guid(id);
+            if (!await _currentContext.OrganizationOwner(orgIdGuid))
+            {
+                throw new NotFoundException();
+            }
+
+            await _organizationService.UpdateSubscription(orgIdGuid, model.SeatAdjustment, model.MaxAutoscaleSeats);
+        }
+
         [HttpPost("{id}/seat")]
         [SelfHosted(NotSelfHostedOnly = true)]
         public async Task<PaymentResponseModel> PostSeat(string id, [FromBody]OrganizationSeatRequestModel model)

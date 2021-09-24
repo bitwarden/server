@@ -104,7 +104,7 @@ namespace Bit.CommCore.Services
             }
 
             var providerUser = await _providerUserRepository.GetByProviderUserAsync(provider.Id, ownerUserId);
-            if (!(providerUser is {Type: ProviderUserType.ProviderAdmin}))
+            if (!(providerUser is { Type: ProviderUserType.ProviderAdmin }))
             {
                 throw new BadRequestException("Invalid owner.");
             }
@@ -211,7 +211,7 @@ namespace Bit.CommCore.Services
             {
                 throw new BadRequestException("User invalid.");
             }
-            
+
             if (providerUser.Status != ProviderUserStatusType.Invited)
             {
                 throw new BadRequestException("Already accepted.");
@@ -228,7 +228,7 @@ namespace Bit.CommCore.Services
             {
                 throw new BadRequestException("User email does not match invite.");
             }
-            
+
             providerUser.Status = ProviderUserStatusType.Accepted;
             providerUser.UserId = user.Id;
             providerUser.Email = null;
@@ -252,7 +252,7 @@ namespace Bit.CommCore.Services
             }
 
             var validOrganizationUserIds = validProviderUsers.Select(u => u.UserId.Value).ToList();
-            
+
             var provider = await _providerRepository.GetByIdAsync(providerId);
             var users = await _userRepository.GetManyAsync(validOrganizationUserIds);
 
@@ -274,7 +274,7 @@ namespace Bit.CommCore.Services
                     {
                         throw new BadRequestException("Invalid user.");
                     }
-                    
+
                     providerUser.Status = ProviderUserStatusType.Confirmed;
                     providerUser.Key = keys[providerUser.Id];
                     providerUser.Email = null;
@@ -303,7 +303,7 @@ namespace Bit.CommCore.Services
             }
 
             if (user.Type != ProviderUserType.ProviderAdmin &&
-                !await HasConfirmedProviderAdminExceptAsync(user.ProviderId, new[] {user.Id}))
+                !await HasConfirmedProviderAdminExceptAsync(user.ProviderId, new[] { user.Id }))
             {
                 throw new BadRequestException("Provider must have at least one confirmed ProviderAdmin.");
             }
@@ -413,14 +413,21 @@ namespace Bit.CommCore.Services
             await _providerOrganizationRepository.CreateAsync(providerOrganization);
             await _eventService.LogProviderOrganizationEventAsync(providerOrganization, EventType.ProviderOrganization_Created);
 
-            await _organizationService.InviteUserAsync(organization.Id, user.Id, null, new OrganizationUserInvite
-            {
-                Emails = new[] { clientOwnerEmail },
-                AccessAll = true,
-                Type = OrganizationUserType.Owner,
-                Permissions = null,
-                Collections = Array.Empty<SelectionReadOnly>(),
-            });
+            await _organizationService.InviteUsersAsync(organization.Id, user.Id,
+                new (OrganizationUserInvite, string)[]
+                {
+                    (
+                        new OrganizationUserInvite
+                        {
+                            Emails = new[] { clientOwnerEmail },
+                            AccessAll = true,
+                            Type = OrganizationUserType.Owner,
+                            Permissions = null,
+                            Collections = Array.Empty<SelectionReadOnly>(),
+                        },
+                        null
+                    )
+                });
 
             return providerOrganization;
         }
