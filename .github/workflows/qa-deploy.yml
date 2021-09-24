@@ -16,7 +16,6 @@ jobs:
     name: Reset Database
     if: ${{ github.event.inputs.resetDb == 'true' }}
     runs-on: ubuntu-20.04
-    needs: build
     steps:
       - name: Reset Test Data - Stub
         run: |
@@ -28,7 +27,6 @@ jobs:
     name: Update Database
     if: ${{ github.event.inputs.migrateDb == 'true' }}
     runs-on: ubuntu-20.04
-    needs: build
     steps:
       - name: Checkout repo
         uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
@@ -108,7 +106,11 @@ jobs:
         env:
           VAULT_NAME: "bitwarden-qa-kv"
         run: |
-          webapp_name=$(az keyvault secret show --vault-name $VAULT_NAME --name appservices-${{ steps.setup.outputs.name_lower }}-webapp-name --query value --output tsv)
+          webapp_name=$(
+            az keyvault secret show --vault-name $VAULT_NAME \
+              --name appservices-${{ steps.setup.outputs.name_lower }}-webapp-name \
+              --query value --output tsv
+          )
           echo "::add-mask::$webapp_name"
           echo "::set-output name=webapp-name::$webapp_name"
 

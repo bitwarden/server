@@ -87,7 +87,11 @@ jobs:
         env:
           VAULT_NAME: "bitwarden-prod-kv"
         run: |
-          webapp_name=$(az keyvault secret show --vault-name $VAULT_NAME --name appservices-${{ steps.setup.outputs.name_lower }}-webapp-name --query value --output tsv)
+          webapp_name=$(
+            az keyvault secret show --vault-name $VAULT_NAME \
+              --name appservices-${{ steps.setup.outputs.name_lower }}-webapp-name \
+              --query value --output tsv
+          )
           echo "::add-mask::$webapp_name"
           echo "::set-output name=webapp-name::$webapp_name"
 
