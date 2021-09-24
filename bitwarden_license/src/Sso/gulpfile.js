@@ -2,7 +2,6 @@
 
 const gulp = require('gulp');
 const merge = require('merge-stream');
-const googleWebFonts = require('gulp-google-webfonts');
 const sass = require('gulp-sass');
 const del = require('del');
 
@@ -65,18 +64,8 @@ function sassWatch() {
     gulp.watch(paths.sass, runSass);
 }
 
-function webfonts() {
-    return gulp.src('./webfonts.list')
-        .pipe(googleWebFonts({
-            fontsDir: 'webfonts',
-            cssFilename: 'webfonts.css'
-        }))
-        .pipe(gulp.dest(paths.cssDir));
-}
-
-exports.build = gulp.series(clean, gulp.parallel([lib, runSass, webfonts]));
+exports.build = gulp.series(clean, gulp.parallel([lib, runSass]));
 exports['sass:watch'] = sassWatch;
 exports.sass = runSass;
 exports.lib = lib;
-exports.webfonts = webfonts;
 exports.clean = clean;
