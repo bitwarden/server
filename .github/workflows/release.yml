@@ -97,13 +97,78 @@ jobs:
           path: ./swagger.json
 
 
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-20.04
+    needs:
+      - setup
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Api
+          - name: Admin
+          - name: Billing
+          - name: Events
+          - name: Sso
+          - name: Portal
+          - name: Identity
+    steps:
+      - name: Setup
+        id: setup
+        run: |
+          NAME_LOWER=$(echo "${{ matrix.name }}" | awk '{print tolower($0)}')
+          echo "Matrix name: ${{ matrix.name }}"
+          echo "NAME_LOWER: $NAME_LOWER"
+          echo "::set-output name=name_lower::$NAME_LOWER"
+
+      - name: Download latest RC ${{ matrix.name }} asset
+        uses: dawidd6/action-download-artifact@b9571484721e8187f1fd08147b497129f8972c74  # v2.14.0
+        with:
+          workflow: build.yml
+          workflow_conclusion: success
+          branch: rc
+          name: ${{ matrix.name }}.zip
+
+      - name: Login to Azure
+        uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a
+        with:
+          creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
+
+      - name: Retrieve secrets
+        id: retrieve-secrets
+        env:
+          VAULT_NAME: "bitwarden-qa-kv"
+        run: |
+          webapp_name=$(az keyvault secret show --vault-name $VAULT_NAME --name appservices-${{ steps.setup.outputs.name_lower }}-webapp-name --query value --output tsv)
+          echo "::add-mask::$webapp_name"
+          echo "::set-output name=webapp-name::$webapp_name"
+
+      - name: Stop App Service
+        env:
+          AZURE_RESOURCE_GROUP: "bw-qa-env"
+        run: az webapp stop --name ${{ steps.retrieve-secrets.outputs.webapp-name }} --resource-group $AZURE_RESOURCE_GROUP
+
+      - name: Deploy App
+        uses: azure/webapps-deploy@798e43877120eda6a2a690a4f212c545e586ae31
+        with:
+          app-name: ${{ steps.retrieve-secrets.outputs.webapp-name }}
+          package: ./${{ matrix.name }}.zip
+          slot: "staging"
+
+      - name: Start App Service
+        env:
+          AZURE_RESOURCE_GROUP: "bw-qa-env"
+        run: az webapp start --name ${{ steps.retrieve-secrets.outputs.webapp-name }} --resource-group $AZURE_RESOURCE_GROUP
+
+
   release:
     name: Create GitHub Release
-    if: false
     runs-on: ubuntu-20.04
     needs:
       - setup
       - build-assets
+      - deploy
     steps:
       - name: Download latest RC Production build
         uses: dawidd6/action-download-artifact@b9571484721e8187f1fd08147b497129f8972c74  # v2.14.0
