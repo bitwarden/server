@@ -44,63 +44,6 @@ jobs:
           echo "::set-output name=tag::v$version"
 
 
-  build-assets:
-    name: Build release assets
-    runs-on: ubuntu-20.04
-    needs:
-      - setup
-    env:
-      _TAG_VERSION: ${{ needs.setup.outputs.tag_version }}
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
-        with: 
-          ref: rc
-
-      - name: Restore
-        run: dotnet tool restore
-
-      - name: Make Docker stub
-        run: |
-          STUB_OUTPUT=$(pwd)/docker-stub
-          docker run -i --rm --name setup -v $STUB_OUTPUT:/bitwarden bitwarden/setup:dev \
-            dotnet Setup.dll -stub 1 -install 1 -domain bitwarden.example.com -os lin
-          sudo chown -R $(whoami):$(whoami) $STUB_OUTPUT
-          rm -rf $STUB_OUTPUT/letsencrypt
-          rm $STUB_OUTPUT/env/uid.env $STUB_OUTPUT/config.yml
-          touch $STUB_OUTPUT/env/uid.env
-          cd docker-stub; zip -r ../docker-stub.zip *; cd ..
-
-      - name: Upload Docker stub artifact
-        uses: actions/upload-artifact@ee69f02b3dfdecd58bb31b4d133da38ba6fe3700
-        with:
-          name: docker-stub.zip
-          path: ./docker-stub.zip
-
-      - name: Build Swagger
-        run: |
-          cd ./src/Api
-          echo "Restore"
-          dotnet restore
-          echo "Clean"
-          dotnet clean -c "Release" -o obj/build-output/publish
-          echo "Publish"
-          dotnet publish -c "Release" -o obj/build-output/publish
-
-          dotnet swagger tofile --output ../../swagger.json --host https://api.bitwarden.com \
-            ./obj/build-output/publish/Api.dll public
-          cd ../..
-        env:
-          ASPNETCORE_ENVIRONMENT: Production
-          swaggerGen: 'True'
-
-      - name: Upload Swagger artifact
-        uses: actions/upload-artifact@ee69f02b3dfdecd58bb31b4d133da38ba6fe3700
-        with:
-          name: swagger.json
-          path: ./swagger.json
-
-
   deploy:
     name: Deploy
     runs-on: ubuntu-20.04
@@ -161,16 +104,16 @@ jobs:
     runs-on: ubuntu-20.04
     needs:
       - setup
-      - build-assets
       - deploy
     steps:
-      - uses: actions/download-artifact@3be87be14a055c47b01d3bd88f8fe02320a9bb60  # v2.0.10
+      - name: Download latest RC docker-stub
+        uses: bitwarden/gh-actions/download-artifacts@master
         with:
-          name: docker-stub.zip
-
-      - uses: actions/download-artifact@3be87be14a055c47b01d3bd88f8fe02320a9bb60  # v2.0.10
-        with:
-          name: swagger.json
+          workflow: build.yml
+          workflow_conclusion: success
+          branch: rc
+          artifacts: "docker-stub.zip,
+                      swagger.json"
 
       - name: Create release
         uses: ncipollo/release-action@95215a3cb6e6a1908b3c44e00b4fdb15548b1e09

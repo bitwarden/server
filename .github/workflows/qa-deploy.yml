@@ -91,7 +91,7 @@ jobs:
           echo "::set-output name=branch_name::$BRANCH_NAME"
 
       - name: Download latest ${{ matrix.name }} asset from ${{ env.branch_name }}
-        uses: dawidd6/action-download-artifact@b9571484721e8187f1fd08147b497129f8972c74  # v2.14.0
+        uses: bitwarden/gh-actions/download-artifacts@master
         with:
           workflow: build.yml
           workflow_conclusion: success
