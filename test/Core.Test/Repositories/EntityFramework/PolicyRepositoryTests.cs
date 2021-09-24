@@ -59,17 +59,16 @@ namespace Bit.Core.Test.Repositories.EntityFramework
         }
 
         [CiSkippedTheory]
-        [EfPolicyApplicableToUserInlineAutoData(true, OrganizationUserType.User, false, OrganizationUserStatusType.Confirmed, true, true, false)]       // Ordinary user
-        [EfPolicyApplicableToUserInlineAutoData(false, OrganizationUserType.Owner, false, OrganizationUserStatusType.Confirmed, true, true, false)]     // Owner
-        [EfPolicyApplicableToUserInlineAutoData(false, OrganizationUserType.Admin, false, OrganizationUserStatusType.Confirmed, true, true, false)]     // Admin
-        [EfPolicyApplicableToUserInlineAutoData(false, OrganizationUserType.User, true, OrganizationUserStatusType.Confirmed, true, true, false)]       // canManagePolicies
-        [EfPolicyApplicableToUserInlineAutoData(false, OrganizationUserType.User, false, OrganizationUserStatusType.Confirmed, true, true, true)]       // Provider
-        [EfPolicyApplicableToUserInlineAutoData(false, OrganizationUserType.User, false, OrganizationUserStatusType.Confirmed, false, true, false)]     // Policy disabled
-        [EfPolicyApplicableToUserInlineAutoData(false, OrganizationUserType.User, false, OrganizationUserStatusType.Confirmed, true, false, false)]     // No policy of Type
-        [EfPolicyApplicableToUserInlineAutoData(false, OrganizationUserType.User, false, OrganizationUserStatusType.Invited, true, true, false)]        // User not minStatus
-        public async void GetManyByTypeApplicableToUser_Works_DataMatches(
+        [EfPolicyApplicableToUserInlineAutoData(OrganizationUserType.User, false, OrganizationUserStatusType.Confirmed, true, true, false)]       // Ordinary user
+        [EfPolicyApplicableToUserInlineAutoData(OrganizationUserType.Owner, false, OrganizationUserStatusType.Confirmed, true, true, false)]     // Owner
+        [EfPolicyApplicableToUserInlineAutoData(OrganizationUserType.Admin, false, OrganizationUserStatusType.Confirmed, true, true, false)]     // Admin
+        [EfPolicyApplicableToUserInlineAutoData(OrganizationUserType.User, true, OrganizationUserStatusType.Confirmed, true, true, false)]       // canManagePolicies
+        [EfPolicyApplicableToUserInlineAutoData(OrganizationUserType.User, false, OrganizationUserStatusType.Confirmed, true, true, true)]       // Provider
+        [EfPolicyApplicableToUserInlineAutoData(OrganizationUserType.User, false, OrganizationUserStatusType.Confirmed, false, true, false)]     // Policy disabled
+        [EfPolicyApplicableToUserInlineAutoData(OrganizationUserType.User, false, OrganizationUserStatusType.Confirmed, true, false, false)]     // No policy of Type
+        [EfPolicyApplicableToUserInlineAutoData(OrganizationUserType.User, false, OrganizationUserStatusType.Invited, true, true, false)]        // User not minStatus
+        public async void GetManyByTypeApplicableToUser_Works_DataMatches_Corre(
             // Inline data
-            bool expectPolicyApplies,
             OrganizationUserType userType,
             bool canManagePolicies,
             OrganizationUserStatusType orgUserStatus,
@@ -187,16 +186,12 @@ namespace Bit.Core.Test.Repositories.EntityFramework
             results.Add(sqlResult.FirstOrDefault());
 
             // Assert
-            if (expectPolicyApplies)
-            {
-                Assert.DoesNotContain(results, r => r == null);
-                var distinctItems = results.Distinct(equalityComparer);
-                Assert.False(distinctItems.Skip(1).Any());
-            }
-            else
-            {
-                Assert.DoesNotContain(results, r => r != null);
-            }
+            var distinctItems = results.Distinct(equalityComparer);
+            
+            Assert.True(
+                results.All(r => r == null) ||
+                !distinctItems.Skip(1).Any()
+            );
         }
     }
 }
