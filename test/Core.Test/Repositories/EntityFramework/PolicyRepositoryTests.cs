@@ -11,6 +11,10 @@ using System.Collections.Generic;
 using EfRepo = Bit.Core.Repositories.EntityFramework;
 using SqlRepo = Bit.Core.Repositories.SqlServer;
 using Bit.Core.Test.Repositories.EntityFramework.EqualityComparers;
+using Bit.Core.Models.Data;
+using System.Text.Json;
+using Bit.Core.Enums;
+using System.Threading.Tasks;
 
 namespace Bit.Core.Test.Repositories.EntityFramework
 {
@@ -55,11 +59,24 @@ namespace Bit.Core.Test.Repositories.EntityFramework
         }
 
         [CiSkippedTheory]
-        [EfPolicyApplicableToUserInlineAutoData(Enums.OrganizationUserType.User, false)]
-        [EfPolicyApplicableToUserInlineAutoData(Enums.OrganizationUserType.Owner, true)]
+        [EfPolicyApplicableToUserInlineAutoData(true, OrganizationUserType.User, false, OrganizationUserStatusType.Confirmed, true, true, false)]       // Ordinary user
+        [EfPolicyApplicableToUserInlineAutoData(false, OrganizationUserType.Owner, false, OrganizationUserStatusType.Confirmed, true, true, false)]     // Owner
+        [EfPolicyApplicableToUserInlineAutoData(false, OrganizationUserType.Admin, false, OrganizationUserStatusType.Confirmed, true, true, false)]     // Admin
+        [EfPolicyApplicableToUserInlineAutoData(false, OrganizationUserType.User, false, OrganizationUserStatusType.Confirmed, true, true, true)]       // Provider
+        [EfPolicyApplicableToUserInlineAutoData(false, OrganizationUserType.User, false, OrganizationUserStatusType.Confirmed, false, true, false)]     // Policy disabled
+        [EfPolicyApplicableToUserInlineAutoData(false, OrganizationUserType.User, false, OrganizationUserStatusType.Confirmed, true, false, false)]     // No policy of Type
+        [EfPolicyApplicableToUserInlineAutoData(false, OrganizationUserType.User, false, OrganizationUserStatusType.Invited, true, true, false)]        // User not minStatus
         public async void GetManyByTypeApplicableToUser_Works_DataMatches(
-            Enums.OrganizationUserType userType,
-            bool expectExempt,
+            // Inline data
+            bool expectPolicyApplies,
+            OrganizationUserType userType,
+            bool canManagePolicies,
+            OrganizationUserStatusType orgUserStatus,
+            bool policyEnabled,
+            bool policySameType,
+            bool isProvider,
+
+            // Auto data - models
             TableModel.Policy policy,
             TableModel.User user,
             TableModel.Organization organization,
@@ -68,6 +85,8 @@ namespace Bit.Core.Test.Repositories.EntityFramework
             TableModel.Provider.ProviderOrganization providerOrganization,
             TableModel.Provider.ProviderUser providerUser,
             PolicyCompare equalityComparer,
+
+            // Auto data - EF repos
             List<EfRepo.PolicyRepository> suts,
             List<EfRepo.UserRepository> efUserRepository,
             List<EfRepo.OrganizationRepository> efOrganizationRepository,
@@ -75,6 +94,8 @@ namespace Bit.Core.Test.Repositories.EntityFramework
             List<EfRepo.ProviderRepository> efProviderRepos,
             List<EfRepo.ProviderOrganizationRepository> efProviderOrganizationRepository,
             List<EfRepo.ProviderUserRepository> efProviderUserRepository,
+
+            // Auto data - SQL repos
             SqlRepo.PolicyRepository sqlPolicyRepo,
             SqlRepo.UserRepository sqlUserRepo,
             SqlRepo.ProviderRepository sqlProviderRepo,
@@ -84,16 +105,21 @@ namespace Bit.Core.Test.Repositories.EntityFramework
             SqlRepo.ProviderUserRepository sqlProviderUserRepo
             )
         {
-            // Arrange
+            var savedPolicyType = PolicyType.SingleOrg;
+            var queriedPolicyType = policySameType ? savedPolicyType : PolicyType.DisableSend;
 
-            // TODO: paramaterize these values
-            // Expected result: policy applies
+            // Arrange data
             orgUser.Type = userType;
-            orgUser.Permissions = null;
-            orgUser.Status = Enums.OrganizationUserStatusType.Confirmed;
+            orgUser.Status = orgUserStatus;
+            var permissionsData = new Permissions { ManagePolicies = canManagePolicies };
+            orgUser.Permissions = JsonSerializer.Serialize(permissionsData, new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            });
 
             policy.OrganizationId = organization.Id;
-            policy.Enabled = true;
+            policy.Enabled = policyEnabled;
+            policy.Type = savedPolicyType;
 
             var results = new List<TableModel.Policy>();
 
@@ -101,7 +127,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
             {
                 var i = suts.IndexOf(sut);
 
-                // Seed database
+                // Seed EF databases
                 var savedUser = await efUserRepository[i].CreateAsync(user);
                 var savedOrg = await efOrganizationRepository[i].CreateAsync(organization);
 
@@ -109,28 +135,29 @@ namespace Bit.Core.Test.Repositories.EntityFramework
                 orgUser.OrganizationId = savedOrg.Id;
                 await efOrganizationUserRepos[i].CreateAsync(orgUser);
 
-                // ONLY IF PROVIDER = TRUE
+                if (isProvider)
+                {
+                    var savedProvider = await efProviderRepos[i].CreateAsync(provider);
 
-                var savedProvider = await efProviderRepos[i].CreateAsync(provider);
+                    providerOrganization.OrganizationId = savedOrg.Id;
+                    providerOrganization.ProviderId = savedProvider.Id;
+                    await efProviderOrganizationRepository[i].CreateAsync(providerOrganization);
 
-                providerOrganization.OrganizationId = savedOrg.Id;
-                providerOrganization.ProviderId = savedProvider.Id;
-                await efProviderOrganizationRepository[i].CreateAsync(providerOrganization);
-
-                //providerUser.UserId = savedUser.Id;
-                //providerUser.ProviderId = savedProvider.Id;
-                //await efProviderUserRepository[i].CreateAsync(providerUser);
+                    providerUser.UserId = savedUser.Id;
+                    providerUser.ProviderId = savedProvider.Id;
+                    await efProviderUserRepository[i].CreateAsync(providerUser);
+                }
 
                 policy.OrganizationId = savedOrg.Id;
                 await sut.CreateAsync(policy);
                 sut.ClearChangeTracking();
 
-                // Act
-                var result = await sut.GetManyByTypeApplicableToUserIdAsync(savedUser.Id, policy.Type, Enums.OrganizationUserStatusType.Accepted);
+                // Act on EF databases
+                var result = await sut.GetManyByTypeApplicableToUserIdAsync(savedUser.Id, queriedPolicyType, OrganizationUserStatusType.Accepted);
                 results.Add(result.FirstOrDefault());
             }
 
-            // Seed Sql database
+            // Seed SQL database
             var sqlUser = await sqlUserRepo.CreateAsync(user);
             var sqlOrg = await sqlOrganizationRepo.CreateAsync(organization);
 
@@ -138,30 +165,36 @@ namespace Bit.Core.Test.Repositories.EntityFramework
             orgUser.OrganizationId = sqlOrg.Id;
             await sqlOrganizationUserRepo.CreateAsync(orgUser);
 
-            var sqlProvider = await sqlProviderRepo.CreateAsync(provider);
+            if (isProvider)
+            {
+                var sqlProvider = await sqlProviderRepo.CreateAsync(provider);
 
-            providerOrganization.OrganizationId = sqlOrg.Id;
-            providerOrganization.ProviderId = sqlProvider.Id;
-            await sqlProviderOrganizationRepo.CreateAsync(providerOrganization);
+                providerOrganization.OrganizationId = sqlOrg.Id;
+                providerOrganization.ProviderId = sqlProvider.Id;
+                await sqlProviderOrganizationRepo.CreateAsync(providerOrganization);
 
-            //providerUser.UserId = sqlUser.Id;
-            //providerUser.ProviderId = sqlProvider.Id;
-            //await sqlProviderUserRepo.CreateAsync(providerUser);
+                providerUser.UserId = sqlUser.Id;
+                providerUser.ProviderId = sqlProvider.Id;
+                await sqlProviderUserRepo.CreateAsync(providerUser);
+            }
 
             policy.OrganizationId = sqlOrg.Id;
             await sqlPolicyRepo.CreateAsync(policy);
 
-            var sqlResult = await sqlPolicyRepo.GetManyByTypeApplicableToUserIdAsync(sqlUser.Id, policy.Type, Enums.OrganizationUserStatusType.Accepted);
+            // Act on SQL database
+            var sqlResult = await sqlPolicyRepo.GetManyByTypeApplicableToUserIdAsync(sqlUser.Id, queriedPolicyType, OrganizationUserStatusType.Accepted);
             results.Add(sqlResult.FirstOrDefault());
 
-            if (expectExempt)
+            // Assert
+            if (expectPolicyApplies)
             {
-                Assert.DoesNotContain(results, r => r != null);
+                Assert.DoesNotContain(results, r => r == null);
+                var distinctItems = results.Distinct(equalityComparer);
+                Assert.False(distinctItems.Skip(1).Any());
             }
             else
             {
-                var distinctItems = results.Distinct(equalityComparer);
-                Assert.False(distinctItems.Skip(1).Any());
+                Assert.DoesNotContain(results, r => r != null);
             }
         }
     }
