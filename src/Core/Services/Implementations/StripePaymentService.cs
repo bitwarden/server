@@ -37,22 +37,16 @@ namespace Bit.Core.Services
             IAppleIapService appleIapService,
             ILogger<StripePaymentService> logger,
             ITaxRateRepository taxRateRepository,
-            IStripeAdapter stripeAdapter)
+            IStripeAdapter stripeAdapter,
+            Braintree.IBraintreeGateway braintreeGateway)
         {
-            _btGateway = new Braintree.BraintreeGateway
-            {
-                Environment = globalSettings.Braintree.Production ?
-                    Braintree.Environment.PRODUCTION : Braintree.Environment.SANDBOX,
-                MerchantId = globalSettings.Braintree.MerchantId,
-                PublicKey = globalSettings.Braintree.PublicKey,
-                PrivateKey = globalSettings.Braintree.PrivateKey
-            };
             _transactionRepository = transactionRepository;
             _userRepository = userRepository;
             _appleIapService = appleIapService;
             _logger = logger;
             _taxRateRepository = taxRateRepository;
             _stripeAdapter = stripeAdapter;
+            _btGateway = braintreeGateway;
         }
 
         public async Task<string> PurchaseOrganizationAsync(Organization org, PaymentMethodType paymentMethodType,
