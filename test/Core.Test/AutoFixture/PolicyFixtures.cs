@@ -110,9 +110,9 @@ namespace Bit.Core.Test.AutoFixture.PolicyFixtures
         { }
     }
 
-    internal class EfPolicyApplicableToUserAutoDataAttribute : CustomAutoDataAttribute
+    internal class EfPolicyApplicableToUserInlineAutoDataAttribute : InlineCustomAutoDataAttribute
     {
-        public EfPolicyApplicableToUserAutoDataAttribute() : base(new SutProviderCustomization(), new EfPolicyApplicableToUser())
+        public EfPolicyApplicableToUserInlineAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization), typeof(EfPolicyApplicableToUser) }, values)
         { }
     }
 

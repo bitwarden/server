@@ -54,8 +54,12 @@ namespace Bit.Core.Test.Repositories.EntityFramework
             Assert.True(!distinctItems.Skip(1).Any());
         }
 
-        [CiSkippedTheory, EfPolicyApplicableToUserAutoData]
+        [CiSkippedTheory]
+        [EfPolicyApplicableToUserInlineAutoData(Enums.OrganizationUserType.User, false)]
+        [EfPolicyApplicableToUserInlineAutoData(Enums.OrganizationUserType.Owner, true)]
         public async void GetManyByTypeApplicableToUser_Works_DataMatches(
+            Enums.OrganizationUserType userType,
+            bool expectExempt,
             TableModel.Policy policy,
             TableModel.User user,
             TableModel.Organization organization,
@@ -84,15 +88,12 @@ namespace Bit.Core.Test.Repositories.EntityFramework
 
             // TODO: paramaterize these values
             // Expected result: policy applies
-            orgUser.Type = Enums.OrganizationUserType.User;
+            orgUser.Type = userType;
             orgUser.Permissions = null;
             orgUser.Status = Enums.OrganizationUserStatusType.Confirmed;
 
             policy.OrganizationId = organization.Id;
             policy.Enabled = true;
-
-            providerUser.UserId = orgUser.UserId;
-            providerUser.ProviderId = providerOrganization.ProviderId;
 
             var results = new List<TableModel.Policy>();
 
@@ -153,8 +154,15 @@ namespace Bit.Core.Test.Repositories.EntityFramework
             var sqlResult = await sqlPolicyRepo.GetManyByTypeApplicableToUserIdAsync(sqlUser.Id, policy.Type, Enums.OrganizationUserStatusType.Accepted);
             results.Add(sqlResult.FirstOrDefault());
 
-            var distinctItems = results.Distinct(equalityComparer);
-            Assert.True(!distinctItems.Skip(1).Any());
+            if (expectExempt)
+            {
+                Assert.DoesNotContain(results, r => r != null);
+            }
+            else
+            {
+                var distinctItems = results.Distinct(equalityComparer);
+                Assert.False(distinctItems.Skip(1).Any());
+            }
         }
     }
 }
