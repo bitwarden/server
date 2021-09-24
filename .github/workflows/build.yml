@@ -304,6 +304,7 @@ jobs:
           path: ${{ matrix.base_path }}/${{ matrix.service_name }}/obj/build-output/publish
 
       - name: Unzip build artifact
+        if: false
         run: |
           ls -alth ${{ matrix.base_path }}/${{ matrix.service_name }}/obj/build-output/publish
           unzip ${{ matrix.base_path }}/${{ matrix.service_name }}/obj/build-output/publish/${{ matrix.service_name }}.zip
