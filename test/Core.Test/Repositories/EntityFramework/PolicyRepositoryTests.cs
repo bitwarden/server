@@ -84,7 +84,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
             TableModel.Provider.Provider provider,
             TableModel.Provider.ProviderOrganization providerOrganization,
             TableModel.Provider.ProviderUser providerUser,
-            PolicyCompare equalityComparer,
+            PolicyCompareIncludingOrganization equalityComparer,
 
             // Auto data - EF repos
             List<EfRepo.PolicyRepository> suts,
