@@ -7,12 +7,10 @@ on:
       release_tag_name_input:
         description: "Release Tag Name <X.X.X>"
         required: true
-  release:
-    types:
-      - published
 
 jobs:
   setup:
+    if: false
     name: Setup
     runs-on: ubuntu-20.04
     outputs:

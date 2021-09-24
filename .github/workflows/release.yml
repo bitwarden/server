@@ -24,6 +24,8 @@ jobs:
 
       - name: Checkout repo
         uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
+        with:
+          ref: rc
 
       - name: Check Release Version
         id: version
@@ -52,6 +54,8 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
+        with: 
+          ref: rc
 
       - name: Restore
         run: dotnet tool restore
@@ -138,16 +142,11 @@ jobs:
       - name: Retrieve secrets
         id: retrieve-secrets
         env:
-          VAULT_NAME: "bitwarden-qa-kv"
+          VAULT_NAME: "bitwarden-prod-kv"
         run: |
           webapp_name=$(az keyvault secret show --vault-name $VAULT_NAME --name appservices-${{ steps.setup.outputs.name_lower }}-webapp-name --query value --output tsv)
           echo "::add-mask::$webapp_name"
           echo "::set-output name=webapp-name::$webapp_name"
-
-      - name: Stop App Service
-        env:
-          AZURE_RESOURCE_GROUP: "bw-qa-env"
-        run: az webapp stop --name ${{ steps.retrieve-secrets.outputs.webapp-name }} --resource-group $AZURE_RESOURCE_GROUP
 
       - name: Deploy App
         uses: azure/webapps-deploy@798e43877120eda6a2a690a4f212c545e586ae31
@@ -155,11 +154,6 @@ jobs:
           app-name: ${{ steps.retrieve-secrets.outputs.webapp-name }}
           package: ./${{ matrix.name }}.zip
           slot: "staging"
-
-      - name: Start App Service
-        env:
-          AZURE_RESOURCE_GROUP: "bw-qa-env"
-        run: az webapp start --name ${{ steps.retrieve-secrets.outputs.webapp-name }} --resource-group $AZURE_RESOURCE_GROUP
 
 
   release:
@@ -170,18 +164,19 @@ jobs:
       - build-assets
       - deploy
     steps:
-      - name: Download latest RC Production build
-        uses: dawidd6/action-download-artifact@b9571484721e8187f1fd08147b497129f8972c74  # v2.14.0
+      - uses: actions/download-artifact@3be87be14a055c47b01d3bd88f8fe02320a9bb60  # v2.0.10
         with:
-          workflow: build.yml
-          workflow_conclusion: success
-          branch: rc
-          name: prod-build-artifact.zip
+          name: docker-stub.zip
+
+      - uses: actions/download-artifact@3be87be14a055c47b01d3bd88f8fe02320a9bb60  # v2.0.10
+        with:
+          name: swagger.json
 
       - name: Create release
         uses: ncipollo/release-action@95215a3cb6e6a1908b3c44e00b4fdb15548b1e09
         with:
-          artifacts: prod-build-artifact.zip
+          artifacts: 'docker-stub.zip,
+                      swagger.json'
           commit: ${{ github.sha }}
           tag: "${{ needs.setup.outputs.tag_version }}"
           name: "Version ${{ needs.setup.outputs.release_version }}"
