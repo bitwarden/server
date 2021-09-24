@@ -14,6 +14,7 @@ using Bit.Core.Test.Repositories.EntityFramework.EqualityComparers;
 using Bit.Core.Models.Data;
 using System.Text.Json;
 using Bit.Core.Enums;
+using Bit.Core.Repositories;
 using System.Threading.Tasks;
 
 namespace Bit.Core.Test.Repositories.EntityFramework
@@ -90,25 +91,41 @@ namespace Bit.Core.Test.Repositories.EntityFramework
             List<EfRepo.PolicyRepository> suts,
             List<EfRepo.UserRepository> efUserRepository,
             List<EfRepo.OrganizationRepository> efOrganizationRepository,
-            List<EfRepo.OrganizationUserRepository> efOrganizationUserRepos,
-            List<EfRepo.ProviderRepository> efProviderRepos,
+            List<EfRepo.OrganizationUserRepository> efOrganizationUserRepository,
+            List<EfRepo.ProviderRepository> efProviderRepository,
             List<EfRepo.ProviderOrganizationRepository> efProviderOrganizationRepository,
             List<EfRepo.ProviderUserRepository> efProviderUserRepository,
 
             // Auto data - SQL repos
             SqlRepo.PolicyRepository sqlPolicyRepo,
             SqlRepo.UserRepository sqlUserRepo,
-            SqlRepo.ProviderRepository sqlProviderRepo,
             SqlRepo.OrganizationRepository sqlOrganizationRepo,
+            SqlRepo.ProviderRepository sqlProviderRepo,
             SqlRepo.OrganizationUserRepository sqlOrganizationUserRepo,
             SqlRepo.ProviderOrganizationRepository sqlProviderOrganizationRepo,
             SqlRepo.ProviderUserRepository sqlProviderUserRepo
             )
         {
+            // Combine EF and SQL repos into one list per type
+            var policyRepos = suts.ToList<IPolicyRepository>();
+            policyRepos.Add(sqlPolicyRepo);
+            var userRepos = efUserRepository.ToList<IUserRepository>();
+            userRepos.Add(sqlUserRepo);
+            var orgRepos = efOrganizationRepository.ToList<IOrganizationRepository>();
+            orgRepos.Add(sqlOrganizationRepo);
+            var orgUserRepos = efOrganizationUserRepository.ToList<IOrganizationUserRepository>();
+            orgUserRepos.Add(sqlOrganizationUserRepo);
+            var providerRepos = efProviderRepository.ToList<IProviderRepository>();
+            providerRepos.Add(sqlProviderRepo);
+            var providerOrgRepos = efProviderOrganizationRepository.ToList<IProviderOrganizationRepository>();
+            providerOrgRepos.Add(sqlProviderOrganizationRepo);
+            var providerUserRepos = efProviderUserRepository.ToList<IProviderUserRepository>();
+            providerUserRepos.Add(sqlProviderUserRepo);
+
+            // Arrange data
             var savedPolicyType = PolicyType.SingleOrg;
             var queriedPolicyType = policySameType ? savedPolicyType : PolicyType.DisableSend;
 
-            // Arrange data
             orgUser.Type = userType;
             orgUser.Status = orgUserStatus;
             var permissionsData = new Permissions { ManagePolicies = canManagePolicies };
@@ -117,81 +134,53 @@ namespace Bit.Core.Test.Repositories.EntityFramework
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             });
 
-            policy.OrganizationId = organization.Id;
             policy.Enabled = policyEnabled;
             policy.Type = savedPolicyType;
 
             var results = new List<TableModel.Policy>();
 
-            foreach (var sut in suts)
+            foreach (var policyRepo in policyRepos)
             {
-                var i = suts.IndexOf(sut);
+                var i = policyRepos.IndexOf(policyRepo);
 
-                // Seed EF databases
-                var savedUser = await efUserRepository[i].CreateAsync(user);
-                var savedOrg = await efOrganizationRepository[i].CreateAsync(organization);
+                // Seed database
+                var savedUser = await userRepos[i].CreateAsync(user);
+                var savedOrg = await orgRepos[i].CreateAsync(organization);
 
                 orgUser.UserId = savedUser.Id;
                 orgUser.OrganizationId = savedOrg.Id;
-                await efOrganizationUserRepos[i].CreateAsync(orgUser);
+                await orgUserRepos[i].CreateAsync(orgUser);
 
                 if (isProvider)
                 {
-                    var savedProvider = await efProviderRepos[i].CreateAsync(provider);
+                    var savedProvider = await providerRepos[i].CreateAsync(provider);
 
                     providerOrganization.OrganizationId = savedOrg.Id;
                     providerOrganization.ProviderId = savedProvider.Id;
-                    await efProviderOrganizationRepository[i].CreateAsync(providerOrganization);
+                    await providerOrgRepos[i].CreateAsync(providerOrganization);
 
                     providerUser.UserId = savedUser.Id;
                     providerUser.ProviderId = savedProvider.Id;
-                    await efProviderUserRepository[i].CreateAsync(providerUser);
+                    await providerUserRepos[i].CreateAsync(providerUser);
                 }
 
                 policy.OrganizationId = savedOrg.Id;
-                await sut.CreateAsync(policy);
-                sut.ClearChangeTracking();
+                await policyRepo.CreateAsync(policy);
+                if (suts.Contains(policyRepo))
+                {
+                    (policyRepo as BaseEntityFrameworkRepository).ClearChangeTracking();
+                }
 
-                // Act on EF databases
-                var result = await sut.GetManyByTypeApplicableToUserIdAsync(savedUser.Id, queriedPolicyType, OrganizationUserStatusType.Accepted);
+                // Act
+                var result = await policyRepo.GetManyByTypeApplicableToUserIdAsync(savedUser.Id, queriedPolicyType, OrganizationUserStatusType.Accepted);
                 results.Add(result.FirstOrDefault());
             }
-
-            // Seed SQL database
-            var sqlUser = await sqlUserRepo.CreateAsync(user);
-            var sqlOrg = await sqlOrganizationRepo.CreateAsync(organization);
-
-            orgUser.UserId = sqlUser.Id;
-            orgUser.OrganizationId = sqlOrg.Id;
-            await sqlOrganizationUserRepo.CreateAsync(orgUser);
-
-            if (isProvider)
-            {
-                var sqlProvider = await sqlProviderRepo.CreateAsync(provider);
-
-                providerOrganization.OrganizationId = sqlOrg.Id;
-                providerOrganization.ProviderId = sqlProvider.Id;
-                await sqlProviderOrganizationRepo.CreateAsync(providerOrganization);
-
-                providerUser.UserId = sqlUser.Id;
-                providerUser.ProviderId = sqlProvider.Id;
-                await sqlProviderUserRepo.CreateAsync(providerUser);
-            }
-
-            policy.OrganizationId = sqlOrg.Id;
-            await sqlPolicyRepo.CreateAsync(policy);
-
-            // Act on SQL database
-            var sqlResult = await sqlPolicyRepo.GetManyByTypeApplicableToUserIdAsync(sqlUser.Id, queriedPolicyType, OrganizationUserStatusType.Accepted);
-            results.Add(sqlResult.FirstOrDefault());
 
             // Assert
             var distinctItems = results.Distinct(equalityComparer);
             
-            Assert.True(
-                results.All(r => r == null) ||
-                !distinctItems.Skip(1).Any()
-            );
+            Assert.True(results.All(r => r == null) ||
+                !distinctItems.Skip(1).Any());
         }
     }
 }
