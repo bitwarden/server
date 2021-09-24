@@ -8,7 +8,6 @@ using Bit.Billing.Models;
 using Bit.Core.Models.Business;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
-using Bit.Core.Settings;
 using Microsoft.Extensions.Logging;
 using TaxRate = Bit.Core.Models.Table.TaxRate;
 using StaticStore = Bit.Core.Models.StaticStore;
@@ -33,7 +32,6 @@ namespace Bit.Core.Services
         public StripePaymentService(
             ITransactionRepository transactionRepository,
             IUserRepository userRepository,
-            GlobalSettings globalSettings,
             IAppleIapService appleIapService,
             ILogger<StripePaymentService> logger,
             ITaxRateRepository taxRateRepository,
