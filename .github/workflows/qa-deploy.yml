@@ -82,14 +82,15 @@ jobs:
         id: setup
         run: |
           NAME_LOWER=$(echo "${{ matrix.name }}" | awk '{print tolower($0)}')
-          BRANCH_NAME=$(echo "{{ github.ref }}" | awk '{split($0, a, "/"); print a[3]}')
           echo "Matrix name: ${{ matrix.name }}"
           echo "NAME_LOWER: $NAME_LOWER"
           echo "::set-output name=name_lower::$NAME_LOWER"
+
+          BRANCH_NAME=$(echo "{{ github.ref }}" | awk '{split($0, a, "/"); print a[3]}')
           echo "::set-output name=branch_name::$BRANCH_NAME"
 
       - name: Download latest ${{ matrix.name }} asset from ${{ env.branch_name }}
-        uses: bitwarden/gh-actions/download-artifacts@master
+        uses: bitwarden/gh-actions/download-artifacts@23433be15ed6fd046ce12b6889c5184a8d9c8783
         with:
           workflow: build.yml
           workflow_conclusion: success

@@ -70,7 +70,7 @@ jobs:
           echo "::set-output name=name_lower::$NAME_LOWER"
 
       - name: Download latest RC ${{ matrix.name }} asset
-        uses: dawidd6/action-download-artifact@b9571484721e8187f1fd08147b497129f8972c74  # v2.14.0
+        uses: bitwarden/gh-actions/download-artifacts@23433be15ed6fd046ce12b6889c5184a8d9c8783
         with:
           workflow: build.yml
           workflow_conclusion: success
@@ -111,7 +111,7 @@ jobs:
       - deploy
     steps:
       - name: Download latest RC docker-stub
-        uses: bitwarden/gh-actions/download-artifacts@master
+        uses: bitwarden/gh-actions/download-artifacts@23433be15ed6fd046ce12b6889c5184a8d9c8783
         with:
           workflow: build.yml
           workflow_conclusion: success
