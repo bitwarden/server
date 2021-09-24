@@ -36,7 +36,6 @@ namespace Bit.Core.Test.Services
             _sut = new StripePaymentService(
                 _transactionRepository,
                 _userRepository,
-                _globalSettings,
                 _appleIapService,
                 _logger,
                 _taxRateRepository,
