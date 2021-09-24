@@ -184,6 +184,7 @@ namespace Bit.Core.Utilities
             // Required for UserService
             services.AddWebAuthn(globalSettings);
 
+            services.AddSingleton<IStripeAdapter, StripeAdapter>();
             services.AddSingleton<IPaymentService, StripePaymentService>();
             services.AddSingleton<IMailService, HandlebarsMailService>();
             services.AddSingleton<ILicensingService, LicensingService>();
