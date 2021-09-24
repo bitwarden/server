@@ -62,6 +62,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
         [EfPolicyApplicableToUserInlineAutoData(true, OrganizationUserType.User, false, OrganizationUserStatusType.Confirmed, true, true, false)]       // Ordinary user
         [EfPolicyApplicableToUserInlineAutoData(false, OrganizationUserType.Owner, false, OrganizationUserStatusType.Confirmed, true, true, false)]     // Owner
         [EfPolicyApplicableToUserInlineAutoData(false, OrganizationUserType.Admin, false, OrganizationUserStatusType.Confirmed, true, true, false)]     // Admin
+        [EfPolicyApplicableToUserInlineAutoData(false, OrganizationUserType.User, true, OrganizationUserStatusType.Confirmed, true, true, false)]       // canManagePolicies
         [EfPolicyApplicableToUserInlineAutoData(false, OrganizationUserType.User, false, OrganizationUserStatusType.Confirmed, true, true, true)]       // Provider
         [EfPolicyApplicableToUserInlineAutoData(false, OrganizationUserType.User, false, OrganizationUserStatusType.Confirmed, false, true, false)]     // Policy disabled
         [EfPolicyApplicableToUserInlineAutoData(false, OrganizationUserType.User, false, OrganizationUserStatusType.Confirmed, true, false, false)]     // No policy of Type
