@@ -17,7 +17,7 @@ namespace Bit.PostgresMigrations.Migrations
             modelBuilder
                 .HasAnnotation("Npgsql:CollationDefinition:postgresIndetermanisticCollation", "en-u-ks-primary,en-u-ks-primary,icu,False")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63)
-                .HasAnnotation("ProductVersion", "5.0.5")
+                .HasAnnotation("ProductVersion", "5.0.9")
                 .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn);
 
             modelBuilder.Entity("Bit.Core.Models.EntityFramework.Cipher", b =>
@@ -281,6 +281,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<Guid?>("ProviderId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("ProviderOrganizationId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid?>("ProviderUserId")
                         .HasColumnType("uuid");
 
@@ -504,6 +507,9 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<int?>("MaxAutoscaleSeats")
+                        .HasColumnType("integer");
+
                     b.Property<short?>("MaxCollections")
                         .HasColumnType("smallint");
 
@@ -513,6 +519,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<string>("Name")
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime?>("OwnersNotifiedOfAutoscaling")
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<string>("Plan")
                         .HasMaxLength(50)

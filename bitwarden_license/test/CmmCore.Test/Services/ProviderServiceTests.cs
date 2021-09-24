@@ -470,12 +470,13 @@ namespace Bit.CommCore.Test.Services
                 .Received().LogProviderOrganizationEventAsync(providerOrganization,
                     EventType.ProviderOrganization_Created);
             await sutProvider.GetDependency<IOrganizationService>()
-                .Received().InviteUserAsync(organization.Id, user.Id, null,
-                Arg.Is<OrganizationUserInvite>(
-                    i => i.Emails.Count() == 1 &&
-                    i.Emails.First() == clientOwnerEmail &&
-                    i.Type == OrganizationUserType.Owner &&
-                    i.AccessAll));
+                .Received().InviteUsersAsync(organization.Id, user.Id, Arg.Is<IEnumerable<(OrganizationUserInvite, string)>>(
+                    t => t.Count() == 1 &&
+                    t.First().Item1.Emails.Count() == 1 &&
+                    t.First().Item1.Emails.First() == clientOwnerEmail &&
+                    t.First().Item1.Type == OrganizationUserType.Owner &&
+                    t.First().Item1.AccessAll &&
+                    t.First().Item2 == null));
         }
 
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]

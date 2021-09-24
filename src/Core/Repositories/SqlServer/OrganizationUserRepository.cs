@@ -240,7 +240,7 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
-        public async Task CreateAsync(OrganizationUser obj, IEnumerable<SelectionReadOnly> collections)
+        public async Task<Guid> CreateAsync(OrganizationUser obj, IEnumerable<SelectionReadOnly> collections)
         {
             obj.SetNewId();
             var objWithCollections = JsonConvert.DeserializeObject<OrganizationUserWithCollections>(
@@ -254,6 +254,8 @@ namespace Bit.Core.Repositories.SqlServer
                     objWithCollections,
                     commandType: CommandType.StoredProcedure);
             }
+
+            return obj.Id;
         }
 
         public async Task ReplaceAsync(OrganizationUser obj, IEnumerable<SelectionReadOnly> collections)
@@ -339,11 +341,11 @@ namespace Bit.Core.Repositories.SqlServer
             await ReplaceManyAsync(replaceUsers);
         }
 
-        public async Task CreateManyAsync(IEnumerable<OrganizationUser> organizationUsers)
+        public async Task<ICollection<Guid>> CreateManyAsync(IEnumerable<OrganizationUser> organizationUsers)
         {
             if (!organizationUsers.Any())
             {
-                return;
+                return default;
             }
 
             foreach(var organizationUser in organizationUsers)
@@ -359,6 +361,8 @@ namespace Bit.Core.Repositories.SqlServer
                     new { OrganizationUsersInput = orgUsersTVP },
                     commandType: CommandType.StoredProcedure);
             }
+
+            return organizationUsers.Select(u => u.Id).ToList();
         }
 
         public async Task ReplaceManyAsync(IEnumerable<OrganizationUser> organizationUsers)
