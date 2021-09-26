@@ -9,7 +9,6 @@
     "del": "5.1.0",
     "font-awesome": "4.7.0",
     "gulp": "4.0.2",
-    "gulp-google-webfonts": "2.0.0",
     "gulp-sass": "4.0.1",
     "jquery": "3.5.1",
     "merge-stream": "1.0.1",
