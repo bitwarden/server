@@ -71,7 +71,7 @@ jobs:
       - name: Test solution
         run: |
           dotnet test ./test --configuration Debug --no-build
-          dotnet test ./bitwarden_license/test --configuration Debug --no-build
+          dotnet test ./bitwarden_license/test/CmmCore.Test --configuration Debug --no-build
         shell: pwsh
 
 
