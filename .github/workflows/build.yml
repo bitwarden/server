@@ -189,10 +189,6 @@ jobs:
             base_path: ./src
             docker_repo: bitwarden
             dotnet: true
-          - service_name: Billing
-            base_path: ./src
-            docker_repo: bitwardenqa.azurecr.io
-            dotnet: true
           - service_name: Attachments
             base_path: ./util
             docker_repo: bitwarden
@@ -301,12 +297,11 @@ jobs:
         uses: actions/download-artifact@3be87be14a055c47b01d3bd88f8fe02320a9bb60  # v2.0.10
         with:
           name: ${{ matrix.service_name }}.zip
-          path: ${{ matrix.base_path }}/${{ matrix.service_name }}
+          path: ${{ matrix.base_path }}/${{ matrix.service_name }}/obj/build-output/publish
 
       - name: Build Docker images
-        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc'
         run: |
-          if [ "${{ matrix.service_name }}" = "K8s-Proxy" ]; then
+          if [ "${{ matrix.service_name }}" = "K8S-Proxy" ]; then
             docker build -f ${{ matrix.base_path }}/Nginx/Dockerfile-k8s \
               -t ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }} ${{ matrix.base_path }}/Nginx
           else
