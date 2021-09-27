@@ -1,0 +1,45 @@
+﻿{{#>FullHtmlLayout}}
+<table width="100%" cellpadding="0" cellspacing="0"
+    style="margin: 0; box-sizing: border-box;">
+    <tr
+        style="margin: 0; box-sizing: border-box;">
+        <td class="content-block"
+            style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; margin: 0; -webkit-font-smoothing: antialiased; padding: 0 0 10px; -webkit-text-size-adjust: none;"
+            valign="top">
+            To accommodate new user invitations, your seat count has increased from {{InitialSeatCount}} to {{CurrentSeatCount}}. A
+            prorated charge has been immediately applied to your subscription for the new users. This notification will only be sent
+            once.
+        </td>
+    </tr>
+    <tr
+        style="margin: 0; box-sizing: border-box;">
+        <td class="content-block"
+            style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; margin: 0; -webkit-font-smoothing: antialiased; padding: 0 0 10px; -webkit-text-size-adjust: none;"
+            valign="top">
+            To manage your subscription:
+            <ol>
+                <li>Log in to your
+                    <a href="https://vault.bitwarden.com/#/organizations/{{{OrganizationId}}}/settings/subscription">
+                        Web Vault
+                    </a> 
+                    and open your Organization.
+                </li>
+                <li>Open the <b>Settings</b> tab and select <b>Subscription</b> from the left-hand menu.</li>
+                <li>Update your subscription.</li>
+                <li>Click <b>Save</b>.</li>
+            </ol>
+        </td>
+    </tr>
+    <tr
+        style="margin: 0; box-sizing: border-box;">
+        <td class="content-block last"
+            style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; margin: 0; -webkit-font-smoothing: antialiased; padding: 0; -webkit-text-size-adjust: none;"
+            valign="top">
+            For more information, please refer to
+            <a href="https://bitwarden.com/help/article/managing-users/#subscription">
+                our help article.
+            </a>
+        </td>
+    </tr>
+</table>
+{{/FullHtmlLayout}}

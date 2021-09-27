@@ -1,7 +1,6 @@
 using System.Linq;
 using Bit.Core.Models.Table;
 using Stripe;
-using StaticStore = Bit.Core.Models.StaticStore;
 
 namespace Bit.Core.Models.Business
 {
@@ -11,6 +10,10 @@ namespace Bit.Core.Models.Business
 
         public abstract SubscriptionItemOptions RevertItemOptions(Subscription subscription);
         public abstract SubscriptionItemOptions UpgradeItemOptions(Subscription subscription);
+
+        public bool UpdateNeeded(Subscription subscription) =>
+            (SubscriptionItem(subscription)?.Quantity ?? 0) != (UpgradeItemOptions(subscription).Quantity ?? 0);
+
         protected SubscriptionItem SubscriptionItem(Subscription subscription) =>
             subscription.Items?.Data?.FirstOrDefault(i => i.Plan.Id == PlanId);
     }

@@ -21,6 +21,8 @@ using Organization = Bit.Core.Models.Table.Organization;
 using OrganizationUser = Bit.Core.Models.Table.OrganizationUser;
 using Policy = Bit.Core.Models.Table.Policy;
 using Bit.Core.Test.AutoFixture.PolicyFixtures;
+using Bit.Core.Settings;
+using AutoFixture.Xunit2;
 
 namespace Bit.Core.Test.Services
 {
@@ -40,11 +42,15 @@ namespace Bit.Core.Test.Services
             });
             var expectedNewUsersCount = newUsers.Count - 1;
 
+            existingUsers.First().Type = OrganizationUserType.Owner;
+
             sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(org.Id).Returns(org);
             sutProvider.GetDependency<IOrganizationUserRepository>().GetManyDetailsByOrganizationAsync(org.Id)
                 .Returns(existingUsers);
             sutProvider.GetDependency<IOrganizationUserRepository>().GetCountByOrganizationIdAsync(org.Id)
                 .Returns(existingUsers.Count);
+            sutProvider.GetDependency<IOrganizationUserRepository>().GetManyByOrganizationAsync(org.Id, OrganizationUserType.Owner)
+                .Returns(existingUsers.Select(u => new OrganizationUser { Status = OrganizationUserStatusType.Confirmed, Type = OrganizationUserType.Owner, Id = u.Id }).ToList());
             sutProvider.GetDependency<ICurrentContext>().ManageUsers(org.Id).Returns(true);
 
             await sutProvider.Sut.ImportAsync(org.Id, userId, null, newUsers, null, false);
@@ -96,6 +102,8 @@ namespace Bit.Core.Test.Services
                 .Returns(existingUsers.Count);
             sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(reInvitedUser.Id)
                 .Returns(new OrganizationUser { Id = reInvitedUser.Id });
+            sutProvider.GetDependency<IOrganizationUserRepository>().GetManyByOrganizationAsync(org.Id, OrganizationUserType.Owner)
+                .Returns(existingUsers.Select(u => new OrganizationUser { Status = OrganizationUserStatusType.Confirmed, Type = OrganizationUserType.Owner, Id = u.Id }).ToList());
             var currentContext = sutProvider.GetDependency<ICurrentContext>();
             currentContext.ManageUsers(org.Id).Returns(true);
 
@@ -188,7 +196,7 @@ namespace Bit.Core.Test.Services
             invite.Emails = null;
             sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
             await Assert.ThrowsAsync<NotFoundException>(
-                () => sutProvider.Sut.InviteUserAsync(organization.Id, invitor.UserId, null, invite));
+                () => sutProvider.Sut.InviteUsersAsync(organization.Id, invitor.UserId, new (OrganizationUserInvite, string)[] { (invite, null) }));
         }
         
         [Theory]
@@ -201,8 +209,9 @@ namespace Bit.Core.Test.Services
         {
             sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
             sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(organization.Id).Returns(true);
+            sutProvider.GetDependency<ICurrentContext>().ManageUsers(organization.Id).Returns(true);
             var exception = await Assert.ThrowsAsync<BadRequestException>(
-                () => sutProvider.Sut.InviteUserAsync(organization.Id, invitor.UserId, null, invite));
+                () => sutProvider.Sut.InviteUsersAsync(organization.Id, invitor.UserId, new (OrganizationUserInvite, string)[] { (invite, null) }));
             Assert.Contains("Organization must have at least one confirmed owner.", exception.Message);
         }
 
@@ -221,7 +230,7 @@ namespace Bit.Core.Test.Services
             currentContext.OrganizationAdmin(organization.Id).Returns(true);
 
             var exception = await Assert.ThrowsAsync<BadRequestException>(
-                () => sutProvider.Sut.InviteUserAsync(organization.Id, invitor.UserId, null, invite));
+                () => sutProvider.Sut.InviteUsersAsync(organization.Id, invitor.UserId, new (OrganizationUserInvite, string)[] { (invite, null) }));
             Assert.Contains("only an owner", exception.Message.ToLowerInvariant());
         }
 
@@ -240,7 +249,7 @@ namespace Bit.Core.Test.Services
             currentContext.OrganizationUser(organization.Id).Returns(true);
 
             var exception = await Assert.ThrowsAsync<BadRequestException>(
-                () => sutProvider.Sut.InviteUserAsync(organization.Id, invitor.UserId, null, invite));
+                () => sutProvider.Sut.InviteUsersAsync(organization.Id, invitor.UserId, new (OrganizationUserInvite, string)[] { (invite, null) }));
             Assert.Contains("only owners and admins", exception.Message.ToLowerInvariant());
         }
 
@@ -266,7 +275,7 @@ namespace Bit.Core.Test.Services
             currentContext.ManageUsers(organization.Id).Returns(false);
 
             var exception = await Assert.ThrowsAsync<BadRequestException>(
-                () => sutProvider.Sut.InviteUserAsync(organization.Id, invitor.UserId, null, invite));
+                () => sutProvider.Sut.InviteUsersAsync(organization.Id, invitor.UserId, new (OrganizationUserInvite, string)[] { (invite, null) }));
             Assert.Contains("account does not have permission", exception.Message.ToLowerInvariant());
         }
 
@@ -292,7 +301,7 @@ namespace Bit.Core.Test.Services
             currentContext.ManageUsers(organization.Id).Returns(true);
 
             var exception = await Assert.ThrowsAsync<BadRequestException>(
-                () => sutProvider.Sut.InviteUserAsync(organization.Id, invitor.UserId, null, invite));
+                () => sutProvider.Sut.InviteUsersAsync(organization.Id, invitor.UserId, new (OrganizationUserInvite, string)[] { (invite, null) }));
             Assert.Contains("can not manage admins", exception.Message.ToLowerInvariant());
         }
 
@@ -314,8 +323,9 @@ namespace Bit.Core.Test.Services
             organizationUserRepository.GetManyByOrganizationAsync(organization.Id, OrganizationUserType.Owner)
                 .Returns(new [] {invitor});
             currentContext.OrganizationOwner(organization.Id).Returns(true);
+            currentContext.ManageUsers(organization.Id).Returns(true);
 
-            await sutProvider.Sut.InviteUserAsync(organization.Id, invitor.UserId, null, invite);
+            await sutProvider.Sut.InviteUsersAsync(organization.Id, invitor.UserId, new (OrganizationUserInvite, string)[] { (invite, null) });
         }
 
         [Theory]
@@ -343,7 +353,7 @@ namespace Bit.Core.Test.Services
                 .Returns(new [] {owner});
             currentContext.ManageUsers(organization.Id).Returns(true);
 
-            await sutProvider.Sut.InviteUserAsync(organization.Id, invitor.UserId, null, invite);
+            await sutProvider.Sut.InviteUsersAsync(organization.Id, invitor.UserId, new (OrganizationUserInvite, string)[] { (invite, null) });
         }
 
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
@@ -818,6 +828,81 @@ namespace Bit.Core.Test.Services
             organizationRepository.GetByIdAsync(org.Id).Returns(org);
 
             await sutProvider.Sut.UpdateOrganizationKeysAsync(org.Id, publicKey, privateKey);
+        }
+
+        [Theory]
+        [InlinePaidOrganizationAutoData(PlanType.EnterpriseAnnually, new object[] { "Cannot set max seat autoscaling below seat count", 1, 0, 2 })]
+        [InlinePaidOrganizationAutoData(PlanType.EnterpriseAnnually, new object[] { "Cannot set max seat autoscaling below seat count", 4, -1, 6 })]
+        [InlineFreeOrganizationAutoData("Your plan does not allow seat autoscaling", 10, 0, null)]
+        public async Task UpdateSubscription_BadInputThrows(string expectedMessage,
+            int? maxAutoscaleSeats, int seatAdjustment, int? currentSeats, Organization organization, SutProvider<OrganizationService> sutProvider)
+        {
+            organization.Seats = currentSeats;
+            sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+
+            var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSubscription(organization.Id,
+                seatAdjustment, maxAutoscaleSeats));
+
+            Assert.Contains(expectedMessage, exception.Message);
+        }
+
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public async Task UpdateSubscription_NoOrganization_Throws(Guid organizationId, SutProvider<OrganizationService> sutProvider)
+        {
+            sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId).Returns((Organization)null);
+
+            await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.UpdateSubscription(organizationId, 0, null));
+        }
+
+        [Theory]
+        [InlinePaidOrganizationAutoData(0, 100, null, true, "")]
+        [InlinePaidOrganizationAutoData(0, 100, 100, true, "")]
+        [InlinePaidOrganizationAutoData(0, null, 100, true, "")]
+        [InlinePaidOrganizationAutoData(1, 100, null, true, "")]
+        [InlinePaidOrganizationAutoData(1, 100, 100, false, "Cannot invite new users. Seat limit has been reached")]
+        public async Task CanScale(int seatsToAdd, int? currentSeats, int? maxAutoscaleSeats,
+            bool expectedResult, string expectedFailureMessage, Organization organization,
+            SutProvider<OrganizationService> sutProvider)
+        {
+            organization.Seats = currentSeats;
+            organization.MaxAutoscaleSeats = maxAutoscaleSeats;
+            sutProvider.GetDependency<ICurrentContext>().ManageUsers(organization.Id).Returns(true);
+
+            var (result, failureMessage) = await sutProvider.Sut.CanScaleAsync(organization, seatsToAdd);
+
+            if (expectedFailureMessage == string.Empty)
+            {
+                Assert.Empty(failureMessage);
+            }
+            else
+            {
+                Assert.Contains(expectedFailureMessage, failureMessage);
+            }
+            Assert.Equal(expectedResult, result);
+        }
+
+        [Theory, PaidOrganizationAutoData]
+        public async Task CanScale_FailsOnSelfHosted(Organization organization,
+            SutProvider<OrganizationService> sutProvider)
+        {
+            sutProvider.GetDependency<IGlobalSettings>().SelfHosted.Returns(true);
+            var (result, failureMessage) = await sutProvider.Sut.CanScaleAsync(organization, 10);
+
+            Assert.False(result);
+            Assert.Contains("Cannot autoscale on self-hosted instance", failureMessage);
+        }
+
+        [Theory, PaidOrganizationAutoData]
+        public async Task CanScale_FailsIfCannotManageUsers(Organization organization,
+            SutProvider<OrganizationService> sutProvider)
+        {
+            organization.MaxAutoscaleSeats = null;
+            sutProvider.GetDependency<ICurrentContext>().ManageUsers(organization.Id).Returns(false);
+
+            var (result, failureMessage) = await sutProvider.Sut.CanScaleAsync(organization, 10);
+
+            Assert.False(result);
+            Assert.Contains("Cannot manage organization users", failureMessage);
         }
     }
 }
