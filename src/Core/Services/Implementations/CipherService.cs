@@ -26,7 +26,6 @@ namespace Bit.Core.Services
         private readonly ICollectionRepository _collectionRepository;
         private readonly IUserRepository _userRepository;
         private readonly IOrganizationRepository _organizationRepository;
-        private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly ICollectionCipherRepository _collectionCipherRepository;
         private readonly IPushNotificationService _pushService;
         private readonly IAttachmentStorageService _attachmentStorageService;
@@ -43,7 +42,6 @@ namespace Bit.Core.Services
             ICollectionRepository collectionRepository,
             IUserRepository userRepository,
             IOrganizationRepository organizationRepository,
-            IOrganizationUserRepository organizationUserRepository,
             ICollectionCipherRepository collectionCipherRepository,
             IPushNotificationService pushService,
             IAttachmentStorageService attachmentStorageService,
@@ -58,7 +56,6 @@ namespace Bit.Core.Services
             _collectionRepository = collectionRepository;
             _userRepository = userRepository;
             _organizationRepository = organizationRepository;
-            _organizationUserRepository = organizationUserRepository;
             _collectionCipherRepository = collectionCipherRepository;
             _pushService = pushService;
             _attachmentStorageService = attachmentStorageService;
@@ -139,19 +136,11 @@ namespace Bit.Core.Services
                 else
                 {
                     // Make sure the user can save new ciphers to their personal vault
-                    var userPolicies = await _policyRepository.GetManyByUserIdAsync(savingUserId);
-                    if (userPolicies != null)
+                    var personalOwnershipPolicyCount = await _policyRepository.GetCountByTypeApplicableToUserIdAsync(savingUserId,
+                        PolicyType.PersonalOwnership);
+                    if (personalOwnershipPolicyCount > 0)
                     {
-                        foreach (var policy in userPolicies.Where(p => p.Enabled && p.Type == PolicyType.PersonalOwnership))
-                        {
-                            var org = await _organizationUserRepository.GetDetailsByUserAsync(savingUserId, policy.OrganizationId,
-                                OrganizationUserStatusType.Confirmed);
-                            if (org != null && org.Enabled && org.UsePolicies
-                               && org.Type != OrganizationUserType.Admin && org.Type != OrganizationUserType.Owner)
-                            {
-                                throw new BadRequestException("Due to an Enterprise Policy, you are restricted from saving items to your personal vault.");
-                            }
-                        }
+                        throw new BadRequestException("Due to an Enterprise Policy, you are restricted from saving items to your personal vault.");
                     }
                     await _cipherRepository.CreateAsync(cipher);
                 }
@@ -688,26 +677,13 @@ namespace Bit.Core.Services
         {
             var userId = folders.FirstOrDefault()?.UserId ?? ciphers.FirstOrDefault()?.UserId;
 
-            // Check user is allowed to import to personal vault
-            if (userId.HasValue)
+            // Make sure the user can save new ciphers to their personal vault
+            var personalOwnershipPolicyCount = await _policyRepository.GetCountByTypeApplicableToUserIdAsync(userId.Value,
+                PolicyType.PersonalOwnership);
+            if (personalOwnershipPolicyCount > 0)
             {
-                var policies = await _policyRepository.GetManyByUserIdAsync(userId.Value);
-                var allOrgUsers = await _organizationUserRepository.GetManyByUserAsync(userId.Value);
-
-                var orgsWithBlockingPolicy = policies
-                    .Where(p => p.Enabled && p.Type == PolicyType.PersonalOwnership)
-                    .Select(p => p.OrganizationId);
-                var blockedByPolicy = allOrgUsers.Any(ou => 
-                    ou.Type != OrganizationUserType.Owner &&
-                    ou.Type != OrganizationUserType.Admin &&
-                    ou.Status != OrganizationUserStatusType.Invited &&
-                    orgsWithBlockingPolicy.Contains(ou.OrganizationId));
-
-                if (blockedByPolicy)
-                {
-                    throw new BadRequestException("You cannot import items into your personal vault because you are " +
-                        "a member of an organization which forbids it.");
-                }
+                throw new BadRequestException("You cannot import items into your personal vault because you are " +
+                    "a member of an organization which forbids it.");
             }
 
             foreach (var cipher in ciphers)

@@ -1,6 +1,7 @@
 using AutoFixture;
 using AutoMapper;
 using Bit.Core.Models.EntityFramework;
+using Bit.Core.Models.EntityFramework.Provider;
 using System.Collections.Generic;
 using AutoFixture.Kernel;
 using System;
@@ -76,6 +77,9 @@ namespace Bit.Core.Test.AutoFixture.EntityFrameworkRepositoryFixtures
                         cfg.AddProfile<InstallationMapperProfile>();
                         cfg.AddProfile<OrganizationMapperProfile>();
                         cfg.AddProfile<OrganizationUserMapperProfile>();
+                        cfg.AddProfile<ProviderMapperProfile>();
+                        cfg.AddProfile<ProviderUserMapperProfile>();
+                        cfg.AddProfile<ProviderOrganizationMapperProfile>();
                         cfg.AddProfile<PolicyMapperProfile>();
                         cfg.AddProfile<SendMapperProfile>();
                         cfg.AddProfile<SsoConfigMapperProfile>();

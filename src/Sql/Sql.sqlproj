@@ -368,5 +368,8 @@
     <Build Include="dbo\Stored Procedures\ProviderOrganizationOrganizationDetails_ReadByProviderId.sql" />
     <Build Include="dbo\Stored Procedures\User_BumpAccountRevisionDateByProviderId.sql" />
     <Build Include="dbo\Stored Procedures\User_BumpAccountRevisionDateByProviderUserId.sql" />
+    <Build Include="dbo\Stored Procedures\Policy_CountByTypeApplicableToUser.sql" />
+    <Build Include="dbo\Stored Procedures\Policy_ReadByTypeApplicableToUser.sql" />
+    <Build Include="dbo\Functions\PolicyApplicableToUser.sql" />
   </ItemGroup>
 </Project>
