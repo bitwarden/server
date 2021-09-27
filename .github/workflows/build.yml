@@ -69,7 +69,7 @@ jobs:
         shell: pwsh
 
       - name: Test solution
-        run: dotnet test --configuration Debug --no-build
+        run: dotnet test .\bitwarden-server.sln --configuration Debug --no-build
         shell: pwsh
 
 
