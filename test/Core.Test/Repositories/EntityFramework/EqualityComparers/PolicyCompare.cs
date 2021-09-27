@@ -18,4 +18,13 @@ namespace Bit.Core.Test.Repositories.EntityFramework.EqualityComparers
             return base.GetHashCode();
         }
     }
+
+    public class PolicyCompareIncludingOrganization: PolicyCompare
+    {
+        public new bool Equals(Policy x, Policy y)
+        {
+            return base.Equals(x, y) &&
+                x.OrganizationId == y.OrganizationId;
+        }
+    }
 }
