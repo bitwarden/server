@@ -69,7 +69,9 @@ jobs:
         shell: pwsh
 
       - name: Test solution
-        run: dotnet test .\test\Core.Test\Core.Test.csproj --configuration Debug --no-build
+        run: |
+          dotnet test ./test --configuration Debug --no-build
+          dotnet test ./bitwarden_license/test/CmmCore.Test --configuration Debug --no-build
         shell: pwsh
 
 
