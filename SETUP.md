@@ -44,6 +44,9 @@ We provide a helper script which will create the development database `vault_dev
 
 ```powershell
 .\dev\migrate.ps1
+
+# You can also re-run the last migration using
+.\dev\migrate.ps1 -r
 ```
 
 ### Azurite
