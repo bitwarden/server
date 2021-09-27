@@ -12,7 +12,7 @@ on:
 jobs:
   cloc:
     name: CLOC
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - name: Checkout repo
         uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
@@ -28,7 +28,7 @@ jobs:
 
   testing:
     name: Testing
-    runs-on: windows-latest
+    runs-on: windows-2019
     steps:
       - name: Set up NuGet
         uses: nuget/setup-nuget@04b0c2b8d1b97922f67eca497d7cf0bf17b8ffe1
@@ -69,14 +69,116 @@ jobs:
         shell: pwsh
 
       - name: Test solution
-        run: dotnet test .\test\Core.Test\Core.Test.csproj --configuration Debug --no-build
+        run: |
+          dotnet test ./test --configuration Debug --no-build
+          dotnet test ./bitwarden_license/test/CmmCore.Test --configuration Debug --no-build
         shell: pwsh
 
 
-  build:
-    name: Build
-    runs-on: ubuntu-latest
+  build-artifacts:
+    name: Build artifacts
+    runs-on: ubuntu-20.04
     needs: testing
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service_name: Admin
+            base_path: ./src
+            gulp: true
+          - service_name: Api
+            base_path: ./src
+          - service_name: Billing
+            base_path: ./src
+          - service_name: Events
+            base_path: ./src
+          - service_name: EventsProcessor
+            base_path: ./src
+          - service_name: Icons
+            base_path: ./src
+          - service_name: Identity
+            base_path: ./src
+          - service_name: Notifications
+            base_path: ./src
+          - service_name: Portal
+            base_path: ./bitwarden_license/src
+            gulp: true
+          - service_name: Server
+            base_path: ./util
+          - service_name: Setup
+            base_path: ./util
+          - service_name: Sso
+            base_path: ./bitwarden_license/src
+            gulp: true
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
+
+      - name: Set up Node
+        uses: actions/setup-node@46071b5c7a2e0c34e49c3cb8a0e792e86e18d5ea
+        with:
+          node-version: '14'
+
+      - name: Update NPM
+        run: |
+          npm install -g npm@7
+
+      - name: Print environment
+        run: |
+          whoami
+          dotnet --info
+          node --version
+          npm --version
+          gulp --version
+          echo "GitHub ref: $GITHUB_REF"
+          echo "GitHub event: $GITHUB_EVENT"
+
+      - name: Set up Gulp
+        if: ${{ matrix.gulp }}
+        working-directory: ${{ matrix.base_path }}/${{ matrix.service_name }}
+        run: |
+          npm install -g gulp
+
+      - name: Restore/Clean service
+        working-directory: ${{ matrix.base_path }}/${{ matrix.service_name }}
+        run: |
+          echo "Restore"
+          dotnet restore
+          echo "Clean"
+          dotnet clean -c "Release" -o obj/build-output/publish
+
+      - name: Execute Gulp
+        if: ${{ matrix.gulp }}
+        working-directory: ${{ matrix.base_path }}/${{ matrix.service_name }}
+        run: |
+          npm install
+          gulp --gulpfile gulpfile.js build
+
+      - name: Publish service
+        working-directory: ${{ matrix.base_path }}/${{ matrix.service_name }}
+        run: |
+          echo "Publish"
+          dotnet publish -c "Release" -o obj/build-output/publish
+
+          cd obj/build-output/publish
+          zip -r ${{ matrix.service_name }}.zip .
+          mv ${{ matrix.service_name }}.zip ../../../
+
+          pwd
+          ls -atlh ../../../
+
+      - name: Upload service artifact
+        uses: actions/upload-artifact@ee69f02b3dfdecd58bb31b4d133da38ba6fe3700
+        with:
+          name: ${{ matrix.service_name }}.zip
+          path: ${{ matrix.base_path }}/${{ matrix.service_name }}/obj/build-output/publish
+          if-no-files-found: error
+
+
+  build-docker:
+    name: Build Docker images
+    runs-on: ubuntu-20.04
+    needs: build-artifacts
     strategy:
       fail-fast: false
       matrix:
@@ -85,7 +187,6 @@ jobs:
             base_path: ./src
             docker_repo: bitwarden
             dotnet: true
-            gulp: true
           - service_name: Api
             base_path: ./src
             docker_repo: bitwarden
@@ -126,7 +227,6 @@ jobs:
             base_path: ./bitwarden_license/src
             docker_repo: bitwarden
             dotnet: true
-            gulp: true
           - service_name: Server
             base_path: ./util
             docker_repo: bitwarden
@@ -139,30 +239,9 @@ jobs:
             base_path: ./bitwarden_license/src
             docker_repo: bitwarden
             dotnet: true
-            gulp: true
     steps:
       - name: Checkout repo
         uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
-
-      - name: Set up Node
-        uses: actions/setup-node@46071b5c7a2e0c34e49c3cb8a0e792e86e18d5ea
-        with:
-          node-version: '14'
-
-      - name: Update NPM
-        run: |
-          npm install -g npm@7
-
-      - name: Print environment
-        run: |
-          whoami
-          dotnet --info
-          node --version
-          npm --version
-          gulp --version
-          docker --version
-          echo "GitHub ref: $GITHUB_REF"
-          echo "GitHub event: $GITHUB_EVENT"
 
       - name: Login to Azure - Prod Subscription
         uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a
@@ -187,25 +266,25 @@ jobs:
 
       - name: Log into Docker
         if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc'
+        env:
+          DOCKER_USERNAME: ${{ steps.retrieve-secrets.outputs.docker-username }}
+          DOCKER_PASSWORD: ${{ steps.retrieve-secrets.outputs.docker-password }}
         run: |
           if [[ "${{ matrix.docker_repo }}" == "bitwardenqa.azurecr.io" ]]; then
             az acr login -n bitwardenqa
           else
             echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
           fi
-        env:
-          DOCKER_USERNAME: ${{ steps.retrieve-secrets.outputs.docker-username }}
-          DOCKER_PASSWORD: ${{ steps.retrieve-secrets.outputs.docker-password }}
 
       - name: Setup Docker Trust
         if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc'
+        env:
+          DCT_DELEGATION_KEY_ID: "c9bde8ec820701516491e5e03d3a6354e7bd66d05fa3df2b0062f68b116dc59c"
+          DCT_DELEGATE_KEY: ${{ steps.retrieve-secrets.outputs.dct-delegate-2-key }}
         run: |
           mkdir -p ~/.docker/trust/private
 
           echo "$DCT_DELEGATE_KEY" > ~/.docker/trust/private/$DCT_DELEGATION_KEY_ID.key
-        env:
-          DCT_DELEGATION_KEY_ID: "c9bde8ec820701516491e5e03d3a6354e7bd66d05fa3df2b0062f68b116dc59c"
-          DCT_DELEGATE_KEY: ${{ steps.retrieve-secrets.outputs.dct-delegate-2-key }}
 
       - name: Setup service name
         id: setup
@@ -215,68 +294,44 @@ jobs:
           echo "SERVICE_NAME: $SERVICE_NAME"
           echo "::set-output name=service_name::$SERVICE_NAME"
 
-      - name: Set up Gulp
-        if: ${{ matrix.gulp }}
-        working-directory: ${{ matrix.base_path }}/${{ matrix.service_name }}
-        run: |
-          npm install -g gulp
-
-      - name: Restore/Clean service
+      - name: Get build artifact
         if: ${{ matrix.dotnet }}
-        working-directory: ${{ matrix.base_path }}/${{ matrix.service_name }}
-        run: |
-          echo "Restore"
-          dotnet restore
-          echo "Clean"
-          dotnet clean -c "Release" -o obj/build-output/publish
-
-      - name: Execute Gulp
-        if: ${{ matrix.gulp }}
-        working-directory: ${{ matrix.base_path }}/${{ matrix.service_name }}
-        run: |
-          npm install
-          gulp --gulpfile gulpfile.js build
-
-      - name: Publish service
-        if: ${{ matrix.dotnet }}
-        working-directory: ${{ matrix.base_path }}/${{ matrix.service_name }}
-        run: |
-          echo "Publish"
-          dotnet publish -c "Release" -o obj/build-output/publish
-
-          cd obj/build-output/publish
-          zip -r ${{ matrix.service_name }}.zip .
-          mv ${{ matrix.service_name }}.zip ../../../
+        uses: actions/download-artifact@3be87be14a055c47b01d3bd88f8fe02320a9bb60  # v2.0.10
+        with:
+          name: ${{ matrix.service_name }}.zip
+          path: ${{ matrix.base_path }}/${{ matrix.service_name }}/obj/build-output/publish
 
       - name: Build Docker images
-        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc'
         run: |
-          if [ "${{ steps.setup.outputs.service_name }}" = "k8s-proxy" ]; then
-            docker build -f ${{ matrix.base_path }}/Nginx/Dockerfile-k8s -t ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }} ${{ matrix.base_path }}/Nginx
+          if [ "${{ matrix.service_name }}" = "K8S-Proxy" ]; then
+            docker build -f ${{ matrix.base_path }}/Nginx/Dockerfile-k8s \
+              -t ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }} ${{ matrix.base_path }}/Nginx
           else
-            docker build -t ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }} ${{ matrix.base_path }}/${{ matrix.service_name }}
+            docker build -t ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }} \
+              ${{ matrix.base_path }}/${{ matrix.service_name }}
           fi
 
       - name: Tag rc
         if: github.ref == 'refs/heads/rc'
         run: |
-          docker tag ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }} ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }}:rc
+          docker tag ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }} \
+            ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }}:rc
 
       - name: Tag dev
         if: github.ref == 'refs/heads/master'
         run: |
-          docker tag ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }} ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }}:dev
+          docker tag ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }} \
+            ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }}:dev
 
       - name: List Docker images
         if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc'
         run: docker images
 
       - name: Docker Trust setup
+        if: matrix.docker_repo == 'bitwarden' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc')
         run: |
-          if [[ "${{ matrix.docker_repo }}" == "bitwarden" ]]; then
-            echo "DOCKER_CONTENT_TRUST=1" >> $GITHUB_ENV
-            echo "DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE=${{ steps.retrieve-secrets.outputs.dct-delegate-2-repo-passphrase }}" >> $GITHUB_ENV
-          fi
+          echo "DOCKER_CONTENT_TRUST=1" >> $GITHUB_ENV
+          echo "DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE=${{ steps.retrieve-secrets.outputs.dct-delegate-2-repo-passphrase }}" >> $GITHUB_ENV
 
       - name: Push rc images
         if: github.ref == 'refs/heads/rc'
@@ -295,8 +350,8 @@ jobs:
 
   upload:
     name: Upload
-    runs-on: ubuntu-latest
-    needs: build
+    runs-on: ubuntu-20.04
+    needs: build-docker
     steps:
       - name: Checkout repo
         uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f

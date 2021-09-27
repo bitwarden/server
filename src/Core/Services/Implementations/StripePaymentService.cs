@@ -732,6 +732,18 @@ namespace Bit.Core.Services
 
             var subResponse = await _stripeAdapter.SubscriptionUpdateAsync(sub.Id, subUpdateOptions);
 
+            var invoice = await _stripeAdapter.InvoiceGetAsync(subResponse?.LatestInvoiceId, new Stripe.InvoiceGetOptions());
+            if (invoice == null)
+            {
+                throw new BadRequestException("Unable to locate draft invoice for subscription update.");
+            }
+
+            // If no amount due, invoice is autofinalized, we're done
+            if (invoice.AmountDue <= 0)
+            {
+                return null;
+            }
+
             string paymentIntentClientSecret = null;
             if (updatedItemOptions.Quantity > 0)
             {
@@ -740,11 +752,11 @@ namespace Bit.Core.Services
                     if (chargeNow)
                     {
                         paymentIntentClientSecret = await PayInvoiceAfterSubscriptionChangeAsync(
-                            storableSubscriber, subResponse?.LatestInvoiceId);
+                            storableSubscriber, invoice);
                     }
                     else
                     {
-                        var invoice = await _stripeAdapter.InvoiceFinalizeInvoiceAsync(subResponse.LatestInvoiceId, new Stripe.InvoiceFinalizeOptions
+                        invoice = await _stripeAdapter.InvoiceFinalizeInvoiceAsync(subResponse.LatestInvoiceId, new Stripe.InvoiceFinalizeOptions
                         {
                             AutoAdvance = false,
                         });
@@ -847,7 +859,7 @@ namespace Bit.Core.Services
             await _stripeAdapter.CustomerDeleteAsync(subscriber.GatewayCustomerId);
         }
 
-        public async Task<string> PayInvoiceAfterSubscriptionChangeAsync(ISubscriber subscriber, string invoiceId)
+        public async Task<string> PayInvoiceAfterSubscriptionChangeAsync(ISubscriber subscriber, Stripe.Invoice invoice)
         {
             var customerOptions = new Stripe.CustomerGetOptions();
             customerOptions.AddExpand("default_source");
@@ -862,16 +874,10 @@ namespace Bit.Core.Services
 
             string paymentIntentClientSecret = null;
 
-            var invoice = await _stripeAdapter.InvoiceGetAsync(invoiceId, new Stripe.InvoiceGetOptions());
-            if (invoice == null)
-            {
-                throw new BadRequestException("Unable to locate draft invoice for subscription update.");
-            }
-
             // Invoice them and pay now instead of waiting until Stripe does this automatically.
 
             string cardPaymentMethodId = null;
-            if (invoice?.AmountDue > 0 && !customer.Metadata.ContainsKey("btCustomerId"))
+            if (!customer.Metadata.ContainsKey("btCustomerId"))
             {
                 var hasDefaultCardPaymentMethod = customer.InvoiceSettings?.DefaultPaymentMethod?.Type == "card";
                 var hasDefaultValidSource = customer.DefaultSource != null &&
@@ -912,48 +918,45 @@ namespace Bit.Core.Services
                 {
                     PaymentMethod = cardPaymentMethodId,
                 };
-                if (invoice.AmountDue > 0)
+                if (customer?.Metadata?.ContainsKey("btCustomerId") ?? false)
                 {
-                    if (customer?.Metadata?.ContainsKey("btCustomerId") ?? false)
-                    {
-                        invoicePayOptions.PaidOutOfBand = true;
-                        var btInvoiceAmount = (invoice.AmountDue / 100M);
-                        var transactionResult = await _btGateway.Transaction.SaleAsync(
-                            new Braintree.TransactionRequest
+                    invoicePayOptions.PaidOutOfBand = true;
+                    var btInvoiceAmount = (invoice.AmountDue / 100M);
+                    var transactionResult = await _btGateway.Transaction.SaleAsync(
+                        new Braintree.TransactionRequest
+                        {
+                            Amount = btInvoiceAmount,
+                            CustomerId = customer.Metadata["btCustomerId"],
+                            Options = new Braintree.TransactionOptionsRequest
                             {
-                                Amount = btInvoiceAmount,
-                                CustomerId = customer.Metadata["btCustomerId"],
-                                Options = new Braintree.TransactionOptionsRequest
+                                SubmitForSettlement = true,
+                                PayPal = new Braintree.TransactionOptionsPayPalRequest
                                 {
-                                    SubmitForSettlement = true,
-                                    PayPal = new Braintree.TransactionOptionsPayPalRequest
-                                    {
-                                        CustomField = $"{subscriber.BraintreeIdField()}:{subscriber.Id}"
-                                    }
-                                },
-                                CustomFields = new Dictionary<string, string>
-                                {
-                                    [subscriber.BraintreeIdField()] = subscriber.Id.ToString()
+                                    CustomField = $"{subscriber.BraintreeIdField()}:{subscriber.Id}"
                                 }
-                            });
-
-                        if (!transactionResult.IsSuccess())
-                        {
-                            throw new GatewayException("Failed to charge PayPal customer.");
-                        }
-
-                        braintreeTransaction = transactionResult.Target;
-                        invoice = await _stripeAdapter.InvoiceUpdateAsync(invoice.Id, new Stripe.InvoiceUpdateOptions
-                        {
-                            Metadata = new Dictionary<string, string>
-                            {
-                                ["btTransactionId"] = braintreeTransaction.Id,
-                                ["btPayPalTransactionId"] =
-                                    braintreeTransaction.PayPalDetails.AuthorizationId
                             },
+                            CustomFields = new Dictionary<string, string>
+                            {
+                                [subscriber.BraintreeIdField()] = subscriber.Id.ToString()
+                            }
                         });
-                        invoicePayOptions.PaidOutOfBand = true;
+
+                    if (!transactionResult.IsSuccess())
+                    {
+                        throw new GatewayException("Failed to charge PayPal customer.");
                     }
+
+                    braintreeTransaction = transactionResult.Target;
+                    invoice = await _stripeAdapter.InvoiceUpdateAsync(invoice.Id, new Stripe.InvoiceUpdateOptions
+                    {
+                        Metadata = new Dictionary<string, string>
+                        {
+                            ["btTransactionId"] = braintreeTransaction.Id,
+                            ["btPayPalTransactionId"] =
+                                braintreeTransaction.PayPalDetails.AuthorizationId
+                        },
+                    });
+                    invoicePayOptions.PaidOutOfBand = true;
                 }
 
                 try
