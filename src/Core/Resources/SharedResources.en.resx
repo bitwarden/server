@@ -442,22 +442,22 @@
   <data name="RequestId" xml:space="preserve">
     <value>Request ID</value>
   </data>
-  <data name="Redirecting">
+  <data name="Redirecting" xml:space="preserve">
     <value>Redirecting</value>
   </data>
-  <data name="RedirectingMessage">
+  <data name="RedirectingMessage" xml:space="preserve">
     <value>You are now being returned to the application. Once complete, you may close this tab.</value>
   </data>
-  <data name="IfIdpWantAuthnRequestsSigned">
+  <data name="IfIdpWantAuthnRequestsSigned" xml:space="preserve">
     <value>If IdP Wants Authn Requests Signed</value>
   </data>
-  <data name="Always">
+  <data name="Always" xml:space="preserve">
     <value>Always</value>
   </data>
-  <data name="Never">
+  <data name="Never" xml:space="preserve">
     <value>Never</value>
   </data>
-  <data name="WelcomeToBusinessPortal">
+  <data name="WelcomeToBusinessPortal" xml:space="preserve">
     <value>Welcome to the Bitwarden Business Portal</value>
   </data>
   <data name="IdpX509PublicCertValidationError" xml:space="preserve">
@@ -469,33 +469,33 @@
   <data name="IdpX509PublicCertCryptographicExceptionValidationError" xml:space="preserve">
     <value>The IdP public certificate provided does not appear to be a valid certificate, please ensure this is a valid, Base64 encoded PEM or CER format public certificate valid for signing: {0}</value>
   </data>
-  <data name="CopyCallbackPath">
+  <data name="CopyCallbackPath" xml:space="preserve">
     <value>Copy the OIDC callback path to your clipboard</value>
   </data>
-  <data name="CopySignedOutCallbackPath">
+  <data name="CopySignedOutCallbackPath" xml:space="preserve">
     <value>Copy the OIDC signed out callback path to your clipboard</value>
   </data>
-  <data name="CopySpEntityId">
+  <data name="CopySpEntityId" xml:space="preserve">
     <value>Copy the SP Entity Id to your clipboard</value>
   </data>
-  <data name="CopySpMetadataUrl">
+  <data name="CopySpMetadataUrl" xml:space="preserve">
     <value>Copy the SAML 2.0 Metadata URL to your clipboard</value>
   </data>
-  <data name="LaunchSpMetadataUrl">
+  <data name="LaunchSpMetadataUrl" xml:space="preserve">
     <value>View the SAML 2.0 Metadata (opens in a new window)</value>
   </data>
-  <data name="CopySpAcsUrl">
+  <data name="CopySpAcsUrl" xml:space="preserve">
     <value>Copy the Assertion Consumer Service (ACS) URL to your clipboard</value>
   </data>
-  <data name="HttpRedirect">
+  <data name="HttpRedirect" xml:space="preserve">
     <value>Redirect</value>
     <comment>A SAML binding type, Redirect</comment>
   </data>
-  <data name="HttpPost">
+  <data name="HttpPost" xml:space="preserve">
     <value>HTTP POST</value>
     <comment>A SAML binding type, HTTP POST</comment>
   </data>
-  <data name="Artifact">
+  <data name="Artifact" xml:space="preserve">
     <value>Artifact</value>
     <comment>A SAML binding type, Artifact</comment>
   </data>
@@ -672,5 +672,20 @@
   </data>
   <data name="ResetPasswordAutoEnrollCheckbox" xml:space="preserve">
     <value>Require new users to be enrolled automatically</value>
+  </data>
+  <data name="CryptoAgentConfig" xml:space="preserve">
+    <value>Crypto Agent Configuration</value>
+  </data>
+  <data name="CryptoAgentUrl" xml:space="preserve">
+    <value>Crypto Agent URL</value>
+  </data>
+  <data name="CryptoAgentUrlValidationError" xml:space="preserve">
+    <value>URL is required when using the Crypto Agent.</value>
+  </data>
+  <data name="CryptoAgentUrlValidationFormatError" xml:space="preserve">
+    <value>Crypto Agent URL is not a valid URL.</value>
+  </data>
+  <data name="UseCryptoAgent" xml:space="preserve">
+    <value>Use Crypto Agent</value>
   </data>
 </root>

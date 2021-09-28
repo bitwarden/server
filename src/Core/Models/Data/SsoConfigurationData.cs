@@ -14,6 +14,8 @@ namespace Bit.Core.Models.Data
         private const string _saml2ModulePath = "/saml2";
 
         public SsoType ConfigType { get; set; }
+        public bool UseCryptoAgent { get; set; }
+        public string CryptoAgentUrl { get; set; }
 
         // OIDC
         public string Authority { get; set; }

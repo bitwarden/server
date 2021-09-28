@@ -58,6 +58,24 @@
         </div>
     </div>
 
+    <!-- Crypto Agent -->
+    <div class="cryptoagent-config">
+        <div class="config-section">
+            <h2>@i18nService.T("CryptoAgentConfig")</h2>
+            <div class="form-group">
+                <div class="form-check">
+                    <input asp-for="Data.UseCryptoAgent" type="checkbox" class="form-check-input">
+                    <label asp-for="Data.UseCryptoAgent" class="form-check-label"></label>
+                </div>
+            </div>
+            <div class="form-group">
+                <label asp-for="Data.CryptoAgentUrl"></label>
+                <input asp-for="Data.CryptoAgentUrl" class="form-control">
+                <span asp-validation-for="Data.CryptoAgentUrl" class="text-danger"></span>
+            </div>
+        </div>
+    </div>
+
     <!-- OIDC -->
     <div class="oidc-config">
         <div class="config-section">

@@ -22,6 +22,8 @@ namespace Bit.Portal.Models
             Guid organizationId)
         {
             ConfigType = configurationData.ConfigType;
+            UseCryptoAgent = configurationData.UseCryptoAgent;
+            CryptoAgentUrl = configurationData.CryptoAgentUrl;
             Authority = configurationData.Authority;
             ClientId = configurationData.ClientId;
             ClientSecret = configurationData.ClientSecret;
@@ -60,6 +62,10 @@ namespace Bit.Portal.Models
         [Required]
         [Display(Name = "ConfigType")]
         public SsoType ConfigType { get; set; }
+        [Display(Name = "UseCryptoAgent")]
+        public bool UseCryptoAgent { get; set; }
+        [Display(Name = "CryptoAgentUrl")]
+        public string CryptoAgentUrl { get; set; }
 
         // OIDC
         [Display(Name = "Authority")]
@@ -138,6 +144,21 @@ namespace Bit.Portal.Models
             var i18nService = context.GetService(typeof(II18nService)) as I18nService;
             var model = context.ObjectInstance as SsoConfigDataViewModel;
 
+            if (model.UseCryptoAgent && string.IsNullOrWhiteSpace(model.CryptoAgentUrl))
+            {
+                yield return new ValidationResult(
+                    i18nService.GetLocalizedHtmlString("CryptoAgentUrlValidationError"),
+                    new[] { nameof(model.CryptoAgentUrl) });
+            }
+
+            if (!string.IsNullOrWhiteSpace(model.CryptoAgentUrl) &&
+                !Uri.TryCreate(model.CryptoAgentUrl, UriKind.Absolute, out _))
+            {
+                yield return new ValidationResult(
+                    i18nService.GetLocalizedHtmlString("CryptoAgentUrlValidationFormatError"),
+                    new[] { nameof(model.CryptoAgentUrl) });
+            }
+
             if (model.ConfigType == SsoType.OpenIdConnect)
             {
                 if (string.IsNullOrWhiteSpace(model.Authority))
@@ -214,6 +235,8 @@ namespace Bit.Portal.Models
             return new SsoConfigurationData
             {
                 ConfigType = ConfigType,
+                UseCryptoAgent = UseCryptoAgent,
+                CryptoAgentUrl = CryptoAgentUrl,
                 Authority = Authority,
                 ClientId = ClientId,
                 ClientSecret = ClientSecret,

@@ -16,9 +16,9 @@ using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Bit.Core.Enums.Provider;
+using System.Text.Json;
 
 namespace Bit.Api.Controllers
 {
@@ -37,6 +37,7 @@ namespace Bit.Api.Controllers
         private readonly IUserService _userService;
         private readonly ISendRepository _sendRepository;
         private readonly ISendService _sendService;
+        private readonly ISsoConfigRepository _ssoConfigRepository;
 
         public AccountsController(
             GlobalSettings globalSettings,
@@ -46,11 +47,11 @@ namespace Bit.Api.Controllers
             IOrganizationUserRepository organizationUserRepository,
             IProviderUserRepository providerUserRepository,
             IPaymentService paymentService,
-            ISsoUserRepository ssoUserRepository,
             IUserRepository userRepository,
             IUserService userService,
             ISendRepository sendRepository,
-            ISendService sendService)
+            ISendService sendService,
+            ISsoConfigRepository ssoConfigRepository)
         {
             _cipherRepository = cipherRepository;
             _folderRepository = folderRepository;
@@ -63,11 +64,12 @@ namespace Bit.Api.Controllers
             _userService = userService;
             _sendRepository = sendRepository;
             _sendService = sendService;
+            _ssoConfigRepository = ssoConfigRepository;
         }
 
         [HttpPost("prelogin")]
         [AllowAnonymous]
-        public async Task<PreloginResponseModel> PostPrelogin([FromBody]PreloginRequestModel model)
+        public async Task<PreloginResponseModel> PostPrelogin([FromBody] PreloginRequestModel model)
         {
             var kdfInformation = await _userRepository.GetKdfInformationByEmailAsync(model.Email);
             if (kdfInformation == null)
@@ -84,7 +86,7 @@ namespace Bit.Api.Controllers
         [HttpPost("register")]
         [AllowAnonymous]
         [CaptchaProtected]
-        public async Task PostRegister([FromBody]RegisterRequestModel model)
+        public async Task PostRegister([FromBody] RegisterRequestModel model)
         {
             var result = await _userService.RegisterUserAsync(model.ToUser(), model.MasterPasswordHash,
                 model.Token, model.OrganizationUserId);
@@ -104,13 +106,13 @@ namespace Bit.Api.Controllers
 
         [HttpPost("password-hint")]
         [AllowAnonymous]
-        public async Task PostPasswordHint([FromBody]PasswordHintRequestModel model)
+        public async Task PostPasswordHint([FromBody] PasswordHintRequestModel model)
         {
             await _userService.SendMasterPasswordHintAsync(model.Email);
         }
 
         [HttpPost("email-token")]
-        public async Task PostEmailToken([FromBody]EmailTokenRequestModel model)
+        public async Task PostEmailToken([FromBody] EmailTokenRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)
@@ -128,7 +130,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("email")]
-        public async Task PostEmail([FromBody]EmailRequestModel model)
+        public async Task PostEmail([FromBody] EmailRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)
@@ -166,7 +168,7 @@ namespace Bit.Api.Controllers
 
         [HttpPost("verify-email-token")]
         [AllowAnonymous]
-        public async Task PostVerifyEmailToken([FromBody]VerifyEmailRequestModel model)
+        public async Task PostVerifyEmailToken([FromBody] VerifyEmailRequestModel model)
         {
             var user = await _userService.GetUserByIdAsync(new Guid(model.UserId));
             if (user == null)
@@ -189,7 +191,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("password")]
-        public async Task PostPassword([FromBody]PasswordRequestModel model)
+        public async Task PostPassword([FromBody] PasswordRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)
@@ -214,7 +216,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("set-password")]
-        public async Task PostSetPasswordAsync([FromBody]SetPasswordRequestModel model)
+        public async Task PostSetPasswordAsync([FromBody] SetPasswordRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)
@@ -222,7 +224,7 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
-            var result = await _userService.SetPasswordAsync(model.ToUser(user), model.MasterPasswordHash, model.Key, 
+            var result = await _userService.SetPasswordAsync(model.ToUser(user), model.MasterPasswordHash, model.Key,
                 model.OrgIdentifier);
             if (result.Succeeded)
             {
@@ -238,7 +240,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("verify-password")]
-        public async Task PostVerifyPassword([FromBody]VerifyPasswordRequestModel model)
+        public async Task PostVerifyPassword([FromBody] VerifyPasswordRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)
@@ -257,7 +259,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("kdf")]
-        public async Task PostKdf([FromBody]KdfRequestModel model)
+        public async Task PostKdf([FromBody] KdfRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)
@@ -282,7 +284,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("key")]
-        public async Task PostKey([FromBody]UpdateKeyRequestModel model)
+        public async Task PostKey([FromBody] UpdateKeyRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)
@@ -338,7 +340,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("security-stamp")]
-        public async Task PostSecurityStamp([FromBody]SecurityStampRequestModel model)
+        public async Task PostSecurityStamp([FromBody] SecurityStampRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)
@@ -394,7 +396,7 @@ namespace Bit.Api.Controllers
 
         [HttpPut("profile")]
         [HttpPost("profile")]
-        public async Task<ProfileResponseModel> PutProfile([FromBody]UpdateProfileRequestModel model)
+        public async Task<ProfileResponseModel> PutProfile([FromBody] UpdateProfileRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)
@@ -422,7 +424,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("keys")]
-        public async Task<KeysResponseModel> PostKeys([FromBody]KeysRequestModel model)
+        public async Task<KeysResponseModel> PostKeys([FromBody] KeysRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)
@@ -448,7 +450,7 @@ namespace Bit.Api.Controllers
 
         [HttpDelete]
         [HttpPost("delete")]
-        public async Task Delete([FromBody]DeleteAccountRequestModel model)
+        public async Task Delete([FromBody] DeleteAccountRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)
@@ -480,14 +482,14 @@ namespace Bit.Api.Controllers
 
         [AllowAnonymous]
         [HttpPost("delete-recover")]
-        public async Task PostDeleteRecover([FromBody]DeleteRecoverRequestModel model)
+        public async Task PostDeleteRecover([FromBody] DeleteRecoverRequestModel model)
         {
             await _userService.SendDeleteConfirmationAsync(model.Email);
         }
 
         [HttpPost("delete-recover-token")]
         [AllowAnonymous]
-        public async Task PostDeleteRecoverToken([FromBody]VerifyDeleteRecoverRequestModel model)
+        public async Task PostDeleteRecoverToken([FromBody] VerifyDeleteRecoverRequestModel model)
         {
             var user = await _userService.GetUserByIdAsync(new Guid(model.UserId));
             if (user == null)
@@ -511,7 +513,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("iap-check")]
-        public async Task PostIapCheck([FromBody]IapCheckRequestModel model)
+        public async Task PostIapCheck([FromBody] IapCheckRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)
@@ -605,7 +607,7 @@ namespace Bit.Api.Controllers
 
         [HttpPost("payment")]
         [SelfHosted(NotSelfHostedOnly = true)]
-        public async Task PostPayment([FromBody]PaymentRequestModel model)
+        public async Task PostPayment([FromBody] PaymentRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)
@@ -623,7 +625,7 @@ namespace Bit.Api.Controllers
 
         [HttpPost("storage")]
         [SelfHosted(NotSelfHostedOnly = true)]
-        public async Task<PaymentResponseModel> PostStorage([FromBody]StorageRequestModel model)
+        public async Task<PaymentResponseModel> PostStorage([FromBody] StorageRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)
@@ -719,7 +721,7 @@ namespace Bit.Api.Controllers
 
         [HttpPut("tax")]
         [SelfHosted(NotSelfHostedOnly = true)]
-        public async Task PutTaxInfo([FromBody]TaxInfoUpdateRequestModel model)
+        public async Task PutTaxInfo([FromBody] TaxInfoUpdateRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)
@@ -757,7 +759,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("api-key")]
-        public async Task<ApiKeyResponseModel> ApiKey([FromBody]ApiKeyRequestModel model)
+        public async Task<ApiKeyResponseModel> ApiKey([FromBody] ApiKeyRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)
@@ -778,7 +780,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("rotate-api-key")]
-        public async Task<ApiKeyResponseModel> RotateApiKey([FromBody]ApiKeyRequestModel model)
+        public async Task<ApiKeyResponseModel> RotateApiKey([FromBody] ApiKeyRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)
@@ -798,9 +800,9 @@ namespace Bit.Api.Controllers
                 return response;
             }
         }
-        
+
         [HttpPut("update-temp-password")]
-        public async Task PutUpdateTempPasswordAsync([FromBody]UpdateTempPasswordRequestModel model)
+        public async Task PutUpdateTempPasswordAsync([FromBody] UpdateTempPasswordRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)
@@ -820,6 +822,35 @@ namespace Bit.Api.Controllers
             }
 
             throw new BadRequestException(ModelState);
+        }
+
+        [HttpGet("sso-config")]
+        public async Task<SsoConfigResponseModel> GetSsoConfig([FromQuery] string identifier)
+        {
+            if (string.IsNullOrWhiteSpace(identifier))
+            {
+                throw new BadRequestException("Identifier", "Identifier required.");
+            }
+
+            var ssoConfig = await _ssoConfigRepository.GetByIdentifierAsync(identifier);
+            var validConfig = false;
+            if (ssoConfig != null)
+            {
+                // TODO: Make sure this user has rights to access this org's sso config data
+                validConfig = true;
+            }
+
+            if (!validConfig)
+            {
+                throw new BadRequestException("Identifier", "Invalid identifier.");
+            }
+
+            var ssoConfigData = JsonSerializer.Deserialize<SsoConfigurationData>(ssoConfig.Data,
+                new JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                });
+            return new SsoConfigResponseModel(ssoConfigData);
         }
     }
 }
