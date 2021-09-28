@@ -1072,10 +1072,13 @@ namespace Bit.Core.Services
                 newSeatsRequired = invites.Sum(i => i.invite.Emails.Count()) - existingEmails.Count() - availableSeats;
             }
 
-            var (canScale, failureReason) = await CanScaleAsync(organization, newSeatsRequired);
-            if (!canScale)
+            if (newSeatsRequired > 0)
             {
-                throw new BadRequestException(failureReason);
+                var (canScale, failureReason) = await CanScaleAsync(organization, newSeatsRequired);
+                if (!canScale)
+                {
+                    throw new BadRequestException(failureReason);
+                }
             }
 
             var invitedAreAllOwners = invites.All(i => i.invite.Type == OrganizationUserType.Owner);
@@ -1465,11 +1468,6 @@ namespace Bit.Core.Services
                 failureReason = "Cannot manage organization users.";
                 return (false, failureReason);
             }
-            // if (!await _currentContext.OrganizationOwner(organization.Id))
-            // {
-            //     failureReason = "Only organization owners can autoscale seats.";
-            //     return (false, failureReason);
-            // }
 
             if (seatsToAdd < 1)
             {
