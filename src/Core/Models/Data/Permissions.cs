@@ -10,12 +10,12 @@ namespace Bit.Core.Models.Data
         public bool AccessEventLogs { get; set; }
         public bool AccessImportExport { get; set; }
         public bool AccessReports { get; set; }
-        [Obsolete("This permission exists for client backwards-compatibility. It should not be used to determine permissions in this repository", false)]
+        [Obsolete("This permission exists for client backwards-compatibility. It should not be used to determine permissions in this repository", true)]
         public bool ManageAllCollections => CreateNewCollections && EditAnyCollection && DeleteAnyCollection;
         public bool CreateNewCollections { get; set; }
         public bool EditAnyCollection { get; set; }
         public bool DeleteAnyCollection { get; set; }
-        [Obsolete("This permission exists for client backwards-compatibility. It should not be used to determine permissions in this repository", false)]
+        [Obsolete("This permission exists for client backwards-compatibility. It should not be used to determine permissions in this repository", true)]
         public bool ManageAssignedCollections => EditAssignedCollections && DeleteAssignedCollections;
         public bool EditAssignedCollections { get; set; }
         public bool DeleteAssignedCollections { get; set; }
