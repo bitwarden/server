@@ -145,7 +145,14 @@ namespace Bit.Core.Services
             {
                 foreach (var service in _services)
                 {
-                    await pushFunc(service);
+                    try
+                    {
+                        await pushFunc(service);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, ex.Message);
+                    }
                 }
             }
         }
