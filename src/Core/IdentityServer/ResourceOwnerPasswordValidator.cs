@@ -50,13 +50,12 @@ namespace Bit.Core.IdentityServer
 
         public async Task ValidateAsync(ResourceOwnerPasswordValidationContext context)
         {
-            // Uncomment whenever we want to require the `auth-email` header
-            //if (!AuthEmailHeaderIsValid(context))
-            //{
-            //    context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant,
-            //        "Auth-Email header invalid.");
-            //    return;
-            //}
+            if (!AuthEmailHeaderIsValid(context))
+            {
+                context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant,
+                    "Auth-Email header invalid.");
+                return;
+            }
 
             string bypassToken = null;
             if (_captchaValidationService.RequireCaptchaValidation(_currentContext))
