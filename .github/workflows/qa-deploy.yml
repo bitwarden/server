@@ -91,11 +91,13 @@ jobs:
 
       - name: Download latest ${{ matrix.name }} asset from ${{ env.branch_name }}
         uses: bitwarden/gh-actions/download-artifacts@23433be15ed6fd046ce12b6889c5184a8d9c8783
+        env:
+          branch_name: ${{ steps.setup.outputs.branch_name }}
         with:
           workflow: build.yml
           workflow_conclusion: success
           branch: ${{ env.branch_name }}
-          name: ${{ matrix.name }}.zip
+          artifacts: ${{ matrix.name }}.zip
 
       - name: Login to Azure
         uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a
