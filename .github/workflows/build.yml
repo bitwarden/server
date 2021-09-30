@@ -167,6 +167,7 @@ jobs:
           pwd
           ls -atlh ../../../
 
+      # This isn't using the Zip archive created from the last step.
       - name: Upload service artifact
         uses: actions/upload-artifact@ee69f02b3dfdecd58bb31b4d133da38ba6fe3700
         with:
