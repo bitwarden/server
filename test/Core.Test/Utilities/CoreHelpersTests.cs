@@ -245,7 +245,7 @@ namespace Bit.Core.Test.Utilities
         public void GetEmbeddedResourceContentsAsync_Success()
         {
             var fileContents = CoreHelpers.GetEmbeddedResourceContentsAsync("data.embeddedResource.txt");
-            Assert.Equal("Contents of embeddedResource.txt\n", fileContents);
+            Assert.Equal("Contents of embeddedResource.txt\n", fileContents.Replace("\r\n", "\n"));
         }
 
         [Theory, CustomAutoData(typeof(UserFixture))]
