@@ -3,16 +3,24 @@ UPDATE [vault_dev].[dbo].[OrganizationUser]
 SET [Permissions] = 
     JSON_MODIFY(
         JSON_MODIFY(
-            JSON_MODIFY(
-                [Permissions], '$.editAssignedCollections', ISNULL(JSON_VALUE([Permissions], '$.manageAssignedCollections'), 'false')
-            ),
-            '$.deleteAssignedCollections', ISNULL(JSON_VALUE([Permissions], '$.manageAssignedCollections'), 'false')
+            [Permissions], '$.editAssignedCollections', CAST(ISNULL(
+                                                            ISNULL(
+                                                                JSON_VALUE([Permissions], '$.editAssignedCollections'),
+                                                                JSON_VALUE([Permissions], '$.manageAssignedCollections')),
+                                                            0) AS BIT)
         ),
-        '$.manageAssignedCollections', NULL
+        '$.deleteAssignedCollections', CAST(ISNULL(
+                                        ISNULL(
+                                            JSON_VALUE([Permissions], '$.deleteAssignedCollections'),
+                                            JSON_VALUE([Permissions], '$.manageAssignedCollections')),
+                                        0) AS BIT)
     )
 WHERE [Permissions] IS NOT NULL
     AND ISJSON([Permissions]) > 0
-    AND JSON_VALUE([Permissions], '$.manageAllCollections') IS NOT NULL
+    AND (
+        JSON_VALUE([Permissions], '$.editAssignedCollections') IS NULL
+        OR JSON_VALUE([Permissions], '$.deleteAssignedCollections') IS NULL
+    )
 
 -- Split Manage All Collections into create, edit, and delete
 UPDATE [vault_dev].[dbo].[OrganizationUser]
@@ -20,15 +28,29 @@ SET [Permissions] =
     JSON_MODIFY(
         JSON_MODIFY(
             JSON_MODIFY(
-                JSON_MODIFY(
-                    [Permissions], '$.createNewCollections', ISNULL(JSON_VALUE([Permissions], '$.manageAllCollections'), 'false')
-                ),
-                '$.editAnyCollection', ISNULL(JSON_VALUE([Permissions], '$.manageAllCollections'), 'false')
+                [Permissions], '$.createNewCollections', CAST(ISNULL(
+                                                            ISNULL(
+                                                                JSON_VALUE([Permissions], '$.createNewCollections'),
+                                                                JSON_VALUE([Permissions], '$.manageAllCollections')),
+                                                            0) AS BIT)
             ),
-            '$.deleteAnyCollection', ISNULL(JSON_VALUE([Permissions], '$.manageAllCollections'), 'false')
+            '$.editAnyCollection', CAST(ISNULL(
+                                    ISNULL(
+                                        JSON_VALUE([Permissions], '$.editAnyCollection'),
+                                        JSON_VALUE([Permissions], '$.manageAllCollections')),
+                                    0) AS BIT)
         ),
-        '$.manageAllCollections', NULL
+        '$.deleteAnyCollection', CAST(ISNULL(
+                                    ISNULL(
+                                        JSON_VALUE([Permissions], '$.deleteAnyCollection'),
+                                        JSON_VALUE([Permissions], '$.manageAllCollections')),
+                                    0) AS BIT)
     )
 WHERE [Permissions] IS NOT NULL
     AND ISJSON([Permissions]) > 0 
-    AND JSON_VALUE([Permissions], '$.manageAllCollections') IS NOT NULL
+    AND (
+        JSON_VALUE([Permissions], '$.createNewCollections') IS NULL
+        OR JSON_VALUE([Permissions], '$.editAnyCollection') IS NULL
+        OR JSON_VALUE([Permissions], '$.deleteAnyCollection') IS NULL
+    )
+
