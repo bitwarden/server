@@ -26,6 +26,7 @@ namespace Bit.Core.Models.Data
         public bool ManageResetPassword { get; set; }
 
         [JsonIgnore]
+        [System.Text.Json.Serialization.JsonIgnore]
         public List<(Func<bool> Permission, string ClaimName)> ClaimsMap => new()
         {
             (() => AccessBusinessPortal, "accessbusinessportal"),
