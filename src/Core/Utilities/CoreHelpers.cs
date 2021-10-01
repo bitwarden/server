@@ -828,11 +828,6 @@ namespace Bit.Core.Utilities
                             {
                                 claims.Add(new KeyValuePair<string, string>("orgcustom", org.Id.ToString()));
 
-                                if (org.Permissions.AccessBusinessPortal)
-                                {
-                                    claims.Add(new KeyValuePair<string, string>("accessbusinessportal", org.Id.ToString()));
-                                }
-
                                 if (org.Permissions.AccessEventLogs)
                                 {
                                     claims.Add(new KeyValuePair<string, string>("accesseventlogs", org.Id.ToString()));

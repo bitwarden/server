@@ -457,9 +457,6 @@
   <data name="Never">
     <value>Never</value>
   </data>
-  <data name="WelcomeToBusinessPortal">
-    <value>Welcome to the Bitwarden Business Portal</value>
-  </data>
   <data name="IdpX509PublicCertValidationError" xml:space="preserve">
     <value>The IdP public certificate provided is invalid: {0}</value>
   </data>

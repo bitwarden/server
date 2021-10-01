@@ -2,7 +2,6 @@ namespace Bit.Core.Models.Data
 {
     public class Permissions
     {
-        public bool AccessBusinessPortal { get; set; }
         public bool AccessEventLogs { get; set; }
         public bool AccessImportExport { get; set; }
         public bool AccessReports { get; set; }

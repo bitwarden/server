@@ -12,8 +12,6 @@ using System.Security.Claims;
 using Bit.Core.Models;
 using Bit.Core.Models.Business;
 using U2fLib = U2F.Core.Crypto.U2F;
-using U2F.Core.Models;
-using U2F.Core.Utils;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Utilities;
@@ -1221,15 +1219,6 @@ namespace Bit.Core.Services
 
             return await CanAccessPremium(user);
         }
-
-        //TODO refactor this to use the below method and enum
-        public async Task<string> GenerateEnterprisePortalSignInTokenAsync(User user)
-        {
-            var token = await GenerateUserTokenAsync(user, Options.Tokens.PasswordResetTokenProvider,
-                "EnterprisePortalTokenSignIn");
-            return token;
-        }
-
 
         public async Task<string> GenerateSignInTokenAsync(User user, string purpose)
         {

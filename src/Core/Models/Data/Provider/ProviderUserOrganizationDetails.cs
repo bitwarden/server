@@ -17,7 +17,6 @@ namespace Bit.Core.Models.Data
         public bool Use2fa { get; set; }
         public bool UseApi{ get; set; }
         public bool UseResetPassword { get; set; }
-        public bool UseBusinessPortal => UsePolicies || UseSso;
         public bool SelfHost { get; set; }
         public bool UsersGetPremium { get; set; }
         public int? Seats { get; set; }

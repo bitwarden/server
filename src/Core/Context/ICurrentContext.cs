@@ -36,7 +36,6 @@ namespace Bit.Core.Context
         Task<bool> OrganizationAdmin(Guid orgId);
         Task<bool> OrganizationOwner(Guid orgId);
         Task<bool> OrganizationCustom(Guid orgId);
-        Task<bool> AccessBusinessPortal(Guid orgId);
         Task<bool> AccessEventLogs(Guid orgId);
         Task<bool> AccessImportExport(Guid orgId);
         Task<bool> AccessReports(Guid orgId);

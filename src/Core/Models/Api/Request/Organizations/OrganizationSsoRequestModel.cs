@@ -5,34 +5,53 @@ using Bit.Core.Services;
 using Bit.Core.Models.Data;
 using Bit.Core.Enums;
 using Bit.Core.Sso;
-using Bit.Core.Settings;
 using U2F.Core.Utils;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using System.Text.Json;
 using System.Text.RegularExpressions;
+using Bit.Core.Models.Table;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 
-namespace Bit.Portal.Models
+namespace Bit.Core.Models.Api
 {
-    public class SsoConfigDataViewModel : IValidatableObject
+    public class OrganizationSsoRequestModel
     {
-        public SsoConfigDataViewModel() { }
+        [Required]
+        public bool Enabled { get; set; }
+        [Required]
+        public SsoConfigurationDataRequest Data { get; set; }
 
-        public SsoConfigDataViewModel(SsoConfigurationData configurationData, GlobalSettings globalSettings,
-            Guid organizationId)
+        public SsoConfig ToSsoConfig(Guid organizationId)
+        {
+            return ToSsoConfig(new SsoConfig { OrganizationId = organizationId });
+        }
+
+        public SsoConfig ToSsoConfig(SsoConfig existingConfig)
+        {
+            existingConfig.Enabled = Enabled;
+            var configurationData = Data.ToConfigurationData();
+            existingConfig.Data = JsonSerializer.Serialize(configurationData, new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            });
+            return existingConfig;
+        }
+    }
+
+    public class SsoConfigurationDataRequest : IValidatableObject
+    {
+        public SsoConfigurationDataRequest() {}
+
+        public SsoConfigurationDataRequest(SsoConfigurationData configurationData)
         {
             ConfigType = configurationData.ConfigType;
             Authority = configurationData.Authority;
             ClientId = configurationData.ClientId;
             ClientSecret = configurationData.ClientSecret;
-            CallbackPath = configurationData.BuildCallbackPath(globalSettings.BaseServiceUri.Sso);
-            SignedOutCallbackPath = configurationData.BuildSignedOutCallbackPath(globalSettings.BaseServiceUri.Sso);
             MetadataAddress = configurationData.MetadataAddress;
             RedirectBehavior = configurationData.RedirectBehavior;
             GetClaimsFromUserInfoEndpoint = configurationData.GetClaimsFromUserInfoEndpoint;
-            SpEntityId = configurationData.BuildSaml2ModulePath(globalSettings.BaseServiceUri.Sso);
-            SpMetadataUrl = configurationData.BuildSaml2MetadataUrl(globalSettings.BaseServiceUri.Sso, organizationId.ToString());
-            SpAcsUrl = configurationData.BuildSaml2AcsUrl(globalSettings.BaseServiceUri.Sso, organizationId.ToString());
             IdpEntityId = configurationData.IdpEntityId;
             IdpBindingType = configurationData.IdpBindingType;
             IdpSingleSignOnServiceUrl = configurationData.IdpSingleSignOnServiceUrl;
@@ -58,148 +77,108 @@ namespace Bit.Portal.Models
         }
 
         [Required]
-        [Display(Name = "ConfigType")]
         public SsoType ConfigType { get; set; }
 
         // OIDC
-        [Display(Name = "Authority")]
         public string Authority { get; set; }
-        [Display(Name = "ClientId")]
         public string ClientId { get; set; }
-        [Display(Name = "ClientSecret")]
         public string ClientSecret { get; set; }
-        [Display(Name = "CallbackPath")]
-        public string CallbackPath { get; set; }
-        [Display(Name = "SignedOutCallbackPath")]
-        public string SignedOutCallbackPath { get; set; }
-        [Display(Name = "MetadataAddress")]
         public string MetadataAddress { get; set; }
-        [Display(Name = "RedirectBehavior")]
         public OpenIdConnectRedirectBehavior RedirectBehavior { get; set; }
-        [Display(Name = "GetClaimsFromUserInfoEndpoint")]
         public bool GetClaimsFromUserInfoEndpoint { get; set; }
-        [Display(Name = "AdditionalScopes")]
         public string AdditionalScopes { get; set; }
-        [Display(Name = "AdditionalUserIdClaimTypes")]
         public string AdditionalUserIdClaimTypes { get; set; }
-        [Display(Name = "AdditionalEmailClaimTypes")]
         public string AdditionalEmailClaimTypes { get; set; }
-        [Display(Name = "AdditionalNameClaimTypes")]
         public string AdditionalNameClaimTypes { get; set; }
-        [Display(Name = "AcrValues")]
         public string AcrValues { get; set; }
-        [Display(Name = "ExpectedReturnAcrValue")]
         public string ExpectedReturnAcrValue { get; set; }
 
         // SAML2 SP
-        [Display(Name = "SpEntityId")]
-        public string SpEntityId { get; set; }
-        [Display(Name = "SpMetadataUrl")]
-        public string SpMetadataUrl { get; set; }
-        [Display(Name = "SpAcsUrl")]
-        public string SpAcsUrl { get; set; }
-        [Display(Name = "NameIdFormat")]
         public Saml2NameIdFormat SpNameIdFormat { get; set; }
-        [Display(Name = "OutboundSigningAlgorithm")]
         public string SpOutboundSigningAlgorithm { get; set; }
-        [Display(Name = "SigningBehavior")]
         public Saml2SigningBehavior SpSigningBehavior { get; set; }
-        [Display(Name = "SpWantAssertionsSigned")]
         public bool SpWantAssertionsSigned { get; set; }
-        [Display(Name = "SpValidateCertificates")]
         public bool SpValidateCertificates { get; set; }
-        [Display(Name = "MinIncomingSigningAlgorithm")]
         public string SpMinIncomingSigningAlgorithm { get; set; }
 
         // SAML2 IDP
-        [Display(Name = "EntityId")]
         public string IdpEntityId { get; set; }
-        [Display(Name = "BindingType")]
         public Saml2BindingType IdpBindingType { get; set; }
-        [Display(Name = "SingleSignOnServiceUrl")]
         public string IdpSingleSignOnServiceUrl { get; set; }
-        [Display(Name = "SingleLogoutServiceUrl")]
         public string IdpSingleLogoutServiceUrl { get; set; }
-        [Display(Name = "ArtifactResolutionServiceUrl")]
         public string IdpArtifactResolutionServiceUrl { get; set; }
-        [Display(Name = "X509PublicCert")]
         public string IdpX509PublicCert { get; set; }
-        [Display(Name = "OutboundSigningAlgorithm")]
         public string IdpOutboundSigningAlgorithm { get; set; }
-        [Display(Name = "AllowUnsolicitedAuthnResponse")]
         public bool IdpAllowUnsolicitedAuthnResponse { get; set; }
-        [Display(Name = "DisableOutboundLogoutRequests")]
         public bool IdpDisableOutboundLogoutRequests { get; set; }
-        [Display(Name = "WantAuthnRequestsSigned")]
         public bool IdpWantAuthnRequestsSigned { get; set; }
 
         public IEnumerable<ValidationResult> Validate(ValidationContext context)
         {
             var i18nService = context.GetService(typeof(II18nService)) as I18nService;
-            var model = context.ObjectInstance as SsoConfigDataViewModel;
 
-            if (model.ConfigType == SsoType.OpenIdConnect)
+            if (ConfigType == SsoType.OpenIdConnect)
             {
-                if (string.IsNullOrWhiteSpace(model.Authority))
+                if (string.IsNullOrWhiteSpace(Authority))
                 {
                     yield return new ValidationResult(i18nService.GetLocalizedHtmlString("AuthorityValidationError"),
-                        new[] { nameof(model.Authority) });
+                        new[] { nameof(Authority) });
                 }
 
-                if (string.IsNullOrWhiteSpace(model.ClientId))
+                if (string.IsNullOrWhiteSpace(ClientId))
                 {
                     yield return new ValidationResult(i18nService.GetLocalizedHtmlString("ClientIdValidationError"),
-                        new[] { nameof(model.ClientId) });
+                        new[] { nameof(ClientId) });
                 }
 
-                if (string.IsNullOrWhiteSpace(model.ClientSecret))
+                if (string.IsNullOrWhiteSpace(ClientSecret))
                 {
                     yield return new ValidationResult(i18nService.GetLocalizedHtmlString("ClientSecretValidationError"),
-                        new[] { nameof(model.ClientSecret) });
+                        new[] { nameof(ClientSecret) });
                 }
             }
-            else if (model.ConfigType == SsoType.Saml2)
+            else if (ConfigType == SsoType.Saml2)
             {
-                if (string.IsNullOrWhiteSpace(model.IdpEntityId))
+                if (string.IsNullOrWhiteSpace(IdpEntityId))
                 {
                     yield return new ValidationResult(i18nService.GetLocalizedHtmlString("IdpEntityIdValidationError"),
-                        new[] { nameof(model.IdpEntityId) });
+                        new[] { nameof(IdpEntityId) });
                 }
 
-                if (model.IdpBindingType == Saml2BindingType.Artifact && string.IsNullOrWhiteSpace(model.IdpArtifactResolutionServiceUrl))
+                if (IdpBindingType == Saml2BindingType.Artifact && string.IsNullOrWhiteSpace(IdpArtifactResolutionServiceUrl))
                 {
                     yield return new ValidationResult(i18nService.GetLocalizedHtmlString("Saml2BindingTypeValidationError"),
-                        new[] { nameof(model.IdpArtifactResolutionServiceUrl) });
+                        new[] { nameof(IdpArtifactResolutionServiceUrl) });
                 }
 
-                if (!Uri.IsWellFormedUriString(model.IdpEntityId, UriKind.Absolute) && string.IsNullOrWhiteSpace(model.IdpSingleSignOnServiceUrl))
+                if (!Uri.IsWellFormedUriString(IdpEntityId, UriKind.Absolute) && string.IsNullOrWhiteSpace(IdpSingleSignOnServiceUrl))
                 {
                     yield return new ValidationResult(i18nService.GetLocalizedHtmlString("IdpSingleSignOnServiceUrlValidationError"),
-                        new[] { nameof(model.IdpSingleSignOnServiceUrl) });
+                        new[] { nameof(IdpSingleSignOnServiceUrl) });
                 }
-                if (!string.IsNullOrWhiteSpace(model.IdpX509PublicCert))
+                if (!string.IsNullOrWhiteSpace(IdpX509PublicCert))
                 {
                     // Validate the certificate is in a valid format
                     ValidationResult failedResult = null;
                     try
                     {
-                        var certData = StripPemCertificateElements(model.IdpX509PublicCert).Base64StringToByteArray();
+                        var certData = StripPemCertificateElements(IdpX509PublicCert).Base64StringToByteArray();
                         new X509Certificate2(certData);
                     }
                     catch (FormatException)
                     {
                         failedResult = new ValidationResult(i18nService.GetLocalizedHtmlString("IdpX509PublicCertInvalidFormatValidationError"),
-                            new[] { nameof(model.IdpX509PublicCert) });
+                            new[] { nameof(IdpX509PublicCert) });
                     }
                     catch (CryptographicException cryptoEx)
                     {
                         failedResult = new ValidationResult(i18nService.GetLocalizedHtmlString("IdpX509PublicCertCryptographicExceptionValidationError", cryptoEx.Message),
-                            new[] { nameof(model.IdpX509PublicCert) });
+                            new[] { nameof(IdpX509PublicCert) });
                     }
                     catch (Exception ex)
                     {
                         failedResult = new ValidationResult(i18nService.GetLocalizedHtmlString("IdpX509PublicCertValidationError", ex.Message),
-                            new[] { nameof(model.IdpX509PublicCert) });
+                            new[] { nameof(IdpX509PublicCert) });
                     }
                     if (failedResult != null)
                     {
