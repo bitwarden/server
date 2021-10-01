@@ -148,8 +148,6 @@ namespace Bit.Api.Controllers
         [HttpPut("{id}/users")]
         public async Task PutUsers(string orgId, string id, [FromBody]IEnumerable<SelectionReadOnlyRequestModel> model)
         {
-            // TODO: add permissions check
-
             var collection = await GetCollectionAsync(new Guid(id), new Guid(orgId));
             await _collectionRepository.UpdateUsersAsync(collection.Id, model?.Select(g => g.ToSelectionReadOnly()));
         }
@@ -171,8 +169,6 @@ namespace Bit.Api.Controllers
         [HttpPost("{id}/delete-user/{orgUserId}")]
         public async Task Delete(string orgId, string id, string orgUserId)
         {
-            // TODO: Add permission check
-
             var collection = await GetCollectionAsync(new Guid(id), new Guid(orgId));
             await _collectionService.DeleteUserAsync(collection, new Guid(orgUserId));
         }
