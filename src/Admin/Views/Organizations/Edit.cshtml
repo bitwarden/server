@@ -145,6 +145,14 @@
             </div>
         </div>
     </div>
+    <div class="row">
+        <div class="col-4">
+            <div class="form-group">
+                <label asp-for="MaxAutoscaleSeats"></label>
+                <input type="number" class="form-control" asp-for="MaxAutoscaleSeats" min="1">
+            </div>
+        </div>
+    </div>
     <h2>Features</h2>
     <div class="form-check">
         <input type="checkbox" class="form-check-input" asp-for="UseTotp">

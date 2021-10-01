@@ -12,34 +12,31 @@ using Bit.Core.Test.AutoFixture;
 using Bit.Core.Test.AutoFixture.SendFixtures;
 using NSubstitute;
 using Xunit;
-using Newtonsoft.Json;
+using System.Text.Json;
 
 namespace Bit.Core.Test.Services
 {
     public class SendServiceTests
     {
+        private void SaveSendAsync_Setup(SendType sendType, bool disableSendPolicyAppliesToUser,
+            SutProvider<SendService> sutProvider, Send send)
+        {
+            send.Id = default;
+            send.Type = sendType;
+
+            sutProvider.GetDependency<IPolicyRepository>().GetCountByTypeApplicableToUserIdAsync(
+                Arg.Any<Guid>(), PolicyType.DisableSend).Returns(disableSendPolicyAppliesToUser ? 1 : 0);
+        }
+
         // Disable Send policy check
 
-        private void SaveSendAsync_DisableSend_Setup(SendType sendType, bool canManagePolicies,
-            SutProvider<SendService> sutProvider, Send send, List<Policy> policies)
-        {
-            send.Id = default;
-            send.Type = sendType;
-
-            policies.First().Type = PolicyType.DisableSend;
-            policies.First().Enabled = true;
-
-            sutProvider.GetDependency<IPolicyRepository>().GetManyByUserIdAsync(send.UserId.Value).Returns(policies);
-            sutProvider.GetDependency<ICurrentContext>().ManagePolicies(Arg.Any<Guid>()).Returns(canManagePolicies);
-        }
-
         [Theory]
         [InlineUserSendAutoData(SendType.File)]
         [InlineUserSendAutoData(SendType.Text)]
-        public async void SaveSendAsync_DisableSend_CantManagePolicies_throws(SendType sendType,
-            SutProvider<SendService> sutProvider, Send send, List<Policy> policies)
+        public async void SaveSendAsync_DisableSend_Applies_throws(SendType sendType,
+            SutProvider<SendService> sutProvider, Send send)
         {
-            SaveSendAsync_DisableSend_Setup(sendType, canManagePolicies: false, sutProvider, send, policies);
+            SaveSendAsync_Setup(sendType, disableSendPolicyAppliesToUser: true, sutProvider, send);
 
             await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SaveSendAsync(send));
         }
@@ -47,61 +44,47 @@ namespace Bit.Core.Test.Services
         [Theory]
         [InlineUserSendAutoData(SendType.File)]
         [InlineUserSendAutoData(SendType.Text)]
-        public async void SaveSendAsync_DisableSend_DisabledPolicy_CantManagePolicies_success(SendType sendType,
-            SutProvider<SendService> sutProvider, Send send, List<Policy> policies)
+        public async void SaveSendAsync_DisableSend_DoesntApply_success(SendType sendType,
+            SutProvider<SendService> sutProvider, Send send)
         {
-            SaveSendAsync_DisableSend_Setup(sendType, canManagePolicies: false, sutProvider, send, policies);
-            foreach (var policy in policies.Where(p => p.Type == PolicyType.DisableSend))
-            {
-                policy.Enabled = false;
-            }
+            SaveSendAsync_Setup(sendType, disableSendPolicyAppliesToUser: false, sutProvider, send);
 
             await sutProvider.Sut.SaveSendAsync(send);
 
             await sutProvider.GetDependency<ISendRepository>().Received(1).CreateAsync(send);
         }
 
-        [Theory]
-        [InlineUserSendAutoData(SendType.File)]
-        [InlineUserSendAutoData(SendType.Text)]
-        public async void SaveSendAsync_DisableSend_CanManagePolicies_success(SendType sendType,
-            SutProvider<SendService> sutProvider, Send send, List<Policy> policies)
+        // Send Options Policy - Disable Hide Email check
+
+        private void SaveSendAsync_HideEmail_Setup(bool disableHideEmailAppliesToUser,
+            SutProvider<SendService> sutProvider, Send send, Policy policy)
         {
-            SaveSendAsync_DisableSend_Setup(sendType, canManagePolicies: true, sutProvider, send, policies);
-
-            await sutProvider.Sut.SaveSendAsync(send);
-
-            await sutProvider.GetDependency<ISendRepository>().Received(1).CreateAsync(send);
-        }
-
-        // SendOptionsPolicy.DisableHideEmail check
-
-        private void SaveSendAsync_DisableHideEmail_Setup(SendType sendType, bool canManagePolicies,
-            SutProvider<SendService> sutProvider, Send send, List<Policy> policies)
-        {
-            send.Id = default;
-            send.Type = sendType;
             send.HideEmail = true;
 
-            var dataObj = new SendOptionsPolicyData();
-            dataObj.DisableHideEmail = true;
+            var sendOptions = new SendOptionsPolicyData
+            {
+                DisableHideEmail = disableHideEmailAppliesToUser
+            };
+            policy.Data = JsonSerializer.Serialize(sendOptions, new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            });
 
-            policies.First().Type = PolicyType.SendOptions;
-            policies.First().Enabled = true;
-            policies.First().Data = JsonConvert.SerializeObject(dataObj);
-
-            sutProvider.GetDependency<IPolicyRepository>().GetManyByUserIdAsync(send.UserId.Value).Returns(policies);
-            sutProvider.GetDependency<ICurrentContext>().ManagePolicies(Arg.Any<Guid>()).Returns(canManagePolicies);
+            sutProvider.GetDependency<IPolicyRepository>().GetManyByTypeApplicableToUserIdAsync(
+                Arg.Any<Guid>(), PolicyType.SendOptions).Returns(new List<Policy>
+                {
+                    policy,
+                });
         }
-
 
         [Theory]
         [InlineUserSendAutoData(SendType.File)]
         [InlineUserSendAutoData(SendType.Text)]
-        public async void SaveSendAsync_DisableHideEmail_CantManagePolicies_throws(SendType sendType,
-            SutProvider<SendService> sutProvider, Send send, List<Policy> policies)
+        public async void SaveSendAsync_DisableHideEmail_Applies_throws(SendType sendType,
+            SutProvider<SendService> sutProvider, Send send, Policy policy)
         {
-            SaveSendAsync_DisableHideEmail_Setup(sendType, canManagePolicies: false, sutProvider, send, policies);
+            SaveSendAsync_Setup(sendType, false, sutProvider, send);
+            SaveSendAsync_HideEmail_Setup(true, sutProvider, send, policy);
 
             await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SaveSendAsync(send));
         }
@@ -109,33 +92,11 @@ namespace Bit.Core.Test.Services
         [Theory]
         [InlineUserSendAutoData(SendType.File)]
         [InlineUserSendAutoData(SendType.Text)]
-        public async void SaveSendAsync_DisableHideEmail_CantManagePolicies_success(SendType sendType,
-            SutProvider<SendService> sutProvider, Send send, List<Policy> policies)
+        public async void SaveSendAsync_DisableHideEmail_DoesntApply_success(SendType sendType,
+            SutProvider<SendService> sutProvider, Send send, Policy policy)
         {
-            SaveSendAsync_DisableHideEmail_Setup(sendType, canManagePolicies: false, sutProvider, send, policies);
-
-            var policyData = new SendOptionsPolicyData();
-            policyData.DisableHideEmail = false;
-            var policyDataSerialized = JsonConvert.SerializeObject(policyData);
-
-            foreach (var policy in policies.Where(p => p.Type == PolicyType.SendOptions))
-            {
-                policies.First().Enabled = true;
-                policies.First().Data = policyDataSerialized;
-            }
-
-            await sutProvider.Sut.SaveSendAsync(send);
-
-            await sutProvider.GetDependency<ISendRepository>().Received(1).CreateAsync(send);
-        }
-
-        [Theory]
-        [InlineUserSendAutoData(SendType.File)]
-        [InlineUserSendAutoData(SendType.Text)]
-        public async void SaveSendAsync_DisableHideEmail_CanManagePolicies_success(SendType sendType,
-            SutProvider<SendService> sutProvider, Send send, List<Policy> policies)
-        {
-            SaveSendAsync_DisableHideEmail_Setup(sendType, canManagePolicies: true, sutProvider, send, policies);
+            SaveSendAsync_Setup(sendType, false, sutProvider, send);
+            SaveSendAsync_HideEmail_Setup(false, sutProvider, send, policy);
 
             await sutProvider.Sut.SaveSendAsync(send);
 

@@ -78,6 +78,15 @@ namespace Bit.Core.Test.AutoFixture.OrganizationFixtures
         }
     }
 
+    internal class FreeOrganization : ICustomization
+    {
+        public void Customize(IFixture fixture)
+        {
+            fixture.Customize<Core.Models.Table.Organization>(composer => composer
+                .With(o => o.PlanType, PlanType.Free));
+        }
+    }
+
     internal class FreeOrganizationUpgrade : ICustomization
     {
         public void Customize(IFixture fixture)
@@ -133,15 +142,27 @@ namespace Bit.Core.Test.AutoFixture.OrganizationFixtures
 
     internal class PaidOrganizationAutoDataAttribute : CustomAutoDataAttribute
     {
-        public PaidOrganizationAutoDataAttribute(int planType = 0) : base(new SutProviderCustomization(),
-            new PaidOrganization { CheckedPlanType = (PlanType)planType })
+        public PaidOrganizationAutoDataAttribute(PlanType planType) : base(new SutProviderCustomization(),
+            new PaidOrganization { CheckedPlanType = planType })
         { }
+        public PaidOrganizationAutoDataAttribute(int planType = 0) : this((PlanType)planType) { }
     }
 
     internal class InlinePaidOrganizationAutoDataAttribute : InlineCustomAutoDataAttribute
     {
+        public InlinePaidOrganizationAutoDataAttribute(PlanType planType, object[] values) : base(
+            new ICustomization[] { new SutProviderCustomization(), new PaidOrganization { CheckedPlanType = planType } }, values)
+        { }
+
         public InlinePaidOrganizationAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
             typeof(PaidOrganization) }, values)
+        { }
+    }
+
+    internal class InlineFreeOrganizationAutoDataAttribute : InlineCustomAutoDataAttribute
+    {
+        public InlineFreeOrganizationAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
+            typeof(FreeOrganization) }, values)
         { }
     }
 

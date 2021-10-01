@@ -2,6 +2,7 @@
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Braintree;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Xunit;
@@ -18,6 +19,8 @@ namespace Bit.Core.Test.Services
         private readonly GlobalSettings _globalSettings;
         private readonly ILogger<StripePaymentService> _logger;
         private readonly ITaxRateRepository _taxRateRepository;
+        private readonly IStripeAdapter _stripeAdapter;
+        private readonly IBraintreeGateway _braintreeGateway;
 
         public StripePaymentServiceTests()
         {
@@ -27,14 +30,17 @@ namespace Bit.Core.Test.Services
             _globalSettings = new GlobalSettings();
             _logger = Substitute.For<ILogger<StripePaymentService>>();
             _taxRateRepository = Substitute.For<ITaxRateRepository>();
+            _stripeAdapter = Substitute.For<IStripeAdapter>();
+            _braintreeGateway = Substitute.For<IBraintreeGateway>();
 
             _sut = new StripePaymentService(
                 _transactionRepository,
                 _userRepository,
-                _globalSettings,
                 _appleIapService,
                 _logger,
-                _taxRateRepository
+                _taxRateRepository,
+                _stripeAdapter,
+                _braintreeGateway
             );
         }
 

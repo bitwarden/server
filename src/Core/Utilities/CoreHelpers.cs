@@ -654,7 +654,7 @@ namespace Bit.Core.Utilities
         }
 
         public static bool UserInviteTokenIsValid(IDataProtector protector, string token, string userEmail,
-            Guid orgUserId, GlobalSettings globalSettings)
+            Guid orgUserId, IGlobalSettings globalSettings)
         {
             return TokenIsValid("OrganizationUserInvite", protector, token, userEmail, orgUserId,
                 globalSettings.OrganizationInviteExpirationHours);

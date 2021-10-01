@@ -115,7 +115,9 @@ namespace Bit.Core.Utilities
                     MaxUsers = 2,
 
                     UpgradeSortOrder = -1, // Always the lowest plan, cannot be upgraded to
-                    DisplaySortOrder = -1
+                    DisplaySortOrder = -1,
+
+                    AllowSeatAutoscale = false,
                 },
                 new Plan
                 {
@@ -145,7 +147,9 @@ namespace Bit.Core.Utilities
                     StripePremiumAccessPlanId = "personal-org-premium-access-annually",
                     BasePrice = 12,
                     AdditionalStoragePricePerGb = 4,
-                    PremiumAccessOptionPrice = 40
+                    PremiumAccessOptionPrice = 40,
+
+                    AllowSeatAutoscale = false,
                 },
                 new Plan
                 {
@@ -174,7 +178,9 @@ namespace Bit.Core.Utilities
                     StripeStoragePlanId = "storage-gb-annually",
                     BasePrice = 60,
                     SeatPrice = 24,
-                    AdditionalStoragePricePerGb = 4
+                    AdditionalStoragePricePerGb = 4,
+
+                    AllowSeatAutoscale = true,
                 },
                 new Plan
                 {
@@ -202,7 +208,9 @@ namespace Bit.Core.Utilities
                     StripeStoragePlanId = "storage-gb-monthly",
                     BasePrice = 8,
                     SeatPrice = 2.5M,
-                    AdditionalStoragePricePerGb = 0.5M
+                    AdditionalStoragePricePerGb = 0.5M,
+
+                    AllowSeatAutoscale = true,
                 },
                 new Plan
                 {
@@ -239,7 +247,9 @@ namespace Bit.Core.Utilities
                     StripeStoragePlanId = "storage-gb-annually",
                     BasePrice = 0,
                     SeatPrice = 36,
-                    AdditionalStoragePricePerGb = 4
+                    AdditionalStoragePricePerGb = 4,
+
+                    AllowSeatAutoscale = true,
                 },
                 new Plan
                 {
@@ -275,7 +285,9 @@ namespace Bit.Core.Utilities
                     StripeStoragePlanId = "storage-gb-monthly",
                     BasePrice = 0,
                     SeatPrice = 4M,
-                    AdditionalStoragePricePerGb = 0.5M
+                    AdditionalStoragePricePerGb = 0.5M,
+
+                    AllowSeatAutoscale = true,
                 },
                 new Plan
                 {
@@ -302,7 +314,9 @@ namespace Bit.Core.Utilities
                     StripePlanId = "2020-families-org-annually",
                     StripeStoragePlanId = "storage-gb-annually",
                     BasePrice = 40,
-                    AdditionalStoragePricePerGb = 4
+                    AdditionalStoragePricePerGb = 4,
+
+                    AllowSeatAutoscale = false,
                 },
                 new Plan
                 {
@@ -334,7 +348,9 @@ namespace Bit.Core.Utilities
                     StripeSeatPlanId = "2020-teams-org-seat-annually",
                     StripeStoragePlanId = "storage-gb-annually",
                     SeatPrice = 36,
-                    AdditionalStoragePricePerGb = 4
+                    AdditionalStoragePricePerGb = 4,
+
+                    AllowSeatAutoscale = true,
                 },
                 new Plan
                 {
@@ -365,7 +381,9 @@ namespace Bit.Core.Utilities
                     StripeSeatPlanId = "2020-teams-org-seat-monthly",
                     StripeStoragePlanId = "storage-gb-monthly",
                     SeatPrice = 4,
-                    AdditionalStoragePricePerGb = 0.5M
+                    AdditionalStoragePricePerGb = 0.5M,
+
+                    AllowSeatAutoscale = true,
                 },
                 new Plan
                 {
@@ -402,7 +420,9 @@ namespace Bit.Core.Utilities
                     StripeStoragePlanId = "storage-gb-annually",
                     BasePrice = 0,
                     SeatPrice = 60,
-                    AdditionalStoragePricePerGb = 4
+                    AdditionalStoragePricePerGb = 4,
+
+                    AllowSeatAutoscale = true,
                 },
                 new Plan
                 {
@@ -438,11 +458,15 @@ namespace Bit.Core.Utilities
                     StripeStoragePlanId = "storage-gb-monthly",
                     BasePrice = 0,
                     SeatPrice = 6,
-                    AdditionalStoragePricePerGb = 0.5M
+                    AdditionalStoragePricePerGb = 0.5M,
+
+                    AllowSeatAutoscale = true,
                 },
                 new Plan
                 {
-                    Type = PlanType.Custom
+                    Type = PlanType.Custom,
+
+                    AllowSeatAutoscale = true,
                 },
             };
 

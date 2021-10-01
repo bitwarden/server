@@ -184,6 +184,18 @@ namespace Bit.Core.Utilities
             // Required for UserService
             services.AddWebAuthn(globalSettings);
 
+            services.AddSingleton<IStripeAdapter, StripeAdapter>();
+            services.AddSingleton<Braintree.IBraintreeGateway>((serviceProvider) =>
+            {
+                return new Braintree.BraintreeGateway
+                {
+                    Environment = globalSettings.Braintree.Production ?
+                        Braintree.Environment.PRODUCTION : Braintree.Environment.SANDBOX,
+                    MerchantId = globalSettings.Braintree.MerchantId,
+                    PublicKey = globalSettings.Braintree.PublicKey,
+                    PrivateKey = globalSettings.Braintree.PrivateKey
+                };
+            });
             services.AddSingleton<IPaymentService, StripePaymentService>();
             services.AddSingleton<IMailService, HandlebarsMailService>();
             services.AddSingleton<ILicensingService, LicensingService>();
