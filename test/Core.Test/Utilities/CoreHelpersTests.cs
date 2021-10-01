@@ -340,16 +340,6 @@ namespace Bit.Core.Test.Utilities
                                     claims.Add(new KeyValuePair<string, string>("accessreports", org.Id.ToString()));
                                 }
 
-                                if (org.Permissions.ManageAllCollections)
-                                {
-                                    claims.Add(new KeyValuePair<string, string>("manageallcollections", org.Id.ToString()));
-                                }
-
-                                if (org.Permissions.ManageAssignedCollections)
-                                {
-                                    claims.Add(new KeyValuePair<string, string>("manageassignedcollections", org.Id.ToString()));
-                                }
-
                                 if (org.Permissions.ManageGroups)
                                 {
                                     claims.Add(new KeyValuePair<string, string>("managegroups", org.Id.ToString()));
