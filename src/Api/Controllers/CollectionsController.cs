@@ -115,12 +115,8 @@ namespace Bit.Api.Controllers
             var orgIdGuid = new Guid(orgId);
             var collection = model.ToCollection(orgIdGuid);
 
-            if (collection.Id == default && !await _currentContext.CreateNewCollections(orgIdGuid))
-            {
-                throw new NotFoundException();
-            }
-
-            if (!await CanEditCollectionAsync(orgIdGuid, collection.Id))
+            if (!await CanCreateCollection(orgIdGuid, collection.Id) &&
+                !await CanEditCollectionAsync(orgIdGuid, collection.Id))
             {
                 throw new NotFoundException();
             }
@@ -192,6 +188,17 @@ namespace Bit.Api.Controllers
             }
 
             return collection;
+        }
+
+
+        public async Task<bool> CanCreateCollection(Guid orgId, Guid collectionId)
+        {
+            if (collectionId != default)
+            {
+                return false;
+            }
+
+            return await _currentContext.CreateNewCollections(orgId);
         }
 
         private async Task<bool> CanEditCollectionAsync(string orgId, string collectionId) =>
