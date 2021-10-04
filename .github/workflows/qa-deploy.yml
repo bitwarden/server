@@ -104,15 +104,15 @@ jobs:
           artifacts: ${{ matrix.name }}.zip
           path: publish
 
-      - name: Zip extracted artifact
-        run: |
-          cd publish
-          zip -r ${{ matrix.name }}.zip .
-          mv ${{ matrix.name }}.zip ../
-          cd ..
+      # - name: Zip extracted artifact
+      #   run: |
+      #     cd publish
+      #     zip -r ${{ matrix.name }}.zip .
+      #     mv ${{ matrix.name }}.zip ../
+      #     cd ..
 
-          pwd
-          ls -atlh
+      #     pwd
+      #     ls -atlh
 
       - name: Login to Azure
         uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a
