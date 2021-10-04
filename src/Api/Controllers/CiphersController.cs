@@ -478,7 +478,7 @@ namespace Bit.Api.Controllers
             var userId = _userService.GetProperUserId(User).Value;
             var cipher = await _cipherRepository.GetOrganizationDetailsByIdAsync(new Guid(id));
             if (cipher == null || !cipher.OrganizationId.HasValue ||
-                !(await _currentContext.EditAnyCollection(cipher.OrganizationId.Value) || await _currentContext.CreateNewCollections(cipher.OrganizationId.Value)))
+                !await _currentContext.EditAnyCollection(cipher.OrganizationId.Value))
             {
                 throw new NotFoundException();
             }
