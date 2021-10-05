@@ -68,10 +68,12 @@ jobs:
         run: msbuild bitwarden-server.sln /p:Configuration=Debug /verbosity:minimal
         shell: pwsh
 
-      - name: Test solution
-        run: |
-          dotnet test ./test --configuration Debug --no-build
-          dotnet test ./bitwarden_license/test/CmmCore.Test --configuration Debug --no-build
+      - name: Test OSS solution
+        run: dotnet test ./test --configuration Debug --no-build
+        shell: pwsh
+
+      - name: Test Bitwarden solution
+        run: dotnet test ./bitwarden_license/test/CmmCore.Test --configuration Debug --no-build
         shell: pwsh
 
 
