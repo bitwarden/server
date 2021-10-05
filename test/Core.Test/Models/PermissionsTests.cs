@@ -14,7 +14,6 @@ namespace Bit.Core.Test.Models
     {
         private static readonly string _exampleSerializedPermissions = string.Concat(
             "{",
-            "\"accessBusinessPortal\": false,",
             "\"accessEventLogs\": false,",
             "\"accessImportExport\": false,",
             "\"accessReports\": false,",
