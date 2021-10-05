@@ -77,7 +77,6 @@ jobs:
           - mssql
           - nginx
           - notifications
-          - portal
           - server
           - setup
           - sso
@@ -170,9 +169,6 @@ jobs:
           - name: Notifications
             base_path: .
           - name: Sso
-            base_path: ./bitwarden_license
-            gulp: true
-          - name: Portal
             base_path: ./bitwarden_license
             gulp: true
           - name: Identity
@@ -411,39 +407,6 @@ jobs:
           slot-name: "staging"
           publish-profile: ${{ steps.retrieve-secrets.outputs.appservices-sso-webapp-publish-profile }}
           package: ./Sso.zip
-
-
-  deploy-portal:
-    name: Deploy Portal
-    runs-on: ubuntu-20.04
-    needs: build
-    steps:
-      - name: Download aritifacts
-        uses: actions/download-artifact@158ca71f7c614ae705e79f25522ef4658df18253
-        with:
-          name: Portal.zip
-
-      - name: Login to Azure
-        uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a
-        with:
-          creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
-
-      - name: Retrieve secrets
-        id: retrieve-secrets
-        uses: Azure/get-keyvault-secrets@80ccd3fafe5662407cc2e55f202ee34bfff8c403
-        with:
-          keyvault: "bitwarden-prod-kv"
-          secrets: "appservices-portal-webapp-name,
-                    appservices-portal-webapp-publish-profile"
-
-      - name: Deploy Portal
-        uses: azure/webapps-deploy@798e43877120eda6a2a690a4f212c545e586ae31
-        with:
-          app-name: ${{ steps.retrieve-secrets.outputs.appservices-portal-webapp-name }}
-          slot-name: "staging"
-          publish-profile: ${{ steps.retrieve-secrets.outputs.appservices-portal-webapp-publish-profile }}
-          package: ./Portal.zip
-
 
   deploy-admin:
     name: Deploy Admin
