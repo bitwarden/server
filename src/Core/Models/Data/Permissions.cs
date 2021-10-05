@@ -27,22 +27,22 @@ namespace Bit.Core.Models.Data
 
         [JsonIgnore]
         [System.Text.Json.Serialization.JsonIgnore]
-        public List<(Func<bool> Permission, string ClaimName)> ClaimsMap => new()
+        public List<(bool Permission, string ClaimName)> ClaimsMap => new()
         {
-            (() => AccessBusinessPortal, "accessbusinessportal"),
-            (() => AccessEventLogs, "accesseventlogs"),
-            (() => AccessImportExport, "accessimportexport"),
-            (() => AccessReports, "accessreports"),
-            (() => CreateNewCollections, "createnewcollections"),
-            (() => EditAnyCollection, "editanycollection"),
-            (() => DeleteAnyCollection, "deleteanycollection"),
-            (() => EditAssignedCollections, "editassignedcollections"),
-            (() => DeleteAssignedCollections, "deleteassignedcollections"),
-            (() => ManageGroups, "managegroups"),
-            (() => ManagePolicies, "managepolicies"),
-            (() => ManageSso, "managesso"),
-            (() => ManageUsers, "manageusers"),
-            (() => ManageResetPassword, "manageresetpassword"),
+            (AccessBusinessPortal, "accessbusinessportal"),
+            (AccessEventLogs, "accesseventlogs"),
+            (AccessImportExport, "accessimportexport"),
+            (AccessReports, "accessreports"),
+            (CreateNewCollections, "createnewcollections"),
+            (EditAnyCollection, "editanycollection"),
+            (DeleteAnyCollection, "deleteanycollection"),
+            (EditAssignedCollections, "editassignedcollections"),
+            (DeleteAssignedCollections, "deleteassignedcollections"),
+            (ManageGroups, "managegroups"),
+            (ManagePolicies, "managepolicies"),
+            (ManageSso, "managesso"),
+            (ManageUsers, "manageusers"),
+            (ManageResetPassword, "manageresetpassword"),
         };
     }
 }

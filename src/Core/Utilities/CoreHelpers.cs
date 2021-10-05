@@ -838,9 +838,9 @@ namespace Bit.Core.Utilities
                             foreach (var org in group)
                             {
                                 claims.Add(new KeyValuePair<string, string>("orgcustom", org.Id.ToString()));
-                                foreach (var (permissionGenerator, claimName) in org.Permissions.ClaimsMap)
+                                foreach (var (permission, claimName) in org.Permissions.ClaimsMap)
                                 {
-                                    if (!permissionGenerator())
+                                    if (!permission)
                                     {
                                         continue;
                                     }
