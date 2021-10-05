@@ -271,111 +271,40 @@ namespace Bit.Core.Test.Utilities
         }
 
         [Theory, CustomAutoData(typeof(UserFixture))]
-        public void BuildIdentityClaims_OrganizationClaims_Success(User user)
+        public void BuildIdentityClaims_NonCustomOrganizationUserType_Success(User user)
         {
             var fixture = new Fixture().WithAutoNSubstitutions();
-            var orgs = new List<CurrentContentOrganization>();
-            foreach (var providerUserType in Enum.GetValues<OrganizationUserType>())
+            foreach (var organizationUserType in Enum.GetValues<OrganizationUserType>().Except(new[] { OrganizationUserType.Custom }))
             {
                 var org = fixture.Create<CurrentContentOrganization>();
-                org.Type = providerUserType;
-                orgs.Add(org);
+                org.Type = organizationUserType;
+
+                var expected = new KeyValuePair<string, string>($"org{organizationUserType.ToString().ToLower()}", org.Id.ToString());
+                var actual = CoreHelpers.BuildIdentityClaims(user, new[] { org }, Array.Empty<CurrentContentProvider>(), false);
+
+                Assert.Contains(expected, actual);
             }
+        }
 
-            var claims = new List<KeyValuePair<string, string>>();
+        [Theory, CustomAutoData(typeof(UserFixture))]
+        public void BuildIdentityClaims_CustomOrganizationUserClaims_Success(User user, CurrentContentOrganization org)
+        {
+            var fixture = new Fixture().WithAutoNSubstitutions();
+            org.Type = OrganizationUserType.Custom;
 
-            // Orgs that this user belongs to
-            if (orgs.Any())
+            var actual = CoreHelpers.BuildIdentityClaims(user, new[] { org }, Array.Empty<CurrentContentProvider>(), false);
+            foreach (var (permitted, claimName) in org.Permissions.ClaimsMap)
             {
-                foreach (var group in orgs.GroupBy(o => o.Type))
+                var claim = new KeyValuePair<string, string>(claimName, org.Id.ToString());
+                if (permitted)
                 {
-                    switch (group.Key)
-                    {
-                        case Enums.OrganizationUserType.Owner:
-                            foreach (var org in group)
-                            {
-                                claims.Add(new KeyValuePair<string, string>("orgowner", org.Id.ToString()));
-                            }
-                            break;
-                        case Enums.OrganizationUserType.Admin:
-                            foreach (var org in group)
-                            {
-                                claims.Add(new KeyValuePair<string, string>("orgadmin", org.Id.ToString()));
-                            }
-                            break;
-                        case Enums.OrganizationUserType.Manager:
-                            foreach (var org in group)
-                            {
-                                claims.Add(new KeyValuePair<string, string>("orgmanager", org.Id.ToString()));
-                            }
-                            break;
-                        case Enums.OrganizationUserType.User:
-                            foreach (var org in group)
-                            {
-                                claims.Add(new KeyValuePair<string, string>("orguser", org.Id.ToString()));
-                            }
-                            break;
-                        case Enums.OrganizationUserType.Custom:
-                            foreach (var org in group)
-                            {
-                                claims.Add(new KeyValuePair<string, string>("orgcustom", org.Id.ToString()));
 
-                                if (org.Permissions.AccessBusinessPortal)
-                                {
-                                    claims.Add(new KeyValuePair<string, string>("accessbusinessportal", org.Id.ToString()));
-                                }
-
-                                if (org.Permissions.AccessEventLogs)
-                                {
-                                    claims.Add(new KeyValuePair<string, string>("accesseventlogs", org.Id.ToString()));
-                                }
-
-                                if (org.Permissions.AccessImportExport)
-                                {
-                                    claims.Add(new KeyValuePair<string, string>("accessimportexport", org.Id.ToString()));
-                                }
-
-                                if (org.Permissions.AccessReports)
-                                {
-                                    claims.Add(new KeyValuePair<string, string>("accessreports", org.Id.ToString()));
-                                }
-
-                                if (org.Permissions.ManageGroups)
-                                {
-                                    claims.Add(new KeyValuePair<string, string>("managegroups", org.Id.ToString()));
-                                }
-
-                                if (org.Permissions.ManagePolicies)
-                                {
-                                    claims.Add(new KeyValuePair<string, string>("managepolicies", org.Id.ToString()));
-                                }
-
-                                if (org.Permissions.ManageSso)
-                                {
-                                    claims.Add(new KeyValuePair<string, string>("managesso", org.Id.ToString()));
-                                }
-
-                                if (org.Permissions.ManageUsers)
-                                {
-                                    claims.Add(new KeyValuePair<string, string>("manageusers", org.Id.ToString()));
-                                }
-
-                                if (org.Permissions.ManageResetPassword)
-                                {
-                                    claims.Add(new KeyValuePair<string, string>("manageresetpassword", org.Id.ToString()));
-                                }
-                            }
-                            break;
-                        default:
-                            break;
-                    }
+                    Assert.Contains(claim, actual);
                 }
-            }
-
-            var actual = CoreHelpers.BuildIdentityClaims(user, orgs, Array.Empty<CurrentContentProvider>(), false);
-            foreach (var claim in claims)
-            {
-                Assert.Contains(claim, actual);
+                else
+                {
+                    Assert.DoesNotContain(claim, actual);
+                }
             }
         }
 
