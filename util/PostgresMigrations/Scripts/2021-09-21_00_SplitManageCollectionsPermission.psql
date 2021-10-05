@@ -15,14 +15,23 @@ CREATE OR REPLACE FUNCTION updatePermissionsJson(permissions jsonb) returns json
 				jsonb_set(
 					jsonb_set(
 						jsonb_set(
-							jsonb_set(permissions, '{createNewCollections}', createNewCollections),
-							'{editAnyCollection}', editAnyCollection
+							jsonb_set(
+								permissions,
+								'{createNewCollections}',
+								createNewCollections
+							),
+							'{editAnyCollection}',
+							editAnyCollection
 						),
-						'{deleteAnyCollection}', deleteAnyCollection
-					), '{editAssignedCollections}', editAssignedCollections
+						'{deleteAnyCollection}',
+						deleteAnyCollection
+					),
+					'{editAssignedCollections}',
+					editAssignedCollections
 				),
-				'{deleteAssignedCollections}', deleteAssignedCollections
-			) - 'manageAllCollections' - 'manageAssignedCollections';
+				'{deleteAssignedCollections}',
+				deleteAssignedCollections
+			);
 	END
 $$;
 
