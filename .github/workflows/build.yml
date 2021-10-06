@@ -294,7 +294,12 @@ jobs:
         uses: actions/download-artifact@3be87be14a055c47b01d3bd88f8fe02320a9bb60  # v2.0.10
         with:
           name: ${{ matrix.service_name }}.zip
-          path: ${{ matrix.base_path }}/${{ matrix.service_name }}/obj/build-output/publish
+
+      - name: Setup build artifact
+        if: ${{ matrix.dotnet }}
+        run: |
+          mkdir -p ${{ matrix.base_path}}/${{ matrix.service_name}}/obj/build-output/publish
+          unzip ${{ matrix.service_name }}.zip -d ${{ matrix.base_path}}/${{ matrix.service_name}}/obj/build-output/publish
 
       - name: Build Docker images
         run: |
