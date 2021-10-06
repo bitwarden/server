@@ -1,0 +1,48 @@
+#!/bin/bash
+
+##############################
+# Builds a specified service
+# Arguments: 
+#   1: Project to build
+#   2: Project path
+##############################
+build() {
+  local project=$1
+  local project_dir=$2
+
+  echo "Building $project"
+  echo "Build Path: $project_dir"
+  echo "=================="
+
+  chmod u+x "$project_dir/build.sh"
+  "$project_dir/build.sh"
+}
+
+# Get Project
+PROJECT=$1; shift
+
+case "$PROJECT" in
+  "api" | "Api") build Api $PWD/src/Api ;;
+  "admin" | "Admin") build Admin $PWD/src/Admin ;;
+  "identity" | "Identity") build Identity $PWD/src/Identity ;;
+  "events" | "Events") build Events $PWD/src/Events ;;
+  "billing" | "Billing") build Billing $PWD/src/Billing ;;
+  "sso" | "Sso") build Sso $PWD/bitwarden_license/src/Sso ;;
+  "server" | "Server") build Server $PWD/util/Server ;;
+  "icons" | "Icons") build Icons $PWD/src/Icons ;;
+  "notifications" | "Notifications") build Notifications $PWD/src/Notifications ;;
+  "setup" | "Setup") build Setup $PWD/util/Setup ;;
+  "eventsprocessor" | "EventsProcessor") build EventsProcessor $PWD/src/EventsProcessor ;;
+  "")
+    build Api $PWD/src/Api 
+    build Admin $PWD/src/Admin 
+    build Identity $PWD/src/Identity 
+    build Events $PWD/src/Events 
+    build Billing $PWD/src/Billing 
+    build Sso $PWD/bitwarden_license/src/Sso 
+    build Server $PWD/util/Server 
+    build Icons $PWD/src/Icons 
+    build Notifications $PWD/src/Notifications 
+    build EventsProcessor $PWD/src/EventsProcessor
+  ;;
+esac
