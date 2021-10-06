@@ -29,11 +29,11 @@ Some settings can be customized by modifying the `dev/.env` file.
 
 ```bash
 # We recommend running the following command when developing for self-hosted
-docker compose --profile mssql --profile mail
+docker compose --profile mssql --profile mail up
 
 # We also provide a storage profile which uses Azurite to emulate some services used by the cloud instance
 #  Usually only needed by internal Bitwarden developers
-docker compose --profile cloud --profile mail
+docker compose --profile cloud --profile mail up
 ```
 
 ### SQL Server

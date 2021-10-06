@@ -1,3 +1,4 @@
+#!/usr/bin/env pwsh
 # Script for configuring the initial state of Azurite Storage account
 #  Can be run multiple times without negative impact
 
