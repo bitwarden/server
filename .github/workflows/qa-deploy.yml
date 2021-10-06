@@ -75,7 +75,6 @@ jobs:
           - name: Billing
           - name: Events
           - name: Sso
-          - name: Portal
           - name: Identity
     steps:
       - name: Setup

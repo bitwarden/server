@@ -133,7 +133,6 @@ function dockerComposeVolumes() {
     createDir "logs/nginx"
     createDir "logs/notifications"
     createDir "logs/sso"
-    createDir "logs/portal"
     createDir "mssql/backups"
     createDir "mssql/data"
 }

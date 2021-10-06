@@ -6,7 +6,6 @@ namespace Bit.Core.Models.Data
 {
     public class Permissions
     {
-        public bool AccessBusinessPortal { get; set; }
         public bool AccessEventLogs { get; set; }
         public bool AccessImportExport { get; set; }
         public bool AccessReports { get; set; }
@@ -29,7 +28,6 @@ namespace Bit.Core.Models.Data
         [System.Text.Json.Serialization.JsonIgnore]
         public List<(bool Permission, string ClaimName)> ClaimsMap => new()
         {
-            (AccessBusinessPortal, "accessbusinessportal"),
             (AccessEventLogs, "accesseventlogs"),
             (AccessImportExport, "accessimportexport"),
             (AccessReports, "accessreports"),
