@@ -68,10 +68,12 @@ jobs:
         run: msbuild bitwarden-server.sln /p:Configuration=Debug /verbosity:minimal
         shell: pwsh
 
-      - name: Test solution
-        run: |
-          dotnet test ./test --configuration Debug --no-build
-          dotnet test ./bitwarden_license/test/CmmCore.Test --configuration Debug --no-build
+      - name: Test OSS solution
+        run: dotnet test ./test --configuration Debug --no-build
+        shell: pwsh
+
+      - name: Test Bitwarden solution
+        run: dotnet test ./bitwarden_license/test/CmmCore.Test --configuration Debug --no-build
         shell: pwsh
 
 
@@ -100,9 +102,6 @@ jobs:
             base_path: ./src
           - service_name: Notifications
             base_path: ./src
-          - service_name: Portal
-            base_path: ./bitwarden_license/src
-            gulp: true
           - service_name: Server
             base_path: ./util
           - service_name: Setup
@@ -171,7 +170,7 @@ jobs:
         uses: actions/upload-artifact@ee69f02b3dfdecd58bb31b4d133da38ba6fe3700
         with:
           name: ${{ matrix.service_name }}.zip
-          path: ${{ matrix.base_path }}/${{ matrix.service_name }}/obj/build-output/publish
+          path: ${{ matrix.base_path }}/${{ matrix.service_name }}/${{ matrix.service_name }}.zip
           if-no-files-found: error
 
 
@@ -221,10 +220,6 @@ jobs:
             docker_repo: bitwarden
           - service_name: Notifications
             base_path: ./src
-            docker_repo: bitwarden
-            dotnet: true
-          - service_name: Portal
-            base_path: ./bitwarden_license/src
             docker_repo: bitwarden
             dotnet: true
           - service_name: Server

@@ -100,6 +100,7 @@
     <Build Include="dbo\Views\ProviderUserProviderDetailsView.sql" />
     <Build Include="dbo\Views\ProviderUserProviderOrganizationDetailsView.sql" />
     <Build Include="dbo\Views\SsoConfigView.sql" />
+    <Build Include="dbo\Views\SsoUserView.sql" />
     <Build Include="dbo\Views\UserView.sql" />
     <Build Include="dbo\Views\U2fView.sql" />
     <Build Include="dbo\Views\CipherView.sql" />
@@ -368,5 +369,8 @@
     <Build Include="dbo\Stored Procedures\ProviderOrganizationOrganizationDetails_ReadByProviderId.sql" />
     <Build Include="dbo\Stored Procedures\User_BumpAccountRevisionDateByProviderId.sql" />
     <Build Include="dbo\Stored Procedures\User_BumpAccountRevisionDateByProviderUserId.sql" />
+    <Build Include="dbo\Stored Procedures\Policy_CountByTypeApplicableToUser.sql" />
+    <Build Include="dbo\Stored Procedures\Policy_ReadByTypeApplicableToUser.sql" />
+    <Build Include="dbo\Functions\PolicyApplicableToUser.sql" />
   </ItemGroup>
 </Project>

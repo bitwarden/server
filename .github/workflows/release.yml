@@ -11,7 +11,6 @@ jobs:
     runs-on: ubuntu-20.04
     outputs:
       release_version: ${{ steps.version.outputs.package }}
-      tag_version: ${{ steps.version.outputs.tag }}
     steps:
       - name: Branch check
         run: |
@@ -41,7 +40,6 @@ jobs:
           fi
 
           echo "::set-output name=package::$version"
-          echo "::set-output name=tag::v$version"
 
 
   deploy:
@@ -58,7 +56,6 @@ jobs:
           - name: Billing
           - name: Events
           - name: Sso
-          - name: Portal
           - name: Identity
     steps:
       - name: Setup
@@ -75,7 +72,7 @@ jobs:
           workflow: build.yml
           workflow_conclusion: success
           branch: rc
-          name: ${{ matrix.name }}.zip
+          artifacts: ${{ matrix.name }}.zip
 
       - name: Login to Azure
         uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a
@@ -125,7 +122,7 @@ jobs:
           artifacts: 'docker-stub.zip,
                       swagger.json'
           commit: ${{ github.sha }}
-          tag: "${{ needs.setup.outputs.tag_version }}"
+          tag: "v${{ needs.setup.outputs.release_version }}"
           name: "Version ${{ needs.setup.outputs.release_version }}"
           body: "<insert release notes here>"
           token: ${{ secrets.GITHUB_TOKEN }}

@@ -639,16 +639,8 @@ namespace Bit.Core.Services
 
         private async Task ValidateSignUpPoliciesAsync(Guid ownerId)
         {
-            var policies = await _policyRepository.GetManyByUserIdAsync(ownerId);
-            var orgUsers = await _organizationUserRepository.GetManyByUserAsync(ownerId);
-
-            var orgsWithSingleOrgPolicy = policies.Where(p => p.Enabled && p.Type == PolicyType.SingleOrg)
-                .Select(p => p.OrganizationId);
-            var blockedBySingleOrgPolicy = orgUsers.Any(ou => ou is { Type: OrganizationUserType.Owner } &&
-                                                              ou.Type != OrganizationUserType.Admin &&
-                                                              ou.Status != OrganizationUserStatusType.Invited &&
-                                                              orgsWithSingleOrgPolicy.Contains(ou.OrganizationId));
-            if (blockedBySingleOrgPolicy)
+            var singleOrgPolicyCount = await _policyRepository.GetCountByTypeApplicableToUserIdAsync(ownerId, PolicyType.SingleOrg);
+            if (singleOrgPolicyCount > 0)
             {
                 throw new BadRequestException("You may not create an organization. You belong to an organization " +
                     "which has a policy that prohibits you from being a member of any other organization.");
@@ -1080,10 +1072,13 @@ namespace Bit.Core.Services
                 newSeatsRequired = invites.Sum(i => i.invite.Emails.Count()) - existingEmails.Count() - availableSeats;
             }
 
-            var (canScale, failureReason) = await CanScaleAsync(organization, newSeatsRequired);
-            if (!canScale)
+            if (newSeatsRequired > 0)
             {
-                throw new BadRequestException(failureReason);
+                var (canScale, failureReason) = await CanScaleAsync(organization, newSeatsRequired);
+                if (!canScale)
+                {
+                    throw new BadRequestException(failureReason);
+                }
             }
 
             var invitedAreAllOwners = invites.All(i => i.invite.Type == OrganizationUserType.Owner);
@@ -1324,48 +1319,37 @@ namespace Bit.Core.Services
                 }
             }
 
-            bool notExempt(OrganizationUser organizationUser)
-            {
-                return organizationUser.Type != OrganizationUserType.Owner &&
-                        organizationUser.Type != OrganizationUserType.Admin;
-            }
-
-            var allOrgUsers = await _organizationUserRepository.GetManyByUserAsync(user.Id);
-
             // Enforce Single Organization Policy of organization user is trying to join
-            var thisSingleOrgPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(orgUser.OrganizationId, PolicyType.SingleOrg);
-            if (thisSingleOrgPolicy != null &&
-                thisSingleOrgPolicy.Enabled &&
-                notExempt(orgUser) &&
-                allOrgUsers.Any(ou => ou.OrganizationId != orgUser.OrganizationId))
+            var allOrgUsers = await _organizationUserRepository.GetManyByUserAsync(user.Id);
+            var hasOtherOrgs = allOrgUsers.Any(ou => ou.OrganizationId != orgUser.OrganizationId);
+            var invitedSingleOrgPolicies = await _policyRepository.GetManyByTypeApplicableToUserIdAsync(user.Id,
+                PolicyType.SingleOrg, OrganizationUserStatusType.Invited);
+
+            if (hasOtherOrgs && invitedSingleOrgPolicies.Any(p => p.OrganizationId == orgUser.OrganizationId))
             {
                 throw new BadRequestException("You may not join this organization until you leave or remove " +
                     "all other organizations.");
             }
 
             // Enforce Single Organization Policy of other organizations user is a member of
-            var policies = await _policyRepository.GetManyByUserIdAsync(user.Id);
-
-            var orgsWithSingleOrgPolicy = policies.Where(p => p.Enabled && p.Type == PolicyType.SingleOrg)
-                .Select(p => p.OrganizationId);
-            var blockedBySingleOrgPolicy = allOrgUsers.Any(ou => notExempt(ou) &&
-                ou.Status != OrganizationUserStatusType.Invited &&
-                orgsWithSingleOrgPolicy.Contains(ou.OrganizationId));
-
-            if (blockedBySingleOrgPolicy)
+            var singleOrgPolicyCount = await _policyRepository.GetCountByTypeApplicableToUserIdAsync(user.Id,
+                PolicyType.SingleOrg);
+            if (singleOrgPolicyCount > 0)
             {
                 throw new BadRequestException("You cannot join this organization because you are a member of " +
-                    "an organization which forbids it");
+                    "another organization which forbids it");
             }
 
-            var twoFactorPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(orgUser.OrganizationId, PolicyType.TwoFactorAuthentication);
-            if (!await userService.TwoFactorIsEnabledAsync(user) &&
-                twoFactorPolicy != null &&
-                twoFactorPolicy.Enabled &&
-                notExempt(orgUser))
+            // Enforce Two Factor Authentication Policy of organization user is trying to join
+            if (!await userService.TwoFactorIsEnabledAsync(user))
             {
-                throw new BadRequestException("You cannot join this organization until you enable " +
-                    "two-step login on your user account.");
+                var invitedTwoFactorPolicies = await _policyRepository.GetManyByTypeApplicableToUserIdAsync(user.Id,
+                    PolicyType.TwoFactorAuthentication, OrganizationUserStatusType.Invited);
+                if (invitedTwoFactorPolicies.Any(p => p.OrganizationId == orgUser.OrganizationId))
+                {
+                    throw new BadRequestException("You cannot join this organization until you enable " +
+                        "two-step login on your user account.");
+                }
             }
 
             orgUser.Status = OrganizationUserStatusType.Accepted;
@@ -1484,11 +1468,6 @@ namespace Bit.Core.Services
                 failureReason = "Cannot manage organization users.";
                 return (false, failureReason);
             }
-            // if (!await _currentContext.OrganizationOwner(organization.Id))
-            // {
-            //     failureReason = "Only organization owners can autoscale seats.";
-            //     return (false, failureReason);
-            // }
 
             if (seatsToAdd < 1)
             {

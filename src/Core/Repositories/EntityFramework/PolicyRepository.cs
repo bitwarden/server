@@ -54,5 +54,30 @@ namespace Bit.Core.Repositories.EntityFramework
                 return Mapper.Map<List<TableModel.Policy>>(results);
             }
         }
+
+        public async Task<ICollection<Policy>> GetManyByTypeApplicableToUserIdAsync(Guid userId, PolicyType policyType,
+                    OrganizationUserStatusType minStatus)
+        {
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+
+                var query = new PolicyReadByTypeApplicableToUserQuery(userId, policyType, minStatus);
+                var results = await query.Run(dbContext).ToListAsync();
+                return Mapper.Map<List<TableModel.Policy>>(results);
+            }
+        }
+
+        public async Task<int> GetCountByTypeApplicableToUserIdAsync(Guid userId, PolicyType policyType,
+                    OrganizationUserStatusType minStatus)
+        {
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+
+                var query = new PolicyReadByTypeApplicableToUserQuery(userId, policyType, minStatus);
+                return await GetCountFromQuery(query);
+            }
+        }
     }
 }

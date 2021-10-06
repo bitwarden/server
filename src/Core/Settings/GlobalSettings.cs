@@ -117,14 +117,12 @@ namespace Bit.Core.Settings
             private string _admin;
             private string _notifications;
             private string _sso;
-            private string _portal;
             private string _internalApi;
             private string _internalIdentity;
             private string _internalAdmin;
             private string _internalNotifications;
             private string _internalSso;
             private string _internalVault;
-            private string _internalPortal;
 
             public BaseServiceUriSettings(GlobalSettings globalSettings)
             {
@@ -159,11 +157,6 @@ namespace Bit.Core.Settings
                 get => _globalSettings.BuildExternalUri(_sso, "sso");
                 set => _sso = value;
             }
-            public string Portal
-            {
-                get => _globalSettings.BuildExternalUri(_portal, "portal");
-                set => _portal = value;
-            }
 
             public string InternalNotifications
             {
@@ -194,11 +187,6 @@ namespace Bit.Core.Settings
             {
                 get => _globalSettings.BuildInternalUri(_internalSso, "sso");
                 set => _internalSso = value;
-            }
-            public string InternalPortal
-            {
-                get => _globalSettings.BuildInternalUri(_internalPortal, "portal");
-                set => _internalPortal = value;
             }
         }
 
