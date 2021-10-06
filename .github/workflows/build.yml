@@ -102,9 +102,6 @@ jobs:
             base_path: ./src
           - service_name: Notifications
             base_path: ./src
-          - service_name: Portal
-            base_path: ./bitwarden_license/src
-            gulp: true
           - service_name: Server
             base_path: ./util
           - service_name: Setup
@@ -223,10 +220,6 @@ jobs:
             docker_repo: bitwarden
           - service_name: Notifications
             base_path: ./src
-            docker_repo: bitwarden
-            dotnet: true
-          - service_name: Portal
-            base_path: ./bitwarden_license/src
             docker_repo: bitwarden
             dotnet: true
           - service_name: Server

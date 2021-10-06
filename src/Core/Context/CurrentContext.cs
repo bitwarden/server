@@ -10,9 +10,7 @@ using System.Security.Claims;
 using Bit.Core.Enums.Provider;
 using Bit.Core.Utilities;
 using Bit.Core.Models.Data;
-using Bit.Core.Models.Table.Provider;
 using Bit.Core.Settings;
-using Microsoft.EntityFrameworkCore.Internal;
 
 namespace Bit.Core.Context
 {
@@ -274,13 +272,6 @@ namespace Bit.Core.Context
             return Task.FromResult(Organizations?.Any(o => o.Id == orgId && o.Type == OrganizationUserType.Custom) ?? false);
         }
 
-
-        public async Task<bool> AccessBusinessPortal(Guid orgId)
-        {
-            return await OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
-                        && (o.Permissions?.AccessBusinessPortal ?? false)) ?? false);
-        }
-
         public async Task<bool> AccessEventLogs(Guid orgId)
         {
             return await OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
@@ -456,7 +447,6 @@ namespace Bit.Core.Context
 
             return new Permissions
             {
-                AccessBusinessPortal = hasClaim("accessbusinessportal"),
                 AccessEventLogs = hasClaim("accesseventlogs"),
                 AccessImportExport = hasClaim("accessimportexport"),
                 AccessReports = hasClaim("accessreports"),
