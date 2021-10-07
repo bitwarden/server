@@ -15,6 +15,10 @@ namespace Bit.Core.Models.Data
 
         public SsoType ConfigType { get; set; }
 
+        // Crypto Agent
+        public bool UseCryptoAgent { get; set; }
+        public string CryptoAgentUrl { get; set; }
+
         // OIDC
         public string Authority { get; set; }
         public string ClientId { get; set; }

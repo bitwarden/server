@@ -46,6 +46,8 @@ namespace Bit.Core.Models.Api
         public SsoConfigurationDataRequest(SsoConfigurationData configurationData)
         {
             ConfigType = configurationData.ConfigType;
+            UseCryptoAgent = configurationData.UseCryptoAgent;
+            CryptoAgentUrl = configurationData.CryptoAgentUrl;
             Authority = configurationData.Authority;
             ClientId = configurationData.ClientId;
             ClientSecret = configurationData.ClientSecret;
@@ -78,6 +80,10 @@ namespace Bit.Core.Models.Api
 
         [Required]
         public SsoType ConfigType { get; set; }
+
+        // Crypto Agent
+        public bool UseCryptoAgent { get; set; }
+        public string CryptoAgentUrl { get; set; }
 
         // OIDC
         public string Authority { get; set; }
@@ -193,6 +199,8 @@ namespace Bit.Core.Models.Api
             return new SsoConfigurationData
             {
                 ConfigType = ConfigType,
+                UseCryptoAgent = UseCryptoAgent,
+                CryptoAgentUrl = CryptoAgentUrl,
                 Authority = Authority,
                 ClientId = ClientId,
                 ClientSecret = ClientSecret,

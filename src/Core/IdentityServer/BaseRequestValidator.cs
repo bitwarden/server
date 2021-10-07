@@ -39,6 +39,7 @@ namespace Bit.Core.IdentityServer
         private readonly ICurrentContext _currentContext;
         private readonly GlobalSettings _globalSettings;
         private readonly IPolicyRepository _policyRepository;
+        private readonly ISsoConfigRepository _ssoConfigRepository;
 
         public BaseRequestValidator(
             UserManager<User> userManager,
@@ -54,7 +55,8 @@ namespace Bit.Core.IdentityServer
             ILogger<ResourceOwnerPasswordValidator> logger,
             ICurrentContext currentContext,
             GlobalSettings globalSettings,
-            IPolicyRepository policyRepository)
+            IPolicyRepository policyRepository,
+            ISsoConfigRepository ssoConfigRepository)
         {
             _userManager = userManager;
             _deviceRepository = deviceRepository;
@@ -70,6 +72,7 @@ namespace Bit.Core.IdentityServer
             _currentContext = currentContext;
             _globalSettings = globalSettings;
             _policyRepository = policyRepository;
+            _ssoConfigRepository = ssoConfigRepository;
         }
 
         protected async Task ValidateAsync(T context, ValidatedTokenRequest request)
@@ -129,7 +132,10 @@ namespace Bit.Core.IdentityServer
                     await BuildErrorResultAsync("No device information provided.", false, context, user);
                     return;
                 }
-                await BuildSuccessResultAsync(user, context, device, twoFactorRequest && twoFactorRemember);
+
+                var organizationClaim = request.Subject.FindFirst(c => c.Type == "organization");
+                var organizationId = organizationClaim != null ? organizationClaim.Value : "";
+                await BuildSuccessResultAsync(user, context, device, organizationId, twoFactorRequest && twoFactorRemember);
             }
             else
             {
@@ -142,7 +148,8 @@ namespace Bit.Core.IdentityServer
 
         protected abstract Task<(User, bool)> ValidateContextAsync(T context);
 
-        protected async Task BuildSuccessResultAsync(User user, T context, Device device, bool sendRememberToken)
+        protected async Task BuildSuccessResultAsync(User user, T context, Device device, string organizationId,
+            bool sendRememberToken)
         {
             await _eventService.LogUserEventAsync(user.Id, EventType.User_LoggedIn);
 
@@ -168,6 +175,21 @@ namespace Bit.Core.IdentityServer
             customResponse.Add("ResetMasterPassword", string.IsNullOrWhiteSpace(user.MasterPassword));
             customResponse.Add("Kdf", (byte)user.Kdf);
             customResponse.Add("KdfIterations", user.KdfIterations);
+
+            if (organizationId != "")
+            {
+                var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(new Guid(organizationId));
+                var options = new JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                };
+                var ssoConfigData = JsonSerializer.Deserialize<SsoConfigurationData>(ssoConfig.Data, options);
+
+                if (ssoConfigData is { UseCryptoAgent: true } && !string.IsNullOrEmpty(ssoConfigData.CryptoAgentUrl))
+                {
+                    customResponse.Add("CryptoAgentUrl", ssoConfigData.CryptoAgentUrl);
+                }
+            }
 
             if (sendRememberToken)
             {
