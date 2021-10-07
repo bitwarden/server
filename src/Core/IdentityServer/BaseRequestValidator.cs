@@ -129,7 +129,6 @@ namespace Bit.Core.IdentityServer
                     await BuildErrorResultAsync("No device information provided.", false, context, user);
                     return;
                 }
-
                 await BuildSuccessResultAsync(user, context, device, twoFactorRequest && twoFactorRemember);
             }
             else
