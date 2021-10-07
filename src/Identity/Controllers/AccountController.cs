@@ -181,7 +181,7 @@ namespace Bit.Identity.Controllers
             };
             if (result.Properties != null && result.Properties.Items.TryGetValue("domain_hint", out var organization))
             {
-                additionalLocalClaims.Add(new Claim("organization", organization));
+                additionalLocalClaims.Add(new Claim("organizationId", organization));
             }
             ProcessLoginCallback(result, additionalLocalClaims, localSignInProps);
 

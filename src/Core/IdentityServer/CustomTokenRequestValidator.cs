@@ -1,4 +1,5 @@
-﻿using Bit.Core.Models.Table;
+﻿using System;
+using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using IdentityServer4.Validation;
 using Microsoft.AspNetCore.Identity;
@@ -9,7 +10,9 @@ using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Context;
 using System.Linq;
+using System.Text.Json;
 using Bit.Core.Identity;
+using Bit.Core.Models.Data;
 using Microsoft.Extensions.Logging;
 using IdentityServer4.Extensions;
 using IdentityModel;
@@ -20,6 +23,7 @@ namespace Bit.Core.IdentityServer
         ICustomTokenRequestValidator
     {
         private UserManager<User> _userManager;
+        private readonly ISsoConfigRepository _ssoConfigRepository;
 
         public CustomTokenRequestValidator(
             UserManager<User> userManager,
@@ -39,9 +43,10 @@ namespace Bit.Core.IdentityServer
             ISsoConfigRepository ssoConfigRepository)
             : base(userManager, deviceRepository, deviceService, userService, eventService,
                   organizationDuoWebTokenProvider, organizationRepository, organizationUserRepository,
-                  applicationCacheService, mailService, logger, currentContext, globalSettings, policyRepository, ssoConfigRepository)
+                  applicationCacheService, mailService, logger, currentContext, globalSettings, policyRepository)
         {
             _userManager = userManager;
+            _ssoConfigRepository = ssoConfigRepository;
         }
 
         public async Task ValidateAsync(CustomTokenRequestValidationContext context)
@@ -53,6 +58,24 @@ namespace Bit.Core.IdentityServer
                 return;
             }
             await ValidateAsync(context, context.Result.ValidatedRequest);
+
+            if (context.Result.CustomResponse != null)
+            {
+                var organizationClaim = context.Result.ValidatedRequest.Subject?.FindFirst(c => c.Type == "organizationId");
+                var organizationId = organizationClaim != null ? organizationClaim.Value : "";
+
+                var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(new Guid(organizationId));
+                var options = new JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                };
+                var ssoConfigData = JsonSerializer.Deserialize<SsoConfigurationData>(ssoConfig.Data, options);
+
+                if (ssoConfigData is { UseCryptoAgent: true } && !string.IsNullOrEmpty(ssoConfigData.CryptoAgentUrl))
+                {
+                    context.Result.CustomResponse["CryptoAgentUrl"] = ssoConfigData.CryptoAgentUrl;
+                }
+            }
         }
 
         protected async override Task<(User, bool)> ValidateContextAsync(CustomTokenRequestValidationContext context)
