@@ -38,7 +38,7 @@ docker compose --profile cloud --profile mail up
 
 ### SQL Server
 
-We recommend changing the `MSSQL_PASSWORD` variable in `dev/.env` to avoid exposing the sqlserver with a dummy password. Note changing this after first running docker compose may require a re-creation of the storage volume. Stop the running containers and run `docker volume rm bitwardenserver_mssql_dev_data`
+We recommend changing the `MSSQL_PASSWORD` variable in `dev/.env` to avoid exposing the sqlserver with a default password. Note changing this after first running docker compose may require a re-creation of the storage volume. Stop the running containers and run `docker volume rm bitwardenserver_mssql_dev_data`
 
 We provide a helper script which will create the development database `vault_dev` and also run all migrations. This commad should be run after starting docker the first time, as well as after syncing against upstream and after creating a new migration.
 
@@ -55,10 +55,10 @@ We provide a helper script which will create the development database `vault_dev
 
 To bootstrap the local Azurite instance please run the following command:
 ```powershell
-.\dev\setup_azurite.ps1
-
 # This script requires the Az module, which can be installed using
 Install-Module -Name Az -Scope CurrentUser -Repository PSGallery -Force
+
+.\dev\setup_azurite.ps1
 ```
 
 ### Mailcatcher
@@ -75,7 +75,7 @@ For more information, see: [Safe storage of app secrets in development in ASP.NE
 Open the server solution file (`bitwarden-server.sln`) in Visual Studio before proceeding.
 
 ### User Secrets - Certificates
-Once you have your user secrets files set up, you'll need to generate two self signed certificates for use in local development.
+Before configuring your user secrets files, you'll need to generate two self signed certificates for use in local development.
 
 #### Windows
 

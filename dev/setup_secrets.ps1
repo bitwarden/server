@@ -6,8 +6,8 @@ param (
     $cmdArgs
 )
 
-if (!(Test-Path "secret.json")) {
-    Write-Warning "No secret.json file found, please copy and modify the provided example";
+if (!(Test-Path "secrets.json")) {
+    Write-Warning "No secrets.json file found, please copy and modify the provided example";
     exit;
 }
 
@@ -17,5 +17,5 @@ foreach ($projects in $projects) {
     if ($clear -eq $true) {
         dotnet user-secrets clear -p "../src/$projects"
     }
-    Get-Content secret.json | & dotnet user-secrets set -p "../src/$projects"
+    Get-Content secrets.json | & dotnet user-secrets set -p "../src/$projects"
 }
