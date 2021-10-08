@@ -58,7 +58,6 @@ namespace Bit.Admin.Controllers
                 {
                     query = query.Where(l => l.Timestamp <= end.Value);
                 }
-                
                 var feedIterator = query.OrderByDescending(l => l.Timestamp).ToFeedIterator();
                 var response = await feedIterator.ReadNextAsync();
 
