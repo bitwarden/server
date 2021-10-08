@@ -90,7 +90,6 @@ namespace Bit.Admin.Controllers
                 {
                     return RedirectToAction("Index");
                 }
-                
                 return View(response?.First());
             }
         }
