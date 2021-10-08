@@ -14,8 +14,8 @@ openssl pkcs12 -export -out data_protection_dev.pfx -inkey data_protection_dev.k
 
 security import ./data_protection_dev.pfx -k ~/Library/Keychains/Login.keychain
 
-identity=($(openssl x509 -in identity_server_dev.crt -outform der | sha1sum | tr a-z A-Z));
-data=($(openssl x509 -in data_protection_dev.crt -outform der | sha1sum | tr a-z A-Z));
+identity=($(openssl x509 -in identity_server_dev.crt -outform der | shasum -a 1 | tr a-z A-Z));
+data=($(openssl x509 -in data_protection_dev.crt -outform der | shasum -a 1 | tr a-z A-Z));
 
 echo "Certificate fingerprints:"
 

@@ -1,2 +1,10 @@
 .data
-secret.json
+secrets.json
+.env
+
+identity_server_dev.crt
+identity_server_dev.key
+identity_server_dev.pfx
+data_protection_dev.crt
+data_protection_dev.key
+data_protection_dev.pfx
