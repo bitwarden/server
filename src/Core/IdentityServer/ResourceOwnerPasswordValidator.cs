@@ -59,9 +59,10 @@ namespace Bit.Core.IdentityServer
             //}
 
             string bypassToken = null;
-            if (_captchaValidationService.RequireCaptchaValidation(_currentContext))
+            var user = await _userManager.FindByEmailAsync(context.UserName.ToLowerInvariant());
+            var unknownDevice = !await KnownDeviceAsync(user, context.Request);
+            if (!unknownDevice && _captchaValidationService.RequireCaptchaValidation(_currentContext))
             {
-                var user = await _userManager.FindByEmailAsync(context.UserName.ToLowerInvariant());
                 var captchaResponse = context.Request.Raw["captchaResponse"]?.ToString();
 
                 if (string.IsNullOrWhiteSpace(captchaResponse))
