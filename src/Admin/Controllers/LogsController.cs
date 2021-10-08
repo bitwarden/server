@@ -86,11 +86,11 @@ namespace Bit.Admin.Controllers
                     .Where(l => l.Id == id.ToString());
                 
                 var response = await query.ToFeedIterator().ReadNextAsync();
-                if (response?.Count == 0)
+                if (response == null || response.Count == 0)
                 {
                     return RedirectToAction("Index");
                 }
-                return View(response?.First());
+                return View(response.First());
             }
         }
     }
