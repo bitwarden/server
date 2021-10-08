@@ -7,7 +7,21 @@ DATABASE="vault_dev"
 USER="SA"
 PASSWD=$SA_PASSWORD
 
-LAST_MIGRATION=$(cat $LAST_MIGRATION_FILE)
+if [ ! -f "$LAST_MIGRATION_FILE" ]; then
+  echo "$LAST_MIGRATION_FILE not found!"
+  echo "This will run all migrations which might cause unexpected behaviour if the database is not empty."
+  echo
+  read -p "Run all Migrations? (y/N) " -n 1 -r
+  echo
+  if [[ ! $REPLY =~ ^[Yy]$ ]]
+  then
+      exit 1
+  fi
+  LAST_MIGRATION=""
+else
+  LAST_MIGRATION=$(cat $LAST_MIGRATION_FILE)
+fi
+
 [ -z "$LAST_MIGRATION" ]
 PERFORM_MIGRATION=$?
 
