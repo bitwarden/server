@@ -13,7 +13,3 @@ echo "Clean"
 dotnet clean "$DIR/Server.csproj" -c "Release" -o "$DIR/obj/build-output/publish"
 echo "Publish"
 dotnet publish "$DIR/Server.csproj" -c "Release" -o "$DIR/obj/build-output/publish"
-
-echo -e "\nBuilding docker image"
-docker --version
-docker build -t bitwarden/server "$DIR/."
