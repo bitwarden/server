@@ -13,10 +13,3 @@ echo "Clean"
 dotnet clean "$DIR/Icons.csproj" -c "Release" -o "$DIR/obj/build-output/publish"
 echo "Publish"
 dotnet publish "$DIR/Icons.csproj" -c "Release" -o "$DIR/obj/build-output/publish"
-
-if [ "$1" != "nodocker" ]
-then
-    echo -e "\nBuilding docker image"
-    docker --version
-    docker build -t bitwarden/icons "$DIR/."
-fi

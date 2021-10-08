@@ -215,3 +215,13 @@ bitwarden_license/src/Sso/wwwroot/css
 **/CoverageOutput/
 .idea/*
 **/**.swp
+
+src/Admin/Admin.zip
+src/Api/Api.zip
+src/Billing/Billing.zip
+src/Events/Events.zip
+src/EventsProcessor/EventsProcessor.zip
+src/Identity/Identity.zip
+src/Notifications/Notifications.zip
+bitwarden_license/src/Portal/Portal.zip
+bitwarden_license/src/Sso/Sso.zip
