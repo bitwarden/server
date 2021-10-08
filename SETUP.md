@@ -28,6 +28,9 @@ To simplify the setup process we provide a [Docker Compose](https://docs.docker.
 Some settings can be customized by modifying the `dev/.env` file.
 
 ```bash
+# Copy the example environment file
+cp ./.env.example ./.env
+
 # We recommend running the following command when developing for self-hosted
 docker compose --profile mssql --profile mail up
 
