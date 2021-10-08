@@ -1499,12 +1499,13 @@ namespace Bit.Core.Services
 
             var ownerEmails = (await _organizationUserRepository.GetManyByMinimumRoleAsync(organization.Id,
                 OrganizationUserType.Owner)).Select(u => u.Email).Distinct();
+            var initialSeatCount = organization.Seats.Value;
 
             await AdjustSeatsAsync(organization, seatsToAdd, prorationDate, ownerEmails);
 
             if (!organization.OwnersNotifiedOfAutoscaling.HasValue)
             {
-                await _mailService.SendOrganizationAutoscaledEmailAsync(organization, organization.Seats.Value + seatsToAdd,
+                await _mailService.SendOrganizationAutoscaledEmailAsync(organization, initialSeatCount,
                     ownerEmails);
                 organization.OwnersNotifiedOfAutoscaling = DateTime.UtcNow;
                 await _organizationRepository.UpsertAsync(organization);
