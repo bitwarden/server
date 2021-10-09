@@ -35,7 +35,7 @@ CREATE OR REPLACE FUNCTION updatePermissionsJson(permissions jsonb) returns json
 	END
 $$;
 
-UPDATE public."OrganizationUser"
+UPDATE "OrganizationUser"
 SET "Permissions" = updatePermissionsJson("Permissions"::jsonb)::text
 WHERE "Permissions" IS NOT NULL;
 	

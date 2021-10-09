@@ -1,5 +1,5 @@
 -- Split Manage Assigned Collections into edit and delete
-UPDATE [vault_dev].[dbo].[OrganizationUser]
+UPDATE [dbo].[OrganizationUser]
 SET [Permissions] = 
     JSON_MODIFY(
         JSON_MODIFY(
@@ -27,7 +27,7 @@ WHERE [Permissions] IS NOT NULL
     )
 
 -- Split Manage All Collections into create, edit, and delete
-UPDATE [vault_dev].[dbo].[OrganizationUser]
+UPDATE [dbo].[OrganizationUser]
 SET [Permissions] = 
     JSON_MODIFY(
         JSON_MODIFY(
