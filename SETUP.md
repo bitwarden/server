@@ -19,13 +19,13 @@ By default some of the services depends on the Bitwarden licensed `CommCore`, ho
 
 This guide will show you how to set up the Api, Identity and SQL projects for development. These are the minimum projects for any development work. You may need to set up additional projects depending on the changes you want to make.
 
-We recommend using [Visual Studio](https://visualstudio.microsoft.com/vs/).
+We recommend using [Visual Studio](https://visualstudio.microsoft.com/vs/), and [PowerShell](https://docs.microsoft.com/en-us/powershell/scripting/install/installing-powershell?view=powershell-7.1) which is used for the helper scripts. 
 
 ## Docker containers
 
-To simplify the setup process we provide a [Docker Compose](https://docs.docker.com/compose/) application model. Which is split up into multiple service profiles to facilitate easily customization.
+To simplify the setup process we provide a [Docker Compose](https://docs.docker.com/compose/) application model. This is split up into multiple service profiles to facilitate easily customization.
 
-Some settings can be customized by modifying the `dev/.env` file.
+Some settings can be customized by modifying the `dev/.env` file, such as the `MSSQL_PASSWORD` which should be modified before starting the project.
 
 ```bash
 # Copy the example environment file
@@ -41,7 +41,7 @@ docker compose --profile cloud --profile mail up
 
 ### SQL Server
 
-We recommend changing the `MSSQL_PASSWORD` variable in `dev/.env` to avoid exposing the sqlserver with a default password. Note changing this after first running docker compose may require a re-creation of the storage volume. Stop the running containers and run `docker volume rm bitwardenserver_mssql_dev_data`
+We recommend changing the `MSSQL_PASSWORD` variable in `dev/.env` to avoid exposing the sqlserver with a default password. Note: changing this after first running docker compose may require a re-creation of the storage volume. To do this, stop the running containers and run `docker volume rm bitwardenserver_mssql_dev_data`. (**Warning:** this will delete your development database.)
 
 We provide a helper script which will create the development database `vault_dev` and also run all migrations. This commad should be run after starting docker the first time, as well as after syncing against upstream and after creating a new migration.
 
@@ -68,19 +68,10 @@ Install-Module -Name Az -Scope CurrentUser -Repository PSGallery -Force
 
 Since the server uses emails for many user interactions a working SMTP server is a requirement, we provide a pre-setup instance of [MailCatcher](https://mailcatcher.me/) which exposes a web interface at http://localhost:1080.
 
-## User Secrets
-User secrets are a method for managing application settings on a per-developer basis. They are stored outside of the local git repository so that they are not pushed to remote.
+## Certificates
+In order to run Bitwarden, we require two certificats which for local development can be resolved by using self signed certificates.
 
-User secrets override the settings in `appsettings.json` of each project. Your user secrets file should match the structure of the `appsettings.json` file for the settings you intend to override.
-
-For more information, see: [Safe storage of app secrets in development in ASP.NET Core](https://docs.microsoft.com/en-us/aspnet/core/security/app-secrets?view=aspnetcore-5.0).
-
-Open the server solution file (`bitwarden-server.sln`) in Visual Studio before proceeding.
-
-### User Secrets - Certificates
-Before configuring your user secrets files, you'll need to generate two self signed certificates for use in local development.
-
-#### Windows
+### Windows
 
 We provide a helper script which will generate and add the certificates to the users Certificate Store. After running the script it will output the thumbrints needed for the next step. The certificates can later be acccessed using `certml.msc` under `Personal/Certificates`.
 
@@ -94,7 +85,7 @@ Thumbprint                                Subject
 C3A6CECAD3DB580F91A52FC9C767FE780300D8AB  CN=Bitwarden Data Protection Dev
 ```
 
-#### MacOS
+### MacOS
 
 We provide a helper script which will generate the certificates and add them to the keychain.
 
@@ -107,6 +98,13 @@ Certificate fingerprints:
 Identity Server Dev: 0BE8A0072214AB37C6928968752F698EEC3A68B5
 Data Protection Dev: C3A6CECAD3DB580F91A52FC9C767FE780300D8AB
 ```
+
+## User Secrets
+User secrets are a method for managing application settings on a per-developer basis. They are stored outside of the local git repository so that they are not pushed to remote.
+
+User secrets override the settings in `appsettings.json` of each project. Your user secrets file should match the structure of the `appsettings.json` file for the settings you intend to override.
+
+For more information, see: [Safe storage of app secrets in development in ASP.NET Core](https://docs.microsoft.com/en-us/aspnet/core/security/app-secrets?view=aspnetcore-5.0).
 
 ### Automated Helper script
 
@@ -125,13 +123,13 @@ Start by copying the `secret.json.example` file to `secret.json` and modify the 
 
 It is also possible to manually creata and modify the user secrets using either the `dotnet` CLI or `Visual Studio` on Windows. For more details see [Appendix A](#user-secrets).
 
-### User Secrets - Other
+### Required User Secrets
 
 **selfhosted**: It is highly recommended that you use the `selfHosted: true` setting when running a local development environment. This tells the system not to use cloud services, assuming that you are running your own local SQL instance. 
 
-**sqlServer__connectionString**: this provides the information required for the Server to connect to the SQL instance. See the example connection string below.
+**sqlServer__connectionString**: this provides the information required for the Server to connect to the SQL instance. See the example connection string in `secrets.json.example`. You may need to change the default password in the connection string.
 
-**licenseDirectory**: this must be set to avoid errors, but it can be set to an aribtrary empty folder.
+**licenseDirectory**: this must be set to avoid errors, but it can be set to an arbitrary empty folder.
 
 **installation__key** and **installation__id**: request your own private Installation Id and Installation Key for self-hosting: https://bitwarden.com/host/.
 
