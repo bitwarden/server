@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Text.Json;
+using Bit.Core.Models.Data;
 
 namespace Bit.Core.Models.Table
 {
@@ -15,6 +17,15 @@ namespace Bit.Core.Models.Table
         {
             // int will be auto-populated
             Id = 0;
+        }
+
+        public SsoConfigurationData GetData()
+        {
+            var options = new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            };
+            return JsonSerializer.Deserialize<SsoConfigurationData>(Data, options);
         }
     }
 }

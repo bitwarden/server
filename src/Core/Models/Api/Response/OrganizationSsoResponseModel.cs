@@ -13,10 +13,7 @@ namespace Bit.Core.Models.Api
             if (config != null)
             {
                 Enabled = config.Enabled;
-                Data = JsonSerializer.Deserialize<SsoConfigurationData>(config.Data, new JsonSerializerOptions
-                {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                });
+                Data = config.GetData();
             }
             else
             {

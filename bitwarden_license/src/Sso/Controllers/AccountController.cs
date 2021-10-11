@@ -321,12 +321,7 @@ namespace Bit.Sso.Controllers
                 throw new Exception(_i18nService.T("OrganizationOrSsoConfigNotFound"));
             }
 
-            var options = new JsonSerializerOptions
-            {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            };
-            var ssoConfigData = JsonSerializer.Deserialize<SsoConfigurationData>(ssoConfig.Data, options);
-
+            var ssoConfigData = ssoConfig.GetData();
             var externalUser = result.Principal;
 
             // Validate acr claim against expectation before going further

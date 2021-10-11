@@ -62,14 +62,10 @@ namespace Bit.Core.IdentityServer
             if (context.Result.CustomResponse != null)
             {
                 var organizationClaim = context.Result.ValidatedRequest.Subject?.FindFirst(c => c.Type == "organizationId");
-                var organizationId = organizationClaim != null ? organizationClaim.Value : "";
+                var organizationId = organizationClaim?.Value ?? "";
 
                 var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(new Guid(organizationId));
-                var options = new JsonSerializerOptions
-                {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                };
-                var ssoConfigData = JsonSerializer.Deserialize<SsoConfigurationData>(ssoConfig.Data, options);
+                var ssoConfigData = ssoConfig.GetData();
 
                 if (ssoConfigData is { UseCryptoAgent: true } && !string.IsNullOrEmpty(ssoConfigData.CryptoAgentUrl))
                 {
