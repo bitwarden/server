@@ -270,7 +270,8 @@ namespace Bit.Core.Business.Sso
 
         private DynamicAuthenticationScheme GetSchemeFromSsoConfig(SsoConfig config)
         {
-            return config.GetData().ConfigType switch
+            var data = config.GetData();
+            return data.ConfigType switch
             {
                 SsoType.OpenIdConnect => GetOidcAuthenticationScheme(config.OrganizationId.ToString(), data),
                 SsoType.Saml2 => GetSaml2AuthenticationScheme(config.OrganizationId.ToString(), data),
