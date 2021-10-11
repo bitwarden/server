@@ -60,7 +60,7 @@ namespace Bit.Core.IdentityServer
             string bypassToken = null;
             var user = await _userManager.FindByEmailAsync(context.UserName.ToLowerInvariant());
             var unknownDevice = !await KnownDeviceAsync(user, context.Request);
-            if (!unknownDevice && _captchaValidationService.RequireCaptchaValidation(_currentContext))
+            if (unknownDevice && _captchaValidationService.RequireCaptchaValidation(_currentContext))
             {
                 var captchaResponse = context.Request.Raw["captchaResponse"]?.ToString();
 
