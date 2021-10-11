@@ -31,10 +31,7 @@ namespace Bit.Core.Models.Api
         {
             existingConfig.Enabled = Enabled;
             var configurationData = Data.ToConfigurationData();
-            existingConfig.Data = JsonSerializer.Serialize(configurationData, new JsonSerializerOptions
-            {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            });
+            existingConfig.SetData(configurationData);
             return existingConfig;
         }
     }

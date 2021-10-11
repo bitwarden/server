@@ -12,7 +12,12 @@ namespace Bit.Core.Models.Table
         public string Data { get; set; }
         public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
         public DateTime RevisionDate { get; internal set; } = DateTime.UtcNow;
-        
+
+        private JsonSerializerOptions _jsonSerializerOptions = new()
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        };
+
         public void SetNewId()
         {
             // int will be auto-populated
@@ -21,11 +26,12 @@ namespace Bit.Core.Models.Table
 
         public SsoConfigurationData GetData()
         {
-            var options = new JsonSerializerOptions
-            {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            };
-            return JsonSerializer.Deserialize<SsoConfigurationData>(Data, options);
+            return JsonSerializer.Deserialize<SsoConfigurationData>(Data, _jsonSerializerOptions);
+        }
+
+        public void SetData(SsoConfigurationData data)
+        {
+            Data = JsonSerializer.Serialize(data, _jsonSerializerOptions);
         }
     }
 }
