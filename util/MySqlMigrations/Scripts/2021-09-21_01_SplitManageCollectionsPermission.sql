@@ -1,5 +1,5 @@
 -- Split Manage Assigned Collections into edit and delete
-UPDATE `bw-vault`.`OrganizationUser`
+UPDATE `OrganizationUser`
 SET `Permissions` =
 	JSON_INSERT(
 		`Permissions`,
@@ -24,7 +24,7 @@ WHERE `Permissions` IS NOT NULL
 	);
 
 -- Split Manage All Collections into create, edit, and delete
-UPDATE `bw-vault`.`OrganizationUser`
+UPDATE `OrganizationUser`
 SET `Permissions` =
 	JSON_INSERT(
 		`Permissions`,
