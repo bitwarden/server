@@ -2,12 +2,12 @@
 using Bit.Core.Utilities;
 using Microsoft.EntityFrameworkCore.Migrations;
 
-namespace Bit.MySqlMigrations.Migrations
+namespace Bit.PostgresMigrations.Migrations
 {
-    public partial class SplitManageCollectionsPermissions : Migration
+    public partial class SplitManageCollectionsPermissions2 : Migration
     {
         private const string _scriptLocation =
-            "MySqlMigrations.Scripts.2021-09-21_01_SplitManageCollectionsPermission.sql";
+            "PostgresMigration.Scripts.2021-09-21_01_SplitManageCollectionsPermission.psql";
 
         protected override void Up(MigrationBuilder migrationBuilder)
         {
