@@ -18,6 +18,7 @@
   </Choose>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.Azure.Cosmos" Version="3.21.0" />
     <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="5.0.2" />
     <PackageReference Include="NewRelic.Agent" Version="8.41.0" />
   </ItemGroup>

@@ -63,8 +63,9 @@ namespace Bit.Core.Utilities
             if (CoreHelpers.SettingHasValue(globalSettings?.DocumentDb.Uri) &&
                 CoreHelpers.SettingHasValue(globalSettings?.DocumentDb.Key))
             {
-                config.WriteTo.AzureDocumentDB(new Uri(globalSettings.DocumentDb.Uri),
-                    globalSettings.DocumentDb.Key, timeToLive: TimeSpan.FromDays(7))
+                config.WriteTo.AzureCosmosDB(new Uri(globalSettings.DocumentDb.Uri),
+                    globalSettings.DocumentDb.Key, timeToLive: TimeSpan.FromDays(7),
+                    partitionKey: "_partitionKey")
                     .Enrich.FromLogContext()
                     .Enrich.WithProperty("Project", globalSettings.ProjectName);
             }
