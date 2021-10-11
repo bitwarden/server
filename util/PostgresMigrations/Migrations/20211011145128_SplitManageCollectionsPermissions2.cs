@@ -4,10 +4,10 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace Bit.PostgresMigrations.Migrations
 {
-    public partial class SplitManageCollectionsPermissions : Migration
+    public partial class SplitManageCollectionsPermissions2 : Migration
     {
         private const string _scriptLocation =
-            "PostgresMigration.Scripts.2021-09-21_00_SplitManageCollectionsPermission.psql";
+            "PostgresMigration.Scripts.2021-09-21_01_SplitManageCollectionsPermission.psql";
 
         protected override void Up(MigrationBuilder migrationBuilder)
         {
