@@ -62,7 +62,7 @@ jobs:
         uses: act10ns/slack@e4e71685b9b239384b0f676a63c32367f59c2522  # v1.2.2
         if: failure()
         env:
-          SLACK_WEBHOOK_URL: ${{ steps.retrieve-secrets.outputs.devops-alerts-slack-webhook-url }}
+          SLACK_WEBHOOK_URL: ${{ env._SLACK_WEBHOOK_URL }}
         with:
           status: ${{ job.status }}
 
@@ -127,7 +127,7 @@ jobs:
         uses: act10ns/slack@e4e71685b9b239384b0f676a63c32367f59c2522  # v1.2.2
         if: failure()
         env:
-          SLACK_WEBHOOK_URL: ${{ steps.retrieve-secrets.outputs.devops-alerts-slack-webhook-url }}
+          SLACK_WEBHOOK_URL: ${{ env._SLACK_WEBHOOK_URL }}
         with:
           status: ${{ job.status }}
 
@@ -237,7 +237,7 @@ jobs:
         uses: act10ns/slack@e4e71685b9b239384b0f676a63c32367f59c2522  # v1.2.2
         if: failure()
         env:
-          SLACK_WEBHOOK_URL: ${{ steps.retrieve-secrets.outputs.devops-alerts-slack-webhook-url }}
+          SLACK_WEBHOOK_URL: ${{ env._SLACK_WEBHOOK_URL }}
         with:
           status: ${{ job.status }}
 
@@ -424,7 +424,7 @@ jobs:
         uses: act10ns/slack@e4e71685b9b239384b0f676a63c32367f59c2522  # v1.2.2
         if: failure()
         env:
-          SLACK_WEBHOOK_URL: ${{ steps.retrieve-secrets.outputs.devops-alerts-slack-webhook-url }}
+          SLACK_WEBHOOK_URL: ${{ env._SLACK_WEBHOOK_URL }}
         with:
           status: ${{ job.status }}
 
@@ -499,6 +499,6 @@ jobs:
         uses: act10ns/slack@e4e71685b9b239384b0f676a63c32367f59c2522  # v1.2.2
         if: failure()
         env:
-          SLACK_WEBHOOK_URL: ${{ steps.retrieve-secrets.outputs.devops-alerts-slack-webhook-url }}
+          SLACK_WEBHOOK_URL: ${{ env._SLACK_WEBHOOK_URL }}
         with:
           status: ${{ job.status }}
