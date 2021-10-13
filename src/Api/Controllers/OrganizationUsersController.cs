@@ -285,7 +285,9 @@ namespace Bit.Api.Controllers
             }
             
             // Get the calling user's Type for this organization and pass it along
-            var orgType = _currentContext.Organizations?.FirstOrDefault(o => o.Id == orgGuidId)?.Type;
+            var orgType = await _currentContext.OrganizationOwner(orgGuidId)
+                ? OrganizationUserType.Owner
+                : _currentContext.Organizations?.FirstOrDefault(o => o.Id == orgGuidId)?.Type;
             if (orgType == null)
             {
                 throw new NotFoundException();
