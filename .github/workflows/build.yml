@@ -38,7 +38,6 @@ jobs:
           SLACK_WEBHOOK_URL: ${{ steps.retrieve-secrets.outputs.devops-alerts-slack-webhook-url }}
         with:
           status: ${{ job.status }}
-          notify_when: 'failure'
         
 
   cloc:
