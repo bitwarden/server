@@ -10,21 +10,12 @@ on:
     inputs: {}
 
 jobs:
-  cloc:
-    name: CLOC
+  setup:
+    name: Setup
     runs-on: ubuntu-20.04
+    outputs:
+      slack_webhook_url: ${{ steps.retrieve-secrets.outputs.devops-alerts-slack-webhook-url }}
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
-
-      - name: Install cloc
-        run: |
-          sudo apt-get update
-          sudo apt-get -y install cloc
-
-      - name: Print lines of code
-        run: cloc --include-lang C#,SQL,Razor,"Bourne Shell",PowerShell,HTML,CSS,Sass,JavaScript,TypeScript --vcs git
-
       - name: Login to Azure - Prod Subscription
         uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a
         with:
@@ -37,18 +28,49 @@ jobs:
           keyvault: "bitwarden-prod-kv"
           secrets: "devops-alerts-slack-webhook-url"
 
-      - name: Notify
+      - name: Notify Slack on failure
         uses: ravsamhq/notify-slack-action@c09876e2b9d663560dfe5ea229a8ae677b382afa  # v1
         if: always()
         with:
           status: ${{ job.status }}
+          notify_when: 'failure'
         env:
           SLACK_WEBHOOK_URL: ${{ steps.retrieve-secrets.outputs.devops-alerts-slack-webhook-url }}
+
+  cloc:
+    name: CLOC
+    runs-on: ubuntu-20.04
+    needs: setup
+    env:
+      _SLACK_WEBHOOK_URL: ${{ needs.setup.outputs.slack_webhook_url }}
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
+
+      - name: Install cloc
+        run: |
+          sudo apt-get update
+          sudo apt-get -y install cloc
+
+      - name: Print lines of code
+        run: cloc --include-lang C#,SQL,Razor,"Bourne Shell",PowerShell,HTML,CSS,Sass,JavaScript,TypeScript --vcs git
+
+      - name: Notify Slack on failure
+        uses: ravsamhq/notify-slack-action@c09876e2b9d663560dfe5ea229a8ae677b382afa  # v1
+        if: always()
+        with:
+          status: ${{ job.status }}
+          notify_when: 'failure'
+        env:
+          SLACK_WEBHOOK_URL: ${{ env._SLACK_WEBHOOK_URL }}
 
 
   testing:
     name: Testing
     runs-on: windows-2019
+    needs: setup
+    env:
+      _SLACK_WEBHOOK_URL: ${{ needs.setup.outputs.slack_webhook_url }}
     steps:
       - name: Set up NuGet
         uses: nuget/setup-nuget@04b0c2b8d1b97922f67eca497d7cf0bf17b8ffe1
@@ -96,11 +118,22 @@ jobs:
         run: dotnet test ./bitwarden_license/test/CmmCore.Test --configuration Debug --no-build
         shell: pwsh
 
+      - name: Notify Slack on failure
+        uses: ravsamhq/notify-slack-action@c09876e2b9d663560dfe5ea229a8ae677b382afa  # v1
+        if: always()
+        with:
+          status: ${{ job.status }}
+          notify_when: 'failure'
+        env:
+          SLACK_WEBHOOK_URL: ${{ env._SLACK_WEBHOOK_URL }}
+
 
   build-artifacts:
     name: Build artifacts
     runs-on: ubuntu-20.04
-    needs: testing
+    needs: [setup, testing]
+    env:
+      _SLACK_WEBHOOK_URL: ${{ needs.setup.outputs.slack_webhook_url }}
     strategy:
       fail-fast: false
       matrix:
@@ -193,11 +226,22 @@ jobs:
           path: ${{ matrix.base_path }}/${{ matrix.service_name }}/${{ matrix.service_name }}.zip
           if-no-files-found: error
 
+      - name: Notify Slack on failure
+        uses: ravsamhq/notify-slack-action@c09876e2b9d663560dfe5ea229a8ae677b382afa  # v1
+        if: always()
+        with:
+          status: ${{ job.status }}
+          notify_when: 'failure'
+        env:
+          SLACK_WEBHOOK_URL: ${{ env._SLACK_WEBHOOK_URL }}
+
 
   build-docker:
     name: Build Docker images
     runs-on: ubuntu-20.04
-    needs: build-artifacts
+    needs: [setup, build-artifacts]
+    env:
+      _SLACK_WEBHOOK_URL: ${{ needs.setup.outputs.slack_webhook_url }}
     strategy:
       fail-fast: false
       matrix:
@@ -367,11 +411,22 @@ jobs:
         if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc'
         run: docker logout
 
+      - name: Notify Slack on failure
+        uses: ravsamhq/notify-slack-action@c09876e2b9d663560dfe5ea229a8ae677b382afa  # v1
+        if: always()
+        with:
+          status: ${{ job.status }}
+          notify_when: 'failure'
+        env:
+          SLACK_WEBHOOK_URL: ${{ env._SLACK_WEBHOOK_URL }}
+
 
   upload:
     name: Upload
     runs-on: ubuntu-20.04
-    needs: build-docker
+    needs: [setup, build-docker]
+    env:
+      _SLACK_WEBHOOK_URL: ${{ needs.setup.outputs.slack_webhook_url }}
     steps:
       - name: Checkout repo
         uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
@@ -428,3 +483,12 @@ jobs:
           name: swagger.json
           path: ./swagger.json
           if-no-files-found: error
+
+      - name: Notify Slack on failure
+        uses: ravsamhq/notify-slack-action@c09876e2b9d663560dfe5ea229a8ae677b382afa  # v1
+        if: always()
+        with:
+          status: ${{ job.status }}
+          notify_when: 'failure'
+        env:
+          SLACK_WEBHOOK_URL: ${{ env._SLACK_WEBHOOK_URL }}
