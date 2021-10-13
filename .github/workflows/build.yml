@@ -10,39 +10,9 @@ on:
     inputs: {}
 
 jobs:
-  setup:
-    name: Setup
-    runs-on: ubuntu-20.04
-    outputs:
-      slack_webhook_url: ${{ steps.retrieve-secrets.outputs.devops-alerts-slack-webhook-url }}
-    steps:
-      - name: Login to Azure - Prod Subscription
-        uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a
-        with:
-          creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
-
-      - name: Retrieve secrets
-        id: retrieve-secrets
-        uses: Azure/get-keyvault-secrets@80ccd3fafe5662407cc2e55f202ee34bfff8c403
-        with:
-          keyvault: "bitwarden-prod-kv"
-          secrets: "devops-alerts-slack-webhook-url"
-
-      - name: Notify Slack on failure
-        uses: act10ns/slack@e4e71685b9b239384b0f676a63c32367f59c2522  # v1.2.2
-        if: failure()
-        env:
-          SLACK_WEBHOOK_URL: ${{ steps.retrieve-secrets.outputs.devops-alerts-slack-webhook-url }}
-        with:
-          status: ${{ job.status }}
-        
-
   cloc:
     name: CLOC
     runs-on: ubuntu-20.04
-    needs: setup
-    env:
-      _SLACK_WEBHOOK_URL: ${{ needs.setup.outputs.slack_webhook_url }}
     steps:
       - name: Checkout repo
         uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
@@ -55,6 +25,18 @@ jobs:
       - name: Print lines of code
         run: cloc --include-lang C#,SQL,Razor,"Bourne Shell",PowerShell,HTML,CSS,Sass,JavaScript,TypeScript --vcs git
 
+      - name: Login to Azure - Prod Subscription
+        uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a
+        with:
+          creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
+
+      - name: Retrieve secrets
+        id: retrieve-secrets
+        uses: Azure/get-keyvault-secrets@80ccd3fafe5662407cc2e55f202ee34bfff8c403
+        with:
+          keyvault: "bitwarden-prod-kv"
+          secrets: "devops-alerts-slack-webhook-url"
+
       - name: TEST FAILURE
         run: exit 1
 
@@ -62,7 +44,7 @@ jobs:
         uses: act10ns/slack@e4e71685b9b239384b0f676a63c32367f59c2522  # v1.2.2
         if: failure()
         env:
-          SLACK_WEBHOOK_URL: ${{ env._SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_URL: ${{ steps.retrieve-secrets.outputs.devops-alerts-slack-webhook-url }}
         with:
           status: ${{ job.status }}
 
@@ -70,9 +52,6 @@ jobs:
   testing:
     name: Testing
     runs-on: windows-2019
-    needs: setup
-    env:
-      _SLACK_WEBHOOK_URL: ${{ needs.setup.outputs.slack_webhook_url }}
     steps:
       - name: Set up NuGet
         uses: nuget/setup-nuget@04b0c2b8d1b97922f67eca497d7cf0bf17b8ffe1
@@ -120,6 +99,18 @@ jobs:
         run: dotnet test ./bitwarden_license/test/CmmCore.Test --configuration Debug --no-build
         shell: pwsh
 
+      - name: Login to Azure - Prod Subscription
+        uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a
+        with:
+          creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
+
+      - name: Retrieve secrets
+        id: retrieve-secrets
+        uses: Azure/get-keyvault-secrets@80ccd3fafe5662407cc2e55f202ee34bfff8c403
+        with:
+          keyvault: "bitwarden-prod-kv"
+          secrets: "devops-alerts-slack-webhook-url"
+
       - name: TEST FAILURE
         run: exit 1
 
@@ -127,7 +118,7 @@ jobs:
         uses: act10ns/slack@e4e71685b9b239384b0f676a63c32367f59c2522  # v1.2.2
         if: failure()
         env:
-          SLACK_WEBHOOK_URL: ${{ env._SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_URL: ${{ steps.retrieve-secrets.outputs.devops-alerts-slack-webhook-url }}
         with:
           status: ${{ job.status }}
 
@@ -135,9 +126,7 @@ jobs:
   build-artifacts:
     name: Build artifacts
     runs-on: ubuntu-20.04
-    needs: [setup, testing]
-    env:
-      _SLACK_WEBHOOK_URL: ${{ needs.setup.outputs.slack_webhook_url }}
+    needs: testing
     strategy:
       fail-fast: false
       matrix:
@@ -230,6 +219,18 @@ jobs:
           path: ${{ matrix.base_path }}/${{ matrix.service_name }}/${{ matrix.service_name }}.zip
           if-no-files-found: error
 
+      - name: Login to Azure - Prod Subscription
+        uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a
+        with:
+          creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
+
+      - name: Retrieve secrets
+        id: retrieve-secrets
+        uses: Azure/get-keyvault-secrets@80ccd3fafe5662407cc2e55f202ee34bfff8c403
+        with:
+          keyvault: "bitwarden-prod-kv"
+          secrets: "devops-alerts-slack-webhook-url"
+
       - name: TEST FAILURE
         run: exit 1
 
@@ -237,7 +238,7 @@ jobs:
         uses: act10ns/slack@e4e71685b9b239384b0f676a63c32367f59c2522  # v1.2.2
         if: failure()
         env:
-          SLACK_WEBHOOK_URL: ${{ env._SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_URL: ${{ steps.retrieve-secrets.outputs.devops-alerts-slack-webhook-url }}
         with:
           status: ${{ job.status }}
 
@@ -245,9 +246,7 @@ jobs:
   build-docker:
     name: Build Docker images
     runs-on: ubuntu-20.04
-    needs: [setup, build-artifacts]
-    env:
-      _SLACK_WEBHOOK_URL: ${{ needs.setup.outputs.slack_webhook_url }}
+    needs: build-artifacts
     strategy:
       fail-fast: false
       matrix:
@@ -321,7 +320,8 @@ jobs:
           secrets: "docker-password,
                     docker-username,
                     dct-delegate-2-repo-passphrase,
-                    dct-delegate-2-key"
+                    dct-delegate-2-key,
+                    devops-alerts-slack-webhook-url"
 
       - name: Login to Azure - QA Subscription
         if: ${{ matrix.service_name }} == "EventsProcessor"
@@ -424,7 +424,7 @@ jobs:
         uses: act10ns/slack@e4e71685b9b239384b0f676a63c32367f59c2522  # v1.2.2
         if: failure()
         env:
-          SLACK_WEBHOOK_URL: ${{ env._SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_URL: ${{ steps.retrieve-secrets.outputs.devops-alerts-slack-webhook-url }}
         with:
           status: ${{ job.status }}
 
@@ -432,9 +432,7 @@ jobs:
   upload:
     name: Upload
     runs-on: ubuntu-20.04
-    needs: [setup, build-docker]
-    env:
-      _SLACK_WEBHOOK_URL: ${{ needs.setup.outputs.slack_webhook_url }}
+    needs: build-docker
     steps:
       - name: Checkout repo
         uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
@@ -492,6 +490,18 @@ jobs:
           path: ./swagger.json
           if-no-files-found: error
 
+      - name: Login to Azure - Prod Subscription
+        uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a
+        with:
+          creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
+
+      - name: Retrieve secrets
+        id: retrieve-secrets
+        uses: Azure/get-keyvault-secrets@80ccd3fafe5662407cc2e55f202ee34bfff8c403
+        with:
+          keyvault: "bitwarden-prod-kv"
+          secrets: "devops-alerts-slack-webhook-url"
+
       - name: TEST FAILURE
         run: exit 1
 
@@ -499,6 +509,6 @@ jobs:
         uses: act10ns/slack@e4e71685b9b239384b0f676a63c32367f59c2522  # v1.2.2
         if: failure()
         env:
-          SLACK_WEBHOOK_URL: ${{ env._SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_URL: ${{ steps.retrieve-secrets.outputs.devops-alerts-slack-webhook-url }}
         with:
           status: ${{ job.status }}
