@@ -225,9 +225,6 @@ jobs:
           keyvault: "bitwarden-prod-kv"
           secrets: "devops-alerts-slack-webhook-url"
 
-      - name: TEST FAILURE
-        run: exit 1
-
       - name: Notify Slack on failure
         uses: act10ns/slack@e4e71685b9b239384b0f676a63c32367f59c2522  # v1.2.2
         if: failure()
