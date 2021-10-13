@@ -166,6 +166,10 @@ jobs:
           pwd
           ls -atlh ../../../
 
+      - name: TEST FAILURE
+        if: ${{ matrix.service_name }} == 'Admin'
+        run: exit 1
+
       - name: Upload service artifact
         uses: actions/upload-artifact@ee69f02b3dfdecd58bb31b4d133da38ba6fe3700
         with:
