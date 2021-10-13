@@ -28,9 +28,6 @@ jobs:
           keyvault: "bitwarden-prod-kv"
           secrets: "devops-alerts-slack-webhook-url"
 
-      - name: TEST FAILURE
-        run: exit 1
-
       - name: Notify Slack on failure
         uses: act10ns/slack@e4e71685b9b239384b0f676a63c32367f59c2522  # v1.2.2
         if: failure()
@@ -62,13 +59,12 @@ jobs:
         run: exit 1
 
       - name: Notify Slack on failure
-        uses: ravsamhq/notify-slack-action@c09876e2b9d663560dfe5ea229a8ae677b382afa  # v1
-        if: always()
+        uses: act10ns/slack@e4e71685b9b239384b0f676a63c32367f59c2522  # v1.2.2
+        if: failure()
+        env:
+          SLACK_WEBHOOK_URL: ${{ steps.retrieve-secrets.outputs.devops-alerts-slack-webhook-url }}
         with:
           status: ${{ job.status }}
-          notify_when: 'failure'
-        env:
-          SLACK_WEBHOOK_URL: ${{ env._SLACK_WEBHOOK_URL }}
 
 
   testing:
@@ -128,13 +124,12 @@ jobs:
         run: exit 1
 
       - name: Notify Slack on failure
-        uses: ravsamhq/notify-slack-action@c09876e2b9d663560dfe5ea229a8ae677b382afa  # v1
-        if: always()
+        uses: act10ns/slack@e4e71685b9b239384b0f676a63c32367f59c2522  # v1.2.2
+        if: failure()
+        env:
+          SLACK_WEBHOOK_URL: ${{ steps.retrieve-secrets.outputs.devops-alerts-slack-webhook-url }}
         with:
           status: ${{ job.status }}
-          notify_when: 'failure'
-        env:
-          SLACK_WEBHOOK_URL: ${{ env._SLACK_WEBHOOK_URL }}
 
 
   build-artifacts:
@@ -235,14 +230,16 @@ jobs:
           path: ${{ matrix.base_path }}/${{ matrix.service_name }}/${{ matrix.service_name }}.zip
           if-no-files-found: error
 
+      - name: TEST FAILURE
+        run: exit 1
+
       - name: Notify Slack on failure
-        uses: ravsamhq/notify-slack-action@c09876e2b9d663560dfe5ea229a8ae677b382afa  # v1
-        if: always()
+        uses: act10ns/slack@e4e71685b9b239384b0f676a63c32367f59c2522  # v1.2.2
+        if: failure()
+        env:
+          SLACK_WEBHOOK_URL: ${{ steps.retrieve-secrets.outputs.devops-alerts-slack-webhook-url }}
         with:
           status: ${{ job.status }}
-          notify_when: 'failure'
-        env:
-          SLACK_WEBHOOK_URL: ${{ env._SLACK_WEBHOOK_URL }}
 
 
   build-docker:
@@ -420,14 +417,16 @@ jobs:
         if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc'
         run: docker logout
 
+      - name: TEST FAILURE
+        run: exit 1
+
       - name: Notify Slack on failure
-        uses: ravsamhq/notify-slack-action@c09876e2b9d663560dfe5ea229a8ae677b382afa  # v1
-        if: always()
+        uses: act10ns/slack@e4e71685b9b239384b0f676a63c32367f59c2522  # v1.2.2
+        if: failure()
+        env:
+          SLACK_WEBHOOK_URL: ${{ steps.retrieve-secrets.outputs.devops-alerts-slack-webhook-url }}
         with:
           status: ${{ job.status }}
-          notify_when: 'failure'
-        env:
-          SLACK_WEBHOOK_URL: ${{ env._SLACK_WEBHOOK_URL }}
 
 
   upload:
@@ -493,11 +492,13 @@ jobs:
           path: ./swagger.json
           if-no-files-found: error
 
+      - name: TEST FAILURE
+        run: exit 1
+
       - name: Notify Slack on failure
-        uses: ravsamhq/notify-slack-action@c09876e2b9d663560dfe5ea229a8ae677b382afa  # v1
-        if: always()
+        uses: act10ns/slack@e4e71685b9b239384b0f676a63c32367f59c2522  # v1.2.2
+        if: failure()
+        env:
+          SLACK_WEBHOOK_URL: ${{ steps.retrieve-secrets.outputs.devops-alerts-slack-webhook-url }}
         with:
           status: ${{ job.status }}
-          notify_when: 'failure'
-        env:
-          SLACK_WEBHOOK_URL: ${{ env._SLACK_WEBHOOK_URL }}
