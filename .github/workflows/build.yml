@@ -415,6 +415,7 @@ jobs:
 
   check-failures:
     name: Check for failures
+    if: always()
     runs-on: ubuntu-20.04
     needs:
       - cloc
