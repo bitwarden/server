@@ -25,26 +25,6 @@ jobs:
       - name: Print lines of code
         run: cloc --include-lang C#,SQL,Razor,"Bourne Shell",PowerShell,HTML,CSS,Sass,JavaScript,TypeScript --vcs git
 
-      - name: Login to Azure - Prod Subscription
-        uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a
-        with:
-          creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
-
-      - name: Retrieve secrets
-        id: retrieve-secrets
-        uses: Azure/get-keyvault-secrets@80ccd3fafe5662407cc2e55f202ee34bfff8c403
-        with:
-          keyvault: "bitwarden-prod-kv"
-          secrets: "devops-alerts-slack-webhook-url"
-
-      - name: Notify Slack on failure
-        uses: act10ns/slack@e4e71685b9b239384b0f676a63c32367f59c2522  # v1.2.2
-        if: failure()
-        env:
-          SLACK_WEBHOOK_URL: ${{ steps.retrieve-secrets.outputs.devops-alerts-slack-webhook-url }}
-        with:
-          status: ${{ job.status }}
-
 
   testing:
     name: Testing
@@ -95,26 +75,6 @@ jobs:
       - name: Test Bitwarden solution
         run: dotnet test ./bitwarden_license/test/CmmCore.Test --configuration Debug --no-build
         shell: pwsh
-
-      - name: Login to Azure - Prod Subscription
-        uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a
-        with:
-          creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
-
-      - name: Retrieve secrets
-        id: retrieve-secrets
-        uses: Azure/get-keyvault-secrets@80ccd3fafe5662407cc2e55f202ee34bfff8c403
-        with:
-          keyvault: "bitwarden-prod-kv"
-          secrets: "devops-alerts-slack-webhook-url"
-
-      - name: Notify Slack on failure
-        uses: act10ns/slack@e4e71685b9b239384b0f676a63c32367f59c2522  # v1.2.2
-        if: failure()
-        env:
-          SLACK_WEBHOOK_URL: ${{ steps.retrieve-secrets.outputs.devops-alerts-slack-webhook-url }}
-        with:
-          status: ${{ job.status }}
 
 
   build-artifacts:
@@ -213,26 +173,6 @@ jobs:
           path: ${{ matrix.base_path }}/${{ matrix.service_name }}/${{ matrix.service_name }}.zip
           if-no-files-found: error
 
-      - name: Login to Azure - Prod Subscription
-        uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a
-        with:
-          creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
-
-      - name: Retrieve secrets
-        id: retrieve-secrets
-        uses: Azure/get-keyvault-secrets@80ccd3fafe5662407cc2e55f202ee34bfff8c403
-        with:
-          keyvault: "bitwarden-prod-kv"
-          secrets: "devops-alerts-slack-webhook-url"
-
-      - name: Notify Slack on failure
-        uses: act10ns/slack@e4e71685b9b239384b0f676a63c32367f59c2522  # v1.2.2
-        if: failure()
-        env:
-          SLACK_WEBHOOK_URL: ${{ steps.retrieve-secrets.outputs.devops-alerts-slack-webhook-url }}
-        with:
-          status: ${{ job.status }}
-
 
   build-docker:
     name: Build Docker images
@@ -311,8 +251,7 @@ jobs:
           secrets: "docker-password,
                     docker-username,
                     dct-delegate-2-repo-passphrase,
-                    dct-delegate-2-key,
-                    devops-alerts-slack-webhook-url"
+                    dct-delegate-2-key"
 
       - name: Login to Azure - QA Subscription
         if: ${{ matrix.service_name }} == "EventsProcessor"
@@ -408,14 +347,6 @@ jobs:
         if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc'
         run: docker logout
 
-      - name: Notify Slack on failure
-        uses: act10ns/slack@e4e71685b9b239384b0f676a63c32367f59c2522  # v1.2.2
-        if: failure()
-        env:
-          SLACK_WEBHOOK_URL: ${{ steps.retrieve-secrets.outputs.devops-alerts-slack-webhook-url }}
-        with:
-          status: ${{ job.status }}
-
 
   upload:
     name: Upload
@@ -478,14 +409,46 @@ jobs:
           path: ./swagger.json
           if-no-files-found: error
 
+  check-failures:
+    name: Check for failures
+    runs-on: ubuntu-20.04
+    needs:
+      - cloc
+      - testing
+      - build-artifacts
+      - build-docker
+      - upload
+    steps:
+      - name: Check if any job failed
+        env:
+          CLOC_STATUS: ${{ needs.cloc.result }}
+          TESTING_STATUS: ${{ needs.testing.result }}
+          BUILD_ARTIFACTS_STATUS: ${{ needs.build-artifacts.result }}
+          BUILD_DOCKER_STATUS: ${{ needs.build-docker.result }}
+          UPLOAD_STATUS: ${{ needs.upload.result }}
+        run: |
+          if [ "$CLOC_STATUS" = "failure" ]; then
+              exit 1
+          elif [ "$TESTING_STATUS" = "failure" ]; then
+              exit 1
+          elif [ "$BUILD_ARTIFACTS_STATUS" = "failure" ]; then
+              exit 1
+          elif [ "$BUILD_DOCKER_STATUS" = "failure" ]; then
+              exit 1
+          elif [ "$UPLOAD_STATUS" = "failure" ]; then
+              exit 1
+          fi
+
       - name: Login to Azure - Prod Subscription
         uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a
+        if: failure()
         with:
           creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
 
       - name: Retrieve secrets
         id: retrieve-secrets
         uses: Azure/get-keyvault-secrets@80ccd3fafe5662407cc2e55f202ee34bfff8c403
+        if: failure()
         with:
           keyvault: "bitwarden-prod-kv"
           secrets: "devops-alerts-slack-webhook-url"
