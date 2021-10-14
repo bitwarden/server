@@ -11,6 +11,8 @@ UPDATE
     [dbo].[Organization]
 SET
     [Use2fa] = (CASE WHEN [PlanType] = 5 OR [PlanType] = 4 THEN 1 ELSE 0 END)
+WHERE
+    [Use2fa] IS NULL
 GO
 
 ALTER TABLE
