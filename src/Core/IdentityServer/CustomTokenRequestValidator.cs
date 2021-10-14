@@ -70,6 +70,11 @@ namespace Bit.Core.IdentityServer
                 if (ssoConfigData is { UseCryptoAgent: true } && !string.IsNullOrEmpty(ssoConfigData.CryptoAgentUrl))
                 {
                     context.Result.CustomResponse["CryptoAgentUrl"] = ssoConfigData.CryptoAgentUrl;
+                    // Prevent clients redirecting to set-password
+                    // TODO: Figure out if we can move this logic to the clients since this might break older clients
+                    //  although we will have issues either way with some clients supporting crypto anent and some not
+                    //  suggestion: We should roll out the clients before enabling it server wise
+                    context.Result.CustomResponse["ResetMasterPassword"] = false;
                 }
             }
         }

@@ -635,6 +635,33 @@ namespace Bit.Core.Services
             
             return IdentityResult.Success;
         }
+
+        public async Task<IdentityResult> SetCryptoAgentKeyAsync(User user, string key, string orgIdentifier)
+        {
+            if (user == null)
+            {
+                throw new ArgumentNullException(nameof(user));
+            }
+
+            if (user.UsesCryptoAgent)
+            {
+                Logger.LogWarning("Already uses crypto agent.");
+                return IdentityResult.Failed(_identityErrorDescriber.UserAlreadyHasPassword());
+            }
+
+            user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
+            user.Key = key;
+            user.UsesCryptoAgent = true;
+
+            await _userRepository.ReplaceAsync(user);
+            // TODO: Use correct event
+            await _eventService.LogUserEventAsync(user.Id, EventType.User_ChangedPassword);
+
+            await _organizationService.AcceptUserAsync(orgIdentifier, user, this);
+
+            return IdentityResult.Success;
+        }
+
         
         public async Task<IdentityResult> AdminResetPasswordAsync(OrganizationUserType callingUserType, Guid orgId, Guid id, string newMasterPassword, string key)
         {
