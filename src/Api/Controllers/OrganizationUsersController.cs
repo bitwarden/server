@@ -284,16 +284,16 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
             
-            // Get the calling user's Type for this organization and pass it along
-            var orgType = await _currentContext.OrganizationOwner(orgGuidId)
+            // Get the users role, since provider users aren't a member of the organization we use the owner check
+            var orgUserType = await _currentContext.OrganizationOwner(orgGuidId)
                 ? OrganizationUserType.Owner
                 : _currentContext.Organizations?.FirstOrDefault(o => o.Id == orgGuidId)?.Type;
-            if (orgType == null)
+            if (orgUserType == null)
             {
                 throw new NotFoundException();
             }
 
-            var result = await _userService.AdminResetPasswordAsync(orgType.Value, orgGuidId, new Guid(id), model.NewMasterPasswordHash, model.Key);
+            var result = await _userService.AdminResetPasswordAsync(orgUserType.Value, orgGuidId, new Guid(id), model.NewMasterPasswordHash, model.Key);
             if (result.Succeeded)
             {
                 return;
