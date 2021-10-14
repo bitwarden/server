@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# There seems to be [a bug with docker-compose](https://github.com/docker/compose/issues/4076#issuecomment-324932294) 
+# where it takes ~40ms to connect to the terminal output of the container, so stuff logged to the terminal in this time is lost.
+# The best workaround seems to be adding tiny delay like so:
+sleep 0.1;
+
 MIGRATE_DIRECTORY="/mnt/migrator/DbScripts"
 LAST_MIGRATION_FILE="/mnt/data/last_migration"
 SERVER='localhost'
