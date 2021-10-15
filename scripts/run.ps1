@@ -124,6 +124,7 @@ function Docker-Compose-Volumes {
     Create-Dir "logs/nginx"
     Create-Dir "logs/notifications"
     Create-Dir "logs/sso"
+    Create-Dir "logs/portal"
     Create-Dir "mssql/backups"
     Create-Dir "mssql/data"
 }
