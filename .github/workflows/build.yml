@@ -421,6 +421,7 @@ jobs:
       - upload
     steps:
       - name: Check if any job failed
+        if: ${{ (github.ref == 'refs/heads/master') || (github.ref == 'refs/heads/rc') }}
         env:
           CLOC_STATUS: ${{ needs.cloc.result }}
           TESTING_STATUS: ${{ needs.testing.result }}
