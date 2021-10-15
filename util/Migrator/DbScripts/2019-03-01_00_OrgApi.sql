@@ -50,6 +50,8 @@ UPDATE
     [dbo].[Organization]
 SET
     [UseApi] = (CASE WHEN [PlanType] = 5 OR [PlanType] = 4 THEN 1 ELSE 0 END)
+WHERE
+    [UseApi] IS NULL
 GO
 
 ALTER TABLE
@@ -71,6 +73,8 @@ UPDATE
     [dbo].[Organization]
 SET
     [ApiKey] = (SELECT [dbo].[SecureRandomString]())
+WHERE
+    [ApiKey] IS NULL
 GO
 
 ALTER TABLE
