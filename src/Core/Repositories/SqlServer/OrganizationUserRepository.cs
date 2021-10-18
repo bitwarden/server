@@ -231,11 +231,12 @@ namespace Bit.Core.Repositories.SqlServer
 
         public async Task UpdateGroupsAsync(Guid orgUserId, IEnumerable<Guid> groupIds)
         {
+            var tvpIds = groupIds.ToGuidIdArrayTVP();
             using (var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.ExecuteAsync(
                     "[dbo].[GroupUser_UpdateGroups]",
-                    new { OrganizationUserId = orgUserId, GroupIds = groupIds.ToGuidIdArrayTVP() },
+                    new { OrganizationUserId = orgUserId, GroupIds = tvpIds },
                     commandType: CommandType.StoredProcedure);
             }
         }
@@ -275,11 +276,12 @@ namespace Bit.Core.Repositories.SqlServer
 
         public async Task<ICollection<OrganizationUser>> GetManyByManyUsersAsync(IEnumerable<Guid> userIds)
         {
+            var tvpIds = userIds.ToGuidIdArrayTVP();
             using (var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.QueryAsync<OrganizationUser>(
                     "[dbo].[OrganizationUser_ReadByUserIds]",
-                    new { UserIds = userIds.ToGuidIdArrayTVP() },
+                    new { UserIds = tvpIds },
                     commandType: CommandType.StoredProcedure);
 
                 return results.ToList();
@@ -288,11 +290,12 @@ namespace Bit.Core.Repositories.SqlServer
         
         public async Task<ICollection<OrganizationUser>> GetManyAsync(IEnumerable<Guid> Ids)
         {
+            var tvpIds = Ids.ToGuidIdArrayTVP();
             using (var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.QueryAsync<OrganizationUser>(
                     "[dbo].[OrganizationUser_ReadByIds]",
-                    new { Ids = Ids.ToGuidIdArrayTVP() },
+                    new { Ids = tvpIds },
                     commandType: CommandType.StoredProcedure);
 
                 return results.ToList();
@@ -314,10 +317,11 @@ namespace Bit.Core.Repositories.SqlServer
 
         public async Task DeleteManyAsync(IEnumerable<Guid> organizationUserIds)
         {
+            var tvpIds = organizationUserIds.ToGuidIdArrayTVP();
             using (var connection = new SqlConnection(ConnectionString))
             {
                 await connection.ExecuteAsync("[dbo].[OrganizationUser_DeleteByIds]",
-                    new { Ids = organizationUserIds.ToGuidIdArrayTVP() }, commandType: CommandType.StoredProcedure);
+                    new { Ids = tvpIds }, commandType: CommandType.StoredProcedure);
             }
         }
 
@@ -385,11 +389,12 @@ namespace Bit.Core.Repositories.SqlServer
         public async Task<IEnumerable<OrganizationUserPublicKey>> GetManyPublicKeysByOrganizationUserAsync(
             Guid organizationId, IEnumerable<Guid> Ids)
         {
+            var tvpIds = Ids.ToGuidIdArrayTVP();
             using (var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.QueryAsync<OrganizationUserPublicKey>(
                     "[dbo].[User_ReadPublicKeysByOrganizationUserIds]",
-                    new { OrganizationId = organizationId, OrganizationUserIds = Ids.ToGuidIdArrayTVP() },
+                    new { OrganizationId = organizationId, OrganizationUserIds = tvpIds },
                     commandType: CommandType.StoredProcedure);
 
                 return results.ToList();
