@@ -3,7 +3,12 @@ name: Release
 
 on:
   workflow_dispatch:
-    inputs: {}
+    inputs:
+      release_branch:
+        description: "branch to release from"
+        required: true
+        default: "rc"
+
 
 jobs:
   setup:
@@ -12,19 +17,10 @@ jobs:
     outputs:
       release_version: ${{ steps.version.outputs.package }}
     steps:
-      - name: Branch check
-        run: |
-          if [[ "$GITHUB_REF" != "refs/heads/rc" ]]; then
-            echo "==================================="
-            echo "[!] Can only release from rc branch"
-            echo "==================================="
-            exit 1
-          fi
-
       - name: Checkout repo
         uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
         with:
-          ref: rc
+          ref: ${{ github.event.inputs.release_branch }}
 
       - name: Check Release Version
         id: version
@@ -66,12 +62,12 @@ jobs:
           echo "NAME_LOWER: $NAME_LOWER"
           echo "::set-output name=name_lower::$NAME_LOWER"
 
-      - name: Download latest RC ${{ matrix.name }} asset
+      - name: Download latest ${{ github.event.inputs.release_branch }} ${{ matrix.name }} asset
         uses: bitwarden/gh-actions/download-artifacts@23433be15ed6fd046ce12b6889c5184a8d9c8783
         with:
           workflow: build.yml
           workflow_conclusion: success
-          branch: rc
+          branch: ${{ github.event.inputs.release_branch }}
           artifacts: ${{ matrix.name }}.zip
 
       - name: Login to Azure
@@ -107,12 +103,12 @@ jobs:
       - setup
       - deploy
     steps:
-      - name: Download latest RC docker-stub
+      - name: Download latest ${{ github.event.inputs.release_branch }} docker-stub
         uses: bitwarden/gh-actions/download-artifacts@23433be15ed6fd046ce12b6889c5184a8d9c8783
         with:
           workflow: build.yml
           workflow_conclusion: success
-          branch: rc
+          branch: ${{ github.event.inputs.release_branch }}
           artifacts: "docker-stub.zip,
                       swagger.json"
 
