@@ -474,9 +474,15 @@ namespace Bit.Core.IdentityServer
         protected async Task<bool> KnownDeviceAsync(User user, ValidatedTokenRequest request) =>
             (await GetKnownDeviceAsync(user, request)) != default;
 
-        protected async Task<Device> GetKnownDeviceAsync(User user, ValidatedTokenRequest request) =>
-            await _deviceRepository.GetByIdentifierAsync(GetDeviceFromRequest(request).Identifier, user.Id);
+        protected async Task<Device> GetKnownDeviceAsync(User user, ValidatedTokenRequest request)
+        {
+            if (user == null)
+            {
+                return default;
+            }
 
+            return await _deviceRepository.GetByIdentifierAsync(GetDeviceFromRequest(request).Identifier, user.Id);
+        }
         private async Task<Device> SaveDeviceAsync(User user, ValidatedTokenRequest request)
         {
             var device = GetDeviceFromRequest(request);
