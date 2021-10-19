@@ -25,6 +25,7 @@ using Bit.Core.Models.Api;
 using Bit.Core.Utilities;
 using System.Text.Json;
 using Bit.Core.Models.Data;
+using Bit.Core.Settings;
 
 namespace Bit.Sso.Controllers
 {
@@ -37,6 +38,7 @@ namespace Bit.Sso.Controllers
         private readonly ILogger<AccountController> _logger;
         private readonly IOrganizationRepository _organizationRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
+        private readonly IOrganizationService _organizationService;
         private readonly ISsoConfigRepository _ssoConfigRepository;
         private readonly ISsoUserRepository _ssoUserRepository;
         private readonly IUserRepository _userRepository;
@@ -44,6 +46,7 @@ namespace Bit.Sso.Controllers
         private readonly IUserService _userService;
         private readonly II18nService _i18nService;
         private readonly UserManager<User> _userManager;
+        private readonly IGlobalSettings _globalSettings;
         private readonly Core.Services.IEventService _eventService;
 
         public AccountController(
@@ -53,6 +56,7 @@ namespace Bit.Sso.Controllers
             ILogger<AccountController> logger,
             IOrganizationRepository organizationRepository,
             IOrganizationUserRepository organizationUserRepository,
+            IOrganizationService organizationService,
             ISsoConfigRepository ssoConfigRepository,
             ISsoUserRepository ssoUserRepository,
             IUserRepository userRepository,
@@ -60,6 +64,7 @@ namespace Bit.Sso.Controllers
             IUserService userService,
             II18nService i18nService,
             UserManager<User> userManager,
+            IGlobalSettings globalSettings,
             Core.Services.IEventService eventService)
         {
             _schemeProvider = schemeProvider;
@@ -68,6 +73,7 @@ namespace Bit.Sso.Controllers
             _logger = logger;
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
+            _organizationService = organizationService;
             _userRepository = userRepository;
             _ssoConfigRepository = ssoConfigRepository;
             _ssoUserRepository = ssoUserRepository;
@@ -76,6 +82,7 @@ namespace Bit.Sso.Controllers
             _i18nService = i18nService;
             _userManager = userManager;
             _eventService = eventService;
+            _globalSettings = globalSettings;
         }
         
         [HttpGet]
@@ -469,10 +476,34 @@ namespace Bit.Sso.Controllers
             if (orgUser == null && organization.Seats.HasValue)
             {
                 var userCount = await _organizationUserRepository.GetCountByOrganizationIdAsync(orgId);
-                var availableSeats = organization.Seats.Value - userCount;
+                var initialSeatCount = organization.Seats.Value;
+                var availableSeats = initialSeatCount - userCount;
+                var prorationDate = DateTime.UtcNow;
                 if (availableSeats < 1)
                 {
-                    throw new Exception(_i18nService.T("NoSeatsAvailable", organization.Name));
+                    try
+                    {
+                        if (_globalSettings.SelfHosted)
+                        {
+                            throw new Exception("Cannot autoscale on self-hosted instance.");
+                        }
+
+                        var paymentIntentClientSecret = await _organizationService.AdjustSeatsAsync(orgId, 1, prorationDate);
+                        organization = await _organizationRepository.GetByIdAsync(orgId);
+                        if (!string.IsNullOrEmpty(paymentIntentClientSecret))
+                        {
+                            throw new Exception("Stripe payment required client-side confirmation.");
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        if (organization.Seats.Value != initialSeatCount)
+                        {
+                            await _organizationService.AdjustSeatsAsync(orgId, initialSeatCount - organization.Seats.Value, prorationDate);
+                        }
+                        _logger.LogInformation(e, "SSO auto provisioning failed");
+                        throw new Exception(_i18nService.T("NoSeatsAvailable", organization.Name));
+                    }
                 }
             }
 
