@@ -294,6 +294,8 @@ UPDATE
     [dbo].[Organization]
 SET
     [UsePolicies] = (CASE WHEN [PlanType] = 5 OR [PlanType] = 4 THEN 1 ELSE 0 END)
+WHERE
+    [UsePolicies] IS NULL
 GO
 
 ALTER TABLE

@@ -1,0 +1,43 @@
+version: "3.9"
+
+services:
+  mssql:
+    image: mcr.microsoft.com/mssql/server:2017-latest
+    restart: always
+    environment:
+      ACCEPT_EULA: Y
+      SA_PASSWORD: ${MSSQL_PASSWORD}
+      MSSQL_PID: Developer
+    volumes:
+      - mssql_dev_data:/var/opt/mssql/data
+      - ../util/Migrator:/mnt/migrator/
+      - ./helpers/mssql:/mnt/helpers
+      - ./.data/mssql:/mnt/data
+    ports:
+      - '1433:1433'
+    profiles:
+      - cloud
+      - mssql
+  
+  storage:
+    image: mcr.microsoft.com/azure-storage/azurite:latest
+    ports: 
+      - "10000:10000" 
+      - "10001:10001"
+      - "10002:10002"
+    volumes:
+      - ./.data/azurite:/data
+    profiles:
+      - storage
+      - cloud
+  
+  mail:
+    image: sj26/mailcatcher:latest
+    ports: 
+      - "${MAILCATCHER_PORT}:1080" 
+      - "10250:1025"
+    profiles:
+      - mail
+
+volumes:
+  mssql_dev_data:

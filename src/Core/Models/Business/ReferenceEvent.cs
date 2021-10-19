@@ -42,7 +42,12 @@ namespace Bit.Core.Models.Business
 
         public PlanType? PlanType { get; set; }
 
+        public string OldPlanName { get; set; }
+
+        public PlanType? OldPlanType { get; set; }
+
         public int? Seats { get; set; }
+        public int? PreviousSeats { get; set; }
 
         public short? Storage { get; set; }
 
@@ -52,5 +57,9 @@ namespace Bit.Core.Models.Business
         public int? MaxAccessCount { get; set; }
 
         public bool? HasPassword { get; set; }
+
+        public string EventRaisedByUser { get; set; }
+
+        public bool? SalesAssistedTrialStarted { get; set; }
     }
 }

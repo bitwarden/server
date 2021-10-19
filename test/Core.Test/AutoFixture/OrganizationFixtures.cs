@@ -6,9 +6,14 @@ using AutoFixture;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
-using Bit.Core.Models.Table;
+using TableModel = Bit.Core.Models.Table;
 using Bit.Core.Test.AutoFixture.Attributes;
+using Bit.Core.Test.AutoFixture.GlobalSettingsFixtures;
 using Bit.Core.Utilities;
+using AutoFixture.Kernel;
+using Bit.Core.Models;
+using Bit.Core.Test.AutoFixture.EntityFrameworkRepositoryFixtures;
+using Bit.Core.Repositories.EntityFramework;
 
 namespace Bit.Core.Test.AutoFixture.OrganizationFixtures
 {
@@ -30,7 +35,30 @@ namespace Bit.Core.Test.AutoFixture.OrganizationFixtures
                 composer
                     .With(c => c.OrganizationId, organizationId));
 
-            fixture.Customize<Group>(composer => composer.With(g => g.OrganizationId, organizationId));
+            fixture.Customize<TableModel.Group>(composer => composer.With(g => g.OrganizationId, organizationId));
+        }
+    }
+
+    internal class OrganizationBuilder: ISpecimenBuilder
+    {
+        public object Create(object request, ISpecimenContext context)
+        {
+            if (context == null) 
+            {
+                throw new ArgumentNullException(nameof(context));
+            }
+
+            var type = request as Type;
+            if (type == null || type != typeof(TableModel.Organization))
+            {
+                return new NoSpecimen();
+            }
+
+            var fixture = new Fixture();
+            var providers = fixture.Create<Dictionary<TwoFactorProviderType, TwoFactorProvider>>();
+            var organization = new Fixture().WithAutoNSubstitutions().Create<TableModel.Organization>();
+            organization.SetTwoFactorProviders(providers);
+            return organization;
         }
     }
 
@@ -46,7 +74,16 @@ namespace Bit.Core.Test.AutoFixture.OrganizationFixtures
             fixture.Customize<Core.Models.Table.Organization>(composer => composer
                 .With(o => o.PlanType, CheckedPlanType));
             fixture.Customize<OrganizationUpgrade>(composer => composer
-                .With(ou => ou.Plan, validUpgradePlans.First()));
+                .With(ou => ou.Plan, validUpgradePlans.First())) ;
+        }
+    }
+
+    internal class FreeOrganization : ICustomization
+    {
+        public void Customize(IFixture fixture)
+        {
+            fixture.Customize<Core.Models.Table.Organization>(composer => composer
+                .With(o => o.PlanType, PlanType.Free));
         }
     }
 
@@ -67,6 +104,7 @@ namespace Bit.Core.Test.AutoFixture.OrganizationFixtures
                 .Without(o => o.GatewaySubscriptionId));
         }
     }
+
     internal class OrganizationInvite : ICustomization
     {
         public OrganizationUserType InviteeUserType { get; set; }
@@ -82,7 +120,7 @@ namespace Bit.Core.Test.AutoFixture.OrganizationFixtures
             fixture.Customize<Core.Models.Table.Organization>(composer => composer
                 .With(o => o.Id, organizationId)
                 .With(o => o.Seats, (short)100));
-            fixture.Customize<OrganizationUser>(composer => composer
+            fixture.Customize<TableModel.OrganizationUser>(composer => composer
                 .With(ou => ou.OrganizationId, organizationId)
                 .With(ou => ou.Type, InvitorUserType)
                 .With(ou => ou.Permissions, PermissionsBlob));
@@ -91,17 +129,40 @@ namespace Bit.Core.Test.AutoFixture.OrganizationFixtures
         }
     }
 
+    internal class EfOrganization: ICustomization
+    {
+        public void Customize(IFixture fixture)
+        {
+            fixture.Customizations.Add(new IgnoreVirtualMembersCustomization());
+            fixture.Customizations.Add(new GlobalSettingsBuilder());
+            fixture.Customizations.Add(new OrganizationBuilder());
+            fixture.Customizations.Add(new EfRepositoryListBuilder<OrganizationRepository>());
+        }
+    }
+
     internal class PaidOrganizationAutoDataAttribute : CustomAutoDataAttribute
     {
-        public PaidOrganizationAutoDataAttribute(int planType = 0) : base(new SutProviderCustomization(),
-            new PaidOrganization { CheckedPlanType = (PlanType)planType })
+        public PaidOrganizationAutoDataAttribute(PlanType planType) : base(new SutProviderCustomization(),
+            new PaidOrganization { CheckedPlanType = planType })
         { }
+        public PaidOrganizationAutoDataAttribute(int planType = 0) : this((PlanType)planType) { }
     }
 
     internal class InlinePaidOrganizationAutoDataAttribute : InlineCustomAutoDataAttribute
     {
+        public InlinePaidOrganizationAutoDataAttribute(PlanType planType, object[] values) : base(
+            new ICustomization[] { new SutProviderCustomization(), new PaidOrganization { CheckedPlanType = planType } }, values)
+        { }
+
         public InlinePaidOrganizationAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
             typeof(PaidOrganization) }, values)
+        { }
+    }
+
+    internal class InlineFreeOrganizationAutoDataAttribute : InlineCustomAutoDataAttribute
+    {
+        public InlineFreeOrganizationAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
+            typeof(FreeOrganization) }, values)
         { }
     }
 
@@ -134,6 +195,19 @@ namespace Bit.Core.Test.AutoFixture.OrganizationFixtures
     {
         public InlineOrganizationInviteAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
             typeof(OrganizationInvite) }, values)
+        { }
+    }
+
+    internal class EfOrganizationAutoDataAttribute : CustomAutoDataAttribute
+    {
+        public EfOrganizationAutoDataAttribute() : base(new SutProviderCustomization(), new EfOrganization())
+        { }
+    }
+
+    internal class InlineEfOrganizationAutoDataAttribute : InlineCustomAutoDataAttribute
+    {
+        public InlineEfOrganizationAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
+            typeof(EfOrganization) }, values)
         { }
     }
 }

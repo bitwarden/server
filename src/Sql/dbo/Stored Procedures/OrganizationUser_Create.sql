@@ -1,5 +1,5 @@
 ﻿CREATE PROCEDURE [dbo].[OrganizationUser_Create]
-    @Id UNIQUEIDENTIFIER,
+    @Id UNIQUEIDENTIFIER OUTPUT,
     @OrganizationId UNIQUEIDENTIFIER,
     @UserId UNIQUEIDENTIFIER,
     @Email NVARCHAR(256),

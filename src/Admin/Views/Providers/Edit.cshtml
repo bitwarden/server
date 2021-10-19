@@ -7,6 +7,7 @@
 
 <h2>Provider Information</h2>
 @await Html.PartialAsync("_ViewInformation", Model)
+@await Html.PartialAsync("Admins", Model)
 <form method="post" id="edit-form">
     <h2>General</h2>
     <div class="row">
@@ -16,10 +17,6 @@
                 <input type="text" class="form-control" asp-for="Name" required>
             </div>
         </div>
-    </div>
-    <div class="form-check mb-3">
-        <input type="checkbox" class="form-check-input" asp-for="Enabled">
-        <label class="form-check-label" asp-for="Enabled"></label>
     </div>
     <h2>Business Information</h2>
     <div class="row">
@@ -40,12 +37,7 @@
         </div>
     </div>
 </form>
+@await Html.PartialAsync("Organizations", Model)
 <div class="d-flex mt-4">
     <button type="submit" class="btn btn-primary" form="edit-form">Save</button>
-    <div class="ml-auto d-flex">
-        <form asp-action="Delete" asp-route-id="@Model.Provider.Id"
-              onsubmit="return confirm('Are you sure you want to delete this provider (@Model.Provider.Name)?')">
-            <button class="btn btn-danger" type="submit">Delete</button>
-        </form>
-    </div>
 </div>

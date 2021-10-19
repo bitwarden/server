@@ -49,6 +49,12 @@ namespace Bit.Core.Services
             return Task.FromResult(0);
         }
 
+        public Task LogProviderOrganizationEventAsync(ProviderOrganization providerOrganization, EventType type,
+            DateTime? date = null)
+        {
+            return Task.FromResult(0);
+        }
+
         public Task LogOrganizationUserEventAsync(OrganizationUser organizationUser, EventType type,
             DateTime? date = null)
         {

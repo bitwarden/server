@@ -52,6 +52,27 @@ namespace Bit.Core.Repositories.SqlServer
                 }, startDate, endDate, pageOptions);
         }
 
+        public async Task<PagedResult<IEvent>> GetManyByProviderAsync(Guid providerId,
+            DateTime startDate, DateTime endDate, PageOptions pageOptions)
+        {
+            return await GetManyAsync($"[{Schema}].[Event_ReadPageByProviderId]",
+                new Dictionary<string, object>
+                {
+                    ["@ProviderId"] = providerId
+                }, startDate, endDate, pageOptions);
+        }
+
+        public async Task<PagedResult<IEvent>> GetManyByProviderActingUserAsync(Guid providerId, Guid actingUserId,
+            DateTime startDate, DateTime endDate, PageOptions pageOptions)
+        {
+            return await GetManyAsync($"[{Schema}].[Event_ReadPageByProviderIdActingUserId]",
+                new Dictionary<string, object>
+                {
+                    ["@ProviderId"] = providerId,
+                    ["@ActingUserId"] = actingUserId
+                }, startDate, endDate, pageOptions);
+        }
+
         public async Task<PagedResult<IEvent>> GetManyByCipherAsync(Cipher cipher, DateTime startDate, DateTime endDate,
             PageOptions pageOptions)
         {
@@ -164,9 +185,9 @@ namespace Bit.Core.Repositories.SqlServer
             eventsTable.Columns.Add(actingUserIdColumn);
             var deviceTypeColumn = new DataColumn(nameof(e.DeviceType), typeof(int));
             eventsTable.Columns.Add(deviceTypeColumn);
-            var ipAddressColumn = new DataColumn(nameof(e.IpAddress), e.IpAddress.GetType());
+            var ipAddressColumn = new DataColumn(nameof(e.IpAddress), typeof(string));
             eventsTable.Columns.Add(ipAddressColumn);
-            var dateColumn = new DataColumn(nameof(e.Date), e.Date.GetType());
+            var dateColumn = new DataColumn(nameof(e.Date), typeof(DateTime));
             eventsTable.Columns.Add(dateColumn);
 
             foreach (DataColumn col in eventsTable.Columns)

@@ -13,19 +13,19 @@ using Bit.Core.Enums;
 using Bit.Core.Utilities;
 using Bit.Core.Settings;
 using Bit.Core.Models.Api;
+using Bit.Core.Models.Business;
 
 namespace Bit.Core.Services
 {
     public class CipherService : ICipherService
     {
-        public const long MAX_FILE_SIZE = 500L * 1024L * 1024L; // 500MB
+        public const long MAX_FILE_SIZE = Constants.FileSize501mb;
         public const string MAX_FILE_SIZE_READABLE = "500 MB";
         private readonly ICipherRepository _cipherRepository;
         private readonly IFolderRepository _folderRepository;
         private readonly ICollectionRepository _collectionRepository;
         private readonly IUserRepository _userRepository;
         private readonly IOrganizationRepository _organizationRepository;
-        private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly ICollectionCipherRepository _collectionCipherRepository;
         private readonly IPushNotificationService _pushService;
         private readonly IAttachmentStorageService _attachmentStorageService;
@@ -34,6 +34,7 @@ namespace Bit.Core.Services
         private readonly IPolicyRepository _policyRepository;
         private readonly GlobalSettings _globalSettings;
         private const long _fileSizeLeeway = 1024L * 1024L; // 1MB 
+        private readonly IReferenceEventService _referenceEventService;
 
         public CipherService(
             ICipherRepository cipherRepository,
@@ -41,21 +42,20 @@ namespace Bit.Core.Services
             ICollectionRepository collectionRepository,
             IUserRepository userRepository,
             IOrganizationRepository organizationRepository,
-            IOrganizationUserRepository organizationUserRepository,
             ICollectionCipherRepository collectionCipherRepository,
             IPushNotificationService pushService,
             IAttachmentStorageService attachmentStorageService,
             IEventService eventService,
             IUserService userService,
             IPolicyRepository policyRepository,
-            GlobalSettings globalSettings)
+            GlobalSettings globalSettings,
+            IReferenceEventService referenceEventService)
         {
             _cipherRepository = cipherRepository;
             _folderRepository = folderRepository;
             _collectionRepository = collectionRepository;
             _userRepository = userRepository;
             _organizationRepository = organizationRepository;
-            _organizationUserRepository = organizationUserRepository;
             _collectionCipherRepository = collectionCipherRepository;
             _pushService = pushService;
             _attachmentStorageService = attachmentStorageService;
@@ -63,6 +63,7 @@ namespace Bit.Core.Services
             _userService = userService;
             _policyRepository = policyRepository;
             _globalSettings = globalSettings;
+            _referenceEventService = referenceEventService;
         }
 
         public async Task SaveAsync(Cipher cipher, Guid savingUserId, DateTime? lastKnownRevisionDate,
@@ -83,6 +84,9 @@ namespace Bit.Core.Services
                         cipher.UserId = savingUserId;
                     }
                     await _cipherRepository.CreateAsync(cipher, collectionIds);
+
+                    await _referenceEventService.RaiseEventAsync(
+                        new ReferenceEvent(ReferenceEventType.CipherCreated, await _organizationRepository.GetByIdAsync(cipher.OrganizationId.Value)));
                 }
                 else
                 {
@@ -132,19 +136,11 @@ namespace Bit.Core.Services
                 else
                 {
                     // Make sure the user can save new ciphers to their personal vault
-                    var userPolicies = await _policyRepository.GetManyByUserIdAsync(savingUserId);
-                    if (userPolicies != null)
+                    var personalOwnershipPolicyCount = await _policyRepository.GetCountByTypeApplicableToUserIdAsync(savingUserId,
+                        PolicyType.PersonalOwnership);
+                    if (personalOwnershipPolicyCount > 0)
                     {
-                        foreach (var policy in userPolicies.Where(p => p.Enabled && p.Type == PolicyType.PersonalOwnership))
-                        {
-                            var org = await _organizationUserRepository.GetDetailsByUserAsync(savingUserId, policy.OrganizationId,
-                                OrganizationUserStatusType.Confirmed);
-                            if (org != null && org.Enabled && org.UsePolicies
-                               && org.Type != OrganizationUserType.Admin && org.Type != OrganizationUserType.Owner)
-                            {
-                                throw new BadRequestException("Due to an Enterprise Policy, you are restricted from saving items to your personal vault.");
-                            }
-                        }
+                        throw new BadRequestException("Due to an Enterprise Policy, you are restricted from saving items to your personal vault.");
                     }
                     await _cipherRepository.CreateAsync(cipher);
                 }
@@ -679,6 +675,17 @@ namespace Bit.Core.Services
             List<CipherDetails> ciphers,
             IEnumerable<KeyValuePair<int, int>> folderRelationships)
         {
+            var userId = folders.FirstOrDefault()?.UserId ?? ciphers.FirstOrDefault()?.UserId;
+
+            // Make sure the user can save new ciphers to their personal vault
+            var personalOwnershipPolicyCount = await _policyRepository.GetCountByTypeApplicableToUserIdAsync(userId.Value,
+                PolicyType.PersonalOwnership);
+            if (personalOwnershipPolicyCount > 0)
+            {
+                throw new BadRequestException("You cannot import items into your personal vault because you are " +
+                    "a member of an organization which forbids it.");
+            }
+
             foreach (var cipher in ciphers)
             {
                 cipher.SetNewId();
@@ -714,7 +721,6 @@ namespace Bit.Core.Services
             await _cipherRepository.CreateAsync(ciphers, folders);
 
             // push
-            var userId = folders.FirstOrDefault()?.UserId ?? ciphers.FirstOrDefault()?.UserId;
             if (userId.HasValue)
             {
                 await _pushService.PushSyncVaultAsync(userId.Value);
@@ -727,17 +733,17 @@ namespace Bit.Core.Services
             IEnumerable<KeyValuePair<int, int>> collectionRelationships,
             Guid importingUserId)
         {
-            if (collections.Count > 0)
+            var org = collections.Count > 0 ?
+                await _organizationRepository.GetByIdAsync(collections[0].OrganizationId) :
+                await _organizationRepository.GetByIdAsync(ciphers.FirstOrDefault(c => c.OrganizationId.HasValue).OrganizationId.Value);
+
+            if (collections.Count > 0 && org != null && org.MaxCollections.HasValue)
             {
-                var org = await _organizationRepository.GetByIdAsync(collections[0].OrganizationId);
-                if (org != null && org.MaxCollections.HasValue)
+                var collectionCount = await _collectionRepository.GetCountByOrganizationIdAsync(org.Id);
+                if (org.MaxCollections.Value < (collectionCount + collections.Count))
                 {
-                    var collectionCount = await _collectionRepository.GetCountByOrganizationIdAsync(org.Id);
-                    if (org.MaxCollections.Value < (collectionCount + collections.Count))
-                    {
-                        throw new BadRequestException("This organization can only have a maximum of " +
-                            $"{org.MaxCollections.Value} collections.");
-                    }
+                    throw new BadRequestException("This organization can only have a maximum of " +
+                        $"{org.MaxCollections.Value} collections.");
                 }
             }
 
@@ -777,6 +783,13 @@ namespace Bit.Core.Services
 
             // push
             await _pushService.PushSyncVaultAsync(importingUserId);
+
+
+            if (org != null)
+            {
+                await _referenceEventService.RaiseEventAsync(
+                    new ReferenceEvent(ReferenceEventType.VaultImported, org));
+            }
         }
 
         public async Task SoftDeleteAsync(Cipher cipher, Guid deletingUserId, bool orgAdmin = false)

@@ -2,17 +2,23 @@
 <table width="100%" cellpadding="0" cellspacing="0" style="margin: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: none;">
     <tr style="margin: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: none;">
         <td class="content-block" style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; margin: 0; -webkit-font-smoothing: antialiased; padding: 0 0 10px; -webkit-text-size-adjust: none;" valign="top">
-            This email is to notify you that {{UserEmail}} has accepted your invitation to join <b style="margin: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: none;">{{OrganizationName}}</b>.
+            {{UserIdentifier}} needs to be confirmed to {{OrganizationName}} before they can access the organization vault.
         </td>
     </tr>
     <tr style="margin: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: none;">
         <td class="content-block" style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; margin: 0; -webkit-font-smoothing: antialiased; padding: 0 0 10px; -webkit-text-size-adjust: none;" valign="top">
-            To confirm this user, log into the Bitwarden web vault, manage your organization "People", and confirm the user.
+            To confirm users into your organization:
+            <ol>
+                <li>Log in to your <a href="{{{WebVaultUrl}}}/organizations/{{{OrganizationId}}}/manage/people">Web Vault</a> and open your Organization.</li>
+                <li>Open the <b>Manage</b> tab and select <b>People</b> from the left-hand menu.</li>
+                <li>Hover over the <b>Accepted</b> user and select the gear dropdown.</li>
+                <li>Select <b>Confirm</b>.</li>
+            </ol>
         </td>
     </tr>
     <tr style="margin: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: none;">
         <td class="content-block last" style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; margin: 0; -webkit-font-smoothing: antialiased; padding: 0; -webkit-text-size-adjust: none;" valign="top">
-            If you do not wish to confirm this user, you can also remove them from the organization on the same page.
+            For more information, please refer to the following help article: <a href="https://bitwarden.com/help/article/managing-users/#confirm">https://bitwarden.com/help/article/managing-users/#confirm</a>
         </td>
     </tr>
 </table>

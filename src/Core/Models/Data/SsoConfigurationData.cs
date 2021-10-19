@@ -34,11 +34,11 @@ namespace Bit.Core.Models.Data
         public string IdpSingleSignOnServiceUrl { get; set; }
         public string IdpSingleLogoutServiceUrl { get; set; }
         public string IdpX509PublicCert { get; set; }
-        public Saml2BindingType IdpBindingType { get; set; }
+        public Saml2BindingType IdpBindingType { get; set; } = Saml2BindingType.HttpRedirect;
         public bool IdpAllowUnsolicitedAuthnResponse { get; set; }
         public string IdpArtifactResolutionServiceUrl { get; set; }
         public bool IdpDisableOutboundLogoutRequests { get; set; }
-        public string IdpOutboundSigningAlgorithm { get; set; }
+        public string IdpOutboundSigningAlgorithm { get; set; } = SamlSigningAlgorithms.Sha256;
         public bool IdpWantAuthnRequestsSigned { get; set; }
 
         // SAML2 SP

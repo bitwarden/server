@@ -19,6 +19,7 @@ namespace Bit.Api.Controllers
         private readonly IUserService _userService;
         private readonly ICipherRepository _cipherRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
+        private readonly IProviderUserRepository _providerUserRepository;
         private readonly IEventRepository _eventRepository;
         private readonly ICurrentContext _currentContext;
 
@@ -26,12 +27,14 @@ namespace Bit.Api.Controllers
             IUserService userService,
             ICipherRepository cipherRepository,
             IOrganizationUserRepository organizationUserRepository,
+            IProviderUserRepository providerUserRepository,
             IEventRepository eventRepository,
             ICurrentContext currentContext)
         {
             _userService = userService;
             _cipherRepository = cipherRepository;
             _organizationUserRepository = organizationUserRepository;
+            _providerUserRepository = providerUserRepository;
             _eventRepository = eventRepository;
             _currentContext = currentContext;
         }
@@ -61,7 +64,7 @@ namespace Bit.Api.Controllers
             var canView = false;
             if (cipher.OrganizationId.HasValue)
             {
-                canView = _currentContext.AccessEventLogs(cipher.OrganizationId.Value);
+                canView = await _currentContext.AccessEventLogs(cipher.OrganizationId.Value);
             }
             else if (cipher.UserId.HasValue)
             {
@@ -86,7 +89,7 @@ namespace Bit.Api.Controllers
             [FromQuery]DateTime? start = null, [FromQuery]DateTime? end = null, [FromQuery]string continuationToken = null)
         {
             var orgId = new Guid(id);
-            if (!_currentContext.AccessEventLogs(orgId))
+            if (!await _currentContext.AccessEventLogs(orgId))
             {
                 throw new NotFoundException();
             }
@@ -104,7 +107,7 @@ namespace Bit.Api.Controllers
         {
             var organizationUser = await _organizationUserRepository.GetByIdAsync(new Guid(id));
             if (organizationUser == null || !organizationUser.UserId.HasValue ||
-                !_currentContext.AccessEventLogs(organizationUser.OrganizationId))
+                !await _currentContext.AccessEventLogs(organizationUser.OrganizationId))
             {
                 throw new NotFoundException();
             }
@@ -112,6 +115,41 @@ namespace Bit.Api.Controllers
             var dateRange = GetDateRange(start, end);
             var result = await _eventRepository.GetManyByOrganizationActingUserAsync(organizationUser.OrganizationId,
                 organizationUser.UserId.Value, dateRange.Item1, dateRange.Item2,
+                new PageOptions { ContinuationToken = continuationToken });
+            var responses = result.Data.Select(e => new EventResponseModel(e));
+            return new ListResponseModel<EventResponseModel>(responses, result.ContinuationToken);
+        }
+
+        [HttpGet("~/providers/{providerId:guid}/events")]
+        public async Task<ListResponseModel<EventResponseModel>> GetProvider(Guid providerId,
+            [FromQuery]DateTime? start = null, [FromQuery]DateTime? end = null, [FromQuery]string continuationToken = null)
+        {
+            if (!_currentContext.ProviderAccessEventLogs(providerId))
+            {
+                throw new NotFoundException();
+            }
+
+            var dateRange = GetDateRange(start, end);
+            var result = await _eventRepository.GetManyByProviderAsync(providerId, dateRange.Item1, dateRange.Item2,
+                new PageOptions { ContinuationToken = continuationToken });
+            var responses = result.Data.Select(e => new EventResponseModel(e));
+            return new ListResponseModel<EventResponseModel>(responses, result.ContinuationToken);
+        }
+
+        [HttpGet("~/providers/{providerId:guid}/users/{id:guid}/events")]
+        public async Task<ListResponseModel<EventResponseModel>> GetProviderUser(Guid providerId, Guid id,
+            [FromQuery]DateTime? start = null, [FromQuery]DateTime? end = null, [FromQuery]string continuationToken = null)
+        {
+            var providerUser = await _providerUserRepository.GetByIdAsync(id);
+            if (providerUser == null || !providerUser.UserId.HasValue ||
+                !_currentContext.ProviderAccessEventLogs(providerUser.ProviderId))
+            {
+                throw new NotFoundException();
+            }
+
+            var dateRange = GetDateRange(start, end);
+            var result = await _eventRepository.GetManyByProviderActingUserAsync(providerUser.ProviderId,
+                providerUser.UserId.Value, dateRange.Item1, dateRange.Item2,
                 new PageOptions { ContinuationToken = continuationToken });
             var responses = result.Data.Select(e => new EventResponseModel(e));
             return new ListResponseModel<EventResponseModel>(responses, result.ContinuationToken);

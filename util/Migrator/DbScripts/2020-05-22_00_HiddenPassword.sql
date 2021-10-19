@@ -69,6 +69,8 @@ UPDATE
     [dbo].[CollectionGroup]
 SET
     [HidePasswords] = 0
+WHERE
+    [HidePasswords] IS NULL
 GO
 
 ALTER TABLE
@@ -90,6 +92,8 @@ UPDATE
     [dbo].[CollectionUser]
 SET
     [HidePasswords] = 0
+WHERE
+    [HidePasswords] IS NULL
 GO
 
 ALTER TABLE

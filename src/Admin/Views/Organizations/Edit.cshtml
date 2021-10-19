@@ -31,9 +31,12 @@
                 document.getElementById('@(nameof(Model.Use2fa))').checked = true;
                 document.getElementById('@(nameof(Model.UseApi))').checked = true;
                 document.getElementById('@(nameof(Model.SelfHost))').checked = true;
+                document.getElementById('@(nameof(Model.UseResetPassword))').checked = true;
                 // Licensing
                 document.getElementById('@(nameof(Model.LicenseKey))').value = '@Model.RandomLicenseKey';
                 document.getElementById('@(nameof(Model.ExpirationDate))').value = '@Model.FourteenDayExpirationDate';
+                document.getElementById('@(nameof(Model.SalesAssistedTrialStarted))').value = true;
+
             });
 
             document.getElementById('@(nameof(Model.PlanType))').addEventListener('change', () => {
@@ -83,6 +86,7 @@
 @await Html.PartialAsync("_BillingInformation",
     new BillingInformationModel { BillingInfo = Model.BillingInfo, OrganizationId = Model.Organization.Id })
 <form method="post" id="edit-form">
+    <input asp-for="SalesAssistedTrialStarted" type="hidden">
     <h2>General</h2>
     <div class="row">
         <div class="col-sm">
@@ -138,6 +142,14 @@
             <div class="form-group">
                 <label asp-for="MaxStorageGb"></label>
                 <input type="number" class="form-control" asp-for="MaxStorageGb" min="1">
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-4">
+            <div class="form-group">
+                <label asp-for="MaxAutoscaleSeats"></label>
+                <input type="number" class="form-control" asp-for="MaxAutoscaleSeats" min="1">
             </div>
         </div>
     </div>

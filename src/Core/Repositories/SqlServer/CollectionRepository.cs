@@ -104,11 +104,7 @@ namespace Bit.Core.Repositories.SqlServer
                     new { UserId = userId },
                     commandType: CommandType.StoredProcedure);
 
-                // Return distinct Id results.
-                return results
-                    .GroupBy(c => c.Id)
-                    .Select(c => c.First())
-                    .ToList();
+                return results.ToList();
             }
         }
 

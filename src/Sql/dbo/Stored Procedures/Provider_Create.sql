@@ -1,5 +1,5 @@
 ﻿CREATE PROCEDURE [dbo].[Provider_Create]
-    @Id UNIQUEIDENTIFIER,
+    @Id UNIQUEIDENTIFIER OUTPUT,
     @Name NVARCHAR(50),
     @BusinessName NVARCHAR(50),
     @BusinessAddress1 NVARCHAR(50),
@@ -9,6 +9,7 @@
     @BusinessTaxNumber NVARCHAR(30),
     @BillingEmail NVARCHAR(256),
     @Status TINYINT,
+    @UseEvents BIT,
     @Enabled BIT,
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
@@ -28,6 +29,7 @@ BEGIN
         [BusinessTaxNumber],
         [BillingEmail],
         [Status],
+        [UseEvents],
         [Enabled],
         [CreationDate],
         [RevisionDate]
@@ -44,6 +46,7 @@ BEGIN
         @BusinessTaxNumber,
         @BillingEmail,
         @Status,
+        @UseEvents,
         @Enabled,
         @CreationDate,
         @RevisionDate

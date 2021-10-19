@@ -4,6 +4,9 @@ using Bit.Core.Models.Table;
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using System.Collections.Generic;
+using System.Linq;
+using Bit.Core.Repositories.EntityFramework.Queries;
 
 namespace Bit.Core.Repositories.EntityFramework
 {
@@ -26,19 +29,21 @@ namespace Bit.Core.Repositories.EntityFramework
             {
                 var dbContext = GetDatabaseContext(scope);
                 var entity = await GetDbSet(dbContext).FindAsync(id);
-                return entity as T;
+                return Mapper.Map<T>(entity);
             }
         }
 
-        public virtual async Task CreateAsync(T obj)
+        public virtual async Task<T> CreateAsync(T obj)
         {
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
+                obj.SetNewId();
                 var entity = Mapper.Map<TEntity>(obj);
-                dbContext.Add(entity);
+                await dbContext.AddAsync(entity);
                 await dbContext.SaveChangesAsync();
                 obj.Id = entity.Id;
+                return obj;
             }
         }
 
@@ -59,7 +64,7 @@ namespace Bit.Core.Repositories.EntityFramework
 
         public virtual async Task UpsertAsync(T obj)
         {
-            if (obj.Id.Equals(default(T)))
+            if (obj.Id.Equals(default(TId)))
             {
                 await CreateAsync(obj);
             }
@@ -75,8 +80,45 @@ namespace Bit.Core.Repositories.EntityFramework
             {
                 var dbContext = GetDatabaseContext(scope);
                 var entity = Mapper.Map<TEntity>(obj);
-                dbContext.Entry(entity).State = EntityState.Deleted;
+                dbContext.Remove(entity);
                 await dbContext.SaveChangesAsync();
+            }
+        }
+
+        public virtual async Task RefreshDb()
+        {
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var context = GetDatabaseContext(scope);
+                await context.Database.EnsureDeletedAsync();
+                await context.Database.EnsureCreatedAsync();
+            }
+        }
+
+        public virtual async Task<List<T>> CreateMany(List<T> objs)
+        {
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var entities = new List<TEntity>();
+                foreach (var o in objs)
+                {
+                    o.SetNewId();
+                    var entity = Mapper.Map<TEntity>(o);
+                    entities.Add(entity);
+                }
+                var dbContext = GetDatabaseContext(scope);
+                await GetDbSet(dbContext).AddRangeAsync(entities);
+                await dbContext.SaveChangesAsync();
+                return objs;
+            }
+        }
+
+        public IQueryable<Tout> Run<Tout>(IQuery<Tout> query)
+        {
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                return query.Run(dbContext);
             }
         }
     }

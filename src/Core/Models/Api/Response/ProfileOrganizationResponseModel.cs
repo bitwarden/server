@@ -1,12 +1,14 @@
 ﻿using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Utilities;
+
 namespace Bit.Core.Models.Api
 {
     public class ProfileOrganizationResponseModel : ResponseModel
     {
-        public ProfileOrganizationResponseModel(OrganizationUserOrganizationDetails organization)
-            : base("profileOrganization")
+        public ProfileOrganizationResponseModel(string str) : base(str) {}
+
+        public ProfileOrganizationResponseModel(OrganizationUserOrganizationDetails organization) : this("profileOrganization")
         {
             Id = organization.OrganizationId.ToString();
             Name = organization.Name;
@@ -34,6 +36,8 @@ namespace Bit.Core.Models.Api
             Permissions = CoreHelpers.LoadClassFromJsonData<Permissions>(organization.Permissions);
             ResetPasswordEnrolled = organization.ResetPasswordKey != null;
             UserId = organization.UserId?.ToString();
+            ProviderId = organization.ProviderId?.ToString();
+            ProviderName = organization.ProviderName;
         }
 
         public string Id { get; set; }
@@ -47,11 +51,10 @@ namespace Bit.Core.Models.Api
         public bool Use2fa { get; set; }
         public bool UseApi { get; set; }
         public bool UseResetPassword { get; set; }
-        public bool UseBusinessPortal => UsePolicies || UseSso; // TODO add events if needed
         public bool UsersGetPremium { get; set; }
         public bool SelfHost { get; set; }
-        public int Seats { get; set; }
-        public int MaxCollections { get; set; }
+        public int? Seats { get; set; }
+        public short? MaxCollections { get; set; }
         public short? MaxStorageGb { get; set; }
         public string Key { get; set; }
         public OrganizationUserStatusType Status { get; set; }
@@ -63,5 +66,7 @@ namespace Bit.Core.Models.Api
         public bool ResetPasswordEnrolled { get; set; }
         public string UserId { get; set; }
         public bool HasPublicAndPrivateKeys { get; set; }
+        public string ProviderId { get; set; }
+        public string ProviderName { get; set; }
     }
 }

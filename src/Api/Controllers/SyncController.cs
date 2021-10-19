@@ -10,6 +10,7 @@ using Bit.Core.Exceptions;
 using System.Linq;
 using Bit.Core.Models.Table;
 using System.Collections.Generic;
+using Bit.Core.Enums.Provider;
 using Bit.Core.Models.Data;
 using Bit.Core.Settings;
 
@@ -25,6 +26,7 @@ namespace Bit.Api.Controllers
         private readonly ICollectionRepository _collectionRepository;
         private readonly ICollectionCipherRepository _collectionCipherRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
+        private readonly IProviderUserRepository _providerUserRepository;
         private readonly IPolicyRepository _policyRepository;
         private readonly ISendRepository _sendRepository;
         private readonly GlobalSettings _globalSettings;
@@ -36,6 +38,7 @@ namespace Bit.Api.Controllers
             ICollectionRepository collectionRepository,
             ICollectionCipherRepository collectionCipherRepository,
             IOrganizationUserRepository organizationUserRepository,
+            IProviderUserRepository providerUserRepository,
             IPolicyRepository policyRepository,
             ISendRepository sendRepository,
             GlobalSettings globalSettings)
@@ -46,6 +49,7 @@ namespace Bit.Api.Controllers
             _collectionRepository = collectionRepository;
             _collectionCipherRepository = collectionCipherRepository;
             _organizationUserRepository = organizationUserRepository;
+            _providerUserRepository = providerUserRepository;
             _policyRepository = policyRepository;
             _sendRepository = sendRepository;
             _globalSettings = globalSettings;
@@ -62,6 +66,11 @@ namespace Bit.Api.Controllers
 
             var organizationUserDetails = await _organizationUserRepository.GetManyDetailsByUserAsync(user.Id,
                 OrganizationUserStatusType.Confirmed);
+            var providerUserDetails = await _providerUserRepository.GetManyDetailsByUserAsync(user.Id,
+                ProviderUserStatusType.Confirmed);
+            var providerUserOrganizationDetails =
+                await _providerUserRepository.GetManyOrganizationDetailsByUserAsync(user.Id,
+                    ProviderUserStatusType.Confirmed);
             var hasEnabledOrgs = organizationUserDetails.Any(o => o.Enabled);
             var folders = await _folderRepository.GetManyByUserIdAsync(user.Id);
             var ciphers = await _cipherRepository.GetManyByUserIdAsync(user.Id, hasEnabledOrgs);
@@ -80,7 +89,8 @@ namespace Bit.Api.Controllers
 
             var userTwoFactorEnabled = await _userService.TwoFactorIsEnabledAsync(user);
             var response = new SyncResponseModel(_globalSettings, user, userTwoFactorEnabled, organizationUserDetails,
-                folders, collections, ciphers, collectionCiphersGroupDict, excludeDomains, policies, sends);
+                providerUserDetails, providerUserOrganizationDetails, folders, collections, ciphers,
+                collectionCiphersGroupDict, excludeDomains, policies, sends);
             return response;
         }
     }

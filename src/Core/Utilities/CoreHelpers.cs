@@ -23,6 +23,11 @@ using Microsoft.Azure.Storage.Blob;
 using Bit.Core.Models.Table;
 using IdentityModel;
 using System.Text.Json;
+using Bit.Core.Enums.Provider;
+using Azure.Storage.Queues;
+using Azure.Storage.Queues.Models;
+using System.Threading;
+using MimeKit;
 
 namespace Bit.Core.Utilities
 {
@@ -234,6 +239,17 @@ namespace Bit.Core.Utilities
             {
                 await s.CopyToAsync(ms);
                 return new X509Certificate2(ms.ToArray(), password);
+            }
+        }
+
+        public static string GetEmbeddedResourceContentsAsync(string file)
+        {
+            var assembly = Assembly.GetCallingAssembly();
+            var resourceName = assembly.GetManifestResourceNames().Single(n => n.EndsWith(file));
+            using (var stream = assembly.GetManifestResourceStream(resourceName))
+            using (var reader = new StreamReader(stream))
+            {
+                return reader.ReadToEnd();
             }
         }
 
@@ -484,6 +500,31 @@ namespace Bit.Core.Utilities
             return Convert.FromBase64String(output);
         }
 
+        public static string PunyEncode(string text)
+        {
+            if (text == "")
+            {
+                return "";
+            }
+
+            if (text == null)
+            {
+                return null;
+            }
+
+            if (!text.Contains("@"))
+            {
+                // Assume domain name or non-email address
+                var idn = new IdnMapping();
+                return idn.GetAscii(text);
+            }
+            else
+            {
+                // Assume email address
+                return MailboxAddress.EncodeAddrspec(text);
+            }
+        }
+
         public static string FormatLicenseSignatureValue(object val)
         {
             if (val == null)
@@ -551,12 +592,20 @@ namespace Bit.Core.Utilities
             return sb.ToString();
         }
 
-        public static string SanitizeForEmail(string value)
+        public static string SanitizeForEmail(string value, bool htmlEncode = true)
         {
-            var cleanedValue = value.Replace("@", "[at]")
-                .Replace("http://", string.Empty)
-                .Replace("https://", string.Empty);
-            return HttpUtility.HtmlEncode(cleanedValue);
+            var cleanedValue = value.Replace("@", "[at]");
+            var regexOptions = RegexOptions.CultureInvariant |
+                RegexOptions.Singleline |
+                RegexOptions.IgnoreCase;
+            cleanedValue = Regex.Replace(cleanedValue, @"(\.\w)",
+                    m => string.Concat("[dot]", m.ToString().Last()), regexOptions);
+            while (Regex.IsMatch(cleanedValue, @"((^|\b)(\w*)://)", regexOptions))
+            {
+                cleanedValue = Regex.Replace(cleanedValue, @"((^|\b)(\w*)://)",
+                    string.Empty, regexOptions);
+            }
+            return htmlEncode ? HttpUtility.HtmlEncode(cleanedValue) : cleanedValue;
         }
 
         public static string DateTimeToTableStorageKey(DateTime? date = null)
@@ -605,13 +654,14 @@ namespace Bit.Core.Utilities
         }
 
         public static bool UserInviteTokenIsValid(IDataProtector protector, string token, string userEmail,
-            Guid orgUserId, GlobalSettings globalSettings)
+            Guid orgUserId, IGlobalSettings globalSettings)
         {
-            return TokenIsValid("OrganizationUserInvite", protector, token, userEmail, orgUserId, globalSettings);
+            return TokenIsValid("OrganizationUserInvite", protector, token, userEmail, orgUserId,
+                globalSettings.OrganizationInviteExpirationHours);
         }
 
         public static bool TokenIsValid(string firstTokenPart, IDataProtector protector, string token, string userEmail,
-            Guid id, GlobalSettings globalSettings)
+            Guid id, double expirationInHours)
         {
             var invalid = true;
             try
@@ -623,7 +673,7 @@ namespace Bit.Core.Utilities
                     dataParts[2].Equals(userEmail, StringComparison.InvariantCultureIgnoreCase))
                 {
                     var creationTime = FromEpocMilliseconds(Convert.ToInt64(dataParts[3]));
-                    var expTime = creationTime.AddHours(globalSettings.OrganizationInviteExpirationHours);
+                    var expTime = creationTime.AddHours(expirationInHours);
                     invalid = expTime < DateTime.UtcNow;
                 }
             }
@@ -737,7 +787,8 @@ namespace Bit.Core.Utilities
             return configDict;
         }
 
-        public static List<KeyValuePair<string, string>> BuildIdentityClaims(User user, ICollection<CurrentContentOrganization> orgs, bool isPremium)
+        public static List<KeyValuePair<string, string>> BuildIdentityClaims(User user, ICollection<CurrentContentOrganization> orgs,
+            ICollection<CurrentContentProvider> providers, bool isPremium)
         {
             var claims = new List<KeyValuePair<string, string>>()
             {
@@ -787,60 +838,14 @@ namespace Bit.Core.Utilities
                             foreach (var org in group)
                             {
                                 claims.Add(new KeyValuePair<string, string>("orgcustom", org.Id.ToString()));
+                                foreach (var (permission, claimName) in org.Permissions.ClaimsMap)
+                                {
+                                    if (!permission)
+                                    {
+                                        continue;
+                                    }
 
-                                if (org.Permissions.AccessBusinessPortal)
-                                {
-                                    claims.Add(new KeyValuePair<string, string>("accessbusinessportal", org.Id.ToString()));
-                                }
-
-                                if (org.Permissions.AccessEventLogs)
-                                {
-                                    claims.Add(new KeyValuePair<string, string>("accesseventlogs", org.Id.ToString()));
-                                }
-
-                                if (org.Permissions.AccessImportExport)
-                                {
-                                    claims.Add(new KeyValuePair<string, string>("accessimportexport", org.Id.ToString()));
-                                }
-
-                                if (org.Permissions.AccessReports)
-                                {
-                                    claims.Add(new KeyValuePair<string, string>("accessreports", org.Id.ToString()));
-                                }
-
-                                if (org.Permissions.ManageAllCollections)
-                                {
-                                    claims.Add(new KeyValuePair<string, string>("manageallcollections", org.Id.ToString()));
-                                }
-
-                                if (org.Permissions.ManageAssignedCollections)
-                                {
-                                    claims.Add(new KeyValuePair<string, string>("manageassignedcollections", org.Id.ToString()));
-                                }
-
-                                if (org.Permissions.ManageGroups)
-                                {
-                                    claims.Add(new KeyValuePair<string, string>("managegroups", org.Id.ToString()));
-                                }
-
-                                if (org.Permissions.ManagePolicies)
-                                {
-                                    claims.Add(new KeyValuePair<string, string>("managepolicies", org.Id.ToString()));
-                                }
-
-                                if (org.Permissions.ManageSso)
-                                {
-                                    claims.Add(new KeyValuePair<string, string>("managesso", org.Id.ToString()));
-                                }
-
-                                if (org.Permissions.ManageUsers)
-                                {
-                                    claims.Add(new KeyValuePair<string, string>("manageusers", org.Id.ToString()));
-                                }
-                                
-                                if (org.Permissions.ManageResetPassword)
-                                {
-                                    claims.Add(new KeyValuePair<string, string>("manageresetpassword", org.Id.ToString()));
+                                    claims.Add(new KeyValuePair<string, string>(claimName, org.Id.ToString()));
                                 }
                             }
                             break;
@@ -849,6 +854,29 @@ namespace Bit.Core.Utilities
                     }
                 }
             }
+            
+            if (providers.Any())
+            {
+                foreach (var group in providers.GroupBy(o => o.Type))
+                {
+                    switch (group.Key)
+                    {
+                        case ProviderUserType.ProviderAdmin:
+                            foreach (var provider in group)
+                            {
+                                claims.Add(new KeyValuePair<string, string>("providerprovideradmin", provider.Id.ToString()));
+                            }
+                            break;
+                        case ProviderUserType.ServiceUser:
+                            foreach (var provider in group)
+                            {
+                                claims.Add(new KeyValuePair<string, string>("providerserviceuser", provider.Id.ToString()));
+                            }
+                            break;
+                    }
+                }
+            }
+            
             return claims;
         }
 
@@ -875,6 +903,23 @@ namespace Bit.Core.Utilities
             }
             list.Add(item);
             return list;
+        }
+
+        public static string DecodeMessageText(this QueueMessage message)
+        {
+            var text = message?.MessageText;
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return text;
+            }
+            try
+            {
+                return Base64DecodeString(text);
+            }
+            catch
+            {
+                return text;
+            }
         }
     }
 }

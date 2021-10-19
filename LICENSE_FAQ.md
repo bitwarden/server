@@ -16,7 +16,12 @@ Our current software products have the following licenses:
 
 *Bitwarden server:* The main Bitwarden server code is licensed under the AGPL 3.0 license.
 
-*Business Portal and the SSO integration:* Code for certain new modules that are designed and developed for use by larger organizations and enterprise environments is released under the Bitwarden License, a "source available" license. The Bitwarden License provides users access to product source code for non-production purposes such as development and testing, but requires a paid subscription for production use of the product, and environments supporting production. At this time, the new Business Portal and the SSO integration are the only Bitwarden modules to which this license applies. 
+*CommCore and SSO integration:* Code for certain new modules that are designed and developed for use by larger
+organizations and enterprise environments is released under the Bitwarden License, a "source available" license. The
+Bitwarden License provides users access to product source code for non-production purposes such as development and
+testing, but requires a paid subscription for production use of the product, and environments supporting production.
+Additionally the Api module by default includes CommCore which is under the Bitwarden License, however this can be
+disabled by using `/p:DefineConstants="OSS"` as an argument to `dotnet` while building the module.
 
 # Frequently Asked Questions
 
@@ -32,11 +37,11 @@ In the case of the [Bitwarden server repository](https://github.com/bitwarden/se
 
 ***Can I offer a managed service based on Bitwarden products?***
 
-Any individual or organization considering offering Bitwarden "as a service" must be mindful of the strong "copyleft" attributes of our open source licenses, as well as the Bitwarden License. With respect to the server software available under the Bitwarden License, production use requires a separate commercial agreement with Bitwarden. With respect to the server software available under the AGPL license, as software professionals we cannot conceive a scenario in which the offering of Bitwarden "as-a-service" would not involve a modification to the applicable Bitwarden code, thereby triggering the strong copyleft provisions of the AGPL 3.0 license. We encourage anyone considering offering Bitwarden as a service, or integrating Bitwarden into a larger solution, to join the Bitwarden Partner Program for access to the comprehensive resources and support we make available to our authorized solutions partners. Please [contact us](https://bitwarden.com/contact/) for information.
+Any individual or organization considering offering Bitwarden "as a service" must be mindful of the strong "copyleft" attributes of our open source licenses, as well as the Bitwarden License. With respect to the server software available under the Bitwarden License, production use requires a separate commercial agreement with Bitwarden. With respect to the server software available under the AGPL license, as software professionals we cannot conceive a scenario in which the offering of Bitwarden "as-a-service" would not involve a modification to the applicable Bitwarden code, thereby triggering the strong copyleft provisions of the AGPL 3.0 license. We encourage anyone considering offering Bitwarden as a service to join the Bitwarden Partner Program for access to the comprehensive resources and support we make available to our authorized solutions partners. Please [contact us](https://bitwarden.com/contact/) for information.
 
 ***What rights do I receive under the "Source Available" Bitwarden License?*** 
 
-Users of software licensed under the Bitwarden License receive a right to use the software source code for non-production purposes of internal development and internal testing. The right to use the software in a production environment, or environments directly supporting production, requires a paid Bitwarden subscription. This approach is modeled on the licensing approaches taken by other successful open source companies including Elastic (NYSE: ESTC) and Confluent.
+Users of software licensed under the Bitwarden License receive a right to use the software source code for non-production purposes of internal development and internal testing. The right to use the software in a production environment, or environments directly supporting production, requires a paid Bitwarden subscription. This approach is modeled on the licensing approaches taken by other successful open source companies including Elastic (NYSE: ESTC) and Confluent (NASDAQ: CFLT).
 
 ***Is Bitwarden open source?***
 

@@ -35,10 +35,11 @@ namespace Bit.Core.Services
         Task<IdentityResult> ChangePasswordAsync(User user, string masterPassword, string newMasterPassword, string key);
         Task<IdentityResult> SetPasswordAsync(User user, string newMasterPassword, string key, string orgIdentifier = null);
         Task<IdentityResult> AdminResetPasswordAsync(OrganizationUserType type, Guid orgId, Guid id, string newMasterPassword, string key);
+        Task<IdentityResult> UpdateTempPasswordAsync(User user, string newMasterPassword, string key, string hint);
         Task<IdentityResult> ChangeKdfAsync(User user, string masterPassword, string newMasterPassword, string key,
             KdfType kdf, int kdfIterations);
         Task<IdentityResult> UpdateKeyAsync(User user, string masterPassword, string key, string privateKey,
-            IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders);
+            IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders, IEnumerable<Send> sends);
         Task<IdentityResult> RefreshSecurityStampAsync(User user, string masterPasswordHash);
         Task UpdateTwoFactorProviderAsync(User user, TwoFactorProviderType type, bool setEnabled = true);
         Task DisableTwoFactorProviderAsync(User user, TwoFactorProviderType type,
@@ -69,8 +70,8 @@ namespace Bit.Core.Services
         Task<bool> CanAccessPremium(ITwoFactorProvidersUser user);
         Task<bool> TwoFactorIsEnabledAsync(ITwoFactorProvidersUser user);
         Task<bool> TwoFactorProviderIsEnabledAsync(TwoFactorProviderType provider, ITwoFactorProvidersUser user);
-        Task<string> GenerateEnterprisePortalSignInTokenAsync(User user);
         Task<string> GenerateSignInTokenAsync(User user, string purpose);
         Task RotateApiKeyAsync(User user);
+        string GetUserName(ClaimsPrincipal principal);
     }
 }

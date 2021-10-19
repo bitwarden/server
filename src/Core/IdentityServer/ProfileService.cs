@@ -18,17 +18,23 @@ namespace Bit.Core.IdentityServer
     {
         private readonly IUserService _userService;
         private readonly IOrganizationUserRepository _organizationUserRepository;
+        private readonly IProviderUserRepository _providerUserRepository;
+        private readonly IProviderOrganizationRepository _providerOrganizationRepository;
         private readonly ILicensingService _licensingService;
         private readonly ICurrentContext _currentContext;
 
         public ProfileService(
             IUserService userService,
             IOrganizationUserRepository organizationUserRepository,
+            IProviderUserRepository providerUserRepository,
+            IProviderOrganizationRepository providerOrganizationRepository,
             ILicensingService licensingService,
             ICurrentContext currentContext)
         {
             _userService = userService;
             _organizationUserRepository = organizationUserRepository;
+            _providerUserRepository = providerUserRepository;
+            _providerOrganizationRepository = providerOrganizationRepository;
             _licensingService = licensingService;
             _currentContext = currentContext;
         }
@@ -43,7 +49,8 @@ namespace Bit.Core.IdentityServer
             {
                 var isPremium = await _licensingService.ValidateUserPremiumAsync(user);
                 var orgs = await _currentContext.OrganizationMembershipAsync(_organizationUserRepository, user.Id);
-                foreach (var claim in CoreHelpers.BuildIdentityClaims(user, orgs, isPremium))
+                var providers = await _currentContext.ProviderMembershipAsync(_providerUserRepository, user.Id);
+                foreach (var claim in CoreHelpers.BuildIdentityClaims(user, orgs, providers, isPremium))
                 {
                     var upperValue = claim.Value.ToUpperInvariant();
                     var isBool = upperValue == "TRUE" || upperValue == "FALSE";

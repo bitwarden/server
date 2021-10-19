@@ -10,6 +10,7 @@ using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
+using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Identity;
 using Newtonsoft.Json;
 
@@ -17,7 +18,7 @@ namespace Bit.Core.Services
 {
     public class SendService : ISendService
     {
-        public const long MAX_FILE_SIZE = 500L * 1024L * 1024L; // 500MB
+        public const long MAX_FILE_SIZE = Constants.FileSize501mb;
         public const string MAX_FILE_SIZE_READABLE = "500 MB";
         private readonly ISendRepository _sendRepository;
         private readonly IUserRepository _userRepository;
@@ -129,6 +130,11 @@ namespace Bit.Core.Services
             }
 
             var data = JsonConvert.DeserializeObject<SendFileData>(send.Data);
+
+            if (data.Validated)
+            {
+                throw new BadRequestException("File has already been uploaded.");
+            }
 
             await _sendFileStorageService.UploadNewFileAsync(stream, send, data.Id);
 
@@ -275,35 +281,24 @@ namespace Bit.Core.Services
                 return;
             }
 
-            var policies = await _policyRepository.GetManyByUserIdAsync(userId.Value);
-
-            if (policies == null)
+            var disableSendPolicyCount = await _policyRepository.GetCountByTypeApplicableToUserIdAsync(userId.Value,
+                PolicyType.DisableSend);
+            if (disableSendPolicyCount > 0)
             {
-                return;
-            }
-
-            foreach (var policy in policies.Where(p => p.Enabled && p.Type == PolicyType.DisableSend))
-            {
-                if (!_currentContext.ManagePolicies(policy.OrganizationId))
-                {
-                    throw new BadRequestException("Due to an Enterprise Policy, you are only able to delete an existing Send.");
-                }
+                throw new BadRequestException("Due to an Enterprise Policy, you are only able to delete an existing Send.");
             }
 
             if (send.HideEmail.GetValueOrDefault())
             {
-                foreach (var policy in policies.Where(p => p.Enabled && p.Type == PolicyType.SendOptions && !_currentContext.ManagePolicies(p.OrganizationId)))
+                var sendOptionsPolicies = await _policyRepository.GetManyByTypeApplicableToUserIdAsync(userId.Value, PolicyType.SendOptions);
+                foreach (var policy in sendOptionsPolicies)
                 {
-                    SendOptionsPolicyData data = null;
-                    if (policy.Data != null)
-                    {
-                        data = JsonConvert.DeserializeObject<SendOptionsPolicyData>(policy.Data);
-                    }
-
+                    var data = CoreHelpers.LoadClassFromJsonData<SendOptionsPolicyData>(policy.Data);
                     if (data?.DisableHideEmail ?? false)
                     {
                         throw new BadRequestException("Due to an Enterprise Policy, you are not allowed to hide your email address from recipients when creating or editing a Send.");
                     }
+
                 }
             }
         }
