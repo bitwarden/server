@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using Bit.Core.Models.Table;
 using Bit.Core.Models.Business;
 using Bit.Core.Enums;
@@ -15,8 +16,8 @@ namespace Bit.Core.Services
            short additionalStorageGb, int additionalSeats, bool premiumAccessAddon, TaxInfo taxInfo);
         Task<string> PurchasePremiumAsync(User user, PaymentMethodType paymentMethodType, string paymentToken,
             short additionalStorageGb, TaxInfo taxInfo);
-        Task<string> AdjustSeatsAsync(Organization organization, Models.StaticStore.Plan plan, int additionalSeats);
-        Task<string> AdjustStorageAsync(IStorableSubscriber storableSubscriber, int additionalStorage, string storagePlanId);
+        Task<string> AdjustSeatsAsync(Organization organization, Models.StaticStore.Plan plan, int additionalSeats, DateTime? prorationDate = null);
+        Task<string> AdjustStorageAsync(IStorableSubscriber storableSubscriber, int additionalStorage, string storagePlanId, DateTime? prorationDate = null);
         Task CancelSubscriptionAsync(ISubscriber subscriber, bool endOfPeriod = false,
             bool skipInAppPurchaseCheck = false);
         Task ReinstateSubscriptionAsync(ISubscriber subscriber);
