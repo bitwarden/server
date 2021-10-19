@@ -679,7 +679,7 @@ namespace Bit.Core.Services
         }
 
         private async Task<string> FinalizeSubscriptionChangeAsync(IStorableSubscriber storableSubscriber,
-            SubscriptionUpdate subscriptionUpdate)
+            SubscriptionUpdate subscriptionUpdate, DateTime? prorationDate)
         {
             var sub = await _stripeAdapter.SubscriptionGetAsync(storableSubscriber.GatewaySubscriptionId);
             if (sub == null)
@@ -687,7 +687,7 @@ namespace Bit.Core.Services
                 throw new GatewayException("Subscription not found.");
             }
 
-            var prorationDate = DateTime.UtcNow;
+            prorationDate ??= DateTime.UtcNow;
             var collectionMethod = sub.CollectionMethod;
             var daysUntilDue = sub.DaysUntilDue;
             var chargeNow = collectionMethod == "charge_automatically";
@@ -793,15 +793,15 @@ namespace Bit.Core.Services
             return paymentIntentClientSecret;
         }
 
-        public Task<string> AdjustSeatsAsync(Organization organization, StaticStore.Plan plan, int additionalSeats)
+        public Task<string> AdjustSeatsAsync(Organization organization, StaticStore.Plan plan, int additionalSeats, DateTime? prorationDate = null)
         {
-            return FinalizeSubscriptionChangeAsync(organization, new SeatSubscriptionUpdate(organization, plan, additionalSeats));
+            return FinalizeSubscriptionChangeAsync(organization, new SeatSubscriptionUpdate(organization, plan, additionalSeats), prorationDate);
         }
 
         public Task<string> AdjustStorageAsync(IStorableSubscriber storableSubscriber, int additionalStorage,
-            string storagePlanId)
+            string storagePlanId, DateTime? prorationDate = null)
         {
-            return FinalizeSubscriptionChangeAsync(storableSubscriber, new StorageSubscriptionUpdate(storagePlanId, additionalStorage));
+            return FinalizeSubscriptionChangeAsync(storableSubscriber, new StorageSubscriptionUpdate(storagePlanId, additionalStorage), prorationDate);
         }
 
         public async Task CancelAndRecoverChargesAsync(ISubscriber subscriber)
