@@ -17,9 +17,10 @@ namespace Bit.Core.Services
         Task ReinstateSubscriptionAsync(Guid organizationId);
         Task<Tuple<bool, string>> UpgradePlanAsync(Guid organizationId, OrganizationUpgrade upgrade);
         Task<string> AdjustStorageAsync(Guid organizationId, short storageAdjustmentGb);
-        Task<string> AdjustSeatsAsync(Guid organizationId, int seatAdjustment);
+        Task UpdateSubscription(Guid organizationId, int seatAdjustment, int? maxAutoscaleSeats);
+        Task<string> AdjustSeatsAsync(Guid organizationId, int seatAdjustment, DateTime? prorationDate = null);
         Task VerifyBankAsync(Guid organizationId, int amount1, int amount2);
-        Task<Tuple<Organization, OrganizationUser>> SignUpAsync(OrganizationSignup organizationSignup);
+        Task<Tuple<Organization, OrganizationUser>> SignUpAsync(OrganizationSignup organizationSignup, bool provider = false);
         Task<Tuple<Organization, OrganizationUser>> SignUpAsync(OrganizationLicense license, User owner,
             string ownerKey, string collectionName, string publicKey, string privateKey);
         Task UpdateLicenseAsync(Guid organizationId, OrganizationLicense license);
@@ -31,9 +32,10 @@ namespace Bit.Core.Services
         Task UpdateAsync(Organization organization, bool updateBilling = false);
         Task UpdateTwoFactorProviderAsync(Organization organization, TwoFactorProviderType type);
         Task DisableTwoFactorProviderAsync(Organization organization, TwoFactorProviderType type);
+        Task<List<OrganizationUser>> InviteUsersAsync(Guid organizationId, Guid? invitingUserId,
+            IEnumerable<(OrganizationUserInvite invite, string externalId)> invites);
         Task<OrganizationUser> InviteUserAsync(Guid organizationId, Guid? invitingUserId, string email,
             OrganizationUserType type, bool accessAll, string externalId, IEnumerable<SelectionReadOnly> collections);
-        Task<List<OrganizationUser>> InviteUserAsync(Guid organizationId, Guid? invitingUserId, string externalId, OrganizationUserInvite orgUserInvite);
         Task<IEnumerable<Tuple<OrganizationUser, string>>> ResendInvitesAsync(Guid organizationId, Guid? invitingUserId, IEnumerable<Guid> organizationUsersId);
         Task ResendInviteAsync(Guid organizationId, Guid? invitingUserId, Guid organizationUserId);
         Task<OrganizationUser> AcceptUserAsync(Guid organizationUserId, User user, string token,
@@ -58,6 +60,7 @@ namespace Bit.Core.Services
             bool overwriteExisting);
         Task RotateApiKeyAsync(Organization organization);
         Task DeleteSsoUserAsync(Guid userId, Guid? organizationId);
-        Task<Organization> UpdateOrganizationKeysAsync(Guid userId, Guid orgId, string publicKey, string privateKey);
+        Task<Organization> UpdateOrganizationKeysAsync(Guid orgId, string publicKey, string privateKey);
+        Task<bool> HasConfirmedOwnersExceptAsync(Guid organizationId, IEnumerable<Guid> organizationUsersId, bool includeProvider = true);
     }
 }

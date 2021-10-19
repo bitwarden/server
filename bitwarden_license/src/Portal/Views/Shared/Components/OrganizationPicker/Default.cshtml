@@ -1,9 +1,0 @@
-﻿@model OrganizationPickerViewModel
-
-<form method="get" asp-action="SetSelectedOrganization" asp-controller="Home" class="form-inline my-2 my-lg-0">
-    <label asp-for="SelectedOrganization" class="sr-only">Organization</label>
-    <select asp-for="SelectedOrganization" asp-items="Model.Organizations" name="id" class="form-control mr-sm-2">
-        <option value="">--Select Organization--</option>
-    </select>
-    <button type="submit" class="btn btn-outline-light my-2 my-sm-0">Go</button>
-</form>

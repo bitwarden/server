@@ -43,8 +43,8 @@ namespace Bit.Core.Services
                 return null;
             }
             var validEnvironment = _globalSettings.AppleIap.AppInReview ||
-                (!_hostingEnvironment.IsProduction() && receiptStatus.Environment == "Sandbox") ||
-                (_hostingEnvironment.IsProduction() && receiptStatus.Environment != "Sandbox");
+                (!(_hostingEnvironment.IsProduction() || _hostingEnvironment.IsEnvironment("QA")) && receiptStatus.Environment == "Sandbox") ||
+                ((_hostingEnvironment.IsProduction() || _hostingEnvironment.IsEnvironment("QA")) && receiptStatus.Environment != "Sandbox");
             var validProductBundle = receiptStatus.Receipt.BundleId == "com.bitwarden.desktop" ||
                 receiptStatus.Receipt.BundleId == "com.8bit.bitwarden";
             var validProduct = receiptStatus.LatestReceiptInfo.LastOrDefault()?.ProductId == "premium_annually";

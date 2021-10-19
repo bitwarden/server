@@ -1,0 +1,58 @@
+@model ProviderViewModel
+<h2>Provider Admins</h2>
+<div class="row">
+    <div class="col-8">
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th style="width: 190px;">Email</th>
+                        <th style="width: 40px;">Status</th>
+                        <th style="width: 30px;"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if(!Model.ProviderAdmins.Any())
+                    {
+                        <tr>
+                            <td colspan="6">No results to list.</td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach(var admin in Model.ProviderAdmins)
+                        {
+                            <tr>
+                                <td class="align-middle">
+                                    @admin.Email
+                                </td>
+                                <td class="align-middle">
+                                    @admin.Status
+                                </td>
+                                <td>
+                                    @if(admin.Status.Equals(ProviderUserStatusType.Confirmed) 
+                                        && @Model.Provider.Status.Equals(ProviderStatusType.Pending))
+                                    {
+                                        @if(@TempData["InviteResentTo"] != null && @TempData["InviteResentTo"].ToString() == @admin.UserId.Value.ToString())
+                                        {
+                                            <button class="btn btn-outline-success btn-sm disabled" disabled>Invite Resent!</button>
+                                        }
+                                        else
+                                        {
+                                            <a class="btn btn-outline-secondary btn-sm" 
+                                                data-id="@admin.Id" asp-controller="Providers" 
+                                                asp-action="ResendInvite" asp-route-ownerId="@admin.UserId" 
+                                                asp-route-providerId="@Model.Provider.Id">
+                                                Resend Setup Invite
+                                            </a>
+                                        }
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

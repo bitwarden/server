@@ -1,0 +1,497 @@
+CREATE TABLE IF NOT EXISTS "__EFMigrationsHistory" (
+    "MigrationId" character varying(150) NOT NULL,
+    "ProductVersion" character varying(32) NOT NULL,
+    CONSTRAINT "PK___EFMigrationsHistory" PRIMARY KEY ("MigrationId")
+);
+
+START TRANSACTION;
+
+CREATE COLLATION "postgresIndetermanisticCollation" (LC_COLLATE = 'en-u-ks-primary',
+    LC_CTYPE = 'en-u-ks-primary',
+    PROVIDER = icu,
+    DETERMINISTIC = False
+);
+
+CREATE TABLE "Event" (
+    "Id" uuid NOT NULL,
+    "Date" timestamp without time zone NOT NULL,
+    "Type" integer NOT NULL,
+    "UserId" uuid NULL,
+    "OrganizationId" uuid NULL,
+    "CipherId" uuid NULL,
+    "CollectionId" uuid NULL,
+    "PolicyId" uuid NULL,
+    "GroupId" uuid NULL,
+    "OrganizationUserId" uuid NULL,
+    "DeviceType" smallint NULL,
+    "IpAddress" character varying(50) NULL,
+    "ActingUserId" uuid NULL,
+    CONSTRAINT "PK_Event" PRIMARY KEY ("Id")
+);
+
+CREATE TABLE "Grant" (
+    "Key" character varying(200) NOT NULL,
+    "Type" character varying(50) NULL,
+    "SubjectId" character varying(200) NULL,
+    "SessionId" character varying(100) NULL,
+    "ClientId" character varying(200) NULL,
+    "Description" character varying(200) NULL,
+    "CreationDate" timestamp without time zone NOT NULL,
+    "ExpirationDate" timestamp without time zone NULL,
+    "ConsumedDate" timestamp without time zone NULL,
+    "Data" text NULL,
+    CONSTRAINT "PK_Grant" PRIMARY KEY ("Key")
+);
+
+CREATE TABLE "Installation" (
+    "Id" uuid NOT NULL,
+    "Email" character varying(256) NULL,
+    "Key" character varying(150) NULL,
+    "Enabled" boolean NOT NULL,
+    "CreationDate" timestamp without time zone NOT NULL,
+    CONSTRAINT "PK_Installation" PRIMARY KEY ("Id")
+);
+
+CREATE TABLE "Organization" (
+    "Id" uuid NOT NULL,
+    "Identifier" character varying(50) COLLATE "postgresIndetermanisticCollation" NULL,
+    "Name" character varying(50) NULL,
+    "BusinessName" character varying(50) NULL,
+    "BusinessAddress1" character varying(50) NULL,
+    "BusinessAddress2" character varying(50) NULL,
+    "BusinessAddress3" character varying(50) NULL,
+    "BusinessCountry" character varying(2) NULL,
+    "BusinessTaxNumber" character varying(30) NULL,
+    "BillingEmail" character varying(256) NULL,
+    "Plan" character varying(50) NULL,
+    "PlanType" smallint NOT NULL,
+    "Seats" integer NULL,
+    "MaxCollections" smallint NULL,
+    "UsePolicies" boolean NOT NULL,
+    "UseSso" boolean NOT NULL,
+    "UseGroups" boolean NOT NULL,
+    "UseDirectory" boolean NOT NULL,
+    "UseEvents" boolean NOT NULL,
+    "UseTotp" boolean NOT NULL,
+    "Use2fa" boolean NOT NULL,
+    "UseApi" boolean NOT NULL,
+    "UseResetPassword" boolean NOT NULL,
+    "SelfHost" boolean NOT NULL,
+    "UsersGetPremium" boolean NOT NULL,
+    "Storage" bigint NULL,
+    "MaxStorageGb" smallint NULL,
+    "Gateway" smallint NULL,
+    "GatewayCustomerId" character varying(50) NULL,
+    "GatewaySubscriptionId" character varying(50) NULL,
+    "ReferenceData" text NULL,
+    "Enabled" boolean NOT NULL,
+    "LicenseKey" character varying(100) NULL,
+    "ApiKey" character varying(30) NULL,
+    "PublicKey" text NULL,
+    "PrivateKey" text NULL,
+    "TwoFactorProviders" text NULL,
+    "ExpirationDate" timestamp without time zone NULL,
+    "CreationDate" timestamp without time zone NOT NULL,
+    "RevisionDate" timestamp without time zone NOT NULL,
+    CONSTRAINT "PK_Organization" PRIMARY KEY ("Id")
+);
+
+CREATE TABLE "Provider" (
+    "Id" uuid NOT NULL,
+    "Name" text NULL,
+    "BusinessName" text NULL,
+    "BusinessAddress1" text NULL,
+    "BusinessAddress2" text NULL,
+    "BusinessAddress3" text NULL,
+    "BusinessCountry" text NULL,
+    "BusinessTaxNumber" text NULL,
+    "BillingEmail" text NULL,
+    "Status" smallint NOT NULL,
+    "UseEvents" boolean NOT NULL,
+    "Enabled" boolean NOT NULL,
+    "CreationDate" timestamp without time zone NOT NULL,
+    "RevisionDate" timestamp without time zone NOT NULL,
+    CONSTRAINT "PK_Provider" PRIMARY KEY ("Id")
+);
+
+CREATE TABLE "TaxRate" (
+    "Id" character varying(40) NOT NULL,
+    "Country" character varying(50) NULL,
+    "State" character varying(2) NULL,
+    "PostalCode" character varying(10) NULL,
+    "Rate" numeric NOT NULL,
+    "Active" boolean NOT NULL,
+    CONSTRAINT "PK_TaxRate" PRIMARY KEY ("Id")
+);
+
+CREATE TABLE "User" (
+    "Id" uuid NOT NULL,
+    "Name" character varying(50) NULL,
+    "Email" character varying(256) COLLATE "postgresIndetermanisticCollation" NOT NULL,
+    "EmailVerified" boolean NOT NULL,
+    "MasterPassword" character varying(300) NULL,
+    "MasterPasswordHint" character varying(50) NULL,
+    "Culture" character varying(10) NULL,
+    "SecurityStamp" character varying(50) NOT NULL,
+    "TwoFactorProviders" text NULL,
+    "TwoFactorRecoveryCode" character varying(32) NULL,
+    "EquivalentDomains" text NULL,
+    "ExcludedGlobalEquivalentDomains" text NULL,
+    "AccountRevisionDate" timestamp without time zone NOT NULL,
+    "Key" text NULL,
+    "PublicKey" text NULL,
+    "PrivateKey" text NULL,
+    "Premium" boolean NOT NULL,
+    "PremiumExpirationDate" timestamp without time zone NULL,
+    "RenewalReminderDate" timestamp without time zone NULL,
+    "Storage" bigint NULL,
+    "MaxStorageGb" smallint NULL,
+    "Gateway" smallint NULL,
+    "GatewayCustomerId" character varying(50) NULL,
+    "GatewaySubscriptionId" character varying(50) NULL,
+    "ReferenceData" text NULL,
+    "LicenseKey" character varying(100) NULL,
+    "ApiKey" character varying(30) NOT NULL,
+    "Kdf" smallint NOT NULL,
+    "KdfIterations" integer NOT NULL,
+    "CreationDate" timestamp without time zone NOT NULL,
+    "RevisionDate" timestamp without time zone NOT NULL,
+    CONSTRAINT "PK_User" PRIMARY KEY ("Id")
+);
+
+CREATE TABLE "Collection" (
+    "Id" uuid NOT NULL,
+    "OrganizationId" uuid NOT NULL,
+    "Name" text NULL,
+    "ExternalId" character varying(300) NULL,
+    "CreationDate" timestamp without time zone NOT NULL,
+    "RevisionDate" timestamp without time zone NOT NULL,
+    CONSTRAINT "PK_Collection" PRIMARY KEY ("Id"),
+    CONSTRAINT "FK_Collection_Organization_OrganizationId" FOREIGN KEY ("OrganizationId") REFERENCES "Organization" ("Id") ON DELETE CASCADE
+);
+
+CREATE TABLE "Group" (
+    "Id" uuid NOT NULL,
+    "OrganizationId" uuid NOT NULL,
+    "Name" character varying(100) NULL,
+    "AccessAll" boolean NOT NULL,
+    "ExternalId" character varying(300) NULL,
+    "CreationDate" timestamp without time zone NOT NULL,
+    "RevisionDate" timestamp without time zone NOT NULL,
+    CONSTRAINT "PK_Group" PRIMARY KEY ("Id"),
+    CONSTRAINT "FK_Group_Organization_OrganizationId" FOREIGN KEY ("OrganizationId") REFERENCES "Organization" ("Id") ON DELETE CASCADE
+);
+
+CREATE TABLE "Policy" (
+    "Id" uuid NOT NULL,
+    "OrganizationId" uuid NOT NULL,
+    "Type" smallint NOT NULL,
+    "Data" text NULL,
+    "Enabled" boolean NOT NULL,
+    "CreationDate" timestamp without time zone NOT NULL,
+    "RevisionDate" timestamp without time zone NOT NULL,
+    CONSTRAINT "PK_Policy" PRIMARY KEY ("Id"),
+    CONSTRAINT "FK_Policy_Organization_OrganizationId" FOREIGN KEY ("OrganizationId") REFERENCES "Organization" ("Id") ON DELETE CASCADE
+);
+
+CREATE TABLE "SsoConfig" (
+    "Id" bigint NOT NULL GENERATED BY DEFAULT AS IDENTITY,
+    "Enabled" boolean NOT NULL,
+    "OrganizationId" uuid NOT NULL,
+    "Data" text NULL,
+    "CreationDate" timestamp without time zone NOT NULL,
+    "RevisionDate" timestamp without time zone NOT NULL,
+    CONSTRAINT "PK_SsoConfig" PRIMARY KEY ("Id"),
+    CONSTRAINT "FK_SsoConfig_Organization_OrganizationId" FOREIGN KEY ("OrganizationId") REFERENCES "Organization" ("Id") ON DELETE CASCADE
+);
+
+CREATE TABLE "ProviderOrganization" (
+    "Id" uuid NOT NULL,
+    "ProviderId" uuid NOT NULL,
+    "OrganizationId" uuid NOT NULL,
+    "Key" text NULL,
+    "Settings" text NULL,
+    "CreationDate" timestamp without time zone NOT NULL,
+    "RevisionDate" timestamp without time zone NOT NULL,
+    CONSTRAINT "PK_ProviderOrganization" PRIMARY KEY ("Id"),
+    CONSTRAINT "FK_ProviderOrganization_Organization_OrganizationId" FOREIGN KEY ("OrganizationId") REFERENCES "Organization" ("Id") ON DELETE CASCADE,
+    CONSTRAINT "FK_ProviderOrganization_Provider_ProviderId" FOREIGN KEY ("ProviderId") REFERENCES "Provider" ("Id") ON DELETE CASCADE
+);
+
+CREATE TABLE "Cipher" (
+    "Id" uuid NOT NULL,
+    "UserId" uuid NULL,
+    "OrganizationId" uuid NULL,
+    "Type" smallint NOT NULL,
+    "Data" text NULL,
+    "Favorites" text NULL,
+    "Folders" text NULL,
+    "Attachments" text NULL,
+    "CreationDate" timestamp without time zone NOT NULL,
+    "RevisionDate" timestamp without time zone NOT NULL,
+    "DeletedDate" timestamp without time zone NULL,
+    "Reprompt" smallint NULL,
+    CONSTRAINT "PK_Cipher" PRIMARY KEY ("Id"),
+    CONSTRAINT "FK_Cipher_Organization_OrganizationId" FOREIGN KEY ("OrganizationId") REFERENCES "Organization" ("Id") ON DELETE RESTRICT,
+    CONSTRAINT "FK_Cipher_User_UserId" FOREIGN KEY ("UserId") REFERENCES "User" ("Id") ON DELETE RESTRICT
+);
+
+CREATE TABLE "Device" (
+    "Id" uuid NOT NULL,
+    "UserId" uuid NOT NULL,
+    "Name" character varying(50) NULL,
+    "Type" smallint NOT NULL,
+    "Identifier" character varying(50) NULL,
+    "PushToken" character varying(255) NULL,
+    "CreationDate" timestamp without time zone NOT NULL,
+    "RevisionDate" timestamp without time zone NOT NULL,
+    CONSTRAINT "PK_Device" PRIMARY KEY ("Id"),
+    CONSTRAINT "FK_Device_User_UserId" FOREIGN KEY ("UserId") REFERENCES "User" ("Id") ON DELETE CASCADE
+);
+
+CREATE TABLE "EmergencyAccess" (
+    "Id" uuid NOT NULL,
+    "GrantorId" uuid NOT NULL,
+    "GranteeId" uuid NULL,
+    "Email" character varying(256) NULL,
+    "KeyEncrypted" text NULL,
+    "Type" smallint NOT NULL,
+    "Status" smallint NOT NULL,
+    "WaitTimeDays" integer NOT NULL,
+    "RecoveryInitiatedDate" timestamp without time zone NULL,
+    "LastNotificationDate" timestamp without time zone NULL,
+    "CreationDate" timestamp without time zone NOT NULL,
+    "RevisionDate" timestamp without time zone NOT NULL,
+    CONSTRAINT "PK_EmergencyAccess" PRIMARY KEY ("Id"),
+    CONSTRAINT "FK_EmergencyAccess_User_GranteeId" FOREIGN KEY ("GranteeId") REFERENCES "User" ("Id") ON DELETE RESTRICT,
+    CONSTRAINT "FK_EmergencyAccess_User_GrantorId" FOREIGN KEY ("GrantorId") REFERENCES "User" ("Id") ON DELETE CASCADE
+);
+
+CREATE TABLE "Folder" (
+    "Id" uuid NOT NULL,
+    "UserId" uuid NOT NULL,
+    "Name" text NULL,
+    "CreationDate" timestamp without time zone NOT NULL,
+    "RevisionDate" timestamp without time zone NOT NULL,
+    CONSTRAINT "PK_Folder" PRIMARY KEY ("Id"),
+    CONSTRAINT "FK_Folder_User_UserId" FOREIGN KEY ("UserId") REFERENCES "User" ("Id") ON DELETE CASCADE
+);
+
+CREATE TABLE "OrganizationUser" (
+    "Id" uuid NOT NULL,
+    "OrganizationId" uuid NOT NULL,
+    "UserId" uuid NULL,
+    "Email" character varying(256) NULL,
+    "Key" text NULL,
+    "ResetPasswordKey" text NULL,
+    "Status" smallint NOT NULL,
+    "Type" smallint NOT NULL,
+    "AccessAll" boolean NOT NULL,
+    "ExternalId" character varying(300) NULL,
+    "CreationDate" timestamp without time zone NOT NULL,
+    "RevisionDate" timestamp without time zone NOT NULL,
+    "Permissions" text NULL,
+    CONSTRAINT "PK_OrganizationUser" PRIMARY KEY ("Id"),
+    CONSTRAINT "FK_OrganizationUser_Organization_OrganizationId" FOREIGN KEY ("OrganizationId") REFERENCES "Organization" ("Id") ON DELETE CASCADE,
+    CONSTRAINT "FK_OrganizationUser_User_UserId" FOREIGN KEY ("UserId") REFERENCES "User" ("Id") ON DELETE RESTRICT
+);
+
+CREATE TABLE "ProviderUser" (
+    "Id" uuid NOT NULL,
+    "ProviderId" uuid NOT NULL,
+    "UserId" uuid NULL,
+    "Email" text NULL,
+    "Key" text NULL,
+    "Status" smallint NOT NULL,
+    "Type" smallint NOT NULL,
+    "Permissions" text NULL,
+    "CreationDate" timestamp without time zone NOT NULL,
+    "RevisionDate" timestamp without time zone NOT NULL,
+    CONSTRAINT "PK_ProviderUser" PRIMARY KEY ("Id"),
+    CONSTRAINT "FK_ProviderUser_Provider_ProviderId" FOREIGN KEY ("ProviderId") REFERENCES "Provider" ("Id") ON DELETE CASCADE,
+    CONSTRAINT "FK_ProviderUser_User_UserId" FOREIGN KEY ("UserId") REFERENCES "User" ("Id") ON DELETE RESTRICT
+);
+
+CREATE TABLE "Send" (
+    "Id" uuid NOT NULL,
+    "UserId" uuid NULL,
+    "OrganizationId" uuid NULL,
+    "Type" smallint NOT NULL,
+    "Data" text NULL,
+    "Key" text NULL,
+    "Password" character varying(300) NULL,
+    "MaxAccessCount" integer NULL,
+    "AccessCount" integer NOT NULL,
+    "CreationDate" timestamp without time zone NOT NULL,
+    "RevisionDate" timestamp without time zone NOT NULL,
+    "ExpirationDate" timestamp without time zone NULL,
+    "DeletionDate" timestamp without time zone NOT NULL,
+    "Disabled" boolean NOT NULL,
+    "HideEmail" boolean NULL,
+    CONSTRAINT "PK_Send" PRIMARY KEY ("Id"),
+    CONSTRAINT "FK_Send_Organization_OrganizationId" FOREIGN KEY ("OrganizationId") REFERENCES "Organization" ("Id") ON DELETE RESTRICT,
+    CONSTRAINT "FK_Send_User_UserId" FOREIGN KEY ("UserId") REFERENCES "User" ("Id") ON DELETE RESTRICT
+);
+
+CREATE TABLE "SsoUser" (
+    "Id" bigint NOT NULL GENERATED BY DEFAULT AS IDENTITY,
+    "UserId" uuid NOT NULL,
+    "OrganizationId" uuid NULL,
+    "ExternalId" character varying(50) COLLATE "postgresIndetermanisticCollation" NULL,
+    "CreationDate" timestamp without time zone NOT NULL,
+    CONSTRAINT "PK_SsoUser" PRIMARY KEY ("Id"),
+    CONSTRAINT "FK_SsoUser_Organization_OrganizationId" FOREIGN KEY ("OrganizationId") REFERENCES "Organization" ("Id") ON DELETE RESTRICT,
+    CONSTRAINT "FK_SsoUser_User_UserId" FOREIGN KEY ("UserId") REFERENCES "User" ("Id") ON DELETE CASCADE
+);
+
+CREATE TABLE "Transaction" (
+    "Id" uuid NOT NULL,
+    "UserId" uuid NULL,
+    "OrganizationId" uuid NULL,
+    "Type" smallint NOT NULL,
+    "Amount" numeric NOT NULL,
+    "Refunded" boolean NULL,
+    "RefundedAmount" numeric NULL,
+    "Details" character varying(100) NULL,
+    "PaymentMethodType" smallint NULL,
+    "Gateway" smallint NULL,
+    "GatewayId" character varying(50) NULL,
+    "CreationDate" timestamp without time zone NOT NULL,
+    CONSTRAINT "PK_Transaction" PRIMARY KEY ("Id"),
+    CONSTRAINT "FK_Transaction_Organization_OrganizationId" FOREIGN KEY ("OrganizationId") REFERENCES "Organization" ("Id") ON DELETE RESTRICT,
+    CONSTRAINT "FK_Transaction_User_UserId" FOREIGN KEY ("UserId") REFERENCES "User" ("Id") ON DELETE RESTRICT
+);
+
+CREATE TABLE "U2f" (
+    "Id" integer NOT NULL GENERATED BY DEFAULT AS IDENTITY,
+    "UserId" uuid NOT NULL,
+    "KeyHandle" character varying(200) NULL,
+    "Challenge" character varying(200) NULL,
+    "AppId" character varying(50) NULL,
+    "Version" character varying(20) NULL,
+    "CreationDate" timestamp without time zone NOT NULL,
+    CONSTRAINT "PK_U2f" PRIMARY KEY ("Id"),
+    CONSTRAINT "FK_U2f_User_UserId" FOREIGN KEY ("UserId") REFERENCES "User" ("Id") ON DELETE CASCADE
+);
+
+CREATE TABLE "CollectionGroups" (
+    "CollectionId" uuid NOT NULL,
+    "GroupId" uuid NOT NULL,
+    "ReadOnly" boolean NOT NULL,
+    "HidePasswords" boolean NOT NULL,
+    CONSTRAINT "PK_CollectionGroups" PRIMARY KEY ("CollectionId", "GroupId"),
+    CONSTRAINT "FK_CollectionGroups_Collection_CollectionId" FOREIGN KEY ("CollectionId") REFERENCES "Collection" ("Id") ON DELETE CASCADE,
+    CONSTRAINT "FK_CollectionGroups_Group_GroupId" FOREIGN KEY ("GroupId") REFERENCES "Group" ("Id") ON DELETE CASCADE
+);
+
+CREATE TABLE "CollectionCipher" (
+    "CollectionId" uuid NOT NULL,
+    "CipherId" uuid NOT NULL,
+    CONSTRAINT "PK_CollectionCipher" PRIMARY KEY ("CollectionId", "CipherId"),
+    CONSTRAINT "FK_CollectionCipher_Cipher_CipherId" FOREIGN KEY ("CipherId") REFERENCES "Cipher" ("Id") ON DELETE CASCADE,
+    CONSTRAINT "FK_CollectionCipher_Collection_CollectionId" FOREIGN KEY ("CollectionId") REFERENCES "Collection" ("Id") ON DELETE CASCADE
+);
+
+CREATE TABLE "CollectionUsers" (
+    "CollectionId" uuid NOT NULL,
+    "OrganizationUserId" uuid NOT NULL,
+    "UserId" uuid NULL,
+    "ReadOnly" boolean NOT NULL,
+    "HidePasswords" boolean NOT NULL,
+    CONSTRAINT "PK_CollectionUsers" PRIMARY KEY ("CollectionId", "OrganizationUserId"),
+    CONSTRAINT "FK_CollectionUsers_Collection_CollectionId" FOREIGN KEY ("CollectionId") REFERENCES "Collection" ("Id") ON DELETE CASCADE,
+    CONSTRAINT "FK_CollectionUsers_OrganizationUser_OrganizationUserId" FOREIGN KEY ("OrganizationUserId") REFERENCES "OrganizationUser" ("Id") ON DELETE CASCADE,
+    CONSTRAINT "FK_CollectionUsers_User_UserId" FOREIGN KEY ("UserId") REFERENCES "User" ("Id") ON DELETE RESTRICT
+);
+
+CREATE TABLE "GroupUser" (
+    "GroupId" uuid NOT NULL,
+    "OrganizationUserId" uuid NOT NULL,
+    "UserId" uuid NULL,
+    CONSTRAINT "PK_GroupUser" PRIMARY KEY ("GroupId", "OrganizationUserId"),
+    CONSTRAINT "FK_GroupUser_Group_GroupId" FOREIGN KEY ("GroupId") REFERENCES "Group" ("Id") ON DELETE CASCADE,
+    CONSTRAINT "FK_GroupUser_OrganizationUser_OrganizationUserId" FOREIGN KEY ("OrganizationUserId") REFERENCES "OrganizationUser" ("Id") ON DELETE CASCADE,
+    CONSTRAINT "FK_GroupUser_User_UserId" FOREIGN KEY ("UserId") REFERENCES "User" ("Id") ON DELETE RESTRICT
+);
+
+CREATE TABLE "ProviderOrganizationProviderUser" (
+    "Id" uuid NOT NULL,
+    "ProviderOrganizationId" uuid NOT NULL,
+    "ProviderUserId" uuid NOT NULL,
+    "Type" smallint NOT NULL,
+    "Permissions" text NULL,
+    "CreationDate" timestamp without time zone NOT NULL,
+    "RevisionDate" timestamp without time zone NOT NULL,
+    CONSTRAINT "PK_ProviderOrganizationProviderUser" PRIMARY KEY ("Id"),
+    CONSTRAINT "FK_ProviderOrganizationProviderUser_ProviderOrganization_Provi~" FOREIGN KEY ("ProviderOrganizationId") REFERENCES "ProviderOrganization" ("Id") ON DELETE CASCADE,
+    CONSTRAINT "FK_ProviderOrganizationProviderUser_ProviderUser_ProviderUserId" FOREIGN KEY ("ProviderUserId") REFERENCES "ProviderUser" ("Id") ON DELETE CASCADE
+);
+
+CREATE INDEX "IX_Cipher_OrganizationId" ON "Cipher" ("OrganizationId");
+
+CREATE INDEX "IX_Cipher_UserId" ON "Cipher" ("UserId");
+
+CREATE INDEX "IX_Collection_OrganizationId" ON "Collection" ("OrganizationId");
+
+CREATE INDEX "IX_CollectionCipher_CipherId" ON "CollectionCipher" ("CipherId");
+
+CREATE INDEX "IX_CollectionGroups_GroupId" ON "CollectionGroups" ("GroupId");
+
+CREATE INDEX "IX_CollectionUsers_OrganizationUserId" ON "CollectionUsers" ("OrganizationUserId");
+
+CREATE INDEX "IX_CollectionUsers_UserId" ON "CollectionUsers" ("UserId");
+
+CREATE INDEX "IX_Device_UserId" ON "Device" ("UserId");
+
+CREATE INDEX "IX_EmergencyAccess_GranteeId" ON "EmergencyAccess" ("GranteeId");
+
+CREATE INDEX "IX_EmergencyAccess_GrantorId" ON "EmergencyAccess" ("GrantorId");
+
+CREATE INDEX "IX_Folder_UserId" ON "Folder" ("UserId");
+
+CREATE INDEX "IX_Group_OrganizationId" ON "Group" ("OrganizationId");
+
+CREATE INDEX "IX_GroupUser_OrganizationUserId" ON "GroupUser" ("OrganizationUserId");
+
+CREATE INDEX "IX_GroupUser_UserId" ON "GroupUser" ("UserId");
+
+CREATE INDEX "IX_OrganizationUser_OrganizationId" ON "OrganizationUser" ("OrganizationId");
+
+CREATE INDEX "IX_OrganizationUser_UserId" ON "OrganizationUser" ("UserId");
+
+CREATE INDEX "IX_Policy_OrganizationId" ON "Policy" ("OrganizationId");
+
+CREATE INDEX "IX_ProviderOrganization_OrganizationId" ON "ProviderOrganization" ("OrganizationId");
+
+CREATE INDEX "IX_ProviderOrganization_ProviderId" ON "ProviderOrganization" ("ProviderId");
+
+CREATE INDEX "IX_ProviderOrganizationProviderUser_ProviderOrganizationId" ON "ProviderOrganizationProviderUser" ("ProviderOrganizationId");
+
+CREATE INDEX "IX_ProviderOrganizationProviderUser_ProviderUserId" ON "ProviderOrganizationProviderUser" ("ProviderUserId");
+
+CREATE INDEX "IX_ProviderUser_ProviderId" ON "ProviderUser" ("ProviderId");
+
+CREATE INDEX "IX_ProviderUser_UserId" ON "ProviderUser" ("UserId");
+
+CREATE INDEX "IX_Send_OrganizationId" ON "Send" ("OrganizationId");
+
+CREATE INDEX "IX_Send_UserId" ON "Send" ("UserId");
+
+CREATE INDEX "IX_SsoConfig_OrganizationId" ON "SsoConfig" ("OrganizationId");
+
+CREATE INDEX "IX_SsoUser_OrganizationId" ON "SsoUser" ("OrganizationId");
+
+CREATE INDEX "IX_SsoUser_UserId" ON "SsoUser" ("UserId");
+
+CREATE INDEX "IX_Transaction_OrganizationId" ON "Transaction" ("OrganizationId");
+
+CREATE INDEX "IX_Transaction_UserId" ON "Transaction" ("UserId");
+
+CREATE INDEX "IX_U2f_UserId" ON "U2f" ("UserId");
+
+INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+VALUES ('20210708191531_Init', '5.0.5');
+
+COMMIT;
+
+

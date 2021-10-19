@@ -1,29 +1,35 @@
 ﻿using System.Collections.Generic;
-using System.Linq;
-using Bit.Core.Enums.Provider;
+using System.ComponentModel.DataAnnotations;
+using Bit.Core.Models.Data;
 using Bit.Core.Models.Table.Provider;
 
 namespace Bit.Admin.Models
 {
     public class ProviderEditModel : ProviderViewModel
     {
-        public ProviderEditModel(Provider provider, IEnumerable<ProviderUser> providerUsers)
-            : base(provider, providerUsers)
+        public ProviderEditModel() { }
+
+        public ProviderEditModel(Provider provider, IEnumerable<ProviderUserUserDetails> providerUsers, IEnumerable<ProviderOrganizationOrganizationDetails> organizations)
+            : base(provider, providerUsers, organizations)
         {
             Name = provider.Name;
             BusinessName = provider.BusinessName;
             BillingEmail = provider.BillingEmail;
-            Enabled = provider.Enabled;
         }
 
-        public string Administrators { get; set; }
-
-        public bool Enabled { get; set; }
-
+        [Display(Name = "Billing Email")]
         public string BillingEmail { get; set; }
-
+        [Display(Name = "Business Name")]
         public string BusinessName { get; set; }
-
         public string Name { get; set; }
+        [Display(Name = "Events")]
+
+        public Provider ToProvider(Provider existingProvider)
+        {
+            existingProvider.Name = Name;
+            existingProvider.BusinessName = BusinessName;
+            existingProvider.BillingEmail = BillingEmail?.ToLowerInvariant()?.Trim();
+            return existingProvider;
+        }
     }
 }

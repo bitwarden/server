@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Azure.Storage.Queues;
+using Bit.Core.Utilities;
 
 namespace Bit.Notifications
 {
@@ -67,7 +68,7 @@ namespace Bit.Notifications
                             try
                             {
                                 await HubHelpers.SendNotificationToHubAsync(
-                                    message.MessageText, _hubContext, cancellationToken);
+                                    message.DecodeMessageText(), _hubContext, cancellationToken);
                                 await _queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt);
                             }
                             catch (Exception e)

@@ -12,8 +12,6 @@ using System.Security.Claims;
 using Bit.Core.Models;
 using Bit.Core.Models.Business;
 using U2fLib = U2F.Core.Crypto.U2F;
-using U2F.Core.Models;
-using U2F.Core.Utils;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Utilities;
@@ -52,6 +50,7 @@ namespace Bit.Core.Services
         private readonly ICurrentContext _currentContext;
         private readonly GlobalSettings _globalSettings;
         private readonly IOrganizationService _organizationService;
+        private readonly IProviderUserRepository _providerUserRepository;
 
         public UserService(
             IUserRepository userRepository,
@@ -79,7 +78,8 @@ namespace Bit.Core.Services
             IFido2 fido2,
             ICurrentContext currentContext,
             GlobalSettings globalSettings,
-            IOrganizationService organizationService)
+            IOrganizationService organizationService,
+            IProviderUserRepository providerUserRepository)
             : base(
                   store,
                   optionsAccessor,
@@ -113,6 +113,7 @@ namespace Bit.Core.Services
             _currentContext = currentContext;
             _globalSettings = globalSettings;
             _organizationService = organizationService;
+            _providerUserRepository = providerUserRepository;
         }
 
         public Guid? GetProperUserId(ClaimsPrincipal principal)
@@ -213,9 +214,18 @@ namespace Bit.Core.Services
                 {
                     return IdentityResult.Failed(new IdentityError
                     {
-                        Description = "You must leave or delete any organizations that you are the only owner of first."
+                        Description = "Cannot delete this user because it is the sole owner of at least one organization. Please delete these organizations or upgrade another user.",
                     });
                 }
+            }
+
+            var onlyOwnerProviderCount = await _providerUserRepository.GetCountByOnlyOwnerAsync(user.Id);
+            if (onlyOwnerProviderCount > 0)
+            {
+                return IdentityResult.Failed(new IdentityError
+                {
+                    Description = "Cannot delete this user because it is the sole owner of at least one provider. Please delete these providers or upgrade another user.",
+                });
             }
 
             if (!string.IsNullOrWhiteSpace(user.GatewaySubscriptionId))
@@ -687,10 +697,37 @@ namespace Bit.Core.Services
 
             user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
             user.Key = key;
+            user.ForcePasswordReset = true;
 
             await _userRepository.ReplaceAsync(user);
             await _mailService.SendAdminResetPasswordEmailAsync(user.Email, user.Name ?? user.Email, org.Name);
             await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_AdminResetPassword);
+            await _pushService.PushLogOutAsync(user.Id);
+
+            return IdentityResult.Success;
+        }
+        
+        public async Task<IdentityResult> UpdateTempPasswordAsync(User user, string newMasterPassword, string key, string hint)
+        {
+            if (!user.ForcePasswordReset)
+            {
+                throw new BadRequestException("User does not have a temporary password to update.");
+            }
+            
+            var result = await UpdatePasswordHash(user, newMasterPassword);
+            if (!result.Succeeded)
+            {
+                return result;
+            }
+
+            user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
+            user.ForcePasswordReset = false;
+            user.Key = key;
+            user.MasterPasswordHint = hint;
+
+            await _userRepository.ReplaceAsync(user);
+            await _mailService.SendUpdatedTempPasswordEmailAsync(user.Email, user.Name ?? user.Email);
+            await _eventService.LogUserEventAsync(user.Id, EventType.User_UpdatedTempPassword);
             await _pushService.PushLogOutAsync(user.Id);
 
             return IdentityResult.Success;
@@ -726,7 +763,7 @@ namespace Bit.Core.Services
         }
 
         public async Task<IdentityResult> UpdateKeyAsync(User user, string masterPassword, string key, string privateKey,
-            IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders)
+            IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders, IEnumerable<Send> sends)
         {
             if (user == null)
             {
@@ -739,9 +776,9 @@ namespace Bit.Core.Services
                 user.SecurityStamp = Guid.NewGuid().ToString();
                 user.Key = key;
                 user.PrivateKey = privateKey;
-                if (ciphers.Any() || folders.Any())
+                if (ciphers.Any() || folders.Any() || sends.Any())
                 {
-                    await _cipherRepository.UpdateUserKeysAndCiphersAsync(user, ciphers, folders);
+                    await _cipherRepository.UpdateUserKeysAndCiphersAsync(user, ciphers, folders, sends);
                 }
                 else
                 {
@@ -1183,15 +1220,6 @@ namespace Bit.Core.Services
             return await CanAccessPremium(user);
         }
 
-        //TODO refactor this to use the below method and enum
-        public async Task<string> GenerateEnterprisePortalSignInTokenAsync(User user)
-        {
-            var token = await GenerateUserTokenAsync(user, Options.Tokens.PasswordResetTokenProvider,
-                "EnterprisePortalTokenSignIn");
-            return token;
-        }
-
-
         public async Task<string> GenerateSignInTokenAsync(User user, string purpose)
         {
             var token = await GenerateUserTokenAsync(user, Options.Tokens.PasswordResetTokenProvider,
@@ -1264,24 +1292,18 @@ namespace Bit.Core.Services
 
         private async Task CheckPoliciesOnTwoFactorRemovalAsync(User user, IOrganizationService organizationService)
         {
-            var policies = await _policyRepository.GetManyByUserIdAsync(user.Id);
-            var twoFactorPolicies = policies.Where(p => p.Type == PolicyType.TwoFactorAuthentication && p.Enabled);
-            if (twoFactorPolicies.Any())
+            var twoFactorPolicies = await _policyRepository.GetManyByTypeApplicableToUserIdAsync(user.Id,
+                PolicyType.TwoFactorAuthentication);
+
+            var removeOrgUserTasks = twoFactorPolicies.Select(async p =>
             {
-                var userOrgs = await _organizationUserRepository.GetManyByUserAsync(user.Id);
-                var ownerOrgs = userOrgs.Where(o => o.Type == OrganizationUserType.Owner)
-                    .Select(o => o.OrganizationId).ToHashSet();
-                foreach (var policy in twoFactorPolicies)
-                {
-                    if (!ownerOrgs.Contains(policy.OrganizationId))
-                    {
-                        await organizationService.DeleteUserAsync(policy.OrganizationId, user.Id);
-                        var organization = await _organizationRepository.GetByIdAsync(policy.OrganizationId);
-                        await _mailService.SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(
-                            organization.Name, user.Email);
-                    }
-                }
-            }
+                await organizationService.DeleteUserAsync(p.OrganizationId, user.Id);
+                var organization = await _organizationRepository.GetByIdAsync(p.OrganizationId);
+                await _mailService.SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(
+                    organization.Name, user.Email);
+            }).ToArray();
+
+            await Task.WhenAll(removeOrgUserTasks);
         }
 
         public override async Task<IdentityResult> ConfirmEmailAsync(User user, string token)

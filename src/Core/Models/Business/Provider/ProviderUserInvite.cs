@@ -1,15 +1,39 @@
+using System;
 using System.Collections.Generic;
 using Bit.Core.Enums.Provider;
-using Bit.Core.Models.Data;
+using Bit.Core.Models.Api;
 
 namespace Bit.Core.Models.Business.Provider
 {
-    public class ProviderUserInvite
+    public class ProviderUserInvite<T>
     {
-        public IEnumerable<string> Emails { get; set; }
+        public IEnumerable<T> UserIdentifiers { get; set; }
         public ProviderUserType Type { get; set; }
-        public Permissions Permissions { get; set; }
+        public Guid InvitingUserId { get; set; }
+        public Guid ProviderId { get; set; }
+    }
 
-        public ProviderUserInvite() {}
+    public static class ProviderUserInviteFactory
+    {
+        public static ProviderUserInvite<string> CreateIntialInvite(IEnumerable<string> inviteeEmails, ProviderUserType type, Guid invitingUserId, Guid providerId)
+        {
+            return new ProviderUserInvite<string>
+            {
+                UserIdentifiers = inviteeEmails,
+                Type = type,
+                InvitingUserId = invitingUserId,
+                ProviderId = providerId
+            };
+        }
+
+        public static ProviderUserInvite<Guid> CreateReinvite(IEnumerable<Guid> inviteeUserIds, Guid invitingUserId, Guid providerId)
+        {
+            return new ProviderUserInvite<Guid>
+            {
+                UserIdentifiers = inviteeUserIds,
+                InvitingUserId = invitingUserId,
+                ProviderId = providerId
+            };
+        }
     }
 }

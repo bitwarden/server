@@ -1,11 +1,11 @@
 ﻿using System;
-using Bit.Core.Models.Table;
 using System.Threading.Tasks;
 using System.Data.SqlClient;
 using System.Data;
 using Dapper;
 using System.Linq;
 using System.Collections.Generic;
+using Bit.Core.Models.Data;
 using Bit.Core.Models.Table.Provider;
 using Bit.Core.Settings;
 
@@ -30,6 +30,18 @@ namespace Bit.Core.Repositories.SqlServer
                     new { Name = name, UserEmail = userEmail, Skip = skip, Take = take },
                     commandType: CommandType.StoredProcedure,
                     commandTimeout: 120);
+
+                return results.ToList();
+            }
+        }
+        
+        public async Task<ICollection<ProviderAbility>> GetManyAbilitiesAsync()
+        {
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<ProviderAbility>(
+                    "[dbo].[Provider_ReadAbilities]",
+                    commandType: CommandType.StoredProcedure);
 
                 return results.ToList();
             }

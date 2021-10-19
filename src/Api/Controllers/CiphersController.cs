@@ -8,6 +8,7 @@ using Bit.Core.Models.Api;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Core.Context;
+using Bit.Core.Utilities;
 using Bit.Api.Utilities;
 using System.Collections.Generic;
 using Bit.Core.Models.Table;
@@ -17,6 +18,7 @@ using Microsoft.Azure.EventGrid.Models;
 using Bit.Core.Models.Data;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using Bit.Core;
 
 namespace Bit.Api.Controllers
 {
@@ -29,6 +31,7 @@ namespace Bit.Api.Controllers
         private readonly ICipherService _cipherService;
         private readonly IUserService _userService;
         private readonly IAttachmentStorageService _attachmentStorageService;
+        private readonly IProviderService _providerService;
         private readonly ICurrentContext _currentContext;
         private readonly ILogger<CiphersController> _logger;
         private readonly GlobalSettings _globalSettings;
@@ -39,6 +42,7 @@ namespace Bit.Api.Controllers
             ICipherService cipherService,
             IUserService userService,
             IAttachmentStorageService attachmentStorageService,
+            IProviderService providerService,
             ICurrentContext currentContext,
             ILogger<CiphersController> logger,
             GlobalSettings globalSettings)
@@ -48,6 +52,7 @@ namespace Bit.Api.Controllers
             _cipherService = cipherService;
             _userService = userService;
             _attachmentStorageService = attachmentStorageService;
+            _providerService = providerService;
             _currentContext = currentContext;
             _logger = logger;
             _globalSettings = globalSettings;
@@ -71,7 +76,7 @@ namespace Bit.Api.Controllers
         {
             var cipher = await _cipherRepository.GetOrganizationDetailsByIdAsync(new Guid(id));
             if (cipher == null || !cipher.OrganizationId.HasValue ||
-                !_currentContext.ManageAllCollections(cipher.OrganizationId.Value))
+                !await _currentContext.ViewAllCollections(cipher.OrganizationId.Value))
             {
                 throw new NotFoundException();
             }
@@ -119,7 +124,7 @@ namespace Bit.Api.Controllers
         {
             var userId = _userService.GetProperUserId(User).Value;
             var cipher = model.ToCipherDetails(userId);
-            if (cipher.OrganizationId.HasValue && !_currentContext.OrganizationUser(cipher.OrganizationId.Value))
+            if (cipher.OrganizationId.HasValue && !await _currentContext.OrganizationUser(cipher.OrganizationId.Value))
             {
                 throw new NotFoundException();
             }
@@ -134,7 +139,7 @@ namespace Bit.Api.Controllers
         {
             var userId = _userService.GetProperUserId(User).Value;
             var cipher = model.Cipher.ToCipherDetails(userId);
-            if (cipher.OrganizationId.HasValue && !_currentContext.OrganizationUser(cipher.OrganizationId.Value))
+            if (cipher.OrganizationId.HasValue && !await _currentContext.OrganizationUser(cipher.OrganizationId.Value))
             {
                 throw new NotFoundException();
             }
@@ -148,7 +153,7 @@ namespace Bit.Api.Controllers
         public async Task<CipherMiniResponseModel> PostAdmin([FromBody]CipherCreateRequestModel model)
         {
             var cipher = model.Cipher.ToOrganizationCipher();
-            if (!_currentContext.ManageAllCollections(cipher.OrganizationId.Value))
+            if (!await _currentContext.EditAnyCollection(cipher.OrganizationId.Value))
             {
                 throw new NotFoundException();
             }
@@ -175,7 +180,7 @@ namespace Bit.Api.Controllers
                 (Guid?)null : new Guid(model.OrganizationId);
             if (cipher.OrganizationId != modelOrgId)
             {
-                throw new BadRequestException("Organization mismatch. Re-sync if you recently shared this item, " +
+                throw new BadRequestException("Organization mismatch. Re-sync if you recently moved this item, " +
                     "then try again.");
             }
 
@@ -192,7 +197,7 @@ namespace Bit.Api.Controllers
             var userId = _userService.GetProperUserId(User).Value;
             var cipher = await _cipherRepository.GetOrganizationDetailsByIdAsync(new Guid(id));
             if (cipher == null || !cipher.OrganizationId.HasValue ||
-                !_currentContext.ManageAllCollections(cipher.OrganizationId.Value))
+                !await _currentContext.EditAnyCollection(cipher.OrganizationId.Value))
             {
                 throw new NotFoundException();
             }
@@ -211,7 +216,7 @@ namespace Bit.Api.Controllers
         {
             var userId = _userService.GetProperUserId(User).Value;
             var orgIdGuid = new Guid(organizationId);
-            if (!_currentContext.ManageAllCollections(orgIdGuid) && !_currentContext.AccessReports(orgIdGuid))
+            if (!await _currentContext.ViewAllCollections(orgIdGuid) && !await _currentContext.AccessReports(orgIdGuid))
             {
                 throw new NotFoundException();
             }
@@ -223,6 +228,12 @@ namespace Bit.Api.Controllers
 
             var responses = ciphers.Select(c => new CipherMiniDetailsResponseModel(c, _globalSettings,
                 collectionCiphersGroupDict));
+
+            var providerId = await _currentContext.ProviderIdForOrg(orgIdGuid);
+            if (providerId.HasValue)
+            {
+                await _providerService.LogProviderAccessToOrganizationAsync(orgIdGuid);
+            }
             return new ListResponseModel<CipherMiniDetailsResponseModel>(responses);
         }
 
@@ -254,7 +265,7 @@ namespace Bit.Api.Controllers
             }
 
             var orgId = new Guid(organizationId);
-            if (!_currentContext.AccessImportExport(orgId))
+            if (!await _currentContext.AccessImportExport(orgId))
             {
                 throw new NotFoundException();
             }
@@ -282,7 +293,7 @@ namespace Bit.Api.Controllers
             var cipherId = new Guid(id);
             var cipher = await _cipherRepository.GetByIdAsync(cipherId);
             if (cipher == null || cipher.UserId != userId ||
-                !_currentContext.OrganizationUser(new Guid(model.Cipher.OrganizationId)))
+                !await _currentContext.OrganizationUser(new Guid(model.Cipher.OrganizationId)))
             {
                 throw new NotFoundException();
             }
@@ -303,7 +314,7 @@ namespace Bit.Api.Controllers
             var userId = _userService.GetProperUserId(User).Value;
             var cipher = await _cipherRepository.GetByIdAsync(new Guid(id), userId);
             if (cipher == null || !cipher.OrganizationId.HasValue ||
-                !_currentContext.OrganizationUser(cipher.OrganizationId.Value))
+                !await _currentContext.OrganizationUser(cipher.OrganizationId.Value))
             {
                 throw new NotFoundException();
             }
@@ -319,7 +330,7 @@ namespace Bit.Api.Controllers
             var userId = _userService.GetProperUserId(User).Value;
             var cipher = await _cipherRepository.GetByIdAsync(new Guid(id));
             if (cipher == null || !cipher.OrganizationId.HasValue ||
-                !_currentContext.ManageAllCollections(cipher.OrganizationId.Value))
+                !await _currentContext.EditAnyCollection(cipher.OrganizationId.Value))
             {
                 throw new NotFoundException();
             }
@@ -349,7 +360,7 @@ namespace Bit.Api.Controllers
             var userId = _userService.GetProperUserId(User).Value;
             var cipher = await _cipherRepository.GetByIdAsync(new Guid(id));
             if (cipher == null || !cipher.OrganizationId.HasValue ||
-                !_currentContext.ManageAllCollections(cipher.OrganizationId.Value))
+                !await _currentContext.EditAnyCollection(cipher.OrganizationId.Value))
             {
                 throw new NotFoundException();
             }
@@ -382,7 +393,7 @@ namespace Bit.Api.Controllers
             }
 
             if (model == null || string.IsNullOrWhiteSpace(model.OrganizationId) ||
-                !_currentContext.ManageAllCollections(new Guid(model.OrganizationId)))
+                !await _currentContext.EditAnyCollection(new Guid(model.OrganizationId)))
             {
                 throw new NotFoundException();
             }
@@ -409,7 +420,7 @@ namespace Bit.Api.Controllers
             var userId = _userService.GetProperUserId(User).Value;
             var cipher = await _cipherRepository.GetByIdAsync(new Guid(id));
             if (cipher == null || !cipher.OrganizationId.HasValue ||
-                !_currentContext.ManageAllCollections(cipher.OrganizationId.Value))
+                !await _currentContext.EditAnyCollection(cipher.OrganizationId.Value))
             {
                 throw new NotFoundException();
             }
@@ -438,7 +449,7 @@ namespace Bit.Api.Controllers
             }
 
             if (model == null || string.IsNullOrWhiteSpace(model.OrganizationId) ||
-                !_currentContext.ManageAllCollections(new Guid(model.OrganizationId)))
+                !await _currentContext.EditAnyCollection(new Guid(model.OrganizationId)))
             {
                 throw new NotFoundException();
             }
@@ -467,7 +478,7 @@ namespace Bit.Api.Controllers
             var userId = _userService.GetProperUserId(User).Value;
             var cipher = await _cipherRepository.GetOrganizationDetailsByIdAsync(new Guid(id));
             if (cipher == null || !cipher.OrganizationId.HasValue ||
-                !_currentContext.ManageAllCollections(cipher.OrganizationId.Value))
+                !await _currentContext.EditAnyCollection(cipher.OrganizationId.Value))
             {
                 throw new NotFoundException();
             }
@@ -514,7 +525,7 @@ namespace Bit.Api.Controllers
         public async Task PutShareMany([FromBody]CipherBulkShareRequestModel model)
         {
             var organizationId = new Guid(model.Ciphers.First().OrganizationId);
-            if (!_currentContext.OrganizationUser(organizationId))
+            if (!await _currentContext.OrganizationUser(organizationId))
             {
                 throw new NotFoundException();
             }
@@ -528,7 +539,7 @@ namespace Bit.Api.Controllers
             {
                 if (!ciphersDict.ContainsKey(cipher.Id.Value))
                 {
-                    throw new BadRequestException("Trying to share ciphers that you do not own.");
+                    throw new BadRequestException("Trying to move ciphers that you do not own.");
                 }
 
                 shareCiphers.Add((cipher.ToCipher(ciphersDict[cipher.Id.Value]), cipher.LastKnownRevisionDate));
@@ -561,7 +572,7 @@ namespace Bit.Api.Controllers
             else
             {
                 var orgId = new Guid(organizationId);
-                if (!_currentContext.ManageAllCollections(orgId))
+                if (!await _currentContext.EditAnyCollection(orgId))
                 {
                     throw new NotFoundException();
                 }
@@ -579,12 +590,12 @@ namespace Bit.Api.Controllers
                 await _cipherRepository.GetByIdAsync(idGuid, userId);
 
             if (cipher == null || (request.AdminRequest && (!cipher.OrganizationId.HasValue ||
-                !_currentContext.ManageAllCollections(cipher.OrganizationId.Value))))
+                !await _currentContext.EditAnyCollection(cipher.OrganizationId.Value))))
             {
                 throw new NotFoundException();
             }
 
-            if (request.FileSize > CipherService.MAX_FILE_SIZE && !_globalSettings.SelfHosted)
+            if (request.FileSize > CipherService.MAX_FILE_SIZE)
             {
                 throw new BadRequestException($"Max file size is {CipherService.MAX_FILE_SIZE_READABLE}.");
             }
@@ -622,6 +633,8 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("{id}/attachment/{attachmentId}")]
+        [SelfHosted(SelfHostedOnly = true)]
+        [RequestSizeLimit(Constants.FileSize501mb)]
         [DisableFormValueModelBinding]
         public async Task PostFileForExistingAttachment(string id, string attachmentId)
         {
@@ -646,7 +659,8 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("{id}/attachment")]
-        [RequestSizeLimit(105_906_176)]
+        [Obsolete("Deprecated Attachments API", false)]
+        [RequestSizeLimit(Constants.FileSize101mb)]
         [DisableFormValueModelBinding]
         public async Task<CipherResponseModel> PostAttachment(string id)
         {
@@ -670,7 +684,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("{id}/attachment-admin")]
-        [RequestSizeLimit(105_906_176)]
+        [RequestSizeLimit(Constants.FileSize101mb)]
         [DisableFormValueModelBinding]
         public async Task<CipherMiniResponseModel> PostAttachmentAdmin(string id)
         {
@@ -680,7 +694,7 @@ namespace Bit.Api.Controllers
             var userId = _userService.GetProperUserId(User).Value;
             var cipher = await _cipherRepository.GetOrganizationDetailsByIdAsync(idGuid);
             if (cipher == null || !cipher.OrganizationId.HasValue ||
-                !_currentContext.ManageAllCollections(cipher.OrganizationId.Value))
+                !await _currentContext.EditAnyCollection(cipher.OrganizationId.Value))
             {
                 throw new NotFoundException();
             }
@@ -703,7 +717,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("{id}/attachment/{attachmentId}/share")]
-        [RequestSizeLimit(105_906_176)]
+        [RequestSizeLimit(Constants.FileSize101mb)]
         [DisableFormValueModelBinding]
         public async Task PostAttachmentShare(string id, string attachmentId, Guid organizationId)
         {
@@ -711,7 +725,7 @@ namespace Bit.Api.Controllers
 
             var userId = _userService.GetProperUserId(User).Value;
             var cipher = await _cipherRepository.GetByIdAsync(new Guid(id));
-            if (cipher == null || cipher.UserId != userId || !_currentContext.OrganizationUser(organizationId))
+            if (cipher == null || cipher.UserId != userId || !await _currentContext.OrganizationUser(organizationId))
             {
                 throw new NotFoundException();
             }
@@ -746,7 +760,7 @@ namespace Bit.Api.Controllers
             var userId = _userService.GetProperUserId(User).Value;
             var cipher = await _cipherRepository.GetByIdAsync(idGuid);
             if (cipher == null || !cipher.OrganizationId.HasValue ||
-                !_currentContext.ManageAllCollections(cipher.OrganizationId.Value))
+                !await _currentContext.EditAnyCollection(cipher.OrganizationId.Value))
             {
                 throw new NotFoundException();
             }
@@ -797,11 +811,6 @@ namespace Bit.Api.Controllers
             if (!Request?.ContentType.Contains("multipart/") ?? true)
             {
                 throw new BadRequestException("Invalid content.");
-            }
-
-            if (Request.ContentLength > 105906176) // 101 MB, give em' 1 extra MB for cushion
-            {
-                throw new BadRequestException("Max file size is 100 MB.");
             }
         }
     }

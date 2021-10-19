@@ -19,6 +19,7 @@ using Bit.Core.Models.Table;
 using Newtonsoft.Json;
 using Bit.Core.Models.Data;
 using Microsoft.Extensions.Logging;
+using Bit.Core;
 
 namespace Bit.Api.Controllers
 {
@@ -166,18 +167,14 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("file")]
-        [RequestSizeLimit(105_906_176)]
+        [Obsolete("Deprecated File Send API", false)]
+        [RequestSizeLimit(Constants.FileSize101mb)]
         [DisableFormValueModelBinding]
         public async Task<SendResponseModel> PostFile()
         {
             if (!Request?.ContentType.Contains("multipart/") ?? true)
             {
                 throw new BadRequestException("Invalid content.");
-            }
-
-            if (Request.ContentLength > 105906176) // 101 MB, give em' 1 extra MB for cushion
-            {
-                throw new BadRequestException("Max file size is 100 MB.");
             }
 
             Send send = null;
@@ -249,17 +246,14 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("{id}/file/{fileId}")]
+        [SelfHosted(SelfHostedOnly = true)]
+        [RequestSizeLimit(Constants.FileSize501mb)]
         [DisableFormValueModelBinding]
         public async Task PostFileForExistingSend(string id, string fileId)
         {
             if (!Request?.ContentType.Contains("multipart/") ?? true)
             {
                 throw new BadRequestException("Invalid content.");
-            }
-
-            if (Request.ContentLength > 105906176 && !_globalSettings.SelfHosted) // 101 MB, give em' 1 extra MB for cushion
-            {
-                throw new BadRequestException("Max file size for direct upload is 100 MB.");
             }
 
             var send = await _sendRepository.GetByIdAsync(new Guid(id));

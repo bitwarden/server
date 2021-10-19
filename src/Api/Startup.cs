@@ -20,6 +20,10 @@ using Microsoft.OpenApi.Models;
 using System.Collections.Generic;
 using System;
 
+#if !OSS
+using Bit.CommCore.Utilities;
+#endif
+
 namespace Bit.Api
 {
     public class Startup
@@ -119,6 +123,12 @@ namespace Bit.Api
             services.AddDefaultServices(globalSettings);
             services.AddCoreLocalizationServices();
 
+            #if OSS
+                services.AddOosServices();
+            #else
+                services.AddCommCoreServices();
+            #endif
+
             // MVC
             services.AddMvc(config =>
             {
@@ -126,7 +136,7 @@ namespace Bit.Api
                 config.Conventions.Add(new PublicApiControllersModelConvention());
             }).AddNewtonsoftJson(options =>
             {
-                if (Environment.IsProduction() && Configuration["swaggerGen"] != "true")
+                if ((Environment.IsProduction() || Environment.IsEnvironment("QA")) && Configuration["swaggerGen"] != "true")
                 {
                     options.SerializerSettings.ContractResolver = new DefaultContractResolver();
                 }

@@ -3,15 +3,16 @@ using Bit.Core.Models.Table;
 using System.Collections.Generic;
 using System.Linq;
 using Bit.Core.Models.Data;
-using Bit.Core.Services;
 
 namespace Bit.Core.Models.Api
 {
     public class ProfileResponseModel : ResponseModel
     {
         public ProfileResponseModel(User user,
-            IEnumerable<OrganizationUserOrganizationDetails> organizationsUserDetails, bool twoFactorEnabled)
-            : base("profile")
+            IEnumerable<OrganizationUserOrganizationDetails> organizationsUserDetails,
+            IEnumerable<ProviderUserProviderDetails> providerUserDetails,
+            IEnumerable<ProviderUserOrganizationDetails> providerUserOrganizationDetails,
+            bool twoFactorEnabled) : base("profile")
         {
             if (user == null)
             {
@@ -29,7 +30,11 @@ namespace Bit.Core.Models.Api
             Key = user.Key;
             PrivateKey = user.PrivateKey;
             SecurityStamp = user.SecurityStamp;
+            ForcePasswordReset = user.ForcePasswordReset;
             Organizations = organizationsUserDetails?.Select(o => new ProfileOrganizationResponseModel(o));
+            Providers = providerUserDetails?.Select(p => new ProfileProviderResponseModel(p));
+            ProviderOrganizations =
+                providerUserOrganizationDetails?.Select(po => new ProfileProviderOrganizationResponseModel(po));
         }
 
         public string Id { get; set; }
@@ -43,6 +48,9 @@ namespace Bit.Core.Models.Api
         public string Key { get; set; }
         public string PrivateKey { get; set; }
         public string SecurityStamp { get; set; }
+        public bool ForcePasswordReset { get; set; }
         public IEnumerable<ProfileOrganizationResponseModel> Organizations { get; set; }
+        public IEnumerable<ProfileProviderResponseModel> Providers { get; set; }
+        public IEnumerable<ProfileProviderOrganizationResponseModel> ProviderOrganizations { get; set; }
     }
 }

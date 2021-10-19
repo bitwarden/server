@@ -1,5 +1,5 @@
 ﻿CREATE PROCEDURE [dbo].[User_Create]
-    @Id UNIQUEIDENTIFIER,
+    @Id UNIQUEIDENTIFIER OUTPUT,
     @Name NVARCHAR(50),
     @Email NVARCHAR(256),
     @EmailVerified BIT,
@@ -29,7 +29,8 @@
     @KdfIterations INT,
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
-    @ApiKey VARCHAR(30)
+    @ApiKey VARCHAR(30),
+    @ForcePasswordReset BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON
@@ -66,7 +67,8 @@ BEGIN
         [KdfIterations],
         [CreationDate],
         [RevisionDate],
-        [ApiKey]
+        [ApiKey],
+        [ForcePasswordReset]
     )
     VALUES
     (
@@ -100,6 +102,7 @@ BEGIN
         @KdfIterations,
         @CreationDate,
         @RevisionDate,
-        @ApiKey
+        @ApiKey,
+        @ForcePasswordReset
     )
 END

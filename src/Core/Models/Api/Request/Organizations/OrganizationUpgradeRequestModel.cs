@@ -34,7 +34,7 @@ namespace Bit.Core.Models.Api
                 }
             };
 
-            Keys.ToOrganizationUpgrade(orgUpgrade);
+            Keys?.ToOrganizationUpgrade(orgUpgrade);
 
             return orgUpgrade;
         }

@@ -164,6 +164,7 @@ namespace Bit.Core.IdentityServer
                 customResponse.Add("Key", user.Key);
             }
 
+            customResponse.Add("ForcePasswordReset", user.ForcePasswordReset);
             customResponse.Add("ResetMasterPassword", string.IsNullOrWhiteSpace(user.MasterPassword));
             customResponse.Add("Kdf", (byte)user.Kdf);
             customResponse.Add("KdfIterations", user.KdfIterations);
@@ -470,12 +471,24 @@ namespace Bit.Core.IdentityServer
             }
         }
 
+        protected async Task<bool> KnownDeviceAsync(User user, ValidatedTokenRequest request) =>
+            (await GetKnownDeviceAsync(user, request)) != default;
+
+        protected async Task<Device> GetKnownDeviceAsync(User user, ValidatedTokenRequest request)
+        {
+            if (user == null)
+            {
+                return default;
+            }
+
+            return await _deviceRepository.GetByIdentifierAsync(GetDeviceFromRequest(request).Identifier, user.Id);
+        }
         private async Task<Device> SaveDeviceAsync(User user, ValidatedTokenRequest request)
         {
             var device = GetDeviceFromRequest(request);
             if (device != null)
             {
-                var existingDevice = await _deviceRepository.GetByIdentifierAsync(device.Identifier, user.Id);
+                var existingDevice = await GetKnownDeviceAsync(user, request);
                 if (existingDevice == null)
                 {
                     device.UserId = user.Id;

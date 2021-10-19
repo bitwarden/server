@@ -1,0 +1,12 @@
+START TRANSACTION;
+
+DROP TABLE "ProviderOrganizationProviderUser";
+
+ALTER TABLE "Event" ADD "ProviderId" uuid NULL;
+
+ALTER TABLE "Event" ADD "ProviderUserId" uuid NULL;
+
+INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+VALUES ('20210709092227_RemoveProviderOrganizationProviderUser', '5.0.5');
+
+COMMIT;

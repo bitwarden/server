@@ -30,8 +30,5 @@ namespace Bit.Core.Services
         public LocalizedString GetString(string name) => _stringLocalizer[name];
         public LocalizedString GetString(string name, params object[] arguments) =>
             _stringLocalizer[name, arguments];
-
-        [Obsolete("This method is obsolete. Use `CurrentCulture` and `CurrentUICulture` instead.")]
-        public IHtmlLocalizer WithCulture(CultureInfo culture) => _htmlLocalizer.WithCulture(culture);
     }
 }

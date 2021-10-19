@@ -11,5 +11,7 @@
         DisableSend = 6,
         SendOptions = 7,
         ResetPassword = 8,
+        MaximumVaultTimeout = 9,
+        DisablePersonalVaultExport = 10,
     }
 }

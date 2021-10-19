@@ -16,9 +16,22 @@ namespace Bit.Core.Repositories.SqlServer
 {
     public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IOrganizationUserRepository
     {
+        /// <summary>
+        /// For use with methods with TDS stream issues.
+        /// This has been observed in Linux-hosted SqlServers with large table-valued-parameters
+        /// https://github.com/dotnet/SqlClient/issues/54
+        /// </summary>
+        private string _marsConnectionString;
+
         public OrganizationUserRepository(GlobalSettings globalSettings)
             : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
-        { }
+        {
+            var builder = new SqlConnectionStringBuilder(ConnectionString)
+            {
+                MultipleActiveResultSets = true,
+            };
+            _marsConnectionString = builder.ToString();
+        }
 
         public OrganizationUserRepository(string connectionString, string readOnlyConnectionString)
             : base(connectionString, readOnlyConnectionString)
@@ -76,17 +89,19 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
-        public async Task<IEnumerable<string>> SelectKnownEmailsAsync(Guid organizationId, IEnumerable<string> emails,
+        public async Task<ICollection<string>> SelectKnownEmailsAsync(Guid organizationId, IEnumerable<string> emails,
             bool onlyRegisteredUsers)
         {
-            using (var connection = new SqlConnection(ConnectionString))
+            var emailsTvp = emails.ToArrayTVP("Email");
+            using (var connection = new SqlConnection(_marsConnectionString))
             {
                 var result = await connection.QueryAsync<string>(
                     "[dbo].[OrganizationUser_SelectKnownEmails]",
-                    new { OrganizationId = organizationId, Emails = emails.ToArrayTVP("Email"), OnlyUsers = onlyRegisteredUsers },
+                    new { OrganizationId = organizationId, Emails = emailsTvp, OnlyUsers = onlyRegisteredUsers },
                     commandType: CommandType.StoredProcedure);
 
-                return result;
+                // Return as a list to avoid timing out the sql connection
+                return result.ToList();
             }
         }
 
@@ -225,7 +240,7 @@ namespace Bit.Core.Repositories.SqlServer
             }
         }
 
-        public async Task CreateAsync(OrganizationUser obj, IEnumerable<SelectionReadOnly> collections)
+        public async Task<Guid> CreateAsync(OrganizationUser obj, IEnumerable<SelectionReadOnly> collections)
         {
             obj.SetNewId();
             var objWithCollections = JsonConvert.DeserializeObject<OrganizationUserWithCollections>(
@@ -239,6 +254,8 @@ namespace Bit.Core.Repositories.SqlServer
                     objWithCollections,
                     commandType: CommandType.StoredProcedure);
             }
+
+            return obj.Id;
         }
 
         public async Task ReplaceAsync(OrganizationUser obj, IEnumerable<SelectionReadOnly> collections)
@@ -254,11 +271,6 @@ namespace Bit.Core.Repositories.SqlServer
                     objWithCollections,
                     commandType: CommandType.StoredProcedure);
             }
-        }
-
-        public class OrganizationUserWithCollections : OrganizationUser
-        {
-            public DataTable Collections { get; set; }
         }
 
         public async Task<ICollection<OrganizationUser>> GetManyByManyUsersAsync(IEnumerable<Guid> userIds)
@@ -329,11 +341,11 @@ namespace Bit.Core.Repositories.SqlServer
             await ReplaceManyAsync(replaceUsers);
         }
 
-        public async Task CreateManyAsync(IEnumerable<OrganizationUser> organizationUsers)
+        public async Task<ICollection<Guid>> CreateManyAsync(IEnumerable<OrganizationUser> organizationUsers)
         {
             if (!organizationUsers.Any())
             {
-                return;
+                return default;
             }
 
             foreach(var organizationUser in organizationUsers)
@@ -341,13 +353,16 @@ namespace Bit.Core.Repositories.SqlServer
                 organizationUser.SetNewId();
             }
 
-            using (var connection = new SqlConnection(ConnectionString))
+            var orgUsersTVP = organizationUsers.ToTvp();
+            using (var connection = new SqlConnection(_marsConnectionString))
             {
                 var results = await connection.ExecuteAsync(
                     $"[{Schema}].[{Table}_CreateMany]",
-                    new { OrganizationUsersInput = organizationUsers.ToTvp() },
+                    new { OrganizationUsersInput = orgUsersTVP },
                     commandType: CommandType.StoredProcedure);
             }
+
+            return organizationUsers.Select(u => u.Id).ToList();
         }
 
         public async Task ReplaceManyAsync(IEnumerable<OrganizationUser> organizationUsers)
@@ -357,11 +372,12 @@ namespace Bit.Core.Repositories.SqlServer
                 return;
             }
 
-            using (var connection = new SqlConnection(ConnectionString))
+            var orgUsersTVP = organizationUsers.ToTvp();
+            using (var connection = new SqlConnection(_marsConnectionString))
             {
                 var results = await connection.ExecuteAsync(
                     $"[{Schema}].[{Table}_UpdateMany]",
-                    new { OrganizationUsersInput = organizationUsers.ToTvp() },
+                    new { OrganizationUsersInput = orgUsersTVP },
                     commandType: CommandType.StoredProcedure);
             }
         }
@@ -374,6 +390,19 @@ namespace Bit.Core.Repositories.SqlServer
                 var results = await connection.QueryAsync<OrganizationUserPublicKey>(
                     "[dbo].[User_ReadPublicKeysByOrganizationUserIds]",
                     new { OrganizationId = organizationId, OrganizationUserIds = Ids.ToGuidIdArrayTVP() },
+                    commandType: CommandType.StoredProcedure);
+
+                return results.ToList();
+            }
+        }
+
+        public async Task<IEnumerable<OrganizationUserUserDetails>> GetManyByMinimumRoleAsync(Guid organizationId, OrganizationUserType minRole)
+        {
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<OrganizationUserUserDetails>(
+                    "[dbo].[OrganizationUser_ReadByMinimumRole]",
+                    new { OrganizationId = organizationId, MinRole = minRole },
                     commandType: CommandType.StoredProcedure);
 
                 return results.ToList();

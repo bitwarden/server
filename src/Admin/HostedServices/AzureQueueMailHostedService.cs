@@ -12,6 +12,7 @@ using Azure.Storage.Queues.Models;
 using System.Linq;
 using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
+using Bit.Core.Utilities;
 
 namespace Bit.Admin.HostedServices
 {
@@ -69,7 +70,7 @@ namespace Bit.Admin.HostedServices
                 {
                     try
                     {
-                        var token = JToken.Parse(message.MessageText);
+                        var token = JToken.Parse(message.DecodeMessageText());
                         if (token is JArray)
                         {
                             foreach (var mailQueueMessage in token.ToObject<List<MailQueueMessage>>())

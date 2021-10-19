@@ -11,6 +11,8 @@ UPDATE
     [dbo].[Organization]
 SET
     [UseSso] = (CASE WHEN [PlanType] = 10 OR [PlanType] = 11 THEN 1 ELSE 0 END)
+WHERE
+    [UseSso] IS NULL
 GO
 
 ALTER TABLE

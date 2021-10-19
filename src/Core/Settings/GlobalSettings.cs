@@ -43,8 +43,11 @@ namespace Bit.Core.Settings
         public virtual CaptchaSettings Captcha { get; set; } = new CaptchaSettings();
         public virtual InstallationSettings Installation { get; set; } = new InstallationSettings();
         public virtual BaseServiceUriSettings BaseServiceUri { get; set; }
+        public virtual string DatabaseProvider { get; set; }
         public virtual SqlSettings SqlServer { get; set; } = new SqlSettings();
         public virtual SqlSettings PostgreSql { get; set; } = new SqlSettings();
+        public virtual SqlSettings MySql { get; set; } = new SqlSettings();
+        public virtual SqlSettings Sqlite { get; set; } = new SqlSettings();
         public virtual MailSettings Mail { get; set; } = new MailSettings();
         public virtual ConnectionStringSettings Storage { get; set; } = new ConnectionStringSettings();
         public virtual ConnectionStringSettings Events { get; set; } = new ConnectionStringSettings();
@@ -114,14 +117,12 @@ namespace Bit.Core.Settings
             private string _admin;
             private string _notifications;
             private string _sso;
-            private string _portal;
             private string _internalApi;
             private string _internalIdentity;
             private string _internalAdmin;
             private string _internalNotifications;
             private string _internalSso;
             private string _internalVault;
-            private string _internalPortal;
 
             public BaseServiceUriSettings(GlobalSettings globalSettings)
             {
@@ -156,11 +157,6 @@ namespace Bit.Core.Settings
                 get => _globalSettings.BuildExternalUri(_sso, "sso");
                 set => _sso = value;
             }
-            public string Portal
-            {
-                get => _globalSettings.BuildExternalUri(_portal, "portal");
-                set => _portal = value;
-            }
 
             public string InternalNotifications
             {
@@ -191,11 +187,6 @@ namespace Bit.Core.Settings
             {
                 get => _globalSettings.BuildInternalUri(_internalSso, "sso");
                 set => _internalSso = value;
-            }
-            public string InternalPortal
-            {
-                get => _globalSettings.BuildInternalUri(_internalPortal, "portal");
-                set => _internalPortal = value;
             }
         }
 
@@ -470,6 +461,7 @@ namespace Bit.Core.Settings
 
         public class CaptchaSettings
         {
+            public bool ForceCaptchaRequired { get; set; } = false;
             public string HCaptchaSecretKey { get; set; }
             public string HCaptchaSiteKey { get; set; }
         }
