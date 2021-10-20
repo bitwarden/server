@@ -101,6 +101,76 @@ jobs:
           slot: "staging"
 
 
+  release-docker:
+    name: Build Docker images
+    runs-on: ubuntu-20.04
+    needs: build-artifacts
+    env:
+      _RELEASE_VERSION: ${{ needs.setup.outputs.release_version }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service_name: Admin
+          - service_name: Api
+          - service_name: Attachments
+          - service_name: Events
+          - service_name: Icons
+          - service_name: Identity
+          - service_name: K8S-Proxy
+          - service_name: MsSql
+          - service_name: Nginx
+          - service_name: Notifications
+          - service_name: Server
+          - service_name: Setup
+          - service_name: Sso
+    steps:
+      - name: Print environment
+        run: |
+          whoami
+          docker --version
+          echo "GitHub ref: $GITHUB_REF"
+          echo "GitHub event: $GITHUB_EVENT"
+
+      - name: Setup DCT
+        id: setup-dct
+        uses: bitwarden/gh-actions/setup-docker-trust@a8c384a05a974c05c48374c818b004be221d43ff
+        with:
+          azure-creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
+          azure-keyvault-name: "bitwarden-prod-kv"
+
+      - name: Checkout repo
+        uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
+
+      - name: Setup service name
+        id: setup
+        run: |
+          SERVICE_NAME=$(echo "${{ matrix.service_name }}" | awk '{print tolower($0)}')
+          echo "Matrix name: ${{ matrix.service_name }}"
+          echo "SERVICE_NAME: $SERVICE_NAME"
+          echo "::set-output name=service_name::$SERVICE_NAME"
+
+      - name: Pull latest selfhost Release image
+        run: docker pull bitwarden/${{ steps.setup.outputs.service_name }}:latest
+
+      - name: Tag version
+        run: |
+          docker tag bitwarden/${{ steps.setup.outputs.service_name }}:latest bitwarden/${{ steps.setup.outputs.service_name }}:$_RELEASE_VERSION
+
+      - name: List Docker images
+        run: docker images
+
+      - name: Push latest image
+        run: |
+          docker push bitwarden/${{ steps.setup.outputs.service_name }}:$_RELEASE_VERSION
+        env:
+          DOCKER_CONTENT_TRUST: 1
+          DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ steps.setup-dct.outputs.dct-delegate-repo-passphrase }}
+
+      - name: Log out of Docker
+        run: docker logout
+
+
   release:
     name: Create GitHub Release
     runs-on: ubuntu-20.04
