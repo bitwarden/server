@@ -10,7 +10,12 @@
     <dd class="col-sm-8 col-lg-9">@(Model.Organization.ExpirationDate?.ToString() ?? "-")</dd>
 
     <dt class="col-sm-4 col-lg-3">Users</dt>
-    <dd class="col-sm-8 col-lg-9">@Model.UserCount / @(Model.Organization.Seats?.ToString() ?? "-")</dd>
+    <dd class="col-sm-8 col-lg-9">
+        @Model.UserCount / @(Model.Organization.Seats?.ToString() ?? "-")
+        (<span title="Invited">@Model.UserInvitedCount</span> /
+        <span title="Accepted">@Model.UserAcceptedCount</span> /
+        <span title="Confirmed">@Model.UserConfirmedCount</span>)
+    </dd>
 
     <dt class="col-sm-4 col-lg-3">Owners</dt>
     <dd class="col-sm-8 col-lg-9">@(string.IsNullOrWhiteSpace(Model.Owners) ? "None" : Model.Owners)</dd>
@@ -32,7 +37,7 @@
 
     <dt class="col-sm-4 col-lg-3">Policies</dt>
     <dd class="col-sm-8 col-lg-9">@Model.PolicyCount</dd>
-    
+
     <dt class="col-sm-4 col-lg-3">Public/Private Keys</dt>
     <dd class="col-sm-8 col-lg-9">@(Model.HasPublicPrivateKeys ? "Yes" : "No")</dd>
 

@@ -17,6 +17,9 @@ namespace Bit.Admin.Models
         {
             Organization = org;
             HasPublicPrivateKeys = org.PublicKey != null && org.PrivateKey != null;
+            UserInvitedCount = orgUsers.Count(u => u.Status == OrganizationUserStatusType.Invited);
+            UserAcceptedCount = orgUsers.Count(u => u.Status == OrganizationUserStatusType.Accepted);
+            UserConfirmedCount = orgUsers.Count(u => u.Status == OrganizationUserStatusType.Confirmed);
             UserCount = orgUsers.Count();
             CipherCount = ciphers.Count();
             CollectionCount = collections.Count();
@@ -35,6 +38,9 @@ namespace Bit.Admin.Models
         public Organization Organization { get; set; }
         public string Owners { get; set; }
         public string Admins { get; set; }
+        public int UserInvitedCount { get; set; }
+        public int UserConfirmedCount { get; set; }
+        public int UserAcceptedCount { get; set; }
         public int UserCount { get; set; }
         public int CipherCount { get; set; }
         public int CollectionCount { get; set; }
