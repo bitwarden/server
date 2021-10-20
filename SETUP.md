@@ -52,7 +52,7 @@ We provide a helper script which will create the development database `vault_dev
 .\dev\migrate.ps1 -r
 ```
 
-**Note:** If all or many migrations are skipped even though this is a new database, make sure that there is not a `last_migration` file located in `dev/.data/mssql`. If there is, remove it and run the helper script again.
+**Note:** If all or many migrations are skipped even though this is a new database, make sure that there is not a `last_migration` file located in `dev/.data/mssql`. If there is, remove it and run the helper script again. This can happen if you create the database, run migrations, then delete it.
 
 ### Azurite
 
