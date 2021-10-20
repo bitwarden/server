@@ -176,8 +176,7 @@ namespace Bit.Api.Controllers
             {
                 collection = await _collectionRepository.GetByIdAsync(id);
             }
-
-            if (await _currentContext.ViewAssignedCollections(orgId))
+            else if (await _currentContext.ViewAssignedCollections(orgId))
             {
                 collection = await _collectionRepository.GetByIdAsync(id, _currentContext.UserId.Value);
             }
