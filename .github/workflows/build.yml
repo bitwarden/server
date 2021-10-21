@@ -299,7 +299,7 @@ jobs:
         if: ${{ matrix.dotnet }}
         run: |
           mkdir -p ${{ matrix.base_path}}/${{ matrix.service_name }}/obj/build-output/publish
-          unzip ${{ matrix.service_name }}.zip -d ${{ matrix.base_path}}/${{ matrix.service_name }}/obj/build-output/publish
+          unzip ${{ matrix.service_name }}.zip -d ${{ matrix.base_path }}/${{ matrix.service_name }}/obj/build-output/publish
 
       - name: Build Docker images
         run: |

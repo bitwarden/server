@@ -17,7 +17,7 @@ jobs:
         run: |
           if [[ "$GITHUB_REF" != "refs/heads/release" ]]; then
             echo "==================================="
-            echo "[!] Can only release from the 'release' branches"
+            echo "[!] Can only release from the 'release' branch"
             echo "==================================="
             exit 1
           fi
