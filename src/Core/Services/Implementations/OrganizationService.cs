@@ -1454,7 +1454,8 @@ namespace Bit.Core.Services
             return result;
         }
 
-        internal async Task<(bool canScale, string failureReason)> CanScaleAsync(Organization organization, int seatsToAdd)
+        public async Task<(bool canScale, string failureReason)> CanScaleAsync(Organization organization,
+            int seatsToAdd, bool checkUserPermissions = true)
         {
             var failureReason = "";
             if (_globalSettings.SelfHosted)
@@ -1463,7 +1464,7 @@ namespace Bit.Core.Services
                 return (false, failureReason);
             }
 
-            if (!await _currentContext.ManageUsers(organization.Id))
+            if (checkUserPermissions && !await _currentContext.ManageUsers(organization.Id))
             {
                 failureReason = "Cannot manage organization users.";
                 return (false, failureReason);
