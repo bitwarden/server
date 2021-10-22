@@ -298,8 +298,8 @@ jobs:
       - name: Setup build artifact
         if: ${{ matrix.dotnet }}
         run: |
-          mkdir -p ${{ matrix.base_path}}/${{ matrix.service_name}}/obj/build-output/publish
-          unzip ${{ matrix.service_name }}.zip -d ${{ matrix.base_path}}/${{ matrix.service_name}}/obj/build-output/publish
+          mkdir -p ${{ matrix.base_path}}/${{ matrix.service_name }}/obj/build-output/publish
+          unzip ${{ matrix.service_name }}.zip -d ${{ matrix.base_path }}/${{ matrix.service_name }}/obj/build-output/publish
 
       - name: Build Docker images
         run: |
@@ -323,6 +323,12 @@ jobs:
           docker tag ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }} \
             ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }}:dev
 
+      - name: Tag latest
+        if: github.ref == 'refs/heads/release'
+        run: |
+          docker tag ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }} \
+            ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }}:latest
+
       - name: List Docker images
         if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc'
         run: docker images
@@ -342,6 +348,11 @@ jobs:
         if: github.ref == 'refs/heads/master'
         run: |
           docker push ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }}:dev
+
+      - name: Push latest images
+        if: github.ref == 'refs/heads/release'
+        run: |
+          docker push ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }}:latest
 
       - name: Log out of Docker
         if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc'
