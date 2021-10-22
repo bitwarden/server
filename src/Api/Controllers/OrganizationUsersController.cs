@@ -61,7 +61,8 @@ namespace Bit.Api.Controllers
         public async Task<ListResponseModel<OrganizationUserUserDetailsResponseModel>> Get(string orgId)
         {
             var orgGuidId = new Guid(orgId);
-            if (!await _currentContext.ViewAssignedCollections(orgGuidId) &&
+            if (!await _currentContext.ViewAllCollections(orgGuidId) &&
+                !await _currentContext.ViewAssignedCollections(orgGuidId) &&
                 !await _currentContext.ManageGroups(orgGuidId) &&
                 !await _currentContext.ManageUsers(orgGuidId))
             {

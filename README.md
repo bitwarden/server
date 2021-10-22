@@ -25,7 +25,7 @@ Please read the [Setup guide](https://github.com/bitwarden/server/blob/master/SE
 
 ### Requirements
 
-- [.NET Core 5.0 SDK](https://www.microsoft.com/net/download/core)
+- [.NET 5.0 SDK](https://dotnet.microsoft.com/download)
 - [SQL Server 2017](https://docs.microsoft.com/en-us/sql/index)
 
 *These dependencies are free to use.*
