@@ -11,7 +11,7 @@ LIMIT 1
 INTO @run_migration_email;
 
 SET @stmt = case @run_migration_seats + @run_migration_email
-WHEN 0 THEN 'UPDATE `Organization` SET MaxAutoscaleSeats = Seats'
+WHEN 0 THEN 'UPDATE `Organization` SET `MaxAutoscaleSeats` = `Seats`'
 ELSE 'SELECT ''No migration necessary'''
 END;
 
