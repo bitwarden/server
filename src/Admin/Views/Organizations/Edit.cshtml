@@ -6,7 +6,7 @@
 @section Scripts {
     <script>
         (() => {
-                document.getElementById('teams-trial').addEventListener('click', () => {
+            document.getElementById('teams-trial').addEventListener('click', () => {
                 if (document.getElementById('@(nameof(Model.PlanType))').value !==
                     '@((byte)Bit.Core.Enums.PlanType.Free)') {
                     alert('Organization is not on a free plan.');
@@ -37,7 +37,7 @@
                 document.getElementById('@(nameof(Model.ExpirationDate))').value = '@Model.FourteenDayExpirationDate';
                 document.getElementById('@(nameof(Model.SalesAssistedTrialStarted))').value = true;
 
-                        });
+            });
 
             document.getElementById('enterprise-trial').addEventListener('click', () => {
                 if (document.getElementById('@(nameof(Model.PlanType))').value !==
