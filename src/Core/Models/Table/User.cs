@@ -58,6 +58,7 @@ namespace Bit.Core.Models.Table
         public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
         public DateTime RevisionDate { get; internal set; } = DateTime.UtcNow;
         public bool ForcePasswordReset { get; set; }
+        public bool UsesCryptoAgent { get; set; }
 
         public void SetNewId()
         {

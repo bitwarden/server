@@ -270,12 +270,7 @@ namespace Bit.Core.Business.Sso
 
         private DynamicAuthenticationScheme GetSchemeFromSsoConfig(SsoConfig config)
         {
-            var options = new JsonSerializerOptions
-            {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            };
-            var data = JsonSerializer.Deserialize<SsoConfigurationData>(config.Data, options);
-
+            var data = config.GetData();
             return data.ConfigType switch
             {
                 SsoType.OpenIdConnect => GetOidcAuthenticationScheme(config.OrganizationId.ToString(), data),
