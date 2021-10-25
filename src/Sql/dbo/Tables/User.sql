@@ -31,6 +31,7 @@
     [RevisionDate]                    DATETIME2 (7)    NOT NULL,
     [ApiKey]                          VARCHAR (30)     NOT NULL,
     [ForcePasswordReset]              BIT              NOT NULL,
+    [UsesCryptoAgent]                 BIT              NOT NULL,
     CONSTRAINT [PK_User] PRIMARY KEY CLUSTERED ([Id] ASC)
 );
 

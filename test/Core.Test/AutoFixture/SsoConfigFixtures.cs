@@ -32,9 +32,7 @@ namespace Bit.Core.Test.AutoFixture.SsoConfigFixtures
             var fixture = new Fixture();
             var ssoConfig = fixture.WithAutoNSubstitutions().Create<TableModel.SsoConfig>();
             var ssoConfigData = fixture.WithAutoNSubstitutions().Create<SsoConfigurationData>();
-            ssoConfig.Data = JsonSerializer.Serialize(ssoConfigData, new JsonSerializerOptions(){
-               PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            });
+            ssoConfig.SetData(ssoConfigData);
             return ssoConfig;
         }
     }
