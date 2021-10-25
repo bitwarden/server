@@ -891,18 +891,5 @@ namespace Bit.Core.Test.Services
             Assert.False(result);
             Assert.Contains("Cannot autoscale on self-hosted instance", failureMessage);
         }
-
-        [Theory, PaidOrganizationAutoData]
-        public async Task CanScale_FailsIfCannotManageUsers(Organization organization,
-            SutProvider<OrganizationService> sutProvider)
-        {
-            organization.MaxAutoscaleSeats = null;
-            sutProvider.GetDependency<ICurrentContext>().ManageUsers(organization.Id).Returns(false);
-
-            var (result, failureMessage) = sutProvider.Sut.CanScale(organization, 10);
-
-            Assert.False(result);
-            Assert.Contains("Cannot manage organization users", failureMessage);
-        }
     }
 }
