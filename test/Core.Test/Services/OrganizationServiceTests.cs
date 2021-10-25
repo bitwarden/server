@@ -868,7 +868,7 @@ namespace Bit.Core.Test.Services
             organization.MaxAutoscaleSeats = maxAutoscaleSeats;
             sutProvider.GetDependency<ICurrentContext>().ManageUsers(organization.Id).Returns(true);
 
-            var (result, failureMessage) = await sutProvider.Sut.CanScaleAsync(organization, seatsToAdd);
+            var (result, failureMessage) = sutProvider.Sut.CanScale(organization, seatsToAdd);
 
             if (expectedFailureMessage == string.Empty)
             {
@@ -886,7 +886,7 @@ namespace Bit.Core.Test.Services
             SutProvider<OrganizationService> sutProvider)
         {
             sutProvider.GetDependency<IGlobalSettings>().SelfHosted.Returns(true);
-            var (result, failureMessage) = await sutProvider.Sut.CanScaleAsync(organization, 10);
+            var (result, failureMessage) = sutProvider.Sut.CanScale(organization, 10);
 
             Assert.False(result);
             Assert.Contains("Cannot autoscale on self-hosted instance", failureMessage);
@@ -899,7 +899,7 @@ namespace Bit.Core.Test.Services
             organization.MaxAutoscaleSeats = null;
             sutProvider.GetDependency<ICurrentContext>().ManageUsers(organization.Id).Returns(false);
 
-            var (result, failureMessage) = await sutProvider.Sut.CanScaleAsync(organization, 10);
+            var (result, failureMessage) = sutProvider.Sut.CanScale(organization, 10);
 
             Assert.False(result);
             Assert.Contains("Cannot manage organization users", failureMessage);
