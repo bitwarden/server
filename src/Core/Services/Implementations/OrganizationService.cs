@@ -1074,7 +1074,7 @@ namespace Bit.Core.Services
 
             if (newSeatsRequired > 0)
             {
-                var (canScale, failureReason) = await CanScaleAsync(organization, newSeatsRequired);
+                var (canScale, failureReason) = CanScale(organization, newSeatsRequired);
                 if (!canScale)
                 {
                     throw new BadRequestException(failureReason);
@@ -1158,6 +1158,11 @@ namespace Bit.Core.Services
                 foreach (var (orgUser, collections) in limitedCollectionOrgUsers)
                 {
                     await _organizationUserRepository.CreateAsync(orgUser, collections);
+                }
+
+                if (!await _currentContext.ManageUsers(organization.Id))
+                {
+                    throw new BadRequestException("Cannot add seats. Cannot manage organization users.");
                 }
 
                 await AutoAddSeatsAsync(organization, newSeatsRequired, prorationDate);
@@ -1454,18 +1459,13 @@ namespace Bit.Core.Services
             return result;
         }
 
-        internal async Task<(bool canScale, string failureReason)> CanScaleAsync(Organization organization, int seatsToAdd)
+        internal (bool canScale, string failureReason) CanScale(Organization organization,
+            int seatsToAdd)
         {
             var failureReason = "";
             if (_globalSettings.SelfHosted)
             {
                 failureReason = "Cannot autoscale on self-hosted instance.";
-                return (false, failureReason);
-            }
-
-            if (!await _currentContext.ManageUsers(organization.Id))
-            {
-                failureReason = "Cannot manage organization users.";
                 return (false, failureReason);
             }
 
@@ -1484,14 +1484,14 @@ namespace Bit.Core.Services
             return (true, failureReason);
         }
 
-        private async Task AutoAddSeatsAsync(Organization organization, int seatsToAdd, DateTime? prorationDate = null)
+        public async Task AutoAddSeatsAsync(Organization organization, int seatsToAdd, DateTime? prorationDate = null)
         {
             if (seatsToAdd < 1 || !organization.Seats.HasValue)
             {
                 return;
             }
 
-            var (canScale, failureMessage) = await CanScaleAsync(organization, seatsToAdd);
+            var (canScale, failureMessage) = CanScale(organization, seatsToAdd);
             if (!canScale)
             {
                 throw new BadRequestException(failureMessage);

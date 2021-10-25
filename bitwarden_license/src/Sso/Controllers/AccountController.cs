@@ -483,12 +483,7 @@ namespace Bit.Sso.Controllers
                             throw new Exception("Cannot autoscale on self-hosted instance.");
                         }
 
-                        var paymentIntentClientSecret = await _organizationService.AdjustSeatsAsync(orgId, 1, prorationDate);
-                        organization = await _organizationRepository.GetByIdAsync(orgId);
-                        if (!string.IsNullOrEmpty(paymentIntentClientSecret))
-                        {
-                            throw new Exception("Stripe payment required client-side confirmation.");
-                        }
+                        await _organizationService.AutoAddSeatsAsync(organization, 1, prorationDate);
                     }
                     catch (Exception e)
                     {
