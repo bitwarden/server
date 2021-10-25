@@ -46,7 +46,6 @@ namespace Bit.Api.Controllers
             IOrganizationUserRepository organizationUserRepository,
             IProviderUserRepository providerUserRepository,
             IPaymentService paymentService,
-            ISsoUserRepository ssoUserRepository,
             IUserRepository userRepository,
             IUserService userService,
             ISendRepository sendRepository,
@@ -769,16 +768,17 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
-            if (!await _userService.CheckPasswordAsync(user, model.MasterPasswordHash))
+            var valid = user.UsesCryptoAgent && !model.SuppliedMasterPassword()
+                ? await _userService.VerifyOtp(user, model.OTP)
+                : await _userService.CheckPasswordAsync(user, model.MasterPasswordHash);
+
+            if (!valid)
             {
                 await Task.Delay(2000);
                 throw new BadRequestException("MasterPasswordHash", "Invalid password.");
             }
-            else
-            {
-                var response = new ApiKeyResponseModel(user);
-                return response;
-            }
+
+            return new ApiKeyResponseModel(user);
         }
 
         [HttpPost("rotate-api-key")]
@@ -824,6 +824,18 @@ namespace Bit.Api.Controllers
             }
 
             throw new BadRequestException(ModelState);
+        }
+
+        [HttpPost("request-otp")]
+        public async Task PostRequestOTP()
+        {
+            var user = await _userService.GetUserByPrincipalAsync(User);
+            if (user is not { UsesCryptoAgent: true })
+            {
+                throw new UnauthorizedAccessException();
+            }
+
+            await _userService.SendOTP(user);
         }
     }
 }

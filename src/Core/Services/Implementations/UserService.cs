@@ -1350,5 +1350,28 @@ namespace Bit.Core.Services
             user.RevisionDate = DateTime.UtcNow;
             await _userRepository.ReplaceAsync(user);
         }
+
+        public async Task SendOTP(User user)
+        {
+            if (user.Email == null)
+            {
+                throw new BadRequestException("No user email.");
+            }
+
+            if (!user.UsesCryptoAgent)
+            {
+                throw new BadRequestException("Not using crypto agent.");
+            }
+
+            var token = await base.GenerateUserTokenAsync(user, TokenOptions.DefaultEmailProvider,
+                "otp:" + user.Email);
+            await _mailService.SendOTPEmailAsync(user.Email, token);
+        }
+
+        public Task<bool> VerifyOtp(User user, string token)
+        {
+            return base.VerifyUserTokenAsync(user, TokenOptions.DefaultEmailProvider,
+                "otp:" + user.Email, token);
+        }
     }
 }
