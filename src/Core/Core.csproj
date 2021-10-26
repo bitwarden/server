@@ -20,8 +20,9 @@
 
   <ItemGroup>
     <PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="8.0.1" />
-    <PackageReference Include="AWSSDK.SimpleEmail" Version="3.3.101.182" />
-    <PackageReference Include="AWSSDK.SQS" Version="3.3.103.15" />
+    <PackageReference Include="AWSSDK.SimpleEmail" Version="3.7.0.86" />
+    <PackageReference Include="AWSSDK.SimpleNotificationService" Version="3.7.2.57" />
+    <PackageReference Include="AWSSDK.SQS" Version="3.7.1.29" />
     <PackageReference Include="Azure.Storage.Queues" Version="12.3.2" />
     <PackageReference Include="BitPay.Light" Version="1.0.1907" />
     <PackageReference Include="Fido2.AspNet" Version="1.1.0" />

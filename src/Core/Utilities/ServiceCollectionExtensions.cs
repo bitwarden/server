@@ -239,7 +239,7 @@ namespace Bit.Core.Utilities
             }
             else if (!globalSettings.SelfHosted)
             {
-                services.AddSingleton<IPushRegistrationService, NotificationHubPushRegistrationService>();
+                services.AddSingleton<IPushRegistrationService, AmazonSnsPushRegistrationService>();
             }
             else
             {

@@ -65,6 +65,7 @@ namespace Bit.Core.Settings
         public virtual BraintreeSettings Braintree { get; set; } = new BraintreeSettings();
         public virtual BitPaySettings BitPay { get; set; } = new BitPaySettings();
         public virtual AmazonSettings Amazon { get; set; } = new AmazonSettings();
+        public virtual SnsSettings Sns { get; set; } = new SnsSettings();
         public virtual ServiceBusSettings ServiceBus { get; set; } = new ServiceBusSettings();
         public virtual AppleIapSettings AppleIap { get; set; } = new AppleIapSettings();
         public virtual SsoSettings Sso { get; set; } = new SsoSettings();
@@ -440,6 +441,13 @@ namespace Bit.Core.Settings
             public string AccessKeyId { get; set; }
             public string AccessKeySecret { get; set; }
             public string Region { get; set; }
+            public string AccountId { get; set; }
+        }
+
+        public class SnsSettings
+        {
+            public string IosPlatformApplicationArn { get; set; }
+            public string AndroidPlatformApplicationArn { get; set; }
         }
 
         public class ServiceBusSettings : ConnectionStringSettings

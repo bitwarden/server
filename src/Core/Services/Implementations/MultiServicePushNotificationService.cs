@@ -43,7 +43,12 @@ namespace Bit.Core.Services
             }
             else
             {
-                if (CoreHelpers.SettingHasValue(globalSettings.NotificationHub.ConnectionString))
+                if (CoreHelpers.SettingHasValue(globalSettings.Sns.AndroidPlatformApplicationArn) &&
+                    CoreHelpers.SettingHasValue(globalSettings.Sns.IosPlatformApplicationArn))
+                {
+                    _services.Add(new AmazonSnsPushNotificationService(globalSettings, httpContextAccessor));
+                }
+                else if (CoreHelpers.SettingHasValue(globalSettings.NotificationHub.ConnectionString))
                 {
                     _services.Add(new NotificationHubPushNotificationService(installationDeviceRepository,
                         globalSettings, httpContextAccessor));
