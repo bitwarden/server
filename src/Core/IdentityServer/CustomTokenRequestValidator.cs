@@ -67,10 +67,16 @@ namespace Bit.Core.IdentityServer
                 var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(new Guid(organizationId));
                 var ssoConfigData = ssoConfig.GetData();
 
-                if (ssoConfigData is { UseCryptoAgent: true } && !string.IsNullOrEmpty(ssoConfigData.CryptoAgentUrl))
+                var cryptoAgentEnabled = ssoConfigData is { UseCryptoAgent: true } && !string.IsNullOrEmpty(ssoConfigData.CryptoAgentUrl);
+                // TODO: Avoid looking up the user twice
+                var (user, _) = await ValidateContextAsync(context);
+
+                // Determine if the crypto agent is enabled and the user should use crypto agent i.e. no MP.
+                if (cryptoAgentEnabled && user.MasterPassword == null)
                 {
                     context.Result.CustomResponse["CryptoAgentUrl"] = ssoConfigData.CryptoAgentUrl;
                     // Prevent clients redirecting to set-password
+
                     // TODO: Figure out if we can move this logic to the clients since this might break older clients
                     //  although we will have issues either way with some clients supporting crypto anent and some not
                     //  suggestion: We should roll out the clients before enabling it server wise
