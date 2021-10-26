@@ -758,7 +758,7 @@ namespace Bit.Core.Services
 
         public async Task SendOTPEmailAsync(string email, string token)
         {
-            var message = CreateDefaultMessage("Your OTP Verification Code", email);
+            var message = CreateDefaultMessage("Your Email Verification Code", email);
             var model = new EmailTokenViewModel
             {
                 Token = token,
