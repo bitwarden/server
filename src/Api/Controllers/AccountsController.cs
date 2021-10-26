@@ -790,17 +790,19 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
-            if (!await _userService.CheckPasswordAsync(user, model.MasterPasswordHash))
+            var valid = user.UsesCryptoAgent && !model.SuppliedMasterPassword()
+                ? await _userService.VerifyOtp(user, model.OTP)
+                : await _userService.CheckPasswordAsync(user, model.MasterPasswordHash);
+
+            if (!valid)
             {
                 await Task.Delay(2000);
                 throw new BadRequestException("MasterPasswordHash", "Invalid password.");
             }
-            else
-            {
-                await _userService.RotateApiKeyAsync(user);
-                var response = new ApiKeyResponseModel(user);
-                return response;
-            }
+
+            await _userService.RotateApiKeyAsync(user);
+            var response = new ApiKeyResponseModel(user);
+            return response;
         }
         
         [HttpPut("update-temp-password")]
