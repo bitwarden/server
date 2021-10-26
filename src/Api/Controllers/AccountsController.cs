@@ -837,5 +837,21 @@ namespace Bit.Api.Controllers
 
             await _userService.SendOTP(user);
         }
+
+        [HttpPost("verify-otp")]
+        public async Task VerifyOtp([FromBody]VerityOtpRequestModel model)
+        {
+            var user = await _userService.GetUserByPrincipalAsync(User);
+            if (user is not { UsesCryptoAgent: true })
+            {
+                throw new UnauthorizedAccessException();
+            }
+
+            if (!await _userService.VerifyOtp(user, model.Otp))
+            {
+                await Task.Delay(2000);
+                throw new BadRequestException("Token", "Invalid token");
+            }
+        }
     }
 }
