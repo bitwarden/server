@@ -259,27 +259,13 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_QA_KV_CREDENTIALS }}
 
-      - name: Log into Docker
-        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc'
-        env:
-          DOCKER_USERNAME: ${{ steps.retrieve-secrets.outputs.docker-username }}
-          DOCKER_PASSWORD: ${{ steps.retrieve-secrets.outputs.docker-password }}
-        run: |
-          if [[ "${{ matrix.docker_repo }}" == "bitwardenqa.azurecr.io" ]]; then
-            az acr login -n bitwardenqa
-          else
-            echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
-          fi
-
-      - name: Setup Docker Trust
-        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc'
-        env:
-          DCT_DELEGATION_KEY_ID: "c9bde8ec820701516491e5e03d3a6354e7bd66d05fa3df2b0062f68b116dc59c"
-          DCT_DELEGATE_KEY: ${{ steps.retrieve-secrets.outputs.dct-delegate-2-key }}
-        run: |
-          mkdir -p ~/.docker/trust/private
-
-          echo "$DCT_DELEGATE_KEY" > ~/.docker/trust/private/$DCT_DELEGATION_KEY_ID.key
+      - name: Setup DCT
+        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/release'
+        id: setup-dct
+        uses: bitwarden/gh-actions/setup-docker-trust@a8c384a05a974c05c48374c818b004be221d43ff
+        with:
+          azure-creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
+          azure-keyvault-name: "bitwarden-prod-kv"
 
       - name: Setup service name
         id: setup
@@ -330,11 +316,11 @@ jobs:
             ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }}:latest
 
       - name: List Docker images
-        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc'
+        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/release'
         run: docker images
 
       - name: Docker Trust setup
-        if: matrix.docker_repo == 'bitwarden' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc')
+        if: matrix.docker_repo == 'bitwarden' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/release')
         run: |
           echo "DOCKER_CONTENT_TRUST=1" >> $GITHUB_ENV
           echo "DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE=${{ steps.retrieve-secrets.outputs.dct-delegate-2-repo-passphrase }}" >> $GITHUB_ENV
@@ -355,7 +341,7 @@ jobs:
           docker push ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }}:latest
 
       - name: Log out of Docker
-        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc'
+        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/release'
         run: docker logout
 
 
