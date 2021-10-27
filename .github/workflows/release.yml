@@ -90,13 +90,21 @@ jobs:
               --name appservices-${{ steps.setup.outputs.name_lower }}-webapp-name \
               --query value --output tsv
           )
+          publish_profile=$(
+            az keyvault secret show --vault-name $VAULT_NAME \
+              --name appservices-${{ steps.setup.outputs.name_lower }}-publish-profile \
+              --query value --output tsv
+          )
           echo "::add-mask::$webapp_name"
           echo "::set-output name=webapp-name::$webapp_name"
+          echo "::add-mask::$publish_profile"
+          echo "::set-output name=publish-profile::$publish_profile"
 
       - name: Deploy App
         uses: azure/webapps-deploy@798e43877120eda6a2a690a4f212c545e586ae31
         with:
           app-name: ${{ steps.retrieve-secrets.outputs.webapp-name }}
+          publish-profile: ${{ steps.retrieve-secrets.outputs.publish-profile }}
           package: ./${{ matrix.name }}.zip
           slot-name: staging
 
