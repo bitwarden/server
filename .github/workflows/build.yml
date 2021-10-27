@@ -375,6 +375,8 @@ jobs:
         run: |
           if [[ "${{ github.ref }}" == "rc" ]]; then
             SETUP_IMAGE="bitwarden/setup:rc"
+          elif [[ "${{ github.ref }}" == "release" ]]; then
+            SETUP_IMAGE="bitwarden/setup:latest"
           else
             SETUP_IMAGE="bitwarden/setup:dev"
           fi
