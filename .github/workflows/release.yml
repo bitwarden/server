@@ -98,7 +98,7 @@ jobs:
         with:
           app-name: ${{ steps.retrieve-secrets.outputs.webapp-name }}
           package: ./${{ matrix.name }}.zip
-          slot-name: "staging"
+          slot-name: staging
 
 
   release-docker:
