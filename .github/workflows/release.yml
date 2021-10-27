@@ -104,7 +104,7 @@ jobs:
   release-docker:
     name: Build Docker images
     runs-on: ubuntu-20.04
-    needs: build-artifacts
+    needs: setup
     env:
       _RELEASE_VERSION: ${{ needs.setup.outputs.release_version }}
     strategy:
