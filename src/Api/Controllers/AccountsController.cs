@@ -841,7 +841,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("verify-otp")]
-        public async Task VerifyOtp([FromBody]VerityOtpRequestModel model)
+        public async Task VerifyOtp([FromBody]VerifyOtpRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user is not { UsesCryptoAgent: true })
