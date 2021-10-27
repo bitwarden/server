@@ -85,7 +85,7 @@ jobs:
           echo "NAME_LOWER: $NAME_LOWER"
           echo "::set-output name=name_lower::$NAME_LOWER"
 
-          BRANCH_NAME=$(echo "$GITHUB_REF" | awk '{split($0, a, "/"); print a[3]}')
+          BRANCH_NAME=$(echo "$GITHUB_REF" | sed "s#refs/heads/##g")
           echo "GITHUB_REF: $GITHUB_REF"
           echo "BRANCH_NAME: $BRANCH_NAME"
           echo "::set-output name=branch_name::$BRANCH_NAME"
