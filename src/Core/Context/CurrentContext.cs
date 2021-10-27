@@ -292,7 +292,7 @@ namespace Bit.Core.Context
 
         public async Task<bool> CreateNewCollections(Guid orgId)
         {
-            return await OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
+            return await OrganizationManager(orgId) || (Organizations?.Any(o => o.Id == orgId
                         && (o.Permissions?.CreateNewCollections ?? false)) ?? false);
         }
 
