@@ -92,7 +92,7 @@ jobs:
           )
           publish_profile=$(
             az keyvault secret show --vault-name $VAULT_NAME \
-              --name appservices-${{ steps.setup.outputs.name_lower }}-publish-profile \
+              --name appservices-${{ steps.setup.outputs.name_lower }}-webapp-publish-profile \
               --query value --output tsv
           )
           echo "::add-mask::$webapp_name"
