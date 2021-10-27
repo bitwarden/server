@@ -21,6 +21,7 @@ using Newtonsoft.Json;
 using Microsoft.AspNetCore.DataProtection;
 using Fido2NetLib;
 using Fido2NetLib.Objects;
+using Bit.Core.Models.Api;
 
 namespace Bit.Core.Services
 {
@@ -1372,6 +1373,13 @@ namespace Bit.Core.Services
         {
             return base.VerifyUserTokenAsync(user, TokenOptions.DefaultEmailProvider,
                 "otp:" + user.Email, token);
+        }
+
+        public async Task<bool> VerifyPasswordOrOTPAsync(User user, VerifyPasswordRequestModel model)
+        {
+            return user.UsesCryptoAgent && !model.SuppliedMasterPassword()
+                ? await VerifyOtp(user, model.OTP)
+                : await CheckPasswordAsync(user, model.MasterPasswordHash);
         }
     }
 }

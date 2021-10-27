@@ -8,6 +8,7 @@ using Bit.Core.Enums;
 using Bit.Core.Models;
 using Bit.Core.Models.Business;
 using Fido2NetLib;
+using Bit.Core.Models.Api;
 
 namespace Bit.Core.Services
 {
@@ -76,5 +77,6 @@ namespace Bit.Core.Services
         string GetUserName(ClaimsPrincipal principal);
         Task SendOTP(User user);
         Task<bool> VerifyOtp(User user, string token);
+        Task<bool> VerifyPasswordOrOTPAsync(User user, VerifyPasswordRequestModel model);
     }
 }
