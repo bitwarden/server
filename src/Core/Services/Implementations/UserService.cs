@@ -1378,5 +1378,12 @@ namespace Bit.Core.Services
             return base.VerifyUserTokenAsync(user, TokenOptions.DefaultEmailProvider,
                 "otp:" + user.Email, token);
         }
+
+        public async Task<bool> VerifyPasswordOrOTPAsync(User user, string secret)
+        {
+            return user.UsesCryptoAgent
+                ? await VerifyOtp(user, secret)
+                : await CheckPasswordAsync(user, secret);
+        }
     }
 }
