@@ -778,11 +778,7 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
-            var valid = user.UsesCryptoAgent && !model.SuppliedMasterPassword()
-                ? await _userService.VerifyOTPAsync(user, model.OTP)
-                : await _userService.CheckPasswordAsync(user, model.MasterPasswordHash);
-
-            if (!valid)
+            if (!await _userService.VerifyPasswordOrOTPAsync(user, model.Secret))
             {
                 await Task.Delay(2000);
                 throw new BadRequestException("MasterPasswordHash", "Invalid password.");
@@ -800,11 +796,7 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
-            var valid = user.UsesCryptoAgent && !model.SuppliedMasterPassword()
-                ? await _userService.VerifyOTPAsync(user, model.OTP)
-                : await _userService.CheckPasswordAsync(user, model.MasterPasswordHash);
-
-            if (!valid)
+            if (!await _userService.VerifyPasswordOrOTPAsync(user, model.Secret))
             {
                 await Task.Delay(2000);
                 throw new BadRequestException("MasterPasswordHash", "Invalid password.");
