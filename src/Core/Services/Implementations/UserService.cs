@@ -1374,12 +1374,5 @@ namespace Bit.Core.Services
             return base.VerifyUserTokenAsync(user, TokenOptions.DefaultEmailProvider,
                 "otp:" + user.Email, token);
         }
-
-        public async Task<bool> VerifyPasswordOrOTPAsync(User user, VerifyPasswordRequestModel model)
-        {
-            return user.UsesCryptoAgent && !model.SuppliedMasterPassword()
-                ? await VerifyOtp(user, model.OTP)
-                : await CheckPasswordAsync(user, model.MasterPasswordHash);
-        }
     }
 }
