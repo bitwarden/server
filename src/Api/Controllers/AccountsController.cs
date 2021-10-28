@@ -117,6 +117,11 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
+            if (user.UsesCryptoAgent)
+            {
+                throw new BadRequestException("You cannot change your email when using Customer Managed Encryption");
+            }
+
             if (!await _userService.CheckPasswordAsync(user, model.MasterPasswordHash))
             {
                 await Task.Delay(2000);
@@ -133,6 +138,11 @@ namespace Bit.Api.Controllers
             if (user == null)
             {
                 throw new UnauthorizedAccessException();
+            }
+
+            if (user.UsesCryptoAgent)
+            {
+                throw new BadRequestException("You cannot change your email when using Customer Managed Encryption");
             }
 
             var result = await _userService.ChangeEmailAsync(user, model.MasterPasswordHash, model.NewEmail,
