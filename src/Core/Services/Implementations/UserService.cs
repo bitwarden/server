@@ -821,14 +821,18 @@ namespace Bit.Core.Services
             return IdentityResult.Failed(_identityErrorDescriber.PasswordMismatch());
         }
 
-        public async Task<IdentityResult> RefreshSecurityStampAsync(User user, string masterPassword)
+        public async Task<IdentityResult> RefreshSecurityStampAsync(User user, string secret)
         {
             if (user == null)
             {
                 throw new ArgumentNullException(nameof(user));
             }
 
-            if (await CheckPasswordAsync(user, masterPassword))
+            var validSecret = user.UsesCryptoAgent
+                ? await VerifyOtp(user, secret)
+                : await CheckPasswordAsync(user, secret);
+
+            if (validSecret)
             {
                 var result = await base.UpdateSecurityStampAsync(user);
                 if (!result.Succeeded)

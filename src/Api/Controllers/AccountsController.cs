@@ -368,7 +368,7 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
-            var result = await _userService.RefreshSecurityStampAsync(user, model.MasterPasswordHash);
+            var result = await _userService.RefreshSecurityStampAsync(user, model.Secret);
             if (result.Succeeded)
             {
                 return;
