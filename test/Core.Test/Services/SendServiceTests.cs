@@ -584,6 +584,7 @@ namespace Bit.Core.Test.Services
             {
                 Id = "TEST",
                 Size = fileContents.Length,
+                Validated = false,
             };
 
             send.Type = SendType.File;
@@ -619,8 +620,6 @@ namespace Bit.Core.Test.Services
             var badRequest = await Assert.ThrowsAsync<BadRequestException>(() =>
                 sutProvider.Sut.UploadFileToExistingSendAsync(new MemoryStream(Encoding.UTF8.GetBytes(fileContents)), send)
             );
-
-            Assert.Contains("does not match", badRequest.Message, StringComparison.InvariantCultureIgnoreCase);
         }
 
         [Theory]
