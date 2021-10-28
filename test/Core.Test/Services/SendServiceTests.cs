@@ -13,6 +13,9 @@ using Bit.Core.Test.AutoFixture.SendFixtures;
 using NSubstitute;
 using Xunit;
 using System.Text.Json;
+using Microsoft.AspNetCore.Identity;
+using System.IO;
+using System.Text;
 
 namespace Bit.Core.Test.Services
 {
@@ -584,7 +587,7 @@ namespace Bit.Core.Test.Services
             };
 
             send.Type = SendType.File;
-            send.Data = JsonConvert.SerializeObject(sendFileData);
+            send.Data = JsonSerializer.Serialize(sendFileData);
 
             sutProvider.GetDependency<ISendFileStorageService>()
                 .ValidateFileAsync(send, sendFileData.Id, sendFileData.Size, Arg.Any<long>())
@@ -607,7 +610,7 @@ namespace Bit.Core.Test.Services
             };
 
             send.Type = SendType.File;
-            send.Data = JsonConvert.SerializeObject(sendFileData);
+            send.Data = JsonSerializer.Serialize(sendFileData);
 
             sutProvider.GetDependency<ISendFileStorageService>()
                 .ValidateFileAsync(send, sendFileData.Id, sendFileData.Size, Arg.Any<long>())
