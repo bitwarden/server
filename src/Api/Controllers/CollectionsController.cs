@@ -121,8 +121,11 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
+            var assignUserToCollection = !(await _currentContext.EditAnyCollection(orgIdGuid)) &&
+                await _currentContext.EditAssignedCollections(orgIdGuid);
+
             await _collectionService.SaveAsync(collection, model.Groups?.Select(g => g.ToSelectionReadOnly()),
-                !await _currentContext.ViewAllCollections(orgIdGuid) ? _currentContext.UserId : null);
+                assignUserToCollection ? _currentContext.UserId : null);
             return new CollectionResponseModel(collection);
         }
 
