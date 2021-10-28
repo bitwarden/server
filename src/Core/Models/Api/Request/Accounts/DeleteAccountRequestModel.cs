@@ -2,9 +2,5 @@
 
 namespace Bit.Core.Models.Api
 {
-    public class DeleteAccountRequestModel
-    {
-        [Required]
-        public string MasterPasswordHash { get; set; }
-    }
+    public class DeleteAccountRequestModel : VerifyPasswordRequestModel { }
 }

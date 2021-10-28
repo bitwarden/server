@@ -488,7 +488,7 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
-            if (!await _userService.CheckPasswordAsync(user, model.MasterPasswordHash))
+            if (!await _userService.VerifyPasswordOrOTPAsync(user, model.Secret))
             {
                 ModelState.AddModelError("MasterPasswordHash", "Invalid password.");
                 await Task.Delay(2000);
