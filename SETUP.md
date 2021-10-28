@@ -25,7 +25,7 @@ We recommend using [Visual Studio](https://visualstudio.microsoft.com/vs/), and 
 
 To simplify the setup process we provide a [Docker Compose](https://docs.docker.com/compose/) application model. This is split up into multiple service profiles to facilitate easily customization.
 
-Some settings can be customized by modifying the `dev/.env` file, such as the `MSSQL_PASSWORD` which should be modified before starting the project.
+Some settings can be customized by modifying the `dev/.env` file, such as the `MSSQL_PASSWORD` which should be modified before starting the project (Please, comply the [password complexity requirements](https://docs.microsoft.com/en-us/sql/relational-databases/security/password-policy?view=sql-server-ver15#password-complexity), otherwise you'd need to recreate the volume if you put a weak password).
 
 ```bash
 # Copy the example environment file
@@ -41,7 +41,7 @@ docker compose --profile cloud --profile mail up
 
 ### SQL Server
 
-We recommend changing the `MSSQL_PASSWORD` variable in `dev/.env` to avoid exposing the sqlserver with a default password. Note: changing this after first running docker compose may require a re-creation of the storage volume. To do this, stop the running containers and run `docker volume rm bitwardenserver_mssql_dev_data`. (**Warning:** this will delete your development database.)
+We recommend changing the `MSSQL_PASSWORD` variable in `dev/.env` to avoid exposing the sqlserver with a default password (Please, comply the [password complexity requirements](https://docs.microsoft.com/en-us/sql/relational-databases/security/password-policy?view=sql-server-ver15#password-complexity), otherwise you'd need to recreate the volume if you put a weak password). Note: changing this after first running docker compose may require a re-creation of the storage volume. To do this, stop the running containers and run `docker volume rm bitwardenserver_mssql_dev_data`. (**Warning:** this will delete your development database.)
 
 We provide a helper script which will create the development database `vault_dev` and also run all migrations. This commad should be run after starting docker the first time, as well as after syncing against upstream and after creating a new migration.
 
