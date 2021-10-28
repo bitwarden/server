@@ -829,7 +829,7 @@ namespace Bit.Core.Services
             }
 
             var validSecret = user.UsesCryptoAgent
-                ? await VerifyOtp(user, secret)
+                ? await VerifyOTPAsync(user, secret)
                 : await CheckPasswordAsync(user, secret);
 
             if (validSecret)
@@ -1356,7 +1356,7 @@ namespace Bit.Core.Services
             await _userRepository.ReplaceAsync(user);
         }
 
-        public async Task SendOTP(User user)
+        public async Task SendOTPAsync(User user)
         {
             if (user.Email == null)
             {
@@ -1373,7 +1373,7 @@ namespace Bit.Core.Services
             await _mailService.SendOTPEmailAsync(user.Email, token);
         }
 
-        public Task<bool> VerifyOtp(User user, string token)
+        public Task<bool> VerifyOTPAsync(User user, string token)
         {
             return base.VerifyUserTokenAsync(user, TokenOptions.DefaultEmailProvider,
                 "otp:" + user.Email, token);
@@ -1382,7 +1382,7 @@ namespace Bit.Core.Services
         public async Task<bool> VerifyPasswordOrOTPAsync(User user, string secret)
         {
             return user.UsesCryptoAgent
-                ? await VerifyOtp(user, secret)
+                ? await VerifyOTPAsync(user, secret)
                 : await CheckPasswordAsync(user, secret);
         }
     }

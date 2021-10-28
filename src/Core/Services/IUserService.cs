@@ -75,8 +75,8 @@ namespace Bit.Core.Services
         Task<string> GenerateSignInTokenAsync(User user, string purpose);
         Task RotateApiKeyAsync(User user);
         string GetUserName(ClaimsPrincipal principal);
-        Task SendOTP(User user);
-        Task<bool> VerifyOtp(User user, string token);
+        Task SendOTPAsync(User user);
+        Task<bool> VerifyOTPAsync(User user, string token);
         Task<bool> VerifyPasswordOrOTPAsync(User user, string secret);
     }
 }

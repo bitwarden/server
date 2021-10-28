@@ -779,7 +779,7 @@ namespace Bit.Api.Controllers
             }
 
             var valid = user.UsesCryptoAgent && !model.SuppliedMasterPassword()
-                ? await _userService.VerifyOtp(user, model.OTP)
+                ? await _userService.VerifyOTPAsync(user, model.OTP)
                 : await _userService.CheckPasswordAsync(user, model.MasterPasswordHash);
 
             if (!valid)
@@ -801,7 +801,7 @@ namespace Bit.Api.Controllers
             }
 
             var valid = user.UsesCryptoAgent && !model.SuppliedMasterPassword()
-                ? await _userService.VerifyOtp(user, model.OTP)
+                ? await _userService.VerifyOTPAsync(user, model.OTP)
                 : await _userService.CheckPasswordAsync(user, model.MasterPasswordHash);
 
             if (!valid)
@@ -847,7 +847,7 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
-            await _userService.SendOTP(user);
+            await _userService.SendOTPAsync(user);
         }
 
         [HttpPost("verify-otp")]
@@ -859,7 +859,7 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
-            if (!await _userService.VerifyOtp(user, model.Otp))
+            if (!await _userService.VerifyOTPAsync(user, model.Otp))
             {
                 await Task.Delay(2000);
                 throw new BadRequestException("Token", "Invalid token");

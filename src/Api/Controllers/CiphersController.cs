@@ -559,7 +559,7 @@ namespace Bit.Api.Controllers
             }
 
             var valid = user.UsesCryptoAgent && !model.SuppliedMasterPassword()
-                ? await _userService.VerifyOtp(user, model.OTP)
+                ? await _userService.VerifyOTPAsync(user, model.OTP)
                 : await _userService.CheckPasswordAsync(user, model.MasterPasswordHash);
 
             if (!valid)
