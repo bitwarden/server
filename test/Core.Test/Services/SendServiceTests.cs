@@ -1,5 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Text;
+using System.Text.Json;
 using System.Linq;
 using Bit.Core.Context;
 using Bit.Core.Enums;
@@ -10,12 +13,9 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture;
 using Bit.Core.Test.AutoFixture.SendFixtures;
+using Microsoft.AspNetCore.Identity;
 using NSubstitute;
 using Xunit;
-using System.Text.Json;
-using Microsoft.AspNetCore.Identity;
-using System.IO;
-using System.Text;
 
 namespace Bit.Core.Test.Services
 {
