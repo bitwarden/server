@@ -258,11 +258,7 @@ namespace Bit.Core.Models.Api
         public TwoFactorProviderType? Type { get; set; }
     }
 
-    public class TwoFactorRequestModel
-    {
-        [Required]
-        public string MasterPasswordHash { get; set; }
-    }
+    public class TwoFactorRequestModel : VerifyPasswordRequestModel { }
 
     public class TwoFactorRecoveryRequestModel : TwoFactorEmailRequestModel
     {
