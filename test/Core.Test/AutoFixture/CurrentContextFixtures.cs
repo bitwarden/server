@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using AutoFixture;
 using AutoFixture.Kernel;
 using Bit.Core.Context;
+using Bit.Test.Common.AutoFixture;
 
 namespace Bit.Core.Test.AutoFixture.CurrentContextFixtures
 {

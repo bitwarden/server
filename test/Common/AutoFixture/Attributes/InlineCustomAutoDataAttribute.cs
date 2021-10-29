@@ -4,9 +4,9 @@ using Xunit.Sdk;
 using AutoFixture.Xunit2;
 using AutoFixture;
 
-namespace Bit.Core.Test.AutoFixture.Attributes
+namespace Bit.Test.Common.AutoFixture.Attributes
 {
-    internal class InlineCustomAutoDataAttribute : CompositeDataAttribute
+    public class InlineCustomAutoDataAttribute : CompositeDataAttribute
     {
         public InlineCustomAutoDataAttribute(Type[] iCustomizationTypes, params object[] values) : base(new DataAttribute[] {
             new InlineDataAttribute(values),

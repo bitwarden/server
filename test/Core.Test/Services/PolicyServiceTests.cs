@@ -5,19 +5,19 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Test.AutoFixture;
-using Bit.Core.Test.AutoFixture.Attributes;
-using Bit.Core.Test.AutoFixture.OrganizationUserFixtures;
 using PolicyFixtures = Bit.Core.Test.AutoFixture.PolicyFixtures;
 using NSubstitute;
 using Xunit;
+using Bit.Core.Enums;
+using Bit.Test.Common.AutoFixture.Attributes;
+using Bit.Test.Common.AutoFixture;
 
 namespace Bit.Core.Test.Services
 {
     public class PolicyServiceTests
     {
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
-        public async Task SaveAsync_OrganizationDoesNotExist_ThrowsBadRequest([PolicyFixtures.Policy(Enums.PolicyType.DisableSend)] Core.Models.Table.Policy policy, SutProvider<PolicyService> sutProvider)
+        public async Task SaveAsync_OrganizationDoesNotExist_ThrowsBadRequest([PolicyFixtures.Policy(PolicyType.DisableSend)] Core.Models.Table.Policy policy, SutProvider<PolicyService> sutProvider)
         {
             SetupOrg(sutProvider, policy.OrganizationId, null);
 
@@ -39,7 +39,7 @@ namespace Bit.Core.Test.Services
         }
 
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
-        public async Task SaveAsync_OrganizationCannotUsePolicies_ThrowsBadRequest([PolicyFixtures.Policy(Enums.PolicyType.DisableSend)] Core.Models.Table.Policy policy, SutProvider<PolicyService> sutProvider)
+        public async Task SaveAsync_OrganizationCannotUsePolicies_ThrowsBadRequest([PolicyFixtures.Policy(PolicyType.DisableSend)] Core.Models.Table.Policy policy, SutProvider<PolicyService> sutProvider)
         {
             var orgId = Guid.NewGuid();
 
@@ -66,7 +66,7 @@ namespace Bit.Core.Test.Services
         }
 
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
-        public async Task SaveAsync_SingleOrg_RequireSsoEnabled_ThrowsBadRequest([PolicyFixtures.Policy(Enums.PolicyType.SingleOrg)] Core.Models.Table.Policy policy, SutProvider<PolicyService> sutProvider)
+        public async Task SaveAsync_SingleOrg_RequireSsoEnabled_ThrowsBadRequest([PolicyFixtures.Policy(PolicyType.SingleOrg)] Core.Models.Table.Policy policy, SutProvider<PolicyService> sutProvider)
         {
             policy.Enabled = false;
 
@@ -77,7 +77,7 @@ namespace Bit.Core.Test.Services
             });
 
             sutProvider.GetDependency<IPolicyRepository>()
-                .GetByOrganizationIdTypeAsync(policy.OrganizationId, Enums.PolicyType.RequireSso)
+                .GetByOrganizationIdTypeAsync(policy.OrganizationId, PolicyType.RequireSso)
                 .Returns(Task.FromResult(new Core.Models.Table.Policy { Enabled = true }));
 
             var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
@@ -126,7 +126,7 @@ namespace Bit.Core.Test.Services
         }
 
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
-        public async Task SaveAsync_RequireSsoPolicy_NotEnabled_ThrowsBadRequestAsync([PolicyFixtures.Policy(Enums.PolicyType.RequireSso)] Core.Models.Table.Policy policy, SutProvider<PolicyService> sutProvider)
+        public async Task SaveAsync_RequireSsoPolicy_NotEnabled_ThrowsBadRequestAsync([PolicyFixtures.Policy(PolicyType.RequireSso)] Core.Models.Table.Policy policy, SutProvider<PolicyService> sutProvider)
         {
             policy.Enabled = true;
 
@@ -137,7 +137,7 @@ namespace Bit.Core.Test.Services
             });
 
             sutProvider.GetDependency<IPolicyRepository>()
-                .GetByOrganizationIdTypeAsync(policy.OrganizationId, Enums.PolicyType.SingleOrg)
+                .GetByOrganizationIdTypeAsync(policy.OrganizationId, PolicyType.SingleOrg)
                 .Returns(Task.FromResult(new Core.Models.Table.Policy { Enabled = false }));
 
             var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
@@ -158,7 +158,7 @@ namespace Bit.Core.Test.Services
         }
 
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
-        public async Task SaveAsync_NewPolicy_Created([PolicyFixtures.Policy(Enums.PolicyType.MasterPassword)] Core.Models.Table.Policy policy, SutProvider<PolicyService> sutProvider)
+        public async Task SaveAsync_NewPolicy_Created([PolicyFixtures.Policy(PolicyType.MasterPassword)] Core.Models.Table.Policy policy, SutProvider<PolicyService> sutProvider)
         {
             policy.Id = default;
 
@@ -173,7 +173,7 @@ namespace Bit.Core.Test.Services
             await sutProvider.Sut.SaveAsync(policy, Substitute.For<IUserService>(), Substitute.For<IOrganizationService>(), Guid.NewGuid());
 
             await sutProvider.GetDependency<IEventService>().Received()
-                .LogPolicyEventAsync(policy, Enums.EventType.Policy_Updated);
+                .LogPolicyEventAsync(policy, EventType.Policy_Updated);
 
             await sutProvider.GetDependency<IPolicyRepository>().Received()
                 .UpsertAsync(policy);
@@ -215,7 +215,7 @@ namespace Bit.Core.Test.Services
         }
 
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
-        public async Task SaveAsync_ExistingPolicy_UpdateTwoFactor([PolicyFixtures.Policy(Enums.PolicyType.TwoFactorAuthentication)] Core.Models.Table.Policy policy, SutProvider<PolicyService> sutProvider)
+        public async Task SaveAsync_ExistingPolicy_UpdateTwoFactor([PolicyFixtures.Policy(PolicyType.TwoFactorAuthentication)] Core.Models.Table.Policy policy, SutProvider<PolicyService> sutProvider)
         {
             // If the policy that this is updating isn't enabled then do some work now that the current one is enabled
 
@@ -233,15 +233,15 @@ namespace Bit.Core.Test.Services
                 .Returns(new Core.Models.Table.Policy
                 { 
                     Id = policy.Id,
-                    Type = Enums.PolicyType.TwoFactorAuthentication,
+                    Type = PolicyType.TwoFactorAuthentication,
                     Enabled = false,
                 });
 
             var orgUserDetail = new Core.Models.Data.OrganizationUserUserDetails
             {
                 Id = Guid.NewGuid(),
-                Status = Enums.OrganizationUserStatusType.Accepted,
-                Type = Enums.OrganizationUserType.User,
+                Status = OrganizationUserStatusType.Accepted,
+                Type = OrganizationUserType.User,
                 // Needs to be different from what is passed in as the savingUserId to Sut.SaveAsync
                 Email = "test@bitwarden.com",
                 Name = "TEST",
@@ -274,7 +274,7 @@ namespace Bit.Core.Test.Services
                 .SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(org.Name, orgUserDetail.Email);
 
             await sutProvider.GetDependency<IEventService>().Received()
-                .LogPolicyEventAsync(policy, Enums.EventType.Policy_Updated);
+                .LogPolicyEventAsync(policy, EventType.Policy_Updated);
 
             await sutProvider.GetDependency<IPolicyRepository>().Received()
                 .UpsertAsync(policy);
@@ -284,7 +284,7 @@ namespace Bit.Core.Test.Services
         }
 
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
-        public async Task SaveAsync_ExistingPolicy_UpdateSingleOrg([PolicyFixtures.Policy(Enums.PolicyType.TwoFactorAuthentication)] Core.Models.Table.Policy policy, SutProvider<PolicyService> sutProvider)
+        public async Task SaveAsync_ExistingPolicy_UpdateSingleOrg([PolicyFixtures.Policy(PolicyType.TwoFactorAuthentication)] Core.Models.Table.Policy policy, SutProvider<PolicyService> sutProvider)
         {
             // If the policy that this is updating isn't enabled then do some work now that the current one is enabled
 
@@ -302,15 +302,15 @@ namespace Bit.Core.Test.Services
                 .Returns(new Core.Models.Table.Policy
                 {
                     Id = policy.Id,
-                    Type = Enums.PolicyType.SingleOrg,
+                    Type = PolicyType.SingleOrg,
                     Enabled = false,
                 });
 
             var orgUserDetail = new Core.Models.Data.OrganizationUserUserDetails
             {
                 Id = Guid.NewGuid(),
-                Status = Enums.OrganizationUserStatusType.Accepted,
-                Type = Enums.OrganizationUserType.User,
+                Status = OrganizationUserStatusType.Accepted,
+                Type = OrganizationUserType.User,
                 // Needs to be different from what is passed in as the savingUserId to Sut.SaveAsync
                 Email = "test@bitwarden.com",
                 Name = "TEST",
@@ -337,7 +337,7 @@ namespace Bit.Core.Test.Services
             await sutProvider.Sut.SaveAsync(policy, userService, organizationService, savingUserId);
 
             await sutProvider.GetDependency<IEventService>().Received()
-                .LogPolicyEventAsync(policy, Enums.EventType.Policy_Updated);
+                .LogPolicyEventAsync(policy, EventType.Policy_Updated);
 
             await sutProvider.GetDependency<IPolicyRepository>().Received()
                 .UpsertAsync(policy);

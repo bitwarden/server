@@ -9,9 +9,9 @@ using Moq;
 using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
 using Bit.Core.Repositories.EntityFramework;
-using Bit.Core.Test.Helpers.Factories;
 using Microsoft.EntityFrameworkCore;
 using Bit.Core.Settings;
+using Bit.Core.Test.Helpers.Factories;
 
 namespace Bit.Core.Test.AutoFixture.EntityFrameworkRepositoryFixtures
 {

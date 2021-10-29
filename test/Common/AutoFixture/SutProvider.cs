@@ -4,9 +4,8 @@ using AutoFixture;
 using AutoFixture.Kernel;
 using System.Reflection;
 using System.Linq;
-using Bit.Core.Test.AutoFixture.GlobalSettingsFixtures;
 
-namespace Bit.Core.Test.AutoFixture
+namespace Bit.Test.Common.AutoFixture
 {
     public class SutProvider<TSut> : ISutProvider
     {

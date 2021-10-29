@@ -9,9 +9,9 @@ using Bit.Core.Models.Table;
 using Core.Models.Data;
 using Bit.Core.Test.AutoFixture.CipherFixtures;
 using System.Collections.Generic;
-using Bit.Core.Test.AutoFixture;
 using System.Linq;
 using Castle.Core.Internal;
+using Bit.Test.Common.AutoFixture;
 
 namespace Bit.Core.Test.Services
 {
