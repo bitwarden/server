@@ -490,7 +490,7 @@ namespace Bit.Api.Controllers
 
             if (!await _userService.VerifyPasswordOrOTPAsync(user, model.Secret))
             {
-                ModelState.AddModelError("MasterPasswordHash", "Invalid password.");
+                ModelState.AddModelError(string.Empty, "Authentication failed.");
                 await Task.Delay(2000);
             }
             else
@@ -781,7 +781,7 @@ namespace Bit.Api.Controllers
             if (!await _userService.VerifyPasswordOrOTPAsync(user, model.Secret))
             {
                 await Task.Delay(2000);
-                throw new BadRequestException("MasterPasswordHash", "Invalid password.");
+                throw new BadRequestException(string.Empty, "Authentication failed.");
             }
 
             return new ApiKeyResponseModel(user);
@@ -799,7 +799,7 @@ namespace Bit.Api.Controllers
             if (!await _userService.VerifyPasswordOrOTPAsync(user, model.Secret))
             {
                 await Task.Delay(2000);
-                throw new BadRequestException("MasterPasswordHash", "Invalid password.");
+                throw new BadRequestException(string.Empty, "Authentication failed.");
             }
 
             await _userService.RotateApiKeyAsync(user);

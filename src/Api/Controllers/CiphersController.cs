@@ -560,7 +560,7 @@ namespace Bit.Api.Controllers
 
             if (!await _userService.VerifyPasswordOrOTPAsync(user, model.Secret))
             {
-                ModelState.AddModelError("MasterPasswordHash", "Invalid password.");
+                ModelState.AddModelError(string.Empty, "Authentication failed.");
                 await Task.Delay(2000);
                 throw new BadRequestException(ModelState);
             }
