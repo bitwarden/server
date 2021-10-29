@@ -1,4 +1,5 @@
 using Bit.Core.Models.Business;
+using NSubstitute;
 using Xunit;
 
 namespace Bit.Core.Test.Models.Business
@@ -14,7 +15,7 @@ namespace Bit.Core.Test.Models.Business
         [InlineData("AE", "PH", null, "ae_trn")]
         [InlineData("AU", "PH", null, "au_abn")]
         [InlineData("BR", "PH", null, "br_cnpj")]
-        // [InlineData("CA", "PH", "bec", "ca_qst")] // This test will fail, I believe this is a bug
+        [InlineData("CA", "PH", "bec", "ca_qst")]
         [InlineData("CA", "PH", null, "ca_bn")] 
         [InlineData("CL", "PH", null, "cl_tin")]
         [InlineData("AT", "PH", null, "eu_vat")]
@@ -75,6 +76,25 @@ namespace Bit.Core.Test.Models.Business
             };
 
             Assert.Equal(expectedTaxIdType, taxInfo.TaxIdType);
+        }
+
+        [Fact]
+        public void GetTaxIdType_CreateOnce_ReturnCacheSecondTime()
+        {
+            var taxInfo = new TaxInfo
+            {
+                BillingAddressCountry = "US",
+                TaxIdNumber = "PH",
+                BillingAddressState = null,
+            };
+
+            Assert.Equal("us_ein", taxInfo.TaxIdType);
+
+            // Per the current spec even if the values change to something other than null it
+            // will return the cached version of TaxIdType.
+            taxInfo.BillingAddressCountry = "ZA";
+
+            Assert.Equal("us_ein", taxInfo.TaxIdType);
         }
     }
 }
