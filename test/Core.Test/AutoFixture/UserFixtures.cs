@@ -1,7 +1,5 @@
 using AutoFixture;
 using TableModel = Bit.Core.Models.Table;
-using Bit.Core.Test.AutoFixture.Attributes;
-using Bit.Core.Test.AutoFixture.GlobalSettingsFixtures;
 using Bit.Core.Models;
 using System.Collections.Generic;
 using Bit.Core.Enums;
@@ -10,6 +8,8 @@ using System;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using Bit.Core.Repositories.EntityFramework;
 using Bit.Core.Test.AutoFixture.EntityFrameworkRepositoryFixtures;
+using Bit.Test.Common.AutoFixture.Attributes;
+using Bit.Test.Common.AutoFixture;
 
 namespace Bit.Core.Test.AutoFixture.UserFixtures
 {

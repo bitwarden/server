@@ -9,10 +9,8 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using NSubstitute;
 using Xunit;
-using Bit.Core.Test.AutoFixture;
 using Bit.Core.Exceptions;
 using Bit.Core.Enums;
-using Bit.Core.Test.AutoFixture.Attributes;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using System.Text.Json;
 using Bit.Core.Context;
@@ -22,7 +20,8 @@ using OrganizationUser = Bit.Core.Models.Table.OrganizationUser;
 using Policy = Bit.Core.Models.Table.Policy;
 using Bit.Core.Test.AutoFixture.PolicyFixtures;
 using Bit.Core.Settings;
-using AutoFixture.Xunit2;
+using Bit.Test.Common.AutoFixture;
+using Bit.Test.Common.AutoFixture.Attributes;
 
 namespace Bit.Core.Test.Services
 {

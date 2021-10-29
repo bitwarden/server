@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Bit.Core.Enums;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -23,7 +24,7 @@ namespace Bit.Core.Test.Services
             {
                 Id = id,
                 Name = "test device",
-                Type = Enums.DeviceType.Android,
+                Type = DeviceType.Android,
                 UserId = userId,
                 PushToken = "testtoken",
                 Identifier = "testid"
@@ -32,7 +33,7 @@ namespace Bit.Core.Test.Services
 
             Assert.True(device.RevisionDate - DateTime.UtcNow < TimeSpan.FromSeconds(1));
             await pushRepo.Received().CreateOrUpdateRegistrationAsync("testtoken", id.ToString(),
-                userId.ToString(), "testid", Enums.DeviceType.Android);
+                userId.ToString(), "testid", DeviceType.Android);
         }
     }
 }

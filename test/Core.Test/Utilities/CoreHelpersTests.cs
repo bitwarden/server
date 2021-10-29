@@ -3,15 +3,15 @@ using System.Collections.Generic;
 using System.Linq;
 using Bit.Core.Utilities;
 using Xunit;
-using Bit.Core.Test.AutoFixture.Attributes;
 using Bit.Core.Test.AutoFixture.UserFixtures;
 using IdentityModel;
 using Bit.Core.Enums.Provider;
 using Bit.Core.Models.Table;
 using Bit.Core.Context;
 using AutoFixture;
-using Bit.Core.Test.AutoFixture;
 using Bit.Core.Enums;
+using Bit.Test.Common.AutoFixture.Attributes;
+using Bit.Test.Common.AutoFixture;
 
 namespace Bit.Core.Test.Utilities
 {

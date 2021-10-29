@@ -1,7 +1,7 @@
 using AutoFixture;
 using AutoFixture.AutoNSubstitute;
 
-namespace Bit.Core.Test.AutoFixture
+namespace Bit.Test.Common.AutoFixture
 {
     public static class FixtureExtensions
     {
