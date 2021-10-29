@@ -26,6 +26,7 @@ namespace Bit.Api.Controllers
         private readonly IGroupRepository _groupRepository;
         private readonly IUserService _userService;
         private readonly ICurrentContext _currentContext;
+        private readonly ISsoConfigRepository _ssoConfigRepository;
 
         public OrganizationUsersController(
             IOrganizationRepository organizationRepository,
@@ -34,7 +35,8 @@ namespace Bit.Api.Controllers
             ICollectionRepository collectionRepository,
             IGroupRepository groupRepository,
             IUserService userService,
-            ICurrentContext currentContext)
+            ICurrentContext currentContext,
+            ISsoConfigRepository ssoConfigRepository)
         {
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
@@ -43,6 +45,7 @@ namespace Bit.Api.Controllers
             _groupRepository = groupRepository;
             _userService = userService;
             _currentContext = currentContext;
+            _ssoConfigRepository = ssoConfigRepository;
         }
 
         [HttpGet("{id}")]
@@ -331,6 +334,16 @@ namespace Bit.Api.Controllers
             if (!await _currentContext.ManageUsers(orgGuidId))
             {
                 throw new NotFoundException();
+            }
+
+            var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(orgGuidId);
+            if (ssoConfig != null)
+            {
+                var ssoConfigData = ssoConfig.GetData();
+                if (ssoConfigData.UseCryptoAgent)
+                {
+                    throw new BadRequestException("You cannot delete an Organization that is using Customer Managed Encryption.");
+                }
             }
 
             var userId = _userService.GetProperUserId(User);
