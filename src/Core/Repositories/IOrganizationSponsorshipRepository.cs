@@ -10,5 +10,6 @@ namespace Bit.Core.Repositories
     {
         Task<OrganizationSponsorship> GetBySponsoringOrganizationUserIdAsync(Guid sponsoringOrganizationUserId);
         Task<OrganizationSponsorship> GetBySponsoredOrganizationIdAsync(Guid sponsoredOrganizationId);
+        Task<OrganizationSponsorship> GetByOfferedToEmailAsync(string email);
     }
 }
