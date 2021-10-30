@@ -13,8 +13,6 @@ using Bit.Core.Models.Table;
 using Bit.Core.Models.Table.Provider;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Test.AutoFixture;
-using Bit.Core.Test.AutoFixture.Attributes;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.DataProtection;
 using NSubstitute;
@@ -22,6 +20,8 @@ using NSubstitute.ReturnsExtensions;
 using Xunit;
 using ProviderUser = Bit.Core.Models.Table.Provider.ProviderUser;
 using Bit.Core.Context;
+using Bit.Test.Common.AutoFixture;
+using Bit.Test.Common.AutoFixture.Attributes;
 
 namespace Bit.CommCore.Test.Services
 {
