@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Bit.Core.Context;
 using Bit.Core.Enums;
@@ -35,7 +36,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("{sponsoringOrgId}/families-for-enterprise")]
-        public async Task<IActionResult> CreateSponsorship(string sponsoringOrgId, [FromBody] OrganizationSponsorshipRequestModel model)
+        public async Task CreateSponsorship(string sponsoringOrgId, [FromBody] OrganizationSponsorshipRequestModel model)
         {
             // TODO: validate has right to sponsor, send sponsorship email
             var sponsoringOrgIdGuid = new Guid(sponsoringOrgId);
@@ -50,32 +51,45 @@ namespace Bit.Api.Controllers
             {
                 throw new BadRequestException("Only confirm users can sponsor other organizations.");
             }
+            if (sponsoringOrgUser.UserId != _currentContext.UserId)
+            {
+                throw new BadRequestException("Can only create organization sponsorships for yourself.");
+            }
 
             var existingOrgSponsorship = await _organizationSponsorshipRepository.GetBySponsoringOrganizationUserIdAsync(sponsoringOrgUser.Id);
             if (existingOrgSponsorship != null)
             {
-                throw new BadRequestException("Can only sponsor one organization per Organization User");
+                throw new BadRequestException("Can only sponsor one organization per Organization User.");
             }
 
-            // TODO: send sponsorship email
-
-            throw new NotImplementedException();
+            await _organizationsSponsorshipService.OfferSponsorshipAsync(sponsoringOrg, sponsoringOrgUser, model.sponsoredEmail);
         }
 
         [HttpPost("sponsored/redeem/families-for-enterprise")]
-        public async Task<IActionResult> RedeemSponsorship([FromQuery] string sponsorshipInfo, [FromBody] OrganizationSponsorshipRedeemRequestModel model)
+        public async Task RedeemSponsorship([FromQuery] string sponsorshipInfo, [FromBody] OrganizationSponsorshipRedeemRequestModel model)
         {
             // TODO: parse out sponsorshipInfo
 
             if (!await _currentContext.OrganizationOwner(model.SponsoredOrganizationId))
             {
-                throw new BadRequestException("Can only redeem sponsorship for and organization you own");
+                throw new BadRequestException("Can only redeem sponsorship for an organization you own");
+            }
+            var existingSponsorshipOffer = await _organizationSponsorshipRepository
+                .GetByOfferedToEmailAsync(_currentContext.User.Email);
+            if (existingSponsorshipOffer == null)
+            {
+                throw new BadRequestException("No unredeemed sponsorship offer exists for you.");
             }
 
-            var existingOrgSponsorship = await _organizationSponsorshipRepository.GetBySponsoredOrganizationIdAsync(model.SponsoredOrganizationId);
+            var existingOrgSponsorship = await _organizationSponsorshipRepository
+                .GetBySponsoredOrganizationIdAsync(model.SponsoredOrganizationId);
             if (existingOrgSponsorship != null)
             {
-                throw new BadRequestException("Cannot redeem a sponsorship offer for and organization that is already sponsored. Revoke existing sponsorship first.");
+                throw new BadRequestException("Cannot redeem a sponsorship offer for an organization that is already sponsored. Revoke existing sponsorship first.");
+            }
+            if (_currentContext.User.Email != existingOrgSponsorship.OfferedToEmail)
+            {
+                throw new BadRequestException("This sponsorship offer was issued to a different user email address.");
             }
 
             var organizationToSponsor = await _organizationRepository.GetByIdAsync(model.SponsoredOrganizationId);
@@ -85,36 +99,34 @@ namespace Bit.Api.Controllers
                 throw new BadRequestException("Can only redeem sponsorship offer on families organizations");
             }
 
-            // TODO: check user is owner of proposed org, it isn't currently sponsored, and set up sponsorship
-            throw new NotImplementedException();
+            await _organizationsSponsorshipService.SetUpSponsorshipAsync(existingSponsorshipOffer, organizationToSponsor);
         }
 
-        [HttpDelete("{sponsoringOrgId}/{sponsoringOrgUserId}")]
-        [HttpPost("{sponsoringOrgId}/{sponsoringOrgUserId}/delete")]
-        public async Task<IActionResult> RevokeSponsorship(string sponsoringOrgId, string sponsoringOrgUserId)
+        [HttpDelete("{sponsoringOrgUserId}")]
+        [HttpPost("{sponsoringOrgUserId}/delete")]
+        public async Task RevokeSponsorship(string sponsoringOrgUserId)
         {
-            var sponsoringOrgIdGuid = new Guid(sponsoringOrgId);
             var sponsoringOrgUserIdGuid = new Guid(sponsoringOrgUserId);
 
             var orgUser = await _organizationUserRepository.GetByIdAsync(sponsoringOrgUserIdGuid);
             if (_currentContext.UserId != orgUser?.UserId)
             {
-                throw new BadRequestException("Can only revoke a sponsorship you own.");
+                throw new BadRequestException("Can only revoke a sponsorship you granted.");
             }
 
-            var existingOrgSponsorship = await _organizationSponsorshipRepository.GetBySponsoringOrganizationUserIdAsync(sponsoringOrgUserIdGuid);
+            var existingOrgSponsorship = await _organizationSponsorshipRepository
+                .GetBySponsoringOrganizationUserIdAsync(sponsoringOrgUserIdGuid);
             if (existingOrgSponsorship == null)
             {
                 throw new BadRequestException("You are not currently sponsoring and organization.");
             }
 
-            // TODO: remove sponsorship
-            throw new NotImplementedException();
+            await _organizationsSponsorshipService.RemoveSponsorshipAsync(existingOrgSponsorship);
         }
 
         [HttpDelete("sponsored/{sponsoredOrgId}")]
         [HttpPost("sponsored/{sponsoredOrgId}/remove")]
-        public async Task<IActionResult> RemoveSponsorship(string sponsoredOrgId)
+        public async Task RemoveSponsorship(string sponsoredOrgId)
         {
             var sponsoredOrgIdGuid = new Guid(sponsoredOrgId);
 
@@ -123,14 +135,14 @@ namespace Bit.Api.Controllers
                 throw new BadRequestException("Only the owner of an organization can remove sponsorship.");
             }
 
-            var existingOrgSponsorship = await _organizationSponsorshipRepository.GetBySponsoringOrganizationUserIdAsync(sponsoredOrgIdGuid);
+            var existingOrgSponsorship = await _organizationSponsorshipRepository
+                .GetBySponsoredOrganizationIdAsync(sponsoredOrgIdGuid);
             if (existingOrgSponsorship == null)
             {
-                throw new BadRequestException("The requested organization is not currently being sponsored");
+                throw new BadRequestException("The requested organization is not currently being sponsored.");
             }
 
-            // TODO: remove sponsorship
-            throw new NotImplementedException();
+            await _organizationsSponsorshipService.RemoveSponsorshipAsync(existingOrgSponsorship);
         }
     }
 }

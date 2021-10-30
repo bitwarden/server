@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
@@ -26,7 +25,10 @@ namespace Bit.Core.Repositories.SqlServer
             {
                 var results = await connection.QueryAsync<OrganizationSponsorship>(
                     "[dbo].[OrganizationSponsorship_ReadBySponsoringOrganizationUserId]",
-                    new { SponsoringOrganizationUserId = sponsoringOrganizationUserId },
+                    new
+                    {
+                        SponsoringOrganizationUserId = sponsoringOrganizationUserId
+                    },
                     commandType: CommandType.StoredProcedure);
 
                 return results.SingleOrDefault();
@@ -40,6 +42,22 @@ namespace Bit.Core.Repositories.SqlServer
                 var results = await connection.QueryAsync<OrganizationSponsorship>(
                     "[dbo].[OrganizationSponsorship_ReadBySponsoredOrganizationId]",
                     new { SponsoredOrganizationId = sponsoredOrganizationId },
+                    commandType: CommandType.StoredProcedure);
+
+                return results.SingleOrDefault();
+            }
+        }
+
+        public async Task<OrganizationSponsorship> GetByOfferedToEmailAsync(string offeredToEmail)
+        {
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<OrganizationSponsorship>(
+                    "[dbo].[OrganizationSponsorship_ReadByOfferedToEmail]",
+                    new
+                    {
+                        OfferedToEmail = offeredToEmail
+                    },
                     commandType: CommandType.StoredProcedure);
 
                 return results.SingleOrDefault();
