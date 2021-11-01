@@ -96,5 +96,21 @@ namespace Bit.Core.Test.Models.Business
 
             Assert.Equal("us_ein", taxInfo.TaxIdType);
         }
+
+        [Theory]
+        [InlineData(null, null, false)]
+        [InlineData("123", "US", true)]
+        [InlineData("123", "ZQ12", false)]
+        [InlineData("    ", "US", false)]
+        public void HasTaxId_ReturnsExpected(string taxIdNumber, string billingAddressCountry, bool expected)
+        {
+            var taxInfo = new TaxInfo
+            {
+                TaxIdNumber = taxIdNumber,
+                BillingAddressCountry = billingAddressCountry,
+            };
+
+            Assert.Equal(expected, taxInfo.HasTaxId);
+        }
     }
 }
