@@ -8,7 +8,6 @@ using Bit.Core.Enums;
 using Bit.Core.Models;
 using Bit.Core.Models.Business;
 using Fido2NetLib;
-using Bit.Core.Models.Api;
 
 namespace Bit.Core.Services
 {
