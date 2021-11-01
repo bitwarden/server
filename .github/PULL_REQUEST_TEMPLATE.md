@@ -22,6 +22,7 @@
 
 
 ## Before you submit
+- [ ] If changing the database schema - I have generated Entity Framework migrations for all database providers
 - [ ] I have added **unit tests** where it makes sense to do so (encouraged but not required)
 - [ ] This change requires a **documentation update** (notify the documentation team)
 - [ ] This change has particular **deployment requirements** (notify the DevOps team)
