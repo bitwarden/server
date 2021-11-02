@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Text.Json;
 using Bit.Core.Models.Data;
 
 namespace Bit.Core.Models.Table
@@ -13,11 +12,6 @@ namespace Bit.Core.Models.Table
         public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
         public DateTime RevisionDate { get; internal set; } = DateTime.UtcNow;
 
-        private JsonSerializerOptions _jsonSerializerOptions = new()
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        };
-
         public void SetNewId()
         {
             // int will be auto-populated
@@ -26,12 +20,12 @@ namespace Bit.Core.Models.Table
 
         public SsoConfigurationData GetData()
         {
-            return JsonSerializer.Deserialize<SsoConfigurationData>(Data, _jsonSerializerOptions);
+            return SsoConfigurationData.Deserialize(Data);
         }
 
         public void SetData(SsoConfigurationData data)
         {
-            Data = JsonSerializer.Serialize(data, _jsonSerializerOptions);
+            Data = data.Serialize();
         }
     }
 }

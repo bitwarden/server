@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using Bit.Core.Enums;
 using Bit.Core.Sso;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
@@ -12,6 +13,21 @@ namespace Bit.Core.Models.Data
         private const string _oidcSigninPath = "/oidc-signin";
         private const string _oidcSignedOutPath = "/oidc-signedout";
         private const string _saml2ModulePath = "/saml2";
+
+        private static JsonSerializerOptions _jsonSerializerOptions = new()
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        };
+
+        public static SsoConfigurationData Deserialize(string data)
+        {
+            return JsonSerializer.Deserialize<SsoConfigurationData>(data, _jsonSerializerOptions);
+        }
+
+        public string Serialize()
+        {
+            return JsonSerializer.Serialize(this, _jsonSerializerOptions);
+        }
 
         public SsoType ConfigType { get; set; }
 
