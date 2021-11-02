@@ -76,6 +76,7 @@ namespace Bit.Core.Test.AutoFixture.EntityFrameworkRepositoryFixtures
                         cfg.AddProfile<GroupUserMapperProfile>();
                         cfg.AddProfile<InstallationMapperProfile>();
                         cfg.AddProfile<OrganizationMapperProfile>();
+                        cfg.AddProfile<OrganizationSponsorshipMapperProfile>();
                         cfg.AddProfile<OrganizationUserMapperProfile>();
                         cfg.AddProfile<ProviderMapperProfile>();
                         cfg.AddProfile<ProviderUserMapperProfile>();
