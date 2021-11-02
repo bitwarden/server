@@ -27,7 +27,7 @@ $githubBaseUrl = "https://raw.githubusercontent.com/bitwarden/server/master"
 
 # Please do not create pull requests modifying the version numbers.
 $coreVersion = "1.44.1"
-$webVersion = "2.24.1"
+$webVersion = "2.24.2"
 
 # Functions
 
