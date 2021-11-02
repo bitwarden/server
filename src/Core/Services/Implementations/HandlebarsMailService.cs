@@ -755,5 +755,40 @@ namespace Bit.Core.Services
             message.Category = "UpdatedTempPassword";
             await _mailDeliveryService.SendEmailAsync(message);
         }
+
+        public Task SendFamilyForEnterpriseInviteRedeemableEmailAsync(string email, string token)
+        {
+            // TODO: Implement
+            throw new NotImplementedException();
+        }
+
+        public Task SendFamilyForEnterpriseInviteRedeemedToFamilyUserEmailAsync(string email)
+        {
+            // TODO: Implement
+            throw new NotImplementedException();
+        }
+        public Task SendFamilyForEnterpriseInviteRedeemedToOrgUserEmailAsync(string email)
+        {
+            // TODO: Implement
+            throw new NotImplementedException();
+        }
+
+        public Task SendFamilyForEnterpriseReconfirmationRequiredEmailAsync(string email)
+        {
+            // TODO: Implement
+            throw new NotImplementedException();
+        }
+
+        public Task SendFamilyForEnterpriseSponsorshipRevertingEmailAsync(string email)
+        {
+            // TODO: Implement
+            throw new NotImplementedException();
+        }
+
+        public Task SendFamilyForEnterpriseSponsorshipEndingEmailAsync(string email)
+        {
+            // TODO: Implement
+            throw new NotImplementedException();
+        }
     }
 }
