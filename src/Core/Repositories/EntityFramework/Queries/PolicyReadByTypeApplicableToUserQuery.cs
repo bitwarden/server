@@ -27,10 +27,19 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
                     on pu.ProviderId equals po.ProviderId
                 select po;
 
+            string userEmail = null;
+            if (_minimumStatus == OrganizationUserStatusType.Invited)
+            {
+                // Invited orgUsers do not have a UserId associated with them, so we have to match up their email
+                userEmail = dbContext.Users.Find(_userId)?.Email;
+            }
+
             var query = from p in dbContext.Policies
                 join ou in dbContext.OrganizationUsers
                     on p.OrganizationId equals ou.OrganizationId
-                where ou.UserId == _userId &&
+                where 
+                    ((_minimumStatus > OrganizationUserStatusType.Invited && ou.UserId == _userId) ||
+                        (_minimumStatus == OrganizationUserStatusType.Invited && ou.Email == userEmail)) &&
                     p.Type == _policyType &&
                     p.Enabled &&
                     ou.Status >= _minimumStatus &&
