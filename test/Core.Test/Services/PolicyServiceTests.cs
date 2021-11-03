@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -95,6 +96,66 @@ namespace Bit.Core.Test.Services
             await sutProvider.GetDependency<IEventService>()
                 .DidNotReceiveWithAnyArgs()
                 .LogPolicyEventAsync(default, default, default);
+        }
+
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public async Task SaveAsync_SingleOrg_VaultTimeoutEnabled_ThrowsBadRequest([PolicyFixtures.Policy(Enums.PolicyType.SingleOrg)] Core.Models.Table.Policy policy, SutProvider<PolicyService> sutProvider)
+        {
+            policy.Enabled = false;
+
+            SetupOrg(sutProvider, policy.OrganizationId, new Organization
+            {
+                Id = policy.OrganizationId,
+                UsePolicies = true,
+            });
+
+            sutProvider.GetDependency<IPolicyRepository>()
+                .GetByOrganizationIdTypeAsync(policy.OrganizationId, Enums.PolicyType.MaximumVaultTimeout)
+                .Returns(new Policy { Enabled = true });
+
+            var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
+                () => sutProvider.Sut.SaveAsync(policy,
+                    Substitute.For<IUserService>(),
+                    Substitute.For<IOrganizationService>(),
+                    Guid.NewGuid()));
+
+            Assert.Contains("Maximum Vault Timeout policy is enabled.", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
+
+            await sutProvider.GetDependency<IPolicyRepository>()
+                .DidNotReceiveWithAnyArgs()
+                .UpsertAsync(default);
+        }
+
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public async Task SaveAsync_SingleOrg_CryptoAgentEnabled_ThrowsBadRequest([PolicyFixtures.Policy(Enums.PolicyType.SingleOrg)] Core.Models.Table.Policy policy, SutProvider<PolicyService> sutProvider)
+        {
+            policy.Enabled = false;
+
+            SetupOrg(sutProvider, policy.OrganizationId, new Organization
+            {
+                Id = policy.OrganizationId,
+                UsePolicies = true,
+            });
+
+            var ssoConfig = new SsoConfig { Enabled = true };
+            var data = new SsoConfigurationData { UseCryptoAgent = true };
+            ssoConfig.SetData(data);
+
+            sutProvider.GetDependency<ISsoConfigRepository>()
+                .GetByOrganizationIdAsync(policy.OrganizationId)
+                .Returns(ssoConfig);
+
+            var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
+                () => sutProvider.Sut.SaveAsync(policy,
+                    Substitute.For<IUserService>(),
+                    Substitute.For<IOrganizationService>(),
+                    Guid.NewGuid()));
+
+            Assert.Contains("CryptoAgent is enabled.", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
+
+            await sutProvider.GetDependency<IPolicyRepository>()
+                .DidNotReceiveWithAnyArgs()
+                .UpsertAsync(default);
         }
 
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]

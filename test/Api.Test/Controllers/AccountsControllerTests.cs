@@ -55,7 +55,6 @@ namespace Bit.Api.Test.Controllers
                 _organizationUserRepository,
                 _providerUserRepository,
                 _paymentService,
-                _ssoUserRepository,
                 _userRepository,
                 _userService,
                 _sendRepository,
