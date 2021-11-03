@@ -288,6 +288,29 @@ namespace Bit.Api.Controllers
             throw new BadRequestException(ModelState);
         }
 
+        [HttpPost("convert-to-crypto-agent")]
+        public async Task PostConvertToCryptoAgent()
+        {
+            var user = await _userService.GetUserByPrincipalAsync(User);
+            if (user == null)
+            {
+                throw new UnauthorizedAccessException();
+            }
+
+            var result = await _userService.ConvertToCryptoAgentAsync(user);
+            if (result.Succeeded)
+            {
+                return;
+            }
+
+            foreach (var error in result.Errors)
+            {
+                ModelState.AddModelError(string.Empty, error.Description);
+            }
+
+            throw new BadRequestException(ModelState);
+        }
+
         [HttpPost("kdf")]
         public async Task PostKdf([FromBody]KdfRequestModel model)
         {
