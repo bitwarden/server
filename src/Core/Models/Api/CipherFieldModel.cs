@@ -14,6 +14,7 @@ namespace Bit.Core.Models.Api
             Type = data.Type;
             Name = data.Name;
             Value = data.Value;
+            LinkedId = data.LinkedId ?? null;
         }
 
         public FieldType Type { get; set; }
@@ -21,5 +22,6 @@ namespace Bit.Core.Models.Api
         public string Name { get; set; }
         [EncryptedStringLength(5000)]
         public string Value { get; set; }
+        public int? LinkedId { get; set; }
     }
 }
