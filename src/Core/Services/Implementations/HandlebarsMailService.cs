@@ -9,6 +9,7 @@ using System.Net;
 using Bit.Core.Utilities;
 using System.Linq;
 using System.Reflection;
+using Bit.Core.Models.Mail.FamilyForEnterprise;
 using Bit.Core.Models.Mail.Provider;
 using Bit.Core.Models.Table.Provider;
 using HandlebarsDotNet;
@@ -756,39 +757,91 @@ namespace Bit.Core.Services
             await _mailDeliveryService.SendEmailAsync(message);
         }
 
-        public Task SendFamilyForEnterpriseInviteRedeemableEmailAsync(string email, string token)
+        public async Task SendFamilyForEnterpriseInviteRedeemableEmailAsync(string email, string organizationName, string token)
         {
-            // TODO: Implement
-            throw new NotImplementedException();
+            // TODO: Complete emails
+            var message = CreateDefaultMessage("A Family Organization Invite Is Redeemable", email);
+
+            // NOTE: If somehow cloud vault changes this will need to change/be injected
+            var url = CoreHelpers.ExtendQuery(new Uri($"https://vault.bitwarden.com/#/sponsored/families-for-enterprise"),
+                new Dictionary<string, string>
+                {
+                    ["sponsorshipToken"] = token,
+                });
+
+            var model = new FamilyForEnterpriseInviteRedeemableViewModel
+            {
+                Url = url.ToString(),
+                OrganizationName = organizationName,
+            };
+
+            await AddMessageContentAsync(message, "FamilyForEnterprise.FamilyForEnterpriseInviteRedeemable", model);
+            message.Category = "";
+            await _mailDeliveryService.SendEmailAsync(message);
         }
 
-        public Task SendFamilyForEnterpriseInviteRedeemedToFamilyUserEmailAsync(string email)
+        public async Task SendFamilyForEnterpriseInviteRedeemedToFamilyUserEmailAsync(string email)
         {
-            // TODO: Implement
-            throw new NotImplementedException();
+            // TODO: Complete emails
+            var message = CreateDefaultMessage("You Have Redeemed A Family Organization Sponsorship", email);
+            var model = new FamilyForEnterpriseInviteRedeemedToFamilyUserViewModel
+            {
+
+            };
+            await AddMessageContentAsync(message, "FamilyForEnterprise.FamilyForEnterpriseInviteRedeemedToFamilyUser", model);
+            message.Category = "";
+            await _mailDeliveryService.SendEmailAsync(message);
         }
-        public Task SendFamilyForEnterpriseInviteRedeemedToOrgUserEmailAsync(string email)
+        public async Task SendFamilyForEnterpriseInviteRedeemedToOrgUserEmailAsync(string email)
         {
-            // TODO: Implement
-            throw new NotImplementedException();
+            // TODO: Complete emails
+            var message = CreateDefaultMessage("A User Has Redeemeed Your Sponsorship", email);
+            var model = new FamilyForEnterpriseInviteRedeemedToOrgUserViewModel
+            {
+
+            };
+            await AddMessageContentAsync(message, "FamilyForEnterprise.FamilyForEnterpriseInviteRedeemedToOrgUser", model);
+            message.Category = "";
+            await _mailDeliveryService.SendEmailAsync(message);
         }
 
-        public Task SendFamilyForEnterpriseReconfirmationRequiredEmailAsync(string email)
+        public async Task SendFamilyForEnterpriseReconfirmationRequiredEmailAsync(string email)
         {
-            // TODO: Implement
-            throw new NotImplementedException();
+            // TODO: Complete emails
+            var message = CreateDefaultMessage("A Family Organization Invite Is Redeemable", email);
+            var model = new FamilyForEnterpriseInviteRedeemableViewModel
+            {
+
+            };
+            await AddMessageContentAsync(message, "FamilyForEnterprise.FamilyForEnterpriseReconfirmationRequired", model);
+            message.Category = "";
+            await _mailDeliveryService.SendEmailAsync(message);
         }
 
-        public Task SendFamilyForEnterpriseSponsorshipRevertingEmailAsync(string email)
+        public async Task SendFamilyForEnterpriseSponsorshipRevertingEmailAsync(string email)
         {
-            // TODO: Implement
-            throw new NotImplementedException();
+            // TODO: Complete emails
+            var message = CreateDefaultMessage("A Family Organization Sponsorship Is Reverting", email);
+            var model = new FamilyForEnterpriseInviteRedeemableViewModel
+            {
+
+            };
+            await AddMessageContentAsync(message, "FamilyForEnterprise.FamilyForEnterpriseInviteRedeemable", model);
+            message.Category = "";
+            await _mailDeliveryService.SendEmailAsync(message);
         }
 
-        public Task SendFamilyForEnterpriseSponsorshipEndingEmailAsync(string email)
+        public async Task SendFamilyForEnterpriseSponsorshipEndingEmailAsync(string email)
         {
-            // TODO: Implement
-            throw new NotImplementedException();
+            // TODO: Complete emails
+            var message = CreateDefaultMessage("A Family Organization Sponsorship Is Ending", email);
+            var model = new FamilyForEnterpriseInviteRedeemableViewModel
+            {
+
+            };
+            await AddMessageContentAsync(message, "FamilyForEnterprise.FamilyForEnterpriseInviteRedeemable", model);
+            message.Category = "";
+            await _mailDeliveryService.SendEmailAsync(message);
         }
     }
 }

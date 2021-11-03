@@ -201,7 +201,7 @@ namespace Bit.Core.Services
             return Task.FromResult(0);
         }
 
-        public Task SendFamilyForEnterpriseInviteRedeemableEmailAsync(string email, string token)
+        public Task SendFamilyForEnterpriseInviteRedeemableEmailAsync(string email, string organizationName, string token)
         {
             return Task.FromResult(0);
         }
