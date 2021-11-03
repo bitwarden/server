@@ -1,8 +1,14 @@
 CREATE PROCEDURE [dbo].[OrganizationSponsorship_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
+    @InstallationId UNIQUEIDENTIFIER,
     @SponsoringOrganizationId UNIQUEIDENTIFIER,
     @SponsoringOrganizationUserID UNIQUEIDENTIFIER,
-    @OfferedToEmail NVARCHAR(256) -- Should not be null
+    @SponsoredOrganizationId UNIQUEIDENTIFIER,
+    @OfferedToEmail NVARCHAR(256),
+    @CloudSponsor BIT,
+    @LastSyncDate DATETIME2 (7),
+    @TimesRenewedWithoutValidation TINYINT,
+    @SponsorshipLapsedDate DATETIME2 (7)
 AS
 BEGIN
     SET NOCOUNT ON
@@ -10,18 +16,28 @@ BEGIN
     INSERT INTO [dbo].[OrganizationSponsorship]
     (
         [Id],
+        [InstallationId],
         [SponsoringOrganizationId],
         [SponsoringOrganizationUserID],
+        [SponsoredOrganizationId],
+        [OfferedToEmail],
         [CloudSponsor],
-        [OfferedToEmail]
+        [LastSyncDate],
+        [TimesRenewedWithoutValidation],
+        [SponsorshipLapsedDate]
     )
     VALUES
     (
         @Id,
+        @InstallationId,
         @SponsoringOrganizationId,
         @SponsoringOrganizationUserID,
-        1, -- Should only be called by cloud sponsorship
-        @OfferedToEmail
+        @SponsoredOrganizationId,
+        @OfferedToEmail,
+        @CloudSponsor,
+        @LastSyncDate,
+        @TimesRenewedWithoutValidation,
+        @SponsorshipLapsedDate
     )
 END
 GO
