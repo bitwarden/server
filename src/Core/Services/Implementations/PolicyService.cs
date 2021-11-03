@@ -15,6 +15,7 @@ namespace Bit.Core.Services
         private readonly IOrganizationRepository _organizationRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly IPolicyRepository _policyRepository;
+        private readonly ISsoConfigRepository _ssoConfigRepository;
         private readonly IMailService _mailService;
 
         public PolicyService(
@@ -22,12 +23,14 @@ namespace Bit.Core.Services
             IOrganizationRepository organizationRepository,
             IOrganizationUserRepository organizationUserRepository,
             IPolicyRepository policyRepository,
+            ISsoConfigRepository ssoConfigRepository,
             IMailService mailService)
         {
             _eventService = eventService;
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
             _policyRepository = policyRepository;
+            _ssoConfigRepository = ssoConfigRepository;
             _mailService = mailService;
         }
 
@@ -56,6 +59,19 @@ namespace Bit.Core.Services
                         if (requireSso?.Enabled == true)
                         {
                             throw new BadRequestException("Single Sign-On Authentication policy is enabled.");
+                        }
+
+                        var vaultTimeout =
+                            await _policyRepository.GetByOrganizationIdTypeAsync(org.Id, PolicyType.MaximumVaultTimeout);
+                        if (vaultTimeout?.Enabled == true)
+                        {
+                            throw new BadRequestException("Maximum Vault Timeout policy is enabled.");
+                        }
+
+                        var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(org.Id);
+                        if (ssoConfig?.GetData()?.UseCryptoAgent == true)
+                        {
+                            throw new BadRequestException("CryptoAgent is enabled.");
                         }
                     }
                     break;
