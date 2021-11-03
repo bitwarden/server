@@ -406,7 +406,7 @@ namespace Bit.Api.Test.Controllers
 
         private void ConfigureUserServiceToAcceptPasswordFor(User user)
         {
-            _userService.CheckPasswordAsync(user, Arg.Any<string>())
+            _userService.VerifyPasswordOrOTPAsync(user, Arg.Any<string>())
                         .Returns(Task.FromResult(true));
         }
 

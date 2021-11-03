@@ -21,7 +21,7 @@ namespace Bit.Core.Test.Services
             var ssoConfig = new SsoConfig
             {
                 Id = 1,
-                Data = "TESTDATA",
+                Data = "{}",
                 Enabled = true,
                 OrganizationId = Guid.NewGuid(),
                 CreationDate = utcNow.AddDays(-10),
@@ -48,7 +48,7 @@ namespace Bit.Core.Test.Services
             var ssoConfig = new SsoConfig
             {
                 Id = default,
-                Data = "TESTDATA",
+                Data = "{}",
                 Enabled = true,
                 OrganizationId = Guid.NewGuid(),
                 CreationDate = utcNow.AddDays(-10),
