@@ -49,7 +49,6 @@
         OrganizationUser_ResetPassword_Withdraw = 1507,
         OrganizationUser_AdminResetPassword = 1508,
         OrganizationUser_ResetSsoLink = 1509,
-        OrganizationUser_LinkedSso = 1510,
 
         Organization_Updated = 1600,
         Organization_PurgedVault = 1601,

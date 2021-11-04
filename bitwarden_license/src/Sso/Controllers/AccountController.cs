@@ -613,7 +613,6 @@ namespace Bit.Sso.Controllers
                 OrganizationId = orgUser.OrganizationId
             }; 
             await _ssoUserRepository.CreateAsync(ssoUser);
-            await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_LinkedSso);
         }
 
         private void ProcessLoginCallback(AuthenticateResult externalResult,
