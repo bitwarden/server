@@ -42,8 +42,11 @@ namespace Bit.Api.Controllers
         {
             // TODO: validate has right to sponsor, send sponsorship email
             var sponsoringOrgIdGuid = new Guid(sponsoringOrgId);
+            var requiredSponsoringProductType = StaticStore.GetSponsoredPlan(model.PlanSponsorshipType)?.SponsoringProductType;
             var sponsoringOrg = await _organizationRepository.GetByIdAsync(sponsoringOrgIdGuid);
-            if (sponsoringOrg == null || !PlanTypeHelper.HasEnterprisePlan(sponsoringOrg))
+            if (requiredSponsoringProductType == null ||
+                sponsoringOrg == null ||
+                StaticStore.GetPlan(sponsoringOrg.PlanType).Product != requiredSponsoringProductType.Value)
             {
                 throw new BadRequestException("Specified Organization cannot sponsor other organizations.");
             }
@@ -71,7 +74,6 @@ namespace Bit.Api.Controllers
         [SelfHosted(NotSelfHostedOnly = true)]
         public async Task RedeemSponsorship([FromQuery] string sponsorshipToken, [FromBody] OrganizationSponsorshipRedeemRequestModel model)
         {
-            // TODO: parse out sponsorshipInfo
             if (!await _organizationsSponsorshipService.ValidateRedemptionTokenAsync(sponsorshipToken))
             {
                 throw new BadRequestException("Failed to parse sponsorship token.");
@@ -99,9 +101,12 @@ namespace Bit.Api.Controllers
                 throw new BadRequestException("Cannot redeem a sponsorship offer for an organization that is already sponsored. Revoke existing sponsorship first.");
             }
 
+            // Check org to sponsor's product type
+            var requiredSponsoredProductType = StaticStore.GetSponsoredPlan(model.planSponsorshipType)?.SponsoredProductType;
             var organizationToSponsor = await _organizationRepository.GetByIdAsync(model.SponsoredOrganizationId);
-            // TODO: only current families plan?
-            if (organizationToSponsor == null || !PlanTypeHelper.HasFamiliesPlan(organizationToSponsor))
+            if (requiredSponsoredProductType == null ||
+                organizationToSponsor == null ||
+                StaticStore.GetPlan(organizationToSponsor.PlanType).Product != requiredSponsoredProductType.Value)
             {
                 throw new BadRequestException("Can only redeem sponsorship offer on families organizations.");
             }

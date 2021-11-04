@@ -16,6 +16,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Models.Api.Request;
 using Bit.Core.Services;
 using Bit.Core.Models.Api;
+using Bit.Core.Utilities;
 
 namespace Bit.Api.Test.Controllers
 {
@@ -24,22 +25,24 @@ namespace Bit.Api.Test.Controllers
     public class OrganizationSponsorshipsControllerTests
     {
         public static IEnumerable<object[]> EnterprisePlanTypes =>
-            Enum.GetValues<PlanType>().Where(p => PlanTypeHelper.IsEnterprise(p)).Select(p => new object[] { p });
+            Enum.GetValues<PlanType>().Where(p => StaticStore.GetPlan(p).Product == ProductType.Enterprise).Select(p => new object[] { p });
         public static IEnumerable<object[]> NonEnterprisePlanTypes =>
-            Enum.GetValues<PlanType>().Where(p => !PlanTypeHelper.IsEnterprise(p)).Select(p => new object[] { p });
+            Enum.GetValues<PlanType>().Where(p => StaticStore.GetPlan(p).Product != ProductType.Enterprise).Select(p => new object[] { p });
         public static IEnumerable<object[]> NonFamiliesPlanTypes =>
-            Enum.GetValues<PlanType>().Where(p => !PlanTypeHelper.IsFamilies(p)).Select(p => new object[] { p });
+            Enum.GetValues<PlanType>().Where(p => StaticStore.GetPlan(p).Product != ProductType.Families).Select(p => new object[] { p });
 
         [Theory]
         [BitMemberAutoData(nameof(NonEnterprisePlanTypes))]
         public async Task CreateSponsorship_BadSponsoringOrgPlan_ThrowsBadRequest(PlanType sponsoringOrgPlan, Organization org,
-            SutProvider<OrganizationSponsorshipsController> sutProvider)
+            OrganizationSponsorshipRequestModel model, SutProvider<OrganizationSponsorshipsController> sutProvider)
         {
             org.PlanType = sponsoringOrgPlan;
+            model.PlanSponsorshipType = PlanSponsorshipType.FamiliesForEnterprise;
+
             sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(org.Id).Returns(org);
 
             var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-                sutProvider.Sut.CreateSponsorship(org.Id.ToString(), null));
+                sutProvider.Sut.CreateSponsorship(org.Id.ToString(), model));
 
             Assert.Contains("Specified Organization cannot sponsor other organizations.", exception.Message);
             await sutProvider.GetDependency<IOrganizationSponsorshipService>()
