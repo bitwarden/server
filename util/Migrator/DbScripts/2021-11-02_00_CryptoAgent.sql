@@ -299,3 +299,35 @@ FROM
     [dbo].[Provider] P ON P.[Id] = PO.[ProviderId]
         LEFT JOIN
     [dbo].[SsoConfig] SS ON SS.[OrganizationId] = OU.[OrganizationId]
+GO
+
+IF EXISTS(SELECT * FROM sys.views WHERE [Name] = 'OrganizationUserUserDetailsView')
+    BEGIN
+        DROP VIEW [dbo].[OrganizationUserUserDetailsView]
+    END
+GO
+
+CREATE VIEW [dbo].[OrganizationUserUserDetailsView]
+AS
+SELECT
+    OU.[Id],
+    OU.[UserId],
+    OU.[OrganizationId],
+    U.[Name],
+    ISNULL(U.[Email], OU.[Email]) Email,
+    U.[TwoFactorProviders],
+    U.[Premium],
+    OU.[Status],
+    OU.[Type],
+    OU.[AccessAll],
+    OU.[ExternalId],
+    SU.[ExternalId] SsoExternalId,
+    OU.[Permissions],
+    OU.[ResetPasswordKey],
+    U.[UsesKeyConnector]
+FROM
+    [dbo].[OrganizationUser] OU
+LEFT JOIN
+    [dbo].[User] U ON U.[Id] = OU.[UserId]
+LEFT JOIN
+    [dbo].[SsoUser] SU ON SU.[UserId] = OU.[UserId] AND SU.[OrganizationId] = OU.[OrganizationId]

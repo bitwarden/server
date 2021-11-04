@@ -737,7 +737,12 @@ namespace Bit.Core.Services
             {
                 throw new NotFoundException();
             }
-            
+
+            if (user.UsesKeyConnector)
+            {
+                throw new BadRequestException("Cannot reset password of a user with key connector.");
+            }
+
             var result = await UpdatePasswordHash(user, newMasterPassword);
             if (!result.Succeeded)
             {
