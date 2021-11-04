@@ -640,14 +640,7 @@ namespace Bit.Api.Controllers
             }
 
             var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(id);
-            if (ssoConfig == null)
-            {
-                ssoConfig = model.ToSsoConfig(id);
-            }
-            else
-            {
-                ssoConfig = model.ToSsoConfig(ssoConfig);
-            }
+            ssoConfig = ssoConfig == null ? model.ToSsoConfig(id) : model.ToSsoConfig(ssoConfig);
 
             await _ssoConfigService.SaveAsync(ssoConfig);
 
