@@ -45,6 +45,11 @@ namespace Bit.Core.Services
             }
 
             var oldConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(config.OrganizationId);
+            if (oldConfig?.GetData()?.UseKeyConnector == true && !config.GetData().UseKeyConnector)
+            {
+                throw new BadRequestException("KeyConnector cannot be disabled at this moment.");
+            }
+
             var organization = await _organizationRepository.GetByIdAsync(config.OrganizationId);
             if (oldConfig?.Enabled != config.Enabled)
             {

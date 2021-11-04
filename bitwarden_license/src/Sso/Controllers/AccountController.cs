@@ -604,6 +604,7 @@ namespace Bit.Sso.Controllers
                 await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_ResetSsoLink);
             }
         }
+
         private async Task CreateSsoUserRecord(string providerUserId, Guid userId, OrganizationUser orgUser)
         {
             var ssoUser = new SsoUser
@@ -611,7 +612,7 @@ namespace Bit.Sso.Controllers
                 ExternalId = providerUserId,
                 UserId = userId,
                 OrganizationId = orgUser.OrganizationId
-            }; 
+            };
             await _ssoUserRepository.CreateAsync(ssoUser);
         }
 
