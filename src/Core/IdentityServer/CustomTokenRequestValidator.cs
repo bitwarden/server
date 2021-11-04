@@ -60,12 +60,35 @@ namespace Bit.Core.IdentityServer
                 return;
             }
             await ValidateAsync(context, context.Result.ValidatedRequest);
+        }
 
-            if (context.Result.CustomResponse != null)
+        protected async override Task<(User, bool)> ValidateContextAsync(CustomTokenRequestValidationContext context)
+        {
+            var email = context.Result.ValidatedRequest.Subject?.GetDisplayName() 
+                ?? context.Result.ValidatedRequest.ClientClaims?.FirstOrDefault(claim => claim.Type == JwtClaimTypes.Email)?.Value;
+            var user = string.IsNullOrWhiteSpace(email) ? null : await _userManager.FindByEmailAsync(email);
+            return (user, user != null);
+        }
+
+        protected override async Task SetSuccessResult(CustomTokenRequestValidationContext context, User user,
+            List<Claim> claims, Dictionary<string, object> customResponse)
+        {
+            context.Result.CustomResponse = customResponse;
+            if (claims?.Any() ?? false)
+            {
+                context.Result.ValidatedRequest.Client.AlwaysSendClientClaims = true;
+                context.Result.ValidatedRequest.Client.ClientClaimsPrefix = string.Empty;
+                foreach (var claim in claims)
+                {
+                    context.Result.ValidatedRequest.ClientClaims.Add(claim);
+                }
+            }
+
+            if (context.Result.CustomResponse != null && user.MasterPassword == null)
             {
                 Guid organizationId;
                 var validatedRequest = context.Result.ValidatedRequest;
-                
+
                 if (validatedRequest.GrantType == "client_credentials")
                 {
                     var organizationIdentifier = validatedRequest.Raw["org_identifier"]?.ToString();
@@ -95,29 +118,6 @@ namespace Bit.Core.IdentityServer
                     context.Result.CustomResponse["KeyConnectorUrl"] = ssoConfigData.KeyConnectorUrl;
                     // Prevent clients redirecting to set-password
                     context.Result.CustomResponse["ResetMasterPassword"] = false;
-                }
-            }
-        }
-
-        protected async override Task<(User, bool)> ValidateContextAsync(CustomTokenRequestValidationContext context)
-        {
-            var email = context.Result.ValidatedRequest.Subject?.GetDisplayName() 
-                ?? context.Result.ValidatedRequest.ClientClaims?.FirstOrDefault(claim => claim.Type == JwtClaimTypes.Email)?.Value;
-            var user = string.IsNullOrWhiteSpace(email) ? null : await _userManager.FindByEmailAsync(email);
-            return (user, user != null);
-        }
-
-        protected override void SetSuccessResult(CustomTokenRequestValidationContext context, User user,
-            List<Claim> claims, Dictionary<string, object> customResponse)
-        {
-            context.Result.CustomResponse = customResponse;
-            if (claims?.Any() ?? false)
-            {
-                context.Result.ValidatedRequest.Client.AlwaysSendClientClaims = true;
-                context.Result.ValidatedRequest.Client.ClientClaimsPrefix = string.Empty;
-                foreach (var claim in claims)
-                {
-                    context.Result.ValidatedRequest.ClientClaims.Add(claim);
                 }
             }
         }
