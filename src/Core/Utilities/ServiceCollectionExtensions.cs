@@ -101,6 +101,7 @@ namespace Bit.Core.Utilities
                 services.AddSingleton<IInstallationRepository, EntityFrameworkRepos.InstallationRepository>();
                 services.AddSingleton<IMaintenanceRepository, EntityFrameworkRepos.MaintenanceRepository>();
                 services.AddSingleton<IOrganizationRepository, EntityFrameworkRepos.OrganizationRepository>();
+                services.AddSingleton<IOrganizationSponsorshipRepository, EntityFrameworkRepos.OrganizationSponsorshipRepository>();
                 services.AddSingleton<IOrganizationUserRepository, EntityFrameworkRepos.OrganizationUserRepository>();
                 services.AddSingleton<IPolicyRepository, EntityFrameworkRepos.PolicyRepository>();
                 services.AddSingleton<ISendRepository, EntityFrameworkRepos.SendRepository>();
@@ -127,6 +128,7 @@ namespace Bit.Core.Utilities
                 services.AddSingleton<IInstallationRepository, SqlServerRepos.InstallationRepository>();
                 services.AddSingleton<IMaintenanceRepository, SqlServerRepos.MaintenanceRepository>();
                 services.AddSingleton<IOrganizationRepository, SqlServerRepos.OrganizationRepository>();
+                services.AddSingleton<IOrganizationSponsorshipRepository, SqlServerRepos.OrganizationSponsorshipRepository>();
                 services.AddSingleton<IOrganizationUserRepository, SqlServerRepos.OrganizationUserRepository>();
                 services.AddSingleton<IPolicyRepository, SqlServerRepos.PolicyRepository>();
                 services.AddSingleton<ISendRepository, SqlServerRepos.SendRepository>();
