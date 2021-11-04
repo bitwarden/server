@@ -7,6 +7,7 @@ using Bit.Core.Test.AutoFixture.EntityFrameworkRepositoryFixtures;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Core.Test.AutoFixture.OrganizationUserFixtures;
+using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 
 namespace Bit.Core.Test.AutoFixture.OrganizationSponsorshipFixtures
 {
@@ -46,14 +47,14 @@ namespace Bit.Core.Test.AutoFixture.OrganizationSponsorshipFixtures
 
     internal class EfOrganizationSponsorshipAutoDataAttribute : CustomAutoDataAttribute
     {
-        public EfOrganizationSponsorshipAutoDataAttribute() : base(new SutProviderCustomization(), new EfOrganizationSponsorship())
+        public EfOrganizationSponsorshipAutoDataAttribute() : base(new SutProviderCustomization(), new EfOrganizationSponsorship(), new EfOrganization())
         { }
     }
 
     internal class InlineEfOrganizationSponsorshipAutoDataAttribute : InlineCustomAutoDataAttribute
     {
         public InlineEfOrganizationSponsorshipAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
-            typeof(EfOrganizationSponsorship) }, values)
+            typeof(EfOrganizationSponsorship), typeof(EfOrganization) }, values)
         { }
     }
 }
