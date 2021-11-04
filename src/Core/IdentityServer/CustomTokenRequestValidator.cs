@@ -24,6 +24,7 @@ namespace Bit.Core.IdentityServer
     {
         private UserManager<User> _userManager;
         private readonly ISsoConfigRepository _ssoConfigRepository;
+        private readonly IOrganizationRepository _organizationRepository;
 
         public CustomTokenRequestValidator(
             UserManager<User> userManager,
@@ -47,6 +48,7 @@ namespace Bit.Core.IdentityServer
         {
             _userManager = userManager;
             _ssoConfigRepository = ssoConfigRepository;
+            _organizationRepository = organizationRepository;
         }
 
         public async Task ValidateAsync(CustomTokenRequestValidationContext context)
@@ -61,22 +63,37 @@ namespace Bit.Core.IdentityServer
 
             if (context.Result.CustomResponse != null)
             {
-                var organizationClaim = context.Result.ValidatedRequest.Subject?.FindFirst(c => c.Type == "organizationId");
-                var organizationId = organizationClaim?.Value ?? "";
+                Guid organizationId;
+                var validatedRequest = context.Result.ValidatedRequest;
+                
+                if (validatedRequest.GrantType == "client_credentials")
+                {
+                    var organizationIdentifier = validatedRequest.Raw["org_identifier"]?.ToString();
 
-                var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(new Guid(organizationId));
+                    if (organizationIdentifier == null)
+                    {
+                        // Api key login not using Key Connector
+                        return;
+                    }
+
+                    // Api key login
+                    var organization = await _organizationRepository.GetByIdentifierAsync(organizationIdentifier);
+                    organizationId = organization.Id;
+                }
+                else
+                {
+                    // SSO login
+                    var organizationClaim = validatedRequest.Subject?.FindFirst(c => c.Type == "organizationId");
+                    organizationId = new Guid(organizationClaim?.Value);
+                }
+
+                var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(organizationId);
                 var ssoConfigData = ssoConfig.GetData();
 
-                var cryptoAgentEnabled = ssoConfigData is { UseCryptoAgent: true } && !string.IsNullOrEmpty(ssoConfigData.CryptoAgentUrl);
-                // TODO: Avoid looking up the user twice
-                var (user, _) = await ValidateContextAsync(context);
-
-                // Determine if the crypto agent is enabled and the user should use crypto agent i.e. no MP.
-                if (cryptoAgentEnabled && user.MasterPassword == null)
+                if (ssoConfigData is { UseCryptoAgent: true } && !string.IsNullOrEmpty(ssoConfigData.CryptoAgentUrl))
                 {
                     context.Result.CustomResponse["CryptoAgentUrl"] = ssoConfigData.CryptoAgentUrl;
                     // Prevent clients redirecting to set-password
-
                     // TODO: Figure out if we can move this logic to the clients since this might break older clients
                     //  although we will have issues either way with some clients supporting crypto anent and some not
                     //  suggestion: We should roll out the clients before enabling it server wise
