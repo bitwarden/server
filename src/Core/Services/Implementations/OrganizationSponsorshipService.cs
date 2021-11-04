@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Bit.Core.Enums;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Microsoft.AspNetCore.DataProtection;
@@ -38,25 +39,31 @@ namespace Bit.Core.Services
 
             if (dataParts[0].Equals(FamiliesForEnterpriseTokenName))
             {
-                if (!Guid.TryParse(dataParts[1], out Guid sponsorshipId))
+                if (!Guid.TryParse(dataParts[1], out Guid sponsorshipId) ||
+                    !Enum.TryParse<PlanSponsorshipType>(dataParts[2], true, out var sponsorshipType))
                 {
                     return false;
                 }
 
                 var sponsorship = await _organizationSponsorshipRepository.GetByIdAsync(sponsorshipId);
-                return sponsorship != null;
+                if (sponsorship == null || sponsorship.PlanSponsorshipType != sponsorshipType)
+                {
+                    return false;
+                }
+
+                return true;
             }
 
             return false;
         }
 
-        private string RedemptionToken(Guid sponsorshipId) =>
+        private string RedemptionToken(Guid sponsorshipId, PlanSponsorshipType sponsorshipType) =>
             string.Concat(
                 TokenClearTextPrefix,
-                _dataProtector.Protect($"{FamiliesForEnterpriseTokenName} {sponsorshipId}")
+                _dataProtector.Protect($"{FamiliesForEnterpriseTokenName} {sponsorshipId} {sponsorshipType}")
             );
 
-        public async Task OfferSponsorshipAsync(Organization sponsoringOrg, OrganizationUser sponsoringOrgUser, string sponsoredEmail)
+        public async Task OfferSponsorshipAsync(Organization sponsoringOrg, OrganizationUser sponsoringOrgUser, PlanSponsorshipType sponsorshipType, string sponsoredEmail)
         {
             var sponsorship = new OrganizationSponsorship
             {

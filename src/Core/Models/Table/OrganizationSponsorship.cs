@@ -1,5 +1,6 @@
 using System;
 using System.ComponentModel.DataAnnotations;
+using Bit.Core.Enums;
 using Bit.Core.Utilities;
 
 namespace Bit.Core.Models.Table
@@ -15,6 +16,7 @@ namespace Bit.Core.Models.Table
         public Guid? SponsoredOrganizationId { get; set; }
         [MaxLength(256)]
         public string OfferedToEmail { get; set; }
+        public PlanSponsorshipType? PlanSponsorshipType { get; set; }
         [Required]
         public bool CloudSponsor { get; set; }
         public DateTime? LastSyncDate { get; set; }

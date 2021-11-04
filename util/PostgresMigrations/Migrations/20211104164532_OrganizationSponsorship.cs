@@ -24,6 +24,7 @@ namespace Bit.PostgresMigrations.Migrations
                     SponsoringOrganizationUserId = table.Column<Guid>(type: "uuid", nullable: false),
                     SponsoredOrganizationId = table.Column<Guid>(type: "uuid", nullable: true),
                     OfferedToEmail = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
+                    PlanSponsorshipType = table.Column<byte>(type: "smallint", nullable: true),
                     CloudSponsor = table.Column<bool>(type: "boolean", nullable: false),
                     LastSyncDate = table.Column<DateTime>(type: "timestamp without time zone", nullable: true),
                     TimesRenewedWithoutValidation = table.Column<byte>(type: "smallint", nullable: false),

@@ -9,6 +9,7 @@ CREATE TABLE "OrganizationSponsorship" (
     "SponsoringOrganizationUserId" uuid NOT NULL,
     "SponsoredOrganizationId" uuid NULL,
     "OfferedToEmail" character varying(256) NULL,
+    "PlanSponsorshipType" smallint NULL,
     "CloudSponsor" boolean NOT NULL,
     "LastSyncDate" timestamp without time zone NULL,
     "TimesRenewedWithoutValidation" smallint NOT NULL,
@@ -26,6 +27,6 @@ CREATE INDEX "IX_OrganizationSponsorship_SponsoredOrganizationId" ON "Organizati
 CREATE INDEX "IX_OrganizationSponsorship_SponsoringOrganizationId" ON "OrganizationSponsorship" ("SponsoringOrganizationId");
 
 INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
-VALUES ('20211102205745_OrganizationSponsorship', '5.0.9');
+VALUES ('20211104164532_OrganizationSponsorship', '5.0.9');
 
 COMMIT;

@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Bit.Core.Enums;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -35,7 +36,8 @@ namespace Bit.Core.Test.Services
         public async Task OfferSponsorship_CreatesSponsorship(Organization sponsoringOrg, OrganizationUser sponsoringOrgUser,
             string sponsoredEmail, SutProvider<OrganizationSponsorshipService> sutProvider)
         {
-            await sutProvider.Sut.OfferSponsorshipAsync(sponsoringOrg, sponsoringOrgUser, sponsoredEmail);
+            await sutProvider.Sut.OfferSponsorshipAsync(sponsoringOrg, sponsoringOrgUser,
+                PlanSponsorshipType.FamiliesForEnterprise, sponsoredEmail);
 
             var expectedSponsorship = new OrganizationSponsorship
             {
@@ -64,7 +66,9 @@ namespace Bit.Core.Test.Services
                 return expectedException;
             });
 
-            var actualException = await Assert.ThrowsAsync<Exception>(() => sutProvider.Sut.OfferSponsorshipAsync(sponsoringOrg, sponsoringOrgUser, sponsoredEmail));
+            var actualException = await Assert.ThrowsAsync<Exception>(() =>
+                sutProvider.Sut.OfferSponsorshipAsync(sponsoringOrg, sponsoringOrgUser,
+                    PlanSponsorshipType.FamiliesForEnterprise, sponsoredEmail));
             Assert.Same(expectedException, actualException);
 
             await sutProvider.GetDependency<IOrganizationSponsorshipRepository>().Received(1)
