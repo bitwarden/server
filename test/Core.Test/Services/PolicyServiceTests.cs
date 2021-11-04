@@ -127,7 +127,7 @@ namespace Bit.Core.Test.Services
         }
 
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
-        public async Task SaveAsync_SingleOrg_CryptoAgentEnabled_ThrowsBadRequest([PolicyFixtures.Policy(Enums.PolicyType.SingleOrg)] Core.Models.Table.Policy policy, SutProvider<PolicyService> sutProvider)
+        public async Task SaveAsync_SingleOrg_KeyConnectorEnabled_ThrowsBadRequest([PolicyFixtures.Policy(Enums.PolicyType.SingleOrg)] Core.Models.Table.Policy policy, SutProvider<PolicyService> sutProvider)
         {
             policy.Enabled = false;
 
@@ -138,7 +138,7 @@ namespace Bit.Core.Test.Services
             });
 
             var ssoConfig = new SsoConfig { Enabled = true };
-            var data = new SsoConfigurationData { UseCryptoAgent = true };
+            var data = new SsoConfigurationData { UseKeyConnector = true };
             ssoConfig.SetData(data);
 
             sutProvider.GetDependency<ISsoConfigRepository>()
@@ -151,7 +151,7 @@ namespace Bit.Core.Test.Services
                     Substitute.For<IOrganizationService>(),
                     Guid.NewGuid()));
 
-            Assert.Contains("CryptoAgent is enabled.", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("KeyConnector is enabled.", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
 
             await sutProvider.GetDependency<IPolicyRepository>()
                 .DidNotReceiveWithAnyArgs()

@@ -42,9 +42,8 @@ namespace Bit.Core.Models.Api
         [Required]
         public SsoType ConfigType { get; set; }
 
-        // Crypto Agent
-        public bool UseCryptoAgent { get; set; }
-        public string CryptoAgentUrl { get; set; }
+        public bool UseKeyConnector { get; set; }
+        public string KeyConnectorUrl { get; set; }
 
         // OIDC
         public string Authority { get; set; }
@@ -160,8 +159,8 @@ namespace Bit.Core.Models.Api
             return new SsoConfigurationData
             {
                 ConfigType = ConfigType,
-                UseCryptoAgent = UseCryptoAgent,
-                CryptoAgentUrl = CryptoAgentUrl,
+                UseKeyConnector = UseKeyConnector,
+                KeyConnectorUrl = KeyConnectorUrl,
                 Authority = Authority,
                 ClientId = ClientId,
                 ClientSecret = ClientSecret,

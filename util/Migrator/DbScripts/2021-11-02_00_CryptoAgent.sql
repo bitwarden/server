@@ -1,24 +1,33 @@
-IF COL_LENGTH('[dbo].[User]', 'UsesCryptoAgent') IS NULL
+IF COL_LENGTH('[dbo].[User]', 'UsesCryptoAgent') IS NOT NULL
+    BEGIN
+        ALTER TABLE
+            [dbo].[User]
+        DROP COLUMN
+            [UsesCryptoAgent]
+    END
+GO
+
+IF COL_LENGTH('[dbo].[User]', 'UsesKeyConnector') IS NULL
     BEGIN
         ALTER TABLE
             [dbo].[User]
         ADD
-            [UsesCryptoAgent] BIT NULL
+            [UsesKeyConnector] BIT NULL
     END
 GO
 
 UPDATE
     [dbo].[User]
 SET
-    [UsesCryptoAgent] = 0
+    [UsesKeyConnector] = 0
 WHERE
-    [UsesCryptoAgent] IS NULL
+    [UsesKeyConnector] IS NULL
 GO
 
 ALTER TABLE
     [dbo].[User]
 ALTER COLUMN
-    [UsesCryptoAgent] BIT NOT NULL
+    [UsesKeyConnector] BIT NOT NULL
 GO
 
 -- View: User
@@ -75,7 +84,7 @@ CREATE PROCEDURE [dbo].[User_Create]
     @RevisionDate DATETIME2(7),
     @ApiKey VARCHAR(30),
     @ForcePasswordReset BIT = 0,
-    @UsesCryptoAgent BIT = 0
+    @UsesKeyConnector BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON
@@ -114,7 +123,7 @@ BEGIN
         [RevisionDate],
         [ApiKey],
         [ForcePasswordReset],
-        [UsesCryptoAgent]
+        [UsesKeyConnector]
     )
     VALUES
     (
@@ -150,7 +159,7 @@ BEGIN
         @RevisionDate,
         @ApiKey,
         @ForcePasswordReset,
-        @UsesCryptoAgent
+        @UsesKeyConnector
     )
 END
 GO
@@ -194,7 +203,7 @@ CREATE PROCEDURE [dbo].[User_Update]
     @RevisionDate DATETIME2(7),
     @ApiKey VARCHAR(30),
     @ForcePasswordReset BIT = 0,
-    @UsesCryptoAgent BIT = 0
+    @UsesKeyConnector BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON
@@ -233,7 +242,7 @@ BEGIN
         [RevisionDate] = @RevisionDate,
         [ApiKey] = @ApiKey,
         [ForcePasswordReset] = @ForcePasswordReset,
-        [UsesCryptoAgent] = @UsesCryptoAgent
+        [UsesKeyConnector] = @UsesKeyConnector
     WHERE
         [Id] = @Id
 END

@@ -637,22 +637,22 @@ namespace Bit.Core.Services
             return IdentityResult.Success;
         }
 
-        public async Task<IdentityResult> SetCryptoAgentKeyAsync(User user, string key, string orgIdentifier)
+        public async Task<IdentityResult> SetKeyConnectorKeyAsync(User user, string key, string orgIdentifier)
         {
             if (user == null)
             {
                 throw new ArgumentNullException(nameof(user));
             }
 
-            if (user.UsesCryptoAgent)
+            if (user.UsesKeyConnector)
             {
-                Logger.LogWarning("Already uses crypto agent.");
+                Logger.LogWarning("Already uses key connector.");
                 return IdentityResult.Failed(_identityErrorDescriber.UserAlreadyHasPassword());
             }
 
             user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
             user.Key = key;
-            user.UsesCryptoAgent = true;
+            user.UsesKeyConnector = true;
 
             await _userRepository.ReplaceAsync(user);
             await _eventService.LogUserEventAsync(user.Id, EventType.User_ChangedPassword);
@@ -662,22 +662,22 @@ namespace Bit.Core.Services
             return IdentityResult.Success;
         }
 
-        public async Task<IdentityResult> ConvertToCryptoAgentAsync(User user)
+        public async Task<IdentityResult> ConvertToKeyConnectorAsync(User user)
         {
             if (user == null)
             {
                 throw new ArgumentNullException(nameof(user));
             }
 
-            if (user.UsesCryptoAgent)
+            if (user.UsesKeyConnector)
             {
-                Logger.LogWarning("Already uses crypto agent.");
+                Logger.LogWarning("Already uses key connector.");
                 return IdentityResult.Failed(_identityErrorDescriber.UserAlreadyHasPassword());
             }
 
             user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
             user.MasterPassword = null;
-            user.UsesCryptoAgent = true;
+            user.UsesKeyConnector = true;
 
             await _userRepository.ReplaceAsync(user);
             await _eventService.LogUserEventAsync(user.Id, EventType.User_ChangedPassword);
@@ -849,7 +849,7 @@ namespace Bit.Core.Services
                 throw new ArgumentNullException(nameof(user));
             }
 
-            var validSecret = user.UsesCryptoAgent
+            var validSecret = user.UsesKeyConnector
                 ? await VerifyOTPAsync(user, secret)
                 : await CheckPasswordAsync(user, secret);
 
@@ -1384,9 +1384,9 @@ namespace Bit.Core.Services
                 throw new BadRequestException("No user email.");
             }
 
-            if (!user.UsesCryptoAgent)
+            if (!user.UsesKeyConnector)
             {
-                throw new BadRequestException("Not using crypto agent.");
+                throw new BadRequestException("Not using key connector.");
             }
 
             var token = await base.GenerateUserTokenAsync(user, TokenOptions.DefaultEmailProvider,
@@ -1402,7 +1402,7 @@ namespace Bit.Core.Services
 
         public async Task<bool> VerifyPasswordOrOTPAsync(User user, string secret)
         {
-            return user.UsesCryptoAgent
+            return user.UsesKeyConnector
                 ? await VerifyOTPAsync(user, secret)
                 : await CheckPasswordAsync(user, secret);
         }

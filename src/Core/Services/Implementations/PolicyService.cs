@@ -69,9 +69,9 @@ namespace Bit.Core.Services
                         }
 
                         var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(org.Id);
-                        if (ssoConfig?.GetData()?.UseCryptoAgent == true)
+                        if (ssoConfig?.GetData()?.UseKeyConnector == true)
                         {
-                            throw new BadRequestException("CryptoAgent is enabled.");
+                            throw new BadRequestException("KeyConnector is enabled.");
                         }
                     }
                     break;

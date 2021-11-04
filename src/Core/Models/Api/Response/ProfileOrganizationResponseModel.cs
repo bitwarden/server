@@ -41,8 +41,8 @@ namespace Bit.Core.Models.Api
             if (organization.SsoConfig != null)
             {
                 var ssoConfigData = SsoConfigurationData.Deserialize(organization.SsoConfig);
-                UsesCryptoAgent = ssoConfigData.UseCryptoAgent && !string.IsNullOrEmpty(ssoConfigData.CryptoAgentUrl);
-                CryptoAgentUrl = ssoConfigData.CryptoAgentUrl;
+                UsesKeyConnector = ssoConfigData.UseKeyConnector && !string.IsNullOrEmpty(ssoConfigData.KeyConnectorUrl);
+                KeyConnectorUrl = ssoConfigData.KeyConnectorUrl;
             }
         }
 
@@ -74,7 +74,7 @@ namespace Bit.Core.Models.Api
         public bool HasPublicAndPrivateKeys { get; set; }
         public string ProviderId { get; set; }
         public string ProviderName { get; set; }
-        public bool UsesCryptoAgent { get; set; }
-        public string CryptoAgentUrl { get; set; }
+        public bool UsesKeyConnector { get; set; }
+        public string KeyConnectorUrl { get; set; }
     }
 }

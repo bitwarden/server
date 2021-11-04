@@ -35,12 +35,12 @@ namespace Bit.Core.Services
                 config.CreationDate = now;
             }
 
-            if (config.GetData().UseCryptoAgent)
+            if (config.GetData().UseKeyConnector)
             {
                 var policy = await _policyRepository.GetByOrganizationIdTypeAsync(config.OrganizationId, PolicyType.SingleOrg);
                 if (policy is not { Enabled: true })
                 {
-                    throw new BadRequestException("CryptoAgent requires Single Organization to be enabled");
+                    throw new BadRequestException("KeyConnector requires Single Organization to be enabled");
                 }
             }
 
@@ -52,9 +52,9 @@ namespace Bit.Core.Services
                 await _eventService.LogOrganizationEventAsync(organization, e);
             }
 
-            if (oldConfig?.GetData()?.UseCryptoAgent != config.GetData().UseCryptoAgent)
+            if (oldConfig?.GetData()?.UseKeyConnector != config.GetData().UseKeyConnector)
             {
-                var e = config.GetData().UseCryptoAgent ? EventType.Organization_EnabledKeyConnector : EventType.Organization_DisabledKeyConnector;
+                var e = config.GetData().UseKeyConnector ? EventType.Organization_EnabledKeyConnector : EventType.Organization_DisabledKeyConnector;
                 await _eventService.LogOrganizationEventAsync(organization, e);
             }
 

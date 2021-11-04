@@ -909,7 +909,7 @@ namespace Bit.Core.Services
         public async Task DeleteAsync(Organization organization)
         {
             var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(organization.Id);
-            if (ssoConfig?.GetData()?.UseCryptoAgent == true)
+            if (ssoConfig?.GetData()?.UseKeyConnector == true)
             {
                 throw new BadRequestException("You cannot delete an Organization that is using Customer Managed Encryption.");
             }

@@ -31,7 +31,7 @@ namespace Bit.Core.Models.Api
             PrivateKey = user.PrivateKey;
             SecurityStamp = user.SecurityStamp;
             ForcePasswordReset = user.ForcePasswordReset;
-            UsesCryptoAgent = user.UsesCryptoAgent;
+            UsesKeyConnector = user.UsesKeyConnector;
             Organizations = organizationsUserDetails?.Select(o => new ProfileOrganizationResponseModel(o));
             Providers = providerUserDetails?.Select(p => new ProfileProviderResponseModel(p));
             ProviderOrganizations =
@@ -50,7 +50,7 @@ namespace Bit.Core.Models.Api
         public string PrivateKey { get; set; }
         public string SecurityStamp { get; set; }
         public bool ForcePasswordReset { get; set; }
-        public bool UsesCryptoAgent { get; set; }
+        public bool UsesKeyConnector { get; set; }
         public IEnumerable<ProfileOrganizationResponseModel> Organizations { get; set; }
         public IEnumerable<ProfileProviderResponseModel> Providers { get; set; }
         public IEnumerable<ProfileProviderOrganizationResponseModel> ProviderOrganizations { get; set; }

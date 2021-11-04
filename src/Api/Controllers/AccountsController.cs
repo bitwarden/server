@@ -117,7 +117,7 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
-            if (user.UsesCryptoAgent)
+            if (user.UsesKeyConnector)
             {
                 throw new BadRequestException("You cannot change your email when using Customer Managed Encryption");
             }
@@ -140,7 +140,7 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
-            if (user.UsesCryptoAgent)
+            if (user.UsesKeyConnector)
             {
                 throw new BadRequestException("You cannot change your email when using Customer Managed Encryption");
             }
@@ -265,8 +265,8 @@ namespace Bit.Api.Controllers
             throw new BadRequestException(ModelState);
         }
 
-        [HttpPost("set-crypto-agent-key")]
-        public async Task PostSetCryptoAgentKeyAsync([FromBody]SetCryptoAgentKeyRequestModel model)
+        [HttpPost("set-key-connector-key")]
+        public async Task PostSetKeyConnectorKeyAsync([FromBody]SetKeyConnectorKeyRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)
@@ -274,7 +274,7 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
-            var result = await _userService.SetCryptoAgentKeyAsync(model.ToUser(user), model.Key, model.OrgIdentifier);
+            var result = await _userService.SetKeyConnectorKeyAsync(model.ToUser(user), model.Key, model.OrgIdentifier);
             if (result.Succeeded)
             {
                 return;
@@ -288,8 +288,8 @@ namespace Bit.Api.Controllers
             throw new BadRequestException(ModelState);
         }
 
-        [HttpPost("convert-to-crypto-agent")]
-        public async Task PostConvertToCryptoAgent()
+        [HttpPost("convert-to-key-connector")]
+        public async Task PostConvertToKeyConnector()
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)
@@ -297,7 +297,7 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
-            var result = await _userService.ConvertToCryptoAgentAsync(user);
+            var result = await _userService.ConvertToKeyConnectorAsync(user);
             if (result.Succeeded)
             {
                 return;
@@ -857,7 +857,7 @@ namespace Bit.Api.Controllers
         public async Task PostRequestOTP()
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
-            if (user is not { UsesCryptoAgent: true })
+            if (user is not { UsesKeyConnector: true })
             {
                 throw new UnauthorizedAccessException();
             }
@@ -869,7 +869,7 @@ namespace Bit.Api.Controllers
         public async Task VerifyOtp([FromBody]VerifyOtpRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
-            if (user is not { UsesCryptoAgent: true })
+            if (user is not { UsesKeyConnector: true })
             {
                 throw new UnauthorizedAccessException();
             }
