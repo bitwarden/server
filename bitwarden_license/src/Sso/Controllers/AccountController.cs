@@ -463,7 +463,7 @@ namespace Bit.Sso.Controllers
                 await DeleteExistingSsoUserRecord(existingUser.Id, orgId, orgUser);
 
                 // Accepted or Confirmed - create SSO link and return;
-                await CreateSsoUserRecord(providerUserId, existingUser.Id, orgId);
+                await CreateSsoUserRecord(providerUserId, existingUser.Id, orgUser);
                 return existingUser;
             }
 
@@ -544,7 +544,7 @@ namespace Bit.Sso.Controllers
             await DeleteExistingSsoUserRecord(user.Id, orgId, orgUser);
 
             // Create sso user record
-            await CreateSsoUserRecord(providerUserId, user.Id, orgId);
+            await CreateSsoUserRecord(providerUserId, user.Id, orgUser);
             
             return user;
         }
@@ -604,15 +604,16 @@ namespace Bit.Sso.Controllers
                 await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_ResetSsoLink);
             }
         }
-        private async Task CreateSsoUserRecord(string providerUserId, Guid userId, Guid orgId)
+        private async Task CreateSsoUserRecord(string providerUserId, Guid userId, OrganizationUser orgUser)
         {
             var ssoUser = new SsoUser
             {
                 ExternalId = providerUserId,
                 UserId = userId,
-                OrganizationId = orgId
+                OrganizationId = orgUser.OrganizationId
             }; 
             await _ssoUserRepository.CreateAsync(ssoUser);
+            await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_LinkedSso);
         }
 
         private void ProcessLoginCallback(AuthenticateResult externalResult,

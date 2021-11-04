@@ -655,7 +655,6 @@ namespace Bit.Core.Services
             user.UsesCryptoAgent = true;
 
             await _userRepository.ReplaceAsync(user);
-            // TODO: Use correct event
             await _eventService.LogUserEventAsync(user.Id, EventType.User_ChangedPassword);
 
             await _organizationService.AcceptUserAsync(orgIdentifier, user, this);
@@ -681,7 +680,6 @@ namespace Bit.Core.Services
             user.UsesCryptoAgent = true;
 
             await _userRepository.ReplaceAsync(user);
-            // TODO: Use correct event
             await _eventService.LogUserEventAsync(user.Id, EventType.User_ChangedPassword);
 
             return IdentityResult.Success;
