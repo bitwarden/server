@@ -8,6 +8,7 @@ using Bit.Core.Models.Api;
 using Bit.Core.Models.Api.Request;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -36,6 +37,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("{sponsoringOrgId}/families-for-enterprise")]
+        [SelfHosted(NotSelfHostedOnly = true)]
         public async Task CreateSponsorship(string sponsoringOrgId, [FromBody] OrganizationSponsorshipRequestModel model)
         {
             // TODO: validate has right to sponsor, send sponsorship email
@@ -66,19 +68,28 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("sponsored/redeem/families-for-enterprise")]
-        public async Task RedeemSponsorship([FromQuery] string sponsorshipInfo, [FromBody] OrganizationSponsorshipRedeemRequestModel model)
+        [SelfHosted(NotSelfHostedOnly = true)]
+        public async Task RedeemSponsorship([FromQuery] string sponsorshipToken, [FromBody] OrganizationSponsorshipRedeemRequestModel model)
         {
             // TODO: parse out sponsorshipInfo
+            if (!await _organizationsSponsorshipService.ValidateRedemptionTokenAsync(sponsorshipToken))
+            {
+                throw new BadRequestException("Failed to parse sponsorship token.");
+            }
 
             if (!await _currentContext.OrganizationOwner(model.SponsoredOrganizationId))
             {
-                throw new BadRequestException("Can only redeem sponsorship for an organization you own");
+                throw new BadRequestException("Can only redeem sponsorship for an organization you own.");
             }
             var existingSponsorshipOffer = await _organizationSponsorshipRepository
                 .GetByOfferedToEmailAsync(_currentContext.User.Email);
             if (existingSponsorshipOffer == null)
             {
                 throw new BadRequestException("No unredeemed sponsorship offer exists for you.");
+            }
+            if (_currentContext.User.Email != existingSponsorshipOffer.OfferedToEmail)
+            {
+                throw new BadRequestException("This sponsorship offer was issued to a different user email address.");
             }
 
             var existingOrgSponsorship = await _organizationSponsorshipRepository
@@ -87,16 +98,12 @@ namespace Bit.Api.Controllers
             {
                 throw new BadRequestException("Cannot redeem a sponsorship offer for an organization that is already sponsored. Revoke existing sponsorship first.");
             }
-            if (_currentContext.User.Email != existingOrgSponsorship.OfferedToEmail)
-            {
-                throw new BadRequestException("This sponsorship offer was issued to a different user email address.");
-            }
 
             var organizationToSponsor = await _organizationRepository.GetByIdAsync(model.SponsoredOrganizationId);
             // TODO: only current families plan?
             if (organizationToSponsor == null || !PlanTypeHelper.HasFamiliesPlan(organizationToSponsor))
             {
-                throw new BadRequestException("Can only redeem sponsorship offer on families organizations");
+                throw new BadRequestException("Can only redeem sponsorship offer on families organizations.");
             }
 
             await _organizationsSponsorshipService.SetUpSponsorshipAsync(existingSponsorshipOffer, organizationToSponsor);
@@ -104,6 +111,7 @@ namespace Bit.Api.Controllers
 
         [HttpDelete("{sponsoringOrgUserId}")]
         [HttpPost("{sponsoringOrgUserId}/delete")]
+        [SelfHosted(NotSelfHostedOnly = true)]
         public async Task RevokeSponsorship(string sponsoringOrgUserId)
         {
             var sponsoringOrgUserIdGuid = new Guid(sponsoringOrgUserId);
@@ -126,6 +134,7 @@ namespace Bit.Api.Controllers
 
         [HttpDelete("sponsored/{sponsoredOrgId}")]
         [HttpPost("sponsored/{sponsoredOrgId}/remove")]
+        [SelfHosted(NotSelfHostedOnly = true)]
         public async Task RemoveSponsorship(string sponsoredOrgId)
         {
             var sponsoredOrgIdGuid = new Guid(sponsoredOrgId);
