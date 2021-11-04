@@ -64,7 +64,7 @@ namespace Bit.Api.Controllers
                 throw new BadRequestException("Can only sponsor one organization per Organization User.");
             }
 
-            await _organizationsSponsorshipService.OfferSponsorshipAsync(sponsoringOrg, sponsoringOrgUser, model.sponsoredEmail);
+            await _organizationsSponsorshipService.OfferSponsorshipAsync(sponsoringOrg, sponsoringOrgUser, model.PlanSponsorshipType, model.sponsoredEmail);
         }
 
         [HttpPost("sponsored/redeem/families-for-enterprise")]

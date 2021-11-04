@@ -1,5 +1,6 @@
 using System;
 using System.ComponentModel.DataAnnotations;
+using Bit.Core.Enums;
 using Bit.Core.Utilities;
 
 namespace Bit.Core.Models.Api.Request
@@ -7,7 +8,11 @@ namespace Bit.Core.Models.Api.Request
     public class OrganizationSponsorshipRequestModel
     {
         [Required]
+        public PlanSponsorshipType PlanSponsorshipType { get; set; }
+
+        [Required]
         public Guid OrganizationUserId { get; set; }
+
         [Required]
         [StringLength(256)]
         [StrictEmailAddress]

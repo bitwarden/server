@@ -9,6 +9,7 @@ CREATE TABLE `OrganizationSponsorship` (
     `SponsoringOrganizationUserId` char(36) COLLATE ascii_general_ci NOT NULL,
     `SponsoredOrganizationId` char(36) COLLATE ascii_general_ci NULL,
     `OfferedToEmail` varchar(256) CHARACTER SET utf8mb4 NULL,
+    `PlanSponsorshipType` tinyint unsigned NULL,
     `CloudSponsor` tinyint(1) NOT NULL,
     `LastSyncDate` datetime(6) NULL,
     `TimesRenewedWithoutValidation` tinyint unsigned NOT NULL,
@@ -26,6 +27,6 @@ CREATE INDEX `IX_OrganizationSponsorship_SponsoredOrganizationId` ON `Organizati
 CREATE INDEX `IX_OrganizationSponsorship_SponsoringOrganizationId` ON `OrganizationSponsorship` (`SponsoringOrganizationId`);
 
 INSERT INTO `__EFMigrationsHistory` (`MigrationId`, `ProductVersion`)
-VALUES ('20211102213543_OrganizationSponsorship', '5.0.9');
+VALUES ('20211104164838_OrganizationSponsorship', '5.0.9');
 
 COMMIT;

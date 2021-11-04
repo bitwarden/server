@@ -603,6 +603,9 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("varchar(256)");
 
+                    b.Property<byte?>("PlanSponsorshipType")
+                        .HasColumnType("tinyint unsigned");
+
                     b.Property<Guid?>("SponsoredOrganizationId")
                         .HasColumnType("char(36)");
 

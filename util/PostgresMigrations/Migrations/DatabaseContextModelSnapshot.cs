@@ -607,6 +607,9 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
 
+                    b.Property<byte?>("PlanSponsorshipType")
+                        .HasColumnType("smallint");
+
                     b.Property<Guid?>("SponsoredOrganizationId")
                         .HasColumnType("uuid");
 

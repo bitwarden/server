@@ -25,6 +25,7 @@ namespace Bit.MySqlMigrations.Migrations
                     SponsoredOrganizationId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
                     OfferedToEmail = table.Column<string>(type: "varchar(256)", maxLength: 256, nullable: true)
                         .Annotation("MySql:CharSet", "utf8mb4"),
+                    PlanSponsorshipType = table.Column<byte>(type: "tinyint unsigned", nullable: true),
                     CloudSponsor = table.Column<bool>(type: "tinyint(1)", nullable: false),
                     LastSyncDate = table.Column<DateTime>(type: "datetime(6)", nullable: true),
                     TimesRenewedWithoutValidation = table.Column<byte>(type: "tinyint unsigned", nullable: false),
