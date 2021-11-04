@@ -84,31 +84,13 @@ namespace Bit.Core.IdentityServer
                 }
             }
 
-            if (context.Result.CustomResponse != null && user.MasterPassword == null)
+            if (context.Result.CustomResponse != null &&
+                user.MasterPassword == null &&
+                context.Result.ValidatedRequest.GrantType != "client_credentials")
             {
-                Guid organizationId;
-                var validatedRequest = context.Result.ValidatedRequest;
-
-                if (validatedRequest.GrantType == "client_credentials")
-                {
-                    var organizationIdentifier = validatedRequest.Raw["org_identifier"]?.ToString();
-
-                    if (organizationIdentifier == null)
-                    {
-                        // Api key login not using Key Connector
-                        return;
-                    }
-
-                    // Api key login
-                    var organization = await _organizationRepository.GetByIdentifierAsync(organizationIdentifier);
-                    organizationId = organization.Id;
-                }
-                else
-                {
-                    // SSO login
-                    var organizationClaim = validatedRequest.Subject?.FindFirst(c => c.Type == "organizationId");
-                    organizationId = new Guid(organizationClaim?.Value);
-                }
+                // SSO login using KeyConnector
+                var organizationClaim = context.Result.ValidatedRequest.Subject?.FindFirst(c => c.Type == "organizationId");
+                var organizationId = new Guid(organizationClaim?.Value);
 
                 var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(organizationId);
                 var ssoConfigData = ssoConfig.GetData();
