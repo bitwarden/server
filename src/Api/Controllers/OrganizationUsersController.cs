@@ -336,16 +336,6 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(orgGuidId);
-            if (ssoConfig != null)
-            {
-                var ssoConfigData = ssoConfig.GetData();
-                if (ssoConfigData.UseCryptoAgent)
-                {
-                    throw new BadRequestException("You cannot delete an Organization that is using Customer Managed Encryption.");
-                }
-            }
-
             var userId = _userService.GetProperUserId(User);
             var result = await _organizationService.DeleteUsersAsync(orgGuidId, model.Ids, userId.Value);
             return new ListResponseModel<OrganizationUserBulkResponseModel>(result.Select(r =>
