@@ -29,6 +29,7 @@ namespace Bit.Billing.Controllers
         private readonly BillingSettings _billingSettings;
         private readonly IWebHostEnvironment _hostingEnvironment;
         private readonly IOrganizationService _organizationService;
+        private readonly IOrganizationSponsorshipService _organizationSponsorshipService;
         private readonly IOrganizationRepository _organizationRepository;
         private readonly ITransactionRepository _transactionRepository;
         private readonly IUserService _userService;
@@ -45,6 +46,7 @@ namespace Bit.Billing.Controllers
             IOptions<BillingSettings> billingSettings,
             IWebHostEnvironment hostingEnvironment,
             IOrganizationService organizationService,
+            IOrganizationSponsorshipService organizationSponsorshipService,
             IOrganizationRepository organizationRepository,
             ITransactionRepository transactionRepository,
             IUserService userService,
@@ -58,6 +60,7 @@ namespace Bit.Billing.Controllers
             _billingSettings = billingSettings?.Value;
             _hostingEnvironment = hostingEnvironment;
             _organizationService = organizationService;
+            _organizationSponsorshipService = organizationSponsorshipService;
             _organizationRepository = organizationRepository;
             _transactionRepository = transactionRepository;
             _userService = userService;
@@ -136,6 +139,16 @@ namespace Bit.Billing.Controllers
                     // org
                     if (ids.Item1.HasValue)
                     {
+                        var newEndPeriod = subscription.CurrentPeriodEnd;
+
+                        // sponsored org
+                        if (IsSponsoredSubscription(subscription))
+                        {
+                            var sponsorshipValid = await _organizationSponsorshipService
+                                .ValidateSponsorshipAsync(ids.Item1.Value);
+                            // TODO: How do we return from this?
+                        }
+
                         await _organizationService.UpdateExpirationDateAsync(ids.Item1.Value,
                             subscription.CurrentPeriodEnd);
                     }
@@ -783,5 +796,8 @@ namespace Bit.Billing.Controllers
             }
             return subscription;
         }
+
+        private static bool IsSponsoredSubscription(Subscription subscription) =>
+            StaticStore.SponsoredPlans.Any(p => p.StripePlanId == subscription.Id);
     }
 }

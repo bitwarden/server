@@ -141,7 +141,7 @@ namespace Bit.Api.Controllers
                 throw new BadRequestException("Unable to find the sponsored Organization.");
             }
 
-            await _organizationsSponsorshipService.RemoveSponsorshipAsync(existingOrgSponsorship, sponsoredOrganization);
+            await _organizationsSponsorshipService.RemoveSponsorshipAsync(sponsoredOrganization, existingOrgSponsorship);
         }
 
         [HttpDelete("sponsored/{sponsoredOrgId}")]
@@ -171,7 +171,7 @@ namespace Bit.Api.Controllers
             }
 
 
-            await _organizationsSponsorshipService.RemoveSponsorshipAsync(existingOrgSponsorship, sponsoredOrganization);
+            await _organizationsSponsorshipService.RemoveSponsorshipAsync(sponsoredOrganization, existingOrgSponsorship);
         }
     }
 }

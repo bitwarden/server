@@ -197,25 +197,23 @@ namespace Bit.Core.Services
             var customer = await _stripeAdapter.CustomerGetAsync(org.GatewayCustomerId);
             var sub = await _stripeAdapter.SubscriptionGetAsync(org.GatewaySubscriptionId);
 
-            var sponsoredSubscription = new SponsoredOrganizationSubscription(org, sponsorship, sub);
+            var sponsoredSubscription = new SponsoredOrganizationSubscription(org, sub);
 
             var subscription = await ChargeForNewSubscriptionAsync(org, customer, false,
-                false, PaymentMethodType.None, sponsoredSubscription.GetSponsorSubscriptionOptions(), null);
+                false, PaymentMethodType.None, sponsoredSubscription.GetSponsorSubscriptionOptions(sponsorship), null);
             org.GatewaySubscriptionId = subscription.Id;
 
             org.ExpirationDate = subscription.CurrentPeriodEnd;
         }
 
-        public async Task<bool> RemoveOrganizationSponsorshipAsync(Organization org, OrganizationSponsorship sponsorship)
+        public async Task<bool> RemoveOrganizationSponsorshipAsync(Organization org)
         {
             var customer = await _stripeAdapter.CustomerGetAsync(org.GatewayCustomerId);
             var sub = await _stripeAdapter.SubscriptionGetAsync(org.GatewaySubscriptionId);
 
-            var sponsoredSubscription = new SponsoredOrganizationSubscription(org, sponsorship, sub);
+            var sponsoredSubscription = new SponsoredOrganizationSubscription(org, sub);
             var subCreateOptions = sponsoredSubscription.RemoveOrganizationSubscriptionOptions();
 
-            throw new NotImplementedException();
-            // TODO: Revert to original subscription plan and charge
             var (stripePaymentMethod, paymentMethodType) = IdentifyPaymentMethod(customer, subCreateOptions);
             var subscription = await ChargeForNewSubscriptionAsync(org, customer, false,
                 stripePaymentMethod, paymentMethodType, subCreateOptions, null);
@@ -226,6 +224,8 @@ namespace Bit.Core.Services
                 return false;
             }
             org.GatewaySubscriptionId = subscription.Id;
+            org.Enabled = true;
+            org.ExpirationDate = subscription.CurrentPeriodEnd;
 
             return true;
         }
