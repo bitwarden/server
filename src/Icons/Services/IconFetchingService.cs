@@ -427,7 +427,7 @@ namespace Bit.Icons.Services
             }
 
             var ipString = ip.ToString();
-            if (ipString == "::1" || ipString == "::" || ipString == "::ffff:")
+            if (ipString == "::1" || ipString == "::" || ipString.StartsWith("::ffff:"))
             {
                 return true;
             }
