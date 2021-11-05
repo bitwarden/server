@@ -129,12 +129,19 @@ namespace Bit.Api.Controllers
 
             var existingOrgSponsorship = await _organizationSponsorshipRepository
                 .GetBySponsoringOrganizationUserIdAsync(sponsoringOrgUserIdGuid);
-            if (existingOrgSponsorship == null)
+            if (existingOrgSponsorship == null || existingOrgSponsorship.SponsoredOrganizationId == null)
             {
-                throw new BadRequestException("You are not currently sponsoring and organization.");
+                throw new BadRequestException("You are not currently sponsoring an organization.");
             }
 
-            await _organizationsSponsorshipService.RemoveSponsorshipAsync(existingOrgSponsorship);
+            var sponsoredOrganization = await _organizationRepository
+                .GetByIdAsync(existingOrgSponsorship.SponsoredOrganizationId.Value);
+            if (sponsoredOrganization == null)
+            {
+                throw new BadRequestException("Unable to find the sponsored Organization.");
+            }
+
+            await _organizationsSponsorshipService.RemoveSponsorshipAsync(existingOrgSponsorship, sponsoredOrganization);
         }
 
         [HttpDelete("sponsored/{sponsoredOrgId}")]
@@ -151,12 +158,20 @@ namespace Bit.Api.Controllers
 
             var existingOrgSponsorship = await _organizationSponsorshipRepository
                 .GetBySponsoredOrganizationIdAsync(sponsoredOrgIdGuid);
-            if (existingOrgSponsorship == null)
+            if (existingOrgSponsorship == null || existingOrgSponsorship.SponsoredOrganizationId == null)
             {
                 throw new BadRequestException("The requested organization is not currently being sponsored.");
             }
 
-            await _organizationsSponsorshipService.RemoveSponsorshipAsync(existingOrgSponsorship);
+            var sponsoredOrganization = await _organizationRepository
+                .GetByIdAsync(existingOrgSponsorship.SponsoredOrganizationId.Value);
+            if (sponsoredOrganization == null)
+            {
+                throw new BadRequestException("Unable to find the sponsored Organization.");
+            }
+
+
+            await _organizationsSponsorshipService.RemoveSponsorshipAsync(existingOrgSponsorship, sponsoredOrganization);
         }
     }
 }
