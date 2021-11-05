@@ -163,19 +163,21 @@ jobs:
           echo "SERVICE_NAME: $SERVICE_NAME"
           echo "::set-output name=service_name::$SERVICE_NAME"
 
-      - name: Pull latest selfhost Release image
-        run: docker pull bitwarden/${{ steps.setup.outputs.service_name }}:latest
+      - name: Pull latest selfhost RC image
+        run: docker pull bitwarden/${{ steps.setup.outputs.service_name }}:rc
 
-      - name: Tag version
+      - name: Tag version and latest
         run: |
-          docker tag bitwarden/${{ steps.setup.outputs.service_name }}:latest bitwarden/${{ steps.setup.outputs.service_name }}:$_RELEASE_VERSION
+          docker tag bitwarden/${{ steps.setup.outputs.service_name }}:rc bitwarden/${{ steps.setup.outputs.service_name }}:$_RELEASE_VERSION
+          docker tag bitwarden/${{ steps.setup.outputs.service_name }}:rc bitwarden/${{ steps.setup.outputs.service_name }}:latest
 
       - name: List Docker images
         run: docker images
 
-      - name: Push latest image
+      - name: Push version and latest image
         run: |
           docker push bitwarden/${{ steps.setup.outputs.service_name }}:$_RELEASE_VERSION
+          docker push bitwarden/${{ steps.setup.outputs.service_name }}:latest
         env:
           DOCKER_CONTENT_TRUST: 1
           DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ steps.setup-dct.outputs.dct-delegate-repo-passphrase }}
