@@ -266,7 +266,7 @@ namespace Bit.Core.Models.Api
             {
                 return false;
             }
-            return Regex.IsMatch(url, "[<>]");
+            return Regex.IsMatch(url, "[<>\"]");
         }
     }
 }
