@@ -159,6 +159,25 @@ namespace Bit.Core.Models.Api
                     yield return new ValidationResult(i18nService.GetLocalizedHtmlString("IdpSingleSignOnServiceUrlValidationError"),
                         new[] { nameof(IdpSingleSignOnServiceUrl) });
                 }
+
+                if (ContainsHtmlMetaCharacters(IdpSingleSignOnServiceUrl))
+                {
+                    yield return new ValidationResult(i18nService.GetLocalizedHtmlString("IdpSingleSignOnServiceUrlInvalid"),
+                        new[] { nameof(IdpSingleSignOnServiceUrl) });
+                }
+
+                if (ContainsHtmlMetaCharacters(IdpArtifactResolutionServiceUrl))
+                {
+                    yield return new ValidationResult(i18nService.GetLocalizedHtmlString("IdpArtifactResolutionServiceUrlInvalid"),
+                        new[] { nameof(IdpArtifactResolutionServiceUrl) });
+                }
+
+                if (ContainsHtmlMetaCharacters(IdpSingleLogoutServiceUrl))
+                {
+                    yield return new ValidationResult(i18nService.GetLocalizedHtmlString("IdpSingleLogoutServiceUrlInvalid"),
+                        new[] { nameof(IdpSingleLogoutServiceUrl) });
+                }
+
                 if (!string.IsNullOrWhiteSpace(IdpX509PublicCert))
                 {
                     // Validate the certificate is in a valid format
@@ -239,6 +258,15 @@ namespace Bit.Core.Models.Api
                 @"(((BEGIN|END) CERTIFICATE)|([\-\n\r\t\s\f]))",
                 string.Empty,
                 RegexOptions.Multiline | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        }
+
+        private bool ContainsHtmlMetaCharacters(string url)
+        {
+            if (string.IsNullOrWhiteSpace(url))
+            {
+                return false;
+            }
+            return Regex.IsMatch(url, "[<>]");
         }
     }
 }
