@@ -102,7 +102,7 @@ namespace Bit.Api.Controllers
             }
 
             // Check org to sponsor's product type
-            var requiredSponsoredProductType = StaticStore.GetSponsoredPlan(model.planSponsorshipType)?.SponsoredProductType;
+            var requiredSponsoredProductType = StaticStore.GetSponsoredPlan(model.PlanSponsorshipType)?.SponsoredProductType;
             var organizationToSponsor = await _organizationRepository.GetByIdAsync(model.SponsoredOrganizationId);
             if (requiredSponsoredProductType == null ||
                 organizationToSponsor == null ||

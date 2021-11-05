@@ -7,7 +7,7 @@ namespace Bit.Core.Models.Api
     public class OrganizationSponsorshipRedeemRequestModel
     {
         [Required]
-        public PlanSponsorshipType planSponsorshipType { get; set; }
+        public PlanSponsorshipType PlanSponsorshipType { get; set; }
         [Required]
         public Guid SponsoredOrganizationId { get; set; }
     }
