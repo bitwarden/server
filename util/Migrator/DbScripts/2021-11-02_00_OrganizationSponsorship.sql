@@ -4,8 +4,8 @@ BEGIN
 CREATE TABLE [dbo].[OrganizationSponsorship] (
     [Id]                            UNIQUEIDENTIFIER NOT NULL,
     [InstallationId]                UNIQUEIDENTIFIER NULL,
-    [SponsoringOrganizationId]      UNIQUEIDENTIFIER NOT NULL,
-    [SponsoringOrganizationUserID]  UNIQUEIDENTIFIER NOT NULL,
+    [SponsoringOrganizationId]      UNIQUEIDENTIFIER NULL,
+    [SponsoringOrganizationUserID]  UNIQUEIDENTIFIER NULL,
     [SponsoredOrganizationId]       UNIQUEIDENTIFIER NULL,
     [OfferedToEmail]                NVARCHAR (256)   NULL,
     [PlanSponsorshipType]           TINYINT          NULL,
@@ -35,6 +35,7 @@ IF NOT EXISTS(SELECT name FROM sys.indexes WHERE name = 'IX_OrganizationSponsors
 BEGIN
 CREATE NONCLUSTERED INDEX [IX_OrganizationSponsorship_SponsoringOrganizationId]
     ON [dbo].[OrganizationSponsorship]([SponsoringOrganizationId] ASC)
+    WHERE [SponsoringOrganizationId] IS NOT NULL;
 END
 GO
 
@@ -42,6 +43,7 @@ IF NOT EXISTS(SELECT name FROM sys.indexes WHERE name = 'IX_OrganizationSponsors
 BEGIN
 CREATE NONCLUSTERED INDEX [IX_OrganizationSponsorship_SponsoringOrganizationUserId]
     ON [dbo].[OrganizationSponsorship]([SponsoringOrganizationUserID] ASC)
+    WHERE [SponsoringOrganizationUserID] IS NOT NULL;
 END
 GO
 

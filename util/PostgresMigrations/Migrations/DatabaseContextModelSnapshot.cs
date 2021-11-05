@@ -613,10 +613,10 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<Guid?>("SponsoredOrganizationId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid>("SponsoringOrganizationId")
+                    b.Property<Guid?>("SponsoringOrganizationId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid>("SponsoringOrganizationUserId")
+                    b.Property<Guid?>("SponsoringOrganizationUserId")
                         .HasColumnType("uuid");
 
                     b.Property<DateTime?>("SponsorshipLapsedDate")
@@ -1363,9 +1363,7 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.HasOne("Bit.Core.Models.EntityFramework.Organization", "SponsoringOrganization")
                         .WithMany()
-                        .HasForeignKey("SponsoringOrganizationId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("SponsoringOrganizationId");
 
                     b.Navigation("Installation");
 
