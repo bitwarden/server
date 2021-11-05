@@ -119,7 +119,7 @@ namespace Bit.Api.Controllers
 
             if (user.UsesKeyConnector)
             {
-                throw new BadRequestException("You cannot change your email when using Customer Managed Encryption");
+                throw new BadRequestException("You cannot change your email when using Key Connector.");
             }
 
             if (!await _userService.CheckPasswordAsync(user, model.MasterPasswordHash))
@@ -142,7 +142,7 @@ namespace Bit.Api.Controllers
 
             if (user.UsesKeyConnector)
             {
-                throw new BadRequestException("You cannot change your email when using Customer Managed Encryption");
+                throw new BadRequestException("You cannot change your email when using Key Connector.");
             }
 
             var result = await _userService.ChangeEmailAsync(user, model.MasterPasswordHash, model.NewEmail,

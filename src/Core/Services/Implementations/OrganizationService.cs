@@ -911,7 +911,7 @@ namespace Bit.Core.Services
             var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(organization.Id);
             if (ssoConfig?.GetData()?.UseKeyConnector == true)
             {
-                throw new BadRequestException("You cannot delete an Organization that is using Customer Managed Encryption.");
+                throw new BadRequestException("You cannot delete an Organization that is using Key Connector.");
             }
 
             if (!string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
