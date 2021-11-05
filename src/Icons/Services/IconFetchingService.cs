@@ -7,7 +7,6 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Bit.Icons.Models;
 using Microsoft.Extensions.Logging;
-using System.Text.RegularExpressions;
 using System.Text;
 using AngleSharp.Html.Parser;
 
@@ -428,7 +427,7 @@ namespace Bit.Icons.Services
             }
 
             var ipString = ip.ToString();
-            if (ipString == "::1" || ipString == "::")
+            if (ipString == "::1" || ipString == "::" || ipString == "::ffff:")
             {
                 return true;
             }
