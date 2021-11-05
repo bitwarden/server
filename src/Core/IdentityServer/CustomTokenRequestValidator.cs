@@ -84,24 +84,36 @@ namespace Bit.Core.IdentityServer
                 }
             }
 
-            if (context.Result.CustomResponse != null &&
-                user.MasterPassword == null &&
-                context.Result.ValidatedRequest.GrantType != "client_credentials")
+            if (context.Result.CustomResponse == null || user.MasterPassword != null)
             {
-                // SSO login using KeyConnector
-                var organizationClaim = context.Result.ValidatedRequest.Subject?.FindFirst(c => c.Type == "organizationId");
-                var organizationId = new Guid(organizationClaim?.Value);
-
-                var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(organizationId);
-                var ssoConfigData = ssoConfig.GetData();
-
-                if (ssoConfigData is { UseKeyConnector: true } && !string.IsNullOrEmpty(ssoConfigData.KeyConnectorUrl))
-                {
-                    context.Result.CustomResponse["KeyConnectorUrl"] = ssoConfigData.KeyConnectorUrl;
-                    // Prevent clients redirecting to set-password
-                    context.Result.CustomResponse["ResetMasterPassword"] = false;
-                }
+                return;
             }
+
+            // KeyConnector responses below
+
+            if (context.Result.ValidatedRequest.GrantType == "client_credentials" &&
+                user.UsesKeyConnector)
+            {
+                // Apikey login
+                // KeyConnectorUrl is configured in the CLI client, just disable master password reset    
+                context.Result.CustomResponse["ResetMasterPassword"] = false;
+                return;
+            }
+
+            // SSO login
+            var organizationClaim = context.Result.ValidatedRequest.Subject?.FindFirst(c => c.Type == "organizationId");
+            var organizationId = new Guid(organizationClaim?.Value);
+
+            var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(organizationId);
+            var ssoConfigData = ssoConfig.GetData();
+
+            if (ssoConfigData is { UseKeyConnector: true } && !string.IsNullOrEmpty(ssoConfigData.KeyConnectorUrl))
+            {
+                context.Result.CustomResponse["KeyConnectorUrl"] = ssoConfigData.KeyConnectorUrl;
+                // Prevent clients redirecting to set-password
+                context.Result.CustomResponse["ResetMasterPassword"] = false;
+            }
+
         }
 
         protected override void SetTwoFactorResult(CustomTokenRequestValidationContext context,
