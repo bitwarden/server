@@ -513,7 +513,7 @@ namespace Bit.Api.Controllers
 
             if (!await _userService.VerifyPasswordOrOTPAsync(user, model.Secret))
             {
-                ModelState.AddModelError(string.Empty, "Authentication failed.");
+                ModelState.AddModelError(string.Empty, "User verification failed.");
                 await Task.Delay(2000);
             }
             else
@@ -804,7 +804,7 @@ namespace Bit.Api.Controllers
             if (!await _userService.VerifyPasswordOrOTPAsync(user, model.Secret))
             {
                 await Task.Delay(2000);
-                throw new BadRequestException(string.Empty, "Authentication failed.");
+                throw new BadRequestException(string.Empty, "User verification failed.");
             }
 
             return new ApiKeyResponseModel(user);
@@ -822,7 +822,7 @@ namespace Bit.Api.Controllers
             if (!await _userService.VerifyPasswordOrOTPAsync(user, model.Secret))
             {
                 await Task.Delay(2000);
-                throw new BadRequestException(string.Empty, "Authentication failed.");
+                throw new BadRequestException(string.Empty, "User verification failed.");
             }
 
             await _userService.RotateApiKeyAsync(user);

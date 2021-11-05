@@ -413,7 +413,7 @@ namespace Bit.Api.Controllers
             if (!await _userService.VerifyPasswordOrOTPAsync(user, model.Secret))
             {
                 await Task.Delay(2000);
-                throw new BadRequestException(string.Empty, "Authentication failed.");
+                throw new BadRequestException(string.Empty, "User verification failed.");
             }
             else
             {
