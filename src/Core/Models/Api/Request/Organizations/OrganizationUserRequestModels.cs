@@ -80,6 +80,10 @@ namespace Bit.Core.Models.Api
     
     public class OrganizationUserResetPasswordEnrollmentRequestModel
     {
+
+        [Required]
+        [StringLength(300)]
+        public string MasterPasswordHash { get; set; }
         public string ResetPasswordKey { get; set; }
     }
 
