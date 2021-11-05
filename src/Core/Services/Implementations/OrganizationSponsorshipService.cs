@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using Bit.Core.Enums;
+using Bit.Core.Exceptions;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Microsoft.AspNetCore.DataProtection;
@@ -13,12 +14,18 @@ namespace Bit.Core.Services
         private const string TokenClearTextPrefix = "BWOrganizationSponsorship_";
 
         private readonly IOrganizationSponsorshipRepository _organizationSponsorshipRepository;
+        private readonly IOrganizationRepository _organizationRepository;
+        private readonly IPaymentService _paymentService;
         private readonly IDataProtector _dataProtector;
 
         public OrganizationSponsorshipService(IOrganizationSponsorshipRepository organizationSponsorshipRepository,
+            IOrganizationRepository organizationRepository,
+            IPaymentService paymentService,
             IDataProtector dataProtector)
         {
             _organizationSponsorshipRepository = organizationSponsorshipRepository;
+            _organizationRepository = organizationRepository;
+            _paymentService = paymentService;
             _dataProtector = dataProtector;
         }
 
@@ -93,14 +100,47 @@ namespace Bit.Core.Services
 
         public async Task SetUpSponsorshipAsync(OrganizationSponsorship sponsorship, Organization sponsoredOrganization)
         {
-            // TODO: set up sponsorship, remember remove offeredToEmail from sponsorship
-            throw new NotImplementedException();
+            if (sponsorship.PlanSponsorshipType == null)
+            {
+                throw new BadRequestException("Cannot set up sponsorship without a known sponsorship type.");
+            }
+
+            // TODO: rollback?
+            await _paymentService.SponsorOrganizationAsync(sponsoredOrganization, sponsorship);
+            await _organizationRepository.UpsertAsync(sponsoredOrganization);
+
+            sponsorship.SponsoredOrganizationId = sponsoredOrganization.Id;
+            sponsorship.OfferedToEmail = null;
+            await _organizationSponsorshipRepository.UpsertAsync(sponsorship);
         }
 
-        public async Task RemoveSponsorshipAsync(OrganizationSponsorship sponsorship)
+        public async Task RemoveSponsorshipAsync(OrganizationSponsorship sponsorship, Organization sponsoredOrganization)
         {
-            // TODO: remove sponsorship
-            throw new NotImplementedException();
+            var success = await _paymentService.RemoveOrganizationSponsorshipAsync(sponsoredOrganization, sponsorship);
+
+            if (success)
+            {
+                if (sponsorship.CloudSponsor || sponsorship.SponsorshipLapsedDate.HasValue)
+                {
+                    await _organizationSponsorshipRepository.DeleteAsync(sponsorship);
+                }
+                else
+                {
+                    sponsorship.SponsoredOrganizationId = null;
+                    sponsorship.OfferedToEmail = null;
+                    sponsorship.PlanSponsorshipType = null;
+                    sponsorship.TimesRenewedWithoutValidation = 0;
+                }
+            }
+            else
+            {
+                sponsorship.TimesRenewedWithoutValidation += 1;
+                sponsorship.SponsorshipLapsedDate ??= DateTime.UtcNow;
+
+                sponsoredOrganization.Enabled = sponsorship.TimesRenewedWithoutValidation <= 6;
+            }
+            await _organizationSponsorshipRepository.UpsertAsync(sponsorship);
+            await _organizationRepository.UpsertAsync(sponsoredOrganization);
         }
 
     }
