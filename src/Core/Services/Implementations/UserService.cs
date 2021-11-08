@@ -854,11 +854,7 @@ namespace Bit.Core.Services
                 throw new ArgumentNullException(nameof(user));
             }
 
-            var validSecret = user.UsesKeyConnector
-                ? await VerifyOTPAsync(user, secret)
-                : await CheckPasswordAsync(user, secret);
-
-            if (validSecret)
+            if (await VerifySecretAsync(user, secret))
             {
                 var result = await base.UpdateSecurityStampAsync(user);
                 if (!result.Succeeded)
