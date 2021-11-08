@@ -258,7 +258,7 @@ namespace Bit.Core.Models.Api
         public TwoFactorProviderType? Type { get; set; }
     }
 
-    public class TwoFactorRequestModel : VerifyPasswordRequestModel { }
+    public class TwoFactorRequestModel : SecretVerificationRequestModel { }
 
     public class TwoFactorRecoveryRequestModel : TwoFactorEmailRequestModel
     {

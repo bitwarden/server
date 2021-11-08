@@ -390,7 +390,7 @@ namespace Bit.Api.Controllers
 
         [HttpDelete("{id}")]
         [HttpPost("{id}/delete")]
-        public async Task Delete(string id, [FromBody]VerifyPasswordRequestModel model)
+        public async Task Delete(string id, [FromBody]SecretVerificationRequestModel model)
         {
             var orgIdGuid = new Guid(id);
             if (!await _currentContext.OrganizationOwner(orgIdGuid))
@@ -466,7 +466,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("{id}/api-key")]
-        public async Task<ApiKeyResponseModel> ApiKey(string id, [FromBody]VerifyPasswordRequestModel model)
+        public async Task<ApiKeyResponseModel> ApiKey(string id, [FromBody]SecretVerificationRequestModel model)
         {
             var orgIdGuid = new Guid(id);
             if (!await _currentContext.OrganizationOwner(orgIdGuid))
@@ -499,7 +499,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("{id}/rotate-api-key")]
-        public async Task<ApiKeyResponseModel> RotateApiKey(string id, [FromBody]VerifyPasswordRequestModel model)
+        public async Task<ApiKeyResponseModel> RotateApiKey(string id, [FromBody]SecretVerificationRequestModel model)
         {
             var orgIdGuid = new Guid(id);
             if (!await _currentContext.OrganizationOwner(orgIdGuid))

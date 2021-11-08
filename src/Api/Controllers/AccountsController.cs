@@ -246,7 +246,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("verify-password")]
-        public async Task PostVerifyPassword([FromBody]VerifyPasswordRequestModel model)
+        public async Task PostVerifyPassword([FromBody]SecretVerificationRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)
@@ -392,7 +392,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("security-stamp")]
-        public async Task PostSecurityStamp([FromBody]VerifyPasswordRequestModel model)
+        public async Task PostSecurityStamp([FromBody]SecretVerificationRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)
@@ -502,7 +502,7 @@ namespace Bit.Api.Controllers
 
         [HttpDelete]
         [HttpPost("delete")]
-        public async Task Delete([FromBody]VerifyPasswordRequestModel model)
+        public async Task Delete([FromBody]SecretVerificationRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)
@@ -792,7 +792,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("api-key")]
-        public async Task<ApiKeyResponseModel> ApiKey([FromBody]VerifyPasswordRequestModel model)
+        public async Task<ApiKeyResponseModel> ApiKey([FromBody]SecretVerificationRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)
@@ -810,7 +810,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("rotate-api-key")]
-        public async Task<ApiKeyResponseModel> RotateApiKey([FromBody]VerifyPasswordRequestModel model)
+        public async Task<ApiKeyResponseModel> RotateApiKey([FromBody]SecretVerificationRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)

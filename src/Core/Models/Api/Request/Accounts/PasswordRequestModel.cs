@@ -2,7 +2,7 @@
 
 namespace Bit.Core.Models.Api
 {
-    public class PasswordRequestModel : VerifyPasswordRequestModel
+    public class PasswordRequestModel : SecretVerificationRequestModel
     {
         [Required]
         [StringLength(300)]

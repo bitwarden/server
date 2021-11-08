@@ -4,7 +4,7 @@ using Bit.Core.Models.Api;
 
 namespace Bit.Core.Models.Api
 {
-    public class EmailRequestModel : VerifyPasswordRequestModel
+    public class EmailRequestModel : SecretVerificationRequestModel
     {
         [Required]
         [StrictEmailAddress]

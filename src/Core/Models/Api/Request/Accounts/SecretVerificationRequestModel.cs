@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Bit.Core.Models.Api
 {
-    public class VerifyPasswordRequestModel : IValidatableObject
+    public class SecretVerificationRequestModel : IValidatableObject
     {
         [StringLength(300)]
         public string MasterPasswordHash { get; set; }
@@ -19,7 +19,7 @@ namespace Bit.Core.Models.Api
             }
         }
 
-        public bool SuppliedMasterPassword()
+        private bool SuppliedMasterPassword()
         {
             return !string.IsNullOrEmpty(MasterPasswordHash);
         }
