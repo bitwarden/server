@@ -905,7 +905,7 @@ namespace Bit.Core.Services
             }
         }
 
-        public async Task<bool> RecoverTwoFactorAsync(string email, string masterPassword, string recoveryCode,
+        public async Task<bool> RecoverTwoFactorAsync(string email, string secret, string recoveryCode,
             IOrganizationService organizationService)
         {
             var user = await _userRepository.GetByEmailAsync(email);
@@ -915,7 +915,7 @@ namespace Bit.Core.Services
                 return false;
             }
 
-            if (!await CheckPasswordAsync(user, masterPassword))
+            if (!await VerifySecretAsync(user, secret))
             {
                 return false;
             }

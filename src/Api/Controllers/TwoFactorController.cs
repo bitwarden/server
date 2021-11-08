@@ -284,7 +284,7 @@ namespace Bit.Api.Controllers
             var user = await _userManager.FindByEmailAsync(model.Email.ToLowerInvariant());
             if (user != null)
             {
-                if (await _userService.CheckPasswordAsync(user, model.MasterPasswordHash))
+                if (await _userService.VerifySecretAsync(user, model.Secret))
                 {
                     await _userService.SendTwoFactorEmailAsync(user);
                     return;
