@@ -299,7 +299,8 @@ jobs:
         if: ${{ matrix.dotnet }}
         run: |
           mkdir -p ${{ matrix.base_path}}/${{ matrix.service_name }}/obj/build-output/publish
-          unzip ${{ matrix.service_name }}.zip -d ${{ matrix.base_path }}/${{ matrix.service_name }}/obj/build-output/publish
+          unzip ${{ matrix.service_name }}.zip \
+            -d ${{ matrix.base_path }}/${{ matrix.service_name }}/obj/build-output/publish
 
       - name: Build Docker images
         run: |
@@ -312,10 +313,16 @@ jobs:
           fi
 
       - name: Tag rc
-        if: github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix'
+        if: github.ref == 'refs/heads/rc'
         run: |
           docker tag ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }} \
             ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }}:rc
+
+      - name: Tag hotfix
+        if: github.ref == 'refs/heads/hotfix'
+        run: |
+          docker tag ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }} \
+            ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }}:hotfix
 
       - name: Tag dev
         if: github.ref == 'refs/heads/master'
@@ -328,15 +335,24 @@ jobs:
         run: docker images
 
       - name: Docker Trust setup
-        if: matrix.docker_repo == 'bitwarden' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix')
+        if: |
+          matrix.docker_repo == 'bitwarden'
+          && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix')
+        env:
+          DCT_REPO_PASSPHRASE: ${{ steps.retrieve-secrets.outputs.dct-delegate-2-repo-passphrase }}
         run: |
           echo "DOCKER_CONTENT_TRUST=1" >> $GITHUB_ENV
-          echo "DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE=${{ steps.retrieve-secrets.outputs.dct-delegate-2-repo-passphrase }}" >> $GITHUB_ENV
+          echo "DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE=$DCT_REPO_PASSPHRASE" >> $GITHUB_ENV
 
       - name: Push rc images
-        if: github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix'
+        if: github.ref == 'refs/heads/rc'
         run: |
           docker push ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }}:rc
+
+      - name: Push hotfix images
+        if: github.ref == 'refs/heads/hotfix'
+        run: |
+          docker push ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }}:hotfix
 
       - name: Push dev images
         if: github.ref == 'refs/heads/master'
@@ -421,7 +437,10 @@ jobs:
       - upload
     steps:
       - name: Check if any job failed
-        if: ${{ (github.ref == 'refs/heads/master') || (github.ref == 'refs/heads/rc') || (github.ref == 'refs/heads/hotfix') }}
+        if: |
+          github.ref == 'refs/heads/master'
+          || github.ref == 'refs/heads/rc'
+          || github.ref == 'refs/heads/hotfix'
         env:
           CLOC_STATUS: ${{ needs.cloc.result }}
           TESTING_STATUS: ${{ needs.testing.result }}

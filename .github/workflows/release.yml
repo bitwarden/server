@@ -120,6 +120,7 @@ jobs:
     needs: setup
     env:
       _RELEASE_VERSION: ${{ needs.setup.outputs.release_version }}
+      _BRANCH_NAME: ${{ needs.setup.outputs.branch-name }}
     strategy:
       fail-fast: false
       matrix:
@@ -164,23 +165,28 @@ jobs:
           echo "::set-output name=service_name::$SERVICE_NAME"
 
       - name: Pull latest selfhost RC image
-        run: docker pull bitwarden/${{ steps.setup.outputs.service_name }}:rc
+        env:
+          SERVICE_NAME: ${{ steps.setup.outputs.service_name }}
+        run: docker pull bitwarden/$SERVICE_NAME:$_BRANCH_NAME
 
       - name: Tag version and latest
+        env:
+          SERVICE_NAME: ${{ steps.setup.outputs.service_name }}
         run: |
-          docker tag bitwarden/${{ steps.setup.outputs.service_name }}:rc bitwarden/${{ steps.setup.outputs.service_name }}:$_RELEASE_VERSION
-          docker tag bitwarden/${{ steps.setup.outputs.service_name }}:rc bitwarden/${{ steps.setup.outputs.service_name }}:latest
+          docker tag bitwarden/$SERVICE_NAME:$_BRANCH_NAME bitwarden/$SERVICE_NAME:$_RELEASE_VERSION
+          docker tag bitwarden/$SERVICE_NAME:$_BRANCH_NAME bitwarden/$SERVICE_NAME:latest
 
       - name: List Docker images
         run: docker images
 
       - name: Push version and latest image
-        run: |
-          docker push bitwarden/${{ steps.setup.outputs.service_name }}:$_RELEASE_VERSION
-          docker push bitwarden/${{ steps.setup.outputs.service_name }}:latest
         env:
           DOCKER_CONTENT_TRUST: 1
           DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ steps.setup-dct.outputs.dct-delegate-repo-passphrase }}
+          SERVICE_NAME: ${{ steps.setup.outputs.service_name }}
+        run: |
+          docker push bitwarden/$SERVICE_NAME:$_RELEASE_VERSION
+          docker push bitwarden/$SERVICE_NAME:latest
 
       - name: Log out of Docker
         run: docker logout
