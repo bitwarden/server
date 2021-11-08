@@ -655,7 +655,7 @@ namespace Bit.Core.Services
             user.UsesKeyConnector = true;
 
             await _userRepository.ReplaceAsync(user);
-            await _eventService.LogUserEventAsync(user.Id, EventType.User_ChangedPassword);
+            await _eventService.LogUserEventAsync(user.Id, EventType.User_MigratedKeyToKeyConnector);
 
             await _organizationService.AcceptUserAsync(orgIdentifier, user, this);
 
@@ -680,7 +680,7 @@ namespace Bit.Core.Services
             user.UsesKeyConnector = true;
 
             await _userRepository.ReplaceAsync(user);
-            await _eventService.LogUserEventAsync(user.Id, EventType.User_ChangedPassword);
+            await _eventService.LogUserEventAsync(user.Id, EventType.User_MigratedKeyToKeyConnector);
 
             return IdentityResult.Success;
         }
