@@ -61,13 +61,6 @@ namespace Bit.Core.Services
                             throw new BadRequestException("Single Sign-On Authentication policy is enabled.");
                         }
 
-                        var vaultTimeout =
-                            await _policyRepository.GetByOrganizationIdTypeAsync(org.Id, PolicyType.MaximumVaultTimeout);
-                        if (vaultTimeout?.Enabled == true)
-                        {
-                            throw new BadRequestException("Maximum Vault Timeout policy is enabled.");
-                        }
-
                         var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(org.Id);
                         if (ssoConfig?.GetData()?.UseKeyConnector == true)
                         {
