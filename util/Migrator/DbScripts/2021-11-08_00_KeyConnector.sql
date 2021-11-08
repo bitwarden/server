@@ -1,12 +1,3 @@
-IF COL_LENGTH('[dbo].[User]', 'UsesCryptoAgent') IS NOT NULL
-    BEGIN
-        ALTER TABLE
-            [dbo].[User]
-        DROP COLUMN
-            [UsesCryptoAgent]
-    END
-GO
-
 IF COL_LENGTH('[dbo].[User]', 'UsesKeyConnector') IS NULL
     BEGIN
         ALTER TABLE
