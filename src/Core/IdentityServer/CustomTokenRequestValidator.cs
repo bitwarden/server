@@ -105,7 +105,7 @@ namespace Bit.Core.IdentityServer
             var organizationClaim = context.Result.ValidatedRequest.Subject?.FindFirst(c => c.Type == "organizationId");
             if (organizationClaim?.Value != null)
             {
-                var organizationId = new Guid(organizationClaim?.Value);
+                var organizationId = new Guid(organizationClaim.Value);
 
                 var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(organizationId);
                 var ssoConfigData = ssoConfig.GetData();

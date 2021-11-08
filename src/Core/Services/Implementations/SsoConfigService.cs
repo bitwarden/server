@@ -35,7 +35,8 @@ namespace Bit.Core.Services
                 config.CreationDate = now;
             }
 
-            if (config.GetData().UseKeyConnector)
+            var useKeyConnector = config.GetData().UseKeyConnector;
+            if (useKeyConnector)
             {
                 var policy = await _policyRepository.GetByOrganizationIdTypeAsync(config.OrganizationId, PolicyType.SingleOrg);
                 if (policy is not { Enabled: true })
@@ -45,7 +46,8 @@ namespace Bit.Core.Services
             }
 
             var oldConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(config.OrganizationId);
-            if (oldConfig?.GetData()?.UseKeyConnector == true && !config.GetData().UseKeyConnector)
+            var oldUseKeyConnector = oldConfig?.GetData()?.UseKeyConnector == true;
+            if (oldUseKeyConnector && !useKeyConnector)
             {
                 throw new BadRequestException("KeyConnector cannot be disabled at this moment.");
             }
@@ -57,9 +59,9 @@ namespace Bit.Core.Services
                 await _eventService.LogOrganizationEventAsync(organization, e);
             }
 
-            if (oldConfig?.GetData()?.UseKeyConnector != config.GetData().UseKeyConnector)
+            if (oldUseKeyConnector != useKeyConnector)
             {
-                var e = config.GetData().UseKeyConnector ? EventType.Organization_EnabledKeyConnector : EventType.Organization_DisabledKeyConnector;
+                var e = useKeyConnector ? EventType.Organization_EnabledKeyConnector : EventType.Organization_DisabledKeyConnector;
                 await _eventService.LogOrganizationEventAsync(organization, e);
             }
 
