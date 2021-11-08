@@ -70,7 +70,6 @@ namespace Bit.Core.Services
                     break;
                 
                case PolicyType.RequireSso:
-               case PolicyType.MaximumVaultTimeout:
                    if (policy.Enabled)
                    {
                        var singleOrg = await _policyRepository.GetByOrganizationIdTypeAsync(org.Id, PolicyType.SingleOrg);
