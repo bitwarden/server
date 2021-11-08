@@ -866,7 +866,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("verify-otp")]
-        public async Task VerifyOtp([FromBody]VerifyOtpRequestModel model)
+        public async Task VerifyOTP([FromBody]VerifyOtpRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user is not { UsesKeyConnector: true })
@@ -874,7 +874,7 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
-            if (!await _userService.VerifyOTPAsync(user, model.Otp))
+            if (!await _userService.VerifyOTPAsync(user, model.OTP))
             {
                 await Task.Delay(2000);
                 throw new BadRequestException("Token", "Invalid token");
