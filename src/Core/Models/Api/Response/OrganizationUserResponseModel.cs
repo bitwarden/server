@@ -79,6 +79,7 @@ namespace Bit.Core.Models.Api
             Email = organizationUser.Email;
             TwoFactorEnabled = twoFactorEnabled;
             SsoBound = !string.IsNullOrWhiteSpace(organizationUser.SsoExternalId);
+            // Prevent reset password when using key connector.
             ResetPasswordEnrolled = ResetPasswordEnrolled && !organizationUser.UsesKeyConnector;
         }
 

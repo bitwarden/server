@@ -91,11 +91,11 @@ namespace Bit.Core.IdentityServer
 
             // KeyConnector responses below
 
+            // Apikey login
             if (context.Result.ValidatedRequest.GrantType == "client_credentials")
             {
-                // Apikey login
                 if (user.UsesKeyConnector) {
-                    // KeyConnectorUrl is configured in the CLI client, just disable master password reset    
+                    // KeyConnectorUrl is configured in the CLI client, just disable master password reset
                     context.Result.CustomResponse["ResetMasterPassword"] = false;
                 }
                 return;
