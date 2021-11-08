@@ -49,7 +49,7 @@ namespace Bit.Billing.Controllers
         [HttpPost("ipn")]
         public async Task<IActionResult> PostIpn([FromBody] BitPayEventModel model, [FromQuery] string key)
         {
-            if (key != _billingSettings.BitPayWebhookKey)
+            if (!CoreHelpers.FixedTimeEquals(key, _billingSettings.BitPayWebhookKey))
             {
                 return new BadRequestResult();
             }
