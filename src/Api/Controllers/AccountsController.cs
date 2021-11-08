@@ -16,7 +16,6 @@ using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Bit.Core.Enums.Provider;
 
@@ -393,7 +392,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("security-stamp")]
-        public async Task PostSecurityStamp([FromBody]SecurityStampRequestModel model)
+        public async Task PostSecurityStamp([FromBody]VerifyPasswordRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)
@@ -503,7 +502,7 @@ namespace Bit.Api.Controllers
 
         [HttpDelete]
         [HttpPost("delete")]
-        public async Task Delete([FromBody]DeleteAccountRequestModel model)
+        public async Task Delete([FromBody]VerifyPasswordRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)
@@ -793,7 +792,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("api-key")]
-        public async Task<ApiKeyResponseModel> ApiKey([FromBody]ApiKeyRequestModel model)
+        public async Task<ApiKeyResponseModel> ApiKey([FromBody]VerifyPasswordRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)
@@ -811,7 +810,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("rotate-api-key")]
-        public async Task<ApiKeyResponseModel> RotateApiKey([FromBody]ApiKeyRequestModel model)
+        public async Task<ApiKeyResponseModel> RotateApiKey([FromBody]VerifyPasswordRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)

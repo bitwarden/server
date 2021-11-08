@@ -319,7 +319,7 @@ namespace Bit.Api.Test.Controllers
             var user = GenerateExampleUser();
             ConfigureUserServiceToReturnValidPrincipalFor(user);
             ConfigureUserServiceToAcceptPasswordFor(user);
-            await _sut.ApiKey(new ApiKeyRequestModel());
+            await _sut.ApiKey(new VerifyPasswordRequestModel());
         }
 
         [Fact]
@@ -328,7 +328,7 @@ namespace Bit.Api.Test.Controllers
             ConfigureUserServiceToReturnNullPrincipal();
 
             await Assert.ThrowsAsync<UnauthorizedAccessException>(
-                () => _sut.ApiKey(new ApiKeyRequestModel())
+                () => _sut.ApiKey(new VerifyPasswordRequestModel())
             );
         }
 
@@ -339,7 +339,7 @@ namespace Bit.Api.Test.Controllers
             ConfigureUserServiceToReturnValidPrincipalFor(user);
             ConfigureUserServiceToRejectPasswordFor(user);
             await Assert.ThrowsAsync<BadRequestException>(
-                () => _sut.ApiKey(new ApiKeyRequestModel())
+                () => _sut.ApiKey(new VerifyPasswordRequestModel())
             );
         }
 
@@ -349,7 +349,7 @@ namespace Bit.Api.Test.Controllers
             var user = GenerateExampleUser();
             ConfigureUserServiceToReturnValidPrincipalFor(user);
             ConfigureUserServiceToAcceptPasswordFor(user);
-            await _sut.RotateApiKey(new ApiKeyRequestModel());
+            await _sut.RotateApiKey(new VerifyPasswordRequestModel());
         }
 
         [Fact]
@@ -358,7 +358,7 @@ namespace Bit.Api.Test.Controllers
             ConfigureUserServiceToReturnNullPrincipal();
 
             await Assert.ThrowsAsync<UnauthorizedAccessException>(
-                () => _sut.ApiKey(new ApiKeyRequestModel())
+                () => _sut.ApiKey(new VerifyPasswordRequestModel())
             );
         }
 
@@ -369,7 +369,7 @@ namespace Bit.Api.Test.Controllers
             ConfigureUserServiceToReturnValidPrincipalFor(user);
             ConfigureUserServiceToRejectPasswordFor(user);
             await Assert.ThrowsAsync<BadRequestException>(
-                () => _sut.ApiKey(new ApiKeyRequestModel())
+                () => _sut.ApiKey(new VerifyPasswordRequestModel())
             );
         }
 

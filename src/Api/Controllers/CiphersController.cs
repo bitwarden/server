@@ -550,7 +550,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("purge")]
-        public async Task PostPurge([FromBody]CipherPurgeRequestModel model, string organizationId = null)
+        public async Task PostPurge([FromBody]VerifyPasswordRequestModel model, string organizationId = null)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)
