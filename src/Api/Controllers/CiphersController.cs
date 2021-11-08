@@ -558,7 +558,7 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
-            if (!await _userService.VerifyPasswordOrOTPAsync(user, model.Secret))
+            if (!await _userService.VerifySecretAsync(user, model.Secret))
             {
                 ModelState.AddModelError(string.Empty, "User verification failed.");
                 await Task.Delay(2000);

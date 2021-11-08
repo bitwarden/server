@@ -408,7 +408,7 @@ namespace Bit.Api.Test.Controllers
         {
             _userService.CheckPasswordAsync(user, Arg.Any<string>())
                         .Returns(Task.FromResult(true));
-            _userService.VerifyPasswordOrOTPAsync(user, Arg.Any<string>())
+            _userService.VerifySecretAsync(user, Arg.Any<string>())
                         .Returns(Task.FromResult(true));
         }
 

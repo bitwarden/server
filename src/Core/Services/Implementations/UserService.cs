@@ -1405,7 +1405,7 @@ namespace Bit.Core.Services
                 "otp:" + user.Email, token);
         }
 
-        public async Task<bool> VerifyPasswordOrOTPAsync(User user, string secret)
+        public async Task<bool> VerifySecretAsync(User user, string secret)
         {
             return user.UsesKeyConnector
                 ? await VerifyOTPAsync(user, secret)

@@ -77,6 +77,6 @@ namespace Bit.Core.Services
         string GetUserName(ClaimsPrincipal principal);
         Task SendOTPAsync(User user);
         Task<bool> VerifyOTPAsync(User user, string token);
-        Task<bool> VerifyPasswordOrOTPAsync(User user, string secret);
+        Task<bool> VerifySecretAsync(User user, string secret);
     }
 }
