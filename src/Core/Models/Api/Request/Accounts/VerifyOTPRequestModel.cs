@@ -2,7 +2,7 @@
 
 namespace Bit.Core.Models.Api
 {
-    public class VerifyOtpRequestModel
+    public class VerifyOTPRequestModel
     {
         [Required]
         public string OTP { get; set; }
