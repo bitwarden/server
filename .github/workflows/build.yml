@@ -268,7 +268,8 @@ jobs:
         if: ${{ matrix.dotnet }}
         run: |
           mkdir -p ${{ matrix.base_path}}/${{ matrix.service_name }}/obj/build-output/publish
-          unzip ${{ matrix.service_name }}.zip -d ${{ matrix.base_path }}/${{ matrix.service_name }}/obj/build-output/publish
+          unzip ${{ matrix.service_name }}.zip \
+            -d ${{ matrix.base_path }}/${{ matrix.service_name }}/obj/build-output/publish
 
       - name: Build Docker images
         env:
@@ -309,7 +310,7 @@ jobs:
             $ECR_REGISTRY/${{ steps.setup.outputs.service_name }}:latest
 
       - name: List Docker images
-        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/release'
+        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix'
         run: docker images
 
       - name: Push rc images
@@ -319,6 +320,11 @@ jobs:
           IMAGE_TAG: ${{ github.sha }}
         run: |
           docker push $ECR_REGISTRY/${{ steps.setup.outputs.service_name }}:rc-$IMAGE_TAG
+
+      - name: Push hotfix images
+        if: github.ref == 'refs/heads/hotfix'
+        run: |
+          docker push ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }}:hotfix
 
       - name: Push dev images
         if: github.ref == 'refs/heads/master'
@@ -371,7 +377,7 @@ jobs:
           cd docker-stub; zip -r ../docker-stub.zip *; cd ..
 
       - name: Upload Docker stub artifact
-        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/release'
+        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix'
         uses: actions/upload-artifact@ee69f02b3dfdecd58bb31b4d133da38ba6fe3700
         with:
           name: docker-stub.zip
@@ -414,7 +420,10 @@ jobs:
       - upload
     steps:
       - name: Check if any job failed
-        if: ${{ (github.ref == 'refs/heads/master') || (github.ref == 'refs/heads/rc') }}
+        if: |
+          github.ref == 'refs/heads/master'
+          || github.ref == 'refs/heads/rc'
+          || github.ref == 'refs/heads/hotfix'
         env:
           CLOC_STATUS: ${{ needs.cloc.result }}
           TESTING_STATUS: ${{ needs.testing.result }}

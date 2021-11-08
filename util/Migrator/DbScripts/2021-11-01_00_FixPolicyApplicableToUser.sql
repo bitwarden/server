@@ -1,3 +1,10 @@
+-- PolicyApplicableToUser
+IF OBJECT_ID('[dbo].[PolicyApplicableToUser]') IS NOT NULL
+BEGIN
+    DROP FUNCTION [dbo].[PolicyApplicableToUser]
+END
+GO
+
 CREATE FUNCTION [dbo].[PolicyApplicableToUser]
 (
     @UserId UNIQUEIDENTIFIER,
@@ -29,7 +36,7 @@ WHERE
             AND OU.[UserId] = @UserId 
         )
         OR (
-            OU.[Status] = 0 -- 'Invited' OrgUsers are not linked to a UserId yet, so we have to look up their email
+            OU.[Status] = 0 -- 'Invited' OrgUsers are not associated with a UserId yet, so we have to look up their email
             AND OU.[Email] IN (SELECT U.Email FROM [dbo].[UserView] U WHERE U.Id = @UserId)
         )
     )
@@ -42,3 +49,4 @@ WHERE
         OR COALESCE(JSON_VALUE(OU.[Permissions], '$.managePolicies'), 'false') = 'false'
     )
     AND PUPO.[UserId] IS NULL   -- Not a provider
+GO

@@ -11,11 +11,26 @@ if (!(Test-Path "secrets.json")) {
     exit;
 }
 
-$projects = "Admin", "Api", "Billing", "Events", "EventsProcessor", "Icons", "Identity", "Notifications";
+if ($clear -eq $true) {
+    Write-Output "Deleting all existing user secrets"
+}
 
-foreach ($projects in $projects) {
+$projects = @{
+    Admin = "../src/Admin"
+    Api = "../src/Api"
+    Billing = "../src/Billing"
+    Events = "../src/Events"
+    EventsProcessor = "../src/EventsProcessor"
+    Icons = "../src/Icons"
+    Identity = "../src/Identity"
+    Notifications = "../src/Notifications"
+    Sso = "../bitwarden_license/src/Sso" 
+}
+
+foreach ($key in $projects.keys) {
     if ($clear -eq $true) {
-        dotnet user-secrets clear -p "../src/$projects"
+        dotnet user-secrets clear -p $projects[$key]
     }
-    Get-Content secrets.json | & dotnet user-secrets set -p "../src/$projects"
+    $output = Get-Content secrets.json | & dotnet user-secrets set -p $projects[$key]
+    Write-Output "$output - $key"
 }
