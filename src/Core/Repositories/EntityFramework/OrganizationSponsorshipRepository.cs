@@ -13,7 +13,7 @@ namespace Bit.Core.Repositories.EntityFramework
     public class OrganizationSponsorshipRepository : Repository<TableModel.OrganizationSponsorship, EFModel.OrganizationSponsorship, Guid>, IOrganizationSponsorshipRepository
     {
         public OrganizationSponsorshipRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper) :
-        base(serviceScopeFactory, mapper, (DatabaseContext context) => context.organizationSponsorships)
+        base(serviceScopeFactory, mapper, (DatabaseContext context) => context.OrganizationSponsorships)
         {
         }
 

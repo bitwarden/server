@@ -67,12 +67,32 @@ namespace Bit.Core.Repositories.EntityFramework
             return organizationUsers.Select(u => u.Id).ToList();
         }
 
+        public override async Task DeleteAsync(OrganizationUser organizationUser) => await DeleteAsync(organizationUser.Id);
+        public async Task DeleteAsync(Guid organizationUserId)
+        {
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var orgUser = dbContext.FindAsync<EfModel.OrganizationUser>(organizationUserId);
+                var sponsorships = dbContext.OrganizationSponsorships
+                    .Where(os => os.SponsoringOrganizationUserId != default &&
+                        os.SponsoringOrganizationUserId.Value == organizationUserId);
+                dbContext.RemoveRange(sponsorships);
+                dbContext.Remove(orgUser);
+                await dbContext.SaveChangesAsync();
+            }
+        }
+
         public async Task DeleteManyAsync(IEnumerable<Guid> organizationUserIds)
         {
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
                 var entities = dbContext.FindAsync<EfModel.OrganizationUser>(organizationUserIds);
+                var sponsorships = dbContext.OrganizationSponsorships
+                    .Where(os => os.SponsoringOrganizationUserId != default &&
+                        organizationUserIds.Contains(os.SponsoringOrganizationUserId ?? default));
+                dbContext.RemoveRange(sponsorships);
                 dbContext.RemoveRange(entities);
                 await dbContext.SaveChangesAsync();
             }

@@ -292,3 +292,318 @@ BEGIN
         [OfferedToEmail] = @OfferedToEmail
 END
 GO
+
+-- OrganizationSponsorship_OrganizationDeleted
+IF OBJECT_ID('[dbo].[OrganizationSponsorship_OrganizationDeleted]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[OrganizationSponsorship_OrganizationDeleted]
+END
+GO
+
+CREATE PROCEDURE [dbo].[OrganizationSponsorship_OrganizationDeleted]
+    @OrganizationId UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    UPDATE
+        [dbo].[OrganizationSponsorship]
+    SET
+        [SponsoringOrganizationId] = NULL
+    WHERE
+        [SponsoringOrganizationId] = @OrganizationId AND
+        [CloudSponsor] = 0
+
+    UPDATE
+        [dbo].[OrganizationSponsorship]
+    SET
+        [SponsoredOrganizationId] = NULL
+    WHERE
+        [SponsoredOrganizationId] = @OrganizationId AND
+        [CloudSponsor] = 0
+
+    DELETE
+    FROM
+        [dbo].[OrganizationSponsorship]
+    WHERE
+        [CloudSponsor] = 1 AND
+        ([SponsoredOrganizationId] = @OrganizationId OR
+         [SponsoringOrganizationId] = @OrganizationId)
+END
+GO
+
+-- OrganizationSponsorship_OrganizationUserDeleted
+IF OBJECT_ID('[dbo].[OrganizationSponsorship_OrganizationUserDeleted]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[OrganizationSponsorship_OrganizationUserDeleted]
+END
+GO
+
+CREATE PROCEDURE [dbo].[OrganizationSponsorship_OrganizationUserDeleted]
+    @OrganizationUserId UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    DELETE
+    FROM
+        [dbo].[OrganizationSponsorship]
+    WHERE
+        [SponsoringOrganizationUserId] = @OrganizationUserId
+END
+GO
+
+-- OrganizationSponsorship_OrganizationUsersDeleted
+IF OBJECT_ID('[dbo].[OrganizationSponsorship_OrganizationUsersDeleted]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[OrganizationSponsorship_OrganizationUsersDeleted]
+END
+GO
+
+CREATE PROCEDURE [dbo].[OrganizationSponsorship_OrganizationUsersDeleted]
+    @SponsoringOrganizationUserIds [dbo].[GuidIdArray] READONLY
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    SET @BatchSize = 100;
+
+    WHILE @BatchSize > 0
+        BEGIN
+        BEGIN TRANSACTION OrganizationSponsorship_DeleteOUs
+
+        DELETE TOP(@BatchSize) OS
+        FROM
+            [dbo].[OrganiozationSponsorship] OS
+        INNER JOIN
+            @Ids I ON I.Id = OS.SponsoringOrganizationUserId
+
+        SET @BatchSize = @@ROWCOUNT
+
+        COMMIT TRANSACTION OrganizationSponsorship_DeleteOUs
+    END
+END
+GO
+
+-- Update Organization delete sprocs to handle organization sponsorships
+IF OBJECT_ID('[dbo].[Organization_DeleteById]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[Organization_DeleteById]
+END
+GO
+
+CREATE PROCEDURE [dbo].[Organization_DeleteById]
+    @Id UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationId] @Id
+
+    DECLARE @BatchSize INT = 100
+    WHILE @BatchSize > 0
+    BEGIN
+        BEGIN TRANSACTION Organization_DeleteById_Ciphers
+
+        DELETE TOP(@BatchSize)
+        FROM
+            [dbo].[Cipher]
+        WHERE
+            [UserId] IS NULL
+            AND [OrganizationId] = @Id
+
+        SET @BatchSize = @@ROWCOUNT
+
+        COMMIT TRANSACTION Organization_DeleteById_Ciphers
+    END
+
+    BEGIN TRANSACTION Organization_DeleteById
+
+    DELETE
+    FROM
+        [dbo].[SsoUser]
+    WHERE
+        [OrganizationId] = @Id
+
+    DELETE
+    FROM
+        [dbo].[SsoConfig]
+    WHERE
+        [OrganizationId] = @Id
+
+    DELETE CU
+    FROM 
+        [dbo].[CollectionUser] CU
+    INNER JOIN 
+        [dbo].[OrganizationUser] OU ON [CU].[OrganizationUserId] = [OU].[Id]
+    WHERE 
+        [OU].[OrganizationId] = @Id
+
+    DELETE
+    FROM 
+        [dbo].[OrganizationUser]
+    WHERE 
+        [OrganizationId] = @Id
+
+    DELETE
+    FROM
+         [dbo].[ProviderOrganization]
+    WHERE
+        [OrganizationId] = @Id
+
+    EXEC[dbo].[OrganizationSponsorship_OrganizationDeleted] @Id
+
+    DELETE
+    FROM
+        [dbo].[Organization]
+    WHERE
+        [Id] = @Id
+
+    COMMIT TRANSACTION Organization_DeleteById
+END
+GO
+
+-- Update Organization User delete sprocs to handle organization sponsorships
+IF OBJECT_ID('[dbo].[OrganizationUser_DeleteById]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[OrganizationUser_DeleteById]
+END
+GO
+
+CREATE PROCEDURE [dbo].[OrganizationUser_DeleteById]
+    @Id UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON
+    
+    EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationUserId] @Id
+    
+    DECLARE @OrganizationId UNIQUEIDENTIFIER
+    DECLARE @UserId UNIQUEIDENTIFIER
+
+    SELECT
+        @OrganizationId = [OrganizationId],
+        @UserId = [UserId]
+    FROM
+        [dbo].[OrganizationUser]
+    WHERE
+        [Id] = @Id
+
+    IF @OrganizationId IS NOT NULL AND @UserId IS NOT NULL
+    BEGIN
+        EXEC [dbo].[SsoUser_Delete] @UserId, @OrganizationId
+    END
+
+    DELETE
+    FROM
+        [dbo].[CollectionUser]
+    WHERE
+        [OrganizationUserId] = @Id
+
+    DELETE
+    FROM
+        [dbo].[GroupUser]
+    WHERE
+        [OrganizationUserId] = @Id
+
+    EXEC [dbo].[OrganizationUser_DeleteById] @Id
+
+    DELETE
+    FROM
+        [dbo].[OrganizationUser]
+    WHERE
+        [Id] = @Id
+END
+GO
+
+
+IF OBJECT_ID('[dbo].[OrganizationUser_DeleteByIds]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[OrganizationUser_DeleteByIds]
+END
+GO
+
+CREATE PROCEDURE [dbo].[OrganizationUser_DeleteByIds]
+    @Ids [dbo].[GuidIdArray] READONLY
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationUserIds] @Ids
+
+    DECLARE @UserAndOrganizationIds [dbo].[TwoGuidIdArray]
+
+    INSERT INTO @UserAndOrganizationIds
+        (Id1, Id2)
+    SELECT
+        UserId,
+        OrganizationId
+    FROM
+        [dbo].[OrganizationUser] OU
+    INNER JOIN
+        @Ids OUIds ON OUIds.Id = OU.Id
+    WHERE
+        UserId IS NOT NULL AND
+        OrganizationId IS NOT NULL
+
+    BEGIN
+        EXEC [dbo].[SsoUser_DeleteMany] @UserAndOrganizationIds
+    END
+
+    DECLARE @BatchSize INT = 100
+
+    -- Delete CollectionUsers
+    WHILE @BatchSize > 0
+    BEGIN
+        BEGIN TRANSACTION CollectionUser_DeleteMany_CUs
+
+        DELETE TOP(@BatchSize) CU
+        FROM
+            [dbo].[CollectionUser] CU
+        INNER JOIN
+            @Ids I ON I.Id = CU.OrganizationUserId
+
+        SET @BatchSize = @@ROWCOUNT
+
+        COMMIT TRANSACTION CollectionUser_DeleteMany_CUs
+    END
+
+    SET @BatchSize = 100;
+
+    -- Delete GroupUsers
+    WHILE @BatchSize > 0
+    BEGIN
+        BEGIN TRANSACTION GroupUser_DeleteMany_GroupUsers
+
+        DELETE TOP(@BatchSize) GU
+        FROM
+            [dbo].[GroupUser] GU
+        INNER JOIN
+            @Ids I ON I.Id = GU.OrganizationUserId
+
+        SET @BatchSize = @@ROWCOUNT
+
+        COMMIT TRANSACTION GoupUser_DeleteMany_GroupUsers
+    END
+
+    EXEC [dbo].[OrganizationSponsorship_OrganizationUsersDeleted] @Ids
+    
+    SET @BatchSize = 100;
+
+    -- Delete OrganizationUsers
+    WHILE @BatchSize > 0
+        BEGIN
+        BEGIN TRANSACTION OrganizationUser_DeleteMany_OUs
+
+        DELETE TOP(@BatchSize) OU
+        FROM
+            [dbo].[OrganizationUser] OU
+        INNER JOIN
+            @Ids I ON I.Id = OU.Id
+
+        SET @BatchSize = @@ROWCOUNT
+
+        COMMIT TRANSACTION OrganizationUser_DeleteMany_OUs
+    END
+END
+GO
