@@ -38,20 +38,30 @@ namespace Bit.Core.Services
             var useKeyConnector = config.GetData().UseKeyConnector;
             if (useKeyConnector)
             {
-                var policy = await _policyRepository.GetByOrganizationIdTypeAsync(config.OrganizationId, PolicyType.SingleOrg);
-                if (policy is not { Enabled: true })
-                {
-                    throw new BadRequestException("KeyConnector requires Single Organization to be enabled");
-                }
+                await VerifyDependenciesAsync(config);
             }
 
             var oldConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(config.OrganizationId);
-            var oldUseKeyConnector = oldConfig?.GetData()?.UseKeyConnector == true;
-            if (oldUseKeyConnector && !useKeyConnector)
+            if (oldConfig?.GetData()?.UseKeyConnector == true && !useKeyConnector)
             {
                 throw new BadRequestException("KeyConnector cannot be disabled at this moment.");
             }
 
+            await LogEventsAsync(config, oldConfig);
+            await _ssoConfigRepository.UpsertAsync(config);
+        }
+
+        private async Task VerifyDependenciesAsync(SsoConfig config)
+        {
+            var policy = await _policyRepository.GetByOrganizationIdTypeAsync(config.OrganizationId, PolicyType.SingleOrg);
+            if (policy is not { Enabled: true })
+            {
+                throw new BadRequestException("KeyConnector requires Single Organization to be enabled");
+            }
+        }
+
+        private async Task LogEventsAsync(SsoConfig config, SsoConfig oldConfig)
+        {
             var organization = await _organizationRepository.GetByIdAsync(config.OrganizationId);
             if (oldConfig?.Enabled != config.Enabled)
             {
@@ -59,13 +69,14 @@ namespace Bit.Core.Services
                 await _eventService.LogOrganizationEventAsync(organization, e);
             }
 
-            if (oldUseKeyConnector != useKeyConnector)
+            var useKeyConnector = config.GetData().UseKeyConnector;
+            if (oldConfig?.GetData()?.UseKeyConnector != useKeyConnector)
             {
-                var e = useKeyConnector ? EventType.Organization_EnabledKeyConnector : EventType.Organization_DisabledKeyConnector;
+                var e = useKeyConnector
+                    ? EventType.Organization_EnabledKeyConnector
+                    : EventType.Organization_DisabledKeyConnector;
                 await _eventService.LogOrganizationEventAsync(organization, e);
             }
-
-            await _ssoConfigRepository.UpsertAsync(config);
         }
     }
 }

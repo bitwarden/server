@@ -8,20 +8,14 @@ namespace Bit.Core.Models.Api
         [StringLength(300)]
         public string MasterPasswordHash { get; set; }
         public string OTP { get; set; }
-
-        public string Secret => SuppliedMasterPassword() ? MasterPasswordHash : OTP;
+        public string Secret => !string.IsNullOrEmpty(MasterPasswordHash) ? MasterPasswordHash : OTP;
 
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {
-            if (string.IsNullOrEmpty(MasterPasswordHash) && string.IsNullOrEmpty(OTP))
+            if (string.IsNullOrEmpty(Secret))
             {
                 yield return new ValidationResult("MasterPasswordHash or OTP must be supplied.");
             }
-        }
-
-        private bool SuppliedMasterPassword()
-        {
-            return !string.IsNullOrEmpty(MasterPasswordHash);
         }
     }
 }
