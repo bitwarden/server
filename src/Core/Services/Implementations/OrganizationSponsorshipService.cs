@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using Bit.Core.Enums;
+using Bit.Core.Exceptions;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Microsoft.AspNetCore.DataProtection;
@@ -13,12 +14,18 @@ namespace Bit.Core.Services
         private const string TokenClearTextPrefix = "BWOrganizationSponsorship_";
 
         private readonly IOrganizationSponsorshipRepository _organizationSponsorshipRepository;
+        private readonly IOrganizationRepository _organizationRepository;
+        private readonly IPaymentService _paymentService;
         private readonly IDataProtector _dataProtector;
 
         public OrganizationSponsorshipService(IOrganizationSponsorshipRepository organizationSponsorshipRepository,
+            IOrganizationRepository organizationRepository,
+            IPaymentService paymentService,
             IDataProtector dataProtector)
         {
             _organizationSponsorshipRepository = organizationSponsorshipRepository;
+            _organizationRepository = organizationRepository;
+            _paymentService = paymentService;
             _dataProtector = dataProtector;
         }
 
@@ -63,13 +70,16 @@ namespace Bit.Core.Services
                 _dataProtector.Protect($"{FamiliesForEnterpriseTokenName} {sponsorshipId} {sponsorshipType}")
             );
 
-        public async Task OfferSponsorshipAsync(Organization sponsoringOrg, OrganizationUser sponsoringOrgUser, PlanSponsorshipType sponsorshipType, string sponsoredEmail)
+        public async Task OfferSponsorshipAsync(Organization sponsoringOrg, OrganizationUser sponsoringOrgUser,
+            PlanSponsorshipType sponsorshipType, string sponsoredEmail, string friendlyName)
         {
             var sponsorship = new OrganizationSponsorship
             {
                 SponsoringOrganizationId = sponsoringOrg.Id,
                 SponsoringOrganizationUserId = sponsoringOrgUser.Id,
+                FriendlyName = friendlyName,
                 OfferedToEmail = sponsoredEmail,
+                PlanSponsorshipType = sponsorshipType,
                 CloudSponsor = true,
             };
 
@@ -78,6 +88,7 @@ namespace Bit.Core.Services
                 sponsorship = await _organizationSponsorshipRepository.CreateAsync(sponsorship);
 
                 // TODO: send email to sponsoredEmail w/ redemption token link
+                var _ = RedemptionToken(sponsorship.Id, sponsorshipType);
             }
             catch
             {
@@ -91,14 +102,117 @@ namespace Bit.Core.Services
 
         public async Task SetUpSponsorshipAsync(OrganizationSponsorship sponsorship, Organization sponsoredOrganization)
         {
-            // TODO: set up sponsorship, remember remove offeredToEmail from sponsorship
-            throw new NotImplementedException();
+            if (sponsorship.PlanSponsorshipType == null)
+            {
+                throw new BadRequestException("Cannot set up sponsorship without a known sponsorship type.");
+            }
+
+            // TODO: rollback?
+            await _paymentService.SponsorOrganizationAsync(sponsoredOrganization, sponsorship);
+            await _organizationRepository.UpsertAsync(sponsoredOrganization);
+
+            sponsorship.SponsoredOrganizationId = sponsoredOrganization.Id;
+            sponsorship.OfferedToEmail = null;
+            await _organizationSponsorshipRepository.UpsertAsync(sponsorship);
         }
 
-        public async Task RemoveSponsorshipAsync(OrganizationSponsorship sponsorship)
+        public async Task<bool> ValidateSponsorshipAsync(Guid sponsoredOrganizationId)
         {
-            // TODO: remove sponsorship
-            throw new NotImplementedException();
+            var sponsoredOrganization = await _organizationRepository.GetByIdAsync(sponsoredOrganizationId);
+            var existingSponsorship = await _organizationSponsorshipRepository
+                .GetBySponsoredOrganizationIdAsync(sponsoredOrganizationId);
+
+            if (existingSponsorship == null)
+            {
+                await RemoveSponsorshipAsync(sponsoredOrganization);
+                // TODO on fail, mark org as disabled.
+                return false;
+            }
+
+            var validated = true;
+            if (existingSponsorship.SponsoringOrganizationId == null || existingSponsorship.SponsoringOrganizationUserId == null)
+            {
+                await RemoveSponsorshipAsync(sponsoredOrganization);
+                validated = false;
+            }
+
+            var sponsoringOrganization = await _organizationRepository
+                .GetByIdAsync(existingSponsorship.SponsoringOrganizationId.Value);
+            if (!sponsoringOrganization.Enabled)
+            {
+                await RemoveSponsorshipAsync(sponsoredOrganization);
+                validated = false;
+            }
+
+            if (!validated && existingSponsorship.SponsoredOrganizationId != null)
+            {
+                existingSponsorship.TimesRenewedWithoutValidation += 1;
+                existingSponsorship.SponsorshipLapsedDate ??= DateTime.UtcNow;
+
+                await _organizationSponsorshipRepository.UpsertAsync(existingSponsorship);
+                if (existingSponsorship.TimesRenewedWithoutValidation >= 6)
+                {
+                    sponsoredOrganization.Enabled = false;
+                    await _organizationRepository.UpsertAsync(sponsoredOrganization);
+                }
+            }
+
+            return true;
+        }
+
+        public async Task RemoveSponsorshipAsync(Organization sponsoredOrganization, OrganizationSponsorship sponsorship = null)
+        {
+            var success = await _paymentService.RemoveOrganizationSponsorshipAsync(sponsoredOrganization);
+            await _organizationRepository.UpsertAsync(sponsoredOrganization);
+
+            if (sponsorship == null)
+            {
+                return;
+            }
+
+            if (success)
+            {
+                // Initialize the record as available
+                sponsorship.SponsoredOrganizationId = null;
+                sponsorship.FriendlyName = null;
+                sponsorship.OfferedToEmail = null;
+                sponsorship.PlanSponsorshipType = null;
+                sponsorship.TimesRenewedWithoutValidation = 0;
+                sponsorship.SponsorshipLapsedDate = null;
+
+                if (sponsorship.CloudSponsor || sponsorship.SponsorshipLapsedDate.HasValue)
+                {
+                    await _organizationSponsorshipRepository.DeleteAsync(sponsorship);
+                }
+                else
+                {
+                    await _organizationSponsorshipRepository.UpsertAsync(sponsorship);
+                }
+            }
+            else
+            {
+                sponsorship.SponsoringOrganizationId = null;
+                sponsorship.SponsoringOrganizationUserId = null;
+
+                if (!sponsorship.CloudSponsor)
+                {
+                    // Sef-hosted sponsorship record
+                    // we need to make the existing sponsorship available, and add
+                    // a new sponsorship record to record the lapsed sponsorship
+                    var cleanSponsorship = new OrganizationSponsorship
+                    {
+                        InstallationId = sponsorship.InstallationId,
+                        SponsoringOrganizationId = sponsorship.SponsoringOrganizationId,
+                        SponsoringOrganizationUserId = sponsorship.SponsoringOrganizationUserId,
+                        CloudSponsor = sponsorship.CloudSponsor,
+                    };
+                    await _organizationSponsorshipRepository.UpsertAsync(cleanSponsorship);
+                }
+
+                sponsorship.SponsorshipLapsedDate ??= DateTime.UtcNow;
+                await _organizationSponsorshipRepository.UpsertAsync(sponsorship);
+            }
+
         }
 
     }

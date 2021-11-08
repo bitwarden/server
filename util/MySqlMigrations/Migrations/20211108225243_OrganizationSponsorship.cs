@@ -1,7 +1,7 @@
 ﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
-namespace Bit.PostgresMigrations.Migrations
+namespace Bit.MySqlMigrations.Migrations
 {
     public partial class OrganizationSponsorship : Migration
     {
@@ -10,7 +10,7 @@ namespace Bit.PostgresMigrations.Migrations
             migrationBuilder.AddColumn<bool>(
                 name: "UsesCryptoAgent",
                 table: "User",
-                type: "boolean",
+                type: "tinyint(1)",
                 nullable: false,
                 defaultValue: false);
 
@@ -18,17 +18,20 @@ namespace Bit.PostgresMigrations.Migrations
                 name: "OrganizationSponsorship",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    InstallationId = table.Column<Guid>(type: "uuid", nullable: true),
-                    SponsoringOrganizationId = table.Column<Guid>(type: "uuid", nullable: false),
-                    SponsoringOrganizationUserId = table.Column<Guid>(type: "uuid", nullable: false),
-                    SponsoredOrganizationId = table.Column<Guid>(type: "uuid", nullable: true),
-                    OfferedToEmail = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
-                    PlanSponsorshipType = table.Column<byte>(type: "smallint", nullable: true),
-                    CloudSponsor = table.Column<bool>(type: "boolean", nullable: false),
-                    LastSyncDate = table.Column<DateTime>(type: "timestamp without time zone", nullable: true),
-                    TimesRenewedWithoutValidation = table.Column<byte>(type: "smallint", nullable: false),
-                    SponsorshipLapsedDate = table.Column<DateTime>(type: "timestamp without time zone", nullable: true)
+                    Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    InstallationId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
+                    SponsoringOrganizationId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
+                    SponsoringOrganizationUserId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
+                    SponsoredOrganizationId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
+                    FriendlyName = table.Column<string>(type: "varchar(256)", maxLength: 256, nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    OfferedToEmail = table.Column<string>(type: "varchar(256)", maxLength: 256, nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    PlanSponsorshipType = table.Column<byte>(type: "tinyint unsigned", nullable: true),
+                    CloudSponsor = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    LastSyncDate = table.Column<DateTime>(type: "datetime(6)", nullable: true),
+                    TimesRenewedWithoutValidation = table.Column<byte>(type: "tinyint unsigned", nullable: false),
+                    SponsorshipLapsedDate = table.Column<DateTime>(type: "datetime(6)", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -46,12 +49,13 @@ namespace Bit.PostgresMigrations.Migrations
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
-                        name: "FK_OrganizationSponsorship_Organization_SponsoringOrganization~",
+                        name: "FK_OrganizationSponsorship_Organization_SponsoringOrganizationId",
                         column: x => x.SponsoringOrganizationId,
                         principalTable: "Organization",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
+                        onDelete: ReferentialAction.Restrict);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateIndex(
                 name: "IX_OrganizationSponsorship_InstallationId",

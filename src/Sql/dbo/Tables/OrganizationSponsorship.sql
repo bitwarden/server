@@ -1,8 +1,8 @@
 CREATE TABLE [dbo].[OrganizationSponsorship] (
     [Id]                            UNIQUEIDENTIFIER NOT NULL,
     [InstallationId]                UNIQUEIDENTIFIER NULL,
-    [SponsoringOrganizationId]      UNIQUEIDENTIFIER NOT NULL,
-    [SponsoringOrganizationUserID]  UNIQUEIDENTIFIER NOT NULL,
+    [SponsoringOrganizationId]      UNIQUEIDENTIFIER NULL,
+    [SponsoringOrganizationUserID]  UNIQUEIDENTIFIER NULL,
     [SponsoredOrganizationId]       UNIQUEIDENTIFIER NULL,
     [OfferedToEmail]                NVARCHAR (256)   NULL,
     [PlanSponsorshipType]           TINYINT          NULL,
@@ -19,24 +19,25 @@ CREATE TABLE [dbo].[OrganizationSponsorship] (
 
 GO
 CREATE NONCLUSTERED INDEX [IX_OrganizationSponsorship_InstallationId]
-    ON [dbo].[Organization]([Id] ASC, [InstallationId] ASC)
+    ON [dbo].[OrganizationSponsorship]([InstallationId] ASC)
     WHERE [InstallationId] IS NOT NULL;
 
 GO
 CREATE NONCLUSTERED INDEX [IX_OrganizationSponsorship_SponsoringOrganizationId]
-    ON [dbo].[Organization]([Id] ASC, [SponsoringOrganizationId] ASC)
+    ON [dbo].[OrganizationSponsorship]([SponsoringOrganizationId] ASC)
+    WHERE [SponsoringOrganizationId] IS NOT NULL;
 
 GO
 CREATE NONCLUSTERED INDEX [IX_OrganizationSponsorship_SponsoringOrganizationUserId]
-    ON [dbo].[Organization]([Id] ASC, [SponsorginOrganizationUserID] ASC)
+    ON [dbo].[OrganizationSponsorship]([SponsoringOrganizationUserID] ASC)
+    WHERE [SponsoringOrganizationUserID] IS NOT NULL;
 
 GO
 CREATE NONCLUSTERED INDEX [IX_OrganizationSponsorship_OfferedToEmail]
-    ON [dbo].[Organization]([Id] ASC, [OfferedToEmail] ASC)
+    ON [dbo].[OrganizationSponsorship]([OfferedToEmail] ASC)
     WHERE [OfferedToEmail] IS NOT NULL;
 
 GO
 CREATE NONCLUSTERED INDEX [IX_OrganizationSponsorship_SponsoredOrganizationID]
-    ON [dbo].[Organization]([Id] ASC, [SponsoredOrganizationId] ASC)
+    ON [dbo].[OrganizationSponsorship]([SponsoredOrganizationId] ASC)
     WHERE [SponsoredOrganizationId] IS NOT NULL;
-

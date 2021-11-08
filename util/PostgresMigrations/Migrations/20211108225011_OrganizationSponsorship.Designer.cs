@@ -10,7 +10,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Bit.PostgresMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20211104164532_OrganizationSponsorship")]
+    [Migration("20211108225011_OrganizationSponsorship")]
     partial class OrganizationSponsorship
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -599,6 +599,10 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<bool>("CloudSponsor")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("FriendlyName")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
                     b.Property<Guid?>("InstallationId")
                         .HasColumnType("uuid");
 
@@ -615,10 +619,10 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<Guid?>("SponsoredOrganizationId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid>("SponsoringOrganizationId")
+                    b.Property<Guid?>("SponsoringOrganizationId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid>("SponsoringOrganizationUserId")
+                    b.Property<Guid?>("SponsoringOrganizationUserId")
                         .HasColumnType("uuid");
 
                     b.Property<DateTime?>("SponsorshipLapsedDate")
@@ -1365,9 +1369,7 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.HasOne("Bit.Core.Models.EntityFramework.Organization", "SponsoringOrganization")
                         .WithMany()
-                        .HasForeignKey("SponsoringOrganizationId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("SponsoringOrganizationId");
 
                     b.Navigation("Installation");
 

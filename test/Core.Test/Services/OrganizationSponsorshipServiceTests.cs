@@ -34,15 +34,16 @@ namespace Bit.Core.Test.Services
         [Theory]
         [BitAutoData]
         public async Task OfferSponsorship_CreatesSponsorship(Organization sponsoringOrg, OrganizationUser sponsoringOrgUser,
-            string sponsoredEmail, SutProvider<OrganizationSponsorshipService> sutProvider)
+            string sponsoredEmail, string friendlyName, SutProvider<OrganizationSponsorshipService> sutProvider)
         {
             await sutProvider.Sut.OfferSponsorshipAsync(sponsoringOrg, sponsoringOrgUser,
-                PlanSponsorshipType.FamiliesForEnterprise, sponsoredEmail);
+                PlanSponsorshipType.FamiliesForEnterprise, sponsoredEmail, friendlyName);
 
             var expectedSponsorship = new OrganizationSponsorship
             {
                 SponsoringOrganizationId = sponsoringOrg.Id,
                 SponsoringOrganizationUserId = sponsoringOrgUser.Id,
+                FriendlyName = friendlyName,
                 OfferedToEmail = sponsoredEmail,
                 CloudSponsor = true,
             };
@@ -55,7 +56,7 @@ namespace Bit.Core.Test.Services
         [Theory]
         [BitAutoData]
         public async Task OfferSponsorship_CreateSponsorshipThrows_RevertsDatabase(Organization sponsoringOrg, OrganizationUser sponsoringOrgUser,
-            string sponsoredEmail, SutProvider<OrganizationSponsorshipService> sutProvider)
+            string sponsoredEmail, string friendlyName, SutProvider<OrganizationSponsorshipService> sutProvider)
         {
             var expectedException = new Exception();
             OrganizationSponsorship createdSponsorship = null;
@@ -68,7 +69,7 @@ namespace Bit.Core.Test.Services
 
             var actualException = await Assert.ThrowsAsync<Exception>(() =>
                 sutProvider.Sut.OfferSponsorshipAsync(sponsoringOrg, sponsoringOrgUser,
-                    PlanSponsorshipType.FamiliesForEnterprise, sponsoredEmail));
+                    PlanSponsorshipType.FamiliesForEnterprise, sponsoredEmail, friendlyName));
             Assert.Same(expectedException, actualException);
 
             await sutProvider.GetDependency<IOrganizationSponsorshipRepository>().Received(1)

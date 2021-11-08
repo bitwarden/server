@@ -16,6 +16,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Models.Api.Request;
 using Bit.Core.Services;
 using Bit.Core.Models.Api;
+using Bit.Core.Utilities;
 
 namespace Bit.Api.Test.Controllers
 {
@@ -24,27 +25,29 @@ namespace Bit.Api.Test.Controllers
     public class OrganizationSponsorshipsControllerTests
     {
         public static IEnumerable<object[]> EnterprisePlanTypes =>
-            Enum.GetValues<PlanType>().Where(p => PlanTypeHelper.IsEnterprise(p)).Select(p => new object[] { p });
+            Enum.GetValues<PlanType>().Where(p => StaticStore.GetPlan(p).Product == ProductType.Enterprise).Select(p => new object[] { p });
         public static IEnumerable<object[]> NonEnterprisePlanTypes =>
-            Enum.GetValues<PlanType>().Where(p => !PlanTypeHelper.IsEnterprise(p)).Select(p => new object[] { p });
+            Enum.GetValues<PlanType>().Where(p => StaticStore.GetPlan(p).Product != ProductType.Enterprise).Select(p => new object[] { p });
         public static IEnumerable<object[]> NonFamiliesPlanTypes =>
-            Enum.GetValues<PlanType>().Where(p => !PlanTypeHelper.IsFamilies(p)).Select(p => new object[] { p });
+            Enum.GetValues<PlanType>().Where(p => StaticStore.GetPlan(p).Product != ProductType.Families).Select(p => new object[] { p });
 
         [Theory]
         [BitMemberAutoData(nameof(NonEnterprisePlanTypes))]
         public async Task CreateSponsorship_BadSponsoringOrgPlan_ThrowsBadRequest(PlanType sponsoringOrgPlan, Organization org,
-            SutProvider<OrganizationSponsorshipsController> sutProvider)
+            OrganizationSponsorshipRequestModel model, SutProvider<OrganizationSponsorshipsController> sutProvider)
         {
             org.PlanType = sponsoringOrgPlan;
+            model.PlanSponsorshipType = PlanSponsorshipType.FamiliesForEnterprise;
+
             sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(org.Id).Returns(org);
 
             var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-                sutProvider.Sut.CreateSponsorship(org.Id.ToString(), null));
+                sutProvider.Sut.CreateSponsorship(org.Id.ToString(), model));
 
             Assert.Contains("Specified Organization cannot sponsor other organizations.", exception.Message);
             await sutProvider.GetDependency<IOrganizationSponsorshipService>()
                 .DidNotReceiveWithAnyArgs()
-                .OfferSponsorshipAsync(default, default, default, default);
+                .OfferSponsorshipAsync(default, default, default, default, default);
         }
 
         public static IEnumerable<object[]> NonConfirmedOrganizationUsersStatuses =>
@@ -73,7 +76,7 @@ namespace Bit.Api.Test.Controllers
             Assert.Contains("Only confirm users can sponsor other organizations.", exception.Message);
             await sutProvider.GetDependency<IOrganizationSponsorshipService>()
                 .DidNotReceiveWithAnyArgs()
-                .OfferSponsorshipAsync(default, default, default, default);
+                .OfferSponsorshipAsync(default, default, default, default, default);
         }
 
         [Theory]
@@ -96,7 +99,7 @@ namespace Bit.Api.Test.Controllers
             Assert.Contains("Can only create organization sponsorships for yourself.", exception.Message);
             await sutProvider.GetDependency<IOrganizationSponsorshipService>()
                 .DidNotReceiveWithAnyArgs()
-                .OfferSponsorshipAsync(default, default, default, default);
+                .OfferSponsorshipAsync(default, default, default, default, default);
         }
 
         [Theory]
@@ -121,7 +124,7 @@ namespace Bit.Api.Test.Controllers
             Assert.Contains("Can only sponsor one organization per Organization User.", exception.Message);
             await sutProvider.GetDependency<IOrganizationSponsorshipService>()
                 .DidNotReceiveWithAnyArgs()
-                .OfferSponsorshipAsync(default, default, default, default);
+                .OfferSponsorshipAsync(default, default, default, default, default);
         }
 
         [Theory]
@@ -272,7 +275,7 @@ namespace Bit.Api.Test.Controllers
             Assert.Contains("Can only revoke a sponsorship you granted.", exception.Message);
             await sutProvider.GetDependency<IOrganizationSponsorshipService>()
                 .DidNotReceiveWithAnyArgs()
-                .RemoveSponsorshipAsync(default);
+                .RemoveSponsorshipAsync(default, default);
         }
 
         [Theory]
@@ -293,10 +296,58 @@ namespace Bit.Api.Test.Controllers
             var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
                 sutProvider.Sut.RevokeSponsorship(sponsoringOrgUser.Id.ToString()));
 
-            Assert.Contains("You are not currently sponsoring and organization.", exception.Message);
+            Assert.Contains("You are not currently sponsoring an organization.", exception.Message);
             await sutProvider.GetDependency<IOrganizationSponsorshipService>()
                 .DidNotReceiveWithAnyArgs()
-                .RemoveSponsorshipAsync(default);
+                .RemoveSponsorshipAsync(default, default);
+        }
+
+        [Theory]
+        [BitAutoData]
+        public async Task RevokeSponsorship_SponsorshipNotRedeemed_ThrowsBadRequest(OrganizationUser sponsoringOrgUser,
+            OrganizationSponsorship sponsorship, SutProvider<OrganizationSponsorshipsController> sutProvider)
+        {
+            sponsorship.SponsoredOrganizationId = null;
+
+            sutProvider.GetDependency<ICurrentContext>().UserId.Returns(sponsoringOrgUser.UserId);
+            sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(sponsoringOrgUser.Id)
+                .Returns(sponsoringOrgUser);
+            sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
+                .GetBySponsoringOrganizationUserIdAsync(Arg.Is<Guid>(v => v != sponsoringOrgUser.Id))
+                .Returns(sponsorship);
+            sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
+                .GetBySponsoringOrganizationUserIdAsync(sponsoringOrgUser.Id)
+                .Returns((OrganizationSponsorship)sponsorship);
+
+            var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+                sutProvider.Sut.RevokeSponsorship(sponsoringOrgUser.Id.ToString()));
+
+            Assert.Contains("You are not currently sponsoring an organization.", exception.Message);
+            await sutProvider.GetDependency<IOrganizationSponsorshipService>()
+                .DidNotReceiveWithAnyArgs()
+                .RemoveSponsorshipAsync(default, default);
+        }
+
+        [Theory]
+        [BitAutoData]
+        public async Task RevokeSponsorship_SponsoredOrgNotFound_ThrowsBadRequest(OrganizationUser sponsoringOrgUser,
+            OrganizationSponsorship sponsorship, SutProvider<OrganizationSponsorshipsController> sutProvider)
+        {
+
+            sutProvider.GetDependency<ICurrentContext>().UserId.Returns(sponsoringOrgUser.UserId);
+            sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(sponsoringOrgUser.Id)
+                .Returns(sponsoringOrgUser);
+            sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
+                .GetBySponsoringOrganizationUserIdAsync(sponsoringOrgUser.Id)
+                .Returns(sponsorship);
+
+            var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+                sutProvider.Sut.RevokeSponsorship(sponsoringOrgUser.Id.ToString()));
+
+            Assert.Contains("Unable to find the sponsored Organization.", exception.Message);
+            await sutProvider.GetDependency<IOrganizationSponsorshipService>()
+                .DidNotReceiveWithAnyArgs()
+                .RemoveSponsorshipAsync(default, default);
         }
 
         [Theory]
@@ -312,7 +363,7 @@ namespace Bit.Api.Test.Controllers
             Assert.Contains("Only the owner of an organization can remove sponsorship.", exception.Message);
             await sutProvider.GetDependency<IOrganizationSponsorshipService>()
                 .DidNotReceiveWithAnyArgs()
-                .RemoveSponsorshipAsync(default);
+                .RemoveSponsorshipAsync(default, default);
         }
 
         [Theory]
@@ -334,7 +385,26 @@ namespace Bit.Api.Test.Controllers
             Assert.Contains("The requested organization is not currently being sponsored.", exception.Message);
             await sutProvider.GetDependency<IOrganizationSponsorshipService>()
                 .DidNotReceiveWithAnyArgs()
-                .RemoveSponsorshipAsync(default);
+                .RemoveSponsorshipAsync(default, default);
+        }
+
+        [Theory]
+        [BitAutoData]
+        public async Task RemoveSponsorship_SponsoredOrgNotFound_ThrowsBadRequest(Organization sponsoredOrg,
+    OrganizationSponsorship sponsorship, SutProvider<OrganizationSponsorshipsController> sutProvider)
+        {
+            sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(Arg.Any<Guid>()).Returns(true);
+            sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
+                .GetBySponsoredOrganizationIdAsync(sponsoredOrg.Id)
+                .Returns(sponsorship);
+
+            var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+                sutProvider.Sut.RemoveSponsorship(sponsoredOrg.Id.ToString()));
+
+            Assert.Contains("Unable to find the sponsored Organization.", exception.Message);
+            await sutProvider.GetDependency<IOrganizationSponsorshipService>()
+                .DidNotReceiveWithAnyArgs()
+                .RemoveSponsorshipAsync(default, default);
         }
     }
 }

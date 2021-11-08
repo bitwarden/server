@@ -593,6 +593,10 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<bool>("CloudSponsor")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<string>("FriendlyName")
+                        .HasMaxLength(256)
+                        .HasColumnType("varchar(256)");
+
                     b.Property<Guid?>("InstallationId")
                         .HasColumnType("char(36)");
 
@@ -609,10 +613,10 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<Guid?>("SponsoredOrganizationId")
                         .HasColumnType("char(36)");
 
-                    b.Property<Guid>("SponsoringOrganizationId")
+                    b.Property<Guid?>("SponsoringOrganizationId")
                         .HasColumnType("char(36)");
 
-                    b.Property<Guid>("SponsoringOrganizationUserId")
+                    b.Property<Guid?>("SponsoringOrganizationUserId")
                         .HasColumnType("char(36)");
 
                     b.Property<DateTime?>("SponsorshipLapsedDate")
@@ -1354,9 +1358,7 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.HasOne("Bit.Core.Models.EntityFramework.Organization", "SponsoringOrganization")
                         .WithMany()
-                        .HasForeignKey("SponsoringOrganizationId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("SponsoringOrganizationId");
 
                     b.Navigation("Installation");
 
