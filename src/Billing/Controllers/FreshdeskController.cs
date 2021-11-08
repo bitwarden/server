@@ -14,6 +14,7 @@ using System.Threading.Tasks;
 using System.ComponentModel.DataAnnotations;
 
 using Bit.Core.Settings;
+using Bit.Core.Utilities;
 
 namespace Bit.Billing.Controllers
 {
@@ -57,7 +58,7 @@ namespace Bit.Billing.Controllers
 
             var key = HttpContext.Request.Query.ContainsKey("key") ?
                 HttpContext.Request.Query["key"].ToString() : null;
-            if (key != _billingSettings.FreshdeskWebhookKey)
+            if (!CoreHelpers.FixedTimeEquals(key, _billingSettings.FreshdeskWebhookKey))
             {
                 return new BadRequestResult();
             }
