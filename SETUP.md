@@ -41,9 +41,9 @@ docker compose --profile cloud --profile mail up
 
 ### SQL Server
 
-We recommend changing the `MSSQL_PASSWORD` variable in `dev/.env` to avoid exposing the sqlserver with a default password. Note: changing this after first running docker compose may require a re-creation of the storage volume. To do this, stop the running containers and run `docker volume rm bitwardenserver_mssql_dev_data`. (**Warning:** this will delete your development database.)
+We recommend changing the `MSSQL_PASSWORD` variable in `dev/.env` to avoid exposing the sqlserver with a default password. **Note**: changing this after first running docker compose may require a re-creation of the storage volume. To do this, stop the running containers and run `docker volume rm bitwardenserver_mssql_dev_data`. (**Warning:** this will delete your development database.)
 
-We provide a helper script which will create the development database `vault_dev` and also run all migrations. This commad should be run after starting docker the first time, as well as after syncing against upstream and after creating a new migration.
+We provide a helper script which will create the development database `vault_dev` and also run all migrations. This command should be run after starting docker the first time, as well as after syncing against upstream and after creating a new migration.
 
 ```powershell
 .\dev\migrate.ps1
@@ -71,11 +71,11 @@ Install-Module -Name Az -Scope CurrentUser -Repository PSGallery -Force
 Since the server uses emails for many user interactions a working SMTP server is a requirement, we provide a pre-setup instance of [MailCatcher](https://mailcatcher.me/) which exposes a web interface at http://localhost:1080.
 
 ## Certificates
-In order to run Bitwarden, we require two certificats which for local development can be resolved by using self signed certificates.
+In order to run Bitwarden, we require two certificates which for local development can be resolved by using self signed certificates.
 
 ### Windows
 
-We provide a helper script which will generate and add the certificates to the users Certificate Store. After running the script it will output the thumbrints needed for the next step. The certificates can later be acccessed using `certml.msc` under `Personal/Certificates`.
+We provide a helper script which will generate and add the certificates to the users Certificate Store. After running the script it will output the thumbprints needed for the next step. The certificates can later be accessed using `certml.msc` under `Personal/Certificates`.
 
 ```powershell
 .\create_certificates_windows.ps1
@@ -112,7 +112,7 @@ For more information, see: [Safe storage of app secrets in development in ASP.NE
 
 We provide a helper scripts which simplifies setting user secrets for all projects in the repository.
 
-Start by copying the `secret.json.example` file to `secret.json` and modify the existing settings and add any other required setting. Afterwards run the following command which will add the settings to each each project in the bitwarden repository.
+Start by copying the `secret.json.example` file to `secret.json` and modify the existing settings and add any other required setting. Afterwards run the following command which will add the settings to each project in the bitwarden repository.
 
 ```powershell
 .\setup_secrets.ps1
@@ -123,7 +123,7 @@ Start by copying the `secret.json.example` file to `secret.json` and modify the 
 
 ### Manually creating and modifying
 
-It is also possible to manually creata and modify the user secrets using either the `dotnet` CLI or `Visual Studio` on Windows. For more details see [Appendix A](#user-secrets).
+It is also possible to manually create and modify the user secrets using either the `dotnet` CLI or `Visual Studio` on Windows. For more details see [Appendix A](#user-secrets).
 
 ### Required User Secrets
 
