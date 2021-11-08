@@ -103,18 +103,20 @@ namespace Bit.Core.IdentityServer
 
             // SSO login
             var organizationClaim = context.Result.ValidatedRequest.Subject?.FindFirst(c => c.Type == "organizationId");
-            var organizationId = new Guid(organizationClaim?.Value);
-
-            var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(organizationId);
-            var ssoConfigData = ssoConfig.GetData();
-
-            if (ssoConfigData is { UseKeyConnector: true } && !string.IsNullOrEmpty(ssoConfigData.KeyConnectorUrl))
+            if (organizationClaim?.Value != null)
             {
-                context.Result.CustomResponse["KeyConnectorUrl"] = ssoConfigData.KeyConnectorUrl;
-                // Prevent clients redirecting to set-password
-                context.Result.CustomResponse["ResetMasterPassword"] = false;
-            }
+                var organizationId = new Guid(organizationClaim?.Value);
 
+                var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(organizationId);
+                var ssoConfigData = ssoConfig.GetData();
+
+                if (ssoConfigData is { UseKeyConnector: true } && !string.IsNullOrEmpty(ssoConfigData.KeyConnectorUrl))
+                {
+                    context.Result.CustomResponse["KeyConnectorUrl"] = ssoConfigData.KeyConnectorUrl;
+                    // Prevent clients redirecting to set-password
+                    context.Result.CustomResponse["ResetMasterPassword"] = false;
+                }
+            }
         }
 
         protected override void SetTwoFactorResult(CustomTokenRequestValidationContext context,
