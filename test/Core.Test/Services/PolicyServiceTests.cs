@@ -183,6 +183,38 @@ namespace Bit.Core.Test.Services
         }
 
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public async Task SaveAsync_VaultTimeoutPolicy_NotEnabled_ThrowsBadRequestAsync([PolicyFixtures.Policy(Enums.PolicyType.MaximumVaultTimeout)] Core.Models.Table.Policy policy, SutProvider<PolicyService> sutProvider)
+        {
+            policy.Enabled = true;
+
+            SetupOrg(sutProvider, policy.OrganizationId, new Organization
+            {
+                Id = policy.OrganizationId,
+                UsePolicies = true,
+            });
+
+            sutProvider.GetDependency<IPolicyRepository>()
+                .GetByOrganizationIdTypeAsync(policy.OrganizationId, Enums.PolicyType.SingleOrg)
+                .Returns(Task.FromResult(new Core.Models.Table.Policy { Enabled = false }));
+
+            var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
+                () => sutProvider.Sut.SaveAsync(policy,
+                    Substitute.For<IUserService>(),
+                    Substitute.For<IOrganizationService>(),
+                    Guid.NewGuid()));
+
+            Assert.Contains("Single Organization policy not enabled.", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
+
+            await sutProvider.GetDependency<IPolicyRepository>()
+                .DidNotReceiveWithAnyArgs()
+                .UpsertAsync(default);
+
+            await sutProvider.GetDependency<IEventService>()
+                .DidNotReceiveWithAnyArgs()
+                .LogPolicyEventAsync(default, default, default);
+        }
+
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
         public async Task SaveAsync_ExistingPolicy_UpdateTwoFactor([PolicyFixtures.Policy(Enums.PolicyType.TwoFactorAuthentication)] Core.Models.Table.Policy policy, SutProvider<PolicyService> sutProvider)
         {
             // If the policy that this is updating isn't enabled then do some work now that the current one is enabled
