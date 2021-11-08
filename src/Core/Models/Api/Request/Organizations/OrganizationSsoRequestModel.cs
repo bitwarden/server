@@ -160,19 +160,19 @@ namespace Bit.Core.Models.Api
                         new[] { nameof(IdpSingleSignOnServiceUrl) });
                 }
 
-                if (ContainsHtmlMetaCharacters(IdpSingleSignOnServiceUrl))
+                if (InvalidServiceUrl(IdpSingleSignOnServiceUrl))
                 {
                     yield return new ValidationResult(i18nService.GetLocalizedHtmlString("IdpSingleSignOnServiceUrlInvalid"),
                         new[] { nameof(IdpSingleSignOnServiceUrl) });
                 }
 
-                if (ContainsHtmlMetaCharacters(IdpArtifactResolutionServiceUrl))
+                if (InvalidServiceUrl(IdpArtifactResolutionServiceUrl))
                 {
                     yield return new ValidationResult(i18nService.GetLocalizedHtmlString("IdpArtifactResolutionServiceUrlInvalid"),
                         new[] { nameof(IdpArtifactResolutionServiceUrl) });
                 }
 
-                if (ContainsHtmlMetaCharacters(IdpSingleLogoutServiceUrl))
+                if (InvalidServiceUrl(IdpSingleLogoutServiceUrl))
                 {
                     yield return new ValidationResult(i18nService.GetLocalizedHtmlString("IdpSingleLogoutServiceUrlInvalid"),
                         new[] { nameof(IdpSingleLogoutServiceUrl) });
@@ -260,11 +260,15 @@ namespace Bit.Core.Models.Api
                 RegexOptions.Multiline | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
         }
 
-        private bool ContainsHtmlMetaCharacters(string url)
+        private bool InvalidServiceUrl(string url)
         {
             if (string.IsNullOrWhiteSpace(url))
             {
                 return false;
+            }
+            if (!url.StartsWith("http://") && !url.StartsWith("https://"))
+            {
+                return true;
             }
             return Regex.IsMatch(url, "[<>\"]");
         }
