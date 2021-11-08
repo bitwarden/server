@@ -164,7 +164,7 @@ jobs:
           echo "SERVICE_NAME: $SERVICE_NAME"
           echo "::set-output name=service_name::$SERVICE_NAME"
 
-      - name: Pull latest selfhost RC image
+      - name: Pull latest selfhost image
         env:
           SERVICE_NAME: ${{ steps.setup.outputs.service_name }}
         run: docker pull bitwarden/$SERVICE_NAME:$_BRANCH_NAME

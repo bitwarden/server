@@ -378,8 +378,10 @@ jobs:
       - name: Make Docker stub
         if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix'
         run: |
-          if [[ "${{ github.ref }}" == "rc" ]] || [[ "${{ github.ref }}" == "hotfix" ]]; then
+          if [[ "${{ github.ref }}" == "rc" ]]; then
             SETUP_IMAGE="bitwarden/setup:rc"
+          elif [[ "${{ github.ref }}" == "hotfix" ]]; then
+            SETUP_IMAGE="bitwarden/setup:hotfix"
           else
             SETUP_IMAGE="bitwarden/setup:dev"
           fi
