@@ -775,7 +775,7 @@ namespace Bit.Core.Services
                 OrganizationName = organizationName,
             };
 
-            await AddMessageContentAsync(message, "FamiliesForEnterprise.FamilyForEnterpriseInviteRedeemable", model);
+            await AddMessageContentAsync(message, "FamiliesForEnterprise.FamiliesForEnterpriseInviteRedeemable", model);
             message.Category = "FamiliesForEnterpriseInviteRedeemable";
             await _mailDeliveryService.SendEmailAsync(message);
         }
@@ -788,20 +788,20 @@ namespace Bit.Core.Services
             {
 
             };
-            await AddMessageContentAsync(message, "FamiliesForEnterprise.FamilyForEnterpriseInviteRedeemedToFamilyUser", model);
+            await AddMessageContentAsync(message, "FamiliesForEnterprise.FamiliesForEnterpriseInviteRedeemedToFamilyUser", model);
             message.Category = "FamilyForEnterpriseInviteRedeemedToFamilyUser";
             await _mailDeliveryService.SendEmailAsync(message);
         }
 
-        public async Task SendFamiliesForEnterpriseInviteRedeemedToOrgUserEmailAsync(string email)
+        public async Task SendFamiliesForEnterpriseInviteRedeemedToOrgUserEmailAsync(string email, string organizationName)
         {
             // TODO: Complete emails
             var message = CreateDefaultMessage("A User Has Redeemeed Your Sponsorship", email);
             var model = new FamiliesForEnterpriseInviteRedeemedToOrgUserViewModel
             {
-
+                OrganizationName = organizationName,
             };
-            await AddMessageContentAsync(message, "FamiliesForEnterprise.FamilyForEnterpriseInviteRedeemedToOrgUser", model);
+            await AddMessageContentAsync(message, "FamiliesForEnterprise.FamiliesForEnterpriseInviteRedeemedToOrgUser", model);
             message.Category = "FamilyForEnterpriseInviteRedeemedToOrgUser";
             await _mailDeliveryService.SendEmailAsync(message);
         }
@@ -812,9 +812,9 @@ namespace Bit.Core.Services
             var message = CreateDefaultMessage("Your Sponsorship Requires Reconfirmation", email);
             var model = new FamiliesForEnterpriseReconfirmationRequiredViewModel
             {
-
+                
             };
-            await AddMessageContentAsync(message, "FamiliesForEnterprise.FamilyForEnterpriseReconfirmationRequired", model);
+            await AddMessageContentAsync(message, "FamiliesForEnterprise.FamiliesForEnterpriseReconfirmationRequired", model);
             message.Category = "FamiliesForEnterpriseReconfirmationRequired";
             await _mailDeliveryService.SendEmailAsync(message);
         }
@@ -827,7 +827,7 @@ namespace Bit.Core.Services
             {
 
             };
-            await AddMessageContentAsync(message, "FamiliesForEnterprise.FamilyForEnterpriseSponsorshipReverting", model);
+            await AddMessageContentAsync(message, "FamiliesForEnterprise.FamiliesForEnterpriseSponsorshipReverting", model);
             message.Category = "FamiliesForEnterpriseSponsorshipReverting";
             await _mailDeliveryService.SendEmailAsync(message);
         }
@@ -840,7 +840,7 @@ namespace Bit.Core.Services
             {
 
             };
-            await AddMessageContentAsync(message, "FamiliesForEnterprise.FamilyForEnterpriseSponsorshipEnding", model);
+            await AddMessageContentAsync(message, "FamiliesForEnterprise.FamiliesForEnterpriseSponsorshipEnding", model);
             message.Category = "FamiliesForEnterpriseSponsorshipEnding";
             await _mailDeliveryService.SendEmailAsync(message);
         }

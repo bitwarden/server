@@ -53,7 +53,7 @@ namespace Bit.Core.Services
         Task SendFamiliesForEnterpriseInviteRedeemableEmailAsync(string email, string organizationName, string token);
         // NOTE: Not married to these next two names
         Task SendFamiliesForEnterpriseInviteRedeemedToFamilyUserEmailAsync(string email);
-        Task SendFamiliesForEnterpriseInviteRedeemedToOrgUserEmailAsync(string email);
+        Task SendFamiliesForEnterpriseInviteRedeemedToOrgUserEmailAsync(string email, string organizationName);
         Task SendFamiliesForEnterpriseReconfirmationRequiredEmailAsync(string email);
         Task SendFamiliesForEnterpriseSponsorshipRevertingEmailAsync(string email);
         Task SendFamiliesForEnterpriseSponsorshipEndingEmailAsync(string email);

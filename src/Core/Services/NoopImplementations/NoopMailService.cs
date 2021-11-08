@@ -211,7 +211,7 @@ namespace Bit.Core.Services
             return Task.FromResult(0);
         }
         
-        public Task SendFamiliesForEnterpriseInviteRedeemedToOrgUserEmailAsync(string email) 
+        public Task SendFamiliesForEnterpriseInviteRedeemedToOrgUserEmailAsync(string email, string organizationName) 
         {
             return Task.FromResult(0);
         }
