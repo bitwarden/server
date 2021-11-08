@@ -50,12 +50,12 @@ namespace Bit.Core.Services
         Task SendProviderUserRemoved(string providerName, string email);
         Task SendUpdatedTempPasswordEmailAsync(string email, string userName);
         // TODO: Change signature to hold data needed for email
-        Task SendFamilyForEnterpriseInviteRedeemableEmailAsync(string email, string organizationName, string token);
+        Task SendFamiliesForEnterpriseInviteRedeemableEmailAsync(string email, string organizationName, string token);
         // NOTE: Not married to these next two names
-        Task SendFamilyForEnterpriseInviteRedeemedToFamilyUserEmailAsync(string email);
-        Task SendFamilyForEnterpriseInviteRedeemedToOrgUserEmailAsync(string email);
-        Task SendFamilyForEnterpriseReconfirmationRequiredEmailAsync(string email);
-        Task SendFamilyForEnterpriseSponsorshipRevertingEmailAsync(string email);
-        Task SendFamilyForEnterpriseSponsorshipEndingEmailAsync(string email);
+        Task SendFamiliesForEnterpriseInviteRedeemedToFamilyUserEmailAsync(string email);
+        Task SendFamiliesForEnterpriseInviteRedeemedToOrgUserEmailAsync(string email);
+        Task SendFamiliesForEnterpriseReconfirmationRequiredEmailAsync(string email);
+        Task SendFamiliesForEnterpriseSponsorshipRevertingEmailAsync(string email);
+        Task SendFamiliesForEnterpriseSponsorshipEndingEmailAsync(string email);
     }
 }

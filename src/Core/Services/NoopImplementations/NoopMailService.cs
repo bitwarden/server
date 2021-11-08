@@ -201,32 +201,32 @@ namespace Bit.Core.Services
             return Task.FromResult(0);
         }
 
-        public Task SendFamilyForEnterpriseInviteRedeemableEmailAsync(string email, string organizationName, string token)
+        public Task SendFamiliesForEnterpriseInviteRedeemableEmailAsync(string email, string organizationName, string token)
         {
             return Task.FromResult(0);
         }
 
-        public Task SendFamilyForEnterpriseInviteRedeemedToFamilyUserEmailAsync(string email)
+        public Task SendFamiliesForEnterpriseInviteRedeemedToFamilyUserEmailAsync(string email)
         {
             return Task.FromResult(0);
         }
         
-        public Task SendFamilyForEnterpriseInviteRedeemedToOrgUserEmailAsync(string email) 
+        public Task SendFamiliesForEnterpriseInviteRedeemedToOrgUserEmailAsync(string email) 
         {
             return Task.FromResult(0);
         }
 
-        public Task SendFamilyForEnterpriseReconfirmationRequiredEmailAsync(string email)
+        public Task SendFamiliesForEnterpriseReconfirmationRequiredEmailAsync(string email)
         {
             return Task.FromResult(0);
         }
 
-        public Task SendFamilyForEnterpriseSponsorshipRevertingEmailAsync(string email)
+        public Task SendFamiliesForEnterpriseSponsorshipRevertingEmailAsync(string email)
         {
             return Task.FromResult(0);
         }
 
-        public Task SendFamilyForEnterpriseSponsorshipEndingEmailAsync(string email)
+        public Task SendFamiliesForEnterpriseSponsorshipEndingEmailAsync(string email)
         {
             return Task.FromResult(0);
         }
