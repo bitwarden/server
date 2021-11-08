@@ -9,11 +9,11 @@ namespace Bit.Core.Models.Table
     {
         public Guid Id { get; set; }
         public Guid? InstallationId { get; set; }
-        [Required]
-        public Guid SponsoringOrganizationId { get; set; }
-        [Required]
-        public Guid SponsoringOrganizationUserId { get; set; }
+        public Guid? SponsoringOrganizationId { get; set; }
+        public Guid? SponsoringOrganizationUserId { get; set; }
         public Guid? SponsoredOrganizationId { get; set; }
+        [MaxLength(256)]
+        public string FriendlyName { get; set; }
         [MaxLength(256)]
         public string OfferedToEmail { get; set; }
         public PlanSponsorshipType? PlanSponsorshipType { get; set; }

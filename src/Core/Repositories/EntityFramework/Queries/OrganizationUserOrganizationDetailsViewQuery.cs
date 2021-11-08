@@ -16,8 +16,10 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
                 from po in po_g.DefaultIfEmpty()
                 join p in dbContext.Providers on po.ProviderId equals p.Id into p_g
                 from p in p_g.DefaultIfEmpty()
+                        join os in dbContext.OrganizationSponsorships on ou.Id equals os.SponsoringOrganizationUserId into os_g
+                        from os in os_g.DefaultIfEmpty()
                 where ((su == null || !su.OrganizationId.HasValue) || su.OrganizationId == ou.OrganizationId)
-                select new { ou, o, su, p };
+                        select new { ou, o, su, p, os };
             return query.Select(x => new OrganizationUserOrganizationDetails 
             {
                 OrganizationId = x.ou.OrganizationId,
@@ -48,6 +50,7 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
                 PrivateKey = x.o.PrivateKey,
                 ProviderId = x.p.Id,
                 ProviderName = x.p.Name,
+                FamilySponsorshipFriendlyName = x.os.FriendlyName
             });
         }
     }

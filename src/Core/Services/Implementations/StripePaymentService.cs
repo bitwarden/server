@@ -192,6 +192,44 @@ namespace Bit.Core.Services
             }
         }
 
+        public async Task SponsorOrganizationAsync(Organization org, OrganizationSponsorship sponsorship)
+        {
+            var customer = await _stripeAdapter.CustomerGetAsync(org.GatewayCustomerId);
+            var sub = await _stripeAdapter.SubscriptionGetAsync(org.GatewaySubscriptionId);
+
+            var sponsoredSubscription = new SponsoredOrganizationSubscription(org, sub);
+
+            var subscription = await ChargeForNewSubscriptionAsync(org, customer, false,
+                false, PaymentMethodType.None, sponsoredSubscription.GetSponsorSubscriptionOptions(sponsorship), null);
+            org.GatewaySubscriptionId = subscription.Id;
+
+            org.ExpirationDate = subscription.CurrentPeriodEnd;
+        }
+
+        public async Task<bool> RemoveOrganizationSponsorshipAsync(Organization org)
+        {
+            var customer = await _stripeAdapter.CustomerGetAsync(org.GatewayCustomerId);
+            var sub = await _stripeAdapter.SubscriptionGetAsync(org.GatewaySubscriptionId);
+
+            var sponsoredSubscription = new SponsoredOrganizationSubscription(org, sub);
+            var subCreateOptions = sponsoredSubscription.RemoveOrganizationSubscriptionOptions();
+
+            var (stripePaymentMethod, paymentMethodType) = IdentifyPaymentMethod(customer, subCreateOptions);
+            var subscription = await ChargeForNewSubscriptionAsync(org, customer, false,
+                stripePaymentMethod, paymentMethodType, subCreateOptions, null);
+
+            if (subscription.Status == "incomplete")
+            {
+                // TODO: revert
+                return false;
+            }
+            org.GatewaySubscriptionId = subscription.Id;
+            org.Enabled = true;
+            org.ExpirationDate = subscription.CurrentPeriodEnd;
+
+            return true;
+        }
+
         public async Task<string> UpgradeFreeOrganizationAsync(Organization org, StaticStore.Plan plan,
             short additionalStorageGb, int additionalSeats, bool premiumAccessAddon, TaxInfo taxInfo)
         {
@@ -227,6 +265,29 @@ namespace Bit.Core.Services
             }
 
             var subCreateOptions = new OrganizationUpgradeSubscriptionOptions(customer.Id, org, plan, taxInfo, additionalSeats, additionalStorageGb, premiumAccessAddon);
+            var (stripePaymentMethod, paymentMethodType) = IdentifyPaymentMethod(customer, subCreateOptions);
+
+            var subscription = await ChargeForNewSubscriptionAsync(org, customer, false,
+                stripePaymentMethod, paymentMethodType, subCreateOptions, null);
+            org.GatewaySubscriptionId = subscription.Id;
+
+            if (subscription.Status == "incomplete" &&
+                subscription.LatestInvoice?.PaymentIntent?.Status == "requires_action")
+            {
+                org.Enabled = false;
+                return subscription.LatestInvoice.PaymentIntent.ClientSecret;
+            }
+            else
+            {
+                org.Enabled = true;
+                org.ExpirationDate = subscription.CurrentPeriodEnd;
+                return null;
+            }
+        }
+
+        private (bool stripePaymentMethod, PaymentMethodType PaymentMethodType) IdentifyPaymentMethod(
+                Stripe.Customer customer, Stripe.SubscriptionCreateOptions subCreateOptions)
+        {
             var stripePaymentMethod = false;
             var paymentMethodType = PaymentMethodType.Credit;
             var hasBtCustomerId = customer.Metadata.ContainsKey("btCustomerId");
@@ -265,23 +326,7 @@ namespace Bit.Core.Services
                     }
                 }
             }
-
-            var subscription = await ChargeForNewSubscriptionAsync(org, customer, false,
-                stripePaymentMethod, paymentMethodType, subCreateOptions, null);
-            org.GatewaySubscriptionId = subscription.Id;
-
-            if (subscription.Status == "incomplete" &&
-                subscription.LatestInvoice?.PaymentIntent?.Status == "requires_action")
-            {
-                org.Enabled = false;
-                return subscription.LatestInvoice.PaymentIntent.ClientSecret;
-            }
-            else
-            {
-                org.Enabled = true;
-                org.ExpirationDate = subscription.CurrentPeriodEnd;
-                return null;
-            }
+            return (stripePaymentMethod, paymentMethodType);
         }
 
         public async Task<string> PurchasePremiumAsync(User user, PaymentMethodType paymentMethodType,

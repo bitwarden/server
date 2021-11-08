@@ -26,7 +26,7 @@ namespace Bit.Core.Repositories.EntityFramework
         public DbSet<GroupUser> GroupUsers { get; set; }
         public DbSet<Installation> Installations { get; set; }
         public DbSet<Organization> Organizations { get; set; }
-        public DbSet<OrganizationSponsorship> organizationSponsorships { get; set; }
+        public DbSet<OrganizationSponsorship> OrganizationSponsorships { get; set; }
         public DbSet<OrganizationUser> OrganizationUsers { get; set; }
         public DbSet<Policy> Policies { get; set; }
         public DbSet<Provider> Providers { get; set; }

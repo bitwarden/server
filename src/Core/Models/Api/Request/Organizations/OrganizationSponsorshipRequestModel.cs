@@ -16,6 +16,9 @@ namespace Bit.Core.Models.Api.Request
         [Required]
         [StringLength(256)]
         [StrictEmailAddress]
-        public string sponsoredEmail { get; set; }
+        public string SponsoredEmail { get; set; }
+
+        [StringLength(256)]
+        public string FriendlyName { get; set; }
     }
 }
