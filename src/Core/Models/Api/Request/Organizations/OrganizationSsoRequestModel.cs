@@ -122,6 +122,25 @@ namespace Bit.Core.Models.Api
                     yield return new ValidationResult(i18nService.GetLocalizedHtmlString("IdpSingleSignOnServiceUrlValidationError"),
                         new[] { nameof(IdpSingleSignOnServiceUrl) });
                 }
+
+                if (InvalidServiceUrl(IdpSingleSignOnServiceUrl))
+                {
+                    yield return new ValidationResult(i18nService.GetLocalizedHtmlString("IdpSingleSignOnServiceUrlInvalid"),
+                        new[] { nameof(IdpSingleSignOnServiceUrl) });
+                }
+
+                if (InvalidServiceUrl(IdpArtifactResolutionServiceUrl))
+                {
+                    yield return new ValidationResult(i18nService.GetLocalizedHtmlString("IdpArtifactResolutionServiceUrlInvalid"),
+                        new[] { nameof(IdpArtifactResolutionServiceUrl) });
+                }
+
+                if (InvalidServiceUrl(IdpSingleLogoutServiceUrl))
+                {
+                    yield return new ValidationResult(i18nService.GetLocalizedHtmlString("IdpSingleLogoutServiceUrlInvalid"),
+                        new[] { nameof(IdpSingleLogoutServiceUrl) });
+                }
+
                 if (!string.IsNullOrWhiteSpace(IdpX509PublicCert))
                 {
                     // Validate the certificate is in a valid format
@@ -202,6 +221,19 @@ namespace Bit.Core.Models.Api
                 @"(((BEGIN|END) CERTIFICATE)|([\-\n\r\t\s\f]))",
                 string.Empty,
                 RegexOptions.Multiline | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        }
+
+        private bool InvalidServiceUrl(string url)
+        {
+            if (string.IsNullOrWhiteSpace(url))
+            {
+                return false;
+            }
+            if (!url.StartsWith("http://") && !url.StartsWith("https://"))
+            {
+                return true;
+            }
+            return Regex.IsMatch(url, "[<>\"]");
         }
     }
 }
