@@ -70,12 +70,14 @@ namespace Bit.Core.Services
                 _dataProtector.Protect($"{FamiliesForEnterpriseTokenName} {sponsorshipId} {sponsorshipType}")
             );
 
-        public async Task OfferSponsorshipAsync(Organization sponsoringOrg, OrganizationUser sponsoringOrgUser, PlanSponsorshipType sponsorshipType, string sponsoredEmail)
+        public async Task OfferSponsorshipAsync(Organization sponsoringOrg, OrganizationUser sponsoringOrgUser,
+            PlanSponsorshipType sponsorshipType, string sponsoredEmail, string friendlyName)
         {
             var sponsorship = new OrganizationSponsorship
             {
                 SponsoringOrganizationId = sponsoringOrg.Id,
                 SponsoringOrganizationUserId = sponsoringOrgUser.Id,
+                FriendlyName = friendlyName,
                 OfferedToEmail = sponsoredEmail,
                 PlanSponsorshipType = sponsorshipType,
                 CloudSponsor = true,
@@ -172,6 +174,7 @@ namespace Bit.Core.Services
             {
                 // Initialize the record as available
                 sponsorship.SponsoredOrganizationId = null;
+                sponsorship.FriendlyName = null;
                 sponsorship.OfferedToEmail = null;
                 sponsorship.PlanSponsorshipType = null;
                 sponsorship.TimesRenewedWithoutValidation = 0;

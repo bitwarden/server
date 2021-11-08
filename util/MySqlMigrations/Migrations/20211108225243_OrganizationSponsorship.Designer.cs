@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.MySqlMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20211105174918_OrganizationSponsorship")]
+    [Migration("20211108225243_OrganizationSponsorship")]
     partial class OrganizationSponsorship
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -594,6 +594,10 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.Property<bool>("CloudSponsor")
                         .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("FriendlyName")
+                        .HasMaxLength(256)
+                        .HasColumnType("varchar(256)");
 
                     b.Property<Guid?>("InstallationId")
                         .HasColumnType("char(36)");

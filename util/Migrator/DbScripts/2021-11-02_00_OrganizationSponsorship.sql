@@ -7,6 +7,7 @@ CREATE TABLE [dbo].[OrganizationSponsorship] (
     [SponsoringOrganizationId]      UNIQUEIDENTIFIER NULL,
     [SponsoringOrganizationUserID]  UNIQUEIDENTIFIER NULL,
     [SponsoredOrganizationId]       UNIQUEIDENTIFIER NULL,
+    [FriendlyName]                  NVARCHAR(256)    NULL,
     [OfferedToEmail]                NVARCHAR (256)   NULL,
     [PlanSponsorshipType]           TINYINT          NULL,
     [CloudSponsor]                  BIT              NULL,
@@ -116,6 +117,7 @@ CREATE PROCEDURE [dbo].[OrganizationSponsorship_Create]
     @SponsoringOrganizationId UNIQUEIDENTIFIER,
     @SponsoringOrganizationUserID UNIQUEIDENTIFIER,
     @SponsoredOrganizationId UNIQUEIDENTIFIER,
+    @FriendlyName NVARCHAR(256),
     @OfferedToEmail NVARCHAR(256),
     @PlanSponsorshipType TINYINT,
     @CloudSponsor BIT,
@@ -133,6 +135,7 @@ BEGIN
         [SponsoringOrganizationId],
         [SponsoringOrganizationUserID],
         [SponsoredOrganizationId],
+        [FriendlyName],
         [OfferedToEmail],
         [PlanSponsorshipType],
         [CloudSponsor],
@@ -147,6 +150,7 @@ BEGIN
         @SponsoringOrganizationId,
         @SponsoringOrganizationUserID,
         @SponsoredOrganizationId,
+        @FriendlyName,
         @OfferedToEmail,
         @PlanSponsorshipType,
         @CloudSponsor,
@@ -170,6 +174,7 @@ CREATE PROCEDURE [dbo].[OrganizationSponsorship_Update]
     @SponsoringOrganizationId UNIQUEIDENTIFIER,
     @SponsoringOrganizationUserID UNIQUEIDENTIFIER,
     @SponsoredOrganizationId UNIQUEIDENTIFIER,
+    @FriendlyName NVARCHAR(256),
     @OfferedToEmail NVARCHAR(256),
     @PlanSponsorshipType TINYINT,
     @CloudSponsor BIT,
@@ -187,6 +192,7 @@ BEGIN
         [SponsoringOrganizationId] = @SponsoringOrganizationId,
         [SponsoringOrganizationUserID] = @SponsoringOrganizationUserID,
         [SponsoredOrganizationId] = @SponsoredOrganizationId,
+        [FriendlyName] = @FriendlyName,
         [OfferedToEmail] = @OfferedToEmail,
         [PlanSponsorshipType] = @PlanSponsorshipType,
         [CloudSponsor] = @CloudSponsor,
@@ -366,21 +372,21 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    SET @BatchSize = 100;
+    DECLARE @BatchSize INT = 100
 
     WHILE @BatchSize > 0
         BEGIN
-        BEGIN TRANSACTION OrganizationSponsorship_DeleteOUs
+        BEGIN TRANSACTION OS_DeleteMany_OUs
 
         DELETE TOP(@BatchSize) OS
         FROM
-            [dbo].[OrganiozationSponsorship] OS
+            [dbo].[OrganizationSponsorship] OS
         INNER JOIN
-            @Ids I ON I.Id = OS.SponsoringOrganizationUserId
+            @SponsoringOrganizationUserIds I ON I.Id = OS.SponsoringOrganizationUserId
 
         SET @BatchSize = @@ROWCOUNT
 
-        COMMIT TRANSACTION OrganizationSponsorship_DeleteOUs
+        COMMIT TRANSACTION OS_DeleteMany_OUs
     END
 END
 GO
@@ -607,3 +613,50 @@ BEGIN
     END
 END
 GO
+
+-- OrganizationUserOrganizationDetailsView update
+ALTER VIEW [dbo].[OrganizationUserOrganizationDetailsView]
+AS
+SELECT
+    OU.[UserId],
+    OU.[OrganizationId],
+    O.[Name],
+    O.[Enabled],
+    O.[UsePolicies],
+    O.[UseSso],
+    O.[UseGroups],
+    O.[UseDirectory],
+    O.[UseEvents],
+    O.[UseTotp],
+    O.[Use2fa],
+    O.[UseApi],
+    O.[UseResetPassword],
+    O.[SelfHost],
+    O.[UsersGetPremium],
+    O.[Seats],
+    O.[MaxCollections],
+    O.[MaxStorageGb],
+    O.[Identifier],
+    OU.[Key],
+    OU.[ResetPasswordKey],
+    O.[PublicKey],
+    O.[PrivateKey],
+    OU.[Status],
+    OU.[Type],
+    SU.[ExternalId] SsoExternalId,
+    OU.[Permissions],
+    PO.[ProviderId],
+    P.[Name] ProviderName,
+    OS.[FriendlyName] FamilySponsorshipFriendlyName
+FROM
+    [dbo].[OrganizationUser] OU
+INNER JOIN
+    [dbo].[Organization] O ON O.[Id] = OU.[OrganizationId]
+LEFT JOIN
+    [dbo].[SsoUser] SU ON SU.[UserId] = OU.[UserId] AND SU.[OrganizationId] = OU.[OrganizationId]
+LEFT JOIN
+    [dbo].[ProviderOrganization] PO ON PO.[OrganizationId] = O.[Id]
+LEFT JOIN
+    [dbo].[Provider] P ON P.[Id] = PO.[ProviderId]
+LEFT JOIN
+    [dbo].[OrganizationSponsorship] OS ON OS.[SponsoringOrganizationUserId] = OU.[Id]

@@ -597,6 +597,10 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<bool>("CloudSponsor")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("FriendlyName")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
                     b.Property<Guid?>("InstallationId")
                         .HasColumnType("uuid");
 

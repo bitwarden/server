@@ -47,7 +47,7 @@ namespace Bit.Api.Test.Controllers
             Assert.Contains("Specified Organization cannot sponsor other organizations.", exception.Message);
             await sutProvider.GetDependency<IOrganizationSponsorshipService>()
                 .DidNotReceiveWithAnyArgs()
-                .OfferSponsorshipAsync(default, default, default, default);
+                .OfferSponsorshipAsync(default, default, default, default, default);
         }
 
         public static IEnumerable<object[]> NonConfirmedOrganizationUsersStatuses =>
@@ -76,7 +76,7 @@ namespace Bit.Api.Test.Controllers
             Assert.Contains("Only confirm users can sponsor other organizations.", exception.Message);
             await sutProvider.GetDependency<IOrganizationSponsorshipService>()
                 .DidNotReceiveWithAnyArgs()
-                .OfferSponsorshipAsync(default, default, default, default);
+                .OfferSponsorshipAsync(default, default, default, default, default);
         }
 
         [Theory]
@@ -99,7 +99,7 @@ namespace Bit.Api.Test.Controllers
             Assert.Contains("Can only create organization sponsorships for yourself.", exception.Message);
             await sutProvider.GetDependency<IOrganizationSponsorshipService>()
                 .DidNotReceiveWithAnyArgs()
-                .OfferSponsorshipAsync(default, default, default, default);
+                .OfferSponsorshipAsync(default, default, default, default, default);
         }
 
         [Theory]
@@ -124,7 +124,7 @@ namespace Bit.Api.Test.Controllers
             Assert.Contains("Can only sponsor one organization per Organization User.", exception.Message);
             await sutProvider.GetDependency<IOrganizationSponsorshipService>()
                 .DidNotReceiveWithAnyArgs()
-                .OfferSponsorshipAsync(default, default, default, default);
+                .OfferSponsorshipAsync(default, default, default, default, default);
         }
 
         [Theory]

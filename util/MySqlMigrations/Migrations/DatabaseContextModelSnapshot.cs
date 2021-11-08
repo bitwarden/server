@@ -593,6 +593,10 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<bool>("CloudSponsor")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<string>("FriendlyName")
+                        .HasMaxLength(256)
+                        .HasColumnType("varchar(256)");
+
                     b.Property<Guid?>("InstallationId")
                         .HasColumnType("char(36)");
 
