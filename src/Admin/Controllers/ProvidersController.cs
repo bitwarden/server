@@ -70,6 +70,7 @@ namespace Bit.Admin.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(CreateProviderModel model)
         {
             if (!ModelState.IsValid)
