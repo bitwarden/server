@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Bit.Core.Utilities;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.EventGrid;
 using Microsoft.Azure.EventGrid.Models;
@@ -48,7 +49,7 @@ namespace Bit.Api.Utilities
         {
             var queryKey = request.Query["key"];
 
-            if (queryKey != EventGridKey)
+            if (!CoreHelpers.FixedTimeEquals(queryKey, EventGridKey))
             {
                 return new UnauthorizedObjectResult("Authentication failed. Please use a valid key.");
             }

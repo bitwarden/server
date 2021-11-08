@@ -893,7 +893,7 @@ namespace Bit.Core.Services
                 return false;
             }
 
-            if (string.Compare(user.TwoFactorRecoveryCode, recoveryCode, true) != 0)
+            if (!CoreHelpers.FixedTimeEquals(user.TwoFactorRecoveryCode, recoveryCode))
             {
                 return false;
             }
