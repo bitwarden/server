@@ -12,20 +12,19 @@ jobs:
     runs-on: ubuntu-20.04
     outputs:
       release_version: ${{ steps.version.outputs.package }}
+      branch-name: ${{ steps.branch.outputs.branch-name }}
     steps:
       - name: Branch check
         run: |
-          if [[ "$GITHUB_REF" != "refs/heads/release" ]]; then
+          if [[ "$GITHUB_REF" != "refs/heads/rc" ]] && [[ "$GITHUB_REF" != "refs/heads/hotfix" ]]; then
             echo "==================================="
-            echo "[!] Can only release from the 'release' branch"
+            echo "[!] Can only release from the 'rc' or 'hotfix' branches"
             echo "==================================="
             exit 1
           fi
 
       - name: Checkout repo
         uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
-        with:
-          ref: release
 
       - name: Check Release Version
         id: version
@@ -41,6 +40,12 @@ jobs:
           fi
 
           echo "::set-output name=package::$version"
+
+      - name: Get branch name
+        id: branch
+        run: |
+          BRANCH_NAME=$(basename ${{ github.ref }})
+          echo "::set-output name=branch-name::$BRANCH_NAME"
 
 
   deploy:
@@ -72,7 +77,7 @@ jobs:
         with:
           workflow: build.yml
           workflow_conclusion: success
-          branch: release
+          branch: ${{ needs.setup.outputs.branch-name }}
           artifacts: ${{ matrix.name }}.zip
 
       - name: Login to Azure
@@ -115,6 +120,7 @@ jobs:
     needs: setup
     env:
       _RELEASE_VERSION: ${{ needs.setup.outputs.release_version }}
+      _BRANCH_NAME: ${{ needs.setup.outputs.branch-name }}
     strategy:
       fail-fast: false
       matrix:
@@ -158,22 +164,29 @@ jobs:
           echo "SERVICE_NAME: $SERVICE_NAME"
           echo "::set-output name=service_name::$SERVICE_NAME"
 
-      - name: Pull latest selfhost Release image
-        run: docker pull bitwarden/${{ steps.setup.outputs.service_name }}:latest
+      - name: Pull latest selfhost image
+        env:
+          SERVICE_NAME: ${{ steps.setup.outputs.service_name }}
+        run: docker pull bitwarden/$SERVICE_NAME:$_BRANCH_NAME
 
-      - name: Tag version
+      - name: Tag version and latest
+        env:
+          SERVICE_NAME: ${{ steps.setup.outputs.service_name }}
         run: |
-          docker tag bitwarden/${{ steps.setup.outputs.service_name }}:latest bitwarden/${{ steps.setup.outputs.service_name }}:$_RELEASE_VERSION
+          docker tag bitwarden/$SERVICE_NAME:$_BRANCH_NAME bitwarden/$SERVICE_NAME:$_RELEASE_VERSION
+          docker tag bitwarden/$SERVICE_NAME:$_BRANCH_NAME bitwarden/$SERVICE_NAME:latest
 
       - name: List Docker images
         run: docker images
 
-      - name: Push latest image
-        run: |
-          docker push bitwarden/${{ steps.setup.outputs.service_name }}:$_RELEASE_VERSION
+      - name: Push version and latest image
         env:
           DOCKER_CONTENT_TRUST: 1
           DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ steps.setup-dct.outputs.dct-delegate-repo-passphrase }}
+          SERVICE_NAME: ${{ steps.setup.outputs.service_name }}
+        run: |
+          docker push bitwarden/$SERVICE_NAME:$_RELEASE_VERSION
+          docker push bitwarden/$SERVICE_NAME:latest
 
       - name: Log out of Docker
         run: docker logout
@@ -191,7 +204,7 @@ jobs:
         with:
           workflow: build.yml
           workflow_conclusion: success
-          branch: release
+          branch: ${{ needs.setup.outputs.branch-name }}
           artifacts: "docker-stub.zip,
                       swagger.json"
 
