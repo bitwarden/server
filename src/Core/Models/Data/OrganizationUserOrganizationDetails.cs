@@ -25,6 +25,7 @@ namespace Bit.Core.Models.Data
         public Enums.OrganizationUserStatusType Status { get; set; }
         public Enums.OrganizationUserType Type { get; set; }
         public bool Enabled { get; set; }
+        public Enums.PlanType PlanType { get; set; }
         public string SsoExternalId { get; set; }
         public string Identifier { get; set; }
         public string Permissions { get; set; }

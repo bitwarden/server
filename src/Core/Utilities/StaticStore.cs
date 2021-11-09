@@ -1,6 +1,6 @@
 ﻿using Bit.Core.Enums;
+using Bit.Core.Models.Data;
 using Bit.Core.Models.StaticStore;
-using Bit.Core.Models.Table;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -484,7 +484,9 @@ namespace Bit.Core.Utilities
                     PlanSponsorshipType = PlanSponsorshipType.FamiliesForEnterprise,
                     SponsoredProductType = ProductType.Families,
                     SponsoringProductType = ProductType.Enterprise,
-                    StripePlanId = "2021-enterprise-sponsored-families-org-monthly"
+                    StripePlanId = "2021-enterprise-sponsored-families-org-monthly",
+                    UsersCanSponsor = (OrganizationUserOrganizationDetails org) =>
+                        GetPlan(org.PlanType).Product == ProductType.Enterprise,
                 }
             };
         public static Plan GetPlan(PlanType planType) =>

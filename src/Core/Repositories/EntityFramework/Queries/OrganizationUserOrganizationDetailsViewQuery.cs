@@ -26,6 +26,7 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
                 UserId = x.ou.UserId,
                 Name = x.o.Name,
                 Enabled = x.o.Enabled,
+                PlanType = x.o.PlanType,
                 UsePolicies = x.o.UsePolicies,
                 UseSso = x.o.UseSso,
                 UseGroups = x.o.UseGroups,

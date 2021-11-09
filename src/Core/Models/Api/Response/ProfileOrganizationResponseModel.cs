@@ -39,6 +39,9 @@ namespace Bit.Core.Models.Api
             ProviderId = organization.ProviderId?.ToString();
             ProviderName = organization.ProviderName;
             FamilySponsorshipFriendlyName = organization.FamilySponsorshipFriendlyName;
+            FamilySponsorshipAvailable = FamilySponsorshipFriendlyName == null &&
+                Utilities.StaticStore.GetSponsoredPlan(PlanSponsorshipType.FamiliesForEnterprise)
+                .UsersCanSponsor(organization);
         }
 
         public string Id { get; set; }
@@ -70,5 +73,6 @@ namespace Bit.Core.Models.Api
         public string ProviderId { get; set; }
         public string ProviderName { get; set; }
         public string FamilySponsorshipFriendlyName { get; set; }
+        public bool FamilySponsorshipAvailable { get; set; }
     }
 }
