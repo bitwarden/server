@@ -759,30 +759,22 @@ namespace Bit.Core.Services
 
         public async Task SendFamiliesForEnterpriseOfferEmailAsync(string email, string organizationName, string token)
         {
-            // TODO: Complete emails
-            var message = CreateDefaultMessage("A Family Organization Invite Is Redeemable", email);
+            var message = CreateDefaultMessage("Free Bitwarden Family Plan Offer", email);
 
-            // NOTE: If somehow cloud vault changes this will need to change/be injected
-            var url = CoreHelpers.ExtendQuery(new Uri($"https://vault.bitwarden.com/#/sponsored/families-for-enterprise"),
-                new Dictionary<string, string>
-                {
-                    ["sponsorshipToken"] = token,
-                });
-
-            var model = new FamiliesForEnterpriseInviteRedeemableViewModel
+            var model = new FamiliesForEnterpriseOfferViewModel
             {
-                Url = url.ToString(),
-                OrganizationName = organizationName,
+                WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+                SiteName = _globalSettings.SiteName,
+                SponsorshipToken = token,
             };
 
-            await AddMessageContentAsync(message, "FamiliesForEnterprise.FamiliesForEnterpriseInviteRedeemable", model);
-            message.Category = "FamiliesForEnterpriseInviteRedeemable";
+            await AddMessageContentAsync(message, "FamiliesForEnterprise.FamiliesForEnterpriseOffer", model);
+            message.Category = "FamiliesForEnterpriseOffer";
             await _mailDeliveryService.SendEmailAsync(message);
         }
 
         public async Task SendFamiliesForEnterpriseRedeemedEmailsAsync(string familyUserEmail, string sponsorEmail, string sponsorOrgName)
         {
-            // TODO: complete emails
             // Email family user
             await SendFamiliesForEnterpriseInviteRedeemedToFamilyUserEmailAsync(familyUserEmail);
 
@@ -794,12 +786,12 @@ namespace Bit.Core.Services
         {
             // TODO: Complete emails
             var message = CreateDefaultMessage("You Have Redeemed A Family Organization Sponsorship", email);
-            var model = new FamiliesForEnterpriseInviteRedeemedToFamilyUserViewModel
+            var model = new FamiliesForEnterpriseRedeemedToFamilyUserViewModel
             {
 
             };
-            await AddMessageContentAsync(message, "FamiliesForEnterprise.FamiliesForEnterpriseInviteRedeemedToFamilyUser", model);
-            message.Category = "FamilyForEnterpriseInviteRedeemedToFamilyUser";
+            await AddMessageContentAsync(message, "FamiliesForEnterprise.FamiliesForEnterpriseRedeemedToFamilyUser", model);
+            message.Category = "FamilyForEnterpriseRedeemedToFamilyUser";
             await _mailDeliveryService.SendEmailAsync(message);
         }
 
@@ -807,12 +799,12 @@ namespace Bit.Core.Services
         {
             // TODO: Complete emails
             var message = CreateDefaultMessage("A User Has Redeemeed Your Sponsorship", email);
-            var model = new FamiliesForEnterpriseInviteRedeemedToOrgUserViewModel
+            var model = new FamiliesForEnterpriseRedeemedToOrgUserViewModel
             {
                 OrganizationName = organizationName,
             };
-            await AddMessageContentAsync(message, "FamiliesForEnterprise.FamiliesForEnterpriseInviteRedeemedToOrgUser", model);
-            message.Category = "FamilyForEnterpriseInviteRedeemedToOrgUser";
+            await AddMessageContentAsync(message, "FamiliesForEnterprise.FamiliesForEnterpriseRedeemedToOrgUser", model);
+            message.Category = "FamilyForEnterpriseRedeemedToOrgUser";
             await _mailDeliveryService.SendEmailAsync(message);
         }
 
