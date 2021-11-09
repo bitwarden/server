@@ -170,6 +170,7 @@ namespace Bit.Core.Utilities
             services.AddScoped<ICipherService, CipherService>();
             services.AddScoped<IUserService, UserService>();
             services.AddScoped<IOrganizationService, OrganizationService>();
+            services.AddScoped<IOrganizationSponsorshipService, OrganizationSponsorshipService>();
             services.AddScoped<ICollectionService, CollectionService>();
             services.AddScoped<IGroupService, GroupService>();
             services.AddScoped<IPolicyService, PolicyService>();
