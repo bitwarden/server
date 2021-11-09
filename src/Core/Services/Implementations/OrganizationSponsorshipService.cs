@@ -88,7 +88,7 @@ namespace Bit.Core.Services
                 sponsorship = await _organizationSponsorshipRepository.CreateAsync(sponsorship);
 
                 // TODO: send email to sponsoredEmail w/ redemption token link
-                var _ = RedemptionToken(sponsorship.Id, sponsorshipType);
+                // var _ = RedemptionToken(sponsorship.Id, sponsorshipType);
             }
             catch
             {

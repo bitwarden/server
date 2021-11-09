@@ -51,14 +51,10 @@ namespace Bit.Api.Controllers
                 throw new BadRequestException("Specified Organization cannot sponsor other organizations.");
             }
 
-            var sponsoringOrgUser = await _organizationUserRepository.GetByIdAsync(model.OrganizationUserId);
+            var sponsoringOrgUser = await _organizationUserRepository.GetByOrganizationAsync(sponsoringOrgIdGuid, _currentContext.UserId ?? default);
             if (sponsoringOrgUser == null || sponsoringOrgUser.Status != OrganizationUserStatusType.Confirmed)
             {
-                throw new BadRequestException("Only confirm users can sponsor other organizations.");
-            }
-            if (sponsoringOrgUser.UserId != _currentContext.UserId)
-            {
-                throw new BadRequestException("Can only create organization sponsorships for yourself.");
+                throw new BadRequestException("Only confirmed users can sponsor other organizations.");
             }
 
             var existingOrgSponsorship = await _organizationSponsorshipRepository.GetBySponsoringOrganizationUserIdAsync(sponsoringOrgUser.Id);

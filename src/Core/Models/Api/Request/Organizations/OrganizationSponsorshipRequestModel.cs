@@ -11,9 +11,6 @@ namespace Bit.Core.Models.Api.Request
         public PlanSponsorshipType PlanSponsorshipType { get; set; }
 
         [Required]
-        public Guid OrganizationUserId { get; set; }
-
-        [Required]
         [StringLength(256)]
         [StrictEmailAddress]
         public string SponsoredEmail { get; set; }

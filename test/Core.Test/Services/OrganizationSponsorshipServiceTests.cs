@@ -45,6 +45,7 @@ namespace Bit.Core.Test.Services
                 SponsoringOrganizationUserId = sponsoringOrgUser.Id,
                 FriendlyName = friendlyName,
                 OfferedToEmail = sponsoredEmail,
+                PlanSponsorshipType = PlanSponsorshipType.FamiliesForEnterprise,
                 CloudSponsor = true,
             };
 
