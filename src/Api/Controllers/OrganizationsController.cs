@@ -390,7 +390,7 @@ namespace Bit.Api.Controllers
 
         [HttpDelete("{id}")]
         [HttpPost("{id}/delete")]
-        public async Task Delete(string id, [FromBody]OrganizationDeleteRequestModel model)
+        public async Task Delete(string id, [FromBody]SecretVerificationRequestModel model)
         {
             var orgIdGuid = new Guid(id);
             if (!await _currentContext.OrganizationOwner(orgIdGuid))
@@ -410,10 +410,10 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
-            if (!await _userService.CheckPasswordAsync(user, model.MasterPasswordHash))
+            if (!await _userService.VerifySecretAsync(user, model.Secret))
             {
                 await Task.Delay(2000);
-                throw new BadRequestException("MasterPasswordHash", "Invalid password.");
+                throw new BadRequestException(string.Empty, "User verification failed.");
             }
             else
             {
@@ -466,7 +466,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("{id}/api-key")]
-        public async Task<ApiKeyResponseModel> ApiKey(string id, [FromBody]ApiKeyRequestModel model)
+        public async Task<ApiKeyResponseModel> ApiKey(string id, [FromBody]SecretVerificationRequestModel model)
         {
             var orgIdGuid = new Guid(id);
             if (!await _currentContext.OrganizationOwner(orgIdGuid))
@@ -486,7 +486,7 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
-            if (!await _userService.CheckPasswordAsync(user, model.MasterPasswordHash))
+            if (!await _userService.VerifySecretAsync(user, model.Secret))
             {
                 await Task.Delay(2000);
                 throw new BadRequestException("MasterPasswordHash", "Invalid password.");
@@ -499,7 +499,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("{id}/rotate-api-key")]
-        public async Task<ApiKeyResponseModel> RotateApiKey(string id, [FromBody]ApiKeyRequestModel model)
+        public async Task<ApiKeyResponseModel> RotateApiKey(string id, [FromBody]SecretVerificationRequestModel model)
         {
             var orgIdGuid = new Guid(id);
             if (!await _currentContext.OrganizationOwner(orgIdGuid))
@@ -519,7 +519,7 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
-            if (!await _userService.CheckPasswordAsync(user, model.MasterPasswordHash))
+            if (!await _userService.VerifySecretAsync(user, model.Secret))
             {
                 await Task.Delay(2000);
                 throw new BadRequestException("MasterPasswordHash", "Invalid password.");
@@ -640,14 +640,7 @@ namespace Bit.Api.Controllers
             }
 
             var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(id);
-            if (ssoConfig == null)
-            {
-                ssoConfig = model.ToSsoConfig(id);
-            }
-            else
-            {
-                ssoConfig = model.ToSsoConfig(ssoConfig);
-            }
+            ssoConfig = ssoConfig == null ? model.ToSsoConfig(id) : model.ToSsoConfig(ssoConfig);
 
             await _ssoConfigService.SaveAsync(ssoConfig);
 

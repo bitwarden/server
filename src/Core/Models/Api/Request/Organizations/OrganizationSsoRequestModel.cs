@@ -8,7 +8,6 @@ using Bit.Core.Sso;
 using U2F.Core.Utils;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
-using System.Text.Json;
 using System.Text.RegularExpressions;
 using Bit.Core.Models.Table;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
@@ -40,47 +39,11 @@ namespace Bit.Core.Models.Api
     {
         public SsoConfigurationDataRequest() {}
 
-        public SsoConfigurationDataRequest(SsoConfigurationData configurationData)
-        {
-            ConfigType = configurationData.ConfigType;
-            UseCryptoAgent = configurationData.UseCryptoAgent;
-            CryptoAgentUrl = configurationData.CryptoAgentUrl;
-            Authority = configurationData.Authority;
-            ClientId = configurationData.ClientId;
-            ClientSecret = configurationData.ClientSecret;
-            MetadataAddress = configurationData.MetadataAddress;
-            RedirectBehavior = configurationData.RedirectBehavior;
-            GetClaimsFromUserInfoEndpoint = configurationData.GetClaimsFromUserInfoEndpoint;
-            IdpEntityId = configurationData.IdpEntityId;
-            IdpBindingType = configurationData.IdpBindingType;
-            IdpSingleSignOnServiceUrl = configurationData.IdpSingleSignOnServiceUrl;
-            IdpSingleLogoutServiceUrl = configurationData.IdpSingleLogoutServiceUrl;
-            IdpArtifactResolutionServiceUrl = configurationData.IdpArtifactResolutionServiceUrl;
-            IdpX509PublicCert = configurationData.IdpX509PublicCert;
-            IdpOutboundSigningAlgorithm = configurationData.IdpOutboundSigningAlgorithm;
-            IdpAllowUnsolicitedAuthnResponse = configurationData.IdpAllowUnsolicitedAuthnResponse;
-            IdpDisableOutboundLogoutRequests = configurationData.IdpDisableOutboundLogoutRequests;
-            IdpWantAuthnRequestsSigned = configurationData.IdpWantAuthnRequestsSigned;
-            SpNameIdFormat = configurationData.SpNameIdFormat;
-            SpOutboundSigningAlgorithm = configurationData.SpOutboundSigningAlgorithm ?? SamlSigningAlgorithms.Sha256;
-            SpSigningBehavior = configurationData.SpSigningBehavior;
-            SpWantAssertionsSigned = configurationData.SpWantAssertionsSigned;
-            SpValidateCertificates = configurationData.SpValidateCertificates;
-            SpMinIncomingSigningAlgorithm = configurationData.SpMinIncomingSigningAlgorithm ?? SamlSigningAlgorithms.Sha256;
-            AdditionalScopes = configurationData.AdditionalScopes;
-            AdditionalUserIdClaimTypes = configurationData.AdditionalUserIdClaimTypes;
-            AdditionalEmailClaimTypes = configurationData.AdditionalEmailClaimTypes;
-            AdditionalNameClaimTypes = configurationData.AdditionalNameClaimTypes;
-            AcrValues = configurationData.AcrValues;
-            ExpectedReturnAcrValue = configurationData.ExpectedReturnAcrValue;
-        }
-
         [Required]
         public SsoType ConfigType { get; set; }
 
-        // Crypto Agent
-        public bool UseCryptoAgent { get; set; }
-        public string CryptoAgentUrl { get; set; }
+        public bool UseKeyConnector { get; set; }
+        public string KeyConnectorUrl { get; set; }
 
         // OIDC
         public string Authority { get; set; }
@@ -215,8 +178,8 @@ namespace Bit.Core.Models.Api
             return new SsoConfigurationData
             {
                 ConfigType = ConfigType,
-                UseCryptoAgent = UseCryptoAgent,
-                CryptoAgentUrl = CryptoAgentUrl,
+                UseKeyConnector = UseKeyConnector,
+                KeyConnectorUrl = KeyConnectorUrl,
                 Authority = Authority,
                 ClientId = ClientId,
                 ClientSecret = ClientSecret,

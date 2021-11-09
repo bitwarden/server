@@ -604,14 +604,15 @@ namespace Bit.Sso.Controllers
                 await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_ResetSsoLink);
             }
         }
+
         private async Task CreateSsoUserRecord(string providerUserId, Guid userId, Guid orgId)
         {
             var ssoUser = new SsoUser
             {
                 ExternalId = providerUserId,
                 UserId = userId,
-                OrganizationId = orgId
-            }; 
+                OrganizationId = orgId,
+            };
             await _ssoUserRepository.CreateAsync(ssoUser);
         }
 

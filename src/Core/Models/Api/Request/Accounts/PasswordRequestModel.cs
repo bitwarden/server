@@ -1,13 +1,9 @@
-﻿using System;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace Bit.Core.Models.Api
 {
-    public class PasswordRequestModel
+    public class PasswordRequestModel : SecretVerificationRequestModel
     {
-        [Required]
-        [StringLength(300)]
-        public string MasterPasswordHash { get; set; }
         [Required]
         [StringLength(300)]
         public string NewMasterPasswordHash { get; set; }

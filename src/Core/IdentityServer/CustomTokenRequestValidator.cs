@@ -24,6 +24,7 @@ namespace Bit.Core.IdentityServer
     {
         private UserManager<User> _userManager;
         private readonly ISsoConfigRepository _ssoConfigRepository;
+        private readonly IOrganizationRepository _organizationRepository;
 
         public CustomTokenRequestValidator(
             UserManager<User> userManager,
@@ -47,6 +48,7 @@ namespace Bit.Core.IdentityServer
         {
             _userManager = userManager;
             _ssoConfigRepository = ssoConfigRepository;
+            _organizationRepository = organizationRepository;
         }
 
         public async Task ValidateAsync(CustomTokenRequestValidationContext context)
@@ -58,25 +60,6 @@ namespace Bit.Core.IdentityServer
                 return;
             }
             await ValidateAsync(context, context.Result.ValidatedRequest);
-
-            if (context.Result.CustomResponse != null)
-            {
-                var organizationClaim = context.Result.ValidatedRequest.Subject?.FindFirst(c => c.Type == "organizationId");
-                var organizationId = organizationClaim?.Value ?? "";
-
-                var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(new Guid(organizationId));
-                var ssoConfigData = ssoConfig.GetData();
-
-                if (ssoConfigData is { UseCryptoAgent: true } && !string.IsNullOrEmpty(ssoConfigData.CryptoAgentUrl))
-                {
-                    context.Result.CustomResponse["CryptoAgentUrl"] = ssoConfigData.CryptoAgentUrl;
-                    // Prevent clients redirecting to set-password
-                    // TODO: Figure out if we can move this logic to the clients since this might break older clients
-                    //  although we will have issues either way with some clients supporting crypto anent and some not
-                    //  suggestion: We should roll out the clients before enabling it server wise
-                    context.Result.CustomResponse["ResetMasterPassword"] = false;
-                }
-            }
         }
 
         protected async override Task<(User, bool)> ValidateContextAsync(CustomTokenRequestValidationContext context)
@@ -87,7 +70,7 @@ namespace Bit.Core.IdentityServer
             return (user, user != null);
         }
 
-        protected override void SetSuccessResult(CustomTokenRequestValidationContext context, User user,
+        protected override async Task SetSuccessResult(CustomTokenRequestValidationContext context, User user,
             List<Claim> claims, Dictionary<string, object> customResponse)
         {
             context.Result.CustomResponse = customResponse;
@@ -98,6 +81,40 @@ namespace Bit.Core.IdentityServer
                 foreach (var claim in claims)
                 {
                     context.Result.ValidatedRequest.ClientClaims.Add(claim);
+                }
+            }
+
+            if (context.Result.CustomResponse == null || user.MasterPassword != null)
+            {
+                return;
+            }
+
+            // KeyConnector responses below
+
+            // Apikey login
+            if (context.Result.ValidatedRequest.GrantType == "client_credentials")
+            {
+                if (user.UsesKeyConnector) {
+                    // KeyConnectorUrl is configured in the CLI client, just disable master password reset
+                    context.Result.CustomResponse["ResetMasterPassword"] = false;
+                }
+                return;
+            }
+
+            // SSO login
+            var organizationClaim = context.Result.ValidatedRequest.Subject?.FindFirst(c => c.Type == "organizationId");
+            if (organizationClaim?.Value != null)
+            {
+                var organizationId = new Guid(organizationClaim.Value);
+
+                var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(organizationId);
+                var ssoConfigData = ssoConfig.GetData();
+
+                if (ssoConfigData is { UseKeyConnector: true } && !string.IsNullOrEmpty(ssoConfigData.KeyConnectorUrl))
+                {
+                    context.Result.CustomResponse["KeyConnectorUrl"] = ssoConfigData.KeyConnectorUrl;
+                    // Prevent clients redirecting to set-password
+                    context.Result.CustomResponse["ResetMasterPassword"] = false;
                 }
             }
         }

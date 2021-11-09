@@ -908,6 +908,8 @@ namespace Bit.Core.Services
 
         public async Task DeleteAsync(Organization organization)
         {
+            await ValidateDeleteOrganizationAsync(organization);
+
             if (!string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
             {
                 try
@@ -2133,6 +2135,15 @@ namespace Bit.Core.Services
             if (oldType == OrganizationUserType.Admin || newType == OrganizationUserType.Admin)
             {
                 throw new BadRequestException("Custom users can not manage Admins or Owners.");
+            }
+        }
+
+        private async Task ValidateDeleteOrganizationAsync(Organization organization)
+        {
+            var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(organization.Id);
+            if (ssoConfig?.GetData()?.UseKeyConnector == true)
+            {
+                throw new BadRequestException("You cannot delete an Organization that is using Key Connector.");
             }
         }
     }

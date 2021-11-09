@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using Bit.Core.Enums;
 using Bit.Core.Sso;
+using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 
 namespace Bit.Core.Models.Data
@@ -13,11 +15,20 @@ namespace Bit.Core.Models.Data
         private const string _oidcSignedOutPath = "/oidc-signedout";
         private const string _saml2ModulePath = "/saml2";
 
+        public static SsoConfigurationData Deserialize(string data)
+        {
+            return CoreHelpers.LoadClassFromJsonData<SsoConfigurationData>(data);
+        }
+
+        public string Serialize()
+        {
+            return CoreHelpers.ClassToJsonData(this);
+        }
+
         public SsoType ConfigType { get; set; }
 
-        // Crypto Agent
-        public bool UseCryptoAgent { get; set; }
-        public string CryptoAgentUrl { get; set; }
+        public bool UseKeyConnector { get; set; }
+        public string KeyConnectorUrl { get; set; }
 
         // OIDC
         public string Authority { get; set; }

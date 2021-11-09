@@ -49,5 +49,6 @@ namespace Bit.Core.Services
         Task SendProviderConfirmedEmailAsync(string providerName, string email);
         Task SendProviderUserRemoved(string providerName, string email);
         Task SendUpdatedTempPasswordEmailAsync(string email, string userName);
+        Task SendOTPEmailAsync(string email, string token);
     }
 }

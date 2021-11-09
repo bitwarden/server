@@ -1,24 +1,24 @@
-IF COL_LENGTH('[dbo].[User]', 'UsesCryptoAgent') IS NULL
+IF COL_LENGTH('[dbo].[User]', 'UsesKeyConnector') IS NULL
     BEGIN
         ALTER TABLE
             [dbo].[User]
         ADD
-            [UsesCryptoAgent] BIT NULL
+            [UsesKeyConnector] BIT NULL
     END
 GO
 
 UPDATE
     [dbo].[User]
 SET
-    [UsesCryptoAgent] = 0
+    [UsesKeyConnector] = 0
 WHERE
-    [UsesCryptoAgent] IS NULL
+    [UsesKeyConnector] IS NULL
 GO
 
 ALTER TABLE
     [dbo].[User]
 ALTER COLUMN
-    [UsesCryptoAgent] BIT NOT NULL
+    [UsesKeyConnector] BIT NOT NULL
 GO
 
 -- View: User
@@ -75,7 +75,7 @@ CREATE PROCEDURE [dbo].[User_Create]
     @RevisionDate DATETIME2(7),
     @ApiKey VARCHAR(30),
     @ForcePasswordReset BIT = 0,
-    @UsesCryptoAgent BIT = 0
+    @UsesKeyConnector BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON
@@ -114,7 +114,7 @@ BEGIN
         [RevisionDate],
         [ApiKey],
         [ForcePasswordReset],
-        [UsesCryptoAgent]
+        [UsesKeyConnector]
     )
     VALUES
     (
@@ -150,7 +150,7 @@ BEGIN
         @RevisionDate,
         @ApiKey,
         @ForcePasswordReset,
-        @UsesCryptoAgent
+        @UsesKeyConnector
     )
 END
 GO
@@ -194,7 +194,7 @@ CREATE PROCEDURE [dbo].[User_Update]
     @RevisionDate DATETIME2(7),
     @ApiKey VARCHAR(30),
     @ForcePasswordReset BIT = 0,
-    @UsesCryptoAgent BIT = 0
+    @UsesKeyConnector BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON
@@ -233,7 +233,92 @@ BEGIN
         [RevisionDate] = @RevisionDate,
         [ApiKey] = @ApiKey,
         [ForcePasswordReset] = @ForcePasswordReset,
-        [UsesCryptoAgent] = @UsesCryptoAgent
+        [UsesKeyConnector] = @UsesKeyConnector
     WHERE
         [Id] = @Id
 END
+GO
+
+IF EXISTS(SELECT * FROM sys.views WHERE [Name] = 'OrganizationUserOrganizationDetailsView')
+BEGIN
+    DROP VIEW [dbo].[OrganizationUserOrganizationDetailsView]
+END
+GO
+
+CREATE VIEW [dbo].[OrganizationUserOrganizationDetailsView]
+AS
+SELECT
+    OU.[UserId],
+    OU.[OrganizationId],
+    O.[Name],
+    O.[Enabled],
+    O.[UsePolicies],
+    O.[UseSso],
+    O.[UseGroups],
+    O.[UseDirectory],
+    O.[UseEvents],
+    O.[UseTotp],
+    O.[Use2fa],
+    O.[UseApi],
+    O.[UseResetPassword],
+    O.[SelfHost],
+    O.[UsersGetPremium],
+    O.[Seats],
+    O.[MaxCollections],
+    O.[MaxStorageGb],
+    O.[Identifier],
+    OU.[Key],
+    OU.[ResetPasswordKey],
+    O.[PublicKey],
+    O.[PrivateKey],
+    OU.[Status],
+    OU.[Type],
+    SU.[ExternalId] SsoExternalId,
+    OU.[Permissions],
+    PO.[ProviderId],
+    P.[Name] ProviderName,
+    SS.[Data] SsoConfig
+FROM
+    [dbo].[OrganizationUser] OU
+        INNER JOIN
+    [dbo].[Organization] O ON O.[Id] = OU.[OrganizationId]
+        LEFT JOIN
+    [dbo].[SsoUser] SU ON SU.[UserId] = OU.[UserId] AND SU.[OrganizationId] = OU.[OrganizationId]
+        LEFT JOIN
+    [dbo].[ProviderOrganization] PO ON PO.[OrganizationId] = O.[Id]
+        LEFT JOIN
+    [dbo].[Provider] P ON P.[Id] = PO.[ProviderId]
+        LEFT JOIN
+    [dbo].[SsoConfig] SS ON SS.[OrganizationId] = OU.[OrganizationId]
+GO
+
+IF EXISTS(SELECT * FROM sys.views WHERE [Name] = 'OrganizationUserUserDetailsView')
+    BEGIN
+        DROP VIEW [dbo].[OrganizationUserUserDetailsView]
+    END
+GO
+
+CREATE VIEW [dbo].[OrganizationUserUserDetailsView]
+AS
+SELECT
+    OU.[Id],
+    OU.[UserId],
+    OU.[OrganizationId],
+    U.[Name],
+    ISNULL(U.[Email], OU.[Email]) Email,
+    U.[TwoFactorProviders],
+    U.[Premium],
+    OU.[Status],
+    OU.[Type],
+    OU.[AccessAll],
+    OU.[ExternalId],
+    SU.[ExternalId] SsoExternalId,
+    OU.[Permissions],
+    OU.[ResetPasswordKey],
+    U.[UsesKeyConnector]
+FROM
+    [dbo].[OrganizationUser] OU
+LEFT JOIN
+    [dbo].[User] U ON U.[Id] = OU.[UserId]
+LEFT JOIN
+    [dbo].[SsoUser] SU ON SU.[UserId] = OU.[UserId] AND SU.[OrganizationId] = OU.[OrganizationId]
