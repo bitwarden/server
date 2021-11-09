@@ -310,6 +310,15 @@ jobs:
           docker tag $ECR_REGISTRY/${{ steps.setup.outputs.service_name }} \
             $ECR_REGISTRY/${{ steps.setup.outputs.service_name }}:dev-$IMAGE_TAG
 
+      - name: TEST STEP TAGGING
+        if: github.ref == 'refs/heads/upload-images-to-aws-ecr'
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker tag $ECR_REGISTRY/${{ steps.setup.outputs.service_name }} \
+            $ECR_REGISTRY/${{ steps.setup.outputs.service_name }}:test-$IMAGE_TAG
+
       - name: List Docker images
         if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix'
         run: docker images
@@ -337,6 +346,14 @@ jobs:
           IMAGE_TAG: ${{ github.sha }}
         run: |
           docker push $ECR_REGISTRY/${{ steps.setup.outputs.service_name }}:dev-$IMAGE_TAG
+
+      - name: TEST STEP PUSHING
+        if: github.ref == 'refs/heads/upload-images-to-aws-ecr'
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker push $ECR_REGISTRY/${{ steps.setup.outputs.service_name }}:test-$IMAGE_TAG
 
 
   upload:
