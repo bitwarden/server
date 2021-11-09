@@ -80,7 +80,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("get-authenticator")]
-        public async Task<TwoFactorAuthenticatorResponseModel> GetAuthenticator([FromBody]TwoFactorRequestModel model)
+        public async Task<TwoFactorAuthenticatorResponseModel> GetAuthenticator([FromBody]SecretVerificationRequestModel model)
         {
             var user = await CheckAsync(model, false);
             var response = new TwoFactorAuthenticatorResponseModel(user);
@@ -108,7 +108,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("get-yubikey")]
-        public async Task<TwoFactorYubiKeyResponseModel> GetYubiKey([FromBody]TwoFactorRequestModel model)
+        public async Task<TwoFactorYubiKeyResponseModel> GetYubiKey([FromBody]SecretVerificationRequestModel model)
         {
             var user = await CheckAsync(model, true);
             var response = new TwoFactorYubiKeyResponseModel(user);
@@ -134,7 +134,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("get-duo")]
-        public async Task<TwoFactorDuoResponseModel> GetDuo([FromBody]TwoFactorRequestModel model)
+        public async Task<TwoFactorDuoResponseModel> GetDuo([FromBody]SecretVerificationRequestModel model)
         {
             var user = await CheckAsync(model, true);
             var response = new TwoFactorDuoResponseModel(user);
@@ -164,7 +164,7 @@ namespace Bit.Api.Controllers
 
         [HttpPost("~/organizations/{id}/two-factor/get-duo")]
         public async Task<TwoFactorDuoResponseModel> GetOrganizationDuo(string id,
-            [FromBody]TwoFactorRequestModel model)
+            [FromBody]SecretVerificationRequestModel model)
         {
             var user = await CheckAsync(model, false);
 
@@ -221,7 +221,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("get-webauthn")]
-        public async Task<TwoFactorWebAuthnResponseModel> GetWebAuthn([FromBody]TwoFactorRequestModel model)
+        public async Task<TwoFactorWebAuthnResponseModel> GetWebAuthn([FromBody]SecretVerificationRequestModel model)
         {
             var user = await CheckAsync(model, true);
             var response = new TwoFactorWebAuthnResponseModel(user);
@@ -229,7 +229,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("get-webauthn-challenge")]
-        public async Task<CredentialCreateOptions> GetWebAuthnChallenge([FromBody]TwoFactorRequestModel model)
+        public async Task<CredentialCreateOptions> GetWebAuthnChallenge([FromBody]SecretVerificationRequestModel model)
         {
             var user = await CheckAsync(model, true);
             var reg = await _userService.StartWebAuthnRegistrationAsync(user);
@@ -262,7 +262,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("get-email")]
-        public async Task<TwoFactorEmailResponseModel> GetEmail([FromBody]TwoFactorRequestModel model)
+        public async Task<TwoFactorEmailResponseModel> GetEmail([FromBody]SecretVerificationRequestModel model)
         {
             var user = await CheckAsync(model, false);
             var response = new TwoFactorEmailResponseModel(user);
@@ -349,7 +349,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("get-recover")]
-        public async Task<TwoFactorRecoverResponseModel> GetRecover([FromBody]TwoFactorRequestModel model)
+        public async Task<TwoFactorRecoverResponseModel> GetRecover([FromBody]SecretVerificationRequestModel model)
         {
             var user = await CheckAsync(model, false);
             var response = new TwoFactorRecoverResponseModel(user);
