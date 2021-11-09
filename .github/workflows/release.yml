@@ -168,14 +168,15 @@ jobs:
       - name: Pull latest selfhost image
         env:
           SERVICE_NAME: ${{ steps.setup.outputs.service_name }}
-        run: docker pull bitwarden/$SERVICE_NAME:$_BRANCH_NAME
+          IMAGE_TAG: ${{ github.sha }}
+        run: docker pull bitwarden/prod/$SERVICE_NAME:$_BRANCH_NAME-$IMAGE_TAG
 
       - name: Tag version and latest
         env:
           SERVICE_NAME: ${{ steps.setup.outputs.service_name }}
         run: |
-          docker tag bitwarden/$SERVICE_NAME:$_BRANCH_NAME bitwarden/$SERVICE_NAME:$_RELEASE_VERSION
-          docker tag bitwarden/$SERVICE_NAME:$_BRANCH_NAME bitwarden/$SERVICE_NAME:latest
+          docker tag bitwarden/prod/$SERVICE_NAME:$_BRANCH_NAME bitwarden/prod/$SERVICE_NAME:$_RELEASE_VERSION
+          docker tag bitwarden/prod/$SERVICE_NAME:$_BRANCH_NAME bitwarden/prod/$SERVICE_NAME:latest
 
       - name: List Docker images
         run: docker images
@@ -186,8 +187,8 @@ jobs:
           DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ steps.setup-dct.outputs.dct-delegate-repo-passphrase }}
           SERVICE_NAME: ${{ steps.setup.outputs.service_name }}
         run: |
-          docker push bitwarden/$SERVICE_NAME:$_RELEASE_VERSION
-          docker push bitwarden/$SERVICE_NAME:latest
+          docker push bitwarden/prod/$SERVICE_NAME:$_RELEASE_VERSION
+          docker push bitwarden/prod/$SERVICE_NAME:latest
 
       - name: Log out of Docker
         run: docker logout
