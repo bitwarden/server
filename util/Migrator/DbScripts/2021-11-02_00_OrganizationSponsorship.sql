@@ -622,6 +622,7 @@ SELECT
     OU.[OrganizationId],
     O.[Name],
     O.[Enabled],
+    O.[PlanType],
     O.[UsePolicies],
     O.[UseSso],
     O.[UseGroups],
