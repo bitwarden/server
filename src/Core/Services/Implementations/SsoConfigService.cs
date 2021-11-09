@@ -56,7 +56,7 @@ namespace Bit.Core.Services
             var policy = await _policyRepository.GetByOrganizationIdTypeAsync(config.OrganizationId, PolicyType.SingleOrg);
             if (policy is not { Enabled: true })
             {
-                throw new BadRequestException("KeyConnector requires Single Organization to be enabled");
+                throw new BadRequestException("KeyConnector requires Single Organization to be enabled.");
             }
         }
 
