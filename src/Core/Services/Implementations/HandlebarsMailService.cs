@@ -757,7 +757,7 @@ namespace Bit.Core.Services
             await _mailDeliveryService.SendEmailAsync(message);
         }
 
-        public async Task SendFamiliesForEnterpriseInviteRedeemableEmailAsync(string email, string organizationName, string token)
+        public async Task SendFamiliesForEnterpriseOfferEmailAsync(string email, string organizationName, string token)
         {
             // TODO: Complete emails
             var message = CreateDefaultMessage("A Family Organization Invite Is Redeemable", email);
@@ -780,7 +780,17 @@ namespace Bit.Core.Services
             await _mailDeliveryService.SendEmailAsync(message);
         }
 
-        public async Task SendFamiliesForEnterpriseInviteRedeemedToFamilyUserEmailAsync(string email)
+        public async Task SendFamiliesForEnterpriseRedeemedEmailsAsync(string familyUserEmail, string sponsorEmail, string sponsorOrgName)
+        {
+            // TODO: complete emails
+            // Email family user
+            await SendFamiliesForEnterpriseInviteRedeemedToFamilyUserEmailAsync(familyUserEmail);
+
+            // Email enterprise org user
+            await SendFamiliesForEnterpriseInviteRedeemedToOrgUserEmailAsync(sponsorEmail, sponsorOrgName);
+        }
+
+        private async Task SendFamiliesForEnterpriseInviteRedeemedToFamilyUserEmailAsync(string email)
         {
             // TODO: Complete emails
             var message = CreateDefaultMessage("You Have Redeemed A Family Organization Sponsorship", email);
@@ -793,7 +803,7 @@ namespace Bit.Core.Services
             await _mailDeliveryService.SendEmailAsync(message);
         }
 
-        public async Task SendFamiliesForEnterpriseInviteRedeemedToOrgUserEmailAsync(string email, string organizationName)
+        private async Task SendFamiliesForEnterpriseInviteRedeemedToOrgUserEmailAsync(string email, string organizationName)
         {
             // TODO: Complete emails
             var message = CreateDefaultMessage("A User Has Redeemeed Your Sponsorship", email);

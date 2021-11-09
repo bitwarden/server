@@ -16,16 +16,20 @@ namespace Bit.Core.Services
         private readonly IOrganizationSponsorshipRepository _organizationSponsorshipRepository;
         private readonly IOrganizationRepository _organizationRepository;
         private readonly IPaymentService _paymentService;
+        private readonly IMailService _mailService;
+
         private readonly IDataProtector _dataProtector;
 
         public OrganizationSponsorshipService(IOrganizationSponsorshipRepository organizationSponsorshipRepository,
             IOrganizationRepository organizationRepository,
             IPaymentService paymentService,
+            IMailService mailService,
             IDataProtectionProvider dataProtectionProvider)
         {
             _organizationSponsorshipRepository = organizationSponsorshipRepository;
             _organizationRepository = organizationRepository;
             _paymentService = paymentService;
+            _mailService = mailService;
             _dataProtector = dataProtectionProvider.CreateProtector("OrganizationSponsorshipServiceDataProtector");
         }
 
@@ -87,8 +91,8 @@ namespace Bit.Core.Services
             {
                 sponsorship = await _organizationSponsorshipRepository.CreateAsync(sponsorship);
 
-                // TODO: send email to sponsoredEmail w/ redemption token link
-                // var _ = RedemptionToken(sponsorship.Id, sponsorshipType);
+                await _mailService.SendFamiliesForEnterpriseOfferEmailAsync(sponsoredEmail, sponsoringOrg.Name,
+                    RedemptionToken(sponsorship.Id, sponsorshipType));
             }
             catch
             {

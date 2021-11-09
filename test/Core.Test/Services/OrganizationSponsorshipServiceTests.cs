@@ -8,9 +8,11 @@ using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.IdentityModel.Tokens;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
+using NSubstitute.Extensions;
 using Xunit;
 
 namespace Bit.Core.Test.Services
@@ -34,13 +36,24 @@ namespace Bit.Core.Test.Services
         [Theory]
         [BitAutoData]
         public async Task OfferSponsorship_CreatesSponsorship(Organization sponsoringOrg, OrganizationUser sponsoringOrgUser,
-            string sponsoredEmail, string friendlyName, SutProvider<OrganizationSponsorshipService> sutProvider)
+            string sponsoredEmail, string friendlyName, Guid sponsorshipId,
+            SutProvider<OrganizationSponsorshipService> sutProvider)
         {
+            var dataProtector = Substitute.For<IDataProtector>();
+            sutProvider.GetDependency<IDataProtectionProvider>().CreateProtector(default).ReturnsForAnyArgs(dataProtector);
+            sutProvider.GetDependency<IOrganizationSponsorshipRepository>().CreateAsync(default).ReturnsForAnyArgs(callInfo =>
+            {
+                var sponsorship = callInfo.Arg<OrganizationSponsorship>();
+                sponsorship.Id = sponsorshipId;
+                return sponsorship;
+            });
+
             await sutProvider.Sut.OfferSponsorshipAsync(sponsoringOrg, sponsoringOrgUser,
                 PlanSponsorshipType.FamiliesForEnterprise, sponsoredEmail, friendlyName);
 
             var expectedSponsorship = new OrganizationSponsorship
             {
+                Id = sponsorshipId,
                 SponsoringOrganizationId = sponsoringOrg.Id,
                 SponsoringOrganizationUserId = sponsoringOrgUser.Id,
                 FriendlyName = friendlyName,
@@ -51,7 +64,10 @@ namespace Bit.Core.Test.Services
 
             await sutProvider.GetDependency<IOrganizationSponsorshipRepository>().Received(1)
                 .CreateAsync(Arg.Is<OrganizationSponsorship>(s => sponsorshipValidator(s, expectedSponsorship)));
-            // TODO: Validate email called with appropriate token.s
+
+            await sutProvider.GetDependency<IMailService>().Received(1).
+                SendFamiliesForEnterpriseOfferEmailAsync(sponsoredEmail, sponsoringOrg.Name,
+                Arg.Any<string>());
         }
 
         [Theory]
