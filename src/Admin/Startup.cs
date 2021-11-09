@@ -115,6 +115,9 @@ namespace Bit.Admin
         {
             app.UseSerilog(env, appLifetime, globalSettings);
 
+            // Add general security headers
+            app.UseMiddleware<SecurityHeadersMiddleware>();
+
             if (globalSettings.SelfHosted)
             {
                 app.UsePathBase("/admin");

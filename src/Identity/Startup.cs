@@ -150,6 +150,9 @@ namespace Bit.Identity
 
             app.UseSerilog(env, appLifetime, globalSettings);
 
+            // Add general security headers
+            app.UseMiddleware<SecurityHeadersMiddleware>();
+
             if (!env.IsDevelopment())
             {
                 var uri = new Uri(globalSettings.BaseServiceUri.Identity);
