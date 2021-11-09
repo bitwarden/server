@@ -43,6 +43,8 @@ namespace Bit.EventsProcessor
         {
             IdentityModelEventSource.ShowPII = true;
             app.UseSerilog(env, appLifetime, globalSettings);
+            // Add general security headers
+            app.UseMiddleware<SecurityHeadersMiddleware>();
             app.UseRouting();
             app.UseEndpoints(endpoints =>
             {
