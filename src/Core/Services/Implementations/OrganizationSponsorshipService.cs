@@ -21,12 +21,12 @@ namespace Bit.Core.Services
         public OrganizationSponsorshipService(IOrganizationSponsorshipRepository organizationSponsorshipRepository,
             IOrganizationRepository organizationRepository,
             IPaymentService paymentService,
-            IDataProtector dataProtector)
+            IDataProtectionProvider dataProtectionProvider)
         {
             _organizationSponsorshipRepository = organizationSponsorshipRepository;
             _organizationRepository = organizationRepository;
             _paymentService = paymentService;
-            _dataProtector = dataProtector;
+            _dataProtector = dataProtectionProvider.CreateProtector("OrganizationSponsorshipServiceDataProtector");
         }
 
         public async Task<bool> ValidateRedemptionTokenAsync(string encryptedToken)
