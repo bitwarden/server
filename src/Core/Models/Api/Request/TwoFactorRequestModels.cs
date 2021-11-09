@@ -7,7 +7,7 @@ using System.Linq;
 
 namespace Bit.Core.Models.Api
 {
-    public class UpdateTwoFactorAuthenticatorRequestModel : TwoFactorRequestModel
+    public class UpdateTwoFactorAuthenticatorRequestModel : SecretVerificationRequestModel
     {
         [Required]
         [StringLength(50)]
@@ -38,7 +38,7 @@ namespace Bit.Core.Models.Api
         }
     }
 
-    public class UpdateTwoFactorDuoRequestModel : TwoFactorRequestModel, IValidatableObject
+    public class UpdateTwoFactorDuoRequestModel : SecretVerificationRequestModel, IValidatableObject
     {
         [Required]
         [StringLength(50)]
@@ -111,7 +111,7 @@ namespace Bit.Core.Models.Api
         }
     }
 
-    public class UpdateTwoFactorYubicoOtpRequestModel : TwoFactorRequestModel, IValidatableObject
+    public class UpdateTwoFactorYubicoOtpRequestModel : SecretVerificationRequestModel, IValidatableObject
     {
         public string Key1 { get; set; }
         public string Key2 { get; set; }
@@ -195,7 +195,7 @@ namespace Bit.Core.Models.Api
         }
     }
 
-    public class TwoFactorEmailRequestModel : TwoFactorRequestModel
+    public class TwoFactorEmailRequestModel : SecretVerificationRequestModel
     {
         [Required]
         [EmailAddress]
@@ -231,13 +231,18 @@ namespace Bit.Core.Models.Api
         public string Name { get; set; }
     }
 
-    public class TwoFactorWebAuthnDeleteRequestModel : TwoFactorRequestModel, IValidatableObject
+    public class TwoFactorWebAuthnDeleteRequestModel : SecretVerificationRequestModel, IValidatableObject
     {
         [Required]
         public int? Id { get; set; }
 
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {
+            foreach (var validationResult in Validate(validationContext))
+            {
+                yield return validationResult;
+            }
+
             if (!Id.HasValue || Id < 0 || Id > 5)
             {
                 yield return new ValidationResult("Invalid Key Id", new string[] { nameof(Id) });
@@ -252,16 +257,10 @@ namespace Bit.Core.Models.Api
         public string Token { get; set; }
     }
 
-    public class TwoFactorProviderRequestModel : TwoFactorRequestModel
+    public class TwoFactorProviderRequestModel : SecretVerificationRequestModel
     {
         [Required]
         public TwoFactorProviderType? Type { get; set; }
-    }
-
-    public class TwoFactorRequestModel
-    {
-        [Required]
-        public string MasterPasswordHash { get; set; }
     }
 
     public class TwoFactorRecoveryRequestModel : TwoFactorEmailRequestModel

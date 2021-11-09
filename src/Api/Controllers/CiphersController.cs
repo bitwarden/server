@@ -550,7 +550,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("purge")]
-        public async Task PostPurge([FromBody]CipherPurgeRequestModel model, string organizationId = null)
+        public async Task PostPurge([FromBody]SecretVerificationRequestModel model, string organizationId = null)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)
@@ -558,9 +558,9 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
-            if (!await _userService.CheckPasswordAsync(user, model.MasterPasswordHash))
+            if (!await _userService.VerifySecretAsync(user, model.Secret))
             {
-                ModelState.AddModelError("MasterPasswordHash", "Invalid password.");
+                ModelState.AddModelError(string.Empty, "User verification failed.");
                 await Task.Delay(2000);
                 throw new BadRequestException(ModelState);
             }

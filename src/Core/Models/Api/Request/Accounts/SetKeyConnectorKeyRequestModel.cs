@@ -4,7 +4,7 @@ using Bit.Core.Models.Table;
 
 namespace Bit.Core.Models.Api.Request.Accounts
 {
-    public class SetCryptoAgentKeyRequestModel
+    public class SetKeyConnectorKeyRequestModel
     {
         [Required]
         public string Key { get; set; }

@@ -14,7 +14,8 @@ SELECT
     OU.[ExternalId],
     SU.[ExternalId] SsoExternalId,
     OU.[Permissions],
-    OU.[ResetPasswordKey]
+    OU.[ResetPasswordKey],
+    U.[UsesKeyConnector]
 FROM
     [dbo].[OrganizationUser] OU
 LEFT JOIN

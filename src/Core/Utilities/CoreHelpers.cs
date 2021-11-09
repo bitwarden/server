@@ -895,6 +895,16 @@ namespace Bit.Core.Utilities
             return System.Text.Json.JsonSerializer.Deserialize<T>(jsonData, options);
         }
 
+        public static string ClassToJsonData<T>(T data)
+        {
+            var options = new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            };
+
+            return System.Text.Json.JsonSerializer.Serialize(data, options);
+        }
+
         public static ICollection<T> AddIfNotExists<T>(this ICollection<T> list, T item)
         {
             if (list.Contains(item))

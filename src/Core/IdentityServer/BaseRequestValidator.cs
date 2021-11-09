@@ -176,7 +176,7 @@ namespace Bit.Core.IdentityServer
                 customResponse.Add("TwoFactorToken", token);
             }
 
-            SetSuccessResult(context, user, claims, customResponse);
+            await SetSuccessResult(context, user, claims, customResponse);
         }
 
         protected async Task BuildTwoFactorResultAsync(User user, Organization organization, T context)
@@ -256,7 +256,7 @@ namespace Bit.Core.IdentityServer
 
         protected abstract void SetSsoResult(T context, Dictionary<string, object> customResponse);
 
-        protected abstract void SetSuccessResult(T context, User user, List<Claim> claims,
+        protected abstract Task SetSuccessResult(T context, User user, List<Claim> claims,
             Dictionary<string, object> customResponse);
 
         protected abstract void SetErrorResult(T context, Dictionary<string, object> customResponse);

@@ -31,7 +31,7 @@
     @RevisionDate DATETIME2(7),
     @ApiKey VARCHAR(30),
     @ForcePasswordReset BIT = 0,
-    @UsesCryptoAgent BIT = 0
+    @UsesKeyConnector BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON
@@ -70,7 +70,7 @@ BEGIN
         [RevisionDate],
         [ApiKey],
         [ForcePasswordReset],
-        [UsesCryptoAgent]
+        [UsesKeyConnector]
     )
     VALUES
     (
@@ -106,6 +106,6 @@ BEGIN
         @RevisionDate,
         @ApiKey,
         @ForcePasswordReset,
-        @UsesCryptoAgent
+        @UsesKeyConnector
     )
 END
