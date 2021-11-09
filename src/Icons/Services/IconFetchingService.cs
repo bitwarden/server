@@ -53,6 +53,7 @@ namespace Bit.Icons.Services
                 AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate,
             });
             _httpClient.Timeout = TimeSpan.FromSeconds(20);
+            _httpClient.MaxResponseContentBufferSize = 5000000; // 5 MB
         }
 
         public async Task<IconResult> GetIconAsync(string domain)
