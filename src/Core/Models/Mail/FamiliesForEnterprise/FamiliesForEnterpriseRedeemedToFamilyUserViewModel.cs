@@ -1,6 +1,6 @@
 namespace Bit.Core.Models.Mail.FamiliesForEnterprise
 {
-    public class FamiliesForEnterpriseInviteRedeemedToOrgUserViewModel : BaseMailModel
+    public class FamiliesForEnterpriseRedeemedToFamilyUserViewModel : BaseMailModel
     {
         public string OrganizationName { get; set; }
     }
