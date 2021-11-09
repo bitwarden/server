@@ -292,6 +292,15 @@ jobs:
           docker tag $ECR_REGISTRY/${{ steps.setup.outputs.service_name }} \
             $ECR_REGISTRY/${{ steps.setup.outputs.service_name }}:rc-$IMAGE_TAG
 
+      - name: Tag hotfix
+        if: github.ref == 'refs/heads/hotfix'
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker tag $ECR_REGISTRY/${{ steps.setup.outputs.service_name }} \
+            $ECR_REGISTRY/${{ steps.setup.outputs.service_name }}:hotfix-$IMAGE_TAG
+
       - name: Tag dev
         if: github.ref == 'refs/heads/master'
         env:
@@ -300,14 +309,6 @@ jobs:
         run: |
           docker tag $ECR_REGISTRY/${{ steps.setup.outputs.service_name }} \
             $ECR_REGISTRY/${{ steps.setup.outputs.service_name }}:dev-$IMAGE_TAG
-
-      - name: Tag latest
-        if: github.ref == 'refs/heads/release'
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        run: |
-          docker tag $ECR_REGISTRY/${{ steps.setup.outputs.service_name }} \
-            $ECR_REGISTRY/${{ steps.setup.outputs.service_name }}:latest
 
       - name: List Docker images
         if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix'
@@ -323,8 +324,11 @@ jobs:
 
       - name: Push hotfix images
         if: github.ref == 'refs/heads/hotfix'
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
         run: |
-          docker push ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }}:hotfix
+          docker push $ECR_REGISTRY/${{ steps.setup.outputs.service_name }}:hotfix-$IMAGE_TAG
 
       - name: Push dev images
         if: github.ref == 'refs/heads/master'
@@ -333,13 +337,6 @@ jobs:
           IMAGE_TAG: ${{ github.sha }}
         run: |
           docker push $ECR_REGISTRY/${{ steps.setup.outputs.service_name }}:dev-$IMAGE_TAG
-
-      - name: Push latest images
-        if: github.ref == 'refs/heads/release'
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        run: |
-          docker push $ECR_REGISTRY/${{ steps.setup.outputs.service_name }}:latest
 
 
   upload:
@@ -354,15 +351,15 @@ jobs:
         run: dotnet tool restore
 
       - name: Make Docker stub
-        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/release'
+        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix'
         env:
           ECR_REGISTRY: ${{ needs.build-docker.outputs.registry }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
           if [[ "${{ github.ref }}" == "rc" ]]; then
             SETUP_IMAGE="$ECR_REGISTRY/setup:rc-$IMAGE_TAG"
-          elif [[ "${{ github.ref }}" == "release" ]]; then
-            SETUP_IMAGE="$ECR_REGISTRY/setup:latest"
+          elif [[ "${{ github.ref }}" == "hotfix" ]]; then
+            SETUP_IMAGE="$ECR_REGISTRY/setup:hotfix-$IMAGE_TAG"
           else
             SETUP_IMAGE="$ECR_REGISTRY/setup:dev-$IMAGE_TAG"
           fi
