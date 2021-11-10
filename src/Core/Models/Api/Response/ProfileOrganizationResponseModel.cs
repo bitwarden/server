@@ -42,6 +42,7 @@ namespace Bit.Core.Models.Api
             FamilySponsorshipAvailable = FamilySponsorshipFriendlyName == null &&
                 Utilities.StaticStore.GetSponsoredPlan(PlanSponsorshipType.FamiliesForEnterprise)
                 .UsersCanSponsor(organization);
+            PlanProductType = Utilities.StaticStore.GetPlan(organization.PlanType).Product;
         }
 
         public string Id { get; set; }
@@ -74,5 +75,6 @@ namespace Bit.Core.Models.Api
         public string ProviderName { get; set; }
         public string FamilySponsorshipFriendlyName { get; set; }
         public bool FamilySponsorshipAvailable { get; set; }
+        public ProductType PlanProductType { get; set; }
     }
 }
