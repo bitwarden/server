@@ -128,7 +128,8 @@ namespace Bit.Core.Services
 
             if (existingSponsorship == null)
             {
-                await RemoveSponsorshipAsync(sponsoredOrganization);
+                // TODO: null safe this method
+                await RemoveSponsorshipAsync(sponsoredOrganization, null);
                 // TODO on fail, mark org as disabled.
                 return false;
             }
@@ -136,7 +137,7 @@ namespace Bit.Core.Services
             var validated = true;
             if (existingSponsorship.SponsoringOrganizationId == null || existingSponsorship.SponsoringOrganizationUserId == null)
             {
-                await RemoveSponsorshipAsync(sponsoredOrganization);
+                await RemoveSponsorshipAsync(sponsoredOrganization, existingSponsorship);
                 validated = false;
             }
 
@@ -144,7 +145,7 @@ namespace Bit.Core.Services
                 .GetByIdAsync(existingSponsorship.SponsoringOrganizationId.Value);
             if (!sponsoringOrganization.Enabled)
             {
-                await RemoveSponsorshipAsync(sponsoredOrganization);
+                await RemoveSponsorshipAsync(sponsoredOrganization, existingSponsorship);
                 validated = false;
             }
 
@@ -166,7 +167,7 @@ namespace Bit.Core.Services
 
         public async Task RemoveSponsorshipAsync(Organization sponsoredOrganization, OrganizationSponsorship sponsorship = null)
         {
-            var success = await _paymentService.RemoveOrganizationSponsorshipAsync(sponsoredOrganization);
+            await _paymentService.RemoveOrganizationSponsorshipAsync(sponsoredOrganization, sponsorship);
             await _organizationRepository.UpsertAsync(sponsoredOrganization);
 
             if (sponsorship == null)
@@ -174,49 +175,22 @@ namespace Bit.Core.Services
                 return;
             }
 
-            if (success)
-            {
-                // Initialize the record as available
-                sponsorship.SponsoredOrganizationId = null;
-                sponsorship.FriendlyName = null;
-                sponsorship.OfferedToEmail = null;
-                sponsorship.PlanSponsorshipType = null;
-                sponsorship.TimesRenewedWithoutValidation = 0;
-                sponsorship.SponsorshipLapsedDate = null;
+            // Initialize the record as available
+            sponsorship.SponsoredOrganizationId = null;
+            sponsorship.FriendlyName = null;
+            sponsorship.OfferedToEmail = null;
+            sponsorship.PlanSponsorshipType = null;
+            sponsorship.TimesRenewedWithoutValidation = 0;
+            sponsorship.SponsorshipLapsedDate = null;
 
-                if (sponsorship.CloudSponsor || sponsorship.SponsorshipLapsedDate.HasValue)
-                {
-                    await _organizationSponsorshipRepository.DeleteAsync(sponsorship);
-                }
-                else
-                {
-                    await _organizationSponsorshipRepository.UpsertAsync(sponsorship);
-                }
+            if (sponsorship.CloudSponsor || sponsorship.SponsorshipLapsedDate.HasValue)
+            {
+                await _organizationSponsorshipRepository.DeleteAsync(sponsorship);
             }
             else
             {
-                sponsorship.SponsoringOrganizationId = null;
-                sponsorship.SponsoringOrganizationUserId = null;
-
-                if (!sponsorship.CloudSponsor)
-                {
-                    // Sef-hosted sponsorship record
-                    // we need to make the existing sponsorship available, and add
-                    // a new sponsorship record to record the lapsed sponsorship
-                    var cleanSponsorship = new OrganizationSponsorship
-                    {
-                        InstallationId = sponsorship.InstallationId,
-                        SponsoringOrganizationId = sponsorship.SponsoringOrganizationId,
-                        SponsoringOrganizationUserId = sponsorship.SponsoringOrganizationUserId,
-                        CloudSponsor = sponsorship.CloudSponsor,
-                    };
-                    await _organizationSponsorshipRepository.UpsertAsync(cleanSponsorship);
-                }
-
-                sponsorship.SponsorshipLapsedDate ??= DateTime.UtcNow;
                 await _organizationSponsorshipRepository.UpsertAsync(sponsorship);
             }
-
         }
 
     }

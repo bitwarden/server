@@ -484,7 +484,7 @@ namespace Bit.Core.Utilities
                     PlanSponsorshipType = PlanSponsorshipType.FamiliesForEnterprise,
                     SponsoredProductType = ProductType.Families,
                     SponsoringProductType = ProductType.Enterprise,
-                    StripePlanId = "2021-enterprise-sponsored-families-org-monthly",
+                    StripePlanId = "2021-family-for-enterprise-annually",
                     UsersCanSponsor = (OrganizationUserOrganizationDetails org) =>
                         GetPlan(org.PlanType).Product == ProductType.Enterprise,
                 }

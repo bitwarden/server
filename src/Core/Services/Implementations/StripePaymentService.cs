@@ -192,43 +192,25 @@ namespace Bit.Core.Services
             }
         }
 
-        public async Task SponsorOrganizationAsync(Organization org, OrganizationSponsorship sponsorship)
+        private async Task ChangeOrganizationSponsorship(Organization org, OrganizationSponsorship sponsorship, bool applySponsorship)
         {
-            var customer = await _stripeAdapter.CustomerGetAsync(org.GatewayCustomerId);
+            var existingPlan = Utilities.StaticStore.GetPlan(org.PlanType);
+            var sponsoredPlan = Utilities.StaticStore.GetSponsoredPlan(sponsorship.PlanSponsorshipType.Value);
+            var subscriptionUpdate = new SponsorOrganizationSubscriptionUpdate(existingPlan, sponsoredPlan, applySponsorship);
+
+            var prorationTime = DateTime.UtcNow;
+            await FinalizeSubscriptionChangeAsync(org, subscriptionUpdate, prorationTime);
+
             var sub = await _stripeAdapter.SubscriptionGetAsync(org.GatewaySubscriptionId);
+            org.ExpirationDate = sub.CurrentPeriodEnd;
 
-            var sponsoredSubscription = new SponsoredOrganizationSubscription(org, sub);
-
-            var subscription = await ChargeForNewSubscriptionAsync(org, customer, false,
-                false, PaymentMethodType.None, sponsoredSubscription.GetSponsorSubscriptionOptions(sponsorship), null);
-            org.GatewaySubscriptionId = subscription.Id;
-
-            org.ExpirationDate = subscription.CurrentPeriodEnd;
         }
 
-        public async Task<bool> RemoveOrganizationSponsorshipAsync(Organization org)
-        {
-            var customer = await _stripeAdapter.CustomerGetAsync(org.GatewayCustomerId);
-            var sub = await _stripeAdapter.SubscriptionGetAsync(org.GatewaySubscriptionId);
+        public Task SponsorOrganizationAsync(Organization org, OrganizationSponsorship sponsorship) =>
+            ChangeOrganizationSponsorship(org, sponsorship, true);
 
-            var sponsoredSubscription = new SponsoredOrganizationSubscription(org, sub);
-            var subCreateOptions = sponsoredSubscription.RemoveOrganizationSubscriptionOptions();
-
-            var (stripePaymentMethod, paymentMethodType) = IdentifyPaymentMethod(customer, subCreateOptions);
-            var subscription = await ChargeForNewSubscriptionAsync(org, customer, false,
-                stripePaymentMethod, paymentMethodType, subCreateOptions, null);
-
-            if (subscription.Status == "incomplete")
-            {
-                // TODO: revert
-                return false;
-            }
-            org.GatewaySubscriptionId = subscription.Id;
-            org.Enabled = true;
-            org.ExpirationDate = subscription.CurrentPeriodEnd;
-
-            return true;
-        }
+        public Task RemoveOrganizationSponsorshipAsync(Organization org, OrganizationSponsorship sponsorship) =>
+            ChangeOrganizationSponsorship(org, sponsorship, false);
 
         public async Task<string> UpgradeFreeOrganizationAsync(Organization org, StaticStore.Plan plan,
             short additionalStorageGb, int additionalSeats, bool premiumAccessAddon, TaxInfo taxInfo)
@@ -736,11 +718,11 @@ namespace Bit.Core.Services
             var collectionMethod = sub.CollectionMethod;
             var daysUntilDue = sub.DaysUntilDue;
             var chargeNow = collectionMethod == "charge_automatically";
-            var updatedItemOptions = subscriptionUpdate.UpgradeItemOptions(sub);
+            var updatedItemOptions = subscriptionUpdate.UpgradeItemsOptions(sub);
 
             var subUpdateOptions = new Stripe.SubscriptionUpdateOptions
             {
-                Items = new List<Stripe.SubscriptionItemOptions> { updatedItemOptions },
+                Items = updatedItemOptions,
                 ProrationBehavior = "always_invoice",
                 DaysUntilDue = daysUntilDue ?? 1,
                 CollectionMethod = "send_invoice",
@@ -783,14 +765,8 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Unable to locate draft invoice for subscription update.");
             }
 
-            // If no amount due, invoice is autofinalized, we're done
-            if (invoice.AmountDue <= 0)
-            {
-                return null;
-            }
-
             string paymentIntentClientSecret = null;
-            if (updatedItemOptions.Quantity > 0)
+            if (invoice.AmountDue > 0 && updatedItemOptions.Any(i => i.Quantity > 0))
             {
                 try
                 {
@@ -814,7 +790,7 @@ namespace Bit.Core.Services
                     // Need to revert the subscription
                     await _stripeAdapter.SubscriptionUpdateAsync(sub.Id, new Stripe.SubscriptionUpdateOptions
                     {
-                        Items = new List<Stripe.SubscriptionItemOptions> { subscriptionUpdate.RevertItemOptions(sub) },
+                        Items = subscriptionUpdate.RevertItemsOptions(sub),
                         // This proration behavior prevents a false "credit" from
                         //  being applied forward to the next month's invoice
                         ProrationBehavior = "none",
