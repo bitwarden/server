@@ -6,6 +6,7 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Api.Request;
+using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
@@ -23,16 +24,20 @@ namespace Bit.Api.Controllers
         private readonly IOrganizationRepository _organizationRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly ICurrentContext _currentContext;
+        private readonly IUserService _userService;
+
         public OrganizationSponsorshipsController(IOrganizationSponsorshipService organizationSponsorshipService,
             IOrganizationSponsorshipRepository organizationSponsorshipRepository,
             IOrganizationRepository organizationRepository,
             IOrganizationUserRepository organizationUserRepository,
+            IUserService userService,
             ICurrentContext currentContext)
         {
             _organizationsSponsorshipService = organizationSponsorshipService;
             _organizationSponsorshipRepository = organizationSponsorshipRepository;
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
+            _userService = userService;
             _currentContext = currentContext;
         }
 
@@ -67,7 +72,7 @@ namespace Bit.Api.Controllers
                 model.PlanSponsorshipType, model.SponsoredEmail, model.FriendlyName);
         }
 
-        [HttpPost("sponsored/redeem")]
+        [HttpPost("redeem")]
         [SelfHosted(NotSelfHostedOnly = true)]
         public async Task RedeemSponsorship([FromQuery] string sponsorshipToken, [FromBody] OrganizationSponsorshipRedeemRequestModel model)
         {
@@ -81,12 +86,12 @@ namespace Bit.Api.Controllers
                 throw new BadRequestException("Can only redeem sponsorship for an organization you own.");
             }
             var existingSponsorshipOffer = await _organizationSponsorshipRepository
-                .GetByOfferedToEmailAsync(_currentContext.User.Email);
+                .GetByOfferedToEmailAsync((await CurrentUser).Email);
             if (existingSponsorshipOffer == null)
             {
                 throw new BadRequestException("No unredeemed sponsorship offer exists for you.");
             }
-            if (_currentContext.User.Email != existingSponsorshipOffer.OfferedToEmail)
+            if ((await CurrentUser).Email != existingSponsorshipOffer.OfferedToEmail)
             {
                 throw new BadRequestException("This sponsorship offer was issued to a different user email address.");
             }
@@ -170,5 +175,7 @@ namespace Bit.Api.Controllers
 
             await _organizationsSponsorshipService.RemoveSponsorshipAsync(sponsoredOrganization, existingOrgSponsorship);
         }
+
+        private Task<User> CurrentUser => _userService.GetUserByIdAsync(_currentContext.UserId.Value);
     }
 }
