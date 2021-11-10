@@ -202,6 +202,8 @@ services:
     restart: always
     volumes:
       - ../key-connector:/etc/bitwarden
+      - ../ca-certificates:/etc/bitwarden/ca-certificates
+      - ../logs/key-connector:/etc/bitwarden/logs
     env_file:
       - ../env/key-connector.override.env
     networks:
