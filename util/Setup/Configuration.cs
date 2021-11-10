@@ -100,6 +100,9 @@ namespace Bit.Setup
             "Learn more: https://nginx.org/en/docs/http/ngx_http_realip_module.html")]
         public List<string> RealIps { get; set; }
 
+        [Description("Enable Key Connector")]
+        public bool EnableKeyConnector { get; set; } = false;
+
         [YamlIgnore]
         public string Domain
         {
