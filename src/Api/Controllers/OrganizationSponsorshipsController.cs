@@ -72,6 +72,33 @@ namespace Bit.Api.Controllers
                 model.PlanSponsorshipType, model.SponsoredEmail, model.FriendlyName);
         }
 
+        [HttpPost("{sponsoringOrgId}/families-for-enterprise/resend")]
+        [SelfHosted(NotSelfHostedOnly = true)]
+        public async Task ResendSponsorshipOffer(string sponsoringOrgId)
+        {
+            // TODO: validate has right to sponsor, send sponsorship email
+            var sponsoringOrgIdGuid = new Guid(sponsoringOrgId);
+            var sponsoringOrg = await _organizationRepository.GetByIdAsync(sponsoringOrgIdGuid);
+            if (sponsoringOrg == null)
+            {
+                throw new BadRequestException("Cannot find the requested sponsoring organization.");
+            }
+
+            var sponsoringOrgUser = await _organizationUserRepository.GetByOrganizationAsync(sponsoringOrgIdGuid, _currentContext.UserId ?? default);
+            if (sponsoringOrgUser == null || sponsoringOrgUser.Status != OrganizationUserStatusType.Confirmed)
+            {
+                throw new BadRequestException("Only confirmed users can sponsor other organizations.");
+            }
+
+            var existingOrgSponsorship = await _organizationSponsorshipRepository.GetBySponsoringOrganizationUserIdAsync(sponsoringOrgUser.Id);
+            if (existingOrgSponsorship == null || existingOrgSponsorship.OfferedToEmail == null)
+            {
+                throw new BadRequestException("Cannot find an outstanding sponsorship offer for this organization.");
+            }
+
+            await _organizationsSponsorshipService.SendSponsorshipOfferAsync(sponsoringOrg, existingOrgSponsorship);
+        }
+
         [HttpPost("redeem")]
         [SelfHosted(NotSelfHostedOnly = true)]
         public async Task RedeemSponsorship([FromQuery] string sponsorshipToken, [FromBody] OrganizationSponsorshipRedeemRequestModel model)
