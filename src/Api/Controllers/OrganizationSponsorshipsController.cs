@@ -158,9 +158,14 @@ namespace Bit.Api.Controllers
 
             var existingOrgSponsorship = await _organizationSponsorshipRepository
                 .GetBySponsoringOrganizationUserIdAsync(orgUser.Id);
-            if (existingOrgSponsorship == null || existingOrgSponsorship.SponsoredOrganizationId == null)
+            if (existingOrgSponsorship == null)
             {
                 throw new BadRequestException("You are not currently sponsoring an organization.");
+            }
+            if (existingOrgSponsorship.SponsoredOrganizationId == null)
+            {
+                await _organizationSponsorshipRepository.DeleteAsync(existingOrgSponsorship);
+                return;
             }
 
             var sponsoredOrganization = await _organizationRepository
