@@ -92,5 +92,20 @@ namespace Bit.Core.Test.Services
             await sutProvider.GetDependency<IOrganizationSponsorshipRepository>().Received(1)
                 .DeleteAsync(createdSponsorship);
         }
+
+        [Theory]
+        [BitAutoData]
+        public async Task SendSponsorshipOfferAsync(Organization org, OrganizationSponsorship sponsorship,
+            SutProvider<OrganizationSponsorshipService> sutProvider)
+        {
+            await sutProvider.Sut.SendSponsorshipOfferAsync(org, sponsorship);
+
+            await sutProvider.GetDependency<IMailService>().Received(1)
+                .SendFamiliesForEnterpriseOfferEmailAsync(sponsorship.OfferedToEmail, org.Name, Arg.Any<string>());
+        }
+
+        // TODO: test validateSponsorshipAsync
+
+        // TODO: test RemoveSponsorshipAsync
     }
 }

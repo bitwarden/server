@@ -91,6 +91,7 @@ namespace Bit.Core.Services
             {
                 sponsorship = await _organizationSponsorshipRepository.CreateAsync(sponsorship);
 
+                await SendSponsorshipOfferAsync(sponsoringOrg, sponsorship);
                 await _mailService.SendFamiliesForEnterpriseOfferEmailAsync(sponsoredEmail, sponsoringOrg.Name,
                     RedemptionToken(sponsorship.Id, sponsorshipType));
             }
@@ -102,6 +103,12 @@ namespace Bit.Core.Services
                 }
                 throw;
             }
+        }
+
+        public async Task SendSponsorshipOfferAsync(Organization sponsoringOrg, OrganizationSponsorship sponsorship)
+        {
+            await _mailService.SendFamiliesForEnterpriseOfferEmailAsync(sponsorship.OfferedToEmail, sponsoringOrg.Name,
+                RedemptionToken(sponsorship.Id, sponsorship.PlanSponsorshipType.Value));
         }
 
         public async Task SetUpSponsorshipAsync(OrganizationSponsorship sponsorship, Organization sponsoredOrganization)
