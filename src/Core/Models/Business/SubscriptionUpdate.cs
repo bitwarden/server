@@ -131,6 +131,7 @@ namespace Bit.Core.Models.Business
         {
             _existingPlanStripeId = existingPlan.StripePlanId;
             _sponsoredPlanStripeId = sponsoredPlan.StripePlanId;
+            _applySponsorship = applySponsorship;
         }
 
         public override List<SubscriptionItemOptions> RevertItemsOptions(Subscription subscription)
