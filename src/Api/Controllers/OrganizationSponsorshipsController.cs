@@ -67,7 +67,7 @@ namespace Bit.Api.Controllers
                 model.PlanSponsorshipType, model.SponsoredEmail, model.FriendlyName);
         }
 
-        [HttpPost("sponsored/redeem/families-for-enterprise")]
+        [HttpPost("sponsored/redeem")]
         [SelfHosted(NotSelfHostedOnly = true)]
         public async Task RedeemSponsorship([FromQuery] string sponsorshipToken, [FromBody] OrganizationSponsorshipRedeemRequestModel model)
         {
