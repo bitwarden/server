@@ -40,10 +40,10 @@ namespace Bit.Core.Services
                 return false;
             }
 
-            var decryptedToken = _dataProtector.Unprotect(encryptedToken);
+            var decryptedToken = _dataProtector.Unprotect(encryptedToken[TokenClearTextPrefix.Length..]);
             var dataParts = decryptedToken.Split(' ');
 
-            if (dataParts.Length != 2)
+            if (dataParts.Length != 3)
             {
                 return false;
             }
