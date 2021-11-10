@@ -116,21 +116,21 @@ namespace Bit.Api.Controllers
             await _organizationsSponsorshipService.SetUpSponsorshipAsync(existingSponsorshipOffer, organizationToSponsor);
         }
 
-        [HttpDelete("{sponsoringOrgUserId}")]
-        [HttpPost("{sponsoringOrgUserId}/delete")]
+        [HttpDelete("{sponsoringOrganizationId}")]
+        [HttpPost("{sponsoringOrganizationId}/delete")]
         [SelfHosted(NotSelfHostedOnly = true)]
-        public async Task RevokeSponsorship(string sponsoringOrgUserId)
+        public async Task RevokeSponsorship(string sponsoringOrganizationId)
         {
-            var sponsoringOrgUserIdGuid = new Guid(sponsoringOrgUserId);
+            var sponsoringOrganizationIdGuid = new Guid(sponsoringOrganizationId);
 
-            var orgUser = await _organizationUserRepository.GetByIdAsync(sponsoringOrgUserIdGuid);
+            var orgUser = await _organizationUserRepository.GetByOrganizationAsync(sponsoringOrganizationIdGuid, _currentContext.UserId ?? default);
             if (_currentContext.UserId != orgUser?.UserId)
             {
                 throw new BadRequestException("Can only revoke a sponsorship you granted.");
             }
 
             var existingOrgSponsorship = await _organizationSponsorshipRepository
-                .GetBySponsoringOrganizationUserIdAsync(sponsoringOrgUserIdGuid);
+                .GetBySponsoringOrganizationUserIdAsync(orgUser.Id);
             if (existingOrgSponsorship == null || existingOrgSponsorship.SponsoredOrganizationId == null)
             {
                 throw new BadRequestException("You are not currently sponsoring an organization.");
