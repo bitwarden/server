@@ -14,7 +14,7 @@ namespace Bit.Core.Services
             string paymentToken, Plan plan, short additionalStorageGb, int additionalSeats,
             bool premiumAccessAddon, TaxInfo taxInfo);
         Task SponsorOrganizationAsync(Organization org, OrganizationSponsorship sponsorship);
-        Task<bool> RemoveOrganizationSponsorshipAsync(Organization org);
+        Task RemoveOrganizationSponsorshipAsync(Organization org, OrganizationSponsorship sponsorship);
         Task<string> UpgradeFreeOrganizationAsync(Organization org, Plan plan,
            short additionalStorageGb, int additionalSeats, bool premiumAccessAddon, TaxInfo taxInfo);
         Task<string> PurchasePremiumAsync(User user, PaymentMethodType paymentMethodType, string paymentToken,
