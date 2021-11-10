@@ -100,7 +100,7 @@ namespace Bit.Setup
             "Learn more: https://nginx.org/en/docs/http/ngx_http_realip_module.html")]
         public List<string> RealIps { get; set; }
 
-        [Description("Enable Key Connector")]
+        [Description("Enable Key Connector (https://bitwarden.com/help/article/deploy-key-connector)")]
         public bool EnableKeyConnector { get; set; } = false;
 
         [YamlIgnore]
