@@ -92,8 +92,6 @@ namespace Bit.Core.Services
                 sponsorship = await _organizationSponsorshipRepository.CreateAsync(sponsorship);
 
                 await SendSponsorshipOfferAsync(sponsoringOrg, sponsorship);
-                await _mailService.SendFamiliesForEnterpriseOfferEmailAsync(sponsoredEmail, sponsoringOrg.Name,
-                    RedemptionToken(sponsorship.Id, sponsorshipType));
             }
             catch
             {
