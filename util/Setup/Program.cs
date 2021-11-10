@@ -291,6 +291,9 @@ namespace Bit.Setup
 
             var environmentFileBuilder = new EnvironmentFileBuilder(_context);
             environmentFileBuilder.BuildForUpdater();
+            
+            var certBuilder = new CertBuilder(_context);
+            certBuilder.BuildForUpdater();
 
             var nginxBuilder = new NginxConfigBuilder(_context);
             nginxBuilder.BuildForUpdater();

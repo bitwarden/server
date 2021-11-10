@@ -14,6 +14,7 @@ namespace Bit.Setup
         private IDictionary<string, string> _mssqlValues;
         private IDictionary<string, string> _globalOverrideValues;
         private IDictionary<string, string> _mssqlOverrideValues;
+        private IDictionary<string, string> _keyConnectorOverrideValues;
 
         public EnvironmentFileBuilder(Context context)
         {
@@ -45,6 +46,7 @@ namespace Bit.Setup
             Init();
             LoadExistingValues(_globalOverrideValues, "/bitwarden/env/global.override.env");
             LoadExistingValues(_mssqlOverrideValues, "/bitwarden/env/mssql.override.env");
+            LoadExistingValues(_keyConnectorOverrideValues, "/bitwarden/env/key-connector.override.env");
 
             if (_context.Config.PushNotifications &&
                 _globalOverrideValues.ContainsKey("globalSettings__pushRelayBaseUri") &&
@@ -107,6 +109,21 @@ namespace Bit.Setup
             {
                 ["SA_PASSWORD"] = dbPassword,
             };
+
+            if (_context.Config.EnableKeyConnector)
+            {
+                _keyConnectorOverrideValues = new Dictionary<string, string>
+                {
+                    ["keyConnectorSettings__webVaultUri"] = _context.Config.Url,
+                    ["keyConnectorSettings__identityServerUri"] = "http://identity:5000",
+                    ["keyConnectorSettings__database__provider"] = "json",
+                    ["keyConnectorSettings__database__jsonFilePath"] = "/etc/bitwarden/data.json",
+                    ["keyConnectorSettings__rsaKey__provider"] = "certificate",
+                    ["keyConnectorSettings__certificate__provider"] = "filesystem",
+                    ["keyConnectorSettings__certificate__filesystemPath"] = "/etc/bitwarden/bwkc.pfx",
+                    ["keyConnectorSettings__certificate__filesystemPassword"] = Helpers.SecureRandomString(32, alpha: true, numeric: true),
+                };
+            }
         }
 
         private void LoadExistingValues(IDictionary<string, string> _values, string file)
@@ -178,6 +195,16 @@ namespace Bit.Setup
                 sw.Write(template(new TemplateModel(_mssqlOverrideValues)));
             }
             Helpers.Exec("chmod 600 /bitwarden/env/mssql.override.env");
+
+            if (_context.Config.EnableKeyConnector)
+            {
+                using (var sw = File.CreateText("/bitwarden/env/key-connector.override.env"))
+                {
+                    sw.Write(template(new TemplateModel(_keyConnectorOverrideValues)));
+                }
+
+                Helpers.Exec("chmod 600 /bitwarden/env/key-connector.override.env");
+            }
 
             // Empty uid env file. Only used on Linux hosts.
             if (!File.Exists("/bitwarden/env/uid.env"))

@@ -194,6 +194,20 @@ services:
     networks:
       - default
       - public
+
+{{#if EnableKeyConnector}}
+  key-connector:
+    image: bitwarden/key-connector:latest
+    container_name: bitwarden-key-connector
+    restart: always
+    volumes:
+      - ../key-connector:/etc/bitwarden
+    env_file:
+      - ../env/key-connector.override.env
+    networks:
+      - default
+      - public
+{{/if}}
 {{#if MssqlDataDockerVolume}}
 
 volumes:
