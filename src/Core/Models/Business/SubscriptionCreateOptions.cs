@@ -62,7 +62,7 @@ namespace Bit.Core.Models.Business
         protected void AddTaxRateItem(List<Stripe.TaxRate> taxRates) => AddTaxRateItem(taxRates?.Select(t => t.Id).ToList());
         protected void AddTaxRateItem(List<string> taxRateIds)
         {
-            if (taxRateIds != null && taxRateIds.Any())
+            if (taxRateIds != null && taxRateIds.Any(tax => !string.IsNullOrWhiteSpace(tax)))
             {
                 DefaultTaxRates = taxRateIds;
             }
