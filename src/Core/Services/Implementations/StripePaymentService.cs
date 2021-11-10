@@ -198,8 +198,7 @@ namespace Bit.Core.Services
             var sponsoredPlan = Utilities.StaticStore.GetSponsoredPlan(sponsorship.PlanSponsorshipType.Value);
             var subscriptionUpdate = new SponsorOrganizationSubscriptionUpdate(existingPlan, sponsoredPlan, applySponsorship);
 
-            var prorationTime = DateTime.UtcNow;
-            await FinalizeSubscriptionChangeAsync(org, subscriptionUpdate, prorationTime);
+            await FinalizeSubscriptionChangeAsync(org, subscriptionUpdate, DateTime.UtcNow);
 
             var sub = await _stripeAdapter.SubscriptionGetAsync(org.GatewaySubscriptionId);
             org.ExpirationDate = sub.CurrentPeriodEnd;

@@ -393,10 +393,10 @@ namespace Bit.Api.Test.Controllers
                 .GetBySponsoringOrganizationUserIdAsync(orgUser.Id)
                 .Returns((OrganizationSponsorship)sponsorship);
 
-            var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-                sutProvider.Sut.RevokeSponsorship(orgUser.OrganizationId.ToString()));
+            await sutProvider.Sut.RevokeSponsorship(orgUser.OrganizationId.ToString());
 
-            Assert.Contains("You are not currently sponsoring an organization.", exception.Message);
+            await sutProvider.GetDependency<IOrganizationSponsorshipRepository>().Received(1).DeleteAsync(sponsorship);
+
             await sutProvider.GetDependency<IOrganizationSponsorshipService>()
                 .DidNotReceiveWithAnyArgs()
                 .RemoveSponsorshipAsync(default, default);
