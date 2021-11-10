@@ -117,10 +117,10 @@ namespace Bit.Setup
                     ["keyConnectorSettings__webVaultUri"] = _context.Config.Url,
                     ["keyConnectorSettings__identityServerUri"] = "http://identity:5000",
                     ["keyConnectorSettings__database__provider"] = "json",
-                    ["keyConnectorSettings__database__jsonFilePath"] = "/etc/bitwarden/data.json",
+                    ["keyConnectorSettings__database__jsonFilePath"] = "/etc/bitwarden/key-connector/data.json",
                     ["keyConnectorSettings__rsaKey__provider"] = "certificate",
                     ["keyConnectorSettings__certificate__provider"] = "filesystem",
-                    ["keyConnectorSettings__certificate__filesystemPath"] = "/etc/bitwarden/bwkc.pfx",
+                    ["keyConnectorSettings__certificate__filesystemPath"] = "/etc/bitwarden/key-connector/bwkc.pfx",
                     ["keyConnectorSettings__certificate__filesystemPassword"] = Helpers.SecureRandomString(32, alpha: true, numeric: true),
                 };
             }
