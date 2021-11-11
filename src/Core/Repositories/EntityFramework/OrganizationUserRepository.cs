@@ -73,7 +73,7 @@ namespace Bit.Core.Repositories.EntityFramework
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
-                var orgUser = dbContext.FindAsync<EfModel.OrganizationUser>(organizationUserId);
+                var orgUser = await dbContext.FindAsync<EfModel.OrganizationUser>(organizationUserId);
                 var sponsorships = dbContext.OrganizationSponsorships
                     .Where(os => os.SponsoringOrganizationUserId != default &&
                         os.SponsoringOrganizationUserId.Value == organizationUserId);

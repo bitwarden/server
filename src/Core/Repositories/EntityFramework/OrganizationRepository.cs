@@ -101,7 +101,7 @@ namespace Bit.Core.Repositories.EntityFramework
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
-                var orgUser = dbContext.FindAsync<EFModel.Organization>(organization.Id);
+                var orgEntity = await dbContext.FindAsync<EFModel.Organization>(organization.Id);
                 var sponsorships = dbContext.OrganizationSponsorships
                     .Where(os =>
                         os.SponsoringOrganizationId == organization.Id ||
@@ -115,7 +115,7 @@ namespace Bit.Core.Repositories.EntityFramework
                     sponsorship.SponsoringOrganizationId = UpdatedOrgId(sponsorship.SponsoringOrganizationId);
                 }
 
-                dbContext.Remove(orgUser);
+                dbContext.Remove(orgEntity);
                 await dbContext.SaveChangesAsync();
             }
         }

@@ -512,7 +512,7 @@ BEGIN
     WHERE
         [OrganizationUserId] = @Id
 
-    EXEC [dbo].[OrganizationUser_DeleteById] @Id
+    EXEC [dbo].[OrganizationSponsorship_OrganizationUserDeleted] @Id
 
     DELETE
     FROM
