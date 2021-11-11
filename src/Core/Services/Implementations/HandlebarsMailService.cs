@@ -801,7 +801,7 @@ namespace Bit.Core.Services
             var message = CreateDefaultMessage("A User Has Redeemeed Your Sponsorship", email);
             var model = new FamiliesForEnterpriseRedeemedToOrgUserViewModel
             {
-                OrganizationName = organizationName,
+                OrganizationName = CoreHelpers.SanitizeForEmail(organizationName, false),
             };
             await AddMessageContentAsync(message, "FamiliesForEnterprise.FamiliesForEnterpriseRedeemedToOrgUser", model);
             message.Category = "FamilyForEnterpriseRedeemedToOrgUser";
@@ -821,13 +821,13 @@ namespace Bit.Core.Services
             await _mailDeliveryService.SendEmailAsync(message);
         }
 
-        public async Task SendFamiliesForEnterpriseSponsorshipRevertingEmailAsync(string email)
+        public async Task SendFamiliesForEnterpriseSponsorshipRevertingEmailAsync(string email, string familyOrgName)
         {
             // TODO: Complete emails
-            var message = CreateDefaultMessage("A Family Organization Sponsorship Is Reverting", email);
+            var message = CreateDefaultMessage($"{familyOrgName} Organization Sponsorship Is No Longer Valid", email);
             var model = new FamiliesForEnterpriseSponsorshipRevertingViewModel
             {
-
+                OrganizationName = CoreHelpers.SanitizeForEmail(familyOrgName, false),
             };
             await AddMessageContentAsync(message, "FamiliesForEnterprise.FamiliesForEnterpriseSponsorshipReverting", model);
             message.Category = "FamiliesForEnterpriseSponsorshipReverting";

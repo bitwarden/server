@@ -141,14 +141,6 @@ namespace Bit.Billing.Controllers
                     {
                         var newEndPeriod = subscription.CurrentPeriodEnd;
 
-                        // sponsored org
-                        if (IsSponsoredSubscription(subscription))
-                        {
-                            var sponsorshipValid = await _organizationSponsorshipService
-                                .ValidateSponsorshipAsync(ids.Item1.Value);
-                            // TODO: How do we return from this?
-                        }
-
                         await _organizationService.UpdateExpirationDateAsync(ids.Item1.Value,
                             subscription.CurrentPeriodEnd);
                     }
@@ -177,6 +169,13 @@ namespace Bit.Billing.Controllers
                 // org
                 if (ids.Item1.HasValue)
                 {
+                    // sponsored org
+                    if (IsSponsoredSubscription(subscription))
+                    {
+                        await _organizationSponsorshipService
+                            .ValidateSponsorshipAsync(ids.Item1.Value);
+                    }
+
                     var org = await _organizationRepository.GetByIdAsync(ids.Item1.Value);
                     if (org != null && OrgPlanForInvoiceNotifications(org))
                     {
