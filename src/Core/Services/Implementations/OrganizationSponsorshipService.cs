@@ -133,38 +133,30 @@ namespace Bit.Core.Services
 
             if (existingSponsorship == null)
             {
-                // TODO: null safe this method
                 await RemoveSponsorshipAsync(sponsoredOrganization, null);
-                // TODO on fail, mark org as disabled.
                 return false;
             }
 
-            var validated = true;
-            if (existingSponsorship.SponsoringOrganizationId == null || existingSponsorship.SponsoringOrganizationUserId == null)
+            if (existingSponsorship.SponsoringOrganizationId == null || existingSponsorship.SponsoringOrganizationUserId == null || existingSponsorship.PlanSponsorshipType == null)
             {
                 await RemoveSponsorshipAsync(sponsoredOrganization, existingSponsorship);
-                validated = false;
+                return false;
             }
+            var sponsoredPlan = Utilities.StaticStore.GetSponsoredPlan(existingSponsorship.PlanSponsorshipType.Value);
 
             var sponsoringOrganization = await _organizationRepository
                 .GetByIdAsync(existingSponsorship.SponsoringOrganizationId.Value);
-            if (!sponsoringOrganization.Enabled)
+            if (sponsoringOrganization == null)
             {
                 await RemoveSponsorshipAsync(sponsoredOrganization, existingSponsorship);
-                validated = false;
+                return false;
             }
 
-            if (!validated && existingSponsorship.SponsoredOrganizationId != null)
+            var sponsoringOrgPlan = Utilities.StaticStore.GetPlan(sponsoringOrganization.PlanType);
+            if (!sponsoringOrganization.Enabled || sponsoredPlan.SponsoringProductType != sponsoringOrgPlan.Product)
             {
-                existingSponsorship.TimesRenewedWithoutValidation += 1;
-                existingSponsorship.SponsorshipLapsedDate ??= DateTime.UtcNow;
-
-                await _organizationSponsorshipRepository.UpsertAsync(existingSponsorship);
-                if (existingSponsorship.TimesRenewedWithoutValidation >= 6)
-                {
-                    sponsoredOrganization.Enabled = false;
-                    await _organizationRepository.UpsertAsync(sponsoredOrganization);
-                }
+                await RemoveSponsorshipAsync(sponsoredOrganization, existingSponsorship);
+                return false;
             }
 
             return true;
@@ -174,6 +166,10 @@ namespace Bit.Core.Services
         {
             await _paymentService.RemoveOrganizationSponsorshipAsync(sponsoredOrganization, sponsorship);
             await _organizationRepository.UpsertAsync(sponsoredOrganization);
+
+            await _mailService.SendFamiliesForEnterpriseSponsorshipRevertingEmailAsync(
+                sponsoredOrganization.BillingEmailAddress(),
+                sponsoredOrganization.Name);
 
             if (sponsorship == null)
             {
@@ -197,6 +193,5 @@ namespace Bit.Core.Services
                 await _organizationSponsorshipRepository.UpsertAsync(sponsorship);
             }
         }
-
     }
 }

@@ -28,7 +28,7 @@ namespace Bit.Core.Models.Business
         }
 
         protected static SubscriptionItem SubscriptionItem(Subscription subscription, string planId) =>
-            subscription.Items?.Data?.FirstOrDefault(i => i.Plan.Id == planId);
+            planId == null ? null : subscription.Items?.Data?.FirstOrDefault(i => i.Plan.Id == planId);
     }
 
 
@@ -122,58 +122,70 @@ namespace Bit.Core.Models.Business
 
     public class SponsorOrganizationSubscriptionUpdate : SubscriptionUpdate
     {
-        private string _existingPlanStripeId;
-        private string _sponsoredPlanStripeId;
-        private bool _applySponsorship;
+        private readonly string _existingPlanStripeId;
+        private readonly string _sponsoredPlanStripeId;
+        private readonly bool _applySponsorship;
         protected override List<string> PlanIds => new() { _existingPlanStripeId, _sponsoredPlanStripeId };
 
         public SponsorOrganizationSubscriptionUpdate(StaticStore.Plan existingPlan, StaticStore.SponsoredPlan sponsoredPlan, bool applySponsorship)
         {
             _existingPlanStripeId = existingPlan.StripePlanId;
-            _sponsoredPlanStripeId = sponsoredPlan.StripePlanId;
+            _sponsoredPlanStripeId = sponsoredPlan?.StripePlanId;
             _applySponsorship = applySponsorship;
         }
 
         public override List<SubscriptionItemOptions> RevertItemsOptions(Subscription subscription)
         {
-            return new()
+            var result = new List<SubscriptionItemOptions>();
+            if (AddStripeItem(subscription) != null)
             {
-                new SubscriptionItemOptions
+                result.Add(new SubscriptionItemOptions
                 {
                     Id = AddStripeItem(subscription)?.Id,
                     Plan = AddStripePlanId,
                     Quantity = 0,
                     Deleted = true,
-                },
-                new SubscriptionItemOptions
+                });
+            }
+
+            if (RemoveStripeItem(subscription) != null)
+            {
+                result.Add(new SubscriptionItemOptions
                 {
                     Id = RemoveStripeItem(subscription)?.Id,
                     Plan = RemoveStripePlanId,
                     Quantity = 1,
                     Deleted = false,
-                },
-            };
+                });
+            }
+            return result;
         }
 
         public override List<SubscriptionItemOptions> UpgradeItemsOptions(Subscription subscription)
         {
-            return new()
+            var result = new List<SubscriptionItemOptions>();
+            if (RemoveStripeItem(subscription) != null)
             {
-                new SubscriptionItemOptions
+                result.Add(new SubscriptionItemOptions
                 {
                     Id = RemoveStripeItem(subscription)?.Id,
                     Plan = RemoveStripePlanId,
                     Quantity = 0,
                     Deleted = true,
-                },
-                new SubscriptionItemOptions
+                });
+            }
+
+            if (AddStripeItem(subscription) != null)
+            {
+                result.Add(new SubscriptionItemOptions
                 {
                     Id = AddStripeItem(subscription)?.Id,
                     Plan = AddStripePlanId,
                     Quantity = 1,
                     Deleted = false,
-                },
-            };
+                });
+            }
+            return result;
         }
 
         private string RemoveStripePlanId => _applySponsorship ? _existingPlanStripeId : _sponsoredPlanStripeId;
