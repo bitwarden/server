@@ -195,7 +195,9 @@ namespace Bit.Core.Services
         private async Task ChangeOrganizationSponsorship(Organization org, OrganizationSponsorship sponsorship, bool applySponsorship)
         {
             var existingPlan = Utilities.StaticStore.GetPlan(org.PlanType);
-            var sponsoredPlan = Utilities.StaticStore.GetSponsoredPlan(sponsorship.PlanSponsorshipType.Value);
+            var sponsoredPlan = sponsorship != null ?
+                Utilities.StaticStore.GetSponsoredPlan(sponsorship.PlanSponsorshipType.Value) :
+                null;
             var subscriptionUpdate = new SponsorOrganizationSubscriptionUpdate(existingPlan, sponsoredPlan, applySponsorship);
 
             await FinalizeSubscriptionChangeAsync(org, subscriptionUpdate, DateTime.UtcNow);
