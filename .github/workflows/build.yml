@@ -290,7 +290,7 @@ jobs:
           IMAGE_TAG: ${{ github.sha }}
         run: |
           docker tag ${{ steps.setup.outputs.service_name }} \
-            $ECR_REGISTRY/bitwarden/prod/${{ steps.setup.outputs.service_name }}:rc-$IMAGE_TAG
+            $ECR_REGISTRY/nonprod/${{ steps.setup.outputs.service_name }}:rc-$IMAGE_TAG
 
       - name: Tag hotfix
         if: github.ref == 'refs/heads/hotfix'
@@ -299,7 +299,7 @@ jobs:
           IMAGE_TAG: ${{ github.sha }}
         run: |
           docker tag ${{ steps.setup.outputs.service_name }} \
-            $ECR_REGISTRY/bitwarden/prod/${{ steps.setup.outputs.service_name }}:hotfix-$IMAGE_TAG
+            $ECR_REGISTRY/nonprod/${{ steps.setup.outputs.service_name }}:hotfix-$IMAGE_TAG
 
       - name: Tag dev
         if: github.ref == 'refs/heads/master'
@@ -308,7 +308,7 @@ jobs:
           IMAGE_TAG: ${{ github.sha }}
         run: |
           docker tag ${{ steps.setup.outputs.service_name }} \
-            $ECR_REGISTRY/bitwarden/prod/${{ steps.setup.outputs.service_name }}:dev-$IMAGE_TAG
+            $ECR_REGISTRY/nonprod/${{ steps.setup.outputs.service_name }}:dev-$IMAGE_TAG
 
       - name: TEST STEP TAGGING
         if: github.ref == 'refs/heads/upload-images-to-aws-ecr'
@@ -317,7 +317,7 @@ jobs:
           IMAGE_TAG: ${{ github.sha }}
         run: |
           docker tag ${{ steps.setup.outputs.service_name }} \
-            $ECR_REGISTRY/bitwarden/prod/${{ steps.setup.outputs.service_name }}:test-$IMAGE_TAG
+            $ECR_REGISTRY/nonprod/${{ steps.setup.outputs.service_name }}:test-$IMAGE_TAG
 
       - name: List Docker images
         if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix'
@@ -329,7 +329,7 @@ jobs:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          docker push $ECR_REGISTRY/bitwarden/prod/${{ steps.setup.outputs.service_name }}:rc-$IMAGE_TAG
+          docker push $ECR_REGISTRY/nonprod/${{ steps.setup.outputs.service_name }}:rc-$IMAGE_TAG
 
       - name: Push hotfix images
         if: github.ref == 'refs/heads/hotfix'
@@ -337,7 +337,7 @@ jobs:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          docker push $ECR_REGISTRY/bitwarden/prod/${{ steps.setup.outputs.service_name }}:hotfix-$IMAGE_TAG
+          docker push $ECR_REGISTRY/nonprod/${{ steps.setup.outputs.service_name }}:hotfix-$IMAGE_TAG
 
       - name: Push dev images
         if: github.ref == 'refs/heads/master'
@@ -345,7 +345,7 @@ jobs:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          docker push $ECR_REGISTRY/bitwarden/prod/${{ steps.setup.outputs.service_name }}:dev-$IMAGE_TAG
+          docker push $ECR_REGISTRY/nonprod/${{ steps.setup.outputs.service_name }}:dev-$IMAGE_TAG
 
       - name: TEST STEP PUSHING
         if: github.ref == 'refs/heads/upload-images-to-aws-ecr'
@@ -353,7 +353,7 @@ jobs:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          docker push $ECR_REGISTRY/bitwarden/prod/${{ steps.setup.outputs.service_name }}:test-$IMAGE_TAG
+          docker push $ECR_REGISTRY/nonprod/${{ steps.setup.outputs.service_name }}:test-$IMAGE_TAG
 
 
   upload:
