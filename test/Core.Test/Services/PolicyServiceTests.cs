@@ -126,12 +126,16 @@ namespace Bit.Core.Test.Services
                 .UpsertAsync(default);
         }
 
-        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
-        public async Task SaveAsync_SingleOrg_KeyConnectorEnabled_ThrowsBadRequest(
-            [PolicyFixtures.Policy(Enums.PolicyType.SingleOrg)] Core.Models.Table.Policy policy,
+        [Theory]
+        [InlineCustomAutoData(new[] { typeof(SutProviderCustomization) }, Enums.PolicyType.SingleOrg)]
+        [InlineCustomAutoData(new[] { typeof(SutProviderCustomization) }, Enums.PolicyType.RequireSso)]
+        public async Task SaveAsync_PolicyRequiredByKeyConnector_DisablePolicy_ThrowsBadRequest(
+            Enums.PolicyType policyType,
+            Policy policy,
             SutProvider<PolicyService> sutProvider)
         {
             policy.Enabled = false;
+            policy.Type = policyType;
 
             SetupOrg(sutProvider, policy.OrganizationId, new Organization
             {
