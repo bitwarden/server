@@ -100,9 +100,6 @@ namespace Bit.Core.Test.Services
             sutProvider.GetDependency<IOrganizationUserRepository>().GetManyDetailsByOrganizationAsync(orgId)
                 .Returns(new[] { new OrganizationUserUserDetails { UsesKeyConnector = true } });
 
-            sutProvider.GetDependency<IOrganizationUserRepository>().GetManyDetailsByOrganizationAsync(orgId)
-                .Returns(new[] { new OrganizationUserUserDetails { UsesKeyConnector = true } });
-
             var exception = await Assert.ThrowsAsync<BadRequestException>(
                 () => sutProvider.Sut.SaveAsync(newSsoConfig));
 
