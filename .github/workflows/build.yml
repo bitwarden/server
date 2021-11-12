@@ -178,8 +178,6 @@ jobs:
     name: Build Docker images
     runs-on: ubuntu-20.04
     needs: build-artifacts
-    outputs:
-      registry: ${{ steps.login-ecr.outputs.registry }}
     strategy:
       fail-fast: false
       matrix:
@@ -315,28 +313,6 @@ jobs:
               ${{ matrix.base_path }}/${{ matrix.service_name }}
           fi
 
-      - name: Tag rc for Docker Hub
-        if: github.ref == 'refs/heads/rc'
-        run: |
-          docker tag ${{ steps.setup.outputs.service_name }} \
-            ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }}:rc
-
-      - name: Tag hotfix for Docker Hub
-        if: github.ref == 'refs/heads/hotfix'
-        run: |
-          docker tag ${{ steps.setup.outputs.service_name }} \
-            ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }}:hotfix
-
-      - name: Tag dev for Docker Hub
-        if: github.ref == 'refs/heads/master'
-        run: |
-          docker tag ${{ steps.setup.outputs.service_name }} \
-            ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }}:dev
-
-      - name: List Docker images
-        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix'
-        run: docker images
-
       - name: Docker Trust setup
         if: |
           matrix.docker_repo == 'bitwarden'
@@ -345,21 +321,27 @@ jobs:
           DCT_REPO_PASSPHRASE: ${{ steps.retrieve-secrets.outputs.dct-delegate-2-repo-passphrase }}
         run: |
           echo "DOCKER_CONTENT_TRUST=1" >> $GITHUB_ENV
-          echo "DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE=$DCT_REPO_PASSPHRASE" >> $GITHUB_ENV
+          echo "DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE=$DCT_REPO_PASSPHRASE" >> $GITHUB_ENV  
 
-      - name: Push rc images to Docker Hub
+      - name: Tag and Push RC to Docker Hub
         if: github.ref == 'refs/heads/rc'
         run: |
+          docker tag ${{ steps.setup.outputs.service_name }} \
+            ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }}:rc
           docker push ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }}:rc
 
-      - name: Push hotfix images to Docker Hub
+      - name: Tag and Push Hotfix to Docker Hub
         if: github.ref == 'refs/heads/hotfix'
         run: |
+          docker tag ${{ steps.setup.outputs.service_name }} \
+            ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }}:hotfix
           docker push ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }}:hotfix
 
-      - name: Push dev images to Docker Hub
+      - name: Tag and Push Dev to Docker Hub
         if: github.ref == 'refs/heads/master'
         run: |
+          docker tag ${{ steps.setup.outputs.service_name }} \
+            ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }}:dev
           docker push ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }}:dev
 
       - name: Log out of Docker
@@ -377,10 +359,7 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@aaf69d68aa3fb14c1d5a6be9ac61fe15b48453a2  # v1
 
-      - name: List Docker images
-        run: docker images
-
-      - name: Tag rc for AWS ECR nonprod registry
+      - name: Tag and Push RC to AWS ECR nonprod registry
         if: github.ref == 'refs/heads/rc'
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
@@ -388,8 +367,9 @@ jobs:
         run: |
           docker tag ${{ steps.setup.outputs.service_name }} \
             $ECR_REGISTRY/nonprod/${{ steps.setup.outputs.service_name }}:rc-${IMAGE_TAG:(-8)}
+          docker push $ECR_REGISTRY/nonprod/${{ steps.setup.outputs.service_name }}:rc-${IMAGE_TAG:(-8)}
 
-      - name: Tag hotfix for AWS ECR nonprod registry
+      - name: Tag and Push Hotfix to AWS ECR nonprod registry
         if: github.ref == 'refs/heads/hotfix'
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
@@ -397,8 +377,9 @@ jobs:
         run: |
           docker tag ${{ steps.setup.outputs.service_name }} \
             $ECR_REGISTRY/nonprod/${{ steps.setup.outputs.service_name }}:hotfix-${IMAGE_TAG:(-8)}
+          docker push $ECR_REGISTRY/nonprod/${{ steps.setup.outputs.service_name }}:hotfix-${IMAGE_TAG:(-8)}
 
-      - name: Tag dev for AWS ECR nonprod registry
+      - name: Tag and Push Dev to AWS ECR nonprod registry
         if: github.ref == 'refs/heads/master'
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
@@ -406,29 +387,6 @@ jobs:
         run: |
           docker tag ${{ steps.setup.outputs.service_name }} \
             $ECR_REGISTRY/nonprod/${{ steps.setup.outputs.service_name }}:dev-${IMAGE_TAG:(-8)}
-
-      - name: Push rc images to AWS ECR nonprod registry
-        if: github.ref == 'refs/heads/rc'
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          IMAGE_TAG: ${{ github.sha }}
-        run: |
-          docker push $ECR_REGISTRY/nonprod/${{ steps.setup.outputs.service_name }}:rc-${IMAGE_TAG:(-8)}
-
-      - name: Push hotfix images to AWS ECR nonprod registry
-        if: github.ref == 'refs/heads/hotfix'
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          IMAGE_TAG: ${{ github.sha }}
-        run: |
-          docker push $ECR_REGISTRY/nonprod/${{ steps.setup.outputs.service_name }}:hotfix-${IMAGE_TAG:(-8)}
-
-      - name: Push dev images to AWS ECR nonprod registry
-        if: github.ref == 'refs/heads/master'
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          IMAGE_TAG: ${{ github.sha }}
-        run: |
           docker push $ECR_REGISTRY/nonprod/${{ steps.setup.outputs.service_name }}:dev-${IMAGE_TAG:(-8)}
 
 
