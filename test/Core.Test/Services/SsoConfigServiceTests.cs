@@ -100,7 +100,7 @@ namespace Bit.Core.Test.Services
             var exception = await Assert.ThrowsAsync<BadRequestException>(
                 () => sutProvider.Sut.SaveAsync(newSsoConfig));
 
-            Assert.Contains("KeyConnector cannot be disabled at this moment.", exception.Message);
+            Assert.Contains("Key Connector cannot be disabled at this moment.", exception.Message);
 
             await sutProvider.GetDependency<ISsoConfigRepository>().DidNotReceiveWithAnyArgs()
                 .UpsertAsync(default);
@@ -124,7 +124,7 @@ namespace Bit.Core.Test.Services
             var exception = await Assert.ThrowsAsync<BadRequestException>(
                 () => sutProvider.Sut.SaveAsync(ssoConfig));
 
-            Assert.Contains("KeyConnector requires Single Organization to be enabled.", exception.Message);
+            Assert.Contains("Key Connector requires the Single Organization policy to be enabled.", exception.Message);
 
             await sutProvider.GetDependency<ISsoConfigRepository>().DidNotReceiveWithAnyArgs()
                 .UpsertAsync(default);
