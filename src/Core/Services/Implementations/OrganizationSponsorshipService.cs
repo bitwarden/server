@@ -128,6 +128,11 @@ namespace Bit.Core.Services
         public async Task<bool> ValidateSponsorshipAsync(Guid sponsoredOrganizationId)
         {
             var sponsoredOrganization = await _organizationRepository.GetByIdAsync(sponsoredOrganizationId);
+            if (sponsoredOrganization == null)
+            {
+                return false;
+            }
+
             var existingSponsorship = await _organizationSponsorshipRepository
                 .GetBySponsoredOrganizationIdAsync(sponsoredOrganizationId);
 
@@ -164,12 +169,15 @@ namespace Bit.Core.Services
 
         public async Task RemoveSponsorshipAsync(Organization sponsoredOrganization, OrganizationSponsorship sponsorship = null)
         {
-            await _paymentService.RemoveOrganizationSponsorshipAsync(sponsoredOrganization, sponsorship);
-            await _organizationRepository.UpsertAsync(sponsoredOrganization);
+            if (sponsoredOrganization != null)
+            {
+                await _paymentService.RemoveOrganizationSponsorshipAsync(sponsoredOrganization, sponsorship);
+                await _organizationRepository.UpsertAsync(sponsoredOrganization);
 
-            await _mailService.SendFamiliesForEnterpriseSponsorshipRevertingEmailAsync(
-                sponsoredOrganization.BillingEmailAddress(),
-                sponsoredOrganization.Name);
+                await _mailService.SendFamiliesForEnterpriseSponsorshipRevertingEmailAsync(
+                    sponsoredOrganization.BillingEmailAddress(),
+                    sponsoredOrganization.Name);
+            }
 
             if (sponsorship == null)
             {
