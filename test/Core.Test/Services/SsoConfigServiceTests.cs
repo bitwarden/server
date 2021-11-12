@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -96,14 +97,51 @@ namespace Bit.Core.Test.Services
             var ssoConfigRepository = sutProvider.GetDependency<ISsoConfigRepository>();
             ssoConfigRepository.GetByOrganizationIdAsync(orgId).Returns(oldSsoConfig);
             ssoConfigRepository.UpsertAsync(newSsoConfig).Returns(Task.CompletedTask);
+            sutProvider.GetDependency<IOrganizationUserRepository>().GetManyDetailsByOrganizationAsync(orgId)
+                .Returns(new[] { new OrganizationUserUserDetails { UsesKeyConnector = true } });
 
             var exception = await Assert.ThrowsAsync<BadRequestException>(
                 () => sutProvider.Sut.SaveAsync(newSsoConfig));
 
-            Assert.Contains("KeyConnector cannot be disabled at this moment.", exception.Message);
+            Assert.Contains("Key Connector cannot be disabled at this moment.", exception.Message);
 
             await sutProvider.GetDependency<ISsoConfigRepository>().DidNotReceiveWithAnyArgs()
                 .UpsertAsync(default);
+        }
+
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public async Task SaveAsync_AllowDisablingKeyConnectorWhenNoUserIsUsingIt(
+            SutProvider<SsoConfigService> sutProvider, Guid orgId)
+        {
+            var utcNow = DateTime.UtcNow;
+
+            var oldSsoConfig = new SsoConfig
+            {
+                Id = 1,
+                Data = "{\"useKeyConnector\": true}",
+                Enabled = true,
+                OrganizationId = orgId,
+                CreationDate = utcNow.AddDays(-10),
+                RevisionDate = utcNow.AddDays(-10),
+            };
+
+            var newSsoConfig = new SsoConfig
+            {
+                Id = 1,
+                Data = "{}",
+                Enabled = true,
+                OrganizationId = orgId,
+                CreationDate = utcNow.AddDays(-10),
+                RevisionDate = utcNow,
+            };
+
+            var ssoConfigRepository = sutProvider.GetDependency<ISsoConfigRepository>();
+            ssoConfigRepository.GetByOrganizationIdAsync(orgId).Returns(oldSsoConfig);
+            ssoConfigRepository.UpsertAsync(newSsoConfig).Returns(Task.CompletedTask);
+            sutProvider.GetDependency<IOrganizationUserRepository>().GetManyDetailsByOrganizationAsync(orgId)
+                .Returns(new[] { new OrganizationUserUserDetails { UsesKeyConnector = false } });
+
+            await sutProvider.Sut.SaveAsync(newSsoConfig);
         }
 
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -12,17 +13,20 @@ namespace Bit.Core.Services
         private readonly ISsoConfigRepository _ssoConfigRepository;
         private readonly IPolicyRepository _policyRepository;
         private readonly IOrganizationRepository _organizationRepository;
+        private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly IEventService _eventService;
 
         public SsoConfigService(
             ISsoConfigRepository ssoConfigRepository,
             IPolicyRepository policyRepository,
             IOrganizationRepository organizationRepository,
+            IOrganizationUserRepository organizationUserRepository,
             IEventService eventService)
         {
             _ssoConfigRepository = ssoConfigRepository;
             _policyRepository = policyRepository;
             _organizationRepository = organizationRepository;
+            _organizationUserRepository = organizationUserRepository;
             _eventService = eventService;
         }
 
@@ -42,13 +46,21 @@ namespace Bit.Core.Services
             }
 
             var oldConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(config.OrganizationId);
-            if (oldConfig?.GetData()?.UseKeyConnector == true && !useKeyConnector)
+            var disabledKeyConnector = oldConfig?.GetData()?.UseKeyConnector == true && !useKeyConnector;
+            if (disabledKeyConnector && await AnyOrgUserHasKeyConnectorEnabledAsync(config.OrganizationId))
             {
-                throw new BadRequestException("KeyConnector cannot be disabled at this moment.");
+                throw new BadRequestException("Key Connector cannot be disabled at this moment.");
             }
 
             await LogEventsAsync(config, oldConfig);
             await _ssoConfigRepository.UpsertAsync(config);
+        }
+
+        private async Task<bool> AnyOrgUserHasKeyConnectorEnabledAsync(Guid organizationId)
+        {
+            var userDetails =
+                await _organizationUserRepository.GetManyDetailsByOrganizationAsync(organizationId);
+            return userDetails.Any(u => u.UsesKeyConnector);
         }
 
         private async Task VerifyDependenciesAsync(SsoConfig config)
