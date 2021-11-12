@@ -11,18 +11,18 @@ namespace Bit.Test.Common.Helpers
 {
     public static class BitAutoDataAttributeHelpers
     {
-        public static IEnumerable<object[]> GetData(MethodInfo testMethod, IFixture fixture, object[] fixedTestParamters)
+        public static IEnumerable<object[]> GetData(MethodInfo testMethod, IFixture fixture, object[] fixedTestParameters)
         {
             var methodParameters = testMethod.GetParameters();
             var classCustomizations = testMethod.DeclaringType.GetCustomAttributes<BitCustomizeAttribute>().Select(attr => attr.GetCustomization());
             var methodCustomizations = testMethod.GetCustomAttributes<BitCustomizeAttribute>().Select(attr => attr.GetCustomization());
 
-            fixedTestParamters = fixedTestParamters ?? Array.Empty<object>();
+            fixedTestParameters = fixedTestParameters ?? Array.Empty<object>();
 
             fixture = ApplyCustomizations(ApplyCustomizations(fixture, classCustomizations), methodCustomizations);
-            var missingParameters = methodParameters.Skip(fixedTestParamters.Length).Select(p => CustomizeAndCreate(p, fixture));
+            var missingParameters = methodParameters.Skip(fixedTestParameters.Length).Select(p => CustomizeAndCreate(p, fixture));
 
-            return new object[1][] { fixedTestParamters.Concat(missingParameters).ToArray() };
+            return new object[1][] { fixedTestParameters.Concat(missingParameters).ToArray() };
         }
 
         public static object CustomizeAndCreate(ParameterInfo p, IFixture fixture)
