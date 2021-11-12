@@ -191,7 +191,7 @@ jobs:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: ${{ github.sha }}
           SERVICE_NAME: ${{ steps.setup.outputs.service_name }}
-        run: docker pull $ECR_REGISTRY/nonprod/$SERVICE_NAME:$_BRANCH_NAME-$IMAGE_TAG
+        run: docker pull $ECR_REGISTRY/nonprod/$SERVICE_NAME:$_BRANCH_NAME-${IMAGE_TAG:(-8)}
 
       - name: Tag version and latest for AWS prod repository
         env:
@@ -199,9 +199,9 @@ jobs:
           IMAGE_TAG: ${{ github.sha }}
           SERVICE_NAME: ${{ steps.setup.outputs.service_name }}
         run: |
-          docker tag $ECR_REGISTRY/nonprod/$SERVICE_NAME:$_BRANCH_NAME-$IMAGE_TAG \
+          docker tag $ECR_REGISTRY/nonprod/$SERVICE_NAME:$_BRANCH_NAME-${IMAGE_TAG:(-8)} \
             $ECR_REGISTRY/prod/$SERVICE_NAME:$_RELEASE_VERSION
-          docker tag $ECR_REGISTRY/nonprod/$SERVICE_NAME:$_BRANCH_NAME-$IMAGE_TAG \
+          docker tag $ECR_REGISTRY/nonprod/$SERVICE_NAME:$_BRANCH_NAME-${IMAGE_TAG:(-8)} \
             $ECR_REGISTRY/prod/$SERVICE_NAME:latest
 
       - name: Push version and latest image
@@ -238,9 +238,9 @@ jobs:
           IMAGE_TAG: ${{ github.sha }}
           SERVICE_NAME: ${{ steps.setup.outputs.service_name }}
         run: |
-          docker tag $ECR_REGISTRY/nonprod/$SERVICE_NAME:$_BRANCH_NAME-$IMAGE_TAG \
+          docker tag $ECR_REGISTRY/nonprod/$SERVICE_NAME:$_BRANCH_NAME-${IMAGE_TAG:(-8)} \
             bitwarden/$SERVICE_NAME:$_RELEASE_VERSION
-          docker tag $ECR_REGISTRY/nonprod/$SERVICE_NAME:$_BRANCH_NAME-$IMAGE_TAG \
+          docker tag $ECR_REGISTRY/nonprod/$SERVICE_NAME:$_BRANCH_NAME-${IMAGE_TAG:(-8)} \
             bitwarden/$SERVICE_NAME:latest
 
       - name: Push version and latest image
