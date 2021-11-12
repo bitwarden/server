@@ -153,7 +153,7 @@ namespace Bit.Core.Test.Services
                     Substitute.For<IOrganizationService>(),
                     Guid.NewGuid()));
 
-            Assert.Contains("KeyConnector is enabled.", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("Key Connector is enabled.", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
 
             await sutProvider.GetDependency<IPolicyRepository>()
                 .DidNotReceiveWithAnyArgs()

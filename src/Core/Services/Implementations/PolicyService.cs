@@ -71,7 +71,7 @@ namespace Bit.Core.Services
                         var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(org.Id);
                         if (ssoConfig?.GetData()?.UseKeyConnector == true)
                         {
-                            throw new BadRequestException("KeyConnector is enabled.");
+                            throw new BadRequestException("Key Connector is enabled.");
                         }
                     }
                     break;

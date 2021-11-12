@@ -44,7 +44,7 @@ namespace Bit.Core.Services
             var oldConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(config.OrganizationId);
             if (oldConfig?.GetData()?.UseKeyConnector == true && !useKeyConnector)
             {
-                throw new BadRequestException("KeyConnector cannot be disabled at this moment.");
+                throw new BadRequestException("Key Connector cannot be disabled at this moment.");
             }
 
             await LogEventsAsync(config, oldConfig);
@@ -56,13 +56,13 @@ namespace Bit.Core.Services
             var singleOrgPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(config.OrganizationId, PolicyType.SingleOrg);
             if (singleOrgPolicy is not { Enabled: true })
             {
-                throw new BadRequestException("KeyConnector requires the Single Organization policy to be enabled.");
+                throw new BadRequestException("Key Connector requires the Single Organization policy to be enabled.");
             }
 
             var ssoPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(config.OrganizationId, PolicyType.RequireSso);
             if (ssoPolicy is not { Enabled: true })
             {
-                throw new BadRequestException("KeyConnector requires the Single Sign-On Authentication policy to be enabled.");
+                throw new BadRequestException("Key Connector requires the Single Sign-On Authentication policy to be enabled.");
             }
 
             if (!config.Enabled) {
