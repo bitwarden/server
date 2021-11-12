@@ -47,7 +47,7 @@ namespace Bit.Core.Services
 
             var oldConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(config.OrganizationId);
             var disabledKeyConnector = oldConfig?.GetData()?.UseKeyConnector == true && !useKeyConnector;
-            if (disabledKeyConnector && await UserHasKeyConnectorEnabledAsync(config.OrganizationId))
+            if (disabledKeyConnector && await AnyOrgUserHasKeyConnectorEnabledAsync(config.OrganizationId))
             {
                 throw new BadRequestException("Key Connector cannot be disabled at this moment.");
             }
@@ -56,7 +56,7 @@ namespace Bit.Core.Services
             await _ssoConfigRepository.UpsertAsync(config);
         }
 
-        private async Task<bool> UserHasKeyConnectorEnabledAsync(Guid organizationId)
+        private async Task<bool> AnyOrgUserHasKeyConnectorEnabledAsync(Guid organizationId)
         {
             var userDetails =
                 await _organizationUserRepository.GetManyDetailsByOrganizationAsync(organizationId);

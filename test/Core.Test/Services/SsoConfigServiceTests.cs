@@ -110,8 +110,8 @@ namespace Bit.Core.Test.Services
         }
 
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
-        public async Task SaveAsync_AllowDisablingKeyConnectorNoUserUsing(SutProvider<SsoConfigService> sutProvider,
-            Guid orgId)
+        public async Task SaveAsync_AllowDisablingKeyConnectorWhenNoUserIsUsingIt(
+            SutProvider<SsoConfigService> sutProvider, Guid orgId)
         {
             var utcNow = DateTime.UtcNow;
 
