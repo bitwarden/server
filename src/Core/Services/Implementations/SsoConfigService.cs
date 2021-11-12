@@ -53,10 +53,16 @@ namespace Bit.Core.Services
 
         private async Task VerifyDependenciesAsync(SsoConfig config)
         {
-            var policy = await _policyRepository.GetByOrganizationIdTypeAsync(config.OrganizationId, PolicyType.SingleOrg);
-            if (policy is not { Enabled: true })
+            var singleOrgPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(config.OrganizationId, PolicyType.SingleOrg);
+            if (singleOrgPolicy is not { Enabled: true })
             {
-                throw new BadRequestException("KeyConnector requires Single Organization to be enabled.");
+                throw new BadRequestException("KeyConnector requires the Single Organization policy to be enabled.");
+            }
+
+            var ssoPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(config.OrganizationId, PolicyType.RequireSso);
+            if (ssoPolicy is not { Enabled: true })
+            {
+                throw new BadRequestException("KeyConnector requires the Single Sign-On Authentication policy to be enabled.");
             }
         }
 
