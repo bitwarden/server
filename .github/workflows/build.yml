@@ -378,7 +378,6 @@ jobs:
         uses: aws-actions/amazon-ecr-login@aaf69d68aa3fb14c1d5a6be9ac61fe15b48453a2  # v1
 
       - name: List Docker images
-        # if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix'
         run: docker images
 
       - name: Tag rc for AWS ECR nonprod registry
@@ -408,15 +407,6 @@ jobs:
           docker tag ${{ steps.setup.outputs.service_name }} \
             $ECR_REGISTRY/nonprod/${{ steps.setup.outputs.service_name }}:dev-${IMAGE_TAG:(-8)}
 
-      - name: TEST STEP TAGGING for AWS ECR nonprod registry
-        if: github.ref == 'refs/heads/upload-images-to-aws-ecr'
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          IMAGE_TAG: ${{ github.sha }}
-        run: |
-          docker tag ${{ steps.setup.outputs.service_name }} \
-            $ECR_REGISTRY/nonprod/${{ steps.setup.outputs.service_name }}:test-${IMAGE_TAG:(-8)}
-
       - name: Push rc images to AWS ECR nonprod registry
         if: github.ref == 'refs/heads/rc'
         env:
@@ -440,18 +430,6 @@ jobs:
           IMAGE_TAG: ${{ github.sha }}
         run: |
           docker push $ECR_REGISTRY/nonprod/${{ steps.setup.outputs.service_name }}:dev-${IMAGE_TAG:(-8)}
-
-      - name: TEST STEP PUSHING to AWS ECR nonprod registry
-        if: github.ref == 'refs/heads/upload-images-to-aws-ecr'
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          IMAGE_TAG: ${{ github.sha }}
-        run: |
-          docker push $ECR_REGISTRY/nonprod/${{ steps.setup.outputs.service_name }}:test-${IMAGE_TAG:(-8)}
-
-      - name: Log out of Docker
-        # if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix'
-        run: docker logout
 
 
   upload:
