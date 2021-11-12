@@ -42,11 +42,3 @@ BEGIN
     WHERE
         [Id] = @Id
 END
-GO
-
-
-IF OBJECT_ID('[dbo].[OrganizationUser_DeleteByIds]') IS NOT NULL
-BEGIN
-    DROP PROCEDURE [dbo].[OrganizationUser_DeleteByIds]
-END
-GO
