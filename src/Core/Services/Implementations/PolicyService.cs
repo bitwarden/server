@@ -61,10 +61,20 @@ namespace Bit.Core.Services
                     break;
                 
                case PolicyType.RequireSso:
+                   if (policy.Enabled)
+                    {
+                        await DependsOnSingleOrgAsync(org);
+                    }
+                    else
+                    {
+                        await RequiredByKeyConnectorAsync(org);
+                    }
+                    break;
+
                case PolicyType.MaximumVaultTimeout:
                    if (policy.Enabled)
                    {
-                        await RequiredBySingleOrgAsync(org);
+                        await DependsOnSingleOrgAsync(org);
                    }
                    break;
             }
@@ -125,7 +135,7 @@ namespace Bit.Core.Services
             await _eventService.LogPolicyEventAsync(policy, Enums.EventType.Policy_Updated);
         }
 
-        private async Task RequiredBySingleOrgAsync(Organization org)
+        private async Task DependsOnSingleOrgAsync(Organization org)
         {
             var singleOrg = await _policyRepository.GetByOrganizationIdTypeAsync(org.Id, PolicyType.SingleOrg);
             if (singleOrg?.Enabled != true)
