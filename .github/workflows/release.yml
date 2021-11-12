@@ -147,6 +147,13 @@ jobs:
           echo "GitHub ref: $GITHUB_REF"
           echo "GitHub event: $GITHUB_EVENT"
 
+      - name: Setup DCT
+        id: setup-dct
+        uses: bitwarden/gh-actions/setup-docker-trust@a8c384a05a974c05c48374c818b004be221d43ff
+        with:
+          azure-creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
+          azure-keyvault-name: "bitwarden-prod-kv"
+
       - name: Checkout repo
         uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
 
@@ -154,29 +161,6 @@ jobs:
         uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a
         with:
           creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
-
-      - name: Retrieve secrets
-        id: retrieve-secrets
-        uses: Azure/get-keyvault-secrets@80ccd3fafe5662407cc2e55f202ee34bfff8c403
-        with:
-          keyvault: "bitwarden-prod-kv"
-          secrets: "aws-ecr-access-key-id,
-                    aws-ecr-secret-access-key,
-                    docker-username,
-                    docker-password,
-                    dct-delegate-repo-passphrase,
-                    dct-delegate-key"
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@0d9a5be0dceea74e09396820e1e522ba4a110d2f  # v1
-        with:
-          aws-access-key-id: ${{ steps.retrieve-secrets.outputs.aws-ecr-access-key-id }}
-          aws-secret-access-key: ${{ steps.retrieve-secrets.outputs.aws-ecr-secret-access-key }}
-          aws-region: us-east-1
-
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@aaf69d68aa3fb14c1d5a6be9ac61fe15b48453a2  # v1
 
       - name: Setup service name
         id: setup
@@ -186,62 +170,20 @@ jobs:
           echo "SERVICE_NAME: $SERVICE_NAME"
           echo "::set-output name=service_name::$SERVICE_NAME"
 
-      - name: Pull latest selfhost image from AWS nonprod repository
+      - name: Pull latest selfhost image
         env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          IMAGE_TAG: ${{ github.sha }}
           SERVICE_NAME: ${{ steps.setup.outputs.service_name }}
-        run: docker pull $ECR_REGISTRY/nonprod/$SERVICE_NAME:$_BRANCH_NAME-${IMAGE_TAG:(-8)}
+        run: docker pull bitwarden/$SERVICE_NAME:$_BRANCH_NAME
 
-      - name: Tag version and latest for AWS prod repository
+      - name: Tag version and latest
         env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          IMAGE_TAG: ${{ github.sha }}
           SERVICE_NAME: ${{ steps.setup.outputs.service_name }}
         run: |
-          docker tag $ECR_REGISTRY/nonprod/$SERVICE_NAME:$_BRANCH_NAME-${IMAGE_TAG:(-8)} \
-            $ECR_REGISTRY/prod/$SERVICE_NAME:$_RELEASE_VERSION
-          docker tag $ECR_REGISTRY/nonprod/$SERVICE_NAME:$_BRANCH_NAME-${IMAGE_TAG:(-8)} \
-            $ECR_REGISTRY/prod/$SERVICE_NAME:latest
+          docker tag bitwarden/$SERVICE_NAME:$_BRANCH_NAME bitwarden/$SERVICE_NAME:$_RELEASE_VERSION
+          docker tag bitwarden/$SERVICE_NAME:$_BRANCH_NAME bitwarden/$SERVICE_NAME:latest
 
-      - name: Push version and latest image
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          IMAGE_TAG: ${{ github.sha }}
-          SERVICE_NAME: ${{ steps.setup.outputs.service_name }}
-        run: |
-          $ECR_REGISTRY/prod/$SERVICE_NAME:$_RELEASE_VERSION
-          $ECR_REGISTRY/prod/$SERVICE_NAME:latest
-
-      - name: Log out of Docker
-        run: docker logout
-
-      - name: Log into Docker
-        shell: bash
-        env:
-          DOCKER_USERNAME: ${{ steps.retrieve-secrets.outputs.docker-username }}
-          DOCKER_PASSWORD: ${{ steps.retrieve-secrets.outputs.docker-password }}
-        run: echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
-
-      - name: Setup Docker Trust
-        shell: bash
-        env:
-          DCT_DELEGATION_KEY_ID: "c9bde8ec820701516491e5e03d3a6354e7bd66d05fa3df2b0062f68b116dc59c"
-          DCT_DELEGATE_KEY: ${{ steps.retrieve-secrets.outputs.dct-delegate-key }}
-        run: |
-          mkdir -p ~/.docker/trust/private
-          echo "$DCT_DELEGATE_KEY" > ~/.docker/trust/private/$DCT_DELEGATION_KEY_ID.key
-
-      - name: Tag version and latest for Docker Hub repository
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          IMAGE_TAG: ${{ github.sha }}
-          SERVICE_NAME: ${{ steps.setup.outputs.service_name }}
-        run: |
-          docker tag $ECR_REGISTRY/nonprod/$SERVICE_NAME:$_BRANCH_NAME-${IMAGE_TAG:(-8)} \
-            bitwarden/$SERVICE_NAME:$_RELEASE_VERSION
-          docker tag $ECR_REGISTRY/nonprod/$SERVICE_NAME:$_BRANCH_NAME-${IMAGE_TAG:(-8)} \
-            bitwarden/$SERVICE_NAME:latest
+      - name: List Docker images
+        run: docker images
 
       - name: Push version and latest image
         env:
@@ -251,9 +193,6 @@ jobs:
         run: |
           docker push bitwarden/$SERVICE_NAME:$_RELEASE_VERSION
           docker push bitwarden/$SERVICE_NAME:latest
-
-      - name: List Docker images
-        run: docker images
 
       - name: Log out of Docker
         run: docker logout
