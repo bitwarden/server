@@ -445,16 +445,13 @@ jobs:
 
       - name: Make Docker stub
         if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix'
-        env:
-          ECR_REGISTRY: ${{ needs.build-docker.outputs.registry }}
-          IMAGE_TAG: ${{ github.sha }}
         run: |
           if [[ "${{ github.ref }}" == "rc" ]]; then
-            SETUP_IMAGE="$ECR_REGISTRY/bitwarden/prod/setup:rc-${IMAGE_TAG:(-8)}"
+            SETUP_IMAGE="bitwarden/setup:rc"
           elif [[ "${{ github.ref }}" == "hotfix" ]]; then
-            SETUP_IMAGE="$ECR_REGISTRY/bitwarden/prod/setup:hotfix-${IMAGE_TAG:(-8)}"
+            SETUP_IMAGE="bitwarden/setup:hotfix"
           else
-            SETUP_IMAGE="$ECR_REGISTRY/bitwarden/prod/setup:dev-${IMAGE_TAG:(-8)}"
+            SETUP_IMAGE="bitwarden/setup:dev"
           fi
 
           STUB_OUTPUT=$(pwd)/docker-stub
