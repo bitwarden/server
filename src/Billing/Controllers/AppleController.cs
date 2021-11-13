@@ -1,4 +1,5 @@
 ﻿using Bit.Core;
+using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -34,7 +35,7 @@ namespace Bit.Billing.Controllers
 
             var key = HttpContext.Request.Query.ContainsKey("key") ?
                 HttpContext.Request.Query["key"].ToString() : null;
-            if (key != _billingSettings.AppleWebhookKey)
+            if (!CoreHelpers.FixedTimeEquals(key, _billingSettings.AppleWebhookKey))
             {
                 return new BadRequestResult();
             }

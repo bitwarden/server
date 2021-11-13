@@ -60,6 +60,7 @@ namespace Bit.Admin.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> ChargeBraintree(ChargeBraintreeModel model)
         {
             if (!ModelState.IsValid)
@@ -121,6 +122,7 @@ namespace Bit.Admin.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> CreateTransaction(CreateUpdateTransactionModel model)
         {
             if (!ModelState.IsValid)
@@ -150,6 +152,7 @@ namespace Bit.Admin.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> EditTransaction(Guid id, CreateUpdateTransactionModel model)
         {
             if (!ModelState.IsValid)
@@ -173,6 +176,7 @@ namespace Bit.Admin.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> PromoteAdmin(PromoteAdminModel model)
         {
             if (!ModelState.IsValid)
@@ -208,6 +212,7 @@ namespace Bit.Admin.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> GenerateLicense(LicenseModel model)
         {
             if (!ModelState.IsValid)
@@ -316,6 +321,7 @@ namespace Bit.Admin.Controllers
             return View(model);
         }
 
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> TaxRateUpload(IFormFile file)
         {
             if (file == null || file.Length == 0)
@@ -382,6 +388,7 @@ namespace Bit.Admin.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> TaxRateAddEdit(TaxRateAddEditModel model) 
         {
             var existingRateCheck = await _taxRateRepository.GetByLocationAsync(new TaxRate() { Country = model.Country, PostalCode = model.PostalCode });
@@ -411,17 +418,6 @@ namespace Bit.Admin.Controllers
             else
             {
                 await _paymentService.CreateTaxRateAsync(taxRate);
-            }
-
-            return RedirectToAction("TaxRate");
-        }
-
-        [HttpPost]
-        public async Task<IActionResult> TaxRateUpdate(TaxRate model) 
-        {
-            if (!string.IsNullOrWhiteSpace(model.Id))
-            {
-                await _paymentService.UpdateTaxRateAsync(model);
             }
 
             return RedirectToAction("TaxRate");

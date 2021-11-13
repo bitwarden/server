@@ -16,7 +16,6 @@ using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Bit.Core.Enums.Provider;
 
@@ -46,7 +45,6 @@ namespace Bit.Api.Controllers
             IOrganizationUserRepository organizationUserRepository,
             IProviderUserRepository providerUserRepository,
             IPaymentService paymentService,
-            ISsoUserRepository ssoUserRepository,
             IUserRepository userRepository,
             IUserService userService,
             ISendRepository sendRepository,
@@ -118,6 +116,11 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
+            if (user.UsesKeyConnector)
+            {
+                throw new BadRequestException("You cannot change your email when using Key Connector.");
+            }
+
             if (!await _userService.CheckPasswordAsync(user, model.MasterPasswordHash))
             {
                 await Task.Delay(2000);
@@ -134,6 +137,11 @@ namespace Bit.Api.Controllers
             if (user == null)
             {
                 throw new UnauthorizedAccessException();
+            }
+
+            if (user.UsesKeyConnector)
+            {
+                throw new BadRequestException("You cannot change your email when using Key Connector.");
             }
 
             var result = await _userService.ChangeEmailAsync(user, model.MasterPasswordHash, model.NewEmail,
@@ -238,7 +246,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("verify-password")]
-        public async Task PostVerifyPassword([FromBody]VerifyPasswordRequestModel model)
+        public async Task PostVerifyPassword([FromBody]SecretVerificationRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)
@@ -256,8 +264,8 @@ namespace Bit.Api.Controllers
             throw new BadRequestException(ModelState);
         }
 
-        [HttpPost("set-crypto-agent-key")]
-        public async Task PostSetCryptoAgentKeyAsync([FromBody]SetCryptoAgentKeyRequestModel model)
+        [HttpPost("set-key-connector-key")]
+        public async Task PostSetKeyConnectorKeyAsync([FromBody]SetKeyConnectorKeyRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)
@@ -265,7 +273,30 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
-            var result = await _userService.SetCryptoAgentKeyAsync(model.ToUser(user), model.Key, model.OrgIdentifier);
+            var result = await _userService.SetKeyConnectorKeyAsync(model.ToUser(user), model.Key, model.OrgIdentifier);
+            if (result.Succeeded)
+            {
+                return;
+            }
+
+            foreach (var error in result.Errors)
+            {
+                ModelState.AddModelError(string.Empty, error.Description);
+            }
+
+            throw new BadRequestException(ModelState);
+        }
+
+        [HttpPost("convert-to-key-connector")]
+        public async Task PostConvertToKeyConnector()
+        {
+            var user = await _userService.GetUserByPrincipalAsync(User);
+            if (user == null)
+            {
+                throw new UnauthorizedAccessException();
+            }
+
+            var result = await _userService.ConvertToKeyConnectorAsync(user);
             if (result.Succeeded)
             {
                 return;
@@ -361,7 +392,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("security-stamp")]
-        public async Task PostSecurityStamp([FromBody]SecurityStampRequestModel model)
+        public async Task PostSecurityStamp([FromBody]SecretVerificationRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)
@@ -369,7 +400,7 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
-            var result = await _userService.RefreshSecurityStampAsync(user, model.MasterPasswordHash);
+            var result = await _userService.RefreshSecurityStampAsync(user, model.Secret);
             if (result.Succeeded)
             {
                 return;
@@ -471,7 +502,7 @@ namespace Bit.Api.Controllers
 
         [HttpDelete]
         [HttpPost("delete")]
-        public async Task Delete([FromBody]DeleteAccountRequestModel model)
+        public async Task Delete([FromBody]SecretVerificationRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)
@@ -479,9 +510,9 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
-            if (!await _userService.CheckPasswordAsync(user, model.MasterPasswordHash))
+            if (!await _userService.VerifySecretAsync(user, model.Secret))
             {
-                ModelState.AddModelError("MasterPasswordHash", "Invalid password.");
+                ModelState.AddModelError(string.Empty, "User verification failed.");
                 await Task.Delay(2000);
             }
             else
@@ -761,7 +792,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("api-key")]
-        public async Task<ApiKeyResponseModel> ApiKey([FromBody]ApiKeyRequestModel model)
+        public async Task<ApiKeyResponseModel> ApiKey([FromBody]SecretVerificationRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)
@@ -769,20 +800,17 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
-            if (!await _userService.CheckPasswordAsync(user, model.MasterPasswordHash))
+            if (!await _userService.VerifySecretAsync(user, model.Secret))
             {
                 await Task.Delay(2000);
-                throw new BadRequestException("MasterPasswordHash", "Invalid password.");
+                throw new BadRequestException(string.Empty, "User verification failed.");
             }
-            else
-            {
-                var response = new ApiKeyResponseModel(user);
-                return response;
-            }
+
+            return new ApiKeyResponseModel(user);
         }
 
         [HttpPost("rotate-api-key")]
-        public async Task<ApiKeyResponseModel> RotateApiKey([FromBody]ApiKeyRequestModel model)
+        public async Task<ApiKeyResponseModel> RotateApiKey([FromBody]SecretVerificationRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)
@@ -790,17 +818,15 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
-            if (!await _userService.CheckPasswordAsync(user, model.MasterPasswordHash))
+            if (!await _userService.VerifySecretAsync(user, model.Secret))
             {
                 await Task.Delay(2000);
-                throw new BadRequestException("MasterPasswordHash", "Invalid password.");
+                throw new BadRequestException(string.Empty, "User verification failed.");
             }
-            else
-            {
-                await _userService.RotateApiKeyAsync(user);
-                var response = new ApiKeyResponseModel(user);
-                return response;
-            }
+
+            await _userService.RotateApiKeyAsync(user);
+            var response = new ApiKeyResponseModel(user);
+            return response;
         }
         
         [HttpPut("update-temp-password")]
@@ -824,6 +850,34 @@ namespace Bit.Api.Controllers
             }
 
             throw new BadRequestException(ModelState);
+        }
+
+        [HttpPost("request-otp")]
+        public async Task PostRequestOTP()
+        {
+            var user = await _userService.GetUserByPrincipalAsync(User);
+            if (user is not { UsesKeyConnector: true })
+            {
+                throw new UnauthorizedAccessException();
+            }
+
+            await _userService.SendOTPAsync(user);
+        }
+
+        [HttpPost("verify-otp")]
+        public async Task VerifyOTP([FromBody]VerifyOTPRequestModel model)
+        {
+            var user = await _userService.GetUserByPrincipalAsync(User);
+            if (user is not { UsesKeyConnector: true })
+            {
+                throw new UnauthorizedAccessException();
+            }
+
+            if (!await _userService.VerifyOTPAsync(user, model.OTP))
+            {
+                await Task.Delay(2000);
+                throw new BadRequestException("Token", "Invalid token");
+            }
         }
     }
 }

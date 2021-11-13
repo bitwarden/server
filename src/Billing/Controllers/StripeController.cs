@@ -83,7 +83,7 @@ namespace Bit.Billing.Controllers
         [HttpPost("webhook")]
         public async Task<IActionResult> PostWebhook([FromQuery] string key)
         {
-            if (key != _billingSettings.StripeWebhookKey)
+            if (!CoreHelpers.FixedTimeEquals(key, _billingSettings.StripeWebhookKey))
             {
                 return new BadRequestResult();
             }

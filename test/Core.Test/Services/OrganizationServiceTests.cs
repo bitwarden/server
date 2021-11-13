@@ -890,5 +890,38 @@ namespace Bit.Core.Test.Services
             Assert.False(result);
             Assert.Contains("Cannot autoscale on self-hosted instance", failureMessage);
         }
+
+        [Theory, PaidOrganizationAutoData]
+        public async Task Delete_Success(Organization organization, SutProvider<OrganizationService> sutProvider)
+        {
+            var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+            var applicationCacheService = sutProvider.GetDependency<IApplicationCacheService>();
+
+            await sutProvider.Sut.DeleteAsync(organization);
+
+            await organizationRepository.Received().DeleteAsync(organization);
+            await applicationCacheService.Received().DeleteOrganizationAbilityAsync(organization.Id);
+        }
+
+        [Theory, PaidOrganizationAutoData]
+        public async Task Delete_Fails_KeyConnector(Organization organization, SutProvider<OrganizationService> sutProvider,
+            SsoConfig ssoConfig)
+        {
+            ssoConfig.Enabled = true;
+            ssoConfig.SetData(new SsoConfigurationData { UseKeyConnector = true });
+            var ssoConfigRepository = sutProvider.GetDependency<ISsoConfigRepository>();
+            var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+            var applicationCacheService = sutProvider.GetDependency<IApplicationCacheService>();
+
+            ssoConfigRepository.GetByOrganizationIdAsync(organization.Id).Returns(ssoConfig);
+
+            var exception = await Assert.ThrowsAsync<BadRequestException>(
+                () => sutProvider.Sut.DeleteAsync(organization));
+
+            Assert.Contains("You cannot delete an Organization that is using Key Connector.", exception.Message);
+
+            await organizationRepository.DidNotReceiveWithAnyArgs().DeleteAsync(default);
+            await applicationCacheService.DidNotReceiveWithAnyArgs().DeleteOrganizationAbilityAsync(default);
+        }
     }
 }

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -126,7 +127,41 @@ namespace Bit.Core.Test.Services
         }
 
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
-        public async Task SaveAsync_RequireSsoPolicy_NotEnabled_ThrowsBadRequestAsync([PolicyFixtures.Policy(PolicyType.RequireSso)] Core.Models.Table.Policy policy, SutProvider<PolicyService> sutProvider)
+        public async Task SaveAsync_SingleOrg_KeyConnectorEnabled_ThrowsBadRequest(
+            [PolicyFixtures.Policy(Enums.PolicyType.SingleOrg)] Core.Models.Table.Policy policy,
+            SutProvider<PolicyService> sutProvider)
+        {
+            policy.Enabled = false;
+
+            SetupOrg(sutProvider, policy.OrganizationId, new Organization
+            {
+                Id = policy.OrganizationId,
+                UsePolicies = true,
+            });
+
+            var ssoConfig = new SsoConfig { Enabled = true };
+            var data = new SsoConfigurationData { UseKeyConnector = true };
+            ssoConfig.SetData(data);
+
+            sutProvider.GetDependency<ISsoConfigRepository>()
+                .GetByOrganizationIdAsync(policy.OrganizationId)
+                .Returns(ssoConfig);
+
+            var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
+                () => sutProvider.Sut.SaveAsync(policy,
+                    Substitute.For<IUserService>(),
+                    Substitute.For<IOrganizationService>(),
+                    Guid.NewGuid()));
+
+            Assert.Contains("KeyConnector is enabled.", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
+
+            await sutProvider.GetDependency<IPolicyRepository>()
+                .DidNotReceiveWithAnyArgs()
+                .UpsertAsync(default);
+        }
+
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public async Task SaveAsync_RequireSsoPolicy_NotEnabled_ThrowsBadRequestAsync([PolicyFixtures.Policy(Enums.PolicyType.RequireSso)] Core.Models.Table.Policy policy, SutProvider<PolicyService> sutProvider)
         {
             policy.Enabled = true;
 

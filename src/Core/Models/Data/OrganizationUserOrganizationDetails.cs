@@ -35,5 +35,6 @@ namespace Bit.Core.Models.Data
         public Guid? ProviderId { get; set; }
         public string ProviderName { get; set; }
         public string FamilySponsorshipFriendlyName { get; set; }
+        public string SsoConfig { get; set; }
     }
 }

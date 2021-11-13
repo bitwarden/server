@@ -846,5 +846,20 @@ namespace Bit.Core.Services
             message.Category = "FamiliesForEnterpriseSponsorshipEnding";
             await _mailDeliveryService.SendEmailAsync(message);
         }
+        
+        public async Task SendOTPEmailAsync(string email, string token)
+        {
+            var message = CreateDefaultMessage("Your Bitwarden Verification Code", email);
+            var model = new EmailTokenViewModel
+            {
+                Token = token,
+                WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+                SiteName = _globalSettings.SiteName,
+            };
+            await AddMessageContentAsync(message, "OTPEmail", model);
+            message.MetaData.Add("SendGridBypassListManagement", true);
+            message.Category = "OTP";
+            await _mailDeliveryService.SendEmailAsync(message);
+        }
     }
 }

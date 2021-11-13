@@ -2,9 +2,9 @@
 
 namespace Bit.Core.Models.Api
 {
-    public class DeleteAccountRequestModel
+    public class VerifyOTPRequestModel
     {
         [Required]
-        public string MasterPasswordHash { get; set; }
+        public string OTP { get; set; }
     }
 }

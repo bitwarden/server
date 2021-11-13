@@ -178,7 +178,7 @@ namespace Bit.Core.Utilities
             services.AddScoped<IEmergencyAccessService, EmergencyAccessService>();
             services.AddSingleton<IDeviceService, DeviceService>();
             services.AddSingleton<IAppleIapService, AppleIapService>();
-            services.AddSingleton<ISsoConfigService, SsoConfigService>();
+            services.AddScoped<ISsoConfigService, SsoConfigService>();
             services.AddScoped<ISendService, SendService>();
         }
 

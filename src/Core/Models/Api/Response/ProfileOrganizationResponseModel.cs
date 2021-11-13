@@ -43,6 +43,13 @@ namespace Bit.Core.Models.Api
                 Utilities.StaticStore.GetSponsoredPlan(PlanSponsorshipType.FamiliesForEnterprise)
                 .UsersCanSponsor(organization);
             PlanProductType = Utilities.StaticStore.GetPlan(organization.PlanType).Product;
+            
+            if (organization.SsoConfig != null)
+            {
+                var ssoConfigData = SsoConfigurationData.Deserialize(organization.SsoConfig);
+                UsesKeyConnector = ssoConfigData.UseKeyConnector && !string.IsNullOrEmpty(ssoConfigData.KeyConnectorUrl);
+                KeyConnectorUrl = ssoConfigData.KeyConnectorUrl;
+            }
         }
 
         public string Id { get; set; }
@@ -76,5 +83,7 @@ namespace Bit.Core.Models.Api
         public string FamilySponsorshipFriendlyName { get; set; }
         public bool FamilySponsorshipAvailable { get; set; }
         public ProductType PlanProductType { get; set; }
+        public bool UsesKeyConnector { get; set; }
+        public string KeyConnectorUrl { get; set; }
     }
 }

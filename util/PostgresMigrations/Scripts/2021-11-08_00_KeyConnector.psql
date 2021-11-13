@@ -1,0 +1,9 @@
+﻿START TRANSACTION;
+
+ALTER TABLE "User" ADD "UsesKeyConnector" boolean NOT NULL DEFAULT FALSE;
+
+INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+VALUES ('20211108041547_KeyConnector', '5.0.9');
+
+COMMIT;
+

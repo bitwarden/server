@@ -11,6 +11,7 @@ using Bit.Core.Models;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
+using System.Text.RegularExpressions;
 
 namespace Bit.Core.Services
 {
@@ -181,7 +182,7 @@ namespace Bit.Core.Services
         public async Task SendPayloadToUserAsync(string userId, PushType type, object payload, string identifier,
             string deviceId = null)
         {
-            var tag = BuildTag($"template:payload_userId:{userId}", identifier);
+            var tag = BuildTag($"template:payload_userId:{SanitizeTagInput(userId)}", identifier);
             await SendPayloadAsync(tag, type, payload);
             if (InstallationDeviceEntity.IsInstallationDeviceId(deviceId))
             {
@@ -192,7 +193,7 @@ namespace Bit.Core.Services
         public async Task SendPayloadToOrganizationAsync(string orgId, PushType type, object payload, string identifier,
             string deviceId = null)
         {
-            var tag = BuildTag($"template:payload && organizationId:{orgId}", identifier);
+            var tag = BuildTag($"template:payload && organizationId:{SanitizeTagInput(orgId)}", identifier);
             await SendPayloadAsync(tag, type, payload);
             if (InstallationDeviceEntity.IsInstallationDeviceId(deviceId))
             {
@@ -216,7 +217,7 @@ namespace Bit.Core.Services
         {
             if (!string.IsNullOrWhiteSpace(identifier))
             {
-                tag += $" && !deviceIdentifier:{identifier}";
+                tag += $" && !deviceIdentifier:{SanitizeTagInput(identifier)}";
             }
 
             return $"({tag})";
@@ -230,6 +231,12 @@ namespace Bit.Core.Services
                     { "type",  ((byte)type).ToString() },
                     { "payload", JsonConvert.SerializeObject(payload) }
                 }, tag);
+        }
+
+        private string SanitizeTagInput(string input)
+        {
+            // Only allow a-z, A-Z, 0-9, and special characters -_:
+            return Regex.Replace(input, "[^a-zA-Z0-9-_:]", string.Empty);
         }
     }
 }

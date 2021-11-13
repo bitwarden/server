@@ -3,6 +3,7 @@ using Bit.Core.Enums;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -56,7 +57,7 @@ namespace Bit.Billing.Controllers
 
             var key = HttpContext.Request.Query.ContainsKey("key") ?
                 HttpContext.Request.Query["key"].ToString() : null;
-            if (key != _billingSettings.PayPal.WebhookKey)
+            if (!CoreHelpers.FixedTimeEquals(key, _billingSettings.PayPal.WebhookKey))
             {
                 _logger.LogWarning("PayPal webhook key is incorrect or does not exist.");
                 return new BadRequestResult();

@@ -7,7 +7,7 @@ namespace Bit.PostgresMigrations.Migrations
     public partial class SetMaxAutoscaleSeatsToCurrentSeatCount : Migration
     {
         private const string _scriptLocation =
-            "PostgresMigration.Scripts.2021-10-21_00_SetMaxAutoscaleSeatCount.sql";
+            "PostgresMigrations.Scripts.2021-10-21_00_SetMaxAutoscaleSeatCount.psql";
 
         protected override void Up(MigrationBuilder migrationBuilder)
         {
