@@ -55,7 +55,7 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
                 PrivateKey = x.o.PrivateKey,
                 ProviderId = x.p.Id,
                 ProviderName = x.p.Name,
-                FamilySponsorshipFriendlyName = x.os.FriendlyName
+                FamilySponsorshipFriendlyName = x.os.FriendlyName,
                 SsoConfig = x.ss.Data,
             });
         }
