@@ -30,7 +30,7 @@ namespace Bit.Core.Services
             _eventService = eventService;
         }
 
-        public async Task SaveAsync(SsoConfig config)
+        public async Task SaveAsync(SsoConfig config, Organization organization)
         {
             var now = DateTime.UtcNow;
             config.RevisionDate = now;
@@ -42,7 +42,7 @@ namespace Bit.Core.Services
             var useKeyConnector = config.GetData().UseKeyConnector;
             if (useKeyConnector)
             {
-                await VerifyDependenciesAsync(config);
+                await VerifyDependenciesAsync(config, organization);
             }
 
             var oldConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(config.OrganizationId);
@@ -63,8 +63,13 @@ namespace Bit.Core.Services
             return userDetails.Any(u => u.UsesKeyConnector);
         }
 
-        private async Task VerifyDependenciesAsync(SsoConfig config)
+        private async Task VerifyDependenciesAsync(SsoConfig config, Organization organization)
         {
+            if (!organization.UseKeyConnector)
+            {
+                throw new BadRequestException("Organization cannot use key connector.");
+            }
+
             var singleOrgPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(config.OrganizationId, PolicyType.SingleOrg);
             if (singleOrgPolicy is not { Enabled: true })
             {

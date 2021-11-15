@@ -10,6 +10,7 @@ namespace Bit.Core.Models.Data
         public string Name { get; set; }
         public bool UsePolicies { get; set; }
         public bool UseSso { get; set; }
+        public bool UseKeyConnector { get; set; }
         public bool UseGroups { get; set; }
         public bool UseDirectory { get; set; }
         public bool UseEvents { get; set; }

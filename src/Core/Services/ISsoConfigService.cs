@@ -5,6 +5,6 @@ namespace Bit.Core.Services
 {
     public interface ISsoConfigService
     {
-        Task SaveAsync(SsoConfig config);
+        Task SaveAsync(SsoConfig config, Organization organization);
     }
 }
