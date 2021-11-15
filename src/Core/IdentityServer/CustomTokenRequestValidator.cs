@@ -95,7 +95,8 @@ namespace Bit.Core.IdentityServer
             if (context.Result.ValidatedRequest.GrantType == "client_credentials")
             {
                 if (user.UsesKeyConnector) {
-                    // KeyConnectorUrl is configured in the CLI client, just disable master password reset
+                    // KeyConnectorUrl is configured in the CLI client, we just need to tell the client to use it
+                    context.Result.CustomResponse["ApiUseKeyConnector"] = true;
                     context.Result.CustomResponse["ResetMasterPassword"] = false;
                 }
                 return;
