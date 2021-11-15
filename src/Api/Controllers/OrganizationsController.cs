@@ -384,6 +384,12 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
+            var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(orgGuidId);
+            if (ssoConfig?.GetData()?.UseKeyConnector == true)
+            {
+                throw new BadRequestException("You cannot leave an Organization that is using Key Connector.");
+            }
+
             var userId = _userService.GetProperUserId(User);
             await _organizationService.DeleteUserAsync(orgGuidId, userId.Value);
         }

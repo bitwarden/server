@@ -145,7 +145,7 @@ namespace Bit.Core.Test.Services
         }
 
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
-        public async Task SaveAsync_KeyConnector_SingleOrgNotEnabled(SutProvider<SsoConfigService> sutProvider)
+        public async Task SaveAsync_KeyConnector_SingleOrgNotEnabled_Throws(SutProvider<SsoConfigService> sutProvider)
         {
             var utcNow = DateTime.UtcNow;
 
@@ -162,7 +162,67 @@ namespace Bit.Core.Test.Services
             var exception = await Assert.ThrowsAsync<BadRequestException>(
                 () => sutProvider.Sut.SaveAsync(ssoConfig));
 
-            Assert.Contains("KeyConnector requires Single Organization to be enabled.", exception.Message);
+            Assert.Contains("Key Connector requires the Single Organization policy to be enabled.", exception.Message);
+
+            await sutProvider.GetDependency<ISsoConfigRepository>().DidNotReceiveWithAnyArgs()
+                .UpsertAsync(default);
+        }
+
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public async Task SaveAsync_KeyConnector_SsoPolicyNotEnabled_Throws(SutProvider<SsoConfigService> sutProvider)
+        {
+            var utcNow = DateTime.UtcNow;
+
+            var ssoConfig = new SsoConfig
+            {
+                Id = default,
+                Data = "{\"useKeyConnector\": true}",
+                Enabled = true,
+                OrganizationId = Guid.NewGuid(),
+                CreationDate = utcNow.AddDays(-10),
+                RevisionDate = utcNow.AddDays(-10),
+            };
+
+            sutProvider.GetDependency<IPolicyRepository>().GetByOrganizationIdTypeAsync(
+                Arg.Any<Guid>(), Enums.PolicyType.SingleOrg).Returns(new Policy
+                {
+                    Enabled = true
+                });
+
+            var exception = await Assert.ThrowsAsync<BadRequestException>(
+                () => sutProvider.Sut.SaveAsync(ssoConfig));
+
+            Assert.Contains("Key Connector requires the Single Sign-On Authentication policy to be enabled.", exception.Message);
+
+            await sutProvider.GetDependency<ISsoConfigRepository>().DidNotReceiveWithAnyArgs()
+                .UpsertAsync(default);
+        }
+
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public async Task SaveAsync_KeyConnector_SsoConfigNotEnabled_Throws(SutProvider<SsoConfigService> sutProvider)
+        {
+            var utcNow = DateTime.UtcNow;
+
+            var ssoConfig = new SsoConfig
+            {
+                Id = default,
+                Data = "{\"useKeyConnector\": true}",
+                Enabled = false,
+                OrganizationId = Guid.NewGuid(),
+                CreationDate = utcNow.AddDays(-10),
+                RevisionDate = utcNow.AddDays(-10),
+            };
+
+            sutProvider.GetDependency<IPolicyRepository>().GetByOrganizationIdTypeAsync(
+                Arg.Any<Guid>(), Arg.Any<Enums.PolicyType>()).Returns(new Policy
+                {
+                    Enabled = true
+                });
+
+            var exception = await Assert.ThrowsAsync<BadRequestException>(
+                () => sutProvider.Sut.SaveAsync(ssoConfig));
+
+            Assert.Contains("You must enable SSO to use Key Connector.", exception.Message);
 
             await sutProvider.GetDependency<ISsoConfigRepository>().DidNotReceiveWithAnyArgs()
                 .UpsertAsync(default);
