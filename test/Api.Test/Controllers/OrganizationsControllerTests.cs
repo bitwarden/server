@@ -8,6 +8,7 @@ using Bit.Core.Services;
 using Bit.Core.Settings;
 using NSubstitute;
 using System.Threading.Tasks;
+using System.Security.Claims;
 using System;
 using Xunit;
 
@@ -53,7 +54,7 @@ namespace Bit.Api.Test.Controllers
 
         [Theory, AutoData]
         public async Task OrganizationsController_WhenUserTriestoLeaveOrganizationUsingKeyConnector_Throws(
-            Guid orgId, OrganizationsController sut)
+            Guid orgId)
         {
             var ssoConfig = new SsoConfig
             {
@@ -63,10 +64,12 @@ namespace Bit.Api.Test.Controllers
                 OrganizationId = orgId,
             };
 
+            _currentContext.OrganizationUser(orgId).Returns(true);
             _ssoConfigRepository.GetByOrganizationIdAsync(orgId).Returns(ssoConfig);
+            _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(new Guid());
 
             var exception = await Assert.ThrowsAsync<BadRequestException>(
-                () => sut.Leave(orgId.ToString()));
+                () => _sut.Leave(orgId.ToString()));
 
             Assert.Contains("You cannot leave an Organization that is using Key Connector.",
                 exception.Message);
