@@ -117,7 +117,8 @@ jobs:
   release-docker:
     name: Build Docker images
     runs-on: ubuntu-20.04
-    needs: setup
+    needs:
+      - setup
     env:
       _RELEASE_VERSION: ${{ needs.setup.outputs.release_version }}
       _BRANCH_NAME: ${{ needs.setup.outputs.branch-name }}
