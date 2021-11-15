@@ -344,9 +344,11 @@ jobs:
             ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }}:dev
           docker push ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }}:dev
 
-      - name: Log out of Docker
+      - name: Log out of Docker and disable Docker Notary
         if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix'
-        run: docker logout
+        run: |
+          docker logout
+          echo "DOCKER_CONTENT_TRUST=0" >> $GITHUB_ENV
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@0d9a5be0dceea74e09396820e1e522ba4a110d2f  # v1
