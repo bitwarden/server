@@ -73,7 +73,7 @@ namespace Bit.Core.Test.Services
 
             await sutProvider.GetDependency<IMailService>().Received(1).
                 SendFamiliesForEnterpriseOfferEmailAsync(sponsoredEmail, sponsoringOrg.Name,
-                Arg.Any<string>());
+                false, Arg.Any<string>());
         }
 
         [Theory]
@@ -104,10 +104,14 @@ namespace Bit.Core.Test.Services
         public async Task SendSponsorshipOfferAsync(Organization org, OrganizationSponsorship sponsorship,
             SutProvider<OrganizationSponsorshipService> sutProvider)
         {
+            sutProvider.GetDependency<IUserRepository>()
+                .GetByEmailAsync(sponsorship.OfferedToEmail)
+                .Returns(Task.FromResult(new User()));
+
             await sutProvider.Sut.SendSponsorshipOfferAsync(org, sponsorship);
 
             await sutProvider.GetDependency<IMailService>().Received(1)
-                .SendFamiliesForEnterpriseOfferEmailAsync(sponsorship.OfferedToEmail, org.Name, Arg.Any<string>());
+                .SendFamiliesForEnterpriseOfferEmailAsync(sponsorship.OfferedToEmail, org.Name, true, Arg.Any<string>());
         }
 
         private async Task AssertRemovedSponsoredPaymentAsync(Organization sponsoredOrg,
