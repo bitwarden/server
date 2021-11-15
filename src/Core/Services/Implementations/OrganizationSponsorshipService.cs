@@ -15,6 +15,7 @@ namespace Bit.Core.Services
 
         private readonly IOrganizationSponsorshipRepository _organizationSponsorshipRepository;
         private readonly IOrganizationRepository _organizationRepository;
+        private readonly IUserRepository _userRepository;
         private readonly IPaymentService _paymentService;
         private readonly IMailService _mailService;
 
@@ -22,12 +23,14 @@ namespace Bit.Core.Services
 
         public OrganizationSponsorshipService(IOrganizationSponsorshipRepository organizationSponsorshipRepository,
             IOrganizationRepository organizationRepository,
+            IUserRepository userRepository,
             IPaymentService paymentService,
             IMailService mailService,
             IDataProtectionProvider dataProtectionProvider)
         {
             _organizationSponsorshipRepository = organizationSponsorshipRepository;
             _organizationRepository = organizationRepository;
+            _userRepository = userRepository;
             _paymentService = paymentService;
             _mailService = mailService;
             _dataProtector = dataProtectionProvider.CreateProtector("OrganizationSponsorshipServiceDataProtector");
@@ -105,8 +108,11 @@ namespace Bit.Core.Services
 
         public async Task SendSponsorshipOfferAsync(Organization sponsoringOrg, OrganizationSponsorship sponsorship)
         {
+            var user = await _userRepository.GetByEmailAsync(sponsorship.OfferedToEmail);
+            var isExistingAccount = user != null;
+
             await _mailService.SendFamiliesForEnterpriseOfferEmailAsync(sponsorship.OfferedToEmail, sponsoringOrg.Name,
-                RedemptionToken(sponsorship.Id, sponsorship.PlanSponsorshipType.Value));
+                isExistingAccount, RedemptionToken(sponsorship.Id, sponsorship.PlanSponsorshipType.Value));
         }
 
         public async Task SetUpSponsorshipAsync(OrganizationSponsorship sponsorship, Organization sponsoredOrganization)

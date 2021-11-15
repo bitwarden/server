@@ -757,35 +757,39 @@ namespace Bit.Core.Services
             await _mailDeliveryService.SendEmailAsync(message);
         }
 
-        public async Task SendFamiliesForEnterpriseOfferEmailAsync(string email, string organizationName, string token)
+        public async Task SendFamiliesForEnterpriseOfferEmailAsync(string email, string sponsorEmail, bool existingAccount, string token)
         {
-            var message = CreateDefaultMessage("Free Bitwarden Family Plan Offer", email);
+            var message = CreateDefaultMessage("Finish Activation - Your Free Families Subscription", email);
 
             var model = new FamiliesForEnterpriseOfferViewModel
             {
+                SponsorEmail = sponsorEmail,
                 WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
                 SiteName = _globalSettings.SiteName,
                 SponsorshipToken = token,
             };
 
-            await AddMessageContentAsync(message, "FamiliesForEnterprise.FamiliesForEnterpriseOffer", model);
+            await AddMessageContentAsync(message, existingAccount
+                ? "FamiliesForEnterprise.FamiliesForEnterpriseOfferExistingAccount"
+                : "FamiliesForEnterprise.FamiliesForEnterpriseOfferNewAccount", model);
+            
             message.Category = "FamiliesForEnterpriseOffer";
             await _mailDeliveryService.SendEmailAsync(message);
         }
 
-        public async Task SendFamiliesForEnterpriseRedeemedEmailsAsync(string familyUserEmail, string sponsorEmail, string sponsorOrgName)
+        public async Task SendFamiliesForEnterpriseRedeemedEmailsAsync(string familyUserEmail, string sponsorEmail)
         {
             // Email family user
             await SendFamiliesForEnterpriseInviteRedeemedToFamilyUserEmailAsync(familyUserEmail);
 
             // Email enterprise org user
-            await SendFamiliesForEnterpriseInviteRedeemedToOrgUserEmailAsync(sponsorEmail, sponsorOrgName);
+            await SendFamiliesForEnterpriseInviteRedeemedToOrgUserEmailAsync(sponsorEmail);
         }
 
         private async Task SendFamiliesForEnterpriseInviteRedeemedToFamilyUserEmailAsync(string email)
         {
             // TODO: Complete emails
-            var message = CreateDefaultMessage("You Have Redeemed A Family Organization Sponsorship", email);
+            var message = CreateDefaultMessage("Success! Families Subscription Activated", email);
             var model = new FamiliesForEnterpriseRedeemedToFamilyUserViewModel
             {
 
@@ -795,13 +799,13 @@ namespace Bit.Core.Services
             await _mailDeliveryService.SendEmailAsync(message);
         }
 
-        private async Task SendFamiliesForEnterpriseInviteRedeemedToOrgUserEmailAsync(string email, string organizationName)
+        private async Task SendFamiliesForEnterpriseInviteRedeemedToOrgUserEmailAsync(string email)
         {
             // TODO: Complete emails
-            var message = CreateDefaultMessage("A User Has Redeemeed Your Sponsorship", email);
+            var message = CreateDefaultMessage("Success! Families Subscription Activated", email);
             var model = new FamiliesForEnterpriseRedeemedToOrgUserViewModel
             {
-                OrganizationName = CoreHelpers.SanitizeForEmail(organizationName, false),
+
             };
             await AddMessageContentAsync(message, "FamiliesForEnterprise.FamiliesForEnterpriseRedeemedToOrgUser", model);
             message.Category = "FamilyForEnterpriseRedeemedToOrgUser";
@@ -814,7 +818,7 @@ namespace Bit.Core.Services
             var message = CreateDefaultMessage("Your Sponsorship Requires Reconfirmation", email);
             var model = new FamiliesForEnterpriseReconfirmationRequiredViewModel
             {
-                
+
             };
             await AddMessageContentAsync(message, "FamiliesForEnterprise.FamiliesForEnterpriseReconfirmationRequired", model);
             message.Category = "FamiliesForEnterpriseReconfirmationRequired";
@@ -823,7 +827,6 @@ namespace Bit.Core.Services
 
         public async Task SendFamiliesForEnterpriseSponsorshipRevertingEmailAsync(string email, string familyOrgName)
         {
-            // TODO: Complete emails
             var message = CreateDefaultMessage($"{familyOrgName} Organization Sponsorship Is No Longer Valid", email);
             var model = new FamiliesForEnterpriseSponsorshipRevertingViewModel
             {
@@ -834,13 +837,14 @@ namespace Bit.Core.Services
             await _mailDeliveryService.SendEmailAsync(message);
         }
 
-        public async Task SendFamiliesForEnterpriseSponsorshipEndingEmailAsync(string email)
+        public async Task SendFamiliesForEnterpriseSponsorshipEndingEmailAsync(string email, DateTime sponsorshipEndDate)
         {
-            // TODO: Complete emails
-            var message = CreateDefaultMessage("A Family Organization Sponsorship Is Ending", email);
+            var endsInTime = DateTime.UtcNow - sponsorshipEndDate;
+
+            var message = CreateDefaultMessage("Action Required: Renew Families Subscription", email);
             var model = new FamiliesForEnterpriseSponsorshipEndingViewModel
             {
-
+                DaysLeft = (int)endsInTime.TotalDays,
             };
             await AddMessageContentAsync(message, "FamiliesForEnterprise.FamiliesForEnterpriseSponsorshipEnding", model);
             message.Category = "FamiliesForEnterpriseSponsorshipEnding";

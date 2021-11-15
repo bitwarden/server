@@ -201,12 +201,12 @@ namespace Bit.Core.Services
             return Task.FromResult(0);
         }
 
-        public Task SendFamiliesForEnterpriseOfferEmailAsync(string email, string organizationName, string token)
+        public Task SendFamiliesForEnterpriseOfferEmailAsync(string email, string sponsorEmail, bool existingAccount, string token)
         {
             return Task.FromResult(0);
         }
 
-        public Task SendFamiliesForEnterpriseRedeemedEmailsAsync(string familyUserEmail, string sponsorEmail, string sponsorOrgName)
+        public Task SendFamiliesForEnterpriseRedeemedEmailsAsync(string familyUserEmail, string sponsorEmail)
         {
             return Task.FromResult(0);
         }
@@ -221,7 +221,7 @@ namespace Bit.Core.Services
             return Task.FromResult(0);
         }
 
-        public Task SendFamiliesForEnterpriseSponsorshipEndingEmailAsync(string email)
+        public Task SendFamiliesForEnterpriseSponsorshipEndingEmailAsync(string email, DateTime sponsorshipEndDate)
         {
             return Task.FromResult(0);
         }
