@@ -79,7 +79,7 @@ namespace Bit.Admin.Models
         public bool UsePolicies { get; set; }
         [Display(Name = "SSO")]
         public bool UseSso { get; set; }
-        [Display(Name = "Customer Managed Encryption")]
+        [Display(Name = "Key Connector with Customer Encryption")]
         public bool UseKeyConnector { get; set; }
         [Display(Name = "Groups")]
         public bool UseGroups { get; set; }
