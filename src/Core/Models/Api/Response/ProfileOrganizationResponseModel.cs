@@ -42,7 +42,7 @@ namespace Bit.Core.Models.Api
             if (organization.SsoConfig != null)
             {
                 var ssoConfigData = SsoConfigurationData.Deserialize(organization.SsoConfig);
-                UsesKeyConnector = ssoConfigData.UseKeyConnector && !string.IsNullOrEmpty(ssoConfigData.KeyConnectorUrl);
+                KeyConnectorEnabled = ssoConfigData.UseKeyConnector && !string.IsNullOrEmpty(ssoConfigData.KeyConnectorUrl);
                 KeyConnectorUrl = ssoConfigData.KeyConnectorUrl;
             }
         }
@@ -76,7 +76,7 @@ namespace Bit.Core.Models.Api
         public bool HasPublicAndPrivateKeys { get; set; }
         public string ProviderId { get; set; }
         public string ProviderName { get; set; }
-        public bool UsesKeyConnector { get; set; }
+        public bool KeyConnectorEnabled { get; set; }
         public string KeyConnectorUrl { get; set; }
     }
 }
