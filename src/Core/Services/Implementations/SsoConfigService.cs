@@ -67,7 +67,7 @@ namespace Bit.Core.Services
         {
             if (!organization.UseKeyConnector)
             {
-                throw new BadRequestException("Organization cannot use key connector.");
+                throw new BadRequestException("Organization cannot use Key Connector.");
             }
 
             var singleOrgPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(config.OrganizationId, PolicyType.SingleOrg);

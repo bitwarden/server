@@ -259,7 +259,7 @@ namespace Bit.Core.Test.Services
             var exception = await Assert.ThrowsAsync<BadRequestException>(
                 () => sutProvider.Sut.SaveAsync(ssoConfig, organization));
 
-            Assert.Contains("Organization cannot use key connector.", exception.Message);
+            Assert.Contains("Organization cannot use Key Connector.", exception.Message);
 
             await sutProvider.GetDependency<ISsoConfigRepository>().DidNotReceiveWithAnyArgs()
                 .UpsertAsync(default);
