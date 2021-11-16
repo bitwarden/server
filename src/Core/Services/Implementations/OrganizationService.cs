@@ -250,7 +250,7 @@ namespace Bit.Core.Services
             if (!newPlan.HasKeyConnector && organization.UseKeyConnector)
             {
                 var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(organization.Id);
-                if (ssoConfig != null && ssoConfig.GetData().UseKeyConnector)
+                if (ssoConfig != null && ssoConfig.GetData().KeyConnectorEnabled)
                 {
                     throw new BadRequestException("Your new plan does not allow the Key Connector feature. " +
                                                   "Disable your Key Connector.");
@@ -880,7 +880,7 @@ namespace Bit.Core.Services
             if (!license.UseKeyConnector && organization.UseKeyConnector)
             {
                 var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(organization.Id);
-                if (ssoConfig != null && ssoConfig.GetData().UseKeyConnector)
+                if (ssoConfig != null && ssoConfig.GetData().KeyConnectorEnabled)
                 {
                     throw new BadRequestException($"Your organization currently has Key Connector enabled. " +
                         $"Your new license does not allow for the use of Key Connector. Disable your Key Connector.");
@@ -2164,7 +2164,7 @@ namespace Bit.Core.Services
         private async Task ValidateDeleteOrganizationAsync(Organization organization)
         {
             var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(organization.Id);
-            if (ssoConfig?.GetData()?.UseKeyConnector == true)
+            if (ssoConfig?.GetData()?.KeyConnectorEnabled == true)
             {
                 throw new BadRequestException("You cannot delete an Organization that is using Key Connector.");
             }

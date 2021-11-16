@@ -42,7 +42,7 @@ namespace Bit.Core.Models.Api
         [Required]
         public SsoType ConfigType { get; set; }
 
-        public bool UseKeyConnector { get; set; }
+        public bool KeyConnectorEnabled { get; set; }
         public string KeyConnectorUrl { get; set; }
 
         // OIDC
@@ -178,7 +178,7 @@ namespace Bit.Core.Models.Api
             return new SsoConfigurationData
             {
                 ConfigType = ConfigType,
-                UseKeyConnector = UseKeyConnector,
+                KeyConnectorEnabled = KeyConnectorEnabled,
                 KeyConnectorUrl = KeyConnectorUrl,
                 Authority = Authority,
                 ClientId = ClientId,

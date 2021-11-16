@@ -42,7 +42,7 @@ namespace Bit.Core.Models.Api
             if (organization.SsoConfig != null)
             {
                 var ssoConfigData = SsoConfigurationData.Deserialize(organization.SsoConfig);
-                KeyConnectorEnabled = ssoConfigData.UseKeyConnector && !string.IsNullOrEmpty(ssoConfigData.KeyConnectorUrl);
+                KeyConnectorEnabled = ssoConfigData.KeyConnectorEnabled && !string.IsNullOrEmpty(ssoConfigData.KeyConnectorUrl);
                 KeyConnectorUrl = ssoConfigData.KeyConnectorUrl;
             }
         }
