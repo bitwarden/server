@@ -97,5 +97,19 @@ namespace Bit.Setup
                 Helpers.ShowBanner(_context, "WARNING", message, ConsoleColor.Yellow);
             }
         }
+
+        public void BuildForUpdater()
+        {
+            if (_context.Config.EnableKeyConnector && !File.Exists("/bitwarden/key-connector/bwkc.pfx"))
+            {
+                Directory.CreateDirectory("/bitwarden/key-connector/");
+                var keyConnectorCertPassword = Helpers.GetValueFromEnvFile("key-connector",
+                    "keyConnectorSettings__certificate__filesystemPassword");
+                Helpers.Exec("openssl req -x509 -newkey rsa:4096 -sha256 -nodes -keyout bwkc.key " +
+                             "-out bwkc.crt -subj \"/CN=Bitwarden Key Connector\" -days 36500");
+                Helpers.Exec("openssl pkcs12 -export -out /bitwarden/key-connector/bwkc.pfx -inkey bwkc.key " +
+                             $"-in bwkc.crt -passout pass:{keyConnectorCertPassword}");
+            }
+        }
     }
 }
