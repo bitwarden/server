@@ -166,4 +166,10 @@ server {
     include /etc/nginx/security-headers.conf;
     add_header X-Frame-Options SAMEORIGIN;
   }
+
+{{#if EnableKeyConnector}}
+  location /key-connector/ {
+    proxy_pass http://key-connector:5000/;
+  }
+{{/if}}
 }
