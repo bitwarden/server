@@ -252,8 +252,8 @@ namespace Bit.Core.Services
                 var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(organization.Id);
                 if (ssoConfig != null && ssoConfig.GetData().UseKeyConnector)
                 {
-                    throw new BadRequestException($"Your new plan does not allow the Key Connector feature. " +
-                                                  $"Disable your Key Connector.");
+                    throw new BadRequestException("Your new plan does not allow the Key Connector feature. " +
+                                                  "Disable your Key Connector.");
                 }
             }
 
