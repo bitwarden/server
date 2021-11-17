@@ -1,6 +1,7 @@
 #!/bin/sh
 BACKUP_INTERVAL=${BACKUP_INTERVAL:-next day}
 BACKUP_INTERVAL_FORMAT=${BACKUP_INTERVAL_FORMAT:-%Y-%m-%d 00:00:00}
+BACKUP_DB_DIR=${BACKUP_DB_DIR:-'/etc/bitwarden/mssql/backups/'}
 
 while true
 do
@@ -19,7 +20,25 @@ do
 
   # Delete backup files older than 30 days
   grep -B1 "BACKUP DATABASE successfully" /var/opt/mssql/log/errorlog | grep -q _${BACKUP_FILENAME}.BAK &&
-  find /etc/bitwarden/mssql/backups/ -mindepth 1 -type f -name '*.BAK' -mtime +32 -delete
+  find $BACKUP_DB_DIR -mindepth 1 -type f -name '*.BAK' -mtime +32 -delete
+
+  # Common variables used in the next two if blocks.
+  DATABASE=${DATABASE:-'vault'}
+  BACKUP_DB_LATEST_FILENAME="${DATABASE}_FULL_${BACKUP_FILENAME}.BAK"
+
+  # Make a copy (overwrite) with a consistent filename.
+  # Helps when taking snapshots with deduplication algorithms e.g. restic
+  if [ "true" = "$BACKUP_DB_COPYOFLATEST" ]; then    
+    BACKUP_DB_COPYOFLATEST_FILENAME=${BACKUP_DB_COPYOFLATEST_FILENAME:-"${DATABASE}_FULL_LATESTCOPY.BAK"}
+    cp -f "${BACKUP_DB_DIR}${BACKUP_DB_LATEST_FILENAME}" "${BACKUP_DB_DIR}${BACKUP_DB_COPYOFLATEST_FILENAME}"
+  fi
+
+  # Make a symlink
+  # Helps in all other circumstances where an actual copy of the file isn't necessary.
+  if [ "true" = "$BACKUP_DB_LNFORLATEST" ]; then
+    BACKUP_DB_LNFORLATEST_FILENAME=${BACKUP_DB_LNFORLATEST_FILENAME:-"${DATABASE}_FULL_LATESTLN.BAK"}
+    ln -sf "${BACKUP_DB_LATEST_FILENAME}" "${BACKUP_DB_DIR}${BACKUP_DB_LNFORLATEST_FILENAME}"
+  fi
 
   # Break if called manually (without loop option)
   [ "$1" != "loop" ] && break
