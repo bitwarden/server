@@ -79,7 +79,7 @@ namespace Bit.Core.Test.Services
             var oldSsoConfig = new SsoConfig
             {
                 Id = 1,
-                Data = "{\"useKeyConnector\": true}",
+                Data = "{\"keyConnectorEnabled\": true}",
                 Enabled = true,
                 OrganizationId = organization.Id,
                 CreationDate = utcNow.AddDays(-10),
@@ -120,7 +120,7 @@ namespace Bit.Core.Test.Services
             var oldSsoConfig = new SsoConfig
             {
                 Id = 1,
-                Data = "{\"useKeyConnector\": true}",
+                Data = "{\"keyConnectorEnabled\": true}",
                 Enabled = true,
                 OrganizationId = organization.Id,
                 CreationDate = utcNow.AddDays(-10),
@@ -155,7 +155,7 @@ namespace Bit.Core.Test.Services
             var ssoConfig = new SsoConfig
             {
                 Id = default,
-                Data = "{\"useKeyConnector\": true}",
+                Data = "{\"keyConnectorEnabled\": true}",
                 Enabled = true,
                 OrganizationId = organization.Id,
                 CreationDate = utcNow.AddDays(-10),
@@ -180,7 +180,7 @@ namespace Bit.Core.Test.Services
             var ssoConfig = new SsoConfig
             {
                 Id = default,
-                Data = "{\"useKeyConnector\": true}",
+                Data = "{\"keyConnectorEnabled\": true}",
                 Enabled = true,
                 OrganizationId = organization.Id,
                 CreationDate = utcNow.AddDays(-10),
@@ -211,7 +211,7 @@ namespace Bit.Core.Test.Services
             var ssoConfig = new SsoConfig
             {
                 Id = default,
-                Data = "{\"useKeyConnector\": true}",
+                Data = "{\"keyConnectorEnabled\": true}",
                 Enabled = false,
                 OrganizationId = organization.Id,
                 CreationDate = utcNow.AddDays(-10),
@@ -243,7 +243,7 @@ namespace Bit.Core.Test.Services
             var ssoConfig = new SsoConfig
             {
                 Id = default,
-                Data = "{\"useKeyConnector\": true}",
+                Data = "{\"keyConnectorEnabled\": true}",
                 Enabled = true,
                 OrganizationId = organization.Id,
                 CreationDate = utcNow.AddDays(-10),
@@ -275,7 +275,7 @@ namespace Bit.Core.Test.Services
             var ssoConfig = new SsoConfig
             {
                 Id = default,
-                Data = "{\"useKeyConnector\": true}",
+                Data = "{\"keyConnectorEnabled\": true}",
                 Enabled = true,
                 OrganizationId = organization.Id,
                 CreationDate = utcNow.AddDays(-10),
