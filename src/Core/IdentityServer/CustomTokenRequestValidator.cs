@@ -111,7 +111,7 @@ namespace Bit.Core.IdentityServer
                 var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(organizationId);
                 var ssoConfigData = ssoConfig.GetData();
 
-                if (ssoConfigData is { UseKeyConnector: true } && !string.IsNullOrEmpty(ssoConfigData.KeyConnectorUrl))
+                if (ssoConfigData is { KeyConnectorEnabled: true } && !string.IsNullOrEmpty(ssoConfigData.KeyConnectorUrl))
                 {
                     context.Result.CustomResponse["KeyConnectorUrl"] = ssoConfigData.KeyConnectorUrl;
                     // Prevent clients redirecting to set-password

@@ -247,6 +247,16 @@ namespace Bit.Core.Services
                 }
             }
 
+            if (!newPlan.HasKeyConnector && organization.UseKeyConnector)
+            {
+                var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(organization.Id);
+                if (ssoConfig != null && ssoConfig.GetData().KeyConnectorEnabled)
+                {
+                    throw new BadRequestException("Your new plan does not allow the Key Connector feature. " +
+                                                  "Disable your Key Connector.");
+                }
+            }
+
             if (!newPlan.HasResetPassword && organization.UseResetPassword)
             {
                 var resetPasswordPolicy =
@@ -295,6 +305,7 @@ namespace Bit.Core.Services
             organization.Use2fa = newPlan.Has2fa;
             organization.UseApi = newPlan.HasApi;
             organization.UseSso = newPlan.HasSso;
+            organization.UseKeyConnector = newPlan.HasKeyConnector;
             organization.UseResetPassword = newPlan.HasResetPassword;
             organization.SelfHost = newPlan.HasSelfHost;
             organization.UsersGetPremium = newPlan.UsersGetPremium || upgrade.PremiumAccessAddon;
@@ -687,6 +698,7 @@ namespace Bit.Core.Services
                 MaxStorageGb = _globalSettings.SelfHosted ? 10240 : license.MaxStorageGb, // 10 TB
                 UsePolicies = license.UsePolicies,
                 UseSso = license.UseSso,
+                UseKeyConnector = license.UseKeyConnector,
                 UseGroups = license.UseGroups,
                 UseDirectory = license.UseDirectory,
                 UseEvents = license.UseEvents,
@@ -865,6 +877,16 @@ namespace Bit.Core.Services
                 }
             }
 
+            if (!license.UseKeyConnector && organization.UseKeyConnector)
+            {
+                var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(organization.Id);
+                if (ssoConfig != null && ssoConfig.GetData().KeyConnectorEnabled)
+                {
+                    throw new BadRequestException($"Your organization currently has Key Connector enabled. " +
+                        $"Your new license does not allow for the use of Key Connector. Disable your Key Connector.");
+                }
+            }
+
             if (!license.UseResetPassword && organization.UseResetPassword)
             {
                 var resetPasswordPolicy =
@@ -895,6 +917,7 @@ namespace Bit.Core.Services
             organization.UseApi = license.UseApi;
             organization.UsePolicies = license.UsePolicies;
             organization.UseSso = license.UseSso;
+            organization.UseKeyConnector = license.UseKeyConnector;
             organization.UseResetPassword = license.UseResetPassword;
             organization.SelfHost = license.SelfHost;
             organization.UsersGetPremium = license.UsersGetPremium;
@@ -2141,7 +2164,7 @@ namespace Bit.Core.Services
         private async Task ValidateDeleteOrganizationAsync(Organization organization)
         {
             var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(organization.Id);
-            if (ssoConfig?.GetData()?.UseKeyConnector == true)
+            if (ssoConfig?.GetData()?.KeyConnectorEnabled == true)
             {
                 throw new BadRequestException("You cannot delete an Organization that is using Key Connector.");
             }

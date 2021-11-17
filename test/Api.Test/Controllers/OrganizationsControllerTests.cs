@@ -10,6 +10,7 @@ using NSubstitute;
 using System.Threading.Tasks;
 using System.Security.Claims;
 using System;
+using Bit.Core.Models.Data;
 using Xunit;
 
 namespace Bit.Api.Test.Controllers
@@ -59,7 +60,10 @@ namespace Bit.Api.Test.Controllers
             var ssoConfig = new SsoConfig
             {
                 Id = default,
-                Data = "{\"useKeyConnector\": true}",
+                Data = new SsoConfigurationData
+                {
+                    KeyConnectorEnabled = true,
+                }.Serialize(),
                 Enabled = true,
                 OrganizationId = orgId,
             };

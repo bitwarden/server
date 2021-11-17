@@ -646,7 +646,7 @@ namespace Bit.Core.Services
 
             if (user.UsesKeyConnector)
             {
-                Logger.LogWarning("Already uses key connector.");
+                Logger.LogWarning("Already uses Key Connector.");
                 return IdentityResult.Failed(_identityErrorDescriber.UserAlreadyHasPassword());
             }
 
@@ -671,7 +671,7 @@ namespace Bit.Core.Services
 
             if (user.UsesKeyConnector)
             {
-                Logger.LogWarning("Already uses key connector.");
+                Logger.LogWarning("Already uses Key Connector.");
                 return IdentityResult.Failed(_identityErrorDescriber.UserAlreadyHasPassword());
             }
 
@@ -740,7 +740,7 @@ namespace Bit.Core.Services
 
             if (user.UsesKeyConnector)
             {
-                throw new BadRequestException("Cannot reset password of a user with key connector.");
+                throw new BadRequestException("Cannot reset password of a user with Key Connector.");
             }
 
             var result = await UpdatePasswordHash(user, newMasterPassword);
@@ -1387,7 +1387,7 @@ namespace Bit.Core.Services
 
             if (!user.UsesKeyConnector)
             {
-                throw new BadRequestException("Not using key connector.");
+                throw new BadRequestException("Not using Key Connector.");
             }
 
             var token = await base.GenerateUserTokenAsync(user, TokenOptions.DefaultEmailProvider,

@@ -25,6 +25,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework.EqualityComparers
                    x.MaxCollections.Equals(y.MaxCollections) &&
                    x.UsePolicies.Equals(y.UsePolicies) &&
                    x.UseSso.Equals(y.UseSso) &&
+                   x.UseKeyConnector.Equals(y.UseKeyConnector) &&
                    x.UseGroups.Equals(y.UseGroups) &&
                    x.UseDirectory.Equals(y.UseDirectory) &&
                    x.UseEvents.Equals(y.UseEvents) &&

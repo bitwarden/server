@@ -565,6 +565,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<bool>("UseGroups")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<bool>("UseKeyConnector")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<bool>("UsePolicies")
                         .HasColumnType("tinyint(1)");
 

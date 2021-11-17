@@ -909,7 +909,7 @@ namespace Bit.Core.Test.Services
             SsoConfig ssoConfig)
         {
             ssoConfig.Enabled = true;
-            ssoConfig.SetData(new SsoConfigurationData { UseKeyConnector = true });
+            ssoConfig.SetData(new SsoConfigurationData { KeyConnectorEnabled = true });
             var ssoConfigRepository = sutProvider.GetDependency<ISsoConfigRepository>();
             var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
             var applicationCacheService = sutProvider.GetDependency<IApplicationCacheService>();

@@ -385,7 +385,7 @@ namespace Bit.Api.Controllers
             }
 
             var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(orgGuidId);
-            if (ssoConfig?.GetData()?.UseKeyConnector == true)
+            if (ssoConfig?.GetData()?.KeyConnectorEnabled == true)
             {
                 throw new BadRequestException("You cannot leave an Organization that is using Key Connector.");
             }
@@ -648,7 +648,7 @@ namespace Bit.Api.Controllers
             var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(id);
             ssoConfig = ssoConfig == null ? model.ToSsoConfig(id) : model.ToSsoConfig(ssoConfig);
 
-            await _ssoConfigService.SaveAsync(ssoConfig);
+            await _ssoConfigService.SaveAsync(ssoConfig, organization);
 
             return new OrganizationSsoResponseModel(organization, _globalSettings, ssoConfig);
         }
