@@ -79,7 +79,10 @@ namespace Bit.Core.Test.Services
             var oldSsoConfig = new SsoConfig
             {
                 Id = 1,
-                Data = "{\"keyConnectorEnabled\": true}",
+                Data = new SsoConfigurationData
+                {
+                    KeyConnectorEnabled = true,
+                }.Serialize(),
                 Enabled = true,
                 OrganizationId = organization.Id,
                 CreationDate = utcNow.AddDays(-10),
@@ -120,7 +123,10 @@ namespace Bit.Core.Test.Services
             var oldSsoConfig = new SsoConfig
             {
                 Id = 1,
-                Data = "{\"keyConnectorEnabled\": true}",
+                Data = new SsoConfigurationData
+                {
+                    KeyConnectorEnabled = true,
+                }.Serialize(),
                 Enabled = true,
                 OrganizationId = organization.Id,
                 CreationDate = utcNow.AddDays(-10),
@@ -155,7 +161,10 @@ namespace Bit.Core.Test.Services
             var ssoConfig = new SsoConfig
             {
                 Id = default,
-                Data = "{\"keyConnectorEnabled\": true}",
+                Data = new SsoConfigurationData
+                {
+                    KeyConnectorEnabled = true,
+                }.Serialize(),
                 Enabled = true,
                 OrganizationId = organization.Id,
                 CreationDate = utcNow.AddDays(-10),
@@ -180,7 +189,10 @@ namespace Bit.Core.Test.Services
             var ssoConfig = new SsoConfig
             {
                 Id = default,
-                Data = "{\"keyConnectorEnabled\": true}",
+                Data = new SsoConfigurationData
+                {
+                    KeyConnectorEnabled = true,
+                }.Serialize(),
                 Enabled = true,
                 OrganizationId = organization.Id,
                 CreationDate = utcNow.AddDays(-10),
@@ -211,7 +223,10 @@ namespace Bit.Core.Test.Services
             var ssoConfig = new SsoConfig
             {
                 Id = default,
-                Data = "{\"keyConnectorEnabled\": true}",
+                Data = new SsoConfigurationData
+                {
+                    KeyConnectorEnabled = true,
+                }.Serialize(),
                 Enabled = false,
                 OrganizationId = organization.Id,
                 CreationDate = utcNow.AddDays(-10),
@@ -243,7 +258,10 @@ namespace Bit.Core.Test.Services
             var ssoConfig = new SsoConfig
             {
                 Id = default,
-                Data = "{\"keyConnectorEnabled\": true}",
+                Data = new SsoConfigurationData
+                {
+                    KeyConnectorEnabled = true,
+                }.Serialize(),
                 Enabled = true,
                 OrganizationId = organization.Id,
                 CreationDate = utcNow.AddDays(-10),
@@ -275,7 +293,10 @@ namespace Bit.Core.Test.Services
             var ssoConfig = new SsoConfig
             {
                 Id = default,
-                Data = "{\"keyConnectorEnabled\": true}",
+                Data = new SsoConfigurationData
+                {
+                    KeyConnectorEnabled = true,
+                }.Serialize(),
                 Enabled = true,
                 OrganizationId = organization.Id,
                 CreationDate = utcNow.AddDays(-10),
