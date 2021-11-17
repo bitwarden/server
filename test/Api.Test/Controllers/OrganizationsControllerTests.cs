@@ -54,8 +54,8 @@ namespace Bit.Api.Test.Controllers
         }
 
         [Theory, AutoData]
-        public async Task OrganizationsController_WhenUserTriestoLeaveOrganizationUsingKeyConnector_Throws(
-            Guid orgId)
+        public async Task OrganizationsController_UserCannotLeaveOrganizationThatProvidesKeyConnector(
+            Guid orgId, User user)
         {
             var ssoConfig = new SsoConfig
             {
@@ -68,17 +68,49 @@ namespace Bit.Api.Test.Controllers
                 OrganizationId = orgId,
             };
 
+            user.UsesKeyConnector = true;
+
             _currentContext.OrganizationUser(orgId).Returns(true);
             _ssoConfigRepository.GetByOrganizationIdAsync(orgId).Returns(ssoConfig);
-            _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(new Guid());
+            _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(user.Id);
+            _currentContext.User.Returns(user);
 
             var exception = await Assert.ThrowsAsync<BadRequestException>(
                 () => _sut.Leave(orgId.ToString()));
 
-            Assert.Contains("You cannot leave an Organization that is using Key Connector.",
+            Assert.Contains("You cannot leave this Organization because you are using its Key Connector.",
                 exception.Message);
 
             await _organizationService.DidNotReceiveWithAnyArgs().DeleteUserAsync(default, default);
+        }
+
+        [Theory]
+        [InlineAutoData(true, false)]
+        [InlineAutoData(false, true)]
+        [InlineAutoData(false, false)]
+        public async Task OrganizationsController_UserCanLeaveOrganizationThatDoesntProvideKeyConnector(
+            bool keyConnectorEnabled, bool userUsesKeyConnector, Guid orgId, User user)
+        {
+            var ssoConfig = new SsoConfig
+            {
+                Id = default,
+                Data = new SsoConfigurationData
+                {
+                    KeyConnectorEnabled = keyConnectorEnabled,
+                }.Serialize(),
+                Enabled = true,
+                OrganizationId = orgId,
+            };
+
+            user.UsesKeyConnector = userUsesKeyConnector;
+
+            _currentContext.OrganizationUser(orgId).Returns(true);
+            _ssoConfigRepository.GetByOrganizationIdAsync(orgId).Returns(ssoConfig);
+            _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(user.Id);
+            _currentContext.User.Returns(user);
+
+            await _organizationService.DeleteUserAsync(orgId, user.Id);
+            await _organizationService.Received(1).DeleteUserAsync(orgId, user.Id);
         }
     }
 }
