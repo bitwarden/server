@@ -1,7 +1,7 @@
 #!/bin/sh
 BACKUP_INTERVAL=${BACKUP_INTERVAL:-next day}
 BACKUP_INTERVAL_FORMAT=${BACKUP_INTERVAL_FORMAT:-%Y-%m-%d 00:00:00}
-BACKUP_DB_DIR=${BACKUP_DB_DIR:-'/etc/bitwarden/mssql/backups/'}
+export BACKUP_DB_DIR=${BACKUP_DB_DIR:-'/etc/bitwarden/mssql/backups/'}
 
 while true
 do
