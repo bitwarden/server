@@ -112,7 +112,7 @@ For more information, see: [Safe storage of app secrets in development in ASP.NE
 
 We provide a helper scripts which simplifies setting user secrets for all projects in the repository.
 
-Start by copying the `secret.json.example` file to `secret.json` and modify the existing settings and add any other required setting. Afterwards run the following command which will add the settings to each project in the bitwarden repository.
+Start by copying the `secret.json.example` file to `secrets.json` and modify the existing settings and add any other required setting. Afterwards run the following command which will add the settings to each project in the bitwarden repository.
 
 ```powershell
 .\setup_secrets.ps1
