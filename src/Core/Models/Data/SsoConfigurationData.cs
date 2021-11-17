@@ -27,7 +27,7 @@ namespace Bit.Core.Models.Data
 
         public SsoType ConfigType { get; set; }
 
-        public bool UseKeyConnector { get; set; }
+        public bool KeyConnectorEnabled { get; set; }
         public string KeyConnectorUrl { get; set; }
 
         // OIDC

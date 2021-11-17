@@ -144,7 +144,7 @@ namespace Bit.Core.Test.Services
             });
 
             var ssoConfig = new SsoConfig { Enabled = true };
-            var data = new SsoConfigurationData { UseKeyConnector = true };
+            var data = new SsoConfigurationData { KeyConnectorEnabled = true };
             ssoConfig.SetData(data);
 
             sutProvider.GetDependency<ISsoConfigRepository>()

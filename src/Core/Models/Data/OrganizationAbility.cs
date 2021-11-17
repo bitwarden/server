@@ -17,6 +17,7 @@ namespace Bit.Core.Models.Data
             UsersGetPremium = organization.UsersGetPremium;
             Enabled = organization.Enabled;
             UseSso = organization.UseSso;
+            UseKeyConnector = organization.UseKeyConnector;
             UseResetPassword = organization.UseResetPassword;
         }
 
@@ -27,6 +28,7 @@ namespace Bit.Core.Models.Data
         public bool UsersGetPremium { get; set; }
         public bool Enabled { get; set; }
         public bool UseSso { get; set; }
+        public bool UseKeyConnector { get; set; }
         public bool UseResetPassword { get; set; }
     }
 }

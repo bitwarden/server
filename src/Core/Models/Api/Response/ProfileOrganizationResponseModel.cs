@@ -14,6 +14,7 @@ namespace Bit.Core.Models.Api
             Name = organization.Name;
             UsePolicies = organization.UsePolicies;
             UseSso = organization.UseSso;
+            UseKeyConnector = organization.UseKeyConnector;
             UseGroups = organization.UseGroups;
             UseDirectory = organization.UseDirectory;
             UseEvents = organization.UseEvents;
@@ -41,7 +42,7 @@ namespace Bit.Core.Models.Api
             if (organization.SsoConfig != null)
             {
                 var ssoConfigData = SsoConfigurationData.Deserialize(organization.SsoConfig);
-                UsesKeyConnector = ssoConfigData.UseKeyConnector && !string.IsNullOrEmpty(ssoConfigData.KeyConnectorUrl);
+                KeyConnectorEnabled = ssoConfigData.KeyConnectorEnabled && !string.IsNullOrEmpty(ssoConfigData.KeyConnectorUrl);
                 KeyConnectorUrl = ssoConfigData.KeyConnectorUrl;
             }
         }
@@ -50,6 +51,7 @@ namespace Bit.Core.Models.Api
         public string Name { get; set; }
         public bool UsePolicies { get; set; }
         public bool UseSso { get; set; }
+        public bool UseKeyConnector { get; set; }
         public bool UseGroups { get; set; }
         public bool UseDirectory { get; set; }
         public bool UseEvents { get; set; }
@@ -74,7 +76,7 @@ namespace Bit.Core.Models.Api
         public bool HasPublicAndPrivateKeys { get; set; }
         public string ProviderId { get; set; }
         public string ProviderName { get; set; }
-        public bool UsesKeyConnector { get; set; }
+        public bool KeyConnectorEnabled { get; set; }
         public string KeyConnectorUrl { get; set; }
     }
 }

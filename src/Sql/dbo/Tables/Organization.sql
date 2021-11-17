@@ -41,6 +41,7 @@
     [RevisionDate]                  DATETIME2 (7)   NOT NULL,
     [OwnersNotifiedOfAutoscaling]   DATETIME2(7)    NULL,
     [MaxAutoscaleSeats]             INT             NULL,
+    [UseKeyConnector]               BIT             NOT NULL,
     CONSTRAINT [PK_Organization] PRIMARY KEY CLUSTERED ([Id] ASC)
 );
 
