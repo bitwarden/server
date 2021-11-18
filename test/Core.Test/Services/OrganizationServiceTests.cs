@@ -28,7 +28,7 @@ namespace Bit.Core.Test.Services
     public class OrganizationServiceTests
     {
         // [Fact]
-        [Theory, PaidOrganizationAutoData(PlanType.EnterpriseAnnually)]
+        [Theory, PaidOrganizationAutoData]
         public async Task OrgImportCreateNewUsers(SutProvider<OrganizationService> sutProvider, Guid userId,
             Organization org, List<OrganizationUserUserDetails> existingUsers, List<ImportedOrganizationUser> newUsers)
         {
@@ -66,7 +66,7 @@ namespace Bit.Core.Test.Services
                 .CreateManyAsync(Arg.Is<IEnumerable<OrganizationUser>>(users => users.Count() == expectedNewUsersCount));
             await sutProvider.GetDependency<IMailService>().Received(1)
                 .BulkSendOrganizationInviteEmailAsync(org.Name,
-                true,
+                Arg.Any<bool>(),
                 Arg.Is<IEnumerable<(OrganizationUser, ExpiringToken)>>(messages => messages.Count() == expectedNewUsersCount));
             
             // Send events
@@ -125,7 +125,7 @@ namespace Bit.Core.Test.Services
                 .CreateManyAsync(Arg.Is<IEnumerable<OrganizationUser>>(users => users.Count() == expectedNewUsersCount));
             await sutProvider.GetDependency<IMailService>().Received(1)
                 .BulkSendOrganizationInviteEmailAsync(org.Name,
-                false,
+                Arg.Any<bool>(),
                 Arg.Is<IEnumerable<(OrganizationUser, ExpiringToken)>>(messages => messages.Count() == expectedNewUsersCount));
 
             // Sent events
