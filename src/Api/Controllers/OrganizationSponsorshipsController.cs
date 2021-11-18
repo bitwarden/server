@@ -43,12 +43,10 @@ namespace Bit.Api.Controllers
 
         [HttpPost("{sponsoringOrgId}/families-for-enterprise")]
         [SelfHosted(NotSelfHostedOnly = true)]
-        public async Task CreateSponsorship(string sponsoringOrgId, [FromBody] OrganizationSponsorshipRequestModel model)
+        public async Task CreateSponsorship(Guid sponsoringOrgId, [FromBody] OrganizationSponsorshipRequestModel model)
         {
-            // TODO: validate has right to sponsor, send sponsorship email
-            var sponsoringOrgIdGuid = new Guid(sponsoringOrgId);
             var requiredSponsoringProductType = StaticStore.GetSponsoredPlan(model.PlanSponsorshipType)?.SponsoringProductType;
-            var sponsoringOrg = await _organizationRepository.GetByIdAsync(sponsoringOrgIdGuid);
+            var sponsoringOrg = await _organizationRepository.GetByIdAsync(sponsoringOrgId);
             if (requiredSponsoringProductType == null ||
                 sponsoringOrg == null ||
                 StaticStore.GetPlan(sponsoringOrg.PlanType).Product != requiredSponsoringProductType.Value)
@@ -56,7 +54,7 @@ namespace Bit.Api.Controllers
                 throw new BadRequestException("Specified Organization cannot sponsor other organizations.");
             }
 
-            var sponsoringOrgUser = await _organizationUserRepository.GetByOrganizationAsync(sponsoringOrgIdGuid, _currentContext.UserId ?? default);
+            var sponsoringOrgUser = await _organizationUserRepository.GetByOrganizationAsync(sponsoringOrgId, _currentContext.UserId ?? default);
             if (sponsoringOrgUser == null || sponsoringOrgUser.Status != OrganizationUserStatusType.Confirmed)
             {
                 throw new BadRequestException("Only confirmed users can sponsor other organizations.");
@@ -74,17 +72,15 @@ namespace Bit.Api.Controllers
 
         [HttpPost("{sponsoringOrgId}/families-for-enterprise/resend")]
         [SelfHosted(NotSelfHostedOnly = true)]
-        public async Task ResendSponsorshipOffer(string sponsoringOrgId)
+        public async Task ResendSponsorshipOffer(Guid sponsoringOrgId)
         {
-            // TODO: validate has right to sponsor, send sponsorship email
-            var sponsoringOrgIdGuid = new Guid(sponsoringOrgId);
-            var sponsoringOrg = await _organizationRepository.GetByIdAsync(sponsoringOrgIdGuid);
+            var sponsoringOrg = await _organizationRepository.GetByIdAsync(sponsoringOrgId);
             if (sponsoringOrg == null)
             {
                 throw new BadRequestException("Cannot find the requested sponsoring organization.");
             }
 
-            var sponsoringOrgUser = await _organizationUserRepository.GetByOrganizationAsync(sponsoringOrgIdGuid, _currentContext.UserId ?? default);
+            var sponsoringOrgUser = await _organizationUserRepository.GetByOrganizationAsync(sponsoringOrgId, _currentContext.UserId ?? default);
             if (sponsoringOrgUser == null || sponsoringOrgUser.Status != OrganizationUserStatusType.Confirmed)
             {
                 throw new BadRequestException("Only confirmed users can sponsor other organizations.");
@@ -146,11 +142,10 @@ namespace Bit.Api.Controllers
         [HttpDelete("{sponsoringOrganizationId}")]
         [HttpPost("{sponsoringOrganizationId}/delete")]
         [SelfHosted(NotSelfHostedOnly = true)]
-        public async Task RevokeSponsorship(string sponsoringOrganizationId)
+        public async Task RevokeSponsorship(Guid sponsoringOrganizationId)
         {
-            var sponsoringOrganizationIdGuid = new Guid(sponsoringOrganizationId);
 
-            var orgUser = await _organizationUserRepository.GetByOrganizationAsync(sponsoringOrganizationIdGuid, _currentContext.UserId ?? default);
+            var orgUser = await _organizationUserRepository.GetByOrganizationAsync(sponsoringOrganizationId, _currentContext.UserId ?? default);
             if (_currentContext.UserId != orgUser?.UserId)
             {
                 throw new BadRequestException("Can only revoke a sponsorship you granted.");
@@ -181,17 +176,16 @@ namespace Bit.Api.Controllers
         [HttpDelete("sponsored/{sponsoredOrgId}")]
         [HttpPost("sponsored/{sponsoredOrgId}/remove")]
         [SelfHosted(NotSelfHostedOnly = true)]
-        public async Task RemoveSponsorship(string sponsoredOrgId)
+        public async Task RemoveSponsorship(Guid sponsoredOrgId)
         {
-            var sponsoredOrgIdGuid = new Guid(sponsoredOrgId);
 
-            if (!await _currentContext.OrganizationOwner(sponsoredOrgIdGuid))
+            if (!await _currentContext.OrganizationOwner(sponsoredOrgId))
             {
                 throw new BadRequestException("Only the owner of an organization can remove sponsorship.");
             }
 
             var existingOrgSponsorship = await _organizationSponsorshipRepository
-                .GetBySponsoredOrganizationIdAsync(sponsoredOrgIdGuid);
+                .GetBySponsoredOrganizationIdAsync(sponsoredOrgId);
             if (existingOrgSponsorship == null || existingOrgSponsorship.SponsoredOrganizationId == null)
             {
                 throw new BadRequestException("The requested organization is not currently being sponsored.");
