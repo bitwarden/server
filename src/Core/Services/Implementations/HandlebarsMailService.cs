@@ -852,20 +852,6 @@ namespace Bit.Core.Services
             message.Category = "FamiliesForEnterpriseSponsorshipReverting";
             await _mailDeliveryService.SendEmailAsync(message);
         }
-
-        public async Task SendFamiliesForEnterpriseSponsorshipEndingEmailAsync(string email, DateTime sponsorshipEndDate)
-        {
-            var endsInTime = DateTime.UtcNow - sponsorshipEndDate;
-
-            var message = CreateDefaultMessage("Action Required: Renew Families Subscription", email);
-            var model = new FamiliesForEnterpriseSponsorshipEndingViewModel
-            {
-                DaysLeft = (int)endsInTime.TotalDays,
-            };
-            await AddMessageContentAsync(message, "FamiliesForEnterprise.FamiliesForEnterpriseSponsorshipEnding", model);
-            message.Category = "FamiliesForEnterpriseSponsorshipEnding";
-            await _mailDeliveryService.SendEmailAsync(message);
-        }
         
         public async Task SendOTPEmailAsync(string email, string token)
         {

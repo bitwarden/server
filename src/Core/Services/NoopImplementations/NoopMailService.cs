@@ -220,11 +220,6 @@ namespace Bit.Core.Services
         {
             return Task.FromResult(0);
         }
-
-        public Task SendFamiliesForEnterpriseSponsorshipEndingEmailAsync(string email, DateTime sponsorshipEndDate)
-        {
-            return Task.FromResult(0);
-        }
         
         public Task SendOTPEmailAsync(string email, string token)
         {
