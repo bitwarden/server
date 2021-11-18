@@ -205,15 +205,15 @@ namespace Bit.Core.Services
             await _mailDeliveryService.SendEmailAsync(message);
         }
 
-        public Task SendOrganizationInviteEmailAsync(string organizationName, OrganizationUser orgUser, ExpiringToken token) =>
-            BulkSendOrganizationInviteEmailAsync(organizationName, new[] { (orgUser, token) });
+        public Task SendOrganizationInviteEmailAsync(string organizationName, bool orgCanSponsor, OrganizationUser orgUser, ExpiringToken token) =>
+            BulkSendOrganizationInviteEmailAsync(organizationName, orgCanSponsor, new[] { (orgUser, token) });
 
-        public async Task BulkSendOrganizationInviteEmailAsync(string organizationName, IEnumerable<(OrganizationUser orgUser, ExpiringToken token)> invites)
+        public async Task BulkSendOrganizationInviteEmailAsync(string organizationName, bool orgCanSponsor, IEnumerable<(OrganizationUser orgUser, ExpiringToken token)> invites)
         {
             MailQueueMessage CreateMessage(string email, object model)
             {
                 var message = CreateDefaultMessage($"Join {organizationName}", email);
-                return new MailQueueMessage(message, "OrganizationUserInvited", model);
+                return new MailQueueMessage(message, orgCanSponsor ? "OrganizationUserInvitedWithSponsorship" : "OrganizationUserInvited", model);
             }
 
             var messageModels = invites.Select(invite => CreateMessage(invite.orgUser.Email,
@@ -761,18 +761,33 @@ namespace Bit.Core.Services
         {
             var message = CreateDefaultMessage("Finish Activation - Your Free Families Subscription", email);
 
-            var model = new FamiliesForEnterpriseOfferViewModel
+            if (existingAccount)
             {
-                SponsorEmail = sponsorEmail,
-                WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
-                SiteName = _globalSettings.SiteName,
-                SponsorshipToken = token,
-            };
+                var model = new FamiliesForEnterpriseOfferExistingAccountViewModel
+                {
+                    SponsorEmail = sponsorEmail,
+                    SponsoredEmail = WebUtility.UrlEncode(email),
+                    WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+                    SiteName = _globalSettings.SiteName,
+                    SponsorshipToken = token,
+                };
 
-            await AddMessageContentAsync(message, existingAccount
-                ? "FamiliesForEnterprise.FamiliesForEnterpriseOfferExistingAccount"
-                : "FamiliesForEnterprise.FamiliesForEnterpriseOfferNewAccount", model);
-            
+                await AddMessageContentAsync(message, "FamiliesForEnterprise.FamiliesForEnterpriseOfferExistingAccount", model);
+            }
+            else
+            {
+                var model = new FamiliesForEnterpriseOfferNewAccountViewModel
+                {
+                    SponsorEmail = sponsorEmail,
+                    SponsoredEmail = WebUtility.UrlEncode(email),
+                    WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+                    SiteName = _globalSettings.SiteName,
+                    SponsorshipToken = token,
+                };
+
+                await AddMessageContentAsync(message, "FamiliesForEnterprise.FamiliesForEnterpriseOfferNewAccount", model);
+            }
+
             message.Category = "FamiliesForEnterpriseOffer";
             await _mailDeliveryService.SendEmailAsync(message);
         }
