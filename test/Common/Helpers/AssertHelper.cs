@@ -23,28 +23,28 @@ namespace Bit.Test.Common.Helpers
                 throw new Exception("Expected object is null but actual is not");
             }
 
-            foreach (var expectedPi in expected.GetType().GetProperties().Where(pi => !relevantExcludedProperties.Contains(pi.Name)))
+            foreach (var expectedPropInfo in expected.GetType().GetProperties().Where(pi => !relevantExcludedProperties.Contains(pi.Name)))
             {
-                var actualPi = actual.GetType().GetProperty(expectedPi.Name);
+                var actualPropInfo = actual.GetType().GetProperty(expectedPropInfo.Name);
 
-                if (actualPi == null)
+                if (actualPropInfo == null)
                 {
                     var settings = new JsonSerializerSettings { Formatting = Formatting.Indented };
-                    throw new Exception(string.Concat($"Expected actual object to contain a property named {expectedPi.Name}, but it does not\n",
+                    throw new Exception(string.Concat($"Expected actual object to contain a property named {expectedPropInfo.Name}, but it does not\n",
                     $"Expected:\n{JsonConvert.SerializeObject(expected, settings)}\n",
                     $"Actual:\n{JsonConvert.SerializeObject(actual, new JsonSerializerSettings { Formatting = Formatting.Indented })}"));
                 }
 
-                if (expectedPi.PropertyType == typeof(string) || expectedPi.PropertyType.IsValueType)
+                if (expectedPropInfo.PropertyType == typeof(string) || expectedPropInfo.PropertyType.IsValueType)
                 {
-                    Assert.Equal(expectedPi.GetValue(expected), actualPi.GetValue(actual));
+                    Assert.Equal(expectedPropInfo.GetValue(expected), actualPropInfo.GetValue(actual));
                 }
                 else
                 {
-                    var prefix = $"{expectedPi.PropertyType.Name}.";
+                    var prefix = $"{expectedPropInfo.PropertyType.Name}.";
                     var nextExcludedProperties = excludedPropertyStrings.Where(name => name.StartsWith(prefix))
                         .Select(name => name[prefix.Length..]).ToArray();
-                    AssertPropertyEqual(expectedPi.GetValue(expected), actualPi.GetValue(actual), nextExcludedProperties);
+                    AssertPropertyEqual(expectedPropInfo.GetValue(expected), actualPropInfo.GetValue(actual), nextExcludedProperties);
                 }
             }
         }
