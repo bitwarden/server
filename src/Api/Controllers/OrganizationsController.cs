@@ -385,9 +385,10 @@ namespace Bit.Api.Controllers
             }
 
             var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(orgGuidId);
-            if (ssoConfig?.GetData()?.KeyConnectorEnabled == true)
+            if (ssoConfig?.GetData()?.KeyConnectorEnabled == true &&
+                _currentContext.User.UsesKeyConnector)
             {
-                throw new BadRequestException("You cannot leave an Organization that is using Key Connector.");
+                throw new BadRequestException("You cannot leave this Organization because you are using its Key Connector.");
             }
 
             var userId = _userService.GetProperUserId(User);
