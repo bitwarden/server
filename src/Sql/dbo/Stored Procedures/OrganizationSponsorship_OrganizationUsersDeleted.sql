@@ -4,6 +4,7 @@ AS
 BEGIN
     SET NOCOUNT ON
 
+    DECLARE @BatchSize AS INT;
     SET @BatchSize = 100;
 
     WHILE @BatchSize > 0
