@@ -1,18 +1,18 @@
 using System;
 using System.Threading.Tasks;
 using Bit.Core.Enums;
-using Bit.Core.Models.Api;
 using Bit.Core.Models.Table;
 
 namespace Bit.Core.Services
 {
     public interface IOrganizationSponsorshipService
     {
-        Task CreateSponsorshipAsync(Guid sponsoringOrgId, OrganizationSponsorshipRequestModel model);
+        Task<bool> ValidateRedemptionTokenAsync(string encryptedToken);
+        Task OfferSponsorshipAsync(Organization sponsoringOrg, OrganizationUser sponsoringOrgUser,
+            PlanSponsorshipType sponsorshipType, string sponsoredEmail, string friendlyName);
+        Task SendSponsorshipOfferAsync(Organization sponsoringOrg, OrganizationSponsorship sponsorship);
+        Task SetUpSponsorshipAsync(OrganizationSponsorship sponsorship, Organization sponsoredOrganization);
         Task<bool> ValidateSponsorshipAsync(Guid sponsoredOrganizationId);
-        Task RedeemSponsorshipAsync(string sponsorshipToken, OrganizationSponsorshipRedeemRequestModel model);
-        Task ResendSponsorshipOfferAsync(Guid sponsoringOrgId);
-        Task RevokeSponsorshipAsync(Guid sponsoringOrganizationId);
-        Task RemoveSponsorshipAsync(Guid sponsoredOrgId);
+        Task RemoveSponsorshipAsync(Organization sponsoredOrganization, OrganizationSponsorship sponsorship);
     }
 }
