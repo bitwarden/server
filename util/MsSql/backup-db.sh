@@ -2,6 +2,7 @@
 BACKUP_INTERVAL=${BACKUP_INTERVAL:-next day}
 BACKUP_INTERVAL_FORMAT=${BACKUP_INTERVAL_FORMAT:-%Y-%m-%d 00:00:00}
 export BACKUP_DB_DIR=${BACKUP_DB_DIR:-'/etc/bitwarden/mssql/backups/'}
+BACKUP_DB_KEEP_MTIME=${BACKUP_DB_KEEP_MTIME:-'+32'}
 
 while true
 do
@@ -21,7 +22,7 @@ do
 
   # Delete backup files older than 30 days
   grep -B1 "BACKUP DATABASE successfully" /var/opt/mssql/log/errorlog | grep -q _${BACKUP_DB_FILENAME}.BAK &&
-  find $BACKUP_DB_DIR -mindepth 1 -type f -name '*.BAK' -mtime +32 -delete
+  find $BACKUP_DB_DIR -mindepth 1 -type f -name '*.BAK' -mtime $BACKUP_DB_KEEP_MTIME -delete
 
   # Common variables used in the next two if blocks.
   DATABASE=${DATABASE:-'vault'}
