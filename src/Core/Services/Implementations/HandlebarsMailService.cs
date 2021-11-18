@@ -804,7 +804,6 @@ namespace Bit.Core.Services
 
         private async Task SendFamiliesForEnterpriseInviteRedeemedToFamilyUserEmailAsync(string email)
         {
-            // TODO: Complete emails
             var message = CreateDefaultMessage("Success! Families Subscription Accepted", email);
             var model = new FamiliesForEnterpriseRedeemedToFamilyUserViewModel
             {
@@ -817,7 +816,6 @@ namespace Bit.Core.Services
 
         private async Task SendFamiliesForEnterpriseInviteRedeemedToEnterpriseUserEmailAsync(string email)
         {
-            // TODO: Complete emails
             var message = CreateDefaultMessage("Success! Families Subscription Accepted", email);
             var model = new FamiliesForEnterpriseRedeemedToEnterpriseUserViewModel
             {
