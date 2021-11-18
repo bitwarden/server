@@ -760,7 +760,7 @@ namespace Bit.Core.Services
 
         public async Task SendFamiliesForEnterpriseOfferEmailAsync(string email, string sponsorEmail, bool existingAccount, string token)
         {
-            var message = CreateDefaultMessage("Finish Activation - Your Free Families Subscription", email);
+            var message = CreateDefaultMessage("Accept Your Free Families Subscription", email);
 
             if (existingAccount)
             {
@@ -805,7 +805,7 @@ namespace Bit.Core.Services
         private async Task SendFamiliesForEnterpriseInviteRedeemedToFamilyUserEmailAsync(string email)
         {
             // TODO: Complete emails
-            var message = CreateDefaultMessage("Success! Families Subscription Activated", email);
+            var message = CreateDefaultMessage("Success! Families Subscription Accepted", email);
             var model = new FamiliesForEnterpriseRedeemedToFamilyUserViewModel
             {
 
@@ -818,7 +818,7 @@ namespace Bit.Core.Services
         private async Task SendFamiliesForEnterpriseInviteRedeemedToEnterpriseUserEmailAsync(string email)
         {
             // TODO: Complete emails
-            var message = CreateDefaultMessage("Success! Families Subscription Activated", email);
+            var message = CreateDefaultMessage("Success! Families Subscription Accepted", email);
             var model = new FamiliesForEnterpriseRedeemedToEnterpriseUserViewModel
             {
 
