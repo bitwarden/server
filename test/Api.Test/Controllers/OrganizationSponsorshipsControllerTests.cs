@@ -82,7 +82,7 @@ namespace Bit.Api.Test.Controllers
                 .Returns(sponsoringOrgUser);
 
             var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-                sutProvider.Sut.RevokeSponsorship(sponsoringOrgUser.Id.ToString()));
+                sutProvider.Sut.RevokeSponsorship(sponsoringOrgUser.Id));
 
             Assert.Contains("Can only revoke a sponsorship you granted.", exception.Message);
             await sutProvider.GetDependency<IOrganizationSponsorshipService>()
@@ -98,7 +98,7 @@ namespace Bit.Api.Test.Controllers
             sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(Arg.Any<Guid>()).Returns(false);
 
             var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-                sutProvider.Sut.RemoveSponsorship(sponsoredOrg.Id.ToString()));
+                sutProvider.Sut.RemoveSponsorship(sponsoredOrg.Id));
 
             Assert.Contains("Only the owner of an organization can remove sponsorship.", exception.Message);
             await sutProvider.GetDependency<IOrganizationSponsorshipService>()
