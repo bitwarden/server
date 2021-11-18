@@ -13,9 +13,9 @@ BEGIN
 
         DELETE TOP(@BatchSize) OS
         FROM
-            [dbo].[OrganiozationSponsorship] OS
+            [dbo].[OrganizationSponsorship] OS
         INNER JOIN
-            @Ids I ON I.Id = OS.SponsoringOrganizationUserId
+            @SponsoringOrganizationUserIds I ON I.Id = OS.SponsoringOrganizationUserId
 
         SET @BatchSize = @@ROWCOUNT
 
