@@ -211,11 +211,6 @@ namespace Bit.Core.Services
             return Task.FromResult(0);
         }
 
-        public Task SendFamiliesForEnterpriseReconfirmationRequiredEmailAsync(string email)
-        {
-            return Task.FromResult(0);
-        }
-
         public Task SendFamiliesForEnterpriseSponsorshipRevertingEmailAsync(string email, string familyOrgName)
         {
             return Task.FromResult(0);

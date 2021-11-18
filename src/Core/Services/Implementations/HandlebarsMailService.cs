@@ -828,19 +828,6 @@ namespace Bit.Core.Services
             await _mailDeliveryService.SendEmailAsync(message);
         }
 
-        public async Task SendFamiliesForEnterpriseReconfirmationRequiredEmailAsync(string email)
-        {
-            // TODO: Complete emails
-            var message = CreateDefaultMessage("Your Sponsorship Requires Reconfirmation", email);
-            var model = new FamiliesForEnterpriseReconfirmationRequiredViewModel
-            {
-
-            };
-            await AddMessageContentAsync(message, "FamiliesForEnterprise.FamiliesForEnterpriseReconfirmationRequired", model);
-            message.Category = "FamiliesForEnterpriseReconfirmationRequired";
-            await _mailDeliveryService.SendEmailAsync(message);
-        }
-
         public async Task SendFamiliesForEnterpriseSponsorshipRevertingEmailAsync(string email, string familyOrgName)
         {
             var message = CreateDefaultMessage($"{familyOrgName} Organization Sponsorship Is No Longer Valid", email);
