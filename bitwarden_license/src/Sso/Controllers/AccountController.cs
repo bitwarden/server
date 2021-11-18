@@ -377,7 +377,6 @@ namespace Bit.Sso.Controllers
         private async Task<User> AutoProvisionUserAsync(string provider, string providerUserId,
             IEnumerable<Claim> claims, string userIdentifier, SsoConfigurationData config)
         {
-            var deletedStaleUser = false;
             var name = GetName(claims, config.GetAdditionalNameClaimTypes());
             var email = GetEmailAddress(claims, config.GetAdditionalEmailClaimTypes());
             if (string.IsNullOrWhiteSpace(email) && providerUserId.Contains("@"))
@@ -460,16 +459,8 @@ namespace Bit.Sso.Controllers
                     throw new Exception(_i18nService.T("UserAlreadyInvited", email, organization.Name)); 
                 }
 
-                // Delete existing SsoUser (if any) - avoids error if providerId has changed and the sso link is stale
-                deletedStaleUser = await DeleteExistingSsoUserRecord(existingUser.Id, orgId, orgUser);
-                if (!deletedStaleUser)
-                {
-                    // If no stale user, this is the user's first Sso login ever
-                    await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_FirstSsoLogin);
-                }
-
                 // Accepted or Confirmed - create SSO link and return;
-                await CreateSsoUserRecord(providerUserId, existingUser.Id, orgId);
+                await CreateSsoUserRecord(providerUserId, existingUser.Id, orgId, orgUser);
                 return existingUser;
             }
 
@@ -546,16 +537,8 @@ namespace Bit.Sso.Controllers
                 await _organizationUserRepository.ReplaceAsync(orgUser);
             }
             
-            // Delete any stale user record to be safe
-            deletedStaleUser = await DeleteExistingSsoUserRecord(user.Id, orgId, orgUser);
-            if (!deletedStaleUser)
-            {
-                // If no stale user, this is the user's first Sso login ever
-                await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_FirstSsoLogin);
-            }
-
             // Create sso user record
-            await CreateSsoUserRecord(providerUserId, user.Id, orgId);
+            await CreateSsoUserRecord(providerUserId, user.Id, orgId, orgUser);
             
             return user;
         }
@@ -618,8 +601,21 @@ namespace Bit.Sso.Controllers
             return false;
         }
 
-        private async Task CreateSsoUserRecord(string providerUserId, Guid userId, Guid orgId)
+        private async Task CreateSsoUserRecord(string providerUserId, Guid userId, Guid orgId, OrganizationUser orgUser)
         {
+            // Delete existing SsoUser (if any) - avoids error if providerId has changed and the sso link is stale
+            var existingSsoUser = await _ssoUserRepository.GetByUserIdOrganizationIdAsync(orgId, userId);
+            if (existingSsoUser != null)
+            {
+                await _ssoUserRepository.DeleteAsync(userId, orgId);
+                await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_ResetSsoLink);
+            }
+            else
+            {
+                // If no stale user, this is the user's first Sso login ever
+                await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_FirstSsoLogin);
+            }
+
             var ssoUser = new SsoUser
             {
                 ExternalId = providerUserId,
