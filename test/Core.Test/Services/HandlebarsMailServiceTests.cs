@@ -35,7 +35,7 @@ namespace Bit.Core.Test.Services
             );
         }
 
-        [Fact]
+        [Fact(Skip = "For local development")]
         public async Task SendAllEmails()
         {
             // This test is only opt in and is more for development purposes.
