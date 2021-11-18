@@ -4,6 +4,7 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
+using Bit.Core.Utilities;
 using Microsoft.AspNetCore.DataProtection;
 
 namespace Bit.Core.Services
@@ -80,6 +81,26 @@ namespace Bit.Core.Services
         public async Task OfferSponsorshipAsync(Organization sponsoringOrg, OrganizationUser sponsoringOrgUser,
             PlanSponsorshipType sponsorshipType, string sponsoredEmail, string friendlyName)
         {
+            var requiredSponsoringProductType = StaticStore.GetSponsoredPlan(sponsorshipType)?.SponsoringProductType;
+            if (requiredSponsoringProductType == null ||
+                sponsoringOrg == null ||
+                StaticStore.GetPlan(sponsoringOrg.PlanType).Product != requiredSponsoringProductType.Value)
+            {
+                throw new BadRequestException("Specified Organization cannot sponsor other organizations.");
+            }
+
+            if (sponsoringOrgUser == null || sponsoringOrgUser.Status != OrganizationUserStatusType.Confirmed)
+            {
+                throw new BadRequestException("Only confirmed users can sponsor other organizations.");
+            }
+
+            var existingOrgSponsorship = await _organizationSponsorshipRepository
+                .GetBySponsoringOrganizationUserIdAsync(sponsoringOrgUser.Id);
+            if (existingOrgSponsorship != null)
+            {
+                throw new BadRequestException("Can only sponsor one organization per Organization User.");
+            }
+
             var sponsorship = new OrganizationSponsorship
             {
                 SponsoringOrganizationId = sponsoringOrg.Id,
@@ -106,6 +127,27 @@ namespace Bit.Core.Services
             }
         }
 
+        public async Task ResendSponsorshipOfferAsync(Organization sponsoringOrg, OrganizationUser sponsoringOrgUser,
+            OrganizationSponsorship sponsorship)
+        {
+            if (sponsoringOrg == null)
+            {
+                throw new BadRequestException("Cannot find the requested sponsoring organization.");
+            }
+
+            if (sponsoringOrgUser == null || sponsoringOrgUser.Status != OrganizationUserStatusType.Confirmed)
+            {
+                throw new BadRequestException("Only confirmed users can sponsor other organizations.");
+            }
+
+            if (sponsorship == null || sponsorship.OfferedToEmail == null)
+            {
+                throw new BadRequestException("Cannot find an outstanding sponsorship offer for this organization.");
+            }
+
+            await SendSponsorshipOfferAsync(sponsoringOrg, sponsorship);
+        }
+
         public async Task SendSponsorshipOfferAsync(Organization sponsoringOrg, OrganizationSponsorship sponsorship)
         {
             var user = await _userRepository.GetByEmailAsync(sponsorship.OfferedToEmail);
@@ -115,14 +157,35 @@ namespace Bit.Core.Services
                 isExistingAccount, RedemptionToken(sponsorship.Id, sponsorship.PlanSponsorshipType.Value));
         }
 
-        public async Task SetUpSponsorshipAsync(OrganizationSponsorship sponsorship, Organization sponsoredOrganization)
+        public async Task SetUpSponsorshipAsync(OrganizationSponsorship sponsorship,
+            Organization sponsoredOrganization)
         {
+            if (sponsorship == null)
+            {
+                throw new BadRequestException("No unredeemed sponsorship offer exists for you.");
+            }
+
+            var existingOrgSponsorship = await _organizationSponsorshipRepository
+                .GetBySponsoredOrganizationIdAsync(sponsoredOrganization.Id);
+            if (existingOrgSponsorship != null)
+            {
+                throw new BadRequestException("Cannot redeem a sponsorship offer for an organization that is already sponsored. Revoke existing sponsorship first.");
+            }
+
             if (sponsorship.PlanSponsorshipType == null)
             {
                 throw new BadRequestException("Cannot set up sponsorship without a known sponsorship type.");
             }
 
-            // TODO: rollback?
+            // Check org to sponsor's product type
+            var requiredSponsoredProductType = StaticStore.GetSponsoredPlan(sponsorship.PlanSponsorshipType.Value)?.SponsoredProductType;
+            if (requiredSponsoredProductType == null ||
+                sponsoredOrganization == null ||
+                StaticStore.GetPlan(sponsoredOrganization.PlanType).Product != requiredSponsoredProductType.Value)
+            {
+                throw new BadRequestException("Can only redeem sponsorship offer on families organizations.");
+            }
+
             await _paymentService.SponsorOrganizationAsync(sponsoredOrganization, sponsorship);
             await _organizationRepository.UpsertAsync(sponsoredOrganization);
 
@@ -144,13 +207,13 @@ namespace Bit.Core.Services
 
             if (existingSponsorship == null)
             {
-                await RemoveSponsorshipAsync(sponsoredOrganization, null);
+                await DoRemoveSponsorshipAsync(sponsoredOrganization, null);
                 return false;
             }
 
             if (existingSponsorship.SponsoringOrganizationId == null || existingSponsorship.SponsoringOrganizationUserId == null || existingSponsorship.PlanSponsorshipType == null)
             {
-                await RemoveSponsorshipAsync(sponsoredOrganization, existingSponsorship);
+                await DoRemoveSponsorshipAsync(sponsoredOrganization, existingSponsorship);
                 return false;
             }
             var sponsoredPlan = Utilities.StaticStore.GetSponsoredPlan(existingSponsorship.PlanSponsorshipType.Value);
@@ -159,21 +222,56 @@ namespace Bit.Core.Services
                 .GetByIdAsync(existingSponsorship.SponsoringOrganizationId.Value);
             if (sponsoringOrganization == null)
             {
-                await RemoveSponsorshipAsync(sponsoredOrganization, existingSponsorship);
+                await DoRemoveSponsorshipAsync(sponsoredOrganization, existingSponsorship);
                 return false;
             }
 
             var sponsoringOrgPlan = Utilities.StaticStore.GetPlan(sponsoringOrganization.PlanType);
             if (!sponsoringOrganization.Enabled || sponsoredPlan.SponsoringProductType != sponsoringOrgPlan.Product)
             {
-                await RemoveSponsorshipAsync(sponsoredOrganization, existingSponsorship);
+                await DoRemoveSponsorshipAsync(sponsoredOrganization, existingSponsorship);
                 return false;
             }
 
             return true;
         }
 
-        public async Task RemoveSponsorshipAsync(Organization sponsoredOrganization, OrganizationSponsorship sponsorship = null)
+        public async Task RevokeSponsorshipAsync(Organization sponsoredOrg, OrganizationSponsorship sponsorship)
+        {
+            if (sponsorship == null)
+            {
+                throw new BadRequestException("You are not currently sponsoring an organization.");
+            }
+            if (sponsorship.SponsoredOrganizationId == null)
+            {
+                await DoRemoveSponsorshipAsync(null, sponsorship);
+                return;
+            }
+
+            if (sponsoredOrg == null)
+            {
+                throw new BadRequestException("Unable to find the sponsored Organization.");
+            }
+
+            await DoRemoveSponsorshipAsync(sponsoredOrg, sponsorship);
+        }
+
+        public async Task RemoveSponsorshipAsync(Organization sponsoredOrg, OrganizationSponsorship sponsorship)
+        {
+            if (sponsorship == null || sponsorship.SponsoredOrganizationId == null)
+            {
+                throw new BadRequestException("The requested organization is not currently being sponsored.");
+            }
+
+            if (sponsoredOrg == null)
+            {
+                throw new BadRequestException("Unable to find the sponsored Organization.");
+            }
+
+            await DoRemoveSponsorshipAsync(sponsoredOrg, sponsorship);
+        }
+
+        internal async Task DoRemoveSponsorshipAsync(Organization sponsoredOrganization, OrganizationSponsorship sponsorship = null)
         {
             if (sponsoredOrganization != null)
             {
