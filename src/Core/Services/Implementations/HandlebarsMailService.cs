@@ -213,7 +213,7 @@ namespace Bit.Core.Services
             MailQueueMessage CreateMessage(string email, object model)
             {
                 var message = CreateDefaultMessage($"Join {organizationName}", email);
-                return new MailQueueMessage(message, orgCanSponsor ? "OrganizationUserInvitedWithSponsorship" : "OrganizationUserInvited", model);
+                return new MailQueueMessage(message, "OrganizationUserInvited", model);
             }
 
             var messageModels = invites.Select(invite => CreateMessage(invite.orgUser.Email,
@@ -228,6 +228,7 @@ namespace Bit.Core.Services
                     OrganizationNameUrlEncoded = WebUtility.UrlEncode(organizationName),
                     WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
                     SiteName = _globalSettings.SiteName,
+                    OrgCanSponsor = orgCanSponsor,
                 }
             ));
 
