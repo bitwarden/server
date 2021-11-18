@@ -139,8 +139,6 @@ namespace Bit.Billing.Controllers
                     // org
                     if (ids.Item1.HasValue)
                     {
-                        var newEndPeriod = subscription.CurrentPeriodEnd;
-
                         await _organizationService.UpdateExpirationDateAsync(ids.Item1.Value,
                             subscription.CurrentPeriodEnd);
                     }
