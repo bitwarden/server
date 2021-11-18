@@ -459,8 +459,8 @@ namespace Bit.Sso.Controllers
                     throw new Exception(_i18nService.T("UserAlreadyInvited", email, organization.Name)); 
                 }
 
-                // Delete existing SsoUser (if any) - avoids error if providerId has changed and the sso link is stale
-                await DeleteExistingSsoUserRecord(existingUser.Id, orgId, orgUser);
+                // Check for existing SsoUser (if any) - avoids error if providerId has changed and the sso link is stale
+                await CheckForExistingSsoUserRecord(existingUser.Id, orgId, orgUser);
 
                 // Accepted or Confirmed - create SSO link and return;
                 await CreateSsoUserRecord(providerUserId, existingUser.Id, orgId);
@@ -540,8 +540,8 @@ namespace Bit.Sso.Controllers
                 await _organizationUserRepository.ReplaceAsync(orgUser);
             }
             
-            // Delete any stale user record to be safe
-            await DeleteExistingSsoUserRecord(user.Id, orgId, orgUser);
+            // Check for any stale user record to be safe
+            await CheckForExistingSsoUserRecord(user.Id, orgId, orgUser);
 
             // Create sso user record
             await CreateSsoUserRecord(providerUserId, user.Id, orgId);
@@ -595,13 +595,17 @@ namespace Bit.Sso.Controllers
             return null;
         }
 
-        private async Task DeleteExistingSsoUserRecord(Guid userId, Guid orgId, OrganizationUser orgUser)
+        private async Task CheckForExistingSsoUserRecord(Guid userId, Guid orgId, OrganizationUser orgUser)
         {
             var existingSsoUser = await _ssoUserRepository.GetByUserIdOrganizationIdAsync(orgId, userId);
             if (existingSsoUser != null)
             {
                 await _ssoUserRepository.DeleteAsync(userId, orgId);
                 await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_ResetSsoLink);
+            }
+            else
+            {
+                await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_FirstSsoLogin);
             }
         }
 
