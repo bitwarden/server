@@ -14,7 +14,7 @@ SELECT
     O.[PlanType],
     O.[UsePolicies],
     O.[UseSso],
-    O.[UserKeyConnector],
+    O.[UseKeyConnector],
     O.[UseGroups],
     O.[UseDirectory],
     O.[UseEvents],
