@@ -639,15 +639,10 @@ namespace Bit.Core.Services
 
         public async Task<IdentityResult> SetKeyConnectorKeyAsync(User user, string key, string orgIdentifier)
         {
-            if (user == null)
+            var identityResult = CheckCanUseKeyConnector(user);
+            if (identityResult != null)
             {
-                throw new ArgumentNullException(nameof(user));
-            }
-
-            if (user.UsesKeyConnector)
-            {
-                Logger.LogWarning("Already uses Key Connector.");
-                return IdentityResult.Failed(_identityErrorDescriber.UserAlreadyHasPassword());
+                return identityResult;
             }
 
             user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
@@ -664,6 +659,24 @@ namespace Bit.Core.Services
 
         public async Task<IdentityResult> ConvertToKeyConnectorAsync(User user)
         {
+            var identityResult = CheckCanUseKeyConnector(user);
+            if (identityResult != null)
+            {
+                return identityResult;
+            }
+
+            user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
+            user.MasterPassword = null;
+            user.UsesKeyConnector = true;
+
+            await _userRepository.ReplaceAsync(user);
+            await _eventService.LogUserEventAsync(user.Id, EventType.User_MigratedKeyToKeyConnector);
+
+            return IdentityResult.Success;
+        }
+
+        private IdentityResult CheckCanUseKeyConnector(User user)
+        {
             if (user == null)
             {
                 throw new ArgumentNullException(nameof(user));
@@ -675,14 +688,13 @@ namespace Bit.Core.Services
                 return IdentityResult.Failed(_identityErrorDescriber.UserAlreadyHasPassword());
             }
 
-            user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
-            user.MasterPassword = null;
-            user.UsesKeyConnector = true;
+            if (_currentContext.Organizations.Any(u =>
+                    u.Type is OrganizationUserType.Owner or OrganizationUserType.Admin))
+            {
+                throw new BadRequestException("Cannot use Key Connector when admin or owner of an organization.");
+            }
 
-            await _userRepository.ReplaceAsync(user);
-            await _eventService.LogUserEventAsync(user.Id, EventType.User_MigratedKeyToKeyConnector);
-
-            return IdentityResult.Success;
+            return null;
         }
 
         public async Task<IdentityResult> AdminResetPasswordAsync(OrganizationUserType callingUserType, Guid orgId, Guid id, string newMasterPassword, string key)
