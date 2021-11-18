@@ -459,11 +459,8 @@ namespace Bit.Sso.Controllers
                     throw new Exception(_i18nService.T("UserAlreadyInvited", email, organization.Name)); 
                 }
 
-                // Delete existing SsoUser (if any) - avoids error if providerId has changed and the sso link is stale
-                await DeleteExistingSsoUserRecord(existingUser.Id, orgId, orgUser);
-
                 // Accepted or Confirmed - create SSO link and return;
-                await CreateSsoUserRecord(providerUserId, existingUser.Id, orgId);
+                await CreateSsoUserRecord(providerUserId, existingUser.Id, orgId, orgUser);
                 return existingUser;
             }
 
@@ -540,11 +537,8 @@ namespace Bit.Sso.Controllers
                 await _organizationUserRepository.ReplaceAsync(orgUser);
             }
             
-            // Delete any stale user record to be safe
-            await DeleteExistingSsoUserRecord(user.Id, orgId, orgUser);
-
             // Create sso user record
-            await CreateSsoUserRecord(providerUserId, user.Id, orgId);
+            await CreateSsoUserRecord(providerUserId, user.Id, orgId, orgUser);
             
             return user;
         }
@@ -595,18 +589,21 @@ namespace Bit.Sso.Controllers
             return null;
         }
 
-        private async Task DeleteExistingSsoUserRecord(Guid userId, Guid orgId, OrganizationUser orgUser)
+        private async Task CreateSsoUserRecord(string providerUserId, Guid userId, Guid orgId, OrganizationUser orgUser)
         {
+            // Delete existing SsoUser (if any) - avoids error if providerId has changed and the sso link is stale
             var existingSsoUser = await _ssoUserRepository.GetByUserIdOrganizationIdAsync(orgId, userId);
             if (existingSsoUser != null)
             {
                 await _ssoUserRepository.DeleteAsync(userId, orgId);
                 await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_ResetSsoLink);
             }
-        }
+            else
+            {
+                // If no stale user, this is the user's first Sso login ever
+                await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_FirstSsoLogin);
+            }
 
-        private async Task CreateSsoUserRecord(string providerUserId, Guid userId, Guid orgId)
-        {
             var ssoUser = new SsoUser
             {
                 ExternalId = providerUserId,
