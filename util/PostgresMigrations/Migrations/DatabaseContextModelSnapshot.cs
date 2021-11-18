@@ -569,6 +569,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<bool>("UseGroups")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("UseKeyConnector")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("UsePolicies")
                         .HasColumnType("boolean");
 

@@ -20,7 +20,7 @@ namespace Bit.Core.Models.Business
         public OrganizationLicense(Organization org, SubscriptionInfo subscriptionInfo, Guid installationId,
             ILicensingService licenseService, int? version = null)
         {
-            Version = version.GetValueOrDefault(7); // TODO: bump to version 8
+            Version = version.GetValueOrDefault(CURRENT_LICENSE_FILE_VERSION); // TODO: Remember to change the constant
             LicenseKey = org.LicenseKey;
             InstallationId = installationId;
             Id = org.Id;
@@ -34,6 +34,7 @@ namespace Bit.Core.Models.Business
             MaxCollections = org.MaxCollections;
             UsePolicies = org.UsePolicies;
             UseSso = org.UseSso;
+            UseKeyConnector = org.UseKeyConnector;
             UseGroups = org.UseGroups;
             UseEvents = org.UseEvents;
             UseDirectory = org.UseDirectory;
@@ -104,6 +105,7 @@ namespace Bit.Core.Models.Business
         public short? MaxCollections { get; set; }
         public bool UsePolicies { get; set; }
         public bool UseSso { get; set; }
+        public bool UseKeyConnector { get; set; }
         public bool UseGroups { get; set; }
         public bool UseEvents { get; set; }
         public bool UseDirectory { get; set; }
@@ -124,10 +126,19 @@ namespace Bit.Core.Models.Business
         [JsonIgnore]
         public byte[] SignatureBytes => Convert.FromBase64String(Signature);
 
+        /// <summary>
+        /// Represents the current version of the license format. Should be updated whenever new fields are added.
+        /// </summary>
+        private const int CURRENT_LICENSE_FILE_VERSION = 8;
+        private bool ValidLicenseVersion
+        {
+            get => Version is >= 1 and <= 9;
+        }
+
         public byte[] GetDataBytes(bool forHash = false)
         {
             string data = null;
-            if (Version >= 1 && Version <= 8)
+            if (ValidLicenseVersion)
             {
                 var props = typeof(OrganizationLicense)
                     .GetProperties(BindingFlags.Public | BindingFlags.Instance)
@@ -148,6 +159,8 @@ namespace Bit.Core.Models.Business
                         (Version >= 7 || !p.Name.Equals(nameof(UseSso))) &&
                         // UseResetPassword was added in Version 8
                         (Version >= 8 || !p.Name.Equals(nameof(UseResetPassword))) &&
+                        // UseKeyConnector was added in Version 9
+                        (Version >= 9 || !p.Name.Equals(nameof(UseKeyConnector))) &&
                         (
                             !forHash ||
                             (
@@ -184,7 +197,7 @@ namespace Bit.Core.Models.Business
                 return false;
             }
 
-            if (Version >= 1 && Version <= 8)
+            if (ValidLicenseVersion)
             {
                 return InstallationId == globalSettings.Installation.Id && SelfHost;
             }
@@ -201,7 +214,7 @@ namespace Bit.Core.Models.Business
                 return false;
             }
 
-            if (Version >= 1 && Version <= 8)
+            if (ValidLicenseVersion)
             {
                 var valid =
                     globalSettings.Installation.Id == InstallationId &&
@@ -245,10 +258,15 @@ namespace Bit.Core.Models.Business
                 {
                     valid = organization.UseSso == UseSso;
                 }
-                
+
                 if (valid && Version >= 8)
                 {
                     valid = organization.UseResetPassword == UseResetPassword;
+                }
+
+                if (valid && Version >= 9)
+                {
+                    valid = organization.UseKeyConnector == UseKeyConnector;
                 }
 
                 return valid;

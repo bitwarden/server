@@ -87,6 +87,7 @@ namespace Bit.Core.Repositories.EntityFramework
                     UsersGetPremium = e.UsersGetPremium,
                     Using2fa = e.Use2fa && e.TwoFactorProviders != null,
                     UseSso = e.UseSso,
+                    UseKeyConnector = e.UseKeyConnector,
                 }).ToListAsync();
             }
         }

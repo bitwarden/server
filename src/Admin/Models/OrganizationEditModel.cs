@@ -32,6 +32,7 @@ namespace Bit.Admin.Models
             MaxCollections = org.MaxCollections;
             UsePolicies = org.UsePolicies;
             UseSso = org.UseSso;
+            UseKeyConnector = org.UseKeyConnector;
             UseGroups = org.UseGroups;
             UseDirectory = org.UseDirectory;
             UseEvents = org.UseEvents;
@@ -78,6 +79,8 @@ namespace Bit.Admin.Models
         public bool UsePolicies { get; set; }
         [Display(Name = "SSO")]
         public bool UseSso { get; set; }
+        [Display(Name = "Key Connector with Customer Encryption")]
+        public bool UseKeyConnector { get; set; }
         [Display(Name = "Groups")]
         public bool UseGroups { get; set; }
         [Display(Name = "Directory")]
@@ -123,6 +126,7 @@ namespace Bit.Admin.Models
             existingOrganization.MaxCollections = MaxCollections;
             existingOrganization.UsePolicies = UsePolicies;
             existingOrganization.UseSso = UseSso;
+            existingOrganization.UseKeyConnector = UseKeyConnector;
             existingOrganization.UseGroups = UseGroups;
             existingOrganization.UseDirectory = UseDirectory;
             existingOrganization.UseEvents = UseEvents;

@@ -40,7 +40,8 @@
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
     @OwnersNotifiedOfAutoscaling DATETIME2(7),
-    @MaxAutoscaleSeats INT
+    @MaxAutoscaleSeats INT,
+    @UseKeyConnector BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON
@@ -88,7 +89,8 @@ BEGIN
         [CreationDate] = @CreationDate,
         [RevisionDate] = @RevisionDate,
         [OwnersNotifiedOfAutoscaling] = @OwnersNotifiedOfAutoscaling,
-        [MaxAutoscaleSeats] = @MaxAutoscaleSeats
+        [MaxAutoscaleSeats] = @MaxAutoscaleSeats,
+        [UseKeyConnector] = @UseKeyConnector
     WHERE
         [Id] = @Id
 END

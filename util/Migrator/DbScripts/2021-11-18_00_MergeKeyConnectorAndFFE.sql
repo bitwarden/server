@@ -14,6 +14,7 @@ SELECT
     O.[PlanType],
     O.[UsePolicies],
     O.[UseSso],
+    O.[UserKeyConnector],
     O.[UseGroups],
     O.[UseDirectory],
     O.[UseEvents],
@@ -53,3 +54,4 @@ LEFT JOIN
     [dbo].[SsoConfig] SS ON SS.[OrganizationId] = OU.[OrganizationId]
 LEFT JOIN
     [dbo].[OrganizationSponsorship] OS ON OS.[SponsoringOrganizationUserID] = OU.[Id]
+GO

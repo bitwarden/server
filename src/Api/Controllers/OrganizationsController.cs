@@ -384,6 +384,13 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
+            var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(orgGuidId);
+            if (ssoConfig?.GetData()?.KeyConnectorEnabled == true &&
+                _currentContext.User.UsesKeyConnector)
+            {
+                throw new BadRequestException("You cannot leave this Organization because you are using its Key Connector.");
+            }
+
             var userId = _userService.GetProperUserId(User);
             await _organizationService.DeleteUserAsync(orgGuidId, userId.Value);
         }
@@ -642,7 +649,7 @@ namespace Bit.Api.Controllers
             var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(id);
             ssoConfig = ssoConfig == null ? model.ToSsoConfig(id) : model.ToSsoConfig(ssoConfig);
 
-            await _ssoConfigService.SaveAsync(ssoConfig);
+            await _ssoConfigService.SaveAsync(ssoConfig, organization);
 
             return new OrganizationSsoResponseModel(organization, _globalSettings, ssoConfig);
         }

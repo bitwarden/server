@@ -95,7 +95,8 @@ namespace Bit.Core.IdentityServer
             if (context.Result.ValidatedRequest.GrantType == "client_credentials")
             {
                 if (user.UsesKeyConnector) {
-                    // KeyConnectorUrl is configured in the CLI client, just disable master password reset
+                    // KeyConnectorUrl is configured in the CLI client, we just need to tell the client to use it
+                    context.Result.CustomResponse["ApiUseKeyConnector"] = true;
                     context.Result.CustomResponse["ResetMasterPassword"] = false;
                 }
                 return;
@@ -110,7 +111,7 @@ namespace Bit.Core.IdentityServer
                 var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(organizationId);
                 var ssoConfigData = ssoConfig.GetData();
 
-                if (ssoConfigData is { UseKeyConnector: true } && !string.IsNullOrEmpty(ssoConfigData.KeyConnectorUrl))
+                if (ssoConfigData is { KeyConnectorEnabled: true } && !string.IsNullOrEmpty(ssoConfigData.KeyConnectorUrl))
                 {
                     context.Result.CustomResponse["KeyConnectorUrl"] = ssoConfigData.KeyConnectorUrl;
                     // Prevent clients redirecting to set-password
