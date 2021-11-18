@@ -377,6 +377,7 @@ namespace Bit.Sso.Controllers
         private async Task<User> AutoProvisionUserAsync(string provider, string providerUserId,
             IEnumerable<Claim> claims, string userIdentifier, SsoConfigurationData config)
         {
+            var deletedStaleUser = false;
             var name = GetName(claims, config.GetAdditionalNameClaimTypes());
             var email = GetEmailAddress(claims, config.GetAdditionalEmailClaimTypes());
             if (string.IsNullOrWhiteSpace(email) && providerUserId.Contains("@"))
@@ -460,7 +461,7 @@ namespace Bit.Sso.Controllers
                 }
 
                 // Delete existing SsoUser (if any) - avoids error if providerId has changed and the sso link is stale
-                var deletedStaleUser = await DeleteExistingSsoUserRecord(existingUser.Id, orgId, orgUser);
+                deletedStaleUser = await DeleteExistingSsoUserRecord(existingUser.Id, orgId, orgUser);
                 if (!deletedStaleUser)
                 {
                     // If no stale user, this is the user's first Sso login ever
@@ -546,7 +547,7 @@ namespace Bit.Sso.Controllers
             }
             
             // Delete any stale user record to be safe
-            var deletedStaleUser = await DeleteExistingSsoUserRecord(user.Id, orgId, orgUser);
+            deletedStaleUser = await DeleteExistingSsoUserRecord(user.Id, orgId, orgUser);
             if (!deletedStaleUser)
             {
                 // If no stale user, this is the user's first Sso login ever
