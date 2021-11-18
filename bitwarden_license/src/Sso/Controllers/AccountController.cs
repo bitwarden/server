@@ -460,7 +460,12 @@ namespace Bit.Sso.Controllers
                 }
 
                 // Delete existing SsoUser (if any) - avoids error if providerId has changed and the sso link is stale
-                await DeleteExistingSsoUserRecord(existingUser.Id, orgId, orgUser);
+                var deletedStaleUser = await DeleteExistingSsoUserRecord(existingUser.Id, orgId, orgUser);
+                if (!deletedStaleUser)
+                {
+                    // If no stale user, this is the user's first Sso login ever
+                    await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_FirstSsoLogin);
+                }
 
                 // Accepted or Confirmed - create SSO link and return;
                 await CreateSsoUserRecord(providerUserId, existingUser.Id, orgId);
@@ -541,7 +546,12 @@ namespace Bit.Sso.Controllers
             }
             
             // Delete any stale user record to be safe
-            await DeleteExistingSsoUserRecord(user.Id, orgId, orgUser);
+            var deletedStaleUser = await DeleteExistingSsoUserRecord(user.Id, orgId, orgUser);
+            if (!deletedStaleUser)
+            {
+                // If no stale user, this is the user's first Sso login ever
+                await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_FirstSsoLogin);
+            }
 
             // Create sso user record
             await CreateSsoUserRecord(providerUserId, user.Id, orgId);
@@ -595,14 +605,16 @@ namespace Bit.Sso.Controllers
             return null;
         }
 
-        private async Task DeleteExistingSsoUserRecord(Guid userId, Guid orgId, OrganizationUser orgUser)
+        private async Task<bool> DeleteExistingSsoUserRecord(Guid userId, Guid orgId, OrganizationUser orgUser)
         {
             var existingSsoUser = await _ssoUserRepository.GetByUserIdOrganizationIdAsync(orgId, userId);
             if (existingSsoUser != null)
             {
                 await _ssoUserRepository.DeleteAsync(userId, orgId);
                 await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_ResetSsoLink);
+                return true;
             }
+            return false;
         }
 
         private async Task CreateSsoUserRecord(string providerUserId, Guid userId, Guid orgId)
