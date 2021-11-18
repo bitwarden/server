@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations;
 using Bit.Core.Enums;
 using Bit.Core.Utilities;
 
-namespace Bit.Core.Models.Api.Request
+namespace Bit.Core.Models.Api
 {
     public class OrganizationSponsorshipRequestModel
     {
