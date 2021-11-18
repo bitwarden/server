@@ -589,18 +589,6 @@ namespace Bit.Sso.Controllers
             return null;
         }
 
-        private async Task<bool> DeleteExistingSsoUserRecord(Guid userId, Guid orgId, OrganizationUser orgUser)
-        {
-            var existingSsoUser = await _ssoUserRepository.GetByUserIdOrganizationIdAsync(orgId, userId);
-            if (existingSsoUser != null)
-            {
-                await _ssoUserRepository.DeleteAsync(userId, orgId);
-                await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_ResetSsoLink);
-                return true;
-            }
-            return false;
-        }
-
         private async Task CreateSsoUserRecord(string providerUserId, Guid userId, Guid orgId, OrganizationUser orgUser)
         {
             // Delete existing SsoUser (if any) - avoids error if providerId has changed and the sso link is stale
