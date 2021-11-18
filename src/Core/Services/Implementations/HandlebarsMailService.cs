@@ -799,7 +799,7 @@ namespace Bit.Core.Services
             await SendFamiliesForEnterpriseInviteRedeemedToFamilyUserEmailAsync(familyUserEmail);
 
             // Email enterprise org user
-            await SendFamiliesForEnterpriseInviteRedeemedToOrgUserEmailAsync(sponsorEmail);
+            await SendFamiliesForEnterpriseInviteRedeemedToEnterpriseUserEmailAsync(sponsorEmail);
         }
 
         private async Task SendFamiliesForEnterpriseInviteRedeemedToFamilyUserEmailAsync(string email)
@@ -815,16 +815,16 @@ namespace Bit.Core.Services
             await _mailDeliveryService.SendEmailAsync(message);
         }
 
-        private async Task SendFamiliesForEnterpriseInviteRedeemedToOrgUserEmailAsync(string email)
+        private async Task SendFamiliesForEnterpriseInviteRedeemedToEnterpriseUserEmailAsync(string email)
         {
             // TODO: Complete emails
             var message = CreateDefaultMessage("Success! Families Subscription Activated", email);
-            var model = new FamiliesForEnterpriseRedeemedToOrgUserViewModel
+            var model = new FamiliesForEnterpriseRedeemedToEnterpriseUserViewModel
             {
 
             };
-            await AddMessageContentAsync(message, "FamiliesForEnterprise.FamiliesForEnterpriseRedeemedToOrgUser", model);
-            message.Category = "FamilyForEnterpriseRedeemedToOrgUser";
+            await AddMessageContentAsync(message, "FamiliesForEnterprise.FamiliesForEnterpriseRedeemedToEnterpriseUser", model);
+            message.Category = "FamilyForEnterpriseRedeemedToEnterpriseUser";
             await _mailDeliveryService.SendEmailAsync(message);
         }
 
