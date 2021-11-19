@@ -103,8 +103,8 @@ namespace Bit.Api.Controllers
 
             await _organizationsSponsorshipService.RevokeSponsorshipAsync(
                 await _organizationRepository
-                    .GetByIdAsync(existingOrgSponsorship.SponsoredOrganizationId.Value),
-                    existingOrgSponsorship);
+                    .GetByIdAsync(existingOrgSponsorship.SponsoredOrganizationId ?? default),
+                existingOrgSponsorship);
         }
 
         [HttpDelete("sponsored/{sponsoredOrgId}")]
