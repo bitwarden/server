@@ -3,7 +3,7 @@ using System.Linq;
 using AutoFixture;
 using AutoFixture.Xunit2;
 
-namespace Bit.Core.Test.AutoFixture.Attributes
+namespace Bit.Test.Common.AutoFixture.Attributes
 {
     public class CustomAutoDataAttribute : AutoDataAttribute
     {

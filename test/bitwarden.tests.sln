@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Icons.Test", "Icons.Test\Ic
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Api.Test", "Api.Test\Api.Test.csproj", "{2B29139A-E3B5-4A44-8A85-1593ACB797CC}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Common", "Common\Common.csproj", "{E94B2922-EE05-435C-9472-FDEFEAD0AA37}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -58,5 +60,17 @@ Global
 		{2B29139A-E3B5-4A44-8A85-1593ACB797CC}.Release|x64.Build.0 = Release|Any CPU
 		{2B29139A-E3B5-4A44-8A85-1593ACB797CC}.Release|x86.ActiveCfg = Release|Any CPU
 		{2B29139A-E3B5-4A44-8A85-1593ACB797CC}.Release|x86.Build.0 = Release|Any CPU
+		{E94B2922-EE05-435C-9472-FDEFEAD0AA37}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E94B2922-EE05-435C-9472-FDEFEAD0AA37}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E94B2922-EE05-435C-9472-FDEFEAD0AA37}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{E94B2922-EE05-435C-9472-FDEFEAD0AA37}.Debug|x64.Build.0 = Debug|Any CPU
+		{E94B2922-EE05-435C-9472-FDEFEAD0AA37}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{E94B2922-EE05-435C-9472-FDEFEAD0AA37}.Debug|x86.Build.0 = Debug|Any CPU
+		{E94B2922-EE05-435C-9472-FDEFEAD0AA37}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E94B2922-EE05-435C-9472-FDEFEAD0AA37}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E94B2922-EE05-435C-9472-FDEFEAD0AA37}.Release|x64.ActiveCfg = Release|Any CPU
+		{E94B2922-EE05-435C-9472-FDEFEAD0AA37}.Release|x64.Build.0 = Release|Any CPU
+		{E94B2922-EE05-435C-9472-FDEFEAD0AA37}.Release|x86.ActiveCfg = Release|Any CPU
+		{E94B2922-EE05-435C-9472-FDEFEAD0AA37}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

@@ -937,5 +937,39 @@ namespace Bit.Core.Utilities
             return CryptographicOperations.FixedTimeEquals(
                 Encoding.UTF8.GetBytes(input1), Encoding.UTF8.GetBytes(input2));
         }
+
+        public static string ObfuscateEmail(string email)
+        {
+            if (email == null)
+            {
+                return email;
+            }
+
+            var emailParts = email.Split('@', StringSplitOptions.RemoveEmptyEntries);
+
+            if (emailParts.Length != 2)
+            {
+                return email;
+            }
+
+            var username = emailParts[0];
+
+            if (username.Length < 2)
+            {
+                return email;
+            }
+
+            var sb = new StringBuilder();
+            sb.Append(emailParts[0][..2]);
+            for (var i = 2; i < emailParts[0].Length; i++)
+            {
+                sb.Append('*');
+            }
+
+            return sb.Append('@')
+                .Append(emailParts[1])
+                .ToString();
+
+        }
     }
 }

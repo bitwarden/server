@@ -7,13 +7,13 @@ using Bit.Core.Enums;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
 using TableModel = Bit.Core.Models.Table;
-using Bit.Core.Test.AutoFixture.Attributes;
-using Bit.Core.Test.AutoFixture.GlobalSettingsFixtures;
 using Bit.Core.Utilities;
 using AutoFixture.Kernel;
 using Bit.Core.Models;
 using Bit.Core.Test.AutoFixture.EntityFrameworkRepositoryFixtures;
 using Bit.Core.Repositories.EntityFramework;
+using Bit.Test.Common.AutoFixture.Attributes;
+using Bit.Test.Common.AutoFixture;
 
 namespace Bit.Core.Test.AutoFixture.OrganizationFixtures
 {
@@ -67,9 +67,9 @@ namespace Bit.Core.Test.AutoFixture.OrganizationFixtures
         public PlanType CheckedPlanType { get; set; }
         public void Customize(IFixture fixture)
         {
-            var validUpgradePlans = StaticStore.Plans.Where(p => p.Type != Enums.PlanType.Free && !p.Disabled).Select(p => p.Type).ToList();
+            var validUpgradePlans = StaticStore.Plans.Where(p => p.Type != PlanType.Free && !p.Disabled).Select(p => p.Type).ToList();
             var lowestActivePaidPlan = validUpgradePlans.First();
-            CheckedPlanType = CheckedPlanType.Equals(Enums.PlanType.Free) ? lowestActivePaidPlan : CheckedPlanType;
+            CheckedPlanType = CheckedPlanType.Equals(PlanType.Free) ? lowestActivePaidPlan : CheckedPlanType;
             validUpgradePlans.Remove(lowestActivePaidPlan);
             fixture.Customize<Core.Models.Table.Organization>(composer => composer
                 .With(o => o.PlanType, CheckedPlanType));

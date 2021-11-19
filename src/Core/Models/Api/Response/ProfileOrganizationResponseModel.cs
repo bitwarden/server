@@ -39,6 +39,12 @@ namespace Bit.Core.Models.Api
             UserId = organization.UserId?.ToString();
             ProviderId = organization.ProviderId?.ToString();
             ProviderName = organization.ProviderName;
+            FamilySponsorshipFriendlyName = organization.FamilySponsorshipFriendlyName;
+            FamilySponsorshipAvailable = FamilySponsorshipFriendlyName == null &&
+                Utilities.StaticStore.GetSponsoredPlan(PlanSponsorshipType.FamiliesForEnterprise)
+                .UsersCanSponsor(organization);
+            PlanProductType = Utilities.StaticStore.GetPlan(organization.PlanType).Product;
+            
             if (organization.SsoConfig != null)
             {
                 var ssoConfigData = SsoConfigurationData.Deserialize(organization.SsoConfig);
@@ -76,6 +82,9 @@ namespace Bit.Core.Models.Api
         public bool HasPublicAndPrivateKeys { get; set; }
         public string ProviderId { get; set; }
         public string ProviderName { get; set; }
+        public string FamilySponsorshipFriendlyName { get; set; }
+        public bool FamilySponsorshipAvailable { get; set; }
+        public ProductType PlanProductType { get; set; }
         public bool KeyConnectorEnabled { get; set; }
         public string KeyConnectorUrl { get; set; }
     }

@@ -52,12 +52,12 @@ namespace Bit.Core.Models.Business
 
             if (!string.IsNullOrWhiteSpace(taxInfo?.StripeTaxRateId))
             {
-                DefaultTaxRates = new List<string>{ taxInfo.StripeTaxRateId };
+                DefaultTaxRates = new List<string> { taxInfo.StripeTaxRateId };
             }
         }
     }
 
-    public class OrganizationPurchaseSubscriptionOptions : OrganizationSubscriptionOptionsBase 
+    public class OrganizationPurchaseSubscriptionOptions : OrganizationSubscriptionOptionsBase
     {
         public OrganizationPurchaseSubscriptionOptions(
             Organization org, StaticStore.Plan plan,
@@ -76,7 +76,7 @@ namespace Bit.Core.Models.Business
             string customerId, Organization org,
             StaticStore.Plan plan, TaxInfo taxInfo,
             int additionalSeats = 0, int additionalStorageGb = 0,
-            bool premiumAccessAddon = false) : 
+            bool premiumAccessAddon = false) :
             base(org, plan, taxInfo, additionalSeats, additionalStorageGb, premiumAccessAddon)
         {
             Customer = customerId;

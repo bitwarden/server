@@ -2,14 +2,14 @@
 using System.Reflection;
 using AutoFixture;
 using TableModel = Bit.Core.Models.Table;
-using Bit.Core.Test.AutoFixture.Attributes;
-using Bit.Core.Test.AutoFixture.GlobalSettingsFixtures;
 using Bit.Core.Enums;
 using AutoFixture.Kernel;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using Bit.Core.Repositories.EntityFramework;
 using Bit.Core.Test.AutoFixture.EntityFrameworkRepositoryFixtures;
 using AutoFixture.Xunit2;
+using Bit.Test.Common.AutoFixture;
+using Bit.Test.Common.AutoFixture.Attributes;
 
 namespace Bit.Core.Test.AutoFixture.PolicyFixtures
 {

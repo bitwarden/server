@@ -2,7 +2,7 @@ using System;
 using AutoFixture;
 using AutoFixture.Kernel;
 
-namespace Bit.Core.Test.AutoFixture
+namespace Bit.Test.Common.AutoFixture.Attributes
 {
     public class SutProviderCustomization : ICustomization, ISpecimenBuilder
     {

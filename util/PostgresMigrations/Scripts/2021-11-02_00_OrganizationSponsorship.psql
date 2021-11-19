@@ -1,0 +1,33 @@
+START TRANSACTION;
+
+ALTER TABLE "User" ADD "UsesCryptoAgent" boolean NOT NULL DEFAULT FALSE;
+
+CREATE TABLE "OrganizationSponsorship" (
+    "Id" uuid NOT NULL,
+    "InstallationId" uuid NULL,
+    "SponsoringOrganizationId" uuid NULL,
+    "SponsoringOrganizationUserId" uuid NULL,
+    "SponsoredOrganizationId" uuid NULL,
+    "FriendlyName" character varying(256) NULL,
+    "OfferedToEmail" character varying(256) NULL,
+    "PlanSponsorshipType" smallint NULL,
+    "CloudSponsor" boolean NOT NULL,
+    "LastSyncDate" timestamp without time zone NULL,
+    "TimesRenewedWithoutValidation" smallint NOT NULL,
+    "SponsorshipLapsedDate" timestamp without time zone NULL,
+    CONSTRAINT "PK_OrganizationSponsorship" PRIMARY KEY ("Id"),
+    CONSTRAINT "FK_OrganizationSponsorship_Installation_InstallationId" FOREIGN KEY ("InstallationId") REFERENCES "Installation" ("Id") ON DELETE RESTRICT,
+    CONSTRAINT "FK_OrganizationSponsorship_Organization_SponsoredOrganizationId" FOREIGN KEY ("SponsoredOrganizationId") REFERENCES "Organization" ("Id") ON DELETE RESTRICT,
+    CONSTRAINT "FK_OrganizationSponsorship_Organization_SponsoringOrganization~" FOREIGN KEY ("SponsoringOrganizationId") REFERENCES "Organization" ("Id") ON DELETE RESTRICT
+);
+
+CREATE INDEX "IX_OrganizationSponsorship_InstallationId" ON "OrganizationSponsorship" ("InstallationId");
+
+CREATE INDEX "IX_OrganizationSponsorship_SponsoredOrganizationId" ON "OrganizationSponsorship" ("SponsoredOrganizationId");
+
+CREATE INDEX "IX_OrganizationSponsorship_SponsoringOrganizationId" ON "OrganizationSponsorship" ("SponsoringOrganizationId");
+
+INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+VALUES ('20211108225011_OrganizationSponsorship', '5.0.9');
+
+COMMIT;
