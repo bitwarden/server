@@ -85,7 +85,6 @@ namespace Bit.Core.Models.Api
         public string FamilySponsorshipFriendlyName { get; set; }
         public bool FamilySponsorshipAvailable { get; set; }
         public ProductType PlanProductType { get; set; }
-        public bool UsesKeyConnector { get; set; }
         public bool KeyConnectorEnabled { get; set; }
         public string KeyConnectorUrl { get; set; }
     }

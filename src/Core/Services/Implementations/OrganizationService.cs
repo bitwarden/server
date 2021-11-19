@@ -1276,8 +1276,6 @@ namespace Bit.Core.Services
             var token = _dataProtector.Protect(
                 $"OrganizationUserInvite {orgUser.Id} {orgUser.Email} {nowMillis}");
             
-            // TODO: Refactor so that the below line can be used.
-            // StaticStore.GetSponsoredPlan(PlanSponsorshipType.FamiliesForEnterprise).UsersCanSponsor(organization)
             var orgCanSponsor = CheckOrgCanSponsor(organization);
 
             await _mailService.SendOrganizationInviteEmailAsync(organization.Name, orgCanSponsor, orgUser, new ExpiringToken(token, now.AddDays(5)));
