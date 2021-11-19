@@ -168,7 +168,7 @@ namespace Bit.Billing.Controllers
                 if (ids.Item1.HasValue)
                 {
                     // sponsored org
-                    if (IsSponsoredSubscription(subscription))
+                    if (CheckSponsoredSubscription(subscription))
                     {
                         await _organizationSponsorshipService
                             .ValidateSponsorshipAsync(ids.Item1.Value);
@@ -794,7 +794,7 @@ namespace Bit.Billing.Controllers
             return subscription;
         }
 
-        private static bool IsSponsoredSubscription(Subscription subscription) =>
+        private static bool CheckSponsoredSubscription(Subscription subscription) =>
             StaticStore.SponsoredPlans.Any(p => p.StripePlanId == subscription.Id);
     }
 }
