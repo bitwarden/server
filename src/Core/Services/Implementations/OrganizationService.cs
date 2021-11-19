@@ -1263,9 +1263,7 @@ namespace Bit.Core.Services
             string MakeToken(OrganizationUser orgUser) =>
                 _dataProtector.Protect($"OrganizationUserInvite {orgUser.Id} {orgUser.Email} {CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow)}");
             
-            var orgCanSponsor = CheckOrgCanSponsor(organization);
-            
-            await _mailService.BulkSendOrganizationInviteEmailAsync(organization.Name, orgCanSponsor,
+            await _mailService.BulkSendOrganizationInviteEmailAsync(organization.Name, CheckOrganizationCanSponsor(organization),
                 orgUsers.Select(o => (o, new ExpiringToken(MakeToken(o), DateTime.UtcNow.AddDays(5)))));
         }
 
@@ -1276,13 +1274,11 @@ namespace Bit.Core.Services
             var token = _dataProtector.Protect(
                 $"OrganizationUserInvite {orgUser.Id} {orgUser.Email} {nowMillis}");
             
-            var orgCanSponsor = CheckOrgCanSponsor(organization);
-
-            await _mailService.SendOrganizationInviteEmailAsync(organization.Name, orgCanSponsor, orgUser, new ExpiringToken(token, now.AddDays(5)));
+            await _mailService.SendOrganizationInviteEmailAsync(organization.Name, CheckOrganizationCanSponsor(organization), orgUser, new ExpiringToken(token, now.AddDays(5)));
         }
 
 
-        private static bool CheckOrgCanSponsor(Organization organization)
+        private static bool CheckOrganizationCanSponsor(Organization organization)
         {
             return StaticStore.GetPlan(organization.PlanType).Product == ProductType.Enterprise
                 && !organization.SelfHost;
