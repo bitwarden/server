@@ -45,11 +45,9 @@ namespace Bit.Api.Controllers
         [SelfHosted(NotSelfHostedOnly = true)]
         public async Task CreateSponsorship(Guid sponsoringOrgId, [FromBody] OrganizationSponsorshipRequestModel model)
         {
-            var sponsoringOrg = await _organizationRepository.GetByIdAsync(sponsoringOrgId);
-
-            var sponsoringOrgUser = await _organizationUserRepository.GetByOrganizationAsync(sponsoringOrgId, _currentContext.UserId ?? default);
-
-            await _organizationsSponsorshipService.OfferSponsorshipAsync(sponsoringOrg, sponsoringOrgUser,
+            await _organizationsSponsorshipService.OfferSponsorshipAsync(
+                await _organizationRepository.GetByIdAsync(sponsoringOrgId), 
+                await _organizationUserRepository.GetByOrganizationAsync(sponsoringOrgId, _currentContext.UserId ?? default),
                 model.PlanSponsorshipType, model.SponsoredEmail, model.FriendlyName);
         }
 
@@ -57,14 +55,14 @@ namespace Bit.Api.Controllers
         [SelfHosted(NotSelfHostedOnly = true)]
         public async Task ResendSponsorshipOffer(Guid sponsoringOrgId)
         {
-            var sponsoringOrg = await _organizationRepository.GetByIdAsync(sponsoringOrgId);
             var sponsoringOrgUser = await _organizationUserRepository
                 .GetByOrganizationAsync(sponsoringOrgId, _currentContext.UserId ?? default);
-            var existingOrgSponsorship = await _organizationSponsorshipRepository
-                .GetBySponsoringOrganizationUserIdAsync(sponsoringOrgUser.Id);
 
-            await _organizationsSponsorshipService.ResendSponsorshipOfferAsync(sponsoringOrg, sponsoringOrgUser,
-                existingOrgSponsorship);
+            await _organizationsSponsorshipService.ResendSponsorshipOfferAsync(
+                await _organizationRepository.GetByIdAsync(sponsoringOrgId), 
+                sponsoringOrgUser,
+                await _organizationSponsorshipRepository
+                    .GetBySponsoringOrganizationUserIdAsync(sponsoringOrgUser.Id));
         }
 
         [HttpPost("redeem")]
@@ -81,13 +79,11 @@ namespace Bit.Api.Controllers
                 throw new BadRequestException("Can only redeem sponsorship for an organization you own.");
             }
 
-            var existingSponsorshipOffer = await _organizationSponsorshipRepository
-                .GetByOfferedToEmailAsync((await CurrentUser).Email);
-
-            // Check org to sponsor's product type
-            var organizationToSponsor = await _organizationRepository.GetByIdAsync(model.SponsoredOrganizationId);
-
-            await _organizationsSponsorshipService.SetUpSponsorshipAsync(existingSponsorshipOffer, organizationToSponsor);
+            await _organizationsSponsorshipService.SetUpSponsorshipAsync(
+                await _organizationSponsorshipRepository
+                    .GetByOfferedToEmailAsync((await CurrentUser).Email),
+                // Check org to sponsor's product type
+                await _organizationRepository.GetByIdAsync(model.SponsoredOrganizationId));
         }
 
         [HttpDelete("{sponsoringOrganizationId}")]
@@ -105,10 +101,10 @@ namespace Bit.Api.Controllers
             var existingOrgSponsorship = await _organizationSponsorshipRepository
                 .GetBySponsoringOrganizationUserIdAsync(orgUser.Id);
 
-            var sponsoredOrganization = await _organizationRepository
-                .GetByIdAsync(existingOrgSponsorship.SponsoredOrganizationId.Value);
-
-            await _organizationsSponsorshipService.RevokeSponsorshipAsync(sponsoredOrganization, existingOrgSponsorship);
+            await _organizationsSponsorshipService.RevokeSponsorshipAsync(
+                await _organizationRepository
+                    .GetByIdAsync(existingOrgSponsorship.SponsoredOrganizationId.Value),
+                    existingOrgSponsorship);
         }
 
         [HttpDelete("sponsored/{sponsoredOrgId}")]
@@ -125,10 +121,10 @@ namespace Bit.Api.Controllers
             var existingOrgSponsorship = await _organizationSponsorshipRepository
                 .GetBySponsoredOrganizationIdAsync(sponsoredOrgId);
 
-            var sponsoredOrganization = await _organizationRepository
-                .GetByIdAsync(existingOrgSponsorship.SponsoredOrganizationId.Value);
-
-            await _organizationsSponsorshipService.RemoveSponsorshipAsync(sponsoredOrganization, existingOrgSponsorship);
+            await _organizationsSponsorshipService.RemoveSponsorshipAsync(
+                await _organizationRepository
+                    .GetByIdAsync(existingOrgSponsorship.SponsoredOrganizationId.Value),
+                existingOrgSponsorship);
         }
 
         private Task<User> CurrentUser => _userService.GetUserByIdAsync(_currentContext.UserId.Value);
