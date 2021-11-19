@@ -766,7 +766,7 @@ namespace Bit.Core.Services
             {
                 var model = new FamiliesForEnterpriseOfferExistingAccountViewModel
                 {
-                    SponsorEmail = sponsorEmail,
+                    SponsorEmail = CoreHelpers.ObfuscateEmail(sponsorEmail),
                     SponsoredEmail = WebUtility.UrlEncode(email),
                     WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
                     SiteName = _globalSettings.SiteName,

@@ -9,10 +9,10 @@ namespace Bit.Core.Services
     {
         Task<bool> ValidateRedemptionTokenAsync(string encryptedToken);
         Task OfferSponsorshipAsync(Organization sponsoringOrg, OrganizationUser sponsoringOrgUser,
-            PlanSponsorshipType sponsorshipType, string sponsoredEmail, string friendlyName);
+            PlanSponsorshipType sponsorshipType, string sponsoredEmail, string friendlyName, string sponsoringUserEmail);
         Task ResendSponsorshipOfferAsync(Organization sponsoringOrg, OrganizationUser sponsoringOrgUser,
-            OrganizationSponsorship sponsorship);
-        Task SendSponsorshipOfferAsync(Organization sponsoringOrg, OrganizationSponsorship sponsorship);
+            OrganizationSponsorship sponsorship, string sponsoringUserEmail);
+        Task SendSponsorshipOfferAsync(OrganizationSponsorship sponsorship, string sponsoringOrgUserEmail);
         Task SetUpSponsorshipAsync(OrganizationSponsorship sponsorship,
             Organization sponsoredOrganization);
         Task<bool> ValidateSponsorshipAsync(Guid sponsoredOrganizationId);

@@ -351,5 +351,16 @@ namespace Bit.Core.Test.Utilities
             }
         }
 
+        [Theory]
+        [InlineData("hi@email.com", "hi@email.com")] // Short email with no room to obfuscate
+        [InlineData("name@email.com", "na**@email.com")] // Can obfuscate
+        [InlineData("reallylongnamethatnooneshouldhave@email", "re*******************************@email")] // Really long email and no .com, .net, etc
+        [InlineData("name@", "name@")] // @ symbol but no domain
+        [InlineData("", "")] // Empty string
+        [InlineData(null, null)] // null
+        public void ObfuscateEmail_Success(string input, string expected)
+        {
+            Assert.Equal(expected, CoreHelpers.ObfuscateEmail(input));
+        }
     }
 }

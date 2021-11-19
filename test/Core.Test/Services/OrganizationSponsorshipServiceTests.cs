@@ -260,17 +260,19 @@ namespace Bit.Core.Test.Services
 
         [Theory]
         [BitAutoData]
-        public async Task SendSponsorshipOfferAsync(Organization org, OrganizationSponsorship sponsorship,
+        public async Task SendSponsorshipOfferAsync(OrganizationSponsorship sponsorship,
             SutProvider<OrganizationSponsorshipService> sutProvider)
         {
+            const string email = "test@bitwarden.com";
+
             sutProvider.GetDependency<IUserRepository>()
                 .GetByEmailAsync(sponsorship.OfferedToEmail)
                 .Returns(Task.FromResult(new User()));
 
-            await sutProvider.Sut.SendSponsorshipOfferAsync(org, sponsorship);
+            await sutProvider.Sut.SendSponsorshipOfferAsync(sponsorship, email);
 
             await sutProvider.GetDependency<IMailService>().Received(1)
-                .SendFamiliesForEnterpriseOfferEmailAsync(sponsorship.OfferedToEmail, org.Name, true, Arg.Any<string>());
+                .SendFamiliesForEnterpriseOfferEmailAsync(sponsorship.OfferedToEmail, email, true, Arg.Any<string>());
         }
 
         [Theory]

@@ -79,7 +79,7 @@ namespace Bit.Core.Services
             );
 
         public async Task OfferSponsorshipAsync(Organization sponsoringOrg, OrganizationUser sponsoringOrgUser,
-            PlanSponsorshipType sponsorshipType, string sponsoredEmail, string friendlyName)
+            PlanSponsorshipType sponsorshipType, string sponsoredEmail, string friendlyName, string sponsoringUserEmail)
         {
             var requiredSponsoringProductType = StaticStore.GetSponsoredPlan(sponsorshipType)?.SponsoringProductType;
             if (requiredSponsoringProductType == null ||
@@ -115,7 +115,7 @@ namespace Bit.Core.Services
             {
                 sponsorship = await _organizationSponsorshipRepository.CreateAsync(sponsorship);
 
-                await SendSponsorshipOfferAsync(sponsoringOrg, sponsorship);
+                await SendSponsorshipOfferAsync(sponsorship, sponsoringUserEmail);
             }
             catch
             {
@@ -128,7 +128,7 @@ namespace Bit.Core.Services
         }
 
         public async Task ResendSponsorshipOfferAsync(Organization sponsoringOrg, OrganizationUser sponsoringOrgUser,
-            OrganizationSponsorship sponsorship)
+            OrganizationSponsorship sponsorship, string sponsoringUserEmail)
         {
             if (sponsoringOrg == null)
             {
@@ -145,15 +145,15 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Cannot find an outstanding sponsorship offer for this organization.");
             }
 
-            await SendSponsorshipOfferAsync(sponsoringOrg, sponsorship);
+            await SendSponsorshipOfferAsync(sponsorship, sponsoringUserEmail);
         }
 
-        public async Task SendSponsorshipOfferAsync(Organization sponsoringOrg, OrganizationSponsorship sponsorship)
+        public async Task SendSponsorshipOfferAsync(OrganizationSponsorship sponsorship, string sponsoringEmail)
         {
             var user = await _userRepository.GetByEmailAsync(sponsorship.OfferedToEmail);
             var isExistingAccount = user != null;
 
-            await _mailService.SendFamiliesForEnterpriseOfferEmailAsync(sponsorship.OfferedToEmail, sponsoringOrg.Name,
+            await _mailService.SendFamiliesForEnterpriseOfferEmailAsync(sponsorship.OfferedToEmail, sponsoringEmail,
                 isExistingAccount, RedemptionToken(sponsorship.Id, sponsorship.PlanSponsorshipType.Value));
         }
 

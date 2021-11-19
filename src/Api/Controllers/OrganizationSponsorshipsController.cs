@@ -48,7 +48,8 @@ namespace Bit.Api.Controllers
             await _organizationsSponsorshipService.OfferSponsorshipAsync(
                 await _organizationRepository.GetByIdAsync(sponsoringOrgId), 
                 await _organizationUserRepository.GetByOrganizationAsync(sponsoringOrgId, _currentContext.UserId ?? default),
-                model.PlanSponsorshipType, model.SponsoredEmail, model.FriendlyName);
+                model.PlanSponsorshipType, model.SponsoredEmail, model.FriendlyName,
+                (await CurrentUser).Email);
         }
 
         [HttpPost("{sponsoringOrgId}/families-for-enterprise/resend")]
@@ -62,7 +63,8 @@ namespace Bit.Api.Controllers
                 await _organizationRepository.GetByIdAsync(sponsoringOrgId), 
                 sponsoringOrgUser,
                 await _organizationSponsorshipRepository
-                    .GetBySponsoringOrganizationUserIdAsync(sponsoringOrgUser.Id));
+                    .GetBySponsoringOrganizationUserIdAsync(sponsoringOrgUser.Id),
+                (await CurrentUser).Email);
         }
 
         [HttpPost("redeem")]
