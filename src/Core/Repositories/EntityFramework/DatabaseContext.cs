@@ -26,6 +26,7 @@ namespace Bit.Core.Repositories.EntityFramework
         public DbSet<GroupUser> GroupUsers { get; set; }
         public DbSet<Installation> Installations { get; set; }
         public DbSet<Organization> Organizations { get; set; }
+        public DbSet<OrganizationSponsorship> OrganizationSponsorships { get; set; }
         public DbSet<OrganizationUser> OrganizationUsers { get; set; }
         public DbSet<Policy> Policies { get; set; }
         public DbSet<Provider> Providers { get; set; }
@@ -55,6 +56,7 @@ namespace Bit.Core.Repositories.EntityFramework
             var eGroupUser = builder.Entity<GroupUser>();
             var eInstallation = builder.Entity<Installation>();
             var eOrganization = builder.Entity<Organization>();
+            var eOrganizationSponsorship = builder.Entity<OrganizationSponsorship>();
             var eOrganizationUser = builder.Entity<OrganizationUser>();
             var ePolicy = builder.Entity<Policy>();
             var eProvider = builder.Entity<Provider>();
@@ -76,6 +78,7 @@ namespace Bit.Core.Repositories.EntityFramework
             eGroup.Property(c => c.Id).ValueGeneratedNever();
             eInstallation.Property(c => c.Id).ValueGeneratedNever();
             eOrganization.Property(c => c.Id).ValueGeneratedNever();
+            eOrganizationSponsorship.Property(c => c.Id).ValueGeneratedNever();
             eOrganizationUser.Property(c => c.Id).ValueGeneratedNever();
             ePolicy.Property(c => c.Id).ValueGeneratedNever();
             eProvider.Property(c => c.Id).ValueGeneratedNever();
@@ -115,6 +118,7 @@ namespace Bit.Core.Repositories.EntityFramework
             eGroupUser.ToTable(nameof(GroupUser));
             eInstallation.ToTable(nameof(Installation));
             eOrganization.ToTable(nameof(Organization));
+            eOrganizationSponsorship.ToTable(nameof(OrganizationSponsorship));
             eOrganizationUser.ToTable(nameof(OrganizationUser));
             ePolicy.ToTable(nameof(Policy));
             eProvider.ToTable(nameof(Provider));

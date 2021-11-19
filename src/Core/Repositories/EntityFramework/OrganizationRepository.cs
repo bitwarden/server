@@ -96,5 +96,29 @@ namespace Bit.Core.Repositories.EntityFramework
         {
             await OrganizationUpdateStorage(id);
         }
+
+        public override async Task DeleteAsync(Organization organization)
+        {
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var orgEntity = await dbContext.FindAsync<EFModel.Organization>(organization.Id);
+                var sponsorships = dbContext.OrganizationSponsorships
+                    .Where(os =>
+                        os.SponsoringOrganizationId == organization.Id ||
+                        os.SponsoredOrganizationId == organization.Id);
+                dbContext.RemoveRange(sponsorships.Where(os => os.CloudSponsor));
+
+                Guid? UpdatedOrgId(Guid? orgId) => orgId == organization.Id ? null : organization.Id;
+                foreach (var sponsorship in sponsorships.Where(os => !os.CloudSponsor))
+                {
+                    sponsorship.SponsoredOrganizationId = UpdatedOrgId(sponsorship.SponsoredOrganizationId);
+                    sponsorship.SponsoringOrganizationId = UpdatedOrgId(sponsorship.SponsoringOrganizationId);
+                }
+
+                dbContext.Remove(orgEntity);
+                await dbContext.SaveChangesAsync();
+            }
+        }
     }
 }

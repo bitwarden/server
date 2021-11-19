@@ -82,12 +82,14 @@ namespace Bit.Core.Models.Api
                 Amount = item.Amount;
                 Interval = item.Interval;
                 Quantity = item.Quantity;
+                SponsoredSubscriptionItem = item.SponsoredSubscriptionItem;
             }
 
             public string Name { get; set; }
             public decimal Amount { get; set; }
             public int Quantity { get; set; }
             public string Interval { get; set; }
+            public bool SponsoredSubscriptionItem { get; set; }
         }
     }
 

@@ -22,5 +22,7 @@ namespace Bit.Core.Enums
         GoogleInApp = 7,
         [Display(Name = "Check")]
         Check = 8,
+        [Display(Name = "None")]
+        None = 255,
     }
 }

@@ -1,19 +1,13 @@
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using System.Reflection;
 using AutoFixture;
 using AutoFixture.Kernel;
-using AutoMapper;
-using Bit.Core.Enums;
-using Bit.Core.Models;
-using Bit.Core.Models.Table;
-using Bit.Core.Settings;
-using Bit.Core.Test.Helpers.Factories;
+using AutoFixture.Xunit2;
+using Bit.Test.Common.Helpers.Factories;
 
-namespace Bit.Core.Test.AutoFixture.GlobalSettingsFixtures
+namespace Bit.Test.Common.AutoFixture
 {
-    internal class GlobalSettingsBuilder: ISpecimenBuilder
+    public class GlobalSettingsBuilder : ISpecimenBuilder
     {
         public object Create(object request, ISpecimenContext context)
         {
@@ -25,22 +19,27 @@ namespace Bit.Core.Test.AutoFixture.GlobalSettingsFixtures
             var pi = request as ParameterInfo;
             var fixture = new Fixture();
 
-            if (pi == null || pi.ParameterType != typeof(Settings.GlobalSettings))
+            if (pi == null || pi.ParameterType != typeof(Bit.Core.Settings.GlobalSettings))
                 return new NoSpecimen();
 
             return GlobalSettingsFactory.GlobalSettings;
         }
     }
 
-    internal class GlobalSettings : ICustomization
+    public class GlobalSettings : ICustomization
     {
         public void Customize(IFixture fixture)
         {
-            fixture.Customize<Settings.GlobalSettings>(composer => composer
+            fixture.Customize<Bit.Core.Settings.GlobalSettings>(composer => composer
                 .Without(s => s.BaseServiceUri)
                 .Without(s => s.Attachment)
                 .Without(s => s.Send)
                 .Without(s => s.DataProtection));
         }
+    }
+
+    public class GlobalSettingsCustomizeAttribute : CustomizeAttribute
+    {
+        public override ICustomization GetCustomization(ParameterInfo parameter) => new GlobalSettings();
     }
 }

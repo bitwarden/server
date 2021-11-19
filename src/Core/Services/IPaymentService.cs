@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using Bit.Core.Models.Table;
 using Bit.Core.Models.Business;
+using Bit.Core.Models.StaticStore;
 using Bit.Core.Enums;
 
 namespace Bit.Core.Services
@@ -10,13 +11,15 @@ namespace Bit.Core.Services
     {
         Task CancelAndRecoverChargesAsync(ISubscriber subscriber);
         Task<string> PurchaseOrganizationAsync(Organization org, PaymentMethodType paymentMethodType,
-            string paymentToken, Models.StaticStore.Plan plan, short additionalStorageGb, int additionalSeats,
+            string paymentToken, Plan plan, short additionalStorageGb, int additionalSeats,
             bool premiumAccessAddon, TaxInfo taxInfo);
-        Task<string> UpgradeFreeOrganizationAsync(Organization org, Models.StaticStore.Plan plan,
+        Task SponsorOrganizationAsync(Organization org, OrganizationSponsorship sponsorship);
+        Task RemoveOrganizationSponsorshipAsync(Organization org, OrganizationSponsorship sponsorship);
+        Task<string> UpgradeFreeOrganizationAsync(Organization org, Plan plan,
            short additionalStorageGb, int additionalSeats, bool premiumAccessAddon, TaxInfo taxInfo);
         Task<string> PurchasePremiumAsync(User user, PaymentMethodType paymentMethodType, string paymentToken,
             short additionalStorageGb, TaxInfo taxInfo);
-        Task<string> AdjustSeatsAsync(Organization organization, Models.StaticStore.Plan plan, int additionalSeats, DateTime? prorationDate = null);
+        Task<string> AdjustSeatsAsync(Organization organization, Plan plan, int additionalSeats, DateTime? prorationDate = null);
         Task<string> AdjustStorageAsync(IStorableSubscriber storableSubscriber, int additionalStorage, string storagePlanId, DateTime? prorationDate = null);
         Task CancelSubscriptionAsync(ISubscriber subscriber, bool endOfPeriod = false,
             bool skipInAppPurchaseCheck = false);
