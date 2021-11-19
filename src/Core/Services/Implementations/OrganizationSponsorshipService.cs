@@ -242,6 +242,7 @@ namespace Bit.Core.Services
             {
                 throw new BadRequestException("You are not currently sponsoring an organization.");
             }
+            
             if (sponsorship.SponsoredOrganizationId == null)
             {
                 await DoRemoveSponsorshipAsync(null, sponsorship);

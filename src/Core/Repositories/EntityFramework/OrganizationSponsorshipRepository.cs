@@ -12,10 +12,9 @@ namespace Bit.Core.Repositories.EntityFramework
 {
     public class OrganizationSponsorshipRepository : Repository<TableModel.OrganizationSponsorship, EFModel.OrganizationSponsorship, Guid>, IOrganizationSponsorshipRepository
     {
-        public OrganizationSponsorshipRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper) :
-        base(serviceScopeFactory, mapper, (DatabaseContext context) => context.OrganizationSponsorships)
-        {
-        }
+        public OrganizationSponsorshipRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper) 
+            : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.OrganizationSponsorships)
+        { }
 
         public async Task<TableModel.OrganizationSponsorship> GetByOfferedToEmailAsync(string email)
         {
@@ -27,6 +26,7 @@ namespace Bit.Core.Repositories.EntityFramework
                 return orgSponsorship;
             }
         }
+
         public async Task<TableModel.OrganizationSponsorship> GetBySponsoredOrganizationIdAsync(Guid sponsoredOrganizationId)
         {
             using (var scope = ServiceScopeFactory.CreateScope())
@@ -37,6 +37,7 @@ namespace Bit.Core.Repositories.EntityFramework
                 return orgSponsorship;
             }
         }
+
         public async Task<TableModel.OrganizationSponsorship> GetBySponsoringOrganizationUserIdAsync(Guid sponsoringOrganizationUserId)
         {
             using (var scope = ServiceScopeFactory.CreateScope())
