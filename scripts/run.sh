@@ -111,6 +111,10 @@ function dockerComposePull() {
 }
 
 function dockerComposeFiles() {
+    set -a
+    [[ -e "${DOCKER_DIR}/.env" ]] && . "${DOCKER_DIR}/.env"
+    set +a
+
     if [ -f "${DOCKER_DIR}/docker-compose.override.yml" ]
     then
         export COMPOSE_FILE="$DOCKER_DIR/docker-compose.yml:$DOCKER_DIR/docker-compose.override.yml"
