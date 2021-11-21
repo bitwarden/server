@@ -19,12 +19,14 @@ if [ $# -gt 2 ]
 then
     COREVERSION=$3
 fi
+export COREVERSION
 
 WEBVERSION="latest"
 if [ $# -gt 3 ]
 then
     WEBVERSION=$4
 fi
+export WEBVERSION
 
 OS="lin"
 [ "$(uname)" == "Darwin" ] && OS="mac"

@@ -17,8 +17,8 @@ version: '{{{ComposeVersion}}}'
 
 services:
   mssql:
-    image: bitwarden/mssql:{{{CoreVersion}}}
-    container_name: bitwarden-mssql
+    image: bitwarden/mssql:${COREVERSION}
+    container_name: ${COMPOSE_PROJECT_NAME:-bitwarden}-mssql
     restart: always
     stop_grace_period: 60s
     volumes:
@@ -35,8 +35,8 @@ services:
       - ../env/mssql.override.env
 
   web:
-    image: bitwarden/web:{{{WebVersion}}}
-    container_name: bitwarden-web
+    image: bitwarden/web:${WEBVERSION}
+    container_name: ${COMPOSE_PROJECT_NAME:-bitwarden}-web
     restart: always
     volumes:
       - ../web:/etc/bitwarden/web
@@ -45,8 +45,8 @@ services:
       - ../env/uid.env
 
   attachments:
-    image: bitwarden/attachments:{{{CoreVersion}}}
-    container_name: bitwarden-attachments
+    image: bitwarden/attachments:${COREVERSION}
+    container_name: ${COMPOSE_PROJECT_NAME:-bitwarden}-attachments
     restart: always
     volumes:
       - ../core/attachments:/etc/bitwarden/core/attachments
@@ -55,8 +55,8 @@ services:
       - ../env/uid.env
 
   api:
-    image: bitwarden/api:{{{CoreVersion}}}
-    container_name: bitwarden-api
+    image: bitwarden/api:${COREVERSION}
+    container_name: ${COMPOSE_PROJECT_NAME:-bitwarden}-api
     restart: always
     volumes:
       - ../core:/etc/bitwarden/core
@@ -71,8 +71,8 @@ services:
       - public
 
   identity:
-    image: bitwarden/identity:{{{CoreVersion}}}
-    container_name: bitwarden-identity
+    image: bitwarden/identity:${COREVERSION}
+    container_name: ${COMPOSE_PROJECT_NAME:-bitwarden}-identity
     restart: always
     volumes:
       - ../identity:/etc/bitwarden/identity
@@ -88,8 +88,8 @@ services:
       - public
 
   sso:
-    image: bitwarden/sso:{{{CoreVersion}}}
-    container_name: bitwarden-sso
+    image: bitwarden/sso:${COREVERSION}
+    container_name: ${COMPOSE_PROJECT_NAME:-bitwarden}-sso
     restart: always
     volumes:
       - ../identity:/etc/bitwarden/identity
@@ -105,8 +105,8 @@ services:
       - public
 
   admin:
-    image: bitwarden/admin:{{{CoreVersion}}}
-    container_name: bitwarden-admin
+    image: bitwarden/admin:${COREVERSION}
+    container_name: ${COMPOSE_PROJECT_NAME:-bitwarden}-admin
     restart: always
     depends_on:
       - mssql
@@ -123,8 +123,8 @@ services:
       - public
 
   icons:
-    image: bitwarden/icons:{{{CoreVersion}}}
-    container_name: bitwarden-icons
+    image: bitwarden/icons:${COREVERSION}
+    container_name: ${COMPOSE_PROJECT_NAME:-bitwarden}-icons
     restart: always
     volumes:
       - ../ca-certificates:/etc/bitwarden/ca-certificates
@@ -137,8 +137,8 @@ services:
       - public
 
   notifications:
-    image: bitwarden/notifications:{{{CoreVersion}}}
-    container_name: bitwarden-notifications
+    image: bitwarden/notifications:${COREVERSION}
+    container_name: ${COMPOSE_PROJECT_NAME:-bitwarden}-notifications
     restart: always
     volumes:
       - ../ca-certificates:/etc/bitwarden/ca-certificates
@@ -152,8 +152,8 @@ services:
       - public
 
   events:
-    image: bitwarden/events:{{{CoreVersion}}}
-    container_name: bitwarden-events
+    image: bitwarden/events:${COREVERSION}
+    container_name: ${COMPOSE_PROJECT_NAME:-bitwarden}-events
     restart: always
     volumes:
       - ../ca-certificates:/etc/bitwarden/ca-certificates
@@ -167,8 +167,8 @@ services:
       - public
 
   nginx:
-    image: bitwarden/nginx:{{{CoreVersion}}}
-    container_name: bitwarden-nginx
+    image: bitwarden/nginx:${COREVERSION}
+    container_name: ${COMPOSE_PROJECT_NAME:-bitwarden}-nginx
     restart: always
     depends_on:
       - web
@@ -198,7 +198,7 @@ services:
 {{#if EnableKeyConnector}}
   key-connector:
     image: bitwarden/key-connector:latest
-    container_name: bitwarden-key-connector
+    container_name: ${COMPOSE_PROJECT_NAME:-bitwarden}-key-connector
     restart: always
     volumes:
       - ../key-connector:/etc/bitwarden/key-connector
