@@ -388,7 +388,7 @@ namespace Bit.Api.Controllers
             if (ssoConfig?.GetData()?.KeyConnectorEnabled == true &&
                 _currentContext.User.UsesKeyConnector)
             {
-                throw new BadRequestException("You cannot leave this Organization because you are using its Key Connector.");
+                throw new BadRequestException("Your organization's Single Sign-On settings prevent you from leaving.");
             }
 
             var userId = _userService.GetProperUserId(User);
