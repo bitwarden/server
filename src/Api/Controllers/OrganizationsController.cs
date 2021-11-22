@@ -384,15 +384,17 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
+            var user = await _userService.GetUserByPrincipalAsync(User);
+
             var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(orgGuidId);
             if (ssoConfig?.GetData()?.KeyConnectorEnabled == true &&
-                _currentContext.User.UsesKeyConnector)
+                user.UsesKeyConnector)
             {
                 throw new BadRequestException("Your organization's Single Sign-On settings prevent you from leaving.");
             }
 
-            var userId = _userService.GetProperUserId(User);
-            await _organizationService.DeleteUserAsync(orgGuidId, userId.Value);
+            
+            await _organizationService.DeleteUserAsync(orgGuidId, user.Id);
         }
 
         [HttpDelete("{id}")]
