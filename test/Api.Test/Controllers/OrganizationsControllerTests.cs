@@ -72,8 +72,7 @@ namespace Bit.Api.Test.Controllers
 
             _currentContext.OrganizationUser(orgId).Returns(true);
             _ssoConfigRepository.GetByOrganizationIdAsync(orgId).Returns(ssoConfig);
-            _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(user.Id);
-            _currentContext.User.Returns(user);
+            _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
 
             var exception = await Assert.ThrowsAsync<BadRequestException>(
                 () => _sut.Leave(orgId.ToString()));
@@ -106,8 +105,7 @@ namespace Bit.Api.Test.Controllers
 
             _currentContext.OrganizationUser(orgId).Returns(true);
             _ssoConfigRepository.GetByOrganizationIdAsync(orgId).Returns(ssoConfig);
-            _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(user.Id);
-            _currentContext.User.Returns(user);
+            _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
 
             await _organizationService.DeleteUserAsync(orgId, user.Id);
             await _organizationService.Received(1).DeleteUserAsync(orgId, user.Id);
