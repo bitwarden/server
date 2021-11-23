@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
@@ -50,7 +50,7 @@ namespace Bit.Core.Services
             {
                 ContentDisposition = $"attachment; filename=\"{fileId}\""
             };
-            
+
             await blobClient.UploadAsync(stream, new BlobUploadOptions { Metadata = metadata, HttpHeaders = headers });
         }
 
@@ -146,7 +146,7 @@ namespace Bit.Core.Services
             if (_sendFilesContainerClient == null)
             {
                 _sendFilesContainerClient = _blobServiceClient.GetBlobContainerClient(FilesContainerName);
-                await _sendFilesContainerClient.CreateIfNotExistsAsync(PublicAccessType.None, null, null);;
+                await _sendFilesContainerClient.CreateIfNotExistsAsync(PublicAccessType.None, null, null);
             }
         }
     }

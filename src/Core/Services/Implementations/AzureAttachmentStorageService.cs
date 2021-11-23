@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
@@ -30,15 +30,20 @@ namespace Bit.Core.Services
                 attachmentData.AttachmentId
             );
 
-        public static (string cipherId, string organizationId, string attachmentId) IdentifiersFromBlobName(string blobName) {
+        public static (string cipherId, string organizationId, string attachmentId) IdentifiersFromBlobName(string blobName)
+        {
             var parts = blobName.Split('/');
-            switch (parts.Length) {
+            switch (parts.Length)
+            {
                 case 4:
                     return (parts[1], parts[2], parts[3]);
                 case 3:
-                    if (parts[0] ==  "temp") {
+                    if (parts[0] == "temp")
+                    {
                         return (parts[1], null, parts[2]);
-                    } else {
+                    }
+                    else
+                    {
                         return (parts[0], parts[1], parts[2]);
                     }
                 case 2:
@@ -99,8 +104,8 @@ namespace Bit.Core.Services
             var headers = new BlobHttpHeaders
             {
                 ContentDisposition = $"attachment; filename=\"{attachmentData.AttachmentId}\""
-            };           
-            await blobClient.UploadAsync(stream, new BlobUploadOptions { Metadata = metadata, HttpHeaders = headers });            
+            };
+            await blobClient.UploadAsync(stream, new BlobUploadOptions { Metadata = metadata, HttpHeaders = headers });
         }
 
         public async Task UploadShareAttachmentAsync(Stream stream, Guid cipherId, Guid organizationId, CipherAttachment.MetaData attachmentData)
@@ -133,7 +138,7 @@ namespace Bit.Core.Services
 
             await InitAsync(_defaultContainerName);
             var dest = _attachmentContainers[_defaultContainerName].GetBlobClient(BlobName(cipherId, data));
-            if (!(await dest.ExistsAsync()))
+            if (!await dest.ExistsAsync())
             {
                 return;
             }
@@ -157,7 +162,7 @@ namespace Bit.Core.Services
             await InitAsync(originalContainer);
             var original = _attachmentContainers[originalContainer].GetBlobClient(
                 BlobName(cipherId, attachmentData, temp: true));
-            if (!(await original.ExistsAsync()))
+            if (!await original.ExistsAsync())
             {
                 return;
             }
