@@ -18,8 +18,9 @@ using Bit.Core.Settings;
 using Bit.Core.Enums;
 using Bit.Core.Context;
 using System.Threading.Tasks;
-using Microsoft.Azure.Storage;
-using Microsoft.Azure.Storage.Blob;
+using Azure;
+using Azure.Storage.Blobs;
+using Azure.Storage.Blobs.Models;
 using Bit.Core.Models.Table;
 using IdentityModel;
 using System.Text.Json;
@@ -253,20 +254,22 @@ namespace Bit.Core.Utilities
             }
         }
 
-        public async static Task<X509Certificate2> GetBlobCertificateAsync(CloudStorageAccount cloudStorageAccount,
-            string container, string file, string password)
+        public async static Task<X509Certificate2> GetBlobCertificateAsync(string connectionString, string container, string file, string password)
         {
-            var blobClient = cloudStorageAccount.CreateCloudBlobClient();
-            var containerRef = blobClient.GetContainerReference(container);
-            if (await containerRef.ExistsAsync().ConfigureAwait(false))
+            try
             {
-                var blobRef = containerRef.GetBlobReference(file);
-                if (await blobRef.ExistsAsync().ConfigureAwait(false))
-                {
-                    var blobBytes = new byte[blobRef.Properties.Length];
-                    await blobRef.DownloadToByteArrayAsync(blobBytes, 0).ConfigureAwait(false);
-                    return new X509Certificate2(blobBytes, password);
-                }
+                var blobServiceClient = new BlobServiceClient(connectionString);
+                var containerRef2 = blobServiceClient.GetBlobContainerClient(container);
+                var blobRef = containerRef2.GetBlobClient(file);
+
+                using var memStream = new MemoryStream();
+                await blobRef.DownloadToAsync(memStream).ConfigureAwait(false);
+                return new X509Certificate2(memStream.ToArray(), password);
+            }
+            catch (RequestFailedException ex)
+            when (ex.ErrorCode == BlobErrorCode.ContainerNotFound || ex.ErrorCode == BlobErrorCode.BlobNotFound)
+            {
+                return null;
             }
             return null;
         }
@@ -756,8 +759,7 @@ namespace Bit.Core.Utilities
                 SettingHasValue(globalSettings.Storage?.ConnectionString) &&
                 SettingHasValue(globalSettings.IdentityServer.CertificatePassword))
             {
-                var storageAccount = CloudStorageAccount.Parse(globalSettings.Storage.ConnectionString);
-                return GetBlobCertificateAsync(storageAccount, "certificates",
+                return GetBlobCertificateAsync(globalSettings.Storage.ConnectionString, "certificates",
                     "identity.pfx", globalSettings.IdentityServer.CertificatePassword).GetAwaiter().GetResult();
             }
             return null;
@@ -854,7 +856,7 @@ namespace Bit.Core.Utilities
                     }
                 }
             }
-            
+
             if (providers.Any())
             {
                 foreach (var group in providers.GroupBy(o => o.Type))
@@ -876,7 +878,7 @@ namespace Bit.Core.Utilities
                     }
                 }
             }
-            
+
             return claims;
         }
 
