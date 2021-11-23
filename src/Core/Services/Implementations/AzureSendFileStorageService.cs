@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
+using Azure;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Azure.Storage.Sas;
@@ -102,38 +103,42 @@ namespace Bit.Core.Services
 
             var blobClient = _sendFilesContainerClient.GetBlobClient(BlobName(send, fileId));
 
-            if (!blobClient.Exists())
+            try
+            {
+                var blobProperties = await blobClient.GetPropertiesAsync();
+                var metadata = blobProperties.Value.Metadata;
+
+                if (send.UserId.HasValue)
+                {
+                    metadata["userId"] = send.UserId.Value.ToString();
+                }
+                else
+                {
+                    metadata["organizationId"] = send.OrganizationId.Value.ToString();
+                }
+                await blobClient.SetMetadataAsync(metadata);
+
+                var headers = new BlobHttpHeaders
+                {
+                    ContentDisposition = $"attachment; filename=\"{fileId}\""
+                };
+                await blobClient.SetHttpHeadersAsync(headers);
+
+                //TODO djsmith85 Is this the correct length
+                //var length = blob.Properties.Length;
+                var length = blobProperties.Value.ContentLength;
+                if (length < expectedFileSize - leeway || length > expectedFileSize + leeway)
+                {
+                    return (false, length);
+                }
+
+                return (true, length);
+            }
+            catch (RequestFailedException requestFailedEx)
+            when (requestFailedEx.ErrorCode == BlobErrorCode.BlobNotFound)
             {
                 return (false, null);
             }
-
-            var blobProperties = blobClient.GetProperties().Value;
-            var metadata = blobProperties.Metadata;
-
-            if (send.UserId.HasValue)
-            {
-                metadata["userId"] = send.UserId.Value.ToString();
-            }
-            else
-            {
-                metadata["organizationId"] = send.OrganizationId.Value.ToString();
-            }
-            await blobClient.SetMetadataAsync(metadata);
-
-            var headers = new BlobHttpHeaders {
-                ContentDisposition = $"attachment; filename=\"{fileId}\""
-            };
-            await blobClient.SetHttpHeadersAsync(headers);
-
-            //TODO djsmith85 Is this the correct length
-            //var length = blob.Properties.Length;
-            var length = blobProperties.ContentLength;
-            if (length < expectedFileSize - leeway || length > expectedFileSize + leeway)
-            {
-                return (false, length);
-            }
-
-            return (true, length);
         }
 
         private async Task InitAsync()

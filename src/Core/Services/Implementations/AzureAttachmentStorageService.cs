@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
+using Azure;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Azure.Storage.Sas;
@@ -197,40 +198,43 @@ namespace Bit.Core.Services
 
             var blobClient = _attachmentContainers[attachmentData.ContainerName].GetBlobClient(BlobName(cipher.Id, attachmentData));
 
-            if (!blobClient.Exists())
+            try
+            {
+                var blobProperties = await blobClient.GetPropertiesAsync();
+
+                var metadata = blobProperties.Value.Metadata;
+                metadata["cipherId"] = cipher.Id.ToString();
+                if (cipher.UserId.HasValue)
+                {
+                    metadata["userId"] = cipher.UserId.Value.ToString();
+                }
+                else
+                {
+                    metadata["organizationId"] = cipher.OrganizationId.Value.ToString();
+                }
+                await blobClient.SetMetadataAsync(metadata);
+
+                var headers = new BlobHttpHeaders
+                {
+                    ContentDisposition = $"attachment; filename=\"{attachmentData.AttachmentId}\""
+                };
+                await blobClient.SetHttpHeadersAsync(headers);
+
+                //TODO djsmith85 Is this the correct length
+                //var length = blob.Properties.Length;
+                var length = blobProperties.Value.ContentLength;
+                if (length < attachmentData.Size - leeway || length > attachmentData.Size + leeway)
+                {
+                    return (false, length);
+                }
+
+                return (true, length);
+            }
+            catch (RequestFailedException requestFailedEx)
+            when (requestFailedEx.ErrorCode == BlobErrorCode.BlobNotFound)
             {
                 return (false, null);
             }
-
-            var blobProperties = blobClient.GetProperties().Value;
-
-            var metadata = blobProperties.Metadata;
-            metadata["cipherId"] = cipher.Id.ToString();
-            if (cipher.UserId.HasValue)
-            {
-                metadata["userId"] = cipher.UserId.Value.ToString();
-            }
-            else
-            {
-                metadata["organizationId"] = cipher.OrganizationId.Value.ToString();
-            }
-            await blobClient.SetMetadataAsync(metadata);
-
-            var headers = new BlobHttpHeaders
-            {
-                ContentDisposition = $"attachment; filename=\"{attachmentData.AttachmentId}\""
-            };
-            await blobClient.SetHttpHeadersAsync(headers);
-
-            //TODO djsmith85 Is this the correct length
-            //var length = blob.Properties.Length;
-            var length = blobProperties.ContentLength;
-            if (length < attachmentData.Size - leeway || length > attachmentData.Size + leeway)
-            {
-                return (false, length);
-            }
-
-            return (true, length);
         }
 
         private async Task DeleteAttachmentsForPathAsync(string path)
