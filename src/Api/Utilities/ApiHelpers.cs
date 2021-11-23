@@ -1,8 +1,8 @@
 ﻿using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Azure.EventGrid;
-using Microsoft.Azure.EventGrid.Models;
+using Azure.Messaging.EventGrid;
+using Azure.Messaging.EventGrid.SystemEvents;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -55,27 +55,26 @@ namespace Bit.Api.Utilities
             }
 
             var response = string.Empty;
-            var requestContent = await new StreamReader(request.Body).ReadToEndAsync();
-            if (string.IsNullOrWhiteSpace(requestContent))
-            {
-                return new OkObjectResult(response);
-            }
-
-            var eventGridSubscriber = new EventGridSubscriber();
-            var eventGridEvents = eventGridSubscriber.DeserializeEventGridEvents(requestContent);
-
+            var eventGridEvents = EventGridEvent.ParseMany(BinaryData.FromStream(request.Body));
             foreach (var eventGridEvent in eventGridEvents)
             {
-                if (eventGridEvent.Data is SubscriptionValidationEventData eventData)
+                if (eventGridEvent.TryGetSystemEventData(out object systemEvent))
                 {
-                    // Might want to enable additional validation: subject, topic etc.
-
-                    var responseData = new SubscriptionValidationResponse()
+                    switch (systemEvent)
                     {
-                        ValidationResponse = eventData.ValidationCode
-                    };
+                        case SubscriptionValidationEventData subscriptionValidated:
+                            // Might want to enable additional validation: subject, topic etc.
 
-                    return new OkObjectResult(responseData);
+                            var responseData = new SubscriptionValidationResponse()
+                            {
+                                ValidationResponse = subscriptionValidated.ValidationCode
+                            };
+
+                            return new OkObjectResult(responseData);
+                            break;
+                        default:
+                            break;
+                    }
                 }
                 else if (eventTypeHandlers.ContainsKey(eventGridEvent.EventType))
                 {

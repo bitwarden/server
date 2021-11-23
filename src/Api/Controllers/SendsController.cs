@@ -12,7 +12,7 @@ using Bit.Core.Settings;
 using Bit.Core.Models.Api.Response;
 using Bit.Core.Enums;
 using Bit.Core.Context;
-using Microsoft.Azure.EventGrid.Models;
+using Azure.Messaging.EventGrid;
 using Bit.Api.Utilities;
 using System.Collections.Generic;
 using Bit.Core.Models.Table;
