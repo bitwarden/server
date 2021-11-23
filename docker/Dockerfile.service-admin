@@ -32,8 +32,9 @@ RUN npm install
 RUN gulp --gulpfile "gulpfile.js" build
 RUN dotnet publish -c release -o /app --no-restore
 
-
-# App stage
+###############################################
+#                  App stage                  #
+###############################################
 FROM mcr.microsoft.com/dotnet/aspnet:5.0-alpine
 LABEL com.bitwarden.product="bitwarden"
 ENV ASPNETCORE_URLS http://+:5000
