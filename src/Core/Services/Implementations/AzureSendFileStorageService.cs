@@ -1,4 +1,5 @@
-﻿using System;
+using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using Azure.Storage.Blobs;
@@ -33,8 +34,8 @@ namespace Bit.Core.Services
             await InitAsync();
 
             var blobClient = _sendFilesContainerClient.GetBlobClient(BlobName(send, fileId));
-            var metadata = blobClient.GetProperties().Value.Metadata;
 
+            var metadata = new Dictionary<string, string>();
             if (send.UserId.HasValue)
             {
                 metadata.Add("userId", send.UserId.Value.ToString());

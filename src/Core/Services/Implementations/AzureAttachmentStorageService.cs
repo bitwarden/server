@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
@@ -84,7 +84,7 @@ namespace Bit.Core.Services
             await InitAsync(_defaultContainerName);
             var blobClient = _attachmentContainers[_defaultContainerName].GetBlobClient(BlobName(cipher.Id, attachmentData));
 
-            var metadata = blobClient.GetProperties().Value.Metadata;
+            var metadata = new Dictionary<string, string>();
             metadata.Add("cipherId", cipher.Id.ToString());
             if (cipher.UserId.HasValue)
             {
@@ -109,7 +109,7 @@ namespace Bit.Core.Services
             var blobClient = _attachmentContainers[_defaultContainerName].GetBlobClient(
                 BlobName(cipherId, attachmentData, organizationId, temp: true));
 
-            var metadata = blobClient.GetProperties().Value.Metadata;
+            var metadata = new Dictionary<string, string>();
             metadata.Add("cipherId", cipherId.ToString());
             metadata.Add("organizationId", organizationId.ToString());
 
