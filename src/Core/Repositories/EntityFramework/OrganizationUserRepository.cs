@@ -77,7 +77,11 @@ namespace Bit.Core.Repositories.EntityFramework
                 var sponsorships = dbContext.OrganizationSponsorships
                     .Where(os => os.SponsoringOrganizationUserId != default &&
                         os.SponsoringOrganizationUserId.Value == organizationUserId);
-                dbContext.RemoveRange(sponsorships);
+                foreach (var sponsorship in sponsorships)
+                {
+                    sponsorship.SponsoringOrganizationUserId = null;
+                }
+
                 dbContext.Remove(orgUser);
                 await dbContext.SaveChangesAsync();
             }
@@ -92,7 +96,11 @@ namespace Bit.Core.Repositories.EntityFramework
                 var sponsorships = dbContext.OrganizationSponsorships
                     .Where(os => os.SponsoringOrganizationUserId != default &&
                         organizationUserIds.Contains(os.SponsoringOrganizationUserId ?? default));
-                dbContext.RemoveRange(sponsorships);
+                foreach (var sponsorship in sponsorships)
+                {
+                    sponsorship.SponsoringOrganizationUserId = null;
+                }
+
                 dbContext.RemoveRange(entities);
                 await dbContext.SaveChangesAsync();
             }
