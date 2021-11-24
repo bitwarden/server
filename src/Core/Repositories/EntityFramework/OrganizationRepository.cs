@@ -107,10 +107,9 @@ namespace Bit.Core.Repositories.EntityFramework
                     .Where(os =>
                         os.SponsoringOrganizationId == organization.Id ||
                         os.SponsoredOrganizationId == organization.Id);
-                dbContext.RemoveRange(sponsorships.Where(os => os.CloudSponsor));
 
                 Guid? UpdatedOrgId(Guid? orgId) => orgId == organization.Id ? null : organization.Id;
-                foreach (var sponsorship in sponsorships.Where(os => !os.CloudSponsor))
+                foreach (var sponsorship in sponsorships)
                 {
                     sponsorship.SponsoredOrganizationId = UpdatedOrgId(sponsorship.SponsoredOrganizationId);
                     sponsorship.SponsoringOrganizationId = UpdatedOrgId(sponsorship.SponsoringOrganizationId);

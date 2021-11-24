@@ -4,9 +4,12 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    DELETE
+    UPDATE
+        OS
+    SET
+        [SponsoringOrganizationUserId] = NULL
     FROM
-        [dbo].[OrganizationSponsorship]
+        [dbo].[OrganizationSponsorship] OS
     WHERE
         [SponsoringOrganizationUserId] = @OrganizationUserId
 END
