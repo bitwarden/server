@@ -74,6 +74,21 @@ namespace Bit.Api.Test.Controllers
 
         [Theory]
         [BitAutoData]
+        public async Task PreValidateSponsorshipToken_ValidatesToken_Success(string sponsorshipToken, User user,
+            SutProvider<OrganizationSponsorshipsController> sutProvider)
+        {
+            sutProvider.GetDependency<ICurrentContext>().UserId.Returns(user.Id);
+            sutProvider.GetDependency<IUserService>().GetUserByIdAsync(user.Id)
+                .Returns(user);
+
+            await sutProvider.Sut.PreValidateSponsorshipToken(sponsorshipToken);
+
+            await sutProvider.GetDependency<IOrganizationSponsorshipService>().Received(1)
+                .ValidateRedemptionTokenAsync(sponsorshipToken, user.Email);
+        }
+
+        [Theory]
+        [BitAutoData]
         public async Task RevokeSponsorship_WrongSponsoringUser_ThrowsBadRequest(OrganizationUser sponsoringOrgUser,
             Guid currentUserId, SutProvider<OrganizationSponsorshipsController> sutProvider)
         {

@@ -67,7 +67,7 @@ namespace Bit.Api.Controllers
 
         [HttpPost("validate-token")]
         [SelfHosted(NotSelfHostedOnly = true)]
-        public async Task<bool> ValidateSponsorshipToken([FromQuery] string sponsorshipToken)
+        public async Task<bool> PreValidateSponsorshipToken([FromQuery] string sponsorshipToken)
         {
             return await _organizationsSponsorshipService.ValidateRedemptionTokenAsync(sponsorshipToken, (await CurrentUser).Email);
         }
