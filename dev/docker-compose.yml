@@ -9,7 +9,7 @@ services:
       MSSQL_SA_PASSWORD: ${MSSQL_PASSWORD}
       MSSQL_PID: Developer
     volumes:
-      - mssql_dev_data:/var/opt/mssql
+      - edgesql_dev_data:/var/opt/mssql
       - ../util/Migrator:/mnt/migrator/
       - ./helpers/mssql:/mnt/helpers
       - ./.data/mssql:/mnt/data
@@ -40,4 +40,4 @@ services:
       - mail
 
 volumes:
-  mssql_dev_data:
+  edgesql_dev_data:
