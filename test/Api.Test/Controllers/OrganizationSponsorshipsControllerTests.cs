@@ -39,11 +39,14 @@ namespace Bit.Api.Test.Controllers
 
         [Theory]
         [BitAutoData]
-        public async Task RedeemSponsorship_BadToken_ThrowsBadRequest(string sponsorshipToken, string userEmail,
+        public async Task RedeemSponsorship_BadToken_ThrowsBadRequest(string sponsorshipToken, User user,
             OrganizationSponsorshipRedeemRequestModel model, SutProvider<OrganizationSponsorshipsController> sutProvider)
         {
-            sutProvider.GetDependency<IOrganizationSponsorshipService>().ValidateRedemptionTokenAsync(sponsorshipToken, userEmail)
-                .Returns(false);
+            sutProvider.GetDependency<ICurrentContext>().UserId.Returns(user.Id);
+            sutProvider.GetDependency<IUserService>().GetUserByIdAsync(user.Id)
+                .Returns(user);
+            sutProvider.GetDependency<IOrganizationSponsorshipService>().ValidateRedemptionTokenAsync(sponsorshipToken,
+                user.Email).Returns(false);
 
             var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
                 sutProvider.Sut.RedeemSponsorship(sponsorshipToken, model));
@@ -56,11 +59,14 @@ namespace Bit.Api.Test.Controllers
 
         [Theory]
         [BitAutoData]
-        public async Task RedeemSponsorship_NotSponsoredOrgOwner_ThrowsBadRequest(string sponsorshipToken, string userEmail,
+        public async Task RedeemSponsorship_NotSponsoredOrgOwner_ThrowsBadRequest(string sponsorshipToken, User user,
             OrganizationSponsorshipRedeemRequestModel model, SutProvider<OrganizationSponsorshipsController> sutProvider)
         {
-            sutProvider.GetDependency<IOrganizationSponsorshipService>().ValidateRedemptionTokenAsync(sponsorshipToken, userEmail)
-                .Returns(true);
+            sutProvider.GetDependency<ICurrentContext>().UserId.Returns(user.Id);
+            sutProvider.GetDependency<IUserService>().GetUserByIdAsync(user.Id)
+                .Returns(user);
+            sutProvider.GetDependency<IOrganizationSponsorshipService>().ValidateRedemptionTokenAsync(sponsorshipToken,
+                user.Email).Returns(true);
             sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(model.SponsoredOrganizationId).Returns(false);
 
             var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
