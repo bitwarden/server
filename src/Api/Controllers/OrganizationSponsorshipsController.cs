@@ -1,8 +1,6 @@
 using System;
-using System.Linq;
 using System.Threading.Tasks;
 using Bit.Core.Context;
-using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Api.Request;
@@ -67,11 +65,18 @@ namespace Bit.Api.Controllers
                 (await CurrentUser).Email);
         }
 
+        [HttpPost("validate-token")]
+        [SelfHosted(NotSelfHostedOnly = true)]
+        public async Task<bool> ValidateSponsorshipToken([FromQuery] string sponsorshipToken)
+        {
+            return await _organizationsSponsorshipService.ValidateRedemptionTokenAsync(sponsorshipToken, (await CurrentUser).Email);
+        }
+
         [HttpPost("redeem")]
         [SelfHosted(NotSelfHostedOnly = true)]
         public async Task RedeemSponsorship([FromQuery] string sponsorshipToken, [FromBody] OrganizationSponsorshipRedeemRequestModel model)
         {
-            if (!await _organizationsSponsorshipService.ValidateRedemptionTokenAsync(sponsorshipToken))
+            if (!await _organizationsSponsorshipService.ValidateRedemptionTokenAsync(sponsorshipToken, (await CurrentUser).Email))
             {
                 throw new BadRequestException("Failed to parse sponsorship token.");
             }
