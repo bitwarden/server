@@ -9,23 +9,13 @@ BEGIN
     SET
         [SponsoringOrganizationId] = NULL
     WHERE
-        [SponsoringOrganizationId] = @OrganizationId AND
-        [CloudSponsor] = 0
+        [SponsoringOrganizationId] = @OrganizationId
 
     UPDATE
         [dbo].[OrganizationSponsorship]
     SET
         [SponsoredOrganizationId] = NULL
     WHERE
-        [SponsoredOrganizationId] = @OrganizationId AND
-        [CloudSponsor] = 0
-
-    DELETE
-    FROM
-        [dbo].[OrganizationSponsorship]
-    WHERE
-        [CloudSponsor] = 1 AND
-        ([SponsoredOrganizationId] = @OrganizationId OR
-         [SponsoringOrganizationId] = @OrganizationId)
+        [SponsoredOrganizationId] = @OrganizationId
 END
 GO
