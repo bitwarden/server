@@ -37,9 +37,9 @@ namespace Bit.Core.Services
             _dataProtector = dataProtectionProvider.CreateProtector("OrganizationSponsorshipServiceDataProtector");
         }
 
-        public async Task<bool> ValidateRedemptionTokenAsync(string encryptedToken, string currentUserEmail)
+        public async Task<bool> ValidateRedemptionTokenAsync(string encryptedToken, string sponsoredUserEmail)
         {
-            if (!encryptedToken.StartsWith(TokenClearTextPrefix) || currentUserEmail == null)
+            if (!encryptedToken.StartsWith(TokenClearTextPrefix) || sponsoredUserEmail == null)
             {
                 return false;
             }
@@ -63,7 +63,7 @@ namespace Bit.Core.Services
                 var sponsorship = await _organizationSponsorshipRepository.GetByIdAsync(sponsorshipId);
                 if (sponsorship == null ||
                     sponsorship.PlanSponsorshipType != sponsorshipType ||
-                    sponsorship.OfferedToEmail != currentUserEmail)
+                    sponsorship.OfferedToEmail != sponsoredUserEmail)
                 {
                     return false;
                 }
