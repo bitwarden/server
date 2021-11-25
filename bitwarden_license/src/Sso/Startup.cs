@@ -36,7 +36,8 @@ namespace Bit.Sso
             var globalSettings = services.AddGlobalSettingsServices(Configuration);
 
             // Stripe Billing
-            StripeConfiguration.ApiKey = globalSettings.StripeApiKey;
+            StripeConfiguration.ApiKey = globalSettings.Stripe.StripeApiKey;
+            StripeConfiguration.MaxNetworkRetries = globalSettings.Stripe.MaxNetworkRetries;
 
             // Data Protection
             services.AddCustomDataProtectionServices(Environment, globalSettings);
