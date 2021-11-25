@@ -468,7 +468,7 @@ namespace Bit.Core.Settings
 
         public class StripeSettings
         {
-            public string StripeApiKey { get; set; }
+            public string ApiKey { get; set; }
             public int MaxNetworkRetries { get; set; } = 2;
         }
     }

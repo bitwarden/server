@@ -61,7 +61,7 @@ namespace Bit.Api
             }
 
             // Stripe Billing
-            StripeConfiguration.ApiKey = globalSettings.Stripe.StripeApiKey;
+            StripeConfiguration.ApiKey = globalSettings.Stripe.ApiKey;
             StripeConfiguration.MaxNetworkRetries = globalSettings.Stripe.MaxNetworkRetries;
 
             // Repositories
