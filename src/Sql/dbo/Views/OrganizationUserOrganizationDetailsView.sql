@@ -7,6 +7,7 @@ SELECT
     O.[Enabled],
     O.[UsePolicies],
     O.[UseSso],
+    O.[UseKeyConnector],
     O.[UseGroups],
     O.[UseDirectory],
     O.[UseEvents],
@@ -29,7 +30,8 @@ SELECT
     SU.[ExternalId] SsoExternalId,
     OU.[Permissions],
     PO.[ProviderId],
-    P.[Name] ProviderName
+    P.[Name] ProviderName,
+    SS.[Data] SsoConfig
 FROM
     [dbo].[OrganizationUser] OU
 INNER JOIN
@@ -40,3 +42,5 @@ LEFT JOIN
     [dbo].[ProviderOrganization] PO ON PO.[OrganizationId] = O.[Id]
 LEFT JOIN
     [dbo].[Provider] P ON P.[Id] = PO.[ProviderId]
+LEFT JOIN
+    [dbo].[SsoConfig] SS ON SS.[OrganizationId] = OU.[OrganizationId]

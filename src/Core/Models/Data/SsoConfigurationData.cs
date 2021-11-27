@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using Bit.Core.Enums;
 using Bit.Core.Sso;
+using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 
 namespace Bit.Core.Models.Data
@@ -13,7 +15,20 @@ namespace Bit.Core.Models.Data
         private const string _oidcSignedOutPath = "/oidc-signedout";
         private const string _saml2ModulePath = "/saml2";
 
+        public static SsoConfigurationData Deserialize(string data)
+        {
+            return CoreHelpers.LoadClassFromJsonData<SsoConfigurationData>(data);
+        }
+
+        public string Serialize()
+        {
+            return CoreHelpers.ClassToJsonData(this);
+        }
+
         public SsoType ConfigType { get; set; }
+
+        public bool KeyConnectorEnabled { get; set; }
+        public string KeyConnectorUrl { get; set; }
 
         // OIDC
         public string Authority { get; set; }
@@ -34,11 +49,11 @@ namespace Bit.Core.Models.Data
         public string IdpSingleSignOnServiceUrl { get; set; }
         public string IdpSingleLogoutServiceUrl { get; set; }
         public string IdpX509PublicCert { get; set; }
-        public Saml2BindingType IdpBindingType { get; set; }
+        public Saml2BindingType IdpBindingType { get; set; } = Saml2BindingType.HttpRedirect;
         public bool IdpAllowUnsolicitedAuthnResponse { get; set; }
         public string IdpArtifactResolutionServiceUrl { get; set; }
         public bool IdpDisableOutboundLogoutRequests { get; set; }
-        public string IdpOutboundSigningAlgorithm { get; set; }
+        public string IdpOutboundSigningAlgorithm { get; set; } = SamlSigningAlgorithms.Sha256;
         public bool IdpWantAuthnRequestsSigned { get; set; }
 
         // SAML2 SP

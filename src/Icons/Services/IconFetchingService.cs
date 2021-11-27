@@ -7,7 +7,6 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Bit.Icons.Models;
 using Microsoft.Extensions.Logging;
-using System.Text.RegularExpressions;
 using System.Text;
 using AngleSharp.Html.Parser;
 
@@ -54,6 +53,7 @@ namespace Bit.Icons.Services
                 AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate,
             });
             _httpClient.Timeout = TimeSpan.FromSeconds(20);
+            _httpClient.MaxResponseContentBufferSize = 5000000; // 5 MB
         }
 
         public async Task<IconResult> GetIconAsync(string domain)
@@ -428,7 +428,7 @@ namespace Bit.Icons.Services
             }
 
             var ipString = ip.ToString();
-            if (ipString == "::1" || ipString == "::")
+            if (ipString == "::1" || ipString == "::" || ipString.StartsWith("::ffff:"))
             {
                 return true;
             }

@@ -569,6 +569,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<bool>("UseGroups")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("UseKeyConnector")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("UsePolicies")
                         .HasColumnType("boolean");
 
@@ -587,6 +590,57 @@ namespace Bit.PostgresMigrations.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Organization");
+                });
+
+            modelBuilder.Entity("Bit.Core.Models.EntityFramework.OrganizationSponsorship", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("CloudSponsor")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("FriendlyName")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<Guid?>("InstallationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("LastSyncDate")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("OfferedToEmail")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<byte?>("PlanSponsorshipType")
+                        .HasColumnType("smallint");
+
+                    b.Property<Guid?>("SponsoredOrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("SponsoringOrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("SponsoringOrganizationUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("SponsorshipLapsedDate")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<byte>("TimesRenewedWithoutValidation")
+                        .HasColumnType("smallint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InstallationId");
+
+                    b.HasIndex("SponsoredOrganizationId");
+
+                    b.HasIndex("SponsoringOrganizationId");
+
+                    b.ToTable("OrganizationSponsorship");
                 });
 
             modelBuilder.Entity("Bit.Core.Models.EntityFramework.OrganizationUser", b =>
@@ -1136,6 +1190,9 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)");
 
+                    b.Property<bool>("UsesKeyConnector")
+                        .HasColumnType("boolean");
+
                     b.HasKey("Id");
 
                     b.ToTable("User");
@@ -1299,6 +1356,27 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Navigation("Group");
 
                     b.Navigation("OrganizationUser");
+                });
+
+            modelBuilder.Entity("Bit.Core.Models.EntityFramework.OrganizationSponsorship", b =>
+                {
+                    b.HasOne("Bit.Core.Models.EntityFramework.Installation", "Installation")
+                        .WithMany()
+                        .HasForeignKey("InstallationId");
+
+                    b.HasOne("Bit.Core.Models.EntityFramework.Organization", "SponsoredOrganization")
+                        .WithMany()
+                        .HasForeignKey("SponsoredOrganizationId");
+
+                    b.HasOne("Bit.Core.Models.EntityFramework.Organization", "SponsoringOrganization")
+                        .WithMany()
+                        .HasForeignKey("SponsoringOrganizationId");
+
+                    b.Navigation("Installation");
+
+                    b.Navigation("SponsoredOrganization");
+
+                    b.Navigation("SponsoringOrganization");
                 });
 
             modelBuilder.Entity("Bit.Core.Models.EntityFramework.OrganizationUser", b =>

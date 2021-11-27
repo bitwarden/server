@@ -192,6 +192,27 @@ namespace Bit.Core.Services
             }
         }
 
+        private async Task ChangeOrganizationSponsorship(Organization org, OrganizationSponsorship sponsorship, bool applySponsorship)
+        {
+            var existingPlan = Utilities.StaticStore.GetPlan(org.PlanType);
+            var sponsoredPlan = sponsorship != null ?
+                Utilities.StaticStore.GetSponsoredPlan(sponsorship.PlanSponsorshipType.Value) :
+                null;
+            var subscriptionUpdate = new SponsorOrganizationSubscriptionUpdate(existingPlan, sponsoredPlan, applySponsorship);
+
+            await FinalizeSubscriptionChangeAsync(org, subscriptionUpdate, DateTime.UtcNow);
+
+            var sub = await _stripeAdapter.SubscriptionGetAsync(org.GatewaySubscriptionId);
+            org.ExpirationDate = sub.CurrentPeriodEnd;
+
+        }
+
+        public Task SponsorOrganizationAsync(Organization org, OrganizationSponsorship sponsorship) =>
+            ChangeOrganizationSponsorship(org, sponsorship, true);
+
+        public Task RemoveOrganizationSponsorshipAsync(Organization org, OrganizationSponsorship sponsorship) =>
+            ChangeOrganizationSponsorship(org, sponsorship, false);
+
         public async Task<string> UpgradeFreeOrganizationAsync(Organization org, StaticStore.Plan plan,
             short additionalStorageGb, int additionalSeats, bool premiumAccessAddon, TaxInfo taxInfo)
         {
@@ -227,6 +248,29 @@ namespace Bit.Core.Services
             }
 
             var subCreateOptions = new OrganizationUpgradeSubscriptionOptions(customer.Id, org, plan, taxInfo, additionalSeats, additionalStorageGb, premiumAccessAddon);
+            var (stripePaymentMethod, paymentMethodType) = IdentifyPaymentMethod(customer, subCreateOptions);
+
+            var subscription = await ChargeForNewSubscriptionAsync(org, customer, false,
+                stripePaymentMethod, paymentMethodType, subCreateOptions, null);
+            org.GatewaySubscriptionId = subscription.Id;
+
+            if (subscription.Status == "incomplete" &&
+                subscription.LatestInvoice?.PaymentIntent?.Status == "requires_action")
+            {
+                org.Enabled = false;
+                return subscription.LatestInvoice.PaymentIntent.ClientSecret;
+            }
+            else
+            {
+                org.Enabled = true;
+                org.ExpirationDate = subscription.CurrentPeriodEnd;
+                return null;
+            }
+        }
+
+        private (bool stripePaymentMethod, PaymentMethodType PaymentMethodType) IdentifyPaymentMethod(
+                Stripe.Customer customer, Stripe.SubscriptionCreateOptions subCreateOptions)
+        {
             var stripePaymentMethod = false;
             var paymentMethodType = PaymentMethodType.Credit;
             var hasBtCustomerId = customer.Metadata.ContainsKey("btCustomerId");
@@ -265,23 +309,7 @@ namespace Bit.Core.Services
                     }
                 }
             }
-
-            var subscription = await ChargeForNewSubscriptionAsync(org, customer, false,
-                stripePaymentMethod, paymentMethodType, subCreateOptions, null);
-            org.GatewaySubscriptionId = subscription.Id;
-
-            if (subscription.Status == "incomplete" &&
-                subscription.LatestInvoice?.PaymentIntent?.Status == "requires_action")
-            {
-                org.Enabled = false;
-                return subscription.LatestInvoice.PaymentIntent.ClientSecret;
-            }
-            else
-            {
-                org.Enabled = true;
-                org.ExpirationDate = subscription.CurrentPeriodEnd;
-                return null;
-            }
+            return (stripePaymentMethod, paymentMethodType);
         }
 
         public async Task<string> PurchasePremiumAsync(User user, PaymentMethodType paymentMethodType,
@@ -679,7 +707,7 @@ namespace Bit.Core.Services
         }
 
         private async Task<string> FinalizeSubscriptionChangeAsync(IStorableSubscriber storableSubscriber,
-            SubscriptionUpdate subscriptionUpdate)
+            SubscriptionUpdate subscriptionUpdate, DateTime? prorationDate)
         {
             var sub = await _stripeAdapter.SubscriptionGetAsync(storableSubscriber.GatewaySubscriptionId);
             if (sub == null)
@@ -687,15 +715,15 @@ namespace Bit.Core.Services
                 throw new GatewayException("Subscription not found.");
             }
 
-            var prorationDate = DateTime.UtcNow;
+            prorationDate ??= DateTime.UtcNow;
             var collectionMethod = sub.CollectionMethod;
             var daysUntilDue = sub.DaysUntilDue;
             var chargeNow = collectionMethod == "charge_automatically";
-            var updatedItemOptions = subscriptionUpdate.UpgradeItemOptions(sub);
+            var updatedItemOptions = subscriptionUpdate.UpgradeItemsOptions(sub);
 
             var subUpdateOptions = new Stripe.SubscriptionUpdateOptions
             {
-                Items = new List<Stripe.SubscriptionItemOptions> { updatedItemOptions },
+                Items = updatedItemOptions,
                 ProrationBehavior = "always_invoice",
                 DaysUntilDue = daysUntilDue ?? 1,
                 CollectionMethod = "send_invoice",
@@ -738,14 +766,8 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Unable to locate draft invoice for subscription update.");
             }
 
-            // If no amount due, invoice is autofinalized, we're done
-            if (invoice.AmountDue <= 0)
-            {
-                return null;
-            }
-
             string paymentIntentClientSecret = null;
-            if (updatedItemOptions.Quantity > 0)
+            if (invoice.AmountDue > 0 && updatedItemOptions.Any(i => i.Quantity > 0))
             {
                 try
                 {
@@ -769,7 +791,7 @@ namespace Bit.Core.Services
                     // Need to revert the subscription
                     await _stripeAdapter.SubscriptionUpdateAsync(sub.Id, new Stripe.SubscriptionUpdateOptions
                     {
-                        Items = new List<Stripe.SubscriptionItemOptions> { subscriptionUpdate.RevertItemOptions(sub) },
+                        Items = subscriptionUpdate.RevertItemsOptions(sub),
                         // This proration behavior prevents a false "credit" from
                         //  being applied forward to the next month's invoice
                         ProrationBehavior = "none",
@@ -793,15 +815,15 @@ namespace Bit.Core.Services
             return paymentIntentClientSecret;
         }
 
-        public Task<string> AdjustSeatsAsync(Organization organization, StaticStore.Plan plan, int additionalSeats)
+        public Task<string> AdjustSeatsAsync(Organization organization, StaticStore.Plan plan, int additionalSeats, DateTime? prorationDate = null)
         {
-            return FinalizeSubscriptionChangeAsync(organization, new SeatSubscriptionUpdate(organization, plan, additionalSeats));
+            return FinalizeSubscriptionChangeAsync(organization, new SeatSubscriptionUpdate(organization, plan, additionalSeats), prorationDate);
         }
 
         public Task<string> AdjustStorageAsync(IStorableSubscriber storableSubscriber, int additionalStorage,
-            string storagePlanId)
+            string storagePlanId, DateTime? prorationDate = null)
         {
-            return FinalizeSubscriptionChangeAsync(storableSubscriber, new StorageSubscriptionUpdate(storagePlanId, additionalStorage));
+            return FinalizeSubscriptionChangeAsync(storableSubscriber, new StorageSubscriptionUpdate(storagePlanId, additionalStorage), prorationDate);
         }
 
         public async Task CancelAndRecoverChargesAsync(ISubscriber subscriber)

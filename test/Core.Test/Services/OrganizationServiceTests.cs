@@ -9,10 +9,8 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using NSubstitute;
 using Xunit;
-using Bit.Core.Test.AutoFixture;
 using Bit.Core.Exceptions;
 using Bit.Core.Enums;
-using Bit.Core.Test.AutoFixture.Attributes;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using System.Text.Json;
 using Bit.Core.Context;
@@ -22,7 +20,8 @@ using OrganizationUser = Bit.Core.Models.Table.OrganizationUser;
 using Policy = Bit.Core.Models.Table.Policy;
 using Bit.Core.Test.AutoFixture.PolicyFixtures;
 using Bit.Core.Settings;
-using AutoFixture.Xunit2;
+using Bit.Test.Common.AutoFixture;
+using Bit.Test.Common.AutoFixture.Attributes;
 
 namespace Bit.Core.Test.Services
 {
@@ -67,6 +66,7 @@ namespace Bit.Core.Test.Services
                 .CreateManyAsync(Arg.Is<IEnumerable<OrganizationUser>>(users => users.Count() == expectedNewUsersCount));
             await sutProvider.GetDependency<IMailService>().Received(1)
                 .BulkSendOrganizationInviteEmailAsync(org.Name,
+                Arg.Any<bool>(),
                 Arg.Is<IEnumerable<(OrganizationUser, ExpiringToken)>>(messages => messages.Count() == expectedNewUsersCount));
             
             // Send events
@@ -125,6 +125,7 @@ namespace Bit.Core.Test.Services
                 .CreateManyAsync(Arg.Is<IEnumerable<OrganizationUser>>(users => users.Count() == expectedNewUsersCount));
             await sutProvider.GetDependency<IMailService>().Received(1)
                 .BulkSendOrganizationInviteEmailAsync(org.Name,
+                Arg.Any<bool>(),
                 Arg.Is<IEnumerable<(OrganizationUser, ExpiringToken)>>(messages => messages.Count() == expectedNewUsersCount));
 
             // Sent events
@@ -868,7 +869,7 @@ namespace Bit.Core.Test.Services
             organization.MaxAutoscaleSeats = maxAutoscaleSeats;
             sutProvider.GetDependency<ICurrentContext>().ManageUsers(organization.Id).Returns(true);
 
-            var (result, failureMessage) = await sutProvider.Sut.CanScaleAsync(organization, seatsToAdd);
+            var (result, failureMessage) = sutProvider.Sut.CanScale(organization, seatsToAdd);
 
             if (expectedFailureMessage == string.Empty)
             {
@@ -886,23 +887,43 @@ namespace Bit.Core.Test.Services
             SutProvider<OrganizationService> sutProvider)
         {
             sutProvider.GetDependency<IGlobalSettings>().SelfHosted.Returns(true);
-            var (result, failureMessage) = await sutProvider.Sut.CanScaleAsync(organization, 10);
+            var (result, failureMessage) = sutProvider.Sut.CanScale(organization, 10);
 
             Assert.False(result);
             Assert.Contains("Cannot autoscale on self-hosted instance", failureMessage);
         }
 
         [Theory, PaidOrganizationAutoData]
-        public async Task CanScale_FailsIfCannotManageUsers(Organization organization,
-            SutProvider<OrganizationService> sutProvider)
+        public async Task Delete_Success(Organization organization, SutProvider<OrganizationService> sutProvider)
         {
-            organization.MaxAutoscaleSeats = null;
-            sutProvider.GetDependency<ICurrentContext>().ManageUsers(organization.Id).Returns(false);
+            var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+            var applicationCacheService = sutProvider.GetDependency<IApplicationCacheService>();
 
-            var (result, failureMessage) = await sutProvider.Sut.CanScaleAsync(organization, 10);
+            await sutProvider.Sut.DeleteAsync(organization);
 
-            Assert.False(result);
-            Assert.Contains("Cannot manage organization users", failureMessage);
+            await organizationRepository.Received().DeleteAsync(organization);
+            await applicationCacheService.Received().DeleteOrganizationAbilityAsync(organization.Id);
+        }
+
+        [Theory, PaidOrganizationAutoData]
+        public async Task Delete_Fails_KeyConnector(Organization organization, SutProvider<OrganizationService> sutProvider,
+            SsoConfig ssoConfig)
+        {
+            ssoConfig.Enabled = true;
+            ssoConfig.SetData(new SsoConfigurationData { KeyConnectorEnabled = true });
+            var ssoConfigRepository = sutProvider.GetDependency<ISsoConfigRepository>();
+            var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+            var applicationCacheService = sutProvider.GetDependency<IApplicationCacheService>();
+
+            ssoConfigRepository.GetByOrganizationIdAsync(organization.Id).Returns(ssoConfig);
+
+            var exception = await Assert.ThrowsAsync<BadRequestException>(
+                () => sutProvider.Sut.DeleteAsync(organization));
+
+            Assert.Contains("You cannot delete an Organization that is using Key Connector.", exception.Message);
+
+            await organizationRepository.DidNotReceiveWithAnyArgs().DeleteAsync(default);
+            await applicationCacheService.DidNotReceiveWithAnyArgs().DeleteOrganizationAbilityAsync(default);
         }
     }
 }

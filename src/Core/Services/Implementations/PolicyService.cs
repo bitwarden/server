@@ -15,6 +15,7 @@ namespace Bit.Core.Services
         private readonly IOrganizationRepository _organizationRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly IPolicyRepository _policyRepository;
+        private readonly ISsoConfigRepository _ssoConfigRepository;
         private readonly IMailService _mailService;
 
         public PolicyService(
@@ -22,12 +23,14 @@ namespace Bit.Core.Services
             IOrganizationRepository organizationRepository,
             IOrganizationUserRepository organizationUserRepository,
             IPolicyRepository policyRepository,
+            ISsoConfigRepository ssoConfigRepository,
             IMailService mailService)
         {
             _eventService = eventService;
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
             _policyRepository = policyRepository;
+            _ssoConfigRepository = ssoConfigRepository;
             _mailService = mailService;
         }
 
@@ -51,23 +54,27 @@ namespace Bit.Core.Services
                 case PolicyType.SingleOrg:
                     if (!policy.Enabled)
                     {
-                        var requireSso =
-                            await _policyRepository.GetByOrganizationIdTypeAsync(org.Id, PolicyType.RequireSso);
-                        if (requireSso?.Enabled == true)
-                        {
-                            throw new BadRequestException("Single Sign-On Authentication policy is enabled.");
-                        }
+                        await RequiredBySsoAsync(org);
+                        await RequiredByVaultTimeoutAsync(org);
+                        await RequiredByKeyConnectorAsync(org);
                     }
                     break;
                 
                case PolicyType.RequireSso:
                    if (policy.Enabled)
+                    {
+                        await DependsOnSingleOrgAsync(org);
+                    }
+                    else
+                    {
+                        await RequiredByKeyConnectorAsync(org);
+                    }
+                    break;
+
+               case PolicyType.MaximumVaultTimeout:
+                   if (policy.Enabled)
                    {
-                       var singleOrg = await _policyRepository.GetByOrganizationIdTypeAsync(org.Id, PolicyType.SingleOrg);
-                       if (singleOrg?.Enabled != true)
-                       {
-                           throw new BadRequestException("Single Organization policy not enabled.");
-                       }
+                        await DependsOnSingleOrgAsync(org);
                    }
                    break;
             }
@@ -126,6 +133,43 @@ namespace Bit.Core.Services
             policy.RevisionDate = now;
             await _policyRepository.UpsertAsync(policy);
             await _eventService.LogPolicyEventAsync(policy, Enums.EventType.Policy_Updated);
+        }
+
+        private async Task DependsOnSingleOrgAsync(Organization org)
+        {
+            var singleOrg = await _policyRepository.GetByOrganizationIdTypeAsync(org.Id, PolicyType.SingleOrg);
+            if (singleOrg?.Enabled != true)
+            {
+                throw new BadRequestException("Single Organization policy not enabled.");
+            }
+        }
+
+        private async Task RequiredBySsoAsync(Organization org)
+        {
+            var requireSso = await _policyRepository.GetByOrganizationIdTypeAsync(org.Id, PolicyType.RequireSso);
+            if (requireSso?.Enabled == true)
+            {
+                throw new BadRequestException("Single Sign-On Authentication policy is enabled.");
+            }
+        }
+
+        private async Task RequiredByKeyConnectorAsync(Organization org)
+        {
+
+            var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(org.Id);
+            if (ssoConfig?.GetData()?.KeyConnectorEnabled == true)
+            {
+                throw new BadRequestException("Key Connector is enabled.");
+            }
+        }
+
+        private async Task RequiredByVaultTimeoutAsync(Organization org)
+        {
+            var vaultTimeout = await _policyRepository.GetByOrganizationIdTypeAsync(org.Id, PolicyType.MaximumVaultTimeout);
+            if (vaultTimeout?.Enabled == true)
+            {
+                throw new BadRequestException("Maximum Vault Timeout policy is enabled.");
+            }
         }
     }
 }

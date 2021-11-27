@@ -10,6 +10,7 @@ namespace Bit.Core.Models.Data
         public string Name { get; set; }
         public bool UsePolicies { get; set; }
         public bool UseSso { get; set; }
+        public bool UseKeyConnector { get; set; }
         public bool UseGroups { get; set; }
         public bool UseDirectory { get; set; }
         public bool UseEvents { get; set; }
@@ -17,7 +18,6 @@ namespace Bit.Core.Models.Data
         public bool Use2fa { get; set; }
         public bool UseApi{ get; set; }
         public bool UseResetPassword { get; set; }
-        public bool UseBusinessPortal => UsePolicies || UseSso;
         public bool SelfHost { get; set; }
         public bool UsersGetPremium { get; set; }
         public int? Seats { get; set; }

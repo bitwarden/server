@@ -4,8 +4,6 @@ using Bit.Core.Settings;
 using NSubstitute;
 using Xunit;
 using System.IO;
-using Bit.Core.Test.AutoFixture.Attributes;
-using Bit.Core.Test.AutoFixture;
 using Bit.Core.Test.AutoFixture.CipherFixtures;
 using Bit.Core.Models.Data;
 using System.Threading.Tasks;
@@ -13,6 +11,8 @@ using Bit.Core.Models.Table;
 using U2F.Core.Utils;
 using Bit.Core.Test.AutoFixture.CipherAttachmentMetaData;
 using AutoFixture;
+using Bit.Test.Common.AutoFixture.Attributes;
+using Bit.Test.Common.AutoFixture;
 
 namespace Bit.Core.Test.Services
 {

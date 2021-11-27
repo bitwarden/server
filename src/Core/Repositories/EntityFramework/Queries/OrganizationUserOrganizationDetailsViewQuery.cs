@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Bit.Core.Models.Data;
+using Microsoft.Azure.Documents.SystemFunctions;
 
 namespace Bit.Core.Repositories.EntityFramework.Queries
 {
@@ -16,16 +17,23 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
                 from po in po_g.DefaultIfEmpty()
                 join p in dbContext.Providers on po.ProviderId equals p.Id into p_g
                 from p in p_g.DefaultIfEmpty()
+                join os in dbContext.OrganizationSponsorships on ou.Id equals os.SponsoringOrganizationUserId into os_g
+                from os in os_g.DefaultIfEmpty()
+                join ss in dbContext.SsoConfigs on ou.OrganizationId equals ss.OrganizationId into ss_g
+                from ss in ss_g.DefaultIfEmpty()
                 where ((su == null || !su.OrganizationId.HasValue) || su.OrganizationId == ou.OrganizationId)
-                select new { ou, o, su, p };
+                select new { ou, o, su, p, ss, os };
+                
             return query.Select(x => new OrganizationUserOrganizationDetails 
             {
                 OrganizationId = x.ou.OrganizationId,
                 UserId = x.ou.UserId,
                 Name = x.o.Name,
                 Enabled = x.o.Enabled,
+                PlanType = x.o.PlanType,
                 UsePolicies = x.o.UsePolicies,
                 UseSso = x.o.UseSso,
+                UseKeyConnector = x.o.UseKeyConnector,
                 UseGroups = x.o.UseGroups,
                 UseDirectory = x.o.UseDirectory,
                 UseEvents = x.o.UseEvents,
@@ -48,6 +56,8 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
                 PrivateKey = x.o.PrivateKey,
                 ProviderId = x.p.Id,
                 ProviderName = x.p.Name,
+                FamilySponsorshipFriendlyName = x.os.FriendlyName,
+                SsoConfig = x.ss.Data,
             });
         }
     }

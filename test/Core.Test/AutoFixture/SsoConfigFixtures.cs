@@ -1,16 +1,14 @@
 using System;
 using AutoFixture;
 using AutoFixture.Kernel;
-using AutoMapper;
 using TableModel = Bit.Core.Models.Table;
-using Bit.Core.Models.EntityFramework;
-using Bit.Core.Test.AutoFixture.Attributes;
-using Bit.Core.Test.AutoFixture.GlobalSettingsFixtures;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using Bit.Core.Models.Data;
 using System.Text.Json;
 using Bit.Core.Test.AutoFixture.EntityFrameworkRepositoryFixtures;
 using Bit.Core.Repositories.EntityFramework;
+using Bit.Test.Common.AutoFixture;
+using Bit.Test.Common.AutoFixture.Attributes;
 
 namespace Bit.Core.Test.AutoFixture.SsoConfigFixtures
 {
@@ -32,9 +30,7 @@ namespace Bit.Core.Test.AutoFixture.SsoConfigFixtures
             var fixture = new Fixture();
             var ssoConfig = fixture.WithAutoNSubstitutions().Create<TableModel.SsoConfig>();
             var ssoConfigData = fixture.WithAutoNSubstitutions().Create<SsoConfigurationData>();
-            ssoConfig.Data = JsonSerializer.Serialize(ssoConfigData, new JsonSerializerOptions(){
-               PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            });
+            ssoConfig.SetData(ssoConfigData);
             return ssoConfig;
         }
     }

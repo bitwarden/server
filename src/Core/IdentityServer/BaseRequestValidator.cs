@@ -176,7 +176,7 @@ namespace Bit.Core.IdentityServer
                 customResponse.Add("TwoFactorToken", token);
             }
 
-            SetSuccessResult(context, user, claims, customResponse);
+            await SetSuccessResult(context, user, claims, customResponse);
         }
 
         protected async Task BuildTwoFactorResultAsync(User user, Organization organization, T context)
@@ -256,7 +256,7 @@ namespace Bit.Core.IdentityServer
 
         protected abstract void SetSsoResult(T context, Dictionary<string, object> customResponse);
 
-        protected abstract void SetSuccessResult(T context, User user, List<Claim> claims,
+        protected abstract Task SetSuccessResult(T context, User user, List<Claim> claims,
             Dictionary<string, object> customResponse);
 
         protected abstract void SetErrorResult(T context, Dictionary<string, object> customResponse);
@@ -471,12 +471,24 @@ namespace Bit.Core.IdentityServer
             }
         }
 
+        protected async Task<bool> KnownDeviceAsync(User user, ValidatedTokenRequest request) =>
+            (await GetKnownDeviceAsync(user, request)) != default;
+
+        protected async Task<Device> GetKnownDeviceAsync(User user, ValidatedTokenRequest request)
+        {
+            if (user == null)
+            {
+                return default;
+            }
+
+            return await _deviceRepository.GetByIdentifierAsync(GetDeviceFromRequest(request).Identifier, user.Id);
+        }
         private async Task<Device> SaveDeviceAsync(User user, ValidatedTokenRequest request)
         {
             var device = GetDeviceFromRequest(request);
             if (device != null)
             {
-                var existingDevice = await _deviceRepository.GetByIdentifierAsync(device.Identifier, user.Id);
+                var existingDevice = await GetKnownDeviceAsync(user, request);
                 if (existingDevice == null)
                 {
                     device.UserId = user.Id;

@@ -7,14 +7,13 @@ using AutoFixture.Kernel;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories.EntityFramework;
-using Bit.Core.Test.AutoFixture.Attributes;
 using Bit.Core.Test.AutoFixture.EntityFrameworkRepositoryFixtures;
-using Bit.Core.Test.AutoFixture.GlobalSettingsFixtures;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using Bit.Core.Test.AutoFixture.OrganizationUserFixtures;
 using Bit.Core.Test.AutoFixture.Relays;
-using Bit.Core.Test.AutoFixture.TransactionFixtures;
 using Bit.Core.Test.AutoFixture.UserFixtures;
+using Bit.Test.Common.AutoFixture;
+using Bit.Test.Common.AutoFixture.Attributes;
 using Core.Models.Data;
 
 namespace Bit.Core.Test.AutoFixture.CipherFixtures

@@ -1,6 +1,8 @@
 ﻿using Bit.Core.Enums;
+using Bit.Core.Models.Data;
 using Bit.Core.Models.StaticStore;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Bit.Core.Utilities
 {
@@ -410,6 +412,7 @@ namespace Bit.Core.Utilities
                     Has2fa = true,
                     HasApi = true,
                     HasSso = true,
+                    HasKeyConnector = true,
                     HasResetPassword = true,
                     UsersGetPremium = true,
 
@@ -448,6 +451,7 @@ namespace Bit.Core.Utilities
                     HasApi = true,
                     HasSelfHost = true,
                     HasSso = true,
+                    HasKeyConnector = true,
                     HasResetPassword = true,
                     UsersGetPremium = true,
 
@@ -475,5 +479,21 @@ namespace Bit.Core.Utilities
 
         public static IDictionary<GlobalEquivalentDomainsType, IEnumerable<string>> GlobalDomains { get; set; }
         public static IEnumerable<Plan> Plans { get; set; }
+        public static IEnumerable<SponsoredPlan> SponsoredPlans { get; set; } = new[]
+            {
+                new SponsoredPlan
+                {
+                    PlanSponsorshipType = PlanSponsorshipType.FamiliesForEnterprise,
+                    SponsoredProductType = ProductType.Families,
+                    SponsoringProductType = ProductType.Enterprise,
+                    StripePlanId = "2021-family-for-enterprise-annually",
+                    UsersCanSponsor = (OrganizationUserOrganizationDetails org) =>
+                        GetPlan(org.PlanType).Product == ProductType.Enterprise,
+                }
+            };
+        public static Plan GetPlan(PlanType planType) =>
+            Plans.FirstOrDefault(p => p.Type == planType);
+        public static SponsoredPlan GetSponsoredPlan(PlanSponsorshipType planSponsorshipType) =>
+            SponsoredPlans.FirstOrDefault(p => p.PlanSponsorshipType == planSponsorshipType);
     }
 }

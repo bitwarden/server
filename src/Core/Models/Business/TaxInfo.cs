@@ -51,6 +51,7 @@
                         if (BillingAddressState?.Contains("bec") ?? false)
                         {
                             _taxIdType = "ca_qst";
+                            break;
                         }
                         _taxIdType = "ca_bn";
                         break;

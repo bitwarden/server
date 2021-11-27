@@ -247,6 +247,16 @@ namespace Bit.Core.Services
                 }
             }
 
+            if (!newPlan.HasKeyConnector && organization.UseKeyConnector)
+            {
+                var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(organization.Id);
+                if (ssoConfig != null && ssoConfig.GetData().KeyConnectorEnabled)
+                {
+                    throw new BadRequestException("Your new plan does not allow the Key Connector feature. " +
+                                                  "Disable your Key Connector.");
+                }
+            }
+
             if (!newPlan.HasResetPassword && organization.UseResetPassword)
             {
                 var resetPasswordPolicy =
@@ -295,6 +305,7 @@ namespace Bit.Core.Services
             organization.Use2fa = newPlan.Has2fa;
             organization.UseApi = newPlan.HasApi;
             organization.UseSso = newPlan.HasSso;
+            organization.UseKeyConnector = newPlan.HasKeyConnector;
             organization.UseResetPassword = newPlan.HasResetPassword;
             organization.SelfHost = newPlan.HasSelfHost;
             organization.UsersGetPremium = newPlan.UsersGetPremium || upgrade.PremiumAccessAddon;
@@ -477,7 +488,7 @@ namespace Bit.Core.Services
                 }
             }
 
-            var paymentIntentClientSecret = await _paymentService.AdjustSeatsAsync(organization, plan, additionalSeats);
+            var paymentIntentClientSecret = await _paymentService.AdjustSeatsAsync(organization, plan, additionalSeats, prorationDate);
             await _referenceEventService.RaiseEventAsync(
                 new ReferenceEvent(ReferenceEventType.AdjustSeats, organization)
                 {
@@ -687,6 +698,7 @@ namespace Bit.Core.Services
                 MaxStorageGb = _globalSettings.SelfHosted ? 10240 : license.MaxStorageGb, // 10 TB
                 UsePolicies = license.UsePolicies,
                 UseSso = license.UseSso,
+                UseKeyConnector = license.UseKeyConnector,
                 UseGroups = license.UseGroups,
                 UseDirectory = license.UseDirectory,
                 UseEvents = license.UseEvents,
@@ -865,6 +877,16 @@ namespace Bit.Core.Services
                 }
             }
 
+            if (!license.UseKeyConnector && organization.UseKeyConnector)
+            {
+                var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(organization.Id);
+                if (ssoConfig != null && ssoConfig.GetData().KeyConnectorEnabled)
+                {
+                    throw new BadRequestException($"Your organization currently has Key Connector enabled. " +
+                        $"Your new license does not allow for the use of Key Connector. Disable your Key Connector.");
+                }
+            }
+
             if (!license.UseResetPassword && organization.UseResetPassword)
             {
                 var resetPasswordPolicy =
@@ -895,6 +917,7 @@ namespace Bit.Core.Services
             organization.UseApi = license.UseApi;
             organization.UsePolicies = license.UsePolicies;
             organization.UseSso = license.UseSso;
+            organization.UseKeyConnector = license.UseKeyConnector;
             organization.UseResetPassword = license.UseResetPassword;
             organization.SelfHost = license.SelfHost;
             organization.UsersGetPremium = license.UsersGetPremium;
@@ -908,6 +931,8 @@ namespace Bit.Core.Services
 
         public async Task DeleteAsync(Organization organization)
         {
+            await ValidateDeleteOrganizationAsync(organization);
+
             if (!string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
             {
                 try
@@ -1074,7 +1099,7 @@ namespace Bit.Core.Services
 
             if (newSeatsRequired > 0)
             {
-                var (canScale, failureReason) = await CanScaleAsync(organization, newSeatsRequired);
+                var (canScale, failureReason) = CanScale(organization, newSeatsRequired);
                 if (!canScale)
                 {
                     throw new BadRequestException(failureReason);
@@ -1160,6 +1185,11 @@ namespace Bit.Core.Services
                     await _organizationUserRepository.CreateAsync(orgUser, collections);
                 }
 
+                if (!await _currentContext.ManageUsers(organization.Id))
+                {
+                    throw new BadRequestException("Cannot add seats. Cannot manage organization users.");
+                }
+
                 await AutoAddSeatsAsync(organization, newSeatsRequired, prorationDate);
                 await SendInvitesAsync(orgUsers, organization);
                 await _eventService.LogOrganizationUserEventsAsync(events);
@@ -1232,7 +1262,8 @@ namespace Bit.Core.Services
         {
             string MakeToken(OrganizationUser orgUser) =>
                 _dataProtector.Protect($"OrganizationUserInvite {orgUser.Id} {orgUser.Email} {CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow)}");
-            await _mailService.BulkSendOrganizationInviteEmailAsync(organization.Name,
+            
+            await _mailService.BulkSendOrganizationInviteEmailAsync(organization.Name, CheckOrganizationCanSponsor(organization),
                 orgUsers.Select(o => (o, new ExpiringToken(MakeToken(o), DateTime.UtcNow.AddDays(5)))));
         }
 
@@ -1242,7 +1273,15 @@ namespace Bit.Core.Services
             var nowMillis = CoreHelpers.ToEpocMilliseconds(now);
             var token = _dataProtector.Protect(
                 $"OrganizationUserInvite {orgUser.Id} {orgUser.Email} {nowMillis}");
-            await _mailService.SendOrganizationInviteEmailAsync(organization.Name, orgUser, new ExpiringToken(token, now.AddDays(5)));
+            
+            await _mailService.SendOrganizationInviteEmailAsync(organization.Name, CheckOrganizationCanSponsor(organization), orgUser, new ExpiringToken(token, now.AddDays(5)));
+        }
+
+
+        private static bool CheckOrganizationCanSponsor(Organization organization)
+        {
+            return StaticStore.GetPlan(organization.PlanType).Product == ProductType.Enterprise
+                && !organization.SelfHost;
         }
 
         public async Task<OrganizationUser> AcceptUserAsync(Guid organizationUserId, User user, string token,
@@ -1454,18 +1493,13 @@ namespace Bit.Core.Services
             return result;
         }
 
-        internal async Task<(bool canScale, string failureReason)> CanScaleAsync(Organization organization, int seatsToAdd)
+        internal (bool canScale, string failureReason) CanScale(Organization organization,
+            int seatsToAdd)
         {
             var failureReason = "";
             if (_globalSettings.SelfHosted)
             {
                 failureReason = "Cannot autoscale on self-hosted instance.";
-                return (false, failureReason);
-            }
-
-            if (!await _currentContext.ManageUsers(organization.Id))
-            {
-                failureReason = "Cannot manage organization users.";
                 return (false, failureReason);
             }
 
@@ -1484,14 +1518,14 @@ namespace Bit.Core.Services
             return (true, failureReason);
         }
 
-        private async Task AutoAddSeatsAsync(Organization organization, int seatsToAdd, DateTime? prorationDate = null)
+        public async Task AutoAddSeatsAsync(Organization organization, int seatsToAdd, DateTime? prorationDate = null)
         {
             if (seatsToAdd < 1 || !organization.Seats.HasValue)
             {
                 return;
             }
 
-            var (canScale, failureMessage) = await CanScaleAsync(organization, seatsToAdd);
+            var (canScale, failureMessage) = CanScale(organization, seatsToAdd);
             if (!canScale)
             {
                 throw new BadRequestException(failureMessage);
@@ -1499,12 +1533,13 @@ namespace Bit.Core.Services
 
             var ownerEmails = (await _organizationUserRepository.GetManyByMinimumRoleAsync(organization.Id,
                 OrganizationUserType.Owner)).Select(u => u.Email).Distinct();
+            var initialSeatCount = organization.Seats.Value;
 
             await AdjustSeatsAsync(organization, seatsToAdd, prorationDate, ownerEmails);
 
             if (!organization.OwnersNotifiedOfAutoscaling.HasValue)
             {
-                await _mailService.SendOrganizationAutoscaledEmailAsync(organization, organization.Seats.Value + seatsToAdd,
+                await _mailService.SendOrganizationAutoscaledEmailAsync(organization, initialSeatCount,
                     ownerEmails);
                 organization.OwnersNotifiedOfAutoscaling = DateTime.UtcNow;
                 await _organizationRepository.UpsertAsync(organization);
@@ -2132,6 +2167,15 @@ namespace Bit.Core.Services
             if (oldType == OrganizationUserType.Admin || newType == OrganizationUserType.Admin)
             {
                 throw new BadRequestException("Custom users can not manage Admins or Owners.");
+            }
+        }
+
+        private async Task ValidateDeleteOrganizationAsync(Organization organization)
+        {
+            var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(organization.Id);
+            if (ssoConfig?.GetData()?.KeyConnectorEnabled == true)
+            {
+                throw new BadRequestException("You cannot delete an Organization that is using Key Connector.");
             }
         }
     }

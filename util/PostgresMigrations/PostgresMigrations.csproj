@@ -16,4 +16,12 @@
     </PackageReference>
   </ItemGroup>
 
+  <ItemGroup>
+    <None Remove="Scripts\2021-09-21_01_SplitManageCollectionsPermission.psql" />
+    <None Remove="Scripts\2021-10-21_00_SetMaxAutoscaleSeatCount.psql" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Scripts\2021-09-21_01_SplitManageCollectionsPermission.psql" />
+    <EmbeddedResource Include="Scripts\2021-10-21_00_SetMaxAutoscaleSeatCount.psql" />
+  </ItemGroup>
 </Project>

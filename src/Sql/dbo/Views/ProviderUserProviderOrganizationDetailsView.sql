@@ -7,6 +7,7 @@ SELECT
     O.[Enabled],
     O.[UsePolicies],
     O.[UseSso],
+    O.[UseKeyConnector],
     O.[UseGroups],
     O.[UseDirectory],
     O.[UseEvents],

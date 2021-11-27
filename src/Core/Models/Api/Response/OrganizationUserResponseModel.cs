@@ -41,6 +41,7 @@ namespace Bit.Core.Models.Api
             AccessAll = organizationUser.AccessAll;
             Permissions = CoreHelpers.LoadClassFromJsonData<Permissions>(organizationUser.Permissions);
             ResetPasswordEnrolled = !string.IsNullOrEmpty(organizationUser.ResetPasswordKey);
+            UsesKeyConnector = organizationUser.UsesKeyConnector;
         }
 
         public string Id { get; set; }
@@ -50,6 +51,7 @@ namespace Bit.Core.Models.Api
         public bool AccessAll { get; set; }
         public Permissions Permissions { get; set; }
         public bool ResetPasswordEnrolled { get; set; }
+        public bool UsesKeyConnector { get; set; }
     }
 
     public class OrganizationUserDetailsResponseModel : OrganizationUserResponseModel
@@ -79,6 +81,8 @@ namespace Bit.Core.Models.Api
             Email = organizationUser.Email;
             TwoFactorEnabled = twoFactorEnabled;
             SsoBound = !string.IsNullOrWhiteSpace(organizationUser.SsoExternalId);
+            // Prevent reset password when using key connector.
+            ResetPasswordEnrolled = ResetPasswordEnrolled && !organizationUser.UsesKeyConnector;
         }
 
         public string Name { get; set; }

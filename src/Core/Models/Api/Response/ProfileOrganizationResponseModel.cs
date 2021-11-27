@@ -14,6 +14,7 @@ namespace Bit.Core.Models.Api
             Name = organization.Name;
             UsePolicies = organization.UsePolicies;
             UseSso = organization.UseSso;
+            UseKeyConnector = organization.UseKeyConnector;
             UseGroups = organization.UseGroups;
             UseDirectory = organization.UseDirectory;
             UseEvents = organization.UseEvents;
@@ -38,12 +39,25 @@ namespace Bit.Core.Models.Api
             UserId = organization.UserId?.ToString();
             ProviderId = organization.ProviderId?.ToString();
             ProviderName = organization.ProviderName;
+            FamilySponsorshipFriendlyName = organization.FamilySponsorshipFriendlyName;
+            FamilySponsorshipAvailable = FamilySponsorshipFriendlyName == null &&
+                Utilities.StaticStore.GetSponsoredPlan(PlanSponsorshipType.FamiliesForEnterprise)
+                .UsersCanSponsor(organization);
+            PlanProductType = Utilities.StaticStore.GetPlan(organization.PlanType).Product;
+            
+            if (organization.SsoConfig != null)
+            {
+                var ssoConfigData = SsoConfigurationData.Deserialize(organization.SsoConfig);
+                KeyConnectorEnabled = ssoConfigData.KeyConnectorEnabled && !string.IsNullOrEmpty(ssoConfigData.KeyConnectorUrl);
+                KeyConnectorUrl = ssoConfigData.KeyConnectorUrl;
+            }
         }
 
         public string Id { get; set; }
         public string Name { get; set; }
         public bool UsePolicies { get; set; }
         public bool UseSso { get; set; }
+        public bool UseKeyConnector { get; set; }
         public bool UseGroups { get; set; }
         public bool UseDirectory { get; set; }
         public bool UseEvents { get; set; }
@@ -51,7 +65,6 @@ namespace Bit.Core.Models.Api
         public bool Use2fa { get; set; }
         public bool UseApi { get; set; }
         public bool UseResetPassword { get; set; }
-        public bool UseBusinessPortal => UsePolicies || UseSso; // TODO add events if needed
         public bool UsersGetPremium { get; set; }
         public bool SelfHost { get; set; }
         public int? Seats { get; set; }
@@ -69,5 +82,10 @@ namespace Bit.Core.Models.Api
         public bool HasPublicAndPrivateKeys { get; set; }
         public string ProviderId { get; set; }
         public string ProviderName { get; set; }
+        public string FamilySponsorshipFriendlyName { get; set; }
+        public bool FamilySponsorshipAvailable { get; set; }
+        public ProductType PlanProductType { get; set; }
+        public bool KeyConnectorEnabled { get; set; }
+        public string KeyConnectorUrl { get; set; }
     }
 }

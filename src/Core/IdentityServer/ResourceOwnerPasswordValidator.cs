@@ -58,9 +58,10 @@ namespace Bit.Core.IdentityServer
             }
 
             string bypassToken = null;
-            if (_captchaValidationService.RequireCaptchaValidation(_currentContext))
+            var user = await _userManager.FindByEmailAsync(context.UserName.ToLowerInvariant());
+            var unknownDevice = !await KnownDeviceAsync(user, context.Request);
+            if (unknownDevice && _captchaValidationService.RequireCaptchaValidation(_currentContext))
             {
-                var user = await _userManager.FindByEmailAsync(context.UserName.ToLowerInvariant());
                 var captchaResponse = context.Request.Raw["captchaResponse"]?.ToString();
 
                 if (string.IsNullOrWhiteSpace(captchaResponse))
@@ -105,13 +106,14 @@ namespace Bit.Core.IdentityServer
             return (user, true);
         }
 
-        protected override void SetSuccessResult(ResourceOwnerPasswordValidationContext context, User user,
+        protected override Task SetSuccessResult(ResourceOwnerPasswordValidationContext context, User user,
             List<Claim> claims, Dictionary<string, object> customResponse)
         {
             context.Result = new GrantValidationResult(user.Id.ToString(), "Application",
                 identityProvider: "bitwarden",
                 claims: claims.Count > 0 ? claims : null,
                 customResponse: customResponse);
+            return Task.CompletedTask;
         }
 
         protected override void SetTwoFactorResult(ResourceOwnerPasswordValidationContext context,

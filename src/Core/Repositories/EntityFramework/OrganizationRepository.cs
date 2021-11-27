@@ -87,6 +87,7 @@ namespace Bit.Core.Repositories.EntityFramework
                     UsersGetPremium = e.UsersGetPremium,
                     Using2fa = e.Use2fa && e.TwoFactorProviders != null,
                     UseSso = e.UseSso,
+                    UseKeyConnector = e.UseKeyConnector,
                 }).ToListAsync();
             }
         }
@@ -94,6 +95,29 @@ namespace Bit.Core.Repositories.EntityFramework
         public async Task UpdateStorageAsync(Guid id)
         {
             await OrganizationUpdateStorage(id);
+        }
+
+        public override async Task DeleteAsync(Organization organization)
+        {
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var orgEntity = await dbContext.FindAsync<EFModel.Organization>(organization.Id);
+                var sponsorships = dbContext.OrganizationSponsorships
+                    .Where(os =>
+                        os.SponsoringOrganizationId == organization.Id ||
+                        os.SponsoredOrganizationId == organization.Id);
+
+                Guid? UpdatedOrgId(Guid? orgId) => orgId == organization.Id ? null : organization.Id;
+                foreach (var sponsorship in sponsorships)
+                {
+                    sponsorship.SponsoredOrganizationId = UpdatedOrgId(sponsorship.SponsoredOrganizationId);
+                    sponsorship.SponsoringOrganizationId = UpdatedOrgId(sponsorship.SponsoringOrganizationId);
+                }
+
+                dbContext.Remove(orgEntity);
+                await dbContext.SaveChangesAsync();
+            }
         }
     }
 }

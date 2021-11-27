@@ -565,6 +565,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<bool>("UseGroups")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<bool>("UseKeyConnector")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<bool>("UsePolicies")
                         .HasColumnType("tinyint(1)");
 
@@ -583,6 +586,57 @@ namespace Bit.MySqlMigrations.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Organization");
+                });
+
+            modelBuilder.Entity("Bit.Core.Models.EntityFramework.OrganizationSponsorship", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("char(36)");
+
+                    b.Property<bool>("CloudSponsor")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("FriendlyName")
+                        .HasMaxLength(256)
+                        .HasColumnType("varchar(256)");
+
+                    b.Property<Guid?>("InstallationId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime?>("LastSyncDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("OfferedToEmail")
+                        .HasMaxLength(256)
+                        .HasColumnType("varchar(256)");
+
+                    b.Property<byte?>("PlanSponsorshipType")
+                        .HasColumnType("tinyint unsigned");
+
+                    b.Property<Guid?>("SponsoredOrganizationId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid?>("SponsoringOrganizationId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid?>("SponsoringOrganizationUserId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime?>("SponsorshipLapsedDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<byte>("TimesRenewedWithoutValidation")
+                        .HasColumnType("tinyint unsigned");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InstallationId");
+
+                    b.HasIndex("SponsoredOrganizationId");
+
+                    b.HasIndex("SponsoringOrganizationId");
+
+                    b.ToTable("OrganizationSponsorship");
                 });
 
             modelBuilder.Entity("Bit.Core.Models.EntityFramework.OrganizationUser", b =>
@@ -1127,6 +1181,9 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("varchar(32)");
 
+                    b.Property<bool>("UsesKeyConnector")
+                        .HasColumnType("tinyint(1)");
+
                     b.HasKey("Id");
 
                     b.ToTable("User");
@@ -1290,6 +1347,27 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Navigation("Group");
 
                     b.Navigation("OrganizationUser");
+                });
+
+            modelBuilder.Entity("Bit.Core.Models.EntityFramework.OrganizationSponsorship", b =>
+                {
+                    b.HasOne("Bit.Core.Models.EntityFramework.Installation", "Installation")
+                        .WithMany()
+                        .HasForeignKey("InstallationId");
+
+                    b.HasOne("Bit.Core.Models.EntityFramework.Organization", "SponsoredOrganization")
+                        .WithMany()
+                        .HasForeignKey("SponsoredOrganizationId");
+
+                    b.HasOne("Bit.Core.Models.EntityFramework.Organization", "SponsoringOrganization")
+                        .WithMany()
+                        .HasForeignKey("SponsoringOrganizationId");
+
+                    b.Navigation("Installation");
+
+                    b.Navigation("SponsoredOrganization");
+
+                    b.Navigation("SponsoringOrganization");
                 });
 
             modelBuilder.Entity("Bit.Core.Models.EntityFramework.OrganizationUser", b =>

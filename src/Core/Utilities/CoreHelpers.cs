@@ -242,6 +242,17 @@ namespace Bit.Core.Utilities
             }
         }
 
+        public static string GetEmbeddedResourceContentsAsync(string file)
+        {
+            var assembly = Assembly.GetCallingAssembly();
+            var resourceName = assembly.GetManifestResourceNames().Single(n => n.EndsWith(file));
+            using (var stream = assembly.GetManifestResourceStream(resourceName))
+            using (var reader = new StreamReader(stream))
+            {
+                return reader.ReadToEnd();
+            }
+        }
+
         public async static Task<X509Certificate2> GetBlobCertificateAsync(CloudStorageAccount cloudStorageAccount,
             string container, string file, string password)
         {
@@ -827,60 +838,14 @@ namespace Bit.Core.Utilities
                             foreach (var org in group)
                             {
                                 claims.Add(new KeyValuePair<string, string>("orgcustom", org.Id.ToString()));
+                                foreach (var (permission, claimName) in org.Permissions.ClaimsMap)
+                                {
+                                    if (!permission)
+                                    {
+                                        continue;
+                                    }
 
-                                if (org.Permissions.AccessBusinessPortal)
-                                {
-                                    claims.Add(new KeyValuePair<string, string>("accessbusinessportal", org.Id.ToString()));
-                                }
-
-                                if (org.Permissions.AccessEventLogs)
-                                {
-                                    claims.Add(new KeyValuePair<string, string>("accesseventlogs", org.Id.ToString()));
-                                }
-
-                                if (org.Permissions.AccessImportExport)
-                                {
-                                    claims.Add(new KeyValuePair<string, string>("accessimportexport", org.Id.ToString()));
-                                }
-
-                                if (org.Permissions.AccessReports)
-                                {
-                                    claims.Add(new KeyValuePair<string, string>("accessreports", org.Id.ToString()));
-                                }
-
-                                if (org.Permissions.ManageAllCollections)
-                                {
-                                    claims.Add(new KeyValuePair<string, string>("manageallcollections", org.Id.ToString()));
-                                }
-
-                                if (org.Permissions.ManageAssignedCollections)
-                                {
-                                    claims.Add(new KeyValuePair<string, string>("manageassignedcollections", org.Id.ToString()));
-                                }
-
-                                if (org.Permissions.ManageGroups)
-                                {
-                                    claims.Add(new KeyValuePair<string, string>("managegroups", org.Id.ToString()));
-                                }
-
-                                if (org.Permissions.ManagePolicies)
-                                {
-                                    claims.Add(new KeyValuePair<string, string>("managepolicies", org.Id.ToString()));
-                                }
-
-                                if (org.Permissions.ManageSso)
-                                {
-                                    claims.Add(new KeyValuePair<string, string>("managesso", org.Id.ToString()));
-                                }
-
-                                if (org.Permissions.ManageUsers)
-                                {
-                                    claims.Add(new KeyValuePair<string, string>("manageusers", org.Id.ToString()));
-                                }
-                                
-                                if (org.Permissions.ManageResetPassword)
-                                {
-                                    claims.Add(new KeyValuePair<string, string>("manageresetpassword", org.Id.ToString()));
+                                    claims.Add(new KeyValuePair<string, string>(claimName, org.Id.ToString()));
                                 }
                             }
                             break;
@@ -930,6 +895,16 @@ namespace Bit.Core.Utilities
             return System.Text.Json.JsonSerializer.Deserialize<T>(jsonData, options);
         }
 
+        public static string ClassToJsonData<T>(T data)
+        {
+            var options = new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            };
+
+            return System.Text.Json.JsonSerializer.Serialize(data, options);
+        }
+
         public static ICollection<T> AddIfNotExists<T>(this ICollection<T> list, T item)
         {
             if (list.Contains(item))
@@ -955,6 +930,46 @@ namespace Bit.Core.Utilities
             {
                 return text;
             }
+        }
+
+        public static bool FixedTimeEquals(string input1, string input2)
+        {
+            return CryptographicOperations.FixedTimeEquals(
+                Encoding.UTF8.GetBytes(input1), Encoding.UTF8.GetBytes(input2));
+        }
+
+        public static string ObfuscateEmail(string email)
+        {
+            if (email == null)
+            {
+                return email;
+            }
+
+            var emailParts = email.Split('@', StringSplitOptions.RemoveEmptyEntries);
+
+            if (emailParts.Length != 2)
+            {
+                return email;
+            }
+
+            var username = emailParts[0];
+
+            if (username.Length < 2)
+            {
+                return email;
+            }
+
+            var sb = new StringBuilder();
+            sb.Append(emailParts[0][..2]);
+            for (var i = 2; i < emailParts[0].Length; i++)
+            {
+                sb.Append('*');
+            }
+
+            return sb.Append('@')
+                .Append(emailParts[1])
+                .ToString();
+
         }
     }
 }

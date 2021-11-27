@@ -62,9 +62,14 @@ namespace Bit.Core.Services
 
         public async Task<EmergencyAccess> InviteAsync(User invitingUser, string email, EmergencyAccessType type, int waitTime)
         {
-            if (! await _userService.CanAccessPremium(invitingUser))
+            if (!await _userService.CanAccessPremium(invitingUser))
             {
                 throw new BadRequestException("Not a premium user.");
+            }
+
+            if (type == EmergencyAccessType.Takeover && invitingUser.UsesKeyConnector)
+            {
+                throw new BadRequestException("You cannot use Emergency Access Takeover because you are using Key Connector.");
             }
             
             var emergencyAccess = new EmergencyAccess
@@ -171,6 +176,11 @@ namespace Bit.Core.Services
             }
 
             var grantor = await _userRepository.GetByIdAsync(confirmingUserId);
+            if (emergencyAccess.Type == EmergencyAccessType.Takeover && grantor.UsesKeyConnector)
+            {
+                throw new BadRequestException("You cannot use Emergency Access Takeover because you are using Key Connector.");
+            }
+
             var grantee = await _userRepository.GetByIdAsync(emergencyAccess.GranteeId.Value);
 
             emergencyAccess.Status = EmergencyAccessStatusType.Confirmed;
@@ -188,7 +198,16 @@ namespace Bit.Core.Services
             {
                 throw new BadRequestException("Emergency Access not valid.");
             }
-            
+
+            if (emergencyAccess.Type == EmergencyAccessType.Takeover)
+            {
+                var grantor = await _userService.GetUserByIdAsync(emergencyAccess.GrantorId);
+                if (grantor.UsesKeyConnector)
+                {
+                    throw new BadRequestException("You cannot use Emergency Access Takeover because you are using Key Connector.");
+                }
+            }
+
             await _emergencyAccessRepository.ReplaceAsync(emergencyAccess);
         }
 
@@ -202,14 +221,19 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Emergency Access not valid.");
             }
 
+            var grantor = await _userRepository.GetByIdAsync(emergencyAccess.GrantorId);
+
+            if (emergencyAccess.Type == EmergencyAccessType.Takeover && grantor.UsesKeyConnector)
+            {
+                throw new BadRequestException("You cannot takeover an account that is using Key Connector.");
+            }
+
             var now = DateTime.UtcNow;
             emergencyAccess.Status = EmergencyAccessStatusType.RecoveryInitiated;
             emergencyAccess.RevisionDate = now;
             emergencyAccess.RecoveryInitiatedDate = now;
             emergencyAccess.LastNotificationDate = now;
             await _emergencyAccessRepository.ReplaceAsync(emergencyAccess);
-
-            var grantor = await _userRepository.GetByIdAsync(emergencyAccess.GrantorId);
 
             await _mailService.SendEmergencyAccessRecoveryInitiated(emergencyAccess, NameOrEmail(initiatingUser), grantor.Email);
         }
@@ -277,7 +301,12 @@ namespace Bit.Core.Services
             }
 
             var grantor = await _userRepository.GetByIdAsync(emergencyAccess.GrantorId);
-            
+
+            if (emergencyAccess.Type == EmergencyAccessType.Takeover && grantor.UsesKeyConnector)
+            {
+                throw new BadRequestException("You cannot takeover an account that is using Key Connector.");
+            }
+
             return (emergencyAccess, grantor);
         }
 

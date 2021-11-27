@@ -12,6 +12,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Logging;
+using Stripe;
 
 namespace Bit.Sso
 {
@@ -33,6 +34,9 @@ namespace Bit.Sso
 
             // Settings
             var globalSettings = services.AddGlobalSettingsServices(Configuration);
+
+            // Stripe Billing
+            StripeConfiguration.ApiKey = globalSettings.StripeApiKey;
 
             // Data Protection
             services.AddCustomDataProtectionServices(Environment, globalSettings);
@@ -90,6 +94,9 @@ namespace Bit.Sso
             }
 
             app.UseSerilog(env, appLifetime, globalSettings);
+
+            // Add general security headers
+            app.UseMiddleware<SecurityHeadersMiddleware>();
 
             if (!env.IsDevelopment())
             {

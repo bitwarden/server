@@ -9,9 +9,9 @@ using Moq;
 using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
 using Bit.Core.Repositories.EntityFramework;
-using Bit.Core.Test.Helpers.Factories;
 using Microsoft.EntityFrameworkCore;
 using Bit.Core.Settings;
+using Bit.Core.Test.Helpers.Factories;
 
 namespace Bit.Core.Test.AutoFixture.EntityFrameworkRepositoryFixtures
 {
@@ -76,6 +76,7 @@ namespace Bit.Core.Test.AutoFixture.EntityFrameworkRepositoryFixtures
                         cfg.AddProfile<GroupUserMapperProfile>();
                         cfg.AddProfile<InstallationMapperProfile>();
                         cfg.AddProfile<OrganizationMapperProfile>();
+                        cfg.AddProfile<OrganizationSponsorshipMapperProfile>();
                         cfg.AddProfile<OrganizationUserMapperProfile>();
                         cfg.AddProfile<ProviderMapperProfile>();
                         cfg.AddProfile<ProviderUserMapperProfile>();

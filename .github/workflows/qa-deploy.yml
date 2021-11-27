@@ -75,7 +75,6 @@ jobs:
           - name: Billing
           - name: Events
           - name: Sso
-          - name: Portal
           - name: Identity
     steps:
       - name: Setup
@@ -86,7 +85,7 @@ jobs:
           echo "NAME_LOWER: $NAME_LOWER"
           echo "::set-output name=name_lower::$NAME_LOWER"
 
-          BRANCH_NAME=$(echo "$GITHUB_REF" | awk '{split($0, a, "/"); print a[3]}')
+          BRANCH_NAME=$(echo "$GITHUB_REF" | sed "s#refs/heads/##g")
           echo "GITHUB_REF: $GITHUB_REF"
           echo "BRANCH_NAME: $BRANCH_NAME"
           echo "::set-output name=branch_name::$BRANCH_NAME"
@@ -102,17 +101,6 @@ jobs:
           workflow_conclusion: success
           branch: ${{ env.branch_name }}
           artifacts: ${{ matrix.name }}.zip
-          path: publish
-
-      - name: Zip extracted artifact
-        run: |
-          cd publish
-          zip -r ${{ matrix.name }}.zip .
-          mv ${{ matrix.name }}.zip ../
-          cd ..
-
-          pwd
-          ls -atlh
 
       - name: Login to Azure
         uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a

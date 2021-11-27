@@ -29,6 +29,7 @@ namespace Bit.Billing.Controllers
         private readonly BillingSettings _billingSettings;
         private readonly IWebHostEnvironment _hostingEnvironment;
         private readonly IOrganizationService _organizationService;
+        private readonly IOrganizationSponsorshipService _organizationSponsorshipService;
         private readonly IOrganizationRepository _organizationRepository;
         private readonly ITransactionRepository _transactionRepository;
         private readonly IUserService _userService;
@@ -45,6 +46,7 @@ namespace Bit.Billing.Controllers
             IOptions<BillingSettings> billingSettings,
             IWebHostEnvironment hostingEnvironment,
             IOrganizationService organizationService,
+            IOrganizationSponsorshipService organizationSponsorshipService,
             IOrganizationRepository organizationRepository,
             ITransactionRepository transactionRepository,
             IUserService userService,
@@ -58,6 +60,7 @@ namespace Bit.Billing.Controllers
             _billingSettings = billingSettings?.Value;
             _hostingEnvironment = hostingEnvironment;
             _organizationService = organizationService;
+            _organizationSponsorshipService = organizationSponsorshipService;
             _organizationRepository = organizationRepository;
             _transactionRepository = transactionRepository;
             _userService = userService;
@@ -80,7 +83,7 @@ namespace Bit.Billing.Controllers
         [HttpPost("webhook")]
         public async Task<IActionResult> PostWebhook([FromQuery] string key)
         {
-            if (key != _billingSettings.StripeWebhookKey)
+            if (!CoreHelpers.FixedTimeEquals(key, _billingSettings.StripeWebhookKey))
             {
                 return new BadRequestResult();
             }
@@ -164,6 +167,13 @@ namespace Bit.Billing.Controllers
                 // org
                 if (ids.Item1.HasValue)
                 {
+                    // sponsored org
+                    if (CheckSponsoredSubscription(subscription))
+                    {
+                        await _organizationSponsorshipService
+                            .ValidateSponsorshipAsync(ids.Item1.Value);
+                    }
+
                     var org = await _organizationRepository.GetByIdAsync(ids.Item1.Value);
                     if (org != null && OrgPlanForInvoiceNotifications(org))
                     {
@@ -783,5 +793,8 @@ namespace Bit.Billing.Controllers
             }
             return subscription;
         }
+
+        private static bool CheckSponsoredSubscription(Subscription subscription) =>
+            StaticStore.SponsoredPlans.Any(p => p.StripePlanId == subscription.Id);
     }
 }

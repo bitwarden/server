@@ -10,9 +10,7 @@ using System.Security.Claims;
 using Bit.Core.Enums.Provider;
 using Bit.Core.Utilities;
 using Bit.Core.Models.Data;
-using Bit.Core.Models.Table.Provider;
 using Bit.Core.Settings;
-using Microsoft.EntityFrameworkCore.Internal;
 
 namespace Bit.Core.Context
 {
@@ -142,7 +140,7 @@ namespace Bit.Core.Context
             Organizations = GetOrganizations(claimsDict, orgApi);
 
             Providers = GetProviders(claimsDict);
-            
+
             return Task.FromResult(0);
         }
 
@@ -210,7 +208,7 @@ namespace Bit.Core.Context
 
             return organizations;
         }
-        
+
         private List<CurrentContentProvider> GetProviders(Dictionary<string, IEnumerable<Claim>> claimsDict)
         {
             var providers = new List<CurrentContentProvider>();
@@ -274,12 +272,6 @@ namespace Bit.Core.Context
             return Task.FromResult(Organizations?.Any(o => o.Id == orgId && o.Type == OrganizationUserType.Custom) ?? false);
         }
 
-        public async Task<bool> AccessBusinessPortal(Guid orgId)
-        {
-            return await OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
-                        && (o.Permissions?.AccessBusinessPortal ?? false)) ?? false);
-        }
-
         public async Task<bool> AccessEventLogs(Guid orgId)
         {
             return await OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
@@ -298,16 +290,44 @@ namespace Bit.Core.Context
                         && (o.Permissions?.AccessReports ?? false)) ?? false);
         }
 
-        public async Task<bool> ManageAllCollections(Guid orgId)
-        {
-            return await OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
-                        && (o.Permissions?.ManageAllCollections ?? false)) ?? false);
-        }
-
-        public async Task<bool> ManageAssignedCollections(Guid orgId)
+        public async Task<bool> CreateNewCollections(Guid orgId)
         {
             return await OrganizationManager(orgId) || (Organizations?.Any(o => o.Id == orgId
-                        && (o.Permissions?.ManageAssignedCollections ?? false)) ?? false);
+                        && (o.Permissions?.CreateNewCollections ?? false)) ?? false);
+        }
+
+        public async Task<bool> EditAnyCollection(Guid orgId)
+        {
+            return await OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
+                        && (o.Permissions?.EditAnyCollection ?? false)) ?? false);
+        }
+
+        public async Task<bool> DeleteAnyCollection(Guid orgId)
+        {
+            return await OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
+                        && (o.Permissions?.DeleteAnyCollection ?? false)) ?? false);
+        }
+
+        public async Task<bool> ViewAllCollections(Guid orgId)
+        {
+            return await CreateNewCollections(orgId) || await EditAnyCollection(orgId) || await DeleteAnyCollection(orgId);
+        }
+
+        public async Task<bool> EditAssignedCollections(Guid orgId)
+        {
+            return await OrganizationManager(orgId) || (Organizations?.Any(o => o.Id == orgId
+                        && (o.Permissions?.EditAssignedCollections ?? false)) ?? false);
+        }
+
+        public async Task<bool> DeleteAssignedCollections(Guid orgId)
+        {
+            return await OrganizationManager(orgId) || (Organizations?.Any(o => o.Id == orgId
+                        && (o.Permissions?.DeleteAssignedCollections ?? false)) ?? false);
+        }
+
+        public async Task<bool> ViewAssignedCollections(Guid orgId)
+        {
+            return await EditAssignedCollections(orgId) || await DeleteAssignedCollections(orgId);
         }
 
         public async Task<bool> ManageGroups(Guid orgId)
@@ -372,13 +392,13 @@ namespace Bit.Core.Context
 
         public async Task<Guid?> ProviderIdForOrg(Guid orgId)
         {
-            if (Organizations.Any(org => org.Id == orgId))
+            if (Organizations?.Any(org => org.Id == orgId) ?? false)
             {
                 return null;
             }
 
             var po = (await GetProviderOrganizations())
-                .FirstOrDefault(po => po.OrganizationId == orgId);
+                ?.FirstOrDefault(po => po.OrganizationId == orgId);
 
             return po?.ProviderId;
         }
@@ -427,12 +447,14 @@ namespace Bit.Core.Context
 
             return new Permissions
             {
-                AccessBusinessPortal = hasClaim("accessbusinessportal"),
                 AccessEventLogs = hasClaim("accesseventlogs"),
                 AccessImportExport = hasClaim("accessimportexport"),
                 AccessReports = hasClaim("accessreports"),
-                ManageAllCollections = hasClaim("manageallcollections"),
-                ManageAssignedCollections = hasClaim("manageassignedcollections"),
+                CreateNewCollections = hasClaim("createnewcollections"),
+                EditAnyCollection = hasClaim("editanycollection"),
+                DeleteAnyCollection = hasClaim("deleteanycollection"),
+                EditAssignedCollections = hasClaim("editassignedcollections"),
+                DeleteAssignedCollections = hasClaim("deleteassignedcollections"),
                 ManageGroups = hasClaim("managegroups"),
                 ManagePolicies = hasClaim("managepolicies"),
                 ManageSso = hasClaim("managesso"),
@@ -443,7 +465,7 @@ namespace Bit.Core.Context
 
         protected async Task<IEnumerable<ProviderUserOrganizationDetails>> GetProviderOrganizations()
         {
-            if (_providerUserOrganizations == null)
+            if (_providerUserOrganizations == null && UserId.HasValue)
             {
                 _providerUserOrganizations = await _providerUserRepository.GetManyOrganizationDetailsByUserAsync(UserId.Value, ProviderUserStatusType.Confirmed);
             }

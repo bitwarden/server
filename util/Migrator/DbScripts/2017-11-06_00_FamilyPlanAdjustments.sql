@@ -11,6 +11,8 @@ UPDATE
     [dbo].[Organization]
 SET
     [UsersGetPremium] = (CASE WHEN [PlanType] = 5 OR [PlanType] = 4 THEN 1 ELSE 0 END)
+WHERE
+    [UsersGetPremium] IS NULL
 GO
 
 UPDATE

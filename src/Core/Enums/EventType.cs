@@ -11,6 +11,7 @@
         User_FailedLogIn2fa = 1006,
         User_ClientExportedVault = 1007,
         User_UpdatedTempPassword = 1008,
+        User_MigratedKeyToKeyConnector = 1009,
 
         Cipher_Created = 1100,
         Cipher_Updated = 1101,
@@ -49,11 +50,16 @@
         OrganizationUser_ResetPassword_Withdraw = 1507,
         OrganizationUser_AdminResetPassword = 1508,
         OrganizationUser_ResetSsoLink = 1509,
+        OrganizationUser_FirstSsoLogin = 1510,
 
         Organization_Updated = 1600,
         Organization_PurgedVault = 1601,
         // Organization_ClientExportedVault = 1602,
         Organization_VaultAccessed = 1603,
+        Organization_EnabledSso = 1604,
+        Organization_DisabledSso = 1605,
+        Organization_EnabledKeyConnector = 1606,
+        Organization_DisabledKeyConnector = 1607,
 
         Policy_Updated = 1700,
         

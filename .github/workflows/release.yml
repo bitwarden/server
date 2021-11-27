@@ -5,26 +5,26 @@ on:
   workflow_dispatch:
     inputs: {}
 
+
 jobs:
   setup:
     name: Setup
     runs-on: ubuntu-20.04
     outputs:
       release_version: ${{ steps.version.outputs.package }}
+      branch-name: ${{ steps.branch.outputs.branch-name }}
     steps:
       - name: Branch check
         run: |
-          if [[ "$GITHUB_REF" != "refs/heads/rc" ]]; then
+          if [[ "$GITHUB_REF" != "refs/heads/rc" ]] && [[ "$GITHUB_REF" != "refs/heads/hotfix" ]]; then
             echo "==================================="
-            echo "[!] Can only release from rc branch"
+            echo "[!] Can only release from the 'rc' or 'hotfix' branches"
             echo "==================================="
             exit 1
           fi
 
       - name: Checkout repo
         uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
-        with:
-          ref: rc
 
       - name: Check Release Version
         id: version
@@ -41,6 +41,12 @@ jobs:
 
           echo "::set-output name=package::$version"
 
+      - name: Get branch name
+        id: branch
+        run: |
+          BRANCH_NAME=$(basename ${{ github.ref }})
+          echo "::set-output name=branch-name::$BRANCH_NAME"
+
 
   deploy:
     name: Deploy
@@ -56,7 +62,6 @@ jobs:
           - name: Billing
           - name: Events
           - name: Sso
-          - name: Portal
           - name: Identity
     steps:
       - name: Setup
@@ -67,12 +72,12 @@ jobs:
           echo "NAME_LOWER: $NAME_LOWER"
           echo "::set-output name=name_lower::$NAME_LOWER"
 
-      - name: Download latest RC ${{ matrix.name }} asset
+      - name: Download latest Release ${{ matrix.name }} asset
         uses: bitwarden/gh-actions/download-artifacts@23433be15ed6fd046ce12b6889c5184a8d9c8783
         with:
           workflow: build.yml
           workflow_conclusion: success
-          branch: rc
+          branch: ${{ needs.setup.outputs.branch-name }}
           artifacts: ${{ matrix.name }}.zip
 
       - name: Login to Azure
@@ -90,15 +95,102 @@ jobs:
               --name appservices-${{ steps.setup.outputs.name_lower }}-webapp-name \
               --query value --output tsv
           )
+          publish_profile=$(
+            az keyvault secret show --vault-name $VAULT_NAME \
+              --name appservices-${{ steps.setup.outputs.name_lower }}-webapp-publish-profile \
+              --query value --output tsv
+          )
           echo "::add-mask::$webapp_name"
           echo "::set-output name=webapp-name::$webapp_name"
+          echo "::add-mask::$publish_profile"
+          echo "::set-output name=publish-profile::$publish_profile"
 
       - name: Deploy App
         uses: azure/webapps-deploy@798e43877120eda6a2a690a4f212c545e586ae31
         with:
           app-name: ${{ steps.retrieve-secrets.outputs.webapp-name }}
+          publish-profile: ${{ steps.retrieve-secrets.outputs.publish-profile }}
           package: ./${{ matrix.name }}.zip
-          slot: "staging"
+          slot-name: "staging"
+
+
+  release-docker:
+    name: Build Docker images
+    runs-on: ubuntu-20.04
+    needs:
+      - setup
+    env:
+      _RELEASE_VERSION: ${{ needs.setup.outputs.release_version }}
+      _BRANCH_NAME: ${{ needs.setup.outputs.branch-name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service_name: Admin
+          - service_name: Api
+          - service_name: Attachments
+          - service_name: Events
+          - service_name: Icons
+          - service_name: Identity
+          - service_name: K8S-Proxy
+          - service_name: MsSql
+          - service_name: Nginx
+          - service_name: Notifications
+          - service_name: Server
+          - service_name: Setup
+          - service_name: Sso
+    steps:
+      - name: Print environment
+        run: |
+          whoami
+          docker --version
+          echo "GitHub ref: $GITHUB_REF"
+          echo "GitHub event: $GITHUB_EVENT"
+
+      - name: Setup DCT
+        id: setup-dct
+        uses: bitwarden/gh-actions/setup-docker-trust@a8c384a05a974c05c48374c818b004be221d43ff
+        with:
+          azure-creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
+          azure-keyvault-name: "bitwarden-prod-kv"
+
+      - name: Checkout repo
+        uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
+
+      - name: Setup service name
+        id: setup
+        run: |
+          SERVICE_NAME=$(echo "${{ matrix.service_name }}" | awk '{print tolower($0)}')
+          echo "Matrix name: ${{ matrix.service_name }}"
+          echo "SERVICE_NAME: $SERVICE_NAME"
+          echo "::set-output name=service_name::$SERVICE_NAME"
+
+      - name: Pull latest selfhost image
+        env:
+          SERVICE_NAME: ${{ steps.setup.outputs.service_name }}
+        run: docker pull bitwarden/$SERVICE_NAME:$_BRANCH_NAME
+
+      - name: Tag version and latest
+        env:
+          SERVICE_NAME: ${{ steps.setup.outputs.service_name }}
+        run: |
+          docker tag bitwarden/$SERVICE_NAME:$_BRANCH_NAME bitwarden/$SERVICE_NAME:$_RELEASE_VERSION
+          docker tag bitwarden/$SERVICE_NAME:$_BRANCH_NAME bitwarden/$SERVICE_NAME:latest
+
+      - name: List Docker images
+        run: docker images
+
+      - name: Push version and latest image
+        env:
+          DOCKER_CONTENT_TRUST: 1
+          DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ steps.setup-dct.outputs.dct-delegate-repo-passphrase }}
+          SERVICE_NAME: ${{ steps.setup.outputs.service_name }}
+        run: |
+          docker push bitwarden/$SERVICE_NAME:$_RELEASE_VERSION
+          docker push bitwarden/$SERVICE_NAME:latest
+
+      - name: Log out of Docker
+        run: docker logout
 
 
   release:
@@ -108,12 +200,12 @@ jobs:
       - setup
       - deploy
     steps:
-      - name: Download latest RC docker-stub
+      - name: Download latest Release docker-stub
         uses: bitwarden/gh-actions/download-artifacts@23433be15ed6fd046ce12b6889c5184a8d9c8783
         with:
           workflow: build.yml
           workflow_conclusion: success
-          branch: rc
+          branch: ${{ needs.setup.outputs.branch-name }}
           artifacts: "docker-stub.zip,
                       swagger.json"
 

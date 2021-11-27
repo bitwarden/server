@@ -179,6 +179,10 @@ namespace Bit.Identity.Controllers
                 IsPersistent = true,
                 ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(1)
             };
+            if (result.Properties != null && result.Properties.Items.TryGetValue("domain_hint", out var organization))
+            {
+                additionalLocalClaims.Add(new Claim("organizationId", organization));
+            }
             ProcessLoginCallback(result, additionalLocalClaims, localSignInProps);
 
             // Issue authentication cookie for user

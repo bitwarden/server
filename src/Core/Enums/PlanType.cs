@@ -27,6 +27,6 @@ namespace Bit.Core.Enums
         [Display(Name = "Enterprise (Monthly)")]
         EnterpriseMonthly = 10,
         [Display(Name = "Enterprise (Annually)")]
-        EnterpriseAnnually= 11,
+        EnterpriseAnnually = 11,
     }
 }

@@ -19,7 +19,3 @@ cd "$CUR_DIR"
 gulp --gulpfile "$DIR/gulpfile.js" build
 echo "Publish"
 dotnet publish "$DIR/Sso.csproj" -c "Release" -o "$DIR/obj/build-output/publish"
-
-echo -e "\nBuilding docker image"
-docker --version
-docker build -t bitwarden/sso "$DIR/."

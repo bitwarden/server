@@ -9,6 +9,7 @@ namespace Bit.Core.Models.Data
         public string Name { get; set; }
         public bool UsePolicies { get; set; }
         public bool UseSso { get; set; }
+        public bool UseKeyConnector { get; set; }
         public bool UseGroups { get; set; }
         public bool UseDirectory { get; set; }
         public bool UseEvents { get; set; }
@@ -16,7 +17,6 @@ namespace Bit.Core.Models.Data
         public bool Use2fa { get; set; }
         public bool UseApi{ get; set; }
         public bool UseResetPassword { get; set; }
-        public bool UseBusinessPortal => UsePolicies || UseSso;
         public bool SelfHost { get; set; }
         public bool UsersGetPremium { get; set; }
         public int? Seats { get; set; }
@@ -26,6 +26,7 @@ namespace Bit.Core.Models.Data
         public Enums.OrganizationUserStatusType Status { get; set; }
         public Enums.OrganizationUserType Type { get; set; }
         public bool Enabled { get; set; }
+        public Enums.PlanType PlanType { get; set; }
         public string SsoExternalId { get; set; }
         public string Identifier { get; set; }
         public string Permissions { get; set; }
@@ -34,5 +35,7 @@ namespace Bit.Core.Models.Data
         public string PrivateKey { get; set; }
         public Guid? ProviderId { get; set; }
         public string ProviderName { get; set; }
+        public string FamilySponsorshipFriendlyName { get; set; }
+        public string SsoConfig { get; set; }
     }
 }

@@ -1,0 +1,42 @@
+#!/bin/bash
+
+##############################
+# Builds the docker image from a pre-built build directory
+# Arguments: 
+#   1: Project Name
+#   2: Project Directory
+#   3: Docker Tag
+#   4: Docker push
+##############################
+deploy_app_service() {
+  local project_name=$1
+  local project_dir=$2
+
+  local project_name_lower=$(echo "$project_name" | awk '{print tolower($0)}')
+  local webapp_name=$(az keyvault secret show --vault-name bitwarden-qa-kv --name appservices-$project_name_lower-webapp-name --query value --output tsv)
+
+  cd $project_dir/obj/build-output/publish
+  zip -r $project_name.zip .
+  mv $project_name.zip ../../../
+  #az webapp deploy --resource-group bw-qa-env --name $webapp_name \
+  #  --src-path $project_name.zip --verbose --type zip --restart true --subscription "Bitwarden Test"
+}
+
+PROJECT=$1; shift
+
+case "$PROJECT" in
+  "api" | "Api") deploy_app_service Api $PWD/src/Api ;;
+  "admin" | "Admin") deploy_app_service Admin $PWD/src/Admin ;;
+  "identity" | "Identity") deploy_app_service Identity $PWD/src/Identity ;;
+  "events" | "Events") deploy_app_service Events $PWD/src/Events ;;
+  "billing" | "Billing") deploy_app_service Billing $PWD/src/Billing ;;
+  "sso" | "Sso") deploy_app_service Sso $PWD/bitwarden_license/src/Sso ;;
+  "")
+    deploy_app_service Api $PWD/src/Api 
+    deploy_app_service Admin $PWD/src/Admin 
+    deploy_app_service Identity $PWD/src/Identity 
+    deploy_app_service Events $PWD/src/Events 
+    deploy_app_service Billing $PWD/src/Billing 
+    deploy_app_service Sso $PWD/bitwarden_license/src/Sso 
+  ;;
+esac

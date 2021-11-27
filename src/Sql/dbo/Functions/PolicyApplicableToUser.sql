@@ -23,7 +23,16 @@ LEFT JOIN
     ON PUPO.UserId = OU.UserId
     AND PUPO.OrganizationId = P.OrganizationId
 WHERE
-    OU.[UserId] = @UserId 
+    (
+        (
+            OU.[Status] > 0
+            AND OU.[UserId] = @UserId 
+        )
+        OR (
+            OU.[Status] = 0 -- 'Invited' OrgUsers are not linked to a UserId yet, so we have to look up their email
+            AND OU.[Email] IN (SELECT U.Email FROM [dbo].[UserView] U WHERE U.Id = @UserId)
+        )
+    )
     AND P.[Type] = @PolicyType
     AND P.[Enabled] = 1
     AND OU.[Status] >= @MinimumStatus

@@ -122,24 +122,6 @@ services:
       - default
       - public
 
-  portal:
-    image: bitwarden/portal:{{{CoreVersion}}}
-    container_name: bitwarden-portal
-    restart: always
-    depends_on:
-      - mssql
-    volumes:
-      - ../core:/etc/bitwarden/core
-      - ../ca-certificates:/etc/bitwarden/ca-certificates
-      - ../logs/portal:/etc/bitwarden/logs
-    env_file:
-      - global.env
-      - ../env/uid.env
-      - ../env/global.override.env
-    networks:
-      - default
-      - public
-
   icons:
     image: bitwarden/icons:{{{CoreVersion}}}
     container_name: bitwarden-icons
@@ -212,6 +194,22 @@ services:
     networks:
       - default
       - public
+
+{{#if EnableKeyConnector}}
+  key-connector:
+    image: bitwarden/key-connector:latest
+    container_name: bitwarden-key-connector
+    restart: always
+    volumes:
+      - ../key-connector:/etc/bitwarden/key-connector
+      - ../ca-certificates:/etc/bitwarden/ca-certificates
+      - ../logs/key-connector:/etc/bitwarden/logs
+    env_file:
+      - ../env/key-connector.override.env
+    networks:
+      - default
+      - public
+{{/if}}
 {{#if MssqlDataDockerVolume}}
 
 volumes:

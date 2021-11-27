@@ -60,19 +60,22 @@ namespace Bit.Core.Test.Repositories.EntityFramework
         }
 
         [CiSkippedTheory]
-        [EfPolicyApplicableToUserInlineAutoData(OrganizationUserType.User, false, OrganizationUserStatusType.Confirmed, true, true, false)]       // Ordinary user
-        [EfPolicyApplicableToUserInlineAutoData(OrganizationUserType.Owner, false, OrganizationUserStatusType.Confirmed, true, true, false)]     // Owner
-        [EfPolicyApplicableToUserInlineAutoData(OrganizationUserType.Admin, false, OrganizationUserStatusType.Confirmed, true, true, false)]     // Admin
-        [EfPolicyApplicableToUserInlineAutoData(OrganizationUserType.User, true, OrganizationUserStatusType.Confirmed, true, true, false)]       // canManagePolicies
-        [EfPolicyApplicableToUserInlineAutoData(OrganizationUserType.User, false, OrganizationUserStatusType.Confirmed, true, true, true)]       // Provider
-        [EfPolicyApplicableToUserInlineAutoData(OrganizationUserType.User, false, OrganizationUserStatusType.Confirmed, false, true, false)]     // Policy disabled
-        [EfPolicyApplicableToUserInlineAutoData(OrganizationUserType.User, false, OrganizationUserStatusType.Confirmed, true, false, false)]     // No policy of Type
-        [EfPolicyApplicableToUserInlineAutoData(OrganizationUserType.User, false, OrganizationUserStatusType.Invited, true, true, false)]        // User not minStatus
-        public async void GetManyByTypeApplicableToUser_Works_DataMatches_Corre(
+        [EfPolicyApplicableToUserInlineAutoData(OrganizationUserType.User, false, OrganizationUserStatusType.Confirmed, false, true, true, false)]      // Ordinary user
+        [EfPolicyApplicableToUserInlineAutoData(OrganizationUserType.User, false, OrganizationUserStatusType.Invited, true, true, true, false)]         // Invited user
+        [EfPolicyApplicableToUserInlineAutoData(OrganizationUserType.Owner, false, OrganizationUserStatusType.Confirmed, false, true, true, false)]     // Owner
+        [EfPolicyApplicableToUserInlineAutoData(OrganizationUserType.Admin, false, OrganizationUserStatusType.Confirmed, false, true, true, false)]     // Admin
+        [EfPolicyApplicableToUserInlineAutoData(OrganizationUserType.User, true, OrganizationUserStatusType.Confirmed, false, true, true, false)]       // canManagePolicies
+        [EfPolicyApplicableToUserInlineAutoData(OrganizationUserType.User, false, OrganizationUserStatusType.Confirmed, false, true, true, true)]       // Provider
+        [EfPolicyApplicableToUserInlineAutoData(OrganizationUserType.User, false, OrganizationUserStatusType.Confirmed, false, false, true, false)]     // Policy disabled
+        [EfPolicyApplicableToUserInlineAutoData(OrganizationUserType.User, false, OrganizationUserStatusType.Confirmed, false, true, false, false)]     // No policy of Type
+        [EfPolicyApplicableToUserInlineAutoData(OrganizationUserType.User, false, OrganizationUserStatusType.Invited, false, true, true, false)]        // User not minStatus
+
+        public async void GetManyByTypeApplicableToUser_Works_DataMatches(
             // Inline data
             OrganizationUserType userType,
             bool canManagePolicies,
             OrganizationUserStatusType orgUserStatus,
+            bool includeInvited,
             bool policyEnabled,
             bool policySameType,
             bool isProvider,
@@ -147,7 +150,17 @@ namespace Bit.Core.Test.Repositories.EntityFramework
                 var savedUser = await userRepos[i].CreateAsync(user);
                 var savedOrg = await orgRepos[i].CreateAsync(organization);
 
-                orgUser.UserId = savedUser.Id;
+                // Invited orgUsers are not associated with an account yet, so they are identified by Email not UserId
+                if (orgUserStatus == OrganizationUserStatusType.Invited)
+                {
+                    orgUser.Email = savedUser.Email;
+                    orgUser.UserId = null;
+                }
+                else
+                {
+                    orgUser.UserId = savedUser.Id;
+                }
+
                 orgUser.OrganizationId = savedOrg.Id;
                 await orgUserRepos[i].CreateAsync(orgUser);
 
@@ -171,8 +184,10 @@ namespace Bit.Core.Test.Repositories.EntityFramework
                     (policyRepo as BaseEntityFrameworkRepository).ClearChangeTracking();
                 }
 
+                var minStatus = includeInvited ? OrganizationUserStatusType.Invited : OrganizationUserStatusType.Accepted;
+
                 // Act
-                var result = await policyRepo.GetManyByTypeApplicableToUserIdAsync(savedUser.Id, queriedPolicyType, OrganizationUserStatusType.Accepted);
+                var result = await policyRepo.GetManyByTypeApplicableToUserIdAsync(savedUser.Id, queriedPolicyType, minStatus);
                 results.Add(result.FirstOrDefault());
             }
 

@@ -1,4 +1,5 @@
-﻿using Bit.Core.Models.Table;
+﻿using System;
+using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using IdentityServer4.Validation;
 using Microsoft.AspNetCore.Identity;
@@ -9,7 +10,9 @@ using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Context;
 using System.Linq;
+using System.Text.Json;
 using Bit.Core.Identity;
+using Bit.Core.Models.Data;
 using Microsoft.Extensions.Logging;
 using IdentityServer4.Extensions;
 using IdentityModel;
@@ -20,6 +23,8 @@ namespace Bit.Core.IdentityServer
         ICustomTokenRequestValidator
     {
         private UserManager<User> _userManager;
+        private readonly ISsoConfigRepository _ssoConfigRepository;
+        private readonly IOrganizationRepository _organizationRepository;
 
         public CustomTokenRequestValidator(
             UserManager<User> userManager,
@@ -35,12 +40,15 @@ namespace Bit.Core.IdentityServer
             ILogger<ResourceOwnerPasswordValidator> logger,
             ICurrentContext currentContext,
             GlobalSettings globalSettings,
-            IPolicyRepository policyRepository)
+            IPolicyRepository policyRepository,
+            ISsoConfigRepository ssoConfigRepository)
             : base(userManager, deviceRepository, deviceService, userService, eventService,
                   organizationDuoWebTokenProvider, organizationRepository, organizationUserRepository,
                   applicationCacheService, mailService, logger, currentContext, globalSettings, policyRepository)
         {
             _userManager = userManager;
+            _ssoConfigRepository = ssoConfigRepository;
+            _organizationRepository = organizationRepository;
         }
 
         public async Task ValidateAsync(CustomTokenRequestValidationContext context)
@@ -62,7 +70,7 @@ namespace Bit.Core.IdentityServer
             return (user, user != null);
         }
 
-        protected override void SetSuccessResult(CustomTokenRequestValidationContext context, User user,
+        protected override async Task SetSuccessResult(CustomTokenRequestValidationContext context, User user,
             List<Claim> claims, Dictionary<string, object> customResponse)
         {
             context.Result.CustomResponse = customResponse;
@@ -73,6 +81,41 @@ namespace Bit.Core.IdentityServer
                 foreach (var claim in claims)
                 {
                     context.Result.ValidatedRequest.ClientClaims.Add(claim);
+                }
+            }
+
+            if (context.Result.CustomResponse == null || user.MasterPassword != null)
+            {
+                return;
+            }
+
+            // KeyConnector responses below
+
+            // Apikey login
+            if (context.Result.ValidatedRequest.GrantType == "client_credentials")
+            {
+                if (user.UsesKeyConnector) {
+                    // KeyConnectorUrl is configured in the CLI client, we just need to tell the client to use it
+                    context.Result.CustomResponse["ApiUseKeyConnector"] = true;
+                    context.Result.CustomResponse["ResetMasterPassword"] = false;
+                }
+                return;
+            }
+
+            // SSO login
+            var organizationClaim = context.Result.ValidatedRequest.Subject?.FindFirst(c => c.Type == "organizationId");
+            if (organizationClaim?.Value != null)
+            {
+                var organizationId = new Guid(organizationClaim.Value);
+
+                var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(organizationId);
+                var ssoConfigData = ssoConfig.GetData();
+
+                if (ssoConfigData is { KeyConnectorEnabled: true } && !string.IsNullOrEmpty(ssoConfigData.KeyConnectorUrl))
+                {
+                    context.Result.CustomResponse["KeyConnectorUrl"] = ssoConfigData.KeyConnectorUrl;
+                    // Prevent clients redirecting to set-password
+                    context.Result.CustomResponse["ResetMasterPassword"] = false;
                 }
             }
         }

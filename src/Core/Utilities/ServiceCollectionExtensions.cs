@@ -101,6 +101,7 @@ namespace Bit.Core.Utilities
                 services.AddSingleton<IInstallationRepository, EntityFrameworkRepos.InstallationRepository>();
                 services.AddSingleton<IMaintenanceRepository, EntityFrameworkRepos.MaintenanceRepository>();
                 services.AddSingleton<IOrganizationRepository, EntityFrameworkRepos.OrganizationRepository>();
+                services.AddSingleton<IOrganizationSponsorshipRepository, EntityFrameworkRepos.OrganizationSponsorshipRepository>();
                 services.AddSingleton<IOrganizationUserRepository, EntityFrameworkRepos.OrganizationUserRepository>();
                 services.AddSingleton<IPolicyRepository, EntityFrameworkRepos.PolicyRepository>();
                 services.AddSingleton<ISendRepository, EntityFrameworkRepos.SendRepository>();
@@ -127,6 +128,7 @@ namespace Bit.Core.Utilities
                 services.AddSingleton<IInstallationRepository, SqlServerRepos.InstallationRepository>();
                 services.AddSingleton<IMaintenanceRepository, SqlServerRepos.MaintenanceRepository>();
                 services.AddSingleton<IOrganizationRepository, SqlServerRepos.OrganizationRepository>();
+                services.AddSingleton<IOrganizationSponsorshipRepository, SqlServerRepos.OrganizationSponsorshipRepository>();
                 services.AddSingleton<IOrganizationUserRepository, SqlServerRepos.OrganizationUserRepository>();
                 services.AddSingleton<IPolicyRepository, SqlServerRepos.PolicyRepository>();
                 services.AddSingleton<ISendRepository, SqlServerRepos.SendRepository>();
@@ -168,6 +170,7 @@ namespace Bit.Core.Utilities
             services.AddScoped<ICipherService, CipherService>();
             services.AddScoped<IUserService, UserService>();
             services.AddScoped<IOrganizationService, OrganizationService>();
+            services.AddScoped<IOrganizationSponsorshipService, OrganizationSponsorshipService>();
             services.AddScoped<ICollectionService, CollectionService>();
             services.AddScoped<IGroupService, GroupService>();
             services.AddScoped<IPolicyService, PolicyService>();
@@ -175,7 +178,7 @@ namespace Bit.Core.Utilities
             services.AddScoped<IEmergencyAccessService, EmergencyAccessService>();
             services.AddSingleton<IDeviceService, DeviceService>();
             services.AddSingleton<IAppleIapService, AppleIapService>();
-            services.AddSingleton<ISsoConfigService, SsoConfigService>();
+            services.AddScoped<ISsoConfigService, SsoConfigService>();
             services.AddScoped<ISendService, SendService>();
         }
 

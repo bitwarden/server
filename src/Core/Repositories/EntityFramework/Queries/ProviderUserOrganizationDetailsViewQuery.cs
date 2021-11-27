@@ -21,6 +21,7 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
                 Enabled = x.o.Enabled,
                 UsePolicies = x.o.UsePolicies,
                 UseSso = x.o.UseSso,
+                UseKeyConnector = x.o.UseKeyConnector,
                 UseGroups = x.o.UseGroups,
                 UseDirectory = x.o.UseDirectory,
                 UseEvents = x.o.UseEvents,

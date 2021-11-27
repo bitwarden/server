@@ -57,6 +57,8 @@ BEGIN
     WHERE
         [OrganizationId] = @Id
 
+    EXEC[dbo].[OrganizationSponsorship_OrganizationDeleted] @Id
+
     DELETE
     FROM
         [dbo].[Organization]

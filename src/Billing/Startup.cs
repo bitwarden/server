@@ -82,6 +82,9 @@ namespace Bit.Billing
         {
             app.UseSerilog(env, appLifetime, globalSettings);
 
+            // Add general security headers
+            app.UseMiddleware<SecurityHeadersMiddleware>();
+
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();

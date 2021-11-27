@@ -30,6 +30,8 @@ namespace Bit.Api.Controllers
         private readonly IUserService _userService;
         private readonly IPaymentService _paymentService;
         private readonly ICurrentContext _currentContext;
+        private readonly ISsoConfigRepository _ssoConfigRepository;
+        private readonly ISsoConfigService _ssoConfigService;
         private readonly GlobalSettings _globalSettings;
 
         public OrganizationsController(
@@ -40,6 +42,8 @@ namespace Bit.Api.Controllers
             IUserService userService,
             IPaymentService paymentService,
             ICurrentContext currentContext,
+            ISsoConfigRepository ssoConfigRepository,
+            ISsoConfigService ssoConfigService,
             GlobalSettings globalSettings)
         {
             _organizationRepository = organizationRepository;
@@ -49,6 +53,8 @@ namespace Bit.Api.Controllers
             _userService = userService;
             _paymentService = paymentService;
             _currentContext = currentContext;
+            _ssoConfigRepository = ssoConfigRepository;
+            _ssoConfigService = ssoConfigService;
             _globalSettings = globalSettings;
         }
 
@@ -378,13 +384,22 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            var userId = _userService.GetProperUserId(User);
-            await _organizationService.DeleteUserAsync(orgGuidId, userId.Value);
+            var user = await _userService.GetUserByPrincipalAsync(User);
+
+            var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(orgGuidId);
+            if (ssoConfig?.GetData()?.KeyConnectorEnabled == true &&
+                user.UsesKeyConnector)
+            {
+                throw new BadRequestException("Your organization's Single Sign-On settings prevent you from leaving.");
+            }
+
+            
+            await _organizationService.DeleteUserAsync(orgGuidId, user.Id);
         }
 
         [HttpDelete("{id}")]
         [HttpPost("{id}/delete")]
-        public async Task Delete(string id, [FromBody]OrganizationDeleteRequestModel model)
+        public async Task Delete(string id, [FromBody]SecretVerificationRequestModel model)
         {
             var orgIdGuid = new Guid(id);
             if (!await _currentContext.OrganizationOwner(orgIdGuid))
@@ -404,10 +419,10 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
-            if (!await _userService.CheckPasswordAsync(user, model.MasterPasswordHash))
+            if (!await _userService.VerifySecretAsync(user, model.Secret))
             {
                 await Task.Delay(2000);
-                throw new BadRequestException("MasterPasswordHash", "Invalid password.");
+                throw new BadRequestException(string.Empty, "User verification failed.");
             }
             else
             {
@@ -460,7 +475,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("{id}/api-key")]
-        public async Task<ApiKeyResponseModel> ApiKey(string id, [FromBody]ApiKeyRequestModel model)
+        public async Task<ApiKeyResponseModel> ApiKey(string id, [FromBody]SecretVerificationRequestModel model)
         {
             var orgIdGuid = new Guid(id);
             if (!await _currentContext.OrganizationOwner(orgIdGuid))
@@ -480,7 +495,7 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
-            if (!await _userService.CheckPasswordAsync(user, model.MasterPasswordHash))
+            if (!await _userService.VerifySecretAsync(user, model.Secret))
             {
                 await Task.Delay(2000);
                 throw new BadRequestException("MasterPasswordHash", "Invalid password.");
@@ -493,7 +508,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("{id}/rotate-api-key")]
-        public async Task<ApiKeyResponseModel> RotateApiKey(string id, [FromBody]ApiKeyRequestModel model)
+        public async Task<ApiKeyResponseModel> RotateApiKey(string id, [FromBody]SecretVerificationRequestModel model)
         {
             var orgIdGuid = new Guid(id);
             if (!await _currentContext.OrganizationOwner(orgIdGuid))
@@ -513,7 +528,7 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
-            if (!await _userService.CheckPasswordAsync(user, model.MasterPasswordHash))
+            if (!await _userService.VerifySecretAsync(user, model.Secret))
             {
                 await Task.Delay(2000);
                 throw new BadRequestException("MasterPasswordHash", "Invalid password.");
@@ -598,6 +613,47 @@ namespace Bit.Api.Controllers
 
             var org = await _organizationService.UpdateOrganizationKeysAsync(new Guid(id), model.PublicKey, model.EncryptedPrivateKey);
             return new OrganizationKeysResponseModel(org);
+        }
+
+        [HttpGet("{id:guid}/sso")]
+        public async Task<OrganizationSsoResponseModel> GetSso(Guid id)
+        {
+            if (!await _currentContext.ManageSso(id))
+            {
+                throw new NotFoundException();
+            }
+
+            var organization = await _organizationRepository.GetByIdAsync(id);
+            if (organization == null)
+            {
+                throw new NotFoundException();
+            }
+
+            var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(id);
+
+            return new OrganizationSsoResponseModel(organization, _globalSettings, ssoConfig);
+        }
+
+        [HttpPost("{id:guid}/sso")]
+        public async Task<OrganizationSsoResponseModel> PostSso(Guid id, [FromBody]OrganizationSsoRequestModel model)
+        {
+            if (!await _currentContext.ManageSso(id))
+            {
+                throw new NotFoundException();
+            }
+
+            var organization = await _organizationRepository.GetByIdAsync(id);
+            if (organization == null)
+            {
+                throw new NotFoundException();
+            }
+
+            var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(id);
+            ssoConfig = ssoConfig == null ? model.ToSsoConfig(id) : model.ToSsoConfig(ssoConfig);
+
+            await _ssoConfigService.SaveAsync(ssoConfig, organization);
+
+            return new OrganizationSsoResponseModel(organization, _globalSettings, ssoConfig);
         }
     }
 }

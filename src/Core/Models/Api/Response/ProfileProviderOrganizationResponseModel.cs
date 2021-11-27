@@ -12,6 +12,7 @@ namespace Bit.Core.Models.Api
             Name = organization.Name;
             UsePolicies = organization.UsePolicies;
             UseSso = organization.UseSso;
+            UseKeyConnector = organization.UseKeyConnector;
             UseGroups = organization.UseGroups;
             UseDirectory = organization.UseDirectory;
             UseEvents = organization.UseEvents;
