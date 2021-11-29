@@ -9,12 +9,10 @@ on:
         required: true
 
 jobs:
-
   bump_props_version:
     name: "Create version_bump_${{ github.event.inputs.version_number }} branch"
     runs-on: ubuntu-latest
     steps:
-
       - name: Create Branch
         uses: peterjgrainger/action-create-branch@v2.0.1
         env:
