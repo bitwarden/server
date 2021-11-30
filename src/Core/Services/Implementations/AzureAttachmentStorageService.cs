@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
@@ -233,8 +233,7 @@ namespace Bit.Core.Services
 
                 return (true, length);
             }
-            catch (RequestFailedException requestFailedEx)
-            when (requestFailedEx.ErrorCode == BlobErrorCode.BlobNotFound)
+            catch (Exception ex)
             {
                 return (false, null);
             }
