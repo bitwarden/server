@@ -39,14 +39,12 @@ jobs:
           git commit -m "Bumped version to ${{ github.event.inputs.version_number }}" -a
 
       - name: Push changes
-        run: |
-          git push -u origin version_bump_${{ github.event.inputs.version_number }}
-
+        run: git push -u origin version_bump_${{ github.event.inputs.version_number }}
 
       - name: Create Version PR
         env:
           PR_BRANCH: "version_bump_${{ github.event.inputs.version_number }}"
-          GITHUB_TOKEN:  "${{ secrets.GITHUB_TOKEN }}"
+          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
           BASE_BRANCH: master
           TITLE: "Bump version to ${{ github.event.inputs.version_number }}"
         run: |
