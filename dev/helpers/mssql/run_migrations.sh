@@ -7,10 +7,10 @@ sleep 0.1;
 
 MIGRATE_DIRECTORY="/mnt/migrator/DbScripts"
 LAST_MIGRATION_FILE="/mnt/data/last_migration"
-SERVER='localhost'
+SERVER='mssql'
 DATABASE="vault_dev"
 USER="SA"
-PASSWD=$SA_PASSWORD
+PASSWD=$MSSQL_PASSWORD
 
 if [ ! -f "$LAST_MIGRATION_FILE" ]; then
   echo "$LAST_MIGRATION_FILE not found!"
@@ -43,9 +43,9 @@ if [ -n "$RERUN" ]; then
 fi
 
 # Create database if it does not already exist
-QUERY="IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = 'vault_dev')
+QUERY="IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = '$DATABASE')
 BEGIN
-  CREATE DATABASE vault_dev;
+  CREATE DATABASE $DATABASE;
 END;"
 
 /opt/mssql-tools/bin/sqlcmd -S $SERVER -d master -U $USER -P $PASSWD -I -Q "$QUERY"

@@ -28,10 +28,10 @@
   </Choose>
 
   <ItemGroup>
+    <PackageReference Include="Azure.Messaging.EventGrid" Version="4.7.0" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="5.0.9" />
     <PackageReference Include="NewRelic.Agent" Version="8.41.0" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.2.3" />
-    <PackageReference Include="Microsoft.Azure.EventGrid" Version="3.2.0" />
   </ItemGroup>
 
   <ItemGroup>

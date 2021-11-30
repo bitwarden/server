@@ -18,7 +18,6 @@ namespace Bit.Core.Settings
         public bool SelfHosted { get; set; }
         public virtual string KnownProxies { get; set; }
         public virtual string SiteName { get; set; }
-        public virtual string StripeApiKey { get; set; }
         public virtual string ProjectName { get; set; }
         public virtual string LogDirectory
         {
@@ -68,6 +67,7 @@ namespace Bit.Core.Settings
         public virtual ServiceBusSettings ServiceBus { get; set; } = new ServiceBusSettings();
         public virtual AppleIapSettings AppleIap { get; set; } = new AppleIapSettings();
         public virtual SsoSettings Sso { get; set; } = new SsoSettings();
+        public virtual StripeSettings Stripe { get; set; } = new StripeSettings();
 
         public string BuildExternalUri(string explicitValue, string name)
         {
@@ -464,6 +464,12 @@ namespace Bit.Core.Settings
             public bool ForceCaptchaRequired { get; set; } = false;
             public string HCaptchaSecretKey { get; set; }
             public string HCaptchaSiteKey { get; set; }
+        }
+
+        public class StripeSettings
+        {
+            public string ApiKey { get; set; }
+            public int MaxNetworkRetries { get; set; } = 2;
         }
     }
 }
