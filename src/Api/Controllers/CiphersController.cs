@@ -14,7 +14,7 @@ using System.Collections.Generic;
 using Bit.Core.Models.Table;
 using Bit.Core.Settings;
 using Core.Models.Data;
-using Microsoft.Azure.EventGrid.Models;
+using Azure.Messaging.EventGrid;
 using Bit.Core.Models.Data;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
