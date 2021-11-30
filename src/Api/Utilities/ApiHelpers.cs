@@ -1,4 +1,4 @@
-using Bit.Core.Utilities;
+﻿using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Azure.Messaging.EventGrid;
@@ -61,23 +61,19 @@ namespace Bit.Api.Utilities
             {
                 if (eventGridEvent.TryGetSystemEventData(out object systemEvent))
                 {
-                    switch (systemEvent)
+                    if (systemEvent is SubscriptionValidationEventData eventData)
                     {
-                        case SubscriptionValidationEventData subscriptionValidated:
-                            // Might want to enable additional validation: subject, topic etc.
+                        // Might want to enable additional validation: subject, topic etc.
+                        var responseData = new SubscriptionValidationResponse()
+                        {
+                            ValidationResponse = eventData.ValidationCode
+                        };
 
-                            var responseData = new SubscriptionValidationResponse()
-                            {
-                                ValidationResponse = subscriptionValidated.ValidationCode
-                            };
-
-                            return new OkObjectResult(responseData);
-                            break;
-                        default:
-                            break;
+                        return new OkObjectResult(responseData);
                     }
                 }
-                else if (eventTypeHandlers.ContainsKey(eventGridEvent.EventType))
+
+                if (eventTypeHandlers.ContainsKey(eventGridEvent.EventType))
                 {
                     await eventTypeHandlers[eventGridEvent.EventType](eventGridEvent);
                 }
