@@ -11,17 +11,18 @@ on:
 jobs:
   bump_props_version:
     name: "Create version_bump_${{ github.event.inputs.version_number }} branch"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
-      - name: Create Branch
-        uses: peterjgrainger/action-create-branch@v2.0.1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          branch: "version_bump_${{ github.event.inputs.version_number }}"
-
       - name: Checkout Branch
-        uses: actions/checkout@v2
+        uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579
+
+      - name: Create Version Branch
+        run: |
+          git switch -c version_bump_${{ github.event.inputs.version_number }}
+          git push -u origin version_bump_${{ github.event.inputs.version_number }}
+
+      - name: Checkout Version Branch
+        uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579
         with:
           ref: version_bump_${{ github.event.inputs.version_number }}
 
@@ -35,33 +36,32 @@ jobs:
         run: |
           git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          git commit -m "Bumped version ${{ github.event.inputs.version_number }}" -a
+          git commit -m "Bumped version to ${{ github.event.inputs.version_number }}" -a
 
       - name: Push changes
-        uses: ad-m/github-push-action@master
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          branch: version_bump_${{ github.event.inputs.version_number }}
+        run: |
+          git push -u origin version_bump_${{ github.event.inputs.version_number }}
 
-      - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v3
-        with:
-          commit-message: Bump version to ${{ github.event.inputs.version_number }}
-          committer: GitHub <noreply@github.com>
-          author: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
-          signoff: false
-          base: master
-          branch: version_bump_${{ github.event.inputs.version_number }}
-          delete-branch: true
-          title: "Bump version to ${{ github.event.inputs.version_number }}"
-          labels: version update, automated pr
-          body: |
-            ## Type of change
-            - [ ] Bug fix
-            - [ ] New feature development
-            - [ ] Tech debt (refactoring, code cleanup, dependency upgrades, etc)
-            - [ ] Build/deploy pipeline (DevOps)
-            - [X] Other
 
-            ## Objective
-            Automated version bump to ${{ github.event.inputs.version_number }}.
+      - name: Create Version PR
+        env:
+          PR_BRANCH: "version_bump_${{ github.event.inputs.version_number }}"
+          GITHUB_TOKEN:  "${{ secrets.GITHUB_TOKEN }}"
+          BASE_BRANCH: master
+          TITLE: "Bump version to ${{ github.event.inputs.version_number }}"
+        run: |
+          gh pr create --title "$TITLE" \
+            --base "$BASE" \
+            --head "$PR_BRANCH" \
+            --label "version update" \
+            --label "automated pr" \
+            --body "
+              ## Type of change
+              - [ ] Bug fix
+              - [ ] New feature development
+              - [ ] Tech debt (refactoring, code cleanup, dependency upgrades, etc)
+              - [ ] Build/deploy pipeline (DevOps)
+              - [X] Other
+              
+              ## Objective
+              Automated version bump to ${{ github.event.inputs.version_number }}"
