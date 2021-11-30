@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
@@ -225,8 +225,6 @@ namespace Bit.Core.Services
                 };
                 await blobClient.SetHttpHeadersAsync(headers);
 
-                //TODO djsmith85 Is this the correct length
-                //var length = blob.Properties.Length;
                 var length = blobProperties.Value.ContentLength;
                 if (length < attachmentData.Size - leeway || length > attachmentData.Size + leeway)
                 {
