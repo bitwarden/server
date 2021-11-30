@@ -1,4 +1,4 @@
-﻿using Bit.Core.Utilities;
+using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Azure.Messaging.EventGrid;
@@ -55,7 +55,8 @@ namespace Bit.Api.Utilities
             }
 
             var response = string.Empty;
-            var eventGridEvents = EventGridEvent.ParseMany(BinaryData.FromStream(request.Body));
+            var requestData = await BinaryData.FromStreamAsync(request.Body);
+            var eventGridEvents = EventGridEvent.ParseMany(requestData);
             foreach (var eventGridEvent in eventGridEvents)
             {
                 if (eventGridEvent.TryGetSystemEventData(out object systemEvent))
