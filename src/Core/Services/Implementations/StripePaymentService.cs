@@ -801,6 +801,12 @@ namespace Bit.Core.Services
                     throw;
                 }
             }
+            else if (!invoice.Paid)
+            {
+                // Pay invoice with no charge to customer this completes the invoice immediately without waiting the scheduled 1h
+                invoice = await _stripeAdapter.InvoicePayAsync(subResponse.LatestInvoiceId);
+                paymentIntentClientSecret = null;
+            }
 
             // Change back the subscription collection method and/or days until due
             if (collectionMethod != "send_invoice" || daysUntilDue == null)
