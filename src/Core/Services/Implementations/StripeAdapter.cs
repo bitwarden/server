@@ -101,7 +101,7 @@ namespace Bit.Core.Services
             return _invoiceService.SendInvoiceAsync(id, options);
         }
 
-        public Task<Stripe.Invoice> InvoicePayAsync(string id, Stripe.InvoicePayOptions options)
+        public Task<Stripe.Invoice> InvoicePayAsync(string id, Stripe.InvoicePayOptions options = null)
         {
             return _invoiceService.PayAsync(id, options);
         }
