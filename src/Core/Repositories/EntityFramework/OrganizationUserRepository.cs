@@ -80,6 +80,7 @@ namespace Bit.Core.Repositories.EntityFramework
                 foreach (var sponsorship in sponsorships)
                 {
                     sponsorship.SponsoringOrganizationUserId = null;
+                    sponsorship.FriendlyName = null;
                 }
 
                 dbContext.Remove(orgUser);
@@ -99,6 +100,7 @@ namespace Bit.Core.Repositories.EntityFramework
                 foreach (var sponsorship in sponsorships)
                 {
                     sponsorship.SponsoringOrganizationUserId = null;
+                    sponsorship.FriendlyName = null;
                 }
 
                 dbContext.RemoveRange(entities);
