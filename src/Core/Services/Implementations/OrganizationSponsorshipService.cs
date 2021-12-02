@@ -98,7 +98,7 @@ namespace Bit.Core.Services
 
             var existingOrgSponsorship = await _organizationSponsorshipRepository
                 .GetBySponsoringOrganizationUserIdAsync(sponsoringOrgUser.Id);
-            if (existingOrgSponsorship != null)
+            if (existingOrgSponsorship?.SponsoredOrganizationId != null)
             {
                 throw new BadRequestException("Can only sponsor one organization per Organization User.");
             }
@@ -113,9 +113,15 @@ namespace Bit.Core.Services
                 CloudSponsor = true,
             };
 
+            if (existingOrgSponsorship != null)
+            {
+                // Replace existing invalid offer with our new sponsorship offer
+                sponsorship.Id = existingOrgSponsorship.Id;
+            }
+
             try
             {
-                sponsorship = await _organizationSponsorshipRepository.CreateAsync(sponsorship);
+                await _organizationSponsorshipRepository.UpsertAsync(sponsorship);
 
                 await SendSponsorshipOfferAsync(sponsorship, sponsoringUserEmail);
             }
