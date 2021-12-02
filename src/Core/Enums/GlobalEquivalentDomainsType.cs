@@ -88,5 +88,6 @@
         Yandex = 83,
         Sony = 84,
         Proton = 85,
+        TransferWise = 87,
     }
 }
