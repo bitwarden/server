@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using Newtonsoft.Json.Linq;
 
 namespace Bit.Core.Models.Mail
 {
@@ -9,7 +11,21 @@ namespace Bit.Core.Models.Mail
         public IEnumerable<string> BccEmails { get; set; }
         public string Category { get; set; }
         public string TemplateName { get; set; }
-        public object Model { get; set; }
+        private object _model;
+        public object Model
+        {
+            get
+            {
+                if (_model?.GetType() == typeof(JObject))
+                {
+                    return (_model as JObject).ToObject(ModelType);
+                }
+                return _model;
+            }
+
+            set => _model = value;
+        }
+        public Type ModelType { get; set; }
 
         public MailQueueMessage() { }
 
@@ -21,6 +37,7 @@ namespace Bit.Core.Models.Mail
             Category = string.IsNullOrEmpty(message.Category) ? templateName : message.Category;
             TemplateName = templateName;
             Model = model;
+            ModelType = model.GetType();
         }
     }
 }
