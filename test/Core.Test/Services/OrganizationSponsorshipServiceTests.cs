@@ -139,7 +139,7 @@ namespace Bit.Core.Test.Services
             };
 
             await sutProvider.GetDependency<IOrganizationSponsorshipRepository>().Received(1)
-                .CreateAsync(Arg.Is<OrganizationSponsorship>(s => SponsorshipValidator(s, expectedSponsorship)));
+                .UpsertAsync(Arg.Is<OrganizationSponsorship>(s => SponsorshipValidator(s, expectedSponsorship)));
 
             await sutProvider.GetDependency<IMailService>().Received(1).
                 SendFamiliesForEnterpriseOfferEmailAsync(sponsoredEmail, email,
@@ -156,7 +156,7 @@ namespace Bit.Core.Test.Services
 
             var expectedException = new Exception();
             OrganizationSponsorship createdSponsorship = null;
-            sutProvider.GetDependency<IOrganizationSponsorshipRepository>().CreateAsync(default).ThrowsForAnyArgs(callInfo =>
+            sutProvider.GetDependency<IOrganizationSponsorshipRepository>().UpsertAsync(default).ThrowsForAnyArgs(callInfo =>
             {
                 createdSponsorship = callInfo.ArgAt<OrganizationSponsorship>(0);
                 createdSponsorship.Id = Guid.NewGuid();
