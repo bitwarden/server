@@ -98,7 +98,7 @@ namespace Bit.Core.Services
 
             var existingOrgSponsorship = await _organizationSponsorshipRepository
                 .GetBySponsoringOrganizationUserIdAsync(sponsoringOrgUser.Id);
-            if (existingOrgSponsorship != null)
+            if (existingOrgSponsorship != null && existingOrgSponsorship.SponsoredOrganizationId != null)
             {
                 throw new BadRequestException("Can only sponsor one organization per Organization User.");
             }
