@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using Newtonsoft.Json;
+using Bit.Core.Utilities;
 
 namespace Bit.Core.Models.Mail
 {
@@ -9,11 +11,12 @@ namespace Bit.Core.Models.Mail
         public IEnumerable<string> BccEmails { get; set; }
         public string Category { get; set; }
         public string TemplateName { get; set; }
-        public object Model { get; set; }
+        [JsonConverter(typeof(ExpandoObjectJsonConverter))]
+        public dynamic Model { get; set; }
 
         public MailQueueMessage() { }
 
-        public MailQueueMessage(MailMessage message, string templateName, object model)
+        public MailQueueMessage(MailMessage message, string templateName, dynamic model)
         {
             Subject = message.Subject;
             ToEmails = message.ToEmails;
