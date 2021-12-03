@@ -1278,10 +1278,10 @@ namespace Bit.Core.Services
         }
 
 
-        private static bool CheckOrganizationCanSponsor(Organization organization)
+        private bool CheckOrganizationCanSponsor(Organization organization)
         {
             return StaticStore.GetPlan(organization.PlanType).Product == ProductType.Enterprise
-                && !organization.SelfHost;
+                && !_globalSettings.SelfHosted;
         }
 
         public async Task<OrganizationUser> AcceptUserAsync(Guid organizationUserId, User user, string token,
