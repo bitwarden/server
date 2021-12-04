@@ -7,9 +7,9 @@ using Bit.Core.Models.Business;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Test.AutoFixture;
-using Bit.Core.Test.AutoFixture.Attributes;
 using Bit.Core.Utilities;
+using Bit.Test.Common.AutoFixture;
+using Bit.Test.Common.AutoFixture.Attributes;
 using Braintree;
 using NSubstitute;
 using Xunit;
@@ -345,6 +345,33 @@ namespace Bit.Core.Test.Services
 
             await stripeAdapter.Received(1).CustomerDeleteAsync("C-1");
             await braintreeGateway.Customer.Received(1).DeleteAsync("Braintree-Id");
+        }
+
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public async void UpgradeFreeOrganizationAsync_Success(SutProvider<StripePaymentService> sutProvider,
+            Organization organization, TaxInfo taxInfo)
+        {
+            organization.GatewaySubscriptionId = null;
+            var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+            stripeAdapter.CustomerGetAsync(default).ReturnsForAnyArgs(new Stripe.Customer
+            {
+                Id = "C-1",
+                Metadata = new Dictionary<string, string>
+                {
+                    { "btCustomerId", "B-123" },
+                }
+            });
+            stripeAdapter.InvoiceUpcomingAsync(default).ReturnsForAnyArgs(new Stripe.Invoice
+            {
+                PaymentIntent = new Stripe.PaymentIntent {Status = "requires_payment_method",},
+                AmountDue = 0
+            });
+            stripeAdapter.SubscriptionCreateAsync(default).ReturnsForAnyArgs(new Stripe.Subscription { });
+
+            var plan = StaticStore.Plans.First(p => p.Type == PlanType.EnterpriseAnnually);
+            var result = await sutProvider.Sut.UpgradeFreeOrganizationAsync(organization, plan, 0, 0, false, taxInfo);
+            
+            Assert.Null(result);
         }
     }
 }

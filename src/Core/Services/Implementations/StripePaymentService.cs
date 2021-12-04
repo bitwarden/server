@@ -692,7 +692,7 @@ namespace Bit.Core.Services
                     throw new GatewayException("Bank account is not yet verified.");
                 }
 
-                throw e;
+                throw;
             }
         }
 
