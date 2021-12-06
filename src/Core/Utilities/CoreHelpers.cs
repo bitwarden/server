@@ -269,7 +269,10 @@ namespace Bit.Core.Utilities
             {
                 return null;
             }
-            return null;
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
         public static long ToEpocMilliseconds(DateTime date)
