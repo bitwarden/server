@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
-using Azure;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Azure.Storage.Sas;
@@ -262,11 +261,11 @@ namespace Bit.Core.Services
                 _attachmentContainers[containerName] = _blobServiceClient.GetBlobContainerClient(containerName);
                 if (containerName == "attachments")
                 {
-                    await _attachmentContainers[containerName].CreateIfNotExistsAsync(Azure.Storage.Blobs.Models.PublicAccessType.Blob, null, null);
+                    await _attachmentContainers[containerName].CreateIfNotExistsAsync(PublicAccessType.Blob, null, null);
                 }
                 else
                 {
-                    await _attachmentContainers[containerName].CreateIfNotExistsAsync(Azure.Storage.Blobs.Models.PublicAccessType.None, null, null);
+                    await _attachmentContainers[containerName].CreateIfNotExistsAsync(PublicAccessType.None, null, null);
                 }
             }
         }
