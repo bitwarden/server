@@ -72,8 +72,8 @@ case "$PROJECT" in
   "icons" | "Icons") docker_build Icons $PWD/src/Icons $TAG $PUSH ;;
   "notifications" | "Notifications") docker_build Notifications $PWD/src/Notifications $TAG $PUSH ;;
   "mssql" | "MsSql" | "Mssql") docker_build MsSql $PWD/util/MsSql $TAG $PUSH ;;
-  "seteup" | "Setup") docker_build Setup $PWD/util/Setup $TAG $PUSH
-  "eventsprocessor" | "EventsProcessor") docker_build EventsProcessor $PWD/src/EventsProcessor $TAG $PUSH
+  "seteup" | "Setup") docker_build Setup $PWD/util/Setup $TAG $PUSH ;;
+  "eventsprocessor" | "EventsProcessor") docker_build EventsProcessor $PWD/src/EventsProcessor $TAG $PUSH ;;
   "")
     docker_build Api $PWD/src/Api $TAG $PUSH
     docker_build Admin $PWD/src/Admin $TAG $PUSH
