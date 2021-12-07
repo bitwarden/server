@@ -377,15 +377,6 @@ jobs:
             $REGISTRY/${{ steps.setup.outputs.service_name }}:dev-${IMAGE_TAG:(-8)}
           docker push $REGISTRY/${{ steps.setup.outputs.service_name }}:dev-${IMAGE_TAG:(-8)}
 
-      - name: TEST STEP
-        env:
-          REGISTRY: bitwardenqa.azurecr.io
-          IMAGE_TAG: ${{ github.sha }}
-        run: |
-          docker tag ${{ steps.setup.outputs.service_name }} \
-            $REGISTRY/${{ steps.setup.outputs.service_name }}:dev-${IMAGE_TAG:(-8)}
-          docker push $REGISTRY/${{ steps.setup.outputs.service_name }}:dev-${IMAGE_TAG:(-8)}
-
 
   upload:
     name: Upload
