@@ -189,33 +189,8 @@ jobs:
           docker push bitwarden/$SERVICE_NAME:$_RELEASE_VERSION
           docker push bitwarden/$SERVICE_NAME:latest
 
-      - name: Log out of Docker and disable Docker Notary
-        run: |
-          docker logout
-          echo "DOCKER_CONTENT_TRUST=0" >> $GITHUB_ENV
-
-      - name: Login to Azure ACR
-        run: az acr login -n bitwardenprod
-
-      - name: Tag version and latest
-        env:
-          REGISTRY: bitwardenprod.azurecr.io
-          SERVICE_NAME: ${{ steps.setup.outputs.service_name }}
-        run: |
-          docker tag bitwarden/$SERVICE_NAME:$_BRANCH_NAME $REGISTRY/$SERVICE_NAME:$_RELEASE_VERSION
-          docker tag bitwarden/$SERVICE_NAME:$_BRANCH_NAME $REGISTRY/$SERVICE_NAME:latest
-
-      - name: List Docker images
-        run: docker images
-
-      - name: Push version and latest image
-        env:
-          DOCKER_CONTENT_TRUST: 1
-          DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ steps.setup-dct.outputs.dct-delegate-repo-passphrase }}
-          SERVICE_NAME: ${{ steps.setup.outputs.service_name }}
-        run: |
-          docker push bitwarden/$SERVICE_NAME:$_RELEASE_VERSION
-          docker push bitwarden/$SERVICE_NAME:latest
+      - name: Log out of Docker
+        run: docker logout
 
 
   release:
