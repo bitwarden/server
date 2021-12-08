@@ -238,7 +238,7 @@ namespace Bit.Core.Models.Api
 
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {
-            foreach (var validationResult in Validate(validationContext))
+            foreach (var validationResult in base.Validate(validationContext))
             {
                 yield return validationResult;
             }
