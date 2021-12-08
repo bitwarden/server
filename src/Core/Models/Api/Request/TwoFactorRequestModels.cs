@@ -236,7 +236,7 @@ namespace Bit.Core.Models.Api
         [Required]
         public int? Id { get; set; }
 
-        public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+        public new IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {
             foreach (var validationResult in base.Validate(validationContext))
             {
