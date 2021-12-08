@@ -10,7 +10,7 @@ namespace Bit.Core.Models.Api
         public string OTP { get; set; }
         public string Secret => !string.IsNullOrEmpty(MasterPasswordHash) ? MasterPasswordHash : OTP;
 
-        public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+        public virtual IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {
             if (string.IsNullOrEmpty(Secret))
             {
