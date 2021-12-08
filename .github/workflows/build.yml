@@ -255,12 +255,7 @@ jobs:
         env:
           DOCKER_USERNAME: ${{ steps.retrieve-secrets.outputs.docker-username }}
           DOCKER_PASSWORD: ${{ steps.retrieve-secrets.outputs.docker-password }}
-        run: |
-          if [[ "${{ matrix.docker_repo }}" == "bitwardenqa.azurecr.io" ]]; then
-            az acr login -n bitwardenqa
-          else
-            echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
-          fi
+        run: echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
 
       - name: Setup Docker Trust
         if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix'
