@@ -60,6 +60,6 @@ jobs:
               - [ ] Tech debt (refactoring, code cleanup, dependency upgrades, etc)
               - [ ] Build/deploy pipeline (DevOps)
               - [X] Other
-              
+
               ## Objective
               Automated version bump to ${{ github.event.inputs.version_number }}"
