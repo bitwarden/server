@@ -32,14 +32,6 @@ namespace Bit.Events.Controllers
             _cipherRepository = cipherRepository;
         }
 
-        [HttpGet("~/alive")]
-        [HttpGet("~/now")]
-        [AllowAnonymous]
-        public DateTime GetAlive()
-        {
-            return DateTime.UtcNow;
-        }
-
         [HttpPost]
         public async Task<IActionResult> Post([FromBody]IEnumerable<EventModel> model)
         {

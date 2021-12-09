@@ -18,14 +18,6 @@ namespace Bit.Sso.Controllers
             _interaction = interaction;
         }
 
-        [HttpGet("~/alive")]
-        [HttpGet("~/now")]
-        [AllowAnonymous]
-        public DateTime GetAlive()
-        {
-            return DateTime.UtcNow;
-        }
-
         [Route("~/Error")]
         [Route("~/Home/Error")]
         [AllowAnonymous]
