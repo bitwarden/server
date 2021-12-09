@@ -1,5 +1,4 @@
-﻿using System;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Bit.Admin.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -28,13 +27,6 @@ namespace Bit.Admin.Controllers
                 GlobalSettings = _globalSettings,
                 CurrentVersion = Core.Utilities.CoreHelpers.GetVersion()
             });
-        }
-        
-        [HttpGet("~/alive")]
-        [HttpGet("~/now")]
-        public DateTime Get()
-        {
-            return DateTime.UtcNow;
         }
 
         public IActionResult Error()
