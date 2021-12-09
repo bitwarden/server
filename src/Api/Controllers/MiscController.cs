@@ -23,20 +23,6 @@ namespace Bit.Api.Controllers
             _globalSettings = globalSettings;
         }
 
-        [HttpGet("~/ip")]
-        public JsonResult Ip()
-        {
-            var headerSet = new HashSet<string> { "x-forwarded-for", "cf-connecting-ip", "client-ip" };
-            var headers = HttpContext.Request?.Headers
-                .Where(h => headerSet.Contains(h.Key.ToLower()))
-                .ToDictionary(h => h.Key);
-            return new JsonResult(new
-            {
-                Ip = HttpContext.Connection?.RemoteIpAddress?.ToString(),
-                Headers = headers,
-            });
-        }
-
         [Authorize("Application")]
         [HttpPost("~/bitpay-invoice")]
         [SelfHosted(NotSelfHostedOnly = true)]
