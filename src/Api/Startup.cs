@@ -8,7 +8,6 @@ using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Identity;
 using Bit.Core.Settings;
-using Newtonsoft.Json.Serialization;
 using AspNetCoreRateLimit;
 using Stripe;
 using Bit.Core.Utilities;
@@ -18,7 +17,6 @@ using Microsoft.IdentityModel.Logging;
 using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
 using System.Collections.Generic;
-using System;
 
 #if !OSS
 using Bit.CommCore.Utilities;
@@ -135,12 +133,6 @@ namespace Bit.Api
             {
                 config.Conventions.Add(new ApiExplorerGroupConvention());
                 config.Conventions.Add(new PublicApiControllersModelConvention());
-            }).AddNewtonsoftJson(options =>
-            {
-                if ((Environment.IsProduction() || Environment.IsEnvironment("QA")) && Configuration["swaggerGen"] != "true")
-                {
-                    options.SerializerSettings.ContractResolver = new DefaultContractResolver();
-                }
             });
 
             services.AddSwagger(globalSettings);
