@@ -135,12 +135,6 @@ namespace Bit.Api
             {
                 config.Conventions.Add(new ApiExplorerGroupConvention());
                 config.Conventions.Add(new PublicApiControllersModelConvention());
-            }).AddNewtonsoftJson(options =>
-            {
-                if ((Environment.IsProduction() || Environment.IsEnvironment("QA")) && Configuration["swaggerGen"] != "true")
-                {
-                    options.SerializerSettings.ContractResolver = new DefaultContractResolver();
-                }
             });
 
             services.AddSwagger(globalSettings);
