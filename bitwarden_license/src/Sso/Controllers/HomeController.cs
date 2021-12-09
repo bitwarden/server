@@ -5,6 +5,7 @@ using IdentityServer4.Services;
 using System.Threading.Tasks;
 using Bit.Sso.Models;
 using System.Diagnostics;
+using System.Reflection;
 using Microsoft.AspNetCore.Diagnostics;
 
 namespace Bit.Sso.Controllers
@@ -24,6 +25,15 @@ namespace Bit.Sso.Controllers
         public DateTime GetAlive()
         {
             return DateTime.UtcNow;
+        }
+        
+        [HttpGet("~/version")]
+        [AllowAnonymous]
+        public JsonResult GetVersion()
+        {
+            var assembly = Assembly.GetExecutingAssembly();
+            var fileVersionInfo = FileVersionInfo.GetVersionInfo(assembly.Location);
+            return Json(fileVersionInfo.ProductVersion);
         }
 
         [Route("~/Error")]

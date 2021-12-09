@@ -5,6 +5,7 @@ using Bit.Admin.Models;
 using Microsoft.AspNetCore.Authorization;
 using Bit.Core.Settings;
 using System.Net.Http;
+using System.Reflection;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 
@@ -32,9 +33,17 @@ namespace Bit.Admin.Controllers
         
         [HttpGet("~/alive")]
         [HttpGet("~/now")]
-        public DateTime Get()
+        public DateTime GetAlive()
         {
             return DateTime.UtcNow;
+        }
+        
+        [HttpGet("~/version")]
+        public JsonResult GetVersion()
+        {
+            var assembly = Assembly.GetExecutingAssembly();
+            var fileVersionInfo = FileVersionInfo.GetVersionInfo(assembly.Location);
+            return Json(fileVersionInfo.ProductVersion);
         }
 
         public IActionResult Error()

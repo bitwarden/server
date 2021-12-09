@@ -8,6 +8,8 @@ using Bit.Core.Settings;
 using Stripe;
 using System.Linq;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Reflection;
 
 namespace Bit.Api.Controllers
 {
@@ -26,15 +28,17 @@ namespace Bit.Api.Controllers
 
         [HttpGet("~/alive")]
         [HttpGet("~/now")]
-        public DateTime Get()
+        public DateTime GetAlive()
         {
             return DateTime.UtcNow;
         }
 
         [HttpGet("~/version")]
-        public VersionResponseModel Version()
+        public JsonResult GetVersion()
         {
-            return new VersionResponseModel();
+            var assembly = Assembly.GetExecutingAssembly();
+            var fileVersionInfo = FileVersionInfo.GetVersionInfo(assembly.Location);
+            return Json(fileVersionInfo.ProductVersion);
         }
 
         [HttpGet("~/ip")]

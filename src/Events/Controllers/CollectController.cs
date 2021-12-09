@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using Bit.Core.Context;
 using Bit.Core.Enums;
@@ -38,6 +40,15 @@ namespace Bit.Events.Controllers
         public DateTime GetAlive()
         {
             return DateTime.UtcNow;
+        }
+        
+        [HttpGet("~/version")]
+        [AllowAnonymous]
+        public JsonResult GetVersion()
+        {
+            var assembly = Assembly.GetExecutingAssembly();
+            var fileVersionInfo = FileVersionInfo.GetVersionInfo(assembly.Location);
+            return Json(fileVersionInfo.ProductVersion);
         }
 
         [HttpPost]
