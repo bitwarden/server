@@ -2,7 +2,7 @@
 using System.Threading.Tasks;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Api;
+using Bit.Web.Models.Api;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;

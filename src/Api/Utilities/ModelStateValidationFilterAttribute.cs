@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using InternalApi = Bit.Core.Models.Api;
-using PublicApi = Bit.Core.Models.Api.Public;
+using PublicApi = Bit.Web.Models.Api.Public;
 using System.Linq;
 
 namespace Bit.Api.Utilities

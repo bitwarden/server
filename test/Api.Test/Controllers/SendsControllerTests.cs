@@ -2,7 +2,7 @@ using AutoFixture.Xunit2;
 using Bit.Api.Controllers;
 using Bit.Core.Context;
 using Bit.Core.Enums;
-using Bit.Core.Models.Api;
+using Bit.Web.Models.Api;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Services;

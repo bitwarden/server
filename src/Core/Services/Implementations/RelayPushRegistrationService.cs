@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Net.Http;
-using Bit.Core.Models.Api;
+using Bit.Web.Models.Api;
 using Bit.Core.Enums;
 using Bit.Core.Settings;
 using System.Linq;

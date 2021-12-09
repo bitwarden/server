@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Api;
+using Bit.Web.Models.Api;
 using System.Threading.Tasks;
 using System.Linq;
 using Microsoft.AspNetCore.Hosting;

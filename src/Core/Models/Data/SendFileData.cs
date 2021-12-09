@@ -1,5 +1,5 @@
 ﻿using System;
-using Bit.Core.Models.Api;
+using Bit.Web.Models.Api;
 using Newtonsoft.Json;
 
 namespace Bit.Core.Models.Data
@@ -10,8 +10,8 @@ namespace Bit.Core.Models.Data
 
         public SendFileData() { }
 
-        public SendFileData(SendRequestModel send, string fileName)
-            : base(send)
+        public SendFileData(string name, string notes, string fileName)
+            : base(name, notes)
         {
             FileName = fileName;
         }

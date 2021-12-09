@@ -2,8 +2,8 @@
 using Bit.Core;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Api;
-using Bit.Core.Models.Api.Request.Accounts;
+using Bit.Web.Models.Api;
+using Bit.Web.Models.Api.Request.Accounts;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;

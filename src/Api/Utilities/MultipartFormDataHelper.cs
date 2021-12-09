@@ -6,7 +6,7 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
-using Bit.Core.Models.Api;
+using Bit.Web.Models.Api;
 using Newtonsoft.Json;
 
 namespace Bit.Api.Utilities

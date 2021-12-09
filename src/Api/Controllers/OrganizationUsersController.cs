@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Bit.Core.Repositories;
 using Microsoft.AspNetCore.Authorization;
-using Bit.Core.Models.Api;
+using Bit.Web.Models.Api;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Core.Context;
@@ -136,7 +136,7 @@ namespace Bit.Api.Controllers
 
             var userId = _userService.GetProperUserId(User);
             var result = await _organizationService.InviteUsersAsync(orgGuidId, userId.Value,
-                new (OrganizationUserInvite, string)[] { (new OrganizationUserInvite(model), null) });
+                new (OrganizationUserInvite, string)[] { (new OrganizationUserInvite(model.ToData()), null) });
         }
         
         [HttpPost("reinvite")]

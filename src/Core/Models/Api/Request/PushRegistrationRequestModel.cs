@@ -1,7 +1,7 @@
 ﻿using Bit.Core.Enums;
 using System.ComponentModel.DataAnnotations;
 
-namespace Bit.Core.Models.Api
+namespace Bit.Web.Models.Api
 {
     public class PushRegistrationRequestModel
     {

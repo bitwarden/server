@@ -3,7 +3,7 @@ using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Bit.Core.Context;
-using Bit.Core.Models.Api.Public;
+using Bit.Web.Models.Api.Public;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;

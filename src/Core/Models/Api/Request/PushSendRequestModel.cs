@@ -2,7 +2,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.Collections.Generic;
 
-namespace Bit.Core.Models.Api
+namespace Bit.Web.Models.Api
 {
     public class PushSendRequestModel : IValidatableObject
     {

@@ -1,6 +1,6 @@
 ﻿using System;
 using InternalApi = Bit.Core.Models.Api;
-using PublicApi = Bit.Core.Models.Api.Public;
+using PublicApi = Bit.Web.Models.Api.Public;
 using Bit.Core.Exceptions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;

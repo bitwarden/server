@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using Bit.Core.Enums;
-using Bit.Core.Models.Api;
 
 namespace Bit.Core.Models.Data
 {
@@ -11,17 +10,6 @@ namespace Bit.Core.Models.Data
         private string _uri;
 
         public CipherLoginData() { }
-
-        public CipherLoginData(CipherRequestModel cipher)
-            : base(cipher)
-        {
-            Uris = cipher.Login.Uris?.Where(u => u != null).Select(u => new CipherLoginUriData(u));
-            Username = cipher.Login.Username;
-            Password = cipher.Login.Password;
-            PasswordRevisionDate = cipher.Login.PasswordRevisionDate;
-            Totp = cipher.Login.Totp;
-            AutofillOnPageLoad = cipher.Login.AutofillOnPageLoad;
-        }
 
         public string Uri
         {
@@ -38,12 +26,6 @@ namespace Bit.Core.Models.Data
         public class CipherLoginUriData
         {
             public CipherLoginUriData() { }
-
-            public CipherLoginUriData(CipherLoginModel.CipherLoginUriModel uri)
-            {
-                Uri = uri.Uri;
-                Match = uri.Match;
-            }
 
             public string Uri { get; set; }
             public UriMatchType? Match { get; set; } = null;

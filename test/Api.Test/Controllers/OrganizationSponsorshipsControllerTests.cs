@@ -13,9 +13,9 @@ using NSubstitute;
 using Bit.Core.Exceptions;
 using Bit.Api.Test.AutoFixture.Attributes;
 using Bit.Core.Repositories;
-using Bit.Core.Models.Api.Request;
+using Bit.Web.Models.Api.Request;
 using Bit.Core.Services;
-using Bit.Core.Models.Api;
+using Bit.Web.Models.Api;
 using Bit.Core.Utilities;
 
 namespace Bit.Api.Test.Controllers
