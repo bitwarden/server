@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using System.Reflection;
 using System.Threading.Tasks;
 using Bit.Core.Context;
 using Bit.Core.Enums;
@@ -32,23 +30,6 @@ namespace Bit.Events.Controllers
             _currentContext = currentContext;
             _eventService = eventService;
             _cipherRepository = cipherRepository;
-        }
-
-        [HttpGet("~/alive")]
-        [HttpGet("~/now")]
-        [AllowAnonymous]
-        public DateTime GetAlive()
-        {
-            return DateTime.UtcNow;
-        }
-        
-        [HttpGet("~/version")]
-        [AllowAnonymous]
-        public JsonResult GetVersion()
-        {
-            var assembly = Assembly.GetExecutingAssembly();
-            var fileVersionInfo = FileVersionInfo.GetVersionInfo(assembly.Location);
-            return Json(fileVersionInfo.ProductVersion);
         }
 
         [HttpPost]

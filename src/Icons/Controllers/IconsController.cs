@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Diagnostics;
-using System.Reflection;
 using System.Threading.Tasks;
 using Bit.Icons.Models;
 using Bit.Icons.Services;
@@ -39,21 +37,6 @@ namespace Bit.Icons.Controllers
             _iconFetchingService = iconFetchingService;
             _logger = logger;
             _iconsSettings = iconsSettings;
-        }
-
-        [HttpGet("~/alive")]
-        [HttpGet("~/now")]
-        public DateTime GetAlive()
-        {
-            return DateTime.UtcNow;
-        }
-        
-        [HttpGet("~/version")]
-        public JsonResult GetVersion()
-        {
-            var assembly = Assembly.GetExecutingAssembly();
-            var fileVersionInfo = FileVersionInfo.GetVersionInfo(assembly.Location);
-            return Json(fileVersionInfo.ProductVersion);
         }
 
         [HttpGet("~/config")]

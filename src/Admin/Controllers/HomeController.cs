@@ -1,11 +1,9 @@
-﻿using System;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Bit.Admin.Models;
 using Microsoft.AspNetCore.Authorization;
 using Bit.Core.Settings;
 using System.Net.Http;
-using System.Reflection;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 
@@ -29,21 +27,6 @@ namespace Bit.Admin.Controllers
                 GlobalSettings = _globalSettings,
                 CurrentVersion = Core.Utilities.CoreHelpers.GetVersion()
             });
-        }
-        
-        [HttpGet("~/alive")]
-        [HttpGet("~/now")]
-        public DateTime GetAlive()
-        {
-            return DateTime.UtcNow;
-        }
-        
-        [HttpGet("~/version")]
-        public JsonResult GetVersion()
-        {
-            var assembly = Assembly.GetExecutingAssembly();
-            var fileVersionInfo = FileVersionInfo.GetVersionInfo(assembly.Location);
-            return Json(fileVersionInfo.ProductVersion);
         }
 
         public IActionResult Error()

@@ -1,5 +1,4 @@
-﻿using System;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Bit.Core.Models.Api;
 using System.Threading.Tasks;
 using Bit.Core.Utilities;
@@ -8,8 +7,6 @@ using Bit.Core.Settings;
 using Stripe;
 using System.Linq;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Reflection;
 
 namespace Bit.Api.Controllers
 {
@@ -24,21 +21,6 @@ namespace Bit.Api.Controllers
         {
             _bitPayClient = bitPayClient;
             _globalSettings = globalSettings;
-        }
-
-        [HttpGet("~/alive")]
-        [HttpGet("~/now")]
-        public DateTime GetAlive()
-        {
-            return DateTime.UtcNow;
-        }
-
-        [HttpGet("~/version")]
-        public JsonResult GetVersion()
-        {
-            var assembly = Assembly.GetExecutingAssembly();
-            var fileVersionInfo = FileVersionInfo.GetVersionInfo(assembly.Location);
-            return Json(fileVersionInfo.ProductVersion);
         }
 
         [HttpGet("~/ip")]
