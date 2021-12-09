@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Bit.Core.Utilities;
 
-namespace Bit.Admin.Controllers
+namespace Bit.Events.Controllers
 {
     public class InfoController : Controller
     {
