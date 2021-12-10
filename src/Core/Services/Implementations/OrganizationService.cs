@@ -1,22 +1,22 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
+using System;
 using System.Linq;
-using System.Text.Json;
 using System.Threading.Tasks;
-using Bit.Core.Context;
-using Bit.Core.Enums;
-using Bit.Core.Exceptions;
-using Bit.Core.Models.Business;
-using Bit.Core.Models.Data;
-using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
-using Bit.Core.Settings;
+using Bit.Core.Models.Business;
+using Bit.Core.Models.Table;
 using Bit.Core.Utilities;
+using Bit.Core.Exceptions;
+using System.Collections.Generic;
 using Microsoft.AspNetCore.DataProtection;
-using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 using Stripe;
+using Bit.Core.Enums;
+using Bit.Core.Models.Data;
+using Bit.Core.Settings;
+using System.IO;
+using Newtonsoft.Json;
+using System.Text.Json;
+using Bit.Core.Context;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Services
 {
@@ -1067,162 +1067,6 @@ namespace Bit.Core.Services
             await UpdateAsync(organization);
         }
 
-        public async Task<List<OrganizationUser>> InviteUsersAsync(Guid organizationId, Guid? invitingUserId,
-            IEnumerable<(OrganizationUserInvite invite, string externalId)> invites)
-        {
-            var organization = await GetOrgById(organizationId);
-            var initialSeatCount = organization.Seats;
-            if (organization == null || invites.Any(i => i.invite.Emails == null))
-            {
-                throw new NotFoundException();
-            }
-
-            var inviteTypes = new HashSet<OrganizationUserType>(invites.Where(i => i.invite.Type.HasValue)
-                .Select(i => i.invite.Type.Value));
-            if (invitingUserId.HasValue && inviteTypes.Count > 0)
-            {
-                foreach (var type in inviteTypes)
-                {
-                    await ValidateOrganizationUserUpdatePermissions(organizationId, type, null);
-                }
-            }
-
-            var newSeatsRequired = 0;
-            var existingEmails = new HashSet<string>(await _organizationUserRepository.SelectKnownEmailsAsync(
-                organizationId, invites.SelectMany(i => i.invite.Emails), false), StringComparer.InvariantCultureIgnoreCase);
-            if (organization.Seats.HasValue)
-            {
-                var userCount = await _organizationUserRepository.GetCountByOrganizationIdAsync(organizationId);
-                var availableSeats = organization.Seats.Value - userCount;
-                newSeatsRequired = invites.Sum(i => i.invite.Emails.Count()) - existingEmails.Count() - availableSeats;
-            }
-
-            if (newSeatsRequired > 0)
-            {
-                var (canScale, failureReason) = CanScale(organization, newSeatsRequired);
-                if (!canScale)
-                {
-                    throw new BadRequestException(failureReason);
-                }
-            }
-
-            var invitedAreAllOwners = invites.All(i => i.invite.Type == OrganizationUserType.Owner);
-            if (!invitedAreAllOwners && !await HasConfirmedOwnersExceptAsync(organizationId, new Guid[] { }))
-            {
-                throw new BadRequestException("Organization must have at least one confirmed owner.");
-            }
-
-
-            var orgUsers = new List<OrganizationUser>();
-            var limitedCollectionOrgUsers = new List<(OrganizationUser, IEnumerable<SelectionReadOnly>)>();
-            var orgUserInvitedCount = 0;
-            var exceptions = new List<Exception>();
-            var events = new List<(OrganizationUser, EventType, DateTime?)>();
-            foreach (var (invite, externalId) in invites)
-            {
-                foreach (var email in invite.Emails)
-                {
-                    try
-                    {
-                        // Make sure user is not already invited
-                        if (existingEmails.Contains(email))
-                        {
-                            continue;
-                        }
-
-                        var orgUser = new OrganizationUser
-                        {
-                            OrganizationId = organizationId,
-                            UserId = null,
-                            Email = email.ToLowerInvariant(),
-                            Key = null,
-                            Type = invite.Type.Value,
-                            Status = OrganizationUserStatusType.Invited,
-                            AccessAll = invite.AccessAll,
-                            ExternalId = externalId,
-                            CreationDate = DateTime.UtcNow,
-                            RevisionDate = DateTime.UtcNow,
-                        };
-
-                        if (invite.Permissions != null)
-                        {
-                            orgUser.Permissions = System.Text.Json.JsonSerializer.Serialize(invite.Permissions, new JsonSerializerOptions
-                            {
-                                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                            });
-                        }
-
-                        if (!orgUser.AccessAll && invite.Collections.Any())
-                        {
-                            limitedCollectionOrgUsers.Add((orgUser, invite.Collections));
-                        }
-                        else
-                        {
-                            orgUsers.Add(orgUser);
-                        }
-
-                        events.Add((orgUser, EventType.OrganizationUser_Invited, DateTime.UtcNow));
-                        orgUserInvitedCount++;
-                    }
-                    catch (Exception e)
-                    {
-                        exceptions.Add(e);
-                    }
-                }
-            }
-
-            if (exceptions.Any())
-            {
-                throw new AggregateException("One or more errors occurred while inviting users.", exceptions);
-            }
-
-            var prorationDate = DateTime.UtcNow;
-            try
-            {
-                await _organizationUserRepository.CreateManyAsync(orgUsers);
-                foreach (var (orgUser, collections) in limitedCollectionOrgUsers)
-                {
-                    await _organizationUserRepository.CreateAsync(orgUser, collections);
-                }
-
-                if (!await _currentContext.ManageUsers(organization.Id))
-                {
-                    throw new BadRequestException("Cannot add seats. Cannot manage organization users.");
-                }
-
-                await AutoAddSeatsAsync(organization, newSeatsRequired, prorationDate);
-                await SendInvitesAsync(orgUsers.Concat(limitedCollectionOrgUsers.Select(u => u.Item1)), organization);
-                await _eventService.LogOrganizationUserEventsAsync(events);
-
-                await _referenceEventService.RaiseEventAsync(
-                    new ReferenceEvent(ReferenceEventType.InvitedUsers, organization)
-                    {
-                        Users = orgUserInvitedCount
-                    });
-            }
-            catch (Exception e)
-            {
-                // Revert any added users.
-                var invitedOrgUserIds = orgUsers.Select(u => u.Id).Concat(limitedCollectionOrgUsers.Select(u => u.Item1.Id));
-                await _organizationUserRepository.DeleteManyAsync(invitedOrgUserIds);
-                var currentSeatCount = (await _organizationRepository.GetByIdAsync(organization.Id)).Seats;
-
-                if (initialSeatCount.HasValue && currentSeatCount.HasValue && currentSeatCount.Value != initialSeatCount.Value)
-                {
-                    await AdjustSeatsAsync(organization, initialSeatCount.Value - currentSeatCount.Value, prorationDate);
-                }
-
-                exceptions.Add(e);
-            }
-
-            if (exceptions.Any())
-            {
-                throw new AggregateException("One or more errors occurred while inviting users.", exceptions);
-            }
-
-            return orgUsers;
-        }
-
         public async Task<IEnumerable<Tuple<OrganizationUser, string>>> ResendInvitesAsync(Guid organizationId, Guid? invitingUserId,
             IEnumerable<Guid> organizationUsersId)
         {
@@ -1262,7 +1106,7 @@ namespace Bit.Core.Services
         {
             string MakeToken(OrganizationUser orgUser) =>
                 _dataProtector.Protect($"OrganizationUserInvite {orgUser.Id} {orgUser.Email} {CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow)}");
-
+            
             await _mailService.BulkSendOrganizationInviteEmailAsync(organization.Name, CheckOrganizationCanSponsor(organization),
                 orgUsers.Select(o => (o, new ExpiringToken(MakeToken(o), DateTime.UtcNow.AddDays(5)))));
         }
@@ -1273,7 +1117,7 @@ namespace Bit.Core.Services
             var nowMillis = CoreHelpers.ToEpocMilliseconds(now);
             var token = _dataProtector.Protect(
                 $"OrganizationUserInvite {orgUser.Id} {orgUser.Email} {nowMillis}");
-
+            
             await _mailService.SendOrganizationInviteEmailAsync(organization.Name, CheckOrganizationCanSponsor(organization), orgUser, new ExpiringToken(token, now.AddDays(5)));
         }
 

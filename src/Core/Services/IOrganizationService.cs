@@ -1,10 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
-using Bit.Core.Enums;
 using Bit.Core.Models.Business;
-using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
+using System;
+using System.Collections.Generic;
+using Bit.Core.Enums;
+using Bit.Core.Models.Data;
 
 namespace Bit.Core.Services
 {
@@ -32,8 +32,6 @@ namespace Bit.Core.Services
         Task UpdateAsync(Organization organization, bool updateBilling = false);
         Task UpdateTwoFactorProviderAsync(Organization organization, TwoFactorProviderType type);
         Task DisableTwoFactorProviderAsync(Organization organization, TwoFactorProviderType type);
-        Task<List<OrganizationUser>> InviteUsersAsync(Guid organizationId, Guid? invitingUserId,
-            IEnumerable<(OrganizationUserInvite invite, string externalId)> invites);
         Task<OrganizationUser> InviteUserAsync(Guid organizationId, Guid? invitingUserId, string email,
             OrganizationUserType type, bool accessAll, string externalId, IEnumerable<SelectionReadOnly> collections);
         Task<IEnumerable<Tuple<OrganizationUser, string>>> ResendInvitesAsync(Guid organizationId, Guid? invitingUserId, IEnumerable<Guid> organizationUsersId);
