@@ -1,5 +1,4 @@
 ﻿using System;
-using Bit.Web.Models.Api;
 using Newtonsoft.Json;
 
 namespace Bit.Core.Models.Data

@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
-namespace Bit.Web.Models.Api
+namespace Bit.Core.Models.Api
 {
     public class PushUpdateRequestModel
     {

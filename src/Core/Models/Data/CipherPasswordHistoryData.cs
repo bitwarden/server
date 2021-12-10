@@ -1,5 +1,4 @@
 ﻿using System;
-using Bit.Web.Models.Api;
 
 namespace Bit.Core.Models.Data
 {

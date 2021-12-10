@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using Bit.Core.Enums;
-using Bit.Core.Models.Business;
+using Bit.Core.Models.Api;
 using Bit.Core.Models.Table;
 using Bit.Core.Utilities;
 using Newtonsoft.Json;

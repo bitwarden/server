@@ -12,7 +12,6 @@ using System.IO;
 using Bit.Core.Enums;
 using Bit.Core.Utilities;
 using Bit.Core.Settings;
-using Bit.Web.Models.Api;
 using Bit.Core.Models.Business;
 
 namespace Bit.Core.Services

@@ -1,7 +1,7 @@
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Api;
 using Bit.Core.Services;
-using Bit.Web.Models.Api;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.DependencyInjection;
 

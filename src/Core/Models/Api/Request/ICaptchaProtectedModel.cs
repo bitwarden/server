@@ -1,4 +1,4 @@
-namespace Bit.Web.Models.Api
+namespace Bit.Core.Models.Api
 {
     public interface ICaptchaProtectedModel
     {

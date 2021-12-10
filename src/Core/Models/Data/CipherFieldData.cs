@@ -1,5 +1,4 @@
 ﻿using Bit.Core.Enums;
-using Bit.Web.Models.Api;
 
 namespace Bit.Core.Models.Data
 {
