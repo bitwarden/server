@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text.Json;
 using Newtonsoft.Json;
 
 namespace Bit.Core.Models.Data
@@ -42,5 +43,13 @@ namespace Bit.Core.Models.Data
             (ManageUsers, "manageusers"),
             (ManageResetPassword, "manageresetpassword"),
         };
+
+        public override string ToString()
+        {
+            return System.Text.Json.JsonSerializer.Serialize(this, new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            });
+        }
     }
 }
