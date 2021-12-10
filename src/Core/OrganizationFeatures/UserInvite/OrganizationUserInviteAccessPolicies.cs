@@ -6,11 +6,24 @@ using Bit.Core.Enums;
 using Bit.Core.Models.Table;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
+using Bit.Core.AccessPolicies;
 
 namespace Bit.Core.OrganizationFeatures.UserInvite
 {
-    public class OrganizationUserInviteAccessPolicies : BaseAccessPolicies
+    public class OrganizationUserInviteAccessPolicies : BaseAccessPolicies, IOrganizationUserInviteAccessPolicies
     {
+        private IGlobalSettings _globalSettings;
+        private ICurrentContext _currentContext;
+
+        public OrganizationUserInviteAccessPolicies(
+            IGlobalSettings globalSettings,
+            ICurrentContext currentContext
+        )
+        {
+            _globalSettings = globalSettings;
+            _currentContext = currentContext;
+        }
+
         public AccessPolicyResult CanScale(Organization organization, int seatsToAdd)
         {
             if (OverrideExists())

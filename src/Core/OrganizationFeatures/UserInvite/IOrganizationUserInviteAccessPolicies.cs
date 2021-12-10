@@ -8,7 +8,6 @@ namespace Bit.Core.OrganizationFeatures.UserInvite
 {
     public interface IOrganizationUserInviteAccessPolicies
     {
-        AccessPolicyResult CanScale(Organization organization, int seatsToAdd);
         Task<AccessPolicyResult> UserCanEditUserType(Guid organizationId, OrganizationUserType newType, OrganizationUserType? oldType = null);
     }
 }
