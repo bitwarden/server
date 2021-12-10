@@ -66,6 +66,15 @@ jobs:
       - name: Build solution
         run: msbuild bitwarden-server.sln /p:Configuration=Debug /verbosity:minimal
         shell: pwsh
+      
+      # TODO: This can be removed when upgrading to .NET 6
+      - name: Restore tools
+        run: dotnet tool restore
+        shell: pwsh
+
+      - name: Format
+        run: dotnet tool run dotnet-format --check
+        shell: pwsh
 
       - name: Test OSS solution
         run: dotnet test ./test --configuration Debug --no-build
