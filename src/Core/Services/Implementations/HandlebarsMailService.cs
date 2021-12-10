@@ -21,7 +21,7 @@ namespace Bit.Core.Services
     {
         private const string Namespace = "Bit.Core.MailTemplates.Handlebars";
 
-        private readonly GlobalSettings _globalSettings;
+        protected readonly GlobalSettings _globalSettings;
         private readonly IMailDeliveryService _mailDeliveryService;
         private readonly IMailEnqueuingService _mailEnqueuingService;
         private readonly Dictionary<string, Func<object, string>> _templateCache =
@@ -205,35 +205,7 @@ namespace Bit.Core.Services
             await _mailDeliveryService.SendEmailAsync(message);
         }
 
-        public Task SendOrganizationInviteEmailAsync(string organizationName, bool orgCanSponsor, OrganizationUser orgUser, ExpiringToken token) =>
-            BulkSendOrganizationInviteEmailAsync(organizationName, orgCanSponsor, new[] { (orgUser, token) });
 
-        public async Task BulkSendOrganizationInviteEmailAsync(string organizationName, bool organizationCanSponsor, IEnumerable<(OrganizationUser orgUser, ExpiringToken token)> invites)
-        {
-            MailQueueMessage CreateMessage(string email, object model)
-            {
-                var message = CreateDefaultMessage($"Join {organizationName}", email);
-                return new MailQueueMessage(message, "OrganizationUserInvited", model);
-            }
-
-            var messageModels = invites.Select(invite => CreateMessage(invite.orgUser.Email,
-                new OrganizationUserInvitedViewModel
-                {
-                    OrganizationName = CoreHelpers.SanitizeForEmail(organizationName, false),
-                    Email = WebUtility.UrlEncode(invite.orgUser.Email),
-                    OrganizationId = invite.orgUser.OrganizationId.ToString(),
-                    OrganizationUserId = invite.orgUser.Id.ToString(),
-                    Token = WebUtility.UrlEncode(invite.token.Token),
-                    ExpirationDate = $"{invite.token.ExpirationDate.ToLongDateString()} {invite.token.ExpirationDate.ToShortTimeString()} UTC",
-                    OrganizationNameUrlEncoded = WebUtility.UrlEncode(organizationName),
-                    WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
-                    SiteName = _globalSettings.SiteName,
-                    OrganizationCanSponsor = organizationCanSponsor,
-                }
-            ));
-
-            await EnqueueMailAsync(messageModels);
-        }
 
         public async Task SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(string organizationName, string email)
         {
@@ -411,13 +383,13 @@ namespace Bit.Core.Services
             await _mailDeliveryService.SendEmailAsync(message);
         }
 
-        private Task EnqueueMailAsync(IMailQueueMessage queueMessage) =>
+        protected Task EnqueueMailAsync(IMailQueueMessage queueMessage) =>
             _mailEnqueuingService.EnqueueAsync(queueMessage, SendEnqueuedMailMessageAsync);
 
-        private Task EnqueueMailAsync(IEnumerable<IMailQueueMessage> queueMessages) =>
+        protected Task EnqueueMailAsync(IEnumerable<IMailQueueMessage> queueMessages) =>
             _mailEnqueuingService.EnqueueManyAsync(queueMessages, SendEnqueuedMailMessageAsync);
 
-        private MailMessage CreateDefaultMessage(string subject, string toEmail)
+        protected MailMessage CreateDefaultMessage(string subject, string toEmail)
         {
             return CreateDefaultMessage(subject, new List<string> { toEmail });
         }
