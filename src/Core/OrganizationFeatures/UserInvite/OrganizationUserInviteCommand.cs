@@ -84,12 +84,6 @@ namespace Bit.Core.OrganizationFeatures.UserInvite
                 newSeatsRequired = invites.Sum(i => i.invite.Emails.Count()) - existingEmails.Count - availableSeats;
             }
 
-            if (newSeatsRequired > 0)
-            {
-                HandlePermissionResultBadRequest(
-                    _organizationUserInviteAccessPolicies.CanScale(organization, newSeatsRequired));
-            }
-
             // validate org has owners
             var invitedAreAllOwners = invites.All(i => i.invite.Type == OrganizationUserType.Owner);
             if (!invitedAreAllOwners && !await _organizationService.HasConfirmedOwnersExceptAsync(organizationId, Array.Empty<Guid>()))
@@ -98,31 +92,19 @@ namespace Bit.Core.OrganizationFeatures.UserInvite
             }
 
             var invitedUsers = await _organizationUserInviteService.InviteUsersAsync(organization, invites, existingEmails);
-            await ExpandSeatsIfNecessaryAsync(organization, initialSeatCount, newSeatsRequired);
+            try
+            {
+                await _organizationSubscriptionService.AutoAddSeatsAsync(organization, newSeatsRequired);
+            }
+            catch
+            {
+                await _organizationUserRepository.DeleteManyAsync(invitedUsers.Select(u => u.Id));
+                throw;
+            }
             await _organizationUserMailer.SendInvitesAsync(invitedUsers, organization);
             await CreateInviteEventsForOrganizationUsersAsync(invitedUsers, organization);
 
             return invitedUsers;
-        }
-
-        private async Task ExpandSeatsIfNecessaryAsync(Organization organization, int? initialSeatCount, int newSeatsRequired)
-        {
-            var prorationDate = DateTime.UtcNow;
-            try
-            {
-                await _organizationSubscriptionService.AutoAddSeatsAsync(organization, newSeatsRequired, prorationDate);
-            }
-            catch
-            {
-                var currentSeatCount = (await _organizationRepository.GetByIdAsync(organization.Id)).Seats;
-
-                if (initialSeatCount.HasValue && currentSeatCount.HasValue && currentSeatCount.Value != initialSeatCount.Value)
-                {
-                    await _organizationSubscriptionService.AdjustSeatsAsync(organization, initialSeatCount.Value - currentSeatCount.Value, prorationDate);
-                }
-
-                throw;
-            }
         }
 
         private async Task CreateInviteEventsForOrganizationUsersAsync(List<OrganizationUser> organizationUsers, Organization organization)

@@ -95,8 +95,24 @@ namespace Bit.Core.OrganizationFeatures.Subscription
 
             var initialSeatCount = organization.Seats.Value;
 
-            // TODO: should fail if customer interaction required (paymentIntentClientSecret != null)
-            await AdjustSeatsAsync(organization, newSeatsRequired, prorationDate);
+            try
+            {
+                // TODO: should fail if customer interaction required (paymentIntentClientSecret != null)
+                await AdjustSeatsAsync(organization, newSeatsRequired, prorationDate);
+            }
+            catch
+            {
+                var currentSeatCount = (await _organizationRepository.GetByIdAsync(organization.Id)).Seats;
+
+                if (currentSeatCount.HasValue && currentSeatCount.Value != initialSeatCount)
+                {
+                    await AdjustSeatsAsync(organization, initialSeatCount - currentSeatCount.Value, prorationDate);
+                }
+
+                throw;
+
+            }
+
             await _organizationUserMailer.SendOrganizationAutoscaledEmailAsync(organization, initialSeatCount);
         }
     }
