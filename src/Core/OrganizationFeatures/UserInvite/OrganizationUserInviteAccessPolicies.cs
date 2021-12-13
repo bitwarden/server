@@ -24,33 +24,6 @@ namespace Bit.Core.OrganizationFeatures.UserInvite
             _currentContext = currentContext;
         }
 
-        public AccessPolicyResult CanScale(Organization organization, int seatsToAdd)
-        {
-            if (OverrideExists())
-            {
-                return PermissionOverrides[nameof(CanScale)];
-            }
-
-            if (seatsToAdd < 1)
-            {
-                return Success;
-            }
-
-            if (_globalSettings.SelfHosted)
-            {
-                return Fail("Cannot autoscale on self-hosted instance.");
-            }
-
-            if (organization.Seats.HasValue &&
-                organization.MaxAutoscaleSeats.HasValue &&
-                organization.MaxAutoscaleSeats.Value < organization.Seats.Value + seatsToAdd)
-            {
-                return Fail($"Cannot invite new users. Seat limit has been reached.");
-            }
-
-            return Success;
-        }
-
         public async Task<AccessPolicyResult> UserCanEditUserType(Guid organizationId, OrganizationUserType newType, OrganizationUserType? oldType = null)
         {
             if (await _currentContext.OrganizationOwner(organizationId))
