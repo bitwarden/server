@@ -7,6 +7,7 @@ using Bit.Core.Enums;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Mail;
 using Bit.Core.Models.Table;
+using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
@@ -14,18 +15,52 @@ using Microsoft.AspNetCore.DataProtection;
 
 namespace Bit.Core.OrganizationFeatures.Mail
 {
-    public class OrganizationUserMailService : HandlebarsMailService, IOrganizationUserMailService
+    public class OrganizationUserMailer : HandlebarsMailService, IOrganizationUserMailer
     {
         readonly IDataProtector _dataProtector;
-        public OrganizationUserMailService(
+        readonly IOrganizationRepository _organizationRepository;
+        readonly IOrganizationUserRepository _organizationUserRepository;
+
+        public OrganizationUserMailer(
+            IOrganizationRepository organizationRepository,
+            IOrganizationUserRepository organizationUserRepository,
             IDataProtectionProvider dataProtectionProvider,
             GlobalSettings globalSettings,
             IMailDeliveryService mailDeliveryService,
             IMailEnqueuingService mailEnqueuingService) : base(globalSettings, mailDeliveryService, mailEnqueuingService)
         {
+            _organizationRepository = organizationRepository;
+            _organizationUserRepository = organizationUserRepository;
             // TODO: change protector string?
             _dataProtector = dataProtectionProvider.CreateProtector("OrganizationServiceDataProtector");
         }
+
+        public async Task SendOrganizationAutoscaledEmailAsync(Organization organization, int initialSeatCount)
+        {
+            if (organization.OwnersNotifiedOfAutoscaling.HasValue)
+            {
+                return;
+            }
+
+            var ownerEmails = (await _organizationUserRepository.GetManyByMinimumRoleAsync(organization.Id,
+                OrganizationUserType.Owner)).Select(u => u.Email).Distinct();
+
+            var message = CreateDefaultMessage($"{organization.Name} Seat Count Has Increased", ownerEmails);
+            var model = new OrganizationSeatsAutoscaledViewModel
+            {
+                OrganizationId = organization.Id,
+                InitialSeatCount = initialSeatCount,
+                CurrentSeatCount = organization.Seats.Value,
+            };
+
+            await AddMessageContentAsync(message, "OrganizationSeatsAutoscaled", model);
+            message.Category = "OrganizationSeatsAutoscaled";
+            await SendEmailAsync(message);
+
+            organization.OwnersNotifiedOfAutoscaling = DateTime.UtcNow;
+            await _organizationRepository.UpsertAsync(organization);
+        }
+
 
         public async Task SendInvitesAsync(IEnumerable<OrganizationUser> orgUsers, Organization organization)
         {
