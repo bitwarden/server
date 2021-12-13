@@ -8,5 +8,6 @@ namespace Bit.Core.OrganizationFeatures.Mail
     {
         Task SendInvitesAsync(IEnumerable<OrganizationUser> orgUsers, Organization organization);
         Task SendOrganizationAutoscaledEmailAsync(Organization organization, int initialSeatCount);
+        Task SendOrganizationMaxSeatLimitReachedEmailAsync(Organization organization, int maxSeatCount);
     }
 }

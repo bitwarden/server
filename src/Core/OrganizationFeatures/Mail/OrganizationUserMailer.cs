@@ -61,6 +61,22 @@ namespace Bit.Core.OrganizationFeatures.Mail
             await _organizationRepository.UpsertAsync(organization);
         }
 
+        public async Task SendOrganizationMaxSeatLimitReachedEmailAsync(Organization organization, int maxSeatCount)
+        {
+            var ownerEmails = (await _organizationUserRepository.GetManyByMinimumRoleAsync(organization.Id,
+                            OrganizationUserType.Owner)).Select(u => u.Email).Distinct();
+
+            var message = CreateDefaultMessage($"{organization.Name} Seat Limit Reached", ownerEmails);
+            var model = new OrganizationSeatsMaxReachedViewModel
+            {
+                OrganizationId = organization.Id,
+                MaxSeatCount = maxSeatCount,
+            };
+
+            await AddMessageContentAsync(message, "OrganizationSeatsMaxReached", model);
+            message.Category = "OrganizationSeatsMaxReached";
+            await SendEmailAsync(message);
+        }
 
         public async Task SendInvitesAsync(IEnumerable<OrganizationUser> orgUsers, Organization organization)
         {

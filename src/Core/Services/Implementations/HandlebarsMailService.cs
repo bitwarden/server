@@ -145,21 +145,6 @@ namespace Bit.Core.Services
             await _mailDeliveryService.SendEmailAsync(message);
         }
 
-        public async Task SendOrganizationAutoscaledEmailAsync(Organization organization, int initialSeatCount, IEnumerable<string> ownerEmails)
-        {
-            var message = CreateDefaultMessage($"{organization.Name} Seat Count Has Increased", ownerEmails);
-            var model = new OrganizationSeatsAutoscaledViewModel
-            {
-                OrganizationId = organization.Id,
-                InitialSeatCount = initialSeatCount,
-                CurrentSeatCount = organization.Seats.Value,
-            };
-
-            await AddMessageContentAsync(message, "OrganizationSeatsAutoscaled", model);
-            message.Category = "OrganizationSeatsAutoscaled";
-            await _mailDeliveryService.SendEmailAsync(message);
-        }
-
         public async Task SendOrganizationMaxSeatLimitReachedEmailAsync(Organization organization, int maxSeatCount, IEnumerable<string> ownerEmails)
         {
             var message = CreateDefaultMessage($"{organization.Name} Seat Limit Reached", ownerEmails);
@@ -388,13 +373,14 @@ namespace Bit.Core.Services
 
         protected Task EnqueueMailAsync(IEnumerable<IMailQueueMessage> queueMessages) =>
             _mailEnqueuingService.EnqueueManyAsync(queueMessages, SendEnqueuedMailMessageAsync);
+        protected Task SendEmailAsync(MailMessage message) => _mailDeliveryService.SendEmailAsync(message);
 
         protected MailMessage CreateDefaultMessage(string subject, string toEmail)
         {
             return CreateDefaultMessage(subject, new List<string> { toEmail });
         }
 
-        private MailMessage CreateDefaultMessage(string subject, IEnumerable<string> toEmails)
+        protected MailMessage CreateDefaultMessage(string subject, IEnumerable<string> toEmails)
         {
             return new MailMessage
             {
@@ -404,7 +390,7 @@ namespace Bit.Core.Services
             };
         }
 
-        private async Task AddMessageContentAsync<T>(MailMessage message, string templateName, T model)
+        protected async Task AddMessageContentAsync<T>(MailMessage message, string templateName, T model)
         {
             message.HtmlContent = await RenderAsync($"{templateName}.html", model);
             message.TextContent = await RenderAsync($"{templateName}.text", model);
