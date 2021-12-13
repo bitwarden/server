@@ -10,9 +10,13 @@ using Bit.Core.Enums;
 using Bit.Core.Identity;
 using Bit.Core.IdentityServer;
 using Bit.Core.Models.Table;
+using Bit.Core.OrganizationFeatures.Mail;
+using Bit.Core.OrganizationFeatures.Subscription;
+using Bit.Core.OrganizationFeatures.UserInvite;
 using Bit.Core.Repositories;
 using Bit.Core.Resources;
 using Bit.Core.Services;
+using Bit.Core.Services.OrganizationServices.UserInvite;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using IdentityModel;
@@ -169,8 +173,7 @@ namespace Bit.Core.Utilities
         {
             services.AddScoped<ICipherService, CipherService>();
             services.AddScoped<IUserService, UserService>();
-            services.AddScoped<IOrganizationService, OrganizationService>();
-            services.AddScoped<IOrganizationSponsorshipService, OrganizationSponsorshipService>();
+            services.AddOrganizationServices();
             services.AddScoped<ICollectionService, CollectionService>();
             services.AddScoped<IGroupService, GroupService>();
             services.AddScoped<IPolicyService, PolicyService>();
@@ -180,6 +183,17 @@ namespace Bit.Core.Utilities
             services.AddSingleton<IAppleIapService, AppleIapService>();
             services.AddScoped<ISsoConfigService, SsoConfigService>();
             services.AddScoped<ISendService, SendService>();
+        }
+
+        private static void AddOrganizationServices(this IServiceCollection services)
+        {
+            services.AddScoped<IOrganizationService, OrganizationService>();
+            services.AddScoped<IOrganizationUserInviteAccessPolicies, OrganizationUserInviteAccessPolicies>();
+            services.AddScoped<IOrganizationUserInviteCommand, OrganizationUserInviteCommand>();
+            services.AddScoped<IOrganizationUserInviteService, OrganizationUserInviteService>();
+            services.AddScoped<IOrganizationSubscriptionAccessPolicies, OrganizationSubscriptionAccessPolicies>();
+            services.AddScoped<IOrganizationSubscriptionService, OrganizationSubscriptionService>();
+            services.AddScoped<IOrganizationSponsorshipService, OrganizationSponsorshipService>();
         }
 
         public static void AddDefaultServices(this IServiceCollection services, GlobalSettings globalSettings)
@@ -201,6 +215,7 @@ namespace Bit.Core.Utilities
             });
             services.AddSingleton<IPaymentService, StripePaymentService>();
             services.AddSingleton<IMailService, HandlebarsMailService>();
+            services.AddSingleton<IOrganizationUserMailer, OrganizationUserMailer>();
             services.AddSingleton<ILicensingService, LicensingService>();
 
             if (CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ConnectionString) &&
