@@ -4,7 +4,6 @@ using System.Text;
 using System.Threading.Tasks;
 using Azure.Storage.Queues;
 using Bit.Core.Utilities;
-using Microsoft.EntityFrameworkCore.Internal;
 using Newtonsoft.Json;
 
 namespace Bit.Core.Services

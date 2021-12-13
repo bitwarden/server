@@ -5,7 +5,7 @@ using TableModel = Bit.Core.Models.Table;
 using Bit.Core.Enums;
 using AutoFixture.Kernel;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
-using Bit.Core.Repositories.EntityFramework;
+using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Core.Test.AutoFixture.EntityFrameworkRepositoryFixtures;
 using AutoFixture.Xunit2;
 using Bit.Test.Common.AutoFixture;

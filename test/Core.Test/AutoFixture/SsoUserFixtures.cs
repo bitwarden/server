@@ -1,5 +1,5 @@
 using AutoFixture;
-using Bit.Core.Repositories.EntityFramework;
+using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Core.Test.AutoFixture.EntityFrameworkRepositoryFixtures;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using Bit.Core.Test.AutoFixture.UserFixtures;

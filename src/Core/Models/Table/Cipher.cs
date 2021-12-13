@@ -18,9 +18,9 @@ namespace Bit.Core.Models.Table
         public string Favorites { get; set; }
         public string Folders { get; set; }
         public string Attachments { get; set; }
-        public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
-        public DateTime RevisionDate { get; internal set; } = DateTime.UtcNow;
-        public DateTime? DeletedDate { get; internal set; }
+        public DateTime CreationDate { get; set; } = DateTime.UtcNow;
+        public DateTime RevisionDate { get; set; } = DateTime.UtcNow;
+        public DateTime? DeletedDate { get; set; }
         public Enums.CipherRepromptType? Reprompt { get; set; }
 
         public void SetNewId()

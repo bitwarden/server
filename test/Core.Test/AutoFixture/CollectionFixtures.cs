@@ -3,7 +3,7 @@ using TableModel = Bit.Core.Models.Table;
 using AutoFixture.Kernel;
 using System;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
-using Bit.Core.Repositories.EntityFramework;
+using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Core.Test.AutoFixture.EntityFrameworkRepositoryFixtures;
 using Bit.Core.Test.AutoFixture.Relays;
 using Bit.Test.Common.AutoFixture;

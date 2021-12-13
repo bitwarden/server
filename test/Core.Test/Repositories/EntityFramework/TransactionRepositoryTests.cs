@@ -1,14 +1,11 @@
 using System.Collections.Generic;
 using Bit.Core.Models.Table;
-using Bit.Core.Repositories.EntityFramework;
-using Bit.Core.Test.AutoFixture;
 using Bit.Core.Test.AutoFixture.Attributes;
 using Bit.Core.Test.AutoFixture.TransactionFixtures;
 using Bit.Core.Test.Repositories.EntityFramework.EqualityComparers;
-using Microsoft.EntityFrameworkCore;
 using Xunit;
-using SqlRepo = Bit.Core.Repositories.SqlServer;
-using EfRepo = Bit.Core.Repositories.EntityFramework;
+using SqlRepo = Bit.Infrastructure.Dapper.Repositories;
+using EfRepo = Bit.Infrastructure.EntityFramework.Repositories;
 using System.Linq;
 
 namespace Bit.Core.Test.Repositories.EntityFramework

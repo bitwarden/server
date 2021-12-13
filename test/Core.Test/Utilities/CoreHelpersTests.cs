@@ -10,6 +10,7 @@ using Bit.Core.Models.Table;
 using Bit.Core.Context;
 using AutoFixture;
 using Bit.Core.Enums;
+using Bit.Infrastructure.Dapper;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.AutoFixture;
 

@@ -1,21 +1,16 @@
-using Bit.Core.Repositories.EntityFramework;
-using Bit.Core.Test.AutoFixture;
 using Bit.Core.Test.AutoFixture.Attributes;
 using Bit.Core.Test.AutoFixture.PolicyFixtures;
-using Bit.Core.Test.AutoFixture.OrganizationUserFixtures;
-using Microsoft.EntityFrameworkCore;
 using Xunit;
 using TableModel = Bit.Core.Models.Table;
 using System.Linq;
 using System.Collections.Generic;
-using EfRepo = Bit.Core.Repositories.EntityFramework;
-using SqlRepo = Bit.Core.Repositories.SqlServer;
+using EfRepo = Bit.Infrastructure.EntityFramework.Repositories;
+using SqlRepo = Bit.Infrastructure.Dapper.Repositories;
 using Bit.Core.Test.Repositories.EntityFramework.EqualityComparers;
 using Bit.Core.Models.Data;
 using System.Text.Json;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
-using System.Threading.Tasks;
 
 namespace Bit.Core.Test.Repositories.EntityFramework
 {
@@ -181,7 +176,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
                 await policyRepo.CreateAsync(policy);
                 if (suts.Contains(policyRepo))
                 {
-                    (policyRepo as BaseEntityFrameworkRepository).ClearChangeTracking();
+                    (policyRepo as EfRepo.BaseEntityFrameworkRepository).ClearChangeTracking();
                 }
 
                 var minStatus = includeInvited ? OrganizationUserStatusType.Invited : OrganizationUserStatusType.Accepted;

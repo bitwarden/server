@@ -5,8 +5,8 @@ using Bit.Core.Test.AutoFixture.FolderFixtures;
 using Bit.Core.Test.Repositories.EntityFramework.EqualityComparers;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
-using EfRepo = Bit.Core.Repositories.EntityFramework;
-using SqlRepo = Bit.Core.Repositories.SqlServer;
+using EfRepo = Bit.Infrastructure.EntityFramework.Repositories;
+using SqlRepo = Bit.Infrastructure.Dapper.Repositories;
 using System.Linq;
 
 namespace Bit.Core.Test.Repositories.EntityFramework

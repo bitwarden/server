@@ -16,10 +16,10 @@ namespace Bit.Core.Models.Table
         public EmergencyAccessType Type { get; set; }
         public EmergencyAccessStatusType Status { get; set; }
         public int WaitTimeDays { get; set; }
-        public DateTime? RecoveryInitiatedDate { get; internal set; }
-        public DateTime? LastNotificationDate { get; internal set; }
-        public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
-        public DateTime RevisionDate { get; internal set; } = DateTime.UtcNow;
+        public DateTime? RecoveryInitiatedDate { get; set; }
+        public DateTime? LastNotificationDate { get; set; }
+        public DateTime CreationDate { get; set; } = DateTime.UtcNow;
+        public DateTime RevisionDate { get; set; } = DateTime.UtcNow;
 
         public void SetNewId()
         {

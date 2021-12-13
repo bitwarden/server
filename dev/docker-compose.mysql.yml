@@ -1,0 +1,13 @@
+version: "3.9"
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: bw-mysql
+    restart: always
+    ports: 
+      - "3306:3306"
+    command: --default-authentication-plugin=mysql_native_password
+    environment:
+      MYSQL_ROOT_PASSWORD: example
+      MYSQL_DATABASE: bw-vault

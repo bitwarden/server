@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using Bit.Core.Repositories.EntityFramework;
+using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Core.Settings;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;

@@ -15,6 +15,7 @@ using Microsoft.IdentityModel.Logging;
 using System.IdentityModel.Tokens.Jwt;
 using System.Threading.Tasks;
 using Bit.Identity.Utilities;
+using Bit.SharedWeb.Utilities;
 using IdentityServer4.Extensions;
 
 namespace Bit.Identity

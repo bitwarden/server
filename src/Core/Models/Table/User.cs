@@ -33,7 +33,7 @@ namespace Bit.Core.Models.Table
         public string TwoFactorRecoveryCode { get; set; }
         public string EquivalentDomains { get; set; }
         public string ExcludedGlobalEquivalentDomains { get; set; }
-        public DateTime AccountRevisionDate { get; internal set; } = DateTime.UtcNow;
+        public DateTime AccountRevisionDate { get; set; } = DateTime.UtcNow;
         public string Key { get; set; }
         public string PublicKey { get; set; }
         public string PrivateKey { get; set; }
@@ -55,8 +55,8 @@ namespace Bit.Core.Models.Table
         public string ApiKey { get; set; }
         public KdfType Kdf { get; set; } = KdfType.PBKDF2_SHA256;
         public int KdfIterations { get; set; } = 5000;
-        public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
-        public DateTime RevisionDate { get; internal set; } = DateTime.UtcNow;
+        public DateTime CreationDate { get; set; } = DateTime.UtcNow;
+        public DateTime RevisionDate { get; set; } = DateTime.UtcNow;
         public bool ForcePasswordReset { get; set; }
         public bool UsesKeyConnector { get; set; }
 

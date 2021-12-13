@@ -65,8 +65,8 @@ namespace Bit.Core.Models.Table
         public string PrivateKey { get; set; }
         public string TwoFactorProviders { get; set; }
         public DateTime? ExpirationDate { get; set; }
-        public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
-        public DateTime RevisionDate { get; internal set; } = DateTime.UtcNow;
+        public DateTime CreationDate { get; set; } = DateTime.UtcNow;
+        public DateTime RevisionDate { get; set; } = DateTime.UtcNow;
         public int? MaxAutoscaleSeats { get; set; } = null;
         public DateTime? OwnersNotifiedOfAutoscaling { get; set; } = null;
 

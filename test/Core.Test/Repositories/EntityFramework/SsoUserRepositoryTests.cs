@@ -1,7 +1,7 @@
 using Bit.Core.Test.AutoFixture;
 using Bit.Core.Test.Helpers.Factories;
-using EfRepo = Bit.Core.Repositories.EntityFramework;
-using SqlRepo = Bit.Core.Repositories.SqlServer;
+using EfRepo = Bit.Infrastructure.EntityFramework.Repositories;
+using SqlRepo = Bit.Infrastructure.Dapper.Repositories;
 using System.Collections.Generic;
 using System.Linq;
 using Bit.Core.Models.Table;

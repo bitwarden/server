@@ -1,17 +1,16 @@
 using AutoFixture;
 using AutoMapper;
-using Bit.Core.Models.EntityFramework;
-using Bit.Core.Models.EntityFramework.Provider;
 using System.Collections.Generic;
 using AutoFixture.Kernel;
 using System;
 using Moq;
 using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
-using Bit.Core.Repositories.EntityFramework;
 using Microsoft.EntityFrameworkCore;
 using Bit.Core.Settings;
 using Bit.Core.Test.Helpers.Factories;
+using Bit.Infrastructure.EntityFramework.Models;
+using Bit.Infrastructure.EntityFramework.Repositories;
 
 namespace Bit.Core.Test.AutoFixture.EntityFrameworkRepositoryFixtures
 {

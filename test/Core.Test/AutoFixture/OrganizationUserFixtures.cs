@@ -6,7 +6,7 @@ using Bit.Core.Enums;
 using AutoFixture.Kernel;
 using System;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
-using Bit.Core.Repositories.EntityFramework;
+using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Core.Test.AutoFixture.EntityFrameworkRepositoryFixtures;
 using Bit.Core.Models.Data;
 using System.Text.Json;

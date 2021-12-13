@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.AspNetCore.Routing;
 using System.Globalization;
+using Bit.SharedWeb.Utilities;
 using Microsoft.Extensions.Hosting;
 
 namespace Bit.Billing

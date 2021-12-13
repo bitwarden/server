@@ -11,7 +11,7 @@ using Bit.Core.Utilities;
 using AutoFixture.Kernel;
 using Bit.Core.Models;
 using Bit.Core.Test.AutoFixture.EntityFrameworkRepositoryFixtures;
-using Bit.Core.Repositories.EntityFramework;
+using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.AutoFixture;
 
@@ -31,9 +31,12 @@ namespace Bit.Core.Test.AutoFixture.OrganizationFixtures
                 .With(o => o.MaxCollections, maxConnections)
                 .With(o => o.UseGroups, UseGroups));
 
+
             fixture.Customize<Core.Models.Table.Collection>(composer =>
                 composer
-                    .With(c => c.OrganizationId, organizationId));
+                    .With(c => c.OrganizationId, organizationId)
+                    .Without(o => o.CreationDate)
+                    .Without(o => o.RevisionDate));
 
             fixture.Customize<TableModel.Group>(composer => composer.With(g => g.OrganizationId, organizationId));
         }
