@@ -133,12 +133,9 @@ namespace Bit.Core.Services
                     await _installationDeviceRepository.DeleteAsync(new InstallationDeviceEntity(deviceId));
                 }
             }
-            catch (Exception e)
+            catch (Exception e) when (e.InnerException == null || !e.InnerException.Message.Contains("(404) Not Found"))
             {
-                if (e.InnerException == null || !e.InnerException.Message.Contains("(404) Not Found"))
-                {
-                    throw e;
-                }
+                throw;
             }
         }
 
@@ -192,12 +189,9 @@ namespace Bit.Core.Services
                 {
                     await _client.PatchInstallationAsync(id, new List<PartialUpdateOperation> { operation });
                 }
-                catch (Exception e)
+                catch (Exception e) when (e.InnerException == null || !e.InnerException.Message.Contains("(404) Not Found"))
                 {
-                    if (e.InnerException == null || !e.InnerException.Message.Contains("(404) Not Found"))
-                    {
-                        throw e;
-                    }
+                    throw;
                 }
             }
         }

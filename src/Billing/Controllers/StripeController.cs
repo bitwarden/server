@@ -603,7 +603,7 @@ namespace Bit.Billing.Controllers
                 }
                 else
                 {
-                    throw e;
+                    throw;
                 }
             }
 
@@ -698,7 +698,7 @@ namespace Bit.Billing.Controllers
                 }
                 else
                 {
-                    throw e;
+                    throw;
                 }
             }
 

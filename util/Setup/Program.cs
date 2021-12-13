@@ -213,7 +213,7 @@ namespace Bit.Setup
                     MigrateDatabase(nextAttempt);
                     return;
                 }
-                throw e;
+                throw;
             }
         }
 
