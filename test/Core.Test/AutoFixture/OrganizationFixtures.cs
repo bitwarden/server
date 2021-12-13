@@ -31,7 +31,6 @@ namespace Bit.Core.Test.AutoFixture.OrganizationFixtures
                 .With(o => o.MaxCollections, maxConnections)
                 .With(o => o.UseGroups, UseGroups));
 
-
             fixture.Customize<Core.Models.Table.Collection>(composer =>
                 composer
                     .With(c => c.OrganizationId, organizationId)
