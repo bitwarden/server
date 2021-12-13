@@ -15,24 +15,26 @@ using Bit.Core.OrganizationFeatures.Subscription;
 
 namespace Bit.Core.OrganizationFeatures.UserInvite
 {
-    public class OrganizationUserInviteMediator
+    public class OrganizationUserInviteCommand : IOrganizationUserInviteCommand
     {
         private readonly IOrganizationUserInviteAccessPolicies _organizationUserInviteAccessPolicies;
         private readonly IOrganizationRepository _organizationRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly IOrganizationService _organizationService;
         private readonly IOrganizationUserInviteService _organizationUserInviteService;
-        private readonly IOrganizationUserMailService _organizationUserMailService;
+        private readonly IOrganizationUserMailer _organizationUserMailer;
         private readonly IOrganizationSubscriptionService _organizationSubscriptionService;
         private readonly IEventService _eventService;
         private readonly IReferenceEventService _referenceEventService;
 
-        public OrganizationUserInviteMediator(
+        public OrganizationUserInviteCommand(
             IOrganizationUserInviteAccessPolicies organizationPermissions,
             IOrganizationRepository organizationRepository,
             IOrganizationUserRepository organizationUserRepository,
             IOrganizationService organizationService,
             IOrganizationUserInviteService organizationUserInviteService,
+            IOrganizationUserMailer organizationUserMailer,
+            IOrganizationSubscriptionService organizationSubscriptionService,
             IEventService eventService,
             IReferenceEventService referenceEventService
         )
@@ -42,6 +44,8 @@ namespace Bit.Core.OrganizationFeatures.UserInvite
             _organizationUserRepository = organizationUserRepository;
             _organizationService = organizationService;
             _organizationUserInviteService = organizationUserInviteService;
+            _organizationUserMailer = organizationUserMailer;
+            _organizationSubscriptionService = organizationSubscriptionService;
             _eventService = eventService;
             _referenceEventService = referenceEventService;
         }
@@ -95,7 +99,7 @@ namespace Bit.Core.OrganizationFeatures.UserInvite
 
             var invitedUsers = await _organizationUserInviteService.InviteUsersAsync(organization, invites, existingEmails);
             await ExpandSeatsIfNecessaryAsync(organization, initialSeatCount, newSeatsRequired);
-            await _organizationUserMailService.SendInvitesAsync(invitedUsers, organization);
+            await _organizationUserMailer.SendInvitesAsync(invitedUsers, organization);
             await CreateInviteEventsForOrganizationUsersAsync(invitedUsers, organization);
 
             return invitedUsers;

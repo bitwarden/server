@@ -7,9 +7,9 @@ using Bit.Core.Models.Table;
 
 namespace Bit.Core.OrganizationFeatures.UserInvite
 {
-    public interface IOrganizationUserInviteMediator
+    public interface IOrganizationUserInviteCommand
     {
         Task<List<OrganizationUser>> InviteUsersAsync(Guid organizationId, Guid? invitingUserId,
-            IEnumerable<(OrganizationUserInvite, string externalId)> invites);
+            IEnumerable<(OrganizationUserInvite invite, string externalId)> invites);
     }
 }
