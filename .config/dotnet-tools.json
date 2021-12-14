@@ -7,6 +7,24 @@
       "commands": [
         "dotnet-format"
       ]
+    },
+    "swashbuckle.aspnetcore.cli": {
+      "version": "5.0.0-rc4",
+      "commands": [
+        "swagger"
+      ]
+    },
+    "coverlet.console": {
+      "version": "3.0.3",
+      "commands": [
+        "coverlet"
+      ]
+    },
+    "dotnet-reportgenerator-globaltool": {
+      "version": "4.8.8",
+      "commands": [
+        "reportgenerator"
+      ]
     }
   }
 }
