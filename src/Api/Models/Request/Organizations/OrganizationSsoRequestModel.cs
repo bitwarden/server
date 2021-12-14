@@ -51,7 +51,7 @@ namespace Bit.Api.Models.Request.Organizations
         public string ClientSecret { get; set; }
         public string MetadataAddress { get; set; }
         public OpenIdConnectRedirectBehavior RedirectBehavior { get; set; }
-        public bool GetClaimsFromUserInfoEndpoint { get; set; }
+        public bool? GetClaimsFromUserInfoEndpoint { get; set; }
         public string AdditionalScopes { get; set; }
         public string AdditionalUserIdClaimTypes { get; set; }
         public string AdditionalEmailClaimTypes { get; set; }
@@ -63,8 +63,8 @@ namespace Bit.Api.Models.Request.Organizations
         public Saml2NameIdFormat SpNameIdFormat { get; set; }
         public string SpOutboundSigningAlgorithm { get; set; }
         public Saml2SigningBehavior SpSigningBehavior { get; set; }
-        public bool SpWantAssertionsSigned { get; set; }
-        public bool SpValidateCertificates { get; set; }
+        public bool? SpWantAssertionsSigned { get; set; }
+        public bool? SpValidateCertificates { get; set; }
         public string SpMinIncomingSigningAlgorithm { get; set; }
 
         // SAML2 IDP
@@ -75,9 +75,9 @@ namespace Bit.Api.Models.Request.Organizations
         public string IdpArtifactResolutionServiceUrl { get; set; }
         public string IdpX509PublicCert { get; set; }
         public string IdpOutboundSigningAlgorithm { get; set; }
-        public bool IdpAllowUnsolicitedAuthnResponse { get; set; }
-        public bool IdpDisableOutboundLogoutRequests { get; set; }
-        public bool IdpWantAuthnRequestsSigned { get; set; }
+        public bool? IdpAllowUnsolicitedAuthnResponse { get; set; }
+        public bool? IdpDisableOutboundLogoutRequests { get; set; }
+        public bool? IdpWantAuthnRequestsSigned { get; set; }
 
         public IEnumerable<ValidationResult> Validate(ValidationContext context)
         {
@@ -184,7 +184,7 @@ namespace Bit.Api.Models.Request.Organizations
                 ClientId = ClientId,
                 ClientSecret = ClientSecret,
                 MetadataAddress = MetadataAddress,
-                GetClaimsFromUserInfoEndpoint = GetClaimsFromUserInfoEndpoint,
+                GetClaimsFromUserInfoEndpoint = GetClaimsFromUserInfoEndpoint.GetValueOrDefault(),
                 RedirectBehavior = RedirectBehavior,
                 IdpEntityId = IdpEntityId,
                 IdpBindingType = IdpBindingType,
@@ -193,14 +193,14 @@ namespace Bit.Api.Models.Request.Organizations
                 IdpArtifactResolutionServiceUrl = IdpArtifactResolutionServiceUrl,
                 IdpX509PublicCert = StripPemCertificateElements(IdpX509PublicCert),
                 IdpOutboundSigningAlgorithm = IdpOutboundSigningAlgorithm,
-                IdpAllowUnsolicitedAuthnResponse = IdpAllowUnsolicitedAuthnResponse,
-                IdpDisableOutboundLogoutRequests = IdpDisableOutboundLogoutRequests,
-                IdpWantAuthnRequestsSigned = IdpWantAuthnRequestsSigned,
+                IdpAllowUnsolicitedAuthnResponse = IdpAllowUnsolicitedAuthnResponse.GetValueOrDefault(),
+                IdpDisableOutboundLogoutRequests = IdpDisableOutboundLogoutRequests.GetValueOrDefault(),
+                IdpWantAuthnRequestsSigned = IdpWantAuthnRequestsSigned.GetValueOrDefault(),
                 SpNameIdFormat = SpNameIdFormat,
                 SpOutboundSigningAlgorithm = SpOutboundSigningAlgorithm ?? SamlSigningAlgorithms.Sha256,
                 SpSigningBehavior = SpSigningBehavior,
-                SpWantAssertionsSigned = SpWantAssertionsSigned,
-                SpValidateCertificates = SpValidateCertificates,
+                SpWantAssertionsSigned = SpWantAssertionsSigned.GetValueOrDefault(),
+                SpValidateCertificates = SpValidateCertificates.GetValueOrDefault(),
                 SpMinIncomingSigningAlgorithm = SpMinIncomingSigningAlgorithm,
                 AdditionalScopes = AdditionalScopes,
                 AdditionalUserIdClaimTypes = AdditionalUserIdClaimTypes,
