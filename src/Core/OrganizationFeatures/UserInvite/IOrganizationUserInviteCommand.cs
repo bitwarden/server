@@ -9,6 +9,7 @@ namespace Bit.Core.OrganizationFeatures.UserInvite
 {
     public interface IOrganizationUserInviteCommand
     {
+        Task<OrganizationUser> InviteUserAsync(Guid organizationId, Guid? invitingUserId, OrganizationUserInvite invite, string externalId);
         Task<List<OrganizationUser>> InviteUsersAsync(Guid organizationId, Guid? invitingUserId,
             IEnumerable<(OrganizationUserInvite invite, string externalId)> invites);
     }

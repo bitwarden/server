@@ -50,6 +50,9 @@ namespace Bit.Core.OrganizationFeatures.UserInvite
             _referenceEventService = referenceEventService;
         }
 
+        public async Task<OrganizationUser> InviteUserAsync(Guid organizationId, Guid? invitingUserId, OrganizationUserInvite invite, string externalId) =>
+            (await InviteUsersAsync(organizationId, invitingUserId, new[] { (invite, externalId) })).FirstOrDefault();
+
         public async Task<List<OrganizationUser>> InviteUsersAsync(Guid organizationId, Guid? invitingUserId,
             IEnumerable<(OrganizationUserInvite invite, string externalId)> invites)
         {
@@ -79,7 +82,7 @@ namespace Bit.Core.OrganizationFeatures.UserInvite
                 organizationId, invites.SelectMany(i => i.invite.Emails), false), StringComparer.InvariantCultureIgnoreCase);
             if (organization.Seats.HasValue)
             {
-                var userCount = await _organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(organizationId);
+                var userCount = await _organizationUserRepository.GetCountByOrganizationIdAsync(organizationId);
                 var availableSeats = organization.Seats.Value - userCount;
                 newSeatsRequired = invites.Sum(i => i.invite.Emails.Count()) - existingEmails.Count - availableSeats;
             }
