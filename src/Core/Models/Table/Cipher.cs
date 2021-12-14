@@ -104,6 +104,7 @@ namespace Bit.Core.Models.Table
             var clone = CoreHelpers.CloneObject(this);
             clone.CreationDate = CreationDate;
             clone.RevisionDate = RevisionDate;
+            clone.DeletedDate = DeletedDate;
 
             return clone;
         }

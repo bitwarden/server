@@ -8,7 +8,7 @@ using Newtonsoft.Json;
 
 namespace Bit.Core.Models.Table
 {
-    public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorableSubscriber, IRevisable, IReferenceable
+    public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorableSubscriber, IRevisable, IReferenceable, ICloneable
     {
         private Dictionary<TwoFactorProviderType, TwoFactorProvider> _twoFactorProviders;
 
@@ -201,5 +201,16 @@ namespace Bit.Core.Models.Table
 
             return providers[provider];
         }
+
+        object ICloneable.Clone() => Clone();
+        public Organization Clone()
+        {
+            var clone = CoreHelpers.CloneObject(this);
+            clone.CreationDate = CreationDate;
+            clone.RevisionDate = RevisionDate;
+
+            return clone;
+        }
+
     }
 }
