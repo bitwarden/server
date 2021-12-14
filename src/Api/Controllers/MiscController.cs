@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
-using Bit.Web.Models.Api;
 using System.Threading.Tasks;
+using Bit.Api.Models.Request;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Bit.Core.Settings;

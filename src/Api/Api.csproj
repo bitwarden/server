@@ -38,8 +38,4 @@
     <DotNetCliToolReference Include="Swashbuckle.AspNetCore.Cli" Version="4.0.1" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Models" />
-  </ItemGroup>
-
 </Project>

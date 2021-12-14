@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Bit.Api.Models.Request;
+using Bit.Api.Models.Request.Organizations;
+using Bit.Api.Models.Response;
 using Bit.Core.Exceptions;
-using Bit.Web.Models.Api;
-using Bit.Web.Models.Api.Request;
-using Bit.Web.Models.Api.Response;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
