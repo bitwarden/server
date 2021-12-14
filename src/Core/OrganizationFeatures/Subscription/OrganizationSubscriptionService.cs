@@ -44,6 +44,24 @@ namespace Bit.Core.OrganizationFeatures.Subscription
             _logger = logger;
         }
 
+        public async Task UpdateSubscription(Guid organizationId, int seatAdjustment, int? maxAutoscaleSeats)
+        {
+            var organization = await _organizationRepository.GetByIdAsync(organizationId);
+
+            CoreHelpers.HandlePermissionResult(
+                _organizationSubscriptionAccessPolicies.CanUpdateSubscription(organization, seatAdjustment, maxAutoscaleSeats)
+            );
+
+            if (seatAdjustment != 0)
+            {
+                await AdjustSeatsAsync(organization, seatAdjustment);
+            }
+            if (maxAutoscaleSeats != organization.MaxAutoscaleSeats)
+            {
+                await UpdateAutoscalingAsync(organization, maxAutoscaleSeats);
+            }
+        }
+
         public async Task<string> AdjustSeatsAsync(Organization organization, int seatAdjustment, DateTime? prorationDate = null)
         {
             var userCount = await _organizationUserRepository.GetCountByOrganizationIdAsync(organization.Id);
@@ -118,6 +136,14 @@ namespace Bit.Core.OrganizationFeatures.Subscription
         }
 
         private async Task UpdateAutoscalingAsync(Organization organization, int? maxAutoscaleSeats)
+        {
+            CoreHelpers.HandlePermissionResult(
+                _organizationSubscriptionAccessPolicies.CanUpdateAutoscaling(organization, maxAutoscaleSeats)
+            );
+
+            organization.MaxAutoscaleSeats = maxAutoscaleSeats;
+
+            await _organizationService.ReplaceAndUpdateCache(organization);
         }
     }
 }

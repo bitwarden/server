@@ -303,7 +303,7 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            await _organizationService.UpdateSubscription(orgIdGuid, model.SeatAdjustment, model.MaxAutoscaleSeats);
+            await _organizationSubscriptionService.UpdateSubscription(orgIdGuid, model.SeatAdjustment, model.MaxAutoscaleSeats);
         }
 
         [HttpPost("{id}/seat")]

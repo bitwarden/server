@@ -100,5 +100,58 @@ namespace Bit.Core.OrganizationFeatures.Subscription
 
             return Success;
         }
+
+        public AccessPolicyResult CanUpdateSubscription(Organization organization, int seatAdjustment, int? maxAutoscaleSeats)
+        {
+            if (organization == null)
+            {
+                return Fail();
+            }
+
+            var newSeatCount = organization.Seats + seatAdjustment;
+            // TODO: possible bug: newSeatCount may be null
+            if (maxAutoscaleSeats.HasValue && newSeatCount > maxAutoscaleSeats.Value)
+            {
+                return Fail("Cannot set max seat autoscaling below seat count.");
+            }
+
+            return Success;
+        }
+
+        public AccessPolicyResult CanUpdateAutoscaling(Organization organization, int? maxAutoscaleSeats)
+        {
+            if (organization == null)
+            {
+                return Fail();
+            }
+
+            if (maxAutoscaleSeats.HasValue &&
+                    organization.Seats.HasValue &&
+                    maxAutoscaleSeats.Value < organization.Seats.Value)
+            {
+                return Fail($"Cannot set max seat autoscaling below current seat count.");
+            }
+
+            var plan = StaticStore.Plans.FirstOrDefault(p => p.Type == organization.PlanType);
+            if (plan == null)
+            {
+                return Fail("Existing plan not found.");
+            }
+
+            if (!plan.AllowSeatAutoscale)
+            {
+                return Fail("Your plan does not allow seat autoscaling.");
+            }
+
+            if (plan.MaxUsers.HasValue && maxAutoscaleSeats.HasValue &&
+                maxAutoscaleSeats > plan.MaxUsers)
+            {
+                return Fail(string.Concat($"Your plan has a seat limit of {plan.MaxUsers}, ",
+                    $"but you have specified a max autoscale count of {maxAutoscaleSeats}.",
+                    "Reduce your max autoscale seat count."));
+            }
+
+            return Success;
+        }
     }
 }
