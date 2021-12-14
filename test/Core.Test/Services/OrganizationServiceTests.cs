@@ -355,6 +355,10 @@ namespace Bit.Core.Test.Services
             currentContext.ManageUsers(organization.Id).Returns(true);
 
             await sutProvider.Sut.InviteUsersAsync(organization.Id, invitor.UserId, new (OrganizationUserInvite, string)[] { (invite, null) });
+
+            await sutProvider.GetDependency<IMailService>().Received(1)
+                .BulkSendOrganizationInviteEmailAsync(organization.Name, Arg.Any<bool>(),
+                    Arg.Is<IEnumerable<(OrganizationUser, ExpiringToken)>>(v => v.Count() == invite.Emails.Count()));
         }
 
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
