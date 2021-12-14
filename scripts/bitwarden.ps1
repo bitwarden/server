@@ -26,7 +26,7 @@ $scriptsDir = "${output}\scripts"
 $githubBaseUrl = "https://raw.githubusercontent.com/bitwarden/server/master"
 
 # Please do not create pull requests modifying the version numbers.
-$coreVersion = "1.45.0"
+$coreVersion = "1.45.2"
 $webVersion = "2.25.0"
 
 # Functions
