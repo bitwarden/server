@@ -285,11 +285,11 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            var result = await _organizationService.UpgradePlanAsync(orgIdGuid, model.ToOrganizationUpgrade());
+            var (success, paymentIntentClientSecret) = await _organizationSubscriptionService.UpgradePlanAsync(orgIdGuid, model.ToOrganizationUpgrade());
             return new PaymentResponseModel
             {
-                Success = result.Item1,
-                PaymentIntentClientSecret = result.Item2
+                Success = success,
+                PaymentIntentClientSecret = paymentIntentClientSecret
             };
         }
 
@@ -336,7 +336,7 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            var result = await _organizationService.AdjustStorageAsync(orgIdGuid, model.StorageGbAdjustment.Value);
+            var result = await _organizationSubscriptionService.AdjustStorageAsync(orgIdGuid, model.StorageGbAdjustment.Value);
             return new PaymentResponseModel
             {
                 Success = true,
@@ -367,7 +367,7 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            await _organizationService.CancelSubscriptionAsync(orgIdGuid);
+            await _organizationSubscriptionService.CancelSubscriptionAsync(orgIdGuid);
         }
 
         [HttpPost("{id}/reinstate")]
@@ -380,7 +380,7 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            await _organizationService.ReinstateSubscriptionAsync(orgIdGuid);
+            await _organizationSubscriptionService.ReinstateSubscriptionAsync(orgIdGuid);
         }
 
         [HttpPost("{id}/leave")]
