@@ -86,7 +86,7 @@ case "$PROJECT" in
     docker_build Attachments $PWD/util/Attachments $TAG $PUSH
     docker_build Icons $PWD/src/Icons $TAG $PUSH
     docker_build Notifications $PWD/src/Notifications $TAG $PUSH
-    docker_build MsSql $PWD/util/MsSql $TAG $PUSH$TAG $PUSH
+    docker_build MsSql $PWD/util/MsSql $TAG $PUSH
     docker_build Setup $PWD/util/Setup $TAG $PUSH
     docker_build EventsProcessor $PWD/src/EventsProcessor $TAG $PUSH
   ;;
