@@ -334,11 +334,16 @@ namespace Bit.Core.Test.Services
             inviteeUserType: (int)OrganizationUserType.User,
             invitorUserType: (int)OrganizationUserType.Custom
         )]
-        public async Task InviteUser_Passes(Organization organization, OrganizationUserInvite invite,
+        public async Task InviteUser_Passes(Organization organization, IEnumerable<(OrganizationUserInvite invite, string externalId)> invites,
             OrganizationUser invitor,
             [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)]OrganizationUser owner,
             SutProvider<OrganizationService> sutProvider)
         {
+            // Autofixture will add collections for all of the invites, remove the first and for all the rest set all access false
+            invites.First().invite.AccessAll = true;
+            invites.First().invite.Collections = null;
+            invites.Skip(1).ToList().ForEach(i => i.invite.AccessAll = false);
+
             invitor.Permissions = JsonSerializer.Serialize(new Permissions() { ManageUsers = true },
                 new JsonSerializerOptions
                 {
@@ -354,7 +359,11 @@ namespace Bit.Core.Test.Services
                 .Returns(new [] {owner});
             currentContext.ManageUsers(organization.Id).Returns(true);
 
-            await sutProvider.Sut.InviteUsersAsync(organization.Id, invitor.UserId, new (OrganizationUserInvite, string)[] { (invite, null) });
+            await sutProvider.Sut.InviteUsersAsync(organization.Id, invitor.UserId, invites);
+
+            await sutProvider.GetDependency<IMailService>().Received(1)
+                .BulkSendOrganizationInviteEmailAsync(organization.Name, Arg.Any<bool>(),
+                    Arg.Is<IEnumerable<(OrganizationUser, ExpiringToken)>>(v => v.Count() == invites.SelectMany(i => i.invite.Emails).Count()));
         }
 
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
