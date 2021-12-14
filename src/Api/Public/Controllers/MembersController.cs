@@ -6,12 +6,12 @@ using System.Threading.Tasks;
 using Bit.Api.Models.Public.Request;
 using Bit.Api.Models.Public.Response;
 using Bit.Core.Context;
-using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.OrganizationFeatures.UserInvite;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Bit.Core.Models.Data;
 
 namespace Bit.Api.Public.Controllers
 {
@@ -122,7 +122,7 @@ namespace Bit.Api.Public.Controllers
         public async Task<IActionResult> Post([FromBody] MemberCreateRequestModel model)
         {
             var associations = model.Collections?.Select(c => c.ToSelectionReadOnly());
-            var invite = new OrganizationUserInvite
+            var invite = new OrganizationUserInviteData
             {
                 Emails = new List<string> { model.Email },
                 Type = model.Type.Value,

@@ -140,7 +140,7 @@ namespace Bit.Api.Controllers
             }
 
             var userId = _userService.GetProperUserId(User);
-            var result = await _organizationUserInviteCommand.InviteUsersAsync(orgIdGuid, userId.Value, new[] { (new OrganizationUserInvite(model), (string)null) });
+            await _organizationUserInviteCommand.InviteUsersAsync(orgIdGuid, userId.Value, new[] { (model.ToData(), (string)null) });
         }
         
         [HttpPost("reinvite")]

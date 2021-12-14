@@ -417,10 +417,10 @@ namespace Bit.CommCore.Services
             await _eventService.LogProviderOrganizationEventAsync(providerOrganization, EventType.ProviderOrganization_Created);
 
             await _organizationUserInviteCommand.InviteUsersAsync(organization.Id, user.Id,
-                new (OrganizationUserInvite, string)[]
+                new (OrganizationUserInviteData, string)[]
                 {
                     (
-                        new OrganizationUserInvite
+                        new OrganizationUserInviteData
                         {
                             Emails = new[] { clientOwnerEmail },
                             AccessAll = true,

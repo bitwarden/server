@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Bit.Core.Enums;
-using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
@@ -20,7 +19,7 @@ namespace Bit.Core.Services.OrganizationServices.UserInvite
         }
 
         private static List<PlannedOrganizationUser> GeneratePlannedOrganizationUsers(Organization organization,
-            IEnumerable<(OrganizationUserInvite invite, string externalId)> invites,
+            IEnumerable<(OrganizationUserInviteData invite, string externalId)> invites,
             HashSet<string> existingUserEmails = null)
         {
             var orgUserInvites = new List<PlannedOrganizationUser>();
@@ -65,7 +64,7 @@ namespace Bit.Core.Services.OrganizationServices.UserInvite
         }
 
         public async Task<List<OrganizationUser>> InviteUsersAsync(Organization organization,
-            IEnumerable<(OrganizationUserInvite invite, string externalId)> invites,
+            IEnumerable<(OrganizationUserInviteData invite, string externalId)> invites,
             HashSet<string> existingUserEmails = null)
         {
             if (existingUserEmails == null)

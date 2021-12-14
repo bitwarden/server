@@ -12,6 +12,7 @@ using Bit.Core.Services.OrganizationServices.UserInvite;
 using Bit.Core.OrganizationFeatures.Mail;
 using Bit.Core.OrganizationFeatures.Subscription;
 using Bit.Core.Utilities;
+using Bit.Core.Models.Data;
 
 namespace Bit.Core.OrganizationFeatures.UserInvite
 {
@@ -50,11 +51,11 @@ namespace Bit.Core.OrganizationFeatures.UserInvite
             _referenceEventService = referenceEventService;
         }
 
-        public async Task<OrganizationUser> InviteUserAsync(Guid organizationId, Guid? invitingUserId, OrganizationUserInvite invite, string externalId) =>
+        public async Task<OrganizationUser> InviteUserAsync(Guid organizationId, Guid? invitingUserId, OrganizationUserInviteData invite, string externalId) =>
             (await InviteUsersAsync(organizationId, invitingUserId, new[] { (invite, externalId) })).FirstOrDefault();
 
         public async Task<List<OrganizationUser>> InviteUsersAsync(Guid organizationId, Guid? invitingUserId,
-            IEnumerable<(OrganizationUserInvite invite, string externalId)> invites)
+            IEnumerable<(OrganizationUserInviteData invite, string externalId)> invites)
         {
             // Validate inputs
             var organization = await _organizationRepository.GetByIdAsync(organizationId);
