@@ -6,9 +6,9 @@ using Bit.Core.Enums;
 using Microsoft.AspNetCore.Http;
 using Bit.Core.Models;
 using System.Net.Http;
-using Bit.Core.Models.Api;
 using Microsoft.Extensions.Logging;
 using System.Collections.Generic;
+using Bit.Core.Models.Api;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 

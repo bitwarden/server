@@ -8,14 +8,13 @@ using System.Collections.Generic;
 using Bit.Core.Models.Table;
 using Bit.Test.Common.AutoFixture;
 using Bit.Api.Controllers;
+using Bit.Api.Models.Request.Organizations;
 using Bit.Core.Context;
 using NSubstitute;
 using Bit.Core.Exceptions;
 using Bit.Api.Test.AutoFixture.Attributes;
 using Bit.Core.Repositories;
-using Bit.Core.Models.Api.Request;
 using Bit.Core.Services;
-using Bit.Core.Models.Api;
 using Bit.Core.Utilities;
 
 namespace Bit.Api.Test.Controllers

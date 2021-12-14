@@ -23,7 +23,6 @@ using System.Threading.Tasks;
 using Bit.Core.Models;
 using Bit.Core.Models.Api;
 using Bit.Core.Utilities;
-using System.Text.Json;
 using Bit.Core.Models.Data;
 using Bit.Core.Settings;
 

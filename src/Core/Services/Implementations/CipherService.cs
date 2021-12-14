@@ -12,7 +12,6 @@ using System.IO;
 using Bit.Core.Enums;
 using Bit.Core.Utilities;
 using Bit.Core.Settings;
-using Bit.Core.Models.Api;
 using Bit.Core.Models.Business;
 
 namespace Bit.Core.Services
@@ -187,17 +186,17 @@ namespace Bit.Core.Services
         }
 
         public async Task<(string attachmentId, string uploadUrl)> CreateAttachmentForDelayedUploadAsync(Cipher cipher,
-            AttachmentRequestModel request, Guid savingUserId)
+            string key, string fileName, long fileSize, bool adminRequest, Guid savingUserId)
         {
-            await ValidateCipherEditForAttachmentAsync(cipher, savingUserId, request.AdminRequest, request.FileSize);
+            await ValidateCipherEditForAttachmentAsync(cipher, savingUserId, adminRequest, fileSize);
 
             var attachmentId = Utilities.CoreHelpers.SecureRandomString(32, upper: false, special: false);
             var data = new CipherAttachment.MetaData
             {
                 AttachmentId = attachmentId,
-                FileName = request.FileName,
-                Key = request.Key,
-                Size = request.FileSize,
+                FileName = fileName,
+                Key = key,
+                Size = fileSize,
                 Validated = false,
             };
 
@@ -357,7 +356,7 @@ namespace Bit.Core.Services
             return valid;
         }
 
-        public async Task<AttachmentResponseModel> GetAttachmentDownloadDataAsync(Cipher cipher, string attachmentId)
+        public async Task<AttachmentResponseData> GetAttachmentDownloadDataAsync(Cipher cipher, string attachmentId)
         {
             var attachments = cipher?.GetAttachments() ?? new Dictionary<string, CipherAttachment.MetaData>();
 
@@ -367,9 +366,12 @@ namespace Bit.Core.Services
             }
 
             var data = attachments[attachmentId];
-            var response = new AttachmentResponseModel(attachmentId, data, cipher, _globalSettings)
+            var response = new AttachmentResponseData
             {
-                Url = await _attachmentStorageService.GetAttachmentDownloadUrlAsync(cipher, data)
+                Cipher = cipher,
+                Data = data,
+                Id = attachmentId,
+                Url = await _attachmentStorageService.GetAttachmentDownloadUrlAsync(cipher, data),
             };
 
             return response;

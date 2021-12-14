@@ -1,6 +1,6 @@
 ﻿using System;
+using Bit.Api.Models.Public.Response;
 using InternalApi = Bit.Core.Models.Api;
-using PublicApi = Bit.Core.Models.Api.Public;
 using Bit.Core.Exceptions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
@@ -33,7 +33,7 @@ namespace Bit.Api.Utilities
                 return;
             }
 
-            PublicApi.ErrorResponseModel publicErrorModel = null;
+            ErrorResponseModel publicErrorModel = null;
             InternalApi.ErrorResponseModel internalErrorModel = null;
             if (exception is BadRequestException badRequestException)
             {
@@ -42,7 +42,7 @@ namespace Bit.Api.Utilities
                 {
                     if (_publicApi)
                     {
-                        publicErrorModel = new PublicApi.ErrorResponseModel(badRequestException.ModelState);
+                        publicErrorModel = new ErrorResponseModel(badRequestException.ModelState);
                     }
                     else
                     {
@@ -59,7 +59,7 @@ namespace Bit.Api.Utilities
                 context.HttpContext.Response.StatusCode = 400;
                 if (_publicApi)
                 {
-                    publicErrorModel = new PublicApi.ErrorResponseModel(stripeException.StripeError.Param,
+                    publicErrorModel = new ErrorResponseModel(stripeException.StripeError.Param,
                         stripeException.Message);
                 }
                 else
@@ -107,7 +107,7 @@ namespace Bit.Api.Utilities
 
             if (_publicApi)
             {
-                var errorModel = publicErrorModel ?? new PublicApi.ErrorResponseModel(errorMessage);
+                var errorModel = publicErrorModel ?? new ErrorResponseModel(errorMessage);
                 context.Result = new ObjectResult(errorModel);
             }
             else

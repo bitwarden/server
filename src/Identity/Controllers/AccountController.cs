@@ -1,7 +1,5 @@
-﻿using Bit.Core.Models.Api;
-using Bit.Core.Models.Table;
+﻿using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Identity.Models;
 using IdentityModel;
 using IdentityServer4;
@@ -9,7 +7,6 @@ using IdentityServer4.Services;
 using IdentityServer4.Stores;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -19,6 +16,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using Bit.Core.Models.Api;
 
 namespace Bit.Identity.Controllers
 {

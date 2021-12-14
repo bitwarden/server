@@ -1,12 +1,10 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Bit.Core.Models.Api;
+using Microsoft.AspNetCore.Mvc;
 using System.Threading.Tasks;
+using Bit.Api.Models.Request;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Bit.Core.Settings;
 using Stripe;
-using System.Linq;
-using System.Collections.Generic;
 
 namespace Bit.Api.Controllers
 {
