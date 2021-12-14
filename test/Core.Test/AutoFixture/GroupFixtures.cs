@@ -1,14 +1,14 @@
+﻿using System;
 using AutoFixture;
-using TableModel = Bit.Core.Models.Table;
 using AutoFixture.Kernel;
-using System;
-using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using Bit.Core.Repositories.EntityFramework;
 using Bit.Core.Test.AutoFixture.EntityFrameworkRepositoryFixtures;
+using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using Bit.Core.Test.AutoFixture.Relays;
-using Fixtures = Bit.Core.Test.AutoFixture.OrganizationFixtures;
-using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.AutoFixture;
+using Bit.Test.Common.AutoFixture.Attributes;
+using Fixtures = Bit.Core.Test.AutoFixture.OrganizationFixtures;
+using TableModel = Bit.Core.Models.Table;
 
 namespace Bit.Core.Test.AutoFixture.GroupFixtures
 {
@@ -26,11 +26,11 @@ namespace Bit.Core.Test.AutoFixture.GroupFixtures
         { }
     }
 
-    internal class GroupBuilder: ISpecimenBuilder
+    internal class GroupBuilder : ISpecimenBuilder
     {
         public object Create(object request, ISpecimenContext context)
         {
-            if (context == null) 
+            if (context == null)
             {
                 throw new ArgumentNullException(nameof(context));
             }
@@ -48,7 +48,7 @@ namespace Bit.Core.Test.AutoFixture.GroupFixtures
         }
     }
 
-    internal class EfGroup: ICustomization 
+    internal class EfGroup : ICustomization
     {
         public void Customize(IFixture fixture)
         {

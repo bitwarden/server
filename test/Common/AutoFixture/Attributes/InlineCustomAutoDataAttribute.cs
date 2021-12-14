@@ -1,8 +1,8 @@
-using System;
+﻿using System;
+using AutoFixture;
+using AutoFixture.Xunit2;
 using Xunit;
 using Xunit.Sdk;
-using AutoFixture.Xunit2;
-using AutoFixture;
 
 namespace Bit.Test.Common.AutoFixture.Attributes
 {

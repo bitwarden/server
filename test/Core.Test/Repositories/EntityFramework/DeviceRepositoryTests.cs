@@ -1,12 +1,12 @@
-using Bit.Core.Test.AutoFixture.Attributes;
-using Xunit;
-using SqlRepo = Bit.Core.Repositories.SqlServer;
-using EfRepo  = Bit.Core.Repositories.EntityFramework;
-using System.Collections.Generic;
-using Bit.Core.Models.Table;
-using Bit.Core.Test.Repositories.EntityFramework.EqualityComparers;
+﻿using System.Collections.Generic;
 using System.Linq;
+using Bit.Core.Models.Table;
+using Bit.Core.Test.AutoFixture.Attributes;
 using Bit.Core.Test.AutoFixture.DeviceFixtures;
+using Bit.Core.Test.Repositories.EntityFramework.EqualityComparers;
+using Xunit;
+using EfRepo = Bit.Core.Repositories.EntityFramework;
+using SqlRepo = Bit.Core.Repositories.SqlServer;
 
 namespace Bit.Core.Test.Repositories.EntityFramework
 {
@@ -44,6 +44,6 @@ namespace Bit.Core.Test.Repositories.EntityFramework
             var distinctItems = savedDevices.Distinct(equalityComparer);
             Assert.True(!distinctItems.Skip(1).Any());
         }
-        
+
     }
 }

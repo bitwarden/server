@@ -34,7 +34,7 @@ namespace Bit.Core.IdentityServer
 
             var options = new DistributedCacheEntryOptions();
             options.SetAbsoluteExpiration(expiresUtc);
-            
+
             var ticket = TicketSerializer.Default.Serialize(data);
             Cache.Set(cacheKey, ticket, options);
 

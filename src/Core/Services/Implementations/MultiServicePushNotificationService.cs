@@ -1,13 +1,13 @@
 ﻿using System;
-using System.Threading.Tasks;
-using Bit.Core.Models.Table;
-using Bit.Core.Enums;
 using System.Collections.Generic;
-using Microsoft.AspNetCore.Http;
-using Bit.Core.Utilities;
-using Microsoft.Extensions.Logging;
+using System.Threading.Tasks;
+using Bit.Core.Enums;
+using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
+using Bit.Core.Utilities;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Services
 {
@@ -53,7 +53,7 @@ namespace Bit.Core.Services
                     _services.Add(new AzureQueuePushNotificationService(globalSettings, httpContextAccessor));
                 }
             }
-            
+
             _logger = logger;
         }
 

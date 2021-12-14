@@ -1,4 +1,4 @@
-namespace Bit.Api.Models.Request
+﻿namespace Bit.Api.Models.Request
 {
     public class AttachmentRequestModel
     {

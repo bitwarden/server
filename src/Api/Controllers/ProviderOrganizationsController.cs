@@ -18,7 +18,7 @@ namespace Bit.Api.Controllers
     [Authorize("Application")]
     public class ProviderOrganizationsController : Controller
     {
-        
+
         private readonly IProviderOrganizationRepository _providerOrganizationRepository;
         private readonly IProviderService _providerService;
         private readonly IUserService _userService;
@@ -35,7 +35,7 @@ namespace Bit.Api.Controllers
             _userService = userService;
             _currentContext = currentContext;
         }
-        
+
         [HttpGet("")]
         public async Task<ListResponseModel<ProviderOrganizationOrganizationDetailsResponseModel>> Get(Guid providerId)
         {
@@ -50,13 +50,13 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("add")]
-        public async Task Add(Guid providerId, [FromBody]ProviderOrganizationAddRequestModel model)
+        public async Task Add(Guid providerId, [FromBody] ProviderOrganizationAddRequestModel model)
         {
             if (!_currentContext.ManageProviderOrganizations(providerId))
             {
                 throw new NotFoundException();
             }
-            
+
             var userId = _userService.GetProperUserId(User).Value;
 
             await _providerService.AddOrganization(providerId, model.OrganizationId, userId, model.Key);

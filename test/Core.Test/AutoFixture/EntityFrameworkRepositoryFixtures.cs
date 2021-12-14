@@ -1,24 +1,25 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Reflection;
 using AutoFixture;
+using AutoFixture.Kernel;
 using AutoMapper;
 using Bit.Core.Models.EntityFramework;
 using Bit.Core.Models.EntityFramework.Provider;
-using System.Collections.Generic;
-using AutoFixture.Kernel;
-using System;
-using Moq;
-using Microsoft.Extensions.DependencyInjection;
-using System.Reflection;
 using Bit.Core.Repositories.EntityFramework;
-using Microsoft.EntityFrameworkCore;
 using Bit.Core.Settings;
 using Bit.Core.Test.Helpers.Factories;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Moq;
 
 namespace Bit.Core.Test.AutoFixture.EntityFrameworkRepositoryFixtures
 {
-    internal class ServiceScopeFactoryBuilder: ISpecimenBuilder
+    internal class ServiceScopeFactoryBuilder : ISpecimenBuilder
     {
         private DbContextOptions<DatabaseContext> _options { get; set; }
-        public ServiceScopeFactoryBuilder(DbContextOptions<DatabaseContext> options) {
+        public ServiceScopeFactoryBuilder(DbContextOptions<DatabaseContext> options)
+        {
             _options = options;
         }
 
@@ -42,11 +43,11 @@ namespace Bit.Core.Test.AutoFixture.EntityFrameworkRepositoryFixtures
         }
     }
 
-    public class EfRepositoryListBuilder<T>: ISpecimenBuilder where T: BaseEntityFrameworkRepository
+    public class EfRepositoryListBuilder<T> : ISpecimenBuilder where T : BaseEntityFrameworkRepository
     {
         public object Create(object request, ISpecimenContext context)
         {
-            if (context == null) 
+            if (context == null)
             {
                 throw new ArgumentNullException(nameof(context));
             }
@@ -62,8 +63,9 @@ namespace Bit.Core.Test.AutoFixture.EntityFrameworkRepositoryFixtures
             {
                 var fixture = new Fixture();
                 fixture.Customize<IServiceScopeFactory>(x => x.FromFactory(new ServiceScopeFactoryBuilder(option)));
-                fixture.Customize<IMapper>(x => x.FromFactory(() => 
-                    new MapperConfiguration(cfg => {
+                fixture.Customize<IMapper>(x => x.FromFactory(() =>
+                    new MapperConfiguration(cfg =>
+                    {
                         cfg.AddProfile<CipherMapperProfile>();
                         cfg.AddProfile<CollectionCipherMapperProfile>();
                         cfg.AddProfile<CollectionMapperProfile>();

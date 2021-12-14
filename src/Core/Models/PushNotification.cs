@@ -1,6 +1,6 @@
-﻿using Bit.Core.Enums;
-using System;
+﻿using System;
 using System.Collections.Generic;
+using Bit.Core.Enums;
 
 namespace Bit.Core.Models
 {
@@ -12,7 +12,7 @@ namespace Bit.Core.Models
             Payload = payload;
             ContextId = contextId;
         }
-        
+
         public PushType Type { get; set; }
         public T Payload { get; set; }
         public string ContextId { get; set; }

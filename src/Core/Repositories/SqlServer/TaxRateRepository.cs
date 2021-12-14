@@ -1,11 +1,11 @@
-using Bit.Core.Models.Table;
-using Bit.Core.Settings;
-using System.Threading.Tasks;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
-using Dapper;
 using System.Linq;
+using System.Threading.Tasks;
+using Bit.Core.Models.Table;
+using Bit.Core.Settings;
+using Dapper;
 
 namespace Bit.Core.Repositories.SqlServer
 {
@@ -31,7 +31,7 @@ namespace Bit.Core.Repositories.SqlServer
                 return results.ToList();
             }
         }
-        
+
         public async Task<ICollection<TaxRate>> GetAllActiveAsync()
         {
             using (var connection = new SqlConnection(ConnectionString))

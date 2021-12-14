@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Bit.Core.Models.Api;
 
 namespace Bit.Api.Models.Response
@@ -10,7 +10,7 @@ namespace Bit.Api.Models.Response
             Id = orgId.ToString();
             ResetPasswordEnabled = resetPasswordEnabled;
         }
-        
+
         public string Id { get; set; }
         public bool ResetPasswordEnabled { get; set; }
     }

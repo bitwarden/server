@@ -1,9 +1,9 @@
-using System.Reflection;
+﻿using System;
 using System.IO;
 using System.Linq;
-using Xunit;
-using System;
+using System.Reflection;
 using Newtonsoft.Json;
+using Xunit;
 
 namespace Bit.Test.Common.Helpers
 {

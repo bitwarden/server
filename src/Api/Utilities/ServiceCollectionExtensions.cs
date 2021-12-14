@@ -53,7 +53,7 @@ namespace Bit.Api.Utilities
                     {
                         new OpenApiSecurityScheme
                         {
-                            Reference = new OpenApiReference 
+                            Reference = new OpenApiReference
                             {
                                 Type = ReferenceType.SecurityScheme,
                                 Id = "OAuth2 Client Credentials"

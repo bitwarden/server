@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading.Tasks;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Core.Context;
@@ -43,7 +43,7 @@ namespace Bit.Api.Controllers
         public async Task CreateSponsorship(Guid sponsoringOrgId, [FromBody] OrganizationSponsorshipRequestModel model)
         {
             await _organizationsSponsorshipService.OfferSponsorshipAsync(
-                await _organizationRepository.GetByIdAsync(sponsoringOrgId), 
+                await _organizationRepository.GetByIdAsync(sponsoringOrgId),
                 await _organizationUserRepository.GetByOrganizationAsync(sponsoringOrgId, _currentContext.UserId ?? default),
                 model.PlanSponsorshipType, model.SponsoredEmail, model.FriendlyName,
                 (await CurrentUser).Email);
@@ -57,7 +57,7 @@ namespace Bit.Api.Controllers
                 .GetByOrganizationAsync(sponsoringOrgId, _currentContext.UserId ?? default);
 
             await _organizationsSponsorshipService.ResendSponsorshipOfferAsync(
-                await _organizationRepository.GetByIdAsync(sponsoringOrgId), 
+                await _organizationRepository.GetByIdAsync(sponsoringOrgId),
                 sponsoringOrgUser,
                 await _organizationSponsorshipRepository
                     .GetBySponsoringOrganizationUserIdAsync(sponsoringOrgUser.Id),

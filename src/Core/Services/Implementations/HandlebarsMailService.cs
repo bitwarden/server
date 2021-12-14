@@ -1,19 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
-using Bit.Core.Models.Table;
-using Bit.Core.Models.Mail;
-using Bit.Core.Settings;
 using System.IO;
-using System.Net;
-using Bit.Core.Utilities;
 using System.Linq;
+using System.Net;
 using System.Reflection;
+using System.Threading.Tasks;
+using Bit.Core.Models.Business;
+using Bit.Core.Models.Mail;
 using Bit.Core.Models.Mail.FamiliesForEnterprise;
 using Bit.Core.Models.Mail.Provider;
+using Bit.Core.Models.Table;
 using Bit.Core.Models.Table.Provider;
+using Bit.Core.Settings;
+using Bit.Core.Utilities;
 using HandlebarsDotNet;
-using Bit.Core.Models.Business;
 
 namespace Bit.Core.Services
 {
@@ -327,7 +327,7 @@ namespace Bit.Core.Services
             message.Category = "AddedCredit";
             await _mailDeliveryService.SendEmailAsync(message);
         }
-        
+
         public async Task SendLicenseExpiredAsync(IEnumerable<string> emails, string organizationName = null)
         {
             var message = CreateDefaultMessage("License Expired", emails);
@@ -397,7 +397,7 @@ namespace Bit.Core.Services
             await AddMessageContentAsync(message, queueMessage.TemplateName, queueMessage.Model);
             await _mailDeliveryService.SendEmailAsync(message);
         }
-        
+
         public async Task SendAdminResetPasswordEmailAsync(string email, string userName, string orgName)
         {
             var message = CreateDefaultMessage("Master Password Has Been Changed", email);
@@ -615,7 +615,7 @@ namespace Bit.Core.Services
         public async Task SendEmergencyAccessRecoveryInitiated(EmergencyAccess emergencyAccess, string initiatingName, string email)
         {
             var message = CreateDefaultMessage("Emergency Access Initiated", email);
-            
+
             var remainingTime = DateTime.UtcNow - emergencyAccess.RecoveryInitiatedDate.GetValueOrDefault();
 
             var model = new EmergencyAccessRecoveryViewModel
@@ -628,7 +628,7 @@ namespace Bit.Core.Services
             message.Category = "EmergencyAccessRecovery";
             await _mailDeliveryService.SendEmailAsync(message);
         }
-        
+
         public async Task SendEmergencyAccessRecoveryApproved(EmergencyAccess emergencyAccess, string approvingName, string email)
         {
             var message = CreateDefaultMessage("Emergency Access Approved", email);
@@ -658,7 +658,7 @@ namespace Bit.Core.Services
             var message = CreateDefaultMessage("Pending Emergency Access Request", email);
 
             var remainingTime = DateTime.UtcNow - emergencyAccess.RecoveryInitiatedDate.GetValueOrDefault();
-            
+
             var model = new EmergencyAccessRecoveryViewModel
             {
                 Name = CoreHelpers.SanitizeForEmail(initiatingName),
@@ -682,7 +682,7 @@ namespace Bit.Core.Services
             message.Category = "EmergencyAccessRecoveryTimedOut";
             await _mailDeliveryService.SendEmailAsync(message);
         }
-        
+
         public async Task SendProviderSetupInviteEmailAsync(Provider provider, string token, string email)
         {
             var message = CreateDefaultMessage($"Create a Provider", email);
@@ -745,7 +745,7 @@ namespace Bit.Core.Services
             message.Category = "ProviderUserRemoved";
             await _mailDeliveryService.SendEmailAsync(message);
         }
-        
+
         public async Task SendUpdatedTempPasswordEmailAsync(string email, string userName)
         {
             var message = CreateDefaultMessage("Master Password Has Been Changed", email);
@@ -829,7 +829,7 @@ namespace Bit.Core.Services
             message.Category = "FamiliesForEnterpriseSponsorshipReverting";
             await _mailDeliveryService.SendEmailAsync(message);
         }
-        
+
         public async Task SendOTPEmailAsync(string email, string token)
         {
             var message = CreateDefaultMessage("Your Bitwarden Verification Code", email);

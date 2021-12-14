@@ -1,11 +1,11 @@
+﻿using System;
 using System.Collections.Generic;
+using Bit.Core.Enums;
 using Bit.Core.Repositories.EntityFramework;
 using Bit.Core.Settings;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
-using Bit.Core.Enums;
 using Microsoft.EntityFrameworkCore.Design;
-using System;
+using Microsoft.Extensions.Configuration;
 
 namespace MySqlMigrations
 {
@@ -20,7 +20,7 @@ namespace MySqlMigrations
         }
     }
 
-     public class DatabaseContextFactory : IDesignTimeDbContextFactory<DatabaseContext>
+    public class DatabaseContextFactory : IDesignTimeDbContextFactory<DatabaseContext>
     {
         public DatabaseContext CreateDbContext(string[] args)
         {
@@ -32,7 +32,7 @@ namespace MySqlMigrations
                 throw new Exception("No MySql connection string found.");
             }
             optionsBuilder.UseMySql(
-                connectionString, 
+                connectionString,
                 ServerVersion.AutoDetect(connectionString),
                 b => b.MigrationsAssembly("MySqlMigrations"));
             return new DatabaseContext(optionsBuilder.Options);

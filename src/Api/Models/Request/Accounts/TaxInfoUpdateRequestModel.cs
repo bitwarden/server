@@ -9,7 +9,7 @@ namespace Bit.Api.Models.Request.Accounts
         public string Country { get; set; }
         public string PostalCode { get; set; }
 
-        public virtual IEnumerable<ValidationResult> Validate (ValidationContext validationContext)
+        public virtual IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {
             if (Country == "US" && string.IsNullOrWhiteSpace(PostalCode))
             {

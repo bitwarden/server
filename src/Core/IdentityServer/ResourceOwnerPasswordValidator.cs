@@ -1,16 +1,16 @@
-﻿using Bit.Core.Models.Table;
+﻿using System.Collections.Generic;
+using System.Security.Claims;
+using System.Threading.Tasks;
+using Bit.Core.Context;
+using Bit.Core.Identity;
+using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
+using Bit.Core.Settings;
+using Bit.Core.Utilities;
 using IdentityServer4.Models;
 using IdentityServer4.Validation;
 using Microsoft.AspNetCore.Identity;
-using System.Collections.Generic;
-using System.Security.Claims;
-using System.Threading.Tasks;
-using Bit.Core.Services;
-using Bit.Core.Identity;
-using Bit.Core.Context;
-using Bit.Core.Settings;
-using Bit.Core.Utilities;
 using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.IdentityServer

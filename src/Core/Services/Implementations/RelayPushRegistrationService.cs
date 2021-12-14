@@ -1,10 +1,10 @@
 ﻿using System.Collections.Generic;
-using System.Threading.Tasks;
-using System.Net.Http;
-using Bit.Core.Enums;
-using Bit.Core.Settings;
 using System.Linq;
+using System.Net.Http;
+using System.Threading.Tasks;
+using Bit.Core.Enums;
 using Bit.Core.Models.Api;
+using Bit.Core.Settings;
 using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Services

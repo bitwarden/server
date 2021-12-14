@@ -1,4 +1,8 @@
-﻿using Microsoft.AspNetCore.Builder;
+﻿using System;
+using System.Security.Authentication;
+using System.Security.Cryptography.X509Certificates;
+using Bit.Core.Settings;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
@@ -6,10 +10,6 @@ using Microsoft.Extensions.Logging;
 using Serilog;
 using Serilog.Events;
 using Serilog.Sinks.Syslog;
-using System;
-using System.Security.Authentication;
-using System.Security.Cryptography.X509Certificates;
-using Bit.Core.Settings;
 
 namespace Bit.Core.Utilities
 {
@@ -83,7 +83,7 @@ namespace Bit.Core.Utilities
                 {
                     config.WriteTo.LocalSyslog(appName);
                 }
-                else if (Uri.TryCreate(globalSettings.Syslog.Destination,UriKind.Absolute, out var syslogAddress))
+                else if (Uri.TryCreate(globalSettings.Syslog.Destination, UriKind.Absolute, out var syslogAddress))
                 {
                     // Syslog's standard port is 514 (both UDP and TCP). TLS does not have a standard port, so assume 514.
                     int port = syslogAddress.Port >= 0
@@ -107,7 +107,7 @@ namespace Bit.Core.Utilities
                         {
                             config.WriteTo.TcpSyslog(syslogAddress.Host, port, appName,
                                 secureProtocols: protocols,
-                                certProvider: new CertificateStoreProvider(StoreName.My, StoreLocation.CurrentUser, 
+                                certProvider: new CertificateStoreProvider(StoreName.My, StoreLocation.CurrentUser,
                                                                            globalSettings.Syslog.CertificateThumbprint));
                         }
                         else

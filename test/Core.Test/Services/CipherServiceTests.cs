@@ -1,17 +1,17 @@
-using System;
-using System.Threading.Tasks;
-using Bit.Core.Repositories;
-using Bit.Core.Services;
-using NSubstitute;
-using Xunit;
-using Bit.Core.Exceptions;
-using Bit.Core.Models.Table;
-using Core.Models.Data;
-using Bit.Core.Test.AutoFixture.CipherFixtures;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Castle.Core.Internal;
+using System.Threading.Tasks;
+using Bit.Core.Exceptions;
+using Bit.Core.Models.Table;
+using Bit.Core.Repositories;
+using Bit.Core.Services;
+using Bit.Core.Test.AutoFixture.CipherFixtures;
 using Bit.Test.Common.AutoFixture;
+using Castle.Core.Internal;
+using Core.Models.Data;
+using NSubstitute;
+using Xunit;
 
 namespace Bit.Core.Test.Services
 {

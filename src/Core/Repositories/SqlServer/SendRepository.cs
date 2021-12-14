@@ -1,12 +1,12 @@
 ﻿using System;
-using Bit.Core.Models.Table;
-using Bit.Core.Settings;
-using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
-using Dapper;
 using System.Linq;
+using System.Threading.Tasks;
+using Bit.Core.Models.Table;
+using Bit.Core.Settings;
+using Dapper;
 
 namespace Bit.Core.Repositories.SqlServer
 {

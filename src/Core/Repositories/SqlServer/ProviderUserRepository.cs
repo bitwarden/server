@@ -35,7 +35,7 @@ namespace Bit.Core.Repositories.SqlServer
                 return result;
             }
         }
-        
+
         public async Task<ICollection<ProviderUser>> GetManyAsync(IEnumerable<Guid> ids)
         {
             using (var connection = new SqlConnection(ConnectionString))
@@ -48,7 +48,7 @@ namespace Bit.Core.Repositories.SqlServer
                 return results.ToList();
             }
         }
-        
+
         public async Task<ICollection<ProviderUser>> GetManyByUserAsync(Guid userId)
         {
             using (var connection = new SqlConnection(ConnectionString))
@@ -61,7 +61,7 @@ namespace Bit.Core.Repositories.SqlServer
                 return results.ToList();
             }
         }
-        
+
         public async Task<ProviderUser> GetByProviderUserAsync(Guid providerId, Guid userId)
         {
             using (var connection = new SqlConnection(ConnectionString))
@@ -74,7 +74,7 @@ namespace Bit.Core.Repositories.SqlServer
                 return results.SingleOrDefault();
             }
         }
-        
+
         public async Task<ICollection<ProviderUser>> GetManyByProviderAsync(Guid providerId, ProviderUserType? type)
         {
             using (var connection = new SqlConnection(ConnectionString))
@@ -87,7 +87,7 @@ namespace Bit.Core.Repositories.SqlServer
                 return results.ToList();
             }
         }
-        
+
         public async Task<ICollection<ProviderUserUserDetails>> GetManyDetailsByProviderAsync(Guid providerId)
         {
             using (var connection = new SqlConnection(ConnectionString))

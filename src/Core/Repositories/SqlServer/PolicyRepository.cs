@@ -1,13 +1,13 @@
 ﻿using System;
-using Bit.Core.Models.Table;
 using System.Collections.Generic;
-using System.Threading.Tasks;
-using System.Data.SqlClient;
 using System.Data;
-using Dapper;
+using System.Data.SqlClient;
 using System.Linq;
+using System.Threading.Tasks;
 using Bit.Core.Enums;
+using Bit.Core.Models.Table;
 using Bit.Core.Settings;
+using Dapper;
 
 namespace Bit.Core.Repositories.SqlServer
 {
@@ -60,7 +60,7 @@ namespace Bit.Core.Repositories.SqlServer
         }
 
         public async Task<ICollection<Policy>> GetManyByTypeApplicableToUserIdAsync(Guid userId, PolicyType policyType,
-            OrganizationUserStatusType minStatus) 
+            OrganizationUserStatusType minStatus)
         {
             using (var connection = new SqlConnection(ConnectionString))
             {
@@ -74,7 +74,7 @@ namespace Bit.Core.Repositories.SqlServer
         }
 
         public async Task<int> GetCountByTypeApplicableToUserIdAsync(Guid userId, PolicyType policyType,
-            OrganizationUserStatusType minStatus) 
+            OrganizationUserStatusType minStatus)
         {
             using (var connection = new SqlConnection(ConnectionString))
             {

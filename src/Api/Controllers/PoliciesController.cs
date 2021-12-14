@@ -3,16 +3,16 @@ using System.Linq;
 using System.Threading.Tasks;
 using Bit.Api.Models.Request;
 using Bit.Api.Models.Response;
-using Microsoft.AspNetCore.Mvc;
-using Bit.Core.Repositories;
-using Microsoft.AspNetCore.Authorization;
-using Bit.Core.Exceptions;
-using Bit.Core.Services;
 using Bit.Core.Context;
 using Bit.Core.Enums;
-using Bit.Core.Utilities;
+using Bit.Core.Exceptions;
+using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bit.Core.Utilities;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.Controllers
 {
@@ -83,8 +83,8 @@ namespace Bit.Api.Controllers
 
         [AllowAnonymous]
         [HttpGet("token")]
-        public async Task<ListResponseModel<PolicyResponseModel>> GetByToken(string orgId, [FromQuery]string email,
-            [FromQuery]string token, [FromQuery]string organizationUserId)
+        public async Task<ListResponseModel<PolicyResponseModel>> GetByToken(string orgId, [FromQuery] string email,
+            [FromQuery] string token, [FromQuery] string organizationUserId)
         {
             var orgUserId = new Guid(organizationUserId);
             var tokenValid = CoreHelpers.UserInviteTokenIsValid(_organizationServiceDataProtector, token,
@@ -107,7 +107,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPut("{type}")]
-        public async Task<PolicyResponseModel> Put(string orgId, int type, [FromBody]PolicyRequestModel model)
+        public async Task<PolicyResponseModel> Put(string orgId, int type, [FromBody] PolicyRequestModel model)
         {
             var orgIdGuid = new Guid(orgId);
             if (!await _currentContext.ManagePolicies(orgIdGuid))

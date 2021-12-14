@@ -1,14 +1,14 @@
-﻿using Bit.Core.Exceptions;
+﻿using System;
+using System.Threading.Tasks;
+using Bit.Core.Exceptions;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Test.AutoFixture.Attributes;
 using Bit.Core.Test.AutoFixture;
+using Bit.Core.Test.AutoFixture.Attributes;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
-using System.Threading.Tasks;
-using System;
 using Xunit;
 
 namespace Bit.Core.Test.Services
@@ -63,7 +63,7 @@ namespace Bit.Core.Test.Services
             };
 
             sutProvider.GetDependency<IUserService>().GetUserByIdAsync(savingUser.Id).Returns(savingUser);
-           
+
             var exception = await Assert.ThrowsAsync<BadRequestException>(
                 () => sutProvider.Sut.SaveAsync(emergencyAccess, savingUser.Id));
 

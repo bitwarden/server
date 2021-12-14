@@ -90,7 +90,7 @@ namespace Bit.Api.Models.Request.Organizations
         [Required]
         public IEnumerable<string> GroupIds { get; set; }
     }
-    
+
     public class OrganizationUserResetPasswordEnrollmentRequestModel
     {
         public string ResetPasswordKey { get; set; }

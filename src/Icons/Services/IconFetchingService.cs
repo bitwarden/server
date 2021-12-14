@@ -4,11 +4,11 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Text;
 using System.Threading.Tasks;
+using AngleSharp.Html.Parser;
 using Bit.Icons.Models;
 using Microsoft.Extensions.Logging;
-using System.Text;
-using AngleSharp.Html.Parser;
 
 namespace Bit.Icons.Services
 {

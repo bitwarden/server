@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Microsoft.AspNetCore.Mvc;
 using Bit.Core.Utilities;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.Controllers
 {
@@ -20,7 +20,7 @@ namespace Bit.Api.Controllers
         {
             return Json(CoreHelpers.GetVersion());
         }
-        
+
         [HttpGet("~/ip")]
         public JsonResult Ip()
         {

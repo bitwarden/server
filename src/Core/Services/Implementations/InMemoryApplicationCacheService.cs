@@ -37,7 +37,7 @@ namespace Bit.Core.Services
             await InitProviderAbilitiesAsync();
             return _providerAbilities;
         }
-        
+
         public virtual async Task UpsertProviderAbilityAsync(Provider provider)
         {
             await InitProviderAbilitiesAsync();
@@ -88,7 +88,7 @@ namespace Bit.Core.Services
                 _lastOrgAbilityRefresh = now;
             }
         }
-        
+
         private async Task InitProviderAbilitiesAsync()
         {
             var now = DateTime.UtcNow;

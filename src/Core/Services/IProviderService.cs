@@ -1,9 +1,9 @@
-﻿using System.Threading.Tasks;
-using Bit.Core.Models.Table;
+﻿using System;
 using System.Collections.Generic;
-using System;
+using System.Threading.Tasks;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Business.Provider;
+using Bit.Core.Models.Table;
 using Bit.Core.Models.Table.Provider;
 
 namespace Bit.Core.Services
