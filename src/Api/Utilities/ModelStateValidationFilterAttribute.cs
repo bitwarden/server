@@ -1,8 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using InternalApi = Bit.Core.Models.Api;
-using PublicApi = Bit.Core.Models.Api.Public;
 using System.Linq;
+using Bit.Api.Models.Public.Response;
 
 namespace Bit.Api.Utilities
 {
@@ -27,7 +27,7 @@ namespace Bit.Api.Utilities
             {
                 if (_publicApi)
                 {
-                    context.Result = new BadRequestObjectResult(new PublicApi.ErrorResponseModel(context.ModelState));
+                    context.Result = new BadRequestObjectResult(new ErrorResponseModel(context.ModelState));
                 }
                 else
                 {

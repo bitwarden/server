@@ -2,13 +2,16 @@
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Bit.Core.Models.Api;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Identity;
 using Bit.Core.Models.Table;
 using Bit.Core.Enums;
 using System.Linq;
+using Bit.Api.Models.Request;
+using Bit.Api.Models.Request.Accounts;
+using Bit.Api.Models.Response;
+using Bit.Api.Models.Response.TwoFactor;
 using Bit.Core.Context;
 using Bit.Core.Repositories;
 using Bit.Core.Utilities;

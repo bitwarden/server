@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Bit.Core.Repositories;
 using Microsoft.AspNetCore.Authorization;
-using Bit.Core.Models.Api;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Core.Context;
@@ -15,6 +14,10 @@ using Bit.Core.Models.Table;
 using Bit.Core.Settings;
 using Core.Models.Data;
 using Azure.Messaging.EventGrid;
+using Bit.Api.Models.Request;
+using Bit.Api.Models.Request.Accounts;
+using Bit.Api.Models.Request.Organizations;
+using Bit.Api.Models.Response;
 using Bit.Core.Models.Data;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -600,8 +603,8 @@ namespace Bit.Api.Controllers
                 throw new BadRequestException($"Max file size is {CipherService.MAX_FILE_SIZE_READABLE}.");
             }
 
-
-            var (attachmentId, uploadUrl) = await _cipherService.CreateAttachmentForDelayedUploadAsync(cipher, request, userId);
+            var (attachmentId, uploadUrl) = await _cipherService.CreateAttachmentForDelayedUploadAsync(cipher,
+                request.Key, request.FileName, request.FileSize, request.AdminRequest, userId);
             return new AttachmentUploadDataResponseModel
             {
                 AttachmentId = attachmentId,
@@ -713,7 +716,8 @@ namespace Bit.Api.Controllers
         {
             var userId = _userService.GetProperUserId(User).Value;
             var cipher = await _cipherRepository.GetByIdAsync(new Guid(id), userId);
-            return await _cipherService.GetAttachmentDownloadDataAsync(cipher, attachmentId);
+            var result = await _cipherService.GetAttachmentDownloadDataAsync(cipher, attachmentId);
+            return new AttachmentResponseModel(result.Id, result.Data, result.Cipher, _globalSettings);
         }
 
         [HttpPost("{id}/attachment/{attachmentId}/share")]

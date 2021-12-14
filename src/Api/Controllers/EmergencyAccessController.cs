@@ -1,13 +1,14 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Bit.Api.Models.Request;
+using Bit.Api.Models.Request.Organizations;
+using Bit.Api.Models.Response;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Api;
-using Bit.Core.Models.Api.Request;
-using Bit.Core.Models.Api.Response;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Settings;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -20,15 +21,18 @@ namespace Bit.Api.Controllers
         private readonly IUserService _userService;
         private readonly IEmergencyAccessRepository _emergencyAccessRepository;
         private readonly IEmergencyAccessService _emergencyAccessService;
+        private readonly IGlobalSettings _globalSettings;
 
         public EmergencyAccessController(
             IUserService userService,
             IEmergencyAccessRepository emergencyAccessRepository,
-            IEmergencyAccessService emergencyAccessService)
+            IEmergencyAccessService emergencyAccessService,
+            IGlobalSettings globalSettings)
         {
             _userService = userService;
             _emergencyAccessRepository = emergencyAccessRepository;
             _emergencyAccessService = emergencyAccessService;
+            _globalSettings = globalSettings;
         }
 
         [HttpGet("trusted")]
@@ -161,14 +165,17 @@ namespace Bit.Api.Controllers
         public async Task<EmergencyAccessViewResponseModel> ViewCiphers(string id)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
-            return await _emergencyAccessService.ViewAsync(new Guid(id), user);
+            var viewResult = await _emergencyAccessService.ViewAsync(new Guid(id), user);
+            return new EmergencyAccessViewResponseModel(_globalSettings, viewResult.EmergencyAccess, viewResult.Ciphers);
         }
 
         [HttpGet("{id}/{cipherId}/attachment/{attachmentId}")]
         public async Task<AttachmentResponseModel> GetAttachmentData(string id, string cipherId, string attachmentId)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
-            return await _emergencyAccessService.GetAttachmentDownloadAsync(new Guid(id), cipherId, attachmentId, user);
+            var result =
+                await _emergencyAccessService.GetAttachmentDownloadAsync(new Guid(id), cipherId, attachmentId, user);
+            return new AttachmentResponseModel(result.Id, result.Data, result.Cipher, _globalSettings);
         }
     }
 }
