@@ -9,6 +9,7 @@ using Bit.Core.Context;
 using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.OrganizationFeatures.UserInvite;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -21,6 +22,7 @@ namespace Bit.Api.Public.Controllers
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly IGroupRepository _groupRepository;
         private readonly IOrganizationService _organizationService;
+        private readonly IOrganizationUserInviteCommand _organizationUserInviteCommand;
         private readonly IUserService _userService;
         private readonly ICurrentContext _currentContext;
 
@@ -28,12 +30,14 @@ namespace Bit.Api.Public.Controllers
             IOrganizationUserRepository organizationUserRepository,
             IGroupRepository groupRepository,
             IOrganizationService organizationService,
+            IOrganizationUserInviteCommand organizationUserInviteCommand,
             IUserService userService,
             ICurrentContext currentContext)
         {
             _organizationUserRepository = organizationUserRepository;
             _groupRepository = groupRepository;
             _organizationService = organizationService;
+            _organizationUserInviteCommand = organizationUserInviteCommand;
             _userService = userService;
             _currentContext = currentContext;
         }
@@ -125,8 +129,7 @@ namespace Bit.Api.Public.Controllers
                 AccessAll = model.AccessAll.Value,
                 Collections = associations
             };
-            var user = await _organizationService.InviteUserAsync(_currentContext.OrganizationId.Value, null,
-                model.Email, model.Type.Value, model.AccessAll.Value, model.ExternalId, associations);
+            var user = await _organizationUserInviteCommand.InviteUserAsync(_currentContext.OrganizationId.Value, null, invite, model.ExternalId);
             var response = new MemberResponseModel(user, associations);
             return new JsonResult(response);
         }

@@ -15,6 +15,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
+using Bit.Core.OrganizationFeatures.UserInvite;
 using Microsoft.AspNetCore.DataProtection;
 
 namespace Bit.CommCore.Services
@@ -35,13 +36,14 @@ namespace Bit.CommCore.Services
         private readonly IUserService _userService;
         private readonly IOrganizationService _organizationService;
         private readonly ICurrentContext _currentContext;
+        private readonly IOrganizationUserInviteCommand _organizationUserInviteCommand;
 
         public ProviderService(IProviderRepository providerRepository, IProviderUserRepository providerUserRepository,
             IProviderOrganizationRepository providerOrganizationRepository, IUserRepository userRepository,
             IUserService userService, IOrganizationService organizationService, IMailService mailService,
             IDataProtectionProvider dataProtectionProvider, IEventService eventService,
             IOrganizationRepository organizationRepository, GlobalSettings globalSettings,
-            ICurrentContext currentContext)
+            IOrganizationUserInviteCommand organizationUserInviteCommand, ICurrentContext currentContext)
         {
             _providerRepository = providerRepository;
             _providerUserRepository = providerUserRepository;
@@ -52,6 +54,7 @@ namespace Bit.CommCore.Services
             _organizationService = organizationService;
             _mailService = mailService;
             _eventService = eventService;
+            _organizationUserInviteCommand = organizationUserInviteCommand;
             _globalSettings = globalSettings;
             _dataProtector = dataProtectionProvider.CreateProtector("ProviderServiceDataProtector");
             _currentContext = currentContext;
@@ -413,7 +416,7 @@ namespace Bit.CommCore.Services
             await _providerOrganizationRepository.CreateAsync(providerOrganization);
             await _eventService.LogProviderOrganizationEventAsync(providerOrganization, EventType.ProviderOrganization_Created);
 
-            await _organizationService.InviteUsersAsync(organization.Id, user.Id,
+            await _organizationUserInviteCommand.InviteUsersAsync(organization.Id, user.Id,
                 new (OrganizationUserInvite, string)[]
                 {
                     (
