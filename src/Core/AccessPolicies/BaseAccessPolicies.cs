@@ -8,6 +8,7 @@ namespace Bit.Core.AccessPolicies
     {
         protected Dictionary<string, AccessPolicyResult> PermissionOverrides { get; } = new();
         protected static AccessPolicyResult Success => new(true, "");
+        protected static AccessPolicyResult Fail() => new(false, null);
         protected static AccessPolicyResult Fail(string reason) => new(false, reason);
 
         protected bool OverrideExists([CallerMemberName] string callerName = "") => PermissionOverrides.ContainsKey(callerName);

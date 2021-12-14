@@ -51,7 +51,9 @@ namespace Bit.Core.OrganizationFeatures.Subscription
             var newSeatTotal = organization.Seats.Value + seatAdjustment;
             var additionalSeats = newSeatTotal - plan.BaseSeats;
 
-            CoreHelpers.HandlePermissionResultBadRequest(_organizationSubscriptionAccessPolicies.CanAdjustSeats(organization, seatAdjustment, userCount));
+            CoreHelpers.HandlePermissionResult(
+                _organizationSubscriptionAccessPolicies.CanAdjustSeats(organization, seatAdjustment, userCount)
+            );
 
             // TODO: move payment service to infrastructure layer
             var paymentIntentClientSecret = await _paymentService.AdjustSeatsAsync(organization, plan, additionalSeats, prorationDate);
@@ -89,7 +91,7 @@ namespace Bit.Core.OrganizationFeatures.Subscription
                 return;
             }
 
-            CoreHelpers.HandlePermissionResultBadRequest(
+            CoreHelpers.HandlePermissionResult(
                 _organizationSubscriptionAccessPolicies.CanScale(organization, newSeatsRequired)
             );
 
@@ -110,10 +112,12 @@ namespace Bit.Core.OrganizationFeatures.Subscription
                 }
 
                 throw;
-
             }
 
             await _organizationUserMailer.SendOrganizationAutoscaledEmailAsync(organization, initialSeatCount);
+        }
+
+        private async Task UpdateAutoscalingAsync(Organization organization, int? maxAutoscaleSeats)
         }
     }
 }

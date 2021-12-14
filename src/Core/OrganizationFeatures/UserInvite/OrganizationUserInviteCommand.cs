@@ -6,12 +6,12 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Table;
-using Bit.Core.AccessPolicies;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Services.OrganizationServices.UserInvite;
 using Bit.Core.OrganizationFeatures.Mail;
 using Bit.Core.OrganizationFeatures.Subscription;
+using Bit.Core.Utilities;
 
 namespace Bit.Core.OrganizationFeatures.UserInvite
 {
@@ -70,7 +70,7 @@ namespace Bit.Core.OrganizationFeatures.UserInvite
             {
                 foreach (var type in inviteTypes)
                 {
-                    HandlePermissionResultBadRequest(
+                    CoreHelpers.HandlePermissionResult(
                         await _organizationUserInviteAccessPolicies.UserCanEditUserType(organizationId, type)
                     );
                 }
@@ -118,14 +118,6 @@ namespace Bit.Core.OrganizationFeatures.UserInvite
                 {
                     Users = organizationUsers.Count
                 });
-        }
-
-        private static void HandlePermissionResultBadRequest(AccessPolicyResult result)
-        {
-            if (!result.Permit)
-            {
-                throw new BadRequestException(result.BlockReason);
-            }
         }
     }
 }

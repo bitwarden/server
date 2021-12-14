@@ -974,11 +974,13 @@ namespace Bit.Core.Utilities
 
         }
 
-        public static void HandlePermissionResultBadRequest(AccessPolicyResult result)
+        public static void HandlePermissionResult(AccessPolicyResult result)
         {
             if (!result.Permit)
             {
-                throw new BadRequestException(result.BlockReason);
+                throw string.IsNullOrEmpty(result.BlockReason) ?
+                    new NotFoundException() :
+                    new BadRequestException(result.BlockReason);
             }
         }
     }
