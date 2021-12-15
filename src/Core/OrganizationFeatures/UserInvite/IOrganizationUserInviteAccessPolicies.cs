@@ -10,5 +10,6 @@ namespace Bit.Core.OrganizationFeatures.UserInvite
     {
         Task<AccessPolicyResult> UserCanEditUserType(Guid organizationId, OrganizationUserType newType, OrganizationUserType? oldType = null);
         AccessPolicyResult CanResendInvite(OrganizationUser organizationUser, Organization organization);
+        Task<AccessPolicyResult> CanAcceptInvite(Organization org, User user, OrganizationUser orgUser, bool tokenIsValid);
     }
 }

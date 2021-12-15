@@ -19,7 +19,6 @@ namespace Bit.Core.Services
         Task SendNoMasterPasswordHintEmailAsync(string email);
         Task SendMasterPasswordHintEmailAsync(string email, string hint);
         Task SendOrganizationMaxSeatLimitReachedEmailAsync(Organization organization, int maxSeatCount, IEnumerable<string> ownerEmails);
-        Task SendOrganizationAcceptedEmailAsync(Organization organization, string userIdentifier, IEnumerable<string> adminEmails);
         Task SendOrganizationConfirmedEmailAsync(string organizationName, string email);
         Task SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(string organizationName, string email);
         Task SendPasswordlessSignInAsync(string returnUrl, string token, string email);

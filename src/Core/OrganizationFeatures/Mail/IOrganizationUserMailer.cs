@@ -10,5 +10,6 @@ namespace Bit.Core.OrganizationFeatures.Mail
         Task SendInvitesAsync(IEnumerable<(OrganizationUser orgUser, ExpiringToken token)> invites, Organization organization);
         Task SendOrganizationAutoscaledEmailAsync(Organization organization, int initialSeatCount);
         Task SendOrganizationMaxSeatLimitReachedEmailAsync(Organization organization, int maxSeatCount);
+        Task SendOrganizationAcceptedEmailAsync(Organization organization, User user);
     }
 }

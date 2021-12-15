@@ -11,7 +11,6 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
-using Microsoft.AspNetCore.DataProtection;
 
 namespace Bit.Core.OrganizationFeatures.Mail
 {
@@ -38,8 +37,7 @@ namespace Bit.Core.OrganizationFeatures.Mail
                 return;
             }
 
-            var ownerEmails = (await _organizationUserRepository.GetManyByMinimumRoleAsync(organization.Id,
-                OrganizationUserType.Owner)).Select(u => u.Email).Distinct();
+            var ownerEmails = await GetOrganizationUserEmailsAsync(organization.Id, OrganizationUserType.Owner);
 
             var message = CreateDefaultMessage($"{organization.Name} Seat Count Has Increased", ownerEmails);
             var model = new OrganizationSeatsAutoscaledViewModel
@@ -59,8 +57,7 @@ namespace Bit.Core.OrganizationFeatures.Mail
 
         public async Task SendOrganizationMaxSeatLimitReachedEmailAsync(Organization organization, int maxSeatCount)
         {
-            var ownerEmails = (await _organizationUserRepository.GetManyByMinimumRoleAsync(organization.Id,
-                            OrganizationUserType.Owner)).Select(u => u.Email).Distinct();
+            var ownerEmails = await GetOrganizationUserEmailsAsync(organization.Id, OrganizationUserType.Owner);
 
             var message = CreateDefaultMessage($"{organization.Name} Seat Limit Reached", ownerEmails);
             var model = new OrganizationSeatsMaxReachedViewModel
@@ -101,10 +98,32 @@ namespace Bit.Core.OrganizationFeatures.Mail
             await EnqueueMailAsync(messageModels);
         }
 
+        public async Task SendOrganizationAcceptedEmailAsync(Organization organization, User acceptingUser)
+        {
+            var adminEmails = await GetOrganizationUserEmailsAsync(organization.Id, OrganizationUserType.Admin);
+
+            var message = CreateDefaultMessage($"Action Required: {acceptingUser.Email} Needs to Be Confirmed", adminEmails);
+            var model = new OrganizationUserAcceptedViewModel
+            {
+                OrganizationId = organization.Id,
+                OrganizationName = CoreHelpers.SanitizeForEmail(organization.Name, false),
+                UserIdentifier = acceptingUser.Email,
+                WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+                SiteName = _globalSettings.SiteName
+            };
+            await AddMessageContentAsync(message, "OrganizationUserAccepted", model);
+            message.Category = "OrganizationUserAccepted";
+            await SendEmailAsync(message);
+        }
+
         private bool CheckOrganizationCanSponsor(Organization organization)
         {
             return StaticStore.GetPlan(organization.PlanType).Product == ProductType.Enterprise
                 && !_globalSettings.SelfHosted;
         }
+
+        private async Task<IEnumerable<string>> GetOrganizationUserEmailsAsync(Guid organizationId, OrganizationUserType orgUserType) =>
+            (await _organizationUserRepository.GetManyByMinimumRoleAsync(organizationId, orgUserType))
+            .Select(a => a.Email).Distinct();
     }
 }

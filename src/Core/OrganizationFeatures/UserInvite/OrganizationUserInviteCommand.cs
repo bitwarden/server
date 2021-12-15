@@ -146,9 +146,10 @@ namespace Bit.Core.OrganizationFeatures.UserInvite
         public async Task<OrganizationUser> AcceptUserAsync(Guid organizationUserId, User user, string token)
         {
             var orgUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
+            var org = await _organizationRepository.GetByIdAsync(orgUser.OrganizationId);
 
             CoreHelpers.HandlePermissionResult(
-                await _organizationUserInviteAccessPolicies.CanAcceptInvite(user, orgUser, _organizationUserInviteService.TokenIsValid(token, user, orgUser))
+                await _organizationUserInviteAccessPolicies.CanAcceptInvite(org, user, orgUser, _organizationUserInviteService.TokenIsValid(token, user, orgUser))
             );
 
             orgUser.Status = OrganizationUserStatusType.Accepted;
@@ -157,10 +158,7 @@ namespace Bit.Core.OrganizationFeatures.UserInvite
 
             await _organizationUserRepository.ReplaceAsync(orgUser);
 
-            // await _mailService.SendOrganizationAcceptedEmailAsync(
-            //     (await _organizationRepository.GetByIdAsync(orgUser.OrganizationId)),
-            //     user.Email,
-            //     (await _organizationUserRepository.GetManyByMinimumRoleAsync(orgUser.OrganizationId, OrganizationUserType.Admin)).Select(a => a.Email).Distinct());
+            await _organizationUserMailer.SendOrganizationAcceptedEmailAsync(org, user);
             return orgUser;
         }
 

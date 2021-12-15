@@ -159,23 +159,6 @@ namespace Bit.Core.Services
             await _mailDeliveryService.SendEmailAsync(message);
         }
 
-        public async Task SendOrganizationAcceptedEmailAsync(Organization organization, string userIdentifier,
-            IEnumerable<string> adminEmails)
-        {
-            var message = CreateDefaultMessage($"Action Required: {userIdentifier} Needs to Be Confirmed", adminEmails);
-            var model = new OrganizationUserAcceptedViewModel
-            {
-                OrganizationId = organization.Id,
-                OrganizationName = CoreHelpers.SanitizeForEmail(organization.Name, false),
-                UserIdentifier = userIdentifier,
-                WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
-                SiteName = _globalSettings.SiteName
-            };
-            await AddMessageContentAsync(message, "OrganizationUserAccepted", model);
-            message.Category = "OrganizationUserAccepted";
-            await _mailDeliveryService.SendEmailAsync(message);
-        }
-
         public async Task SendOrganizationConfirmedEmailAsync(string organizationName, string email)
         {
             var message = CreateDefaultMessage($"You Have Been Confirmed To {organizationName}", email);
