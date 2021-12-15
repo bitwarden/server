@@ -116,6 +116,20 @@ namespace Bit.Core.OrganizationFeatures.Mail
             await SendEmailAsync(message);
         }
 
+        public async Task SendOrganizationConfirmedEmail(Organization organization, User user)
+        {
+            var message = CreateDefaultMessage($"You Have Been Confirmed To {organization.Name}", user.Email);
+            var model = new OrganizationUserConfirmedViewModel
+            {
+                OrganizationName = CoreHelpers.SanitizeForEmail(organization.Name, false),
+                WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+                SiteName = _globalSettings.SiteName
+            };
+            await AddMessageContentAsync(message, "OrganizationUserConfirmed", model);
+            message.Category = "OrganizationUserConfirmed";
+            await SendEmailAsync(message);
+        }
+
         private bool CheckOrganizationCanSponsor(Organization organization)
         {
             return StaticStore.GetPlan(organization.PlanType).Product == ProductType.Enterprise

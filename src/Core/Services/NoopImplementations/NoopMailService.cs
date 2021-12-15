@@ -40,11 +40,6 @@ namespace Bit.Core.Services
             return Task.FromResult(0);
         }
 
-        public Task SendOrganizationConfirmedEmailAsync(string organizationName, string email)
-        {
-            return Task.FromResult(0);
-        }
-
         public Task SendOrganizationInviteEmailAsync(string organizationName, bool orgCanSponsor, OrganizationUser orgUser, ExpiringToken token)
         {
             return Task.FromResult(0);

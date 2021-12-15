@@ -17,18 +17,28 @@ namespace Bit.Core.Services.OrganizationServices.UserInvite
     {
         readonly IDataProtector _dataProtector;
         readonly IOrganizationUserRepository _organizationUserRepository;
+        private readonly IDeviceRepository _deviceRepository;
         readonly IGlobalSettings _globalSettings;
+        private readonly IPushRegistrationService _pushRegistrationService;
+        private readonly IPushNotificationService _pushNotificationService;
+
 
         public OrganizationUserInviteService(
             IOrganizationUserRepository organizationUserRepository,
+            IDeviceRepository deviceRepository,
             IDataProtectionProvider dataProtectionProvider,
-            IGlobalSettings globalSettings
+            IGlobalSettings globalSettings,
+            IPushRegistrationService pushRegistrationService,
+            IPushNotificationService pushNotificationService
         )
         {
             _organizationUserRepository = organizationUserRepository;
+            _deviceRepository = deviceRepository;
             // TODO: change protector string?
             _dataProtector = dataProtectionProvider.CreateProtector("OrganizationServiceDataProtector");
             _globalSettings = globalSettings;
+            _pushRegistrationService = pushRegistrationService;
+            _pushNotificationService = pushNotificationService;
         }
 
         public ExpiringToken MakeToken(OrganizationUser orgUser) =>
@@ -122,6 +132,20 @@ namespace Bit.Core.Services.OrganizationServices.UserInvite
             }
 
             return plannedOrgUsers.Select(p => p.OrganizationUser).ToList();
+        }
+
+        public async Task DeleteAndPushUserRegistrationAsync(Guid organizationId, Guid userId)
+        {
+            var deviceIds = await GetUserDeviceIdsAsync(userId);
+            await _pushRegistrationService.DeleteUserRegistrationOrganizationAsync(deviceIds,
+                organizationId.ToString());
+            await _pushNotificationService.PushSyncOrgKeysAsync(userId);
+        }
+
+        private async Task<IEnumerable<string>> GetUserDeviceIdsAsync(Guid userId)
+        {
+            var devices = await _deviceRepository.GetManyByUserIdAsync(userId);
+            return devices.Where(d => !string.IsNullOrWhiteSpace(d.PushToken)).Select(d => d.Id.ToString());
         }
     }
 

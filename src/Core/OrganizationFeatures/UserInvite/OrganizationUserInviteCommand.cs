@@ -21,6 +21,7 @@ namespace Bit.Core.OrganizationFeatures.UserInvite
         private readonly IOrganizationUserInviteAccessPolicies _organizationUserInviteAccessPolicies;
         private readonly IOrganizationRepository _organizationRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
+        private readonly IUserRepository _userRepository;
         private readonly IOrganizationService _organizationService;
         private readonly IOrganizationUserInviteService _organizationUserInviteService;
         private readonly IOrganizationUserMailer _organizationUserMailer;
@@ -32,6 +33,7 @@ namespace Bit.Core.OrganizationFeatures.UserInvite
             IOrganizationUserInviteAccessPolicies organizationPermissions,
             IOrganizationRepository organizationRepository,
             IOrganizationUserRepository organizationUserRepository,
+            IUserRepository userRepository,
             IOrganizationService organizationService,
             IOrganizationUserInviteService organizationUserInviteService,
             IOrganizationUserMailer organizationUserMailer,
@@ -43,6 +45,7 @@ namespace Bit.Core.OrganizationFeatures.UserInvite
             _organizationUserInviteAccessPolicies = organizationPermissions;
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
+            _userRepository = userRepository;
             _organizationService = organizationService;
             _organizationUserInviteService = organizationUserInviteService;
             _organizationUserMailer = organizationUserMailer;
@@ -72,7 +75,7 @@ namespace Bit.Core.OrganizationFeatures.UserInvite
                 foreach (var type in inviteTypes)
                 {
                     CoreHelpers.HandlePermissionResult(
-                        await _organizationUserInviteAccessPolicies.UserCanEditUserType(organizationId, type)
+                        await _organizationUserInviteAccessPolicies.UserCanEditUserTypeAsync(organizationId, type)
                     );
                 }
             }
@@ -132,7 +135,7 @@ namespace Bit.Core.OrganizationFeatures.UserInvite
                 var accessPolicy = _organizationUserInviteAccessPolicies.CanResendInvite(orgUser, org);
                 if (!accessPolicy.Permit)
                 {
-                    result.Add((orgUser, "User Invalid."));
+                    result.Add((orgUser, accessPolicy.BlockReason ?? "User Invalid."));
                     continue;
                 }
 
@@ -149,7 +152,7 @@ namespace Bit.Core.OrganizationFeatures.UserInvite
             var org = await _organizationRepository.GetByIdAsync(orgUser.OrganizationId);
 
             CoreHelpers.HandlePermissionResult(
-                await _organizationUserInviteAccessPolicies.CanAcceptInvite(org, user, orgUser, _organizationUserInviteService.TokenIsValid(token, user, orgUser))
+                await _organizationUserInviteAccessPolicies.CanAcceptInviteAsync(org, user, orgUser, _organizationUserInviteService.TokenIsValid(token, user, orgUser))
             );
 
             orgUser.Status = OrganizationUserStatusType.Accepted;
@@ -162,6 +165,78 @@ namespace Bit.Core.OrganizationFeatures.UserInvite
             return orgUser;
         }
 
+        public async Task<OrganizationUser> ConfirmUserAsync(Guid organizationId, Guid organizationUserId, string key)
+        {
+            var result = await ConfirmUsersAsync(organizationId, new Dictionary<Guid, string> { { organizationUserId, key } });
+
+            if (!result.Any())
+            {
+                throw new BadRequestException("User not valid.");
+            }
+
+            var (orgUser, error) = result[0];
+            if (!string.IsNullOrWhiteSpace(error))
+            {
+                throw new BadRequestException(error);
+            }
+            return orgUser;
+        }
+
+        public async Task<List<(OrganizationUser orgUser, string error)>> ConfirmUsersAsync(Guid organizationId, Dictionary<Guid, string> orgUserKeys)
+        {
+            var organizationUsers = await _organizationUserRepository.GetManyAsync(orgUserKeys.Keys);
+            var keyedUserOrgUser = organizationUsers
+                .Where(u => u.Status == OrganizationUserStatusType.Accepted && u.OrganizationId == organizationId && u.UserId != null)
+                .ToDictionary(u => u.UserId.Value, u => u);
+
+            if (!keyedUserOrgUser.Any())
+            {
+                return new();
+            }
+
+            var organization = await _organizationRepository.GetByIdAsync(organizationId);
+            var keyedUserAllOrgUsers = (await _organizationUserRepository.GetManyByManyUsersAsync(keyedUserOrgUser.Keys))
+                .GroupBy(u => u.UserId.Value).ToDictionary(u => u.Key, u => u.ToList());
+            var users = await _userRepository.GetManyAsync(keyedUserOrgUser.Keys);
+
+            var succeededUsers = new List<OrganizationUser>();
+            var result = new List<(OrganizationUser orguser, string failureReason)>();
+
+            foreach (var user in users)
+            {
+                if (!keyedUserOrgUser.ContainsKey(user.Id))
+                {
+                    continue;
+                }
+                var orgUser = keyedUserOrgUser[user.Id];
+                var allOrgUsers = keyedUserAllOrgUsers.GetValueOrDefault(user.Id, new List<OrganizationUser>());
+
+                var accessPolicy = await _organizationUserInviteAccessPolicies.CanConfirmUserAsync(organization, user, orgUser, allOrgUsers);
+
+                if (!accessPolicy.Permit)
+                {
+                    result.Add((orgUser, "User Invalid."));
+                    continue;
+                }
+
+
+                orgUser.Status = OrganizationUserStatusType.Confirmed;
+                orgUser.Key = orgUserKeys[orgUser.Id];
+                orgUser.Email = null;
+
+                await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Confirmed);
+                await _organizationUserMailer.SendOrganizationConfirmedEmail(organization, user);
+                // await _mailService.SendOrganizationConfirmedEmailAsync(organization.Name, user.Email);
+                await _organizationUserInviteService.DeleteAndPushUserRegistrationAsync(organizationId, user.Id);
+                succeededUsers.Add(orgUser);
+                result.Add((orgUser, ""));
+            }
+
+            await _organizationUserRepository.ReplaceManyAsync(succeededUsers);
+
+            return result;
+        }
+
         private async Task CreateInviteEventsForOrganizationUsersAsync(List<OrganizationUser> organizationUsers, Organization organization)
         {
             await _eventService.LogOrganizationUserEventsAsync(organizationUsers.Select(u => (u, EventType.OrganizationUser_Invited, (DateTime?)DateTime.UtcNow)));
@@ -171,5 +246,6 @@ namespace Bit.Core.OrganizationFeatures.UserInvite
                     Users = organizationUsers.Count
                 });
         }
+
     }
 }

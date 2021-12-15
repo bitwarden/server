@@ -159,22 +159,6 @@ namespace Bit.Core.Services
             await _mailDeliveryService.SendEmailAsync(message);
         }
 
-        public async Task SendOrganizationConfirmedEmailAsync(string organizationName, string email)
-        {
-            var message = CreateDefaultMessage($"You Have Been Confirmed To {organizationName}", email);
-            var model = new OrganizationUserConfirmedViewModel
-            {
-                OrganizationName = CoreHelpers.SanitizeForEmail(organizationName, false),
-                WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
-                SiteName = _globalSettings.SiteName
-            };
-            await AddMessageContentAsync(message, "OrganizationUserConfirmed", model);
-            message.Category = "OrganizationUserConfirmed";
-            await _mailDeliveryService.SendEmailAsync(message);
-        }
-
-
-
         public async Task SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(string organizationName, string email)
         {
             var message = CreateDefaultMessage($"You have been removed from {organizationName}", email);

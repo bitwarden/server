@@ -186,33 +186,30 @@ namespace Bit.Api.Controllers
         [HttpPost("{id}/confirm")]
         public async Task Confirm(string orgId, string id, [FromBody]OrganizationUserConfirmRequestModel model)
         {
-            var orgGuidId = new Guid(orgId);
-            if (!await _currentContext.ManageUsers(orgGuidId))
+            var orgIdGuid = new Guid(orgId);
+            if (!await _currentContext.ManageUsers(orgIdGuid))
             {
                 throw new NotFoundException();
             }
 
-            var userId = _userService.GetProperUserId(User);
-            var result = await _organizationService.ConfirmUserAsync(orgGuidId, new Guid(id), model.Key, userId.Value,
-                _userService);
+            await _organizationUserInviteCommand.ConfirmUserAsync(orgIdGuid, new Guid(id), model.Key);
         }
 
         [HttpPost("confirm")]
         public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkConfirm(string orgId,
             [FromBody]OrganizationUserBulkConfirmRequestModel model)
         {
-            var orgGuidId = new Guid(orgId);
-            if (!await _currentContext.ManageUsers(orgGuidId))
+            var orgIdGuid = new Guid(orgId);
+            if (!await _currentContext.ManageUsers(orgIdGuid))
             {
                 throw new NotFoundException();
             }
 
             var userId = _userService.GetProperUserId(User);
-            var results = await _organizationService.ConfirmUsersAsync(orgGuidId, model.ToDictionary(), userId.Value,
-                _userService);
+            var results = await _organizationUserInviteCommand.ConfirmUsersAsync(orgIdGuid, model.ToDictionary());
 
             return new ListResponseModel<OrganizationUserBulkResponseModel>(results.Select(r =>
-                new OrganizationUserBulkResponseModel(r.Item1.Id, r.Item2)));
+                new OrganizationUserBulkResponseModel(r.orgUser.Id, r.error)));
         }
 
         [HttpPost("public-keys")]

@@ -11,5 +11,6 @@ namespace Bit.Core.OrganizationFeatures.Mail
         Task SendOrganizationAutoscaledEmailAsync(Organization organization, int initialSeatCount);
         Task SendOrganizationMaxSeatLimitReachedEmailAsync(Organization organization, int maxSeatCount);
         Task SendOrganizationAcceptedEmailAsync(Organization organization, User user);
+        Task SendOrganizationConfirmedEmail(Organization organization, User user);
     }
 }

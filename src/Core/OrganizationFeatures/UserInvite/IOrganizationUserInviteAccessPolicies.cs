@@ -1,4 +1,6 @@
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Bit.Core.AccessPolicies;
 using Bit.Core.Enums;
@@ -8,8 +10,12 @@ namespace Bit.Core.OrganizationFeatures.UserInvite
 {
     public interface IOrganizationUserInviteAccessPolicies
     {
-        Task<AccessPolicyResult> UserCanEditUserType(Guid organizationId, OrganizationUserType newType, OrganizationUserType? oldType = null);
+        Task<AccessPolicyResult> UserCanEditUserTypeAsync(Guid organizationId, OrganizationUserType newType,
+            OrganizationUserType? oldType = null);
         AccessPolicyResult CanResendInvite(OrganizationUser organizationUser, Organization organization);
-        Task<AccessPolicyResult> CanAcceptInvite(Organization org, User user, OrganizationUser orgUser, bool tokenIsValid);
+        Task<AccessPolicyResult> CanAcceptInviteAsync(Organization organization, User user, OrganizationUser organizationUser,
+            bool tokenIsValid);
+        Task<AccessPolicyResult> CanConfirmUserAsync(Organization organization, User user, OrganizationUser organizationUser,
+            IEnumerable<OrganizationUser> allOrgUsers = null);
     }
 }

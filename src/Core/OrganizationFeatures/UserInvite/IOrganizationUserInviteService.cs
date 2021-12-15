@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Bit.Core.Models.Business;
@@ -13,5 +14,6 @@ namespace Bit.Core.Services.OrganizationServices.UserInvite
         Task<List<OrganizationUser>> InviteUsersAsync(Organization organization,
             IEnumerable<(OrganizationUserInviteData invite, string externalId)> invites,
             HashSet<string> existingUserEmails = null);
+        Task DeleteAndPushUserRegistrationAsync(Guid organizationId, Guid userId);
     }
 }

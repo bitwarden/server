@@ -16,5 +16,7 @@ namespace Bit.Core.OrganizationFeatures.UserInvite
             IEnumerable<Guid> organizationUsersId);
         Task ResendInviteAsync(Guid organizationId, Guid organizationUserId);
         Task<OrganizationUser> AcceptUserAsync(Guid organizationUserId, User user, string token);
+        Task<OrganizationUser> ConfirmUserAsync(Guid organizationId, Guid organizationUserId, string key);
+        Task<List<(OrganizationUser orgUser, string error)>> ConfirmUsersAsync(Guid organizationId, Dictionary<Guid, string> orgUserKeys);
     }
 }

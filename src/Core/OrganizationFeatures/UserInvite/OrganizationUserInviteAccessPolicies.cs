@@ -7,6 +7,7 @@ using Bit.Core.AccessPolicies;
 using Bit.Core.Repositories;
 using System.Linq;
 using Bit.Core.Services;
+using System.Collections.Generic;
 
 namespace Bit.Core.OrganizationFeatures.UserInvite
 {
@@ -30,7 +31,7 @@ namespace Bit.Core.OrganizationFeatures.UserInvite
             _userService = userService;
         }
 
-        public async Task<AccessPolicyResult> UserCanEditUserType(Guid organizationId, OrganizationUserType newType, OrganizationUserType? oldType = null)
+        public async Task<AccessPolicyResult> UserCanEditUserTypeAsync(Guid organizationId, OrganizationUserType newType, OrganizationUserType? oldType = null)
         {
             if (await _currentContext.OrganizationOwner(organizationId))
             {
@@ -81,7 +82,7 @@ namespace Bit.Core.OrganizationFeatures.UserInvite
             return Success;
         }
 
-        public async Task<AccessPolicyResult> CanAcceptInvite(Organization org, User user, OrganizationUser orgUser, bool tokenIsValid)
+        public async Task<AccessPolicyResult> CanAcceptInviteAsync(Organization org, User user, OrganizationUser orgUser, bool tokenIsValid)
         {
             if (orgUser == null || org == null)
             {
@@ -111,13 +112,23 @@ namespace Bit.Core.OrganizationFeatures.UserInvite
             }
 
             return await Success.AndAsync(
-                () => CanAcceptFreeOrgAdminAsync(org, orgUser, user),
-                () => CanJoinOrganizationAsync(user, orgUser),
-                () => CanJoinMoreOrganizationsAsync(user)
+                () => CanBeFreeOrgAdminAsync(org, orgUser, user, adminFailureMessage: false),
+                () => CanJoinOrganizationAsync(user, orgUser, adminFailureMessage: false),
+                () => CanJoinMoreOrganizationsAsync(user, adminFailureMessage: false)
             );
         }
 
-        private async Task<AccessPolicyResult> CanAcceptFreeOrgAdminAsync(Organization org, OrganizationUser orgUser, User user)
+        public async Task<AccessPolicyResult> CanConfirmUserAsync(Organization org, User user, OrganizationUser orgUser, IEnumerable<OrganizationUser> allOrgUsers)
+        {
+            return await Success.AndAsync(
+                () => CanBeFreeOrgAdminAsync(org, orgUser, user, adminFailureMessage: true),
+                () => CanJoinOrganizationAsync(user, orgUser, adminFailureMessage: true, allOrgUsers),
+                () => CanJoinMoreOrganizationsAsync(user, adminFailureMessage: true)
+            );
+        }
+
+        private async Task<AccessPolicyResult> CanBeFreeOrgAdminAsync(Organization org, OrganizationUser orgUser, User user,
+            bool adminFailureMessage)
         {
             if (orgUser.Type == OrganizationUserType.Owner || orgUser.Type == OrganizationUserType.Admin)
             {
@@ -127,7 +138,10 @@ namespace Bit.Core.OrganizationFeatures.UserInvite
                         user.Id);
                     if (adminCount > 0)
                     {
-                        return Fail("You can only be an admin of one free organization.");
+                        return Fail(string.Concat(
+                            adminFailureMessage ? "User" : "You",
+                            " can only be an admin of one free organization."
+                        ));
                     }
                 }
             }
@@ -139,17 +153,19 @@ namespace Bit.Core.OrganizationFeatures.UserInvite
         /// Enforces Single Organization and two factory policies of organization user is trying to join
         /// </summary>
         /// <returns></returns>
-        private async Task<AccessPolicyResult> CanJoinOrganizationAsync(User user, OrganizationUser orgUser)
+        private async Task<AccessPolicyResult> CanJoinOrganizationAsync(User user, OrganizationUser orgUser, bool adminFailureMessage, IEnumerable<OrganizationUser> allOrgUsers = null)
         {
             // Single Org Policy
-            var allOrgUsers = await _organizationUserRepository.GetManyByUserAsync(user.Id);
+            allOrgUsers ??= await _organizationUserRepository.GetManyByUserAsync(user.Id);
             var hasOtherOrgs = allOrgUsers.Any(ou => ou.OrganizationId != orgUser.OrganizationId);
             var invitedSingleOrgPolicies = await _policyRepository.GetManyByTypeApplicableToUserIdAsync(user.Id,
                 PolicyType.SingleOrg, OrganizationUserStatusType.Invited);
 
             if (hasOtherOrgs && invitedSingleOrgPolicies.Any(p => p.OrganizationId == orgUser.OrganizationId))
             {
-                return Fail("You may not join this organization until you leave or remove all other organizations.");
+                return adminFailureMessage ?
+                    Fail("User does not have two-step login enabled") :
+                    Fail("You may not join this organization until you leave or remove all other organizations.");
             }
 
             // Two Factor Authentication Policy
@@ -159,7 +175,9 @@ namespace Bit.Core.OrganizationFeatures.UserInvite
                     PolicyType.TwoFactorAuthentication, OrganizationUserStatusType.Invited);
                 if (invitedTwoFactorPolicies.Any(p => p.OrganizationId == orgUser.OrganizationId))
                 {
-                    return Fail("You cannot join this organization until you enable two-step login on your user account.");
+                    return adminFailureMessage ?
+                        Fail("User is a member of another organization.") :
+                        Fail("You cannot join this organization until you enable two-step login on your user account.");
                 }
             }
 
@@ -171,15 +189,16 @@ namespace Bit.Core.OrganizationFeatures.UserInvite
         /// </summary>
         /// <param name="user"></param>
         /// <returns></returns>
-        private async Task<AccessPolicyResult> CanJoinMoreOrganizationsAsync(User user)
+        private async Task<AccessPolicyResult> CanJoinMoreOrganizationsAsync(User user, bool adminFailureMessage)
         {
             // Enforce Single Organization Policy of other organizations user is a member of
             var singleOrgPolicyCount = await _policyRepository.GetCountByTypeApplicableToUserIdAsync(user.Id,
                 PolicyType.SingleOrg);
             if (singleOrgPolicyCount > 0)
             {
-                return Fail("You cannot join this organization because you are a member of " +
-                    "another organization which forbids it");
+                return adminFailureMessage ?
+                    Fail("User is a member of another organization that forbids joining more organizations.") :
+                    Fail("You cannot join this organization because you are a member of another organization which forbids it");
             }
 
             return Success;
