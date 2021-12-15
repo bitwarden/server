@@ -234,7 +234,8 @@ namespace Bit.Api.Public.Controllers
             {
                 return new NotFoundResult();
             }
-            await _organizationService.ResendInviteAsync(_currentContext.OrganizationId.Value, null, id);
+
+            await _organizationUserInviteCommand.ResendInviteAsync(_currentContext.OrganizationId.Value, id);
             return new OkResult();
         }
     }

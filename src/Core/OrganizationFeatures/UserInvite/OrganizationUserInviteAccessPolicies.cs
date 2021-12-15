@@ -1,11 +1,9 @@
 using System;
-using System.Linq;
 using System.Threading.Tasks;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Models.Table;
 using Bit.Core.Settings;
-using Bit.Core.Utilities;
 using Bit.Core.AccessPolicies;
 
 namespace Bit.Core.OrganizationFeatures.UserInvite
@@ -55,6 +53,21 @@ namespace Bit.Core.OrganizationFeatures.UserInvite
             if (oldType == OrganizationUserType.Admin || newType == OrganizationUserType.Admin)
             {
                 return Fail("Custom users can not manage Admins or Owners.");
+            }
+
+            return Success;
+        }
+
+        public AccessPolicyResult CanResendInvite(OrganizationUser organizationUser, Organization organization)
+        {
+            if (organizationUser == null)
+            {
+                return Fail();
+            }
+
+            if (organizationUser.Status != OrganizationUserStatusType.Invited || organizationUser.OrganizationId != organization.Id)
+            {
+                return Fail("User Invalid.");
             }
 
             return Success;

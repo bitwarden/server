@@ -144,7 +144,8 @@ namespace Bit.Api.Controllers
         }
         
         [HttpPost("reinvite")]
-        public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkReinvite(string orgId, [FromBody]OrganizationUserBulkRequestModel model)
+        public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkReinvite(string orgId,
+            [FromBody] OrganizationUserBulkRequestModel model)
         {
             var orgGuidId = new Guid(orgId);
             if (!await _currentContext.ManageUsers(orgGuidId))
@@ -153,9 +154,9 @@ namespace Bit.Api.Controllers
             }
 
             var userId = _userService.GetProperUserId(User);
-            var result = await _organizationService.ResendInvitesAsync(orgGuidId, userId.Value, model.Ids);
+            var result = await _organizationUserInviteCommand.ResendInvitesAsync(orgGuidId, model.Ids);
             return new ListResponseModel<OrganizationUserBulkResponseModel>(
-                result.Select(t => new OrganizationUserBulkResponseModel(t.Item1.Id, t.Item2)));
+                result.Select(t => new OrganizationUserBulkResponseModel(t.orgUser.Id, t.failureReason)));
         }
 
         [HttpPost("{id}/reinvite")]
@@ -167,8 +168,7 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            var userId = _userService.GetProperUserId(User);
-            await _organizationService.ResendInviteAsync(orgGuidId, userId.Value, new Guid(id));
+            await _organizationUserInviteCommand.ResendInviteAsync(orgGuidId, new Guid(id));
         }
 
         [HttpPost("{id}/accept")]

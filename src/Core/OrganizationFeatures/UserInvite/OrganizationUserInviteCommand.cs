@@ -111,6 +111,38 @@ namespace Bit.Core.OrganizationFeatures.UserInvite
             return invitedUsers;
         }
 
+        public async Task ResendInviteAsync(Guid organizationId, Guid organizationUserId)
+        {
+            var (_, FailureReason) = (await ResendInvitesAsync(organizationId, new[] { organizationUserId })).First();
+            if (!string.IsNullOrEmpty(FailureReason))
+            {
+                throw new BadRequestException(FailureReason);
+            }
+        }
+
+        public async Task<IEnumerable<(OrganizationUser orgUser, string failureReason)>> ResendInvitesAsync(Guid organizationId,
+            IEnumerable<Guid> organizationUsersId)
+        {
+            var orgUsers = await _organizationUserRepository.GetManyAsync(organizationUsersId);
+            var org = await _organizationRepository.GetByIdAsync(organizationId);
+
+            var result = new List<(OrganizationUser orgUser, string failureReason)>();
+            foreach (var orgUser in orgUsers)
+            {
+                var accessPolicy = _organizationUserInviteAccessPolicies.CanResendInvite(orgUser, org);
+                if (!accessPolicy.Permit)
+                {
+                    result.Add((orgUser, "User Invalid."));
+                    continue;
+                }
+
+                await _organizationUserMailer.SendInvitesAsync(new[] { orgUser }, org);
+                result.Add((orgUser, ""));
+            }
+
+            return result;
+        }
+
         private async Task CreateInviteEventsForOrganizationUsersAsync(List<OrganizationUser> organizationUsers, Organization organization)
         {
             await _eventService.LogOrganizationUserEventsAsync(organizationUsers.Select(u => (u, EventType.OrganizationUser_Invited, (DateTime?)DateTime.UtcNow)));
