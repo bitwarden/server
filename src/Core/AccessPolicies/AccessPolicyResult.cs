@@ -23,22 +23,47 @@ namespace Bit.Core.AccessPolicies
             );
         }
 
-        public AccessPolicyResult And(Func<AccessPolicyResult> resultGenerator)
+        /// <summary>
+        /// Lazily evaluates AccessPolicyResults, terminating evaluation on the first occurrence of Permit == false
+        /// </summary>
+        /// <param name="resultGenerator"></param>
+        /// <returns></returns>
+        public AccessPolicyResult And(params Func<AccessPolicyResult>[] resultGenerators)
         {
-            if (Permit)
+            var currentResult = new AccessPolicyResult(Permit, BlockReason);
+
+            foreach (var resultGenerator in resultGenerators)
             {
-                return resultGenerator();
+                if (!currentResult.Permit)
+                {
+                    return currentResult;
+                }
+                currentResult = currentResult.And(resultGenerator());
             }
-            return new(Permit, BlockReason);
+
+            return currentResult;
         }
 
-        public async Task<AccessPolicyResult> AndAsync(Func<Task<AccessPolicyResult>> resultGenerator)
+        /// <summary>
+        /// Lazily evaluates AccessPolicyResults, terminating evaluation on the first occurrence of Permit == false
+        /// </summary>
+        /// <param name="resultGenerators"></param>
+        /// <returns></returns>
+        public async Task<AccessPolicyResult> AndAsync(params Func<Task<AccessPolicyResult>>[] resultGenerators)
         {
-            if (Permit)
+            var currentResult = new AccessPolicyResult(Permit, BlockReason);
+
+            foreach (var resultGenerator in resultGenerators)
             {
-                return await resultGenerator();
+                if (!currentResult.Permit)
+                {
+                    return currentResult;
+                }
+
+                currentResult = currentResult.And(await resultGenerator());
             }
-            return new(Permit, BlockReason);
+
+            return currentResult;
         }
 
         private string ConcatBlockReason(AccessPolicyResult result)
