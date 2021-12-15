@@ -105,7 +105,7 @@ namespace Bit.Core.OrganizationFeatures.UserInvite
                 await _organizationUserRepository.DeleteManyAsync(invitedUsers.Select(u => u.Id));
                 throw;
             }
-            await _organizationUserMailer.SendInvitesAsync(invitedUsers, organization);
+            await _organizationUserMailer.SendInvitesAsync(invitedUsers.Select(u => (u, _organizationUserInviteService.MakeToken(u))), organization);
             await CreateInviteEventsForOrganizationUsersAsync(invitedUsers, organization);
 
             return invitedUsers;
@@ -136,11 +136,32 @@ namespace Bit.Core.OrganizationFeatures.UserInvite
                     continue;
                 }
 
-                await _organizationUserMailer.SendInvitesAsync(new[] { orgUser }, org);
+                await _organizationUserMailer.SendInvitesAsync(new[] { (orgUser, _organizationUserInviteService.MakeToken(orgUser)) }, org);
                 result.Add((orgUser, ""));
             }
 
             return result;
+        }
+
+        public async Task<OrganizationUser> AcceptUserAsync(Guid organizationUserId, User user, string token)
+        {
+            var orgUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
+
+            CoreHelpers.HandlePermissionResult(
+                await _organizationUserInviteAccessPolicies.CanAcceptInvite(user, orgUser, _organizationUserInviteService.TokenIsValid(token, user, orgUser))
+            );
+
+            orgUser.Status = OrganizationUserStatusType.Accepted;
+            orgUser.UserId = user.Id;
+            orgUser.Email = null;
+
+            await _organizationUserRepository.ReplaceAsync(orgUser);
+
+            // await _mailService.SendOrganizationAcceptedEmailAsync(
+            //     (await _organizationRepository.GetByIdAsync(orgUser.OrganizationId)),
+            //     user.Email,
+            //     (await _organizationUserRepository.GetManyByMinimumRoleAsync(orgUser.OrganizationId, OrganizationUserType.Admin)).Select(a => a.Email).Distinct());
+            return orgUser;
         }
 
         private async Task CreateInviteEventsForOrganizationUsersAsync(List<OrganizationUser> organizationUsers, Organization organization)

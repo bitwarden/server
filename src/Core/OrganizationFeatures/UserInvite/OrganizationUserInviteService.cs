@@ -3,20 +3,40 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Bit.Core.Enums;
+using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
+using Bit.Core.Settings;
+using Bit.Core.Utilities;
+using Microsoft.AspNetCore.DataProtection;
 
 namespace Bit.Core.Services.OrganizationServices.UserInvite
 {
     public class OrganizationUserInviteService : IOrganizationUserInviteService
     {
+        readonly IDataProtector _dataProtector;
         readonly IOrganizationUserRepository _organizationUserRepository;
+        readonly IGlobalSettings _globalSettings;
 
-        public OrganizationUserInviteService(IOrganizationUserRepository organizationUserRepository)
+        public OrganizationUserInviteService(
+            IOrganizationUserRepository organizationUserRepository,
+            IDataProtectionProvider dataProtectionProvider,
+            IGlobalSettings globalSettings
+        )
         {
             _organizationUserRepository = organizationUserRepository;
+            // TODO: change protector string?
+            _dataProtector = dataProtectionProvider.CreateProtector("OrganizationServiceDataProtector");
+            _globalSettings = globalSettings;
         }
+
+        public ExpiringToken MakeToken(OrganizationUser orgUser) =>
+            new(_dataProtector.Protect($"OrganizationUserInvite {orgUser.Id} {orgUser.Email} {CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow)}"),
+                DateTime.Now.AddDays(5));
+
+        public bool TokenIsValid(string token, User user, OrganizationUser orgUser) =>
+            CoreHelpers.UserInviteTokenIsValid(_dataProtector, token, user.Email, orgUser.Id, _globalSettings);
 
         private static List<PlannedOrganizationUser> GeneratePlannedOrganizationUsers(Organization organization,
             IEnumerable<(OrganizationUserInviteData invite, string externalId)> invites,

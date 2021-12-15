@@ -17,22 +17,18 @@ namespace Bit.Core.OrganizationFeatures.Mail
 {
     public class OrganizationUserMailer : HandlebarsMailService, IOrganizationUserMailer
     {
-        readonly IDataProtector _dataProtector;
         readonly IOrganizationRepository _organizationRepository;
         readonly IOrganizationUserRepository _organizationUserRepository;
 
         public OrganizationUserMailer(
             IOrganizationRepository organizationRepository,
             IOrganizationUserRepository organizationUserRepository,
-            IDataProtectionProvider dataProtectionProvider,
             GlobalSettings globalSettings,
             IMailDeliveryService mailDeliveryService,
             IMailEnqueuingService mailEnqueuingService) : base(globalSettings, mailDeliveryService, mailEnqueuingService)
         {
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
-            // TODO: change protector string?
-            _dataProtector = dataProtectionProvider.CreateProtector("OrganizationServiceDataProtector");
         }
 
         public async Task SendOrganizationAutoscaledEmailAsync(Organization organization, int initialSeatCount)
@@ -78,36 +74,27 @@ namespace Bit.Core.OrganizationFeatures.Mail
             await SendEmailAsync(message);
         }
 
-        public async Task SendInvitesAsync(IEnumerable<OrganizationUser> orgUsers, Organization organization)
-        {
-            string MakeToken(OrganizationUser orgUser) =>
-                _dataProtector.Protect($"OrganizationUserInvite {orgUser.Id} {orgUser.Email} {CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow)}");
-
-            await BulkSendOrganizationInviteEmailAsync(organization.Name, CheckOrganizationCanSponsor(organization),
-                orgUsers.Select(o => (o, new ExpiringToken(MakeToken(o), DateTime.UtcNow.AddDays(5)))));
-        }
-
-        private async Task BulkSendOrganizationInviteEmailAsync(string organizationName, bool organizationCanSponsor, IEnumerable<(OrganizationUser orgUser, ExpiringToken token)> invites)
+        public async Task SendInvitesAsync(IEnumerable<(OrganizationUser orgUser, ExpiringToken token)> invites, Organization organization)
         {
             MailQueueMessage CreateMessage(string email, object model)
             {
-                var message = CreateDefaultMessage($"Join {organizationName}", email);
+                var message = CreateDefaultMessage($"Join {organization.Name}", email);
                 return new MailQueueMessage(message, "OrganizationUserInvited", model);
             }
 
             var messageModels = invites.Select(invite => CreateMessage(invite.orgUser.Email,
                 new OrganizationUserInvitedViewModel
                 {
-                    OrganizationName = CoreHelpers.SanitizeForEmail(organizationName, false),
+                    OrganizationName = CoreHelpers.SanitizeForEmail(organization.Name, false),
                     Email = WebUtility.UrlEncode(invite.orgUser.Email),
                     OrganizationId = invite.orgUser.OrganizationId.ToString(),
                     OrganizationUserId = invite.orgUser.Id.ToString(),
                     Token = WebUtility.UrlEncode(invite.token.Token),
                     ExpirationDate = $"{invite.token.ExpirationDate.ToLongDateString()} {invite.token.ExpirationDate.ToShortTimeString()} UTC",
-                    OrganizationNameUrlEncoded = WebUtility.UrlEncode(organizationName),
+                    OrganizationNameUrlEncoded = WebUtility.UrlEncode(organization.Name),
                     WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
                     SiteName = _globalSettings.SiteName,
-                    OrganizationCanSponsor = organizationCanSponsor,
+                    OrganizationCanSponsor = CheckOrganizationCanSponsor(organization),
                 }
             ));
 
