@@ -72,7 +72,7 @@ jobs:
         run: dotnet tool restore
         shell: pwsh
 
-     - name: Verify Format
+      - name: Verify Format
         run: dotnet tool run dotnet-format --check
         shell: pwsh
 
