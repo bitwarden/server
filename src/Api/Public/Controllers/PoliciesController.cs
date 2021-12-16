@@ -100,7 +100,7 @@ namespace Bit.Api.Public.Controllers
             {
                 policy = model.ToPolicy(policy);
             }
-            await _policyService.SaveAsync(policy, _userService, _organizationService, null);
+            await _policyService.SaveAsync(policy, _userService, null);
             var response = new PolicyResponseModel(policy);
             return new JsonResult(response);
         }

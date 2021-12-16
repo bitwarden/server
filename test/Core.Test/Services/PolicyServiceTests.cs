@@ -1,17 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Test.Common.AutoFixture;
-using Bit.Test.Common.AutoFixture.Attributes;
+using PolicyFixtures = Bit.Core.Test.AutoFixture.PolicyFixtures;
 using NSubstitute;
 using Xunit;
-using PolicyFixtures = Bit.Core.Test.AutoFixture.PolicyFixtures;
+using Bit.Core.Enums;
+using Bit.Test.Common.AutoFixture.Attributes;
+using Bit.Test.Common.AutoFixture;
+using Bit.Core.OrganizationFeatures.OrgUser;
 
 namespace Bit.Core.Test.Services
 {
@@ -25,7 +26,6 @@ namespace Bit.Core.Test.Services
             var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
                 () => sutProvider.Sut.SaveAsync(policy,
                     Substitute.For<IUserService>(),
-                    Substitute.For<IOrganizationService>(),
                     Guid.NewGuid()));
 
             Assert.Contains("Organization not found", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
@@ -44,7 +44,7 @@ namespace Bit.Core.Test.Services
         {
             var orgId = Guid.NewGuid();
 
-            SetupOrg(sutProvider, policy.OrganizationId, new Organization
+            SetupOrg(sutProvider, policy.OrganizationId, new Organization 
             {
                 UsePolicies = false,
             });
@@ -52,7 +52,6 @@ namespace Bit.Core.Test.Services
             var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
                 () => sutProvider.Sut.SaveAsync(policy,
                     Substitute.For<IUserService>(),
-                    Substitute.For<IOrganizationService>(),
                     Guid.NewGuid()));
 
             Assert.Contains("cannot use policies", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
@@ -84,7 +83,6 @@ namespace Bit.Core.Test.Services
             var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
                 () => sutProvider.Sut.SaveAsync(policy,
                     Substitute.For<IUserService>(),
-                    Substitute.For<IOrganizationService>(),
                     Guid.NewGuid()));
 
             Assert.Contains("Single Sign-On Authentication policy is enabled.", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
@@ -116,7 +114,6 @@ namespace Bit.Core.Test.Services
             var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
                 () => sutProvider.Sut.SaveAsync(policy,
                     Substitute.For<IUserService>(),
-                    Substitute.For<IOrganizationService>(),
                     Guid.NewGuid()));
 
             Assert.Contains("Maximum Vault Timeout policy is enabled.", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
@@ -154,7 +151,6 @@ namespace Bit.Core.Test.Services
             var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
                 () => sutProvider.Sut.SaveAsync(policy,
                     Substitute.For<IUserService>(),
-                    Substitute.For<IOrganizationService>(),
                     Guid.NewGuid()));
 
             Assert.Contains("Key Connector is enabled.", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
@@ -182,7 +178,6 @@ namespace Bit.Core.Test.Services
             var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
                 () => sutProvider.Sut.SaveAsync(policy,
                     Substitute.For<IUserService>(),
-                    Substitute.For<IOrganizationService>(),
                     Guid.NewGuid()));
 
             Assert.Contains("Single Organization policy not enabled.", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
@@ -209,7 +204,7 @@ namespace Bit.Core.Test.Services
 
             var utcNow = DateTime.UtcNow;
 
-            await sutProvider.Sut.SaveAsync(policy, Substitute.For<IUserService>(), Substitute.For<IOrganizationService>(), Guid.NewGuid());
+            await sutProvider.Sut.SaveAsync(policy, Substitute.For<IUserService>(), Guid.NewGuid());
 
             await sutProvider.GetDependency<IEventService>().Received()
                 .LogPolicyEventAsync(policy, EventType.Policy_Updated);
@@ -239,7 +234,6 @@ namespace Bit.Core.Test.Services
             var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
                 () => sutProvider.Sut.SaveAsync(policy,
                     Substitute.For<IUserService>(),
-                    Substitute.For<IOrganizationService>(),
                     Guid.NewGuid()));
 
             Assert.Contains("Single Organization policy not enabled.", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
@@ -270,7 +264,7 @@ namespace Bit.Core.Test.Services
             sutProvider.GetDependency<IPolicyRepository>()
                 .GetByIdAsync(policy.Id)
                 .Returns(new Core.Models.Table.Policy
-                {
+                { 
                     Id = policy.Id,
                     Type = PolicyType.TwoFactorAuthentication,
                     Enabled = false,
@@ -295,7 +289,6 @@ namespace Bit.Core.Test.Services
                 });
 
             var userService = Substitute.For<IUserService>();
-            var organizationService = Substitute.For<IOrganizationService>();
 
             userService.TwoFactorIsEnabledAsync(orgUserDetail)
                 .Returns(false);
@@ -304,9 +297,9 @@ namespace Bit.Core.Test.Services
 
             var savingUserId = Guid.NewGuid();
 
-            await sutProvider.Sut.SaveAsync(policy, userService, organizationService, savingUserId);
+            await sutProvider.Sut.SaveAsync(policy, userService, savingUserId);
 
-            await organizationService.Received()
+            await sutProvider.GetDependency<IOrganizationUserService>().Received()
                 .DeleteUserAsync(policy.OrganizationId, orgUserDetail.Id, savingUserId);
 
             await sutProvider.GetDependency<IMailService>().Received()
@@ -364,7 +357,6 @@ namespace Bit.Core.Test.Services
                 });
 
             var userService = Substitute.For<IUserService>();
-            var organizationService = Substitute.For<IOrganizationService>();
 
             userService.TwoFactorIsEnabledAsync(orgUserDetail)
                 .Returns(false);
@@ -373,7 +365,7 @@ namespace Bit.Core.Test.Services
 
             var savingUserId = Guid.NewGuid();
 
-            await sutProvider.Sut.SaveAsync(policy, userService, organizationService, savingUserId);
+            await sutProvider.Sut.SaveAsync(policy, userService, savingUserId);
 
             await sutProvider.GetDependency<IEventService>().Received()
                 .LogPolicyEventAsync(policy, EventType.Policy_Updated);

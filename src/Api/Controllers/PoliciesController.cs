@@ -125,7 +125,7 @@ namespace Bit.Api.Controllers
             }
 
             var userId = _userService.GetProperUserId(User);
-            await _policyService.SaveAsync(policy, _userService, _organizationService, userId);
+            await _policyService.SaveAsync(policy, _userService, userId);
             return new PolicyResponseModel(policy);
         }
     }

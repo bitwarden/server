@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Table;
+using Bit.Core.OrganizationFeatures.OrgUser;
 using Bit.Core.Repositories;
 
 namespace Bit.Core.Services
@@ -14,6 +15,7 @@ namespace Bit.Core.Services
         private readonly IEventService _eventService;
         private readonly IOrganizationRepository _organizationRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
+        private readonly IOrganizationUserService _organizationUserService;
         private readonly IPolicyRepository _policyRepository;
         private readonly ISsoConfigRepository _ssoConfigRepository;
         private readonly IMailService _mailService;
@@ -22,6 +24,7 @@ namespace Bit.Core.Services
             IEventService eventService,
             IOrganizationRepository organizationRepository,
             IOrganizationUserRepository organizationUserRepository,
+            IOrganizationUserService organizationUserService,
             IPolicyRepository policyRepository,
             ISsoConfigRepository ssoConfigRepository,
             IMailService mailService)
@@ -29,12 +32,13 @@ namespace Bit.Core.Services
             _eventService = eventService;
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
+            _organizationUserService = organizationUserService;
             _policyRepository = policyRepository;
             _ssoConfigRepository = ssoConfigRepository;
             _mailService = mailService;
         }
 
-        public async Task SaveAsync(Policy policy, IUserService userService, IOrganizationService organizationService,
+        public async Task SaveAsync(Policy policy, IUserService userService,
             Guid? savingUserId)
         {
             var org = await _organizationRepository.GetByIdAsync(policy.OrganizationId);
@@ -102,7 +106,7 @@ namespace Bit.Core.Services
                             {
                                 if (!await userService.TwoFactorIsEnabledAsync(orgUser))
                                 {
-                                    await organizationService.DeleteUserAsync(policy.OrganizationId, orgUser.Id,
+                                    await _organizationUserService.DeleteUserAsync(policy.OrganizationId, orgUser.Id,
                                         savingUserId);
                                     await _mailService.SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(
                                         org.Name, orgUser.Email);
@@ -118,7 +122,7 @@ namespace Bit.Core.Services
                                             && ou.OrganizationId != org.Id
                                             && ou.Status != OrganizationUserStatusType.Invited))
                                 {
-                                    await organizationService.DeleteUserAsync(policy.OrganizationId, orgUser.Id,
+                                    await _organizationUserService.DeleteUserAsync(policy.OrganizationId, orgUser.Id,
                                         savingUserId);
                                     await _mailService.SendOrganizationUserRemovedForPolicySingleOrgEmailAsync(
                                         org.Name, orgUser.Email);

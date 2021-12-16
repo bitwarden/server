@@ -19,6 +19,7 @@ using Bit.Core.Utilities;
 using Bit.Core.Settings;
 using Bit.Core.OrganizationFeatures.Subscription;
 using Newtonsoft.Json;
+using Bit.Core.OrganizationFeatures.OrgUser;
 
 namespace Bit.Api.Controllers
 {
@@ -31,6 +32,7 @@ namespace Bit.Api.Controllers
         private readonly IOrganizationSubscriptionService _organizationSubscriptionService;
         private readonly IPolicyRepository _policyRepository;
         private readonly IOrganizationService _organizationService;
+        private readonly IOrganizationUserService _organizationUserService;
         private readonly IUserService _userService;
         private readonly IPaymentService _paymentService;
         private readonly ICurrentContext _currentContext;
@@ -42,6 +44,7 @@ namespace Bit.Api.Controllers
             IOrganizationRepository organizationRepository,
             IOrganizationUserRepository organizationUserRepository,
             IOrganizationSubscriptionService organizationSubscriptionService,
+            IOrganizationUserService organizationUserService,
             IPolicyRepository policyRepository,
             IOrganizationService organizationService,
             IUserService userService,
@@ -54,6 +57,7 @@ namespace Bit.Api.Controllers
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
             _organizationSubscriptionService = organizationSubscriptionService;
+            _organizationUserService = organizationUserService;
             _policyRepository = policyRepository;
             _organizationService = organizationService;
             _userService = userService;
@@ -386,23 +390,22 @@ namespace Bit.Api.Controllers
         [HttpPost("{id}/leave")]
         public async Task Leave(string id)
         {
-            var orgGuidId = new Guid(id);
-            if (!await _currentContext.OrganizationUser(orgGuidId))
+            var orgIdGuid = new Guid(id);
+            if (!await _currentContext.OrganizationUser(orgIdGuid))
             {
                 throw new NotFoundException();
             }
 
             var user = await _userService.GetUserByPrincipalAsync(User);
 
-            var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(orgGuidId);
+            var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(orgIdGuid);
             if (ssoConfig?.GetData()?.KeyConnectorEnabled == true &&
                 user.UsesKeyConnector)
             {
                 throw new BadRequestException("Your organization's Single Sign-On settings prevent you from leaving.");
             }
 
-            
-            await _organizationService.DeleteUserAsync(orgGuidId, user.Id);
+            await _organizationUserService.DeleteUserAsync(orgIdGuid, user.Id);
         }
 
         [HttpDelete("{id}")]

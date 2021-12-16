@@ -12,6 +12,7 @@ using Bit.Core.OrganizationFeatures.UserInvite;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Bit.Core.Models.Data;
+using Bit.Core.OrganizationFeatures.OrgUser;
 
 namespace Bit.Api.Public.Controllers
 {
@@ -22,6 +23,7 @@ namespace Bit.Api.Public.Controllers
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly IGroupRepository _groupRepository;
         private readonly IOrganizationService _organizationService;
+        private readonly IOrganizationUserService _organizationUserService;
         private readonly IOrganizationUserInviteCommand _organizationUserInviteCommand;
         private readonly IUserService _userService;
         private readonly ICurrentContext _currentContext;
@@ -30,6 +32,7 @@ namespace Bit.Api.Public.Controllers
             IOrganizationUserRepository organizationUserRepository,
             IGroupRepository groupRepository,
             IOrganizationService organizationService,
+            IOrganizationUserService organizationUserService,
             IOrganizationUserInviteCommand organizationUserInviteCommand,
             IUserService userService,
             ICurrentContext currentContext)
@@ -37,6 +40,7 @@ namespace Bit.Api.Public.Controllers
             _organizationUserRepository = organizationUserRepository;
             _groupRepository = groupRepository;
             _organizationService = organizationService;
+            _organizationUserService = organizationUserService;
             _organizationUserInviteCommand = organizationUserInviteCommand;
             _userService = userService;
             _currentContext = currentContext;
@@ -156,7 +160,7 @@ namespace Bit.Api.Public.Controllers
             }
             var updatedUser = model.ToOrganizationUser(existingUser);
             var associations = model.Collections?.Select(c => c.ToSelectionReadOnly());
-            await _organizationService.SaveUserAsync(updatedUser, null, associations);
+            await _organizationUserService.SaveUserAsync(updatedUser, null, associations);
             MemberResponseModel response = null;
             if (existingUser.UserId.HasValue)
             {
@@ -212,7 +216,7 @@ namespace Bit.Api.Public.Controllers
             {
                 return new NotFoundResult();
             }
-            await _organizationService.DeleteUserAsync(_currentContext.OrganizationId.Value, id, null);
+            await _organizationUserService.DeleteUserAsync(_currentContext.OrganizationId.Value, id, null);
             return new OkResult();
         }
 

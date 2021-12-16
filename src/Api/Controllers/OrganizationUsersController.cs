@@ -11,9 +11,9 @@ using System.Collections.Generic;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
 using Bit.Core.Enums;
-using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
 using Bit.Core.OrganizationFeatures.UserInvite;
+using Bit.Core.OrganizationFeatures.OrgUser;
 
 namespace Bit.Api.Controllers
 {
@@ -24,6 +24,7 @@ namespace Bit.Api.Controllers
         private readonly IOrganizationRepository _organizationRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly IOrganizationService _organizationService;
+        private readonly IOrganizationUserService _organizationUserService;
         private readonly IOrganizationUserInviteCommand _organizationUserInviteCommand;
         private readonly ICollectionRepository _collectionRepository;
         private readonly IGroupRepository _groupRepository;
@@ -34,6 +35,7 @@ namespace Bit.Api.Controllers
             IOrganizationRepository organizationRepository,
             IOrganizationUserRepository organizationUserRepository,
             IOrganizationService organizationService,
+            IOrganizationUserService organizationUserService,
             IOrganizationUserInviteCommand organizationUserInviteCommand,
             ICollectionRepository collectionRepository,
             IGroupRepository groupRepository,
@@ -43,6 +45,7 @@ namespace Bit.Api.Controllers
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
             _organizationService = organizationService;
+            _organizationUserService = organizationUserService;
             _organizationUserInviteCommand = organizationUserInviteCommand;
             _collectionRepository = collectionRepository;
             _groupRepository = groupRepository;
@@ -243,7 +246,7 @@ namespace Bit.Api.Controllers
             }
 
             var userId = _userService.GetProperUserId(User);
-            await _organizationService.SaveUserAsync(model.ToOrganizationUser(organizationUser), userId.Value,
+            await _organizationUserService.SaveUserAsync(model.ToOrganizationUser(organizationUser), userId.Value,
                 model.Collections?.Select(c => c.ToSelectionReadOnly()));
         }
 
@@ -314,30 +317,30 @@ namespace Bit.Api.Controllers
         [HttpPost("{id}/delete")]
         public async Task Delete(string orgId, string id)
         {
-            var orgGuidId = new Guid(orgId);
-            if (!await _currentContext.ManageUsers(orgGuidId))
+            var orgIdGuid = new Guid(orgId);
+            if (!await _currentContext.ManageUsers(orgIdGuid))
             {
                 throw new NotFoundException();
             }
 
             var userId = _userService.GetProperUserId(User);
-            await _organizationService.DeleteUserAsync(orgGuidId, new Guid(id), userId.Value);
+            await _organizationUserService.DeleteUserAsync(orgIdGuid, new Guid(id), userId.Value);
         }
 
         [HttpDelete("")]
         [HttpPost("delete")]
         public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkDelete(string orgId, [FromBody]OrganizationUserBulkRequestModel model)
         {
-            var orgGuidId = new Guid(orgId);
-            if (!await _currentContext.ManageUsers(orgGuidId))
+            var orgIdGuid = new Guid(orgId);
+            if (!await _currentContext.ManageUsers(orgIdGuid))
             {
                 throw new NotFoundException();
             }
 
             var userId = _userService.GetProperUserId(User);
-            var result = await _organizationService.DeleteUsersAsync(orgGuidId, model.Ids, userId.Value);
+            var result = await _organizationUserService.DeleteUsersAsync(orgIdGuid, model.Ids, userId.Value);
             return new ListResponseModel<OrganizationUserBulkResponseModel>(result.Select(r =>
-                new OrganizationUserBulkResponseModel(r.Item1.Id, r.Item2)));
+                new OrganizationUserBulkResponseModel(r.orgUser.Id, r.error)));
         }
     }
 }

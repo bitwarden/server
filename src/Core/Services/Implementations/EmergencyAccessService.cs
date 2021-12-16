@@ -12,6 +12,7 @@ using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
+using Bit.Core.OrganizationFeatures.OrgUser;
 
 namespace Bit.Core.Services
 {
@@ -29,6 +30,7 @@ namespace Bit.Core.Services
         private readonly GlobalSettings _globalSettings;
         private readonly IPasswordHasher<User> _passwordHasher;
         private readonly IOrganizationService _organizationService;
+        private readonly IOrganizationUserService _organizationUserService;
 
         public EmergencyAccessService(
             IEmergencyAccessRepository emergencyAccessRepository,
@@ -42,7 +44,9 @@ namespace Bit.Core.Services
             IPasswordHasher<User> passwordHasher,
             IDataProtectionProvider dataProtectionProvider,
             GlobalSettings globalSettings,
-            IOrganizationService organizationService)
+            IOrganizationService organizationService,
+            IOrganizationUserService organizationUserService
+        )
         {
             _emergencyAccessRepository = emergencyAccessRepository;
             _organizationUserRepository = organizationUserRepository;
@@ -56,6 +60,7 @@ namespace Bit.Core.Services
             _dataProtector = dataProtectionProvider.CreateProtector("EmergencyAccessServiceDataProtector");
             _globalSettings = globalSettings;
             _organizationService = organizationService;
+            _organizationUserService = organizationUserService;
         }
 
         public async Task<EmergencyAccess> InviteAsync(User invitingUser, string email, EmergencyAccessType type, int waitTime)
@@ -331,7 +336,7 @@ namespace Bit.Core.Services
             {
                 if (o.Type != OrganizationUserType.Owner)
                 {
-                    await _organizationService.DeleteUserAsync(o.OrganizationId, grantor.Id);
+                    await _organizationUserService.DeleteUserAsync(o.OrganizationId, grantor.Id);
                 }
             }
         }

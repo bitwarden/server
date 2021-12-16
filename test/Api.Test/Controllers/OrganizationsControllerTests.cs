@@ -12,6 +12,8 @@ using Bit.Core.Services;
 using Bit.Core.Settings;
 using NSubstitute;
 using Xunit;
+using Bit.Core.OrganizationFeatures.OrgUser;
+using Bit.Core.OrganizationFeatures.Subscription;
 
 namespace Bit.Api.Test.Controllers
 {
@@ -21,6 +23,8 @@ namespace Bit.Api.Test.Controllers
         private readonly ICurrentContext _currentContext;
         private readonly IOrganizationRepository _organizationRepository;
         private readonly IOrganizationService _organizationService;
+        private readonly IOrganizationSubscriptionService _organizationSubscriptionService;
+        private readonly IOrganizationUserService _organizationUserService;
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly IPaymentService _paymentService;
         private readonly IPolicyRepository _policyRepository;
@@ -36,6 +40,8 @@ namespace Bit.Api.Test.Controllers
             _globalSettings = Substitute.For<GlobalSettings>();
             _organizationRepository = Substitute.For<IOrganizationRepository>();
             _organizationService = Substitute.For<IOrganizationService>();
+            _organizationSubscriptionService = Substitute.For<IOrganizationSubscriptionService>();
+            _organizationUserService = Substitute.For<IOrganizationUserService>();
             _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
             _paymentService = Substitute.For<IPaymentService>();
             _policyRepository = Substitute.For<IPolicyRepository>();
@@ -44,8 +50,9 @@ namespace Bit.Api.Test.Controllers
             _userService = Substitute.For<IUserService>();
 
             _sut = new OrganizationsController(_organizationRepository, _organizationUserRepository,
-                _policyRepository, _organizationService, _userService, _paymentService, _currentContext,
-                _ssoConfigRepository, _ssoConfigService, _globalSettings);
+                _organizationSubscriptionService, _organizationUserService, _policyRepository, _organizationService,
+                _userService, _paymentService, _currentContext, _ssoConfigRepository, _ssoConfigService,
+                _globalSettings);
         }
 
         public void Dispose()
@@ -80,7 +87,7 @@ namespace Bit.Api.Test.Controllers
             Assert.Contains("Your organization's Single Sign-On settings prevent you from leaving.",
                 exception.Message);
 
-            await _organizationService.DidNotReceiveWithAnyArgs().DeleteUserAsync(default, default);
+            await _organizationUserService.DidNotReceiveWithAnyArgs().DeleteUserAsync(default, default);
         }
 
         [Theory]
@@ -107,8 +114,8 @@ namespace Bit.Api.Test.Controllers
             _ssoConfigRepository.GetByOrganizationIdAsync(orgId).Returns(ssoConfig);
             _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
 
-            await _organizationService.DeleteUserAsync(orgId, user.Id);
-            await _organizationService.Received(1).DeleteUserAsync(orgId, user.Id);
+            await _organizationUserService.DeleteUserAsync(orgId, user.Id);
+            await _organizationUserService.Received(1).DeleteUserAsync(orgId, user.Id);
         }
     }
 }
