@@ -30,6 +30,7 @@ namespace Bit.Api.Controllers
         private readonly IOrganizationRepository _organizationRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly IOrganizationSubscriptionService _organizationSubscriptionService;
+        private readonly IOrganizationUserImportCommand _organizationUserImportCommand;
         private readonly IPolicyRepository _policyRepository;
         private readonly IOrganizationService _organizationService;
         private readonly IOrganizationUserService _organizationUserService;
@@ -44,6 +45,7 @@ namespace Bit.Api.Controllers
             IOrganizationRepository organizationRepository,
             IOrganizationUserRepository organizationUserRepository,
             IOrganizationSubscriptionService organizationSubscriptionService,
+            IOrganizationUserImportCommand organizationUserImportCommand,
             IOrganizationUserService organizationUserService,
             IPolicyRepository policyRepository,
             IOrganizationService organizationService,
@@ -57,6 +59,7 @@ namespace Bit.Api.Controllers
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
             _organizationSubscriptionService = organizationSubscriptionService;
+            _organizationUserImportCommand = organizationUserImportCommand;
             _organizationUserService = organizationUserService;
             _policyRepository = policyRepository;
             _organizationService = organizationService;
@@ -476,7 +479,7 @@ namespace Bit.Api.Controllers
             }
 
             var userId = _userService.GetProperUserId(User);
-            await _organizationService.ImportAsync(
+            await _organizationUserImportCommand.ImportAsync(
                 orgIdGuid,
                 userId.Value,
                 model.Groups.Select(g => g.ToImportedGroup(orgIdGuid)),

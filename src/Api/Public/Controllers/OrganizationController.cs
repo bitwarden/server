@@ -5,6 +5,7 @@ using Bit.Api.Models.Public.Request;
 using Bit.Api.Models.Public.Response;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
+using Bit.Core.OrganizationFeatures.OrgUser;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Microsoft.AspNetCore.Authorization;
@@ -16,16 +17,16 @@ namespace Bit.Api.Public.Controllers
     [Authorize("Organization")]
     public class OrganizationController : Controller
     {
-        private readonly IOrganizationService _organizationService;
+        private readonly IOrganizationUserImportCommand _organizationUserImportCommand;
         private readonly ICurrentContext _currentContext;
         private readonly GlobalSettings _globalSettings;
 
         public OrganizationController(
-            IOrganizationService organizationService,
+            IOrganizationUserImportCommand organizationUserImportCommand,
             ICurrentContext currentContext,
             GlobalSettings globalSettings)
         {
-            _organizationService = organizationService;
+            _organizationUserImportCommand = organizationUserImportCommand;
             _currentContext = currentContext;
             _globalSettings = globalSettings;
         }
@@ -48,7 +49,7 @@ namespace Bit.Api.Public.Controllers
                 throw new BadRequestException("You cannot import this much data at once.");
             }
 
-            await _organizationService.ImportAsync(
+            await _organizationUserImportCommand.ImportAsync(
                 _currentContext.OrganizationId.Value,
                 null,
                 model.Groups.Select(g => g.ToImportedGroup(_currentContext.OrganizationId.Value)),
