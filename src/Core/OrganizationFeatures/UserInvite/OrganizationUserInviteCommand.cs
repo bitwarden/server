@@ -13,16 +13,19 @@ using Bit.Core.OrganizationFeatures.Mail;
 using Bit.Core.OrganizationFeatures.Subscription;
 using Bit.Core.Utilities;
 using Bit.Core.Models.Data;
+using Bit.Core.OrganizationFeatures.OrgUser;
 
 namespace Bit.Core.OrganizationFeatures.UserInvite
 {
     public class OrganizationUserInviteCommand : IOrganizationUserInviteCommand
     {
         private readonly IOrganizationUserInviteAccessPolicies _organizationUserInviteAccessPolicies;
+        private readonly IOrganizationUserAccessPolicies _organizationUserAccessPolicies;
         private readonly IOrganizationRepository _organizationRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly IUserRepository _userRepository;
         private readonly IOrganizationService _organizationService;
+        private readonly IOrganizationUserService _organizationUserService;
         private readonly IOrganizationUserInviteService _organizationUserInviteService;
         private readonly IOrganizationUserMailer _organizationUserMailer;
         private readonly IOrganizationSubscriptionService _organizationSubscriptionService;
@@ -30,11 +33,13 @@ namespace Bit.Core.OrganizationFeatures.UserInvite
         private readonly IReferenceEventService _referenceEventService;
 
         public OrganizationUserInviteCommand(
-            IOrganizationUserInviteAccessPolicies organizationPermissions,
+            IOrganizationUserInviteAccessPolicies organizationUserInviteAccessPolicies,
+            IOrganizationUserAccessPolicies organizationUserAccessPolicies,
             IOrganizationRepository organizationRepository,
             IOrganizationUserRepository organizationUserRepository,
             IUserRepository userRepository,
             IOrganizationService organizationService,
+            IOrganizationUserService organizationUserService,
             IOrganizationUserInviteService organizationUserInviteService,
             IOrganizationUserMailer organizationUserMailer,
             IOrganizationSubscriptionService organizationSubscriptionService,
@@ -42,11 +47,13 @@ namespace Bit.Core.OrganizationFeatures.UserInvite
             IReferenceEventService referenceEventService
         )
         {
-            _organizationUserInviteAccessPolicies = organizationPermissions;
+            _organizationUserInviteAccessPolicies = organizationUserInviteAccessPolicies;
+            _organizationUserAccessPolicies = organizationUserAccessPolicies;
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
             _userRepository = userRepository;
             _organizationService = organizationService;
+            _organizationUserService = organizationUserService;
             _organizationUserInviteService = organizationUserInviteService;
             _organizationUserMailer = organizationUserMailer;
             _organizationSubscriptionService = organizationSubscriptionService;
@@ -75,7 +82,7 @@ namespace Bit.Core.OrganizationFeatures.UserInvite
                 foreach (var type in inviteTypes)
                 {
                     CoreHelpers.HandlePermissionResult(
-                        await _organizationUserInviteAccessPolicies.UserCanEditUserTypeAsync(organizationId, type)
+                        await _organizationUserAccessPolicies.UserCanEditUserTypeAsync(organizationId, type)
                     );
                 }
             }
@@ -226,8 +233,7 @@ namespace Bit.Core.OrganizationFeatures.UserInvite
 
                 await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Confirmed);
                 await _organizationUserMailer.SendOrganizationConfirmedEmail(organization, user);
-                // await _mailService.SendOrganizationConfirmedEmailAsync(organization.Name, user.Email);
-                await _organizationUserInviteService.DeleteAndPushUserRegistrationAsync(organizationId, user.Id);
+                await _organizationUserService.DeleteAndPushUserRegistrationAsync(organizationId, user.Id);
                 succeededUsers.Add(orgUser);
                 result.Add((orgUser, ""));
             }
