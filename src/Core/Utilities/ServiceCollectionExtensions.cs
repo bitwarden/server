@@ -200,6 +200,8 @@ namespace Bit.Core.Utilities
             services.AddScoped<IOrganizationSponsorshipService, OrganizationSponsorshipService>();
             services.AddScoped<IPasswordResetAccessPolicies, PasswordResetAccessPolicies>();
             services.AddScoped<IPasswordResetService, PasswordResetService>();
+            services.AddScoped<IOrganizationUserImportAccessPolicies, OrganizationUserImportAccessPolicies>();
+            services.AddScoped<IOrganizationUserImportCommand, OrganizationUserImportCommand>();
         }
 
         public static void AddDefaultServices(this IServiceCollection services, GlobalSettings globalSettings)
