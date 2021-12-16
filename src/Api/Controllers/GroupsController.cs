@@ -1,15 +1,15 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
-using Bit.Core.Repositories;
-using Microsoft.AspNetCore.Authorization;
-using Bit.Core.Exceptions;
-using Bit.Core.Services;
-using Bit.Core.Context;
-using System.Collections.Generic;
 using Bit.Api.Models.Request;
 using Bit.Api.Models.Response;
+using Bit.Core.Context;
+using Bit.Core.Exceptions;
+using Bit.Core.Repositories;
+using Bit.Core.Services;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.Controllers
 {
@@ -89,7 +89,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("")]
-        public async Task<GroupResponseModel> Post(string orgId, [FromBody]GroupRequestModel model)
+        public async Task<GroupResponseModel> Post(string orgId, [FromBody] GroupRequestModel model)
         {
             var orgIdGuid = new Guid(orgId);
             if (!await _currentContext.ManageGroups(orgIdGuid))
@@ -104,7 +104,7 @@ namespace Bit.Api.Controllers
 
         [HttpPut("{id}")]
         [HttpPost("{id}")]
-        public async Task<GroupResponseModel> Put(string orgId, string id, [FromBody]GroupRequestModel model)
+        public async Task<GroupResponseModel> Put(string orgId, string id, [FromBody] GroupRequestModel model)
         {
             var group = await _groupRepository.GetByIdAsync(new Guid(id));
             if (group == null || !await _currentContext.ManageGroups(group.OrganizationId))
@@ -117,7 +117,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPut("{id}/users")]
-        public async Task PutUsers(string orgId, string id, [FromBody]IEnumerable<Guid> model)
+        public async Task PutUsers(string orgId, string id, [FromBody] IEnumerable<Guid> model)
         {
             var group = await _groupRepository.GetByIdAsync(new Guid(id));
             if (group == null || !await _currentContext.ManageGroups(group.OrganizationId))

@@ -1,16 +1,16 @@
 ﻿using System;
-using System.Threading.Tasks;
-using Bit.Core.Models.Table;
 using System.Collections.Generic;
-using Bit.Core.Exceptions;
 using System.Linq;
+using System.Threading.Tasks;
 using Bit.Billing.Models;
-using Bit.Core.Models.Business;
 using Bit.Core.Enums;
+using Bit.Core.Exceptions;
+using Bit.Core.Models.Business;
+using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Microsoft.Extensions.Logging;
-using TaxRate = Bit.Core.Models.Table.TaxRate;
 using StaticStore = Bit.Core.Models.StaticStore;
+using TaxRate = Bit.Core.Models.Table.TaxRate;
 
 namespace Bit.Core.Services
 {

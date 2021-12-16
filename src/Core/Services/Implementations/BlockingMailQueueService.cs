@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -15,7 +15,7 @@ namespace Bit.Core.Services
 
         public async Task EnqueueManyAsync(IEnumerable<IMailQueueMessage> messages, Func<IMailQueueMessage, Task> fallback)
         {
-            foreach(var message in messages)
+            foreach (var message in messages)
             {
                 await fallback(message);
             }

@@ -1,13 +1,13 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Bit.Core.Services;
-using Microsoft.AspNetCore.Authorization;
-using Bit.Core.Context;
+﻿using System;
 using System.Threading.Tasks;
-using Bit.Core.Models.Business;
+using Bit.Core.Context;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
-using System;
+using Bit.Core.Services;
 using Bit.Core.Utilities;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.Controllers
 {
@@ -40,7 +40,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpGet("user/{id}")]
-        public async Task<UserLicense> GetUser(string id, [FromQuery]string key)
+        public async Task<UserLicense> GetUser(string id, [FromQuery] string key)
         {
             var user = await _userRepository.GetByIdAsync(new Guid(id));
             if (user == null)
@@ -58,7 +58,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpGet("organization/{id}")]
-        public async Task<OrganizationLicense> GetOrganization(string id, [FromQuery]string key)
+        public async Task<OrganizationLicense> GetOrganization(string id, [FromQuery] string key)
         {
             var org = await _organizationRepository.GetByIdAsync(new Guid(id));
             if (org == null)

@@ -1,14 +1,14 @@
-using Bit.Core.Test.AutoFixture;
-using Bit.Core.Test.Helpers.Factories;
-using EfRepo = Bit.Core.Repositories.EntityFramework;
-using SqlRepo = Bit.Core.Repositories.SqlServer;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using Bit.Core.Models.Table;
-using Xunit;
-using Bit.Core.Test.Repositories.EntityFramework.EqualityComparers;
-using Bit.Core.Test.AutoFixture.SsoUserFixtures;
+using Bit.Core.Test.AutoFixture;
 using Bit.Core.Test.AutoFixture.Attributes;
+using Bit.Core.Test.AutoFixture.SsoUserFixtures;
+using Bit.Core.Test.Helpers.Factories;
+using Bit.Core.Test.Repositories.EntityFramework.EqualityComparers;
+using Xunit;
+using EfRepo = Bit.Core.Repositories.EntityFramework;
+using SqlRepo = Bit.Core.Repositories.SqlServer;
 
 namespace Bit.Core.Test.Repositories.EntityFramework
 {
@@ -53,7 +53,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
         }
 
         [CiSkippedTheory, EfSsoUserAutoData]
-        public async void ReplaceAsync_Works_DataMatches(SsoUser postSsoUser, SsoUser replaceSsoUser, 
+        public async void ReplaceAsync_Works_DataMatches(SsoUser postSsoUser, SsoUser replaceSsoUser,
             Organization org, User user, SsoUserCompare equalityComparer,
             List<EfRepo.SsoUserRepository> suts, List<EfRepo.UserRepository> efUserRepos,
             List<EfRepo.OrganizationRepository> efOrgRepos, SqlRepo.SsoUserRepository sqlSsoUserRepo,

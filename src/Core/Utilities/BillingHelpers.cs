@@ -1,8 +1,8 @@
-﻿using Bit.Core.Exceptions;
+﻿using System;
+using System.Threading.Tasks;
+using Bit.Core.Exceptions;
 using Bit.Core.Models.Table;
 using Bit.Core.Services;
-using System;
-using System.Threading.Tasks;
 
 namespace Bit.Core.Utilities
 {

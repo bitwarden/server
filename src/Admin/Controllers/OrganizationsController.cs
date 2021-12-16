@@ -1,16 +1,16 @@
 ﻿using System;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Authorization;
-using Bit.Core.Repositories;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Bit.Admin.Models;
-using System.Collections.Generic;
+using Bit.Core.Enums;
+using Bit.Core.Models.Business;
 using Bit.Core.Models.Table;
-using Bit.Core.Utilities;
+using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Core.Models.Business;
-using Bit.Core.Enums;
+using Bit.Core.Utilities;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Admin.Controllers
 {
@@ -143,7 +143,8 @@ namespace Bit.Admin.Controllers
             model.ToOrganization(organization);
             await _organizationRepository.ReplaceAsync(organization);
             await _applicationCacheService.UpsertOrganizationAbilityAsync(organization);
-            await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.OrganizationEditedByAdmin, organization) {
+            await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.OrganizationEditedByAdmin, organization)
+            {
                 EventRaisedByUser = _userService.GetUserName(User),
                 SalesAssistedTrialStarted = model.SalesAssistedTrialStarted,
             });

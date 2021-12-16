@@ -1,13 +1,13 @@
-﻿using Bit.Core;
+﻿using System;
+using System.IO;
+using System.Text;
+using System.Threading.Tasks;
+using Bit.Core;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
-using System;
-using System.IO;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Bit.Billing.Controllers
 {

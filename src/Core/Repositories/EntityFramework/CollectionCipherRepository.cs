@@ -1,14 +1,14 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using AutoMapper;
 using Bit.Core.Enums;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories.EntityFramework.Queries;
-using EfModel = Bit.Core.Models.EntityFramework;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using System;
+using EfModel = Bit.Core.Models.EntityFramework;
 
 namespace Bit.Core.Repositories.EntityFramework
 {
@@ -41,10 +41,10 @@ namespace Bit.Core.Repositories.EntityFramework
             {
                 var dbContext = GetDatabaseContext(scope);
                 var data = await (from cc in dbContext.CollectionCiphers
-                    join c in dbContext.Collections 
-                        on cc.CollectionId equals c.Id
-                    where c.OrganizationId == organizationId
-                    select cc).ToArrayAsync();
+                                  join c in dbContext.Collections
+                                      on cc.CollectionId equals c.Id
+                                  where c.OrganizationId == organizationId
+                                  select cc).ToArrayAsync();
                 return data;
             }
         }
@@ -80,45 +80,45 @@ namespace Bit.Core.Repositories.EntityFramework
                 var dbContext = GetDatabaseContext(scope);
                 var organizationId = (await dbContext.Ciphers.FindAsync(cipherId)).OrganizationId;
                 var availableCollectionsCte = from c in dbContext.Collections
-                    join o in dbContext.Organizations
-                        on c.OrganizationId equals o.Id
-                    join ou in dbContext.OrganizationUsers
-                        on o.Id equals ou.OrganizationId
-                    where ou.UserId == userId
-                    join cu in dbContext.CollectionUsers
-                        on ou.Id equals cu.OrganizationUserId into cu_g
-                    from cu in cu_g.DefaultIfEmpty()
-                    where !ou.AccessAll && cu.CollectionId == c.Id
-                    join gu in dbContext.GroupUsers
-                        on ou.Id equals gu.OrganizationUserId into gu_g
-                    from gu in gu_g.DefaultIfEmpty()
-                    where cu.CollectionId == null && !ou.AccessAll
-                    join g in dbContext.Groups
-                        on gu.GroupId equals g.Id into g_g
-                    from g in g_g.DefaultIfEmpty()
-                    join cg in dbContext.CollectionGroups
-                        on gu.GroupId equals cg.GroupId into cg_g
-                    from cg in cg_g.DefaultIfEmpty()
-                    where !g.AccessAll && cg.CollectionId == c.Id &&
-                    (o.Id == organizationId && o.Enabled && ou.Status == OrganizationUserStatusType.Confirmed && (
-                    ou.AccessAll || !cu.ReadOnly || g.AccessAll || !cg.ReadOnly))
-                    select new { c, o, cu, gu, g, cg };
+                                              join o in dbContext.Organizations
+                                                  on c.OrganizationId equals o.Id
+                                              join ou in dbContext.OrganizationUsers
+                                                  on o.Id equals ou.OrganizationId
+                                              where ou.UserId == userId
+                                              join cu in dbContext.CollectionUsers
+                                                  on ou.Id equals cu.OrganizationUserId into cu_g
+                                              from cu in cu_g.DefaultIfEmpty()
+                                              where !ou.AccessAll && cu.CollectionId == c.Id
+                                              join gu in dbContext.GroupUsers
+                                                  on ou.Id equals gu.OrganizationUserId into gu_g
+                                              from gu in gu_g.DefaultIfEmpty()
+                                              where cu.CollectionId == null && !ou.AccessAll
+                                              join g in dbContext.Groups
+                                                  on gu.GroupId equals g.Id into g_g
+                                              from g in g_g.DefaultIfEmpty()
+                                              join cg in dbContext.CollectionGroups
+                                                  on gu.GroupId equals cg.GroupId into cg_g
+                                              from cg in cg_g.DefaultIfEmpty()
+                                              where !g.AccessAll && cg.CollectionId == c.Id &&
+                                              (o.Id == organizationId && o.Enabled && ou.Status == OrganizationUserStatusType.Confirmed && (
+                                              ou.AccessAll || !cu.ReadOnly || g.AccessAll || !cg.ReadOnly))
+                                              select new { c, o, cu, gu, g, cg };
                 var target = from cc in dbContext.CollectionCiphers
-                    where cc.CipherId == cipherId
-                    select new { cc.CollectionId, cc.CipherId };
+                             where cc.CipherId == cipherId
+                             select new { cc.CollectionId, cc.CipherId };
                 var source = collectionIds.Select(x => new { CollectionId = x, CipherId = cipherId });
                 var merge1 = from t in target
-                    join s in source
-                        on t.CollectionId equals s.CollectionId into s_g
-                    from s in s_g.DefaultIfEmpty()
-                    where t.CipherId == s.CipherId
-                    select new { t, s };
+                             join s in source
+                                 on t.CollectionId equals s.CollectionId into s_g
+                             from s in s_g.DefaultIfEmpty()
+                             where t.CipherId == s.CipherId
+                             select new { t, s };
                 var merge2 = from s in source
-                    join t in target
-                        on s.CollectionId equals t.CollectionId into t_g
-                    from t in t_g.DefaultIfEmpty()
-                    where t.CipherId == s.CipherId
-                    select new { t, s };
+                             join t in target
+                                 on s.CollectionId equals t.CollectionId into t_g
+                             from t in t_g.DefaultIfEmpty()
+                             where t.CipherId == s.CipherId
+                             select new { t, s };
                 var union = merge1.Union(merge2).Distinct();
                 var insert = union
                     .Where(x => x.t == null && collectionIds.Contains(x.s.CollectionId))
@@ -151,28 +151,28 @@ namespace Bit.Core.Repositories.EntityFramework
             {
                 var dbContext = GetDatabaseContext(scope);
                 var availableCollectionsCte = from c in dbContext.Collections
-                    where c.OrganizationId == organizationId
-                    select c;
+                                              where c.OrganizationId == organizationId
+                                              select c;
                 var target = from cc in dbContext.CollectionCiphers
-                    where cc.CipherId == cipherId
-                    select new { cc.CollectionId, cc.CipherId };
+                             where cc.CipherId == cipherId
+                             select new { cc.CollectionId, cc.CipherId };
                 var source = collectionIds.Select(x => new { CollectionId = x, CipherId = cipherId });
                 var merge1 = from t in target
-                    join s in source
-                        on t.CollectionId equals s.CollectionId into s_g
-                    from s in s_g.DefaultIfEmpty()
-                    where t.CipherId == s.CipherId
-                    select new { t, s };
+                             join s in source
+                                 on t.CollectionId equals s.CollectionId into s_g
+                             from s in s_g.DefaultIfEmpty()
+                             where t.CipherId == s.CipherId
+                             select new { t, s };
                 var merge2 = from s in source
-                    join t in target
-                        on s.CollectionId equals t.CollectionId into t_g
-                    from t in t_g.DefaultIfEmpty()
-                    where t.CipherId == s.CipherId
-                    select new { t, s };
+                             join t in target
+                                 on s.CollectionId equals t.CollectionId into t_g
+                             from t in t_g.DefaultIfEmpty()
+                             where t.CipherId == s.CipherId
+                             select new { t, s };
                 var union = merge1.Union(merge2).Distinct();
                 var insert = union
                     .Where(x => x.t == null && collectionIds.Contains(x.s.CollectionId))
-                    .Select(x => new EfModel.CollectionCipher 
+                    .Select(x => new EfModel.CollectionCipher
                     {
                         CollectionId = x.s.CollectionId,
                         CipherId = x.s.CipherId,
@@ -197,29 +197,29 @@ namespace Bit.Core.Repositories.EntityFramework
             {
                 var dbContext = GetDatabaseContext(scope);
                 var availibleCollections = from c in dbContext.Collections
-                    join o in dbContext.Organizations
-                        on c.OrganizationId equals o.Id
-                    join ou in dbContext.OrganizationUsers
-                        on o.Id equals ou.OrganizationId
-                    where ou.UserId == userId
-                    join cu in dbContext.CollectionUsers
-                        on ou.Id equals cu.OrganizationUserId into cu_g
-                    from cu in cu_g.DefaultIfEmpty()
-                    where !ou.AccessAll && cu.CollectionId == c.Id
-                    join gu in dbContext.GroupUsers
-                        on ou.Id equals gu.OrganizationUserId into gu_g
-                    from gu in gu_g.DefaultIfEmpty()
-                    where cu.CollectionId == null && !ou.AccessAll
-                    join g in dbContext.Groups
-                        on gu.GroupId equals g.Id into g_g
-                    from g in g_g.DefaultIfEmpty()
-                    join cg in dbContext.CollectionGroups
-                        on gu.GroupId equals cg.GroupId into cg_g
-                    from cg in cg_g.DefaultIfEmpty()
-                    where !g.AccessAll && cg.CollectionId == c.Id &&
-                    (o.Id == organizationId && o.Enabled && ou.Status == OrganizationUserStatusType.Confirmed && 
-                    (ou.AccessAll || !cu.ReadOnly || g.AccessAll || !cg.ReadOnly))
-                    select new { c, o, ou, cu, gu, g, cg };
+                                           join o in dbContext.Organizations
+                                               on c.OrganizationId equals o.Id
+                                           join ou in dbContext.OrganizationUsers
+                                               on o.Id equals ou.OrganizationId
+                                           where ou.UserId == userId
+                                           join cu in dbContext.CollectionUsers
+                                               on ou.Id equals cu.OrganizationUserId into cu_g
+                                           from cu in cu_g.DefaultIfEmpty()
+                                           where !ou.AccessAll && cu.CollectionId == c.Id
+                                           join gu in dbContext.GroupUsers
+                                               on ou.Id equals gu.OrganizationUserId into gu_g
+                                           from gu in gu_g.DefaultIfEmpty()
+                                           where cu.CollectionId == null && !ou.AccessAll
+                                           join g in dbContext.Groups
+                                               on gu.GroupId equals g.Id into g_g
+                                           from g in g_g.DefaultIfEmpty()
+                                           join cg in dbContext.CollectionGroups
+                                               on gu.GroupId equals cg.GroupId into cg_g
+                                           from cg in cg_g.DefaultIfEmpty()
+                                           where !g.AccessAll && cg.CollectionId == c.Id &&
+                                           (o.Id == organizationId && o.Enabled && ou.Status == OrganizationUserStatusType.Confirmed &&
+                                           (ou.AccessAll || !cu.ReadOnly || g.AccessAll || !cg.ReadOnly))
+                                           select new { c, o, ou, cu, gu, g, cg };
                 var count = await availibleCollections.CountAsync();
                 if (await availibleCollections.CountAsync() < 1)
                 {
@@ -227,13 +227,13 @@ namespace Bit.Core.Repositories.EntityFramework
                 }
 
                 var insertData = from collectionId in collectionIds
-                    from cipherId in cipherIds
-                    where availibleCollections.Select(x => x.c.Id).Contains(collectionId)
-                    select new EfModel.CollectionCipher
-                    {
-                        CollectionId = collectionId,
-                        CipherId = cipherId,
-                    };
+                                 from cipherId in cipherIds
+                                 where availibleCollections.Select(x => x.c.Id).Contains(collectionId)
+                                 select new EfModel.CollectionCipher
+                                 {
+                                     CollectionId = collectionId,
+                                     CipherId = cipherId,
+                                 };
                 await dbContext.AddRangeAsync(insertData);
                 await UserBumpAccountRevisionDateByOrganizationId(organizationId);
             }

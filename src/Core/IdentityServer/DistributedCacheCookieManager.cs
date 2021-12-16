@@ -22,7 +22,7 @@ namespace Bit.Core.IdentityServer
         {
             var id = Guid.NewGuid().ToString();
             var cacheKey = GetKey(key, id);
-            
+
             var expiresUtc = options.Expires ?? DateTimeOffset.UtcNow.AddMinutes(15);
             var cacheOptions = new DistributedCacheEntryOptions()
                 .SetAbsoluteExpiration(expiresUtc);

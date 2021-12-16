@@ -1,14 +1,14 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using Bit.Core.Models.Table;
 
 namespace Bit.Core.Test.Repositories.EntityFramework.EqualityComparers
 {
-    public class SendCompare: IEqualityComparer<Send>
+    public class SendCompare : IEqualityComparer<Send>
     {
         public bool Equals(Send x, Send y)
         {
-            return  x.Type == y.Type &&
+            return x.Type == y.Type &&
             x.Data == y.Data &&
             x.Key == y.Key &&
             x.Password == y.Password &&

@@ -18,7 +18,7 @@ namespace Bit.Billing.Jobs
             IServiceProvider serviceProvider,
             ILogger<JobsHostedService> logger,
             ILogger<JobListener> listenerLogger)
-            : base(globalSettings, serviceProvider, logger, listenerLogger) {}
+            : base(globalSettings, serviceProvider, logger, listenerLogger) { }
 
         public override async Task StartAsync(CancellationToken cancellationToken)
         {

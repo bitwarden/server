@@ -24,7 +24,7 @@ namespace Bit.Core.Models.Business
 
         [JsonConverter(typeof(StringEnumConverter))]
         public ReferenceEventType Type { get; set; }
-        
+
         [JsonConverter(typeof(StringEnumConverter))]
         public ReferenceEventSource Source { get; set; }
 

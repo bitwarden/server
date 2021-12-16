@@ -1,6 +1,6 @@
-﻿using Bit.Core.Enums;
+﻿using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using System.Collections.Generic;
+using Bit.Core.Enums;
 
 namespace Bit.Core.Models.Api
 {

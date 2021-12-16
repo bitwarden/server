@@ -1,17 +1,17 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using Bit.Core.Models.Table;
-using Microsoft.Azure.NotificationHubs;
 using Bit.Core.Context;
 using Bit.Core.Enums;
-using Newtonsoft.Json;
-using System.Collections.Generic;
-using Microsoft.AspNetCore.Http;
 using Bit.Core.Models;
 using Bit.Core.Models.Data;
+using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
-using System.Text.RegularExpressions;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Azure.NotificationHubs;
+using Newtonsoft.Json;
 
 namespace Bit.Core.Services
 {

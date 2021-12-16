@@ -1,13 +1,13 @@
-﻿using System.Threading.Tasks;
-using System;
-using Bit.Core.Enums;
-using Bit.Core.Repositories;
-using Bit.Core.Models.Data;
-using System.Linq;
+﻿using System;
 using System.Collections.Generic;
-using Bit.Core.Models.Table;
+using System.Linq;
+using System.Threading.Tasks;
 using Bit.Core.Context;
+using Bit.Core.Enums;
+using Bit.Core.Models.Data;
+using Bit.Core.Models.Table;
 using Bit.Core.Models.Table.Provider;
+using Bit.Core.Repositories;
 using Bit.Core.Settings;
 
 namespace Bit.Core.Services
@@ -61,7 +61,7 @@ namespace Bit.Core.Services
                     Type = type,
                     Date = DateTime.UtcNow
                 });
-            
+
             var providerAbilities = await _applicationCacheService.GetProviderAbilitiesAsync();
             var providers = await _currentContext.ProviderMembershipAsync(_providerUserRepository, userId);
             var providerEvents = providers.Where(o => CanUseProviderEvents(providerAbilities, o.Id))
@@ -310,7 +310,7 @@ namespace Bit.Core.Services
             return orgAbilities != null && orgAbilities.ContainsKey(orgId) &&
                 orgAbilities[orgId].Enabled && orgAbilities[orgId].UseEvents;
         }
-        
+
         private bool CanUseProviderEvents(IDictionary<Guid, ProviderAbility> providerAbilities, Guid providerId)
         {
             return providerAbilities != null && providerAbilities.ContainsKey(providerId) &&

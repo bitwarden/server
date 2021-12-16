@@ -1,4 +1,4 @@
-using AutoFixture;
+﻿using AutoFixture;
 using AutoFixture.Dsl;
 using Bit.Core.Models.Data;
 

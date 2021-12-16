@@ -20,7 +20,7 @@ namespace Bit.Core.Repositories.SqlServer
         public ProviderOrganizationRepository(string connectionString, string readOnlyConnectionString)
             : base(connectionString, readOnlyConnectionString)
         { }
-        
+
         public async Task<ICollection<ProviderOrganizationOrganizationDetails>> GetManyDetailsByProviderAsync(Guid providerId)
         {
             using (var connection = new SqlConnection(ConnectionString))

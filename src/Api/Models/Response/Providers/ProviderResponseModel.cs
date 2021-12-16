@@ -23,7 +23,7 @@ namespace Bit.Api.Models.Response.Providers
             BusinessTaxNumber = provider.BusinessTaxNumber;
             BillingEmail = provider.BillingEmail;
         }
-        
+
         public Guid Id { get; set; }
         public string Name { get; set; }
         public string BusinessName { get; set; }

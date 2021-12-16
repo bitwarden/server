@@ -2,13 +2,13 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Bit.Api.Models.Response;
-using Microsoft.AspNetCore.Mvc;
-using Bit.Core.Repositories;
-using Microsoft.AspNetCore.Authorization;
-using Bit.Core.Exceptions;
-using Bit.Core.Services;
 using Bit.Core.Context;
+using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
+using Bit.Core.Repositories;
+using Bit.Core.Services;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.Controllers
 {
@@ -41,7 +41,7 @@ namespace Bit.Api.Controllers
 
         [HttpGet("")]
         public async Task<ListResponseModel<EventResponseModel>> GetUser(
-            [FromQuery]DateTime? start = null, [FromQuery]DateTime? end = null, [FromQuery]string continuationToken = null)
+            [FromQuery] DateTime? start = null, [FromQuery] DateTime? end = null, [FromQuery] string continuationToken = null)
         {
             var dateRange = GetDateRange(start, end);
             var userId = _userService.GetProperUserId(User).Value;
@@ -53,7 +53,7 @@ namespace Bit.Api.Controllers
 
         [HttpGet("~/ciphers/{id}/events")]
         public async Task<ListResponseModel<EventResponseModel>> GetCipher(string id,
-            [FromQuery]DateTime? start = null, [FromQuery]DateTime? end = null, [FromQuery]string continuationToken = null)
+            [FromQuery] DateTime? start = null, [FromQuery] DateTime? end = null, [FromQuery] string continuationToken = null)
         {
             var cipher = await _cipherRepository.GetByIdAsync(new Guid(id));
             if (cipher == null)
@@ -86,7 +86,7 @@ namespace Bit.Api.Controllers
 
         [HttpGet("~/organizations/{id}/events")]
         public async Task<ListResponseModel<EventResponseModel>> GetOrganization(string id,
-            [FromQuery]DateTime? start = null, [FromQuery]DateTime? end = null, [FromQuery]string continuationToken = null)
+            [FromQuery] DateTime? start = null, [FromQuery] DateTime? end = null, [FromQuery] string continuationToken = null)
         {
             var orgId = new Guid(id);
             if (!await _currentContext.AccessEventLogs(orgId))
@@ -103,7 +103,7 @@ namespace Bit.Api.Controllers
 
         [HttpGet("~/organizations/{orgId}/users/{id}/events")]
         public async Task<ListResponseModel<EventResponseModel>> GetOrganizationUser(string orgId, string id,
-            [FromQuery]DateTime? start = null, [FromQuery]DateTime? end = null, [FromQuery]string continuationToken = null)
+            [FromQuery] DateTime? start = null, [FromQuery] DateTime? end = null, [FromQuery] string continuationToken = null)
         {
             var organizationUser = await _organizationUserRepository.GetByIdAsync(new Guid(id));
             if (organizationUser == null || !organizationUser.UserId.HasValue ||
@@ -122,7 +122,7 @@ namespace Bit.Api.Controllers
 
         [HttpGet("~/providers/{providerId:guid}/events")]
         public async Task<ListResponseModel<EventResponseModel>> GetProvider(Guid providerId,
-            [FromQuery]DateTime? start = null, [FromQuery]DateTime? end = null, [FromQuery]string continuationToken = null)
+            [FromQuery] DateTime? start = null, [FromQuery] DateTime? end = null, [FromQuery] string continuationToken = null)
         {
             if (!_currentContext.ProviderAccessEventLogs(providerId))
             {
@@ -138,7 +138,7 @@ namespace Bit.Api.Controllers
 
         [HttpGet("~/providers/{providerId:guid}/users/{id:guid}/events")]
         public async Task<ListResponseModel<EventResponseModel>> GetProviderUser(Guid providerId, Guid id,
-            [FromQuery]DateTime? start = null, [FromQuery]DateTime? end = null, [FromQuery]string continuationToken = null)
+            [FromQuery] DateTime? start = null, [FromQuery] DateTime? end = null, [FromQuery] string continuationToken = null)
         {
             var providerUser = await _providerUserRepository.GetByIdAsync(id);
             if (providerUser == null || !providerUser.UserId.HasValue ||

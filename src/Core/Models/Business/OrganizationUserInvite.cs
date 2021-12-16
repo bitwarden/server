@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Bit.Core.Models.Data;
 
 namespace Bit.Core.Models.Business
@@ -11,7 +11,7 @@ namespace Bit.Core.Models.Business
         public Permissions Permissions { get; set; }
         public IEnumerable<SelectionReadOnly> Collections { get; set; }
 
-        public OrganizationUserInvite() {}
+        public OrganizationUserInvite() { }
 
         public OrganizationUserInvite(OrganizationUserInviteData requestModel)
         {

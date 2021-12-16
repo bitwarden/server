@@ -1,13 +1,13 @@
-﻿using AutoMapper;
-using Bit.Core.Models.Table;
-using DataModel = Bit.Core.Models.Data;
-using EFModel = Bit.Core.Models.EntityFramework;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using System;
+using AutoMapper;
+using Bit.Core.Models.Table;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using DataModel = Bit.Core.Models.Data;
+using EFModel = Bit.Core.Models.EntityFramework;
 using TableModel = Bit.Core.Models.Table;
 
 namespace Bit.Core.Repositories.EntityFramework
@@ -62,7 +62,7 @@ namespace Bit.Core.Repositories.EntityFramework
                 var organizations = await GetDbSet(dbContext)
                     .Where(e => name == null || e.Name.Contains(name))
                     .Where(e => userEmail == null || e.OrganizationUsers.Any(u => u.Email == userEmail))
-                    .Where(e => paid == null || 
+                    .Where(e => paid == null ||
                             (paid == true && !string.IsNullOrWhiteSpace(e.GatewaySubscriptionId)) ||
                             (paid == false && e.GatewaySubscriptionId == null))
                     .OrderBy(e => e.CreationDate)

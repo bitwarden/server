@@ -39,7 +39,7 @@ namespace Bit.Api.Public.Controllers
         /// </remarks>
         [HttpGet]
         [ProducesResponseType(typeof(ListResponseModel<EventResponseModel>), (int)HttpStatusCode.OK)]
-        public async Task<IActionResult> List([FromQuery]EventFilterRequestModel request)
+        public async Task<IActionResult> List([FromQuery] EventFilterRequestModel request)
         {
             var dateRange = request.ToDateRange();
             var result = new PagedResult<IEvent>();

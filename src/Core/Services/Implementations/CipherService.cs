@@ -1,18 +1,18 @@
 ﻿using System;
-using System.Linq;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
+using Bit.Core.Enums;
+using Bit.Core.Exceptions;
+using Bit.Core.Models.Business;
+using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
-using Core.Models.Data;
-using Bit.Core.Exceptions;
-using Bit.Core.Models.Data;
-using Newtonsoft.Json;
-using System.IO;
-using Bit.Core.Enums;
-using Bit.Core.Utilities;
 using Bit.Core.Settings;
-using Bit.Core.Models.Business;
+using Bit.Core.Utilities;
+using Core.Models.Data;
+using Newtonsoft.Json;
 
 namespace Bit.Core.Services
 {

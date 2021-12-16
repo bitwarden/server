@@ -37,7 +37,7 @@ namespace Bit.Api.Models.Request.Organizations
 
     public class SsoConfigurationDataRequest : IValidatableObject
     {
-        public SsoConfigurationDataRequest() {}
+        public SsoConfigurationDataRequest() { }
 
         [Required]
         public SsoType ConfigType { get; set; }

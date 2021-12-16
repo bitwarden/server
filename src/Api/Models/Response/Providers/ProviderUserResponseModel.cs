@@ -23,7 +23,7 @@ namespace Bit.Api.Models.Response.Providers
             Status = providerUser.Status;
             Permissions = CoreHelpers.LoadClassFromJsonData<Permissions>(providerUser.Permissions);
         }
-        
+
         public ProviderUserResponseModel(ProviderUserUserDetails providerUser, string obj = "providerUser")
             : base(obj)
         {
@@ -48,7 +48,7 @@ namespace Bit.Api.Models.Response.Providers
 
     public class ProviderUserUserDetailsResponseModel : ProviderUserResponseModel
     {
-        public ProviderUserUserDetailsResponseModel(ProviderUserUserDetails providerUser, 
+        public ProviderUserUserDetailsResponseModel(ProviderUserUserDetails providerUser,
             string obj = "providerUserUserDetails") : base(providerUser, obj)
         {
             if (providerUser == null)

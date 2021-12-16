@@ -1,11 +1,11 @@
-﻿using Bit.Core.Enums;
+﻿using System;
+using System.Collections.Generic;
+using System.Security.Cryptography;
+using Bit.Core.Enums;
 using Fido2NetLib.Objects;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using PeterO.Cbor;
-using System;
-using System.Collections.Generic;
-using System.Security.Cryptography;
 using U2F.Core.Utils;
 
 namespace Bit.Core.Models

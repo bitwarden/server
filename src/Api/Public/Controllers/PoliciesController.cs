@@ -88,7 +88,7 @@ namespace Bit.Api.Public.Controllers
         [ProducesResponseType(typeof(PolicyResponseModel), (int)HttpStatusCode.OK)]
         [ProducesResponseType(typeof(ErrorResponseModel), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
-        public async Task<IActionResult> Put(PolicyType type, [FromBody]PolicyUpdateRequestModel model)
+        public async Task<IActionResult> Put(PolicyType type, [FromBody] PolicyUpdateRequestModel model)
         {
             var policy = await _policyRepository.GetByOrganizationIdTypeAsync(
                 _currentContext.OrganizationId.Value, type);

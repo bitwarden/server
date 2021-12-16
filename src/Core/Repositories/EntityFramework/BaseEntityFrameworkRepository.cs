@@ -1,17 +1,17 @@
-﻿using AutoMapper;
-using Bit.Core.Models.Table;
-using Bit.Core.Repositories.EntityFramework.Queries;
-using EfModel = Bit.Core.Models.EntityFramework;
-using LinqToDB.Data;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
-using System;
+using AutoMapper;
 using Bit.Core.Enums;
 using Bit.Core.Enums.Provider;
+using Bit.Core.Models.Table;
+using Bit.Core.Repositories.EntityFramework.Queries;
+using LinqToDB.Data;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using EfModel = Bit.Core.Models.EntityFramework;
 
 namespace Bit.Core.Repositories.EntityFramework
 {
@@ -70,7 +70,7 @@ namespace Bit.Core.Repositories.EntityFramework
                     var query = new UserBumpAccountRevisionDateByCipherIdQuery(cipher);
                     var users = query.Run(dbContext);
 
-                    await users.ForEachAsync(e => 
+                    await users.ForEachAsync(e =>
                     {
                         dbContext.Attach(e);
                         e.RevisionDate = DateTime.UtcNow;
@@ -87,7 +87,7 @@ namespace Bit.Core.Repositories.EntityFramework
                 var dbContext = GetDatabaseContext(scope);
                 var query = new UserBumpAccountRevisionDateByOrganizationIdQuery(organizationId);
                 var users = query.Run(dbContext);
-                await users.ForEachAsync(e => 
+                await users.ForEachAsync(e =>
                 {
                     dbContext.Attach(e);
                     e.RevisionDate = DateTime.UtcNow;
@@ -107,7 +107,7 @@ namespace Bit.Core.Repositories.EntityFramework
             {
                 var dbContext = GetDatabaseContext(scope);
                 var users = dbContext.Users.Where(u => userIds.Contains(u.Id));
-                await users.ForEachAsync(u => 
+                await users.ForEachAsync(u =>
                 {
                     dbContext.Attach(u);
                     u.RevisionDate = DateTime.UtcNow;
@@ -195,31 +195,31 @@ namespace Bit.Core.Repositories.EntityFramework
             {
                 var dbContext = GetDatabaseContext(scope);
                 var query = from u in dbContext.Users
-                    join ou in dbContext.OrganizationUsers
-                        on u.Id equals ou.UserId
-                    join cu in dbContext.CollectionUsers
-                        on ou.Id equals cu.OrganizationUserId into cu_g
-                    from cu in cu_g.DefaultIfEmpty()
-                    where !ou.AccessAll && cu.CollectionId.Equals(collectionId)
-                    join gu in dbContext.GroupUsers
-                        on ou.Id equals gu.OrganizationUserId into gu_g
-                    from gu in gu_g.DefaultIfEmpty()
-                    where cu.CollectionId == default(Guid) && !ou.AccessAll
-                    join g in dbContext.Groups
-                        on gu.GroupId equals g.Id into g_g
-                    from g in g_g.DefaultIfEmpty()
-                    join cg in dbContext.CollectionGroups
-                        on gu.GroupId equals cg.GroupId into cg_g
-                    from cg in cg_g.DefaultIfEmpty()
-                    where !g.AccessAll && cg.CollectionId == collectionId &&
-                        (ou.OrganizationId == organizationId && ou.Status == OrganizationUserStatusType.Confirmed &&
-                        (cu.CollectionId != default(Guid) || cg.CollectionId != default(Guid) || ou.AccessAll || g.AccessAll))
-                    select new { u, ou, cu, gu, g, cg };
+                            join ou in dbContext.OrganizationUsers
+                                on u.Id equals ou.UserId
+                            join cu in dbContext.CollectionUsers
+                                on ou.Id equals cu.OrganizationUserId into cu_g
+                            from cu in cu_g.DefaultIfEmpty()
+                            where !ou.AccessAll && cu.CollectionId.Equals(collectionId)
+                            join gu in dbContext.GroupUsers
+                                on ou.Id equals gu.OrganizationUserId into gu_g
+                            from gu in gu_g.DefaultIfEmpty()
+                            where cu.CollectionId == default(Guid) && !ou.AccessAll
+                            join g in dbContext.Groups
+                                on gu.GroupId equals g.Id into g_g
+                            from g in g_g.DefaultIfEmpty()
+                            join cg in dbContext.CollectionGroups
+                                on gu.GroupId equals cg.GroupId into cg_g
+                            from cg in cg_g.DefaultIfEmpty()
+                            where !g.AccessAll && cg.CollectionId == collectionId &&
+                                (ou.OrganizationId == organizationId && ou.Status == OrganizationUserStatusType.Confirmed &&
+                                (cu.CollectionId != default(Guid) || cg.CollectionId != default(Guid) || ou.AccessAll || g.AccessAll))
+                            select new { u, ou, cu, gu, g, cg };
                 var users = query.Select(x => x.u);
-                await users.ForEachAsync(u => 
+                await users.ForEachAsync(u =>
                 {
                     dbContext.Attach(u);
-                    u.RevisionDate = DateTime.UtcNow; 
+                    u.RevisionDate = DateTime.UtcNow;
                 });
                 await dbContext.SaveChangesAsync();
             }
@@ -231,12 +231,12 @@ namespace Bit.Core.Repositories.EntityFramework
             {
                 var dbContext = GetDatabaseContext(scope);
                 var query = from u in dbContext.Users
-                    join ou in dbContext.OrganizationUsers
-                        on u.Id equals ou.UserId
-                    where ou.Id.Equals(organizationUserId) && ou.Status.Equals(OrganizationUserStatusType.Confirmed)
-                    select new { u, ou };
+                            join ou in dbContext.OrganizationUsers
+                                on u.Id equals ou.UserId
+                            where ou.Id.Equals(organizationUserId) && ou.Status.Equals(OrganizationUserStatusType.Confirmed)
+                            select new { u, ou };
                 var users = query.Select(x => x.u);
-                await users.ForEachAsync(u => 
+                await users.ForEachAsync(u =>
                 {
                     dbContext.Attach(u);
                     u.AccountRevisionDate = DateTime.UtcNow;
@@ -251,13 +251,14 @@ namespace Bit.Core.Repositories.EntityFramework
             {
                 var dbContext = GetDatabaseContext(scope);
                 var query = from pu in dbContext.ProviderUsers
-                    join u in dbContext.Users
-                        on pu.UserId equals u.Id
-                    where pu.Status.Equals(ProviderUserStatusType.Confirmed) &&
-                        providerUserIds.Contains(pu.Id)
-                    select new { pu, u };
+                            join u in dbContext.Users
+                                on pu.UserId equals u.Id
+                            where pu.Status.Equals(ProviderUserStatusType.Confirmed) &&
+                                providerUserIds.Contains(pu.Id)
+                            select new { pu, u };
                 var users = query.Select(x => x.u);
-                await users.ForEachAsync(u => {
+                await users.ForEachAsync(u =>
+                {
                     dbContext.Attach(u);
                     u.AccountRevisionDate = DateTime.UtcNow;
                 });

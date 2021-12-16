@@ -1,15 +1,15 @@
 ﻿using System;
 using System.Reflection;
 using AutoFixture;
-using TableModel = Bit.Core.Models.Table;
-using Bit.Core.Enums;
 using AutoFixture.Kernel;
-using Bit.Core.Test.AutoFixture.OrganizationFixtures;
+using AutoFixture.Xunit2;
+using Bit.Core.Enums;
 using Bit.Core.Repositories.EntityFramework;
 using Bit.Core.Test.AutoFixture.EntityFrameworkRepositoryFixtures;
-using AutoFixture.Xunit2;
+using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using TableModel = Bit.Core.Models.Table;
 
 namespace Bit.Core.Test.AutoFixture.PolicyFixtures
 {
@@ -21,7 +21,7 @@ namespace Bit.Core.Test.AutoFixture.PolicyFixtures
         {
             Type = type;
         }
-        
+
         public void Customize(IFixture fixture)
         {
             fixture.Customize<Core.Models.Table.Policy>(composer => composer
@@ -45,12 +45,12 @@ namespace Bit.Core.Test.AutoFixture.PolicyFixtures
             return new Policy(_type);
         }
     }
-    
-    internal class PolicyBuilder: ISpecimenBuilder
+
+    internal class PolicyBuilder : ISpecimenBuilder
     {
         public object Create(object request, ISpecimenContext context)
         {
-            if (context == null) 
+            if (context == null)
             {
                 throw new ArgumentNullException(nameof(context));
             }
@@ -67,7 +67,7 @@ namespace Bit.Core.Test.AutoFixture.PolicyFixtures
         }
     }
 
-    internal class EfPolicy: ICustomization 
+    internal class EfPolicy : ICustomization
     {
         public void Customize(IFixture fixture)
         {

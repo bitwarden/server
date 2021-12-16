@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Bit.Core.Enums;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.StaticStore;

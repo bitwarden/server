@@ -1,9 +1,9 @@
-using System;
-using Xunit.Sdk;
-using AutoFixture;
-using System.Reflection;
+﻿using System;
 using System.Collections.Generic;
+using System.Reflection;
+using AutoFixture;
 using Bit.Test.Common.Helpers;
+using Xunit.Sdk;
 
 namespace Bit.Test.Common.AutoFixture.Attributes
 {

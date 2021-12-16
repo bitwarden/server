@@ -1,8 +1,8 @@
-﻿using Microsoft.AspNetCore.Identity;
-using Bit.Core.Models.Table;
-using Microsoft.Extensions.Options;
+﻿using Bit.Core.Models.Table;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Bit.Core.Identity
 {

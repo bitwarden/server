@@ -8,8 +8,8 @@ using Bit.Core.Models;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
-using Bit.Core.Utilities;
 using Bit.Core.Settings;
+using Bit.Core.Utilities;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 
@@ -69,7 +69,7 @@ namespace Bit.Core.Services
             {
                 throw new BadRequestException("You cannot use Emergency Access Takeover because you are using Key Connector.");
             }
-            
+
             var emergencyAccess = new EmergencyAccess
             {
                 GrantorId = invitingUser.Id,
@@ -248,7 +248,7 @@ namespace Bit.Core.Services
 
             emergencyAccess.Status = EmergencyAccessStatusType.RecoveryApproved;
             await _emergencyAccessRepository.ReplaceAsync(emergencyAccess);
-            
+
             var grantee = await _userRepository.GetByIdAsync(emergencyAccess.GranteeId.Value);
             await _mailService.SendEmergencyAccessRecoveryApproved(emergencyAccess, NameOrEmail(approvingUser), grantee.Email);
         }
@@ -263,10 +263,10 @@ namespace Bit.Core.Services
             {
                 throw new BadRequestException("Emergency Access not valid.");
             }
-            
+
             emergencyAccess.Status = EmergencyAccessStatusType.Confirmed;
             await _emergencyAccessRepository.ReplaceAsync(emergencyAccess);
-            
+
             var grantee = await _userRepository.GetByIdAsync(emergencyAccess.GranteeId.Value);
             await _mailService.SendEmergencyAccessRecoveryRejected(emergencyAccess, NameOrEmail(rejectingUser), grantee.Email);
         }
@@ -381,7 +381,8 @@ namespace Bit.Core.Services
 
             var ciphers = await _cipherRepository.GetManyByUserIdAsync(emergencyAccess.GrantorId, false);
 
-            return new EmergencyAccessViewData {
+            return new EmergencyAccessViewData
+            {
                 EmergencyAccess = emergencyAccess,
                 Ciphers = ciphers,
             };
@@ -412,11 +413,12 @@ namespace Bit.Core.Services
             return string.IsNullOrWhiteSpace(user.Name) ? user.Email : user.Name;
         }
 
-        private bool IsValidRequest(EmergencyAccess availibleAccess, User requestingUser, EmergencyAccessType requestedAccessType) {
-             return availibleAccess != null && 
-                availibleAccess.GranteeId == requestingUser.Id &&
-                availibleAccess.Status == EmergencyAccessStatusType.RecoveryApproved &&
-                availibleAccess.Type == requestedAccessType;
+        private bool IsValidRequest(EmergencyAccess availibleAccess, User requestingUser, EmergencyAccessType requestedAccessType)
+        {
+            return availibleAccess != null &&
+               availibleAccess.GranteeId == requestingUser.Id &&
+               availibleAccess.Status == EmergencyAccessStatusType.RecoveryApproved &&
+               availibleAccess.Type == requestedAccessType;
         }
     }
 }

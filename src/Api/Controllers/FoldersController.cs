@@ -3,11 +3,11 @@ using System.Linq;
 using System.Threading.Tasks;
 using Bit.Api.Models.Request;
 using Bit.Api.Models.Response;
-using Microsoft.AspNetCore.Mvc;
-using Bit.Core.Repositories;
-using Microsoft.AspNetCore.Authorization;
 using Bit.Core.Exceptions;
+using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.Controllers
 {
@@ -52,7 +52,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("")]
-        public async Task<FolderResponseModel> Post([FromBody]FolderRequestModel model)
+        public async Task<FolderResponseModel> Post([FromBody] FolderRequestModel model)
         {
             var userId = _userService.GetProperUserId(User).Value;
             var folder = model.ToFolder(_userService.GetProperUserId(User).Value);
@@ -62,7 +62,7 @@ namespace Bit.Api.Controllers
 
         [HttpPut("{id}")]
         [HttpPost("{id}")]
-        public async Task<FolderResponseModel> Put(string id, [FromBody]FolderRequestModel model)
+        public async Task<FolderResponseModel> Put(string id, [FromBody] FolderRequestModel model)
         {
             var userId = _userService.GetProperUserId(User).Value;
             var folder = await _folderRepository.GetByIdAsync(new Guid(id), userId);

@@ -1,8 +1,8 @@
 ﻿using System.Data;
 using System.Data.SqlClient;
 using System.Threading.Tasks;
-using Dapper;
 using Bit.Core.Settings;
+using Dapper;
 
 namespace Bit.Core.Repositories.SqlServer
 {

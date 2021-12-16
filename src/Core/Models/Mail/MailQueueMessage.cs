@@ -1,6 +1,6 @@
-using System.Collections.Generic;
-using Newtonsoft.Json;
+﻿using System.Collections.Generic;
 using Bit.Core.Utilities;
+using Newtonsoft.Json;
 
 namespace Bit.Core.Models.Mail
 {

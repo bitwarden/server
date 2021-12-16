@@ -1,8 +1,8 @@
-﻿using Microsoft.AspNetCore;
+﻿using Bit.Core.Utilities;
+using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
-using Bit.Core.Utilities;
-using Serilog.Events;
 using Microsoft.Extensions.Hosting;
+using Serilog.Events;
 
 namespace Bit.Events
 {

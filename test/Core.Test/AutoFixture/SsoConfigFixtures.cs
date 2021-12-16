@@ -1,22 +1,22 @@
-using System;
+﻿using System;
+using System.Text.Json;
 using AutoFixture;
 using AutoFixture.Kernel;
-using TableModel = Bit.Core.Models.Table;
-using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using Bit.Core.Models.Data;
-using System.Text.Json;
-using Bit.Core.Test.AutoFixture.EntityFrameworkRepositoryFixtures;
 using Bit.Core.Repositories.EntityFramework;
+using Bit.Core.Test.AutoFixture.EntityFrameworkRepositoryFixtures;
+using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using TableModel = Bit.Core.Models.Table;
 
 namespace Bit.Core.Test.AutoFixture.SsoConfigFixtures
 {
-    internal class SsoConfigBuilder: ISpecimenBuilder
+    internal class SsoConfigBuilder : ISpecimenBuilder
     {
         public object Create(object request, ISpecimenContext context)
         {
-            if (context == null) 
+            if (context == null)
             {
                 throw new ArgumentNullException(nameof(context));
             }
@@ -35,18 +35,18 @@ namespace Bit.Core.Test.AutoFixture.SsoConfigFixtures
         }
     }
 
-   internal class EfSsoConfig: ICustomization 
-   {
-      public void Customize(IFixture fixture)
-      {
-         fixture.Customizations.Add(new IgnoreVirtualMembersCustomization());
-         fixture.Customizations.Add(new GlobalSettingsBuilder());
-         fixture.Customizations.Add(new OrganizationBuilder());
-         fixture.Customizations.Add(new SsoConfigBuilder());
-         fixture.Customizations.Add(new EfRepositoryListBuilder<SsoConfigRepository>());
-         fixture.Customizations.Add(new EfRepositoryListBuilder<OrganizationRepository>());
-      }
-   }
+    internal class EfSsoConfig : ICustomization
+    {
+        public void Customize(IFixture fixture)
+        {
+            fixture.Customizations.Add(new IgnoreVirtualMembersCustomization());
+            fixture.Customizations.Add(new GlobalSettingsBuilder());
+            fixture.Customizations.Add(new OrganizationBuilder());
+            fixture.Customizations.Add(new SsoConfigBuilder());
+            fixture.Customizations.Add(new EfRepositoryListBuilder<SsoConfigRepository>());
+            fixture.Customizations.Add(new EfRepositoryListBuilder<OrganizationRepository>());
+        }
+    }
 
     internal class EfSsoConfigAutoDataAttribute : CustomAutoDataAttribute
     {

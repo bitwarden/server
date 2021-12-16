@@ -82,7 +82,8 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Key Connector requires the Single Sign-On Authentication policy to be enabled.");
             }
 
-            if (!config.Enabled) {
+            if (!config.Enabled)
+            {
                 throw new BadRequestException("You must enable SSO to use Key Connector.");
             }
         }

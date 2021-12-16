@@ -1,16 +1,16 @@
 ﻿using System;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Authorization;
+using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Security.Cryptography;
-using Bit.Core.Services;
+using System.Threading.Tasks;
 using Bit.Core.Context;
-using System.Net;
 using Bit.Core.Exceptions;
-using System.Linq;
-using Bit.Core.Utilities;
+using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bit.Core.Utilities;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.Controllers
 {

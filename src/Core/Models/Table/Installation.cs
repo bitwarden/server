@@ -1,6 +1,6 @@
-﻿using Bit.Core.Utilities;
-using System;
+﻿using System;
 using System.ComponentModel.DataAnnotations;
+using Bit.Core.Utilities;
 
 namespace Bit.Core.Models.Table
 {

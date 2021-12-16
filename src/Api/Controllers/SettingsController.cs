@@ -2,9 +2,9 @@
 using System.Threading.Tasks;
 using Bit.Api.Models.Request;
 using Bit.Api.Models.Response;
+using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Bit.Core.Services;
 
 namespace Bit.Api.Controllers
 {
@@ -35,7 +35,7 @@ namespace Bit.Api.Controllers
 
         [HttpPut("domains")]
         [HttpPost("domains")]
-        public async Task<DomainsResponseModel> PutDomains([FromBody]UpdateDomainsRequestModel model)
+        public async Task<DomainsResponseModel> PutDomains([FromBody] UpdateDomainsRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)

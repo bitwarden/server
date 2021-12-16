@@ -1,5 +1,8 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Text;
+using System.Text.Json;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
@@ -7,13 +10,10 @@ using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture.SendFixtures;
+using Bit.Test.Common.AutoFixture;
 using Microsoft.AspNetCore.Identity;
 using NSubstitute;
 using Xunit;
-using System.Text.Json;
-using Bit.Test.Common.AutoFixture;
-using System.IO;
-using System.Text;
 
 namespace Bit.Core.Test.Services
 {
@@ -509,7 +509,7 @@ namespace Bit.Core.Test.Services
 
             var utcNow = DateTime.UtcNow;
 
-            var exception = await Assert.ThrowsAsync<Exception>(() => 
+            var exception = await Assert.ThrowsAsync<Exception>(() =>
                 sutProvider.Sut.SaveFileSendAsync(send, data, 1 * Models.Tables.UserTests.Multiplier)
             );
 
@@ -530,7 +530,7 @@ namespace Bit.Core.Test.Services
 
             await sutProvider.GetDependency<ISendFileStorageService>()
                 .Received(1)
-                .DeleteFileAsync(send, Arg.Any<string>()); 
+                .DeleteFileAsync(send, Arg.Any<string>());
         }
 
         [Theory]
@@ -573,7 +573,7 @@ namespace Bit.Core.Test.Services
 
         [Theory]
         [InlineUserSendAutoData]
-        public async void UpdateFileToExistingSendAsync_Success(SutProvider<SendService> sutProvider, 
+        public async void UpdateFileToExistingSendAsync_Success(SutProvider<SendService> sutProvider,
             Send send)
         {
             var fileContents = "Test file content";
@@ -635,7 +635,7 @@ namespace Bit.Core.Test.Services
                 .VerifyHashedPassword(Arg.Any<User>(), send.Password, "TEST")
                 .Returns(PasswordVerificationResult.Success);
 
-            var (grant, passwordRequiredError, passwordInvalidError) 
+            var (grant, passwordRequiredError, passwordInvalidError)
                 = sutProvider.Sut.SendCanBeAccessed(send, "TEST");
 
             Assert.True(grant);
@@ -710,7 +710,7 @@ namespace Bit.Core.Test.Services
 
         [Theory]
         [InlineUserSendAutoData]
-        public void SendCanBeAccessed_RehashNeeded_RehashesPassword(SutProvider<SendService> sutProvider, 
+        public void SendCanBeAccessed_RehashNeeded_RehashesPassword(SutProvider<SendService> sutProvider,
             Send send)
         {
             var now = DateTime.UtcNow;
@@ -739,7 +739,7 @@ namespace Bit.Core.Test.Services
 
         [Theory]
         [InlineUserSendAutoData]
-        public void SendCanBeAccessed_VerifyFailed_PasswordInvalidReturnsTrue(SutProvider<SendService> sutProvider, 
+        public void SendCanBeAccessed_VerifyFailed_PasswordInvalidReturnsTrue(SutProvider<SendService> sutProvider,
             Send send)
         {
             var now = DateTime.UtcNow;

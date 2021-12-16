@@ -1,17 +1,17 @@
-﻿using System.Linq;
-using IdentityServer4.Stores;
-using System.Threading.Tasks;
-using IdentityServer4.Models;
+﻿using System;
 using System.Collections.Generic;
-using Bit.Core.Repositories;
-using System;
-using IdentityModel;
-using Bit.Core.Utilities;
+using System.Collections.ObjectModel;
+using System.Linq;
 using System.Security.Claims;
+using System.Threading.Tasks;
+using Bit.Core.Context;
+using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Core.Context;
-using System.Collections.ObjectModel;
+using Bit.Core.Utilities;
+using IdentityModel;
+using IdentityServer4.Models;
+using IdentityServer4.Stores;
 
 namespace Bit.Core.IdentityServer
 {
@@ -45,7 +45,7 @@ namespace Bit.Core.IdentityServer
             _userRepository = userRepository;
             _globalSettings = globalSettings;
             _staticClientStore = staticClientStore;
-            _licensingService = licensingService; 
+            _licensingService = licensingService;
             _currentContext = currentContext;
             _organizationUserRepository = organizationUserRepository;
             _providerUserRepository = providerUserRepository;
@@ -138,11 +138,11 @@ namespace Bit.Core.IdentityServer
                     var user = await _userRepository.GetByIdAsync(id);
                     if (user != null)
                     {
-                        var claims = new Collection<ClientClaim>() 
+                        var claims = new Collection<ClientClaim>()
                         {
                             new ClientClaim(JwtClaimTypes.Subject, user.Id.ToString()),
                             new ClientClaim(JwtClaimTypes.AuthenticationMethod, "Application", "external")
-                        }; 
+                        };
                         var orgs = await _currentContext.OrganizationMembershipAsync(_organizationUserRepository, user.Id);
                         var providers = await _currentContext.ProviderMembershipAsync(_providerUserRepository, user.Id);
                         var isPremium = await _licensingService.ValidateUserPremiumAsync(user);

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Text.Json;
 using AutoFixture.Xunit2;
 using Bit.Core.Models.Data;

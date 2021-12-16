@@ -62,7 +62,7 @@
         Organization_DisabledKeyConnector = 1607,
 
         Policy_Updated = 1700,
-        
+
         ProviderUser_Invited = 1800,
         ProviderUser_Confirmed = 1801,
         ProviderUser_Updated = 1802,

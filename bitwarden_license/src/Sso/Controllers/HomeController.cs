@@ -1,11 +1,11 @@
 ﻿using System;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Authorization;
-using IdentityServer4.Services;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using Bit.Sso.Models;
-using System.Diagnostics;
+using IdentityServer4.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Sso.Controllers
 {

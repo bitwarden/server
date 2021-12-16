@@ -40,7 +40,7 @@ namespace Bit.Api.Public.Controllers
         [HttpPost("import")]
         [ProducesResponseType(typeof(MemberResponseModel), (int)HttpStatusCode.OK)]
         [ProducesResponseType(typeof(ErrorResponseModel), (int)HttpStatusCode.BadRequest)]
-        public async Task<IActionResult> Import([FromBody]OrganizationImportRequestModel model)
+        public async Task<IActionResult> Import([FromBody] OrganizationImportRequestModel model)
         {
             if (!_globalSettings.SelfHosted && !model.LargeImport &&
                 (model.Groups.Count() > 2000 || model.Members.Count(u => !u.Deleted) > 2000))

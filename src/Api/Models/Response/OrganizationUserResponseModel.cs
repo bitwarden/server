@@ -108,7 +108,7 @@ namespace Bit.Api.Models.Response
             ResetPasswordKey = orgUser.ResetPasswordKey;
             EncryptedPrivateKey = orgUser.EncryptedPrivateKey;
         }
-        
+
         public KdfType Kdf { get; set; }
         public int KdfIterations { get; set; }
         public string ResetPasswordKey { get; set; }

@@ -39,7 +39,7 @@ namespace Bit.Core.Repositories.EntityFramework
         public DbSet<Transaction> Transactions { get; set; }
         public DbSet<U2f> U2fs { get; set; }
         public DbSet<User> Users { get; set; }
-        
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
             var eCipher = builder.Entity<Cipher>();
@@ -95,7 +95,7 @@ namespace Bit.Core.Repositories.EntityFramework
             eGroupUser.HasKey(gu => new { gu.GroupId, gu.OrganizationUserId });
 
 
-            if (Database.IsNpgsql()) 
+            if (Database.IsNpgsql())
             {
                 // the postgres provider doesn't currently support database level non-deterministic collations.
                 // see https://www.npgsql.org/efcore/misc/collations-and-case-sensitivity.html#database-collation

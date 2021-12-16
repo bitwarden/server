@@ -1,15 +1,15 @@
-using AutoFixture;
-using TableModel = Bit.Core.Models.Table;
-using Bit.Core.Models;
+﻿using System;
 using System.Collections.Generic;
-using Bit.Core.Enums;
+using AutoFixture;
 using AutoFixture.Kernel;
-using System;
-using Bit.Core.Test.AutoFixture.OrganizationFixtures;
+using Bit.Core.Enums;
+using Bit.Core.Models;
 using Bit.Core.Repositories.EntityFramework;
 using Bit.Core.Test.AutoFixture.EntityFrameworkRepositoryFixtures;
-using Bit.Test.Common.AutoFixture.Attributes;
+using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using Bit.Test.Common.AutoFixture;
+using Bit.Test.Common.AutoFixture.Attributes;
+using TableModel = Bit.Core.Models.Table;
 
 namespace Bit.Core.Test.AutoFixture.UserFixtures
 {

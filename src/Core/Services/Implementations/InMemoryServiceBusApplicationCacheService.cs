@@ -3,8 +3,8 @@ using System.Threading.Tasks;
 using Bit.Core.Enums;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
-using Bit.Core.Utilities;
 using Bit.Core.Settings;
+using Bit.Core.Utilities;
 using Microsoft.Azure.ServiceBus;
 
 namespace Bit.Core.Services

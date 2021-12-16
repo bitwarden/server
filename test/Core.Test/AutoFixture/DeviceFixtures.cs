@@ -1,21 +1,21 @@
+﻿using System;
 using AutoFixture;
-using TableModel = Bit.Core.Models.Table;
 using AutoFixture.Kernel;
-using System;
 using Bit.Core.Repositories.EntityFramework;
 using Bit.Core.Test.AutoFixture.EntityFrameworkRepositoryFixtures;
-using Bit.Core.Test.AutoFixture.UserFixtures;
 using Bit.Core.Test.AutoFixture.Relays;
+using Bit.Core.Test.AutoFixture.UserFixtures;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using TableModel = Bit.Core.Models.Table;
 
 namespace Bit.Core.Test.AutoFixture.DeviceFixtures
 {
-    internal class DeviceBuilder: ISpecimenBuilder
+    internal class DeviceBuilder : ISpecimenBuilder
     {
         public object Create(object request, ISpecimenContext context)
         {
-            if (context == null) 
+            if (context == null)
             {
                 throw new ArgumentNullException(nameof(context));
             }
@@ -33,7 +33,7 @@ namespace Bit.Core.Test.AutoFixture.DeviceFixtures
         }
     }
 
-    internal class EfDevice: ICustomization 
+    internal class EfDevice : ICustomization
     {
         public void Customize(IFixture fixture)
         {

@@ -1,8 +1,8 @@
 ﻿using System;
-using Bit.Core.Utilities;
-using Bit.Core.Models.Data;
-using Newtonsoft.Json;
 using System.Collections.Generic;
+using Bit.Core.Models.Data;
+using Bit.Core.Utilities;
+using Newtonsoft.Json;
 
 namespace Bit.Core.Models.Table
 {
