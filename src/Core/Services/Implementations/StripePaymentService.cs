@@ -171,7 +171,7 @@ namespace Bit.Core.Services
                 {
                     await _btGateway.Customer.DeleteAsync(braintreeCustomer.Id);
                 }
-                throw e;
+                throw;
             }
 
             org.Gateway = GatewayType.Stripe;
@@ -367,7 +367,7 @@ namespace Bit.Core.Services
                         var message = e.Message.ToLowerInvariant();
                         if (message.Contains("apple") || message.Contains("in-app"))
                         {
-                            throw e;
+                            throw;
                         }
                     }
                 }
@@ -692,7 +692,7 @@ namespace Bit.Core.Services
                     throw new GatewayException("Bank account is not yet verified.");
                 }
 
-                throw e;
+                throw;
             }
         }
 
@@ -1105,7 +1105,7 @@ namespace Bit.Core.Services
             {
                 if (e.Message != $"No such subscription: {subscriber.GatewaySubscriptionId}")
                 {
-                    throw e;
+                    throw;
                 }
             }
         }
@@ -1408,13 +1408,13 @@ namespace Bit.Core.Services
                     });
                 }
             }
-            catch (Exception e)
+            catch
             {
                 if (braintreeCustomer != null && !hadBtCustomer)
                 {
                     await _btGateway.Customer.DeleteAsync(braintreeCustomer.Id);
                 }
-                throw e;
+                throw;
             }
 
             return createdCustomer;

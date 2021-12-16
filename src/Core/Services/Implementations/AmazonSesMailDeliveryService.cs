@@ -130,7 +130,7 @@ namespace Bit.Core.Services
             {
                 _logger.LogWarning(e, "Failed to send email. Retrying...");
                 await SendAsync(request, true);
-                throw e;
+                throw;
             }
         }
 
