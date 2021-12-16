@@ -11,6 +11,7 @@ using Bit.Core.Identity;
 using Bit.Core.IdentityServer;
 using Bit.Core.Models.Table;
 using Bit.Core.OrganizationFeatures.Mail;
+using Bit.Core.OrganizationFeatures.OrgUser;
 using Bit.Core.OrganizationFeatures.Subscription;
 using Bit.Core.OrganizationFeatures.UserInvite;
 using Bit.Core.Repositories;
@@ -188,6 +189,8 @@ namespace Bit.Core.Utilities
         private static void AddOrganizationServices(this IServiceCollection services)
         {
             services.AddScoped<IOrganizationService, OrganizationService>();
+            services.AddScoped<IOrganizationUserService, OrganizationUserService>();
+            services.AddScoped<IOrganizationUserAccessPolicies, OrganizationUserAccessPolicies>();
             services.AddScoped<IOrganizationUserInviteAccessPolicies, OrganizationUserInviteAccessPolicies>();
             services.AddScoped<IOrganizationUserInviteCommand, OrganizationUserInviteCommand>();
             services.AddScoped<IOrganizationUserInviteService, OrganizationUserInviteService>();
