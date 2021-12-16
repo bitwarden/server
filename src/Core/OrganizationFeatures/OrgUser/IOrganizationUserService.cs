@@ -14,5 +14,6 @@ namespace Bit.Core.OrganizationFeatures.OrgUser
             IEnumerable<Guid> organizationUsersId, Guid? deletingUserId);
         Task DeleteUserAsync(Guid organizationId, Guid userId);
         Task DeleteAndPushUserRegistrationAsync(Guid organizationId, Guid userId);
+        Task UpdateUserGroupsAsync(OrganizationUser organizationUser, IEnumerable<Guid> groupIds, Guid? loggedInUserId);
     }
 }

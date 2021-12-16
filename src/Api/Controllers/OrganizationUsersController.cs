@@ -271,7 +271,7 @@ namespace Bit.Api.Controllers
             }
 
             var loggedInUserId = _userService.GetProperUserId(User);
-            await _organizationService.UpdateUserGroupsAsync(organizationUser, model.GroupIds.Select(g => new Guid(g)), loggedInUserId);
+            await _organizationUserService.UpdateUserGroupsAsync(organizationUser, model.GroupIds.Select(g => new Guid(g)), loggedInUserId);
         }
         
         [HttpPut("{userId}/reset-password-enrollment")]

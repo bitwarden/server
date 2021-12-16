@@ -8,7 +8,6 @@ using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
-using Microsoft.Azure.Cosmos.Linq;
 
 namespace Bit.Core.OrganizationFeatures.OrgUser
 {
@@ -143,5 +142,18 @@ namespace Bit.Core.OrganizationFeatures.OrgUser
             return devices.Where(d => !string.IsNullOrWhiteSpace(d.PushToken)).Select(d => d.Id.ToString());
         }
 
+        public async Task UpdateUserGroupsAsync(OrganizationUser organizationUser, IEnumerable<Guid> groupIds, Guid? loggedInUserId)
+        {
+            if (loggedInUserId.HasValue)
+            {
+                CoreHelpers.HandlePermissionResult(
+                    await _organizationUserAccessPolicies.UserCanEditUserTypeAsync(organizationUser.OrganizationId, organizationUser.Type, null)
+                );
+            }
+
+            await _organizationUserRepository.UpdateGroupsAsync(organizationUser.Id, groupIds);
+            await _eventService.LogOrganizationUserEventAsync(organizationUser,
+                EventType.OrganizationUser_UpdatedGroups);
+        }
     }
 }

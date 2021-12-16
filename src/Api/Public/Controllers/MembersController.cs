@@ -194,7 +194,7 @@ namespace Bit.Api.Public.Controllers
             {
                 return new NotFoundResult();
             }
-            await _organizationService.UpdateUserGroupsAsync(existingUser, model.GroupIds, null);
+            await _organizationUserService.UpdateUserGroupsAsync(existingUser, model.GroupIds, null);
             return new OkResult();
         }
 
