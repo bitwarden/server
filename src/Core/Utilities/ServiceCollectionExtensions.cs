@@ -12,6 +12,7 @@ using Bit.Core.IdentityServer;
 using Bit.Core.Models.Table;
 using Bit.Core.OrganizationFeatures.Mail;
 using Bit.Core.OrganizationFeatures.OrgUser;
+using Bit.Core.OrganizationFeatures.PasswordReset;
 using Bit.Core.OrganizationFeatures.Subscription;
 using Bit.Core.OrganizationFeatures.UserInvite;
 using Bit.Core.Repositories;
@@ -197,6 +198,8 @@ namespace Bit.Core.Utilities
             services.AddScoped<IOrganizationSubscriptionAccessPolicies, OrganizationSubscriptionAccessPolicies>();
             services.AddScoped<IOrganizationSubscriptionService, OrganizationSubscriptionService>();
             services.AddScoped<IOrganizationSponsorshipService, OrganizationSponsorshipService>();
+            services.AddScoped<IPasswordResetAccessPolicies, PasswordResetAccessPolicies>();
+            services.AddScoped<IPasswordResetService, PasswordResetService>();
         }
 
         public static void AddDefaultServices(this IServiceCollection services, GlobalSettings globalSettings)

@@ -14,6 +14,7 @@ using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.OrganizationFeatures.UserInvite;
 using Bit.Core.OrganizationFeatures.OrgUser;
+using Bit.Core.OrganizationFeatures.PasswordReset;
 
 namespace Bit.Api.Controllers
 {
@@ -26,6 +27,7 @@ namespace Bit.Api.Controllers
         private readonly IOrganizationService _organizationService;
         private readonly IOrganizationUserService _organizationUserService;
         private readonly IOrganizationUserInviteCommand _organizationUserInviteCommand;
+        private readonly IPasswordResetService _passwordResetService;
         private readonly ICollectionRepository _collectionRepository;
         private readonly IGroupRepository _groupRepository;
         private readonly IUserService _userService;
@@ -37,6 +39,7 @@ namespace Bit.Api.Controllers
             IOrganizationService organizationService,
             IOrganizationUserService organizationUserService,
             IOrganizationUserInviteCommand organizationUserInviteCommand,
+            IPasswordResetService passwordResetService,
             ICollectionRepository collectionRepository,
             IGroupRepository groupRepository,
             IUserService userService,
@@ -47,6 +50,7 @@ namespace Bit.Api.Controllers
             _organizationService = organizationService;
             _organizationUserService = organizationUserService;
             _organizationUserInviteCommand = organizationUserInviteCommand;
+            _passwordResetService = passwordResetService;
             _collectionRepository = collectionRepository;
             _groupRepository = groupRepository;
             _userService = userService;
@@ -274,7 +278,7 @@ namespace Bit.Api.Controllers
         public async Task PutResetPasswordEnrollment(string orgId, string userId, [FromBody]OrganizationUserResetPasswordEnrollmentRequestModel model)
         {
             var callingUserId = _userService.GetProperUserId(User);
-            await _organizationService.UpdateUserResetPasswordEnrollmentAsync(new Guid(orgId), new Guid(userId), model.ResetPasswordKey, callingUserId);
+            await _passwordResetService.UpdateUserResetPasswordEnrollmentAsync(new Guid(orgId), new Guid(userId), model.ResetPasswordKey, callingUserId);
         }
         
         [HttpPut("{id}/reset-password")]
