@@ -47,11 +47,6 @@ namespace Bit.Core.OrganizationFeatures.Subscription
 
         public AccessPolicyResult CanScale(Organization organization, int seatsToAdd)
         {
-            if (OverrideExists())
-            {
-                return PermissionOverrides[nameof(CanScale)];
-            }
-
             if (seatsToAdd < 1)
             {
                 return Success;
