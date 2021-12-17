@@ -13,16 +13,24 @@ namespace Bit.Core.OrganizationFeatures.Subscription
 {
     public class OrganizationSubscriptionAccessPolicies : BaseAccessPolicies, IOrganizationSubscriptionAccessPolicies
     {
-        readonly IOrganizationUserRepository _organizationUserRepository;
-        readonly ICollectionRepository _collectionRepository;
-        readonly IGroupRepository _groupRepository;
-        readonly IPolicyRepository _policyRepository;
-        readonly ISsoConfigRepository _ssoConfigRepository;
-        readonly IGlobalSettings _globalSettings;
+        private readonly IOrganizationUserRepository _organizationUserRepository;
+        private readonly ICollectionRepository _collectionRepository;
+        private readonly IGroupRepository _groupRepository;
+        private readonly IPolicyRepository _policyRepository;
+        private readonly ISsoConfigRepository _ssoConfigRepository;
+        private readonly IGlobalSettings _globalSettings;
 
-        public OrganizationSubscriptionAccessPolicies(IGlobalSettings globalSettings)
+        public OrganizationSubscriptionAccessPolicies(IGlobalSettings globalSettings,
+            IOrganizationUserRepository organizationUserRepository, ICollectionRepository collectionRepository,
+            IGroupRepository groupRepository, IPolicyRepository policyRepository,
+            ISsoConfigRepository ssoConfigRepository)
         {
             _globalSettings = globalSettings;
+            _organizationUserRepository = organizationUserRepository;
+            _collectionRepository = collectionRepository;
+            _groupRepository = groupRepository;
+            _policyRepository = policyRepository;
+            _ssoConfigRepository = ssoConfigRepository;
         }
 
         public AccessPolicyResult CanCancel(Organization organization)
@@ -111,7 +119,7 @@ namespace Bit.Core.OrganizationFeatures.Subscription
             if (plan.MaxAdditionalSeats.HasValue && additionalSeats > plan.MaxAdditionalSeats.Value)
             {
                 return Fail($"Organization plan allows a maximum of " +
-                    $"{plan.MaxAdditionalSeats.Value} additional seats.");
+                            $"{plan.MaxAdditionalSeats.Value} additional seats.");
             }
 
             if (!organization.Seats.HasValue || organization.Seats.Value > newSeatTotal)
@@ -119,7 +127,7 @@ namespace Bit.Core.OrganizationFeatures.Subscription
                 if (currentUserCount > newSeatTotal)
                 {
                     return Fail($"Your organization currently has {currentUserCount} seats filled. " +
-                        $"Your new plan only has ({newSeatTotal}) seats. Remove some users.");
+                                $"Your new plan only has ({newSeatTotal}) seats. Remove some users.");
                 }
             }
 
@@ -150,7 +158,8 @@ namespace Bit.Core.OrganizationFeatures.Subscription
         }
 
 
-        public AccessPolicyResult CanUpdateSubscription(Organization organization, int seatAdjustment, int? maxAutoscaleSeats)
+        public AccessPolicyResult CanUpdateSubscription(Organization organization, int seatAdjustment,
+            int? maxAutoscaleSeats)
         {
             if (organization == null)
             {
@@ -167,7 +176,8 @@ namespace Bit.Core.OrganizationFeatures.Subscription
             return Success;
         }
 
-        public async Task<AccessPolicyResult> CanUpgradePlanAsync(Organization organization, OrganizationUpgrade upgrade)
+        public async Task<AccessPolicyResult> CanUpgradePlanAsync(Organization organization,
+            OrganizationUpgrade upgrade)
         {
             if (organization == null)
             {
@@ -224,8 +234,8 @@ namespace Bit.Core.OrganizationFeatures.Subscription
             }
 
             if (maxAutoscaleSeats.HasValue &&
-                    organization.Seats.HasValue &&
-                    maxAutoscaleSeats.Value < organization.Seats.Value)
+                organization.Seats.HasValue &&
+                maxAutoscaleSeats.Value < organization.Seats.Value)
             {
                 return Fail($"Cannot set max seat autoscaling below current seat count.");
             }
@@ -288,35 +298,36 @@ namespace Bit.Core.OrganizationFeatures.Subscription
                 upgrade.AdditionalSeats > plan.MaxAdditionalSeats.Value)
             {
                 return Fail($"Selected plan allows a maximum of " +
-                    $"{plan.MaxAdditionalSeats.GetValueOrDefault(0)} additional users.");
+                            $"{plan.MaxAdditionalSeats.GetValueOrDefault(0)} additional users.");
             }
 
             return Success;
         }
 
-        private async Task<AccessPolicyResult> ValidateOrganizationCompliantWithNewPlanAsync(Organization organization, Plan newPlan, OrganizationUpgrade upgrade)
+        private async Task<AccessPolicyResult> ValidateOrganizationCompliantWithNewPlanAsync(Organization organization,
+            Plan newPlan, OrganizationUpgrade upgrade)
         {
-            var newPlanSeats = (short)(newPlan.BaseSeats +
-                (newPlan.HasAdditionalSeatsOption ? upgrade.AdditionalSeats : 0));
+            var newPlanSeats = (short) (newPlan.BaseSeats +
+                                        (newPlan.HasAdditionalSeatsOption ? upgrade.AdditionalSeats : 0));
             if (!organization.Seats.HasValue || organization.Seats.Value > newPlanSeats)
             {
                 var userCount = await _organizationUserRepository.GetCountByOrganizationIdAsync(organization.Id);
                 if (userCount > newPlanSeats)
                 {
                     return Fail($"Your organization currently has {userCount} seats filled. " +
-                        $"Your new plan only has ({newPlanSeats}) seats. Remove some users.");
+                                $"Your new plan only has ({newPlanSeats}) seats. Remove some users.");
                 }
             }
 
             if (newPlan.MaxCollections.HasValue && (!organization.MaxCollections.HasValue ||
-                organization.MaxCollections.Value > newPlan.MaxCollections.Value))
+                                                    organization.MaxCollections.Value > newPlan.MaxCollections.Value))
             {
                 var collectionCount = await _collectionRepository.GetCountByOrganizationIdAsync(organization.Id);
                 if (collectionCount > newPlan.MaxCollections.Value)
                 {
                     return Fail($"Your organization currently has {collectionCount} collections. " +
-                        $"Your new plan allows for a maximum of ({newPlan.MaxCollections.Value}) collections. " +
-                        "Remove some collections.");
+                                $"Your new plan allows for a maximum of ({newPlan.MaxCollections.Value}) collections. " +
+                                "Remove some collections.");
                 }
             }
 
@@ -326,7 +337,7 @@ namespace Bit.Core.OrganizationFeatures.Subscription
                 if (groups.Any())
                 {
                     return Fail($"Your new plan does not allow the groups feature. " +
-                        $"Remove your groups.");
+                                $"Remove your groups.");
                 }
             }
 
@@ -336,7 +347,7 @@ namespace Bit.Core.OrganizationFeatures.Subscription
                 if (policies.Any(p => p.Enabled))
                 {
                     return Fail($"Your new plan does not allow the policies feature. " +
-                        $"Disable your policies.");
+                                $"Disable your policies.");
                 }
             }
 
@@ -346,7 +357,7 @@ namespace Bit.Core.OrganizationFeatures.Subscription
                 if (ssoConfig != null && ssoConfig.Enabled)
                 {
                     return Fail($"Your new plan does not allow the SSO feature. " +
-                        $"Disable your SSO configuration.");
+                                $"Disable your SSO configuration.");
                 }
             }
 
@@ -356,7 +367,7 @@ namespace Bit.Core.OrganizationFeatures.Subscription
                 if (ssoConfig != null && ssoConfig.GetData().KeyConnectorEnabled)
                 {
                     return Fail("Your new plan does not allow the Key Connector feature. " +
-                                                  "Disable your Key Connector.");
+                                "Disable your Key Connector.");
                 }
             }
 
@@ -367,7 +378,7 @@ namespace Bit.Core.OrganizationFeatures.Subscription
                 if (resetPasswordPolicy != null && resetPasswordPolicy.Enabled)
                 {
                     return Fail("Your new plan does not allow the Password Reset feature. " +
-                        "Disable your Password Reset policy.");
+                                "Disable your Password Reset policy.");
                 }
             }
 
