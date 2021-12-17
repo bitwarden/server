@@ -97,14 +97,9 @@ namespace Bit.Core.OrganizationFeatures.OrgUser
             return await OrganizationCanLoseOwnerAsync(orgUser.OrganizationId, orgUser);
         }
 
-        private async Task<AccessPolicyResult> OrganizationCanLoseOwnerAsync(Guid organizationId, params OrganizationUser[] orgUser)
+        protected async Task<AccessPolicyResult> OrganizationCanLoseOwnerAsync(Guid organizationId, params OrganizationUser[] orgUsers)
         {
-            if (orgUser.All(u => u.Type == OrganizationUserType.Owner))
-            {
-                return Success;
-            }
-
-            if (!await _organizationService.HasConfirmedOwnersExceptAsync(organizationId, orgUser.Select(u => u.Id)))
+            if (!await _organizationService.HasConfirmedOwnersExceptAsync(organizationId, orgUsers.Select(u => u.Id)))
             {
                 return Fail("Organization must have at least one confirmed owner.");
             }
