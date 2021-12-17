@@ -231,7 +231,7 @@ namespace Bit.Api.Controllers
                 throw new BadRequestException("Invalid license");
             }
 
-            var result = await _organizationService.SignUpAsync(license, user, model.Key,
+            var result = await _organizationService.SelfHostedSignUpAsync(license, user, model.Key,
                 model.CollectionName, model.Keys?.PublicKey, model.Keys?.EncryptedPrivateKey);
             return new OrganizationResponseModel(result.Item1);
         }
