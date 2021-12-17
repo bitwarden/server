@@ -13,6 +13,7 @@ namespace Bit.Test.Common.AutoFixture
         private readonly IFixture _fixture;
         private readonly ConstructorParameterRelay<TSut> _constructorParameterRelay;
 
+        public IFixture Fixture => _fixture;
         public TSut Sut { get; private set; }
         public Type SutType => typeof(TSut);
 
