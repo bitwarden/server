@@ -8,10 +8,12 @@ using Bit.Core.Repositories;
 using System.Linq;
 using Bit.Core.Services;
 using System.Collections.Generic;
+using Bit.Core.OrganizationFeatures.OrgUser;
+using Bit.Core.Models.Data;
 
 namespace Bit.Core.OrganizationFeatures.UserInvite
 {
-    public class OrganizationUserInviteAccessPolicies : BaseAccessPolicies, IOrganizationUserInviteAccessPolicies
+    public class OrganizationUserInviteAccessPolicies : OrganizationUserAccessPolicies, IOrganizationUserInviteAccessPolicies
     {
         private ICurrentContext _currentContext;
         private IOrganizationUserRepository _organizationUserRepository;
@@ -21,14 +23,47 @@ namespace Bit.Core.OrganizationFeatures.UserInvite
         public OrganizationUserInviteAccessPolicies(
             ICurrentContext currentContext,
             IOrganizationUserRepository organizationUserRepository,
+            IOrganizationService organizationService,
             IPolicyRepository policyRepository,
             IUserService userService
-        )
+        ) : base(currentContext, organizationUserRepository, organizationService)
         {
             _currentContext = currentContext;
             _organizationUserRepository = organizationUserRepository;
             _policyRepository = policyRepository;
             _userService = userService;
+        }
+
+        public async Task<AccessPolicyResult> CanInviteAsync(Organization organization, IEnumerable<OrganizationUserInviteData> invites, Guid? invitingUserId)
+        {
+            if (organization == null || invites.Any(i => i.Emails == null))
+            {
+                return Fail();
+            }
+
+            if (!invitingUserId.HasValue)
+            {
+                return Success;
+            }
+
+            var currentResult = Success;
+            foreach (var inviteType in invites.Where(i => i.Type.HasValue).Select(i => i.Type.Value).Distinct())
+            {
+                if (!currentResult.Permit)
+                {
+                    break;
+                }
+                
+                currentResult = currentResult.LazyAnd(await UserCanEditUserTypeAsync(organization.Id, inviteType));
+            }
+
+            // validate org has owners
+            if (!invites.All(i => i.Type == OrganizationUserType.Owner))
+            {
+                currentResult = currentResult.LazyAnd(await OrganizationCanLoseOwnerAsync(organization.Id, Array.Empty<OrganizationUser>()));
+            }
+
+            return currentResult;
         }
 
 
@@ -129,8 +164,8 @@ namespace Bit.Core.OrganizationFeatures.UserInvite
             if (hasOtherOrgs && invitedSingleOrgPolicies.Any(p => p.OrganizationId == orgUser.OrganizationId))
             {
                 return adminFailureMessage ?
-                    Fail("User does not have two-step login enabled") :
-                    Fail("You may not join this organization until you leave or remove all other organizations.");
+                    Fail("User is a member of another organization.") :
+                    Fail("You cannot join this organization until you enable two-step login on your user account.");
             }
 
             // Two Factor Authentication Policy
@@ -141,8 +176,8 @@ namespace Bit.Core.OrganizationFeatures.UserInvite
                 if (invitedTwoFactorPolicies.Any(p => p.OrganizationId == orgUser.OrganizationId))
                 {
                     return adminFailureMessage ?
-                        Fail("User is a member of another organization.") :
-                        Fail("You cannot join this organization until you enable two-step login on your user account.");
+                        Fail("User does not have two-step login enabled.") :
+                        Fail("You may not join this organization until you leave or remove all other organizations.");
                 }
             }
 

@@ -67,25 +67,12 @@ namespace Bit.Core.OrganizationFeatures.UserInvite
         public async Task<List<OrganizationUser>> InviteUsersAsync(Guid organizationId, Guid? invitingUserId,
             IEnumerable<(OrganizationUserInviteData invite, string externalId)> invites)
         {
-            // Validate inputs
             var organization = await _organizationRepository.GetByIdAsync(organizationId);
             var initialSeatCount = organization.Seats;
-            if (organization == null || invites.Any(i => i.invite.Emails == null))
-            {
-                throw new NotFoundException();
-            }
-
-            // Validate permission to create invite
-            var inviteTypes = new HashSet<OrganizationUserType>(invites.Where(i => i.invite.Type.HasValue).Select(i => i.invite.Type.Value));
-            if (invitingUserId.HasValue && inviteTypes.Count > 0)
-            {
-                foreach (var type in inviteTypes)
-                {
-                    CoreHelpers.HandlePermissionResult(
-                        await _organizationUserAccessPolicies.UserCanEditUserTypeAsync(organizationId, type)
-                    );
-                }
-            }
+            CoreHelpers.HandlePermissionResult(
+                await _organizationUserInviteAccessPolicies
+                .CanInviteAsync(organization, invites.Select(i => i.invite), invitingUserId)
+            );
 
             // Validate organization subscription size
             var newSeatsRequired = 0;
@@ -96,13 +83,6 @@ namespace Bit.Core.OrganizationFeatures.UserInvite
                 var userCount = await _organizationUserRepository.GetCountByOrganizationIdAsync(organizationId);
                 var availableSeats = organization.Seats.Value - userCount;
                 newSeatsRequired = invites.Sum(i => i.invite.Emails.Count()) - existingEmails.Count - availableSeats;
-            }
-
-            // validate org has owners
-            var invitedAreAllOwners = invites.All(i => i.invite.Type == OrganizationUserType.Owner);
-            if (!invitedAreAllOwners && !await _organizationService.HasConfirmedOwnersExceptAsync(organizationId, Array.Empty<Guid>()))
-            {
-                throw new BadRequestException("Organization must have at least one confirmed owner.");
             }
 
             var invitedUsers = await _organizationUserInviteService.InviteUsersAsync(organization, invites, existingEmails);
@@ -222,7 +202,10 @@ namespace Bit.Core.OrganizationFeatures.UserInvite
 
                 if (!accessPolicy.Permit)
                 {
-                    result.Add((orgUser, "User Invalid."));
+                    result.Add((orgUser,
+                        string.IsNullOrWhiteSpace(accessPolicy.BlockReason)
+                            ? "User Invalid."
+                            : accessPolicy.BlockReason));
                     continue;
                 }
 
@@ -252,6 +235,5 @@ namespace Bit.Core.OrganizationFeatures.UserInvite
                     Users = organizationUsers.Count
                 });
         }
-
     }
 }
