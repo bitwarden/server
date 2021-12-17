@@ -447,7 +447,7 @@ namespace Bit.Sso.Controllers
             if (existingUser != null)
             {
                 if (existingUser.UsesKeyConnector && orgUser == null ||
-                    orgUser.Status == OrganizationUserStatusType.Invited)
+                    orgUser?.Status == OrganizationUserStatusType.Invited)
                 {
                     throw new Exception(_i18nService.T("UserAlreadyExistsKeyConnector"));
                 }
