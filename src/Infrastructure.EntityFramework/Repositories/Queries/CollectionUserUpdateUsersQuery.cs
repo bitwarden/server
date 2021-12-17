@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Bit.Core.Models.Data;
 using Bit.Infrastructure.EntityFramework.Models;
 using Microsoft.EntityFrameworkCore;
+using EfModel = Bit.Core.Models.EntityFramework;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories.Queries
 {
