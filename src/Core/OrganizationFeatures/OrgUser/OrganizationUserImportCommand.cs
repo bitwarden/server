@@ -17,15 +17,15 @@ namespace Bit.Core.OrganizationFeatures.OrgUser
 {
     public class OrganizationUserImportCommand : IOrganizationUserImportCommand
     {
-        readonly IOrganizationUserImportAccessPolicies _organizationUserImportAccessPolicies;
-        readonly IOrganizationUserInviteService _organizationUserInviteService;
-        readonly IOrganizationSubscriptionService _organizationSubscriptionService;
-        readonly IOrganizationUserMailer _organizationUserMailer;
-        readonly IOrganizationRepository _organizationRepository;
-        readonly IOrganizationUserRepository _organizationUserRepository;
-        readonly IGroupRepository _groupRepository;
-        readonly IEventService _eventService;
-        readonly IReferenceEventService _referenceEventService;
+        private readonly IOrganizationUserImportAccessPolicies _organizationUserImportAccessPolicies;
+        private readonly IOrganizationUserInviteService _organizationUserInviteService;
+        private readonly IOrganizationSubscriptionService _organizationSubscriptionService;
+        private readonly IOrganizationUserMailer _organizationUserMailer;
+        private readonly IOrganizationRepository _organizationRepository;
+        private readonly IOrganizationUserRepository _organizationUserRepository;
+        private readonly IGroupRepository _groupRepository;
+        private readonly IEventService _eventService;
+        private readonly IReferenceEventService _referenceEventService;
 
 
         public OrganizationUserImportCommand(

@@ -16,8 +16,8 @@ namespace Bit.Core.OrganizationFeatures.Mail
 {
     public class OrganizationUserMailer : HandlebarsMailService, IOrganizationUserMailer
     {
-        readonly IOrganizationRepository _organizationRepository;
-        readonly IOrganizationUserRepository _organizationUserRepository;
+        private readonly IOrganizationRepository _organizationRepository;
+        private readonly IOrganizationUserRepository _organizationUserRepository;
 
         public OrganizationUserMailer(
             IOrganizationRepository organizationRepository,

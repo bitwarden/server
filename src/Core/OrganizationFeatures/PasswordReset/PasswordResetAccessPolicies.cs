@@ -11,8 +11,8 @@ namespace Bit.Core.OrganizationFeatures.PasswordReset
 {
     public class PasswordResetAccessPolicies : BaseAccessPolicies, IPasswordResetAccessPolicies
     {
-        readonly IOrganizationRepository _organizationRepository;
-        readonly IPolicyRepository _policyRepository;
+        private readonly IOrganizationRepository _organizationRepository;
+        private readonly IPolicyRepository _policyRepository;
 
         public PasswordResetAccessPolicies(
             IOrganizationRepository organizationRepository,

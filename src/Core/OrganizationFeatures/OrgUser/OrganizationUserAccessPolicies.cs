@@ -14,9 +14,9 @@ namespace Bit.Core.OrganizationFeatures.OrgUser
 {
     public class OrganizationUserAccessPolicies : BaseAccessPolicies, IOrganizationUserAccessPolicies
     {
-        readonly ICurrentContext _currentContext;
-        readonly IOrganizationUserRepository _organizationUserRepository;
-        readonly IOrganizationService _organizationService;
+        private readonly ICurrentContext _currentContext;
+        private readonly IOrganizationUserRepository _organizationUserRepository;
+        private readonly IOrganizationService _organizationService;
 
         public OrganizationUserAccessPolicies(
             ICurrentContext currentContext,

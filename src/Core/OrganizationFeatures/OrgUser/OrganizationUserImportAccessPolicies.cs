@@ -5,8 +5,6 @@ namespace Bit.Core.OrganizationFeatures.OrgUser
 {
     public class OrganizationUserImportAccessPolicies : BaseAccessPolicies, IOrganizationUserImportAccessPolicies
     {
-        public OrganizationUserImportAccessPolicies() { }
-
         public AccessPolicyResult CanImport(Organization organization)
         {
             if (organization == null)

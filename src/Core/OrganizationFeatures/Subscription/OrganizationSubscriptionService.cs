@@ -14,14 +14,14 @@ namespace Bit.Core.OrganizationFeatures.Subscription
 {
     public class OrganizationSubscriptionService : IOrganizationSubscriptionService
     {
-        readonly IOrganizationSubscriptionAccessPolicies _organizationSubscriptionAccessPolicies;
-        readonly IOrganizationService _organizationService;
-        readonly IOrganizationRepository _organizationRepository;
-        readonly IOrganizationUserRepository _organizationUserRepository;
-        readonly IPaymentService _paymentService;
-        readonly IOrganizationUserMailer _organizationUserMailer;
-        readonly IReferenceEventService _referenceEventService;
-        readonly ILogger<OrganizationSubscriptionService> _logger;
+        private readonly IOrganizationSubscriptionAccessPolicies _organizationSubscriptionAccessPolicies;
+        private readonly IOrganizationService _organizationService;
+        private readonly IOrganizationRepository _organizationRepository;
+        private readonly IOrganizationUserRepository _organizationUserRepository;
+        private readonly IPaymentService _paymentService;
+        private readonly IOrganizationUserMailer _organizationUserMailer;
+        private readonly IReferenceEventService _referenceEventService;
+        private readonly ILogger<OrganizationSubscriptionService> _logger;
 
         public OrganizationSubscriptionService(
             IOrganizationSubscriptionAccessPolicies organizationSubscriptionAccessPolicies,

@@ -9,9 +9,9 @@ namespace Bit.Core.OrganizationFeatures.PasswordReset
 {
     public class PasswordResetService : IPasswordResetService
     {
-        readonly IPasswordResetAccessPolicies _passwordResetAccessPolicies;
-        readonly IOrganizationUserRepository _organizationUserRepository;
-        readonly IEventService _eventService;
+        private readonly IPasswordResetAccessPolicies _passwordResetAccessPolicies;
+        private readonly IOrganizationUserRepository _organizationUserRepository;
+        private readonly IEventService _eventService;
 
         public PasswordResetService(
             IPasswordResetAccessPolicies passwordResetAccessPolicies,

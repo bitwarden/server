@@ -13,10 +13,10 @@ namespace Bit.Core.OrganizationFeatures.OrgUser
 {
     public class OrganizationUserService : IOrganizationUserService
     {
-        readonly IOrganizationUserAccessPolicies _organizationUserAccessPolicies;
-        readonly IOrganizationUserRepository _organizationUserRepository;
+        private readonly IOrganizationUserAccessPolicies _organizationUserAccessPolicies;
+        private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly IDeviceRepository _deviceRepository;
-        readonly IEventService _eventService;
+        private readonly IEventService _eventService;
         private readonly IPushRegistrationService _pushRegistrationService;
         private readonly IPushNotificationService _pushNotificationService;
 
