@@ -101,14 +101,13 @@ namespace Bit.Core.OrganizationFeatures.Subscription
             OrganizationUpgrade upgrade)
         {
             var organization = await _organizationRepository.GetByIdAsync(organizationId);
-            var existingPlan = StaticStore.Plans.FirstOrDefault(p => p.Type == organization.PlanType);
-            var newPlan = StaticStore.Plans.FirstOrDefault(p => p.Type == upgrade.Plan && !p.Disabled);
-
 
             CoreHelpers.HandlePermissionResult(
                 await _organizationSubscriptionAccessPolicies.CanUpgradePlanAsync(organization, upgrade)
             );
 
+            var existingPlan = StaticStore.Plans.FirstOrDefault(p => p.Type == organization.PlanType);
+            var newPlan = StaticStore.Plans.FirstOrDefault(p => p.Type == upgrade.Plan && !p.Disabled);
 
             var paymentIntentClientSecret = await _paymentService.UpgradeFreeOrganizationAsync(organization, newPlan,
                 upgrade.AdditionalStorageGb, upgrade.AdditionalSeats, upgrade.PremiumAccessAddon, upgrade.TaxInfo);

@@ -127,7 +127,6 @@ namespace Bit.Core.OrganizationFeatures.OrgUser
             }
         }
 
-
         public async Task DeleteAndPushUserRegistrationAsync(Guid organizationId, Guid userId)
         {
             var deviceIds = await GetUserDeviceIdsAsync(userId);
