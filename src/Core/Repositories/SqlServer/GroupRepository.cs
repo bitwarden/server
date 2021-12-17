@@ -1,15 +1,15 @@
 ﻿using System;
-using Bit.Core.Models.Table;
 using System.Collections.Generic;
-using System.Threading.Tasks;
-using Dapper;
 using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
-using Newtonsoft.Json;
-using Bit.Core.Utilities;
+using System.Threading.Tasks;
 using Bit.Core.Models.Data;
+using Bit.Core.Models.Table;
 using Bit.Core.Settings;
+using Bit.Core.Utilities;
+using Dapper;
+using Newtonsoft.Json;
 
 namespace Bit.Core.Repositories.SqlServer
 {
@@ -126,7 +126,7 @@ namespace Bit.Core.Repositories.SqlServer
             {
                 var results = await connection.ExecuteAsync(
                     $"[{Schema}].[GroupUser_Delete]",
-                    new { GroupId = groupId, OrganizationUserId = organizationUserId  },
+                    new { GroupId = groupId, OrganizationUserId = organizationUserId },
                     commandType: CommandType.StoredProcedure);
             }
         }

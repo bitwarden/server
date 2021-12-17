@@ -1,13 +1,13 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Net.Http;
+using System.Text;
 using System.Threading.Tasks;
 using Bit.Core.Settings;
-using Microsoft.Extensions.Logging;
-using System.Net.Http;
-using System.Collections.Generic;
-using Newtonsoft.Json;
-using Microsoft.AspNetCore.Hosting;
-using System.Text;
 using Bit.Core.Utilities;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 
 namespace Bit.Core.Services
 {

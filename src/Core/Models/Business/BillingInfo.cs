@@ -1,8 +1,8 @@
-﻿using Bit.Core.Enums;
+﻿using System;
+using System.Collections.Generic;
+using Bit.Core.Enums;
 using Bit.Core.Models.Table;
 using Stripe;
-using System;
-using System.Collections.Generic;
 
 namespace Bit.Core.Models.Business
 {

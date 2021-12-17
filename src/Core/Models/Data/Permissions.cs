@@ -1,8 +1,8 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Newtonsoft.Json;
 
-namespace Bit.Core.Models.Data 
+namespace Bit.Core.Models.Data
 {
     public class Permissions
     {

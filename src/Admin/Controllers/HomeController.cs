@@ -1,10 +1,10 @@
 ﻿using System.Diagnostics;
-using Microsoft.AspNetCore.Mvc;
-using Bit.Admin.Models;
-using Microsoft.AspNetCore.Authorization;
-using Bit.Core.Settings;
 using System.Net.Http;
 using System.Threading.Tasks;
+using Bit.Admin.Models;
+using Bit.Core.Settings;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json.Linq;
 
 namespace Bit.Admin.Controllers

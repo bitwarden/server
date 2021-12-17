@@ -1,15 +1,15 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using AutoMapper;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories.EntityFramework.Queries;
-using EfModel = Bit.Core.Models.EntityFramework;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using System;
+using EfModel = Bit.Core.Models.EntityFramework;
 using TableModel = Bit.Core.Models.Table;
 
 namespace Bit.Core.Repositories.EntityFramework
@@ -118,7 +118,7 @@ namespace Bit.Core.Repositories.EntityFramework
                     from ou in dbContext.OrganizationUsers
                     join cu in dbContext.CollectionUsers
                         on ou.Id equals cu.OrganizationUserId
-                    where !ou.AccessAll && 
+                    where !ou.AccessAll &&
                         ou.Id == id
                     select cu).ToListAsync();
                 var collections = query.Select(cu => new SelectionReadOnly
@@ -126,7 +126,7 @@ namespace Bit.Core.Repositories.EntityFramework
                     Id = cu.CollectionId,
                     ReadOnly = cu.ReadOnly,
                     HidePasswords = cu.HidePasswords,
-                }); 
+                });
                 return new Tuple<OrganizationUser, ICollection<SelectionReadOnly>>(
                     organizationUser, collections.ToList());
             }
@@ -198,14 +198,14 @@ namespace Bit.Core.Repositories.EntityFramework
             {
                 var dbContext = GetDatabaseContext(scope);
                 var query = from ou in dbContext.OrganizationUsers
-                    join cu in dbContext.CollectionUsers on ou.Id equals cu.OrganizationUserId
-                    where !ou.AccessAll && ou.Id == id
-                    select cu;
+                            join cu in dbContext.CollectionUsers on ou.Id equals cu.OrganizationUserId
+                            where !ou.AccessAll && ou.Id == id
+                            select cu;
                 var collections = await query.Select(cu => new SelectionReadOnly
                 {
-                   Id = cu.CollectionId,
-                   ReadOnly = cu.ReadOnly,
-                   HidePasswords = cu.HidePasswords,
+                    Id = cu.CollectionId,
+                    ReadOnly = cu.ReadOnly,
+                    HidePasswords = cu.HidePasswords,
                 }).ToListAsync();
                 return new Tuple<OrganizationUserUserDetails, ICollection<SelectionReadOnly>>(organizationUserUserDetails, collections);
             }
@@ -219,8 +219,8 @@ namespace Bit.Core.Repositories.EntityFramework
                 var view = new OrganizationUserOrganizationDetailsViewQuery();
                 var t = await (view.Run(dbContext)).ToArrayAsync();
                 var entity = await view.Run(dbContext)
-                    .FirstOrDefaultAsync(o => o.UserId == userId && 
-                        o.OrganizationId == organizationId && 
+                    .FirstOrDefaultAsync(o => o.UserId == userId &&
+                        o.OrganizationId == organizationId &&
                         (status == null || o.Status == status));
                 return entity;
             }
@@ -232,8 +232,8 @@ namespace Bit.Core.Repositories.EntityFramework
             {
                 var dbContext = GetDatabaseContext(scope);
                 var query = from ou in dbContext.OrganizationUsers
-                    where Ids.Contains(ou.Id)
-                    select ou;
+                            where Ids.Contains(ou.Id)
+                            select ou;
                 var data = await query.ToArrayAsync();
                 return data;
             }
@@ -245,8 +245,8 @@ namespace Bit.Core.Repositories.EntityFramework
             {
                 var dbContext = GetDatabaseContext(scope);
                 var query = from ou in dbContext.OrganizationUsers
-                    where userIds.Contains(ou.Id)
-                    select ou;
+                            where userIds.Contains(ou.Id)
+                            select ou;
                 return Mapper.Map<List<TableModel.OrganizationUser>>(await query.ToListAsync());
             }
         }
@@ -257,9 +257,9 @@ namespace Bit.Core.Repositories.EntityFramework
             {
                 var dbContext = GetDatabaseContext(scope);
                 var query = from ou in dbContext.OrganizationUsers
-                    where ou.OrganizationId == organizationId &&
-                        (type == null || ou.Type == type)
-                    select ou;
+                            where ou.OrganizationId == organizationId &&
+                                (type == null || ou.Type == type)
+                            select ou;
                 return Mapper.Map<List<TableModel.OrganizationUser>>(await query.ToListAsync());
             }
         }
@@ -270,8 +270,8 @@ namespace Bit.Core.Repositories.EntityFramework
             {
                 var dbContext = GetDatabaseContext(scope);
                 var query = from ou in dbContext.OrganizationUsers
-                    where ou.UserId == userId
-                    select ou;
+                            where ou.UserId == userId
+                            select ou;
                 return Mapper.Map<List<TableModel.OrganizationUser>>(await query.ToListAsync());
             }
         }
@@ -283,8 +283,8 @@ namespace Bit.Core.Repositories.EntityFramework
                 var dbContext = GetDatabaseContext(scope);
                 var view = new OrganizationUserUserDetailsViewQuery();
                 var query = from ou in view.Run(dbContext)
-                    where ou.OrganizationId == organizationId
-                    select ou;
+                            where ou.OrganizationId == organizationId
+                            select ou;
                 return await query.ToListAsync();
             }
         }
@@ -297,9 +297,9 @@ namespace Bit.Core.Repositories.EntityFramework
                 var dbContext = GetDatabaseContext(scope);
                 var view = new OrganizationUserOrganizationDetailsViewQuery();
                 var query = from ou in view.Run(dbContext)
-                    where ou.UserId == userId &&
-                    (status == null || ou.Status == status)
-                    select ou;
+                            where ou.UserId == userId &&
+                            (status == null || ou.Status == status)
+                            select ou;
                 var organizationUsers = await query.ToListAsync();
                 return organizationUsers;
             }
@@ -311,16 +311,16 @@ namespace Bit.Core.Repositories.EntityFramework
             {
                 var dbContext = GetDatabaseContext(scope);
                 var query = from ou in dbContext.OrganizationUsers
-                    where Ids.Contains(ou.Id) && ou.Status == OrganizationUserStatusType.Accepted
-                    join u in dbContext.Users
-                        on ou.UserId equals u.Id
-                    where ou.OrganizationId == organizationId
-                    select new { ou, u };
+                            where Ids.Contains(ou.Id) && ou.Status == OrganizationUserStatusType.Accepted
+                            join u in dbContext.Users
+                                on ou.UserId equals u.Id
+                            where ou.OrganizationId == organizationId
+                            select new { ou, u };
                 var data = await query
-                    .Select(x => new OrganizationUserPublicKey() 
+                    .Select(x => new OrganizationUserPublicKey()
                     {
-                       Id = x.ou.Id,
-                       PublicKey = x.u.PublicKey,
+                        Id = x.ou.Id,
+                        PublicKey = x.u.PublicKey,
                     }).ToListAsync();
                 return data;
             }
@@ -341,7 +341,7 @@ namespace Bit.Core.Repositories.EntityFramework
                 var insert = procedure.Insert.Run(dbContext);
                 await dbContext.AddRangeAsync(await insert.ToListAsync());
 
-                dbContext.RemoveRange(await procedure.Delete.Run(dbContext).ToListAsync()); 
+                dbContext.RemoveRange(await procedure.Delete.Run(dbContext).ToListAsync());
                 await dbContext.SaveChangesAsync();
             }
         }
@@ -365,19 +365,19 @@ namespace Bit.Core.Repositories.EntityFramework
             {
                 var dbContext = GetDatabaseContext(scope);
                 var usersQuery = from ou in dbContext.OrganizationUsers
-                    join u in dbContext.Users
-                        on ou.UserId equals u.Id into u_g
-                    from u in u_g
-                    where ou.OrganizationId == organizationId
-                    select new { ou, u };
+                                 join u in dbContext.Users
+                                     on ou.UserId equals u.Id into u_g
+                                 from u in u_g
+                                 where ou.OrganizationId == organizationId
+                                 select new { ou, u };
                 var ouu = await usersQuery.ToListAsync();
                 var ouEmails = ouu.Select(x => x.ou.Email);
                 var uEmails = ouu.Select(x => x.u.Email);
                 var knownEmails = from e in emails
-                    where (ouEmails.Contains(e) || uEmails.Contains(e)) &&
-                    (!onlyRegisteredUsers && (uEmails.Contains(e) || ouEmails.Contains(e))) ||
-                    (onlyRegisteredUsers && uEmails.Contains(e))
-                    select e;
+                                  where (ouEmails.Contains(e) || uEmails.Contains(e)) &&
+                                  (!onlyRegisteredUsers && (uEmails.Contains(e) || ouEmails.Contains(e))) ||
+                                  (onlyRegisteredUsers && uEmails.Contains(e))
+                                  select e;
                 return knownEmails;
             }
         }
@@ -396,7 +396,7 @@ namespace Bit.Core.Repositories.EntityFramework
 
                 var delete = procedure.Delete.Run(dbContext);
                 var deleteData = await delete.ToListAsync();
-                dbContext.RemoveRange(deleteData); 
+                dbContext.RemoveRange(deleteData);
                 await UserBumpAccountRevisionDateByOrganizationUserId(orgUserId);
                 await dbContext.SaveChangesAsync();
             }
@@ -431,10 +431,11 @@ namespace Bit.Core.Repositories.EntityFramework
                 var dbContext = GetDatabaseContext(scope);
                 var query = dbContext.OrganizationUsers
                     .Include(e => e.User)
-                    .Where(e => e.OrganizationId.Equals(organizationId) && 
+                    .Where(e => e.OrganizationId.Equals(organizationId) &&
                         e.Type <= minRole &&
                         e.Status == OrganizationUserStatusType.Confirmed)
-                    .Select(e => new OrganizationUserUserDetails() {
+                    .Select(e => new OrganizationUserUserDetails()
+                    {
                         Id = e.Id,
                         Email = e.Email ?? e.User.Email
                     });

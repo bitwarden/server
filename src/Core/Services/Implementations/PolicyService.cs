@@ -47,9 +47,9 @@ namespace Bit.Core.Services
             {
                 throw new BadRequestException("This organization cannot use policies.");
             }
-            
+
             // Handle dependent policy checks
-            switch(policy.Type)
+            switch (policy.Type)
             {
                 case PolicyType.SingleOrg:
                     if (!policy.Enabled)
@@ -59,9 +59,9 @@ namespace Bit.Core.Services
                         await RequiredByKeyConnectorAsync(org);
                     }
                     break;
-                
-               case PolicyType.RequireSso:
-                   if (policy.Enabled)
+
+                case PolicyType.RequireSso:
+                    if (policy.Enabled)
                     {
                         await DependsOnSingleOrgAsync(org);
                     }
@@ -71,12 +71,12 @@ namespace Bit.Core.Services
                     }
                     break;
 
-               case PolicyType.MaximumVaultTimeout:
-                   if (policy.Enabled)
-                   {
+                case PolicyType.MaximumVaultTimeout:
+                    if (policy.Enabled)
+                    {
                         await DependsOnSingleOrgAsync(org);
-                   }
-                   break;
+                    }
+                    break;
             }
 
             var now = DateTime.UtcNow;
@@ -93,7 +93,7 @@ namespace Bit.Core.Services
                         policy.OrganizationId);
                     var removableOrgUsers = orgUsers.Where(ou =>
                         ou.Status != Enums.OrganizationUserStatusType.Invited &&
-                        ou.Type != Enums.OrganizationUserType.Owner && ou.Type != Enums.OrganizationUserType.Admin && 
+                        ou.Type != Enums.OrganizationUserType.Owner && ou.Type != Enums.OrganizationUserType.Admin &&
                         ou.UserId != savingUserId);
                     switch (currentPolicy.Type)
                     {
@@ -108,14 +108,14 @@ namespace Bit.Core.Services
                                         org.Name, orgUser.Email);
                                 }
                             }
-                        break;
+                            break;
                         case Enums.PolicyType.SingleOrg:
                             var userOrgs = await _organizationUserRepository.GetManyByManyUsersAsync(
                                     removableOrgUsers.Select(ou => ou.UserId.Value));
                             foreach (var orgUser in removableOrgUsers)
                             {
-                                if (userOrgs.Any(ou => ou.UserId == orgUser.UserId 
-                                            && ou.OrganizationId != org.Id 
+                                if (userOrgs.Any(ou => ou.UserId == orgUser.UserId
+                                            && ou.OrganizationId != org.Id
                                             && ou.Status != OrganizationUserStatusType.Invited))
                                 {
                                     await organizationService.DeleteUserAsync(policy.OrganizationId, orgUser.Id,
@@ -124,9 +124,9 @@ namespace Bit.Core.Services
                                         org.Name, orgUser.Email);
                                 }
                             }
-                        break;
+                            break;
                         default:
-                        break;
+                            break;
                     }
                 }
             }

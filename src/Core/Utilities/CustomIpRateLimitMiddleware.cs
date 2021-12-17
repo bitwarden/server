@@ -1,4 +1,6 @@
-﻿using AspNetCoreRateLimit;
+﻿using System;
+using System.Threading.Tasks;
+using AspNetCoreRateLimit;
 using Bit.Core.Models.Api;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Http;
@@ -6,8 +8,6 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
-using System.Threading.Tasks;
-using System;
 
 namespace Bit.Core.Utilities
 {

@@ -1,10 +1,10 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using Bit.Core.Models.Table;
 
 namespace Bit.Core.Test.Repositories.EntityFramework.EqualityComparers
 {
-    public class OrganizationCompare: IEqualityComparer<Organization>
+    public class OrganizationCompare : IEqualityComparer<Organization>
     {
         public bool Equals(Organization x, Organization y)
         {

@@ -84,7 +84,7 @@ namespace Bit.Core.Utilities
                     if (provider == SupportedDatabaseProviders.Postgres)
                     {
                         options.UseNpgsql(connectionString);
-                    } 
+                    }
                     else if (provider == SupportedDatabaseProviders.MySql)
                     {
                         options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString));

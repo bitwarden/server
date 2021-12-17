@@ -2,8 +2,9 @@
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+using Bit.Api.Models.Public.Request;
+using Bit.Api.Models.Public.Response;
 using Bit.Core.Context;
-using Bit.Core.Models.Api.Public;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Microsoft.AspNetCore.Authorization;
@@ -38,7 +39,7 @@ namespace Bit.Api.Public.Controllers
         /// </remarks>
         [HttpGet]
         [ProducesResponseType(typeof(ListResponseModel<EventResponseModel>), (int)HttpStatusCode.OK)]
-        public async Task<IActionResult> List([FromQuery]EventFilterRequestModel request)
+        public async Task<IActionResult> List([FromQuery] EventFilterRequestModel request)
         {
             var dateRange = request.ToDateRange();
             var result = new PagedResult<IEvent>();

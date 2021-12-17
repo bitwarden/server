@@ -48,7 +48,7 @@ namespace Bit.Core.Identity
             {
                 return Task.FromResult<IdentityUser>(null);
             }
-            
+
             return Task.FromResult(new IdentityUser
             {
                 Id = normalizedEmail,

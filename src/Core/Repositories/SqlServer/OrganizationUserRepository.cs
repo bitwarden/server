@@ -1,15 +1,15 @@
 ﻿using System;
-using Bit.Core.Models.Table;
+using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
-using System.Threading.Tasks;
-using Dapper;
 using System.Linq;
-using Bit.Core.Models.Data;
-using System.Collections.Generic;
+using System.Threading.Tasks;
 using Bit.Core.Enums;
-using Bit.Core.Utilities;
+using Bit.Core.Models.Data;
+using Bit.Core.Models.Table;
 using Bit.Core.Settings;
+using Bit.Core.Utilities;
+using Dapper;
 using Newtonsoft.Json;
 
 namespace Bit.Core.Repositories.SqlServer
@@ -214,8 +214,8 @@ namespace Bit.Core.Repositories.SqlServer
                 return results.ToList();
             }
         }
-        
-        public async Task<OrganizationUserOrganizationDetails> GetDetailsByUserAsync(Guid userId, 
+
+        public async Task<OrganizationUserOrganizationDetails> GetDetailsByUserAsync(Guid userId,
             Guid organizationId, OrganizationUserStatusType? status = null)
         {
             using (var connection = new SqlConnection(ConnectionString))
@@ -285,7 +285,7 @@ namespace Bit.Core.Repositories.SqlServer
                 return results.ToList();
             }
         }
-        
+
         public async Task<ICollection<OrganizationUser>> GetManyAsync(IEnumerable<Guid> Ids)
         {
             using (var connection = new SqlConnection(ConnectionString))
@@ -298,7 +298,7 @@ namespace Bit.Core.Repositories.SqlServer
                 return results.ToList();
             }
         }
-        
+
         public async Task<OrganizationUser> GetByOrganizationEmailAsync(Guid organizationId, string email)
         {
             using (var connection = new SqlConnection(ConnectionString))
@@ -348,7 +348,7 @@ namespace Bit.Core.Repositories.SqlServer
                 return default;
             }
 
-            foreach(var organizationUser in organizationUsers)
+            foreach (var organizationUser in organizationUsers)
             {
                 organizationUser.SetNewId();
             }

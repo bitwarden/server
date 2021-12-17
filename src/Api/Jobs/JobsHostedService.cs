@@ -31,7 +31,7 @@ namespace Bit.Api.Jobs
                 .StartNow()
                 .WithCronSchedule("0 0 * * * ?")
                 .Build();
-            var emergencyAccessTimeoutTrigger  = TriggerBuilder.Create()
+            var emergencyAccessTimeoutTrigger = TriggerBuilder.Create()
                 .WithIdentity("EmergencyAccessTimeoutTrigger")
                 .StartNow()
                 .WithCronSchedule("0 0 * * * ?")

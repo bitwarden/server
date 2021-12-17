@@ -1,7 +1,12 @@
-﻿using Bit.Core.Models.Api;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net.Http;
+using System.Security.Claims;
+using System.Threading.Tasks;
+using Bit.Core.Models.Api;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Identity.Models;
 using IdentityModel;
 using IdentityServer4;
@@ -9,16 +14,9 @@ using IdentityServer4.Services;
 using IdentityServer4.Stores;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net.Http;
-using System.Security.Claims;
-using System.Threading.Tasks;
 
 namespace Bit.Identity.Controllers
 {
@@ -49,7 +47,7 @@ namespace Bit.Identity.Controllers
             _organizationRepository = organizationRepository;
             _clientFactory = clientFactory;
         }
-        
+
         [HttpGet]
         public async Task<IActionResult> PreValidate(string domainHint)
         {
@@ -93,7 +91,7 @@ namespace Bit.Identity.Controllers
         {
             var context = await _interaction.GetAuthorizationContextAsync(returnUrl);
 
-            var domainHint = context.Parameters.AllKeys.Contains("domain_hint") ? 
+            var domainHint = context.Parameters.AllKeys.Contains("domain_hint") ?
                 context.Parameters["domain_hint"] : null;
 
             if (string.IsNullOrWhiteSpace(domainHint))
@@ -101,7 +99,7 @@ namespace Bit.Identity.Controllers
                 throw new Exception("No domain_hint provided");
             }
 
-            var userIdentifier = context.Parameters.AllKeys.Contains("user_identifier") ? 
+            var userIdentifier = context.Parameters.AllKeys.Contains("user_identifier") ?
                 context.Parameters["user_identifier"] : null;
 
             return RedirectToAction(nameof(ExternalChallenge), new

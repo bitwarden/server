@@ -1,13 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
+using Amazon;
+using Amazon.SimpleEmail;
+using Amazon.SimpleEmail.Model;
 using Bit.Core.Models.Mail;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
-using System.Linq;
-using Amazon.SimpleEmail;
-using Amazon;
-using Amazon.SimpleEmail.Model;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -130,7 +130,7 @@ namespace Bit.Core.Services
             {
                 _logger.LogWarning(e, "Failed to send email. Retrying...");
                 await SendAsync(request, true);
-                throw e;
+                throw;
             }
         }
 

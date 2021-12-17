@@ -1,4 +1,4 @@
-namespace Bit.Core.Models.Mail.FamiliesForEnterprise
+﻿namespace Bit.Core.Models.Mail.FamiliesForEnterprise
 {
     public class FamiliesForEnterpriseOfferNewAccountViewModel : BaseMailModel
     {

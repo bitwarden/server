@@ -122,11 +122,11 @@ namespace Bit.Api
             services.AddDefaultServices(globalSettings);
             services.AddCoreLocalizationServices();
 
-            #if OSS
+#if OSS
                 services.AddOosServices();
-            #else
-                services.AddCommCoreServices();
-            #endif
+#else
+            services.AddCommCoreServices();
+#endif
 
             // MVC
             services.AddMvc(config =>

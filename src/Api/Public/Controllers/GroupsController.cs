@@ -3,8 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+using Bit.Api.Models.Public.Request;
+using Bit.Api.Models.Public.Response;
 using Bit.Core.Context;
-using Bit.Core.Models.Api.Public;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -103,7 +104,7 @@ namespace Bit.Api.Public.Controllers
         [HttpPost]
         [ProducesResponseType(typeof(GroupResponseModel), (int)HttpStatusCode.OK)]
         [ProducesResponseType(typeof(ErrorResponseModel), (int)HttpStatusCode.BadRequest)]
-        public async Task<IActionResult> Post([FromBody]GroupCreateUpdateRequestModel model)
+        public async Task<IActionResult> Post([FromBody] GroupCreateUpdateRequestModel model)
         {
             var group = model.ToGroup(_currentContext.OrganizationId.Value);
             var associations = model.Collections?.Select(c => c.ToSelectionReadOnly());
@@ -125,7 +126,7 @@ namespace Bit.Api.Public.Controllers
         [ProducesResponseType(typeof(GroupResponseModel), (int)HttpStatusCode.OK)]
         [ProducesResponseType(typeof(ErrorResponseModel), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
-        public async Task<IActionResult> Put(Guid id, [FromBody]GroupCreateUpdateRequestModel model)
+        public async Task<IActionResult> Put(Guid id, [FromBody] GroupCreateUpdateRequestModel model)
         {
             var existingGroup = await _groupRepository.GetByIdAsync(id);
             if (existingGroup == null || existingGroup.OrganizationId != _currentContext.OrganizationId)
@@ -151,7 +152,7 @@ namespace Bit.Api.Public.Controllers
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType(typeof(ErrorResponseModel), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
-        public async Task<IActionResult> PutMemberIds(Guid id, [FromBody]UpdateMemberIdsRequestModel model)
+        public async Task<IActionResult> PutMemberIds(Guid id, [FromBody] UpdateMemberIdsRequestModel model)
         {
             var existingGroup = await _groupRepository.GetByIdAsync(id);
             if (existingGroup == null || existingGroup.OrganizationId != _currentContext.OrganizationId)

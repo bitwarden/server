@@ -1,21 +1,21 @@
+﻿using System.Collections.Generic;
+using System.Linq;
+using System.Text.Json;
+using System.Threading.Tasks;
+using Bit.Core.Enums;
+using Bit.Core.Models.Data;
+using Bit.Core.Repositories;
 using Bit.Core.Repositories.EntityFramework;
 using Bit.Core.Test.AutoFixture;
 using Bit.Core.Test.AutoFixture.Attributes;
-using Bit.Core.Test.AutoFixture.PolicyFixtures;
 using Bit.Core.Test.AutoFixture.OrganizationUserFixtures;
+using Bit.Core.Test.AutoFixture.PolicyFixtures;
+using Bit.Core.Test.Repositories.EntityFramework.EqualityComparers;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
-using TableModel = Bit.Core.Models.Table;
-using System.Linq;
-using System.Collections.Generic;
 using EfRepo = Bit.Core.Repositories.EntityFramework;
 using SqlRepo = Bit.Core.Repositories.SqlServer;
-using Bit.Core.Test.Repositories.EntityFramework.EqualityComparers;
-using Bit.Core.Models.Data;
-using System.Text.Json;
-using Bit.Core.Enums;
-using Bit.Core.Repositories;
-using System.Threading.Tasks;
+using TableModel = Bit.Core.Models.Table;
 
 namespace Bit.Core.Test.Repositories.EntityFramework
 {
@@ -193,7 +193,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
 
             // Assert
             var distinctItems = results.Distinct(equalityComparer);
-            
+
             Assert.True(results.All(r => r == null) ||
                 !distinctItems.Skip(1).Any());
         }

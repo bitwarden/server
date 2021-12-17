@@ -1,13 +1,13 @@
-﻿using Bit.Core.Utilities;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using Azure.Messaging.EventGrid;
-using Azure.Messaging.EventGrid.SystemEvents;
-using Newtonsoft.Json;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
+using Azure.Messaging.EventGrid;
+using Azure.Messaging.EventGrid.SystemEvents;
+using Bit.Core.Utilities;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Newtonsoft.Json;
 
 namespace Bit.Api.Utilities
 {

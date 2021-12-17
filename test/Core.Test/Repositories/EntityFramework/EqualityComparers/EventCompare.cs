@@ -1,14 +1,14 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using Bit.Core.Models.Table;
 
 namespace Bit.Core.Test.Repositories.EntityFramework.EqualityComparers
 {
-    public class EventCompare: IEqualityComparer<Event>
+    public class EventCompare : IEqualityComparer<Event>
     {
         public bool Equals(Event x, Event y)
         {
-            return  x.Date.ToShortDateString() == y.Date.ToShortDateString() &&
+            return x.Date.ToShortDateString() == y.Date.ToShortDateString() &&
             x.Type == y.Type &&
             x.IpAddress == y.IpAddress;
         }

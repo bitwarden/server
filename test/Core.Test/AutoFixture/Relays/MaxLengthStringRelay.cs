@@ -1,15 +1,15 @@
-using AutoFixture.Kernel;
-using System;
+﻿using System;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Reflection;
+using AutoFixture.Kernel;
 
 namespace Bit.Core.Test.AutoFixture.Relays
 {
     // Creates a string the same length as any availible MaxLength data annotation
     // Modified version of the StringLenfthRelay provided by AutoFixture
     // https://github.com/AutoFixture/AutoFixture/blob/master/Src/AutoFixture/DataAnnotations/StringLengthAttributeRelay.cs
-    internal class MaxLengthStringRelay: ISpecimenBuilder
+    internal class MaxLengthStringRelay : ISpecimenBuilder
     {
         public object Create(object request, ISpecimenContext context)
         {

@@ -3,8 +3,8 @@ using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Threading.Tasks;
-using Dapper;
 using Bit.Core.Models.Table;
+using Dapper;
 
 namespace Bit.Core.Repositories.SqlServer
 {

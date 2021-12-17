@@ -3,17 +3,17 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using AutoFixture;
+using AutoFixture.Kernel;
 using Bit.Core.Enums;
+using Bit.Core.Models;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
-using TableModel = Bit.Core.Models.Table;
-using Bit.Core.Utilities;
-using AutoFixture.Kernel;
-using Bit.Core.Models;
-using Bit.Core.Test.AutoFixture.EntityFrameworkRepositoryFixtures;
 using Bit.Core.Repositories.EntityFramework;
-using Bit.Test.Common.AutoFixture.Attributes;
+using Bit.Core.Test.AutoFixture.EntityFrameworkRepositoryFixtures;
+using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
+using Bit.Test.Common.AutoFixture.Attributes;
+using TableModel = Bit.Core.Models.Table;
 
 namespace Bit.Core.Test.AutoFixture.OrganizationFixtures
 {
@@ -39,11 +39,11 @@ namespace Bit.Core.Test.AutoFixture.OrganizationFixtures
         }
     }
 
-    internal class OrganizationBuilder: ISpecimenBuilder
+    internal class OrganizationBuilder : ISpecimenBuilder
     {
         public object Create(object request, ISpecimenContext context)
         {
-            if (context == null) 
+            if (context == null)
             {
                 throw new ArgumentNullException(nameof(context));
             }
@@ -74,7 +74,7 @@ namespace Bit.Core.Test.AutoFixture.OrganizationFixtures
             fixture.Customize<Core.Models.Table.Organization>(composer => composer
                 .With(o => o.PlanType, CheckedPlanType));
             fixture.Customize<OrganizationUpgrade>(composer => composer
-                .With(ou => ou.Plan, validUpgradePlans.First())) ;
+                .With(ou => ou.Plan, validUpgradePlans.First()));
         }
     }
 
@@ -129,7 +129,7 @@ namespace Bit.Core.Test.AutoFixture.OrganizationFixtures
         }
     }
 
-    internal class EfOrganization: ICustomization
+    internal class EfOrganization : ICustomization
     {
         public void Customize(IFixture fixture)
         {

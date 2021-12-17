@@ -1,6 +1,6 @@
 ﻿using System;
-using System.Threading.Tasks;
 using System.Linq;
+using System.Threading.Tasks;
 using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Jobs;

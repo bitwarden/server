@@ -1,20 +1,20 @@
-﻿using System.Threading.Tasks;
-using Microsoft.AspNetCore.Identity;
-using Bit.Core.Models.Table;
-using Bit.Core.Enums;
-using Bit.Core.Models;
-using Bit.Core.Repositories;
-using Newtonsoft.Json;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using U2fLib = U2F.Core.Crypto.U2F;
-using U2F.Core.Models;
-using U2F.Core.Exceptions;
-using U2F.Core.Utils;
-using System;
+using System.Threading.Tasks;
+using Bit.Core.Enums;
+using Bit.Core.Models;
+using Bit.Core.Models.Table;
+using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
+using Newtonsoft.Json;
+using U2F.Core.Exceptions;
+using U2F.Core.Models;
+using U2F.Core.Utils;
+using U2fLib = U2F.Core.Crypto.U2F;
 
 namespace Bit.Core.Identity
 {

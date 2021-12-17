@@ -1,11 +1,11 @@
+﻿using System;
 using System.Collections.Generic;
+using Bit.Core.Enums;
 using Bit.Core.Repositories.EntityFramework;
 using Bit.Core.Settings;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
-using Bit.Core.Enums;
 using Microsoft.EntityFrameworkCore.Design;
-using System;
+using Microsoft.Extensions.Configuration;
 
 namespace MySqlMigrations
 {
@@ -20,19 +20,19 @@ namespace MySqlMigrations
         }
     }
 
-     public class DatabaseContextFactory : IDesignTimeDbContextFactory<DatabaseContext>
+    public class DatabaseContextFactory : IDesignTimeDbContextFactory<DatabaseContext>
     {
         public DatabaseContext CreateDbContext(string[] args)
         {
             var globalSettings = GlobalSettingsFactory.GlobalSettings;
             var optionsBuilder = new DbContextOptionsBuilder<DatabaseContext>();
             var connectionString = globalSettings.PostgreSql?.ConnectionString;
-            if (string.IsNullOrWhiteSpace(connectionString)) 
+            if (string.IsNullOrWhiteSpace(connectionString))
             {
                 throw new Exception("No Postgres connection string found.");
             }
             optionsBuilder.UseNpgsql(
-                connectionString,  
+                connectionString,
                 b => b.MigrationsAssembly("PostgresMigrations"));
             return new DatabaseContext(optionsBuilder.Options);
         }

@@ -33,7 +33,7 @@ namespace Bit.Events.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Post([FromBody]IEnumerable<EventModel> model)
+        public async Task<IActionResult> Post([FromBody] IEnumerable<EventModel> model)
         {
             if (model == null || !model.Any())
             {

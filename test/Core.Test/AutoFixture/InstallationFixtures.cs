@@ -1,19 +1,19 @@
+﻿using System;
 using AutoFixture;
-using TableModel = Bit.Core.Models.Table;
 using AutoFixture.Kernel;
-using System;
 using Bit.Core.Repositories.EntityFramework;
 using Bit.Core.Test.AutoFixture.EntityFrameworkRepositoryFixtures;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using TableModel = Bit.Core.Models.Table;
 
 namespace Bit.Core.Test.AutoFixture.InstallationFixtures
 {
-    internal class InstallationBuilder: ISpecimenBuilder
+    internal class InstallationBuilder : ISpecimenBuilder
     {
         public object Create(object request, ISpecimenContext context)
         {
-            if (context == null) 
+            if (context == null)
             {
                 throw new ArgumentNullException(nameof(context));
             }
@@ -30,7 +30,7 @@ namespace Bit.Core.Test.AutoFixture.InstallationFixtures
         }
     }
 
-    internal class EfInstallation: ICustomization 
+    internal class EfInstallation : ICustomization
     {
         public void Customize(IFixture fixture)
         {

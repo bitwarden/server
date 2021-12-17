@@ -1,13 +1,13 @@
+﻿using System;
 using AutoFixture;
-using TableModel = Bit.Core.Models.Table;
 using AutoFixture.Kernel;
-using System;
 using Bit.Core.Repositories.EntityFramework;
 using Bit.Core.Test.AutoFixture.EntityFrameworkRepositoryFixtures;
+using Bit.Core.Test.AutoFixture.OrganizationFixtures;
+using Bit.Core.Test.AutoFixture.OrganizationUserFixtures;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
-using Bit.Core.Test.AutoFixture.OrganizationUserFixtures;
-using Bit.Core.Test.AutoFixture.OrganizationFixtures;
+using TableModel = Bit.Core.Models.Table;
 
 namespace Bit.Core.Test.AutoFixture.OrganizationSponsorshipFixtures
 {

@@ -15,7 +15,7 @@ namespace Bit.CommCore.Test.AutoFixture.ProviderUserFixtures
             Status = status;
             Type = type;
         }
-        
+
         public void Customize(IFixture fixture)
         {
             fixture.Customize<Core.Models.Table.Provider.ProviderUser>(composer => composer

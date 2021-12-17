@@ -1,19 +1,19 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using System.Linq;
-using TableModel = Bit.Core.Models.Table;
-using EfModel = Bit.Core.Models.EntityFramework;
-using Microsoft.Extensions.DependencyInjection;
+using System.Threading.Tasks;
 using AutoMapper;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Table.Provider;
 using Bit.Core.Repositories.EntityFramework.Queries;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using EfModel = Bit.Core.Models.EntityFramework;
+using TableModel = Bit.Core.Models.Table;
 
 namespace Bit.Core.Repositories.EntityFramework
 {
-    public class ProviderOrganizationRepository : 
+    public class ProviderOrganizationRepository :
         Repository<TableModel.Provider.ProviderOrganization, EfModel.Provider.ProviderOrganization, Guid>, IProviderOrganizationRepository
     {
         public ProviderOrganizationRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)

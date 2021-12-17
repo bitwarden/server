@@ -1,4 +1,4 @@
-using System.Data;
+﻿using System.Data;
 using Bit.Core.Models.Table;
 
 namespace Bit.Core.Models.Data

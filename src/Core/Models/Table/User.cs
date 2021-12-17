@@ -1,10 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using Bit.Core.Enums;
 using Bit.Core.Utilities;
-using System.Collections.Generic;
-using Newtonsoft.Json;
 using Microsoft.AspNetCore.Identity;
-using System.ComponentModel.DataAnnotations;
+using Newtonsoft.Json;
 
 namespace Bit.Core.Models.Table
 {

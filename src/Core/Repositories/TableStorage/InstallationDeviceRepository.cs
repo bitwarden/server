@@ -79,12 +79,9 @@ namespace Bit.Core.Repositories.TableStorage
                 entity.ETag = "*";
                 await _table.ExecuteAsync(TableOperation.Delete(entity));
             }
-            catch (StorageException e)
+            catch (StorageException e) when (e.RequestInformation.HttpStatusCode != (int)HttpStatusCode.NotFound)
             {
-                if (e.RequestInformation.HttpStatusCode != (int)HttpStatusCode.NotFound)
-                {
-                    throw e;
-                }
+                throw;
             }
         }
     }

@@ -95,19 +95,19 @@ namespace Bit.Core.Models.Data
             .Where(c => !string.IsNullOrWhiteSpace(c))?
             .Select(c => c.Trim()) ??
             Array.Empty<string>();
-        
+
         public IEnumerable<string> GetAdditionalUserIdClaimTypes() => AdditionalUserIdClaimTypes?
             .Split(',')?
             .Where(c => !string.IsNullOrWhiteSpace(c))?
             .Select(c => c.Trim()) ??
             Array.Empty<string>();
-        
+
         public IEnumerable<string> GetAdditionalEmailClaimTypes() => AdditionalEmailClaimTypes?
             .Split(',')?
             .Where(c => !string.IsNullOrWhiteSpace(c))?
             .Select(c => c.Trim()) ??
             Array.Empty<string>();
-        
+
         public IEnumerable<string> GetAdditionalNameClaimTypes() => AdditionalNameClaimTypes?
             .Split(',')?
             .Where(c => !string.IsNullOrWhiteSpace(c))?

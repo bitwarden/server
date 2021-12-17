@@ -1,17 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
+using Bit.Core.Context;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Fido2NetLib;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using NSubstitute;
 using Xunit;
-using Fido2NetLib;
-using Bit.Core.Context;
 
 namespace Bit.Core.Test.Services
 {
