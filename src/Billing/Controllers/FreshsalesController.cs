@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
@@ -55,7 +55,7 @@ namespace Bit.Billing.Controllers
 
 
         [HttpPost("webhook")]
-        public async Task<IActionResult> PostWebhook([FromHeader(Name = "Authorization")] string freshsalesApiKey, 
+        public async Task<IActionResult> PostWebhook([FromHeader(Name = "Authorization")] string freshsalesApiKey,
             [FromBody] CustomWebhookRequestModel request,
             CancellationToken cancellationToken)
         {

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
 using Xunit.Sdk;
@@ -36,10 +36,10 @@ namespace Bit.Test.Common.AutoFixture.Attributes
 
             for (var i = 0; i < _environmentVariableNames.Length; i++)
             {
-                values[i]= Convert.ChangeType(Environment.GetEnvironmentVariable(_environmentVariableNames[i]), methodParameters[i].ParameterType);
+                values[i] = Convert.ChangeType(Environment.GetEnvironmentVariable(_environmentVariableNames[i]), methodParameters[i].ParameterType);
             }
 
-            return new [] { values };
+            return new[] { values };
         }
     }
 }
