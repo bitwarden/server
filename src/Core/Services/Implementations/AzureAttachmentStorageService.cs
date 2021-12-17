@@ -1,13 +1,13 @@
-using System.Threading.Tasks;
-using Microsoft.Azure.Storage;
-using Microsoft.Azure.Storage.Blob;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
-using System;
+using System.Threading.Tasks;
+using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
 using Bit.Core.Settings;
-using System.Collections.Generic;
-using Bit.Core.Enums;
+using Microsoft.Azure.Storage;
+using Microsoft.Azure.Storage.Blob;
 
 namespace Bit.Core.Services
 {
@@ -28,15 +28,20 @@ namespace Bit.Core.Services
                 attachmentData.AttachmentId
             );
 
-        public static (string cipherId, string organizationId, string attachmentId) IdentifiersFromBlobName(string blobName) {
+        public static (string cipherId, string organizationId, string attachmentId) IdentifiersFromBlobName(string blobName)
+        {
             var parts = blobName.Split('/');
-            switch (parts.Length) {
+            switch (parts.Length)
+            {
                 case 4:
                     return (parts[1], parts[2], parts[3]);
                 case 3:
-                    if (parts[0] ==  "temp") {
+                    if (parts[0] == "temp")
+                    {
                         return (parts[1], null, parts[2]);
-                    } else {
+                    }
+                    else
+                    {
                         return (parts[0], parts[1], parts[2]);
                     }
                 case 2:

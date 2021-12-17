@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using Bit.Core.Models.Table;
 using Bit.Core.Test.AutoFixture.Attributes;
@@ -12,7 +12,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
 {
     public class U2fRepositoryTests
     {
-        
+
         [CiSkippedTheory, EfU2fAutoData]
         public async void CreateAsync_Works_DataMatches(
             U2f u2f,

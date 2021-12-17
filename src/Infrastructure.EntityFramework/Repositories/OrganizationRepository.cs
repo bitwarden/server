@@ -62,7 +62,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
                 var organizations = await GetDbSet(dbContext)
                     .Where(e => name == null || e.Name.Contains(name))
                     .Where(e => userEmail == null || e.OrganizationUsers.Any(u => u.Email == userEmail))
-                    .Where(e => paid == null || 
+                    .Where(e => paid == null ||
                             (paid == true && !string.IsNullOrWhiteSpace(e.GatewaySubscriptionId)) ||
                             (paid == false && e.GatewaySubscriptionId == null))
                     .OrderBy(e => e.CreationDate)

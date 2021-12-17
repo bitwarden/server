@@ -1,8 +1,8 @@
-﻿using Bit.Core.Enums;
+﻿using System.Collections.Generic;
+using System.Linq;
+using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.StaticStore;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace Bit.Core.Utilities
 {

@@ -1,16 +1,16 @@
-using Bit.Core.Test.AutoFixture.Attributes;
-using Bit.Core.Test.AutoFixture.PolicyFixtures;
-using Xunit;
-using TableModel = Bit.Core.Models.Table;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Collections.Generic;
-using EfRepo = Bit.Infrastructure.EntityFramework.Repositories;
-using SqlRepo = Bit.Infrastructure.Dapper.Repositories;
-using Bit.Core.Test.Repositories.EntityFramework.EqualityComparers;
-using Bit.Core.Models.Data;
 using System.Text.Json;
 using Bit.Core.Enums;
+using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
+using Bit.Core.Test.AutoFixture.Attributes;
+using Bit.Core.Test.AutoFixture.PolicyFixtures;
+using Bit.Core.Test.Repositories.EntityFramework.EqualityComparers;
+using Xunit;
+using EfRepo = Bit.Infrastructure.EntityFramework.Repositories;
+using SqlRepo = Bit.Infrastructure.Dapper.Repositories;
+using TableModel = Bit.Core.Models.Table;
 
 namespace Bit.Core.Test.Repositories.EntityFramework
 {
@@ -188,7 +188,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
 
             // Assert
             var distinctItems = results.Distinct(equalityComparer);
-            
+
             Assert.True(results.All(r => r == null) ||
                 !distinctItems.Skip(1).Any());
         }

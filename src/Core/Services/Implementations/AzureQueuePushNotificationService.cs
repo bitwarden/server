@@ -1,14 +1,14 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
+using Azure.Storage.Queues;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Models;
 using Bit.Core.Models.Table;
 using Bit.Core.Settings;
-using Newtonsoft.Json;
-using Azure.Storage.Queues;
 using Microsoft.AspNetCore.Http;
-using System.Collections.Generic;
+using Newtonsoft.Json;
 
 namespace Bit.Core.Services
 {

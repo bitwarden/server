@@ -1,6 +1,6 @@
 ﻿using System;
-using Microsoft.AspNetCore.Mvc;
 using Bit.Core.Utilities;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Icons.Controllers
 {
@@ -12,7 +12,7 @@ namespace Bit.Icons.Controllers
         {
             return DateTime.UtcNow;
         }
-        
+
         [HttpGet("~/version")]
         public JsonResult GetVersion()
         {

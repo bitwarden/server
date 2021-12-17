@@ -7,7 +7,7 @@ namespace Bit.Api.Models.Response
 {
     public class ProfileOrganizationResponseModel : ResponseModel
     {
-        public ProfileOrganizationResponseModel(string str) : base(str) {}
+        public ProfileOrganizationResponseModel(string str) : base(str) { }
 
         public ProfileOrganizationResponseModel(OrganizationUserOrganizationDetails organization) : this("profileOrganization")
         {
@@ -45,7 +45,7 @@ namespace Bit.Api.Models.Response
                 StaticStore.GetSponsoredPlan(PlanSponsorshipType.FamiliesForEnterprise)
                 .UsersCanSponsor(organization);
             PlanProductType = StaticStore.GetPlan(organization.PlanType).Product;
-            
+
             if (organization.SsoConfig != null)
             {
                 var ssoConfigData = SsoConfigurationData.Deserialize(organization.SsoConfig);

@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
@@ -32,7 +32,7 @@ namespace Bit.Infrastructure.Dapper.Repositories
                 return results.ToList();
             }
         }
-        
+
         public async Task<ICollection<TaxRate>> GetAllActiveAsync()
         {
             using (var connection = new SqlConnection(ConnectionString))

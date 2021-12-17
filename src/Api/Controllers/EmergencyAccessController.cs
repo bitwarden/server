@@ -77,7 +77,7 @@ namespace Bit.Api.Controllers
 
         [HttpPut("{id}")]
         [HttpPost("{id}")]
-        public async Task Put(string id, [FromBody]EmergencyAccessUpdateRequestModel model)
+        public async Task Put(string id, [FromBody] EmergencyAccessUpdateRequestModel model)
         {
             var emergencyAccess = await _emergencyAccessRepository.GetByIdAsync(new Guid(id));
             if (emergencyAccess == null)
@@ -88,7 +88,7 @@ namespace Bit.Api.Controllers
             var userId = _userService.GetProperUserId(User);
             await _emergencyAccessService.SaveAsync(model.ToEmergencyAccess(emergencyAccess), userId.Value);
         }
-        
+
         [HttpDelete("{id}")]
         [HttpPost("{id}/delete")]
         public async Task Delete(string id)
@@ -96,7 +96,7 @@ namespace Bit.Api.Controllers
             var userId = _userService.GetProperUserId(User);
             await _emergencyAccessService.DeleteAsync(new Guid(id), userId.Value);
         }
-        
+
         [HttpPost("invite")]
         public async Task Invite([FromBody] EmergencyAccessInviteRequestModel model)
         {
@@ -138,7 +138,7 @@ namespace Bit.Api.Controllers
             var user = await _userService.GetUserByPrincipalAsync(User);
             await _emergencyAccessService.ApproveAsync(new Guid(id), user);
         }
-        
+
         [HttpPost("{id}/reject")]
         public async Task Reject(string id)
         {
@@ -153,14 +153,14 @@ namespace Bit.Api.Controllers
             var (result, grantor) = await _emergencyAccessService.TakeoverAsync(new Guid(id), user);
             return new EmergencyAccessTakeoverResponseModel(result, grantor);
         }
-        
+
         [HttpPost("{id}/password")]
         public async Task Password(string id, [FromBody] EmergencyAccessPasswordRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             await _emergencyAccessService.PasswordAsync(new Guid(id), user, model.NewMasterPasswordHash, model.Key);
         }
-        
+
         [HttpPost("{id}/view")]
         public async Task<EmergencyAccessViewResponseModel> ViewCiphers(string id)
         {

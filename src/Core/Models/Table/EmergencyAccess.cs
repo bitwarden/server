@@ -25,7 +25,7 @@ namespace Bit.Core.Models.Table
         {
             Id = CoreHelpers.GenerateComb();
         }
-        
+
         public EmergencyAccess ToEmergencyAccess()
         {
             return new EmergencyAccess

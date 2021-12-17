@@ -1,12 +1,12 @@
-﻿using System.Collections.Generic;
-using System.Threading.Tasks;
-using Microsoft.Azure.NotificationHubs;
-using Bit.Core.Enums;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
-using System;
+using System.Threading.Tasks;
+using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
+using Microsoft.Azure.NotificationHubs;
 
 namespace Bit.Core.Services
 {

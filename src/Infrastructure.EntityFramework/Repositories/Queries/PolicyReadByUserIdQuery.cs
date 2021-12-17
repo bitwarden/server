@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using Bit.Core.Enums;
 using Bit.Infrastructure.EntityFramework.Models;
@@ -17,15 +17,15 @@ namespace Bit.Infrastructure.EntityFramework.Repositories.Queries
         public IQueryable<Policy> Run(DatabaseContext dbContext)
         {
             var query = from p in dbContext.Policies
-                join ou in dbContext.OrganizationUsers
-                    on p.OrganizationId equals ou.OrganizationId
-                join o in dbContext.Organizations
-                    on ou.OrganizationId equals o.Id
-                where ou.UserId == _userId &&
-                    ou.Status == OrganizationUserStatusType.Confirmed &&
-                    o.Enabled == true
-                select p;
-                                
+                        join ou in dbContext.OrganizationUsers
+                            on p.OrganizationId equals ou.OrganizationId
+                        join o in dbContext.Organizations
+                            on ou.OrganizationId equals o.Id
+                        where ou.UserId == _userId &&
+                            ou.Status == OrganizationUserStatusType.Confirmed &&
+                            o.Enabled == true
+                        select p;
+
             return query;
         }
     }

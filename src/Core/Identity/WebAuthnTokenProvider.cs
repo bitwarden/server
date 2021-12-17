@@ -1,18 +1,18 @@
-﻿using System.Threading.Tasks;
-using Microsoft.AspNetCore.Identity;
-using Bit.Core.Models.Table;
-using Bit.Core.Enums;
-using Bit.Core.Models;
-using Newtonsoft.Json;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System;
+using System.Threading.Tasks;
+using Bit.Core.Enums;
+using Bit.Core.Models;
+using Bit.Core.Models.Table;
 using Bit.Core.Services;
-using Microsoft.Extensions.DependencyInjection;
-using Fido2NetLib.Objects;
-using Fido2NetLib;
-using Bit.Core.Utilities;
 using Bit.Core.Settings;
+using Bit.Core.Utilities;
+using Fido2NetLib;
+using Fido2NetLib.Objects;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.DependencyInjection;
+using Newtonsoft.Json;
 
 namespace Bit.Core.Identity
 {

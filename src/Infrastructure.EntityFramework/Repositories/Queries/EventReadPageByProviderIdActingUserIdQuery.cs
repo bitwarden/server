@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using Bit.Core.Models.Data;
 using Bit.Infrastructure.EntityFramework.Models;
@@ -28,13 +28,13 @@ namespace Bit.Infrastructure.EntityFramework.Repositories.Queries
         public IQueryable<Event> Run(DatabaseContext dbContext)
         {
             var q = from e in dbContext.Events
-                where e.Date >= _startDate &&
-                (_beforeDate != null || e.Date <= _endDate) &&
-                (_beforeDate == null || e.Date < _beforeDate.Value) &&
-                e.ProviderId == _providerId &&
-                e.ActingUserId == _actingUserId
-                orderby e.Date descending
-                select e;
+                    where e.Date >= _startDate &&
+                    (_beforeDate != null || e.Date <= _endDate) &&
+                    (_beforeDate == null || e.Date < _beforeDate.Value) &&
+                    e.ProviderId == _providerId &&
+                    e.ActingUserId == _actingUserId
+                    orderby e.Date descending
+                    select e;
             return q.Skip(0).Take(_pageOptions.PageSize);
         }
     }

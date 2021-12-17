@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
@@ -12,7 +12,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
 {
     public class OrganizationSponsorshipRepository : Repository<TableModel.OrganizationSponsorship, OrganizationSponsorship, Guid>, IOrganizationSponsorshipRepository
     {
-        public OrganizationSponsorshipRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper) 
+        public OrganizationSponsorshipRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
             : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.OrganizationSponsorships)
         { }
 

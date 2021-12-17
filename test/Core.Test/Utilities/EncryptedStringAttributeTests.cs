@@ -1,4 +1,4 @@
-using Bit.Core.Utilities;
+﻿using Bit.Core.Utilities;
 using Xunit;
 
 namespace Bit.Core.Test.Utilities
@@ -15,10 +15,10 @@ namespace Bit.Core.Test.Utilities
             var sut = new EncryptedStringAttribute();
 
             var actual = sut.IsValid(input);
-            
+
             Assert.True(actual);
         }
-        
+
         [Theory]
         [InlineData("")]
         [InlineData(".")]
@@ -36,7 +36,7 @@ namespace Bit.Core.Test.Utilities
             var sut = new EncryptedStringAttribute();
 
             var actual = sut.IsValid(input);
-            
+
             Assert.False(actual);
         }
     }

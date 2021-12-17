@@ -215,8 +215,8 @@ namespace Bit.Infrastructure.Dapper.Repositories
                 return results.ToList();
             }
         }
-        
-        public async Task<OrganizationUserOrganizationDetails> GetDetailsByUserAsync(Guid userId, 
+
+        public async Task<OrganizationUserOrganizationDetails> GetDetailsByUserAsync(Guid userId,
             Guid organizationId, OrganizationUserStatusType? status = null)
         {
             using (var connection = new SqlConnection(ConnectionString))
@@ -286,7 +286,7 @@ namespace Bit.Infrastructure.Dapper.Repositories
                 return results.ToList();
             }
         }
-        
+
         public async Task<ICollection<OrganizationUser>> GetManyAsync(IEnumerable<Guid> Ids)
         {
             using (var connection = new SqlConnection(ConnectionString))
@@ -299,7 +299,7 @@ namespace Bit.Infrastructure.Dapper.Repositories
                 return results.ToList();
             }
         }
-        
+
         public async Task<OrganizationUser> GetByOrganizationEmailAsync(Guid organizationId, string email)
         {
             using (var connection = new SqlConnection(ConnectionString))
@@ -349,7 +349,7 @@ namespace Bit.Infrastructure.Dapper.Repositories
                 return default;
             }
 
-            foreach(var organizationUser in organizationUsers)
+            foreach (var organizationUser in organizationUsers)
             {
                 organizationUser.SetNewId();
             }

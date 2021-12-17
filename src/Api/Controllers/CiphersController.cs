@@ -1,27 +1,27 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
-using Bit.Core.Repositories;
-using Microsoft.AspNetCore.Authorization;
-using Bit.Core.Exceptions;
-using Bit.Core.Services;
-using Bit.Core.Context;
-using Bit.Core.Utilities;
-using Bit.Api.Utilities;
-using System.Collections.Generic;
-using Bit.Core.Models.Table;
-using Bit.Core.Settings;
-using Core.Models.Data;
 using Azure.Messaging.EventGrid;
 using Bit.Api.Models.Request;
 using Bit.Api.Models.Request.Accounts;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
+using Bit.Api.Utilities;
+using Bit.Core;
+using Bit.Core.Context;
+using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
+using Bit.Core.Models.Table;
+using Bit.Core.Repositories;
+using Bit.Core.Services;
+using Bit.Core.Settings;
+using Bit.Core.Utilities;
+using Core.Models.Data;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
-using Bit.Core;
 
 namespace Bit.Api.Controllers
 {
@@ -123,7 +123,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("")]
-        public async Task<CipherResponseModel> Post([FromBody]CipherRequestModel model)
+        public async Task<CipherResponseModel> Post([FromBody] CipherRequestModel model)
         {
             var userId = _userService.GetProperUserId(User).Value;
             var cipher = model.ToCipherDetails(userId);
@@ -138,7 +138,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("create")]
-        public async Task<CipherResponseModel> PostCreate([FromBody]CipherCreateRequestModel model)
+        public async Task<CipherResponseModel> PostCreate([FromBody] CipherCreateRequestModel model)
         {
             var userId = _userService.GetProperUserId(User).Value;
             var cipher = model.Cipher.ToCipherDetails(userId);
@@ -153,7 +153,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("admin")]
-        public async Task<CipherMiniResponseModel> PostAdmin([FromBody]CipherCreateRequestModel model)
+        public async Task<CipherMiniResponseModel> PostAdmin([FromBody] CipherCreateRequestModel model)
         {
             var cipher = model.Cipher.ToOrganizationCipher();
             if (!await _currentContext.EditAnyCollection(cipher.OrganizationId.Value))
@@ -170,7 +170,7 @@ namespace Bit.Api.Controllers
 
         [HttpPut("{id}")]
         [HttpPost("{id}")]
-        public async Task<CipherResponseModel> Put(string id, [FromBody]CipherRequestModel model)
+        public async Task<CipherResponseModel> Put(string id, [FromBody] CipherRequestModel model)
         {
             var userId = _userService.GetProperUserId(User).Value;
             var cipher = await _cipherRepository.GetByIdAsync(new Guid(id), userId);
@@ -179,7 +179,7 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            var modelOrgId = string.IsNullOrWhiteSpace(model.OrganizationId) ? 
+            var modelOrgId = string.IsNullOrWhiteSpace(model.OrganizationId) ?
                 (Guid?)null : new Guid(model.OrganizationId);
             if (cipher.OrganizationId != modelOrgId)
             {
@@ -195,7 +195,7 @@ namespace Bit.Api.Controllers
 
         [HttpPut("{id}/admin")]
         [HttpPost("{id}/admin")]
-        public async Task<CipherMiniResponseModel> PutAdmin(string id, [FromBody]CipherRequestModel model)
+        public async Task<CipherMiniResponseModel> PutAdmin(string id, [FromBody] CipherRequestModel model)
         {
             var userId = _userService.GetProperUserId(User).Value;
             var cipher = await _cipherRepository.GetOrganizationDetailsByIdAsync(new Guid(id));
@@ -241,7 +241,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("import")]
-        public async Task PostImport([FromBody]ImportCiphersRequestModel model)
+        public async Task PostImport([FromBody] ImportCiphersRequestModel model)
         {
             if (!_globalSettings.SelfHosted &&
                 (model.Ciphers.Count() > 6000 || model.FolderRelationships.Count() > 6000 ||
@@ -257,8 +257,8 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("import-organization")]
-        public async Task PostImport([FromQuery]string organizationId,
-            [FromBody]ImportOrganizationCiphersRequestModel model)
+        public async Task PostImport([FromQuery] string organizationId,
+            [FromBody] ImportOrganizationCiphersRequestModel model)
         {
             if (!_globalSettings.SelfHosted &&
                 (model.Ciphers.Count() > 6000 || model.CollectionRelationships.Count() > 12000 ||
@@ -281,7 +281,7 @@ namespace Bit.Api.Controllers
 
         [HttpPut("{id}/partial")]
         [HttpPost("{id}/partial")]
-        public async Task PutPartial(string id, [FromBody]CipherPartialRequestModel model)
+        public async Task PutPartial(string id, [FromBody] CipherPartialRequestModel model)
         {
             var userId = _userService.GetProperUserId(User).Value;
             var folderId = string.IsNullOrWhiteSpace(model.FolderId) ? null : (Guid?)new Guid(model.FolderId);
@@ -290,7 +290,7 @@ namespace Bit.Api.Controllers
 
         [HttpPut("{id}/share")]
         [HttpPost("{id}/share")]
-        public async Task<CipherResponseModel> PutShare(string id, [FromBody]CipherShareRequestModel model)
+        public async Task<CipherResponseModel> PutShare(string id, [FromBody] CipherShareRequestModel model)
         {
             var userId = _userService.GetProperUserId(User).Value;
             var cipherId = new Guid(id);
@@ -312,7 +312,7 @@ namespace Bit.Api.Controllers
 
         [HttpPut("{id}/collections")]
         [HttpPost("{id}/collections")]
-        public async Task PutCollections(string id, [FromBody]CipherCollectionsRequestModel model)
+        public async Task PutCollections(string id, [FromBody] CipherCollectionsRequestModel model)
         {
             var userId = _userService.GetProperUserId(User).Value;
             var cipher = await _cipherRepository.GetByIdAsync(new Guid(id), userId);
@@ -322,13 +322,13 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            await _cipherService.SaveCollectionsAsync(cipher, 
+            await _cipherService.SaveCollectionsAsync(cipher,
                 model.CollectionIds.Select(c => new Guid(c)), userId, false);
         }
 
         [HttpPut("{id}/collections-admin")]
         [HttpPost("{id}/collections-admin")]
-        public async Task PutCollectionsAdmin(string id, [FromBody]CipherCollectionsRequestModel model)
+        public async Task PutCollectionsAdmin(string id, [FromBody] CipherCollectionsRequestModel model)
         {
             var userId = _userService.GetProperUserId(User).Value;
             var cipher = await _cipherRepository.GetByIdAsync(new Guid(id));
@@ -338,7 +338,7 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            await _cipherService.SaveCollectionsAsync(cipher, 
+            await _cipherService.SaveCollectionsAsync(cipher,
                 model.CollectionIds.Select(c => new Guid(c)), userId, true);
         }
 
@@ -373,7 +373,7 @@ namespace Bit.Api.Controllers
 
         [HttpDelete("")]
         [HttpPost("delete")]
-        public async Task DeleteMany([FromBody]CipherBulkDeleteRequestModel model)
+        public async Task DeleteMany([FromBody] CipherBulkDeleteRequestModel model)
         {
             if (!_globalSettings.SelfHosted && model.Ids.Count() > 500)
             {
@@ -387,7 +387,7 @@ namespace Bit.Api.Controllers
 
         [HttpDelete("admin")]
         [HttpPost("delete-admin")]
-        public async Task DeleteManyAdmin([FromBody]CipherBulkDeleteRequestModel model)
+        public async Task DeleteManyAdmin([FromBody] CipherBulkDeleteRequestModel model)
         {
             if (!_globalSettings.SelfHosted && model.Ids.Count() > 500)
             {
@@ -432,7 +432,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPut("delete")]
-        public async Task PutDeleteMany([FromBody]CipherBulkDeleteRequestModel model)
+        public async Task PutDeleteMany([FromBody] CipherBulkDeleteRequestModel model)
         {
             if (!_globalSettings.SelfHosted && model.Ids.Count() > 500)
             {
@@ -444,7 +444,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPut("delete-admin")]
-        public async Task PutDeleteManyAdmin([FromBody]CipherBulkDeleteRequestModel model)
+        public async Task PutDeleteManyAdmin([FromBody] CipherBulkDeleteRequestModel model)
         {
             if (!_globalSettings.SelfHosted && model.Ids.Count() > 500)
             {
@@ -511,7 +511,7 @@ namespace Bit.Api.Controllers
 
         [HttpPut("move")]
         [HttpPost("move")]
-        public async Task MoveMany([FromBody]CipherBulkMoveRequestModel model)
+        public async Task MoveMany([FromBody] CipherBulkMoveRequestModel model)
         {
             if (!_globalSettings.SelfHosted && model.Ids.Count() > 500)
             {
@@ -525,7 +525,7 @@ namespace Bit.Api.Controllers
 
         [HttpPut("share")]
         [HttpPost("share")]
-        public async Task PutShareMany([FromBody]CipherBulkShareRequestModel model)
+        public async Task PutShareMany([FromBody] CipherBulkShareRequestModel model)
         {
             var organizationId = new Guid(model.Ciphers.First().OrganizationId);
             if (!await _currentContext.OrganizationUser(organizationId))
@@ -553,7 +553,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("purge")]
-        public async Task PostPurge([FromBody]SecretVerificationRequestModel model, string organizationId = null)
+        public async Task PostPurge([FromBody] SecretVerificationRequestModel model, string organizationId = null)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)

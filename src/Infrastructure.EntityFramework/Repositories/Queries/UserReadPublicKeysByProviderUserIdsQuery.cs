@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using Bit.Core.Enums.Provider;
@@ -20,12 +20,12 @@ namespace Bit.Infrastructure.EntityFramework.Repositories.Queries
         public virtual IQueryable<ProviderUserPublicKey> Run(DatabaseContext dbContext)
         {
             var query = from pu in dbContext.ProviderUsers
-                join u in dbContext.Users
-                    on pu.UserId equals u.Id
-                where _ids.Contains(pu.Id) &&
-                    pu.Status == ProviderUserStatusType.Accepted &&
-                    pu.ProviderId == _providerId
-                select new { pu, u };
+                        join u in dbContext.Users
+                            on pu.UserId equals u.Id
+                        where _ids.Contains(pu.Id) &&
+                            pu.Status == ProviderUserStatusType.Accepted &&
+                            pu.ProviderId == _providerId
+                        select new { pu, u };
             return query.Select(x => new ProviderUserPublicKey
             {
                 Id = x.pu.Id,

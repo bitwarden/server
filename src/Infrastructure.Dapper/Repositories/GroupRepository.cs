@@ -127,7 +127,7 @@ namespace Bit.Infrastructure.Dapper.Repositories
             {
                 var results = await connection.ExecuteAsync(
                     $"[{Schema}].[GroupUser_Delete]",
-                    new { GroupId = groupId, OrganizationUserId = organizationUserId  },
+                    new { GroupId = groupId, OrganizationUserId = organizationUserId },
                     commandType: CommandType.StoredProcedure);
             }
         }

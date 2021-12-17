@@ -1,9 +1,9 @@
-using Microsoft.AspNetCore.Mvc;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Bit.Api.Models.Request;
+using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
-using Bit.Core.Settings;
+using Microsoft.AspNetCore.Mvc;
 using Stripe;
 
 namespace Bit.Api.Controllers
@@ -24,7 +24,7 @@ namespace Bit.Api.Controllers
         [Authorize("Application")]
         [HttpPost("~/bitpay-invoice")]
         [SelfHosted(NotSelfHostedOnly = true)]
-        public async Task<string> PostBitPayInvoice([FromBody]BitPayInvoiceRequestModel model)
+        public async Task<string> PostBitPayInvoice([FromBody] BitPayInvoiceRequestModel model)
         {
             var invoice = await _bitPayClient.CreateInvoiceAsync(model.ToBitpayInvoice(_globalSettings));
             return invoice.Url;

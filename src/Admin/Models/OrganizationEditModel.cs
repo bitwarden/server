@@ -5,8 +5,8 @@ using Bit.Core.Enums;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
-using Bit.Core.Utilities;
 using Bit.Core.Settings;
+using Bit.Core.Utilities;
 
 namespace Bit.Admin.Models
 {
@@ -92,7 +92,7 @@ namespace Bit.Admin.Models
         [Display(Name = "2FA")]
         public bool Use2fa { get; set; }
         [Display(Name = "API")]
-        public bool UseApi{ get; set; }
+        public bool UseApi { get; set; }
         [Display(Name = "Reset Password")]
         public bool UseResetPassword { get; set; }
         [Display(Name = "Self Host")]

@@ -61,7 +61,7 @@ namespace Bit.Infrastructure.Dapper.Repositories
         }
 
         public async Task<ICollection<Policy>> GetManyByTypeApplicableToUserIdAsync(Guid userId, PolicyType policyType,
-            OrganizationUserStatusType minStatus) 
+            OrganizationUserStatusType minStatus)
         {
             using (var connection = new SqlConnection(ConnectionString))
             {
@@ -75,7 +75,7 @@ namespace Bit.Infrastructure.Dapper.Repositories
         }
 
         public async Task<int> GetCountByTypeApplicableToUserIdAsync(Guid userId, PolicyType policyType,
-            OrganizationUserStatusType minStatus) 
+            OrganizationUserStatusType minStatus)
         {
             using (var connection = new SqlConnection(ConnectionString))
             {

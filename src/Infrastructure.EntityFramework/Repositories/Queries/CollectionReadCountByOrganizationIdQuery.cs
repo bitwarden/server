@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using Bit.Infrastructure.EntityFramework.Models;
 
@@ -16,8 +16,8 @@ namespace Bit.Infrastructure.EntityFramework.Repositories.Queries
         public IQueryable<Collection> Run(DatabaseContext dbContext)
         {
             var query = from c in dbContext.Collections
-                where c.OrganizationId == _organizationId
-                select c;
+                        where c.OrganizationId == _organizationId
+                        select c;
             return query;
         }
     }

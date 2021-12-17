@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -37,7 +37,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
                 await dbContext.SaveChangesAsync();
             }
         }
-        
+
         public override Task ReplaceAsync(TableModel.U2f obj)
         {
             throw new NotSupportedException();

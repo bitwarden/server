@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -34,8 +34,8 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             {
                 var dbContext = GetDatabaseContext(scope);
                 var query = from f in dbContext.Folders
-                    where f.UserId == userId
-                    select f;
+                            where f.UserId == userId
+                            select f;
                 var folders = await query.ToListAsync();
                 return Mapper.Map<List<TableModel.Folder>>(folders);
             }

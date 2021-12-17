@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using Bit.Core.Enums;
 using Bit.Infrastructure.EntityFramework.Models;
@@ -21,10 +21,10 @@ namespace Bit.Infrastructure.EntityFramework.Repositories.Queries
         public IQueryable<Policy> Run(DatabaseContext dbContext)
         {
             var providerOrganizations = from pu in dbContext.ProviderUsers
-                where pu.UserId == _userId
-                join po in dbContext.ProviderOrganizations
-                    on pu.ProviderId equals po.ProviderId
-                select po;
+                                        where pu.UserId == _userId
+                                        join po in dbContext.ProviderOrganizations
+                                            on pu.ProviderId equals po.ProviderId
+                                        select po;
 
             string userEmail = null;
             if (_minimumStatus == OrganizationUserStatusType.Invited)
@@ -34,19 +34,19 @@ namespace Bit.Infrastructure.EntityFramework.Repositories.Queries
             }
 
             var query = from p in dbContext.Policies
-                join ou in dbContext.OrganizationUsers
-                    on p.OrganizationId equals ou.OrganizationId
-                where 
-                    ((_minimumStatus > OrganizationUserStatusType.Invited && ou.UserId == _userId) ||
-                        (_minimumStatus == OrganizationUserStatusType.Invited && ou.Email == userEmail)) &&
-                    p.Type == _policyType &&
-                    p.Enabled &&
-                    ou.Status >= _minimumStatus &&
-                    ou.Type >= OrganizationUserType.User &&
-                    (ou.Permissions == null ||
-                        ou.Permissions.Contains($"\"managePolicies\":false")) &&
-                    !providerOrganizations.Any(po => po.OrganizationId == p.OrganizationId)
-                select p;
+                        join ou in dbContext.OrganizationUsers
+                            on p.OrganizationId equals ou.OrganizationId
+                        where
+                            ((_minimumStatus > OrganizationUserStatusType.Invited && ou.UserId == _userId) ||
+                                (_minimumStatus == OrganizationUserStatusType.Invited && ou.Email == userEmail)) &&
+                            p.Type == _policyType &&
+                            p.Enabled &&
+                            ou.Status >= _minimumStatus &&
+                            ou.Type >= OrganizationUserType.User &&
+                            (ou.Permissions == null ||
+                                ou.Permissions.Contains($"\"managePolicies\":false")) &&
+                            !providerOrganizations.Any(po => po.OrganizationId == p.OrganizationId)
+                        select p;
             return query;
         }
     }

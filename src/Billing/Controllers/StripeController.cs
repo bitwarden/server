@@ -1,4 +1,10 @@
-﻿using Bit.Core.Enums;
+﻿using System;
+using System.Collections.Generic;
+using System.Data.SqlClient;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
+using Bit.Core.Enums;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
@@ -11,12 +17,6 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Stripe;
-using System;
-using System.Collections.Generic;
-using System.Data.SqlClient;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace Bit.Billing.Controllers
 {
@@ -322,7 +322,7 @@ namespace Bit.Billing.Controllers
                     await _transactionRepository.CreateAsync(tx);
                 }
                 // Catch foreign key violations because user/org could have been deleted.
-                catch (SqlException e) when(e.Number == 547) { }
+                catch (SqlException e) when (e.Number == 547) { }
             }
             else if (parsedEvent.Type.Equals("charge.refunded"))
             {
@@ -773,10 +773,10 @@ namespace Bit.Billing.Controllers
             if (!string.IsNullOrWhiteSpace(invoice?.CustomerAddress?.Country) && !string.IsNullOrWhiteSpace(invoice?.CustomerAddress?.PostalCode))
             {
                 var localBitwardenTaxRates = await _taxRateRepository.GetByLocationAsync(
-                    new Bit.Core.Models.Table.TaxRate() 
-                    { 
+                    new Bit.Core.Models.Table.TaxRate()
+                    {
                         Country = invoice.CustomerAddress.Country,
-                        PostalCode = invoice.CustomerAddress.PostalCode 
+                        PostalCode = invoice.CustomerAddress.PostalCode
                     }
                 );
 

@@ -1,14 +1,14 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using Bit.Core.Models.Table;
 
 namespace Bit.Core.Test.Repositories.EntityFramework.EqualityComparers
 {
-    public class GrantCompare: IEqualityComparer<Grant>
+    public class GrantCompare : IEqualityComparer<Grant>
     {
         public bool Equals(Grant x, Grant y)
         {
-            return  x.Key == y.Key &&
+            return x.Key == y.Key &&
             x.Type == y.Type &&
             x.SubjectId == y.SubjectId &&
             x.ClientId == y.ClientId &&

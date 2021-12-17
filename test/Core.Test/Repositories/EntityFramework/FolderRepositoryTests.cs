@@ -1,4 +1,5 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using System.Linq;
 using Bit.Core.Models.Table;
 using Bit.Core.Test.AutoFixture.Attributes;
 using Bit.Core.Test.AutoFixture.FolderFixtures;
@@ -7,7 +8,6 @@ using Microsoft.EntityFrameworkCore;
 using Xunit;
 using EfRepo = Bit.Infrastructure.EntityFramework.Repositories;
 using SqlRepo = Bit.Infrastructure.Dapper.Repositories;
-using System.Linq;
 
 namespace Bit.Core.Test.Repositories.EntityFramework
 {

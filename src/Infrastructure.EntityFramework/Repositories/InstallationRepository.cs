@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using AutoMapper;
 using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.Models;

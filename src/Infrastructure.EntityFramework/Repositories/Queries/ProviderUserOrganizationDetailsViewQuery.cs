@@ -1,4 +1,4 @@
-using System.Linq;
+﻿using System.Linq;
 using Bit.Core.Models.Data;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories.Queries
@@ -8,10 +8,10 @@ namespace Bit.Infrastructure.EntityFramework.Repositories.Queries
         public IQueryable<ProviderUserOrganizationDetails> Run(DatabaseContext dbContext)
         {
             var query = from pu in dbContext.ProviderUsers
-                join po in dbContext.ProviderOrganizations on pu.ProviderId equals po.ProviderId
-                join o in dbContext.Organizations on po.OrganizationId equals o.Id
-                join p in dbContext.Providers on pu.ProviderId equals p.Id
-                select new { pu, po, o, p };
+                        join po in dbContext.ProviderOrganizations on pu.ProviderId equals po.ProviderId
+                        join o in dbContext.Organizations on po.OrganizationId equals o.Id
+                        join p in dbContext.Providers on pu.ProviderId equals p.Id
+                        select new { pu, po, o, p };
             return query.Select(x => new ProviderUserOrganizationDetails
             {
                 OrganizationId = x.po.OrganizationId,

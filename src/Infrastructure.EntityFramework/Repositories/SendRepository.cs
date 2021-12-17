@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -19,13 +19,13 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
 
         public override async Task<TableModel.Send> CreateAsync(TableModel.Send send)
         {
-           send = await base.CreateAsync(send);
-           if (send.UserId.HasValue)
-           {
+            send = await base.CreateAsync(send);
+            if (send.UserId.HasValue)
+            {
                 await UserUpdateStorage(send.UserId.Value);
                 await UserBumpAccountRevisionDate(send.UserId.Value);
-           }
-           return send;
+            }
+            return send;
         }
 
         public async Task<ICollection<TableModel.Send>> GetManyByDeletionDateAsync(DateTime deletionDateBefore)

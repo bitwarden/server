@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -47,9 +47,9 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             {
                 var dbContext = GetDatabaseContext(scope);
                 var query = from gu in dbContext.GroupUsers
-                    where gu.GroupId == groupId &&
-                        gu.OrganizationUserId == organizationUserId
-                    select gu;
+                            where gu.GroupId == groupId &&
+                                gu.OrganizationUserId == organizationUserId
+                            select gu;
                 dbContext.RemoveRange(await query.ToListAsync());
                 await dbContext.SaveChangesAsync();
             }
@@ -61,7 +61,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
-                var query = await ( 
+                var query = await (
                     from cg in dbContext.CollectionGroups
                     where cg.GroupId == id
                     select cg).ToListAsync();
@@ -70,7 +70,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
                     Id = c.CollectionId,
                     ReadOnly = c.ReadOnly,
                     HidePasswords = c.HidePasswords,
-                }).ToList(); 
+                }).ToList();
                 return new Tuple<TableModel.Group, ICollection<SelectionReadOnly>>(
                     grp, collections);
             }
@@ -150,23 +150,23 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
                 var dbContext = GetDatabaseContext(scope);
                 var orgId = (await dbContext.Groups.FindAsync(groupId)).OrganizationId;
                 var insert = from ou in dbContext.OrganizationUsers
-                    where organizationUserIds.Contains(ou.Id) &&
-                        ou.OrganizationId == orgId &&
-                        !dbContext.GroupUsers.Any(gu => gu.GroupId == groupId && ou.Id == gu.OrganizationUserId)
-                    select new GroupUser
-                    {
-                        GroupId = groupId,
-                        OrganizationUserId = ou.Id,
-                    };
-               await dbContext.AddRangeAsync(insert);
+                             where organizationUserIds.Contains(ou.Id) &&
+                                 ou.OrganizationId == orgId &&
+                                 !dbContext.GroupUsers.Any(gu => gu.GroupId == groupId && ou.Id == gu.OrganizationUserId)
+                             select new GroupUser
+                             {
+                                 GroupId = groupId,
+                                 OrganizationUserId = ou.Id,
+                             };
+                await dbContext.AddRangeAsync(insert);
 
-               var delete = from gu in dbContext.GroupUsers
-                    where gu.GroupId == groupId &&
-                    !organizationUserIds.Contains(gu.OrganizationUserId)
-                    select gu;
-               dbContext.RemoveRange(delete);
-               await dbContext.SaveChangesAsync();
-               await UserBumpAccountRevisionDateByOrganizationId(orgId);
+                var delete = from gu in dbContext.GroupUsers
+                             where gu.GroupId == groupId &&
+                             !organizationUserIds.Contains(gu.OrganizationUserId)
+                             select gu;
+                dbContext.RemoveRange(delete);
+                await dbContext.SaveChangesAsync();
+                await UserBumpAccountRevisionDateByOrganizationId(orgId);
             }
         }
     }

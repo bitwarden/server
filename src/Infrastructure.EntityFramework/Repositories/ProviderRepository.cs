@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -25,18 +25,18 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
                 var dbContext = GetDatabaseContext(scope);
                 var query = !string.IsNullOrWhiteSpace(userEmail) ?
                     (from p in dbContext.Providers
-                    join pu in dbContext.ProviderUsers
-                        on p.Id equals pu.ProviderId
-                    join u in dbContext.Users
-                        on pu.UserId equals u.Id
-                    where (string.IsNullOrWhiteSpace(name) || p.Name.Contains(name)) &&
-                        u.Email == userEmail
-                    orderby p.CreationDate descending
-                    select new { p, pu, u }).Skip(skip).Take(take).Select(x => x.p) :
+                     join pu in dbContext.ProviderUsers
+                         on p.Id equals pu.ProviderId
+                     join u in dbContext.Users
+                         on pu.UserId equals u.Id
+                     where (string.IsNullOrWhiteSpace(name) || p.Name.Contains(name)) &&
+                         u.Email == userEmail
+                     orderby p.CreationDate descending
+                     select new { p, pu, u }).Skip(skip).Take(take).Select(x => x.p) :
                     (from p in dbContext.Providers
-                    where string.IsNullOrWhiteSpace(name) || p.Name.Contains(name)
-                    orderby p.CreationDate descending
-                    select new { p }).Skip(skip).Take(take).Select(x => x.p);
+                     where string.IsNullOrWhiteSpace(name) || p.Name.Contains(name)
+                     orderby p.CreationDate descending
+                     select new { p }).Skip(skip).Take(take).Select(x => x.p);
                 var providers = await query.ToArrayAsync();
                 return Mapper.Map<List<Provider>>(providers);
             }

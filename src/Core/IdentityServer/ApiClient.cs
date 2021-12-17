@@ -1,7 +1,7 @@
-﻿using IdentityServer4.Models;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using Bit.Core.Settings;
+using IdentityServer4.Models;
 
 namespace Bit.Core.IdentityServer
 {

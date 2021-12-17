@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;

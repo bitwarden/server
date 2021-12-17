@@ -1,7 +1,7 @@
-﻿using Microsoft.AspNetCore.Http;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Bit.Core.Context;
 using Bit.Core.Settings;
+using Microsoft.AspNetCore.Http;
 
 namespace Bit.Core.Utilities
 {

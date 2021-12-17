@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -84,8 +84,8 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
                 var dbContext = GetDatabaseContext(scope);
                 var userIdKey = $"\"{cipher.UserId}\"";
                 cipher.UserId = cipher.OrganizationId.HasValue ? null : cipher.UserId;
-                cipher.Favorites = cipher.Favorite ? 
-                    $"{{{userIdKey}:true}}" : 
+                cipher.Favorites = cipher.Favorite ?
+                    $"{{{userIdKey}:true}}" :
                     null;
                 cipher.Folders = cipher.FolderId.HasValue ?
                     $"{{{userIdKey}:\"{cipher.FolderId}\"}}" :
@@ -124,9 +124,9 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
 
         public async Task CreateAsync(IEnumerable<TableModel.Cipher> ciphers, IEnumerable<TableModel.Collection> collections, IEnumerable<TableModel.CollectionCipher> collectionCiphers)
         {
-            if (!ciphers.Any()) 
+            if (!ciphers.Any())
             {
-                return; 
+                return;
             }
             using (var scope = ServiceScopeFactory.CreateScope())
             {
@@ -200,15 +200,15 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
                 var dbContext = GetDatabaseContext(scope);
 
                 var collectionCiphers = from cc in dbContext.CollectionCiphers
-                    join c in dbContext.Collections
-                        on cc.CollectionId equals c.Id
-                    where c.OrganizationId == organizationId
-                    select cc;
+                                        join c in dbContext.Collections
+                                            on cc.CollectionId equals c.Id
+                                        where c.OrganizationId == organizationId
+                                        select cc;
                 dbContext.RemoveRange(collectionCiphers);
 
                 var ciphers = from c in dbContext.Ciphers
-                    where c.OrganizationId == organizationId
-                    select c;
+                              where c.OrganizationId == organizationId
+                              select c;
                 dbContext.RemoveRange(ciphers);
 
                 await dbContext.SaveChangesAsync();
@@ -223,12 +223,12 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             {
                 var dbContext = GetDatabaseContext(scope);
                 var ciphers = from c in dbContext.Ciphers
-                    where c.UserId == userId
-                    select c;
+                              where c.UserId == userId
+                              select c;
                 dbContext.RemoveRange(ciphers);
                 var folders = from f in dbContext.Folders
-                    where f.UserId == userId
-                    select f;
+                              where f.UserId == userId
+                              select f;
                 dbContext.RemoveRange(folders);
                 await dbContext.SaveChangesAsync();
                 await UserUpdateStorage(userId);
@@ -286,29 +286,30 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
-                IQueryable<CipherDetails> cipherDetailsView = withOrganizations ? 
+                IQueryable<CipherDetails> cipherDetailsView = withOrganizations ?
                     new UserCipherDetailsQuery(userId).Run(dbContext) :
                     new CipherDetailsQuery(userId).Run(dbContext);
                 if (!withOrganizations)
                 {
                     cipherDetailsView = from c in cipherDetailsView
-                        where c.UserId == userId
-                        select new CipherDetails {
-                            Id = c.Id,
-                            UserId = c.UserId,
-                            OrganizationId = c.OrganizationId,
-                            Type= c.Type,
-                            Data = c.Data,
-                            Attachments = c.Attachments,
-                            CreationDate = c.CreationDate,
-                            RevisionDate = c.RevisionDate,
-                            DeletedDate = c.DeletedDate,
-                            Favorite = c.Favorite,
-                            FolderId = c.FolderId,
-                            Edit = true,
-                            ViewPassword = true,
-                            OrganizationUseTotp = false,
-                        };
+                                        where c.UserId == userId
+                                        select new CipherDetails
+                                        {
+                                            Id = c.Id,
+                                            UserId = c.UserId,
+                                            OrganizationId = c.OrganizationId,
+                                            Type = c.Type,
+                                            Data = c.Data,
+                                            Attachments = c.Attachments,
+                                            CreationDate = c.CreationDate,
+                                            RevisionDate = c.RevisionDate,
+                                            DeletedDate = c.DeletedDate,
+                                            Favorite = c.Favorite,
+                                            FolderId = c.FolderId,
+                                            Edit = true,
+                                            ViewPassword = true,
+                                            OrganizationUseTotp = false,
+                                        };
                 }
                 var ciphers = await cipherDetailsView.ToListAsync();
                 return ciphers;
@@ -334,13 +335,13 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
                 var cipherEntities = dbContext.Ciphers.Where(c => ids.Contains(c.Id));
                 var userCipherDetails = new UserCipherDetailsQuery(userId).Run(dbContext);
                 var idsToMove = from ucd in userCipherDetails
-                    join c in cipherEntities
-                        on ucd.Id equals c.Id
-                    where ucd.Edit
-                    select c;
-                await idsToMove.ForEachAsync(cipher => 
+                                join c in cipherEntities
+                                    on ucd.Id equals c.Id
+                                where ucd.Edit
+                                select c;
+                await idsToMove.ForEachAsync(cipher =>
                 {
-                    var foldersJson = string.IsNullOrWhiteSpace(cipher.Folders) ? 
+                    var foldersJson = string.IsNullOrWhiteSpace(cipher.Folders) ?
                         new JObject() :
                         JObject.Parse(cipher.Folders);
 
@@ -355,7 +356,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
                     }
                     dbContext.Attach(cipher);
                     cipher.Folders = JsonConvert.SerializeObject(foldersJson);
-                });          
+                });
                 await dbContext.SaveChangesAsync();
                 await UserBumpAccountRevisionDate(userId);
             }
@@ -475,10 +476,10 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
                 var userCipherDetailsQuery = new UserCipherDetailsQuery(userId);
                 var cipherEntitiesToCheck = await (dbContext.Ciphers.Where(c => ids.Contains(c.Id))).ToListAsync();
                 var query = from ucd in await (userCipherDetailsQuery.Run(dbContext)).ToListAsync()
-                    join c in cipherEntitiesToCheck
-                        on ucd.Id equals c.Id
-                    where ucd.Edit && ucd.DeletedDate == null
-                    select c;
+                            join c in cipherEntitiesToCheck
+                                on ucd.Id equals c.Id
+                            where ucd.Edit && ucd.DeletedDate == null
+                            select c;
 
                 var utcNow = DateTime.UtcNow;
                 var cipherIdsToModify = query.Select(c => c.Id);
@@ -487,9 +488,9 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
                 {
                     dbContext.RemoveRange(cipherEntitiesToModify);
                 }
-                else 
+                else
                 {
-                    await cipherEntitiesToModify.ForEachAsync(cipher => 
+                    await cipherEntitiesToModify.ForEachAsync(cipher =>
                     {
                         dbContext.Attach(cipher);
                         cipher.DeletedDate = action == CipherStateAction.Restore ? null : utcNow;
@@ -523,12 +524,12 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
                 var dbContext = GetDatabaseContext(scope);
                 var utcNow = DateTime.UtcNow;
                 var ciphers = dbContext.Ciphers.Where(c => ids.Contains(c.Id) && c.OrganizationId == organizationId);
-                await ciphers.ForEachAsync(cipher => 
+                await ciphers.ForEachAsync(cipher =>
                 {
                     dbContext.Attach(cipher);
                     cipher.DeletedDate = utcNow;
                     cipher.RevisionDate = utcNow;
-                }); 
+                });
                 await dbContext.SaveChangesAsync();
                 await OrganizationUpdateStorage(organizationId);
                 await UserBumpAccountRevisionDateByOrganizationId(organizationId);
@@ -561,9 +562,9 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
 
         public async Task UpdateCiphersAsync(Guid userId, IEnumerable<TableModel.Cipher> ciphers)
         {
-            if (!ciphers.Any()) 
+            if (!ciphers.Any())
             {
-                return; 
+                return;
             }
             using (var scope = ServiceScopeFactory.CreateScope())
             {
@@ -590,7 +591,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
                 {
                     foldersJson[userId] = folderId.Value;
                 }
-                else 
+                else
                 {
                     foldersJson.Remove(userId.ToString());
                 }
@@ -600,7 +601,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
                 {
                     favoritesJson.Add(userId.ToString(), favorite);
                 }
-                else 
+                else
                 {
                     favoritesJson.Remove(userId.ToString());
                 }

@@ -1,7 +1,7 @@
-﻿using Microsoft.AspNetCore.Mvc.Filters;
-using Microsoft.Extensions.DependencyInjection;
-using Bit.Core.Exceptions;
+﻿using Bit.Core.Exceptions;
 using Bit.Core.Settings;
+using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Core.Utilities
 {

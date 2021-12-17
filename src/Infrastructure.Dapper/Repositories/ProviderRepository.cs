@@ -21,7 +21,7 @@ namespace Bit.Infrastructure.Dapper.Repositories
         public ProviderRepository(string connectionString, string readOnlyConnectionString)
             : base(connectionString, readOnlyConnectionString)
         { }
-        
+
         public async Task<ICollection<Provider>> SearchAsync(string name, string userEmail, int skip, int take)
         {
             using (var connection = new SqlConnection(ReadOnlyConnectionString))
@@ -35,7 +35,7 @@ namespace Bit.Infrastructure.Dapper.Repositories
                 return results.ToList();
             }
         }
-        
+
         public async Task<ICollection<ProviderAbility>> GetManyAbilitiesAsync()
         {
             using (var connection = new SqlConnection(ConnectionString))

@@ -1,7 +1,7 @@
-﻿using Bit.Core.Utilities;
-using IdentityServer4.Services;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Bit.Core.Settings;
+using Bit.Core.Utilities;
+using IdentityServer4.Services;
 
 namespace Bit.Core.IdentityServer
 {

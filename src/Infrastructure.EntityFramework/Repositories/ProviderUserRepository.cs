@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -14,7 +14,7 @@ using TableModel = Bit.Core.Models.Table;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories
 {
-    public class ProviderUserRepository : 
+    public class ProviderUserRepository :
         Repository<TableModel.Provider.ProviderUser, Models.ProviderUser, Guid>, IProviderUserRepository
     {
         public ProviderUserRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
@@ -27,13 +27,13 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             {
                 var dbContext = GetDatabaseContext(scope);
                 var query = from pu in dbContext.ProviderUsers
-                    join u in dbContext.Users
-                        on pu.UserId equals u.Id into u_g
-                    from u in u_g.DefaultIfEmpty()
-                    where pu.ProviderId == providerId &&
-                        ((!onlyRegisteredUsers && (pu.Email == email || u.Email == email)) ||
-                        (onlyRegisteredUsers && u.Email == email))
-                    select new { pu, u };
+                            join u in dbContext.Users
+                                on pu.UserId equals u.Id into u_g
+                            from u in u_g.DefaultIfEmpty()
+                            where pu.ProviderId == providerId &&
+                                ((!onlyRegisteredUsers && (pu.Email == email || u.Email == email)) ||
+                                (onlyRegisteredUsers && u.Email == email))
+                            select new { pu, u };
                 return await query.CountAsync();
             }
         }
@@ -53,7 +53,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
-                var query = dbContext.ProviderUsers.Where(pu => pu.ProviderId.Equals(providerId) && 
+                var query = dbContext.ProviderUsers.Where(pu => pu.ProviderId.Equals(providerId) &&
                     (type != null && pu.Type.Equals(type)));
                 return await query.ToArrayAsync();
             }
@@ -71,14 +71,14 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             }
         }
 
-        public async Task<ICollection<ProviderUser>> GetManyByUserAsync(Guid userId) 
+        public async Task<ICollection<ProviderUser>> GetManyByUserAsync(Guid userId)
         {
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
                 var query = from pu in dbContext.ProviderUsers
-                    where pu.UserId == userId
-                    select pu;
+                            where pu.UserId == userId
+                            select pu;
                 return await query.ToArrayAsync();
             }
         }
@@ -88,23 +88,23 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             {
                 var dbContext = GetDatabaseContext(scope);
                 var query = from pu in dbContext.ProviderUsers
-                    where pu.UserId == userId &&
-                        pu.ProviderId == providerId
-                    select pu;
+                            where pu.UserId == userId &&
+                                pu.ProviderId == providerId
+                            select pu;
                 return await query.FirstOrDefaultAsync();
             }
         }
-        public async Task<ICollection<ProviderUserUserDetails>> GetManyDetailsByProviderAsync(Guid providerId) 
+        public async Task<ICollection<ProviderUserUserDetails>> GetManyDetailsByProviderAsync(Guid providerId)
         {
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
                 var view = from pu in dbContext.ProviderUsers
-                    join u in dbContext.Users
-                        on pu.UserId equals u.Id into u_g
-                    from u in u_g.DefaultIfEmpty()
-                    select new {pu, u};
-                var data = await view.Where(e => e.pu.ProviderId == providerId).Select(e => new ProviderUserUserDetails 
+                           join u in dbContext.Users
+                               on pu.UserId equals u.Id into u_g
+                           from u in u_g.DefaultIfEmpty()
+                           select new { pu, u };
+                var data = await view.Where(e => e.pu.ProviderId == providerId).Select(e => new ProviderUserUserDetails
                 {
                     Id = e.pu.Id,
                     UserId = e.pu.UserId,
@@ -130,7 +130,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             }
         }
 
-        public async Task<IEnumerable<ProviderUserPublicKey>> GetManyPublicKeysByProviderUserAsync(Guid providerId, IEnumerable<Guid> Ids) 
+        public async Task<IEnumerable<ProviderUserPublicKey>> GetManyPublicKeysByProviderUserAsync(Guid providerId, IEnumerable<Guid> Ids)
         {
             using (var scope = ServiceScopeFactory.CreateScope())
             {
@@ -148,9 +148,9 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
                 var dbContext = GetDatabaseContext(scope);
                 var view = new ProviderUserOrganizationDetailsViewQuery();
                 var query = from ou in view.Run(dbContext)
-                    where ou.UserId == userId &&
-                          (status == null || ou.Status == status)
-                    select ou;
+                            where ou.UserId == userId &&
+                                  (status == null || ou.Status == status)
+                            select ou;
                 var organizationUsers = await query.ToListAsync();
                 return organizationUsers;
             }

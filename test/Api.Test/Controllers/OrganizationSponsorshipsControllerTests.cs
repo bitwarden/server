@@ -1,21 +1,21 @@
-using Xunit;
-using Bit.Test.Common.AutoFixture.Attributes;
-using System.Threading.Tasks;
-using System;
-using Bit.Core.Enums;
-using System.Linq;
+﻿using System;
 using System.Collections.Generic;
-using Bit.Core.Models.Table;
-using Bit.Test.Common.AutoFixture;
+using System.Linq;
+using System.Threading.Tasks;
 using Bit.Api.Controllers;
 using Bit.Api.Models.Request.Organizations;
-using Bit.Core.Context;
-using NSubstitute;
-using Bit.Core.Exceptions;
 using Bit.Api.Test.AutoFixture.Attributes;
+using Bit.Core.Context;
+using Bit.Core.Enums;
+using Bit.Core.Exceptions;
+using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
+using Bit.Test.Common.AutoFixture;
+using Bit.Test.Common.AutoFixture.Attributes;
+using NSubstitute;
+using Xunit;
 
 namespace Bit.Api.Test.Controllers
 {

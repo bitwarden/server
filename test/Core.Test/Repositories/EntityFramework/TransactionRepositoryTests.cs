@@ -1,18 +1,18 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using System.Linq;
 using Bit.Core.Models.Table;
 using Bit.Core.Test.AutoFixture.Attributes;
 using Bit.Core.Test.AutoFixture.TransactionFixtures;
 using Bit.Core.Test.Repositories.EntityFramework.EqualityComparers;
 using Xunit;
-using SqlRepo = Bit.Infrastructure.Dapper.Repositories;
 using EfRepo = Bit.Infrastructure.EntityFramework.Repositories;
-using System.Linq;
+using SqlRepo = Bit.Infrastructure.Dapper.Repositories;
 
 namespace Bit.Core.Test.Repositories.EntityFramework
 {
     public class TransactionRepositoryTests
     {
-        
+
         [CiSkippedTheory, EfUserTransactionAutoData, EfOrganizationTransactionAutoData]
         public async void CreateAsync_Works_DataMatches(
             Transaction transaction,

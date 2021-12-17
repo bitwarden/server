@@ -25,11 +25,11 @@ namespace Bit.Admin.Models
             CollectionCount = collections.Count();
             GroupCount = groups?.Count() ?? 0;
             PolicyCount = policies?.Count() ?? 0;
-            Owners = string.Join(", ", 
+            Owners = string.Join(", ",
                 orgUsers
                 .Where(u => u.Type == OrganizationUserType.Owner && u.Status == OrganizationUserStatusType.Confirmed)
                 .Select(u => u.Email));
-            Admins = string.Join(", ", 
+            Admins = string.Join(", ",
                 orgUsers
                 .Where(u => u.Type == OrganizationUserType.Admin && u.Status == OrganizationUserStatusType.Confirmed)
                 .Select(u => u.Email));

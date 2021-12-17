@@ -5,18 +5,18 @@ using Bit.Api.Models.Request;
 using Bit.Api.Models.Request.Accounts;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
-using Microsoft.AspNetCore.Mvc;
-using Bit.Core.Repositories;
-using Microsoft.AspNetCore.Authorization;
+using Bit.Api.Utilities;
+using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Services;
-using Bit.Core.Context;
-using Bit.Api.Utilities;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
-using Bit.Core.Utilities;
+using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bit.Core.Utilities;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 
 namespace Bit.Api.Controllers
@@ -130,7 +130,7 @@ namespace Bit.Api.Controllers
 
         [HttpGet("{id}/license")]
         [SelfHosted(NotSelfHostedOnly = true)]
-        public async Task<OrganizationLicense> GetLicense(string id, [FromQuery]Guid installationId)
+        public async Task<OrganizationLicense> GetLicense(string id, [FromQuery] Guid installationId)
         {
             var orgIdGuid = new Guid(id);
             if (!await _currentContext.OrganizationOwner(orgIdGuid))
@@ -156,7 +156,7 @@ namespace Bit.Api.Controllers
             var responses = organizations.Select(o => new ProfileOrganizationResponseModel(o));
             return new ListResponseModel<ProfileOrganizationResponseModel>(responses);
         }
-        
+
         [HttpGet("{identifier}/auto-enroll-status")]
         public async Task<OrganizationAutoEnrollStatusResponseModel> GetAutoEnrollStatus(string identifier)
         {
@@ -165,7 +165,7 @@ namespace Bit.Api.Controllers
             {
                 throw new UnauthorizedAccessException();
             }
-            
+
             var organization = await _organizationRepository.GetByIdentifierAsync(identifier);
             if (organization == null)
             {
@@ -184,14 +184,14 @@ namespace Bit.Api.Controllers
             {
                 return new OrganizationAutoEnrollStatusResponseModel(organization.Id, false);
             }
-            
+
             var data = JsonConvert.DeserializeObject<ResetPasswordDataModel>(resetPasswordPolicy.Data);
             return new OrganizationAutoEnrollStatusResponseModel(organization.Id, data?.AutoEnrollEnabled ?? false);
         }
 
         [HttpPost("")]
         [SelfHosted(NotSelfHostedOnly = true)]
-        public async Task<OrganizationResponseModel> Post([FromBody]OrganizationCreateRequestModel model)
+        public async Task<OrganizationResponseModel> Post([FromBody] OrganizationCreateRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)
@@ -227,7 +227,7 @@ namespace Bit.Api.Controllers
 
         [HttpPut("{id}")]
         [HttpPost("{id}")]
-        public async Task<OrganizationResponseModel> Put(string id, [FromBody]OrganizationUpdateRequestModel model)
+        public async Task<OrganizationResponseModel> Put(string id, [FromBody] OrganizationUpdateRequestModel model)
         {
             var orgIdGuid = new Guid(id);
             if (!await _currentContext.OrganizationOwner(orgIdGuid))
@@ -250,7 +250,7 @@ namespace Bit.Api.Controllers
 
         [HttpPost("{id}/payment")]
         [SelfHosted(NotSelfHostedOnly = true)]
-        public async Task PostPayment(string id, [FromBody]PaymentRequestModel model)
+        public async Task PostPayment(string id, [FromBody] PaymentRequestModel model)
         {
             var orgIdGuid = new Guid(id);
             if (!await _currentContext.OrganizationOwner(orgIdGuid))
@@ -273,7 +273,7 @@ namespace Bit.Api.Controllers
 
         [HttpPost("{id}/upgrade")]
         [SelfHosted(NotSelfHostedOnly = true)]
-        public async Task<PaymentResponseModel> PostUpgrade(string id, [FromBody]OrganizationUpgradeRequestModel model)
+        public async Task<PaymentResponseModel> PostUpgrade(string id, [FromBody] OrganizationUpgradeRequestModel model)
         {
             var orgIdGuid = new Guid(id);
             if (!await _currentContext.OrganizationOwner(orgIdGuid))
@@ -304,7 +304,7 @@ namespace Bit.Api.Controllers
 
         [HttpPost("{id}/seat")]
         [SelfHosted(NotSelfHostedOnly = true)]
-        public async Task<PaymentResponseModel> PostSeat(string id, [FromBody]OrganizationSeatRequestModel model)
+        public async Task<PaymentResponseModel> PostSeat(string id, [FromBody] OrganizationSeatRequestModel model)
         {
             var orgIdGuid = new Guid(id);
             if (!await _currentContext.OrganizationOwner(orgIdGuid))
@@ -322,7 +322,7 @@ namespace Bit.Api.Controllers
 
         [HttpPost("{id}/storage")]
         [SelfHosted(NotSelfHostedOnly = true)]
-        public async Task<PaymentResponseModel> PostStorage(string id, [FromBody]StorageRequestModel model)
+        public async Task<PaymentResponseModel> PostStorage(string id, [FromBody] StorageRequestModel model)
         {
             var orgIdGuid = new Guid(id);
             if (!await _currentContext.OrganizationOwner(orgIdGuid))
@@ -340,7 +340,7 @@ namespace Bit.Api.Controllers
 
         [HttpPost("{id}/verify-bank")]
         [SelfHosted(NotSelfHostedOnly = true)]
-        public async Task PostVerifyBank(string id, [FromBody]OrganizationVerifyBankRequestModel model)
+        public async Task PostVerifyBank(string id, [FromBody] OrganizationVerifyBankRequestModel model)
         {
             var orgIdGuid = new Guid(id);
             if (!await _currentContext.OrganizationOwner(orgIdGuid))
@@ -395,13 +395,13 @@ namespace Bit.Api.Controllers
                 throw new BadRequestException("Your organization's Single Sign-On settings prevent you from leaving.");
             }
 
-            
+
             await _organizationService.DeleteUserAsync(orgGuidId, user.Id);
         }
 
         [HttpDelete("{id}")]
         [HttpPost("{id}/delete")]
-        public async Task Delete(string id, [FromBody]SecretVerificationRequestModel model)
+        public async Task Delete(string id, [FromBody] SecretVerificationRequestModel model)
         {
             var orgIdGuid = new Guid(id);
             if (!await _currentContext.OrganizationOwner(orgIdGuid))
@@ -452,7 +452,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("{id}/import")]
-        public async Task Import(string id, [FromBody]ImportOrganizationUsersRequestModel model)
+        public async Task Import(string id, [FromBody] ImportOrganizationUsersRequestModel model)
         {
             if (!_globalSettings.SelfHosted && !model.LargeImport &&
                 (model.Groups.Count() > 2000 || model.Users.Count(u => !u.Deleted) > 2000))
@@ -477,7 +477,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("{id}/api-key")]
-        public async Task<ApiKeyResponseModel> ApiKey(string id, [FromBody]SecretVerificationRequestModel model)
+        public async Task<ApiKeyResponseModel> ApiKey(string id, [FromBody] SecretVerificationRequestModel model)
         {
             var orgIdGuid = new Guid(id);
             if (!await _currentContext.OrganizationOwner(orgIdGuid))
@@ -510,7 +510,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("{id}/rotate-api-key")]
-        public async Task<ApiKeyResponseModel> RotateApiKey(string id, [FromBody]SecretVerificationRequestModel model)
+        public async Task<ApiKeyResponseModel> RotateApiKey(string id, [FromBody] SecretVerificationRequestModel model)
         {
             var orgIdGuid = new Guid(id);
             if (!await _currentContext.OrganizationOwner(orgIdGuid))
@@ -565,7 +565,7 @@ namespace Bit.Api.Controllers
 
         [HttpPut("{id}/tax")]
         [SelfHosted(NotSelfHostedOnly = true)]
-        public async Task PutTaxInfo(string id, [FromBody]OrganizationTaxInfoUpdateRequestModel model)
+        public async Task PutTaxInfo(string id, [FromBody] OrganizationTaxInfoUpdateRequestModel model)
         {
             var orgIdGuid = new Guid(id);
             if (!await _currentContext.OrganizationOwner(orgIdGuid))
@@ -591,7 +591,7 @@ namespace Bit.Api.Controllers
             };
             await _paymentService.SaveTaxInfoAsync(organization, taxInfo);
         }
-        
+
         [HttpGet("{id}/keys")]
         public async Task<OrganizationKeysResponseModel> GetKeys(string id)
         {
@@ -603,9 +603,9 @@ namespace Bit.Api.Controllers
 
             return new OrganizationKeysResponseModel(org);
         }
-        
+
         [HttpPost("{id}/keys")]
-        public async Task<OrganizationKeysResponseModel> PostKeys(string id, [FromBody]OrganizationKeysRequestModel model)
+        public async Task<OrganizationKeysResponseModel> PostKeys(string id, [FromBody] OrganizationKeysRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)
@@ -637,7 +637,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("{id:guid}/sso")]
-        public async Task<OrganizationSsoResponseModel> PostSso(Guid id, [FromBody]OrganizationSsoRequestModel model)
+        public async Task<OrganizationSsoResponseModel> PostSso(Guid id, [FromBody] OrganizationSsoRequestModel model)
         {
             if (!await _currentContext.ManageSso(id))
             {

@@ -1,10 +1,10 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using Bit.Core.Models.Table;
 
 namespace Bit.Core.Test.Repositories.EntityFramework.EqualityComparers
 {
-    public class SsoConfigCompare: IEqualityComparer<SsoConfig>
+    public class SsoConfigCompare : IEqualityComparer<SsoConfig>
     {
         public bool Equals(SsoConfig x, SsoConfig y)
         {

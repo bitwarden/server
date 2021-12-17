@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -13,7 +13,7 @@ using TableModel = Bit.Core.Models.Table;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories
 {
-    public class ProviderOrganizationRepository : 
+    public class ProviderOrganizationRepository :
         Repository<TableModel.Provider.ProviderOrganization, Models.ProviderOrganization, Guid>, IProviderOrganizationRepository
     {
         public ProviderOrganizationRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)

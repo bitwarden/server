@@ -1,4 +1,4 @@
-using Bit.Core.Settings;
+﻿using Bit.Core.Settings;
 using Microsoft.Extensions.Configuration;
 
 namespace Bit.Test.Common.Helpers.Factories

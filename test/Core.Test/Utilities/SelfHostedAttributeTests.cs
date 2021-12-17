@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Bit.Core.Exceptions;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
@@ -82,9 +82,9 @@ namespace Bit.Core.Test.Utilities
             var context = Substitute.For<ActionExecutingContext>(
                 Substitute.For<ActionContext>(httpContext,
                     new RouteData(),
-                    Substitute.For<ActionDescriptor>()), 
-                new List<IFilterMetadata>(), 
-                new Dictionary<string, object>(), 
+                    Substitute.For<ActionDescriptor>()),
+                new List<IFilterMetadata>(),
+                new Dictionary<string, object>(),
                 Substitute.For<Controller>());
 
             return context;

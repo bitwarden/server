@@ -14,7 +14,7 @@ namespace Bit.Api.Models.Response.Providers
             {
                 throw new ArgumentNullException(nameof(providerOrganization));
             }
-            
+
             Id = providerOrganization.Id;
             ProviderId = providerOrganization.ProviderId;
             OrganizationId = providerOrganization.OrganizationId;
@@ -31,7 +31,7 @@ namespace Bit.Api.Models.Response.Providers
             {
                 throw new ArgumentNullException(nameof(providerOrganization));
             }
-            
+
             Id = providerOrganization.Id;
             ProviderId = providerOrganization.ProviderId;
             OrganizationId = providerOrganization.OrganizationId;
@@ -40,7 +40,7 @@ namespace Bit.Api.Models.Response.Providers
             CreationDate = providerOrganization.CreationDate;
             RevisionDate = providerOrganization.RevisionDate;
         }
-        
+
         public Guid Id { get; set; }
         public Guid ProviderId { get; set; }
         public Guid OrganizationId { get; set; }
@@ -49,7 +49,7 @@ namespace Bit.Api.Models.Response.Providers
         public DateTime CreationDate { get; set; }
         public DateTime RevisionDate { get; set; }
     }
-    
+
     public class ProviderOrganizationOrganizationDetailsResponseModel : ProviderOrganizationResponseModel
     {
         public ProviderOrganizationOrganizationDetailsResponseModel(ProviderOrganizationOrganizationDetails providerOrganization,
@@ -62,7 +62,7 @@ namespace Bit.Api.Models.Response.Providers
 
             OrganizationName = providerOrganization.OrganizationName;
         }
-        
+
         public string OrganizationName { get; set; }
     }
 }

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using Bit.Core.Models.Data;
 using Event = Bit.Infrastructure.EntityFramework.Models.Event;
@@ -35,15 +35,15 @@ namespace Bit.Infrastructure.EntityFramework.Repositories.Queries
         public IQueryable<Event> Run(DatabaseContext dbContext)
         {
             var q = from e in dbContext.Events
-                where e.Date >= _startDate &&
-                (_beforeDate == null || e.Date < _beforeDate.Value) &&
-                ((!_cipher.OrganizationId.HasValue && !e.OrganizationId.HasValue) ||
-                (_cipher.OrganizationId.HasValue && _cipher.OrganizationId == e.OrganizationId)) &&
-                ((!_cipher.UserId.HasValue && !e.UserId.HasValue) ||
-                    (_cipher.UserId.HasValue && _cipher.UserId == e.UserId)) &&
-                _cipher.Id == e.CipherId
-                orderby e.Date descending
-                select e;
+                    where e.Date >= _startDate &&
+                    (_beforeDate == null || e.Date < _beforeDate.Value) &&
+                    ((!_cipher.OrganizationId.HasValue && !e.OrganizationId.HasValue) ||
+                    (_cipher.OrganizationId.HasValue && _cipher.OrganizationId == e.OrganizationId)) &&
+                    ((!_cipher.UserId.HasValue && !e.UserId.HasValue) ||
+                        (_cipher.UserId.HasValue && _cipher.UserId == e.UserId)) &&
+                    _cipher.Id == e.CipherId
+                    orderby e.Date descending
+                    select e;
             return q.Skip(0).Take(_pageOptions.PageSize);
         }
     }

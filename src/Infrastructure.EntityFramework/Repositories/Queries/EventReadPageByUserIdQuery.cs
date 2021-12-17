@@ -1,11 +1,11 @@
-using System;
+﻿using System;
 using System.Linq;
 using Bit.Core.Models.Data;
 using Bit.Infrastructure.EntityFramework.Models;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories.Queries
 {
-    public class EventReadPageByUserIdQuery: IQuery<Event>
+    public class EventReadPageByUserIdQuery : IQuery<Event>
     {
         private readonly Guid _userId;
         private readonly DateTime _startDate;
@@ -26,13 +26,13 @@ namespace Bit.Infrastructure.EntityFramework.Repositories.Queries
         public IQueryable<Event> Run(DatabaseContext dbContext)
         {
             var q = from e in dbContext.Events
-                where e.Date >= _startDate &&
-                (_beforeDate != null || e.Date <= _endDate) &&
-                (_beforeDate == null || e.Date < _beforeDate.Value) &&
-                !e.OrganizationId.HasValue &&
-                e.ActingUserId == _userId
-                orderby e.Date descending
-                select e;
+                    where e.Date >= _startDate &&
+                    (_beforeDate != null || e.Date <= _endDate) &&
+                    (_beforeDate == null || e.Date < _beforeDate.Value) &&
+                    !e.OrganizationId.HasValue &&
+                    e.ActingUserId == _userId
+                    orderby e.Date descending
+                    select e;
             return q.Skip(0).Take(_pageOptions.PageSize);
         }
     }

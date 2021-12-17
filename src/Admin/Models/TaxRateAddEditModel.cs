@@ -1,6 +1,6 @@
-namespace Bit.Admin.Models
+﻿namespace Bit.Admin.Models
 {
-    public class TaxRateAddEditModel 
+    public class TaxRateAddEditModel
     {
         public string StripeTaxRateId { get; set; }
         public string Country { get; set; }

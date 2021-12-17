@@ -7,8 +7,8 @@ using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using TableModel = Bit.Core.Models.Table;
 using DataModel = Bit.Core.Models.Data;
+using TableModel = Bit.Core.Models.Table;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories
 {
@@ -51,13 +51,14 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
                 if (dbContext.Database.IsNpgsql())
                 {
                     users = await GetDbSet(dbContext)
-                        .Where(e => e.Email == null || 
+                        .Where(e => e.Email == null ||
                             EF.Functions.ILike(EF.Functions.Collate(e.Email, "default"), "a%"))
                         .OrderBy(e => e.Email)
                         .Skip(skip).Take(take)
                         .ToListAsync();
                 }
-                else {
+                else
+                {
                     users = await GetDbSet(dbContext)
                         .Where(e => email == null || e.Email.StartsWith(email))
                         .OrderBy(e => e.Email)
@@ -126,7 +127,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
                 var dbContext = GetDatabaseContext(scope);
                 var ssoUser = await dbContext.SsoUsers.SingleOrDefaultAsync(e =>
                     e.OrganizationId == organizationId && e.ExternalId == externalId);
-                
+
                 if (ssoUser == null)
                 {
                     return null;
