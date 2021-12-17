@@ -2,6 +2,7 @@ using System.Threading.Tasks;
 using Bit.Core.AccessPolicies;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
+using Bit.Core.OrganizationFeatures.Subscription;
 using Bit.Core.Settings;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using Bit.Test.Common.AutoFixture;
@@ -10,7 +11,7 @@ using NSubstitute;
 using Xunit;
 using Organization = Bit.Core.Models.Table.Organization;
 
-namespace Bit.Core.OrganizationFeatures.Subscription
+namespace Bit.Core.Test.OrganizationFeatures.Subscription
 {
     [SutProviderCustomize]
     public class OrganizationSubscriptionAccessPoliciesTests
