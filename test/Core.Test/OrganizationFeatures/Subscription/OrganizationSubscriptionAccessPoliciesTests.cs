@@ -1,10 +1,7 @@
 using System.Threading.Tasks;
 using Bit.Core.AccessPolicies;
 using Bit.Core.Enums;
-using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
-using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using Bit.Test.Common.AutoFixture;
