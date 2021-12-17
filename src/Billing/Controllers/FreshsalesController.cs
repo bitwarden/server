@@ -61,7 +61,7 @@ namespace Bit.Billing.Controllers
         {
             if (string.IsNullOrEmpty(freshsalesApiKey) || !CoreHelpers.FixedTimeEquals(_freshsalesApiKey, freshsalesApiKey))
             {
-                return BadRequest();
+                return Unauthorized();
             }
 
             try
@@ -75,7 +75,7 @@ namespace Bit.Billing.Controllers
 
                 if (primaryEmail == null)
                 {
-                    return BadRequest();
+                    return BadRequest(new { Message = "Lead has not primary email." });
                 }
 
                 var user = await _userRepository.GetByEmailAsync(primaryEmail.Value);
@@ -123,7 +123,7 @@ namespace Bit.Billing.Controllers
             {
                 Console.WriteLine(ex);
                 _logger.LogError(ex, "Error processing freshsales webhook");
-                return BadRequest();
+                return BadRequest(new { ex.Message });
             }
         }
 
