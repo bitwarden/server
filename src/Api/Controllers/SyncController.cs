@@ -2,7 +2,6 @@
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Bit.Core.Models.Api;
 using Bit.Core.Services;
 using Bit.Core.Repositories;
 using Bit.Core.Enums;
@@ -10,6 +9,7 @@ using Bit.Core.Exceptions;
 using System.Linq;
 using Bit.Core.Models.Table;
 using System.Collections.Generic;
+using Bit.Api.Models.Response;
 using Bit.Core.Enums.Provider;
 using Bit.Core.Models.Data;
 using Bit.Core.Settings;

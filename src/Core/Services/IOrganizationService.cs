@@ -4,7 +4,6 @@ using Bit.Core.Models.Table;
 using System;
 using System.Collections.Generic;
 using Bit.Core.Enums;
-using Bit.Core.Models.Api;
 using Bit.Core.Models.Data;
 
 namespace Bit.Core.Services

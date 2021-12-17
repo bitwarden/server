@@ -5,8 +5,8 @@ using Microsoft.Net.Http.Headers;
 using System;
 using System.IO;
 using System.Threading.Tasks;
+using Bit.Api.Models.Request;
 using Microsoft.Extensions.Primitives;
-using Bit.Core.Models.Api;
 using Newtonsoft.Json;
 
 namespace Bit.Api.Utilities

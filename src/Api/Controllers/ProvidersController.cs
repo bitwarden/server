@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Bit.Api.Models.Request.Providers;
+using Bit.Api.Models.Response.Providers;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Api;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
