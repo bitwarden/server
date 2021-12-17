@@ -1,13 +1,18 @@
 using System;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace Bit.Core.AccessPolicies
 {
-    public class AccessPolicyResult
+    public class AccessPolicyResult : IEquatable<AccessPolicyResult>
     {
         public bool Permit { get; private set; }
         public string BlockReason { get; private set; }
+
+        public static AccessPolicyResult Success => new(true, "");
+        public static AccessPolicyResult Fail() => new(false, null);
+        public static AccessPolicyResult Fail(string blockReason) => new(false, blockReason);
 
         public AccessPolicyResult(bool permit, string blockReason)
         {
@@ -21,6 +26,11 @@ namespace Bit.Core.AccessPolicies
                 Permit && result.Permit,
                 ConcatBlockReason(result)
             );
+        }
+
+        public AccessPolicyResult LazyAnd(AccessPolicyResult result)
+        {
+            return Permit ? And(result) : new(Permit, BlockReason);
         }
 
         /// <summary>
@@ -73,5 +83,28 @@ namespace Bit.Core.AccessPolicies
                 result.BlockReason
             }.Where(r => !string.IsNullOrWhiteSpace(r)));
         }
+
+        // IEquatable
+        public bool Equals(AccessPolicyResult other)
+        {
+            return Permit == other.Permit && BlockReason == other.BlockReason;
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (obj == null)
+            {
+                return false;
+            }
+
+            if (obj is not AccessPolicyResult other)
+            {
+                return false;
+            }
+
+            return Equals(other);
+        }
+
+        public override int GetHashCode() => JsonSerializer.Serialize(this).GetHashCode();
     }
 }
