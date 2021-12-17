@@ -15,7 +15,6 @@ namespace Bit.Core.OrganizationFeatures.UserInvite
 {
     public class OrganizationUserInviteAccessPolicies : OrganizationUserAccessPolicies, IOrganizationUserInviteAccessPolicies
     {
-        private ICurrentContext _currentContext;
         private IOrganizationUserRepository _organizationUserRepository;
         private IPolicyRepository _policyRepository;
         private IUserService _userService;
@@ -28,7 +27,6 @@ namespace Bit.Core.OrganizationFeatures.UserInvite
             IUserService userService
         ) : base(currentContext, organizationUserRepository, organizationService)
         {
-            _currentContext = currentContext;
             _organizationUserRepository = organizationUserRepository;
             _policyRepository = policyRepository;
             _userService = userService;

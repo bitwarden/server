@@ -18,7 +18,6 @@ namespace Bit.Core.OrganizationFeatures.OrgUser
     public class OrganizationUserImportCommand : IOrganizationUserImportCommand
     {
         readonly IOrganizationUserImportAccessPolicies _organizationUserImportAccessPolicies;
-        readonly IOrganizationUserService _organizationUserService;
         readonly IOrganizationUserInviteService _organizationUserInviteService;
         readonly IOrganizationSubscriptionService _organizationSubscriptionService;
         readonly IOrganizationUserMailer _organizationUserMailer;
@@ -31,7 +30,6 @@ namespace Bit.Core.OrganizationFeatures.OrgUser
 
         public OrganizationUserImportCommand(
             IOrganizationUserImportAccessPolicies organizationUserImportAccessPolicies,
-            IOrganizationUserService organizationUserService,
             IOrganizationUserInviteService organizationUserInviteService,
             IOrganizationSubscriptionService organizationSubscriptionService,
             IOrganizationUserMailer organizationUserMailer,
@@ -44,7 +42,6 @@ namespace Bit.Core.OrganizationFeatures.OrgUser
         )
         {
             _organizationUserImportAccessPolicies = organizationUserImportAccessPolicies;
-            _organizationUserService = organizationUserService;
             _organizationUserInviteService = organizationUserInviteService;
             _organizationSubscriptionService = organizationSubscriptionService;
             _organizationUserMailer = organizationUserMailer;

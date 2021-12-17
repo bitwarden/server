@@ -20,11 +20,9 @@ namespace Bit.Core.OrganizationFeatures.UserInvite
     public class OrganizationUserInviteCommand : IOrganizationUserInviteCommand
     {
         private readonly IOrganizationUserInviteAccessPolicies _organizationUserInviteAccessPolicies;
-        private readonly IOrganizationUserAccessPolicies _organizationUserAccessPolicies;
         private readonly IOrganizationRepository _organizationRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly IUserRepository _userRepository;
-        private readonly IOrganizationService _organizationService;
         private readonly IOrganizationUserService _organizationUserService;
         private readonly IOrganizationUserInviteService _organizationUserInviteService;
         private readonly IOrganizationUserMailer _organizationUserMailer;
@@ -34,11 +32,9 @@ namespace Bit.Core.OrganizationFeatures.UserInvite
 
         public OrganizationUserInviteCommand(
             IOrganizationUserInviteAccessPolicies organizationUserInviteAccessPolicies,
-            IOrganizationUserAccessPolicies organizationUserAccessPolicies,
             IOrganizationRepository organizationRepository,
             IOrganizationUserRepository organizationUserRepository,
             IUserRepository userRepository,
-            IOrganizationService organizationService,
             IOrganizationUserService organizationUserService,
             IOrganizationUserInviteService organizationUserInviteService,
             IOrganizationUserMailer organizationUserMailer,
@@ -48,11 +44,9 @@ namespace Bit.Core.OrganizationFeatures.UserInvite
         )
         {
             _organizationUserInviteAccessPolicies = organizationUserInviteAccessPolicies;
-            _organizationUserAccessPolicies = organizationUserAccessPolicies;
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
             _userRepository = userRepository;
-            _organizationService = organizationService;
             _organizationUserService = organizationUserService;
             _organizationUserInviteService = organizationUserInviteService;
             _organizationUserMailer = organizationUserMailer;
