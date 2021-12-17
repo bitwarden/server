@@ -28,7 +28,7 @@ namespace Bit.Api.Models.Request.Organizations
                 Emails = Emails,
                 Type = Type,
                 AccessAll = AccessAll,
-                Collections = Collections.Select(c => c.ToSelectionReadOnly()),
+                Collections = Collections?.Select(c => c.ToSelectionReadOnly()),
                 Permissions = Permissions,
             };
         }
