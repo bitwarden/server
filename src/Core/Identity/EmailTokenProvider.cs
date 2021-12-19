@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Identity;
-using Bit.Core.Models.Table;
 using Bit.Core.Enums;
-using Bit.Core.Services;
-using Microsoft.Extensions.DependencyInjection;
 using Bit.Core.Models;
+using Bit.Core.Models.Table;
+using Bit.Core.Services;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Core.Identity
 {

@@ -17,10 +17,10 @@ namespace Bit.Core.Test.Utilities
             var sut = new StrictEmailAddressAttribute();
 
             var actual = sut.IsValid(email);
-            
+
             Assert.True(actual);
         }
-        
+
         [Theory]
         [InlineData(null)]                                  // null
         [InlineData("hello@world.com\t")]                   // trailing tab char
@@ -51,7 +51,7 @@ namespace Bit.Core.Test.Utilities
             var sut = new StrictEmailAddressAttribute();
 
             var actual = sut.IsValid(email);
-            
+
             Assert.False(actual);
         }
     }

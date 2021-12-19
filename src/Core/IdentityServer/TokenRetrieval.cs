@@ -1,6 +1,6 @@
-﻿using Microsoft.AspNetCore.Http;
-using System;
+﻿using System;
 using System.Linq;
+using Microsoft.AspNetCore.Http;
 
 namespace Bit.Core.IdentityServer
 {

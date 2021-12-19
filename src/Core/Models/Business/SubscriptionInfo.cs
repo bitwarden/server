@@ -1,7 +1,7 @@
-﻿using Stripe;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Stripe;
 
 namespace Bit.Core.Models.Business
 {
@@ -52,12 +52,14 @@ namespace Bit.Core.Models.Business
                     }
 
                     Quantity = (int)item.Quantity;
+                    SponsoredSubscriptionItem = Utilities.StaticStore.SponsoredPlans.Any(p => p.StripePlanId == item.Plan.Id);
                 }
 
                 public string Name { get; set; }
                 public decimal Amount { get; set; }
                 public int Quantity { get; set; }
                 public string Interval { get; set; }
+                public bool SponsoredSubscriptionItem { get; set; }
             }
         }
 

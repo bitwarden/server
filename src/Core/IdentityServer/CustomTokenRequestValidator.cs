@@ -1,21 +1,21 @@
 ﻿using System;
-using Bit.Core.Models.Table;
-using Bit.Core.Repositories;
-using IdentityServer4.Validation;
-using Microsoft.AspNetCore.Identity;
 using System.Collections.Generic;
-using System.Security.Claims;
-using System.Threading.Tasks;
-using Bit.Core.Services;
-using Bit.Core.Settings;
-using Bit.Core.Context;
 using System.Linq;
+using System.Security.Claims;
 using System.Text.Json;
+using System.Threading.Tasks;
+using Bit.Core.Context;
 using Bit.Core.Identity;
 using Bit.Core.Models.Data;
-using Microsoft.Extensions.Logging;
-using IdentityServer4.Extensions;
+using Bit.Core.Models.Table;
+using Bit.Core.Repositories;
+using Bit.Core.Services;
+using Bit.Core.Settings;
 using IdentityModel;
+using IdentityServer4.Extensions;
+using IdentityServer4.Validation;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.IdentityServer
 {
@@ -64,7 +64,7 @@ namespace Bit.Core.IdentityServer
 
         protected async override Task<(User, bool)> ValidateContextAsync(CustomTokenRequestValidationContext context)
         {
-            var email = context.Result.ValidatedRequest.Subject?.GetDisplayName() 
+            var email = context.Result.ValidatedRequest.Subject?.GetDisplayName()
                 ?? context.Result.ValidatedRequest.ClientClaims?.FirstOrDefault(claim => claim.Type == JwtClaimTypes.Email)?.Value;
             var user = string.IsNullOrWhiteSpace(email) ? null : await _userManager.FindByEmailAsync(email);
             return (user, user != null);
@@ -94,7 +94,8 @@ namespace Bit.Core.IdentityServer
             // Apikey login
             if (context.Result.ValidatedRequest.GrantType == "client_credentials")
             {
-                if (user.UsesKeyConnector) {
+                if (user.UsesKeyConnector)
+                {
                     // KeyConnectorUrl is configured in the CLI client, we just need to tell the client to use it
                     context.Result.CustomResponse["ApiUseKeyConnector"] = true;
                     context.Result.CustomResponse["ResetMasterPassword"] = false;
@@ -129,8 +130,8 @@ namespace Bit.Core.IdentityServer
             context.Result.CustomResponse = customResponse;
         }
 
-        protected override void SetSsoResult(CustomTokenRequestValidationContext context, 
-            Dictionary<string, object> customResponse) 
+        protected override void SetSsoResult(CustomTokenRequestValidationContext context,
+            Dictionary<string, object> customResponse)
         {
             context.Result.Error = "invalid_grant";
             context.Result.ErrorDescription = "Single Sign on required.";

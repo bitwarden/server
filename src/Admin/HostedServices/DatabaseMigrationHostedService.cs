@@ -46,7 +46,7 @@ namespace Bit.Admin.HostedServices
                     if (i >= maxMigrationAttempts)
                     {
                         _logger.LogError(e, "Database failed to migrate.");
-                        throw e;
+                        throw;
                     }
                     else
                     {

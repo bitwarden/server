@@ -1,14 +1,14 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using Bit.Core.Models.Table;
 
 namespace Bit.Core.Test.Repositories.EntityFramework.EqualityComparers
 {
-    public class CollectionCompare: IEqualityComparer<Collection>
+    public class CollectionCompare : IEqualityComparer<Collection>
     {
         public bool Equals(Collection x, Collection y)
         {
-            return  x.Name == y.Name &&
+            return x.Name == y.Name &&
                 x.ExternalId == y.ExternalId;
         }
 

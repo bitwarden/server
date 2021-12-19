@@ -1,33 +1,33 @@
-﻿using Bit.Core.Models.Data;
-using Newtonsoft.Json;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
-using System.Text.RegularExpressions;
-using Dapper;
-using System.Globalization;
-using System.Web;
-using Microsoft.AspNetCore.DataProtection;
-using Bit.Core.Settings;
-using Bit.Core.Enums;
-using Bit.Core.Context;
-using System.Threading.Tasks;
-using Microsoft.Azure.Storage;
-using Microsoft.Azure.Storage.Blob;
-using Bit.Core.Models.Table;
-using IdentityModel;
 using System.Text.Json;
-using Bit.Core.Enums.Provider;
+using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Web;
 using Azure.Storage.Queues;
 using Azure.Storage.Queues.Models;
-using System.Threading;
+using Bit.Core.Context;
+using Bit.Core.Enums;
+using Bit.Core.Enums.Provider;
+using Bit.Core.Models.Data;
+using Bit.Core.Models.Table;
+using Bit.Core.Settings;
+using Dapper;
+using IdentityModel;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.Azure.Storage;
+using Microsoft.Azure.Storage.Blob;
 using MimeKit;
+using Newtonsoft.Json;
 
 namespace Bit.Core.Utilities
 {
@@ -854,7 +854,7 @@ namespace Bit.Core.Utilities
                     }
                 }
             }
-            
+
             if (providers.Any())
             {
                 foreach (var group in providers.GroupBy(o => o.Type))
@@ -876,7 +876,7 @@ namespace Bit.Core.Utilities
                     }
                 }
             }
-            
+
             return claims;
         }
 
@@ -936,6 +936,40 @@ namespace Bit.Core.Utilities
         {
             return CryptographicOperations.FixedTimeEquals(
                 Encoding.UTF8.GetBytes(input1), Encoding.UTF8.GetBytes(input2));
+        }
+
+        public static string ObfuscateEmail(string email)
+        {
+            if (email == null)
+            {
+                return email;
+            }
+
+            var emailParts = email.Split('@', StringSplitOptions.RemoveEmptyEntries);
+
+            if (emailParts.Length != 2)
+            {
+                return email;
+            }
+
+            var username = emailParts[0];
+
+            if (username.Length < 2)
+            {
+                return email;
+            }
+
+            var sb = new StringBuilder();
+            sb.Append(emailParts[0][..2]);
+            for (var i = 2; i < emailParts[0].Length; i++)
+            {
+                sb.Append('*');
+            }
+
+            return sb.Append('@')
+                .Append(emailParts[1])
+                .ToString();
+
         }
     }
 }

@@ -1,16 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Bit.Core.Models.Table;
-using Bit.Core.Enums;
-using Microsoft.AspNetCore.Http;
-using Bit.Core.Repositories;
-using System.Threading.Tasks;
 using System.Security.Claims;
+using System.Threading.Tasks;
+using Bit.Core.Enums;
 using Bit.Core.Enums.Provider;
-using Bit.Core.Utilities;
 using Bit.Core.Models.Data;
+using Bit.Core.Models.Table;
+using Bit.Core.Repositories;
 using Bit.Core.Settings;
+using Bit.Core.Utilities;
+using Microsoft.AspNetCore.Http;
 
 namespace Bit.Core.Context
 {
@@ -392,13 +392,13 @@ namespace Bit.Core.Context
 
         public async Task<Guid?> ProviderIdForOrg(Guid orgId)
         {
-            if (Organizations.Any(org => org.Id == orgId))
+            if (Organizations?.Any(org => org.Id == orgId) ?? false)
             {
                 return null;
             }
 
             var po = (await GetProviderOrganizations())
-                .FirstOrDefault(po => po.OrganizationId == orgId);
+                ?.FirstOrDefault(po => po.OrganizationId == orgId);
 
             return po?.ProviderId;
         }
@@ -414,7 +414,7 @@ namespace Bit.Core.Context
             }
             return Organizations;
         }
-        
+
         public async Task<ICollection<CurrentContentProvider>> ProviderMembershipAsync(
             IProviderUserRepository providerUserRepository, Guid userId)
         {
@@ -465,7 +465,7 @@ namespace Bit.Core.Context
 
         protected async Task<IEnumerable<ProviderUserOrganizationDetails>> GetProviderOrganizations()
         {
-            if (_providerUserOrganizations == null)
+            if (_providerUserOrganizations == null && UserId.HasValue)
             {
                 _providerUserOrganizations = await _providerUserRepository.GetManyOrganizationDetailsByUserAsync(UserId.Value, ProviderUserStatusType.Confirmed);
             }

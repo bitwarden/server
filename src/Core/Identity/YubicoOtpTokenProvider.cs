@@ -1,13 +1,13 @@
-﻿using System.Threading.Tasks;
-using Microsoft.AspNetCore.Identity;
-using Bit.Core.Models.Table;
-using Bit.Core.Enums;
-using YubicoDotNetClient;
+﻿using System;
 using System.Linq;
+using System.Threading.Tasks;
+using Bit.Core.Enums;
+using Bit.Core.Models.Table;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using System;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
+using YubicoDotNetClient;
 
 namespace Bit.Core.Identity
 {

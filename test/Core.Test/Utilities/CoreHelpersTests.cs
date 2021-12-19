@@ -1,17 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Bit.Core.Utilities;
-using Xunit;
-using Bit.Core.Test.AutoFixture.Attributes;
-using Bit.Core.Test.AutoFixture.UserFixtures;
-using IdentityModel;
+using AutoFixture;
+using Bit.Core.Context;
+using Bit.Core.Enums;
 using Bit.Core.Enums.Provider;
 using Bit.Core.Models.Table;
-using Bit.Core.Context;
-using AutoFixture;
-using Bit.Core.Test.AutoFixture;
-using Bit.Core.Enums;
+using Bit.Core.Test.AutoFixture.UserFixtures;
+using Bit.Core.Utilities;
+using Bit.Test.Common.AutoFixture;
+using Bit.Test.Common.AutoFixture.Attributes;
+using IdentityModel;
+using Xunit;
 
 namespace Bit.Core.Test.Utilities
 {
@@ -35,7 +35,7 @@ namespace Bit.Core.Test.Utilities
         }
 
         [Theory]
-        [InlineData(2, 5, new[] { 1, 2, 3, 4, 5, 6, 7, 8 , 9, 0 })]
+        [InlineData(2, 5, new[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 0 })]
         [InlineData(2, 3, new[] { 1, 2, 3, 4, 5 })]
         [InlineData(2, 1, new[] { 1, 2 })]
         [InlineData(1, 1, new[] { 1 })]
@@ -351,5 +351,16 @@ namespace Bit.Core.Test.Utilities
             }
         }
 
+        [Theory]
+        [InlineData("hi@email.com", "hi@email.com")] // Short email with no room to obfuscate
+        [InlineData("name@email.com", "na**@email.com")] // Can obfuscate
+        [InlineData("reallylongnamethatnooneshouldhave@email", "re*******************************@email")] // Really long email and no .com, .net, etc
+        [InlineData("name@", "name@")] // @ symbol but no domain
+        [InlineData("", "")] // Empty string
+        [InlineData(null, null)] // null
+        public void ObfuscateEmail_Success(string input, string expected)
+        {
+            Assert.Equal(expected, CoreHelpers.ObfuscateEmail(input));
+        }
     }
 }

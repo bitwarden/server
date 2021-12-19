@@ -1,8 +1,18 @@
-﻿using Bit.Core;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Security.Claims;
+using System.Threading.Tasks;
+using Bit.Core;
 using Bit.Core.Enums;
+using Bit.Core.Models;
+using Bit.Core.Models.Api;
+using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Settings;
+using Bit.Core.Utilities;
 using Bit.Sso.Models;
 using Bit.Sso.Utilities;
 using IdentityModel;
@@ -11,21 +21,10 @@ using IdentityServer4.Extensions;
 using IdentityServer4.Services;
 using IdentityServer4.Stores;
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Security.Claims;
-using System.Threading.Tasks;
-using Bit.Core.Models;
-using Bit.Core.Models.Api;
-using Bit.Core.Utilities;
-using System.Text.Json;
-using Bit.Core.Models.Data;
-using Bit.Core.Settings;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Sso.Controllers
 {
@@ -84,7 +83,7 @@ namespace Bit.Sso.Controllers
             _eventService = eventService;
             _globalSettings = globalSettings;
         }
-        
+
         [HttpGet]
         public async Task<IActionResult> PreValidate(string domainHint)
         {
@@ -383,7 +382,7 @@ namespace Bit.Sso.Controllers
             {
                 email = providerUserId;
             }
-            
+
             if (!Guid.TryParse(provider, out var orgId))
             {
                 // TODO: support non-org (server-wide) SSO in the future?
@@ -433,7 +432,7 @@ namespace Bit.Sso.Controllers
             {
                 throw new Exception(_i18nService.T("CouldNotFindOrganization", orgId));
             }
-            
+
             // Try to find OrgUser via existing User Id (accepted/confirmed user)
             if (existingUser != null)
             {
@@ -443,27 +442,30 @@ namespace Bit.Sso.Controllers
 
             // If no Org User found by Existing User Id - search all organization users via email
             orgUser ??= await _organizationUserRepository.GetByOrganizationEmailAsync(orgId, email);
-            
+
             // All Existing User flows handled below
             if (existingUser != null)
             {
+                if (existingUser.UsesKeyConnector && orgUser == null ||
+                    orgUser?.Status == OrganizationUserStatusType.Invited)
+                {
+                    throw new Exception(_i18nService.T("UserAlreadyExistsKeyConnector"));
+                }
+
                 if (orgUser == null)
                 {
                     // Org User is not created - no invite has been sent
                     throw new Exception(_i18nService.T("UserAlreadyExistsInviteProcess"));
                 }
-                
+
                 if (orgUser.Status == OrganizationUserStatusType.Invited)
                 {
                     // Org User is invited - they must manually accept the invite via email and authenticate with MP
-                    throw new Exception(_i18nService.T("UserAlreadyInvited", email, organization.Name)); 
+                    throw new Exception(_i18nService.T("UserAlreadyInvited", email, organization.Name));
                 }
 
-                // Delete existing SsoUser (if any) - avoids error if providerId has changed and the sso link is stale
-                await DeleteExistingSsoUserRecord(existingUser.Id, orgId, orgUser);
-
                 // Accepted or Confirmed - create SSO link and return;
-                await CreateSsoUserRecord(providerUserId, existingUser.Id, orgId);
+                await CreateSsoUserRecord(providerUserId, existingUser.Id, orgId, orgUser);
                 return existingUser;
             }
 
@@ -505,7 +507,7 @@ namespace Bit.Sso.Controllers
                 ApiKey = CoreHelpers.SecureRandomString(30)
             };
             await _userService.RegisterUserAsync(user);
-            
+
             // If the organization has 2fa policy enabled, make sure to default jit user 2fa to email
             var twoFactorPolicy =
                 await _policyRepository.GetByOrganizationIdTypeAsync(orgId, PolicyType.TwoFactorAuthentication);
@@ -514,14 +516,14 @@ namespace Bit.Sso.Controllers
                 user.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
                 {
                     [TwoFactorProviderType.Email] = new TwoFactorProvider
-                        {
-                            MetaData = new Dictionary<string, object> { ["Email"] = user.Email.ToLowerInvariant() },
-                            Enabled = true
-                        }
+                    {
+                        MetaData = new Dictionary<string, object> { ["Email"] = user.Email.ToLowerInvariant() },
+                        Enabled = true
+                    }
                 });
                 await _userService.UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.Email);
             }
-            
+
             // Create Org User if null or else update existing Org User
             if (orgUser == null)
             {
@@ -539,13 +541,10 @@ namespace Bit.Sso.Controllers
                 orgUser.UserId = user.Id;
                 await _organizationUserRepository.ReplaceAsync(orgUser);
             }
-            
-            // Delete any stale user record to be safe
-            await DeleteExistingSsoUserRecord(user.Id, orgId, orgUser);
 
             // Create sso user record
-            await CreateSsoUserRecord(providerUserId, user.Id, orgId);
-            
+            await CreateSsoUserRecord(providerUserId, user.Id, orgId, orgUser);
+
             return user;
         }
 
@@ -595,18 +594,21 @@ namespace Bit.Sso.Controllers
             return null;
         }
 
-        private async Task DeleteExistingSsoUserRecord(Guid userId, Guid orgId, OrganizationUser orgUser)
+        private async Task CreateSsoUserRecord(string providerUserId, Guid userId, Guid orgId, OrganizationUser orgUser)
         {
+            // Delete existing SsoUser (if any) - avoids error if providerId has changed and the sso link is stale
             var existingSsoUser = await _ssoUserRepository.GetByUserIdOrganizationIdAsync(orgId, userId);
             if (existingSsoUser != null)
             {
                 await _ssoUserRepository.DeleteAsync(userId, orgId);
                 await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_ResetSsoLink);
             }
-        }
+            else
+            {
+                // If no stale user, this is the user's first Sso login ever
+                await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_FirstSsoLogin);
+            }
 
-        private async Task CreateSsoUserRecord(string providerUserId, Guid userId, Guid orgId)
-        {
             var ssoUser = new SsoUser
             {
                 ExternalId = providerUserId,

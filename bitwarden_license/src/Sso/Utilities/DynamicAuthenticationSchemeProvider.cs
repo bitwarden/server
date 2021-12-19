@@ -9,8 +9,8 @@ using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
-using Bit.Core.Utilities;
 using Bit.Core.Settings;
+using Bit.Core.Utilities;
 using Bit.Sso.Models;
 using Bit.Sso.Utilities;
 using IdentityModel;
@@ -136,7 +136,7 @@ namespace Bit.Core.Business.Sso
 
             await LoadAllDynamicSchemesIntoCacheAsync();
             schemes.AddRange(_handlerSchemesCopy);
-            
+
             return schemes.ToArray();
         }
 

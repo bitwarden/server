@@ -88,12 +88,9 @@ namespace Bit.Core.Repositories.TableStorage
                     ETag = "*"
                 }));
             }
-            catch (StorageException e)
+            catch (StorageException e) when (e.RequestInformation.HttpStatusCode != (int)HttpStatusCode.NotFound)
             {
-                if (e.RequestInformation.HttpStatusCode != (int)HttpStatusCode.NotFound)
-                {
-                    throw e;
-                }
+                throw;
             }
         }
     }

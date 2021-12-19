@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
@@ -7,14 +7,13 @@ using AutoFixture.Kernel;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories.EntityFramework;
-using Bit.Core.Test.AutoFixture.Attributes;
 using Bit.Core.Test.AutoFixture.EntityFrameworkRepositoryFixtures;
-using Bit.Core.Test.AutoFixture.GlobalSettingsFixtures;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using Bit.Core.Test.AutoFixture.OrganizationUserFixtures;
 using Bit.Core.Test.AutoFixture.Relays;
-using Bit.Core.Test.AutoFixture.TransactionFixtures;
 using Bit.Core.Test.AutoFixture.UserFixtures;
+using Bit.Test.Common.AutoFixture;
+using Bit.Test.Common.AutoFixture.Attributes;
 using Core.Models.Data;
 
 namespace Bit.Core.Test.AutoFixture.CipherFixtures
@@ -47,12 +46,12 @@ namespace Bit.Core.Test.AutoFixture.CipherFixtures
         }
     }
 
-    internal class CipherBuilder: ISpecimenBuilder
+    internal class CipherBuilder : ISpecimenBuilder
     {
         public bool OrganizationOwned { get; set; }
         public object Create(object request, ISpecimenContext context)
         {
-            if (context == null) 
+            if (context == null)
             {
                 throw new ArgumentNullException(nameof(context));
             }
@@ -79,11 +78,12 @@ namespace Bit.Core.Test.AutoFixture.CipherFixtures
                 .Without(e => e.Favorites)
                 .Without(e => e.Folders));
             //
-            var serializerOptions = new JsonSerializerOptions(){
+            var serializerOptions = new JsonSerializerOptions()
+            {
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase
             };
 
-            if(type == typeof(Cipher))
+            if (type == typeof(Cipher))
             {
                 var obj = fixture.WithAutoNSubstitutions().Create<Cipher>();
                 var cipherData = fixture.WithAutoNSubstitutions().Create<CipherLoginData>();
@@ -93,10 +93,10 @@ namespace Bit.Core.Test.AutoFixture.CipherFixtures
 
                 return obj;
             }
-            if (type == typeof(List<Cipher>)) 
+            if (type == typeof(List<Cipher>))
             {
                 var ciphers = fixture.WithAutoNSubstitutions().CreateMany<Cipher>().ToArray();
-                for (var i = 0; i < ciphers.Count(); i++ )
+                for (var i = 0; i < ciphers.Count(); i++)
                 {
                     var cipherData = fixture.WithAutoNSubstitutions().Create<CipherLoginData>();
                     var cipherAttachements = fixture.WithAutoNSubstitutions().Create<List<CipherAttachment>>();
@@ -111,14 +111,15 @@ namespace Bit.Core.Test.AutoFixture.CipherFixtures
         }
     }
 
-    internal class EfCipher: ICustomization 
+    internal class EfCipher : ICustomization
     {
         public bool OrganizationOwned { get; set; }
         public void Customize(IFixture fixture)
         {
             fixture.Customizations.Add(new GlobalSettingsBuilder());
-            fixture.Customizations.Add(new CipherBuilder(){
-                    OrganizationOwned = OrganizationOwned
+            fixture.Customizations.Add(new CipherBuilder()
+            {
+                OrganizationOwned = OrganizationOwned
             });
             fixture.Customizations.Add(new UserBuilder());
             fixture.Customizations.Add(new OrganizationBuilder());
@@ -173,9 +174,10 @@ namespace Bit.Core.Test.AutoFixture.CipherFixtures
 
     internal class EfOrganizationCipherAutoDataAttribute : CustomAutoDataAttribute
     {
-        public EfOrganizationCipherAutoDataAttribute() : base(new SutProviderCustomization(), new EfCipher(){
-                OrganizationOwned = true,
-            })
+        public EfOrganizationCipherAutoDataAttribute() : base(new SutProviderCustomization(), new EfCipher()
+        {
+            OrganizationOwned = true,
+        })
         { }
     }
 

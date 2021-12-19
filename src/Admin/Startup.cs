@@ -44,7 +44,8 @@ namespace Bit.Admin
             services.AddCustomDataProtectionServices(Environment, globalSettings);
 
             // Stripe Billing
-            StripeConfiguration.ApiKey = globalSettings.StripeApiKey;
+            StripeConfiguration.ApiKey = globalSettings.Stripe.ApiKey;
+            StripeConfiguration.MaxNetworkRetries = globalSettings.Stripe.MaxNetworkRetries;
 
             // Repositories
             services.AddSqlServerRepositories(globalSettings);
@@ -69,12 +70,12 @@ namespace Bit.Admin
             // Services
             services.AddBaseServices();
             services.AddDefaultServices(globalSettings);
-            
-            #if OSS
+
+#if OSS
                 services.AddOosServices();
-            #else
-                services.AddCommCoreServices();
-            #endif
+#else
+            services.AddCommCoreServices();
+#endif
 
             // Mvc
             services.AddMvc(config =>

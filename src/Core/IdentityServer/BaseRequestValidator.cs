@@ -1,25 +1,25 @@
-﻿using Bit.Core.Models.Table;
-using Bit.Core.Enums;
-using Bit.Core.Repositories;
-using IdentityServer4.Validation;
-using Microsoft.AspNetCore.Identity;
-using System;
+﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.Linq;
+using System.Reflection;
 using System.Security.Claims;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Bit.Core.Services;
-using System.Linq;
-using Bit.Core.Models;
-using Bit.Core.Identity;
-using Bit.Core.Models.Data;
-using Bit.Core.Utilities;
-using System.ComponentModel.DataAnnotations;
-using System.Reflection;
-using Microsoft.Extensions.Logging;
-using Bit.Core.Models.Api;
 using Bit.Core.Context;
+using Bit.Core.Enums;
+using Bit.Core.Identity;
+using Bit.Core.Models;
+using Bit.Core.Models.Api;
+using Bit.Core.Models.Data;
+using Bit.Core.Models.Table;
+using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bit.Core.Utilities;
+using IdentityServer4.Validation;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.IdentityServer
 {
@@ -319,7 +319,7 @@ namespace Bit.Core.IdentityServer
                         var orgPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(userOrg.OrganizationId,
                             PolicyType.RequireSso);
                         // Owners and Admins are exempt from this policy
-                        if (orgPolicy != null && orgPolicy.Enabled && 
+                        if (orgPolicy != null && orgPolicy.Enabled &&
                             userOrg.Type != OrganizationUserType.Owner && userOrg.Type != OrganizationUserType.Admin)
                         {
                             return false;

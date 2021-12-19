@@ -2,14 +2,14 @@ version: "3.9"
 
 services:
   mssql:
-    image: mcr.microsoft.com/mssql/server:2017-latest
+    image: mcr.microsoft.com/azure-sql-edge:latest
     restart: always
     environment:
       ACCEPT_EULA: Y
-      SA_PASSWORD: ${MSSQL_PASSWORD}
+      MSSQL_SA_PASSWORD: ${MSSQL_PASSWORD}
       MSSQL_PID: Developer
     volumes:
-      - mssql_dev_data:/var/opt/mssql/data
+      - edgesql_dev_data:/var/opt/mssql
       - ../util/Migrator:/mnt/migrator/
       - ./helpers/mssql:/mnt/helpers
       - ./.data/mssql:/mnt/data
@@ -40,4 +40,4 @@ services:
       - mail
 
 volumes:
-  mssql_dev_data:
+  edgesql_dev_data:

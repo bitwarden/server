@@ -1,9 +1,10 @@
 ﻿using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+using Bit.Api.Models.Public.Request;
+using Bit.Api.Models.Public.Response;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Api.Public;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Microsoft.AspNetCore.Authorization;
@@ -39,7 +40,7 @@ namespace Bit.Api.Public.Controllers
         [HttpPost("import")]
         [ProducesResponseType(typeof(MemberResponseModel), (int)HttpStatusCode.OK)]
         [ProducesResponseType(typeof(ErrorResponseModel), (int)HttpStatusCode.BadRequest)]
-        public async Task<IActionResult> Import([FromBody]OrganizationImportRequestModel model)
+        public async Task<IActionResult> Import([FromBody] OrganizationImportRequestModel model)
         {
             if (!_globalSettings.SelfHosted && !model.LargeImport &&
                 (model.Groups.Count() > 2000 || model.Members.Count(u => !u.Deleted) > 2000))

@@ -1,16 +1,16 @@
 ﻿using System;
-using System.Linq;
 using System.Collections.Generic;
-using System.Data.SqlClient;
-using System.Threading.Tasks;
-using Bit.Core.Models.Table;
 using System.Data;
-using Dapper;
-using Core.Models.Data;
-using Bit.Core.Utilities;
-using Newtonsoft.Json;
+using System.Data.SqlClient;
+using System.Linq;
+using System.Threading.Tasks;
 using Bit.Core.Models.Data;
+using Bit.Core.Models.Table;
 using Bit.Core.Settings;
+using Bit.Core.Utilities;
+using Core.Models.Data;
+using Dapper;
+using Newtonsoft.Json;
 
 namespace Bit.Core.Repositories.SqlServer
 {

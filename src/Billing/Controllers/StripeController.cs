@@ -1,4 +1,10 @@
-﻿using Bit.Core.Enums;
+﻿using System;
+using System.Collections.Generic;
+using System.Data.SqlClient;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
+using Bit.Core.Enums;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
@@ -11,12 +17,6 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Stripe;
-using System;
-using System.Collections.Generic;
-using System.Data.SqlClient;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace Bit.Billing.Controllers
 {
@@ -29,6 +29,7 @@ namespace Bit.Billing.Controllers
         private readonly BillingSettings _billingSettings;
         private readonly IWebHostEnvironment _hostingEnvironment;
         private readonly IOrganizationService _organizationService;
+        private readonly IOrganizationSponsorshipService _organizationSponsorshipService;
         private readonly IOrganizationRepository _organizationRepository;
         private readonly ITransactionRepository _transactionRepository;
         private readonly IUserService _userService;
@@ -45,6 +46,7 @@ namespace Bit.Billing.Controllers
             IOptions<BillingSettings> billingSettings,
             IWebHostEnvironment hostingEnvironment,
             IOrganizationService organizationService,
+            IOrganizationSponsorshipService organizationSponsorshipService,
             IOrganizationRepository organizationRepository,
             ITransactionRepository transactionRepository,
             IUserService userService,
@@ -58,6 +60,7 @@ namespace Bit.Billing.Controllers
             _billingSettings = billingSettings?.Value;
             _hostingEnvironment = hostingEnvironment;
             _organizationService = organizationService;
+            _organizationSponsorshipService = organizationSponsorshipService;
             _organizationRepository = organizationRepository;
             _transactionRepository = transactionRepository;
             _userService = userService;
@@ -164,6 +167,13 @@ namespace Bit.Billing.Controllers
                 // org
                 if (ids.Item1.HasValue)
                 {
+                    // sponsored org
+                    if (CheckSponsoredSubscription(subscription))
+                    {
+                        await _organizationSponsorshipService
+                            .ValidateSponsorshipAsync(ids.Item1.Value);
+                    }
+
                     var org = await _organizationRepository.GetByIdAsync(ids.Item1.Value);
                     if (org != null && OrgPlanForInvoiceNotifications(org))
                     {
@@ -312,7 +322,7 @@ namespace Bit.Billing.Controllers
                     await _transactionRepository.CreateAsync(tx);
                 }
                 // Catch foreign key violations because user/org could have been deleted.
-                catch (SqlException e) when(e.Number == 547) { }
+                catch (SqlException e) when (e.Number == 547) { }
             }
             else if (parsedEvent.Type.Equals("charge.refunded"))
             {
@@ -593,7 +603,7 @@ namespace Bit.Billing.Controllers
                 }
                 else
                 {
-                    throw e;
+                    throw;
                 }
             }
 
@@ -688,7 +698,7 @@ namespace Bit.Billing.Controllers
                 }
                 else
                 {
-                    throw e;
+                    throw;
                 }
             }
 
@@ -763,10 +773,10 @@ namespace Bit.Billing.Controllers
             if (!string.IsNullOrWhiteSpace(invoice?.CustomerAddress?.Country) && !string.IsNullOrWhiteSpace(invoice?.CustomerAddress?.PostalCode))
             {
                 var localBitwardenTaxRates = await _taxRateRepository.GetByLocationAsync(
-                    new Bit.Core.Models.Table.TaxRate() 
-                    { 
+                    new Bit.Core.Models.Table.TaxRate()
+                    {
                         Country = invoice.CustomerAddress.Country,
-                        PostalCode = invoice.CustomerAddress.PostalCode 
+                        PostalCode = invoice.CustomerAddress.PostalCode
                     }
                 );
 
@@ -783,5 +793,8 @@ namespace Bit.Billing.Controllers
             }
             return subscription;
         }
+
+        private static bool CheckSponsoredSubscription(Subscription subscription) =>
+            StaticStore.SponsoredPlans.Any(p => p.StripePlanId == subscription.Id);
     }
 }

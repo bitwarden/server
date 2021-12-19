@@ -1,11 +1,11 @@
-﻿using System.Threading.Tasks;
-using Microsoft.Azure.Storage;
-using Microsoft.Azure.Storage.Blob;
+﻿using System;
 using System.IO;
-using System;
+using System.Threading.Tasks;
+using Bit.Core.Enums;
 using Bit.Core.Models.Table;
 using Bit.Core.Settings;
-using Bit.Core.Enums;
+using Microsoft.Azure.Storage;
+using Microsoft.Azure.Storage.Blob;
 
 namespace Bit.Core.Services
 {

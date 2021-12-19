@@ -12,12 +12,12 @@ namespace Bit.Core.Models.Data
             {
                 throw new ArgumentNullException(nameof(orgUser));
             }
-            
+
             if (user == null)
             {
                 throw new ArgumentNullException(nameof(user));
             }
-            
+
             if (org == null)
             {
                 throw new ArgumentNullException(nameof(org));

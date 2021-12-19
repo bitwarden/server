@@ -39,13 +39,6 @@ namespace Bit.Icons.Controllers
             _iconsSettings = iconsSettings;
         }
 
-        [HttpGet("~/alive")]
-        [HttpGet("~/now")]
-        public DateTime GetAlive()
-        {
-            return DateTime.UtcNow;
-        }
-
         [HttpGet("~/config")]
         public IActionResult GetConfig()
         {

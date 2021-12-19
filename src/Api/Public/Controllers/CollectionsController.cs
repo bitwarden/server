@@ -2,8 +2,9 @@
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+using Bit.Api.Models.Public.Request;
+using Bit.Api.Models.Public.Response;
 using Bit.Core.Context;
-using Bit.Core.Models.Api.Public;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -84,7 +85,7 @@ namespace Bit.Api.Public.Controllers
         [ProducesResponseType(typeof(CollectionResponseModel), (int)HttpStatusCode.OK)]
         [ProducesResponseType(typeof(ErrorResponseModel), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
-        public async Task<IActionResult> Put(Guid id, [FromBody]CollectionUpdateRequestModel model)
+        public async Task<IActionResult> Put(Guid id, [FromBody] CollectionUpdateRequestModel model)
         {
             var existingCollection = await _collectionRepository.GetByIdAsync(id);
             if (existingCollection == null || existingCollection.OrganizationId != _currentContext.OrganizationId)

@@ -1,8 +1,8 @@
-﻿using Microsoft.AspNetCore.Hosting;
+﻿using AspNetCoreRateLimit;
 using Bit.Core.Utilities;
-using Serilog.Events;
-using AspNetCoreRateLimit;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
+using Serilog.Events;
 
 namespace Bit.Identity
 {

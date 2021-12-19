@@ -50,6 +50,7 @@
         OrganizationUser_ResetPassword_Withdraw = 1507,
         OrganizationUser_AdminResetPassword = 1508,
         OrganizationUser_ResetSsoLink = 1509,
+        OrganizationUser_FirstSsoLogin = 1510,
 
         Organization_Updated = 1600,
         Organization_PurgedVault = 1601,
@@ -61,7 +62,7 @@
         Organization_DisabledKeyConnector = 1607,
 
         Policy_Updated = 1700,
-        
+
         ProviderUser_Invited = 1800,
         ProviderUser_Confirmed = 1801,
         ProviderUser_Updated = 1802,

@@ -2,10 +2,10 @@
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Azure.Storage.Queues;
 using Bit.Core.Settings;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Azure.Storage.Queues;
 
 namespace Bit.Admin.HostedServices
 {

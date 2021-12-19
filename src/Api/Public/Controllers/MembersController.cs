@@ -3,8 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+using Bit.Api.Models.Public.Request;
+using Bit.Api.Models.Public.Response;
 using Bit.Core.Context;
-using Bit.Core.Models.Api.Public;
 using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -114,7 +115,7 @@ namespace Bit.Api.Public.Controllers
         [HttpPost]
         [ProducesResponseType(typeof(MemberResponseModel), (int)HttpStatusCode.OK)]
         [ProducesResponseType(typeof(ErrorResponseModel), (int)HttpStatusCode.BadRequest)]
-        public async Task<IActionResult> Post([FromBody]MemberCreateRequestModel model)
+        public async Task<IActionResult> Post([FromBody] MemberCreateRequestModel model)
         {
             var associations = model.Collections?.Select(c => c.ToSelectionReadOnly());
             var invite = new OrganizationUserInvite
@@ -143,7 +144,7 @@ namespace Bit.Api.Public.Controllers
         [ProducesResponseType(typeof(MemberResponseModel), (int)HttpStatusCode.OK)]
         [ProducesResponseType(typeof(ErrorResponseModel), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
-        public async Task<IActionResult> Put(Guid id, [FromBody]MemberUpdateRequestModel model)
+        public async Task<IActionResult> Put(Guid id, [FromBody] MemberUpdateRequestModel model)
         {
             var existingUser = await _organizationUserRepository.GetByIdAsync(id);
             if (existingUser == null || existingUser.OrganizationId != _currentContext.OrganizationId)
@@ -179,7 +180,7 @@ namespace Bit.Api.Public.Controllers
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType(typeof(ErrorResponseModel), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
-        public async Task<IActionResult> PutGroupIds(Guid id, [FromBody]UpdateGroupIdsRequestModel model)
+        public async Task<IActionResult> PutGroupIds(Guid id, [FromBody] UpdateGroupIdsRequestModel model)
         {
             var existingUser = await _organizationUserRepository.GetByIdAsync(id);
             if (existingUser == null || existingUser.OrganizationId != _currentContext.OrganizationId)

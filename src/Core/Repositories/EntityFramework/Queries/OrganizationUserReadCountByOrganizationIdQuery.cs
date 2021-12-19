@@ -1,6 +1,6 @@
+﻿using System;
 using System.Linq;
 using Bit.Core.Models.EntityFramework;
-using System;
 
 namespace Bit.Core.Repositories.EntityFramework.Queries
 {
@@ -16,8 +16,8 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
         public IQueryable<OrganizationUser> Run(DatabaseContext dbContext)
         {
             var query = from ou in dbContext.OrganizationUsers
-                where ou.OrganizationId == _organizationId
-                select ou;
+                        where ou.OrganizationId == _organizationId
+                        select ou;
             return query;
         }
     }

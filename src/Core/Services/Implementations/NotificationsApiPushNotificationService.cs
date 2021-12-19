@@ -1,15 +1,15 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Net.Http;
 using System.Threading.Tasks;
 using Bit.Core.Context;
-using Bit.Core.Models.Table;
 using Bit.Core.Enums;
-using Bit.Core.Settings;
-using Newtonsoft.Json;
 using Bit.Core.Models;
+using Bit.Core.Models.Table;
+using Bit.Core.Settings;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
-using System.Net.Http;
-using System.Collections.Generic;
+using Newtonsoft.Json;
 
 namespace Bit.Core.Services
 {

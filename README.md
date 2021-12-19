@@ -104,3 +104,23 @@ Code contributions are welcome! Visual Studio or VS Code is highly recommended i
 Security audits and feedback are welcome. Please open an issue or email us privately if the report is sensitive in nature. You can read our security policy in the [`SECURITY.md`](SECURITY.md) file. We also run a program on [HackerOne](https://hackerone.com/bitwarden).
 
 No grant of any rights in the trademarks, service marks, or logos of Bitwarden is made (except as may be necessary to comply with the notice requirements as applicable), and use of any Bitwarden trademarks must comply with [Bitwarden Trademark Guidelines](https://github.com/bitwarden/server/blob/master/TRADEMARK_GUIDELINES.md).
+
+### Dotnet-format
+
+We recently migrated to using dotnet-foormat as code formatter. All previous branches will need to updated to avoid large merge conflicts using the following steps:
+
+1. Check out your local Branch
+2. Run `git merge 61dc65aa598b1f492d2f0222bb7bf0dd15d116f5`
+3. Resolve any merge conflicts, commit.
+4. Run `dotnet tool run dotnet-format`
+5. Commit
+6. Run `git merge -Xours 23b0a1f9df25058ab29785ecad9a233113c10889`
+7. Push
+
+#### Git blame
+
+We also recommend that you configure git to ignore the prettier revision using:
+
+```bash
+git config blame.ignoreRevsFile .git-blame-ignore-revs
+```

@@ -1,10 +1,10 @@
-﻿using Bit.Migrator;
-using Newtonsoft.Json;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Globalization;
 using System.Net.Http;
+using Bit.Migrator;
+using Newtonsoft.Json;
 
 namespace Bit.Setup
 {
@@ -137,7 +137,7 @@ namespace Bit.Setup
             // a new cert and bag to replace the old Identity.pfx.  This fixes an issue that came up as a result of
             // moving the project to .NET 5.
             _context.Install.IdentityCertPassword = Helpers.GetValueFromEnvFile("global", "globalSettings__identityServer__certificatePassword");
-            var certCountString = Helpers.Exec("openssl pkcs12 -nokeys -info -in /bitwarden/identity/identity.pfx " + 
+            var certCountString = Helpers.Exec("openssl pkcs12 -nokeys -info -in /bitwarden/identity/identity.pfx " +
                 $"-passin pass:{_context.Install.IdentityCertPassword} 2> /dev/null | grep -c \"\\-----BEGIN CERTIFICATE----\"", true);
             if (int.TryParse(certCountString, out var certCount) && certCount > 1)
             {
@@ -213,7 +213,7 @@ namespace Bit.Setup
                     MigrateDatabase(nextAttempt);
                     return;
                 }
-                throw e;
+                throw;
             }
         }
 
@@ -291,7 +291,7 @@ namespace Bit.Setup
 
             var environmentFileBuilder = new EnvironmentFileBuilder(_context);
             environmentFileBuilder.BuildForUpdater();
-            
+
             var certBuilder = new CertBuilder(_context);
             certBuilder.BuildForUpdater();
 

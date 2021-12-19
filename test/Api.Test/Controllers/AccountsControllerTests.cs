@@ -1,8 +1,11 @@
+﻿using System;
+using System.Security.Claims;
+using System.Threading.Tasks;
 using Bit.Api.Controllers;
+using Bit.Api.Models.Request.Accounts;
 using Bit.Core;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Api;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
@@ -10,9 +13,6 @@ using Bit.Core.Services;
 using Bit.Core.Settings;
 using Microsoft.AspNetCore.Identity;
 using NSubstitute;
-using System;
-using System.Security.Claims;
-using System.Threading.Tasks;
 using Xunit;
 
 namespace Bit.Api.Test.Controllers

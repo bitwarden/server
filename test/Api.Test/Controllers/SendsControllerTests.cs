@@ -1,8 +1,12 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using AutoFixture.Xunit2;
 using Bit.Api.Controllers;
+using Bit.Api.Models.Request;
+using Bit.Api.Models.Response;
 using Bit.Core.Context;
 using Bit.Core.Enums;
-using Bit.Core.Models.Api;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -12,9 +16,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using NSubstitute;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using System;
 using Xunit;
 
 namespace Bit.Api.Test.Controllers

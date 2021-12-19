@@ -1,8 +1,8 @@
-using System.Linq;
-using Bit.Core.Models.EntityFramework;
-using System;
-using Bit.Core.Enums;
+﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using Bit.Core.Enums;
+using Bit.Core.Models.EntityFramework;
 using Table = Bit.Core.Models.Table;
 
 namespace Bit.Core.Repositories.EntityFramework.Queries

@@ -1,21 +1,21 @@
+﻿using System;
+using System.Security.Claims;
+using System.Threading.Tasks;
 using AutoFixture.Xunit2;
 using Bit.Api.Controllers;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using NSubstitute;
-using System.Threading.Tasks;
-using System.Security.Claims;
-using System;
-using Bit.Core.Models.Data;
 using Xunit;
 
 namespace Bit.Api.Test.Controllers
 {
-    public class OrganizationsControllerTests: IDisposable
+    public class OrganizationsControllerTests : IDisposable
     {
         private readonly GlobalSettings _globalSettings;
         private readonly ICurrentContext _currentContext;
@@ -54,8 +54,8 @@ namespace Bit.Api.Test.Controllers
         }
 
         [Theory, AutoData]
-        public async Task OrganizationsController_WhenUserTriestoLeaveOrganizationUsingKeyConnector_Throws(
-            Guid orgId)
+        public async Task OrganizationsController_UserCannotLeaveOrganizationThatProvidesKeyConnector(
+            Guid orgId, User user)
         {
             var ssoConfig = new SsoConfig
             {
@@ -68,17 +68,47 @@ namespace Bit.Api.Test.Controllers
                 OrganizationId = orgId,
             };
 
+            user.UsesKeyConnector = true;
+
             _currentContext.OrganizationUser(orgId).Returns(true);
             _ssoConfigRepository.GetByOrganizationIdAsync(orgId).Returns(ssoConfig);
-            _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(new Guid());
+            _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
 
             var exception = await Assert.ThrowsAsync<BadRequestException>(
                 () => _sut.Leave(orgId.ToString()));
 
-            Assert.Contains("You cannot leave an Organization that is using Key Connector.",
+            Assert.Contains("Your organization's Single Sign-On settings prevent you from leaving.",
                 exception.Message);
 
             await _organizationService.DidNotReceiveWithAnyArgs().DeleteUserAsync(default, default);
+        }
+
+        [Theory]
+        [InlineAutoData(true, false)]
+        [InlineAutoData(false, true)]
+        [InlineAutoData(false, false)]
+        public async Task OrganizationsController_UserCanLeaveOrganizationThatDoesntProvideKeyConnector(
+            bool keyConnectorEnabled, bool userUsesKeyConnector, Guid orgId, User user)
+        {
+            var ssoConfig = new SsoConfig
+            {
+                Id = default,
+                Data = new SsoConfigurationData
+                {
+                    KeyConnectorEnabled = keyConnectorEnabled,
+                }.Serialize(),
+                Enabled = true,
+                OrganizationId = orgId,
+            };
+
+            user.UsesKeyConnector = userUsesKeyConnector;
+
+            _currentContext.OrganizationUser(orgId).Returns(true);
+            _ssoConfigRepository.GetByOrganizationIdAsync(orgId).Returns(ssoConfig);
+            _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
+
+            await _organizationService.DeleteUserAsync(orgId, user.Id);
+            await _organizationService.Received(1).DeleteUserAsync(orgId, user.Id);
         }
     }
 }

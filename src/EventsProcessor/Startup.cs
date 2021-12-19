@@ -48,8 +48,13 @@ namespace Bit.EventsProcessor
             app.UseRouting();
             app.UseEndpoints(endpoints =>
             {
-                endpoints.MapGet("/alive", 
-                    async context => await context.Response.WriteAsync(System.DateTime.UtcNow.ToString()));
+                endpoints.MapGet("/alive",
+                    async context => await context.Response.WriteAsJsonAsync(System.DateTime.UtcNow));
+                endpoints.MapGet("/now",
+                    async context => await context.Response.WriteAsJsonAsync(System.DateTime.UtcNow));
+                endpoints.MapGet("/version",
+                    async context => await context.Response.WriteAsJsonAsync(CoreHelpers.GetVersion()));
+
             });
         }
     }

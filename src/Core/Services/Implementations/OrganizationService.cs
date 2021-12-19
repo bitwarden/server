@@ -1,22 +1,22 @@
 ﻿using System;
-using System.Linq;
-using System.Threading.Tasks;
-using Bit.Core.Repositories;
-using Bit.Core.Models.Business;
-using Bit.Core.Models.Table;
-using Bit.Core.Utilities;
-using Bit.Core.Exceptions;
 using System.Collections.Generic;
-using Microsoft.AspNetCore.DataProtection;
-using Stripe;
-using Bit.Core.Enums;
-using Bit.Core.Models.Data;
-using Bit.Core.Settings;
 using System.IO;
-using Newtonsoft.Json;
+using System.Linq;
 using System.Text.Json;
+using System.Threading.Tasks;
 using Bit.Core.Context;
+using Bit.Core.Enums;
+using Bit.Core.Exceptions;
+using Bit.Core.Models.Business;
+using Bit.Core.Models.Data;
+using Bit.Core.Models.Table;
+using Bit.Core.Repositories;
+using Bit.Core.Settings;
+using Bit.Core.Utilities;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
+using Stripe;
 
 namespace Bit.Core.Services
 {
@@ -1191,7 +1191,7 @@ namespace Bit.Core.Services
                 }
 
                 await AutoAddSeatsAsync(organization, newSeatsRequired, prorationDate);
-                await SendInvitesAsync(orgUsers, organization);
+                await SendInvitesAsync(orgUsers.Concat(limitedCollectionOrgUsers.Select(u => u.Item1)), organization);
                 await _eventService.LogOrganizationUserEventsAsync(events);
 
                 await _referenceEventService.RaiseEventAsync(
@@ -1262,7 +1262,8 @@ namespace Bit.Core.Services
         {
             string MakeToken(OrganizationUser orgUser) =>
                 _dataProtector.Protect($"OrganizationUserInvite {orgUser.Id} {orgUser.Email} {CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow)}");
-            await _mailService.BulkSendOrganizationInviteEmailAsync(organization.Name,
+
+            await _mailService.BulkSendOrganizationInviteEmailAsync(organization.Name, CheckOrganizationCanSponsor(organization),
                 orgUsers.Select(o => (o, new ExpiringToken(MakeToken(o), DateTime.UtcNow.AddDays(5)))));
         }
 
@@ -1272,7 +1273,15 @@ namespace Bit.Core.Services
             var nowMillis = CoreHelpers.ToEpocMilliseconds(now);
             var token = _dataProtector.Protect(
                 $"OrganizationUserInvite {orgUser.Id} {orgUser.Email} {nowMillis}");
-            await _mailService.SendOrganizationInviteEmailAsync(organization.Name, orgUser, new ExpiringToken(token, now.AddDays(5)));
+
+            await _mailService.SendOrganizationInviteEmailAsync(organization.Name, CheckOrganizationCanSponsor(organization), orgUser, new ExpiringToken(token, now.AddDays(5)));
+        }
+
+
+        private bool CheckOrganizationCanSponsor(Organization organization)
+        {
+            return StaticStore.GetPlan(organization.PlanType).Product == ProductType.Enterprise
+                && !_globalSettings.SelfHosted;
         }
 
         public async Task<OrganizationUser> AcceptUserAsync(Guid organizationUserId, User user, string token,
