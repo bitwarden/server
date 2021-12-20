@@ -15,6 +15,12 @@ namespace Bit.Core.Models.Business
         public string PublicKey { get; set; }
         public string PrivateKey { get; set; }
 
+        /// <summary>
+        /// Creates and new clone of organization and applies this upgrade to it.
+        /// </summary>
+        /// <param name="organization"></param>
+        /// <param name="enable"></param>
+        /// <returns></returns>
         public Organization ApplyToOrganization(Organization organization, bool enable)
         {
             var newOrg = organization.Clone();
