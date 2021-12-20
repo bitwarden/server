@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json;
 using Bit.Core.Enums;
 using Bit.Core.Models.Table;
-using Newtonsoft.Json;
 
 namespace Bit.Api.Models.Request
 {
@@ -27,7 +27,7 @@ namespace Bit.Api.Models.Request
         public Policy ToPolicy(Policy existingPolicy)
         {
             existingPolicy.Enabled = Enabled.GetValueOrDefault();
-            existingPolicy.Data = Data != null ? JsonConvert.SerializeObject(Data) : null;
+            existingPolicy.Data = Data != null ? JsonSerializer.Serialize(Data) : null;
             return existingPolicy;
         }
     }
