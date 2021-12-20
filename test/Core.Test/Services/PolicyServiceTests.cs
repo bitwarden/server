@@ -1,18 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
+using Bit.Core.OrganizationFeatures.OrgUser;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using PolicyFixtures = Bit.Core.Test.AutoFixture.PolicyFixtures;
+using Bit.Test.Common.AutoFixture;
+using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
-using Bit.Core.Enums;
-using Bit.Test.Common.AutoFixture.Attributes;
-using Bit.Test.Common.AutoFixture;
-using Bit.Core.OrganizationFeatures.OrgUser;
+using PolicyFixtures = Bit.Core.Test.AutoFixture.PolicyFixtures;
 
 namespace Bit.Core.Test.Services
 {
@@ -44,7 +44,7 @@ namespace Bit.Core.Test.Services
         {
             var orgId = Guid.NewGuid();
 
-            SetupOrg(sutProvider, policy.OrganizationId, new Organization 
+            SetupOrg(sutProvider, policy.OrganizationId, new Organization
             {
                 UsePolicies = false,
             });
@@ -264,7 +264,7 @@ namespace Bit.Core.Test.Services
             sutProvider.GetDependency<IPolicyRepository>()
                 .GetByIdAsync(policy.Id)
                 .Returns(new Core.Models.Table.Policy
-                { 
+                {
                     Id = policy.Id,
                     Type = PolicyType.TwoFactorAuthentication,
                     Enabled = false,

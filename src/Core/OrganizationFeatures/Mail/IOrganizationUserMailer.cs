@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Table;

@@ -1,4 +1,4 @@
-using System.Linq;
+﻿using System.Linq;
 using System.Threading.Tasks;
 using Bit.Core.AccessPolicies;
 using Bit.Core.Enums;
@@ -307,7 +307,7 @@ namespace Bit.Core.OrganizationFeatures.Subscription
         private async Task<AccessPolicyResult> ValidateOrganizationCompliantWithNewPlanAsync(Organization organization,
             Plan newPlan, OrganizationUpgrade upgrade)
         {
-            var newPlanSeats = (short) (newPlan.BaseSeats +
+            var newPlanSeats = (short)(newPlan.BaseSeats +
                                         (newPlan.HasAdditionalSeatsOption ? upgrade.AdditionalSeats : 0));
             if (!organization.Seats.HasValue || organization.Seats.Value > newPlanSeats)
             {

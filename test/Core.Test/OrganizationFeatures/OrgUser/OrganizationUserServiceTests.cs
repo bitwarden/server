@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -37,7 +37,7 @@ namespace Bit.Core.Test.OrganizationFeatures.OrgUser
 
             await sutProvider.Sut.SaveUserAsync(orgUser, savingUserId, collections);
 
-            await accessPolicies.Received(1).CanSaveAsync(orgUser,savingUserId);
+            await accessPolicies.Received(1).CanSaveAsync(orgUser, savingUserId);
             if (orgUser.AccessAll)
             {
                 await orgUserRepository.Received(1)
@@ -51,49 +51,49 @@ namespace Bit.Core.Test.OrganizationFeatures.OrgUser
             await sutProvider.GetDependency<IEventService>().Received(1)
                 .LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Updated);
         }
-        
+
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
-         public async Task DeleteUser_Success(
+        public async Task DeleteUser_Success(
              OrganizationUser organizationUser, Guid deletingUserId,
              SutProvider<OrganizationUserService> sutProvider)
-         {
-             var accessPolicies = sutProvider.GetDependency<IOrganizationUserAccessPolicies>();
-             var orgUserRespository = sutProvider.GetDependency<IOrganizationUserRepository>();
+        {
+            var accessPolicies = sutProvider.GetDependency<IOrganizationUserAccessPolicies>();
+            var orgUserRespository = sutProvider.GetDependency<IOrganizationUserRepository>();
 
-             accessPolicies.CanDeleteUserAsync(default, default, default).ReturnsForAnyArgs(AccessPolicyResult.Success);
-             orgUserRespository.GetByIdAsync(organizationUser.Id).Returns(organizationUser);
-             
-             await sutProvider.Sut.DeleteUserAsync(organizationUser.OrganizationId, organizationUser.Id, deletingUserId);
+            accessPolicies.CanDeleteUserAsync(default, default, default).ReturnsForAnyArgs(AccessPolicyResult.Success);
+            orgUserRespository.GetByIdAsync(organizationUser.Id).Returns(organizationUser);
 
-             await accessPolicies.Received(1)
-                 .CanDeleteUserAsync(organizationUser.OrganizationId, organizationUser, deletingUserId);
-             await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).DeleteAsync(organizationUser);
-             await sutProvider.GetDependency<IEventService>().Received(1)
-                 .LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Removed);
-             if (organizationUser.UserId.HasValue)
-             {
-                 await sutProvider.GetDependency<IPushRegistrationService>().ReceivedWithAnyArgs(1)
-                     .DeleteUserRegistrationOrganizationAsync(default, default);
-                 await sutProvider.GetDependency<IPushNotificationService>().ReceivedWithAnyArgs(1)
-                     .PushSyncOrgKeysAsync(default);
-             }
-         }
+            await sutProvider.Sut.DeleteUserAsync(organizationUser.OrganizationId, organizationUser.Id, deletingUserId);
 
-         [Theory, BitAutoData]
+            await accessPolicies.Received(1)
+                .CanDeleteUserAsync(organizationUser.OrganizationId, organizationUser, deletingUserId);
+            await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).DeleteAsync(organizationUser);
+            await sutProvider.GetDependency<IEventService>().Received(1)
+                .LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Removed);
+            if (organizationUser.UserId.HasValue)
+            {
+                await sutProvider.GetDependency<IPushRegistrationService>().ReceivedWithAnyArgs(1)
+                    .DeleteUserRegistrationOrganizationAsync(default, default);
+                await sutProvider.GetDependency<IPushNotificationService>().ReceivedWithAnyArgs(1)
+                    .PushSyncOrgKeysAsync(default);
+            }
+        }
+
+        [Theory, BitAutoData]
         public async Task DeleteUsersAsync_Passes(Organization org, List<OrganizationUser> orgUsers, Guid deletingUserId,
-            SutProvider<OrganizationUserService> sutProvider)
+           SutProvider<OrganizationUserService> sutProvider)
         {
             orgUsers.ForEach(u => u.OrganizationId = org.Id);
             var orgUserIds = orgUsers.Select(u => u.Id);
 
             var accessPolicies = sutProvider.GetDependency<IOrganizationUserAccessPolicies>();
             var orgUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
-            
+
             orgUserRepository.GetManyAsync(orgUserIds).Returns(orgUsers);
             accessPolicies.CanDeleteManyUsersAsync(default, default, default)
                 .ReturnsForAnyArgs(AccessPolicyResult.Success);
             accessPolicies.CanDeleteUserAsync(default, default, default).ReturnsForAnyArgs(AccessPolicyResult.Success);
-            
+
             var result =
                 await sutProvider.Sut.DeleteUsersAsync(org.Id, orgUserIds, deletingUserId);
 

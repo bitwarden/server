@@ -1,4 +1,4 @@
-using Bit.Test.Common.AutoFixture.Attributes;
+﻿using Bit.Test.Common.AutoFixture.Attributes;
 
 namespace Bit.Core.Test.OrganizationFeatures.UserInvite
 {

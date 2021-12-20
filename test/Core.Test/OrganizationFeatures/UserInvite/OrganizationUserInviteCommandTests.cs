@@ -1,7 +1,7 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
-using System.Linq;
 using Bit.Core.AccessPolicies;
 using Bit.Core.Context;
 using Bit.Core.Enums;
@@ -12,18 +12,18 @@ using Bit.Core.Models.Table;
 using Bit.Core.OrganizationFeatures.Mail;
 using Bit.Core.OrganizationFeatures.OrgUser;
 using Bit.Core.OrganizationFeatures.UserInvite;
+using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Services.OrganizationServices.UserInvite;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
+using Bit.Core.Test.AutoFixture.OrganizationUserFixtures;
+using Bit.Core.Test.AutoFixture.PolicyFixtures;
 using Bit.Test.Common.AutoFixture;
+using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
 using Organization = Bit.Core.Models.Table.Organization;
 using OrganizationUser = Bit.Core.Models.Table.OrganizationUser;
-using Bit.Core.Repositories;
-using Bit.Core.Services.OrganizationServices.UserInvite;
-using Bit.Core.Test.AutoFixture.OrganizationUserFixtures;
-using Bit.Core.Test.AutoFixture.PolicyFixtures;
-using Bit.Test.Common.AutoFixture.Attributes;
 using Policy = Bit.Core.Models.Table.Policy;
 
 namespace Bit.Core.Test.OrganizationFeatures.UserInvite
@@ -33,8 +33,8 @@ namespace Bit.Core.Test.OrganizationFeatures.UserInvite
     {
         [Theory]
         [OrganizationInviteDataAutoData(
-            inviteeUserType: (int) OrganizationUserType.User,
-            invitorUserType: (int) OrganizationUserType.Custom
+            inviteeUserType: (int)OrganizationUserType.User,
+            invitorUserType: (int)OrganizationUserType.Custom
         )]
         public async Task InviteUser_Passes(Organization organization,
             IEnumerable<(OrganizationUserInviteData invite, string externalId)> invites,
@@ -47,8 +47,8 @@ namespace Bit.Core.Test.OrganizationFeatures.UserInvite
             invites.Skip(1).ToList().ForEach(i => i.invite.AccessAll = false);
             var expectedInviteCount = invites.SelectMany(i => i.invite.Emails).Count();
 
-            invitor.Permissions = JsonSerializer.Serialize(new Permissions() {ManageUsers = true},
-                new JsonSerializerOptions {PropertyNamingPolicy = JsonNamingPolicy.CamelCase,});
+            invitor.Permissions = JsonSerializer.Serialize(new Permissions() { ManageUsers = true },
+                new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, });
 
             sutProvider.GetDependency<IOrganizationUserInviteAccessPolicies>()
                 .CanInviteAsync(organization, invites.Select(i => i.invite), default)
@@ -76,7 +76,7 @@ namespace Bit.Core.Test.OrganizationFeatures.UserInvite
         {
             var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
 
-            organizationUserRepository.GetManyAsync(default).ReturnsForAnyArgs(new[] {orgUser});
+            organizationUserRepository.GetManyAsync(default).ReturnsForAnyArgs(new[] { orgUser });
 
             var exception = await Assert.ThrowsAsync<BadRequestException>(
                 () => sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key));
@@ -113,8 +113,8 @@ namespace Bit.Core.Test.OrganizationFeatures.UserInvite
             orgUser.OrganizationId = confirmingUser.OrganizationId = org.Id;
             orgUser.UserId = user.Id;
             organizationRepository.GetByIdAsync(org.Id).Returns(org);
-            organizationUserRepository.GetManyAsync(default).ReturnsForAnyArgs(new[] {orgUser});
-            userRepository.GetManyAsync(default).ReturnsForAnyArgs(new[] {user});
+            organizationUserRepository.GetManyAsync(default).ReturnsForAnyArgs(new[] { orgUser });
+            userRepository.GetManyAsync(default).ReturnsForAnyArgs(new[] { user });
             accessPolicies.CanConfirmUserAsync(default, default, default, default)
                 .ReturnsForAnyArgs(AccessPolicyResult.Success);
 
@@ -156,11 +156,11 @@ namespace Bit.Core.Test.OrganizationFeatures.UserInvite
             orgUser2.UserId = user2.Id;
             orgUser3.UserId = user3.Id;
             anotherOrgUser.UserId = user3.Id;
-            var orgUsers = new[] {orgUser1, orgUser2, orgUser3};
+            var orgUsers = new[] { orgUser1, orgUser2, orgUser3 };
 
             organizationRepository.GetByIdAsync(org.Id).Returns(org);
             organizationUserRepository.GetManyAsync(default).ReturnsForAnyArgs(orgUsers);
-            userRepository.GetManyAsync(default).ReturnsForAnyArgs(new[] {user1, user2, user3});
+            userRepository.GetManyAsync(default).ReturnsForAnyArgs(new[] { user1, user2, user3 });
             accessPolicies.CanConfirmUserAsync(default, default, default, default)
                 .ReturnsForAnyArgs(AccessPolicyResult.Success,
                     AccessPolicyResult.Fail("User does not have two-step login enabled."),
@@ -168,10 +168,10 @@ namespace Bit.Core.Test.OrganizationFeatures.UserInvite
 
             organizationUserRepository.GetManyAsync(default).ReturnsForAnyArgs(orgUsers);
             organizationRepository.GetByIdAsync(org.Id).Returns(org);
-            userRepository.GetManyAsync(default).ReturnsForAnyArgs(new[] {user1, user2, user3});
+            userRepository.GetManyAsync(default).ReturnsForAnyArgs(new[] { user1, user2, user3 });
             organizationUserRepository.GetManyByManyUsersAsync(default)
-                .ReturnsForAnyArgs(new[] {orgUser1, orgUser2, orgUser3, anotherOrgUser});
-            
+                .ReturnsForAnyArgs(new[] { orgUser1, orgUser2, orgUser3, anotherOrgUser });
+
             var keys = orgUsers.ToDictionary(ou => ou.Id, _ => key);
             var result = await sutProvider.Sut.ConfirmUsersAsync(confirmingUser.OrganizationId, keys);
             Assert.Contains("", result[0].Item2);

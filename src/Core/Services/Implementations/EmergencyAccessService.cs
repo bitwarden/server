@@ -7,12 +7,12 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
+using Bit.Core.OrganizationFeatures.OrgUser;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
-using Bit.Core.OrganizationFeatures.OrgUser;
 
 namespace Bit.Core.Services
 {

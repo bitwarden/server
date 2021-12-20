@@ -1,23 +1,23 @@
-using System;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Bit.Core.Repositories;
-using Bit.Core.Models.Business;
-using Bit.Core.Models.Table;
-using Bit.Core.Utilities;
-using Bit.Core.Exceptions;
-using System.Collections.Generic;
-using Microsoft.AspNetCore.DataProtection;
-using Stripe;
-using Bit.Core.Enums;
-using Bit.Core.Models.Data;
-using Bit.Core.Settings;
-using System.IO;
-using Newtonsoft.Json;
 using Bit.Core.Context;
+using Bit.Core.Enums;
+using Bit.Core.Exceptions;
+using Bit.Core.Models.Business;
+using Bit.Core.Models.Data;
+using Bit.Core.Models.Table;
 using Bit.Core.OrganizationFeatures;
-using Microsoft.Extensions.Logging;
 using Bit.Core.OrganizationFeatures.Mail;
+using Bit.Core.Repositories;
+using Bit.Core.Settings;
+using Bit.Core.Utilities;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
+using Stripe;
 
 namespace Bit.Core.Services
 {
@@ -215,7 +215,7 @@ namespace Bit.Core.Services
                 });
             return returnValue;
         }
-        
+
         public async Task<Tuple<Organization, OrganizationUser>> SelfHostedSignUpAsync(
             OrganizationLicense license, User owner, string ownerKey, string collectionName, string publicKey,
             string privateKey)

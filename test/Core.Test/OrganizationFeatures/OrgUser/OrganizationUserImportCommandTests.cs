@@ -1,23 +1,23 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using AutoFixture;
+using Bit.Core.AccessPolicies;
+using Bit.Core.Enums;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
+using Bit.Core.OrganizationFeatures.Mail;
 using Bit.Core.OrganizationFeatures.OrgUser;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Services.OrganizationServices.UserInvite;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
+using Bit.Test.Common.AutoFixture;
+using NSubstitute;
+using Xunit;
 using Organization = Bit.Core.Models.Table.Organization;
 using OrganizationUser = Bit.Core.Models.Table.OrganizationUser;
-using Bit.Test.Common.AutoFixture;
-using Xunit;
-using Bit.Core.Enums;
-using NSubstitute;
-using Bit.Core.OrganizationFeatures.Mail;
-using Bit.Core.AccessPolicies;
-using Bit.Core.Services.OrganizationServices.UserInvite;
-using AutoFixture;
 
 namespace Bit.Core.Test.OrganizationFeatures.OrgUser
 {

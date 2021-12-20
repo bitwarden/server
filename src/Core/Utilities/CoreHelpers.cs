@@ -1,35 +1,35 @@
-﻿using Bit.Core.Models.Data;
-using Newtonsoft.Json;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
-using System.Text.RegularExpressions;
-using Dapper;
-using System.Globalization;
-using System.Web;
-using Microsoft.AspNetCore.DataProtection;
-using Bit.Core.Settings;
-using Bit.Core.Enums;
-using Bit.Core.Context;
-using System.Threading.Tasks;
-using Microsoft.Azure.Storage;
-using Microsoft.Azure.Storage.Blob;
-using Bit.Core.Models.Table;
-using IdentityModel;
 using System.Text.Json;
-using Bit.Core.Enums.Provider;
+using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Web;
 using Azure.Storage.Queues;
 using Azure.Storage.Queues.Models;
-using System.Threading;
-using MimeKit;
 using Bit.Core.AccessPolicies;
+using Bit.Core.Context;
+using Bit.Core.Enums;
+using Bit.Core.Enums.Provider;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Data;
+using Bit.Core.Models.Table;
+using Bit.Core.Settings;
+using Dapper;
+using IdentityModel;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.Azure.Storage;
+using Microsoft.Azure.Storage.Blob;
+using MimeKit;
+using Newtonsoft.Json;
 
 namespace Bit.Core.Utilities
 {
@@ -856,7 +856,7 @@ namespace Bit.Core.Utilities
                     }
                 }
             }
-            
+
             if (providers.Any())
             {
                 foreach (var group in providers.GroupBy(o => o.Type))
@@ -878,7 +878,7 @@ namespace Bit.Core.Utilities
                     }
                 }
             }
-            
+
             return claims;
         }
 

@@ -1,4 +1,4 @@
-namespace Bit.Core.OrganizationFeatures.Mail
+﻿namespace Bit.Core.OrganizationFeatures.Mail
 {
     public interface IOrganizationMailer
     {

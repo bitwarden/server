@@ -1,4 +1,4 @@
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Bit.Core.AccessPolicies;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
@@ -67,9 +67,9 @@ namespace Bit.Core.Test.OrganizationFeatures.Subscription
 
         [Theory]
         [InlinePaidOrganizationAutoData(PlanType.EnterpriseAnnually,
-            new object[] {"Cannot set max seat autoscaling below current seat count.", 1, 2})]
+            new object[] { "Cannot set max seat autoscaling below current seat count.", 1, 2 })]
         [InlinePaidOrganizationAutoData(PlanType.EnterpriseAnnually,
-            new object[] {"Cannot set max seat autoscaling below current seat count.", 4, 6})]
+            new object[] { "Cannot set max seat autoscaling below current seat count.", 4, 6 })]
         [InlineFreeOrganizationAutoData("Your plan does not allow seat autoscaling.", 10, null)]
         public void UpdateAutoScaling_BadInput_Fails(string expectedMessage,
             int? maxAutoscaleSeats, int? currentSeats, Organization organization,

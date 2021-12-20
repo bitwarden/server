@@ -7,13 +7,13 @@ using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
+using Bit.Core.OrganizationFeatures.OrgUser;
+using Bit.Core.OrganizationFeatures.Subscription;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using NSubstitute;
 using Xunit;
-using Bit.Core.OrganizationFeatures.OrgUser;
-using Bit.Core.OrganizationFeatures.Subscription;
 
 namespace Bit.Api.Test.Controllers
 {
@@ -24,6 +24,7 @@ namespace Bit.Api.Test.Controllers
         private readonly IOrganizationRepository _organizationRepository;
         private readonly IOrganizationService _organizationService;
         private readonly IOrganizationSubscriptionService _organizationSubscriptionService;
+        private readonly IOrganizationUserImportCommand _organizationUserImportCommand;
         private readonly IOrganizationUserService _organizationUserService;
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly IPaymentService _paymentService;
@@ -41,6 +42,7 @@ namespace Bit.Api.Test.Controllers
             _organizationRepository = Substitute.For<IOrganizationRepository>();
             _organizationService = Substitute.For<IOrganizationService>();
             _organizationSubscriptionService = Substitute.For<IOrganizationSubscriptionService>();
+            _organizationUserImportCommand = Substitute.For<IOrganizationUserImportCommand>();
             _organizationUserService = Substitute.For<IOrganizationUserService>();
             _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
             _paymentService = Substitute.For<IPaymentService>();
@@ -50,7 +52,7 @@ namespace Bit.Api.Test.Controllers
             _userService = Substitute.For<IUserService>();
 
             _sut = new OrganizationsController(_organizationRepository, _organizationUserRepository,
-                _organizationSubscriptionService, _organizationUserService, _policyRepository, _organizationService,
+                _organizationSubscriptionService, _organizationUserImportCommand, _organizationUserService, _policyRepository, _organizationService,
                 _userService, _paymentService, _currentContext, _ssoConfigRepository, _ssoConfigService,
                 _globalSettings);
         }

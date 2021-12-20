@@ -1,4 +1,4 @@
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Bit.Core.AccessPolicies;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Table;

@@ -1,4 +1,4 @@
-using Bit.Core.AccessPolicies;
+﻿using Bit.Core.AccessPolicies;
 using Bit.Core.Models.Table;
 
 namespace Bit.Core.OrganizationFeatures.OrgUser

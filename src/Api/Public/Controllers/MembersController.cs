@@ -6,13 +6,13 @@ using System.Threading.Tasks;
 using Bit.Api.Models.Public.Request;
 using Bit.Api.Models.Public.Response;
 using Bit.Core.Context;
-using Bit.Core.Repositories;
-using Bit.Core.Services;
-using Bit.Core.OrganizationFeatures.UserInvite;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
 using Bit.Core.Models.Data;
 using Bit.Core.OrganizationFeatures.OrgUser;
+using Bit.Core.OrganizationFeatures.UserInvite;
+using Bit.Core.Repositories;
+using Bit.Core.Services;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.Public.Controllers
 {

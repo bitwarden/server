@@ -9,6 +9,7 @@ using Bit.Core.Models;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
+using Bit.Core.OrganizationFeatures.Subscription;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -38,6 +39,7 @@ namespace Bit.Sso.Controllers
         private readonly IOrganizationRepository _organizationRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly IOrganizationService _organizationService;
+        private readonly IOrganizationSubscriptionService _organizationSubscriptionService;
         private readonly ISsoConfigRepository _ssoConfigRepository;
         private readonly ISsoUserRepository _ssoUserRepository;
         private readonly IUserRepository _userRepository;
@@ -64,7 +66,7 @@ namespace Bit.Sso.Controllers
             II18nService i18nService,
             UserManager<User> userManager,
             IGlobalSettings globalSettings,
-            Core.Services.IEventService eventService)
+            Core.Services.IEventService eventService, IOrganizationSubscriptionService organizationSubscriptionService)
         {
             _schemeProvider = schemeProvider;
             _clientStore = clientStore;
@@ -81,6 +83,7 @@ namespace Bit.Sso.Controllers
             _i18nService = i18nService;
             _userManager = userManager;
             _eventService = eventService;
+            _organizationSubscriptionService = organizationSubscriptionService;
             _globalSettings = globalSettings;
         }
 
@@ -485,13 +488,14 @@ namespace Bit.Sso.Controllers
                             throw new Exception("Cannot autoscale on self-hosted instance.");
                         }
 
-                        await _organizationService.AutoAddSeatsAsync(organization, 1, prorationDate);
+                        await _organizationSubscriptionService.AutoAddSeatsAsync(organization, 1, prorationDate);
                     }
                     catch (Exception e)
                     {
                         if (organization.Seats.Value != initialSeatCount)
                         {
-                            await _organizationService.AdjustSeatsAsync(orgId, initialSeatCount - organization.Seats.Value, prorationDate);
+                            await _organizationSubscriptionService.AdjustSeatsAsync(organization,
+                                initialSeatCount - organization.Seats.Value, prorationDate);
                         }
                         _logger.LogInformation(e, "SSO auto provisioning failed");
                         throw new Exception(_i18nService.T("NoSeatsAvailable", organization.Name));

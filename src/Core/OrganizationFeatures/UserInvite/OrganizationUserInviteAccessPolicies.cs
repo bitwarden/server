@@ -1,15 +1,15 @@
-using System;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
+using Bit.Core.AccessPolicies;
 using Bit.Core.Context;
 using Bit.Core.Enums;
-using Bit.Core.Models.Table;
-using Bit.Core.AccessPolicies;
-using Bit.Core.Repositories;
-using System.Linq;
-using Bit.Core.Services;
-using System.Collections.Generic;
-using Bit.Core.OrganizationFeatures.OrgUser;
 using Bit.Core.Models.Data;
+using Bit.Core.Models.Table;
+using Bit.Core.OrganizationFeatures.OrgUser;
+using Bit.Core.Repositories;
+using Bit.Core.Services;
 
 namespace Bit.Core.OrganizationFeatures.UserInvite
 {
@@ -51,7 +51,7 @@ namespace Bit.Core.OrganizationFeatures.UserInvite
                 {
                     break;
                 }
-                
+
                 currentResult = currentResult.LazyAnd(await UserCanEditUserTypeAsync(organization.Id, inviteType));
             }
 

@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Threading.Tasks;
 using Bit.Core.AccessPolicies;
 using Bit.Core.Context;
@@ -25,22 +25,21 @@ namespace Bit.Core.Test.OrganizationFeatures.UserInvite
     [SutProviderCustomize]
     public class OrganizationUserInviteAccessPoliciesTests
     {
-        [Theory]
-        [OrganizationInviteDataAutoData]
+        [Theory, OrganizationInviteDataAutoData]
         public async Task InviteUser_NoEmails_Throws(Organization organization, OrganizationUser invitor,
             OrganizationUserInviteData invite, SutProvider<OrganizationUserInviteAccessPolicies> sutProvider)
         {
             invite.Emails = null;
 
-            var result = await sutProvider.Sut.CanInviteAsync(organization, new[] {invite}, invitor.UserId);
+            var result = await sutProvider.Sut.CanInviteAsync(organization, new[] { invite }, invitor.UserId);
 
             Assert.Equal(AccessPolicyResult.Fail(), result);
         }
 
         [Theory]
         [OrganizationInviteDataAutoData(
-            inviteeUserType: (int) OrganizationUserType.Admin,
-            invitorUserType: (int) OrganizationUserType.Owner
+            inviteeUserType: (int)OrganizationUserType.Admin,
+            invitorUserType: (int)OrganizationUserType.Owner
         )]
         public async Task InviteUser_NoOwner_Throws(Organization organization,
             OrganizationUserInviteData invite, OrganizationUser invitor,
@@ -51,15 +50,15 @@ namespace Bit.Core.Test.OrganizationFeatures.UserInvite
             sutProvider.GetDependency<IOrganizationService>().HasConfirmedOwnersExceptAsync(default, default, default)
                 .ReturnsForAnyArgs(false);
 
-            var result = await sutProvider.Sut.CanInviteAsync(organization, new[] {invite}, invitor.UserId);
+            var result = await sutProvider.Sut.CanInviteAsync(organization, new[] { invite }, invitor.UserId);
 
             Assert.Equal(AccessPolicyResult.Fail("Organization must have at least one confirmed owner."), result);
         }
 
         [Theory]
         [OrganizationInviteDataAutoData(
-            inviteeUserType: (int) OrganizationUserType.Owner,
-            invitorUserType: (int) OrganizationUserType.Admin
+            inviteeUserType: (int)OrganizationUserType.Owner,
+            invitorUserType: (int)OrganizationUserType.Admin
         )]
         public async Task InviteUser_NonOwnerConfiguringOwner_Throws(Organization organization,
             OrganizationUserInviteData invite, OrganizationUser invitor,
@@ -67,15 +66,15 @@ namespace Bit.Core.Test.OrganizationFeatures.UserInvite
         {
             sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(organization.Id).Returns(true);
 
-            var result = await sutProvider.Sut.CanInviteAsync(organization, new[] {invite}, invitor.UserId);
+            var result = await sutProvider.Sut.CanInviteAsync(organization, new[] { invite }, invitor.UserId);
 
             Assert.Equal(AccessPolicyResult.Fail("Only an Owner can configure another Owner's account."), result);
         }
 
         [Theory]
         [OrganizationInviteDataAutoData(
-            inviteeUserType: (int) OrganizationUserType.Custom,
-            invitorUserType: (int) OrganizationUserType.User
+            inviteeUserType: (int)OrganizationUserType.Custom,
+            invitorUserType: (int)OrganizationUserType.User
         )]
         public async Task InviteUser_NonAdminConfiguringAdmin_Throws(Organization organization,
             OrganizationUserInviteData invite, OrganizationUser invitor,
@@ -83,57 +82,57 @@ namespace Bit.Core.Test.OrganizationFeatures.UserInvite
         {
             sutProvider.GetDependency<ICurrentContext>().OrganizationUser(organization.Id).Returns(true);
 
-            var result = await sutProvider.Sut.CanInviteAsync(organization, new[] {invite}, invitor.UserId);
+            var result = await sutProvider.Sut.CanInviteAsync(organization, new[] { invite }, invitor.UserId);
 
             Assert.Equal(AccessPolicyResult.Fail("Only Owners and Admins can configure Custom accounts."), result);
         }
 
         [Theory]
         [OrganizationInviteDataAutoData(
-            inviteeUserType: (int) OrganizationUserType.Manager,
-            invitorUserType: (int) OrganizationUserType.Custom
+            inviteeUserType: (int)OrganizationUserType.Manager,
+            invitorUserType: (int)OrganizationUserType.Custom
         )]
         public async Task InviteUser_CustomUserWithoutManageUsersConfiguringUser_Throws(Organization organization,
             OrganizationUserInviteData invite, OrganizationUser invitor,
             SutProvider<OrganizationUserInviteAccessPolicies> sutProvider)
         {
-            invitor.Permissions = JsonSerializer.Serialize(new Permissions() {ManageUsers = false},
-                new JsonSerializerOptions {PropertyNamingPolicy = JsonNamingPolicy.CamelCase,});
+            invitor.Permissions = JsonSerializer.Serialize(new Permissions() { ManageUsers = false },
+                new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, });
 
             var currentContext = sutProvider.GetDependency<ICurrentContext>();
             currentContext.OrganizationCustom(organization.Id).Returns(true);
             currentContext.ManageUsers(organization.Id).Returns(false);
 
-            var result = await sutProvider.Sut.CanInviteAsync(organization, new[] {invite}, invitor.UserId);
+            var result = await sutProvider.Sut.CanInviteAsync(organization, new[] { invite }, invitor.UserId);
 
             Assert.Equal(AccessPolicyResult.Fail("Your account does not have permission to manage users."), result);
         }
 
         [Theory]
         [OrganizationInviteDataAutoData(
-            inviteeUserType: (int) OrganizationUserType.Admin,
-            invitorUserType: (int) OrganizationUserType.Custom
+            inviteeUserType: (int)OrganizationUserType.Admin,
+            invitorUserType: (int)OrganizationUserType.Custom
         )]
         public async Task InviteUser_CustomUserConfiguringAdmin_Throws(Organization organization,
             OrganizationUserInviteData invite, OrganizationUser invitor,
             SutProvider<OrganizationUserInviteAccessPolicies> sutProvider)
         {
-            invitor.Permissions = JsonSerializer.Serialize(new Permissions() {ManageUsers = true},
-                new JsonSerializerOptions {PropertyNamingPolicy = JsonNamingPolicy.CamelCase,});
+            invitor.Permissions = JsonSerializer.Serialize(new Permissions() { ManageUsers = true },
+                new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, });
 
             var currentContext = sutProvider.GetDependency<ICurrentContext>();
             currentContext.OrganizationCustom(organization.Id).Returns(true);
             currentContext.ManageUsers(organization.Id).Returns(true);
 
-            var result = await sutProvider.Sut.CanInviteAsync(organization, new[] {invite}, invitor.UserId);
+            var result = await sutProvider.Sut.CanInviteAsync(organization, new[] { invite }, invitor.UserId);
 
             Assert.Equal(AccessPolicyResult.Fail("Custom users can not manage Admins or Owners."), result);
         }
 
         [Theory]
         [OrganizationInviteDataAutoData(
-            inviteeUserType: (int) OrganizationUserType.User,
-            invitorUserType: (int) OrganizationUserType.Owner
+            inviteeUserType: (int)OrganizationUserType.User,
+            invitorUserType: (int)OrganizationUserType.Owner
         )]
         public async Task InviteUser_NoPermissionsObject_Passes(Organization organization,
             OrganizationUserInviteData invite,
@@ -148,7 +147,7 @@ namespace Bit.Core.Test.OrganizationFeatures.UserInvite
             sutProvider.GetDependency<IOrganizationService>().HasConfirmedOwnersExceptAsync(default, default)
                 .ReturnsForAnyArgs(true);
 
-            var result = await sutProvider.Sut.CanInviteAsync(organization, new[] {invite}, invitor.UserId);
+            var result = await sutProvider.Sut.CanInviteAsync(organization, new[] { invite }, invitor.UserId);
 
             Assert.Equal(AccessPolicyResult.Success, result);
         }
@@ -171,7 +170,7 @@ namespace Bit.Core.Test.OrganizationFeatures.UserInvite
             orgUser.Type = userType;
             organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(orgUser.UserId.Value).Returns(1);
 
-            var result = await sutProvider.Sut.CanConfirmUserAsync(org, user, orgUser, new[] {orgUser});
+            var result = await sutProvider.Sut.CanConfirmUserAsync(org, user, orgUser, new[] { orgUser });
 
             Assert.Equal(AccessPolicyResult.Fail("User can only be an admin of one free organization."), result);
         }
@@ -213,7 +212,7 @@ namespace Bit.Core.Test.OrganizationFeatures.UserInvite
             orgUser.Type = orgUserType;
             organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(orgUser.UserId.Value).Returns(1);
 
-            var result = await sutProvider.Sut.CanConfirmUserAsync(org, user, orgUser, new[] {orgUser});
+            var result = await sutProvider.Sut.CanConfirmUserAsync(org, user, orgUser, new[] { orgUser });
 
             Assert.Equal(AccessPolicyResult.Success, result);
         }
@@ -233,10 +232,10 @@ namespace Bit.Core.Test.OrganizationFeatures.UserInvite
             orgUser.UserId = orgUserAnotherOrg.UserId = user.Id;
             singleOrgPolicy.OrganizationId = org.Id;
             policyRepository.GetManyByTypeApplicableToUserIdAsync(user.Id, PolicyType.SingleOrg,
-                OrganizationUserStatusType.Invited).Returns(new[] {singleOrgPolicy});
+                OrganizationUserStatusType.Invited).Returns(new[] { singleOrgPolicy });
 
             var result =
-                await sutProvider.Sut.CanConfirmUserAsync(org, user, orgUser, new[] {orgUserAnotherOrg, orgUser});
+                await sutProvider.Sut.CanConfirmUserAsync(org, user, orgUser, new[] { orgUserAnotherOrg, orgUser });
 
             Assert.Equal(AccessPolicyResult.Fail("User is a member of another organization."), result);
         }
@@ -256,10 +255,10 @@ namespace Bit.Core.Test.OrganizationFeatures.UserInvite
             orgUser.UserId = orgUserAnotherOrg.UserId = user.Id;
             twoFactorPolicy.OrganizationId = org.Id;
             policyRepository.GetManyByTypeApplicableToUserIdAsync(user.Id, PolicyType.TwoFactorAuthentication,
-                OrganizationUserStatusType.Invited).Returns(new[] {twoFactorPolicy});
+                OrganizationUserStatusType.Invited).Returns(new[] { twoFactorPolicy });
             userService.TwoFactorIsEnabledAsync(default).ReturnsForAnyArgs(false);
 
-            var result = await sutProvider.Sut.CanConfirmUserAsync(org, user, orgUser, new[] {orgUser});
+            var result = await sutProvider.Sut.CanConfirmUserAsync(org, user, orgUser, new[] { orgUser });
 
             Assert.Equal(AccessPolicyResult.Fail("User does not have two-step login enabled."), result);
         }

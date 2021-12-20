@@ -1,19 +1,19 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
+using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
+using Bit.Core.OrganizationFeatures.Mail;
+using Bit.Core.OrganizationFeatures.OrgUser;
+using Bit.Core.OrganizationFeatures.Subscription;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Services.OrganizationServices.UserInvite;
-using Bit.Core.OrganizationFeatures.Mail;
-using Bit.Core.OrganizationFeatures.Subscription;
 using Bit.Core.Utilities;
-using Bit.Core.Models.Data;
-using Bit.Core.OrganizationFeatures.OrgUser;
 
 namespace Bit.Core.OrganizationFeatures.UserInvite
 {

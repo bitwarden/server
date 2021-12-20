@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Bit.Core.AccessPolicies;
@@ -30,7 +30,7 @@ namespace Bit.Core.OrganizationFeatures
             IOrganizationUserRepository organizationUserRepository,
             IGlobalSettings globalSettings,
             ILicensingService licensingService,
-            IOrganizationRepository organizationRepository, 
+            IOrganizationRepository organizationRepository,
             ICollectionRepository collectionRepository,
             IGroupRepository groupRepository,
             ISsoConfigRepository ssoConfigRepository)
@@ -67,7 +67,7 @@ namespace Bit.Core.OrganizationFeatures
 
         public async Task<AccessPolicyResult> CanSignUp(OrganizationSignup signup, Plan plan, bool provider)
         {
-            if (!(plan is {LegacyYear: null}))
+            if (!(plan is { LegacyYear: null }))
             {
                 return Fail("Invalid plan selected.");
             }

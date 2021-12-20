@@ -1,4 +1,4 @@
-using Bit.Core.AccessPolicies;
+﻿using Bit.Core.AccessPolicies;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Xunit;
 
