@@ -1,8 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Runtime.CompilerServices;
-using Quartz.Util;
-
-namespace Bit.Core.AccessPolicies
+﻿namespace Bit.Core.AccessPolicies
 {
     public abstract class BaseAccessPolicies
     {
