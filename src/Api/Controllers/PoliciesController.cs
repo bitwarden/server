@@ -22,7 +22,6 @@ namespace Bit.Api.Controllers
     {
         private readonly IPolicyRepository _policyRepository;
         private readonly IPolicyService _policyService;
-        private readonly IOrganizationService _organizationService;
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly IUserService _userService;
         private readonly ICurrentContext _currentContext;
@@ -32,7 +31,6 @@ namespace Bit.Api.Controllers
         public PoliciesController(
             IPolicyRepository policyRepository,
             IPolicyService policyService,
-            IOrganizationService organizationService,
             IOrganizationUserRepository organizationUserRepository,
             IUserService userService,
             ICurrentContext currentContext,
@@ -41,7 +39,6 @@ namespace Bit.Api.Controllers
         {
             _policyRepository = policyRepository;
             _policyService = policyService;
-            _organizationService = organizationService;
             _organizationUserRepository = organizationUserRepository;
             _userService = userService;
             _currentContext = currentContext;

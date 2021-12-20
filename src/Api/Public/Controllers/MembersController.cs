@@ -22,7 +22,6 @@ namespace Bit.Api.Public.Controllers
     {
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly IGroupRepository _groupRepository;
-        private readonly IOrganizationService _organizationService;
         private readonly IOrganizationUserService _organizationUserService;
         private readonly IOrganizationUserInviteCommand _organizationUserInviteCommand;
         private readonly IUserService _userService;
@@ -31,7 +30,6 @@ namespace Bit.Api.Public.Controllers
         public MembersController(
             IOrganizationUserRepository organizationUserRepository,
             IGroupRepository groupRepository,
-            IOrganizationService organizationService,
             IOrganizationUserService organizationUserService,
             IOrganizationUserInviteCommand organizationUserInviteCommand,
             IUserService userService,
@@ -39,7 +37,6 @@ namespace Bit.Api.Public.Controllers
         {
             _organizationUserRepository = organizationUserRepository;
             _groupRepository = groupRepository;
-            _organizationService = organizationService;
             _organizationUserService = organizationUserService;
             _organizationUserInviteCommand = organizationUserInviteCommand;
             _userService = userService;

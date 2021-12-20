@@ -24,11 +24,9 @@ namespace Bit.Api.Controllers
     {
         private readonly IOrganizationRepository _organizationRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
-        private readonly IOrganizationService _organizationService;
         private readonly IOrganizationUserService _organizationUserService;
         private readonly IOrganizationUserInviteCommand _organizationUserInviteCommand;
         private readonly IPasswordResetService _passwordResetService;
-        private readonly ICollectionRepository _collectionRepository;
         private readonly IGroupRepository _groupRepository;
         private readonly IUserService _userService;
         private readonly ICurrentContext _currentContext;
@@ -36,22 +34,18 @@ namespace Bit.Api.Controllers
         public OrganizationUsersController(
             IOrganizationRepository organizationRepository,
             IOrganizationUserRepository organizationUserRepository,
-            IOrganizationService organizationService,
             IOrganizationUserService organizationUserService,
             IOrganizationUserInviteCommand organizationUserInviteCommand,
             IPasswordResetService passwordResetService,
-            ICollectionRepository collectionRepository,
             IGroupRepository groupRepository,
             IUserService userService,
             ICurrentContext currentContext)
         {
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
-            _organizationService = organizationService;
             _organizationUserService = organizationUserService;
             _organizationUserInviteCommand = organizationUserInviteCommand;
             _passwordResetService = passwordResetService;
-            _collectionRepository = collectionRepository;
             _groupRepository = groupRepository;
             _userService = userService;
             _currentContext = currentContext;

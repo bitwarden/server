@@ -38,7 +38,6 @@ namespace Bit.Sso.Controllers
         private readonly ILogger<AccountController> _logger;
         private readonly IOrganizationRepository _organizationRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
-        private readonly IOrganizationService _organizationService;
         private readonly IOrganizationSubscriptionService _organizationSubscriptionService;
         private readonly ISsoConfigRepository _ssoConfigRepository;
         private readonly ISsoUserRepository _ssoUserRepository;
@@ -57,7 +56,6 @@ namespace Bit.Sso.Controllers
             ILogger<AccountController> logger,
             IOrganizationRepository organizationRepository,
             IOrganizationUserRepository organizationUserRepository,
-            IOrganizationService organizationService,
             ISsoConfigRepository ssoConfigRepository,
             ISsoUserRepository ssoUserRepository,
             IUserRepository userRepository,
@@ -74,7 +72,6 @@ namespace Bit.Sso.Controllers
             _logger = logger;
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
-            _organizationService = organizationService;
             _userRepository = userRepository;
             _ssoConfigRepository = ssoConfigRepository;
             _ssoUserRepository = ssoUserRepository;
