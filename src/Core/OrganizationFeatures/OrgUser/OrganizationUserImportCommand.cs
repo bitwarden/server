@@ -52,8 +52,7 @@ namespace Bit.Core.OrganizationFeatures.OrgUser
             _referenceEventService = referenceEventService;
         }
 
-        // TODO MDG: split this up
-        // TODO MDG: resuse OrganizationUserInviteCommand
+        // TODO: split this up
         public async Task ImportAsync(Guid organizationId, Guid? importingUserId, IEnumerable<ImportedGroup> groups,
             IEnumerable<ImportedOrganizationUser> newUsers, IEnumerable<string> removeUserExternalIds,
             bool overwriteExisting)

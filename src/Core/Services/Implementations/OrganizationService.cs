@@ -93,7 +93,7 @@ namespace Bit.Core.Services
             _organizationUserMailer = organizationUserMailer;
         }
 
-        // TODO MDG: Move to OrganizationPaymentService?
+        // TODO: This feels like it likely doesn't belong. Make OrganizationPaymentService?
         public async Task ReplacePaymentMethodAsync(Guid organizationId, string paymentToken,
             PaymentMethodType paymentMethodType, TaxInfo taxInfo)
         {
@@ -111,7 +111,7 @@ namespace Bit.Core.Services
             }
         }
 
-        // TODO MDG: This feels like it likely doesn't belong
+        // TODO: This feels like it likely doesn't belong. Make OrganizationPaymentService?
         public async Task VerifyBankAsync(Guid organizationId, int amount1, int amount2)
         {
             var organization = await GetOrgById(organizationId);
@@ -329,7 +329,6 @@ namespace Bit.Core.Services
             }
         }
 
-        // TODO MDG: Break this up
         public async Task UpdateLicenseAsync(Guid organizationId, OrganizationLicense license)
         {
             if (!_globalSettings.SelfHosted)
@@ -643,7 +642,7 @@ namespace Bit.Core.Services
             await ReplaceAndUpdateCache(organization);
         }
 
-        // TODO MDG: move out of OrganizationService
+        // TODO: this feels like it doesn't belong. Make SsoUserService?
         public async Task DeleteSsoUserAsync(Guid userId, Guid? organizationId)
         {
             await _ssoUserRepository.DeleteAsync(userId, organizationId);
