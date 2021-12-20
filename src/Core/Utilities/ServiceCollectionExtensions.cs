@@ -360,7 +360,6 @@ namespace Bit.Core.Utilities
 
         public static void AddNoopServices(this IServiceCollection services)
         {
-            services.AddSingleton<IMailService, NoopMailService>();
             services.AddSingleton<IMailDeliveryService, NoopMailDeliveryService>();
             services.AddSingleton<IPushNotificationService, NoopPushNotificationService>();
             services.AddSingleton<IBlockIpService, NoopBlockIpService>();
