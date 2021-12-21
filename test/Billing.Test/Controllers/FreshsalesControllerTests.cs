@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using Bit.Billing.Controllers;
 using Bit.Core.Models.Table;
@@ -79,7 +80,7 @@ namespace Bit.Billing.Test.Controllers
             var response = await sut.PostWebhook(freshsalesApiKey, new CustomWebhookRequestModel
             {
                 LeadId = leadId,
-            });
+            }, new CancellationToken(false));
 
             var statusCodeResult = Assert.IsAssignableFrom<StatusCodeResult>(response);
             Assert.Equal(StatusCodes.Status204NoContent, statusCodeResult.StatusCode);
