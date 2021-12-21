@@ -2,6 +2,7 @@
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Text.Json;
 using Newtonsoft.Json;
 using Xunit;
 
@@ -54,5 +55,16 @@ namespace Bit.Test.Common.Helpers
             Assert.Equal(expected, actual);
             return true;
         };
+
+        public static JsonElement AssertJsonProperty(JsonElement element, string propertyName, JsonValueKind jsonValueKind)
+        {
+            if (!element.TryGetProperty(propertyName, out var subElement))
+            {
+                throw new Xunit.Sdk.XunitException($"Could not find property by name '{propertyName}'");
+            }
+
+            Assert.Equal(jsonValueKind, subElement.ValueKind);
+            return subElement;
+        }
     }
 }

@@ -11,7 +11,7 @@ namespace Bit.Api.Models
         {
             Id = data.Id;
             FileName = data.FileName;
-            Size = data.SizeString;
+            Size = data.Size.ToString();
             SizeName = CoreHelpers.ReadableBytesSize(data.Size);
         }
 

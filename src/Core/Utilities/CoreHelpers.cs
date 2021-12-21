@@ -27,7 +27,6 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Azure.Storage;
 using Microsoft.Azure.Storage.Blob;
 using MimeKit;
-using Newtonsoft.Json;
 
 namespace Bit.Core.Utilities
 {
@@ -434,7 +433,7 @@ namespace Bit.Core.Utilities
         /// </summary>
         public static T CloneObject<T>(T obj)
         {
-            return JsonConvert.DeserializeObject<T>(JsonConvert.SerializeObject(obj));
+            return JsonHelpers.Deserialize<T>(JsonHelpers.Serialize(obj));
         }
 
         public static bool SettingHasValue(string setting)

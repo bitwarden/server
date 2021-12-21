@@ -8,7 +8,6 @@ using Bit.Core.Enums;
 using Bit.Core.Models.Table;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Newtonsoft.Json;
 
 namespace Bit.Core.Models.Business
 {

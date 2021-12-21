@@ -7,7 +7,6 @@ using Azure.Messaging.EventGrid.SystemEvents;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Newtonsoft.Json;
 
 namespace Bit.Api.Utilities
 {
@@ -27,7 +26,7 @@ namespace Bit.Api.Utilities
                         var s = await reader.ReadToEndAsync();
                         if (!string.IsNullOrWhiteSpace(s))
                         {
-                            obj = JsonConvert.DeserializeObject<T>(s);
+                            obj = JsonHelpers.Deserialize<T>(s);
                         }
                     }
                 }

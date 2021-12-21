@@ -21,7 +21,6 @@ using Core.Models.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 
 namespace Bit.Api.Controllers
 {
@@ -802,7 +801,7 @@ namespace Bit.Api.Controllers
                         }
                         catch (Exception e)
                         {
-                            _logger.LogError(e, $"Uncaught exception occurred while handling event grid event: {JsonConvert.SerializeObject(eventGridEvent)}");
+                            _logger.LogError(e, $"Uncaught exception occurred while handling event grid event: {JsonHelpers.Serialize(eventGridEvent)}");
                             return;
                         }
                     }

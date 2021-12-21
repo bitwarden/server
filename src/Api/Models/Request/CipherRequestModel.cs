@@ -71,20 +71,18 @@ namespace Bit.Api.Models.Request
                 case CipherType.Login:
                     var loginObj = JObject.FromObject(ToCipherLoginData(),
                         new JsonSerializer { NullValueHandling = NullValueHandling.Ignore });
+                    // TODO: Switch to JsonNode in .NET 6 https://docs.microsoft.com/en-us/dotnet/standard/serialization/system-text-json-use-dom-utf8jsonreader-utf8jsonwriter?pivots=dotnet-6-0
                     loginObj[nameof(CipherLoginData.Uri)]?.Parent?.Remove();
                     existingCipher.Data = loginObj.ToString(Formatting.None);
                     break;
                 case CipherType.Card:
-                    existingCipher.Data = JsonConvert.SerializeObject(ToCipherCardData(),
-                        new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
+                    existingCipher.Data = JsonHelpers.Serialize(ToCipherCardData(), JsonHelpers.IgnoreNullJsonOptions);
                     break;
                 case CipherType.Identity:
-                    existingCipher.Data = JsonConvert.SerializeObject(ToCipherIdentityData(),
-                        new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
+                    existingCipher.Data = JsonHelpers.Serialize(ToCipherIdentityData(), JsonHelpers.IgnoreNullJsonOptions);
                     break;
                 case CipherType.SecureNote:
-                    existingCipher.Data = JsonConvert.SerializeObject(ToCipherSecureNoteData(),
-                        new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
+                    existingCipher.Data = JsonHelpers.Serialize(ToCipherSecureNoteData(), JsonHelpers.IgnoreNullJsonOptions);
                     break;
                 default:
                     throw new ArgumentException("Unsupported type: " + nameof(Type) + ".");

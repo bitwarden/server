@@ -2,12 +2,12 @@
 using System.IO;
 using System.Threading.Tasks;
 using Bit.Api.Models.Request;
+using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Primitives;
 using Microsoft.Net.Http.Headers;
-using Newtonsoft.Json;
 
 namespace Bit.Api.Utilities
 {
@@ -94,7 +94,8 @@ namespace Bit.Api.Utilities
                             var fileName = HeaderUtilities.RemoveQuotes(secondContent.FileName).ToString();
                             using (secondSection.Body)
                             {
-                                var model = JsonConvert.DeserializeObject<SendRequestModel>(requestModelJson);
+                                // NOTE: Evaluate for async
+                                var model = JsonHelpers.Deserialize<SendRequestModel>(requestModelJson);
                                 await callback(secondSection.Body, fileName, model);
                             }
                         }

@@ -19,7 +19,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Newtonsoft.Json;
+// using Newtonsoft.Json;
 using File = System.IO.File;
 using U2fLib = U2F.Core.Crypto.U2F;
 
@@ -983,7 +983,8 @@ namespace Bit.Core.Services
 
                 var dir = $"{_globalSettings.LicenseDirectory}/user";
                 Directory.CreateDirectory(dir);
-                File.WriteAllText($"{dir}/{user.Id}.json", JsonConvert.SerializeObject(license, Formatting.Indented));
+                using var fs = File.OpenWrite(Path.Combine(dir, $"{user.Id}.json"));
+                await JsonHelpers.SerializeAsync(fs, license, JsonHelpers.IndentedJsonOptions);
             }
             else
             {
@@ -1068,7 +1069,8 @@ namespace Bit.Core.Services
 
             var dir = $"{_globalSettings.LicenseDirectory}/user";
             Directory.CreateDirectory(dir);
-            File.WriteAllText($"{dir}/{user.Id}.json", JsonConvert.SerializeObject(license, Formatting.Indented));
+            using var fs = File.OpenWrite(Path.Combine(dir, $"{user.Id}.json"));
+            await JsonHelpers.SerializeAsync(fs, license, JsonHelpers.IndentedJsonOptions);
 
             user.Premium = license.Premium;
             user.RevisionDate = DateTime.UtcNow;

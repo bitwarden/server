@@ -5,7 +5,6 @@ using Bit.Core.Enums;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Table;
 using Bit.Core.Utilities;
-using Newtonsoft.Json;
 
 namespace Bit.Api.Models.Request.Accounts
 {
@@ -44,7 +43,7 @@ namespace Bit.Api.Models.Request.Accounts
 
             if (ReferenceData != null)
             {
-                user.ReferenceData = JsonConvert.SerializeObject(ReferenceData);
+                user.ReferenceData = JsonHelpers.Serialize(ReferenceData);
             }
 
             if (Key != null)

@@ -19,7 +19,6 @@ using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 
 namespace Bit.Api.Controllers
 {
@@ -227,7 +226,7 @@ namespace Bit.Api.Controllers
             var userId = _userService.GetProperUserId(User).Value;
             var sendId = new Guid(id);
             var send = await _sendRepository.GetByIdAsync(sendId);
-            var fileData = JsonConvert.DeserializeObject<SendFileData>(send?.Data);
+            var fileData = JsonHelpers.Deserialize<SendFileData>(send?.Data);
 
             if (send == null || send.Type != SendType.File || (send.UserId.HasValue && send.UserId.Value != userId) ||
                 !send.UserId.HasValue || fileData.Id != fileId || fileData.Validated)
@@ -289,7 +288,7 @@ namespace Bit.Api.Controllers
                         }
                         catch (Exception e)
                         {
-                            _logger.LogError(e, $"Uncaught exception occurred while handling event grid event: {JsonConvert.SerializeObject(eventGridEvent)}");
+                            _logger.LogError(e, $"Uncaught exception occurred while handling event grid event: {JsonHelpers.Serialize(eventGridEvent)}");
                             return;
                         }
                     }

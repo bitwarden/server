@@ -12,7 +12,6 @@ using Fido2NetLib;
 using Fido2NetLib.Objects;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
-using Newtonsoft.Json;
 
 namespace Bit.Core.Identity
 {
@@ -98,7 +97,7 @@ namespace Bit.Core.Identity
                 return false;
             }
 
-            var clientResponse = JsonConvert.DeserializeObject<AuthenticatorAssertionRawResponse>(token);
+            var clientResponse = JsonHelpers.Deserialize<AuthenticatorAssertionRawResponse>(token);
 
             var jsonOptions = provider.MetaData["login"].ToString();
             var options = AssertionOptions.FromJson(jsonOptions);

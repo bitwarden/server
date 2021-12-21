@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using Bit.Core.Enums;
 using Bit.Core.Models.Table;
-using Newtonsoft.Json;
+using Bit.Core.Utilities;
 
 namespace Bit.Api.Models.Request
 {
@@ -12,9 +12,9 @@ namespace Bit.Api.Models.Request
 
         public User ToUser(User existingUser)
         {
-            existingUser.EquivalentDomains = EquivalentDomains != null ? JsonConvert.SerializeObject(EquivalentDomains) : null;
+            existingUser.EquivalentDomains = EquivalentDomains != null ? JsonHelpers.Serialize(EquivalentDomains) : null;
             existingUser.ExcludedGlobalEquivalentDomains = ExcludedGlobalEquivalentDomains != null ?
-                JsonConvert.SerializeObject(ExcludedGlobalEquivalentDomains) : null;
+                JsonHelpers.Serialize(ExcludedGlobalEquivalentDomains) : null;
             return existingUser;
         }
     }

@@ -17,7 +17,6 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Web;
-using Newtonsoft.Json;
 
 namespace Bit.Core.Utilities.Duo
 {
@@ -175,7 +174,7 @@ namespace Bit.Core.Utilities.Duo
             var res = ApiCall(method, path, parameters, timeout, out var statusCode);
             try
             {
-                var dict = JsonConvert.DeserializeObject<Dictionary<string, object>>(res);
+                var dict = JsonHelpers.Deserialize<Dictionary<string, object>>(res);
                 if (dict["stat"] as string == "OK")
                 {
                     return dict["response"] as T;

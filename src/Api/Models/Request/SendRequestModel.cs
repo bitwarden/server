@@ -6,7 +6,6 @@ using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
-using Newtonsoft.Json;
 
 namespace Bit.Api.Models.Request
 {
@@ -65,15 +64,13 @@ namespace Bit.Api.Models.Request
             switch (existingSend.Type)
             {
                 case SendType.File:
-                    var fileData = JsonConvert.DeserializeObject<SendFileData>(existingSend.Data);
+                    var fileData = JsonHelpers.Deserialize<SendFileData>(existingSend.Data);
                     fileData.Name = Name;
                     fileData.Notes = Notes;
-                    existingSend.Data = JsonConvert.SerializeObject(fileData,
-                        new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
+                    existingSend.Data = JsonHelpers.Serialize(fileData, JsonHelpers.IgnoreNullJsonOptions);
                     break;
                 case SendType.Text:
-                    existingSend.Data = JsonConvert.SerializeObject(ToSendData(),
-                        new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
+                    existingSend.Data = JsonHelpers.Serialize(ToSendData(), JsonHelpers.IgnoreNullJsonOptions);
                     break;
                 default:
                     throw new ArgumentException("Unsupported type: " + nameof(Type) + ".");

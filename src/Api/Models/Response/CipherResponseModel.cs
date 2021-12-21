@@ -6,8 +6,8 @@ using Bit.Core.Models.Api;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
 using Bit.Core.Settings;
+using Bit.Core.Utilities;
 using Core.Models.Data;
-using Newtonsoft.Json;
 
 namespace Bit.Api.Models.Response
 {
@@ -28,25 +28,25 @@ namespace Bit.Api.Models.Response
             switch (cipher.Type)
             {
                 case CipherType.Login:
-                    var loginData = JsonConvert.DeserializeObject<CipherLoginData>(cipher.Data);
+                    var loginData = JsonHelpers.Deserialize<CipherLoginData>(cipher.Data);
                     cipherData = loginData;
                     Data = loginData;
                     Login = new CipherLoginModel(loginData);
                     break;
                 case CipherType.SecureNote:
-                    var secureNoteData = JsonConvert.DeserializeObject<CipherSecureNoteData>(cipher.Data);
+                    var secureNoteData = JsonHelpers.Deserialize<CipherSecureNoteData>(cipher.Data);
                     Data = secureNoteData;
                     cipherData = secureNoteData;
                     SecureNote = new CipherSecureNoteModel(secureNoteData);
                     break;
                 case CipherType.Card:
-                    var cardData = JsonConvert.DeserializeObject<CipherCardData>(cipher.Data);
+                    var cardData = JsonHelpers.Deserialize<CipherCardData>(cipher.Data);
                     Data = cardData;
                     cipherData = cardData;
                     Card = new CipherCardModel(cardData);
                     break;
                 case CipherType.Identity:
-                    var identityData = JsonConvert.DeserializeObject<CipherIdentityData>(cipher.Data);
+                    var identityData = JsonHelpers.Deserialize<CipherIdentityData>(cipher.Data);
                     Data = identityData;
                     cipherData = identityData;
                     Identity = new CipherIdentityModel(identityData);

@@ -5,7 +5,6 @@ using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
-using Newtonsoft.Json;
 
 namespace Bit.Api.Models.Response
 {
@@ -26,12 +25,12 @@ namespace Bit.Api.Models.Response
             switch (send.Type)
             {
                 case SendType.File:
-                    var fileData = JsonConvert.DeserializeObject<SendFileData>(send.Data);
+                    var fileData = JsonHelpers.Deserialize<SendFileData>(send.Data);
                     sendData = fileData;
                     File = new SendFileModel(fileData);
                     break;
                 case SendType.Text:
-                    var textData = JsonConvert.DeserializeObject<SendTextData>(send.Data);
+                    var textData = JsonHelpers.Deserialize<SendTextData>(send.Data);
                     sendData = textData;
                     Text = new SendTextModel(textData);
                     break;
