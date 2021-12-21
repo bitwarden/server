@@ -16,7 +16,7 @@ namespace Bit.Api.Models.Public
             {
                 throw new ArgumentNullException(nameof(user));
             }
-            
+
             Type = user.Type;
             AccessAll = user.AccessAll;
             ExternalId = user.ExternalId;
@@ -29,7 +29,7 @@ namespace Bit.Api.Models.Public
             {
                 throw new ArgumentNullException(nameof(user));
             }
-            
+
             Type = user.Type;
             AccessAll = user.AccessAll;
             ExternalId = user.ExternalId;

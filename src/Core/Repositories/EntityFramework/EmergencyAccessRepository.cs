@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -31,8 +31,8 @@ namespace Bit.Core.Repositories.EntityFramework
             {
                 var dbContext = GetDatabaseContext(scope);
                 var view = new EmergencyAccessDetailsViewQuery();
-                var query = view.Run(dbContext).Where(ea => 
-                    ea.Id == id && 
+                var query = view.Run(dbContext).Where(ea =>
+                    ea.Id == id &&
                     ea.GrantorId == grantorId
                 );
                 return await query.FirstOrDefaultAsync();
@@ -45,7 +45,7 @@ namespace Bit.Core.Repositories.EntityFramework
             {
                 var dbContext = GetDatabaseContext(scope);
                 var view = new EmergencyAccessDetailsViewQuery();
-                var query = view.Run(dbContext).Where(ea => 
+                var query = view.Run(dbContext).Where(ea =>
                     ea.Status == EmergencyAccessStatusType.RecoveryInitiated
                 );
                 return await query.ToListAsync();
@@ -58,7 +58,7 @@ namespace Bit.Core.Repositories.EntityFramework
             {
                 var dbContext = GetDatabaseContext(scope);
                 var view = new EmergencyAccessDetailsViewQuery();
-                var query = view.Run(dbContext).Where(ea => 
+                var query = view.Run(dbContext).Where(ea =>
                     ea.GranteeId == granteeId
                 );
                 return await query.ToListAsync();
@@ -71,7 +71,7 @@ namespace Bit.Core.Repositories.EntityFramework
             {
                 var dbContext = GetDatabaseContext(scope);
                 var view = new EmergencyAccessDetailsViewQuery();
-                var query = view.Run(dbContext).Where(ea => 
+                var query = view.Run(dbContext).Where(ea =>
                     ea.GrantorId == grantorId
                 );
                 return await query.ToListAsync();
@@ -84,10 +84,10 @@ namespace Bit.Core.Repositories.EntityFramework
             {
                 var dbContext = GetDatabaseContext(scope);
                 var view = new EmergencyAccessDetailsViewQuery();
-                var query = view.Run(dbContext).Where(ea => 
+                var query = view.Run(dbContext).Where(ea =>
                     ea.Status == EmergencyAccessStatusType.RecoveryInitiated
                 );
-                var notifies = await query.Select(ea => new EmergencyAccessNotify 
+                var notifies = await query.Select(ea => new EmergencyAccessNotify
                 {
                     Id = ea.Id,
                     GrantorId = ea.GrantorId,
@@ -104,7 +104,7 @@ namespace Bit.Core.Repositories.EntityFramework
                     GranteeName = ea.GranteeName,
                     GranteeEmail = ea.GranteeEmail,
                     GrantorEmail = ea.GrantorEmail,
-                }).ToListAsync(); 
+                }).ToListAsync();
                 return notifies;
             }
         }

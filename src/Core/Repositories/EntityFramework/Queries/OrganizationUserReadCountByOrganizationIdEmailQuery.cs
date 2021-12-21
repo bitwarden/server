@@ -1,6 +1,6 @@
+﻿using System;
 using System.Linq;
 using Bit.Core.Models.EntityFramework;
-using System;
 
 namespace Bit.Core.Repositories.EntityFramework.Queries
 {
@@ -20,13 +20,13 @@ namespace Bit.Core.Repositories.EntityFramework.Queries
         public IQueryable<OrganizationUser> Run(DatabaseContext dbContext)
         {
             var query = from ou in dbContext.OrganizationUsers
-                join u in dbContext.Users
-                    on ou.UserId equals u.Id into u_g
-                from u in u_g.DefaultIfEmpty()
-                where ou.OrganizationId == _organizationId &&
-                    ((!_onlyUsers && (ou.Email == _email || u.Email == _email))
-                     || (_onlyUsers && u.Email == _email))
-                select ou;
+                        join u in dbContext.Users
+                            on ou.UserId equals u.Id into u_g
+                        from u in u_g.DefaultIfEmpty()
+                        where ou.OrganizationId == _organizationId &&
+                            ((!_onlyUsers && (ou.Email == _email || u.Email == _email))
+                             || (_onlyUsers && u.Email == _email))
+                        select ou;
             return query;
         }
     }

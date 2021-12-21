@@ -41,7 +41,7 @@ namespace Bit.Admin.Controllers
                     },
                     continuationToken: cursor
                 ).AsQueryable();
-                
+
                 if (level.HasValue)
                 {
                     query = query.Where(l => l.Level == level.Value.ToString());
@@ -84,7 +84,7 @@ namespace Bit.Admin.Controllers
                 var query = cosmosContainer.GetItemLinqQueryable<LogDetailsModel>()
                     .AsQueryable()
                     .Where(l => l.Id == id.ToString());
-                
+
                 var response = await query.ToFeedIterator().ReadNextAsync();
                 if (response == null || response.Count == 0)
                 {

@@ -1,4 +1,4 @@
-using Bit.Core.Models.Business;
+﻿using Bit.Core.Models.Business;
 using NSubstitute;
 using Xunit;
 
@@ -16,7 +16,7 @@ namespace Bit.Core.Test.Models.Business
         [InlineData("AU", "PH", null, "au_abn")]
         [InlineData("BR", "PH", null, "br_cnpj")]
         [InlineData("CA", "PH", "bec", "ca_qst")]
-        [InlineData("CA", "PH", null, "ca_bn")] 
+        [InlineData("CA", "PH", null, "ca_bn")]
         [InlineData("CL", "PH", null, "cl_tin")]
         [InlineData("AT", "PH", null, "eu_vat")]
         [InlineData("BE", "PH", null, "eu_vat")]
@@ -63,8 +63,8 @@ namespace Bit.Core.Test.Models.Business
         [InlineData("US", "PH", null, "us_ein")]
         [InlineData("ZA", "PH", null, "za_vat")]
         [InlineData("ABCDEF", "PH", null, null)]
-        public void GetTaxIdType_Success(string billingAddressCountry, 
-            string taxIdNumber, 
+        public void GetTaxIdType_Success(string billingAddressCountry,
+            string taxIdNumber,
             string billingAddressState,
             string expectedTaxIdType)
         {

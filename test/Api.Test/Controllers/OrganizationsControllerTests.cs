@@ -1,21 +1,21 @@
+﻿using System;
+using System.Security.Claims;
+using System.Threading.Tasks;
 using AutoFixture.Xunit2;
 using Bit.Api.Controllers;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using NSubstitute;
-using System.Threading.Tasks;
-using System.Security.Claims;
-using System;
-using Bit.Core.Models.Data;
 using Xunit;
 
 namespace Bit.Api.Test.Controllers
 {
-    public class OrganizationsControllerTests: IDisposable
+    public class OrganizationsControllerTests : IDisposable
     {
         private readonly GlobalSettings _globalSettings;
         private readonly ICurrentContext _currentContext;

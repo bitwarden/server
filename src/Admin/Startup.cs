@@ -70,12 +70,12 @@ namespace Bit.Admin
             // Services
             services.AddBaseServices();
             services.AddDefaultServices(globalSettings);
-            
-            #if OSS
+
+#if OSS
                 services.AddOosServices();
-            #else
-                services.AddCommCoreServices();
-            #endif
+#else
+            services.AddCommCoreServices();
+#endif
 
             // Mvc
             services.AddMvc(config =>

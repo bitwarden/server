@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
 using AutoFixture;
 using AutoFixture.Kernel;
-using System.Reflection;
-using System.Linq;
 
 namespace Bit.Test.Common.AutoFixture
 {

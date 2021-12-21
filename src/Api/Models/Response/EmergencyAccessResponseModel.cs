@@ -114,7 +114,7 @@ namespace Bit.Api.Models.Response
             KeyEncrypted = emergencyAccess.KeyEncrypted;
             Ciphers = ciphers.Select(c => new CipherResponseModel(c, globalSettings));
         }
-        
+
         public string KeyEncrypted { get; set; }
         public IEnumerable<CipherResponseModel> Ciphers { get; set; }
     }

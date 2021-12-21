@@ -5,13 +5,13 @@ using System.Threading.Tasks;
 using Bit.Api.Models.Request.Providers;
 using Bit.Api.Models.Response;
 using Bit.Api.Models.Response.Providers;
-using Microsoft.AspNetCore.Mvc;
-using Bit.Core.Repositories;
-using Microsoft.AspNetCore.Authorization;
-using Bit.Core.Exceptions;
-using Bit.Core.Services;
 using Bit.Core.Context;
+using Bit.Core.Exceptions;
 using Bit.Core.Models.Business.Provider;
+using Bit.Core.Repositories;
+using Bit.Core.Services;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.Controllers
 {
@@ -62,7 +62,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("invite")]
-        public async Task Invite(Guid providerId, [FromBody]ProviderUserInviteRequestModel model)
+        public async Task Invite(Guid providerId, [FromBody] ProviderUserInviteRequestModel model)
         {
             if (!_currentContext.ProviderManageUsers(providerId))
             {
@@ -73,9 +73,9 @@ namespace Bit.Api.Controllers
                 _userService.GetProperUserId(User).Value, providerId);
             await _providerService.InviteUserAsync(invite);
         }
-        
+
         [HttpPost("reinvite")]
-        public async Task<ListResponseModel<ProviderUserBulkResponseModel>> BulkReinvite(Guid providerId, [FromBody]ProviderUserBulkRequestModel model)
+        public async Task<ListResponseModel<ProviderUserBulkResponseModel>> BulkReinvite(Guid providerId, [FromBody] ProviderUserBulkRequestModel model)
         {
             if (!_currentContext.ProviderManageUsers(providerId))
             {
@@ -87,7 +87,7 @@ namespace Bit.Api.Controllers
             return new ListResponseModel<ProviderUserBulkResponseModel>(
                 result.Select(t => new ProviderUserBulkResponseModel(t.Item1.Id, t.Item2)));
         }
-        
+
         [HttpPost("{id:guid}/reinvite")]
         public async Task Reinvite(Guid providerId, Guid id)
         {
@@ -96,13 +96,13 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            var invite = ProviderUserInviteFactory.CreateReinvite(new [] { id },
+            var invite = ProviderUserInviteFactory.CreateReinvite(new[] { id },
                 _userService.GetProperUserId(User).Value, providerId);
             await _providerService.ResendInvitesAsync(invite);
         }
 
         [HttpPost("{id:guid}/accept")]
-        public async Task Accept(Guid providerId, Guid id, [FromBody]ProviderUserAcceptRequestModel model)
+        public async Task Accept(Guid providerId, Guid id, [FromBody] ProviderUserAcceptRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)
@@ -112,9 +112,9 @@ namespace Bit.Api.Controllers
 
             await _providerService.AcceptUserAsync(id, user, model.Token);
         }
-        
+
         [HttpPost("{id:guid}/confirm")]
-        public async Task Confirm(Guid providerId, Guid id, [FromBody]ProviderUserConfirmRequestModel model)
+        public async Task Confirm(Guid providerId, Guid id, [FromBody] ProviderUserConfirmRequestModel model)
         {
             if (!_currentContext.ProviderManageUsers(providerId))
             {
@@ -127,7 +127,7 @@ namespace Bit.Api.Controllers
 
         [HttpPost("confirm")]
         public async Task<ListResponseModel<ProviderUserBulkResponseModel>> BulkConfirm(Guid providerId,
-            [FromBody]ProviderUserBulkConfirmRequestModel model)
+            [FromBody] ProviderUserBulkConfirmRequestModel model)
         {
             if (!_currentContext.ProviderManageUsers(providerId))
             {
@@ -142,7 +142,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("public-keys")]
-        public async Task<ListResponseModel<ProviderUserPublicKeyResponseModel>> UserPublicKeys(Guid providerId, [FromBody]ProviderUserBulkRequestModel model)
+        public async Task<ListResponseModel<ProviderUserPublicKeyResponseModel>> UserPublicKeys(Guid providerId, [FromBody] ProviderUserBulkRequestModel model)
         {
             if (!_currentContext.ProviderManageUsers(providerId))
             {
@@ -156,7 +156,7 @@ namespace Bit.Api.Controllers
 
         [HttpPut("{id:guid}")]
         [HttpPost("{id:guid}")]
-        public async Task Put(Guid providerId, Guid id, [FromBody]ProviderUserUpdateRequestModel model)
+        public async Task Put(Guid providerId, Guid id, [FromBody] ProviderUserUpdateRequestModel model)
         {
             if (!_currentContext.ProviderManageUsers(providerId))
             {
@@ -183,12 +183,12 @@ namespace Bit.Api.Controllers
             }
 
             var userId = _userService.GetProperUserId(User);
-            await _providerService.DeleteUsersAsync(providerId, new [] { id }, userId.Value);
+            await _providerService.DeleteUsersAsync(providerId, new[] { id }, userId.Value);
         }
 
         [HttpDelete("")]
         [HttpPost("delete")]
-        public async Task<ListResponseModel<ProviderUserBulkResponseModel>> BulkDelete(Guid providerId, [FromBody]ProviderUserBulkRequestModel model)
+        public async Task<ListResponseModel<ProviderUserBulkResponseModel>> BulkDelete(Guid providerId, [FromBody] ProviderUserBulkRequestModel model)
         {
             if (!_currentContext.ProviderManageUsers(providerId))
             {

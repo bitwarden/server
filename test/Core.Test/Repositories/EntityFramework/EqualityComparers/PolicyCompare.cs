@@ -1,14 +1,14 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using Bit.Core.Models.Table;
 
 namespace Bit.Core.Test.Repositories.EntityFramework.EqualityComparers
 {
-    public class PolicyCompare: IEqualityComparer<Policy>
+    public class PolicyCompare : IEqualityComparer<Policy>
     {
         public bool Equals(Policy x, Policy y)
         {
-            return  x.Type == y.Type &&
+            return x.Type == y.Type &&
             x.Data == y.Data &&
             x.Enabled == y.Enabled;
         }
@@ -19,7 +19,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework.EqualityComparers
         }
     }
 
-    public class PolicyCompareIncludingOrganization: PolicyCompare
+    public class PolicyCompareIncludingOrganization : PolicyCompare
     {
         public new bool Equals(Policy x, Policy y)
         {

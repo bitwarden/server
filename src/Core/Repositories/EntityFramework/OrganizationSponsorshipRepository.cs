@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -12,7 +12,7 @@ namespace Bit.Core.Repositories.EntityFramework
 {
     public class OrganizationSponsorshipRepository : Repository<TableModel.OrganizationSponsorship, EFModel.OrganizationSponsorship, Guid>, IOrganizationSponsorshipRepository
     {
-        public OrganizationSponsorshipRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper) 
+        public OrganizationSponsorshipRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
             : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.OrganizationSponsorships)
         { }
 

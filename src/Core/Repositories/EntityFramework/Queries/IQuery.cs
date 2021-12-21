@@ -1,4 +1,4 @@
-using System.Linq;
+﻿using System.Linq;
 
 namespace Bit.Core.Repositories.EntityFramework.Queries
 {

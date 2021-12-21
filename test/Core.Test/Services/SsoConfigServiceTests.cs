@@ -270,9 +270,9 @@ namespace Bit.Core.Test.Services
 
             sutProvider.GetDependency<IPolicyRepository>().GetByOrganizationIdTypeAsync(
                 Arg.Any<Guid>(), Arg.Any<Enums.PolicyType>()).Returns(new Policy
-            {
-                Enabled = true,
-            });
+                {
+                    Enabled = true,
+                });
 
             var exception = await Assert.ThrowsAsync<BadRequestException>(
                 () => sutProvider.Sut.SaveAsync(ssoConfig, organization));
@@ -305,9 +305,9 @@ namespace Bit.Core.Test.Services
 
             sutProvider.GetDependency<IPolicyRepository>().GetByOrganizationIdTypeAsync(
                 Arg.Any<Guid>(), Arg.Any<Enums.PolicyType>()).Returns(new Policy
-            {
-                Enabled = true,
-            });
+                {
+                    Enabled = true,
+                });
 
             await sutProvider.Sut.SaveAsync(ssoConfig, organization);
 

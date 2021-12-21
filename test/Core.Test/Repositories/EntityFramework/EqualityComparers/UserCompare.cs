@@ -1,14 +1,14 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using Bit.Core.Models.Table;
 
 namespace Bit.Core.Test.Repositories.EntityFramework.EqualityComparers
 {
-    public class UserCompare: IEqualityComparer<User>
+    public class UserCompare : IEqualityComparer<User>
     {
         public bool Equals(User x, User y)
         {
-            return  x.Name == y.Name &&
+            return x.Name == y.Name &&
                     x.Email == y.Email &&
                     x.EmailVerified == y.EmailVerified &&
                     x.MasterPassword == y.MasterPassword &&

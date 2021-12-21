@@ -11,7 +11,7 @@
         public const long FileSize501mb = 501L * 1024L * 1024L;
     }
 
-    public static class TokenPurposes 
+    public static class TokenPurposes
     {
         public const string LinkSso = "LinkSso";
     }

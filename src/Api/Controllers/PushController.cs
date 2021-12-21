@@ -1,14 +1,14 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Bit.Core.Services;
-using Microsoft.AspNetCore.Authorization;
+﻿using System.Linq;
+using System.Threading.Tasks;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
-using System.Threading.Tasks;
-using System.Linq;
-using Microsoft.AspNetCore.Hosting;
 using Bit.Core.Models.Api;
-using Bit.Core.Utilities;
+using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bit.Core.Utilities;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Hosting;
 
 namespace Bit.Api.Controllers
@@ -39,7 +39,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("register")]
-        public async Task PostRegister([FromBody]PushRegistrationRequestModel model)
+        public async Task PostRegister([FromBody] PushRegistrationRequestModel model)
         {
             CheckUsage();
             await _pushRegistrationService.CreateOrUpdateRegistrationAsync(model.PushToken, Prefix(model.DeviceId),
@@ -54,7 +54,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPut("add-organization")]
-        public async Task PutAddOrganization([FromBody]PushUpdateRequestModel model)
+        public async Task PutAddOrganization([FromBody] PushUpdateRequestModel model)
         {
             CheckUsage();
             await _pushRegistrationService.AddUserRegistrationOrganizationAsync(
@@ -62,7 +62,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPut("delete-organization")]
-        public async Task PutDeleteOrganization([FromBody]PushUpdateRequestModel model)
+        public async Task PutDeleteOrganization([FromBody] PushUpdateRequestModel model)
         {
             CheckUsage();
             await _pushRegistrationService.DeleteUserRegistrationOrganizationAsync(
@@ -70,7 +70,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("send")]
-        public async Task PostSend([FromBody]PushSendRequestModel model)
+        public async Task PostSend([FromBody] PushSendRequestModel model)
         {
             CheckUsage();
 

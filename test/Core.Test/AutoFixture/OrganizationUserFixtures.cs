@@ -1,28 +1,28 @@
-﻿using AutoFixture;
-using TableModel = Bit.Core.Models.Table;
-using Bit.Core.Models;
+﻿using System;
 using System.Collections.Generic;
-using Bit.Core.Enums;
+using System.Reflection;
+using System.Text.Json;
+using AutoFixture;
 using AutoFixture.Kernel;
-using System;
-using Bit.Core.Test.AutoFixture.OrganizationFixtures;
+using AutoFixture.Xunit2;
+using Bit.Core.Enums;
+using Bit.Core.Models;
+using Bit.Core.Models.Data;
 using Bit.Core.Repositories.EntityFramework;
 using Bit.Core.Test.AutoFixture.EntityFrameworkRepositoryFixtures;
-using Bit.Core.Models.Data;
-using System.Text.Json;
+using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using Bit.Core.Test.AutoFixture.UserFixtures;
-using AutoFixture.Xunit2;
-using System.Reflection;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using TableModel = Bit.Core.Models.Table;
 
 namespace Bit.Core.Test.AutoFixture.OrganizationUserFixtures
 {
-    internal class OrganizationUserBuilder: ISpecimenBuilder
+    internal class OrganizationUserBuilder : ISpecimenBuilder
     {
         public object Create(object request, ISpecimenContext context)
         {
-            if (context == null) 
+            if (context == null)
             {
                 throw new ArgumentNullException(nameof(context));
             }
@@ -33,7 +33,8 @@ namespace Bit.Core.Test.AutoFixture.OrganizationUserFixtures
                 var fixture = new Fixture();
                 var orgUser = fixture.WithAutoNSubstitutions().Create<TableModel.OrganizationUser>();
                 var orgUserPermissions = fixture.WithAutoNSubstitutions().Create<Permissions>();
-                orgUser.Permissions = JsonSerializer.Serialize(orgUserPermissions, new JsonSerializerOptions() {
+                orgUser.Permissions = JsonSerializer.Serialize(orgUserPermissions, new JsonSerializerOptions()
+                {
                     PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
                 });
                 return orgUser;
@@ -46,7 +47,8 @@ namespace Bit.Core.Test.AutoFixture.OrganizationUserFixtures
                 {
                     var providers = fixture.Create<Dictionary<TwoFactorProviderType, TwoFactorProvider>>();
                     var orgUserPermissions = fixture.WithAutoNSubstitutions().Create<Permissions>();
-                    orgUser.Permissions = JsonSerializer.Serialize(orgUserPermissions, new JsonSerializerOptions() {
+                    orgUser.Permissions = JsonSerializer.Serialize(orgUserPermissions, new JsonSerializerOptions()
+                    {
                         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
                     });
                 }
@@ -55,7 +57,7 @@ namespace Bit.Core.Test.AutoFixture.OrganizationUserFixtures
             return new NoSpecimen();
         }
     }
-    
+
     internal class OrganizationUser : ICustomization
     {
         public OrganizationUserStatusType Status { get; set; }
@@ -66,7 +68,7 @@ namespace Bit.Core.Test.AutoFixture.OrganizationUserFixtures
             Status = status;
             Type = type;
         }
-        
+
         public void Customize(IFixture fixture)
         {
             fixture.Customize<Core.Models.Table.OrganizationUser>(composer => composer
@@ -94,20 +96,20 @@ namespace Bit.Core.Test.AutoFixture.OrganizationUserFixtures
         }
     }
 
-   internal class EfOrganizationUser: ICustomization 
-   {
-      public void Customize(IFixture fixture)
-      {
-         fixture.Customizations.Add(new IgnoreVirtualMembersCustomization());
-         fixture.Customizations.Add(new GlobalSettingsBuilder());
-         fixture.Customizations.Add(new OrganizationUserBuilder());
-         fixture.Customizations.Add(new OrganizationBuilder());
-         fixture.Customizations.Add(new UserBuilder());
-         fixture.Customizations.Add(new EfRepositoryListBuilder<OrganizationUserRepository>());
-         fixture.Customizations.Add(new EfRepositoryListBuilder<UserRepository>());
-         fixture.Customizations.Add(new EfRepositoryListBuilder<OrganizationRepository>());
-      }
-   }
+    internal class EfOrganizationUser : ICustomization
+    {
+        public void Customize(IFixture fixture)
+        {
+            fixture.Customizations.Add(new IgnoreVirtualMembersCustomization());
+            fixture.Customizations.Add(new GlobalSettingsBuilder());
+            fixture.Customizations.Add(new OrganizationUserBuilder());
+            fixture.Customizations.Add(new OrganizationBuilder());
+            fixture.Customizations.Add(new UserBuilder());
+            fixture.Customizations.Add(new EfRepositoryListBuilder<OrganizationUserRepository>());
+            fixture.Customizations.Add(new EfRepositoryListBuilder<UserRepository>());
+            fixture.Customizations.Add(new EfRepositoryListBuilder<OrganizationRepository>());
+        }
+    }
 
     internal class EfOrganizationUserAutoDataAttribute : CustomAutoDataAttribute
     {

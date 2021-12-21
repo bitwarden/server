@@ -31,7 +31,7 @@ namespace Bit.Api.Controllers
             _currentContext = currentContext;
             _globalSettings = globalSettings;
         }
-        
+
         [HttpGet("{id:guid}")]
         public async Task<ProviderResponseModel> Get(Guid id)
         {
@@ -48,10 +48,10 @@ namespace Bit.Api.Controllers
 
             return new ProviderResponseModel(provider);
         }
-        
+
         [HttpPut("{id:guid}")]
         [HttpPost("{id:guid}")]
-        public async Task<ProviderResponseModel> Put(Guid id, [FromBody]ProviderUpdateRequestModel model)
+        public async Task<ProviderResponseModel> Put(Guid id, [FromBody] ProviderUpdateRequestModel model)
         {
             if (!_currentContext.ProviderProviderAdmin(id))
             {
@@ -67,9 +67,9 @@ namespace Bit.Api.Controllers
             await _providerService.UpdateAsync(model.ToProvider(provider, _globalSettings));
             return new ProviderResponseModel(provider);
         }
-        
+
         [HttpPost("{id:guid}/setup")]
-        public async Task<ProviderResponseModel> Setup(Guid id, [FromBody]ProviderSetupRequestModel model)
+        public async Task<ProviderResponseModel> Setup(Guid id, [FromBody] ProviderSetupRequestModel model)
         {
             if (!_currentContext.ProviderProviderAdmin(id))
             {
@@ -81,9 +81,9 @@ namespace Bit.Api.Controllers
             {
                 throw new NotFoundException();
             }
-            
+
             var userId = _userService.GetProperUserId(User).Value;
-            
+
             var response =
                 await _providerService.CompleteSetupAsync(model.ToProvider(provider), userId, model.Token, model.Key);
 

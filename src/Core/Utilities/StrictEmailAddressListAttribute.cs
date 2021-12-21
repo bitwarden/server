@@ -15,7 +15,7 @@ namespace Bit.Core.Utilities
             {
                 return new ValidationResult("An email is required.");
             }
-            
+
             if (emails.Count() > 20)
             {
                 return new ValidationResult("You can only submit up to 20 emails at a time.");

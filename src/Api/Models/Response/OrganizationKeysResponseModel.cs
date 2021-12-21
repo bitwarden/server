@@ -12,11 +12,11 @@ namespace Bit.Api.Models.Response
             {
                 throw new ArgumentNullException(nameof(org));
             }
-            
+
             PublicKey = org.PublicKey;
             PrivateKey = org.PrivateKey;
         }
-        
+
         public string PublicKey { get; set; }
         public string PrivateKey { get; set; }
     }

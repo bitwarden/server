@@ -10,7 +10,7 @@ namespace Bit.Api.Models.Request.Organizations
         public string PublicKey { get; set; }
         [Required]
         public string EncryptedPrivateKey { get; set; }
-        
+
         public OrganizationSignup ToOrganizationSignup(OrganizationSignup existingSignup)
         {
             if (string.IsNullOrWhiteSpace(existingSignup.PublicKey))
@@ -25,7 +25,7 @@ namespace Bit.Api.Models.Request.Organizations
 
             return existingSignup;
         }
-        
+
         public OrganizationUpgrade ToOrganizationUpgrade(OrganizationUpgrade existingUpgrade)
         {
             if (string.IsNullOrWhiteSpace(existingUpgrade.PublicKey))

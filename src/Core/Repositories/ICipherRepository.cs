@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
 using Core.Models.Data;
-using Bit.Core.Models.Data;
 
 namespace Bit.Core.Repositories
 {

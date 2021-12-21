@@ -1,15 +1,15 @@
-using Bit.Core.Test.AutoFixture;
-using Bit.Core.Test.Helpers.Factories;
-using EfRepo = Bit.Core.Repositories.EntityFramework;
-using SqlRepo = Bit.Core.Repositories.SqlServer;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using Bit.Core.Models.Table;
-using Xunit;
-using Bit.Core.Test.Repositories.EntityFramework.EqualityComparers;
-using Bit.Core.Test.AutoFixture.SsoConfigFixtures;
-using System;
+using Bit.Core.Test.AutoFixture;
 using Bit.Core.Test.AutoFixture.Attributes;
+using Bit.Core.Test.AutoFixture.SsoConfigFixtures;
+using Bit.Core.Test.Helpers.Factories;
+using Bit.Core.Test.Repositories.EntityFramework.EqualityComparers;
+using Xunit;
+using EfRepo = Bit.Core.Repositories.EntityFramework;
+using SqlRepo = Bit.Core.Repositories.SqlServer;
 
 namespace Bit.Core.Test.Repositories.EntityFramework
 {
@@ -52,7 +52,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
         }
 
         [CiSkippedTheory, EfSsoConfigAutoData]
-        public async void ReplaceAsync_Works_DataMatches(SsoConfig postSsoConfig, SsoConfig replaceSsoConfig, 
+        public async void ReplaceAsync_Works_DataMatches(SsoConfig postSsoConfig, SsoConfig replaceSsoConfig,
             Organization org, SsoConfigCompare equalityComparer, List<EfRepo.SsoConfigRepository> suts,
             List<EfRepo.OrganizationRepository> efOrgRepos, SqlRepo.SsoConfigRepository sqlSsoConfigRepo,
             SqlRepo.OrganizationRepository sqlOrganizationRepo)
@@ -118,7 +118,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
                 sut.ClearChangeTracking();
 
                 await sut.DeleteAsync(savedEfSsoConfig);
-                var deletedEfSsoConfig= await sut.GetByIdAsync(savedEfSsoConfig.Id);
+                var deletedEfSsoConfig = await sut.GetByIdAsync(savedEfSsoConfig.Id);
                 Assert.True(deletedEfSsoConfig == null);
             }
 

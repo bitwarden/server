@@ -1,18 +1,18 @@
-using System;
+﻿using System;
+using System.IO;
+using System.Threading.Tasks;
+using AutoFixture;
+using Bit.Core.Models.Data;
+using Bit.Core.Models.Table;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using NSubstitute;
-using Xunit;
-using System.IO;
-using Bit.Core.Test.AutoFixture.CipherFixtures;
-using Bit.Core.Models.Data;
-using System.Threading.Tasks;
-using Bit.Core.Models.Table;
-using U2F.Core.Utils;
 using Bit.Core.Test.AutoFixture.CipherAttachmentMetaData;
-using AutoFixture;
-using Bit.Test.Common.AutoFixture.Attributes;
+using Bit.Core.Test.AutoFixture.CipherFixtures;
 using Bit.Test.Common.AutoFixture;
+using Bit.Test.Common.AutoFixture.Attributes;
+using NSubstitute;
+using U2F.Core.Utils;
+using Xunit;
 
 namespace Bit.Core.Test.Services
 {

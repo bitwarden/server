@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Table;
-using Bit.Core.Utilities;
 using Bit.Core.Settings;
+using Bit.Core.Utilities;
 
 namespace Bit.Admin.Models
 {
@@ -30,7 +30,7 @@ namespace Bit.Admin.Models
             LicenseKey = user.LicenseKey;
             PremiumExpirationDate = user.PremiumExpirationDate;
         }
-        
+
         public BillingInfo BillingInfo { get; set; }
         public string RandomLicenseKey => CoreHelpers.SecureRandomString(20);
         public string OneYearExpirationDate => DateTime.Now.AddYears(1).ToString("yyyy-MM-ddTHH:mm");

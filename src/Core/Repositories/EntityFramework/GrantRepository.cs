@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -24,8 +24,8 @@ namespace Bit.Core.Repositories.EntityFramework
             {
                 var dbContext = GetDatabaseContext(scope);
                 var query = from g in dbContext.Grants
-                    where g.Key == key
-                    select g;
+                            where g.Key == key
+                            select g;
                 dbContext.Remove(query);
                 await dbContext.SaveChangesAsync();
             }
@@ -37,11 +37,11 @@ namespace Bit.Core.Repositories.EntityFramework
             {
                 var dbContext = GetDatabaseContext(scope);
                 var query = from g in dbContext.Grants
-                    where g.SubjectId == subjectId &&
-                        g.ClientId == clientId && 
-                        g.SessionId == sessionId &&
-                        g.Type == type
-                    select g;
+                            where g.SubjectId == subjectId &&
+                                g.ClientId == clientId &&
+                                g.SessionId == sessionId &&
+                                g.Type == type
+                            select g;
                 dbContext.Remove(query);
                 await dbContext.SaveChangesAsync();
             }
@@ -53,8 +53,8 @@ namespace Bit.Core.Repositories.EntityFramework
             {
                 var dbContext = GetDatabaseContext(scope);
                 var query = from g in dbContext.Grants
-                    where g.Key == key
-                    select g;
+                            where g.Key == key
+                            select g;
                 var grant = await query.FirstOrDefaultAsync();
                 return grant;
             }
@@ -66,11 +66,11 @@ namespace Bit.Core.Repositories.EntityFramework
             {
                 var dbContext = GetDatabaseContext(scope);
                 var query = from g in dbContext.Grants
-                    where g.SubjectId == subjectId &&
-                        g.ClientId == clientId && 
-                        g.SessionId == sessionId &&
-                        g.Type == type
-                    select g;
+                            where g.SubjectId == subjectId &&
+                                g.ClientId == clientId &&
+                                g.SessionId == sessionId &&
+                                g.Type == type
+                            select g;
                 var grants = await query.ToListAsync();
                 return (ICollection<Grant>)grants;
             }
@@ -82,8 +82,8 @@ namespace Bit.Core.Repositories.EntityFramework
             {
                 var dbContext = GetDatabaseContext(scope);
                 var existingGrant = await (from g in dbContext.Grants
-                    where g.Key == obj.Key
-                    select g).FirstOrDefaultAsync();
+                                           where g.Key == obj.Key
+                                           select g).FirstOrDefaultAsync();
                 if (existingGrant != null)
                 {
                     dbContext.Entry(existingGrant).CurrentValues.SetValues(obj);

@@ -1,16 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Bit.Core.Models.Table;
-using Bit.Core.Enums;
-using Microsoft.AspNetCore.Http;
-using Bit.Core.Repositories;
-using System.Threading.Tasks;
 using System.Security.Claims;
+using System.Threading.Tasks;
+using Bit.Core.Enums;
 using Bit.Core.Enums.Provider;
-using Bit.Core.Utilities;
 using Bit.Core.Models.Data;
+using Bit.Core.Models.Table;
+using Bit.Core.Repositories;
 using Bit.Core.Settings;
+using Bit.Core.Utilities;
+using Microsoft.AspNetCore.Http;
 
 namespace Bit.Core.Context
 {
@@ -414,7 +414,7 @@ namespace Bit.Core.Context
             }
             return Organizations;
         }
-        
+
         public async Task<ICollection<CurrentContentProvider>> ProviderMembershipAsync(
             IProviderUserRepository providerUserRepository, Guid userId)
         {

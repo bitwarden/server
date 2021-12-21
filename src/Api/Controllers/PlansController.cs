@@ -1,10 +1,10 @@
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using Bit.Core.Utilities;
-using System.Linq;
-using Bit.Core.Repositories;
+﻿using System.Linq;
 using System.Threading.Tasks;
 using Bit.Api.Models.Response;
+using Bit.Core.Repositories;
+using Bit.Core.Utilities;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.Controllers
 {

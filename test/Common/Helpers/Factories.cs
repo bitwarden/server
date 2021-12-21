@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Bit.Core.Repositories.EntityFramework;
 using Bit.Core.Settings;
 using Microsoft.EntityFrameworkCore;

@@ -19,7 +19,7 @@ namespace Bit.Core.Services
             NullValueHandling = NullValueHandling.Ignore,
         };
 
-        public AzureQueueReferenceEventService (
+        public AzureQueueReferenceEventService(
             GlobalSettings globalSettings)
         {
             _queueClient = new QueueClient(globalSettings.Events.ConnectionString, _queueName);

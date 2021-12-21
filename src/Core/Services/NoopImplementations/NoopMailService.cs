@@ -195,7 +195,7 @@ namespace Bit.Core.Services
         {
             return Task.FromResult(0);
         }
-        
+
         public Task SendUpdatedTempPasswordEmailAsync(string email, string userName)
         {
             return Task.FromResult(0);
@@ -215,7 +215,7 @@ namespace Bit.Core.Services
         {
             return Task.FromResult(0);
         }
-        
+
         public Task SendOTPEmailAsync(string email, string token)
         {
             return Task.FromResult(0);

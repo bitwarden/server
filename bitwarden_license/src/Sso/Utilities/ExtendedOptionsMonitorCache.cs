@@ -1,6 +1,6 @@
-﻿using Microsoft.Extensions.Options;
-using System;
+﻿using System;
 using System.Collections.Concurrent;
+using Microsoft.Extensions.Options;
 
 namespace Bit.Sso.Utilities
 {

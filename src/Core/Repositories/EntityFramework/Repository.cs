@@ -1,12 +1,12 @@
 ﻿using System;
-using System.Threading.Tasks;
-using Bit.Core.Models.Table;
-using AutoMapper;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
+using AutoMapper;
+using Bit.Core.Models.Table;
 using Bit.Core.Repositories.EntityFramework.Queries;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Core.Repositories.EntityFramework
 {

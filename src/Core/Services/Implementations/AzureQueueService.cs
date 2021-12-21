@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -53,7 +53,7 @@ namespace Bit.Core.Services
 
             var messagesList = new List<string>();
             var messagesListSize = 0;
-            
+
             int calculateByteSize(int totalSize, int toAdd) =>
                 // Calculate the total length this would be w/ "[]" and commas
                 getBase64Size(totalSize + toAdd + messagesList.Count + 2);
@@ -68,7 +68,7 @@ namespace Bit.Core.Services
                 return CoreHelpers.Base64EncodeString(
                     string.Concat("[", string.Join(',', messagesList), "]"));
             }
-            
+
             var serializedMessages = messages.Select(message =>
                 JsonConvert.SerializeObject(message, jsonSettings));
 

@@ -1,14 +1,14 @@
-using Bit.Core.Test.AutoFixture.OrganizationUserFixtures;
-using EfRepo = Bit.Core.Repositories.EntityFramework;
-using SqlRepo = Bit.Core.Repositories.SqlServer;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using TableModel = Bit.Core.Models.Table;
-using Xunit;
-using Bit.Core.Test.Repositories.EntityFramework.EqualityComparers;
 using Bit.Core.Models.Data;
-using System;
 using Bit.Core.Test.AutoFixture.Attributes;
+using Bit.Core.Test.AutoFixture.OrganizationUserFixtures;
+using Bit.Core.Test.Repositories.EntityFramework.EqualityComparers;
+using Xunit;
+using EfRepo = Bit.Core.Repositories.EntityFramework;
+using SqlRepo = Bit.Core.Repositories.SqlServer;
+using TableModel = Bit.Core.Models.Table;
 
 namespace Bit.Core.Test.Repositories.EntityFramework
 {
@@ -125,10 +125,10 @@ namespace Bit.Core.Test.Repositories.EntityFramework
 
                 var savedEfOrgUser = await sut.GetByIdAsync(postEfOrgUser.Id);
                 Assert.True(savedEfOrgUser != null);
-                sut.ClearChangeTracking();    
+                sut.ClearChangeTracking();
 
                 await sut.DeleteAsync(savedEfOrgUser);
-                sut.ClearChangeTracking();    
+                sut.ClearChangeTracking();
 
                 savedEfOrgUser = await sut.GetByIdAsync(savedEfOrgUser.Id);
                 Assert.True(savedEfOrgUser == null);

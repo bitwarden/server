@@ -12,7 +12,7 @@ namespace Bit.Api.Models
             FileName = data.FileName;
             Key = data.Key;
         }
-        
+
         [EncryptedStringLength(1000)]
         public string FileName { get; set; }
         [EncryptedStringLength(1000)]

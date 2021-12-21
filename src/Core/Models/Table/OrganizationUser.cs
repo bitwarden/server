@@ -1,7 +1,7 @@
 ﻿using System;
-using Bit.Core.Utilities;
-using Bit.Core.Enums;
 using System.ComponentModel.DataAnnotations;
+using Bit.Core.Enums;
+using Bit.Core.Utilities;
 
 namespace Bit.Core.Models.Table
 {
