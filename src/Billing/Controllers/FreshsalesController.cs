@@ -55,18 +55,21 @@ namespace Bit.Billing.Controllers
 
 
         [HttpPost("webhook")]
-        public async Task<IActionResult> PostWebhook([FromHeader(Name = "Authorization")] string freshsalesApiKey,
+        public async Task<IActionResult> PostWebhook([FromHeader(Name = "Authorization")] string key,
             [FromBody] CustomWebhookRequestModel request,
             CancellationToken cancellationToken)
         {
-            if (string.IsNullOrEmpty(freshsalesApiKey) || !CoreHelpers.FixedTimeEquals(_freshsalesApiKey, freshsalesApiKey))
+            if (string.IsNullOrWhiteSpace(key) || !CoreHelpers.FixedTimeEquals(_freshsalesApiKey, key))
             {
                 return Unauthorized();
             }
 
             try
             {
-                var leadResponse = await _httpClient.GetFromJsonAsync<LeadWrapper<FreshsalesLeadModel>>($"leads/{request.LeadId}", cancellationToken);
+                var leadResponse = await _httpClient.GetFromJsonAsync<LeadWrapper<FreshsalesLeadModel>>(
+                        $"leads/{request.LeadId}",
+                        cancellationToken);
+
                 var lead = leadResponse.Lead;
 
                 var primaryEmail = lead.Emails
@@ -111,11 +114,16 @@ namespace Bit.Billing.Controllers
                 if (newTags.Any())
                 {
                     var allTags = newTags.Concat(lead.Tags);
-                    var updateLeadResponse = await _httpClient.PutAsJsonAsync($"leads/{request.LeadId}", CreateWrapper(new { tags = allTags }), cancellationToken);
+                    var updateLeadResponse = await _httpClient.PutAsJsonAsync(
+                        $"leads/{request.LeadId}",
+                        CreateWrapper(new { tags = allTags }),
+                        cancellationToken);
                     updateLeadResponse.EnsureSuccessStatusCode();
                 }
 
-                var createNoteResponse = await _httpClient.PostAsJsonAsync("notes", CreateNoteRequestModel(request.LeadId, string.Join('\n', noteItems)), cancellationToken);
+                var createNoteResponse = await _httpClient.PostAsJsonAsync(
+                    "notes",
+                    CreateNoteRequestModel(request.LeadId, string.Join('\n', noteItems)), cancellationToken);
                 createNoteResponse.EnsureSuccessStatusCode();
                 return NoContent();
             }

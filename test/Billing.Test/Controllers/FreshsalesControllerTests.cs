@@ -23,12 +23,11 @@ namespace Bit.Billing.Test.Controllers
         private const string ApiKey = "TEST_FRESHSALES_APIKEY";
         private const string TestLead = "TEST_FRESHSALES_TESTLEAD";
 
-        private static (FreshsalesController sut, IUserRepository userRepository, IOrganizationRepository organizationRepository) CreateSut(
+        private static (FreshsalesController, IUserRepository, IOrganizationRepository) CreateSut(
             string freshsalesApiKey)
         {
             var userRepository = Substitute.For<IUserRepository>();
             var organizationRepository = Substitute.For<IOrganizationRepository>();
-
 
             var billingSettings = Options.Create(new BillingSettings
             {
