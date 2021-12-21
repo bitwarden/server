@@ -115,7 +115,7 @@ if ($install) {
     Test-Output-Dir-Not-Exists
     New-Item -ItemType directory -Path $output -ErrorAction Ignore | Out-Null
     Get-Run-File
-    #Invoke-Expression "& `"$scriptsDir\run.ps1`" -install -outputDir `"$output`" -coreVersion $coreVersion -webVersion $webVersion"
+    Invoke-Expression "& `"$scriptsDir\run.ps1`" -install -outputDir `"$output`" -coreVersion $coreVersion -webVersion $webVersion"
 }
 elseif ($start -Or $restart) {
     Test-Output-Dir-Exists
