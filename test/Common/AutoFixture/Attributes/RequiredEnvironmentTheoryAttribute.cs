@@ -4,16 +4,15 @@ using Xunit;
 namespace Bit.Test.Common.AutoFixture.Attributes
 {
     /// <summary>
-    /// 
+    /// Used for requiring certain environment variables exist at the time. Mostly used for more edge unit tests that shouldn't
+    /// be run during CI builds or should only be ran in CI builds when pieces of information are available.
     /// </summary>
     public class RequiredEnvironmentTheoryAttribute : TheoryAttribute
     {
-        private readonly bool _allowEmpty;
         private readonly string[] _environmentVariableNames;
 
-        public RequiredEnvironmentTheoryAttribute(bool allowEmpty, params string[] environmentVariableNames)
+        public RequiredEnvironmentTheoryAttribute(params string[] environmentVariableNames)
         {
-            _allowEmpty = allowEmpty;
             _environmentVariableNames = environmentVariableNames;
 
             if (!HasRequiredEnvironmentVariables())
@@ -22,19 +21,13 @@ namespace Bit.Test.Common.AutoFixture.Attributes
             }
         }
 
-        public RequiredEnvironmentTheoryAttribute(params string[] environmentVariablesNames)
-            : this(false, environmentVariablesNames)
-        {
-
-        }
-
         private bool HasRequiredEnvironmentVariables()
         {
             foreach (var env in _environmentVariableNames)
             {
                 var value = Environment.GetEnvironmentVariable(env);
 
-                if (value == null || (!_allowEmpty && value == ""))
+                if (value == null)
                 {
                     return false;
                 }
