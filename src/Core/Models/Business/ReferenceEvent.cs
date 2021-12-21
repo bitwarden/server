@@ -1,8 +1,6 @@
 ﻿using System;
+using System.Text.Json.Serialization;
 using Bit.Core.Enums;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
-using Newtonsoft.Json.Serialization;
 
 namespace Bit.Core.Models.Business
 {
@@ -26,6 +24,7 @@ namespace Bit.Core.Models.Business
         public ReferenceEventType Type { get; set; }
 
         [JsonConverter(typeof(StringEnumConverter))]
+        
         public ReferenceEventSource Source { get; set; }
 
         public Guid Id { get; set; }
