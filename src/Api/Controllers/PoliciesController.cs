@@ -106,6 +106,32 @@ namespace Bit.Api.Controllers
             return new ListResponseModel<PolicyResponseModel>(responses);
         }
 
+        [AllowAnonymous]
+        [HttpGet("invited-user")]
+        public async Task<ListResponseModel<PolicyResponseModel>> GetByInvitedUser(string orgId, [FromQuery] string userId)
+        {
+            var user = await _userService.GetUserByIdAsync(new Guid(userId));
+            if (user == null)
+            {
+                throw new UnauthorizedAccessException();
+            }
+            var orgIdGuid = new Guid(orgId);
+            var orgUsersByUserId = await _organizationUserRepository.GetManyByUserAsync(user.Id);
+            var orgUser = orgUsersByUserId.SingleOrDefault(u => u.OrganizationId == orgIdGuid);
+            if (orgUser == null)
+            {
+                throw new NotFoundException();
+            }
+            if (orgUser.Status != OrganizationUserStatusType.Invited)
+            {
+                throw new UnauthorizedAccessException();
+            }
+
+            var policies = await _policyRepository.GetManyByOrganizationIdAsync(orgIdGuid);
+            var responses = policies.Where(p => p.Enabled).Select(p => new PolicyResponseModel(p));
+            return new ListResponseModel<PolicyResponseModel>(responses);
+        }
+
         [HttpPut("{type}")]
         public async Task<PolicyResponseModel> Put(string orgId, int type, [FromBody] PolicyRequestModel model)
         {
