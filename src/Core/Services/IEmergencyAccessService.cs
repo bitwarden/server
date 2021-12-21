@@ -2,8 +2,6 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Bit.Core.Enums;
-using Bit.Core.Models.Api;
-using Bit.Core.Models.Api.Response;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
 
@@ -26,7 +24,7 @@ namespace Bit.Core.Services
         Task PasswordAsync(Guid id, User user, string newMasterPasswordHash, string key);
         Task SendNotificationsAsync();
         Task HandleTimedOutRequestsAsync();
-        Task<EmergencyAccessViewResponseModel> ViewAsync(Guid id, User user);
-        Task<AttachmentResponseModel> GetAttachmentDownloadAsync(Guid id, string cipherId, string attachmentId, User user);
+        Task<EmergencyAccessViewData> ViewAsync(Guid id, User user);
+        Task<AttachmentResponseData> GetAttachmentDownloadAsync(Guid id, string cipherId, string attachmentId, User user);
     }
 }

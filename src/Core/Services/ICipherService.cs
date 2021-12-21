@@ -4,7 +4,6 @@ using Bit.Core.Models.Table;
 using Core.Models.Data;
 using System;
 using System.IO;
-using Bit.Core.Models.Api;
 using Bit.Core.Models.Data;
 
 namespace Bit.Core.Services
@@ -16,7 +15,7 @@ namespace Bit.Core.Services
         Task SaveDetailsAsync(CipherDetails cipher, Guid savingUserId, DateTime? lastKnownRevisionDate,
             IEnumerable<Guid> collectionIds = null, bool skipPermissionCheck = false);
         Task<(string attachmentId, string uploadUrl)> CreateAttachmentForDelayedUploadAsync(Cipher cipher,
-            AttachmentRequestModel request, Guid savingUserId);
+            string key, string fileName, long fileSize, bool adminRequest, Guid savingUserId);
         Task CreateAttachmentAsync(Cipher cipher, Stream stream, string fileName, string key,
             long requestLength, Guid savingUserId, bool orgAdmin = false);
         Task CreateAttachmentShareAsync(Cipher cipher, Stream stream, long requestLength, string attachmentId,
@@ -42,7 +41,7 @@ namespace Bit.Core.Services
         Task RestoreAsync(Cipher cipher, Guid restoringUserId, bool orgAdmin = false);
         Task RestoreManyAsync(IEnumerable<CipherDetails> ciphers, Guid restoringUserId);
         Task UploadFileForExistingAttachmentAsync(Stream stream, Cipher cipher, CipherAttachment.MetaData attachmentId);
-        Task<AttachmentResponseModel> GetAttachmentDownloadDataAsync(Cipher cipher, string attachmentId);
+        Task<AttachmentResponseData> GetAttachmentDownloadDataAsync(Cipher cipher, string attachmentId);
         Task<bool> ValidateCipherAttachmentFile(Cipher cipher, CipherAttachment.MetaData attachmentData);
     }
 }

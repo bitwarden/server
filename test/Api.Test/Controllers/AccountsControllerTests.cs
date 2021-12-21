@@ -2,7 +2,6 @@ using Bit.Api.Controllers;
 using Bit.Core;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Api;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
@@ -13,6 +12,7 @@ using NSubstitute;
 using System;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using Bit.Api.Models.Request.Accounts;
 using Xunit;
 
 namespace Bit.Api.Test.Controllers

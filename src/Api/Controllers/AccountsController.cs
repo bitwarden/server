@@ -2,8 +2,6 @@
 using Bit.Core;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Api;
-using Bit.Core.Models.Api.Request.Accounts;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
@@ -17,6 +15,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Bit.Api.Models.Request;
+using Bit.Api.Models.Request.Accounts;
+using Bit.Api.Models.Response;
 using Bit.Core.Enums.Provider;
 
 namespace Bit.Api.Controllers

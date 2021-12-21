@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Bit.Api.Models.Response;
 using Microsoft.AspNetCore.Mvc;
 using Bit.Core.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Api;
 
 namespace Bit.Api.Controllers
 {

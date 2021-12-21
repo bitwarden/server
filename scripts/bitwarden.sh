@@ -22,7 +22,7 @@ EOF
 # Setup
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-SCRIPT_NAME=`basename "$0"`
+SCRIPT_NAME=$(basename "$0")
 SCRIPT_PATH="$DIR/$SCRIPT_NAME"
 OUTPUT="$DIR/bwdata"
 if [ $# -eq 2 ]
@@ -34,8 +34,8 @@ SCRIPTS_DIR="$OUTPUT/scripts"
 GITHUB_BASE_URL="https://raw.githubusercontent.com/bitwarden/server/master"
 
 # Please do not create pull requests modifying the version numbers.
-COREVERSION="1.44.1"
-WEBVERSION="2.24.2"
+COREVERSION="1.45.2"
+WEBVERSION="2.25.0"
 
 echo "bitwarden.sh version $COREVERSION"
 docker --version

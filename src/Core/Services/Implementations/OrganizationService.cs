@@ -1191,7 +1191,7 @@ namespace Bit.Core.Services
                 }
 
                 await AutoAddSeatsAsync(organization, newSeatsRequired, prorationDate);
-                await SendInvitesAsync(orgUsers, organization);
+                await SendInvitesAsync(orgUsers.Concat(limitedCollectionOrgUsers.Select(u => u.Item1)), organization);
                 await _eventService.LogOrganizationUserEventsAsync(events);
 
                 await _referenceEventService.RaiseEventAsync(
@@ -1278,10 +1278,10 @@ namespace Bit.Core.Services
         }
 
 
-        private static bool CheckOrganizationCanSponsor(Organization organization)
+        private bool CheckOrganizationCanSponsor(Organization organization)
         {
             return StaticStore.GetPlan(organization.PlanType).Product == ProductType.Enterprise
-                && !organization.SelfHost;
+                && !_globalSettings.SelfHosted;
         }
 
         public async Task<OrganizationUser> AcceptUserAsync(Guid organizationUserId, User user, string token,

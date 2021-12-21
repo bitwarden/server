@@ -23,7 +23,6 @@ using System.Threading.Tasks;
 using Bit.Core.Models;
 using Bit.Core.Models.Api;
 using Bit.Core.Utilities;
-using System.Text.Json;
 using Bit.Core.Models.Data;
 using Bit.Core.Settings;
 
@@ -447,6 +446,12 @@ namespace Bit.Sso.Controllers
             // All Existing User flows handled below
             if (existingUser != null)
             {
+                if (existingUser.UsesKeyConnector && orgUser == null ||
+                    orgUser.Status == OrganizationUserStatusType.Invited)
+                {
+                    throw new Exception(_i18nService.T("UserAlreadyExistsKeyConnector"));
+                }
+
                 if (orgUser == null)
                 {
                     // Org User is not created - no invite has been sent

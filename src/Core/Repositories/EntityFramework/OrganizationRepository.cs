@@ -113,6 +113,7 @@ namespace Bit.Core.Repositories.EntityFramework
                 {
                     sponsorship.SponsoredOrganizationId = UpdatedOrgId(sponsorship.SponsoredOrganizationId);
                     sponsorship.SponsoringOrganizationId = UpdatedOrgId(sponsorship.SponsoringOrganizationId);
+                    sponsorship.FriendlyName = null;
                 }
 
                 dbContext.Remove(orgEntity);

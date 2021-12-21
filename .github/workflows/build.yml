@@ -44,8 +44,7 @@ jobs:
           node-version: '14'
 
       - name: Update NPM
-        run: |
-          npm install -g npm@7
+        run: npm install -g npm@7
 
       - name: Print environment
         run: |
@@ -67,6 +66,15 @@ jobs:
       - name: Build solution
         run: msbuild bitwarden-server.sln /p:Configuration=Debug /verbosity:minimal
         shell: pwsh
+      
+      # TODO: This can be removed when upgrading to .NET 6
+      - name: Restore tools
+        run: dotnet tool restore
+        shell: pwsh
+
+      # - name: Verify Format
+      #   run: dotnet tool run dotnet-format --check
+      #   shell: pwsh
 
       - name: Test OSS solution
         run: dotnet test ./test --configuration Debug --no-build
@@ -119,8 +127,7 @@ jobs:
           node-version: '14'
 
       - name: Update NPM
-        run: |
-          npm install -g npm@7
+        run: npm install -g npm@7
 
       - name: Print environment
         run: |
@@ -135,8 +142,7 @@ jobs:
       - name: Set up Gulp
         if: ${{ matrix.gulp }}
         working-directory: ${{ matrix.base_path }}/${{ matrix.service_name }}
-        run: |
-          npm install -g gulp
+        run: npm install -g gulp
 
       - name: Restore/Clean service
         working-directory: ${{ matrix.base_path }}/${{ matrix.service_name }}
@@ -248,30 +254,17 @@ jobs:
         uses: Azure/get-keyvault-secrets@80ccd3fafe5662407cc2e55f202ee34bfff8c403
         with:
           keyvault: "bitwarden-prod-kv"
-          secrets: "aws-ecr-access-key-id,
-                    aws-ecr-secret-access-key,
-                    docker-password,
+          secrets: "docker-password,
                     docker-username,
                     dct-delegate-2-repo-passphrase,
                     dct-delegate-2-key"
-
-      - name: Login to Azure - QA Subscription
-        if: ${{ matrix.service_name }} == "EventsProcessor"
-        uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a
-        with:
-          creds: ${{ secrets.AZURE_QA_KV_CREDENTIALS }}
 
       - name: Log into Docker
         if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix'
         env:
           DOCKER_USERNAME: ${{ steps.retrieve-secrets.outputs.docker-username }}
           DOCKER_PASSWORD: ${{ steps.retrieve-secrets.outputs.docker-password }}
-        run: |
-          if [[ "${{ matrix.docker_repo }}" == "bitwardenqa.azurecr.io" ]]; then
-            az acr login -n bitwardenqa
-          else
-            echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
-          fi
+        run: echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
 
       - name: Setup Docker Trust
         if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix'
@@ -321,24 +314,24 @@ jobs:
           DCT_REPO_PASSPHRASE: ${{ steps.retrieve-secrets.outputs.dct-delegate-2-repo-passphrase }}
         run: |
           echo "DOCKER_CONTENT_TRUST=1" >> $GITHUB_ENV
-          echo "DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE=$DCT_REPO_PASSPHRASE" >> $GITHUB_ENV  
+          echo "DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE=$DCT_REPO_PASSPHRASE" >> $GITHUB_ENV
 
       - name: Tag and Push RC to Docker Hub
-        if: github.ref == 'refs/heads/rc'
+        if: (github.ref == 'refs/heads/rc' && matrix.docker_repo == 'bitwarden')
         run: |
           docker tag ${{ steps.setup.outputs.service_name }} \
             ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }}:rc
           docker push ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }}:rc
 
       - name: Tag and Push Hotfix to Docker Hub
-        if: github.ref == 'refs/heads/hotfix'
+        if: (github.ref == 'refs/heads/hotfix' && matrix.docker_repo == 'bitwarden')
         run: |
           docker tag ${{ steps.setup.outputs.service_name }} \
             ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }}:hotfix
           docker push ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }}:hotfix
 
       - name: Tag and Push Dev to Docker Hub
-        if: github.ref == 'refs/heads/master'
+        if: (github.ref == 'refs/heads/master' && matrix.docker_repo == 'bitwarden')
         run: |
           docker tag ${{ steps.setup.outputs.service_name }} \
             ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }}:dev
@@ -350,46 +343,43 @@ jobs:
           docker logout
           echo "DOCKER_CONTENT_TRUST=0" >> $GITHUB_ENV
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@0d9a5be0dceea74e09396820e1e522ba4a110d2f  # v1
+      - name: Login to Azure - QA Subscription
+        uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a
         with:
-          aws-access-key-id: ${{ steps.retrieve-secrets.outputs.aws-ecr-access-key-id }}
-          aws-secret-access-key: ${{ steps.retrieve-secrets.outputs.aws-ecr-secret-access-key }}
-          aws-region: us-east-1
+          creds: ${{ secrets.AZURE_QA_KV_CREDENTIALS }}
 
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@aaf69d68aa3fb14c1d5a6be9ac61fe15b48453a2  # v1
+      - name: Login to Azure ACR
+        run: az acr login -n bitwardenqa
 
-      - name: Tag and Push RC to AWS ECR nonprod registry
+      - name: Tag and Push RC to Azure ACR QA registry
         if: github.ref == 'refs/heads/rc'
         env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          REGISTRY: bitwardenqa.azurecr.io
           IMAGE_TAG: ${{ github.sha }}
         run: |
           docker tag ${{ steps.setup.outputs.service_name }} \
-            $ECR_REGISTRY/nonprod/${{ steps.setup.outputs.service_name }}:rc-${IMAGE_TAG:(-8)}
-          docker push $ECR_REGISTRY/nonprod/${{ steps.setup.outputs.service_name }}:rc-${IMAGE_TAG:(-8)}
+            $REGISTRY/${{ steps.setup.outputs.service_name }}:rc-${IMAGE_TAG:(-8)}
+          docker push $REGISTRY/${{ steps.setup.outputs.service_name }}:rc-${IMAGE_TAG:(-8)}
 
-      - name: Tag and Push Hotfix to AWS ECR nonprod registry
+      - name: Tag and Push Hotfix to Azure ACR QA registry
         if: github.ref == 'refs/heads/hotfix'
         env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          REGISTRY: bitwardenqa.azurecr.io
           IMAGE_TAG: ${{ github.sha }}
         run: |
           docker tag ${{ steps.setup.outputs.service_name }} \
-            $ECR_REGISTRY/nonprod/${{ steps.setup.outputs.service_name }}:hotfix-${IMAGE_TAG:(-8)}
-          docker push $ECR_REGISTRY/nonprod/${{ steps.setup.outputs.service_name }}:hotfix-${IMAGE_TAG:(-8)}
+            $REGISTRY/${{ steps.setup.outputs.service_name }}:hotfix-${IMAGE_TAG:(-8)}
+          docker push $REGISTRY/${{ steps.setup.outputs.service_name }}:hotfix-${IMAGE_TAG:(-8)}
 
-      - name: Tag and Push Dev to AWS ECR nonprod registry
+      - name: Tag and Push Dev to Azure ACR QA registry
         if: github.ref == 'refs/heads/master'
         env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          REGISTRY: bitwardenqa.azurecr.io
           IMAGE_TAG: ${{ github.sha }}
         run: |
           docker tag ${{ steps.setup.outputs.service_name }} \
-            $ECR_REGISTRY/nonprod/${{ steps.setup.outputs.service_name }}:dev-${IMAGE_TAG:(-8)}
-          docker push $ECR_REGISTRY/nonprod/${{ steps.setup.outputs.service_name }}:dev-${IMAGE_TAG:(-8)}
+            $REGISTRY/${{ steps.setup.outputs.service_name }}:dev-${IMAGE_TAG:(-8)}
+          docker push $REGISTRY/${{ steps.setup.outputs.service_name }}:dev-${IMAGE_TAG:(-8)}
 
 
   upload:

@@ -2,10 +2,11 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Bit.Api.Models.Request;
+using Bit.Api.Models.Response;
 using Microsoft.AspNetCore.Mvc;
 using Bit.Core.Repositories;
 using Microsoft.AspNetCore.Authorization;
-using Bit.Core.Models.Api;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Table;
 using Bit.Core.Services;
