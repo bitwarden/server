@@ -9,6 +9,7 @@
         public virtual string AppleWebhookKey { get; set; }
         public virtual string FreshdeskWebhookKey { get; set; }
         public virtual string FreshdeskApiKey { get; set; }
+        public virtual string FreshsalesApiKey { get; set; }
         public virtual PayPalSettings PayPal { get; set; } = new PayPalSettings();
 
         public class PayPalSettings
