@@ -1,11 +1,14 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
+using Azure;
+using Azure.Storage.Blobs;
+using Azure.Storage.Blobs.Models;
+using Azure.Storage.Sas;
 using Bit.Core.Enums;
 using Bit.Core.Models.Table;
 using Bit.Core.Settings;
-using Microsoft.Azure.Storage;
-using Microsoft.Azure.Storage.Blob;
 
 namespace Bit.Core.Services
 {
@@ -13,8 +16,8 @@ namespace Bit.Core.Services
     {
         public const string FilesContainerName = "sendfiles";
         private static readonly TimeSpan _downloadLinkLiveTime = TimeSpan.FromMinutes(1);
-        private readonly CloudBlobClient _blobClient;
-        private CloudBlobContainer _sendFilesContainer;
+        private readonly BlobServiceClient _blobServiceClient;
+        private BlobContainerClient _sendFilesContainerClient;
 
         public FileUploadType FileUploadType => FileUploadType.Azure;
 
@@ -24,24 +27,31 @@ namespace Bit.Core.Services
         public AzureSendFileStorageService(
             GlobalSettings globalSettings)
         {
-            var storageAccount = CloudStorageAccount.Parse(globalSettings.Send.ConnectionString);
-            _blobClient = storageAccount.CreateCloudBlobClient();
+            _blobServiceClient = new BlobServiceClient(globalSettings.Send.ConnectionString);
         }
 
         public async Task UploadNewFileAsync(Stream stream, Send send, string fileId)
         {
             await InitAsync();
-            var blob = _sendFilesContainer.GetBlockBlobReference(BlobName(send, fileId));
+
+            var blobClient = _sendFilesContainerClient.GetBlobClient(BlobName(send, fileId));
+
+            var metadata = new Dictionary<string, string>();
             if (send.UserId.HasValue)
             {
-                blob.Metadata.Add("userId", send.UserId.Value.ToString());
+                metadata.Add("userId", send.UserId.Value.ToString());
             }
             else
             {
-                blob.Metadata.Add("organizationId", send.OrganizationId.Value.ToString());
+                metadata.Add("organizationId", send.OrganizationId.Value.ToString());
             }
-            blob.Properties.ContentDisposition = $"attachment; filename=\"{fileId}\"";
-            await blob.UploadFromStreamAsync(stream);
+
+            var headers = new BlobHttpHeaders
+            {
+                ContentDisposition = $"attachment; filename=\"{fileId}\""
+            };
+
+            await blobClient.UploadAsync(stream, new BlobUploadOptions { Metadata = metadata, HttpHeaders = headers });
         }
 
         public async Task DeleteFileAsync(Send send, string fileId) => await DeleteBlobAsync(BlobName(send, fileId));
@@ -49,8 +59,8 @@ namespace Bit.Core.Services
         public async Task DeleteBlobAsync(string blobName)
         {
             await InitAsync();
-            var blob = _sendFilesContainer.GetBlockBlobReference(blobName);
-            await blob.DeleteIfExistsAsync();
+            var blobClient = _sendFilesContainerClient.GetBlobClient(blobName);
+            await blobClient.DeleteIfExistsAsync();
         }
 
         public async Task DeleteFilesForOrganizationAsync(Guid organizationId)
@@ -66,70 +76,66 @@ namespace Bit.Core.Services
         public async Task<string> GetSendFileDownloadUrlAsync(Send send, string fileId)
         {
             await InitAsync();
-            var blob = _sendFilesContainer.GetBlockBlobReference(BlobName(send, fileId));
-            var accessPolicy = new SharedAccessBlobPolicy()
-            {
-                SharedAccessExpiryTime = DateTime.UtcNow.Add(_downloadLinkLiveTime),
-                Permissions = SharedAccessBlobPermissions.Read,
-            };
-
-            return blob.Uri + blob.GetSharedAccessSignature(accessPolicy);
+            var blobClient = _sendFilesContainerClient.GetBlobClient(BlobName(send, fileId));
+            var sasUri = blobClient.GenerateSasUri(BlobSasPermissions.Read, DateTime.UtcNow.Add(_downloadLinkLiveTime));
+            return sasUri.ToString();
         }
 
         public async Task<string> GetSendFileUploadUrlAsync(Send send, string fileId)
         {
             await InitAsync();
-            var blob = _sendFilesContainer.GetBlockBlobReference(BlobName(send, fileId));
-
-            var accessPolicy = new SharedAccessBlobPolicy()
-            {
-                SharedAccessExpiryTime = DateTime.UtcNow.Add(_downloadLinkLiveTime),
-                Permissions = SharedAccessBlobPermissions.Create | SharedAccessBlobPermissions.Write,
-            };
-
-            return blob.Uri + blob.GetSharedAccessSignature(accessPolicy);
+            var blobClient = _sendFilesContainerClient.GetBlobClient(BlobName(send, fileId));
+            var sasUri = blobClient.GenerateSasUri(BlobSasPermissions.Create | BlobSasPermissions.Write, DateTime.UtcNow.Add(_downloadLinkLiveTime));
+            return sasUri.ToString();
         }
 
         public async Task<(bool, long?)> ValidateFileAsync(Send send, string fileId, long expectedFileSize, long leeway)
         {
             await InitAsync();
 
-            var blob = _sendFilesContainer.GetBlockBlobReference(BlobName(send, fileId));
+            var blobClient = _sendFilesContainerClient.GetBlobClient(BlobName(send, fileId));
 
-            if (!blob.Exists())
+            try
+            {
+                var blobProperties = await blobClient.GetPropertiesAsync();
+                var metadata = blobProperties.Value.Metadata;
+
+                if (send.UserId.HasValue)
+                {
+                    metadata["userId"] = send.UserId.Value.ToString();
+                }
+                else
+                {
+                    metadata["organizationId"] = send.OrganizationId.Value.ToString();
+                }
+                await blobClient.SetMetadataAsync(metadata);
+
+                var headers = new BlobHttpHeaders
+                {
+                    ContentDisposition = $"attachment; filename=\"{fileId}\""
+                };
+                await blobClient.SetHttpHeadersAsync(headers);
+
+                var length = blobProperties.Value.ContentLength;
+                if (length < expectedFileSize - leeway || length > expectedFileSize + leeway)
+                {
+                    return (false, length);
+                }
+
+                return (true, length);
+            }
+            catch (Exception ex)
             {
                 return (false, null);
             }
-
-            blob.FetchAttributes();
-
-            if (send.UserId.HasValue)
-            {
-                blob.Metadata["userId"] = send.UserId.Value.ToString();
-            }
-            else
-            {
-                blob.Metadata["organizationId"] = send.OrganizationId.Value.ToString();
-            }
-            blob.Properties.ContentDisposition = $"attachment; filename=\"{fileId}\"";
-            blob.SetMetadata();
-            blob.SetProperties();
-
-            var length = blob.Properties.Length;
-            if (length < expectedFileSize - leeway || length > expectedFileSize + leeway)
-            {
-                return (false, length);
-            }
-
-            return (true, length);
         }
 
         private async Task InitAsync()
         {
-            if (_sendFilesContainer == null)
+            if (_sendFilesContainerClient == null)
             {
-                _sendFilesContainer = _blobClient.GetContainerReference(FilesContainerName);
-                await _sendFilesContainer.CreateIfNotExistsAsync(BlobContainerPublicAccessType.Off, null, null);
+                _sendFilesContainerClient = _blobServiceClient.GetBlobContainerClient(FilesContainerName);
+                await _sendFilesContainerClient.CreateIfNotExistsAsync(PublicAccessType.None, null, null);
             }
         }
     }
