@@ -1,5 +1,6 @@
 ﻿using System;
 using Bit.Core.Utilities;
+using Bit.SharedKernel.Utilities;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Admin.Controllers
@@ -16,7 +17,7 @@ namespace Bit.Admin.Controllers
         [HttpGet("~/version")]
         public JsonResult GetVersion()
         {
-            return Json(CoreHelpers.GetVersion());
+            return Json(VersionHelper.GetVersion());
         }
     }
 }

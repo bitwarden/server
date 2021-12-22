@@ -1,6 +1,7 @@
 ﻿using System.Globalization;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
+using Bit.SharedKernel.Utilities;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -8,6 +9,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Logging;
+using SecurityHeadersMiddleware = Bit.Core.Utilities.SecurityHeadersMiddleware;
 
 namespace Bit.EventsProcessor
 {
@@ -53,7 +55,7 @@ namespace Bit.EventsProcessor
                 endpoints.MapGet("/now",
                     async context => await context.Response.WriteAsJsonAsync(System.DateTime.UtcNow));
                 endpoints.MapGet("/version",
-                    async context => await context.Response.WriteAsJsonAsync(CoreHelpers.GetVersion()));
+                    async context => await context.Response.WriteAsJsonAsync(VersionHelper.GetVersion()));
 
             });
         }

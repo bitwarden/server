@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Bit.Core.Utilities;
+using Bit.SharedKernel.Utilities;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.Controllers
@@ -18,7 +18,7 @@ namespace Bit.Api.Controllers
         [HttpGet("~/version")]
         public JsonResult GetVersion()
         {
-            return Json(CoreHelpers.GetVersion());
+            return Json(VersionHelper.GetVersion());
         }
 
         [HttpGet("~/ip")]

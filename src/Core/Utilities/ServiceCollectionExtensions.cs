@@ -1,6 +1,5 @@
 ﻿using System;
 using System.IO;
-using System.Linq;
 using System.Reflection;
 using System.Security.Claims;
 using System.Security.Cryptography.X509Certificates;
@@ -14,7 +13,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Resources;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Core.Utilities;
+using Bit.SharedKernel.Utilities;
 using IdentityModel;
 using IdentityServer4.AccessTokenValidation;
 using IdentityServer4.Configuration;
@@ -554,7 +553,7 @@ namespace Bit.Core.Utilities
                 {
                     httpContext.Response.OnStarting((state) =>
                     {
-                        httpContext.Response.Headers.Append("Server-Version", CoreHelpers.GetVersion());
+                        httpContext.Response.Headers.Append("Server-Version", VersionHelper.GetVersion());
                         return Task.FromResult(0);
                     }, null);
                     await next.Invoke();

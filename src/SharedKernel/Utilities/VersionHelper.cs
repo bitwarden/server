@@ -6,12 +6,12 @@ namespace Bit.SharedKernel.Utilities
     {
         private static string? _version;
 
-        public static string? GetVersion()
+        public static string GetVersion()
         {
             if (string.IsNullOrWhiteSpace(_version))
             {
-                _version = Assembly.GetEntryAssembly()
-                    .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+                _version = Assembly.GetEntryAssembly()!
+                    .GetCustomAttribute<AssemblyInformationalVersionAttribute>()!
                     .InformationalVersion;
             }
 
