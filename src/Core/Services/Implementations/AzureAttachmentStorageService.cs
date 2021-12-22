@@ -62,12 +62,8 @@ namespace Bit.Core.Services
         {
             await InitAsync(attachmentData.ContainerName);
             var blobClient = _attachmentContainers[attachmentData.ContainerName].GetBlobClient(BlobName(cipher.Id, attachmentData));
-            if (blobClient.CanGenerateSasUri)
-            {
-                var sasUri = blobClient.GenerateSasUri(BlobSasPermissions.Read, DateTime.UtcNow.Add(blobLinkLiveTime));
-                return sasUri.ToString();
-            }
-            return null;
+            var sasUri = blobClient.GenerateSasUri(BlobSasPermissions.Read, DateTime.UtcNow.Add(blobLinkLiveTime));
+            return sasUri.ToString();
         }
 
         public async Task<string> GetAttachmentUploadUrlAsync(Cipher cipher, CipherAttachment.MetaData attachmentData)
@@ -75,12 +71,8 @@ namespace Bit.Core.Services
             await InitAsync(EventGridEnabledContainerName);
             var blobClient = _attachmentContainers[EventGridEnabledContainerName].GetBlobClient(BlobName(cipher.Id, attachmentData));
             attachmentData.ContainerName = EventGridEnabledContainerName;
-            if (blobClient.CanGenerateSasUri)
-            {
-                var sasUri = blobClient.GenerateSasUri(BlobSasPermissions.Create | BlobSasPermissions.Write, DateTime.UtcNow.Add(blobLinkLiveTime));
-                return sasUri.ToString();
-            }
-            return null;
+            var sasUri = blobClient.GenerateSasUri(BlobSasPermissions.Create | BlobSasPermissions.Write, DateTime.UtcNow.Add(blobLinkLiveTime));
+            return sasUri.ToString();
         }
 
         public async Task UploadNewAttachmentAsync(Stream stream, Cipher cipher, CipherAttachment.MetaData attachmentData)

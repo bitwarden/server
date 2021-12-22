@@ -77,24 +77,16 @@ namespace Bit.Core.Services
         {
             await InitAsync();
             var blobClient = _sendFilesContainerClient.GetBlobClient(BlobName(send, fileId));
-            if (blobClient.CanGenerateSasUri)
-            {
-                var sasUri = blobClient.GenerateSasUri(BlobSasPermissions.Read, DateTime.UtcNow.Add(_downloadLinkLiveTime));
-                return sasUri.ToString();
-            }
-            return null;
+            var sasUri = blobClient.GenerateSasUri(BlobSasPermissions.Read, DateTime.UtcNow.Add(_downloadLinkLiveTime));
+            return sasUri.ToString();
         }
 
         public async Task<string> GetSendFileUploadUrlAsync(Send send, string fileId)
         {
             await InitAsync();
             var blobClient = _sendFilesContainerClient.GetBlobClient(BlobName(send, fileId));
-            if (blobClient.CanGenerateSasUri)
-            {
-                var sasUri = blobClient.GenerateSasUri(BlobSasPermissions.Create | BlobSasPermissions.Write, DateTime.UtcNow.Add(_downloadLinkLiveTime));
-                return sasUri.ToString();
-            }
-            return null;
+            var sasUri = blobClient.GenerateSasUri(BlobSasPermissions.Create | BlobSasPermissions.Write, DateTime.UtcNow.Add(_downloadLinkLiveTime));
+            return sasUri.ToString();
         }
 
         public async Task<(bool, long?)> ValidateFileAsync(Send send, string fileId, long expectedFileSize, long leeway)
