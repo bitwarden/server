@@ -14,6 +14,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Resources;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bit.Core.Tokenizer;
 using Bit.Core.Utilities;
 using IdentityModel;
 using IdentityServer4.AccessTokenValidation;
@@ -201,6 +202,7 @@ namespace Bit.Core.Utilities
             services.AddSingleton<IPaymentService, StripePaymentService>();
             services.AddSingleton<IMailService, HandlebarsMailService>();
             services.AddSingleton<ILicensingService, LicensingService>();
+            services.AddSingleton<ITokenizerFactory, TokenizerFactory>();
 
             if (CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ConnectionString) &&
                 CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ApplicationCacheTopicName))
