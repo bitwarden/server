@@ -1,10 +1,9 @@
 using System;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.DataProtection;
 
 namespace Bit.Core.Tokenizer
 {
-    public class TokenizerFactory
+    public class TokenizerFactory : ITokenizerFactory
     {
         private readonly IDataProtectionProvider _dataProtectionProvider;
 
