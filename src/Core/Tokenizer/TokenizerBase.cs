@@ -51,7 +51,7 @@ namespace Bit.Core.Tokenizer
             return JsonSerializer.Deserialize<T>(protectedData);
         }
 
-        protected string StripClearTextPrefix(string protectedData)
+        private string StripClearTextPrefix(string protectedData)
         {
             if (!protectedData.StartsWith(_clearTextPrefix))
             {

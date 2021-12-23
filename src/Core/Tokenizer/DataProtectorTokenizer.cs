@@ -18,8 +18,6 @@ namespace Bit.Core.Tokenizer
 
         protected override T UnprotectData(string key, string protectedData)
         {
-            protectedData = StripClearTextPrefix(protectedData);
-
             return Deserialize(_dataProtectionProvider.CreateProtector(key).Unprotect(protectedData));
         }
     }
