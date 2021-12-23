@@ -8,7 +8,7 @@ namespace Bit.Core.Tokenizer
     {
         [JsonConverter(typeof(EpochDateTimeJsonConverter))]
         public DateTime ExpirationDate { get; set; }
-        public bool Valid => ExpirationDate < DateTime.UtcNow && TokenIsValid();
+        public bool Valid => ExpirationDate > DateTime.UtcNow && TokenIsValid();
         protected abstract bool TokenIsValid();
     }
 }
