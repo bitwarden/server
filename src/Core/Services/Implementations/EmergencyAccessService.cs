@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models;
-using Bit.Core.Models.Api.Response;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
@@ -377,7 +376,7 @@ namespace Bit.Core.Services
             }
         }
 
-        public async Task<EmergencyAccessViewResponseModel> ViewAsync(Guid id, User requestingUser)
+        public async Task<EmergencyAccessViewData> ViewAsync(Guid id, User requestingUser)
         {
             var emergencyAccess = await _emergencyAccessRepository.GetByIdAsync(id);
 
@@ -387,11 +386,15 @@ namespace Bit.Core.Services
             }
             
             var ciphers = await _cipherRepository.GetManyByUserIdAsync(emergencyAccess.GrantorId, false);
-            
-            return new EmergencyAccessViewResponseModel(_globalSettings, emergencyAccess, ciphers);
+
+            return new EmergencyAccessViewData
+            {
+                EmergencyAccess = emergencyAccess,
+                Ciphers = ciphers,
+            };
         }
 
-        public async Task<AttachmentResponseModel> GetAttachmentDownloadAsync(Guid id, string cipherId, string attachmentId, User requestingUser)
+        public async Task<AttachmentResponseData> GetAttachmentDownloadAsync(Guid id, string cipherId, string attachmentId, User requestingUser)
         {
             var emergencyAccess = await _emergencyAccessRepository.GetByIdAsync(id);
 
