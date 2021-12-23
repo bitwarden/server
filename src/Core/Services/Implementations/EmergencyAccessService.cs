@@ -8,17 +8,16 @@ using Bit.Core.Models;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
-using Bit.Core.Utilities;
 using Bit.Core.Settings;
-using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
-using Bit.Core.Models.Api;
 using Bit.Core.Models.Business.Tokens;
+using Bit.Core.Tokenizer;
 
 namespace Bit.Core.Services
 {
     public class EmergencyAccessService : IEmergencyAccessService
     {
+        private const string TokenKey = "EmergencyAccessServiceDataProtector";
         private readonly IEmergencyAccessRepository _emergencyAccessRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly IUserRepository _userRepository;
@@ -27,11 +26,10 @@ namespace Bit.Core.Services
         private readonly ICipherService _cipherService;
         private readonly IMailService _mailService;
         private readonly IUserService _userService;
-        private readonly IDataProtector _dataProtector;
         private readonly GlobalSettings _globalSettings;
         private readonly IPasswordHasher<User> _passwordHasher;
         private readonly IOrganizationService _organizationService;
-        private readonly ITokenService<EmergencyAccessInviteToken> _tokenService;
+        private readonly ITokenizer<EmergencyAccessInviteToken> _tokenizer;
 
         public EmergencyAccessService(
             IEmergencyAccessRepository emergencyAccessRepository,
@@ -43,10 +41,9 @@ namespace Bit.Core.Services
             IMailService mailService,
             IUserService userService,
             IPasswordHasher<User> passwordHasher,
-            IDataProtectionProvider dataProtectionProvider,
             GlobalSettings globalSettings,
             IOrganizationService organizationService,
-            ITokenService<EmergencyAccessInviteToken> tokenService)
+            ITokenizerFactory tokenizerFactory)
         {
             _emergencyAccessRepository = emergencyAccessRepository;
             _organizationUserRepository = organizationUserRepository;
@@ -57,10 +54,9 @@ namespace Bit.Core.Services
             _mailService = mailService;
             _userService = userService;
             _passwordHasher = passwordHasher;
-            _dataProtector = dataProtectionProvider.CreateProtector("EmergencyAccessServiceDataProtector");
             _globalSettings = globalSettings;
             _organizationService = organizationService;
-            _tokenService = tokenService;
+            _tokenizer = tokenizerFactory.Create<EmergencyAccessInviteToken>("", TokenType.DataProtector);
         }
 
         public async Task<EmergencyAccess> InviteAsync(User invitingUser, string email, EmergencyAccessType type, int waitTime)
@@ -123,9 +119,7 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Emergency Access not valid.");
             }
 
-            var unProtectedToken = _tokenService.Unprotect(_dataProtector, token);
-            if (!unProtectedToken.IsValid(emergencyAccessId, user.Email,
-                    _globalSettings.OrganizationInviteExpirationHours))
+            if (!_tokenizer.TryUnprotect(TokenKey, token, out var data) && data.IsValid(emergencyAccessId, user.Email))
             {
                 throw new BadRequestException("Invalid token.");
             }
@@ -409,10 +403,12 @@ namespace Bit.Core.Services
 
         private async Task SendInviteAsync(EmergencyAccess emergencyAccess, string invitingUsersName)
         {
-            var token = _tokenService.Protect(_dataProtector, new EmergencyAccessInviteToken
+
+            var token = _tokenizer.Protect(TokenKey, new EmergencyAccessInviteToken
             {
                 Id = emergencyAccess.Id,
                 Email = emergencyAccess.Email,
+                ExpirationDate = DateTime.UtcNow.AddHours(_globalSettings.OrganizationInviteExpirationHours)
             });
             await _mailService.SendEmergencyAccessInviteEmailAsync(emergencyAccess, invitingUsersName, token);
         }
