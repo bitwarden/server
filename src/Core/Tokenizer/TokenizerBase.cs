@@ -22,6 +22,11 @@ namespace Bit.Core.Tokenizer
             return UnprotectData(key, strippedProtectedData);
         }
 
+        public bool TokenValid(string key, string token)
+        {
+            return Unprotect(key, token).Valid;
+        }
+
         protected string Serialize(T data)
         {
             return JsonSerializer.Serialize(data);

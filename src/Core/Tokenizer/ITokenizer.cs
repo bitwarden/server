@@ -4,5 +4,6 @@
     {
         string Protect(string key, T data);
         T Unprotect(string key, string token);
+        bool TokenValid(string key, string token);
     }
 }
