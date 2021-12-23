@@ -22,6 +22,20 @@ namespace Bit.Core.Test.Tokenizer
             Assert.Contains($"\"ExpirationDate\":{expectedDate}", result);
         }
 
+        [Theory, AutoData]
+        public void ExpirationSerializationRoundTrip(DateTime expirationDate)
+        {
+            var sut = new TestExpiringToken
+            {
+                ExpirationDate = expirationDate
+            };
+
+            var intermediate = JsonSerializer.Serialize(sut);
+            var result = JsonSerializer.Deserialize<TestExpiringToken>(intermediate);
+
+            Assert.Equal(sut.ExpirationDate, result.ExpirationDate, TimeSpan.FromMilliseconds(100));
+        }
+
         [Fact]
         public void InvalidIfPastExpiryDate()
         {
