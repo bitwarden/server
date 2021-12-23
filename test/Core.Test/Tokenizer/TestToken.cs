@@ -1,4 +1,4 @@
-using Bit.Core.Tokenizer;
+﻿using Bit.Core.Tokenizer;
 
 namespace Bit.Core.Test.Tokenizer
 {

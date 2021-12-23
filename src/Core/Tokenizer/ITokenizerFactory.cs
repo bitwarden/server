@@ -1,4 +1,4 @@
-namespace Bit.Core.Tokenizer
+﻿namespace Bit.Core.Tokenizer
 {
     public interface ITokenizerFactory
     {
