@@ -22,6 +22,20 @@ namespace Bit.Core.Tokenizer
             return UnprotectData(key, strippedProtectedData);
         }
 
+        public bool TryUnprotect(string key, string token, out T data)
+        {
+            data = default;
+            try
+            {
+                data = Unprotect(key, token);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
         public bool TokenValid(string key, string token)
         {
             return Unprotect(key, token).Valid;
