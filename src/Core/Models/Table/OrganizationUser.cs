@@ -5,7 +5,7 @@ using Bit.Core.Utilities;
 
 namespace Bit.Core.Models.Table
 {
-    public class OrganizationUser : ITableObject<Guid>, IExternal
+    public class OrganizationUser : ITableObject<Guid>, IExternal, ICloneable
     {
         public Guid Id { get; set; }
         public Guid OrganizationId { get; set; }
@@ -26,6 +26,34 @@ namespace Bit.Core.Models.Table
         public void SetNewId()
         {
             Id = CoreHelpers.GenerateComb();
+        }
+
+        public OrganizationUser AcceptUser(Guid userId)
+        {
+            var orgUser = Clone();
+            orgUser.Status = OrganizationUserStatusType.Accepted;
+            orgUser.UserId = userId;
+            orgUser.Email = null;
+            return orgUser;
+        }
+
+        public OrganizationUser ConfirmUser(string key)
+        {
+            var orgUser = Clone();
+            orgUser.Status = OrganizationUserStatusType.Confirmed;
+            orgUser.Key = key;
+            orgUser.Email = null;
+            return orgUser;
+        }
+
+        object ICloneable.Clone() => Clone();
+        public OrganizationUser Clone()
+        {
+            var clone = CoreHelpers.CloneObject(this);
+            clone.CreationDate = CreationDate;
+            clone.RevisionDate = RevisionDate;
+
+            return clone;
         }
     }
 }

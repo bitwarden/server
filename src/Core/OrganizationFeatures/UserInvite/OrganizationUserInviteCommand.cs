@@ -136,9 +136,7 @@ namespace Bit.Core.OrganizationFeatures.UserInvite
                 await _organizationUserInviteAccessPolicies.CanAcceptInviteAsync(org, user, orgUser, _organizationUserInviteService.TokenIsValid(token, user, orgUser))
             );
 
-            orgUser.Status = OrganizationUserStatusType.Accepted;
-            orgUser.UserId = user.Id;
-            orgUser.Email = null;
+            orgUser = orgUser.AcceptUser(user.Id);
 
             await _organizationUserRepository.ReplaceAsync(orgUser);
 
@@ -203,10 +201,7 @@ namespace Bit.Core.OrganizationFeatures.UserInvite
                     continue;
                 }
 
-
-                orgUser.Status = OrganizationUserStatusType.Confirmed;
-                orgUser.Key = orgUserKeys[orgUser.Id];
-                orgUser.Email = null;
+                orgUser = orgUser.ConfirmUser(orgUserKeys[orgUser.Id]);
 
                 await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Confirmed);
                 await _organizationUserMailer.SendOrganizationConfirmedEmail(organization, user);
