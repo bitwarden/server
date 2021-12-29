@@ -1,13 +1,13 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
-using Bit.Core.Repositories;
-using Microsoft.AspNetCore.Authorization;
-using Bit.Core.Models.Api;
-using Bit.Core.Exceptions;
-using Bit.Core.Services;
 using Bit.Core.Context;
+using Bit.Core.Exceptions;
+using Bit.Core.Models.Api;
 using Bit.Core.Models.Table;
+using Bit.Core.Repositories;
+using Bit.Core.Services;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.Controllers
 {
@@ -43,7 +43,7 @@ namespace Bit.Api.Controllers
         {
             var userId = _userService.GetProperUserId(User).Value;
             var authRequest = await _authRequestRepository.GetByIdAsync(new Guid(id));
-            if(authRequest == null || authRequest.UserId != userId)
+            if (authRequest == null || authRequest.UserId != userId)
             {
                 throw new NotFoundException();
             }
@@ -55,12 +55,12 @@ namespace Bit.Api.Controllers
         public async Task<AuthRequestResponseModel> Post([FromBody] AuthRequestCreateRequestModel model)
         {
             var user = await _userRepository.GetByEmailAsync(model.Email);
-            if(user == null)
+            if (user == null)
             {
                 throw new NotFoundException();
             }
             var device = await _deviceRepository.GetByIdentifierAsync(model.DeviceIdentifier);
-            if(device == null)
+            if (device == null)
             {
                 device = new Device
                 {
@@ -85,13 +85,13 @@ namespace Bit.Api.Controllers
         {
             var userId = _userService.GetProperUserId(User).Value;
             var authRequest = await _authRequestRepository.GetByIdAsync(new Guid(id));
-            if(authRequest == null || authRequest.UserId != userId)
+            if (authRequest == null || authRequest.UserId != userId)
             {
                 throw new NotFoundException();
             }
 
             var device = await _deviceRepository.GetByIdentifierAsync(model.DeviceIdentifier);
-            if(device == null)
+            if (device == null)
             {
                 throw new BadRequestException("Invalid device.");
             }
