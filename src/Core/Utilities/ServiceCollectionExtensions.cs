@@ -141,6 +141,7 @@ namespace Bit.Core.Utilities
                 services.AddSingleton<ITransactionRepository, SqlServerRepos.TransactionRepository>();
                 services.AddSingleton<IU2fRepository, SqlServerRepos.U2fRepository>();
                 services.AddSingleton<IUserRepository, SqlServerRepos.UserRepository>();
+                services.AddSingleton<IAuthRequestRepository, SqlServerRepos.AuthRequestRepository>();
             }
 
             if (globalSettings.SelfHosted)
