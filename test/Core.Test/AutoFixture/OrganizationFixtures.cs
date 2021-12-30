@@ -105,7 +105,7 @@ namespace Bit.Core.Test.AutoFixture.OrganizationFixtures
         }
     }
 
-    internal class OrganizationInvite : ICustomization
+    internal class OrganizationInviteData : ICustomization
     {
         public OrganizationUserType InviteeUserType { get; set; }
         public OrganizationUserType InvitorUserType { get; set; }
@@ -124,7 +124,7 @@ namespace Bit.Core.Test.AutoFixture.OrganizationFixtures
                 .With(ou => ou.OrganizationId, organizationId)
                 .With(ou => ou.Type, InvitorUserType)
                 .With(ou => ou.Permissions, PermissionsBlob));
-            fixture.Customize<OrganizationUserInvite>(composer => composer
+            fixture.Customize<OrganizationUserInviteData>(composer => composer
                 .With(oi => oi.Type, InviteeUserType));
         }
     }
@@ -179,10 +179,10 @@ namespace Bit.Core.Test.AutoFixture.OrganizationFixtures
         { }
     }
 
-    internal class OrganizationInviteAutoDataAttribute : CustomAutoDataAttribute
+    internal class OrganizationInviteDataAutoDataAttribute : CustomAutoDataAttribute
     {
-        public OrganizationInviteAutoDataAttribute(int inviteeUserType = 0, int invitorUserType = 0, string permissionsBlob = null) : base(new SutProviderCustomization(),
-            new OrganizationInvite
+        public OrganizationInviteDataAutoDataAttribute(int inviteeUserType = 0, int invitorUserType = 0, string permissionsBlob = null) : base(new SutProviderCustomization(),
+            new OrganizationInviteData
             {
                 InviteeUserType = (OrganizationUserType)inviteeUserType,
                 InvitorUserType = (OrganizationUserType)invitorUserType,
@@ -191,13 +191,12 @@ namespace Bit.Core.Test.AutoFixture.OrganizationFixtures
         { }
     }
 
-    internal class InlineOrganizationInviteAutoDataAttribute : InlineCustomAutoDataAttribute
+    internal class InlineOrganizationInviteDataAutoDataAttribute : InlineCustomAutoDataAttribute
     {
-        public InlineOrganizationInviteAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
-            typeof(OrganizationInvite) }, values)
+        public InlineOrganizationInviteDataAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
+            typeof(OrganizationInviteData) }, values)
         { }
     }
-
     internal class EfOrganizationAutoDataAttribute : CustomAutoDataAttribute
     {
         public EfOrganizationAutoDataAttribute() : base(new SutProviderCustomization(), new EfOrganization())

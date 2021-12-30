@@ -101,9 +101,21 @@ namespace Bit.Core.Models.Table
         object ICloneable.Clone() => Clone();
         public Cipher Clone()
         {
-            var clone = CoreHelpers.CloneObject(this);
-            clone.CreationDate = CreationDate;
-            clone.RevisionDate = RevisionDate;
+            var clone = new Cipher
+            {
+                Id = Id,
+                UserId = UserId,
+                OrganizationId = OrganizationId,
+                Type = Type,
+                Data = Data,
+                Favorites = Favorites,
+                Folders = Folders,
+                Attachments = Attachments,
+                CreationDate = CreationDate,
+                RevisionDate = RevisionDate,
+                DeletedDate = DeletedDate,
+                Reprompt = Reprompt,
+            };
 
             return clone;
         }

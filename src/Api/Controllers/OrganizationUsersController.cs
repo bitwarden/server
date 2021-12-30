@@ -7,8 +7,11 @@ using Bit.Api.Models.Response;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
+using Bit.Core.OrganizationFeatures.OrgUser.Invitation.Accept;
+using Bit.Core.OrganizationFeatures.OrgUser.Invitation.Confirm;
+using Bit.Core.OrganizationFeatures.OrgUser.Invitation.Invite;
+using Bit.Core.OrganizationFeatures.OrgUser.Invitation.ResendInvite;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -23,7 +26,10 @@ namespace Bit.Api.Controllers
         private readonly IOrganizationRepository _organizationRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly IOrganizationService _organizationService;
-        private readonly ICollectionRepository _collectionRepository;
+        private readonly IOrganizationUserConfirmCommand _organizationUserConfirmCommand;
+        private readonly IOrganizationUserAcceptCommand _organizationUserAcceptCommand;
+        private readonly IOrganizationUserInviteCommand _organizationUserInviteCommand;
+        private readonly IOrganizationUserResendInviteCommand _organizationUserResendInviteCommand;
         private readonly IGroupRepository _groupRepository;
         private readonly IUserService _userService;
         private readonly ICurrentContext _currentContext;
@@ -32,7 +38,10 @@ namespace Bit.Api.Controllers
             IOrganizationRepository organizationRepository,
             IOrganizationUserRepository organizationUserRepository,
             IOrganizationService organizationService,
-            ICollectionRepository collectionRepository,
+            IOrganizationUserConfirmCommand organizationUserConfirmCommand,
+            IOrganizationUserAcceptCommand organizationUserAcceptCommand,
+            IOrganizationUserInviteCommand organizationUserInviteCommand,
+            IOrganizationUserResendInviteCommand organizationUserResendInviteCommand,
             IGroupRepository groupRepository,
             IUserService userService,
             ICurrentContext currentContext)
@@ -40,7 +49,10 @@ namespace Bit.Api.Controllers
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
             _organizationService = organizationService;
-            _collectionRepository = collectionRepository;
+            _organizationUserConfirmCommand = organizationUserConfirmCommand;
+            _organizationUserAcceptCommand = organizationUserAcceptCommand;
+            _organizationUserInviteCommand = organizationUserInviteCommand;
+            _organizationUserResendInviteCommand = organizationUserResendInviteCommand;
             _groupRepository = groupRepository;
             _userService = userService;
             _currentContext = currentContext;
@@ -136,8 +148,8 @@ namespace Bit.Api.Controllers
             }
 
             var userId = _userService.GetProperUserId(User);
-            var result = await _organizationService.InviteUsersAsync(orgGuidId, userId.Value,
-                new (OrganizationUserInvite, string)[] { (new OrganizationUserInvite(model.ToData()), null) });
+            var result = await _organizationUserInviteCommand.InviteUsersAsync(orgGuidId, userId.Value,
+                new (OrganizationUserInviteData, string)[] { (model.ToData(), null) });
         }
 
         [HttpPost("reinvite")]
@@ -150,9 +162,9 @@ namespace Bit.Api.Controllers
             }
 
             var userId = _userService.GetProperUserId(User);
-            var result = await _organizationService.ResendInvitesAsync(orgGuidId, userId.Value, model.Ids);
+            var result = await _organizationUserResendInviteCommand.ResendInvitesAsync(orgGuidId, model.Ids);
             return new ListResponseModel<OrganizationUserBulkResponseModel>(
-                result.Select(t => new OrganizationUserBulkResponseModel(t.Item1.Id, t.Item2)));
+                result.Select(t => new OrganizationUserBulkResponseModel(t.orgUser.Id, t.failureReason)));
         }
 
         [HttpPost("{id}/reinvite")]
@@ -165,7 +177,7 @@ namespace Bit.Api.Controllers
             }
 
             var userId = _userService.GetProperUserId(User);
-            await _organizationService.ResendInviteAsync(orgGuidId, userId.Value, new Guid(id));
+            await _organizationUserResendInviteCommand.ResendInvitesAsync(orgGuidId, new[] { userId.Value });
         }
 
         [HttpPost("{id}/accept")]
@@ -177,7 +189,7 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
-            var result = await _organizationService.AcceptUserAsync(new Guid(id), user, model.Token, _userService);
+            var result = await _organizationUserAcceptCommand.AcceptUserAsync(new Guid(id), user, model.Token);
         }
 
         [HttpPost("{id}/confirm")]
@@ -190,8 +202,8 @@ namespace Bit.Api.Controllers
             }
 
             var userId = _userService.GetProperUserId(User);
-            var result = await _organizationService.ConfirmUserAsync(orgGuidId, new Guid(id), model.Key, userId.Value,
-                _userService);
+            var result = await _organizationUserConfirmCommand.ConfirmUsersAsync(orgGuidId,
+                new Dictionary<Guid, string> { { new Guid(id), model.Key } });
         }
 
         [HttpPost("confirm")]
@@ -205,8 +217,7 @@ namespace Bit.Api.Controllers
             }
 
             var userId = _userService.GetProperUserId(User);
-            var results = await _organizationService.ConfirmUsersAsync(orgGuidId, model.ToDictionary(), userId.Value,
-                _userService);
+            var results = await _organizationUserConfirmCommand.ConfirmUsersAsync(orgGuidId, model.ToDictionary());
 
             return new ListResponseModel<OrganizationUserBulkResponseModel>(results.Select(r =>
                 new OrganizationUserBulkResponseModel(r.Item1.Id, r.Item2)));

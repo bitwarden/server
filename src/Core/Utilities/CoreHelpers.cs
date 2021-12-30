@@ -16,9 +16,11 @@ using Azure;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Azure.Storage.Queues.Models;
+using Bit.Core.AccessPolicies;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Enums.Provider;
+using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
 using Bit.Core.Settings;
@@ -973,6 +975,15 @@ namespace Bit.Core.Utilities
                 .Append(emailParts[1])
                 .ToString();
 
+        }
+        public static void HandlePermissionResult(AccessPolicyResult result)
+        {
+            if (!result.Permit)
+            {
+                throw string.IsNullOrEmpty(result.BlockReason) ?
+                    new NotFoundException() :
+                    new BadRequestException(result.BlockReason);
+            }
         }
     }
 }

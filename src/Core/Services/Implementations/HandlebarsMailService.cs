@@ -21,7 +21,7 @@ namespace Bit.Core.Services
     {
         private const string Namespace = "Bit.Core.MailTemplates.Handlebars";
 
-        private readonly GlobalSettings _globalSettings;
+        protected readonly GlobalSettings _globalSettings;
         private readonly IMailDeliveryService _mailDeliveryService;
         private readonly IMailEnqueuingService _mailEnqueuingService;
         private readonly Dictionary<string, Func<object, string>> _templateCache =
@@ -411,18 +411,20 @@ namespace Bit.Core.Services
             await _mailDeliveryService.SendEmailAsync(message);
         }
 
-        private Task EnqueueMailAsync(IMailQueueMessage queueMessage) =>
+        protected Task EnqueueMailAsync(IMailQueueMessage queueMessage) =>
             _mailEnqueuingService.EnqueueAsync(queueMessage, SendEnqueuedMailMessageAsync);
 
-        private Task EnqueueMailAsync(IEnumerable<IMailQueueMessage> queueMessages) =>
+        protected Task EnqueueMailAsync(IEnumerable<IMailQueueMessage> queueMessages) =>
             _mailEnqueuingService.EnqueueManyAsync(queueMessages, SendEnqueuedMailMessageAsync);
 
-        private MailMessage CreateDefaultMessage(string subject, string toEmail)
+        protected Task SendEmailAsync(MailMessage message) => _mailDeliveryService.SendEmailAsync(message);
+
+        protected MailMessage CreateDefaultMessage(string subject, string toEmail)
         {
             return CreateDefaultMessage(subject, new List<string> { toEmail });
         }
 
-        private MailMessage CreateDefaultMessage(string subject, IEnumerable<string> toEmails)
+        protected MailMessage CreateDefaultMessage(string subject, IEnumerable<string> toEmails)
         {
             return new MailMessage
             {
@@ -432,7 +434,7 @@ namespace Bit.Core.Services
             };
         }
 
-        private async Task AddMessageContentAsync<T>(MailMessage message, string templateName, T model)
+        protected async Task AddMessageContentAsync<T>(MailMessage message, string templateName, T model)
         {
             message.HtmlContent = await RenderAsync($"{templateName}.html", model);
             message.TextContent = await RenderAsync($"{templateName}.text", model);

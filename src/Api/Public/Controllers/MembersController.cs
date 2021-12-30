@@ -6,7 +6,10 @@ using System.Threading.Tasks;
 using Bit.Api.Models.Public.Request;
 using Bit.Api.Models.Public.Response;
 using Bit.Core.Context;
-using Bit.Core.Models.Business;
+using Bit.Core.Exceptions;
+using Bit.Core.Models.Data;
+using Bit.Core.OrganizationFeatures.OrgUser.Invitation.Invite;
+using Bit.Core.OrganizationFeatures.OrgUser.Invitation.ResendInvite;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -21,6 +24,8 @@ namespace Bit.Api.Public.Controllers
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly IGroupRepository _groupRepository;
         private readonly IOrganizationService _organizationService;
+        private readonly IOrganizationUserInviteCommand _organizationUserInviteCommand;
+        private readonly IOrganizationUserResendInviteCommand _organizationUserResendInviteCommand;
         private readonly IUserService _userService;
         private readonly ICurrentContext _currentContext;
 
@@ -28,12 +33,16 @@ namespace Bit.Api.Public.Controllers
             IOrganizationUserRepository organizationUserRepository,
             IGroupRepository groupRepository,
             IOrganizationService organizationService,
+            IOrganizationUserInviteCommand organizationUserInviteCommand,
+            IOrganizationUserResendInviteCommand organizationUserResendInviteCommand,
             IUserService userService,
             ICurrentContext currentContext)
         {
             _organizationUserRepository = organizationUserRepository;
             _groupRepository = groupRepository;
             _organizationService = organizationService;
+            _organizationUserInviteCommand = organizationUserInviteCommand;
+            _organizationUserResendInviteCommand = organizationUserResendInviteCommand;
             _userService = userService;
             _currentContext = currentContext;
         }
@@ -118,15 +127,14 @@ namespace Bit.Api.Public.Controllers
         public async Task<IActionResult> Post([FromBody] MemberCreateRequestModel model)
         {
             var associations = model.Collections?.Select(c => c.ToSelectionReadOnly());
-            var invite = new OrganizationUserInvite
+            var invite = new OrganizationUserInviteData
             {
                 Emails = new List<string> { model.Email },
                 Type = model.Type.Value,
                 AccessAll = model.AccessAll.Value,
                 Collections = associations
             };
-            var user = await _organizationService.InviteUserAsync(_currentContext.OrganizationId.Value, null,
-                model.Email, model.Type.Value, model.AccessAll.Value, model.ExternalId, associations);
+            var user = (await _organizationUserInviteCommand.InviteUsersAsync(_currentContext.OrganizationId.Value, null, new[] { (invite, model.ExternalId) })).FirstOrDefault();
             var response = new MemberResponseModel(user, associations);
             return new JsonResult(response);
         }
@@ -231,7 +239,11 @@ namespace Bit.Api.Public.Controllers
             {
                 return new NotFoundResult();
             }
-            await _organizationService.ResendInviteAsync(_currentContext.OrganizationId.Value, null, id);
+            var (_, failureReason) = (await _organizationUserResendInviteCommand.ResendInvitesAsync(_currentContext.OrganizationId.Value, new[] { id })).First();
+            if (!string.IsNullOrEmpty(failureReason))
+            {
+                throw new BadRequestException(failureReason);
+            }
             return new OkResult();
         }
     }

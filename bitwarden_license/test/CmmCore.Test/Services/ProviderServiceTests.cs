@@ -10,8 +10,10 @@ using Bit.Core.Enums.Provider;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Business.Provider;
+using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
 using Bit.Core.Models.Table.Provider;
+using Bit.Core.OrganizationFeatures.OrgUser.Invitation.Invite;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
@@ -483,8 +485,8 @@ namespace Bit.CommCore.Test.Services
             await sutProvider.GetDependency<IEventService>()
                 .Received().LogProviderOrganizationEventAsync(providerOrganization,
                     EventType.ProviderOrganization_Created);
-            await sutProvider.GetDependency<IOrganizationService>()
-                .Received().InviteUsersAsync(organization.Id, user.Id, Arg.Is<IEnumerable<(OrganizationUserInvite, string)>>(
+            await sutProvider.GetDependency<IOrganizationUserInviteCommand>()
+                .Received().InviteUsersAsync(organization.Id, user.Id, Arg.Is<IEnumerable<(OrganizationUserInviteData, string)>>(
                     t => t.Count() == 1 &&
                     t.First().Item1.Emails.Count() == 1 &&
                     t.First().Item1.Emails.First() == clientOwnerEmail &&

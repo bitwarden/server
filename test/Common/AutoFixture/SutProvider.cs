@@ -85,8 +85,6 @@ namespace Bit.Test.Common.AutoFixture
         private bool DependencyIsSet(Type dependencyType, string parameterName = "")
             => _dependencies.ContainsKey(dependencyType) && _dependencies[dependencyType].ContainsKey(parameterName);
 
-        private object GetDefault(Type type) => type.IsValueType ? Activator.CreateInstance(type) : null;
-
         private class ConstructorParameterRelay<T> : ISpecimenBuilder
         {
             private readonly SutProvider<T> _sutProvider;
@@ -119,11 +117,7 @@ namespace Bit.Test.Common.AutoFixture
                     return _sutProvider.GetDependency(parameterInfo.ParameterType, parameterInfo.Name);
                 }
 
-
-                // This is the equivalent of _fixture.Create<parameterInfo.ParameterType>, but no overload for
-                // Create(Type type) exists.
-                var dependency = new SpecimenContext(_fixture).Resolve(new SeededRequest(parameterInfo.ParameterType,
-                    _sutProvider.GetDefault(parameterInfo.ParameterType)));
+                var dependency = _fixture.Create(parameterInfo.ParameterType);
                 _sutProvider.SetDependency(parameterInfo.ParameterType, dependency, parameterInfo.Name);
                 return dependency;
             }
