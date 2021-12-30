@@ -190,10 +190,12 @@ function updateDatabase() {
 function updatebw() {
     CORE_ID=$(docker-compose ps -q admin)
     WEB_ID=$(docker-compose ps -q web)
-    KEYCONNECTOR_ID=$(docker-compose ps -q key-connector)
+    #KEYCONNECTOR_ID=$(docker-compose ps -q key-connector)
+    #if docker inspect --format='{{.Config.Image}}:' $CORE_ID | grep -F ":$COREVERSION:" | grep -q ":[0-9.]*:$" &&
+    #   docker inspect --format='{{.Config.Image}}:' $WEB_ID | grep -F ":$WEBVERSION:" | grep -q ":[0-9.]*:$" &&
+    #   docker inspect --format='{{.Config.Image}}:' $KEYCONNECTOR_ID | grep -F ":$KEYCONNECTORVERSION:" | grep -q ":[0-9.]*:$"
     if docker inspect --format='{{.Config.Image}}:' $CORE_ID | grep -F ":$COREVERSION:" | grep -q ":[0-9.]*:$" &&
-       docker inspect --format='{{.Config.Image}}:' $WEB_ID | grep -F ":$WEBVERSION:" | grep -q ":[0-9.]*:$" &&
-       docker inspect --format='{{.Config.Image}}:' $KEYCONNECTOR_ID | grep -F ":$KEYCONNECTORVERSION:" | grep -q ":[0-9.]*:$"
+       docker inspect --format='{{.Config.Image}}:' $WEB_ID | grep -F ":$WEBVERSION:" | grep -q ":[0-9.]*:$"
     then
         echo "Update not needed"
         exit
