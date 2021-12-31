@@ -4,7 +4,6 @@ using Bit.Core.Enums;
 
 namespace Bit.Core.Models.Business
 {
-    [JsonObject(NamingStrategyType = typeof(CamelCaseNamingStrategy))]
     public class ReferenceEvent
     {
         public ReferenceEvent() { }
@@ -20,10 +19,10 @@ namespace Bit.Core.Models.Business
             }
         }
 
-        [JsonConverter(typeof(StringEnumConverter))]
+        [JsonConverter(typeof(JsonStringEnumConverter))]
         public ReferenceEventType Type { get; set; }
 
-        [JsonConverter(typeof(StringEnumConverter))]
+        [JsonConverter(typeof(JsonStringEnumConverter))]
         
         public ReferenceEventSource Source { get; set; }
 
@@ -50,7 +49,7 @@ namespace Bit.Core.Models.Business
 
         public short? Storage { get; set; }
 
-        [JsonConverter(typeof(StringEnumConverter))]
+        [JsonConverter(typeof(JsonStringEnumConverter))]
         public SendType? SendType { get; set; }
 
         public int? MaxAccessCount { get; set; }

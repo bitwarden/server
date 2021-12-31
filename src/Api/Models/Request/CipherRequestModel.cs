@@ -76,13 +76,13 @@ namespace Bit.Api.Models.Request
                     existingCipher.Data = loginObj.ToString(Formatting.None);
                     break;
                 case CipherType.Card:
-                    existingCipher.Data = JsonHelpers.Serialize(ToCipherCardData(), JsonHelpers.IgnoreNullJsonOptions);
+                    existingCipher.Data = JsonHelpers.Serialize(ToCipherCardData(), JsonHelpers.IgnoreWritingNull);
                     break;
                 case CipherType.Identity:
-                    existingCipher.Data = JsonHelpers.Serialize(ToCipherIdentityData(), JsonHelpers.IgnoreNullJsonOptions);
+                    existingCipher.Data = JsonHelpers.Serialize(ToCipherIdentityData(), JsonHelpers.IgnoreWritingNull);
                     break;
                 case CipherType.SecureNote:
-                    existingCipher.Data = JsonHelpers.Serialize(ToCipherSecureNoteData(), JsonHelpers.IgnoreNullJsonOptions);
+                    existingCipher.Data = JsonHelpers.Serialize(ToCipherSecureNoteData(), JsonHelpers.IgnoreWritingNull);
                     break;
                 default:
                     throw new ArgumentException("Unsupported type: " + nameof(Type) + ".");

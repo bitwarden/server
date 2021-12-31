@@ -36,7 +36,7 @@ namespace Bit.Core.Services
             }
             try
             {
-                var message = JsonHelpers.Serialize(referenceEvent, JsonHelpers.IgnoreWritingNull);
+                var message = JsonHelpers.Serialize(referenceEvent, JsonHelpers.IgnoreWritingNullAndCamelCase);
                 // Messages need to be base64 encoded
                 var encodedMessage = Convert.ToBase64String(Encoding.UTF8.GetBytes(message));
                 await _queueClient.SendMessageAsync(encodedMessage);

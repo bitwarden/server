@@ -3,7 +3,6 @@ using System.IO;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
@@ -17,6 +16,7 @@ namespace Bit.Core.Utilities
         public static JsonSerializerOptions Indented { get; }
         public static JsonSerializerOptions IgnoreWritingNull { get; }
         public static JsonSerializerOptions CamelCase { get; }
+        public static JsonSerializerOptions IgnoreWritingNullAndCamelCase { get; }
 
         public static JsonDocumentOptions DefaultDocument { get; }
 
@@ -39,6 +39,12 @@ namespace Bit.Core.Utilities
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             };
 
+            IgnoreWritingNullAndCamelCase = new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+            };
+
             DefaultDocument = new JsonDocumentOptions();
         }
 
@@ -56,11 +62,6 @@ namespace Bit.Core.Utilities
         public static T Deserialize<T>(string json, JsonSerializerOptions options = null)
         {
             return JsonSerializer.Deserialize<T>(json, options ?? Default);
-        }
-
-        public static JsonNode SerializeToNode<T>(T value, JsonSerializerOptions options = null)
-        {
-            return JsonSerializer.SerializeToNode(value, options ?? Default);
         }
 
         public static T DeserializeOrNew<T>(string json, JsonSerializerOptions options = null)
