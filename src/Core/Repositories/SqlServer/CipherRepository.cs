@@ -10,7 +10,6 @@ using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Core.Models.Data;
 using Dapper;
-using Newtonsoft.Json;
 
 namespace Bit.Core.Repositories.SqlServer
 {
@@ -105,8 +104,8 @@ namespace Bit.Core.Repositories.SqlServer
         public async Task CreateAsync(Cipher cipher, IEnumerable<Guid> collectionIds)
         {
             cipher.SetNewId();
-            var objWithCollections = JsonConvert.DeserializeObject<CipherWithCollections>(
-                JsonConvert.SerializeObject(cipher));
+            var objWithCollections = JsonHelpers.Deserialize<CipherWithCollections>(
+                JsonHelpers.Serialize(cipher));
             objWithCollections.CollectionIds = collectionIds.ToGuidIdArrayTVP();
             using (var connection = new SqlConnection(ConnectionString))
             {
@@ -132,8 +131,8 @@ namespace Bit.Core.Repositories.SqlServer
         public async Task CreateAsync(CipherDetails cipher, IEnumerable<Guid> collectionIds)
         {
             cipher.SetNewId();
-            var objWithCollections = JsonConvert.DeserializeObject<CipherDetailsWithCollections>(
-                JsonConvert.SerializeObject(cipher));
+            var objWithCollections = JsonHelpers.Deserialize<CipherDetailsWithCollections>(
+                JsonHelpers.Serialize(cipher));
             objWithCollections.CollectionIds = collectionIds.ToGuidIdArrayTVP();
             using (var connection = new SqlConnection(ConnectionString))
             {
@@ -169,8 +168,8 @@ namespace Bit.Core.Repositories.SqlServer
 
         public async Task<bool> ReplaceAsync(Cipher obj, IEnumerable<Guid> collectionIds)
         {
-            var objWithCollections = JsonConvert.DeserializeObject<CipherWithCollections>(
-                JsonConvert.SerializeObject(obj));
+            var objWithCollections = JsonHelpers.Deserialize<CipherWithCollections>(
+                JsonHelpers.Serialize(obj));
             objWithCollections.CollectionIds = collectionIds.ToGuidIdArrayTVP();
 
             using (var connection = new SqlConnection(ConnectionString))

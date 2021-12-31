@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Reflection;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Mail;
@@ -564,6 +565,34 @@ namespace Bit.Core.Services
 
                 var clickTrackingText = (clickTrackingOff ? "clicktracking=off" : string.Empty);
                 writer.WriteSafeString($"<a href=\"{href}\" target=\"_blank\" {clickTrackingText}>{text}</a>");
+            });
+
+            Handlebars.RegisterHelper("jsonIf", (output, options, context, arguments) =>
+            {
+                // Special case for JsonElement
+                if (arguments[0] is JsonElement jsonElement)
+                {
+                    if (jsonElement.GetBoolean())
+                    {
+                        options.Template(output, context);
+                    }
+                    else
+                    {
+                        options.Inverse(output, context);
+                    }
+
+                    return;
+                }
+
+                // Fallback to normal
+                if (HandlebarsUtils.IsTruthy(arguments[0]))
+                {
+                    options.Template(output, context);
+                }
+                else
+                {
+                    options.Inverse(output, context);
+                }
             });
         }
 

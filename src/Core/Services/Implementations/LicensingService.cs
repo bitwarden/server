@@ -14,7 +14,6 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Azure.Storage;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 
 namespace Bit.Core.Services
 {
@@ -248,7 +247,7 @@ namespace Bit.Core.Services
             }
 
             var data = File.ReadAllText(filePath, Encoding.UTF8);
-            return JsonConvert.DeserializeObject<UserLicense>(data);
+            return JsonHelpers.Deserialize<UserLicense>(data);
         }
 
         private OrganizationLicense ReadOrganizationLicense(Organization organization)
@@ -260,7 +259,7 @@ namespace Bit.Core.Services
             }
 
             var data = File.ReadAllText(filePath, Encoding.UTF8);
-            return JsonConvert.DeserializeObject<OrganizationLicense>(data);
+            return JsonHelpers.Deserialize<OrganizationLicense>(data);
         }
     }
 }

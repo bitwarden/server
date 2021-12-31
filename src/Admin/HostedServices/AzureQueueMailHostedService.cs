@@ -69,7 +69,9 @@ namespace Bit.Admin.HostedServices
                 {
                     try
                     {
-                        var root = JsonHelpers.Parse(message.DecodeMessageText()).RootElement;
+                        using var document = JsonHelpers.Parse(message.DecodeMessageText());
+                        var root = document.RootElement;
+                        
                         if (root.ValueKind == JsonValueKind.Array)
                         {
                             foreach (var mailQueueMessage in root.ToObject<List<MailQueueMessage>>())

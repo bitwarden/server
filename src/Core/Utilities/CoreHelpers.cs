@@ -428,7 +428,7 @@ namespace Bit.Core.Utilities
 
         /// <summary>
         /// Creates a clone of the given object through serializing to json and deserializing.
-        /// This method is subject to the limitations of Newstonsoft. For example, properties with
+        /// This method is subject to the limitations of System.Text.Json. For example, properties with
         /// inaccessible setters will not be set.
         /// </summary>
         public static T CloneObject<T>(T obj)

@@ -18,7 +18,7 @@ namespace Bit.Api.Models.Response
             Url = $"{globalSettings.Attachment.BaseUrl}/{cipher.Id}/{id}";
             FileName = data.FileName;
             Key = data.Key;
-            Size = data.SizeString;
+            Size = data.Size.ToString();
             SizeName = CoreHelpers.ReadableBytesSize(data.Size);
         }
 

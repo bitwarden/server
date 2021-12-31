@@ -12,7 +12,6 @@ using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Core.Models.Data;
-using Newtonsoft.Json;
 
 namespace Bit.Core.Services
 {
@@ -208,7 +207,7 @@ namespace Bit.Core.Services
                 UserId = cipher.UserId,
                 OrganizationId = cipher.OrganizationId,
                 AttachmentId = attachmentId,
-                AttachmentData = JsonConvert.SerializeObject(data)
+                AttachmentData = JsonHelpers.Serialize(data)
             });
             cipher.AddAttachment(attachmentId, data);
             await _pushService.PushSyncCipherUpdateAsync(cipher, null);
@@ -241,7 +240,7 @@ namespace Bit.Core.Services
                     UserId = cipher.UserId,
                     OrganizationId = cipher.OrganizationId,
                     AttachmentId = attachmentId,
-                    AttachmentData = JsonConvert.SerializeObject(data)
+                    AttachmentData = JsonHelpers.Serialize(data)
                 };
 
                 await _cipherRepository.UpdateAttachmentAsync(attachment);
@@ -312,7 +311,7 @@ namespace Bit.Core.Services
                     UserId = cipher.UserId,
                     OrganizationId = cipher.OrganizationId,
                     AttachmentId = attachmentId,
-                    AttachmentData = JsonConvert.SerializeObject(attachments[attachmentId])
+                    AttachmentData = JsonHelpers.Serialize(attachments[attachmentId])
                 };
 
                 await _cipherRepository.UpdateAttachmentAsync(updatedAttachment);
@@ -347,7 +346,7 @@ namespace Bit.Core.Services
                 UserId = cipher.UserId,
                 OrganizationId = cipher.OrganizationId,
                 AttachmentId = attachmentData.AttachmentId,
-                AttachmentData = JsonConvert.SerializeObject(attachmentData)
+                AttachmentData = JsonHelpers.Serialize(attachmentData)
             };
 
 

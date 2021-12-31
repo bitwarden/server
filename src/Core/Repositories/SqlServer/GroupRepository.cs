@@ -9,7 +9,6 @@ using Bit.Core.Models.Table;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Dapper;
-using Newtonsoft.Json;
 
 namespace Bit.Core.Repositories.SqlServer
 {
@@ -94,7 +93,7 @@ namespace Bit.Core.Repositories.SqlServer
         public async Task CreateAsync(Group obj, IEnumerable<SelectionReadOnly> collections)
         {
             obj.SetNewId();
-            var objWithCollections = JsonConvert.DeserializeObject<GroupWithCollections>(JsonConvert.SerializeObject(obj));
+            var objWithCollections = JsonHelpers.Deserialize<GroupWithCollections>(JsonHelpers.Serialize(obj));
             objWithCollections.Collections = collections.ToArrayTVP();
 
             using (var connection = new SqlConnection(ConnectionString))
@@ -108,7 +107,7 @@ namespace Bit.Core.Repositories.SqlServer
 
         public async Task ReplaceAsync(Group obj, IEnumerable<SelectionReadOnly> collections)
         {
-            var objWithCollections = JsonConvert.DeserializeObject<GroupWithCollections>(JsonConvert.SerializeObject(obj));
+            var objWithCollections = JsonHelpers.Deserialize<GroupWithCollections>(JsonHelpers.Serialize(obj));
             objWithCollections.Collections = collections.ToArrayTVP();
 
             using (var connection = new SqlConnection(ConnectionString))

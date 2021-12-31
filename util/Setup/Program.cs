@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Globalization;
 using System.Net.Http;
+using System.Text.Json;
 using Bit.Migrator;
-using Newtonsoft.Json;
 
 namespace Bit.Setup
 {
@@ -269,8 +269,9 @@ namespace Bit.Setup
                 }
 
                 var resultString = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-                var result = JsonConvert.DeserializeObject<dynamic>(resultString);
-                if (!(bool)result.Enabled)
+                using var jsonDocument = JsonSerializer.Deserialize<JsonDocument>(resultString);
+                var root = jsonDocument.RootElement;
+                if (!root.GetProperty("Enabled").GetBoolean())
                 {
                     Console.WriteLine("Installation id has been disabled.");
                     return false;

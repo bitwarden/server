@@ -15,7 +15,6 @@ using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 using Stripe;
 
 namespace Bit.Core.Services
@@ -727,8 +726,8 @@ namespace Bit.Core.Services
 
             var dir = $"{_globalSettings.LicenseDirectory}/organization";
             Directory.CreateDirectory(dir);
-            System.IO.File.WriteAllText($"{dir}/{organization.Id}.json",
-                JsonConvert.SerializeObject(license, Formatting.Indented));
+            using var fs = System.IO.File.OpenWrite(Path.Combine(dir, $"{organization.Id}.json"));
+            await JsonHelpers.SerializeAsync(fs, license, JsonHelpers.Indented);
             return result;
         }
 
@@ -900,8 +899,8 @@ namespace Bit.Core.Services
 
             var dir = $"{_globalSettings.LicenseDirectory}/organization";
             Directory.CreateDirectory(dir);
-            System.IO.File.WriteAllText($"{dir}/{organization.Id}.json",
-                JsonConvert.SerializeObject(license, Formatting.Indented));
+            using var fs = System.IO.File.OpenWrite(Path.Combine(dir, $"{organization.Id}.json"));
+            await JsonHelpers.SerializeAsync(fs, license, JsonHelpers.Indented);
 
             organization.Name = license.Name;
             organization.BusinessName = license.BusinessName;
@@ -1146,6 +1145,7 @@ namespace Bit.Core.Services
 
                         if (invite.Permissions != null)
                         {
+                            // TODO: Use JsonHelpers
                             orgUser.Permissions = System.Text.Json.JsonSerializer.Serialize(invite.Permissions, new JsonSerializerOptions
                             {
                                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -1765,7 +1765,7 @@ namespace Bit.Core.Services
             // Block the user from withdrawal if auto enrollment is enabled
             if (resetPasswordKey == null && resetPasswordPolicy.Data != null)
             {
-                var data = JsonConvert.DeserializeObject<ResetPasswordDataModel>(resetPasswordPolicy.Data);
+                var data = JsonHelpers.Deserialize<ResetPasswordDataModel>(resetPasswordPolicy.Data);
 
                 if (data?.AutoEnrollEnabled ?? false)
                 {

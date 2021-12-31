@@ -3,8 +3,9 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text.Json;
-using Newtonsoft.Json;
+using Bit.Core.Utilities;
 using Xunit;
+using Xunit.Sdk;
 
 namespace Bit.Test.Common.Helpers
 {
@@ -30,10 +31,9 @@ namespace Bit.Test.Common.Helpers
 
                 if (actualPropInfo == null)
                 {
-                    var settings = new JsonSerializerSettings { Formatting = Formatting.Indented };
                     throw new Exception(string.Concat($"Expected actual object to contain a property named {expectedPropInfo.Name}, but it does not\n",
-                    $"Expected:\n{JsonConvert.SerializeObject(expected, settings)}\n",
-                    $"Actual:\n{JsonConvert.SerializeObject(actual, new JsonSerializerSettings { Formatting = Formatting.Indented })}"));
+                    $"Expected:\n{JsonHelpers.Serialize(expected, JsonHelpers.Indented)}\n",
+                    $"Actual:\n{JsonHelpers.Serialize(actual, JsonHelpers.Indented)}"));
                 }
 
                 if (expectedPropInfo.PropertyType == typeof(string) || expectedPropInfo.PropertyType.IsValueType)
@@ -60,7 +60,7 @@ namespace Bit.Test.Common.Helpers
         {
             if (!element.TryGetProperty(propertyName, out var subElement))
             {
-                throw new Xunit.Sdk.XunitException($"Could not find property by name '{propertyName}'");
+                throw new XunitException($"Could not find property by name '{propertyName}'");
             }
 
             Assert.Equal(jsonValueKind, subElement.ValueKind);

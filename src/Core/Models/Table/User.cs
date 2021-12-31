@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json;
 using Bit.Core.Enums;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Identity;
-using Newtonsoft.Json;
 
 namespace Bit.Core.Models.Table
 {
@@ -107,13 +107,13 @@ namespace Bit.Core.Models.Table
                 if (_twoFactorProviders == null)
                 {
                     _twoFactorProviders =
-                        JsonConvert.DeserializeObject<Dictionary<TwoFactorProviderType, TwoFactorProvider>>(
+                        JsonHelpers.Deserialize<Dictionary<TwoFactorProviderType, TwoFactorProvider>>(
                             TwoFactorProviders);
                 }
 
                 return _twoFactorProviders;
             }
-            catch (JsonSerializationException)
+            catch (JsonException)
             {
                 return null;
             }
@@ -131,10 +131,7 @@ namespace Bit.Core.Models.Table
 
         public void SetTwoFactorProviders(Dictionary<TwoFactorProviderType, TwoFactorProvider> providers)
         {
-            TwoFactorProviders = JsonConvert.SerializeObject(providers, new JsonSerializerSettings
-            {
-                ContractResolver = new EnumKeyResolver<byte>()
-            });
+            TwoFactorProviders = JsonHelpers.Serialize(providers);
             _twoFactorProviders = providers;
         }
 

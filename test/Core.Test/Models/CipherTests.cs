@@ -1,6 +1,6 @@
 ﻿using Bit.Core.Models.Table;
 using Bit.Core.Test.AutoFixture.CipherFixtures;
-using Newtonsoft.Json;
+using Bit.Core.Utilities;
 using Xunit;
 
 namespace Bit.Core.Test.Models
@@ -12,7 +12,7 @@ namespace Bit.Core.Test.Models
         [InlineOrganizationCipherAutoData]
         public void Clone_CreatesExactCopy(Cipher cipher)
         {
-            Assert.Equal(JsonConvert.SerializeObject(cipher), JsonConvert.SerializeObject(cipher.Clone()));
+            Assert.Equal(JsonHelpers.Serialize(cipher), JsonHelpers.Serialize(cipher.Clone()));
         }
     }
 }

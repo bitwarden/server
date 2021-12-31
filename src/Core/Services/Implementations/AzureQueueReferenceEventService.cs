@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using Azure.Storage.Queues;
 using Bit.Core.Models.Business;
 using Bit.Core.Settings;
-using Newtonsoft.Json;
+using Bit.Core.Utilities;
 
 namespace Bit.Core.Services
 {
@@ -14,10 +14,6 @@ namespace Bit.Core.Services
 
         private readonly QueueClient _queueClient;
         private readonly GlobalSettings _globalSettings;
-        private readonly JsonSerializerSettings _jsonSerializerSettings = new JsonSerializerSettings
-        {
-            NullValueHandling = NullValueHandling.Ignore,
-        };
 
         public AzureQueueReferenceEventService(
             GlobalSettings globalSettings)
@@ -40,7 +36,7 @@ namespace Bit.Core.Services
             }
             try
             {
-                var message = JsonConvert.SerializeObject(referenceEvent, _jsonSerializerSettings);
+                var message = JsonHelpers.Serialize(referenceEvent, JsonHelpers.IgnoreWritingNull);
                 // Messages need to be base64 encoded
                 var encodedMessage = Convert.ToBase64String(Encoding.UTF8.GetBytes(message));
                 await _queueClient.SendMessageAsync(encodedMessage);

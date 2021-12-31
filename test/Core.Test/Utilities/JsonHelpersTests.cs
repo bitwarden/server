@@ -26,7 +26,7 @@ namespace Bit.Core.Test.Helpers
                 Name = "Test",
             };
 
-            CompareJson(testObject, JsonHelpers.DefaultJsonOptions, new Newtonsoft.Json.JsonSerializerSettings());
+            CompareJson(testObject, JsonHelpers.Default, new Newtonsoft.Json.JsonSerializerSettings());
         }
 
         [Fact]
@@ -38,7 +38,7 @@ namespace Bit.Core.Test.Helpers
                 Name = "Test Name"
             };
 
-            CompareJson(testObject, JsonHelpers.IndentedJsonOptions, new Newtonsoft.Json.JsonSerializerSettings
+            CompareJson(testObject, JsonHelpers.Indented, new Newtonsoft.Json.JsonSerializerSettings
             {
                 Formatting = Newtonsoft.Json.Formatting.Indented,
             });
@@ -53,7 +53,7 @@ namespace Bit.Core.Test.Helpers
                 Name = null,
             };
 
-            CompareJson(testObject, JsonHelpers.IgnoreNullJsonOptions, new Newtonsoft.Json.JsonSerializerSettings
+            CompareJson(testObject, JsonHelpers.IgnoreWritingNull, new Newtonsoft.Json.JsonSerializerSettings
             {
                 NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore,
             });

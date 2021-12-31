@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using Bit.Core.Models.Data;
 using Bit.Core.Utilities;
-using Newtonsoft.Json;
 
 namespace Bit.Core.Models.Table
 {
@@ -42,7 +41,7 @@ namespace Bit.Core.Models.Table
 
             try
             {
-                _attachmentData = JsonConvert.DeserializeObject<Dictionary<string, CipherAttachment.MetaData>>(Attachments);
+                _attachmentData = JsonHelpers.Deserialize<Dictionary<string, CipherAttachment.MetaData>>(Attachments);
                 foreach (var kvp in _attachmentData)
                 {
                     kvp.Value.AttachmentId = kvp.Key;
@@ -65,7 +64,7 @@ namespace Bit.Core.Models.Table
             }
 
             _attachmentData = data;
-            Attachments = JsonConvert.SerializeObject(_attachmentData);
+            Attachments = JsonHelpers.Serialize(_attachmentData);
         }
 
         public void AddAttachment(string id, CipherAttachment.MetaData data)

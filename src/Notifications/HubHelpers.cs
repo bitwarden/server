@@ -2,8 +2,8 @@
 using System.Threading.Tasks;
 using Bit.Core.Enums;
 using Bit.Core.Models;
+using Bit.Core.Utilities;
 using Microsoft.AspNetCore.SignalR;
-using Newtonsoft.Json;
 
 namespace Bit.Notifications
 {
@@ -12,7 +12,7 @@ namespace Bit.Notifications
         public static async Task SendNotificationToHubAsync(string notificationJson,
             IHubContext<NotificationsHub> hubContext, CancellationToken cancellationToken = default(CancellationToken))
         {
-            var notification = JsonConvert.DeserializeObject<PushNotificationData<object>>(notificationJson);
+            var notification = JsonHelpers.Deserialize<PushNotificationData<object>>(notificationJson);
             switch (notification.Type)
             {
                 case PushType.SyncCipherUpdate:
@@ -20,7 +20,7 @@ namespace Bit.Notifications
                 case PushType.SyncCipherDelete:
                 case PushType.SyncLoginDelete:
                     var cipherNotification =
-                        JsonConvert.DeserializeObject<PushNotificationData<SyncCipherPushNotification>>(
+                        JsonHelpers.Deserialize<PushNotificationData<SyncCipherPushNotification>>(
                             notificationJson);
                     if (cipherNotification.Payload.UserId.HasValue)
                     {
@@ -38,7 +38,7 @@ namespace Bit.Notifications
                 case PushType.SyncFolderCreate:
                 case PushType.SyncFolderDelete:
                     var folderNotification =
-                        JsonConvert.DeserializeObject<PushNotificationData<SyncFolderPushNotification>>(
+                        JsonHelpers.Deserialize<PushNotificationData<SyncFolderPushNotification>>(
                             notificationJson);
                     await hubContext.Clients.User(folderNotification.Payload.UserId.ToString())
                             .SendAsync("ReceiveMessage", folderNotification, cancellationToken);
@@ -49,7 +49,7 @@ namespace Bit.Notifications
                 case PushType.SyncSettings:
                 case PushType.LogOut:
                     var userNotification =
-                        JsonConvert.DeserializeObject<PushNotificationData<UserPushNotification>>(
+                        JsonHelpers.Deserialize<PushNotificationData<UserPushNotification>>(
                             notificationJson);
                     await hubContext.Clients.User(userNotification.Payload.UserId.ToString())
                             .SendAsync("ReceiveMessage", userNotification, cancellationToken);
@@ -58,7 +58,7 @@ namespace Bit.Notifications
                 case PushType.SyncSendUpdate:
                 case PushType.SyncSendDelete:
                     var sendNotification =
-                        JsonConvert.DeserializeObject<PushNotificationData<SyncSendPushNotification>>(
+                        JsonHelpers.Deserialize<PushNotificationData<SyncSendPushNotification>>(
                                 notificationJson);
                     await hubContext.Clients.User(sendNotification.Payload.UserId.ToString())
                         .SendAsync("ReceiveMessage", sendNotification, cancellationToken);

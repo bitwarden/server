@@ -4,6 +4,7 @@ using System.Reflection;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using System.Text.Json.Serialization;
 using Bit.Core.Enums;
 using Bit.Core.Models.Table;
 using Bit.Core.Services;

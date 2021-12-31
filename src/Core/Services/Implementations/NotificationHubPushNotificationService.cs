@@ -9,9 +9,9 @@ using Bit.Core.Models.Data;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
+using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Azure.NotificationHubs;
-using Newtonsoft.Json;
 
 namespace Bit.Core.Services
 {
@@ -229,7 +229,7 @@ namespace Bit.Core.Services
                 new Dictionary<string, string>
                 {
                     { "type",  ((byte)type).ToString() },
-                    { "payload", JsonConvert.SerializeObject(payload) }
+                    { "payload", JsonHelpers.Serialize(payload) }
                 }, tag);
         }
 
