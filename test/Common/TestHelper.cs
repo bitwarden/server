@@ -1,9 +1,7 @@
-using System.Reflection;
-using System.IO;
+﻿using System;
 using System.Linq;
-using Xunit;
-using System;
 using Newtonsoft.Json;
+using Xunit;
 
 namespace Bit.Test.Common
 {
