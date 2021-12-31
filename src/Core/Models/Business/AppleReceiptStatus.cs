@@ -136,7 +136,5 @@ namespace Bit.Billing.Models
             [JsonPropertyName("cancellation_reason")]
             public string CancellationReason { get; set; }
         }
-
-        
     }
 }

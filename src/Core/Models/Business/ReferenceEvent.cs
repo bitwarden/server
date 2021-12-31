@@ -23,7 +23,6 @@ namespace Bit.Core.Models.Business
         public ReferenceEventType Type { get; set; }
 
         [JsonConverter(typeof(JsonStringEnumConverter))]
-        
         public ReferenceEventSource Source { get; set; }
 
         public Guid Id { get; set; }

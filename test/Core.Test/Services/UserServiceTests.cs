@@ -25,7 +25,7 @@ namespace Bit.Core.Test.Services
     public class UserServiceTests
     {
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
-        public async Task UpdateLicenseAsync_Success(SutProvider<UserService> sutProvider, 
+        public async Task UpdateLicenseAsync_Success(SutProvider<UserService> sutProvider,
             User user, UserLicense userLicense)
         {
             using var tempDir = new TempDirectory();

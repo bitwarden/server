@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Bit.Core.Models.Data;
 using Bit.Test.Common.Helpers;
 using Xunit;
