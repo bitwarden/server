@@ -10,7 +10,7 @@ using Bit.Core.Services;
 
 namespace Bit.Core.OrganizationFeatures.OrgUser.Invitation
 {
-    public class OrganizationUserInvitationAccessPolicies : BaseAccessPolicies
+    public abstract class OrganizationUserInvitationAccessPolicies : BaseAccessPolicies
     {
         protected readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly IPolicyRepository _policyRepository;
