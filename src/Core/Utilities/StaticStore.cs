@@ -100,6 +100,7 @@ namespace Bit.Core.Utilities
             GlobalDomains.Add(GlobalEquivalentDomainsType.Sony, new List<string> { "sonyentertainmentnetwork.com", "sony.com" });
             GlobalDomains.Add(GlobalEquivalentDomainsType.Proton, new List<string> { "protonmail.com", "protonvpn.com" });
             GlobalDomains.Add(GlobalEquivalentDomainsType.Ubisoft, new List<string> { "ubisoft.com", "ubi.com" });
+            GlobalDomains.Add(GlobalEquivalentDomainsType.TransferWise, new List<string> { "transferwise.com", "wise.com" });
             #endregion
 
             #region Plans

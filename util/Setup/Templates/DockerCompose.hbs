@@ -197,7 +197,7 @@ services:
 
 {{#if EnableKeyConnector}}
   key-connector:
-    image: bitwarden/key-connector:latest
+    image: bitwarden/key-connector:{{{KeyConnectorVersion}}}
     container_name: bitwarden-key-connector
     restart: always
     volumes:
