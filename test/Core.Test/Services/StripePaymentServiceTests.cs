@@ -151,7 +151,7 @@ namespace Bit.Core.Test.Services
             });
             sutProvider.GetDependency<ITaxRateRepository>().GetByLocationAsync(Arg.Is<TaxRate>(t =>
                     t.Country == taxInfo.BillingAddressCountry && t.PostalCode == taxInfo.BillingAddressPostalCode))
-                .Returns(new List<TaxRate>{ new() { Id = "T-1"}});
+                .Returns(new List<TaxRate> { new() { Id = "T-1" } });
 
             var result = await sutProvider.Sut.PurchaseOrganizationAsync(organization, PaymentMethodType.Card, paymentToken, plan, 0, 0, false, taxInfo);
 
@@ -363,14 +363,14 @@ namespace Bit.Core.Test.Services
             });
             stripeAdapter.InvoiceUpcomingAsync(default).ReturnsForAnyArgs(new Stripe.Invoice
             {
-                PaymentIntent = new Stripe.PaymentIntent {Status = "requires_payment_method",},
+                PaymentIntent = new Stripe.PaymentIntent { Status = "requires_payment_method", },
                 AmountDue = 0
             });
             stripeAdapter.SubscriptionCreateAsync(default).ReturnsForAnyArgs(new Stripe.Subscription { });
 
             var plan = StaticStore.Plans.First(p => p.Type == PlanType.EnterpriseAnnually);
             var result = await sutProvider.Sut.UpgradeFreeOrganizationAsync(organization, plan, 0, 0, false, taxInfo);
-            
+
             Assert.Null(result);
         }
     }
