@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using System.Text.Json;
 
 namespace Bit.Api.Models.Request
 {

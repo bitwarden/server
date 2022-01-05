@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Reflection;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Bit.Billing.Controllers;
-using Bit.Core.Models.Table;
+using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Test.Common.AutoFixture.Attributes;
