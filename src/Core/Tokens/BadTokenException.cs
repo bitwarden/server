@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Bit.Core.Tokenizer
+namespace Bit.Core.Tokens
 {
     public class BadTokenException : Exception
     {

@@ -2,13 +2,14 @@
 using System.Text.Json.Serialization;
 using Bit.Core.Utilities;
 
-namespace Bit.Core.Tokenizer
+namespace Bit.Core.Tokens
 {
-    public abstract class ExpiringToken : ITokenable
+    public abstract class ExpiringTokenable : Tokenable
     {
         [JsonConverter(typeof(EpochDateTimeJsonConverter))]
         public DateTime ExpirationDate { get; set; }
-        public bool Valid => ExpirationDate > DateTime.UtcNow && TokenIsValid();
+        public override bool Valid => ExpirationDate > DateTime.UtcNow && TokenIsValid();
+
         protected abstract bool TokenIsValid();
     }
 }

@@ -9,12 +9,13 @@ using AutoMapper;
 using Bit.Core.Enums;
 using Bit.Core.Identity;
 using Bit.Core.IdentityServer;
+using Bit.Core.Models.Business.Tokenables;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Resources;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Core.Tokenizer;
+using Bit.Core.Tokens;
 using Bit.Core.Utilities;
 using IdentityModel;
 using IdentityServer4.AccessTokenValidation;
@@ -182,6 +183,22 @@ namespace Bit.Core.Utilities
             services.AddScoped<ISendService, SendService>();
         }
 
+        public static void AddTokenizers(this IServiceCollection services)
+        {
+            services.AddSingleton<IDataProtectorTokenFactory<EmergencyAccessInviteTokenable>>(serviceProvider =>
+                new DataProtectorTokenFactory<EmergencyAccessInviteTokenable>(
+                    EmergencyAccessInviteTokenable.ClearTextPrefix,
+                    EmergencyAccessInviteTokenable.DataProtectorPurpose,
+                    serviceProvider.GetDataProtectionProvider())
+            );
+            services.AddSingleton<IDataProtectorTokenFactory<HCaptchaTokenable>>(serviceProvider =>
+                new DataProtectorTokenFactory<HCaptchaTokenable>(
+                    HCaptchaTokenable.ClearTextPrefix,
+                    HCaptchaTokenable.DataProtectorPurpose,
+                    serviceProvider.GetDataProtectionProvider())
+            );
+        }
+
         public static void AddDefaultServices(this IServiceCollection services, GlobalSettings globalSettings)
         {
             // Required for UserService
@@ -202,7 +219,7 @@ namespace Bit.Core.Utilities
             services.AddSingleton<IPaymentService, StripePaymentService>();
             services.AddSingleton<IMailService, HandlebarsMailService>();
             services.AddSingleton<ILicensingService, LicensingService>();
-            services.AddSingleton<ITokenizerFactory, TokenizerFactory>();
+            services.AddTokenizers();
 
             if (CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ConnectionString) &&
                 CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ApplicationCacheTopicName))

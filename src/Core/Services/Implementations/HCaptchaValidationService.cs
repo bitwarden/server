@@ -3,9 +3,10 @@ using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Bit.Core.Context;
+using Bit.Core.Models.Business.Tokenables;
 using Bit.Core.Models.Table;
 using Bit.Core.Settings;
-using Bit.Core.Tokenizer;
+using Bit.Core.Tokens;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
@@ -13,31 +14,27 @@ namespace Bit.Core.Services
 {
     public class HCaptchaValidationService : ICaptchaValidationService
     {
-        private const double TokenLifetimeInHours = (double)5 / 60; // 5 minutes
-        private const string TokenName = "CaptchaBypassToken";
-        private const string TokenClearTextPrefix = "BWCaptchaBypass_";
-        private const string DataProtectionTokenizerKey = "CaptchaServiceDataProtector";
         private readonly ILogger<HCaptchaValidationService> _logger;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly GlobalSettings _globalSettings;
-        private readonly ITokenizer<HCaptchaToken> _tokenizer;
+        private readonly IDataProtectorTokenFactory<HCaptchaTokenable> _tokenizer;
 
         public HCaptchaValidationService(
             ILogger<HCaptchaValidationService> logger,
             IHttpClientFactory httpClientFactory,
-            ITokenizerFactory tokenizerFactory,
+            IDataProtectorTokenFactory<HCaptchaTokenable> tokenizer,
             GlobalSettings globalSettings)
         {
             _logger = logger;
             _httpClientFactory = httpClientFactory;
             _globalSettings = globalSettings;
-            _tokenizer = tokenizerFactory.Create<HCaptchaToken>(TokenClearTextPrefix, TokenType.DataProtector);
+            _tokenizer = tokenizer;
         }
 
         public string SiteKeyResponseKeyName => "HCaptcha_SiteKey";
         public string SiteKey => _globalSettings.Captcha.HCaptchaSiteKey;
 
-        public string GenerateCaptchaBypassToken(User user) => _tokenizer.Protect(DataProtectionTokenizerKey, CaptchaBypassTokenContent(user));
+        public string GenerateCaptchaBypassToken(User user) => _tokenizer.Protect(new HCaptchaTokenable(user));
 
         public bool ValidateCaptchaBypassToken(string bypassToken, User user) =>
             TokenIsApiKey(bypassToken, user) || TokenIsCaptchaBypassToken(bypassToken, user);
@@ -88,37 +85,12 @@ namespace Bit.Core.Services
         public bool RequireCaptchaValidation(ICurrentContext currentContext) =>
             currentContext.IsBot || _globalSettings.Captcha.ForceCaptchaRequired;
 
-
-        private static HCaptchaToken CaptchaBypassTokenContent(User user) =>
-            new HCaptchaToken
-            {
-                Id = user.Id,
-                Email = user.Email,
-                ExpirationDate = DateTime.UtcNow.AddHours(TokenLifetimeInHours)
-            };
-
         private static bool TokenIsApiKey(string bypassToken, User user) =>
             !string.IsNullOrWhiteSpace(bypassToken) && user != null && user.ApiKey == bypassToken;
         private bool TokenIsCaptchaBypassToken(string encryptedToken, User user)
         {
-            return _tokenizer.TryUnprotect(DataProtectionTokenizerKey, encryptedToken, out var data) &&
+            return _tokenizer.TryUnprotect(encryptedToken, out var data) &&
                 data.Valid && data.TokenIsValid(user);
-        }
-
-        private class HCaptchaToken : ExpiringToken
-        {
-            public string TokenName { get; private set; } = HCaptchaValidationService.TokenName;
-            public Guid Id { get; set; }
-            public string Email { get; set; }
-
-            public bool TokenIsValid(User user)
-            {
-                return Id == user.Id &&
-                    Email == user.Email;
-            }
-
-            // Validates deserialized 
-            protected override bool TokenIsValid() => TokenName == HCaptchaValidationService.TokenName;
         }
     }
 }

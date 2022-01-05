@@ -1,18 +1,17 @@
-﻿using Bit.Core.Tokenizer;
+﻿using Bit.Core.Tokens;
 
 namespace Bit.Core.Test.Tokenizer
 {
-    public class TestToken : ITokenable
+    public class TestToken : Tokenable
     {
         private bool? _valid;
-        public bool Valid
+        public override bool Valid
         {
             get => _valid ?? true;
-            set => _valid = value;
         }
     }
 
-    public class TestExpiringToken : ExpiringToken
+    public class TestExpiringToken : ExpiringTokenable
     {
         private bool _forceInvalid;
 
