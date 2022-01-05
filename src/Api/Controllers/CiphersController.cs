@@ -232,10 +232,10 @@ namespace Bit.Api.Controllers
             var responses = ciphers.Select(c => new CipherMiniDetailsResponseModel(c, _globalSettings,
                 collectionCiphersGroupDict));
 
-            var providerId = await _currentContext.ProviderIdForOrg(organizationId);
+            var providerId = await _currentContext.ProviderIdForOrg(orgIdGuid);
             if (providerId.HasValue)
             {
-                await _providerService.LogProviderAccessToOrganizationAsync(organizationId);
+                await _providerService.LogProviderAccessToOrganizationAsync(orgIdGuid);
             }
             return new ListResponseModel<CipherMiniDetailsResponseModel>(responses);
         }

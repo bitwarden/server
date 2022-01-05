@@ -18,6 +18,7 @@ namespace Bit.Setup
         public string HostOS { get; set; } = "win";
         public string CoreVersion { get; set; } = "latest";
         public string WebVersion { get; set; } = "latest";
+        public string KeyConnectorVersion { get; set; } = "latest";
         public Installation Install { get; set; } = new Installation();
         public Configuration Config { get; set; } = new Configuration();
 

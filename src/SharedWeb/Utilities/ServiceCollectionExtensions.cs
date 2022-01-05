@@ -27,7 +27,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Localization;
-using Microsoft.Azure.Storage;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -395,7 +394,7 @@ namespace Bit.SharedWeb.Utilities
         public static void AddCustomDataProtectionServices(
             this IServiceCollection services, IWebHostEnvironment env, GlobalSettings globalSettings)
         {
-            var builder = services.AddDataProtection().SetApplicationName("Bitwarden");
+            var builder = services.AddDataProtection(options => options.ApplicationDiscriminator = "Bitwarden");
             if (env.IsDevelopment())
             {
                 return;
@@ -408,7 +407,6 @@ namespace Bit.SharedWeb.Utilities
 
             if (!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Storage?.ConnectionString))
             {
-                var storageAccount = CloudStorageAccount.Parse(globalSettings.Storage.ConnectionString);
                 X509Certificate2 dataProtectionCert = null;
                 if (CoreHelpers.SettingHasValue(globalSettings.DataProtection.CertificateThumbprint))
                 {
@@ -417,12 +415,13 @@ namespace Bit.SharedWeb.Utilities
                 }
                 else if (CoreHelpers.SettingHasValue(globalSettings.DataProtection.CertificatePassword))
                 {
-                    dataProtectionCert = CoreHelpers.GetBlobCertificateAsync(storageAccount, "certificates",
+                    dataProtectionCert = CoreHelpers.GetBlobCertificateAsync(globalSettings.Storage.ConnectionString, "certificates",
                         "dataprotection.pfx", globalSettings.DataProtection.CertificatePassword)
                         .GetAwaiter().GetResult();
                 }
+                //TODO djsmith85 Check if this is the correct container name
                 builder
-                    .PersistKeysToAzureBlobStorage(storageAccount, "aspnet-dataprotection/keys.xml")
+                    .PersistKeysToAzureBlobStorage(globalSettings.Storage.ConnectionString, "aspnet-dataprotection", "keys.xml")
                     .ProtectKeysWithCertificate(dataProtectionCert);
             }
         }

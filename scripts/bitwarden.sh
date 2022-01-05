@@ -36,6 +36,7 @@ GITHUB_BASE_URL="https://raw.githubusercontent.com/bitwarden/server/master"
 # Please do not create pull requests modifying the version numbers.
 COREVERSION="1.45.2"
 WEBVERSION="2.25.0"
+KEYCONNECTORVERSION="1.0.0"
 
 echo "bitwarden.sh version $COREVERSION"
 docker --version
@@ -110,36 +111,36 @@ case $1 in
         checkOutputDirNotExists
         mkdir -p $OUTPUT
         downloadRunFile
-        $SCRIPTS_DIR/run.sh install $OUTPUT $COREVERSION $WEBVERSION
+        $SCRIPTS_DIR/run.sh install $OUTPUT $COREVERSION $WEBVERSION $KEYCONNECTORVERSION
         ;;
     "start" | "restart")
         checkOutputDirExists
-        $SCRIPTS_DIR/run.sh restart $OUTPUT $COREVERSION $WEBVERSION
+        $SCRIPTS_DIR/run.sh restart $OUTPUT $COREVERSION $WEBVERSION $KEYCONNECTORVERSION
         ;;
     "update")
         checkOutputDirExists
         downloadRunFile
-        $SCRIPTS_DIR/run.sh update $OUTPUT $COREVERSION $WEBVERSION
+        $SCRIPTS_DIR/run.sh update $OUTPUT $COREVERSION $WEBVERSION $KEYCONNECTORVERSION
         ;;
     "rebuild")
         checkOutputDirExists
-        $SCRIPTS_DIR/run.sh rebuild $OUTPUT $COREVERSION $WEBVERSION
+        $SCRIPTS_DIR/run.sh rebuild $OUTPUT $COREVERSION $WEBVERSION $KEYCONNECTORVERSION
         ;;
     "updateconf")
         checkOutputDirExists
-        $SCRIPTS_DIR/run.sh updateconf $OUTPUT $COREVERSION $WEBVERSION
+        $SCRIPTS_DIR/run.sh updateconf $OUTPUT $COREVERSION $WEBVERSION $KEYCONNECTORVERSION
         ;;
     "updatedb")
         checkOutputDirExists
-        $SCRIPTS_DIR/run.sh updatedb $OUTPUT $COREVERSION $WEBVERSION
+        $SCRIPTS_DIR/run.sh updatedb $OUTPUT $COREVERSION $WEBVERSION $KEYCONNECTORVERSION
         ;;
     "stop")
         checkOutputDirExists
-        $SCRIPTS_DIR/run.sh stop $OUTPUT $COREVERSION $WEBVERSION
+        $SCRIPTS_DIR/run.sh stop $OUTPUT $COREVERSION $WEBVERSION $KEYCONNECTORVERSION
         ;;
     "renewcert")
         checkOutputDirExists
-        $SCRIPTS_DIR/run.sh renewcert $OUTPUT $COREVERSION $WEBVERSION
+        $SCRIPTS_DIR/run.sh renewcert $OUTPUT $COREVERSION $WEBVERSION $KEYCONNECTORVERSION
         ;;
     "updaterun")
         checkOutputDirExists

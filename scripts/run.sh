@@ -26,6 +26,12 @@ then
     WEBVERSION=$4
 fi
 
+KEYCONNECTORVERSION="latest"
+if [ $# -gt 4 ]
+then
+    KEYCONNECTORVERSION=$5
+fi
+
 OS="lin"
 [ "$(uname)" == "Darwin" ] && OS="mac"
 ENV_DIR="$OUTPUT_DIR/env"
@@ -89,7 +95,7 @@ function install() {
     docker run -it --rm --name setup -v $OUTPUT_DIR:/bitwarden \
         --env-file $ENV_DIR/uid.env bitwarden/setup:$COREVERSION \
         dotnet Setup.dll -install 1 -domain $DOMAIN -letsencrypt $LETS_ENCRYPT -os $OS \
-        -corev $COREVERSION -webv $WEBVERSION -dbname "$DATABASE"
+        -corev $COREVERSION -webv $WEBVERSION -dbname "$DATABASE" -keyconnectorv $KEYCONNECTORVERSION
 }
 
 function dockerComposeUp() {
@@ -177,15 +183,29 @@ function updateDatabase() {
     MSSQL_ID=$(docker-compose ps -q mssql)
     docker run -i --rm --name setup --network container:$MSSQL_ID \
         -v $OUTPUT_DIR:/bitwarden --env-file $ENV_DIR/uid.env bitwarden/setup:$COREVERSION \
-        dotnet Setup.dll -update 1 -db 1 -os $OS -corev $COREVERSION -webv $WEBVERSION
+        dotnet Setup.dll -update 1 -db 1 -os $OS -corev $COREVERSION -webv $WEBVERSION -keyconnectorv $KEYCONNECTORVERSION
     echo "Database update complete"
 }
 
 function updatebw() {
+    KEY_CONNECTOR_ENABLED=$(grep -A3 'enable_key_connector:' $OUTPUT_DIR/config.yml | tail -n1 | awk '{ print $2}')
     CORE_ID=$(docker-compose ps -q admin)
     WEB_ID=$(docker-compose ps -q web)
-    if docker inspect --format='{{.Config.Image}}:' $CORE_ID | grep -F ":$COREVERSION:" | grep -q ":[0-9.]*:$" &&
-       docker inspect --format='{{.Config.Image}}:' $WEB_ID | grep -F ":$WEBVERSION:" | grep -q ":[0-9.]*:$"
+    if [ $KEY_CONNECTOR_ENABLED = true ];
+    then
+        KEYCONNECTOR_ID=$(docker-compose ps -q key-connector)
+    fi
+
+    if [ $KEYCONNECTOR_ID ] &&
+        docker inspect --format='{{.Config.Image}}:' $CORE_ID | grep -F ":$COREVERSION:" | grep -q ":[0-9.]*:$" &&
+        docker inspect --format='{{.Config.Image}}:' $WEB_ID | grep -F ":$WEBVERSION:" | grep -q ":[0-9.]*:$" &&
+        docker inspect --format='{{.Config.Image}}:' $KEYCONNECTOR_ID | grep -F ":$KEYCONNECTORVERSION:" | grep -q ":[0-9.]*:$"
+    then
+        echo "Update not needed"
+        exit
+    elif
+        docker inspect --format='{{.Config.Image}}:' $CORE_ID | grep -F ":$COREVERSION:" | grep -q ":[0-9.]*:$" &&
+        docker inspect --format='{{.Config.Image}}:' $WEB_ID | grep -F ":$WEBVERSION:" | grep -q ":[0-9.]*:$"
     then
         echo "Update not needed"
         exit
@@ -205,14 +225,14 @@ function update() {
     fi
     docker run -i --rm --name setup -v $OUTPUT_DIR:/bitwarden \
         --env-file $ENV_DIR/uid.env bitwarden/setup:$COREVERSION \
-        dotnet Setup.dll -update 1 -os $OS -corev $COREVERSION -webv $WEBVERSION
+        dotnet Setup.dll -update 1 -os $OS -corev $COREVERSION -webv $WEBVERSION -keyconnectorv $KEYCONNECTORVERSION
 }
 
 function printEnvironment() {
     pullSetup
     docker run -i --rm --name setup -v $OUTPUT_DIR:/bitwarden \
         --env-file $ENV_DIR/uid.env bitwarden/setup:$COREVERSION \
-        dotnet Setup.dll -printenv 1 -os $OS -corev $COREVERSION -webv $WEBVERSION
+        dotnet Setup.dll -printenv 1 -os $OS -corev $COREVERSION -webv $WEBVERSION -keyconnectorv $KEYCONNECTORVERSION
 }
 
 function restart() {

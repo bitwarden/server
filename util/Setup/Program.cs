@@ -38,6 +38,10 @@ namespace Bit.Setup
             {
                 _context.WebVersion = _context.Parameters["webv"];
             }
+            if (_context.Parameters.ContainsKey("keyconnectorv"))
+            {
+                _context.KeyConnectorVersion = _context.Parameters["keyconnectorv"];
+            }
             if (_context.Parameters.ContainsKey("stub"))
             {
                 _context.Stub = _context.Parameters["stub"] == "true" ||
@@ -213,7 +217,7 @@ namespace Bit.Setup
                     MigrateDatabase(nextAttempt);
                     return;
                 }
-                throw e;
+                throw;
             }
         }
 

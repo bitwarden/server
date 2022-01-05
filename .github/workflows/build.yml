@@ -66,7 +66,7 @@ jobs:
       - name: Build solution
         run: msbuild bitwarden-server.sln /p:Configuration=Debug /verbosity:minimal
         shell: pwsh
-      
+
       # TODO: This can be removed when upgrading to .NET 6
       - name: Restore tools
         run: dotnet tool restore
@@ -355,31 +355,28 @@ jobs:
         if: github.ref == 'refs/heads/rc'
         env:
           REGISTRY: bitwardenqa.azurecr.io
-          IMAGE_TAG: ${{ github.sha }}
         run: |
           docker tag ${{ steps.setup.outputs.service_name }} \
-            $REGISTRY/${{ steps.setup.outputs.service_name }}:rc-${IMAGE_TAG:(-8)}
-          docker push $REGISTRY/${{ steps.setup.outputs.service_name }}:rc-${IMAGE_TAG:(-8)}
+            $REGISTRY/${{ steps.setup.outputs.service_name }}:rc
+          docker push $REGISTRY/${{ steps.setup.outputs.service_name }}:rc
 
       - name: Tag and Push Hotfix to Azure ACR QA registry
         if: github.ref == 'refs/heads/hotfix'
         env:
           REGISTRY: bitwardenqa.azurecr.io
-          IMAGE_TAG: ${{ github.sha }}
         run: |
           docker tag ${{ steps.setup.outputs.service_name }} \
-            $REGISTRY/${{ steps.setup.outputs.service_name }}:hotfix-${IMAGE_TAG:(-8)}
-          docker push $REGISTRY/${{ steps.setup.outputs.service_name }}:hotfix-${IMAGE_TAG:(-8)}
+            $REGISTRY/${{ steps.setup.outputs.service_name }}:hotfix
+          docker push $REGISTRY/${{ steps.setup.outputs.service_name }}:hotfix
 
       - name: Tag and Push Dev to Azure ACR QA registry
         if: github.ref == 'refs/heads/master'
         env:
           REGISTRY: bitwardenqa.azurecr.io
-          IMAGE_TAG: ${{ github.sha }}
         run: |
           docker tag ${{ steps.setup.outputs.service_name }} \
-            $REGISTRY/${{ steps.setup.outputs.service_name }}:dev-${IMAGE_TAG:(-8)}
-          docker push $REGISTRY/${{ steps.setup.outputs.service_name }}:dev-${IMAGE_TAG:(-8)}
+            $REGISTRY/${{ steps.setup.outputs.service_name }}:dev
+          docker push $REGISTRY/${{ steps.setup.outputs.service_name }}:dev
 
 
   upload:
@@ -444,6 +441,7 @@ jobs:
           name: swagger.json
           path: ./swagger.json
           if-no-files-found: error
+
 
   check-failures:
     name: Check for failures
