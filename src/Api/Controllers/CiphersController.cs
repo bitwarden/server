@@ -215,17 +215,18 @@ namespace Bit.Api.Controllers
 
         [HttpGet("organization-details")]
         public async Task<ListResponseModel<CipherMiniDetailsResponseModel>> GetOrganizationCollections(
-            Guid organizationId)
+            string organizationId)
         {
             var userId = _userService.GetProperUserId(User).Value;
-            if (!await _currentContext.ViewAllCollections(organizationId) && !await _currentContext.AccessReports(organizationId))
+            var orgIdGuid = new Guid(organizationId);
+            if (!await _currentContext.ViewAllCollections(orgIdGuid) && !await _currentContext.AccessReports(orgIdGuid))
             {
                 throw new NotFoundException();
             }
 
-            var ciphers = await _cipherRepository.GetManyByOrganizationIdAsync(organizationId);
+            var ciphers = await _cipherRepository.GetManyByOrganizationIdAsync(orgIdGuid);
 
-            var collectionCiphers = await _collectionCipherRepository.GetManyByOrganizationIdAsync(organizationId);
+            var collectionCiphers = await _collectionCipherRepository.GetManyByOrganizationIdAsync(orgIdGuid);
             var collectionCiphersGroupDict = collectionCiphers.GroupBy(c => c.CipherId).ToDictionary(s => s.Key);
 
             var responses = ciphers.Select(c => new CipherMiniDetailsResponseModel(c, _globalSettings,
