@@ -9,6 +9,7 @@ param (
     [switch] $stop,
     [switch] $pull,
     [switch] $updateconf,
+    [switch] $uninstall,
     [switch] $renewcert,
     [switch] $updatedb,
     [switch] $update
@@ -183,6 +184,26 @@ function Update([switch] $withpull) {
         -keyconnectorv $keyConnectorVersion -q $setupQuiet
 }
 
+function Uninstall() {
+    Write-Host "(WARNING: ALL DATA WILL BE REMOVED, INCLUDING THE FOLDER $outputDir) " -f red -nonewline
+        $uninstallAction = $( Read-Host "Are you sure you want to uninstall Bitwarden? (y/n)" )
+    
+        if ($uninstallAction -eq "y") {
+            Write-Host "uninstalling Bitwarden..."
+            Docker-Compose-Down
+            Write-Host "Removing $outputDir"
+            Remove-Item -Path $outputDir -Force -Recurse
+            Write-Host "Bitwarden uninstall complete!"
+        }
+
+    Write-Host "(!) " -f red -nonewline
+        $purgeAction = $( Read-Host "Would you like to purge all local Bitwarden container images? (y/n)" )
+    
+        if ($purgeAction -eq "y") {
+            Docker-Prune
+        }
+}
+
 function Print-Environment {
     Pull-Setup
     docker run -it --rm --name setup -v ${outputDir}:/bitwarden bitwarden/setup:$coreVersion `
@@ -249,6 +270,10 @@ elseif ($update) {
     Write-Line "Pausing 60 seconds for database to come online. Please wait..."
     Start-Sleep -s 60
     Update-Database
+}
+elseif ($uninstall) {
+    Docker-Compose-Down
+    Uninstall
 }
 elseif ($rebuild) {
     Docker-Compose-Down
