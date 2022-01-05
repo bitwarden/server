@@ -29,6 +29,9 @@ namespace Bit.Core.Tokens
         public Token ProtectWith(IDataProtector dataProtector) =>
             new(dataProtector.Protect(ToString()));
 
+        public Token UnprotectWith(IDataProtector dataProtector) =>
+            new(dataProtector.Unprotect(ToString()));
+
         public override string ToString() => _token;
     }
 }

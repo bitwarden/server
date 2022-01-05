@@ -17,7 +17,7 @@ namespace Bit.Core.Tokens
             data.ToToken().ProtectWith(_dataProtector).WithPrefix(_clearTextPrefix).ToString();
 
         public T Unprotect(string token) =>
-            Tokenable.FromToken<T>(_dataProtector.Unprotect(new Token(token).RemovePrefix(_clearTextPrefix).ToString()));
+            Tokenable.FromToken<T>(new Token(token).RemovePrefix(_clearTextPrefix).UnprotectWith(_dataProtector).ToString());
 
         public bool TokenValid(string token)
         {
