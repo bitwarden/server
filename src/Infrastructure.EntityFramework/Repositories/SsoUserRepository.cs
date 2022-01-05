@@ -5,11 +5,10 @@ using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using TableModel = Bit.Core.Models.Table;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories
 {
-    public class SsoUserRepository : Repository<TableModel.SsoUser, SsoUser, long>, ISsoUserRepository
+    public class SsoUserRepository : Repository<Core.Entities.SsoUser, SsoUser, long>, ISsoUserRepository
     {
         public SsoUserRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
             : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.SsoUsers)
@@ -26,7 +25,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             }
         }
 
-        public async Task<TableModel.SsoUser> GetByUserIdOrganizationIdAsync(Guid organizationId, Guid userId)
+        public async Task<Core.Entities.SsoUser> GetByUserIdOrganizationIdAsync(Guid organizationId, Guid userId)
         {
             using (var scope = ServiceScopeFactory.CreateScope())
             {

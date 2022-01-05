@@ -2,7 +2,7 @@
 
 namespace Bit.Infrastructure.EntityFramework.Models
 {
-    public class U2f : Core.Models.Table.U2f
+    public class U2f : Core.Entities.U2f
     {
         public virtual User User { get; set; }
     }
@@ -11,7 +11,7 @@ namespace Bit.Infrastructure.EntityFramework.Models
     {
         public U2fMapperProfile()
         {
-            CreateMap<Core.Models.Table.U2f, U2f>().ReverseMap();
+            CreateMap<Core.Entities.U2f, U2f>().ReverseMap();
         }
     }
 }

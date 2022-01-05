@@ -1,13 +1,13 @@
 ﻿using System;
 using AutoFixture;
 using AutoFixture.Kernel;
+using Bit.Core.Entities;
 using Bit.Core.Test.AutoFixture.EntityFrameworkRepositoryFixtures;
 using Bit.Core.Test.AutoFixture.Relays;
 using Bit.Core.Test.AutoFixture.UserFixtures;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
-using TableModel = Bit.Core.Models.Table;
 
 namespace Bit.Core.Test.AutoFixture.U2fFixtures
 {
@@ -21,14 +21,14 @@ namespace Bit.Core.Test.AutoFixture.U2fFixtures
             }
 
             var type = request as Type;
-            if (type == null || type != typeof(TableModel.U2f))
+            if (type == null || type != typeof(U2f))
             {
                 return new NoSpecimen();
             }
 
             var fixture = new Fixture();
             fixture.Customizations.Add(new MaxLengthStringRelay());
-            var obj = fixture.WithAutoNSubstitutions().Create<TableModel.U2f>();
+            var obj = fixture.WithAutoNSubstitutions().Create<U2f>();
             return obj;
         }
     }

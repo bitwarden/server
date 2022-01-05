@@ -2,7 +2,7 @@
 
 namespace Bit.Infrastructure.EntityFramework.Models
 {
-    public class Grant : Core.Models.Table.Grant
+    public class Grant : Core.Entities.Grant
     {
     }
 
@@ -10,7 +10,7 @@ namespace Bit.Infrastructure.EntityFramework.Models
     {
         public GrantMapperProfile()
         {
-            CreateMap<Core.Models.Table.Grant, Grant>().ReverseMap();
+            CreateMap<Core.Entities.Grant, Grant>().ReverseMap();
         }
     }
 }

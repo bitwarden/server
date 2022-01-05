@@ -2,7 +2,7 @@
 
 namespace Bit.Infrastructure.EntityFramework.Models
 {
-    public class Event : Core.Models.Table.Event
+    public class Event : Core.Entities.Event
     {
     }
 
@@ -10,7 +10,7 @@ namespace Bit.Infrastructure.EntityFramework.Models
     {
         public EventMapperProfile()
         {
-            CreateMap<Core.Models.Table.Event, Event>().ReverseMap();
+            CreateMap<Core.Entities.Event, Event>().ReverseMap();
         }
     }
 }

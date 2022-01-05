@@ -2,7 +2,7 @@
 
 namespace Bit.Infrastructure.EntityFramework.Models
 {
-    public class Role : Core.Models.Table.Role
+    public class Role : Core.Entities.Role
     {
     }
 
@@ -10,7 +10,7 @@ namespace Bit.Infrastructure.EntityFramework.Models
     {
         public RoleMapperProfile()
         {
-            CreateMap<Core.Models.Table.Role, Role>().ReverseMap();
+            CreateMap<Core.Entities.Role, Role>().ReverseMap();
         }
     }
 }

@@ -3,7 +3,7 @@ using AutoMapper;
 
 namespace Bit.Infrastructure.EntityFramework.Models
 {
-    public class User : Core.Models.Table.User
+    public class User : Core.Entities.User
     {
         public virtual ICollection<Cipher> Ciphers { get; set; }
         public virtual ICollection<Folder> Folders { get; set; }
@@ -19,7 +19,7 @@ namespace Bit.Infrastructure.EntityFramework.Models
     {
         public UserMapperProfile()
         {
-            CreateMap<Core.Models.Table.User, User>().ReverseMap();
+            CreateMap<Core.Entities.User, User>().ReverseMap();
         }
     }
 }

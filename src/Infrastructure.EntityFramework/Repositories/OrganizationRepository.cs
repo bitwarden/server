@@ -8,17 +8,16 @@ using Bit.Infrastructure.EntityFramework.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using DataModel = Bit.Core.Models.Data;
-using TableModel = Bit.Core.Models.Table;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories
 {
-    public class OrganizationRepository : Repository<TableModel.Organization, Organization, Guid>, IOrganizationRepository
+    public class OrganizationRepository : Repository<Core.Entities.Organization, Organization, Guid>, IOrganizationRepository
     {
         public OrganizationRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
             : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.Organizations)
         { }
 
-        public async Task<TableModel.Organization> GetByIdentifierAsync(string identifier)
+        public async Task<Core.Entities.Organization> GetByIdentifierAsync(string identifier)
         {
             using (var scope = ServiceScopeFactory.CreateScope())
             {
@@ -29,17 +28,17 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             }
         }
 
-        public async Task<ICollection<TableModel.Organization>> GetManyByEnabledAsync()
+        public async Task<ICollection<Core.Entities.Organization>> GetManyByEnabledAsync()
         {
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
                 var organizations = await GetDbSet(dbContext).Where(e => e.Enabled).ToListAsync();
-                return Mapper.Map<List<TableModel.Organization>>(organizations);
+                return Mapper.Map<List<Core.Entities.Organization>>(organizations);
             }
         }
 
-        public async Task<ICollection<TableModel.Organization>> GetManyByUserIdAsync(Guid userId)
+        public async Task<ICollection<Core.Entities.Organization>> GetManyByUserIdAsync(Guid userId)
         {
             using (var scope = ServiceScopeFactory.CreateScope())
             {
@@ -49,11 +48,11 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
                         .Where(ou => ou.UserId == userId)
                         .Select(ou => ou.Organization))
                     .ToListAsync();
-                return Mapper.Map<List<TableModel.Organization>>(organizations);
+                return Mapper.Map<List<Core.Entities.Organization>>(organizations);
             }
         }
 
-        public async Task<ICollection<TableModel.Organization>> SearchAsync(string name, string userEmail,
+        public async Task<ICollection<Core.Entities.Organization>> SearchAsync(string name, string userEmail,
             bool? paid, int skip, int take)
         {
             using (var scope = ServiceScopeFactory.CreateScope())
@@ -68,7 +67,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
                     .OrderBy(e => e.CreationDate)
                     .Skip(skip).Take(take)
                     .ToListAsync();
-                return Mapper.Map<List<TableModel.Organization>>(organizations);
+                return Mapper.Map<List<Core.Entities.Organization>>(organizations);
             }
         }
 
@@ -97,7 +96,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             await OrganizationUpdateStorage(id);
         }
 
-        public override async Task DeleteAsync(TableModel.Organization organization)
+        public override async Task DeleteAsync(Core.Entities.Organization organization)
         {
             using (var scope = ServiceScopeFactory.CreateScope())
             {

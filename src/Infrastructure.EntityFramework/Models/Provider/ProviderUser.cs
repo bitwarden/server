@@ -2,7 +2,7 @@
 
 namespace Bit.Infrastructure.EntityFramework.Models
 {
-    public class ProviderUser : Core.Models.Table.Provider.ProviderUser
+    public class ProviderUser : Core.Entities.Provider.ProviderUser
     {
         public virtual User User { get; set; }
         public virtual Provider Provider { get; set; }
@@ -12,7 +12,7 @@ namespace Bit.Infrastructure.EntityFramework.Models
     {
         public ProviderUserMapperProfile()
         {
-            CreateMap<Core.Models.Table.Provider.ProviderUser, ProviderUser>().ReverseMap();
+            CreateMap<Core.Entities.Provider.ProviderUser, ProviderUser>().ReverseMap();
         }
     }
 }

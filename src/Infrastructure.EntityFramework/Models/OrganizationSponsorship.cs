@@ -2,7 +2,7 @@
 
 namespace Bit.Infrastructure.EntityFramework.Models
 {
-    public class OrganizationSponsorship : Core.Models.Table.OrganizationSponsorship
+    public class OrganizationSponsorship : Core.Entities.OrganizationSponsorship
     {
         public virtual Installation Installation { get; set; }
         public virtual Organization SponsoringOrganization { get; set; }
@@ -13,7 +13,7 @@ namespace Bit.Infrastructure.EntityFramework.Models
     {
         public OrganizationSponsorshipMapperProfile()
         {
-            CreateMap<Core.Models.Table.OrganizationSponsorship, OrganizationSponsorship>().ReverseMap();
+            CreateMap<Core.Entities.OrganizationSponsorship, OrganizationSponsorship>().ReverseMap();
         }
     }
 }

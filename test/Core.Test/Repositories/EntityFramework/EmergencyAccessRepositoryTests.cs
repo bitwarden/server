@@ -3,7 +3,7 @@ using System.Linq;
 using AutoFixture;
 using AutoFixture.DataAnnotations;
 using AutoFixture.Kernel;
-using Bit.Core.Models.Table;
+using Bit.Core.Entities;
 using Bit.Core.Test.AutoFixture.Attributes;
 using Bit.Core.Test.AutoFixture.EmergencyAccessFixtures;
 using Bit.Core.Test.AutoFixture.Relays;

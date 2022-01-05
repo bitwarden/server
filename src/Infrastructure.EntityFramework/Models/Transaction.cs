@@ -2,7 +2,7 @@
 
 namespace Bit.Infrastructure.EntityFramework.Models
 {
-    public class Transaction : Core.Models.Table.Transaction
+    public class Transaction : Core.Entities.Transaction
     {
         public virtual Organization Organization { get; set; }
         public virtual User User { get; set; }
@@ -12,7 +12,7 @@ namespace Bit.Infrastructure.EntityFramework.Models
     {
         public TransactionMapperProfile()
         {
-            CreateMap<Core.Models.Table.Transaction, Transaction>().ReverseMap();
+            CreateMap<Core.Entities.Transaction, Transaction>().ReverseMap();
         }
     }
 }

@@ -4,9 +4,9 @@ using System.Data.SqlClient;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
-using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -17,6 +17,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Stripe;
+using TaxRate = Bit.Core.Entities.TaxRate;
 
 namespace Bit.Billing.Controllers
 {
@@ -773,7 +774,7 @@ namespace Bit.Billing.Controllers
             if (!string.IsNullOrWhiteSpace(invoice?.CustomerAddress?.Country) && !string.IsNullOrWhiteSpace(invoice?.CustomerAddress?.PostalCode))
             {
                 var localBitwardenTaxRates = await _taxRateRepository.GetByLocationAsync(
-                    new Bit.Core.Models.Table.TaxRate()
+                    new TaxRate()
                     {
                         Country = invoice.CustomerAddress.Country,
                         PostalCode = invoice.CustomerAddress.PostalCode

@@ -2,7 +2,7 @@
 
 namespace Bit.Infrastructure.EntityFramework.Models
 {
-    public class Policy : Core.Models.Table.Policy
+    public class Policy : Core.Entities.Policy
     {
         public virtual Organization Organization { get; set; }
     }
@@ -11,7 +11,7 @@ namespace Bit.Infrastructure.EntityFramework.Models
     {
         public PolicyMapperProfile()
         {
-            CreateMap<Core.Models.Table.Policy, Policy>().ReverseMap();
+            CreateMap<Core.Entities.Policy, Policy>().ReverseMap();
         }
     }
 }

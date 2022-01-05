@@ -3,19 +3,18 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
+using Bit.Core.Entities.Provider;
 using Bit.Core.Enums.Provider;
 using Bit.Core.Models.Data;
-using Bit.Core.Models.Table.Provider;
 using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories.Queries;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using TableModel = Bit.Core.Models.Table;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories
 {
     public class ProviderUserRepository :
-        Repository<TableModel.Provider.ProviderUser, Models.ProviderUser, Guid>, IProviderUserRepository
+        Repository<ProviderUser, Models.ProviderUser, Guid>, IProviderUserRepository
     {
         public ProviderUserRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
             : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.ProviderUsers)

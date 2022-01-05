@@ -11,8 +11,8 @@ using Bit.Infrastructure.EntityFramework.Repositories.Queries;
 using LinqToDB.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Cipher = Bit.Core.Models.Table.Cipher;
-using User = Bit.Core.Models.Table.User;
+using Cipher = Bit.Core.Entities.Cipher;
+using User = Bit.Core.Entities.User;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories
 {

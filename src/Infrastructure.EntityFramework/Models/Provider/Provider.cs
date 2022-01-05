@@ -2,7 +2,7 @@
 
 namespace Bit.Infrastructure.EntityFramework.Models
 {
-    public class Provider : Core.Models.Table.Provider.Provider
+    public class Provider : Core.Entities.Provider.Provider
     {
     }
 
@@ -10,7 +10,7 @@ namespace Bit.Infrastructure.EntityFramework.Models
     {
         public ProviderMapperProfile()
         {
-            CreateMap<Core.Models.Table.Provider.Provider, Provider>().ReverseMap();
+            CreateMap<Core.Entities.Provider.Provider, Provider>().ReverseMap();
         }
     }
 }

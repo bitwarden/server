@@ -2,7 +2,7 @@
 
 namespace Bit.Infrastructure.EntityFramework.Models
 {
-    public class Folder : Core.Models.Table.Folder
+    public class Folder : Core.Entities.Folder
     {
         public virtual User User { get; set; }
     }
@@ -11,7 +11,7 @@ namespace Bit.Infrastructure.EntityFramework.Models
     {
         public FolderMapperProfile()
         {
-            CreateMap<Core.Models.Table.Folder, Folder>().ReverseMap();
+            CreateMap<Core.Entities.Folder, Folder>().ReverseMap();
         }
     }
 }

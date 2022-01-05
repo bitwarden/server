@@ -2,7 +2,7 @@
 
 namespace Bit.Infrastructure.EntityFramework.Models
 {
-    public class Send : Core.Models.Table.Send
+    public class Send : Core.Entities.Send
     {
         public virtual Organization Organization { get; set; }
         public virtual User User { get; set; }
@@ -12,7 +12,7 @@ namespace Bit.Infrastructure.EntityFramework.Models
     {
         public SendMapperProfile()
         {
-            CreateMap<Core.Models.Table.Send, Send>().ReverseMap();
+            CreateMap<Core.Entities.Send, Send>().ReverseMap();
         }
     }
 }

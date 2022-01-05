@@ -2,7 +2,7 @@
 
 namespace Bit.Infrastructure.EntityFramework.Models
 {
-    public class TaxRate : Core.Models.Table.TaxRate
+    public class TaxRate : Core.Entities.TaxRate
     {
     }
 
@@ -10,7 +10,7 @@ namespace Bit.Infrastructure.EntityFramework.Models
     {
         public TaxRateMapperProfile()
         {
-            CreateMap<Core.Models.Table.TaxRate, TaxRate>().ReverseMap();
+            CreateMap<Core.Entities.TaxRate, TaxRate>().ReverseMap();
         }
     }
 }

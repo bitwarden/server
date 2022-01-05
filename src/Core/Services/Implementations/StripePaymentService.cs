@@ -3,14 +3,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Bit.Billing.Models;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
-using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Microsoft.Extensions.Logging;
 using StaticStore = Bit.Core.Models.StaticStore;
-using TaxRate = Bit.Core.Models.Table.TaxRate;
+using TaxRate = Bit.Core.Entities.TaxRate;
 
 namespace Bit.Core.Services
 {
@@ -466,7 +466,7 @@ namespace Bit.Core.Services
                     && !string.IsNullOrWhiteSpace(taxInfo?.BillingAddressPostalCode))
             {
                 var taxRates = await _taxRateRepository.GetByLocationAsync(
-                    new Bit.Core.Models.Table.TaxRate()
+                    new TaxRate()
                     {
                         Country = taxInfo.BillingAddressCountry,
                         PostalCode = taxInfo.BillingAddressPostalCode
@@ -742,7 +742,7 @@ namespace Bit.Core.Services
                     && !string.IsNullOrWhiteSpace(customer?.Address?.PostalCode))
             {
                 var taxRates = await _taxRateRepository.GetByLocationAsync(
-                    new Bit.Core.Models.Table.TaxRate()
+                    new TaxRate()
                     {
                         Country = customer.Address.Country,
                         PostalCode = customer.Address.PostalCode

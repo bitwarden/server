@@ -2,7 +2,7 @@
 
 namespace Bit.Infrastructure.EntityFramework.Models
 {
-    public class CollectionUser : Core.Models.Table.CollectionUser
+    public class CollectionUser : Core.Entities.CollectionUser
     {
         public virtual Collection Collection { get; set; }
         public virtual OrganizationUser OrganizationUser { get; set; }
@@ -12,7 +12,7 @@ namespace Bit.Infrastructure.EntityFramework.Models
     {
         public CollectionUserMapperProfile()
         {
-            CreateMap<Core.Models.Table.CollectionUser, CollectionUser>().ReverseMap();
+            CreateMap<Core.Entities.CollectionUser, CollectionUser>().ReverseMap();
         }
     }
 }

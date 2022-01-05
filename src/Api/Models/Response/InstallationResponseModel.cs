@@ -1,5 +1,5 @@
-﻿using Bit.Core.Models.Api;
-using Bit.Core.Models.Table;
+﻿using Bit.Core.Entities;
+using Bit.Core.Models.Api;
 
 namespace Bit.Api.Models.Response
 {

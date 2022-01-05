@@ -1,15 +1,15 @@
 ﻿using System.Linq;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Table = Bit.Core.Models.Table;
 using User = Bit.Infrastructure.EntityFramework.Models.User;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories.Queries
 {
     public class UserBumpAccountRevisionDateByCipherIdQuery : IQuery<User>
     {
-        private readonly Table.Cipher _cipher;
+        private readonly Cipher _cipher;
 
-        public UserBumpAccountRevisionDateByCipherIdQuery(Table.Cipher cipher)
+        public UserBumpAccountRevisionDateByCipherIdQuery(Cipher cipher)
         {
             _cipher = cipher;
         }

@@ -2,7 +2,7 @@
 
 namespace Bit.Infrastructure.EntityFramework.Models
 {
-    public class GroupUser : Core.Models.Table.GroupUser
+    public class GroupUser : Core.Entities.GroupUser
     {
         public virtual Group Group { get; set; }
         public virtual OrganizationUser OrganizationUser { get; set; }
@@ -12,7 +12,7 @@ namespace Bit.Infrastructure.EntityFramework.Models
     {
         public GroupUserMapperProfile()
         {
-            CreateMap<Core.Models.Table.GroupUser, GroupUser>().ReverseMap();
+            CreateMap<Core.Entities.GroupUser, GroupUser>().ReverseMap();
         }
     }
 }

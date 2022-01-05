@@ -10,11 +10,11 @@ using Bit.Infrastructure.EntityFramework.Repositories.Queries;
 using LinqToDB.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using TableModel = Bit.Core.Models.Table;
+using Cipher = Bit.Core.Entities.Cipher;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories
 {
-    public class EventRepository : Repository<TableModel.Event, Event, Guid>, IEventRepository
+    public class EventRepository : Repository<Core.Entities.Event, Event, Guid>, IEventRepository
     {
         public EventRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
             : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.Events)
@@ -22,9 +22,9 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
 
         public async Task CreateAsync(IEvent e)
         {
-            if (e is not TableModel.Event ev)
+            if (e is not Core.Entities.Event ev)
             {
-                ev = new TableModel.Event(e);
+                ev = new Core.Entities.Event(e);
             }
 
             await base.CreateAsync(ev);
@@ -46,14 +46,14 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
-                var tableEvents = entities.Select(e => e as TableModel.Event ?? new TableModel.Event(e));
+                var tableEvents = entities.Select(e => e as Core.Entities.Event ?? new Core.Entities.Event(e));
                 var entityEvents = Mapper.Map<List<Event>>(tableEvents);
                 entityEvents.ForEach(e => e.SetNewId());
                 await dbContext.BulkCopyAsync(entityEvents);
             }
         }
 
-        public async Task<PagedResult<IEvent>> GetManyByCipherAsync(TableModel.Cipher cipher, DateTime startDate, DateTime endDate, PageOptions pageOptions)
+        public async Task<PagedResult<IEvent>> GetManyByCipherAsync(Cipher cipher, DateTime startDate, DateTime endDate, PageOptions pageOptions)
         {
             DateTime? beforeDate = null;
             if (!string.IsNullOrWhiteSpace(pageOptions.ContinuationToken) &&

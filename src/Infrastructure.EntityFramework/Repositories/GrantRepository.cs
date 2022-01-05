@@ -6,7 +6,6 @@ using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using TableModel = Bit.Core.Models.Table;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories
 {
@@ -45,7 +44,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             }
         }
 
-        public async Task<TableModel.Grant> GetByKeyAsync(string key)
+        public async Task<Core.Entities.Grant> GetByKeyAsync(string key)
         {
             using (var scope = ServiceScopeFactory.CreateScope())
             {
@@ -58,7 +57,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             }
         }
 
-        public async Task<ICollection<TableModel.Grant>> GetManyAsync(string subjectId, string sessionId, string clientId, string type)
+        public async Task<ICollection<Core.Entities.Grant>> GetManyAsync(string subjectId, string sessionId, string clientId, string type)
         {
             using (var scope = ServiceScopeFactory.CreateScope())
             {
@@ -70,11 +69,11 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
                                 g.Type == type
                             select g;
                 var grants = await query.ToListAsync();
-                return (ICollection<TableModel.Grant>)grants;
+                return (ICollection<Core.Entities.Grant>)grants;
             }
         }
 
-        public async Task SaveAsync(TableModel.Grant obj)
+        public async Task SaveAsync(Core.Entities.Grant obj)
         {
             using (var scope = ServiceScopeFactory.CreateScope())
             {

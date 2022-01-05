@@ -1,5 +1,5 @@
 ﻿using System;
-using Bit.Core.Models.Table;
+using Bit.Core.Entities;
 using Newtonsoft.Json;
 
 namespace Bit.Api.Models.Public.Request

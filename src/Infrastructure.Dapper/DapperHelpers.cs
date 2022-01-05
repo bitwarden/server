@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
+using Bit.Core.Entities;
 using Bit.Core.Models.Data;
-using Bit.Core.Models.Table;
 using Dapper;
 
 namespace Bit.Infrastructure.Dapper

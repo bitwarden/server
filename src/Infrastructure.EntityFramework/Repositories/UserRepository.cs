@@ -8,23 +8,22 @@ using Bit.Infrastructure.EntityFramework.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using DataModel = Bit.Core.Models.Data;
-using TableModel = Bit.Core.Models.Table;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories
 {
-    public class UserRepository : Repository<TableModel.User, User, Guid>, IUserRepository
+    public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserRepository
     {
         public UserRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
             : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.Users)
         { }
 
-        public async Task<TableModel.User> GetByEmailAsync(string email)
+        public async Task<Core.Entities.User> GetByEmailAsync(string email)
         {
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
                 var entity = await GetDbSet(dbContext).FirstOrDefaultAsync(e => e.Email == email);
-                return Mapper.Map<TableModel.User>(entity);
+                return Mapper.Map<Core.Entities.User>(entity);
             }
         }
 
@@ -42,7 +41,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             }
         }
 
-        public async Task<ICollection<TableModel.User>> SearchAsync(string email, int skip, int take)
+        public async Task<ICollection<Core.Entities.User>> SearchAsync(string email, int skip, int take)
         {
             using (var scope = ServiceScopeFactory.CreateScope())
             {
@@ -65,17 +64,17 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
                         .Skip(skip).Take(take)
                         .ToListAsync();
                 }
-                return Mapper.Map<List<TableModel.User>>(users);
+                return Mapper.Map<List<Core.Entities.User>>(users);
             }
         }
 
-        public async Task<ICollection<TableModel.User>> GetManyByPremiumAsync(bool premium)
+        public async Task<ICollection<Core.Entities.User>> GetManyByPremiumAsync(bool premium)
         {
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
                 var users = await GetDbSet(dbContext).Where(e => e.Premium == premium).ToListAsync();
-                return Mapper.Map<List<TableModel.User>>(users);
+                return Mapper.Map<List<Core.Entities.User>>(users);
             }
         }
 
@@ -120,7 +119,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             }
         }
 
-        public async Task<TableModel.User> GetBySsoUserAsync(string externalId, Guid? organizationId)
+        public async Task<Core.Entities.User> GetBySsoUserAsync(string externalId, Guid? organizationId)
         {
             using (var scope = ServiceScopeFactory.CreateScope())
             {
@@ -134,11 +133,11 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
                 }
 
                 var entity = await dbContext.Users.SingleOrDefaultAsync(e => e.Id == ssoUser.UserId);
-                return Mapper.Map<TableModel.User>(entity);
+                return Mapper.Map<Core.Entities.User>(entity);
             }
         }
 
-        public async Task<IEnumerable<TableModel.User>> GetManyAsync(IEnumerable<Guid> ids)
+        public async Task<IEnumerable<Core.Entities.User>> GetManyAsync(IEnumerable<Guid> ids)
         {
             using (var scope = ServiceScopeFactory.CreateScope())
             {

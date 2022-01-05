@@ -2,7 +2,7 @@
 
 namespace Bit.Infrastructure.EntityFramework.Models
 {
-    public class SsoConfig : Core.Models.Table.SsoConfig
+    public class SsoConfig : Core.Entities.SsoConfig
     {
         public virtual Organization Organization { get; set; }
     }
@@ -11,7 +11,7 @@ namespace Bit.Infrastructure.EntityFramework.Models
     {
         public SsoConfigMapperProfile()
         {
-            CreateMap<Core.Models.Table.SsoConfig, SsoConfig>().ReverseMap();
+            CreateMap<Core.Entities.SsoConfig, SsoConfig>().ReverseMap();
         }
     }
 }

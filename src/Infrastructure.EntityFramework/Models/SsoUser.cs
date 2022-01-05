@@ -2,7 +2,7 @@
 
 namespace Bit.Infrastructure.EntityFramework.Models
 {
-    public class SsoUser : Core.Models.Table.SsoUser
+    public class SsoUser : Core.Entities.SsoUser
     {
         public virtual Organization Organization { get; set; }
         public virtual User User { get; set; }
@@ -12,7 +12,7 @@ namespace Bit.Infrastructure.EntityFramework.Models
     {
         public SsoUserMapperProfile()
         {
-            CreateMap<Core.Models.Table.SsoUser, SsoUser>().ReverseMap();
+            CreateMap<Core.Entities.SsoUser, SsoUser>().ReverseMap();
         }
     }
 }

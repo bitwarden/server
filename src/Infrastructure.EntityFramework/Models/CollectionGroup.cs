@@ -2,7 +2,7 @@
 
 namespace Bit.Infrastructure.EntityFramework.Models
 {
-    public class CollectionGroup : Core.Models.Table.CollectionGroup
+    public class CollectionGroup : Core.Entities.CollectionGroup
     {
         public virtual Collection Collection { get; set; }
         public virtual Group Group { get; set; }
@@ -12,7 +12,7 @@ namespace Bit.Infrastructure.EntityFramework.Models
     {
         public CollectionGroupMapperProfile()
         {
-            CreateMap<Core.Models.Table.CollectionGroup, CollectionGroup>().ReverseMap();
+            CreateMap<Core.Entities.CollectionGroup, CollectionGroup>().ReverseMap();
         }
     }
 }

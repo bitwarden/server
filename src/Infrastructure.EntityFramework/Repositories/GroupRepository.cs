@@ -8,17 +8,16 @@ using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using TableModel = Bit.Core.Models.Table;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories
 {
-    public class GroupRepository : Repository<TableModel.Group, Group, Guid>, IGroupRepository
+    public class GroupRepository : Repository<Core.Entities.Group, Group, Guid>, IGroupRepository
     {
         public GroupRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
             : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.Groups)
         { }
 
-        public async Task CreateAsync(TableModel.Group obj, IEnumerable<SelectionReadOnly> collections)
+        public async Task CreateAsync(Core.Entities.Group obj, IEnumerable<SelectionReadOnly> collections)
         {
             var grp = await base.CreateAsync(obj);
             using (var scope = ServiceScopeFactory.CreateScope())
@@ -55,7 +54,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             }
         }
 
-        public async Task<Tuple<TableModel.Group, ICollection<SelectionReadOnly>>> GetByIdWithCollectionsAsync(Guid id)
+        public async Task<Tuple<Core.Entities.Group, ICollection<SelectionReadOnly>>> GetByIdWithCollectionsAsync(Guid id)
         {
             var grp = await base.GetByIdAsync(id);
             using (var scope = ServiceScopeFactory.CreateScope())
@@ -71,12 +70,12 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
                     ReadOnly = c.ReadOnly,
                     HidePasswords = c.HidePasswords,
                 }).ToList();
-                return new Tuple<TableModel.Group, ICollection<SelectionReadOnly>>(
+                return new Tuple<Core.Entities.Group, ICollection<SelectionReadOnly>>(
                     grp, collections);
             }
         }
 
-        public async Task<ICollection<TableModel.Group>> GetManyByOrganizationIdAsync(Guid organizationId)
+        public async Task<ICollection<Core.Entities.Group>> GetManyByOrganizationIdAsync(Guid organizationId)
         {
             using (var scope = ServiceScopeFactory.CreateScope())
             {
@@ -85,11 +84,11 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
                     from g in dbContext.Groups
                     where g.OrganizationId == organizationId
                     select g).ToListAsync();
-                return Mapper.Map<List<TableModel.Group>>(data);
+                return Mapper.Map<List<Core.Entities.Group>>(data);
             }
         }
 
-        public async Task<ICollection<TableModel.GroupUser>> GetManyGroupUsersByOrganizationIdAsync(Guid organizationId)
+        public async Task<ICollection<Core.Entities.GroupUser>> GetManyGroupUsersByOrganizationIdAsync(Guid organizationId)
         {
             using (var scope = ServiceScopeFactory.CreateScope())
             {
@@ -101,7 +100,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
                     where g.OrganizationId == organizationId
                     select gu;
                 var groupUsers = await query.ToListAsync();
-                return Mapper.Map<List<TableModel.GroupUser>>(groupUsers);
+                return Mapper.Map<List<Core.Entities.GroupUser>>(groupUsers);
             }
         }
 
@@ -133,7 +132,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             }
         }
 
-        public async Task ReplaceAsync(TableModel.Group obj, IEnumerable<SelectionReadOnly> collections)
+        public async Task ReplaceAsync(Core.Entities.Group obj, IEnumerable<SelectionReadOnly> collections)
         {
             await base.ReplaceAsync(obj);
             using (var scope = ServiceScopeFactory.CreateScope())

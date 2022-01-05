@@ -2,7 +2,6 @@
 using System.Text.Json;
 using AutoFixture.Xunit2;
 using Bit.Core.Models.Data;
-using Bit.Core.Models.Table;
 using Bit.Core.Utilities;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;

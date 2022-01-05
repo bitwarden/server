@@ -10,11 +10,10 @@ using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Infrastructure.EntityFramework.Repositories.Queries;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using TableModel = Bit.Core.Models.Table;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories
 {
-    public class EmergencyAccessRepository : Repository<TableModel.EmergencyAccess, EmergencyAccess, Guid>, IEmergencyAccessRepository
+    public class EmergencyAccessRepository : Repository<Core.Entities.EmergencyAccess, EmergencyAccess, Guid>, IEmergencyAccessRepository
     {
         public EmergencyAccessRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
             : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.EmergencyAccesses)

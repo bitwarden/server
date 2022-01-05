@@ -1,20 +1,20 @@
 ﻿using System;
 using System.Linq;
+using Bit.Core.Entities;
 using Bit.Core.Models.Data;
 using Event = Bit.Infrastructure.EntityFramework.Models.Event;
-using Table = Bit.Core.Models.Table;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories.Queries
 {
     public class EventReadPageByCipherIdQuery : IQuery<Event>
     {
-        private readonly Table.Cipher _cipher;
+        private readonly Cipher _cipher;
         private readonly DateTime _startDate;
         private readonly DateTime _endDate;
         private readonly DateTime? _beforeDate;
         private readonly PageOptions _pageOptions;
 
-        public EventReadPageByCipherIdQuery(Table.Cipher cipher, DateTime startDate, DateTime endDate, PageOptions pageOptions)
+        public EventReadPageByCipherIdQuery(Cipher cipher, DateTime startDate, DateTime endDate, PageOptions pageOptions)
         {
             _cipher = cipher;
             _startDate = startDate;
@@ -23,7 +23,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories.Queries
             _pageOptions = pageOptions;
         }
 
-        public EventReadPageByCipherIdQuery(Table.Cipher cipher, DateTime startDate, DateTime endDate, DateTime? beforeDate, PageOptions pageOptions)
+        public EventReadPageByCipherIdQuery(Cipher cipher, DateTime startDate, DateTime endDate, DateTime? beforeDate, PageOptions pageOptions)
         {
             _cipher = cipher;
             _startDate = startDate;

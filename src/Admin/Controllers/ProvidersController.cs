@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Bit.Admin.Models;
-using Bit.Core.Models.Table.Provider;
+using Bit.Core.Entities.Provider;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;

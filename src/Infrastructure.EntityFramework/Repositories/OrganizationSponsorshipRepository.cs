@@ -6,17 +6,16 @@ using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using TableModel = Bit.Core.Models.Table;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories
 {
-    public class OrganizationSponsorshipRepository : Repository<TableModel.OrganizationSponsorship, OrganizationSponsorship, Guid>, IOrganizationSponsorshipRepository
+    public class OrganizationSponsorshipRepository : Repository<Core.Entities.OrganizationSponsorship, OrganizationSponsorship, Guid>, IOrganizationSponsorshipRepository
     {
         public OrganizationSponsorshipRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
             : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.OrganizationSponsorships)
         { }
 
-        public async Task<TableModel.OrganizationSponsorship> GetByOfferedToEmailAsync(string email)
+        public async Task<Core.Entities.OrganizationSponsorship> GetByOfferedToEmailAsync(string email)
         {
             using (var scope = ServiceScopeFactory.CreateScope())
             {
@@ -27,7 +26,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             }
         }
 
-        public async Task<TableModel.OrganizationSponsorship> GetBySponsoredOrganizationIdAsync(Guid sponsoredOrganizationId)
+        public async Task<Core.Entities.OrganizationSponsorship> GetBySponsoredOrganizationIdAsync(Guid sponsoredOrganizationId)
         {
             using (var scope = ServiceScopeFactory.CreateScope())
             {
@@ -38,7 +37,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             }
         }
 
-        public async Task<TableModel.OrganizationSponsorship> GetBySponsoringOrganizationUserIdAsync(Guid sponsoringOrganizationUserId)
+        public async Task<Core.Entities.OrganizationSponsorship> GetBySponsoringOrganizationUserIdAsync(Guid sponsoringOrganizationUserId)
         {
             using (var scope = ServiceScopeFactory.CreateScope())
             {

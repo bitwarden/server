@@ -4,11 +4,11 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Bit.Core.Context;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
-using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -19,9 +19,9 @@ using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
-using Organization = Bit.Core.Models.Table.Organization;
-using OrganizationUser = Bit.Core.Models.Table.OrganizationUser;
-using Policy = Bit.Core.Models.Table.Policy;
+using Organization = Bit.Core.Entities.Organization;
+using OrganizationUser = Bit.Core.Entities.OrganizationUser;
+using Policy = Bit.Core.Entities.Policy;
 
 namespace Bit.Core.Test.Services
 {

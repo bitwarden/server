@@ -2,7 +2,7 @@
 
 namespace Bit.Infrastructure.EntityFramework.Models
 {
-    public class Installation : Core.Models.Table.Installation
+    public class Installation : Core.Entities.Installation
     {
     }
 
@@ -10,7 +10,7 @@ namespace Bit.Infrastructure.EntityFramework.Models
     {
         public InstallationMapperProfile()
         {
-            CreateMap<Core.Models.Table.Installation, Installation>().ReverseMap();
+            CreateMap<Core.Entities.Installation, Installation>().ReverseMap();
         }
     }
 }

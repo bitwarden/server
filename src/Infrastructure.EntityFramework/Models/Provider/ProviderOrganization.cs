@@ -2,7 +2,7 @@
 
 namespace Bit.Infrastructure.EntityFramework.Models
 {
-    public class ProviderOrganization : Core.Models.Table.Provider.ProviderOrganization
+    public class ProviderOrganization : Core.Entities.Provider.ProviderOrganization
     {
         public virtual Provider Provider { get; set; }
         public virtual Organization Organization { get; set; }
@@ -12,7 +12,7 @@ namespace Bit.Infrastructure.EntityFramework.Models
     {
         public ProviderOrganizationMapperProfile()
         {
-            CreateMap<Core.Models.Table.Provider.ProviderOrganization, ProviderOrganization>().ReverseMap();
+            CreateMap<Core.Entities.Provider.ProviderOrganization, ProviderOrganization>().ReverseMap();
         }
     }
 }

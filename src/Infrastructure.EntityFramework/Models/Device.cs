@@ -2,7 +2,7 @@
 
 namespace Bit.Infrastructure.EntityFramework.Models
 {
-    public class Device : Core.Models.Table.Device
+    public class Device : Core.Entities.Device
     {
         public virtual User User { get; set; }
     }
@@ -11,7 +11,7 @@ namespace Bit.Infrastructure.EntityFramework.Models
     {
         public DeviceMapperProfile()
         {
-            CreateMap<Core.Models.Table.Device, Device>().ReverseMap();
+            CreateMap<Core.Entities.Device, Device>().ReverseMap();
         }
     }
 }

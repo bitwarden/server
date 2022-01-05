@@ -1,18 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using CollectionCipher = Bit.Infrastructure.EntityFramework.Models.CollectionCipher;
-using Table = Bit.Core.Models.Table;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories.Queries
 {
     public class CipherUpdateCollectionsQuery : IQuery<CollectionCipher>
     {
-        private readonly Table.Cipher _cipher;
+        private readonly Cipher _cipher;
         private readonly IEnumerable<Guid> _collectionIds;
 
-        public CipherUpdateCollectionsQuery(Table.Cipher cipher, IEnumerable<Guid> collectionIds)
+        public CipherUpdateCollectionsQuery(Cipher cipher, IEnumerable<Guid> collectionIds)
         {
             _cipher = cipher;
             _collectionIds = collectionIds;

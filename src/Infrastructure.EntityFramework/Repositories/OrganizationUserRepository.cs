@@ -10,17 +10,16 @@ using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Infrastructure.EntityFramework.Repositories.Queries;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using TableModel = Bit.Core.Models.Table;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories
 {
-    public class OrganizationUserRepository : Repository<TableModel.OrganizationUser, OrganizationUser, Guid>, IOrganizationUserRepository
+    public class OrganizationUserRepository : Repository<Core.Entities.OrganizationUser, OrganizationUser, Guid>, IOrganizationUserRepository
     {
         public OrganizationUserRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
             : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.OrganizationUsers)
         { }
 
-        public async Task<Guid> CreateAsync(TableModel.OrganizationUser obj, IEnumerable<SelectionReadOnly> collections)
+        public async Task<Guid> CreateAsync(Core.Entities.OrganizationUser obj, IEnumerable<SelectionReadOnly> collections)
         {
             var organizationUser = await base.CreateAsync(obj);
             using (var scope = ServiceScopeFactory.CreateScope())
@@ -45,7 +44,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             return organizationUser.Id;
         }
 
-        public async Task<ICollection<Guid>> CreateManyAsync(IEnumerable<TableModel.OrganizationUser> organizationUsers)
+        public async Task<ICollection<Guid>> CreateManyAsync(IEnumerable<Core.Entities.OrganizationUser> organizationUsers)
         {
             if (!organizationUsers.Any())
             {
@@ -67,7 +66,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             return organizationUsers.Select(u => u.Id).ToList();
         }
 
-        public override async Task DeleteAsync(TableModel.OrganizationUser organizationUser) => await DeleteAsync(organizationUser.Id);
+        public override async Task DeleteAsync(Core.Entities.OrganizationUser organizationUser) => await DeleteAsync(organizationUser.Id);
         public async Task DeleteAsync(Guid organizationUserId)
         {
             using (var scope = ServiceScopeFactory.CreateScope())
@@ -108,7 +107,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             }
         }
 
-        public async Task<Tuple<TableModel.OrganizationUser, ICollection<SelectionReadOnly>>> GetByIdWithCollectionsAsync(Guid id)
+        public async Task<Tuple<Core.Entities.OrganizationUser, ICollection<SelectionReadOnly>>> GetByIdWithCollectionsAsync(Guid id)
         {
             var organizationUser = await base.GetByIdAsync(id);
             using (var scope = ServiceScopeFactory.CreateScope())
@@ -127,12 +126,12 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
                     ReadOnly = cu.ReadOnly,
                     HidePasswords = cu.HidePasswords,
                 });
-                return new Tuple<TableModel.OrganizationUser, ICollection<SelectionReadOnly>>(
+                return new Tuple<Core.Entities.OrganizationUser, ICollection<SelectionReadOnly>>(
                     organizationUser, collections.ToList());
             }
         }
 
-        public async Task<TableModel.OrganizationUser> GetByOrganizationAsync(Guid organizationId, Guid userId)
+        public async Task<Core.Entities.OrganizationUser> GetByOrganizationAsync(Guid organizationId, Guid userId)
         {
             using (var scope = ServiceScopeFactory.CreateScope())
             {
@@ -143,7 +142,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             }
         }
 
-        public async Task<TableModel.OrganizationUser> GetByOrganizationEmailAsync(Guid organizationId, string email)
+        public async Task<Core.Entities.OrganizationUser> GetByOrganizationEmailAsync(Guid organizationId, string email)
         {
             using (var scope = ServiceScopeFactory.CreateScope())
             {
@@ -226,7 +225,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             }
         }
 
-        public async Task<ICollection<TableModel.OrganizationUser>> GetManyAsync(IEnumerable<Guid> Ids)
+        public async Task<ICollection<Core.Entities.OrganizationUser>> GetManyAsync(IEnumerable<Guid> Ids)
         {
             using (var scope = ServiceScopeFactory.CreateScope())
             {
@@ -239,7 +238,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             }
         }
 
-        public async Task<ICollection<TableModel.OrganizationUser>> GetManyByManyUsersAsync(IEnumerable<Guid> userIds)
+        public async Task<ICollection<Core.Entities.OrganizationUser>> GetManyByManyUsersAsync(IEnumerable<Guid> userIds)
         {
             using (var scope = ServiceScopeFactory.CreateScope())
             {
@@ -247,11 +246,11 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
                 var query = from ou in dbContext.OrganizationUsers
                             where userIds.Contains(ou.Id)
                             select ou;
-                return Mapper.Map<List<TableModel.OrganizationUser>>(await query.ToListAsync());
+                return Mapper.Map<List<Core.Entities.OrganizationUser>>(await query.ToListAsync());
             }
         }
 
-        public async Task<ICollection<TableModel.OrganizationUser>> GetManyByOrganizationAsync(Guid organizationId, OrganizationUserType? type)
+        public async Task<ICollection<Core.Entities.OrganizationUser>> GetManyByOrganizationAsync(Guid organizationId, OrganizationUserType? type)
         {
             using (var scope = ServiceScopeFactory.CreateScope())
             {
@@ -260,11 +259,11 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
                             where ou.OrganizationId == organizationId &&
                                 (type == null || ou.Type == type)
                             select ou;
-                return Mapper.Map<List<TableModel.OrganizationUser>>(await query.ToListAsync());
+                return Mapper.Map<List<Core.Entities.OrganizationUser>>(await query.ToListAsync());
             }
         }
 
-        public async Task<ICollection<TableModel.OrganizationUser>> GetManyByUserAsync(Guid userId)
+        public async Task<ICollection<Core.Entities.OrganizationUser>> GetManyByUserAsync(Guid userId)
         {
             using (var scope = ServiceScopeFactory.CreateScope())
             {
@@ -272,7 +271,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
                 var query = from ou in dbContext.OrganizationUsers
                             where ou.UserId == userId
                             select ou;
-                return Mapper.Map<List<TableModel.OrganizationUser>>(await query.ToListAsync());
+                return Mapper.Map<List<Core.Entities.OrganizationUser>>(await query.ToListAsync());
             }
         }
 
@@ -326,7 +325,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             }
         }
 
-        public async Task ReplaceAsync(TableModel.OrganizationUser obj, IEnumerable<SelectionReadOnly> collections)
+        public async Task ReplaceAsync(Core.Entities.OrganizationUser obj, IEnumerable<SelectionReadOnly> collections)
         {
             await base.ReplaceAsync(obj);
             using (var scope = ServiceScopeFactory.CreateScope())
@@ -346,7 +345,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             }
         }
 
-        public async Task ReplaceManyAsync(IEnumerable<TableModel.OrganizationUser> organizationUsers)
+        public async Task ReplaceManyAsync(IEnumerable<Core.Entities.OrganizationUser> organizationUsers)
         {
             using (var scope = ServiceScopeFactory.CreateScope())
             {
@@ -402,10 +401,10 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             }
         }
 
-        public async Task UpsertManyAsync(IEnumerable<TableModel.OrganizationUser> organizationUsers)
+        public async Task UpsertManyAsync(IEnumerable<Core.Entities.OrganizationUser> organizationUsers)
         {
-            var createUsers = new List<TableModel.OrganizationUser>();
-            var replaceUsers = new List<TableModel.OrganizationUser>();
+            var createUsers = new List<Core.Entities.OrganizationUser>();
+            var replaceUsers = new List<Core.Entities.OrganizationUser>();
             foreach (var organizationUser in organizationUsers)
             {
                 if (organizationUser.Id.Equals(default))

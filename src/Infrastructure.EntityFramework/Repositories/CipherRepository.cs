@@ -15,17 +15,17 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using TableModel = Bit.Core.Models.Table;
+using User = Bit.Core.Entities.User;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories
 {
-    public class CipherRepository : Repository<TableModel.Cipher, Cipher, Guid>, ICipherRepository
+    public class CipherRepository : Repository<Core.Entities.Cipher, Cipher, Guid>, ICipherRepository
     {
         public CipherRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
             : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.Ciphers)
         { }
 
-        public override async Task<TableModel.Cipher> CreateAsync(TableModel.Cipher cipher)
+        public override async Task<Core.Entities.Cipher> CreateAsync(Core.Entities.Cipher cipher)
         {
             cipher = await base.CreateAsync(cipher);
             using (var scope = ServiceScopeFactory.CreateScope())
@@ -43,7 +43,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             return cipher;
         }
 
-        public IQueryable<TableModel.User> GetBumpedAccountsByCipherId(TableModel.Cipher cipher)
+        public IQueryable<User> GetBumpedAccountsByCipherId(Core.Entities.Cipher cipher)
         {
             using (var scope = ServiceScopeFactory.CreateScope())
             {
@@ -53,13 +53,13 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             }
         }
 
-        public async Task CreateAsync(TableModel.Cipher cipher, IEnumerable<Guid> collectionIds)
+        public async Task CreateAsync(Core.Entities.Cipher cipher, IEnumerable<Guid> collectionIds)
         {
             cipher = await base.CreateAsync(cipher);
             await UpdateCollections(cipher, collectionIds);
         }
 
-        private async Task UpdateCollections(TableModel.Cipher cipher, IEnumerable<Guid> collectionIds)
+        private async Task UpdateCollections(Core.Entities.Cipher cipher, IEnumerable<Guid> collectionIds)
         {
             using (var scope = ServiceScopeFactory.CreateScope())
             {
@@ -90,7 +90,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
                 cipher.Folders = cipher.FolderId.HasValue ?
                     $"{{{userIdKey}:\"{cipher.FolderId}\"}}" :
                     null;
-                var entity = Mapper.Map<Cipher>((TableModel.Cipher)cipher);
+                var entity = Mapper.Map<Cipher>((Core.Entities.Cipher)cipher);
                 await dbContext.AddAsync(entity);
                 await dbContext.SaveChangesAsync();
             }
@@ -104,7 +104,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             await UpdateCollections(cipher, collectionIds);
         }
 
-        public async Task CreateAsync(IEnumerable<TableModel.Cipher> ciphers, IEnumerable<TableModel.Folder> folders)
+        public async Task CreateAsync(IEnumerable<Core.Entities.Cipher> ciphers, IEnumerable<Core.Entities.Folder> folders)
         {
             if (!ciphers.Any())
             {
@@ -122,7 +122,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             }
         }
 
-        public async Task CreateAsync(IEnumerable<TableModel.Cipher> ciphers, IEnumerable<TableModel.Collection> collections, IEnumerable<TableModel.CollectionCipher> collectionCiphers)
+        public async Task CreateAsync(IEnumerable<Core.Entities.Cipher> ciphers, IEnumerable<Core.Entities.Collection> collections, IEnumerable<Core.Entities.CollectionCipher> collectionCiphers)
         {
             if (!ciphers.Any())
             {
@@ -270,14 +270,14 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             }
         }
 
-        public async Task<ICollection<TableModel.Cipher>> GetManyByOrganizationIdAsync(Guid organizationId)
+        public async Task<ICollection<Core.Entities.Cipher>> GetManyByOrganizationIdAsync(Guid organizationId)
         {
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
                 var query = dbContext.Ciphers.Where(x => !x.UserId.HasValue && x.OrganizationId == organizationId);
                 var data = await query.ToListAsync();
-                return Mapper.Map<List<TableModel.Cipher>>(data);
+                return Mapper.Map<List<Core.Entities.Cipher>>(data);
             }
         }
 
@@ -418,7 +418,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
                             cipher.Favorites = JsonConvert.SerializeObject(folders);
                         }
                     }
-                    var mappedEntity = Mapper.Map<Cipher>((TableModel.Cipher)cipher);
+                    var mappedEntity = Mapper.Map<Cipher>((Core.Entities.Cipher)cipher);
                     dbContext.Entry(entity).CurrentValues.SetValues(mappedEntity);
                     await UserBumpAccountRevisionDateByCipherId(cipher);
                     await dbContext.SaveChangesAsync();
@@ -426,7 +426,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             }
         }
 
-        public async Task<bool> ReplaceAsync(TableModel.Cipher obj, IEnumerable<Guid> collectionIds)
+        public async Task<bool> ReplaceAsync(Core.Entities.Cipher obj, IEnumerable<Guid> collectionIds)
         {
             await UpdateCollections(obj, collectionIds);
             using (var scope = ServiceScopeFactory.CreateScope())
@@ -550,7 +550,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
                 if (attachment.OrganizationId.HasValue)
                 {
                     await OrganizationUpdateStorage(cipher.OrganizationId.Value);
-                    await UserBumpAccountRevisionDateByCipherId(new List<TableModel.Cipher> { cipher });
+                    await UserBumpAccountRevisionDateByCipherId(new List<Core.Entities.Cipher> { cipher });
                 }
                 else if (attachment.UserId.HasValue)
                 {
@@ -560,7 +560,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             }
         }
 
-        public async Task UpdateCiphersAsync(Guid userId, IEnumerable<TableModel.Cipher> ciphers)
+        public async Task UpdateCiphersAsync(Guid userId, IEnumerable<Core.Entities.Cipher> ciphers)
         {
             if (!ciphers.Any())
             {
@@ -611,7 +611,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             }
         }
 
-        public async Task UpdateUserKeysAndCiphersAsync(TableModel.User user, IEnumerable<TableModel.Cipher> ciphers, IEnumerable<TableModel.Folder> folders, IEnumerable<TableModel.Send> sends)
+        public async Task UpdateUserKeysAndCiphersAsync(User user, IEnumerable<Core.Entities.Cipher> ciphers, IEnumerable<Core.Entities.Folder> folders, IEnumerable<Core.Entities.Send> sends)
         {
             using (var scope = ServiceScopeFactory.CreateScope())
             {

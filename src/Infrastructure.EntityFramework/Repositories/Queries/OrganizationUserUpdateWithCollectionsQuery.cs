@@ -1,8 +1,8 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using Bit.Core.Entities;
 using Bit.Core.Models.Data;
 using CollectionUser = Bit.Infrastructure.EntityFramework.Models.CollectionUser;
-using Table = Bit.Core.Models.Table;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories.Queries
 {
@@ -12,7 +12,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories.Queries
         public OrganizationUserUpdateWithCollectionsUpdateQuery Update { get; set; }
         public OrganizationUserUpdateWithCollectionsDeleteQuery Delete { get; set; }
 
-        public OrganizationUserUpdateWithCollectionsQuery(Table.OrganizationUser organizationUser,
+        public OrganizationUserUpdateWithCollectionsQuery(OrganizationUser organizationUser,
                 IEnumerable<SelectionReadOnly> collections)
         {
             Insert = new OrganizationUserUpdateWithCollectionsInsertQuery(organizationUser, collections);
@@ -23,10 +23,10 @@ namespace Bit.Infrastructure.EntityFramework.Repositories.Queries
 
     public class OrganizationUserUpdateWithCollectionsInsertQuery : IQuery<CollectionUser>
     {
-        private readonly Table.OrganizationUser _organizationUser;
+        private readonly OrganizationUser _organizationUser;
         private readonly IEnumerable<SelectionReadOnly> _collections;
 
-        public OrganizationUserUpdateWithCollectionsInsertQuery(Table.OrganizationUser organizationUser, IEnumerable<SelectionReadOnly> collections)
+        public OrganizationUserUpdateWithCollectionsInsertQuery(OrganizationUser organizationUser, IEnumerable<SelectionReadOnly> collections)
         {
             _organizationUser = organizationUser;
             _collections = collections;
@@ -56,10 +56,10 @@ namespace Bit.Infrastructure.EntityFramework.Repositories.Queries
 
     public class OrganizationUserUpdateWithCollectionsUpdateQuery : IQuery<CollectionUser>
     {
-        private readonly Table.OrganizationUser _organizationUser;
+        private readonly OrganizationUser _organizationUser;
         private readonly IEnumerable<SelectionReadOnly> _collections;
 
-        public OrganizationUserUpdateWithCollectionsUpdateQuery(Table.OrganizationUser organizationUser, IEnumerable<SelectionReadOnly> collections)
+        public OrganizationUserUpdateWithCollectionsUpdateQuery(OrganizationUser organizationUser, IEnumerable<SelectionReadOnly> collections)
         {
             _organizationUser = organizationUser;
             _collections = collections;
@@ -87,10 +87,10 @@ namespace Bit.Infrastructure.EntityFramework.Repositories.Queries
 
     public class OrganizationUserUpdateWithCollectionsDeleteQuery : IQuery<CollectionUser>
     {
-        private readonly Table.OrganizationUser _organizationUser;
+        private readonly OrganizationUser _organizationUser;
         private readonly IEnumerable<SelectionReadOnly> _collections;
 
-        public OrganizationUserUpdateWithCollectionsDeleteQuery(Table.OrganizationUser organizationUser, IEnumerable<SelectionReadOnly> collections)
+        public OrganizationUserUpdateWithCollectionsDeleteQuery(OrganizationUser organizationUser, IEnumerable<SelectionReadOnly> collections)
         {
             _organizationUser = organizationUser;
             _collections = collections;

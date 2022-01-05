@@ -9,7 +9,6 @@ using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
-using TableModel = Bit.Core.Models.Table;
 
 namespace Bit.Core.Test.AutoFixture.TransactionFixtures
 {
@@ -24,7 +23,7 @@ namespace Bit.Core.Test.AutoFixture.TransactionFixtures
             }
 
             var type = request as Type;
-            if (type == null || type != typeof(TableModel.Transaction))
+            if (type == null || type != typeof(Entities.Transaction))
             {
                 return new NoSpecimen();
             }
@@ -36,7 +35,7 @@ namespace Bit.Core.Test.AutoFixture.TransactionFixtures
                         .Without(c => c.OrganizationId));
             }
             fixture.Customizations.Add(new MaxLengthStringRelay());
-            var obj = fixture.WithAutoNSubstitutions().Create<TableModel.Transaction>();
+            var obj = fixture.WithAutoNSubstitutions().Create<Entities.Transaction>();
             return obj;
         }
     }

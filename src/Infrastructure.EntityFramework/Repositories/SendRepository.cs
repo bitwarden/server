@@ -7,17 +7,16 @@ using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using TableModel = Bit.Core.Models.Table;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories
 {
-    public class SendRepository : Repository<TableModel.Send, Send, Guid>, ISendRepository
+    public class SendRepository : Repository<Core.Entities.Send, Send, Guid>, ISendRepository
     {
         public SendRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
             : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.Sends)
         { }
 
-        public override async Task<TableModel.Send> CreateAsync(TableModel.Send send)
+        public override async Task<Core.Entities.Send> CreateAsync(Core.Entities.Send send)
         {
             send = await base.CreateAsync(send);
             if (send.UserId.HasValue)
@@ -28,23 +27,23 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             return send;
         }
 
-        public async Task<ICollection<TableModel.Send>> GetManyByDeletionDateAsync(DateTime deletionDateBefore)
+        public async Task<ICollection<Core.Entities.Send>> GetManyByDeletionDateAsync(DateTime deletionDateBefore)
         {
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
                 var results = await dbContext.Sends.Where(s => s.DeletionDate < deletionDateBefore).ToListAsync();
-                return Mapper.Map<List<TableModel.Send>>(results);
+                return Mapper.Map<List<Core.Entities.Send>>(results);
             }
         }
 
-        public async Task<ICollection<TableModel.Send>> GetManyByUserIdAsync(Guid userId)
+        public async Task<ICollection<Core.Entities.Send>> GetManyByUserIdAsync(Guid userId)
         {
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
                 var results = await dbContext.Sends.Where(s => s.UserId == userId).ToListAsync();
-                return Mapper.Map<List<TableModel.Send>>(results);
+                return Mapper.Map<List<Core.Entities.Send>>(results);
             }
         }
     }

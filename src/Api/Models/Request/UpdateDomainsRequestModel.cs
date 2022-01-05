@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Models.Table;
 using Newtonsoft.Json;
 
 namespace Bit.Api.Models.Request

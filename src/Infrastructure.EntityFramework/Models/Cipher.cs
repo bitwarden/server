@@ -3,7 +3,7 @@ using AutoMapper;
 
 namespace Bit.Infrastructure.EntityFramework.Models
 {
-    public class Cipher : Core.Models.Table.Cipher
+    public class Cipher : Core.Entities.Cipher
     {
         public virtual User User { get; set; }
         public virtual Organization Organization { get; set; }
@@ -14,7 +14,7 @@ namespace Bit.Infrastructure.EntityFramework.Models
     {
         public CipherMapperProfile()
         {
-            CreateMap<Core.Models.Table.Cipher, Cipher>().ReverseMap();
+            CreateMap<Core.Entities.Cipher, Cipher>().ReverseMap();
         }
     }
 }

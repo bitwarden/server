@@ -10,9 +10,9 @@ using Bit.Api.Models.Response;
 using Bit.Api.Utilities;
 using Bit.Core;
 using Bit.Core.Context;
+using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
-using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -215,27 +215,26 @@ namespace Bit.Api.Controllers
 
         [HttpGet("organization-details")]
         public async Task<ListResponseModel<CipherMiniDetailsResponseModel>> GetOrganizationCollections(
-            string organizationId)
+            Guid organizationId)
         {
             var userId = _userService.GetProperUserId(User).Value;
-            var orgIdGuid = new Guid(organizationId);
-            if (!await _currentContext.ViewAllCollections(orgIdGuid) && !await _currentContext.AccessReports(orgIdGuid))
+            if (!await _currentContext.ViewAllCollections(organizationId) && !await _currentContext.AccessReports(organizationId))
             {
                 throw new NotFoundException();
             }
 
-            var ciphers = await _cipherRepository.GetManyByOrganizationIdAsync(orgIdGuid);
+            var ciphers = await _cipherRepository.GetManyByOrganizationIdAsync(organizationId);
 
-            var collectionCiphers = await _collectionCipherRepository.GetManyByOrganizationIdAsync(orgIdGuid);
+            var collectionCiphers = await _collectionCipherRepository.GetManyByOrganizationIdAsync(organizationId);
             var collectionCiphersGroupDict = collectionCiphers.GroupBy(c => c.CipherId).ToDictionary(s => s.Key);
 
             var responses = ciphers.Select(c => new CipherMiniDetailsResponseModel(c, _globalSettings,
                 collectionCiphersGroupDict));
 
-            var providerId = await _currentContext.ProviderIdForOrg(orgIdGuid);
+            var providerId = await _currentContext.ProviderIdForOrg(organizationId);
             if (providerId.HasValue)
             {
-                await _providerService.LogProviderAccessToOrganizationAsync(orgIdGuid);
+                await _providerService.LogProviderAccessToOrganizationAsync(organizationId);
             }
             return new ListResponseModel<CipherMiniDetailsResponseModel>(responses);
         }

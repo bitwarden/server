@@ -2,7 +2,7 @@
 
 namespace Bit.Infrastructure.EntityFramework.Models
 {
-    public class CollectionCipher : Core.Models.Table.CollectionCipher
+    public class CollectionCipher : Core.Entities.CollectionCipher
     {
         public virtual Cipher Cipher { get; set; }
         public virtual Collection Collection { get; set; }
@@ -12,7 +12,7 @@ namespace Bit.Infrastructure.EntityFramework.Models
     {
         public CollectionCipherMapperProfile()
         {
-            CreateMap<Core.Models.Table.CollectionCipher, CollectionCipher>().ReverseMap();
+            CreateMap<Core.Entities.CollectionCipher, CollectionCipher>().ReverseMap();
         }
     }
 }

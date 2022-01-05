@@ -8,7 +8,7 @@ using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories.Queries;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using CollectionCipher = Bit.Core.Models.Table.CollectionCipher;
+using CollectionCipher = Bit.Core.Entities.CollectionCipher;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories
 {
