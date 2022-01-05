@@ -5,15 +5,15 @@ using Bit.Core.Models.Table;
 using Bit.Core.Tokens;
 using Xunit;
 
-namespace Bit.Core.Test.Tokenizer
+namespace Bit.Core.Test.Models.Business.Tokenables
 {
-    public class EmergencyAccessInviteTokenTests
+    public class EmergencyAccessInviteTokenableTests
     {
         [Theory, AutoData]
         public void SerializationSetsCorrectDateTime(EmergencyAccess emergencyAccess)
         {
-            var token = new EmergencyAccessInviteToken(emergencyAccess, 2);
-            Assert.Equal(Tokenable.FromToken<EmergencyAccessInviteToken>(token.ToToken().ToString()).ExpirationDate,
+            var token = new EmergencyAccessInviteTokenable(emergencyAccess, 2);
+            Assert.Equal(Tokenable.FromToken<EmergencyAccessInviteTokenable>(token.ToToken().ToString()).ExpirationDate,
                 token.ExpirationDate,
                 TimeSpan.FromMilliseconds(10));
         }
@@ -21,7 +21,7 @@ namespace Bit.Core.Test.Tokenizer
         [Fact]
         public void IsInvalidIfIdentifierIsWrong()
         {
-            var token = new EmergencyAccessInviteToken(DateTime.MaxValue)
+            var token = new EmergencyAccessInviteTokenable(DateTime.MaxValue)
             {
                 Email = "email",
                 Id = Guid.NewGuid(),

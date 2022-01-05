@@ -6,14 +6,14 @@ using Bit.Core.Models.Table;
 using Bit.Core.Tokens;
 using Xunit;
 
-namespace Bit.Core.Test.Models.Business.Tokens
+namespace Bit.Core.Test.Models.Business.Tokenables
 {
-    public class HCaptchaTokenTests
+    public class HCaptchaTokenableTests
     {
         [Theory, AutoData]
         public void CanUpdateExpirationToNonStandard(User user)
         {
-            var token = new HCaptchaToken(user)
+            var token = new HCaptchaTokenable(user)
             {
                 ExpirationDate = DateTime.MinValue
             };
@@ -24,7 +24,7 @@ namespace Bit.Core.Test.Models.Business.Tokens
         [Theory, AutoData]
         public void SetsDataFromUser(User user)
         {
-            var token = new HCaptchaToken(user);
+            var token = new HCaptchaTokenable(user);
 
             Assert.Equal(user.Id, token.Id);
             Assert.Equal(user.Email, token.Email);
@@ -34,12 +34,12 @@ namespace Bit.Core.Test.Models.Business.Tokens
         public void SerializationSetsCorrectDateTime(User user)
         {
             var expectedDateTime = DateTime.UtcNow.AddHours(-5);
-            var token = new HCaptchaToken(user)
+            var token = new HCaptchaTokenable(user)
             {
                 ExpirationDate = expectedDateTime
             };
 
-            var result = Tokenable.FromToken<HCaptchaToken>(token.ToToken());
+            var result = Tokenable.FromToken<HCaptchaTokenable>(token.ToToken());
 
             Assert.Equal(expectedDateTime, result.ExpirationDate, TimeSpan.FromMilliseconds(10));
         }
@@ -47,7 +47,7 @@ namespace Bit.Core.Test.Models.Business.Tokens
         [Theory, AutoData]
         public void IsInvalidIfIdentifierIsWrong(User user)
         {
-            var token = new HCaptchaToken(user)
+            var token = new HCaptchaTokenable(user)
             {
                 Identifier = "not correct"
             };
