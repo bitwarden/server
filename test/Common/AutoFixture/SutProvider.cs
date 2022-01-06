@@ -47,10 +47,11 @@ namespace Bit.Test.Common.AutoFixture
         {
             if (DependencyIsSet(dependencyType, parameterName))
             {
-                return _dependencies[dependencyType][parameterName];
-            }
-            else if (_dependencies.ContainsKey(dependencyType))
-            {
+                if (_dependencies[dependencyType].ContainsKey(parameterName))
+                {
+                    return _dependencies[dependencyType][parameterName];
+                }
+
                 var knownDependencies = _dependencies[dependencyType];
                 if (knownDependencies.Values.Count == 1)
                 {
@@ -83,7 +84,8 @@ namespace Bit.Test.Common.AutoFixture
         }
 
         private bool DependencyIsSet(Type dependencyType, string parameterName = "")
-            => _dependencies.ContainsKey(dependencyType) && _dependencies[dependencyType].ContainsKey(parameterName);
+            => _dependencies.ContainsKey(dependencyType) &&
+            (_dependencies[dependencyType].ContainsKey(parameterName) || _dependencies[dependencyType].ContainsKey(""));
 
         private object GetDefault(Type type) => type.IsValueType ? Activator.CreateInstance(type) : null;
 

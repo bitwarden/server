@@ -4,14 +4,14 @@ using AutoFixture.Xunit2;
 using Bit.Core.Utilities;
 using Xunit;
 
-namespace Bit.Core.Test.Tokenizer
+namespace Bit.Core.Test.Tokens
 {
     public class ExpiringTokenTests
     {
         [Theory, AutoData]
         public void ExpirationSerializesToEpochMilliseconds(DateTime expirationDate)
         {
-            var sut = new TestExpiringToken
+            var sut = new TestExpiringTokenable
             {
                 ExpirationDate = expirationDate
             };
@@ -25,13 +25,13 @@ namespace Bit.Core.Test.Tokenizer
         [Theory, AutoData]
         public void ExpirationSerializationRoundTrip(DateTime expirationDate)
         {
-            var sut = new TestExpiringToken
+            var sut = new TestExpiringTokenable
             {
                 ExpirationDate = expirationDate
             };
 
             var intermediate = JsonSerializer.Serialize(sut);
-            var result = JsonSerializer.Deserialize<TestExpiringToken>(intermediate);
+            var result = JsonSerializer.Deserialize<TestExpiringTokenable>(intermediate);
 
             Assert.Equal(sut.ExpirationDate, result.ExpirationDate, TimeSpan.FromMilliseconds(100));
         }
@@ -39,7 +39,7 @@ namespace Bit.Core.Test.Tokenizer
         [Fact]
         public void InvalidIfPastExpiryDate()
         {
-            var sut = new TestExpiringToken
+            var sut = new TestExpiringTokenable
             {
                 ExpirationDate = DateTime.UtcNow.AddHours(-1)
             };
@@ -50,7 +50,7 @@ namespace Bit.Core.Test.Tokenizer
         [Fact]
         public void ValidIfWithinExpirationAndTokenReportsValid()
         {
-            var sut = new TestExpiringToken
+            var sut = new TestExpiringTokenable
             {
                 ExpirationDate = DateTime.UtcNow.AddHours(1)
             };
@@ -61,7 +61,7 @@ namespace Bit.Core.Test.Tokenizer
         [Fact]
         public void HonorsTokenIsValidAbstractMember()
         {
-            var sut = new TestExpiringToken(forceInvalid: true)
+            var sut = new TestExpiringTokenable(forceInvalid: true)
             {
                 ExpirationDate = DateTime.UtcNow.AddHours(1)
             };
