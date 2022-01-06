@@ -2,7 +2,7 @@
 
 namespace Bit.Core.Tokens
 {
-    public class DataProtectorTokenFactory<T> : IDataProtectorTokenFactory<T> where T : ITokenable
+    public class DataProtectorTokenFactory<T> : IDataProtectorTokenFactory<T> where T : Tokenable
     {
         private readonly IDataProtector _dataProtector;
         private readonly string _clearTextPrefix;

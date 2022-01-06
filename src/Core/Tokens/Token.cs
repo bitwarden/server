@@ -11,19 +11,19 @@ namespace Bit.Core.Tokens
             _token = token;
         }
 
-        public Token WithPrefix(string clearPrefix)
+        public Token WithPrefix(string prefix)
         {
-            return new Token($"{clearPrefix}{_token}");
+            return new Token($"{prefix}{_token}");
         }
 
-        public Token RemovePrefix(string expectedClearPrefix)
+        public Token RemovePrefix(string expectedPrefix)
         {
-            if (!_token.StartsWith(expectedClearPrefix))
+            if (!_token.StartsWith(expectedPrefix))
             {
-                throw new BadTokenException("Missing clear text prefix");
+                throw new BadTokenException($"Expected prefix, {expectedPrefix}, was not present.");
             }
 
-            return new Token(_token[expectedClearPrefix.Length..]);
+            return new Token(_token[expectedPrefix.Length..]);
         }
 
         public Token ProtectWith(IDataProtector dataProtector) =>

@@ -2,7 +2,7 @@
 
 namespace Bit.Core.Tokens
 {
-    public abstract class Tokenable : ITokenable
+    public abstract class Tokenable
     {
         public abstract bool Valid { get; }
 
