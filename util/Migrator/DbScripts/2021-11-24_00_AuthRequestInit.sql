@@ -2,15 +2,16 @@
 IF OBJECT_ID('[dbo].[AuthRequest]') IS NULL
 BEGIN
 CREATE TABLE [dbo].[AuthRequest] (
-    [Id]                UNIQUEIDENTIFIER NOT NULL,
-    [UserId]            UNIQUEIDENTIFIER NOT NULL,
-    [Type]              SMALLINT         NOT NULL,
-    [RequestDeviceId]   UNIQUEIDENTIFIER NOT NULL,
-    [ResponseDeviceId]  UNIQUEIDENTIFIER NULL,
-    [PublicKey]         VARCHAR(MAX)     NOT NULL,
-    [Key]               VARCHAR(MAX)     NULL,
-    [CreationDate]      DATETIME2 (7)    NOT NULL,
-    [ResponseDate]      DATETIME2 (7)    NULL,
+    [Id]                    UNIQUEIDENTIFIER NOT NULL,
+    [UserId]                UNIQUEIDENTIFIER NOT NULL,
+    [Type]                  SMALLINT         NOT NULL,
+    [RequestDeviceId]       UNIQUEIDENTIFIER NOT NULL,
+    [ResponseDeviceId]      UNIQUEIDENTIFIER NULL,
+    [PublicKey]             VARCHAR(MAX)     NOT NULL,
+    [Key]                   VARCHAR(MAX)     NULL,
+    [MasterPasswordHash]    VARCHAR(MAX)     NULL,
+    [CreationDate]          DATETIME2 (7)    NOT NULL,
+    [ResponseDate]          DATETIME2 (7)    NULL,
     CONSTRAINT [PK_AuthRequest] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_AuthRequest_User] FOREIGN KEY ([UserId]) REFERENCES [dbo].[User] ([Id]),
     CONSTRAINT [FK_AuthRequest_RequestDevice] FOREIGN KEY ([RequestDeviceId]) REFERENCES [dbo].[Device] ([Id]),
@@ -51,6 +52,7 @@ CREATE PROCEDURE [dbo].[AuthRequest_Create]
     @ResponseDeviceId UNIQUEIDENTIFIER,
     @PublicKey VARCHAR(MAX),
     @Key VARCHAR(MAX),
+    @MasterPasswordHash VARCHAR(MAX),
     @CreationDate DATETIME2(7),
     @ResponseDate DATETIME2(7)
 AS
@@ -66,6 +68,7 @@ BEGIN
         [ResponseDeviceId],
         [PublicKey],
         [Key],
+        [MasterPasswordHash],
         [CreationDate],
         [ResponseDate]
     )
@@ -78,6 +81,7 @@ BEGIN
         @ResponseDeviceId,
         @PublicKey,
         @Key,
+        @MasterPasswordHash,
         @CreationDate,
         @ResponseDate
     )
@@ -98,6 +102,7 @@ CREATE PROCEDURE [dbo].[AuthRequest_Update]
     @ResponseDeviceId UNIQUEIDENTIFIER,
     @PublicKey VARCHAR(MAX),
     @Key VARCHAR(MAX),
+    @MasterPasswordHash VARCHAR(MAX),
     @CreationDate DATETIME2(7),
     @ResponseDate DATETIME2(7)
 AS
@@ -113,6 +118,7 @@ BEGIN
         [ResponseDeviceId] = @ResponseDeviceId,
         [PublicKey] = @PublicKey,
         [Key] = @Key,
+        [MasterPasswordHash] = @MasterPasswordHash,
         [CreationDate] = @CreationDate,
         [ResponseDate] = @ResponseDate
     WHERE

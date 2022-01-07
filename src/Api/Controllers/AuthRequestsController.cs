@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Bit.Api.Models.Request;
+using Bit.Api.Models.Response;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Api;
 using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -52,6 +53,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("")]
+        [AllowAnonymous]
         public async Task<AuthRequestResponseModel> Post([FromBody] AuthRequestCreateRequestModel model)
         {
             var user = await _userRepository.GetByEmailAsync(model.Email);
@@ -65,7 +67,7 @@ namespace Bit.Api.Controllers
                 device = new Device
                 {
                     Identifier = model.DeviceIdentifier,
-                    Type = model.DeviceType,
+                    Type = _currentContext.DeviceType.Value,
                     UserId = user.Id
                 };
                 await _deviceService.SaveAsync(device);
@@ -74,7 +76,8 @@ namespace Bit.Api.Controllers
             {
                 RequestDeviceId = device.Id,
                 PublicKey = model.PublicKey,
-                UserId = user.Id
+                UserId = user.Id,
+                Type = model.Type.Value,
             };
             await _authRequestRepository.CreateAsync(authRequest);
             return new AuthRequestResponseModel(authRequest);

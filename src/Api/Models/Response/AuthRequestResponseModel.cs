@@ -1,7 +1,8 @@
 ﻿using System;
+using Bit.Core.Models.Api;
 using Bit.Core.Models.Table;
 
-namespace Bit.Core.Models.Api
+namespace Bit.Api.Models.Response
 {
     public class AuthRequestResponseModel : ResponseModel
     {
@@ -16,10 +17,12 @@ namespace Bit.Core.Models.Api
             Id = authRequest.Id.ToString();
             PublicKey = authRequest.PublicKey;
             Key = authRequest.Key;
+            MasterPasswordHash = authRequest.MasterPasswordHash;
         }
 
         public string Id { get; set; }
         public string PublicKey { get; set; }
         public string Key { get; set; }
+        public string MasterPasswordHash { get; set; }
     }
 }

@@ -12,6 +12,7 @@ namespace Bit.Core.Models.Table
         public Guid? ResponseDeviceId { get; set; }
         public string PublicKey { get; set; }
         public string Key { get; set; }
+        public string MasterPasswordHash { get; set; }
         public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
         public DateTime? ResponseDate { get; internal set; }
 

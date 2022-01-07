@@ -2,7 +2,7 @@
 using Bit.Core.Enums;
 using Newtonsoft.Json;
 
-namespace Bit.Core.Models.Api
+namespace Bit.Api.Models.Request
 {
     public class AuthRequestCreateRequestModel
     {
@@ -11,15 +11,16 @@ namespace Bit.Core.Models.Api
         [Required]
         public string PublicKey { get; set; }
         [Required]
-        public DeviceType DeviceType { get; set; }
-        [Required]
         public string DeviceIdentifier { get; set; }
+        [Required]
+        public AuthRequestType? Type { get; set; }
     }
 
     public class AuthRequestUpdateRequestModel
     {
         [Required]
         public string Key { get; set; }
+        public string MasterPasswordHash { get; set; }
         [Required]
         public string DeviceIdentifier { get; set; }
     }

@@ -6,6 +6,7 @@
     @ResponseDeviceId UNIQUEIDENTIFIER,
     @PublicKey VARCHAR(MAX),
     @Key VARCHAR(MAX),
+    @MasterPasswordHash VARCHAR(MAX),
     @CreationDate DATETIME2(7),
     @ResponseDate DATETIME2(7)
 AS
@@ -21,6 +22,7 @@ BEGIN
         [ResponseDeviceId],
         [PublicKey],
         [Key],
+        [MasterPasswordHash],
         [CreationDate],
         [ResponseDate]
     )
@@ -33,6 +35,7 @@ BEGIN
         @ResponseDeviceId,
         @PublicKey,
         @Key,
+        @MasterPasswordHash,
         @CreationDate,
         @ResponseDate
     )
