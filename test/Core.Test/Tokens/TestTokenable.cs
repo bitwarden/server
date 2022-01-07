@@ -4,11 +4,7 @@ namespace Bit.Core.Test.Tokens
 {
     public class TestTokenable : Tokenable
     {
-        public bool ForceInvalid { get; set; } = false;
-        public override bool Valid
-        {
-            get => !ForceInvalid;
-        }
+        public override bool Valid => true;
     }
 
     public class TestExpiringTokenable : ExpiringTokenable
