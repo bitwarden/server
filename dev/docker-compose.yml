@@ -45,7 +45,7 @@ services:
     ports: 
       - "5432:5432"
     environment:
-      POSTGRES_DB: bw-vault
+      POSTGRES_DB: vault_dev
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
@@ -64,7 +64,7 @@ services:
     command: --default-authentication-plugin=mysql_native_password
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: bw-vault
+      MYSQL_DATABASE: vault_dev
     volumes:
       - mysql_dev_data:/var/lib/mysql
     profiles:
