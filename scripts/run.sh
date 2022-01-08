@@ -101,19 +101,19 @@ function install() {
 function dockerComposeUp() {
     dockerComposeFiles
     dockerComposeVolumes
-    docker-compose up -d
+    $dccmd up -d
 }
 
 function dockerComposeDown() {
     dockerComposeFiles
-    if [ $(docker-compose ps | wc -l) -gt 2 ]; then
-        docker-compose down
+    if [ $($dccmd ps | wc -l) -gt 2 ]; then
+        $dccmd down
     fi
 }
 
 function dockerComposePull() {
     dockerComposeFiles
-    docker-compose pull
+    $dccmd pull
 }
 
 function dockerComposeFiles() {
@@ -180,7 +180,7 @@ function forceUpdateLetsEncrypt() {
 function updateDatabase() {
     pullSetup
     dockerComposeFiles
-    MSSQL_ID=$(docker-compose ps -q mssql)
+    MSSQL_ID=$($dccmd ps -q mssql)
     docker run -i --rm --name setup --network container:$MSSQL_ID \
         -v $OUTPUT_DIR:/bitwarden --env-file $ENV_DIR/uid.env bitwarden/setup:$COREVERSION \
         dotnet Setup.dll -update 1 -db 1 -os $OS -corev $COREVERSION -webv $WEBVERSION -keyconnectorv $KEYCONNECTORVERSION
@@ -189,11 +189,11 @@ function updateDatabase() {
 
 function updatebw() {
     KEY_CONNECTOR_ENABLED=$(grep -A3 'enable_key_connector:' $OUTPUT_DIR/config.yml | tail -n1 | awk '{ print $2}')
-    CORE_ID=$(docker-compose ps -q admin)
-    WEB_ID=$(docker-compose ps -q web)
+    CORE_ID=$($dccmd ps -q admin)
+    WEB_ID=$($dccmd ps -q web)
     if [ $KEY_CONNECTOR_ENABLED = true ];
     then
-        KEYCONNECTOR_ID=$(docker-compose ps -q key-connector)
+        KEYCONNECTOR_ID=$($dccmd ps -q key-connector)
     fi
 
     if [ $KEYCONNECTOR_ID ] &&
