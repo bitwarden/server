@@ -13,9 +13,6 @@ namespace Bit.Core.Utilities
 {
     public static class JsonHelpers
     {
-        
-
-
         public static JsonSerializerOptions Default { get; }
         public static JsonSerializerOptions Indented { get; }
         public static JsonSerializerOptions IgnoreWritingNull { get; }
