@@ -46,7 +46,7 @@ KEYCONNECTORVERSION="1.0.0"
 
 echo "bitwarden.sh version $COREVERSION"
 docker --version
-docker-compose --version
+$dccmd --version
 
 echo ""
 
