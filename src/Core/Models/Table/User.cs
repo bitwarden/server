@@ -107,7 +107,7 @@ namespace Bit.Core.Models.Table
                 if (_twoFactorProviders == null)
                 {
                     _twoFactorProviders =
-                        JsonHelpers.Deserialize<Dictionary<TwoFactorProviderType, TwoFactorProvider>>(
+                        JsonHelpers.LegacyDeserialize<Dictionary<TwoFactorProviderType, TwoFactorProvider>>(
                             TwoFactorProviders);
                 }
 
@@ -131,7 +131,7 @@ namespace Bit.Core.Models.Table
 
         public void SetTwoFactorProviders(Dictionary<TwoFactorProviderType, TwoFactorProvider> providers)
         {
-            TwoFactorProviders = JsonHelpers.Serialize(providers);
+            TwoFactorProviders = JsonHelpers.LegacySerialize(providers);
             _twoFactorProviders = providers;
         }
 

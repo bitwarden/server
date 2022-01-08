@@ -7,11 +7,15 @@ using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
+using NS = Newtonsoft.Json;
 
 namespace Bit.Core.Utilities
 {
     public static class JsonHelpers
     {
+        
+
+
         public static JsonSerializerOptions Default { get; }
         public static JsonSerializerOptions Indented { get; }
         public static JsonSerializerOptions IgnoreWritingNull { get; }
@@ -125,6 +129,25 @@ namespace Bit.Core.Utilities
             options ??= Default;
             return Serialize(Deserialize<JsonDocument>(json, options), options);
         }
+
+        #region Legacy Newtonsoft.Json usage
+        private const string LegacyMessage = "Usage of Newtonsoft.Json should be kept to a minimum and will further be removed when we move to .NET 6";
+
+        [Obsolete(LegacyMessage)]
+        public static NS.JsonSerializerSettings LegacyDefault { get; } = new NS.JsonSerializerSettings();
+
+        [Obsolete(LegacyMessage)]
+        public static string LegacySerialize(object value, NS.JsonSerializerSettings settings = null)
+        {
+            return NS.JsonConvert.SerializeObject(value, settings ?? LegacyDefault);
+        }
+
+        [Obsolete(LegacyMessage)]
+        public static T LegacyDeserialize<T>(string value, NS.JsonSerializerSettings settings = null)
+        {
+            return NS.JsonConvert.DeserializeObject<T>(value, settings ?? LegacyDefault);
+        }
+        #endregion
     }
 
     public class MsEpochConverter : JsonConverter<DateTime?>
