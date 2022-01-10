@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -41,7 +41,7 @@ namespace Bit.Core.Test.Identity
             sutProvider.GetDependency<IServiceProvider>()
                 .GetService(typeof(IUserService))
                 .Returns(userService);
-            
+
             SetupUserService(userService, user);
 
             return userService;
