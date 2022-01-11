@@ -8,6 +8,7 @@ using Bit.Core.Entities;
 using Bit.Core.Models.Business.Tokenables;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
+using Bit.Core.Utilities;
 using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Services
