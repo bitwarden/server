@@ -1,13 +1,13 @@
 ﻿using System;
 using AutoFixture;
 using AutoFixture.Kernel;
-using Bit.Core.Repositories.EntityFramework;
+using Bit.Core.Entities;
 using Bit.Core.Test.AutoFixture.EntityFrameworkRepositoryFixtures;
 using Bit.Core.Test.AutoFixture.Relays;
 using Bit.Core.Test.AutoFixture.UserFixtures;
+using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
-using TableModel = Bit.Core.Models.Table;
 
 namespace Bit.Core.Test.AutoFixture.EmergencyAccessFixtures
 {
@@ -21,14 +21,14 @@ namespace Bit.Core.Test.AutoFixture.EmergencyAccessFixtures
             }
 
             var type = request as Type;
-            if (type == null || type != typeof(TableModel.EmergencyAccess))
+            if (type == null || type != typeof(EmergencyAccess))
             {
                 return new NoSpecimen();
             }
 
             var fixture = new Fixture();
             fixture.Customizations.Insert(0, new MaxLengthStringRelay());
-            var obj = fixture.Create<TableModel.EmergencyAccess>();
+            var obj = fixture.Create<EmergencyAccess>();
             return obj;
         }
     }

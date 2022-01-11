@@ -1,5 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using Bit.Core.Models.Table.Provider;
+using Bit.Core.Entities.Provider;
 
 namespace Bit.Api.Models.Request.Providers
 {

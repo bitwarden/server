@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Bit.Core.Entities;
 using Bit.Core.Models.Data;
-using Bit.Core.Models.Table;
 using Bit.Core.Settings;
 
 namespace Bit.Api.Models.Request.Organizations
