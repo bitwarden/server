@@ -2,10 +2,10 @@
 using System.Collections.Generic;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models;
 using Bit.Core.Models.Business;
-using Bit.Core.Models.Table;
 using Fido2NetLib;
 using Microsoft.AspNetCore.Identity;
 

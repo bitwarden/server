@@ -1,6 +1,6 @@
 ﻿using System.Threading.Tasks;
+using Bit.Core.Entities;
 using Bit.Core.Models.Business;
-using Bit.Core.Models.Table;
 
 namespace Bit.Core.Services
 {

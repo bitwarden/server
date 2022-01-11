@@ -1,6 +1,6 @@
 ﻿using System;
-using Bit.Core.Models.Table;
 using Bit.Core.Utilities;
+using Bit.Core.Entities;
 
 namespace Bit.Api.Models.Public.Request
 {

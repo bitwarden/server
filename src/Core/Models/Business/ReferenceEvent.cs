@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Text.Json.Serialization;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 
 namespace Bit.Core.Models.Business

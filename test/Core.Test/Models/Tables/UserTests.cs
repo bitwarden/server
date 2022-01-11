@@ -1,4 +1,4 @@
-﻿using Bit.Core.Models.Table;
+﻿using Bit.Core.Entities;
 using Xunit;
 
 namespace Bit.Core.Test.Models.Tables
