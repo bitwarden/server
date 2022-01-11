@@ -1,14 +1,18 @@
 ﻿CREATE PROCEDURE [dbo].[AuthRequest_Update]
-    @Id UNIQUEIDENTIFIER,
+    @Id UNIQUEIDENTIFIER OUTPUT,
     @UserId UNIQUEIDENTIFIER,
     @Type TINYINT,
-    @RequestDeviceId UNIQUEIDENTIFIER,
+    @RequestDeviceIdentifier NVARCHAR(50),
+    @RequestDeviceType TINYINT,
+    @RequestIpAddress VARCHAR(50),
     @ResponseDeviceId UNIQUEIDENTIFIER,
+    @AccessCode VARCHAR(25),
     @PublicKey VARCHAR(MAX),
     @Key VARCHAR(MAX),
     @MasterPasswordHash VARCHAR(MAX),
     @CreationDate DATETIME2(7),
-    @ResponseDate DATETIME2(7)
+    @ResponseDate DATETIME2(7),
+    @AuthenticationDate DATETIME2(7)
 AS
 BEGIN
     SET NOCOUNT ON
@@ -18,13 +22,17 @@ BEGIN
     SET
         [UserId] = @UserId,
         [Type] = @Type,
-        [RequestDeviceId] = @RequestDeviceId,
+        [RequestDeviceIdentifier] = @RequestDeviceIdentifier,
+        [RequestDeviceType] = @RequestDeviceType,
+        [RequestIpAddress] = @RequestIpAddress,
         [ResponseDeviceId] = @ResponseDeviceId,
+        [AccessCode] = @AccessCode,
         [PublicKey] = @PublicKey,
         [Key] = @Key,
         [MasterPasswordHash] = @MasterPasswordHash,
         [CreationDate] = @CreationDate,
-        [ResponseDate] = @ResponseDate
+        [ResponseDate] = @ResponseDate,
+        [AuthenticationDate] = @AuthenticationDate
     WHERE
         [Id] = @Id
 END

@@ -174,6 +174,27 @@ namespace Bit.Core.Services
             }
         }
 
+        public async Task PushAuthRequestAsync(AuthRequest authRequest)
+        {
+            await PushAuthRequestAsync(authRequest, PushType.AuthRequest);
+        }
+
+        public async Task PushAuthRequestResponseAsync(AuthRequest authRequest)
+        {
+            await PushAuthRequestAsync(authRequest, PushType.AuthRequestResponse);
+        }
+
+        private async Task PushAuthRequestAsync(AuthRequest authRequest, PushType type)
+        {
+            var message = new AuthRequestPushNotification
+            {
+                Id = authRequest.Id,
+                UserId = authRequest.UserId
+            };
+
+            await SendMessageAsync(type, message, true);
+        }
+
         private async Task SendMessageAsync<T>(PushType type, T payload, bool excludeCurrentContext)
         {
             var contextId = GetContextIdentifier(excludeCurrentContext);

@@ -141,6 +141,18 @@ namespace Bit.Core.Services
             return Task.FromResult(0);
         }
 
+        public Task PushAuthRequestAsync(AuthRequest authRequest)
+        {
+            PushToServices((s) => s.PushAuthRequestAsync(authRequest));
+            return Task.FromResult(0);
+        }
+
+        public Task PushAuthRequestResponseAsync(AuthRequest authRequest)
+        {
+            PushToServices((s) => s.PushAuthRequestResponseAsync(authRequest));
+            return Task.FromResult(0);
+        }
+
         public Task SendPayloadToUserAsync(string userId, PushType type, object payload, string identifier,
             string deviceId = null)
         {

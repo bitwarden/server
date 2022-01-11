@@ -13,6 +13,9 @@ namespace Bit.Api.Models.Request
         [Required]
         public string DeviceIdentifier { get; set; }
         [Required]
+        [StringLength(25)]
+        public string AccessCode { get; set; }
+        [Required]
         public AuthRequestType? Type { get; set; }
     }
 

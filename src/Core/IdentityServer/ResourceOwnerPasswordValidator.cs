@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using Bit.Core.Context;
@@ -22,6 +23,8 @@ namespace Bit.Core.IdentityServer
         private readonly IUserService _userService;
         private readonly ICurrentContext _currentContext;
         private readonly ICaptchaValidationService _captchaValidationService;
+        private readonly IAuthRequestRepository _authRequestRepository;
+
         public ResourceOwnerPasswordValidator(
             UserManager<User> userManager,
             IDeviceRepository deviceRepository,
@@ -37,7 +40,8 @@ namespace Bit.Core.IdentityServer
             ICurrentContext currentContext,
             GlobalSettings globalSettings,
             IPolicyRepository policyRepository,
-            ICaptchaValidationService captchaValidationService)
+            ICaptchaValidationService captchaValidationService,
+            IAuthRequestRepository authRequestRepository)
             : base(userManager, deviceRepository, deviceService, userService, eventService,
                   organizationDuoWebTokenProvider, organizationRepository, organizationUserRepository,
                   applicationCacheService, mailService, logger, currentContext, globalSettings, policyRepository)
@@ -46,6 +50,7 @@ namespace Bit.Core.IdentityServer
             _userService = userService;
             _currentContext = currentContext;
             _captchaValidationService = captchaValidationService;
+            _authRequestRepository = authRequestRepository;
         }
 
         public async Task ValidateAsync(ResourceOwnerPasswordValidationContext context)
@@ -98,12 +103,36 @@ namespace Bit.Core.IdentityServer
             }
 
             var user = await _userManager.FindByEmailAsync(context.UserName.ToLowerInvariant());
-            if (user == null || !await _userService.CheckPasswordAsync(user, context.Password))
+            if (user == null)
             {
-                return (user, false);
+                return (null, false);
             }
 
-            return (user, true);
+            var authRequestId = context.Request.Raw["AuthRequest"]?.ToString()?.ToLowerInvariant();
+            if (!string.IsNullOrWhiteSpace(authRequestId) && Guid.TryParse(authRequestId, out var authRequestGuid))
+            {
+                var authRequest = await _authRequestRepository.GetByIdAsync(authRequestGuid);
+                if (authRequest != null)
+                {
+                    var requestAge = DateTime.UtcNow - authRequest.CreationDate;
+                    if (requestAge < TimeSpan.FromHours(1) && !authRequest.AuthenticationDate.HasValue &&
+                        CoreHelpers.FixedTimeEquals(authRequest.AccessCode, context.Password))
+                    {
+                        authRequest.AuthenticationDate = DateTime.UtcNow;
+                        await _authRequestRepository.ReplaceAsync(authRequest);
+                        return (user, true);
+                    }
+                }
+                return (user, false);
+            }
+            else
+            {
+                if (!await _userService.CheckPasswordAsync(user, context.Password))
+                {
+                    return (user, false);
+                }
+                return (user, true);
+            }
         }
 
         protected override Task SetSuccessResult(ResourceOwnerPasswordValidationContext context, User user,

@@ -46,4 +46,10 @@ namespace Bit.Core.Models
         public Guid UserId { get; set; }
         public DateTime RevisionDate { get; set; }
     }
+
+    public class AuthRequestPushNotification
+    {
+        public Guid UserId { get; set; }
+        public Guid Id { get; set; }
+    }
 }

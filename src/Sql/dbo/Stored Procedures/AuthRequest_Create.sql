@@ -2,13 +2,17 @@
     @Id UNIQUEIDENTIFIER OUTPUT,
     @UserId UNIQUEIDENTIFIER,
     @Type TINYINT,
-    @RequestDeviceId UNIQUEIDENTIFIER,
+    @RequestDeviceIdentifier NVARCHAR(50),
+    @RequestDeviceType TINYINT,
+    @RequestIpAddress VARCHAR(50),
     @ResponseDeviceId UNIQUEIDENTIFIER,
+    @AccessCode VARCHAR(25),
     @PublicKey VARCHAR(MAX),
     @Key VARCHAR(MAX),
     @MasterPasswordHash VARCHAR(MAX),
     @CreationDate DATETIME2(7),
-    @ResponseDate DATETIME2(7)
+    @ResponseDate DATETIME2(7),
+    @AuthenticationDate DATETIME2(7)
 AS
 BEGIN
     SET NOCOUNT ON
@@ -18,25 +22,33 @@ BEGIN
         [Id],
         [UserId],
         [Type],
-        [RequestDeviceId],
+        [RequestDeviceIdentifier],
+        [RequestDeviceType],
+        [RequestIpAddress],
         [ResponseDeviceId],
+        [AccessCode],
         [PublicKey],
         [Key],
         [MasterPasswordHash],
         [CreationDate],
-        [ResponseDate]
+        [ResponseDate],
+        [AuthenticationDate]
     )
     VALUES
     (
         @Id,
         @UserId,
         @Type,
-        @RequestDeviceId,
+        @RequestDeviceIdentifier,
+        @RequestDeviceType,
+        @RequestIpAddress,
         @ResponseDeviceId,
+        @AccessCode,
         @PublicKey,
         @Key,
         @MasterPasswordHash,
         @CreationDate,
-        @ResponseDate
+        @ResponseDate,
+        @AuthenticationDate
     )
 END

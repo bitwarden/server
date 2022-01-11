@@ -1,4 +1,5 @@
 ﻿using System;
+using Bit.Core.Enums;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Table;
 
@@ -16,13 +17,19 @@ namespace Bit.Api.Models.Response
 
             Id = authRequest.Id.ToString();
             PublicKey = authRequest.PublicKey;
+            RequestDeviceType = authRequest.RequestDeviceType;
+            RequestIpAddress = authRequest.RequestIpAddress;
             Key = authRequest.Key;
             MasterPasswordHash = authRequest.MasterPasswordHash;
+            CreationDate = authRequest.CreationDate;
         }
 
         public string Id { get; set; }
         public string PublicKey { get; set; }
+        public DeviceType RequestDeviceType { get; set; }
+        public string RequestIpAddress { get; set; }
         public string Key { get; set; }
         public string MasterPasswordHash { get; set; }
+        public DateTime CreationDate { get; set; }
     }
 }
