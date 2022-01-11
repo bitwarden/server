@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models;
-using Bit.Core.Models.Table;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities.Duo;

@@ -1,5 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using Bit.Core.Models.Table;
+using Bit.Core.Entities;
 
 namespace Bit.Api.Models.Request.Accounts
 {

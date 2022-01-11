@@ -1,5 +1,4 @@
-﻿using Bit.Core.Models.Table;
-using Bit.Core.Models.Table.Provider;
+﻿using Bit.Core.Entities.Provider;
 
 namespace Bit.Admin.Models
 {

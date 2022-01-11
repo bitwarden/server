@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Text.Json.Serialization;
-using Bit.Core.Models.Table;
+using Bit.Core.Entities;
 
 namespace Bit.Core.Models.Business.Tokenables
 {

@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Bit.Core.Repositories;
 using IdentityServer4.Models;
 using IdentityServer4.Stores;
+using Grant = Bit.Core.Entities.Grant;
 
 namespace Bit.Core.IdentityServer
 {
@@ -53,9 +54,9 @@ namespace Bit.Core.IdentityServer
             await _grantRepository.SaveAsync(grant);
         }
 
-        private Models.Table.Grant ToGrant(PersistedGrant pGrant)
+        private Grant ToGrant(PersistedGrant pGrant)
         {
-            return new Models.Table.Grant
+            return new Grant
             {
                 Key = pGrant.Key,
                 Type = pGrant.Type,
@@ -70,7 +71,7 @@ namespace Bit.Core.IdentityServer
             };
         }
 
-        private PersistedGrant ToPersistedGrant(Models.Table.Grant grant)
+        private PersistedGrant ToPersistedGrant(Grant grant)
         {
             return new PersistedGrant
             {

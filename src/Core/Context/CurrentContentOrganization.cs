@@ -1,7 +1,7 @@
 ﻿using System;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
-using Bit.Core.Models.Table;
 using Bit.Core.Utilities;
 
 namespace Bit.Core.Context

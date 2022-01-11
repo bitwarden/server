@@ -1,5 +1,5 @@
-﻿using Bit.Core.Enums;
-using Bit.Core.Models.Table;
+﻿using Bit.Core.Entities;
+using Bit.Core.Enums;
 
 namespace Bit.Core.Models.Business
 {

@@ -1,8 +1,7 @@
 ﻿using System;
-using System.Text.Json;
 using AutoFixture.Xunit2;
+using Bit.Core.Entities;
 using Bit.Core.Models.Business.Tokenables;
-using Bit.Core.Models.Table;
 using Bit.Core.Tokens;
 using Xunit;
 

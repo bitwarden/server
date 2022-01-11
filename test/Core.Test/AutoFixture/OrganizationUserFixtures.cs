@@ -8,13 +8,12 @@ using AutoFixture.Xunit2;
 using Bit.Core.Enums;
 using Bit.Core.Models;
 using Bit.Core.Models.Data;
-using Bit.Core.Repositories.EntityFramework;
 using Bit.Core.Test.AutoFixture.EntityFrameworkRepositoryFixtures;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using Bit.Core.Test.AutoFixture.UserFixtures;
+using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
-using TableModel = Bit.Core.Models.Table;
 
 namespace Bit.Core.Test.AutoFixture.OrganizationUserFixtures
 {
@@ -31,7 +30,7 @@ namespace Bit.Core.Test.AutoFixture.OrganizationUserFixtures
             if (type == typeof(OrganizationUser))
             {
                 var fixture = new Fixture();
-                var orgUser = fixture.WithAutoNSubstitutions().Create<TableModel.OrganizationUser>();
+                var orgUser = fixture.WithAutoNSubstitutions().Create<Entities.OrganizationUser>();
                 var orgUserPermissions = fixture.WithAutoNSubstitutions().Create<Permissions>();
                 orgUser.Permissions = JsonSerializer.Serialize(orgUserPermissions, new JsonSerializerOptions()
                 {
@@ -42,7 +41,7 @@ namespace Bit.Core.Test.AutoFixture.OrganizationUserFixtures
             else if (type == typeof(List<OrganizationUser>))
             {
                 var fixture = new Fixture();
-                var orgUsers = fixture.WithAutoNSubstitutions().CreateMany<TableModel.OrganizationUser>(2);
+                var orgUsers = fixture.WithAutoNSubstitutions().CreateMany<Entities.OrganizationUser>(2);
                 foreach (var orgUser in orgUsers)
                 {
                     var providers = fixture.Create<Dictionary<TwoFactorProviderType, TwoFactorProvider>>();
@@ -71,7 +70,7 @@ namespace Bit.Core.Test.AutoFixture.OrganizationUserFixtures
 
         public void Customize(IFixture fixture)
         {
-            fixture.Customize<Core.Models.Table.OrganizationUser>(composer => composer
+            fixture.Customize<Entities.OrganizationUser>(composer => composer
                 .With(o => o.Type, Type)
                 .With(o => o.Status, Status));
         }

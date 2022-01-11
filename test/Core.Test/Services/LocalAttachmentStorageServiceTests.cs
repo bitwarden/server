@@ -2,8 +2,8 @@
 using System.IO;
 using System.Threading.Tasks;
 using AutoFixture;
+using Bit.Core.Entities;
 using Bit.Core.Models.Data;
-using Bit.Core.Models.Table;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Test.AutoFixture.CipherAttachmentMetaData;

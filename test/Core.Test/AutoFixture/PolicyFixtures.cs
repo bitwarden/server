@@ -4,12 +4,11 @@ using AutoFixture;
 using AutoFixture.Kernel;
 using AutoFixture.Xunit2;
 using Bit.Core.Enums;
-using Bit.Core.Repositories.EntityFramework;
 using Bit.Core.Test.AutoFixture.EntityFrameworkRepositoryFixtures;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
+using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
-using TableModel = Bit.Core.Models.Table;
 
 namespace Bit.Core.Test.AutoFixture.PolicyFixtures
 {
@@ -24,7 +23,7 @@ namespace Bit.Core.Test.AutoFixture.PolicyFixtures
 
         public void Customize(IFixture fixture)
         {
-            fixture.Customize<Core.Models.Table.Policy>(composer => composer
+            fixture.Customize<Entities.Policy>(composer => composer
                 .With(o => o.OrganizationId, Guid.NewGuid())
                 .With(o => o.Type, Type)
                 .With(o => o.Enabled, true));
@@ -56,13 +55,13 @@ namespace Bit.Core.Test.AutoFixture.PolicyFixtures
             }
 
             var type = request as Type;
-            if (type == null || type != typeof(TableModel.Policy))
+            if (type == null || type != typeof(Entities.Policy))
             {
                 return new NoSpecimen();
             }
 
             var fixture = new Fixture();
-            var obj = fixture.WithAutoNSubstitutions().Create<TableModel.Policy>();
+            var obj = fixture.WithAutoNSubstitutions().Create<Entities.Policy>();
             return obj;
         }
     }

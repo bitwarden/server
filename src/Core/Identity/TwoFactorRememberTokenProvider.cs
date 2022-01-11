@@ -1,4 +1,4 @@
-﻿using Bit.Core.Models.Table;
+﻿using Bit.Core.Entities;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;

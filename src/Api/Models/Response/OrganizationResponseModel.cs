@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Linq;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Business;
-using Bit.Core.Models.Table;
 using Bit.Core.Utilities;
 
 namespace Bit.Api.Models.Response
