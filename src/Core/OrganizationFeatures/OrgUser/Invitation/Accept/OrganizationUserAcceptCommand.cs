@@ -39,7 +39,7 @@ namespace Bit.Core.OrganizationFeatures.OrgUser.Invitation.Accept
                 await _organizationUserAcceptAccessPolicies.CanAcceptInviteAsync(org, user, orgUser, _organizationUserInvitationService.TokenIsValid(token, user, orgUser))
             );
 
-            orgUser = orgUser.AcceptUser(user.Id);
+            orgUser.AcceptUser(user.Id);
 
             await _organizationUserRepository.ReplaceAsync(orgUser);
 

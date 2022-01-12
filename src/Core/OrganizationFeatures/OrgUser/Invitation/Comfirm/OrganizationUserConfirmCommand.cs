@@ -40,6 +40,7 @@ namespace Bit.Core.OrganizationFeatures.OrgUser.Invitation.Confirm
             _eventService = eventService;
         }
 
+
         public async Task<List<(OrganizationUser orgUser, string error)>> ConfirmUsersAsync(Guid organizationId, Dictionary<Guid, string> orgUserKeys)
         {
             var organizationUsers = await _organizationUserRepository.GetManyAsync(orgUserKeys.Keys);
@@ -80,7 +81,7 @@ namespace Bit.Core.OrganizationFeatures.OrgUser.Invitation.Confirm
                     continue;
                 }
 
-                orgUser = orgUser.ConfirmUser(orgUserKeys[orgUser.Id]);
+                orgUser.ConfirmUser(orgUserKeys[orgUser.Id]);
 
                 await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Confirmed);
                 await _organizationUserMailer.SendOrganizationConfirmedEmail(organization, user);

@@ -5,7 +5,7 @@ using Bit.Core.Utilities;
 
 namespace Bit.Core.Models.Table
 {
-    public class OrganizationUser : ITableObject<Guid>, IExternal, ICloneable
+    public class OrganizationUser : ITableObject<Guid>, IExternal
     {
         public Guid Id { get; set; }
         public Guid OrganizationId { get; set; }
@@ -30,41 +30,18 @@ namespace Bit.Core.Models.Table
 
         public OrganizationUser AcceptUser(Guid userId)
         {
-            var orgUser = Clone();
-            orgUser.Status = OrganizationUserStatusType.Accepted;
-            orgUser.UserId = userId;
-            orgUser.Email = null;
-            return orgUser;
+            Status = OrganizationUserStatusType.Accepted;
+            UserId = userId;
+            Email = null;
+            return this;
         }
 
         public OrganizationUser ConfirmUser(string key)
         {
-            var orgUser = Clone();
-            orgUser.Status = OrganizationUserStatusType.Confirmed;
-            orgUser.Key = key;
-            orgUser.Email = null;
-            return orgUser;
-        }
-
-        object ICloneable.Clone() => Clone();
-        public OrganizationUser Clone()
-        {
-            return new OrganizationUser
-            {
-                Id = Id,
-                OrganizationId = OrganizationId,
-                UserId = UserId,
-                Email = Email,
-                Key = Key,
-                ResetPasswordKey = ResetPasswordKey,
-                Status = Status,
-                Type = Type,
-                AccessAll = AccessAll,
-                ExternalId = ExternalId,
-                CreationDate = CreationDate,
-                RevisionDate = RevisionDate,
-                Permissions = Permissions,
-            };
+            Status = OrganizationUserStatusType.Confirmed;
+            Key = key;
+            Email = null;
+            return this;
         }
     }
 }
