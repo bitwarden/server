@@ -5,15 +5,8 @@ using System.Net.Http;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using Bit.Core.Entities;
-using Bit.Core.Enums;
-using Bit.Core.Exceptions;
 using Bit.Core.Models.Api;
-using Bit.Core.Models.Api.Request.Accounts;
-using Bit.Core.Models.Api.Response.Accounts;
-using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
-using Bit.Core.Utilities;
 using Bit.Identity.Models;
 using IdentityModel;
 using IdentityServer4;
@@ -32,7 +25,6 @@ namespace Bit.Identity.Controllers
         private readonly ILogger<AccountController> _logger;
         private readonly ISsoConfigRepository _ssoConfigRepository;
         private readonly IUserRepository _userRepository;
-        private readonly IUserService _userService;
         private readonly IHttpClientFactory _clientFactory;
 
         public AccountController(
@@ -40,14 +32,12 @@ namespace Bit.Identity.Controllers
             ILogger<AccountController> logger,
             ISsoConfigRepository ssoConfigRepository,
             IUserRepository userRepository,
-            IUserService userService,
             IHttpClientFactory clientFactory)
         {
             _interaction = interaction;
             _logger = logger;
             _ssoConfigRepository = ssoConfigRepository;
             _userRepository = userRepository;
-            _userService = userService;
             _clientFactory = clientFactory;
         }
 
@@ -87,43 +77,6 @@ namespace Bit.Identity.Controllers
                     InnerExceptionMessage = ex.InnerException?.Message,
                 });
             }
-        }
-
-        // Moved from API, If you modify this endpoint, please update Identity as well.
-        [HttpPost("register")]
-        [CaptchaProtected]
-        public async Task PostRegister([FromBody] RegisterRequestModel model)
-        {
-            var result = await _userService.RegisterUserAsync(model.ToUser(), model.MasterPasswordHash,
-                model.Token, model.OrganizationUserId);
-            if (result.Succeeded)
-            {
-                return;
-            }
-
-            foreach (var error in result.Errors.Where(e => e.Code != "DuplicateUserName"))
-            {
-                ModelState.AddModelError(string.Empty, error.Description);
-            }
-
-            await Task.Delay(2000);
-            throw new BadRequestException(ModelState);
-        }
-
-        // Moved from API, If you modify this endpoint, please update Identity as well.
-        [HttpPost("prelogin")]
-        public async Task<PreloginResponseModel> PostPrelogin([FromBody] PreloginRequestModel model)
-        {
-            var kdfInformation = await _userRepository.GetKdfInformationByEmailAsync(model.Email);
-            if (kdfInformation == null)
-            {
-                kdfInformation = new UserKdfInformation
-                {
-                    Kdf = KdfType.PBKDF2_SHA256,
-                    KdfIterations = 100000,
-                };
-            }
-            return new PreloginResponseModel(kdfInformation);
         }
 
         [HttpGet]
