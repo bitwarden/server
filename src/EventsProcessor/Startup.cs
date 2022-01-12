@@ -10,7 +10,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Logging;
-using SecurityHeadersMiddleware = Bit.Core.Utilities.SecurityHeadersMiddleware;
 
 namespace Bit.EventsProcessor
 {
