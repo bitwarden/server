@@ -66,6 +66,7 @@ namespace Bit.Api.Controllers
             _sendService = sendService;
         }
 
+        [Obsolete("2022-01-12 Moved to Identity, left for backwards compatability with older clients")]
         [HttpPost("prelogin")]
         [AllowAnonymous]
         public async Task<PreloginResponseModel> PostPrelogin([FromBody] PreloginRequestModel model)
@@ -82,6 +83,7 @@ namespace Bit.Api.Controllers
             return new PreloginResponseModel(kdfInformation);
         }
 
+        [Obsolete("2022-01-12 Moved to Identity, left for backwards compatability with older clients")]
         [HttpPost("register")]
         [AllowAnonymous]
         [CaptchaProtected]
