@@ -5,13 +5,12 @@ using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
+using Bit.Core.Entities;
 using Bit.Core.Models.Business;
-using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.Azure.Storage;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -57,8 +56,7 @@ namespace Bit.Core.Services
             else if (CoreHelpers.SettingHasValue(_globalSettings.Storage?.ConnectionString) &&
                 CoreHelpers.SettingHasValue(_globalSettings.LicenseCertificatePassword))
             {
-                var storageAccount = CloudStorageAccount.Parse(globalSettings.Storage.ConnectionString);
-                _certificate = CoreHelpers.GetBlobCertificateAsync(storageAccount, "certificates",
+                _certificate = CoreHelpers.GetBlobCertificateAsync(globalSettings.Storage.ConnectionString, "certificates",
                     "licensing.pfx", _globalSettings.LicenseCertificatePassword)
                     .GetAwaiter().GetResult();
             }

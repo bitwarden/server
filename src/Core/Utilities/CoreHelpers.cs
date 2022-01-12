@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -10,22 +9,19 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
-using Azure.Storage.Queues;
+using Azure;
+using Azure.Storage.Blobs;
+using Azure.Storage.Blobs.Models;
 using Azure.Storage.Queues.Models;
 using Bit.Core.Context;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Enums.Provider;
-using Bit.Core.Models.Data;
-using Bit.Core.Models.Table;
 using Bit.Core.Settings;
-using Dapper;
 using IdentityModel;
 using Microsoft.AspNetCore.DataProtection;
-using Microsoft.Azure.Storage;
-using Microsoft.Azure.Storage.Blob;
 using MimeKit;
 using Newtonsoft.Json;
 
@@ -104,104 +100,6 @@ namespace Bit.Core.Utilities
             }
         }
 
-        public static DataTable ToGuidIdArrayTVP(this IEnumerable<Guid> ids)
-        {
-            return ids.ToArrayTVP("GuidId");
-        }
-
-        public static DataTable ToArrayTVP<T>(this IEnumerable<T> values, string columnName)
-        {
-            var table = new DataTable();
-            table.SetTypeName($"[dbo].[{columnName}Array]");
-            table.Columns.Add(columnName, typeof(T));
-
-            if (values != null)
-            {
-                foreach (var value in values)
-                {
-                    table.Rows.Add(value);
-                }
-            }
-
-            return table;
-        }
-
-        public static DataTable ToArrayTVP(this IEnumerable<SelectionReadOnly> values)
-        {
-            var table = new DataTable();
-            table.SetTypeName("[dbo].[SelectionReadOnlyArray]");
-
-            var idColumn = new DataColumn("Id", typeof(Guid));
-            table.Columns.Add(idColumn);
-            var readOnlyColumn = new DataColumn("ReadOnly", typeof(bool));
-            table.Columns.Add(readOnlyColumn);
-            var hidePasswordsColumn = new DataColumn("HidePasswords", typeof(bool));
-            table.Columns.Add(hidePasswordsColumn);
-
-            if (values != null)
-            {
-                foreach (var value in values)
-                {
-                    var row = table.NewRow();
-                    row[idColumn] = value.Id;
-                    row[readOnlyColumn] = value.ReadOnly;
-                    row[hidePasswordsColumn] = value.HidePasswords;
-                    table.Rows.Add(row);
-                }
-            }
-
-            return table;
-        }
-
-        public static DataTable ToTvp(this IEnumerable<OrganizationUser> orgUsers)
-        {
-            var table = new DataTable();
-            table.SetTypeName("[dbo].[OrganizationUserType]");
-
-            var columnData = new List<(string name, Type type, Func<OrganizationUser, object> getter)>
-            {
-                (nameof(OrganizationUser.Id), typeof(Guid), ou => ou.Id),
-                (nameof(OrganizationUser.OrganizationId), typeof(Guid), ou => ou.OrganizationId),
-                (nameof(OrganizationUser.UserId), typeof(Guid), ou => ou.UserId),
-                (nameof(OrganizationUser.Email), typeof(string), ou => ou.Email),
-                (nameof(OrganizationUser.Key), typeof(string), ou => ou.Key),
-                (nameof(OrganizationUser.Status), typeof(byte), ou => ou.Status),
-                (nameof(OrganizationUser.Type), typeof(byte), ou => ou.Type),
-                (nameof(OrganizationUser.AccessAll), typeof(bool), ou => ou.AccessAll),
-                (nameof(OrganizationUser.ExternalId), typeof(string), ou => ou.ExternalId),
-                (nameof(OrganizationUser.CreationDate), typeof(DateTime), ou => ou.CreationDate),
-                (nameof(OrganizationUser.RevisionDate), typeof(DateTime), ou => ou.RevisionDate),
-                (nameof(OrganizationUser.Permissions), typeof(string), ou => ou.Permissions),
-                (nameof(OrganizationUser.ResetPasswordKey), typeof(string), ou => ou.ResetPasswordKey),
-            };
-
-            foreach (var (name, type, getter) in columnData)
-            {
-                var column = new DataColumn(name, type);
-                table.Columns.Add(column);
-            }
-
-            foreach (var orgUser in orgUsers ?? new OrganizationUser[] { })
-            {
-                var row = table.NewRow();
-                foreach (var (name, type, getter) in columnData)
-                {
-                    var val = getter(orgUser);
-                    if (val == null)
-                    {
-                        row[name] = DBNull.Value;
-                    }
-                    else
-                    {
-                        row[name] = val;
-                    }
-                }
-                table.Rows.Add(row);
-            }
-
-            return table;
-        }
-
         public static string CleanCertificateThumbprint(string thumbprint)
         {
             // Clean possible garbage characters from thumbprint copy/paste
@@ -253,22 +151,27 @@ namespace Bit.Core.Utilities
             }
         }
 
-        public async static Task<X509Certificate2> GetBlobCertificateAsync(CloudStorageAccount cloudStorageAccount,
-            string container, string file, string password)
+        public async static Task<X509Certificate2> GetBlobCertificateAsync(string connectionString, string container, string file, string password)
         {
-            var blobClient = cloudStorageAccount.CreateCloudBlobClient();
-            var containerRef = blobClient.GetContainerReference(container);
-            if (await containerRef.ExistsAsync().ConfigureAwait(false))
+            try
             {
-                var blobRef = containerRef.GetBlobReference(file);
-                if (await blobRef.ExistsAsync().ConfigureAwait(false))
-                {
-                    var blobBytes = new byte[blobRef.Properties.Length];
-                    await blobRef.DownloadToByteArrayAsync(blobBytes, 0).ConfigureAwait(false);
-                    return new X509Certificate2(blobBytes, password);
-                }
+                var blobServiceClient = new BlobServiceClient(connectionString);
+                var containerRef2 = blobServiceClient.GetBlobContainerClient(container);
+                var blobRef = containerRef2.GetBlobClient(file);
+
+                using var memStream = new MemoryStream();
+                await blobRef.DownloadToAsync(memStream).ConfigureAwait(false);
+                return new X509Certificate2(memStream.ToArray(), password);
             }
-            return null;
+            catch (RequestFailedException ex)
+            when (ex.ErrorCode == BlobErrorCode.ContainerNotFound || ex.ErrorCode == BlobErrorCode.BlobNotFound)
+            {
+                return null;
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
         public static long ToEpocMilliseconds(DateTime date)
@@ -744,8 +647,7 @@ namespace Bit.Core.Utilities
                 SettingHasValue(globalSettings.Storage?.ConnectionString) &&
                 SettingHasValue(globalSettings.IdentityServer.CertificatePassword))
             {
-                var storageAccount = CloudStorageAccount.Parse(globalSettings.Storage.ConnectionString);
-                return GetBlobCertificateAsync(storageAccount, "certificates",
+                return GetBlobCertificateAsync(globalSettings.Storage.ConnectionString, "certificates",
                     "identity.pfx", globalSettings.IdentityServer.CertificatePassword).GetAwaiter().GetResult();
             }
             return null;

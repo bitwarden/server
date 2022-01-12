@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text.Json;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
-using Bit.Core.Models.Table;
 using Bit.Core.Utilities;
 
 namespace Bit.Api.Models.Request.Organizations
@@ -28,7 +28,7 @@ namespace Bit.Api.Models.Request.Organizations
                 Emails = Emails,
                 Type = Type,
                 AccessAll = AccessAll,
-                Collections = Collections.Select(c => c.ToSelectionReadOnly()),
+                Collections = Collections?.Select(c => c.ToSelectionReadOnly()),
                 Permissions = Permissions,
             };
         }

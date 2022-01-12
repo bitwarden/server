@@ -3,7 +3,15 @@ name: Release
 
 on:
   workflow_dispatch:
-    inputs: {}
+    inputs:
+      release_type:
+        description: 'Release Options'
+        required: true
+        default: 'Initial Release'
+        type: choice
+        options:
+          - Initial Release
+          - Redeploy
 
 
 jobs:
@@ -34,7 +42,8 @@ jobs:
             curl -sL https://api.github.com/repos/$GITHUB_REPOSITORY/releases/latest | jq -r ".tag_name"
           )
 
-          if [ "v$version" == "$previous_release_tag_version" ]; then
+          if [ "v$version" == "$previous_release_tag_version" ] && \
+          [ "${{ github.event.inputs.release_type }}" == "Initial Release" ]; then
             echo "[!] Already released v$version. Please bump version to continue"
             exit 1
           fi

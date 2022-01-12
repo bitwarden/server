@@ -2,14 +2,14 @@
 using System.Collections.Generic;
 using AutoFixture;
 using AutoFixture.Kernel;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models;
-using Bit.Core.Repositories.EntityFramework;
 using Bit.Core.Test.AutoFixture.EntityFrameworkRepositoryFixtures;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
+using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
-using TableModel = Bit.Core.Models.Table;
 
 namespace Bit.Core.Test.AutoFixture.UserFixtures
 {
@@ -23,18 +23,18 @@ namespace Bit.Core.Test.AutoFixture.UserFixtures
             }
 
             var type = request as Type;
-            if (type == typeof(TableModel.User))
+            if (type == typeof(User))
             {
                 var fixture = new Fixture();
                 var providers = fixture.Create<Dictionary<TwoFactorProviderType, TwoFactorProvider>>();
-                var user = fixture.WithAutoNSubstitutions().Create<TableModel.User>();
+                var user = fixture.WithAutoNSubstitutions().Create<User>();
                 user.SetTwoFactorProviders(providers);
                 return user;
             }
-            else if (type == typeof(List<TableModel.User>))
+            else if (type == typeof(List<User>))
             {
                 var fixture = new Fixture();
-                var users = fixture.WithAutoNSubstitutions().CreateMany<TableModel.User>(2);
+                var users = fixture.WithAutoNSubstitutions().CreateMany<User>(2);
                 foreach (var user in users)
                 {
                     var providers = fixture.Create<Dictionary<TwoFactorProviderType, TwoFactorProvider>>();

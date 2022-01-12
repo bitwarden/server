@@ -1,21 +1,18 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
-using System.Threading.Tasks;
+using Bit.Core.Entities;
+using Bit.Core.Entities.Provider;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
-using Bit.Core.Repositories.EntityFramework;
-using Bit.Core.Test.AutoFixture;
 using Bit.Core.Test.AutoFixture.Attributes;
-using Bit.Core.Test.AutoFixture.OrganizationUserFixtures;
 using Bit.Core.Test.AutoFixture.PolicyFixtures;
 using Bit.Core.Test.Repositories.EntityFramework.EqualityComparers;
-using Microsoft.EntityFrameworkCore;
 using Xunit;
-using EfRepo = Bit.Core.Repositories.EntityFramework;
-using SqlRepo = Bit.Core.Repositories.SqlServer;
-using TableModel = Bit.Core.Models.Table;
+using EfRepo = Bit.Infrastructure.EntityFramework.Repositories;
+using Policy = Bit.Core.Entities.Policy;
+using SqlRepo = Bit.Infrastructure.Dapper.Repositories;
 
 namespace Bit.Core.Test.Repositories.EntityFramework
 {
@@ -23,8 +20,8 @@ namespace Bit.Core.Test.Repositories.EntityFramework
     {
         [CiSkippedTheory, EfPolicyAutoData]
         public async void CreateAsync_Works_DataMatches(
-            TableModel.Policy policy,
-            TableModel.Organization organization,
+            Policy policy,
+            Organization organization,
             PolicyCompare equalityComparer,
             List<EfRepo.PolicyRepository> suts,
             List<EfRepo.OrganizationRepository> efOrganizationRepos,
@@ -32,7 +29,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
             SqlRepo.OrganizationRepository sqlOrganizationRepo
             )
         {
-            var savedPolicys = new List<TableModel.Policy>();
+            var savedPolicys = new List<Policy>();
             foreach (var sut in suts)
             {
                 var i = suts.IndexOf(sut);
@@ -81,13 +78,13 @@ namespace Bit.Core.Test.Repositories.EntityFramework
             bool isProvider,
 
             // Auto data - models
-            TableModel.Policy policy,
-            TableModel.User user,
-            TableModel.Organization organization,
-            TableModel.OrganizationUser orgUser,
-            TableModel.Provider.Provider provider,
-            TableModel.Provider.ProviderOrganization providerOrganization,
-            TableModel.Provider.ProviderUser providerUser,
+            Policy policy,
+            User user,
+            Organization organization,
+            OrganizationUser orgUser,
+            Provider provider,
+            ProviderOrganization providerOrganization,
+            ProviderUser providerUser,
             PolicyCompareIncludingOrganization equalityComparer,
 
             // Auto data - EF repos
@@ -140,7 +137,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
             policy.Enabled = policyEnabled;
             policy.Type = savedPolicyType;
 
-            var results = new List<TableModel.Policy>();
+            var results = new List<Policy>();
 
             foreach (var policyRepo in policyRepos)
             {
@@ -181,7 +178,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
                 await policyRepo.CreateAsync(policy);
                 if (suts.Contains(policyRepo))
                 {
-                    (policyRepo as BaseEntityFrameworkRepository).ClearChangeTracking();
+                    (policyRepo as EfRepo.BaseEntityFrameworkRepository).ClearChangeTracking();
                 }
 
                 var minStatus = includeInvited ? OrganizationUserStatusType.Invited : OrganizationUserStatusType.Accepted;

@@ -2,6 +2,7 @@ param (
     [string]$outputDir = "../.",
     [string]$coreVersion = "latest",
     [string]$webVersion = "latest",
+    [string]$keyConnectorVersion = "latest",
     [switch] $install,
     [switch] $start,
     [switch] $restart,
@@ -80,7 +81,7 @@ function Install() {
     Pull-Setup
     docker run -it --rm --name setup -v ${outputDir}:/bitwarden bitwarden/setup:$coreVersion `
         dotnet Setup.dll -install 1 -domain ${domain} -letsencrypt ${letsEncrypt} `
-        -os win -corev $coreVersion -webv $webVersion -q $setupQuiet -dbname "$database"
+        -os win -corev $coreVersion -webv $webVersion -keyconnectorv $keyConnectorVersion -q $setupQuiet -dbname "$database"
 }
 
 function Docker-Compose-Up {
@@ -168,7 +169,8 @@ function Update-Database {
     $mssqlId = docker-compose ps -q mssql
     docker run -it --rm --name setup --network container:$mssqlId `
         -v ${outputDir}:/bitwarden bitwarden/setup:$coreVersion `
-        dotnet Setup.dll -update 1 -db 1 -os win -corev $coreVersion -webv $webVersion -q $setupQuiet
+        dotnet Setup.dll -update 1 -db 1 -os win -corev $coreVersion -webv $webVersion `
+        -keyconnectorv $keyConnectorVersion -q $setupQuiet
     Write-Line "Database update complete"
 }
 
@@ -177,13 +179,15 @@ function Update([switch] $withpull) {
         Pull-Setup
     }
     docker run -it --rm --name setup -v ${outputDir}:/bitwarden bitwarden/setup:$coreVersion `
-        dotnet Setup.dll -update 1 -os win -corev $coreVersion -webv $webVersion -q $setupQuiet
+        dotnet Setup.dll -update 1 -os win -corev $coreVersion -webv $webVersion `
+        -keyconnectorv $keyConnectorVersion -q $setupQuiet
 }
 
 function Print-Environment {
     Pull-Setup
     docker run -it --rm --name setup -v ${outputDir}:/bitwarden bitwarden/setup:$coreVersion `
-        dotnet Setup.dll -printenv 1 -os win -corev $coreVersion -webv $webVersion -q $setupQuiet
+        dotnet Setup.dll -printenv 1 -os win -corev $coreVersion -webv $webVersion `
+        -keyconnectorv $keyConnectorVersion -q $setupQuiet
 }
 
 function Restart {

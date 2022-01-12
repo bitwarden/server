@@ -1,4 +1,4 @@
-﻿using Bit.Core.Models.Table;
+﻿using Bit.Core.Entities;
 using Bit.Core.Test.AutoFixture.CipherFixtures;
 using Newtonsoft.Json;
 using Xunit;

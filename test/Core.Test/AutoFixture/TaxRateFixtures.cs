@@ -1,12 +1,12 @@
 ﻿using System;
 using AutoFixture;
 using AutoFixture.Kernel;
-using Bit.Core.Repositories.EntityFramework;
+using Bit.Core.Entities;
 using Bit.Core.Test.AutoFixture.EntityFrameworkRepositoryFixtures;
 using Bit.Core.Test.AutoFixture.Relays;
+using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
-using TableModel = Bit.Core.Models.Table;
 
 namespace Bit.Core.Test.AutoFixture.TaxRateFixtures
 {
@@ -20,14 +20,14 @@ namespace Bit.Core.Test.AutoFixture.TaxRateFixtures
             }
 
             var type = request as Type;
-            if (type == null || type != typeof(TableModel.TaxRate))
+            if (type == null || type != typeof(TaxRate))
             {
                 return new NoSpecimen();
             }
 
             var fixture = new Fixture();
             fixture.Customizations.Insert(0, new MaxLengthStringRelay());
-            var obj = fixture.WithAutoNSubstitutions().Create<TableModel.TaxRate>();
+            var obj = fixture.WithAutoNSubstitutions().Create<TaxRate>();
             return obj;
         }
     }

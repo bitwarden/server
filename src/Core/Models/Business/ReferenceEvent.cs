@@ -1,4 +1,5 @@
 ﻿using System;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
