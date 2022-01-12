@@ -201,9 +201,18 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            var userId = _userService.GetProperUserId(User);
             var result = await _organizationUserConfirmCommand.ConfirmUsersAsync(orgGuidId,
                 new Dictionary<Guid, string> { { new Guid(id), model.Key } });
+            if (!result.Any())
+            {
+                throw new BadRequestException("User not valid.");
+            }
+
+            var (_, error) = result[0];
+            if (!string.IsNullOrWhiteSpace(error))
+            {
+                throw new BadRequestException(error);
+            }
         }
 
         [HttpPost("confirm")]

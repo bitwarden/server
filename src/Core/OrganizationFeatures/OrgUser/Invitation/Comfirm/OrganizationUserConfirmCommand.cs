@@ -40,24 +40,6 @@ namespace Bit.Core.OrganizationFeatures.OrgUser.Invitation.Confirm
             _eventService = eventService;
         }
 
-        // TODO MDG: remove this method
-        public async Task<OrganizationUser> ConfirmUserAsync(Guid organizationId, Guid organizationUserId, string key)
-        {
-            var result = await ConfirmUsersAsync(organizationId, new Dictionary<Guid, string> { { organizationUserId, key } });
-
-            if (!result.Any())
-            {
-                throw new BadRequestException("User not valid.");
-            }
-
-            var (orgUser, error) = result[0];
-            if (!string.IsNullOrWhiteSpace(error))
-            {
-                throw new BadRequestException(error);
-            }
-            return orgUser;
-        }
-
         public async Task<List<(OrganizationUser orgUser, string error)>> ConfirmUsersAsync(Guid organizationId, Dictionary<Guid, string> orgUserKeys)
         {
             var organizationUsers = await _organizationUserRepository.GetManyAsync(orgUserKeys.Keys);
