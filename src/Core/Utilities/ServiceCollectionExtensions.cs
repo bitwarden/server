@@ -10,6 +10,7 @@ using Bit.Core.Enums;
 using Bit.Core.Identity;
 using Bit.Core.IdentityServer;
 using Bit.Core.Models.Table;
+using Bit.Core.OrganizationFeatures;
 using Bit.Core.OrganizationFeatures.OrgUser;
 using Bit.Core.OrganizationFeatures.OrgUser.Invitation;
 using Bit.Core.OrganizationFeatures.OrgUser.Invitation.Accept;
@@ -185,23 +186,6 @@ namespace Bit.Core.Utilities
             services.AddSingleton<IAppleIapService, AppleIapService>();
             services.AddScoped<ISsoConfigService, SsoConfigService>();
             services.AddScoped<ISendService, SendService>();
-        }
-
-        private static void AddOrganizationServices(this IServiceCollection services)
-        {
-            services.AddScoped<IOrganizationService, OrganizationService>();
-            services.AddScoped<IOrganizationUserAccessPolicies, OrganizationUserAccessPolicies>();
-            services.AddScoped<IOrganizationUserAcceptAccessPolicies, OrganizationUserAcceptAccessPolicies>();
-            services.AddScoped<IOrganizationUserAcceptCommand, OrganizationUserAcceptCommand>();
-            services.AddScoped<IOrganizationUserConfirmAccessPolicies, OrganizationUserConfirmAccessPolicies>();
-            services.AddScoped<IOrganizationUserConfirmCommand, OrganizationUserConfirmCommand>();
-            services.AddScoped<IOrganizationUserInviteAccessPolicies, OrganizationUserInviteAccessPolicies>();
-            services.AddScoped<IOrganizationUserInviteCommand, OrganizationUserInviteCommand>();
-            services.AddScoped<IOrganizationUserResendInviteAccessPolicies, OrganizationUserResendInviteAccessPolicies>();
-            services.AddScoped<IOrganizationUserResendInviteCommand, OrganizationUserResendInviteCommand>();
-            services.AddScoped<IOrganizationUserMailer, OrganizationUserMailer>();
-            services.AddScoped<IOrganizationUserInvitationService, OrganizationUserInvitationService>();
-            services.AddScoped<IOrganizationSponsorshipService, OrganizationSponsorshipService>();
         }
 
         public static void AddDefaultServices(this IServiceCollection services, GlobalSettings globalSettings)
