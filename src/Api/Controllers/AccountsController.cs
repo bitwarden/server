@@ -11,6 +11,8 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Enums.Provider;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Api.Request.Accounts;
+using Bit.Core.Models.Api.Response.Accounts;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
@@ -74,7 +76,7 @@ namespace Bit.Api.Controllers
                 kdfInformation = new UserKdfInformation
                 {
                     Kdf = KdfType.PBKDF2_SHA256,
-                    KdfIterations = 100000
+                    KdfIterations = 100000,
                 };
             }
             return new PreloginResponseModel(kdfInformation);

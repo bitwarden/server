@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.Entities;
 
-namespace Bit.Api.Models.Request.Accounts
+namespace Bit.Core.Models.Api.Request.Accounts
 {
     public class KeysRequestModel
     {
