@@ -66,6 +66,8 @@ namespace Bit.Api.Controllers
             _sendService = sendService;
         }
 
+        #region DEPRECATED (Moved to Identity Service)
+
         [Obsolete("2022-01-12 Moved to Identity, left for backwards compatability with older clients")]
         [HttpPost("prelogin")]
         [AllowAnonymous]
@@ -104,6 +106,8 @@ namespace Bit.Api.Controllers
             await Task.Delay(2000);
             throw new BadRequestException(ModelState);
         }
+
+        #endregion
 
         [HttpPost("password-hint")]
         [AllowAnonymous]
