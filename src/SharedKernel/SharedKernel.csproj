@@ -7,6 +7,7 @@
     <ItemGroup>
       <PackageReference Include="Sentry.Serilog" Version="3.12.2" />
       <PackageReference Include="Serilog.AspNetCore" Version="4.1.0" />
+      <PackageReference Include="Serilog.Expressions" Version="3.2.1" />
       <PackageReference Include="Serilog.Extensions.Logging.File" Version="2.0.0" />
       <PackageReference Include="Serilog.Sinks.AzureCosmosDB" Version="1.0.0" />
       <PackageReference Include="Serilog.Sinks.SyslogMessages" Version="2.0.6" />
