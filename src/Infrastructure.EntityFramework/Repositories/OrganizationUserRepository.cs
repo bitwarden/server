@@ -92,7 +92,10 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
-                var entities = dbContext.FindAsync<OrganizationUser>(organizationUserIds);
+                var entities = await dbContext.OrganizationUsers
+                    .Where(ou => organizationUserIds.Contains(ou.Id))
+                    .ToListAsync();
+
                 var sponsorships = dbContext.OrganizationSponsorships
                     .Where(os => os.SponsoringOrganizationUserId != default &&
                         organizationUserIds.Contains(os.SponsoringOrganizationUserId ?? default));
@@ -102,7 +105,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
                     sponsorship.FriendlyName = null;
                 }
 
-                dbContext.RemoveRange(entities);
+                dbContext.OrganizationUsers.RemoveRange(entities);
                 await dbContext.SaveChangesAsync();
             }
         }
@@ -358,7 +361,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             }
         }
 
-        public async Task<IEnumerable<string>> SelectKnownEmailsAsync(Guid organizationId, IEnumerable<string> emails, bool onlyRegisteredUsers)
+        public async Task<ICollection<string>> SelectKnownEmailsAsync(Guid organizationId, IEnumerable<string> emails, bool onlyRegisteredUsers)
         {
             using (var scope = ServiceScopeFactory.CreateScope())
             {
@@ -377,7 +380,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
                                   (!onlyRegisteredUsers && (uEmails.Contains(e) || ouEmails.Contains(e))) ||
                                   (onlyRegisteredUsers && uEmails.Contains(e))
                                   select e;
-                return knownEmails;
+                return knownEmails.ToList();
             }
         }
 
@@ -420,8 +423,6 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             await CreateManyAsync(createUsers);
             await ReplaceManyAsync(replaceUsers);
         }
-
-        Task<ICollection<string>> IOrganizationUserRepository.SelectKnownEmailsAsync(Guid organizationId, IEnumerable<string> emails, bool onlyRegisteredUsers) => throw new NotImplementedException();
 
         public async Task<IEnumerable<OrganizationUserUserDetails>> GetManyByMinimumRoleAsync(Guid organizationId, OrganizationUserType minRole)
         {
