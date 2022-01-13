@@ -263,15 +263,16 @@ namespace Bit.Admin.Controllers
             {
                 var license = await _organizationService.GenerateLicenseAsync(organization,
                     model.InstallationId.Value, model.Version);
-                return File(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(license, JsonHelpers.Indented)),
-                    "text/plain", "bitwarden_organization_license.json");
+                var ms = new MemoryStream();
+                await JsonSerializer.SerializeAsync(ms, license, JsonHelpers.Indented);
+                return File(ms, "text/plain", "bitwarden_organization_license.json");
             }
             else if (user != null)
             {
                 var license = await _userService.GenerateLicenseAsync(user, null, model.Version);
-                // NOTE: Evaluate for async
-                return File(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(license, JsonHelpers.Indented)),
-                    "text/plain", "bitwarden_premium_license.json");
+                var ms = new MemoryStream();
+                await JsonSerializer.SerializeAsync(ms, license, JsonHelpers.Indented);
+                return File(ms, "text/plain", "bitwarden_premium_license.json");
             }
             else
             {

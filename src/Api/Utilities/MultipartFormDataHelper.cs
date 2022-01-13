@@ -78,13 +78,6 @@ namespace Bit.Api.Utilities
             {
                 if (ContentDispositionHeaderValue.TryParse(firstSection.ContentDisposition, out _))
                 {
-                    // Request model json, then data
-                    string requestModelJson = null;
-                    using (var sr = new StreamReader(firstSection.Body))
-                    {
-                        requestModelJson = await sr.ReadToEndAsync();
-                    }
-
                     var secondSection = await reader.ReadNextSectionAsync();
                     if (secondSection != null)
                     {
@@ -94,8 +87,7 @@ namespace Bit.Api.Utilities
                             var fileName = HeaderUtilities.RemoveQuotes(secondContent.FileName).ToString();
                             using (secondSection.Body)
                             {
-                                // NOTE: Evaluate for async
-                                var model = JsonSerializer.Deserialize<SendRequestModel>(requestModelJson);
+                                var model = await JsonSerializer.DeserializeAsync<SendRequestModel>(firstSection.Body);
                                 await callback(secondSection.Body, fileName, model);
                             }
                         }
