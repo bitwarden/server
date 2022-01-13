@@ -53,9 +53,7 @@ namespace Bit.Core.Test.Identity
                 .TwoFactorProviderIsEnabledAsync(TwoFactorProviderType, user)
                 .Returns(true);
         }
-
-
-
+        
         protected static UserManager<User> SubstituteUserManager()
         {
             return new UserManager<User>(Substitute.For<IUserStore<User>>(),
