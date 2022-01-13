@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.Storage.Queues;
 using Bit.Core.Models.Business;
@@ -36,7 +37,7 @@ namespace Bit.Core.Services
             }
             try
             {
-                var message = JsonHelpers.Serialize(referenceEvent, JsonHelpers.IgnoreWritingNullAndCamelCase);
+                var message = JsonSerializer.Serialize(referenceEvent, JsonHelpers.IgnoreWritingNullAndCamelCase);
                 // Messages need to be base64 encoded
                 var encodedMessage = Convert.ToBase64String(Encoding.UTF8.GetBytes(message));
                 await _queueClient.SendMessageAsync(encodedMessage);

@@ -41,7 +41,7 @@ namespace Bit.Core.Utilities
             httpContext.Response.Headers["Retry-After"] = retryAfter;
             httpContext.Response.StatusCode = _options.HttpStatusCode;
             var errorModel = new ErrorResponseModel { Message = message };
-            return httpContext.Response.WriteJsonAsync(errorModel, cancellationToken: httpContext.RequestAborted);
+            return httpContext.Response.WriteAsJsonAsync(errorModel, cancellationToken: httpContext.RequestAborted);
         }
 
         public override void LogBlockedRequest(HttpContext httpContext, ClientRequestIdentity identity,

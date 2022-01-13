@@ -1,11 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Net.Http;
-using System.Text;
+using System.Net.Http.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Bit.Core.Settings;
-using Bit.Core.Utilities;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -65,7 +64,7 @@ namespace Bit.Admin.HostedServices
             request.RequestUri = new Uri("https://api.cloudflare.com/" +
                 $"client/v4/zones/{_adminSettings.Cloudflare.ZoneId}/firewall/access_rules/rules");
 
-            request.Content = JsonHelpers.CreateJsonContent(new
+            request.Content = JsonContent.Create(new
             {
                 mode = "block",
                 configuration = new
@@ -82,7 +81,7 @@ namespace Bit.Admin.HostedServices
                 return;
             }
 
-            var accessRuleResponse = await response.Content.ReadJsonAsync<AccessRuleResponse>(cancellationToken: cancellationToken);
+            var accessRuleResponse = await response.Content.ReadFromJsonAsync<AccessRuleResponse>(cancellationToken: cancellationToken);
             if (!accessRuleResponse.Success)
             {
                 return;
@@ -116,7 +115,7 @@ namespace Bit.Admin.HostedServices
                     return;
                 }
 
-                var listResponse = await response.Content.ReadJsonAsync<ListResponse>(cancellationToken: cancellationToken);
+                var listResponse = await response.Content.ReadFromJsonAsync<ListResponse>(cancellationToken: cancellationToken);
                 if (!listResponse.Success)
                 {
                     return;

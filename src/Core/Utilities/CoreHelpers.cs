@@ -336,7 +336,7 @@ namespace Bit.Core.Utilities
         /// </summary>
         public static T CloneObject<T>(T obj)
         {
-            return JsonHelpers.Deserialize<T>(JsonHelpers.Serialize(obj));
+            return JsonSerializer.Deserialize<T>(JsonSerializer.Serialize(obj));
         }
 
         public static bool SettingHasValue(string setting)

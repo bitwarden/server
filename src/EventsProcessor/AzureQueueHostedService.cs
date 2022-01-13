@@ -108,7 +108,7 @@ namespace Bit.EventsProcessor
                 _logger.LogInformation("Processing message.");
                 var events = new List<IEvent>();
 
-                using var jsonDocument = JsonHelpers.Parse(message);
+                using var jsonDocument = JsonDocument.Parse(message);
                 var root = jsonDocument.RootElement;
                 if (root.ValueKind == JsonValueKind.Array)
                 {

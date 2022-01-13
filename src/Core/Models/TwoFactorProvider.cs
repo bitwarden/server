@@ -5,7 +5,6 @@ using System.Text.Json.Serialization;
 using Bit.Core.Enums;
 using Bit.Core.Utilities;
 using Fido2NetLib.Objects;
-using Microsoft.Extensions.Options;
 using PeterO.Cbor;
 using U2F.Core.Utils;
 
@@ -103,7 +102,7 @@ namespace Bit.Core.Models
                 catch
                 {
                     // Handle newtonsoft parsing
-                    Descriptor = JsonHelpers.Deserialize<PublicKeyCredentialDescriptor>(o.Descriptor.ToString());
+                    Descriptor = JsonHelpers.LegacyDeserialize<PublicKeyCredentialDescriptor>(o.Descriptor.ToString());
                 }
                 PublicKey = o.PublicKey;
                 UserHandle = o.UserHandle;

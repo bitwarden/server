@@ -244,8 +244,8 @@ namespace Bit.Infrastructure.Dapper.Repositories
         public async Task<Guid> CreateAsync(OrganizationUser obj, IEnumerable<SelectionReadOnly> collections)
         {
             obj.SetNewId();
-            var objWithCollections = JsonHelpers.Deserialize<OrganizationUserWithCollections>(
-                JsonHelpers.Serialize(obj));
+            var objWithCollections = JsonSerializer.Deserialize<OrganizationUserWithCollections>(
+                JsonSerializer.Serialize(obj));
             objWithCollections.Collections = collections.ToArrayTVP();
 
             using (var connection = new SqlConnection(ConnectionString))
@@ -261,8 +261,8 @@ namespace Bit.Infrastructure.Dapper.Repositories
 
         public async Task ReplaceAsync(OrganizationUser obj, IEnumerable<SelectionReadOnly> collections)
         {
-            var objWithCollections = JsonHelpers.Deserialize<OrganizationUserWithCollections>(
-                JsonHelpers.Serialize(obj));
+            var objWithCollections = JsonSerializer.Deserialize<OrganizationUserWithCollections>(
+                JsonSerializer.Serialize(obj));
             objWithCollections.Collections = collections.ToArrayTVP();
 
             using (var connection = new SqlConnection(ConnectionString))

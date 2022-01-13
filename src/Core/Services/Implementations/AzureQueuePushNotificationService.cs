@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.Storage.Queues;
 using Bit.Core.Context;
@@ -165,7 +166,7 @@ namespace Bit.Core.Services
         private async Task SendMessageAsync<T>(PushType type, T payload, bool excludeCurrentContext)
         {
             var contextId = GetContextIdentifier(excludeCurrentContext);
-            var message = JsonHelpers.Serialize(new PushNotificationData<T>(type, payload, contextId),
+            var message = JsonSerializer.Serialize(new PushNotificationData<T>(type, payload, contextId),
                 JsonHelpers.IgnoreWritingNull);
             await _queueClient.SendMessageAsync(message);
         }

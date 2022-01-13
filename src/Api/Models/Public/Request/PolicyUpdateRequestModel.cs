@@ -1,6 +1,6 @@
 ﻿using System;
+using System.Text.Json;
 using Bit.Core.Entities;
-using Bit.Core.Utilities;
 
 namespace Bit.Api.Models.Public.Request
 {
@@ -17,7 +17,7 @@ namespace Bit.Api.Models.Public.Request
         public virtual Policy ToPolicy(Policy existingPolicy)
         {
             existingPolicy.Enabled = Enabled.GetValueOrDefault();
-            existingPolicy.Data = Data != null ? JsonHelpers.Serialize(Data) : null;
+            existingPolicy.Data = Data != null ? JsonSerializer.Serialize(Data) : null;
             return existingPolicy;
         }
     }

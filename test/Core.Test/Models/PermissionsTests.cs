@@ -1,6 +1,4 @@
-﻿using System;
-using System.Text.Json;
-using AutoFixture.Xunit2;
+﻿using System.Text.Json;
 using Bit.Core.Models.Data;
 using Bit.Core.Utilities;
 using Xunit;
@@ -49,9 +47,9 @@ namespace Bit.Core.Test.Models
             };
 
             // minify expected json
-            var expected = JsonHelpers.Serialize(permissions, JsonHelpers.CamelCase);
+            var expected = JsonSerializer.Serialize(permissions, JsonHelpers.CamelCase);
 
-            var actual = JsonHelpers.Serialize(
+            var actual = JsonSerializer.Serialize(
                 JsonHelpers.DeserializeOrNew<Permissions>(_exampleSerializedPermissions, JsonHelpers.CamelCase),
                 JsonHelpers.CamelCase);
 

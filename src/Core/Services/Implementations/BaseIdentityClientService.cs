@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -126,8 +127,7 @@ namespace Bit.Core.Services
                 return false;
             }
 
-            using var jsonDocument = await JsonHelpers.DeserializeAsync<JsonDocument>(
-                await response.Content.ReadAsStreamAsync());
+            using var jsonDocument = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync());
 
             AccessToken = jsonDocument.RootElement.GetProperty("access_token").GetString();
             return true;
@@ -145,7 +145,7 @@ namespace Bit.Core.Services
             {
                 if (requestObject != null)
                 {
-                    Content = JsonHelpers.CreateJsonContent(requestObject);
+                    Content = JsonContent.Create(requestObject);
                 }
             }
         }

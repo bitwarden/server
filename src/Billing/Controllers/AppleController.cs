@@ -53,7 +53,7 @@ namespace Bit.Billing.Controllers
 
             try
             {
-                var json = JsonHelpers.Serialize(JsonHelpers.Deserialize<JsonDocument>(body), JsonHelpers.Indented);
+                var json = JsonSerializer.Serialize(JsonSerializer.Deserialize<JsonDocument>(body), JsonHelpers.Indented);
                 _logger.LogInformation(Constants.BypassFiltersEventId, "Apple IAP Notification:\n\n{0}", json);
                 return new OkResult();
             }

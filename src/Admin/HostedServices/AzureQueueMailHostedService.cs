@@ -69,7 +69,7 @@ namespace Bit.Admin.HostedServices
                 {
                     try
                     {
-                        using var document = JsonHelpers.Parse(message.DecodeMessageText());
+                        using var document = JsonDocument.Parse(message.DecodeMessageText());
                         var root = document.RootElement;
 
                         if (root.ValueKind == JsonValueKind.Array)

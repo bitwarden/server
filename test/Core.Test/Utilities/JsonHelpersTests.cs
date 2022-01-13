@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Text.Json;
-using System.Text.Json.Serialization;
+﻿using System.Text.Json;
 using Bit.Core.Utilities;
 using Xunit;
 
@@ -10,7 +8,7 @@ namespace Bit.Core.Test.Helpers
     {
         private static void CompareJson<T>(T value, JsonSerializerOptions options, Newtonsoft.Json.JsonSerializerSettings settings)
         {
-            var stgJson = JsonHelpers.Serialize(value, options);
+            var stgJson = JsonSerializer.Serialize(value, options);
             var nsJson = Newtonsoft.Json.JsonConvert.SerializeObject(value, settings);
 
             Assert.Equal(stgJson, nsJson);

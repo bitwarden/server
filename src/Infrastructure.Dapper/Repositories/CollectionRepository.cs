@@ -3,12 +3,12 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
-using Bit.Core.Utilities;
 using Dapper;
 
 namespace Bit.Infrastructure.Dapper.Repositories
@@ -111,7 +111,7 @@ namespace Bit.Infrastructure.Dapper.Repositories
         public async Task CreateAsync(Collection obj, IEnumerable<SelectionReadOnly> groups)
         {
             obj.SetNewId();
-            var objWithGroups = JsonHelpers.Deserialize<CollectionWithGroups>(JsonHelpers.Serialize(obj));
+            var objWithGroups = JsonSerializer.Deserialize<CollectionWithGroups>(JsonSerializer.Serialize(obj));
             objWithGroups.Groups = groups.ToArrayTVP();
 
             using (var connection = new SqlConnection(ConnectionString))
@@ -125,7 +125,7 @@ namespace Bit.Infrastructure.Dapper.Repositories
 
         public async Task ReplaceAsync(Collection obj, IEnumerable<SelectionReadOnly> groups)
         {
-            var objWithGroups = JsonHelpers.Deserialize<CollectionWithGroups>(JsonHelpers.Serialize(obj));
+            var objWithGroups = JsonSerializer.Deserialize<CollectionWithGroups>(JsonSerializer.Serialize(obj));
             objWithGroups.Groups = groups.ToArrayTVP();
 
             using (var connection = new SqlConnection(ConnectionString))

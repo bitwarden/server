@@ -3,12 +3,12 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
-using Bit.Core.Utilities;
 using Core.Models.Data;
 using Dapper;
 
@@ -105,8 +105,8 @@ namespace Bit.Infrastructure.Dapper.Repositories
         public async Task CreateAsync(Cipher cipher, IEnumerable<Guid> collectionIds)
         {
             cipher.SetNewId();
-            var objWithCollections = JsonHelpers.Deserialize<CipherWithCollections>(
-                JsonHelpers.Serialize(cipher));
+            var objWithCollections = JsonSerializer.Deserialize<CipherWithCollections>(
+                JsonSerializer.Serialize(cipher));
             objWithCollections.CollectionIds = collectionIds.ToGuidIdArrayTVP();
             using (var connection = new SqlConnection(ConnectionString))
             {
@@ -132,8 +132,8 @@ namespace Bit.Infrastructure.Dapper.Repositories
         public async Task CreateAsync(CipherDetails cipher, IEnumerable<Guid> collectionIds)
         {
             cipher.SetNewId();
-            var objWithCollections = JsonHelpers.Deserialize<CipherDetailsWithCollections>(
-                JsonHelpers.Serialize(cipher));
+            var objWithCollections = JsonSerializer.Deserialize<CipherDetailsWithCollections>(
+                JsonSerializer.Serialize(cipher));
             objWithCollections.CollectionIds = collectionIds.ToGuidIdArrayTVP();
             using (var connection = new SqlConnection(ConnectionString))
             {
@@ -169,8 +169,8 @@ namespace Bit.Infrastructure.Dapper.Repositories
 
         public async Task<bool> ReplaceAsync(Cipher obj, IEnumerable<Guid> collectionIds)
         {
-            var objWithCollections = JsonHelpers.Deserialize<CipherWithCollections>(
-                JsonHelpers.Serialize(obj));
+            var objWithCollections = JsonSerializer.Deserialize<CipherWithCollections>(
+                JsonSerializer.Serialize(obj));
             objWithCollections.CollectionIds = collectionIds.ToGuidIdArrayTVP();
 
             using (var connection = new SqlConnection(ConnectionString))

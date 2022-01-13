@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text.Json;
 using Bit.Core.Models.Data;
 using Bit.Core.Utilities;
 
@@ -41,7 +42,7 @@ namespace Bit.Core.Entities
 
             try
             {
-                _attachmentData = JsonHelpers.Deserialize<Dictionary<string, CipherAttachment.MetaData>>(Attachments);
+                _attachmentData = JsonSerializer.Deserialize<Dictionary<string, CipherAttachment.MetaData>>(Attachments);
                 foreach (var kvp in _attachmentData)
                 {
                     kvp.Value.AttachmentId = kvp.Key;
@@ -64,7 +65,7 @@ namespace Bit.Core.Entities
             }
 
             _attachmentData = data;
-            Attachments = JsonHelpers.Serialize(_attachmentData);
+            Attachments = JsonSerializer.Serialize(_attachmentData);
         }
 
         public void AddAttachment(string id, CipherAttachment.MetaData data)

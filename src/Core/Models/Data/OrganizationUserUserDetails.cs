@@ -38,13 +38,13 @@ namespace Bit.Core.Models.Data
                 if (_twoFactorProviders == null)
                 {
                     _twoFactorProviders =
-                        JsonHelpers.Deserialize<Dictionary<TwoFactorProviderType, TwoFactorProvider>>(
+                        JsonHelpers.LegacyDeserialize<Dictionary<TwoFactorProviderType, TwoFactorProvider>>(
                             TwoFactorProviders);
                 }
 
                 return _twoFactorProviders;
             }
-            catch (JsonException)
+            catch (Newtonsoft.Json.JsonException)
             {
                 return null;
             }

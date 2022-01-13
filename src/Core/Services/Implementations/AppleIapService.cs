@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 using Bit.Billing.Models;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
-using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -107,7 +106,7 @@ namespace Bit.Core.Services
 
                 if (response.IsSuccessStatusCode)
                 {
-                    var receiptStatus = await response.Content.ReadJsonAsync<AppleReceiptStatus>();
+                    var receiptStatus = await response.Content.ReadFromJsonAsync<AppleReceiptStatus>();
                     if (receiptStatus.Status == 21007)
                     {
                         return await GetReceiptStatusAsync(receiptData, false, attempt + 1, receiptStatus);

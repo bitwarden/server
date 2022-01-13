@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Bit.Admin.Models;
-using Bit.Core;
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -263,14 +263,14 @@ namespace Bit.Admin.Controllers
             {
                 var license = await _organizationService.GenerateLicenseAsync(organization,
                     model.InstallationId.Value, model.Version);
-                return File(Encoding.UTF8.GetBytes(JsonHelpers.Serialize(license, JsonHelpers.Indented)),
+                return File(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(license, JsonHelpers.Indented)),
                     "text/plain", "bitwarden_organization_license.json");
             }
             else if (user != null)
             {
                 var license = await _userService.GenerateLicenseAsync(user, null, model.Version);
                 // NOTE: Evaluate for async
-                return File(Encoding.UTF8.GetBytes(JsonHelpers.Serialize(license, JsonHelpers.Indented)),
+                return File(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(license, JsonHelpers.Indented)),
                     "text/plain", "bitwarden_premium_license.json");
             }
             else

@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Data;
 using Bit.Core.Settings;
-using Bit.Core.Utilities;
 using Core.Models.Data;
 
 namespace Bit.Api.Models.Response
@@ -28,25 +28,25 @@ namespace Bit.Api.Models.Response
             switch (cipher.Type)
             {
                 case CipherType.Login:
-                    var loginData = JsonHelpers.Deserialize<CipherLoginData>(cipher.Data);
+                    var loginData = JsonSerializer.Deserialize<CipherLoginData>(cipher.Data);
                     cipherData = loginData;
                     Data = loginData;
                     Login = new CipherLoginModel(loginData);
                     break;
                 case CipherType.SecureNote:
-                    var secureNoteData = JsonHelpers.Deserialize<CipherSecureNoteData>(cipher.Data);
+                    var secureNoteData = JsonSerializer.Deserialize<CipherSecureNoteData>(cipher.Data);
                     Data = secureNoteData;
                     cipherData = secureNoteData;
                     SecureNote = new CipherSecureNoteModel(secureNoteData);
                     break;
                 case CipherType.Card:
-                    var cardData = JsonHelpers.Deserialize<CipherCardData>(cipher.Data);
+                    var cardData = JsonSerializer.Deserialize<CipherCardData>(cipher.Data);
                     Data = cardData;
                     cipherData = cardData;
                     Card = new CipherCardModel(cardData);
                     break;
                 case CipherType.Identity:
-                    var identityData = JsonHelpers.Deserialize<CipherIdentityData>(cipher.Data);
+                    var identityData = JsonSerializer.Deserialize<CipherIdentityData>(cipher.Data);
                     Data = identityData;
                     cipherData = identityData;
                     Identity = new CipherIdentityModel(identityData);

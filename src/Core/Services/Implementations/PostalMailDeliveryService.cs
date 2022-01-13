@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Net.Http.Json;
-using System.Text;
 using System.Threading.Tasks;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
@@ -82,7 +81,7 @@ namespace Bit.Core.Services
 
             if (responseMessage.IsSuccessStatusCode)
             {
-                var response = await responseMessage.Content.ReadJsonAsync<PostalResponse>();
+                var response = await responseMessage.Content.ReadFromJsonAsync<PostalResponse>();
                 if (response.status != "success")
                 {
                     _logger.LogError("Postal send status was not successful: {0}, {1}",

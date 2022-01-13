@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -207,7 +208,7 @@ namespace Bit.Core.Services
                 UserId = cipher.UserId,
                 OrganizationId = cipher.OrganizationId,
                 AttachmentId = attachmentId,
-                AttachmentData = JsonHelpers.Serialize(data)
+                AttachmentData = JsonSerializer.Serialize(data)
             });
             cipher.AddAttachment(attachmentId, data);
             await _pushService.PushSyncCipherUpdateAsync(cipher, null);
@@ -240,7 +241,7 @@ namespace Bit.Core.Services
                     UserId = cipher.UserId,
                     OrganizationId = cipher.OrganizationId,
                     AttachmentId = attachmentId,
-                    AttachmentData = JsonHelpers.Serialize(data)
+                    AttachmentData = JsonSerializer.Serialize(data)
                 };
 
                 await _cipherRepository.UpdateAttachmentAsync(attachment);
@@ -311,7 +312,7 @@ namespace Bit.Core.Services
                     UserId = cipher.UserId,
                     OrganizationId = cipher.OrganizationId,
                     AttachmentId = attachmentId,
-                    AttachmentData = JsonHelpers.Serialize(attachments[attachmentId])
+                    AttachmentData = JsonSerializer.Serialize(attachments[attachmentId])
                 };
 
                 await _cipherRepository.UpdateAttachmentAsync(updatedAttachment);
@@ -346,7 +347,7 @@ namespace Bit.Core.Services
                 UserId = cipher.UserId,
                 OrganizationId = cipher.OrganizationId,
                 AttachmentId = attachmentData.AttachmentId,
-                AttachmentData = JsonHelpers.Serialize(attachmentData)
+                AttachmentData = JsonSerializer.Serialize(attachmentData)
             };
 
 

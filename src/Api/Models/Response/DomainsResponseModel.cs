@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Api;
-using Bit.Core.Utilities;
 
 namespace Bit.Api.Models.Response
 {
@@ -19,10 +19,10 @@ namespace Bit.Api.Models.Response
             }
 
             EquivalentDomains = user.EquivalentDomains != null ?
-                JsonHelpers.Deserialize<List<List<string>>>(user.EquivalentDomains) : null;
+                JsonSerializer.Deserialize<List<List<string>>>(user.EquivalentDomains) : null;
 
             var excludedGlobalEquivalentDomains = user.ExcludedGlobalEquivalentDomains != null ?
-                JsonHelpers.Deserialize<List<GlobalEquivalentDomainsType>>(user.ExcludedGlobalEquivalentDomains) :
+                JsonSerializer.Deserialize<List<GlobalEquivalentDomainsType>>(user.ExcludedGlobalEquivalentDomains) :
                 new List<GlobalEquivalentDomainsType>();
             var globalDomains = new List<GlobalDomains>();
             var domainsToInclude = excluded ? Core.Utilities.StaticStore.GlobalDomains :

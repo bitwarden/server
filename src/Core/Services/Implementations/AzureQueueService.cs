@@ -21,7 +21,7 @@ namespace Bit.Core.Services
 
         public async Task CreateAsync(T message)
         {
-            var json = JsonHelpers.Serialize(message, _jsonOptions);
+            var json = JsonSerializer.Serialize(message, _jsonOptions);
             var base64 = CoreHelpers.Base64EncodeString(json);
             await _queueClient.SendMessageAsync(base64);
         }
@@ -69,7 +69,7 @@ namespace Bit.Core.Services
             }
 
             var serializedMessages = messages.Select(message =>
-                JsonHelpers.Serialize(message, jsonOptions));
+                JsonSerializer.Serialize(message, jsonOptions));
 
             foreach (var message in serializedMessages)
             {

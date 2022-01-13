@@ -1,7 +1,5 @@
 ﻿using System;
-using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Text.Json;
 using Bit.Core.Utilities;
 using Xunit;
@@ -32,8 +30,8 @@ namespace Bit.Test.Common.Helpers
                 if (actualPropInfo == null)
                 {
                     throw new Exception(string.Concat($"Expected actual object to contain a property named {expectedPropInfo.Name}, but it does not\n",
-                    $"Expected:\n{JsonHelpers.Serialize(expected, JsonHelpers.Indented)}\n",
-                    $"Actual:\n{JsonHelpers.Serialize(actual, JsonHelpers.Indented)}"));
+                    $"Expected:\n{JsonSerializer.Serialize(expected, JsonHelpers.Indented)}\n",
+                    $"Actual:\n{JsonSerializer.Serialize(actual, JsonHelpers.Indented)}"));
                 }
 
                 if (expectedPropInfo.PropertyType == typeof(string) || expectedPropInfo.PropertyType.IsValueType)

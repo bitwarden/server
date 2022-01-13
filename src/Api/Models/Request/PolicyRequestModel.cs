@@ -28,7 +28,7 @@ namespace Bit.Api.Models.Request
         public Policy ToPolicy(Policy existingPolicy)
         {
             existingPolicy.Enabled = Enabled.GetValueOrDefault();
-            existingPolicy.Data = Data != null ? JsonHelpers.Serialize(Data) : null;
+            existingPolicy.Data = Data != null ? JsonSerializer.Serialize(Data) : null;
             return existingPolicy;
         }
     }

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.Messaging.EventGrid;
 using Bit.Api.Models.Request;
@@ -801,7 +802,7 @@ namespace Bit.Api.Controllers
                         }
                         catch (Exception e)
                         {
-                            _logger.LogError(e, $"Uncaught exception occurred while handling event grid event: {JsonHelpers.Serialize(eventGridEvent)}");
+                            _logger.LogError(e, $"Uncaught exception occurred while handling event grid event: {JsonSerializer.Serialize(eventGridEvent)}");
                             return;
                         }
                     }

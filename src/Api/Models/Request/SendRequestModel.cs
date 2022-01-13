@@ -1,5 +1,6 @@
 ﻿using System;
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -64,13 +65,13 @@ namespace Bit.Api.Models.Request
             switch (existingSend.Type)
             {
                 case SendType.File:
-                    var fileData = JsonHelpers.Deserialize<SendFileData>(existingSend.Data);
+                    var fileData = JsonSerializer.Deserialize<SendFileData>(existingSend.Data);
                     fileData.Name = Name;
                     fileData.Notes = Notes;
-                    existingSend.Data = JsonHelpers.Serialize(fileData, JsonHelpers.IgnoreWritingNull);
+                    existingSend.Data = JsonSerializer.Serialize(fileData, JsonHelpers.IgnoreWritingNull);
                     break;
                 case SendType.Text:
-                    existingSend.Data = JsonHelpers.Serialize(ToSendData(), JsonHelpers.IgnoreWritingNull);
+                    existingSend.Data = JsonSerializer.Serialize(ToSendData(), JsonHelpers.IgnoreWritingNull);
                     break;
                 default:
                     throw new ArgumentException("Unsupported type: " + nameof(Type) + ".");

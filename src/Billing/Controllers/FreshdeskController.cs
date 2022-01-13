@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Net.Http.Json;
 using System.Reflection;
 using System.Text;
 using System.Text.Json;
@@ -62,7 +62,7 @@ namespace Bit.Billing.Controllers
                 return new BadRequestResult();
             }
 
-            using var body = await JsonHelpers.DeserializeAsync<JsonDocument>(HttpContext.Request.Body);
+            using var body = await JsonSerializer.DeserializeAsync<JsonDocument>(HttpContext.Request.Body);
             var root = body.RootElement;
             if (root.ValueKind != JsonValueKind.Object)
             {
@@ -117,7 +117,7 @@ namespace Bit.Billing.Controllers
                     var updateRequest = new HttpRequestMessage(HttpMethod.Put,
                         string.Format("https://bitwarden.freshdesk.com/api/v2/tickets/{0}", ticketId))
                     {
-                        Content = JsonHelpers.CreateJsonContent(updateBody),
+                        Content = JsonContent.Create(updateBody),
                     };
 
                     await CallFreshdeskApiAsync(updateRequest);
@@ -131,7 +131,7 @@ namespace Bit.Billing.Controllers
                     var noteRequest = new HttpRequestMessage(HttpMethod.Post,
                         string.Format("https://bitwarden.freshdesk.com/api/v2/tickets/{0}/notes", ticketId))
                     {
-                        Content = JsonHelpers.CreateJsonContent(noteBody),
+                        Content = JsonContent.Create(noteBody),
                     };
                     await CallFreshdeskApiAsync(noteRequest);
                 }

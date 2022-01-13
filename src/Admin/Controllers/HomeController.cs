@@ -1,10 +1,10 @@
 ﻿using System.Diagnostics;
 using System.Net.Http;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Bit.Admin.Models;
 using Bit.Core.Settings;
-using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -46,7 +46,7 @@ namespace Bit.Admin.Controllers
                 $"https://hub.docker.com/v2/repositories/bitwarden/{repository}/tags/", cancellationToken);
                 if (response.IsSuccessStatusCode)
                 {
-                    using var jsonDocument = await JsonHelpers.ParseAsync(await response.Content.ReadAsStreamAsync(cancellationToken), cancellationToken);
+                    using var jsonDocument = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(cancellationToken), cancellationToken: cancellationToken);
                     var root = jsonDocument.RootElement;
 
                     var results = root.GetProperty("results");
@@ -73,7 +73,7 @@ namespace Bit.Admin.Controllers
                     $"{_globalSettings.BaseServiceUri.InternalVault}/version.json", cancellationToken);
                 if (response.IsSuccessStatusCode)
                 {
-                    using var jsonDocument = await JsonHelpers.ParseAsync(await response.Content.ReadAsStreamAsync(cancellationToken), cancellationToken);
+                    using var jsonDocument = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(cancellationToken), cancellationToken: cancellationToken);
                     var root = jsonDocument.RootElement;
                     return new JsonResult(root.GetProperty("version").GetString());
                 }

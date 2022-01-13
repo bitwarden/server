@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Bit.Api.Models.Request;
 using Bit.Api.Models.Request.Accounts;
@@ -184,7 +185,7 @@ namespace Bit.Api.Controllers
                 return new OrganizationAutoEnrollStatusResponseModel(organization.Id, false);
             }
 
-            var data = JsonHelpers.Deserialize<ResetPasswordDataModel>(resetPasswordPolicy.Data);
+            var data = JsonSerializer.Deserialize<ResetPasswordDataModel>(resetPasswordPolicy.Data);
             return new OrganizationAutoEnrollStatusResponseModel(organization.Id, data?.AutoEnrollEnabled ?? false);
         }
 

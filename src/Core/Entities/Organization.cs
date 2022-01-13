@@ -142,7 +142,7 @@ namespace Bit.Core.Entities
                 if (_twoFactorProviders == null)
                 {
                     _twoFactorProviders =
-                        JsonHelpers.Deserialize<Dictionary<TwoFactorProviderType, TwoFactorProvider>>(
+                        JsonSerializer.Deserialize<Dictionary<TwoFactorProviderType, TwoFactorProvider>>(
                             TwoFactorProviders);
                 }
 
@@ -163,7 +163,7 @@ namespace Bit.Core.Entities
                 return;
             }
 
-            TwoFactorProviders = JsonHelpers.Serialize(providers);
+            TwoFactorProviders = JsonSerializer.Serialize(providers);
             _twoFactorProviders = providers;
         }
 

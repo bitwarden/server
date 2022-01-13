@@ -2,13 +2,14 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
+using System.Text.Json;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Utilities;
 using Core.Models.Data;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using NS = Newtonsoft.Json;
+using NSL = Newtonsoft.Json.Linq;
 
 namespace Bit.Api.Models.Request
 {
@@ -69,20 +70,20 @@ namespace Bit.Api.Models.Request
             switch (existingCipher.Type)
             {
                 case CipherType.Login:
-                    var loginObj = JObject.FromObject(ToCipherLoginData(),
-                        new JsonSerializer { NullValueHandling = NullValueHandling.Ignore });
+                    var loginObj = NSL.JObject.FromObject(ToCipherLoginData(),
+                        new NS.JsonSerializer { NullValueHandling = NS.NullValueHandling.Ignore });
                     // TODO: Switch to JsonNode in .NET 6 https://docs.microsoft.com/en-us/dotnet/standard/serialization/system-text-json-use-dom-utf8jsonreader-utf8jsonwriter?pivots=dotnet-6-0
                     loginObj[nameof(CipherLoginData.Uri)]?.Parent?.Remove();
-                    existingCipher.Data = loginObj.ToString(Formatting.None);
+                    existingCipher.Data = loginObj.ToString(NS.Formatting.None);
                     break;
                 case CipherType.Card:
-                    existingCipher.Data = JsonHelpers.Serialize(ToCipherCardData(), JsonHelpers.IgnoreWritingNull);
+                    existingCipher.Data = JsonSerializer.Serialize(ToCipherCardData(), JsonHelpers.IgnoreWritingNull);
                     break;
                 case CipherType.Identity:
-                    existingCipher.Data = JsonHelpers.Serialize(ToCipherIdentityData(), JsonHelpers.IgnoreWritingNull);
+                    existingCipher.Data = JsonSerializer.Serialize(ToCipherIdentityData(), JsonHelpers.IgnoreWritingNull);
                     break;
                 case CipherType.SecureNote:
-                    existingCipher.Data = JsonHelpers.Serialize(ToCipherSecureNoteData(), JsonHelpers.IgnoreWritingNull);
+                    existingCipher.Data = JsonSerializer.Serialize(ToCipherSecureNoteData(), JsonHelpers.IgnoreWritingNull);
                     break;
                 default:
                     throw new ArgumentException("Unsupported type: " + nameof(Type) + ".");

@@ -1,8 +1,8 @@
 ﻿using System;
 using System.IO;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Bit.Api.Models.Request;
-using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.WebUtilities;
@@ -95,7 +95,7 @@ namespace Bit.Api.Utilities
                             using (secondSection.Body)
                             {
                                 // NOTE: Evaluate for async
-                                var model = JsonHelpers.Deserialize<SendRequestModel>(requestModelJson);
+                                var model = JsonSerializer.Deserialize<SendRequestModel>(requestModelJson);
                                 await callback(secondSection.Body, fileName, model);
                             }
                         }

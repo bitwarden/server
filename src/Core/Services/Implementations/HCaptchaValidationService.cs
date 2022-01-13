@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Net.Http;
+using System.Net.Http.Json;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Bit.Core.Context;
@@ -8,7 +9,6 @@ using Bit.Core.Entities;
 using Bit.Core.Models.Business.Tokenables;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
-using Bit.Core.Utilities;
 using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Services
@@ -78,10 +78,8 @@ namespace Bit.Core.Services
                 return false;
             }
 
-            using var jsonDocument = await responseMessage.Content.ReadJsonAsync<JsonDocument>();
+            using var jsonDocument = await responseMessage.Content.ReadFromJsonAsync<JsonDocument>();
             var root = jsonDocument.RootElement;
-
-            var responseContent = await responseMessage.Content.ReadAsStringAsync();
             return root.GetProperty("success").GetBoolean();
         }
 

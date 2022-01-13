@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text.Json;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Api;
-using Bit.Core.Utilities;
 
 namespace Bit.Api.Models.Response
 {
@@ -23,7 +23,7 @@ namespace Bit.Api.Models.Response
             Enabled = policy.Enabled;
             if (!string.IsNullOrWhiteSpace(policy.Data))
             {
-                Data = JsonHelpers.Deserialize<Dictionary<string, object>>(policy.Data);
+                Data = JsonSerializer.Deserialize<Dictionary<string, object>>(policy.Data);
             }
         }
 

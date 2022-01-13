@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -97,7 +98,7 @@ namespace Bit.Core.Identity
                 return false;
             }
 
-            var clientResponse = JsonHelpers.Deserialize<AuthenticatorAssertionRawResponse>(token);
+            var clientResponse = JsonSerializer.Deserialize<AuthenticatorAssertionRawResponse>(token);
 
             var jsonOptions = provider.MetaData["login"].ToString();
             var options = AssertionOptions.FromJson(jsonOptions);

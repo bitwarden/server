@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text.Json;
 using System.Threading.Tasks;
 using AutoFixture.Xunit2;
 using Bit.Api.Controllers;
@@ -65,7 +66,7 @@ namespace Bit.Api.Test.Controllers
 
             send.Id = default;
             send.Type = SendType.Text;
-            send.Data = JsonHelpers.Serialize(new Dictionary<string, string>());
+            send.Data = JsonSerializer.Serialize(new Dictionary<string, string>());
             send.HideEmail = true;
 
             _sendService.AccessAsync(id, null).Returns((send, false, false));
