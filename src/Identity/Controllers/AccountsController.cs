@@ -16,12 +16,12 @@ namespace Bit.Identity.Controllers
     [Route("accounts")]
     public class AccountsController : Controller
     {
-        private readonly ILogger<AccountController> _logger;
+        private readonly ILogger<AccountsController> _logger;
         private readonly IUserRepository _userRepository;
         private readonly IUserService _userService;
 
         public AccountsController(
-            ILogger<AccountController> logger,
+            ILogger<AccountsController> logger,
             IUserRepository userRepository,
             IUserService userService)
         {

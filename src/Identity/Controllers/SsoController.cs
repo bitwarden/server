@@ -19,17 +19,19 @@ using Microsoft.Extensions.Logging;
 
 namespace Bit.Identity.Controllers
 {
-    public class AccountController : Controller
+    [Route("account/[action]")]
+    [Route("sso/[action]")]
+    public class SsoController : Controller
     {
         private readonly IIdentityServerInteractionService _interaction;
-        private readonly ILogger<AccountController> _logger;
+        private readonly ILogger<SsoController> _logger;
         private readonly ISsoConfigRepository _ssoConfigRepository;
         private readonly IUserRepository _userRepository;
         private readonly IHttpClientFactory _clientFactory;
 
-        public AccountController(
+        public SsoController(
             IIdentityServerInteractionService interaction,
-            ILogger<AccountController> logger,
+            ILogger<SsoController> logger,
             ISsoConfigRepository ssoConfigRepository,
             IUserRepository userRepository,
             IHttpClientFactory clientFactory)
@@ -265,7 +267,7 @@ namespace Bit.Identity.Controllers
             }
         }
 
-        public bool IsNativeClient(IdentityServer4.Models.AuthorizationRequest context)
+        private bool IsNativeClient(IdentityServer4.Models.AuthorizationRequest context)
         {
             return !context.RedirectUri.StartsWith("https", StringComparison.Ordinal)
                && !context.RedirectUri.StartsWith("http", StringComparison.Ordinal);
