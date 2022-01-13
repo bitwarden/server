@@ -570,7 +570,7 @@ namespace Bit.Core.Services
             Handlebars.RegisterHelper("jsonIf", (output, options, context, arguments) =>
             {
                 // Special case for JsonElement
-                if (arguments[0] is JsonElement jsonElement 
+                if (arguments[0] is JsonElement jsonElement
                     && (jsonElement.ValueKind == JsonValueKind.True || jsonElement.ValueKind == JsonValueKind.False))
                 {
                     if (jsonElement.GetBoolean())
