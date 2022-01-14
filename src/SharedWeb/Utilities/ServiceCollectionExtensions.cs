@@ -346,7 +346,7 @@ namespace Bit.SharedWeb.Utilities
             return identityBuilder;
         }
 
-        public static Tuple<IdentityBuilder, IdentityBuilder> AddPasswordlessIdentityServices<TUserStore>(
+        public static (IdentityBuilder PasswordlessBuilder, IdentityBuilder RegularBuilder) AddPasswordlessIdentityServices<TUserStore>(
             this IServiceCollection services, GlobalSettings globalSettings) where TUserStore : class
         {
             services.TryAddTransient<ILookupNormalizer, LowerInvariantLookupNormalizer>();
@@ -377,7 +377,7 @@ namespace Bit.SharedWeb.Utilities
                 options.SlidingExpiration = true;
             });
 
-            return new Tuple<IdentityBuilder, IdentityBuilder>(passwordlessIdentityBuilder, regularIdentityBuilder);
+            return (passwordlessIdentityBuilder, regularIdentityBuilder);
         }
 
         public static void AddIdentityAuthenticationServices(

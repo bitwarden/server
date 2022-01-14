@@ -26,7 +26,7 @@ namespace Bit.Api.Models.Public.Request
         /// </summary>
         public string ContinuationToken { get; set; }
 
-        public Tuple<DateTime, DateTime> ToDateRange()
+        public (DateTime Start, DateTime End) ToDateRange()
         {
             if (!End.HasValue || !Start.HasValue)
             {
@@ -45,7 +45,7 @@ namespace Bit.Api.Models.Public.Request
                 throw new BadRequestException("Date range must be < 367 days.");
             }
 
-            return new Tuple<DateTime, DateTime>(Start.Value, End.Value);
+            return (Start.Value, End.Value);
         }
     }
 }

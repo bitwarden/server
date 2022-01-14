@@ -41,12 +41,12 @@ namespace Bit.Api.Public.Controllers
         [ProducesResponseType(typeof(ListResponseModel<EventResponseModel>), (int)HttpStatusCode.OK)]
         public async Task<IActionResult> List([FromQuery] EventFilterRequestModel request)
         {
-            var dateRange = request.ToDateRange();
+            var (startDate, endDate) = request.ToDateRange();
             var result = new PagedResult<IEvent>();
             if (request.ActingUserId.HasValue)
             {
                 result = await _eventRepository.GetManyByOrganizationActingUserAsync(
-                    _currentContext.OrganizationId.Value, request.ActingUserId.Value, dateRange.Item1, dateRange.Item2,
+                    _currentContext.OrganizationId.Value, request.ActingUserId.Value, startDate, endDate,
                     new PageOptions { ContinuationToken = request.ContinuationToken });
             }
             else if (request.ItemId.HasValue)
@@ -55,14 +55,14 @@ namespace Bit.Api.Public.Controllers
                 if (cipher != null && cipher.OrganizationId == _currentContext.OrganizationId.Value)
                 {
                     result = await _eventRepository.GetManyByCipherAsync(
-                        cipher, dateRange.Item1, dateRange.Item2,
+                        cipher, startDate, endDate,
                         new PageOptions { ContinuationToken = request.ContinuationToken });
                 }
             }
             else
             {
                 result = await _eventRepository.GetManyByOrganizationAsync(
-                    _currentContext.OrganizationId.Value, dateRange.Item1, dateRange.Item2,
+                    _currentContext.OrganizationId.Value, startDate, endDate,
                     new PageOptions { ContinuationToken = request.ContinuationToken });
             }
 

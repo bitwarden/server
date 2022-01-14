@@ -116,7 +116,7 @@ namespace Bit.Billing.Controllers
             }
 
             var ids = ipnTransaction.GetIdsFromCustom();
-            if (!ids.Item1.HasValue && !ids.Item2.HasValue)
+            if (!ids.OrgId.HasValue && !ids.UserId.HasValue)
             {
                 return new OkResult();
             }
@@ -138,8 +138,8 @@ namespace Bit.Billing.Controllers
                     {
                         Amount = ipnTransaction.McGross,
                         CreationDate = ipnTransaction.PaymentDate,
-                        OrganizationId = ids.Item1,
-                        UserId = ids.Item2,
+                        OrganizationId = ids.OrgId,
+                        UserId = ids.UserId,
                         Type = isAccountCredit ? TransactionType.Credit : TransactionType.Charge,
                         Gateway = GatewayType.PayPal,
                         GatewayId = ipnTransaction.TxnId,

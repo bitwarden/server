@@ -120,7 +120,7 @@ namespace Bit.Billing.Utilities
             public string ReceiverEmail { get; set; }
             public DateTime PaymentDate { get; set; }
 
-            public Tuple<Guid?, Guid?> GetIdsFromCustom()
+            public (Guid? OrgId, Guid? UserId) GetIdsFromCustom()
             {
                 Guid? orgId = null;
                 Guid? userId = null;
@@ -145,7 +145,7 @@ namespace Bit.Billing.Utilities
                     }
                 }
 
-                return new Tuple<Guid?, Guid?>(orgId, userId);
+                return (orgId, userId);
             }
 
             public bool IsAccountCredit()
