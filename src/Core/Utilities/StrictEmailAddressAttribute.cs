@@ -47,7 +47,6 @@ namespace Bit.Core.Utilities
                 return false;
             }
 
-            
             if (!_emailFormatRegex.IsMatch(emailAddress))
             {
                 return false;

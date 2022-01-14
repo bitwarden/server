@@ -43,7 +43,7 @@ namespace Bit.Core.Utilities
         private static readonly string CloudFlareConnectingIp = "CF-Connecting-IP";
         private static readonly string RealIp = "X-Real-IP";
         private static readonly Regex _cleanCertificateRegex = new Regex(@"[^\da-fA-F]", RegexOptions.Compiled);
-        private static readonly Regex _findProtocolRegex = new Regex(@"((^|\b)(\w*)://)", 
+        private static readonly Regex _findProtocolRegex = new Regex(@"((^|\b)(\w*)://)",
             RegexOptions.CultureInvariant | RegexOptions.Singleline | RegexOptions.IgnoreCase | RegexOptions.Compiled);
         private static readonly Regex _domainSeperatorRegex = new Regex(@"(\.\w)",
             RegexOptions.CultureInvariant | RegexOptions.Singleline | RegexOptions.IgnoreCase | RegexOptions.Compiled);
@@ -383,7 +383,7 @@ namespace Bit.Core.Utilities
 
         public static byte[] Base64UrlDecode(string input)
         {
-            
+
             var output = input;
             // 62nd char of encoding
             output = output.Replace('-', '+');
@@ -507,8 +507,8 @@ namespace Bit.Core.Utilities
             var regexOptions = RegexOptions.CultureInvariant |
                 RegexOptions.Singleline |
                 RegexOptions.IgnoreCase;
-            
-            cleanedValue = _domainSeperatorRegex.Replace(cleanedValue, 
+
+            cleanedValue = _domainSeperatorRegex.Replace(cleanedValue,
                 m => string.Concat("[dot]", m.ToString().Last()));
             while (_findProtocolRegex.IsMatch(cleanedValue))
             {

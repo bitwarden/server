@@ -241,7 +241,7 @@ namespace Bit.Core.Services
 
         private string SanitizeTagInput(string input)
         {
-            return _sanitizeTagRegex.Replace(input,  string.Empty);
+            return _sanitizeTagRegex.Replace(input, string.Empty);
         }
     }
 }

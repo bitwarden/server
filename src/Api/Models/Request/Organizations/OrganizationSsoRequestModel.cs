@@ -37,7 +37,7 @@ namespace Bit.Api.Models.Request.Organizations
 
     public class SsoConfigurationDataRequest : IValidatableObject
     {
-        private static readonly Regex _certificateRegex = new Regex(@"(((BEGIN|END) CERTIFICATE)|([\-\n\r\t\s\f]))", 
+        private static readonly Regex _certificateRegex = new Regex(@"(((BEGIN|END) CERTIFICATE)|([\-\n\r\t\s\f]))",
             RegexOptions.Multiline | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
         private static readonly Regex _urlRegex = new Regex("[<>\"]", RegexOptions.Compiled);
