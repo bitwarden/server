@@ -37,6 +37,11 @@ namespace Bit.Api.Models.Request.Organizations
 
     public class SsoConfigurationDataRequest : IValidatableObject
     {
+        private static readonly Regex _certificateRegex = new Regex(@"(((BEGIN|END) CERTIFICATE)|([\-\n\r\t\s\f]))", 
+            RegexOptions.Multiline | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
+        private static readonly Regex _urlRegex = new Regex("[<>\"]", RegexOptions.Compiled);
+
         public SsoConfigurationDataRequest() { }
 
         [Required]
@@ -217,10 +222,7 @@ namespace Bit.Api.Models.Request.Organizations
             {
                 return null;
             }
-            return Regex.Replace(certificateText,
-                @"(((BEGIN|END) CERTIFICATE)|([\-\n\r\t\s\f]))",
-                string.Empty,
-                RegexOptions.Multiline | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+            return _certificateRegex.Replace(certificateText, string.Empty);
         }
 
         private bool InvalidServiceUrl(string url)
@@ -233,7 +235,7 @@ namespace Bit.Api.Models.Request.Organizations
             {
                 return true;
             }
-            return Regex.IsMatch(url, "[<>\"]");
+            return _urlRegex.IsMatch(url);
         }
     }
 }

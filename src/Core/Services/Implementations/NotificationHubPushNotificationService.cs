@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Bit.Core.Context;
@@ -11,12 +12,17 @@ using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Azure.NotificationHubs;
+using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 
 namespace Bit.Core.Services
 {
     public class NotificationHubPushNotificationService : IPushNotificationService
     {
+
+        // Only allow a-z, A-Z, 0-9, and special characters -_:
+        private static readonly Regex _sanitizeTagRegex = new Regex("[^a-zA-Z0-9-_:]", RegexOptions.Compiled);
+
         private readonly IInstallationDeviceRepository _installationDeviceRepository;
         private readonly GlobalSettings _globalSettings;
         private readonly IHttpContextAccessor _httpContextAccessor;
@@ -209,7 +215,7 @@ namespace Bit.Core.Services
             }
 
             var currentContext = _httpContextAccessor?.HttpContext?.
-                RequestServices.GetService(typeof(ICurrentContext)) as ICurrentContext;
+                RequestServices.GetService<ICurrentContext>();
             return currentContext?.DeviceIdentifier;
         }
 
@@ -235,8 +241,7 @@ namespace Bit.Core.Services
 
         private string SanitizeTagInput(string input)
         {
-            // Only allow a-z, A-Z, 0-9, and special characters -_:
-            return Regex.Replace(input, "[^a-zA-Z0-9-_:]", string.Empty);
+            return _sanitizeTagRegex.Replace(input,  string.Empty);
         }
     }
 }

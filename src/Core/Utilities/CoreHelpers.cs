@@ -42,6 +42,11 @@ namespace Bit.Core.Utilities
         private static readonly string _colemakMap = "qwfpgjluy;arstdhneiozxcvbkmQWFPGJLUY:ARSTDHNEIOZXCVBKM";
         private static readonly string CloudFlareConnectingIp = "CF-Connecting-IP";
         private static readonly string RealIp = "X-Real-IP";
+        private static readonly Regex _cleanCertificateRegex = new Regex(@"[^\da-fA-F]", RegexOptions.Compiled);
+        private static readonly Regex _findProtocolRegex = new Regex(@"((^|\b)(\w*)://)", 
+            RegexOptions.CultureInvariant | RegexOptions.Singleline | RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        private static readonly Regex _domainSeperatorRegex = new Regex(@"(\.\w)",
+            RegexOptions.CultureInvariant | RegexOptions.Singleline | RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         /// <summary>
         /// Generate sequential Guid for Sql Server.
@@ -104,7 +109,7 @@ namespace Bit.Core.Utilities
         {
             // Clean possible garbage characters from thumbprint copy/paste
             // ref http://stackoverflow.com/questions/8448147/problems-with-x509store-certificates-find-findbythumbprint
-            return Regex.Replace(thumbprint, @"[^\da-fA-F]", string.Empty).ToUpper();
+            return _cleanCertificateRegex.Replace(thumbprint, string.Empty).ToUpper();
         }
 
         public static X509Certificate2 GetCertificate(string thumbprint)
@@ -265,31 +270,31 @@ namespace Bit.Core.Utilities
 
         private static string RandomStringCharacters(bool alpha, bool upper, bool lower, bool numeric, bool special)
         {
-            var characters = string.Empty;
+            var characters = new StringBuilder();
             if (alpha)
             {
                 if (upper)
                 {
-                    characters += "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+                    characters.Append("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
                 }
 
                 if (lower)
                 {
-                    characters += "abcdefghijklmnopqrstuvwxyz";
+                    characters.Append("abcdefghijklmnopqrstuvwxyz");
                 }
             }
 
             if (numeric)
             {
-                characters += "0123456789";
+                characters.Append("0123456789");
             }
 
             if (special)
             {
-                characters += "!@#$%^*&";
+                characters.Append("!@#$%^*&");
             }
 
-            return characters;
+            return characters.ToString();
         }
 
         // ref: https://stackoverflow.com/a/11124118/1090359
@@ -378,6 +383,7 @@ namespace Bit.Core.Utilities
 
         public static byte[] Base64UrlDecode(string input)
         {
+            
             var output = input;
             // 62nd char of encoding
             output = output.Replace('-', '+');
@@ -501,12 +507,12 @@ namespace Bit.Core.Utilities
             var regexOptions = RegexOptions.CultureInvariant |
                 RegexOptions.Singleline |
                 RegexOptions.IgnoreCase;
-            cleanedValue = Regex.Replace(cleanedValue, @"(\.\w)",
-                    m => string.Concat("[dot]", m.ToString().Last()), regexOptions);
-            while (Regex.IsMatch(cleanedValue, @"((^|\b)(\w*)://)", regexOptions))
+            
+            cleanedValue = _domainSeperatorRegex.Replace(cleanedValue, 
+                m => string.Concat("[dot]", m.ToString().Last()));
+            while (_findProtocolRegex.IsMatch(cleanedValue))
             {
-                cleanedValue = Regex.Replace(cleanedValue, @"((^|\b)(\w*)://)",
-                    string.Empty, regexOptions);
+                cleanedValue = _findProtocolRegex.Replace(cleanedValue, string.Empty);
             }
             return htmlEncode ? HttpUtility.HtmlEncode(cleanedValue) : cleanedValue;
         }

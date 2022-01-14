@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using AutoFixture;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -362,6 +363,29 @@ namespace Bit.Core.Test.Utilities
         public void ObfuscateEmail_Success(string input, string expected)
         {
             Assert.Equal(expected, CoreHelpers.ObfuscateEmail(input));
+        }
+
+        [Theory]
+        [InlineData("", true, "")]
+        [InlineData("Org Name", true, "Org Name")]
+        [InlineData("Stuff. More Stuff", true, "Stuff. More Stuff")]
+        [InlineData("https://google.com", true, "google[dot]com")]
+        [InlineData("https://://bitwarden.com", true, "bitwarden[dot]com")]
+        [InlineData("http:https:////google.com", true, "google[dot]com")]
+        [InlineData("test@email.com", true, "test[at]email[dot]com")]
+        [InlineData("test@email..com", true, "test[at]email.[dot]com")]
+        [InlineData("<p>Hi</p>", true, "&lt;p&gt;Hi&lt;/p&gt;")]
+        [InlineData("<p>Hi</p>", false, "<p>Hi</p>")]
+        public void SanitizeForEmail_Success(string input, bool htmlEncode, string expected)
+        {
+            Assert.Equal(expected, CoreHelpers.SanitizeForEmail(input, htmlEncode));
+        }
+
+        [Theory]
+        [InlineData("")]
+        public void Base64UrlDecode_Success(string input, string expected)
+        {
+            Assert.Equal(Encoding.UTF8.GetBytes(expected), CoreHelpers.Base64UrlDecode(input));
         }
     }
 }

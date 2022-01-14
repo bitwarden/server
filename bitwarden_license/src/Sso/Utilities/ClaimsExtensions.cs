@@ -9,7 +9,7 @@ namespace Bit.Sso.Utilities
     public static class ClaimsExtensions
     {
         private static readonly Regex _normalizeTextRegEx =
-            new Regex(@"[^a-zA-Z]", RegexOptions.CultureInvariant | RegexOptions.Singleline);
+            new Regex(@"[^a-zA-Z]", RegexOptions.CultureInvariant | RegexOptions.Singleline | RegexOptions.Compiled);
 
         public static string GetFirstMatch(this IEnumerable<Claim> claims, params string[] possibleNames)
         {
