@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Text;
 using Bit.Core.Settings;
 
 namespace Bit.Api.Models.Request
@@ -33,19 +34,21 @@ namespace Bit.Api.Models.Request
                 ExtendedNotifications = true
             };
 
-            var posData = string.Empty;
+            var posData = new StringBuilder();
             if (UserId.HasValue)
             {
-                posData = "userId:" + UserId.Value;
+                posData.Append("userId:")
+                    .Append(UserId.Value);
             }
             else if (OrganizationId.HasValue)
             {
-                posData = "organizationId:" + OrganizationId.Value;
+                posData.Append("organizationId:")
+                    .Append(OrganizationId.Value);
             }
 
             if (Credit)
             {
-                posData += ",accountCredit:1";
+                posData.Append(",accountCredit:1");
                 inv.ItemDesc = "Bitwarden Account Credit";
             }
             else
@@ -53,7 +56,7 @@ namespace Bit.Api.Models.Request
                 inv.ItemDesc = "Bitwarden";
             }
 
-            inv.PosData = posData;
+            inv.PosData = posData.ToString();
             return inv;
         }
 

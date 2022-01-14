@@ -66,31 +66,31 @@ namespace Bit.Setup
 
         private static string RandomStringCharacters(bool alpha, bool upper, bool lower, bool numeric, bool special)
         {
-            var characters = string.Empty;
+            var characters = new StringBuilder();
             if (alpha)
             {
                 if (upper)
                 {
-                    characters += "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+                    characters.Append("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
                 }
 
                 if (lower)
                 {
-                    characters += "abcdefghijklmnopqrstuvwxyz";
+                    characters.Append("abcdefghijklmnopqrstuvwxyz");
                 }
             }
 
             if (numeric)
             {
-                characters += "0123456789";
+                characters.Append("0123456789");
             }
 
             if (special)
             {
-                characters += "!@#$%^*&";
+                characters.Append("!@#$%^*&");
             }
 
-            return characters;
+            return characters.ToString();
         }
 
         public static string GetValueFromEnvFile(string envFile, string key)
