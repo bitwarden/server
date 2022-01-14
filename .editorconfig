@@ -105,6 +105,24 @@ csharp_new_line_before_finally = true
 csharp_new_line_before_members_in_object_initializers = true
 csharp_new_line_before_members_in_anonymous_types = true
 
+csharp_style_implicit_object_creation_when_type_is_apparent = false
+
+# Only for Controllers
+[*Controller.cs]
+# Controller actions do not need to end in "Async"
+dotnet_naming_rule.async_methods_end_in_async.symbols = controller_async_methods
+dotnet_naming_rule.async_methods_end_in_async.style = no_end_in_async
+dotnet_naming_rule.async_methods_end_in_async.severity = none
+
+# Only for public methods because those are the only ones that are routable
+dotnet_naming_symbols.controller_async_methods.applicable_kinds = method
+dotnet_naming_symbols.controller_async_methods.applicable_accessibilities = public
+dotnet_naming_symbols.controller_async_methods.required_modifiers = async
+
+# Does not require the Async suffix
+dotnet_naming_style.no_end_in_async.required_prefix =
+dotnet_naming_style.no_end_in_async.required_suffix =
+
 # All files
 [*]
 guidelines = 120

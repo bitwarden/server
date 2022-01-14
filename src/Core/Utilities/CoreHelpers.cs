@@ -504,9 +504,6 @@ namespace Bit.Core.Utilities
         public static string SanitizeForEmail(string value, bool htmlEncode = true)
         {
             var cleanedValue = value.Replace("@", "[at]");
-            var regexOptions = RegexOptions.CultureInvariant |
-                RegexOptions.Singleline |
-                RegexOptions.IgnoreCase;
 
             cleanedValue = _domainSeperatorRegex.Replace(cleanedValue,
                 m => string.Concat("[dot]", m.ToString().Last()));

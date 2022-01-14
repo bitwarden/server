@@ -27,7 +27,7 @@ namespace Bit.Core.Services
         private readonly GlobalSettings _globalSettings;
         private readonly IHttpContextAccessor _httpContextAccessor;
 
-        private NotificationHubClient _client = null;
+        private readonly NotificationHubClient _client;
 
         public NotificationHubPushNotificationService(
             IInstallationDeviceRepository installationDeviceRepository,
