@@ -380,12 +380,5 @@ namespace Bit.Core.Test.Utilities
         {
             Assert.Equal(expected, CoreHelpers.SanitizeForEmail(input, htmlEncode));
         }
-
-        [Theory]
-        [InlineData("")]
-        public void Base64UrlDecode_Success(string input, string expected)
-        {
-            Assert.Equal(Encoding.UTF8.GetBytes(expected), CoreHelpers.Base64UrlDecode(input));
-        }
     }
 }
