@@ -51,27 +51,27 @@ namespace Bit.Core.Test.Models.Tables
             var user = new User();
             user.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
             {
-               [TwoFactorProviderType.WebAuthn] = new TwoFactorProvider
-               {
-                   Enabled = true,
-                   MetaData = new Dictionary<string, object>
-                   {
-                       ["Item"] = "thing",
-                   },
-               },
-               [TwoFactorProviderType.Email] = new TwoFactorProvider
-               {
-                   Enabled = false,
-                   MetaData = new Dictionary<string, object>
-                   {
-                       ["Email"] = "test@email.com",
-                   },
-               },
+                [TwoFactorProviderType.WebAuthn] = new TwoFactorProvider
+                {
+                    Enabled = true,
+                    MetaData = new Dictionary<string, object>
+                    {
+                        ["Item"] = "thing",
+                    },
+                },
+                [TwoFactorProviderType.Email] = new TwoFactorProvider
+                {
+                    Enabled = false,
+                    MetaData = new Dictionary<string, object>
+                    {
+                        ["Email"] = "test@email.com",
+                    },
+                },
             });
 
             using var jsonDocument = JsonDocument.Parse(user.TwoFactorProviders);
             var root = jsonDocument.RootElement;
-            
+
             var webAuthn = AssertHelper.AssertJsonProperty(root, "WebAuthn", JsonValueKind.Object);
             AssertHelper.AssertJsonProperty(webAuthn, "Enabled", JsonValueKind.True);
             var webMetaData = AssertHelper.AssertJsonProperty(webAuthn, "MetaData", JsonValueKind.Object);
