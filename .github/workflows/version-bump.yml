@@ -27,7 +27,7 @@ jobs:
           ref: version_bump_${{ github.event.inputs.version_number }}
 
       - name: Bump Version - Props
-        uses: bitwarden/gh-actions/version-bump@0c263b3963211ccaf5804313c3b3a0bcc52d4b19
+        uses: bitwarden/gh-actions/version-bump@03ad9a873c39cdc95dd8d77dbbda67f84db43945
         with:
           version: ${{ github.event.inputs.version_number }}
           file_path: "./Directory.Build.props"
