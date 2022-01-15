@@ -12,17 +12,14 @@ namespace Bit.Admin.HostedServices
 {
     public class DatabaseMigrationHostedService : IHostedService, IDisposable
     {
-        private readonly GlobalSettings _globalSettings;
         private readonly ILogger<DatabaseMigrationHostedService> _logger;
         private readonly DbMigrator _dbMigrator;
 
         public DatabaseMigrationHostedService(
             GlobalSettings globalSettings,
             ILogger<DatabaseMigrationHostedService> logger,
-            ILogger<DbMigrator> migratorLogger,
-            ILogger<JobListener> listenerLogger)
+            ILogger<DbMigrator> migratorLogger)
         {
-            _globalSettings = globalSettings;
             _logger = logger;
             _dbMigrator = new DbMigrator(globalSettings.SqlServer.ConnectionString, migratorLogger);
         }
@@ -30,7 +27,7 @@ namespace Bit.Admin.HostedServices
         public virtual async Task StartAsync(CancellationToken cancellationToken)
         {
             // Wait 20 seconds to allow database to come online
-            await Task.Delay(20000);
+            await Task.Delay(20000, cancellationToken);
 
             var maxMigrationAttempts = 10;
             for (var i = 1; i <= maxMigrationAttempts; i++)
@@ -52,7 +49,7 @@ namespace Bit.Admin.HostedServices
                     {
                         _logger.LogError(e,
                             "Database unavailable for migration. Trying again (attempt #{0})...", i + 1);
-                        await Task.Delay(20000);
+                        await Task.Delay(20000, cancellationToken);
                     }
                 }
             }
