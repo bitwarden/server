@@ -3,11 +3,10 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Models.Api;
 using Bit.Core.Utilities;
 using Newtonsoft.Json;
 
-namespace Bit.Api.Models.Request.Accounts
+namespace Bit.Core.Models.Api.Request.Accounts
 {
     public class RegisterRequestModel : IValidatableObject, ICaptchaProtectedModel
     {
