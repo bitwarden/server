@@ -189,9 +189,14 @@ namespace Bit.Core.Services
             return emergencyAccess;
         }
 
-        public async Task SaveAsync(EmergencyAccess emergencyAccess, Guid savingUserId)
+        public async Task SaveAsync(EmergencyAccess emergencyAccess, User savingUser)
         {
-            if (emergencyAccess.GrantorId != savingUserId)
+            if (!await _userService.CanAccessPremium(savingUser))
+            {
+                throw new BadRequestException("Not a premium user.");
+            }
+
+            if (emergencyAccess.GrantorId != savingUser.Id)
             {
                 throw new BadRequestException("Emergency Access not valid.");
             }

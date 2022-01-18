@@ -85,8 +85,8 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            var userId = _userService.GetProperUserId(User);
-            await _emergencyAccessService.SaveAsync(model.ToEmergencyAccess(emergencyAccess), userId.Value);
+            var user = await _userService.GetUserByPrincipalAsync(User);
+            await _emergencyAccessService.SaveAsync(model.ToEmergencyAccess(emergencyAccess), user);
         }
 
         [HttpDelete("{id}")]
