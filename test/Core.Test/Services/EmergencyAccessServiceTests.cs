@@ -82,7 +82,9 @@ namespace Bit.Core.Test.Services
                 GrantorId = savingUser.Id,
             };
 
-            sutProvider.GetDependency<IUserService>().GetUserByIdAsync(savingUser.Id).Returns(savingUser);
+            var userService = sutProvider.GetDependency<IUserService>();
+            userService.GetUserByIdAsync(savingUser.Id).Returns(savingUser);
+            userService.CanAccessPremium(savingUser).Returns(true);
 
             var exception = await Assert.ThrowsAsync<BadRequestException>(
                 () => sutProvider.Sut.SaveAsync(emergencyAccess, savingUser));
