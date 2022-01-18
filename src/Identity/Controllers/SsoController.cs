@@ -11,7 +11,6 @@ using Bit.Identity.Models;
 using IdentityModel;
 using IdentityServer4;
 using IdentityServer4.Services;
-using IdentityServer4.Stores;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Localization;
@@ -20,31 +19,28 @@ using Microsoft.Extensions.Logging;
 
 namespace Bit.Identity.Controllers
 {
-    public class AccountController : Controller
+    // TODO: 2022-01-12, Remove account alias
+    [Route("account/[action]")]
+    [Route("sso/[action]")]
+    public class SsoController : Controller
     {
-        private readonly IClientStore _clientStore;
         private readonly IIdentityServerInteractionService _interaction;
-        private readonly ILogger<AccountController> _logger;
+        private readonly ILogger<SsoController> _logger;
         private readonly ISsoConfigRepository _ssoConfigRepository;
         private readonly IUserRepository _userRepository;
-        private readonly IOrganizationRepository _organizationRepository;
         private readonly IHttpClientFactory _clientFactory;
 
-        public AccountController(
-            IClientStore clientStore,
+        public SsoController(
             IIdentityServerInteractionService interaction,
-            ILogger<AccountController> logger,
+            ILogger<SsoController> logger,
             ISsoConfigRepository ssoConfigRepository,
             IUserRepository userRepository,
-            IOrganizationRepository organizationRepository,
             IHttpClientFactory clientFactory)
         {
-            _clientStore = clientStore;
             _interaction = interaction;
             _logger = logger;
             _ssoConfigRepository = ssoConfigRepository;
             _userRepository = userRepository;
-            _organizationRepository = organizationRepository;
             _clientFactory = clientFactory;
         }
 
@@ -272,7 +268,7 @@ namespace Bit.Identity.Controllers
             }
         }
 
-        public bool IsNativeClient(IdentityServer4.Models.AuthorizationRequest context)
+        private bool IsNativeClient(IdentityServer4.Models.AuthorizationRequest context)
         {
             return !context.RedirectUri.StartsWith("https", StringComparison.Ordinal)
                && !context.RedirectUri.StartsWith("http", StringComparison.Ordinal);
