@@ -76,7 +76,7 @@ function install() {
     
             mkdir -p $OUTPUT_DIR/letsencrypt
             docker pull certbot/certbot
-            docker run -it --rm --name certbot -p 80:80 -v $OUTPUT_DIR/letsencrypt:/etc/letsencrypt/ certbot/certbot \
+            docker run -it --rm --name certbot -p 80:80 -v $OUTPUT_DIR/letsencrypt:/etc/letsencrypt/:z certbot/certbot \
                 certonly --standalone --noninteractive  --agree-tos --preferred-challenges http \
                 --email $EMAIL -d $DOMAIN --logs-dir /etc/letsencrypt/logs
         fi
@@ -92,7 +92,7 @@ function install() {
     fi
     
     pullSetup
-    docker run -it --rm --name setup -v $OUTPUT_DIR:/bitwarden \
+    docker run -it --rm --name setup -v $OUTPUT_DIR:/bitwarden:z \
         --env-file $ENV_DIR/uid.env bitwarden/setup:$COREVERSION \
         dotnet Setup.dll -install 1 -domain $DOMAIN -letsencrypt $LETS_ENCRYPT -os $OS \
         -corev $COREVERSION -webv $WEBVERSION -dbname "$DATABASE" -keyconnectorv $KEYCONNECTORVERSION
@@ -162,7 +162,7 @@ function updateLetsEncrypt() {
     then
         docker pull certbot/certbot
         docker run -i --rm --name certbot -p 443:443 -p 80:80 \
-            -v $OUTPUT_DIR/letsencrypt:/etc/letsencrypt/ certbot/certbot \
+            -v $OUTPUT_DIR/letsencrypt:/etc/letsencrypt/:z certbot/certbot \
             renew --logs-dir /etc/letsencrypt/logs
     fi
 }
@@ -172,7 +172,7 @@ function forceUpdateLetsEncrypt() {
     then
         docker pull certbot/certbot
         docker run -i --rm --name certbot -p 443:443 -p 80:80 \
-            -v $OUTPUT_DIR/letsencrypt:/etc/letsencrypt/ certbot/certbot \
+            -v $OUTPUT_DIR/letsencrypt:/etc/letsencrypt/:z certbot/certbot \
             renew --logs-dir /etc/letsencrypt/logs --force-renew
     fi
 }
@@ -182,7 +182,7 @@ function updateDatabase() {
     dockerComposeFiles
     MSSQL_ID=$(docker-compose ps -q mssql)
     docker run -i --rm --name setup --network container:$MSSQL_ID \
-        -v $OUTPUT_DIR:/bitwarden --env-file $ENV_DIR/uid.env bitwarden/setup:$COREVERSION \
+        -v $OUTPUT_DIR:/bitwarden:z --env-file $ENV_DIR/uid.env bitwarden/setup:$COREVERSION \
         dotnet Setup.dll -update 1 -db 1 -os $OS -corev $COREVERSION -webv $WEBVERSION -keyconnectorv $KEYCONNECTORVERSION
     echo "Database update complete"
 }
@@ -223,14 +223,14 @@ function update() {
     then
         pullSetup
     fi
-    docker run -i --rm --name setup -v $OUTPUT_DIR:/bitwarden \
+    docker run -i --rm --name setup -v $OUTPUT_DIR:/bitwarden:z \
         --env-file $ENV_DIR/uid.env bitwarden/setup:$COREVERSION \
         dotnet Setup.dll -update 1 -os $OS -corev $COREVERSION -webv $WEBVERSION -keyconnectorv $KEYCONNECTORVERSION
 }
 
 function printEnvironment() {
     pullSetup
-    docker run -i --rm --name setup -v $OUTPUT_DIR:/bitwarden \
+    docker run -i --rm --name setup -v $OUTPUT_DIR:/bitwarden:z \
         --env-file $ENV_DIR/uid.env bitwarden/setup:$COREVERSION \
         dotnet Setup.dll -printenv 1 -os $OS -corev $COREVERSION -webv $WEBVERSION -keyconnectorv $KEYCONNECTORVERSION
 }
