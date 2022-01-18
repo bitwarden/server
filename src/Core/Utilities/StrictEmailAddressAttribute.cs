@@ -16,7 +16,7 @@ namespace Bit.Core.Utilities
         * Must end in a letter (including unicode)
         See the unit tests for examples of what is allowed.
         **/
-        private static readonly Regex _emailFormatRegex = new Regex(@"[\x00-\x7F]+@.+\.\p{L}+$", RegexOptions.Compiled);
+        private static readonly Regex _emailFormatRegex = new Regex(@"[\x00-\x7F]+@.+\.\p{L}+$");
         private static readonly EmailAddressAttribute _emailAddressAttribute = new EmailAddressAttribute();
 
         public StrictEmailAddressAttribute()

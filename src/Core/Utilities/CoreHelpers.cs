@@ -42,11 +42,11 @@ namespace Bit.Core.Utilities
         private static readonly string _colemakMap = "qwfpgjluy;arstdhneiozxcvbkmQWFPGJLUY:ARSTDHNEIOZXCVBKM";
         private static readonly string CloudFlareConnectingIp = "CF-Connecting-IP";
         private static readonly string RealIp = "X-Real-IP";
-        private static readonly Regex _cleanCertificateRegex = new Regex(@"[^\da-fA-F]", RegexOptions.Compiled);
+        private static readonly Regex _cleanCertificateRegex = new Regex(@"[^\da-fA-F]");
         private static readonly Regex _findProtocolRegex = new Regex(@"((^|\b)(\w*)://)",
-            RegexOptions.CultureInvariant | RegexOptions.Singleline | RegexOptions.IgnoreCase | RegexOptions.Compiled);
+            RegexOptions.CultureInvariant | RegexOptions.Singleline | RegexOptions.IgnoreCase);
         private static readonly Regex _domainSeperatorRegex = new Regex(@"(\.\w)",
-            RegexOptions.CultureInvariant | RegexOptions.Singleline | RegexOptions.IgnoreCase | RegexOptions.Compiled);
+            RegexOptions.CultureInvariant | RegexOptions.Singleline | RegexOptions.IgnoreCase);
 
         /// <summary>
         /// Generate sequential Guid for Sql Server.

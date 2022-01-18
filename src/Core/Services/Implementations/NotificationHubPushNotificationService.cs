@@ -21,7 +21,7 @@ namespace Bit.Core.Services
     {
 
         // Only allow a-z, A-Z, 0-9, and special characters -_:
-        private static readonly Regex _sanitizeTagRegex = new Regex("[^a-zA-Z0-9-_:]", RegexOptions.Compiled);
+        private static readonly Regex _sanitizeTagRegex = new Regex("[^a-zA-Z0-9-_:]");
 
         private readonly IInstallationDeviceRepository _installationDeviceRepository;
         private readonly GlobalSettings _globalSettings;
