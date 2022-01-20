@@ -21,7 +21,7 @@ namespace Bit.Core.Services
 
         public async Task CreateAsync(T message)
         {
-            var json = JsonSerializer.Serialize(message, _jsonOptions);
+            var json = JsonSerializer.Serialize(new [] { message }, _jsonOptions);
             var base64 = CoreHelpers.Base64EncodeString(json);
             await _queueClient.SendMessageAsync(base64);
         }
