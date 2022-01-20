@@ -65,7 +65,6 @@ namespace Bit.Core.Identity
 
             var exts = new AuthenticationExtensionsClientInputs()
             {
-                UserVerificationIndex = true,
                 UserVerificationMethod = true,
                 AppID = CoreHelpers.U2fAppIdUrl(_globalSettings),
             };

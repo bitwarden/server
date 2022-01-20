@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Security.Cryptography;
 using Bit.Core.Enums;
 using Fido2NetLib.Objects;
-using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using PeterO.Cbor;
 using U2F.Core.Utils;
