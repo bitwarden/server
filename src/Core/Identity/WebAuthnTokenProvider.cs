@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -12,7 +13,6 @@ using Fido2NetLib;
 using Fido2NetLib.Objects;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
-using Newtonsoft.Json;
 
 namespace Bit.Core.Identity
 {
@@ -71,7 +71,7 @@ namespace Bit.Core.Identity
 
             var options = _fido2.GetAssertionOptions(existingCredentials, UserVerificationRequirement.Discouraged, exts);
 
-            provider.MetaData["login"] = options;
+            provider.MetaData["login"] = JsonSerializer.Serialize(options);
 
             var providers = user.GetTwoFactorProviders();
             providers[TwoFactorProviderType.WebAuthn] = provider;
@@ -97,7 +97,8 @@ namespace Bit.Core.Identity
                 return false;
             }
 
-            var clientResponse = JsonConvert.DeserializeObject<AuthenticatorAssertionRawResponse>(token);
+            var clientResponse = JsonSerializer.Deserialize<AuthenticatorAssertionRawResponse>(token,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
             var jsonOptions = provider.MetaData["login"].ToString();
             var options = AssertionOptions.FromJson(jsonOptions);
