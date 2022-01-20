@@ -203,7 +203,7 @@ namespace Bit.Api
             app.UseEndpoints(endpoints => endpoints.MapDefaultControllerRoute());
 
             // Add Swagger
-            if (Environment.IsDevelopment() || globalSettings.SelfHosted)
+            if (Environment.IsDevelopment())
             {
                 app.UseSwagger(config =>
                 {
