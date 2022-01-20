@@ -190,91 +190,61 @@ jobs:
         include:
           - service_name: Admin
             base_path: ./src
-            docker_repo: bitwarden
+            docker_repos: [ bitwarden, bitwardenqa.azurecr.io ]
             dotnet: true
           - service_name: Api
             base_path: ./src
-            docker_repo: bitwarden
+            docker_repos: [ bitwarden, bitwardenqa.azurecr.io ]
             dotnet: true
           - service_name: Attachments
             base_path: ./util
-            docker_repo: bitwarden
+            docker_repos: [ bitwarden, bitwardenqa.azurecr.io ]
           - service_name: Events
             base_path: ./src
-            docker_repo: bitwarden
+            docker_repos: [ bitwarden, bitwardenqa.azurecr.io ]
             dotnet: true
           - service_name: EventsProcessor
             base_path: ./src
-            docker_repo: bitwardenqa.azurecr.io
+            docker_repos: [ bitwarden, bitwardenqa.azurecr.io ]
             dotnet: true
           - service_name: Icons
             base_path: ./src
-            docker_repo: bitwarden
+            docker_repos: [ bitwarden, bitwardenqa.azurecr.io ]
             dotnet: true
           - service_name: Identity
             base_path: ./src
-            docker_repo: bitwarden
+            docker_repos: [ bitwarden, bitwardenqa.azurecr.io ]
             dotnet: true
           - service_name: K8S-Proxy
             base_path: ./util
-            docker_repo: bitwarden
+            docker_repos: [ bitwarden, bitwardenqa.azurecr.io ]
           - service_name: MsSql
             base_path: ./util
-            docker_repo: bitwarden
+            docker_repos: [ bitwarden, bitwardenqa.azurecr.io ]
           - service_name: Nginx
             base_path: ./util
-            docker_repo: bitwarden
+            docker_repos: [ bitwarden, bitwardenqa.azurecr.io ]
           - service_name: Notifications
             base_path: ./src
-            docker_repo: bitwarden
+            docker_repos: [ bitwarden, bitwardenqa.azurecr.io ]
             dotnet: true
           - service_name: Server
             base_path: ./util
-            docker_repo: bitwarden
+            docker_repos: [ bitwarden, bitwardenqa.azurecr.io ]
             dotnet: true
           - service_name: Setup
             base_path: ./util
-            docker_repo: bitwarden
+            docker_repos: [ bitwarden, bitwardenqa.azurecr.io ]
             dotnet: true
           - service_name: Sso
             base_path: ./bitwarden_license/src
-            docker_repo: bitwarden
+            docker_repos: [ bitwarden, bitwardenqa.azurecr.io ]
             dotnet: true
     steps:
       - name: Checkout repo
         uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
 
-      - name: Login to Azure - Prod Subscription
-        uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a
-        with:
-          creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
-
-      - name: Retrieve secrets
-        id: retrieve-secrets
-        uses: Azure/get-keyvault-secrets@80ccd3fafe5662407cc2e55f202ee34bfff8c403
-        with:
-          keyvault: "bitwarden-prod-kv"
-          secrets: "docker-password,
-                    docker-username,
-                    dct-delegate-2-repo-passphrase,
-                    dct-delegate-2-key"
-
-      - name: Log into Docker
-        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix'
-        env:
-          DOCKER_USERNAME: ${{ steps.retrieve-secrets.outputs.docker-username }}
-          DOCKER_PASSWORD: ${{ steps.retrieve-secrets.outputs.docker-password }}
-        run: echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
-
-      - name: Setup Docker Trust
-        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix'
-        env:
-          DCT_DELEGATION_KEY_ID: "c9bde8ec820701516491e5e03d3a6354e7bd66d05fa3df2b0062f68b116dc59c"
-          DCT_DELEGATE_KEY: ${{ steps.retrieve-secrets.outputs.dct-delegate-2-key }}
-        run: |
-          mkdir -p ~/.docker/trust/private
-          echo "$DCT_DELEGATE_KEY" > ~/.docker/trust/private/$DCT_DELEGATION_KEY_ID.key
-
+      ########## Build Docker Image ##########
       - name: Setup service name
         id: setup
         run: |
@@ -306,43 +276,7 @@ jobs:
               ${{ matrix.base_path }}/${{ matrix.service_name }}
           fi
 
-      - name: Docker Trust setup
-        if: |
-          matrix.docker_repo == 'bitwarden'
-          && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix')
-        env:
-          DCT_REPO_PASSPHRASE: ${{ steps.retrieve-secrets.outputs.dct-delegate-2-repo-passphrase }}
-        run: |
-          echo "DOCKER_CONTENT_TRUST=1" >> $GITHUB_ENV
-          echo "DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE=$DCT_REPO_PASSPHRASE" >> $GITHUB_ENV
-
-      - name: Tag and Push RC to Docker Hub
-        if: (github.ref == 'refs/heads/rc' && matrix.docker_repo == 'bitwarden')
-        run: |
-          docker tag ${{ steps.setup.outputs.service_name }} \
-            ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }}:rc
-          docker push ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }}:rc
-
-      - name: Tag and Push Hotfix to Docker Hub
-        if: (github.ref == 'refs/heads/hotfix' && matrix.docker_repo == 'bitwarden')
-        run: |
-          docker tag ${{ steps.setup.outputs.service_name }} \
-            ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }}:hotfix
-          docker push ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }}:hotfix
-
-      - name: Tag and Push Dev to Docker Hub
-        if: (github.ref == 'refs/heads/master' && matrix.docker_repo == 'bitwarden')
-        run: |
-          docker tag ${{ steps.setup.outputs.service_name }} \
-            ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }}:dev
-          docker push ${{ matrix.docker_repo }}/${{ steps.setup.outputs.service_name }}:dev
-
-      - name: Log out of Docker and disable Docker Notary
-        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix'
-        run: |
-          docker logout
-          echo "DOCKER_CONTENT_TRUST=0" >> $GITHUB_ENV
-
+      ########## ACR ##########
       - name: Login to Azure - QA Subscription
         uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a
         with:
@@ -352,31 +286,101 @@ jobs:
         run: az acr login -n bitwardenqa
 
       - name: Tag and Push RC to Azure ACR QA registry
-        if: github.ref == 'refs/heads/rc'
         env:
           REGISTRY: bitwardenqa.azurecr.io
         run: |
-          docker tag ${{ steps.setup.outputs.service_name }} \
-            $REGISTRY/${{ steps.setup.outputs.service_name }}:rc
-          docker push $REGISTRY/${{ steps.setup.outputs.service_name }}:rc
+          IMAGE_TAG=$(echo "${GITHUB_REF:11}" | sed "s#/#-#g")  # slash safe branch name
+          if [[ "$IMAGE_TAG" == "master" ]]; then
+            IMAGE_TAG=dev
+          fi  
 
-      - name: Tag and Push Hotfix to Azure ACR QA registry
-        if: github.ref == 'refs/heads/hotfix'
-        env:
-          REGISTRY: bitwardenqa.azurecr.io
-        run: |
           docker tag ${{ steps.setup.outputs.service_name }} \
-            $REGISTRY/${{ steps.setup.outputs.service_name }}:hotfix
-          docker push $REGISTRY/${{ steps.setup.outputs.service_name }}:hotfix
+            $REGISTRY/${{ steps.setup.outputs.service_name }}:$IMAGE_TAG
+          docker push $REGISTRY/${{ steps.setup.outputs.service_name }}:#IMAGE_TAG
 
-      - name: Tag and Push Dev to Azure ACR QA registry
-        if: github.ref == 'refs/heads/master'
+      - name: Log out of Docker 
+        run: docker logout
+
+      ########## DockerHub ##########
+      - name: Login to Azure - Prod Subscription
+        if: |
+          contains(matrix.docker_repos, 'bitwarden')
+          && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix')
+        uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a
+        with:
+          creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
+
+      - name: Retrieve secrets
+        if: |
+          contains(matrix.docker_repos, 'bitwarden')
+          && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix')
+        id: retrieve-secrets
+        uses: Azure/get-keyvault-secrets@80ccd3fafe5662407cc2e55f202ee34bfff8c403
+        with:
+          keyvault: "bitwarden-prod-kv"
+          secrets: "docker-password,
+                    docker-username,
+                    dct-delegate-2-repo-passphrase,
+                    dct-delegate-2-key"
+
+      - name: Log into Docker
+        if: |
+          contains(matrix.docker_repos, 'bitwarden')
+          && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix')
         env:
-          REGISTRY: bitwardenqa.azurecr.io
+          DOCKER_USERNAME: ${{ steps.retrieve-secrets.outputs.docker-username }}
+          DOCKER_PASSWORD: ${{ steps.retrieve-secrets.outputs.docker-password }}
+        run: echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+
+      - name: Setup Docker Trust
+        if: | 
+          contains(matrix.docker_repos, 'bitwarden')
+          && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix')
+        env:
+          DCT_DELEGATION_KEY_ID: "c9bde8ec820701516491e5e03d3a6354e7bd66d05fa3df2b0062f68b116dc59c"
+          DCT_DELEGATE_KEY: ${{ steps.retrieve-secrets.outputs.dct-delegate-2-key }}
+        run: |
+          mkdir -p ~/.docker/trust/private
+          echo "$DCT_DELEGATE_KEY" > ~/.docker/trust/private/$DCT_DELEGATION_KEY_ID.key
+
+      - name: Docker Trust setup
+        if: |
+          contains(matrix.docker_repos, 'bitwarden')
+          && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix')
+        env:
+          DCT_REPO_PASSPHRASE: ${{ steps.retrieve-secrets.outputs.dct-delegate-2-repo-passphrase }}
+        run: |
+          echo "DOCKER_CONTENT_TRUST=1" >> $GITHUB_ENV
+          echo "DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE=$DCT_REPO_PASSPHRASE" >> $GITHUB_ENV
+
+      - name: Tag and Push RC to Docker Hub
+        if: (github.ref == 'refs/heads/rc' && contains(matrix.docker_repos, 'bitwarden'))
         run: |
           docker tag ${{ steps.setup.outputs.service_name }} \
-            $REGISTRY/${{ steps.setup.outputs.service_name }}:dev
-          docker push $REGISTRY/${{ steps.setup.outputs.service_name }}:dev
+            bitwarden/${{ steps.setup.outputs.service_name }}:rc
+          docker push bitwarden/${{ steps.setup.outputs.service_name }}:rc
+
+      - name: Tag and Push Hotfix to Docker Hub
+        if: (github.ref == 'refs/heads/hotfix' && contains(matrix.docker_repos, 'bitwarden'))
+        run: |
+          docker tag ${{ steps.setup.outputs.service_name }} \
+            bitwarden/${{ steps.setup.outputs.service_name }}:hotfix
+          docker push bitwarden/${{ steps.setup.outputs.service_name }}:hotfix
+
+      - name: Tag and Push Dev to Docker Hub
+        if: (github.ref == 'refs/heads/master' && contains(matrix.docker_repos, 'bitwarden'))
+        run: |
+          docker tag ${{ steps.setup.outputs.service_name }} \
+            bitwraden/${{ steps.setup.outputs.service_name }}:dev
+          docker push bitwarden/${{ steps.setup.outputs.service_name }}:dev
+
+      - name: Log out of Docker and disable Docker Notary
+        if: | 
+          contains(matrix.docker_repos, 'bitwarden')
+          && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix')
+        run: |
+          docker logout
+          echo "DOCKER_CONTENT_TRUST=0" >> $GITHUB_ENV
 
 
   upload:
