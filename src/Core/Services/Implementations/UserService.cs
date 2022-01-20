@@ -21,7 +21,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using File = System.IO.File;
-using U2fLib = U2F.Core.Crypto.U2F;
 
 namespace Bit.Core.Services
 {
@@ -481,25 +480,6 @@ namespace Bit.Core.Services
                 return false;
             }
 
-            // Delete U2F token is this is a migrated WebAuthn token.
-            var entry = new TwoFactorProvider.WebAuthnData(provider.MetaData[keyName]);
-            if (entry?.Migrated ?? false)
-            {
-                var u2fProvider = user.GetTwoFactorProvider(TwoFactorProviderType.U2f);
-                if (u2fProvider?.MetaData?.ContainsKey(keyName) ?? false)
-                {
-                    u2fProvider.MetaData.Remove(keyName);
-                    if (u2fProvider.MetaData.Count > 0)
-                    {
-                        providers[TwoFactorProviderType.U2f] = u2fProvider;
-                    }
-                    else
-                    {
-                        providers.Remove(TwoFactorProviderType.U2f);
-                    }
-                }
-            }
-
             provider.MetaData.Remove(keyName);
             providers[TwoFactorProviderType.WebAuthn] = provider;
             user.SetTwoFactorProviders(providers);
@@ -897,13 +877,6 @@ namespace Bit.Core.Services
             if (!providers?.ContainsKey(type) ?? true)
             {
                 return;
-            }
-
-            // Since the user can no longer directly manipulate U2F tokens, we should
-            // disable them when the user disables WebAuthn.
-            if (type == TwoFactorProviderType.WebAuthn)
-            {
-                providers.Remove(TwoFactorProviderType.U2f);
             }
 
             providers.Remove(type);
