@@ -1,4 +1,5 @@
 using System;
+using Bit.Core.Enums;
 using Bit.Core.Utilities;
 
 namespace Bit.Core.Entities
@@ -8,6 +9,7 @@ namespace Bit.Core.Entities
         public Guid Id { get; set; }
         public Guid OrganizationId { get; set; }
         public string ApiKey { get; set; }
+        public string Name { get; set; }
 
         public void SetNewId()
         {

@@ -4,7 +4,8 @@ BEGIN
 CREATE TABLE [dbo].[OrganizationApiKey] (
     [Id]                UNIQUEIDENTIFIER NOT NULL,
     [OrganizationId]    UNIQUEIDENTIFIER NOT NULL,
-    [ApiKey]            VARCHAR(30) NOT NULL,
+    [ApiKey]            VARCHAR(MAX) NOT NULL,
+    [Name]              NVARCHAR(50) NOT NULL,
     CONSTRAINT [PK_OrganizationApiKey] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_OrganizationApiKey_OrganizationId] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id])
 );
@@ -70,7 +71,8 @@ GO
 CREATE PROCEDURE [dbo].[OrganizationApiKey_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
     @OrganizationId UNIQUEIDENTIFIER,
-    @ApiKey VARCHAR(30)
+    @ApiKey VARCHAR(30),
+    @Scope BIGINT
 AS
 BEGIN
     SET NOCOUNT ON
@@ -79,13 +81,15 @@ BEGIN
     (
         [Id],
         [OrganizationId],
-        [ApiKey]
+        [ApiKey],
+        [Scope]
     )
     VALUES
     (
         @Id,
         @OrganizationId,
-        @ApiKey
+        @ApiKey,
+        @Scope
     )
 END
 GO
@@ -99,7 +103,8 @@ GO
 CREATE PROCEDURE [dbo].[OrganizationApiKey_Update]
     @Id UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
-    @ApiKey VARCHAR(30)
+    @ApiKey VARCHAR(30),
+    @Scope BIGINT
 AS
 BEGIN
     SET NOCOUNT ON
@@ -108,7 +113,8 @@ BEGIN
         [dbo].[OrganizationApiKey]
     SET
         [OrganizationId] = @OrganizationId,
-        [ApiKey] = @ApiKey
+        [ApiKey] = @ApiKey,
+        [Scope] = @Scope
     WHERE
         [Id] = @Id
 END

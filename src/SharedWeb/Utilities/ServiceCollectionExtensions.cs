@@ -394,6 +394,17 @@ namespace Bit.SharedWeb.Utilities
                     options.TokenRetriever = TokenRetrieval.FromAuthorizationHeaderOrQueryString();
                     options.NameClaimType = ClaimTypes.Email;
                     options.SupportedTokens = SupportedTokens.Jwt;
+                    options.JwtBearerEvents.OnMessageReceived = context =>
+                    {
+                        // TODO: Remove before commiting, only for testing
+                        var logger = context.HttpContext.RequestServices
+                            .GetRequiredService<Microsoft.Extensions.Logging.ILoggerFactory>()
+                            .CreateLogger("Testing.Information");
+
+                        Microsoft.Extensions.Logging.LoggerExtensions.LogWarning(logger, "Message Received: {Token}", context.Token);
+
+                        return Task.CompletedTask;
+                    };
                 });
 
             if (addAuthorization != null)
