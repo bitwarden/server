@@ -15,5 +15,7 @@ namespace Bit.Core.Services
             new QueueClient(globalSettings.Events.ConnectionString, "event"),
             JsonHelpers.IgnoreWritingNull)
         { }
+
+        public Task CreateAsync(IEvent e) => CreateManyAsync(new[] { e });
     }
 }

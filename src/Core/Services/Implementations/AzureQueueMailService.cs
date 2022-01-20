@@ -17,7 +17,7 @@ namespace Bit.Core.Services
         { }
 
         public Task EnqueueAsync(IMailQueueMessage message, Func<IMailQueueMessage, Task> fallback) =>
-            CreateAsync(message);
+            CreateManyAsync(new[] { message });
 
         public Task EnqueueManyAsync(IEnumerable<IMailQueueMessage> messages, Func<IMailQueueMessage, Task> fallback) =>
             CreateManyAsync(messages);

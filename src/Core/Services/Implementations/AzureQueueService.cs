@@ -19,23 +19,10 @@ namespace Bit.Core.Services
             _jsonOptions = jsonOptions;
         }
 
-        public async Task CreateAsync(T message)
-        {
-            var json = JsonSerializer.Serialize(new [] { message }, _jsonOptions);
-            var base64 = CoreHelpers.Base64EncodeString(json);
-            await _queueClient.SendMessageAsync(base64);
-        }
-
         public async Task CreateManyAsync(IEnumerable<T> messages)
         {
             if (messages?.Any() != true)
             {
-                return;
-            }
-
-            if (!messages.Skip(1).Any())
-            {
-                await CreateAsync(messages.First());
                 return;
             }
 
