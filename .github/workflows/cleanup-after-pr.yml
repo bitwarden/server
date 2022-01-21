@@ -62,7 +62,7 @@ jobs:
               IMAGE_TAG=dev
             fi
 
-            echo "az acr repository delete --name $REGISTRY --image $SERVICE_NAME:$IMAGE_TAG --yes"
+            az acr repository delete --name $REGISTRY --image $SERVICE_NAME:$IMAGE_TAG --yes
           done
 
       - name: Log out of Docker
