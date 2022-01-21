@@ -35,7 +35,7 @@ jobs:
 
       - name: Remove the docker image from ACR
         env:
-          REGISTRY: bitwardenqa.azurecr.io
+          REGISTRY_NAME: bitwardenqa
           SERVICES: |
             services:
               - Admin
@@ -62,8 +62,21 @@ jobs:
               IMAGE_TAG=dev
             fi
 
-            echo "[*] Removing remote $REGISTRY/$SERVICE_NAME:$IMAGE_TAG"
-            az acr repository delete --name $REGISTRY --image $SERVICE_NAME:$IMAGE_TAG --yes
+            #TAG_EXISTS=$(
+            #  az acr repository show-tags --name $REGISTRY_NAME --repository $SERVICE_NAME \
+            #  | jq --arg $TAG "$IMAGE_TAG" -e '.|any(. == $TAG)'
+            #)
+            TAG_EXISTS=$(
+              az acr repository show-tags --name $REGISTRY_NAME --repository $SERVICE_NAME \
+              | jq -e '.|any(. == env.IMAGE_TAG)'
+            )
+
+            if [[ "TAG_EXISTS" == "true" ]]; then
+              echo "[*] Removing remote $REGISTRY_NAME/$SERVICE_NAME:$IMAGE_TAG"
+              az acr repository delete --name $REGISTRY_NAME --image $SERVICE_NAME:$IMAGE_TAG --yes
+            else
+              echo "[*] Tag does not exist. No action needed"
+            fi
           done
 
       - name: Log out of Docker
