@@ -53,7 +53,7 @@ jobs:
               - Setup
               - Sso
         run: |
-          for SERVICE in $(echo ${{ env.SERVICES }} | yq e ".services[]" - )
+          for SERVICE in $(echo "${{ env.SERVICES }}" | yq e ".services[]" - )
           do
             SERVICE_NAME=$(echo $SERVICE | awk '{print tolower($0)}')
             IMAGE_TAG=$(echo "${GITHUB_REF:11}" | sed "s#/#-#g")  # slash safe branch name
