@@ -339,40 +339,26 @@ jobs:
         env:
           DCT_DELEGATION_KEY_ID: "c9bde8ec820701516491e5e03d3a6354e7bd66d05fa3df2b0062f68b116dc59c"
           DCT_DELEGATE_KEY: ${{ steps.retrieve-secrets.outputs.dct-delegate-2-key }}
+          DCT_REPO_PASSPHRASE: ${{ steps.retrieve-secrets.outputs.dct-delegate-2-repo-passphrase }}
         run: |
           mkdir -p ~/.docker/trust/private
           echo "$DCT_DELEGATE_KEY" > ~/.docker/trust/private/$DCT_DELEGATION_KEY_ID.key
-
-      - name: Docker Trust setup
-        if: |
-          contains(matrix.docker_repos, 'bitwarden')
-          && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix')
-        env:
-          DCT_REPO_PASSPHRASE: ${{ steps.retrieve-secrets.outputs.dct-delegate-2-repo-passphrase }}
-        run: |
           echo "DOCKER_CONTENT_TRUST=1" >> $GITHUB_ENV
           echo "DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE=$DCT_REPO_PASSPHRASE" >> $GITHUB_ENV
 
       - name: Tag and Push RC to Docker Hub
-        if: (github.ref == 'refs/heads/rc' && contains(matrix.docker_repos, 'bitwarden'))
+        if: | 
+          contains(matrix.docker_repos, 'bitwarden')
+          && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix')
         run: |
-          docker tag ${{ steps.setup.outputs.service_name }} \
-            bitwarden/${{ steps.setup.outputs.service_name }}:rc
-          docker push bitwarden/${{ steps.setup.outputs.service_name }}:rc
+          IMAGE_TAG=$(echo "${GITHUB_REF:11}" | sed "s#/#-#g")  # slash safe branch name
+          if [[ "$IMAGE_TAG" == "master" ]]; then
+            IMAGE_TAG=dev
+          fi
 
-      - name: Tag and Push Hotfix to Docker Hub
-        if: (github.ref == 'refs/heads/hotfix' && contains(matrix.docker_repos, 'bitwarden'))
-        run: |
           docker tag ${{ steps.setup.outputs.service_name }} \
-            bitwarden/${{ steps.setup.outputs.service_name }}:hotfix
-          docker push bitwarden/${{ steps.setup.outputs.service_name }}:hotfix
-
-      - name: Tag and Push Dev to Docker Hub
-        if: (github.ref == 'refs/heads/master' && contains(matrix.docker_repos, 'bitwarden'))
-        run: |
-          docker tag ${{ steps.setup.outputs.service_name }} \
-            bitwraden/${{ steps.setup.outputs.service_name }}:dev
-          docker push bitwarden/${{ steps.setup.outputs.service_name }}:dev
+            $REGISTRY/${{ steps.setup.outputs.service_name }}:$IMAGE_TAG
+          docker push $REGISTRY/${{ steps.setup.outputs.service_name }}:$IMAGE_TAG
 
       - name: Log out of Docker and disable Docker Notary
         if: |
