@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -11,7 +12,6 @@ using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Dapper;
-using Newtonsoft.Json;
 
 namespace Bit.Infrastructure.Dapper.Repositories
 {
@@ -244,8 +244,8 @@ namespace Bit.Infrastructure.Dapper.Repositories
         public async Task<Guid> CreateAsync(OrganizationUser obj, IEnumerable<SelectionReadOnly> collections)
         {
             obj.SetNewId();
-            var objWithCollections = JsonConvert.DeserializeObject<OrganizationUserWithCollections>(
-                JsonConvert.SerializeObject(obj));
+            var objWithCollections = JsonSerializer.Deserialize<OrganizationUserWithCollections>(
+                JsonSerializer.Serialize(obj));
             objWithCollections.Collections = collections.ToArrayTVP();
 
             using (var connection = new SqlConnection(ConnectionString))
@@ -261,8 +261,8 @@ namespace Bit.Infrastructure.Dapper.Repositories
 
         public async Task ReplaceAsync(OrganizationUser obj, IEnumerable<SelectionReadOnly> collections)
         {
-            var objWithCollections = JsonConvert.DeserializeObject<OrganizationUserWithCollections>(
-                JsonConvert.SerializeObject(obj));
+            var objWithCollections = JsonSerializer.Deserialize<OrganizationUserWithCollections>(
+                JsonSerializer.Serialize(obj));
             objWithCollections.Collections = collections.ToArrayTVP();
 
             using (var connection = new SqlConnection(ConnectionString))

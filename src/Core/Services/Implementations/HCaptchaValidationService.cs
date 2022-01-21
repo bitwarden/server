@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Net.Http;
+using System.Net.Http.Json;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -8,7 +10,6 @@ using Bit.Core.Models.Business.Tokenables;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 
 namespace Bit.Core.Services
 {
@@ -77,9 +78,9 @@ namespace Bit.Core.Services
                 return false;
             }
 
-            var responseContent = await responseMessage.Content.ReadAsStringAsync();
-            dynamic jsonResponse = JsonConvert.DeserializeObject(responseContent);
-            return (bool)jsonResponse.success;
+            using var jsonDocument = await responseMessage.Content.ReadFromJsonAsync<JsonDocument>();
+            var root = jsonDocument.RootElement;
+            return root.GetProperty("success").GetBoolean();
         }
 
         public bool RequireCaptchaValidation(ICurrentContext currentContext) =>

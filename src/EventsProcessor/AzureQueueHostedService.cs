@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure.Storage.Queues;
@@ -11,8 +12,6 @@ using Bit.Core.Utilities;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 
 namespace Bit.EventsProcessor
 {
@@ -109,29 +108,26 @@ namespace Bit.EventsProcessor
                 _logger.LogInformation("Processing message.");
                 var events = new List<IEvent>();
 
-                var token = JToken.Parse(message);
-                if (token is JArray)
+                using var jsonDocument = JsonDocument.Parse(message);
+                var root = jsonDocument.RootElement;
+                if (root.ValueKind == JsonValueKind.Array)
                 {
-                    var indexedEntities = token.ToObject<List<EventMessage>>()
+                    var indexedEntities = root.ToObject<List<EventMessage>>()
                         .SelectMany(e => EventTableEntity.IndexEvent(e));
                     events.AddRange(indexedEntities);
                 }
-                else if (token is JObject)
+                else if (root.ValueKind == JsonValueKind.Object)
                 {
-                    var eventMessage = token.ToObject<EventMessage>();
+                    var eventMessage = root.ToObject<EventMessage>();
                     events.AddRange(EventTableEntity.IndexEvent(eventMessage));
                 }
 
                 await _eventWriteService.CreateManyAsync(events);
                 _logger.LogInformation("Processed message.");
             }
-            catch (JsonReaderException)
+            catch (JsonException)
             {
                 _logger.LogError("JsonReaderException: Unable to parse message.");
-            }
-            catch (JsonSerializationException)
-            {
-                _logger.LogError("JsonSerializationException: Unable to serialize token.");
             }
         }
     }
