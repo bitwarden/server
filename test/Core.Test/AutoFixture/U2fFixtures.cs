@@ -41,7 +41,6 @@ namespace Bit.Core.Test.AutoFixture.U2fFixtures
             fixture.Customizations.Add(new GlobalSettingsBuilder());
             fixture.Customizations.Add(new U2fBuilder());
             fixture.Customizations.Add(new UserBuilder());
-            fixture.Customizations.Add(new EfRepositoryListBuilder<U2fRepository>());
             fixture.Customizations.Add(new EfRepositoryListBuilder<UserRepository>());
         }
     }

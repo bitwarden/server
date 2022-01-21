@@ -19,6 +19,7 @@ namespace Bit.Setup
                 Url = _context.Config.Url
             };
 
+            // Needed for backwards compatability with migrated U2F tokens.
             Helpers.WriteLine(_context, "Building FIDO U2F app id.");
             Directory.CreateDirectory("/bitwarden/web/");
             var template = Helpers.ReadTemplate("AppId");
