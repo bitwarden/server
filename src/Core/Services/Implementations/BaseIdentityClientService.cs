@@ -3,23 +3,23 @@ using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Net.Http.Json;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Bit.Core.Utilities;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 
 namespace Bit.Core.Services
 {
-    public abstract class BaseIdentityClientService
+    public abstract class BaseIdentityClientService : IDisposable
     {
         private readonly string _identityScope;
         private readonly string _identityClientId;
         private readonly string _identityClientSecret;
         private readonly ILogger<BaseIdentityClientService> _logger;
 
-        private dynamic _decodedToken;
+        private JsonDocument _decodedToken;
         private DateTime? _nextAuthAttempt = null;
 
         public BaseIdentityClientService(
@@ -127,9 +127,9 @@ namespace Bit.Core.Services
                 return false;
             }
 
-            var responseContent = await response.Content.ReadAsStringAsync();
-            dynamic tokenResponse = JsonConvert.DeserializeObject(responseContent);
-            AccessToken = (string)tokenResponse.access_token;
+            using var jsonDocument = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync());
+
+            AccessToken = jsonDocument.RootElement.GetProperty("access_token").GetString();
             return true;
         }
 
@@ -145,8 +145,7 @@ namespace Bit.Core.Services
             {
                 if (requestObject != null)
                 {
-                    var stringContent = JsonConvert.SerializeObject(requestObject);
-                    Content = new StringContent(stringContent, Encoding.UTF8, "application/json");
+                    Content = JsonContent.Create(requestObject);
                 }
             }
         }
@@ -154,17 +153,16 @@ namespace Bit.Core.Services
         protected bool TokenNeedsRefresh(int minutes = 5)
         {
             var decoded = DecodeToken();
-            var exp = decoded?["exp"];
-            if (exp == null)
+            if (!decoded.RootElement.TryGetProperty("exp", out var expProp))
             {
                 throw new InvalidOperationException("No exp in token.");
             }
 
-            var expiration = CoreHelpers.FromEpocSeconds(exp.Value<long>());
+            var expiration = CoreHelpers.FromEpocSeconds(expProp.GetInt64());
             return DateTime.UtcNow.AddMinutes(-1 * minutes) > expiration;
         }
 
-        protected JObject DecodeToken()
+        protected JsonDocument DecodeToken()
         {
             if (_decodedToken != null)
             {
@@ -188,8 +186,13 @@ namespace Bit.Core.Services
                 throw new InvalidOperationException($"{nameof(AccessToken)} must have 3 parts");
             }
 
-            _decodedToken = JObject.Parse(Encoding.UTF8.GetString(decodedBytes, 0, decodedBytes.Length));
+            _decodedToken = JsonDocument.Parse(decodedBytes);
             return _decodedToken;
+        }
+
+        public void Dispose()
+        {
+            _decodedToken.Dispose();
         }
     }
 }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Claims;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -19,7 +20,6 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Newtonsoft.Json;
 using File = System.IO.File;
 
 namespace Bit.Core.Services
@@ -956,7 +956,8 @@ namespace Bit.Core.Services
 
                 var dir = $"{_globalSettings.LicenseDirectory}/user";
                 Directory.CreateDirectory(dir);
-                File.WriteAllText($"{dir}/{user.Id}.json", JsonConvert.SerializeObject(license, Formatting.Indented));
+                using var fs = File.OpenWrite(Path.Combine(dir, $"{user.Id}.json"));
+                await JsonSerializer.SerializeAsync(fs, license, JsonHelpers.Indented);
             }
             else
             {
@@ -1041,7 +1042,8 @@ namespace Bit.Core.Services
 
             var dir = $"{_globalSettings.LicenseDirectory}/user";
             Directory.CreateDirectory(dir);
-            File.WriteAllText($"{dir}/{user.Id}.json", JsonConvert.SerializeObject(license, Formatting.Indented));
+            using var fs = File.OpenWrite(Path.Combine(dir, $"{user.Id}.json"));
+            await JsonSerializer.SerializeAsync(fs, license, JsonHelpers.Indented);
 
             user.Premium = license.Premium;
             user.RevisionDate = DateTime.UtcNow;

@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using Bit.Core.Enums;
+using Bit.Core.Utilities;
 using Fido2NetLib.Objects;
-using Newtonsoft.Json;
 
 namespace Bit.Core.Models
 {
@@ -25,7 +25,7 @@ namespace Bit.Core.Models
                 catch
                 {
                     // Handle newtonsoft parsing
-                    Descriptor = JsonConvert.DeserializeObject<PublicKeyCredentialDescriptor>(o.Descriptor.ToString());
+                    Descriptor = JsonHelpers.LegacyDeserialize<PublicKeyCredentialDescriptor>(o.Descriptor.ToString());
                 }
                 PublicKey = o.PublicKey;
                 UserHandle = o.UserHandle;

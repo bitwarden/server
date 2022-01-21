@@ -1,7 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text.Json;
 using Bit.Core.Enums;
-using Newtonsoft.Json;
+using Bit.Core.Utilities;
 
 namespace Bit.Core.Models.Data
 {
@@ -37,13 +38,13 @@ namespace Bit.Core.Models.Data
                 if (_twoFactorProviders == null)
                 {
                     _twoFactorProviders =
-                        JsonConvert.DeserializeObject<Dictionary<TwoFactorProviderType, TwoFactorProvider>>(
+                        JsonHelpers.LegacyDeserialize<Dictionary<TwoFactorProviderType, TwoFactorProvider>>(
                             TwoFactorProviders);
                 }
 
                 return _twoFactorProviders;
             }
-            catch (JsonSerializationException)
+            catch (Newtonsoft.Json.JsonException)
             {
                 return null;
             }
