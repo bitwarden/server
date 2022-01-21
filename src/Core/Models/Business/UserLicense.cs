@@ -4,9 +4,9 @@ using System.Reflection;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using System.Text.Json.Serialization;
 using Bit.Core.Entities;
 using Bit.Core.Services;
-using Newtonsoft.Json;
 
 namespace Bit.Core.Models.Business
 {

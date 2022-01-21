@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -10,7 +11,6 @@ using Bit.Core.Services;
 using Bit.Core.Settings;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
-using Newtonsoft.Json;
 using U2F.Core.Exceptions;
 using U2F.Core.Models;
 using U2F.Core.Utils;
@@ -107,8 +107,8 @@ namespace Bit.Core.Identity
                     });
                 }
 
-                var oldToken = JsonConvert.SerializeObject(oldChallenges);
-                var token = JsonConvert.SerializeObject(new
+                var oldToken = JsonSerializer.Serialize(oldChallenges);
+                var token = JsonSerializer.Serialize(new
                 {
                     appId = appId,
                     challenge = challengeBytes.ByteArrayToBase64String(),

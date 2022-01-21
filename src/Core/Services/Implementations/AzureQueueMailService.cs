@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using Azure.Storage.Queues;
 using Bit.Core.Models.Mail;
 using Bit.Core.Settings;
-using Newtonsoft.Json;
+using Bit.Core.Utilities;
 
 namespace Bit.Core.Services
 {
@@ -13,11 +13,11 @@ namespace Bit.Core.Services
     {
         public AzureQueueMailService(GlobalSettings globalSettings) : base(
             new QueueClient(globalSettings.Mail.ConnectionString, "mail"),
-            new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore })
+            JsonHelpers.IgnoreWritingNull)
         { }
 
         public Task EnqueueAsync(IMailQueueMessage message, Func<IMailQueueMessage, Task> fallback) =>
-            CreateAsync(message);
+            CreateManyAsync(new[] { message });
 
         public Task EnqueueManyAsync(IEnumerable<IMailQueueMessage> messages, Func<IMailQueueMessage, Task> fallback) =>
             CreateManyAsync(messages);
