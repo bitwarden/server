@@ -60,7 +60,7 @@ jobs:
             IMAGE_TAG=dev
           fi
 
-          az acr repository delete --name $REGISTRY --image ${{ steps.setup.outputs.service_name }}:$IMAGE_TAG
+          az acr repository delete --name $REGISTRY --image ${{ steps.setup.outputs.service_name }}:$IMAGE_TAG --yes
 
       - name: Log out of Docker
         run: docker logout
