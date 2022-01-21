@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Bit.Core.Entities;
@@ -411,7 +410,7 @@ namespace Bit.Core.Business.Sso
             }
             if (!string.IsNullOrWhiteSpace(config.IdpX509PublicCert))
             {
-                var cert = Convert.FromBase64String(config.IdpX509PublicCert);
+                var cert = CoreHelpers.Base64UrlDecode(config.IdpX509PublicCert);
                 idp.SigningKeys.AddConfiguredKey(new X509Certificate2(cert));
             }
             // This must happen last since it calls Validate() internally.

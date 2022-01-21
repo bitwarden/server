@@ -9,6 +9,7 @@ using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Services;
 using Bit.Core.Sso;
+using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 
 namespace Bit.Api.Models.Request.Organizations
@@ -146,7 +147,7 @@ namespace Bit.Api.Models.Request.Organizations
                     ValidationResult failedResult = null;
                     try
                     {
-                        var certData = Convert.FromBase64String(StripPemCertificateElements(IdpX509PublicCert));
+                        var certData = CoreHelpers.Base64UrlDecode(StripPemCertificateElements(IdpX509PublicCert));
                         new X509Certificate2(certData);
                     }
                     catch (FormatException)
