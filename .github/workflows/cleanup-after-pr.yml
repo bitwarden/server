@@ -3,7 +3,7 @@ name: Clean After PR
 
 on:
   pull_request:
-    - closed
+    types: [closed]
 
 jobs:
   build-docker:
