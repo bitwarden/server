@@ -7,7 +7,7 @@ on:
 
 jobs:
   build-docker:
-    name: Remove docker images no longer needed
+    name: Remove feature branch docker images
     runs-on: ubuntu-20.04
     needs: build-artifacts
     strategy:
