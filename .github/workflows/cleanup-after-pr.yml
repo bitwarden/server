@@ -58,14 +58,14 @@ jobs:
             SERVICE_NAME=$(echo $SERVICE | awk '{print tolower($0)}')
             IMAGE_TAG=$(echo "${GITHUB_REF:11}" | sed "s#/#-#g")  # slash safe branch name
 
-            #TAG_EXISTS=$(
-            #  az acr repository show-tags --name $REGISTRY_NAME --repository $SERVICE_NAME \
-            #  | jq --arg $TAG "$IMAGE_TAG" -e '.|any(. == $TAG)'
-            #)
             TAG_EXISTS=$(
               az acr repository show-tags --name $REGISTRY_NAME --repository $SERVICE_NAME \
-              | jq -e '. | any(. == env.IMAGE_TAG)'
+              | jq --arg $TAG "$IMAGE_TAG" -e '. | any(. == "$TAG")'
             )
+            #TAG_EXISTS=$(
+            #  az acr repository show-tags --name $REGISTRY_NAME --repository $SERVICE_NAME \
+            #  | jq -e '. | any(. == env.IMAGE_TAG)'
+            #)
 
             echo "service_name: $SERVICE_NAME"
             echo "image_tag: $IMAGE_TAG"
