@@ -88,7 +88,6 @@ namespace Bit.Core.Test.AutoFixture.EntityFrameworkRepositoryFixtures
                         cfg.AddProfile<SsoUserMapperProfile>();
                         cfg.AddProfile<TaxRateMapperProfile>();
                         cfg.AddProfile<TransactionMapperProfile>();
-                        cfg.AddProfile<U2fMapperProfile>();
                         cfg.AddProfile<UserMapperProfile>();
                     })
                 .CreateMapper()));
