@@ -68,10 +68,10 @@ jobs:
             #)
             TAG_EXISTS=$(
               az acr repository show-tags --name $REGISTRY_NAME --repository $SERVICE_NAME \
-              | jq -e '.|any(. == env.IMAGE_TAG)'
+              | jq -e '. | any(. == env.IMAGE_TAG)'
             )
 
-            if [[ "TAG_EXISTS" == "true" ]]; then
+            if [[ "$TAG_EXISTS" == "true" ]]; then
               echo "[*] Removing remote $REGISTRY_NAME/$SERVICE_NAME:$IMAGE_TAG"
               az acr repository delete --name $REGISTRY_NAME --image $SERVICE_NAME:$IMAGE_TAG --yes
             else
