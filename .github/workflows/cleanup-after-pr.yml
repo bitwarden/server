@@ -1,0 +1,14 @@
+---
+name: Clean After PR
+
+on:
+  pull_request:
+    types: [closed]
+
+jobs:
+  build-docker:
+    name: Remove feature branch docker images
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Stub
+        run: echo "This is a workflow stub"
