@@ -62,6 +62,7 @@ jobs:
               IMAGE_TAG=dev
             fi
 
+            echo "[*] Removing remote $REGISTRY/$SERVICE_NAME:$IMAGE_TAG"
             az acr repository delete --name $REGISTRY --image $SERVICE_NAME:$IMAGE_TAG --yes
           done
 
