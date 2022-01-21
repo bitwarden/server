@@ -58,22 +58,14 @@ jobs:
             SERVICE_NAME=$(echo $SERVICE | awk '{print tolower($0)}')
             IMAGE_TAG=$(echo "${GITHUB_REF:11}" | sed "s#/#-#g")  # slash safe branch name
 
+            echo "[*] Checking if remote $REGISTRY/$SERVICE_NAME:$IMAGE_TAG exists"
             TAG_EXISTS=$(
               az acr repository show-tags --name $REGISTRY_NAME --repository $SERVICE_NAME \
               | jq --arg $TAG "$IMAGE_TAG" -e '. | any(. == "$TAG")'
             )
-            #TAG_EXISTS=$(
-            #  az acr repository show-tags --name $REGISTRY_NAME --repository $SERVICE_NAME \
-            #  | jq -e '. | any(. == env.IMAGE_TAG)'
-            #)
-
-            echo "service_name: $SERVICE_NAME"
-            echo "image_tag: $IMAGE_TAG"
-            echo "registry: $REGISTRY"
-            echo "tag_exists: $TAG_EXISTS"
 
             if [[ "$TAG_EXISTS" == "true" ]]; then
-              echo "[*] Removing remote $REGISTRY_NAME/$SERVICE_NAME:$IMAGE_TAG"
+              echo "[*] Tag exists. Removing tag"
               az acr repository delete --name $REGISTRY_NAME --image $SERVICE_NAME:$IMAGE_TAG --yes
             else
               echo "[*] Tag does not exist. No action needed"
