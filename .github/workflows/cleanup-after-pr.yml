@@ -4,7 +4,7 @@ name: Clean After PR
 on:
   pull_request:
     types: [closed]
-  workflow_dispatch: 
+  workflow_dispatch:
     inputs: {}
 
 jobs:
@@ -24,15 +24,7 @@ jobs:
       - name: Login to Azure ACR
         run: az acr login -n bitwardenqa
 
-      ########## Build Docker Image ##########
-      - name: Setup service name
-        id: setup
-        run: |
-          SERVICE_NAME=$(echo "${{ matrix.service_name }}" | awk '{print tolower($0)}')
-          echo "Matrix name: ${{ matrix.service_name }}"
-          echo "SERVICE_NAME: $SERVICE_NAME"
-          echo "::set-output name=service_name::$SERVICE_NAME"
-
+      ########## Remove Docker images ##########
       - name: Remove the docker image from ACR
         env:
           REGISTRY_NAME: bitwardenqa
@@ -58,7 +50,7 @@ jobs:
             SERVICE_NAME=$(echo $SERVICE | awk '{print tolower($0)}')
             IMAGE_TAG=$(echo "${GITHUB_REF:11}" | sed "s#/#-#g")  # slash safe branch name
 
-            echo "[*] Checking if remote $REGISTRY/$SERVICE_NAME:$IMAGE_TAG exists"
+            echo "[*] Checking if remote exists: $REGISTRY_NAME.azurecr.io/$SERVICE_NAME:$IMAGE_TAG"
             TAG_EXISTS=$(
               az acr repository show-tags --name $REGISTRY_NAME --repository $SERVICE_NAME \
               | jq --arg $TAG "$IMAGE_TAG" -e '. | any(. == "$TAG")'
