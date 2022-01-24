@@ -205,7 +205,7 @@ jobs:
             dotnet: true
           - service_name: EventsProcessor
             base_path: ./src
-            docker_repos: [bitwarden]
+            docker_repos: [bitwardenqa.azurecr.io]
             dotnet: true
           - service_name: Icons
             base_path: ./src
