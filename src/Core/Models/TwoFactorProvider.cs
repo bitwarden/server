@@ -31,7 +31,7 @@ namespace Bit.Core.Models
                         o.Descriptor.Type = "public-key";
                     }
                     Descriptor = JsonSerializer.Deserialize<PublicKeyCredentialDescriptor>(o.Descriptor.ToString(),
-                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true  });
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
                 }
                 PublicKey = o.PublicKey;
                 UserHandle = o.UserHandle;
