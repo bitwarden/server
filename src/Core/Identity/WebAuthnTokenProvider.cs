@@ -71,6 +71,7 @@ namespace Bit.Core.Identity
 
             var options = _fido2.GetAssertionOptions(existingCredentials, UserVerificationRequirement.Discouraged, exts);
 
+            // TODO: Remove this when newtonsoft legacy converters are gone
             provider.MetaData["login"] = JsonSerializer.Serialize(options);
 
             var providers = user.GetTwoFactorProviders();
