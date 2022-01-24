@@ -347,7 +347,7 @@ jobs:
           echo "DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE=$DCT_REPO_PASSPHRASE" >> $GITHUB_ENV
 
       - name: Tag and Push RC to Docker Hub
-        if: | 
+        if: |
           contains(matrix.docker_repos, 'bitwarden')
           && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix')
         run: |
