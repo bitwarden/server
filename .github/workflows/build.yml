@@ -75,7 +75,8 @@ jobs:
       - name: Verify Format
         run: dotnet tool run dotnet-format --check
         shell: pwsh
-- name: Test OSS solution
+
+      - name: Test OSS solution
         run: dotnet test ./test --configuration Debug --no-build
         shell: pwsh
 
