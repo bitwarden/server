@@ -25,7 +25,6 @@ namespace Bit.Core.Models
                 catch
                 {
                     // Fallback for older newtonsoft serialized tokens.
-                    // DO NOT REMOVE!
                     if (o.Descriptor.Type == 0)
                     {
                         o.Descriptor.Type = "public-key";
