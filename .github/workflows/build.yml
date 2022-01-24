@@ -350,6 +350,8 @@ jobs:
         if: |
           contains(matrix.docker_repos, 'bitwarden')
           && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix')
+        env:
+          REGISTRY: bitwarden
         run: |
           IMAGE_TAG=$(echo "${GITHUB_REF:11}" | sed "s#/#-#g")  # slash safe branch name
           if [[ "$IMAGE_TAG" == "master" ]]; then
