@@ -24,8 +24,14 @@ namespace Bit.Core.Models
                 }
                 catch
                 {
-                    // Handle newtonsoft parsing
-                    Descriptor = JsonSerializer.Deserialize<PublicKeyCredentialDescriptor>(o.Descriptor.ToString());
+                    // Fallback for older newtonsoft serialized tokens.
+                    // DO NOT REMOVE!
+                    if (o.Descriptor.Type == 0)
+                    {
+                        o.Descriptor.Type = "public-key";
+                    }
+                    Descriptor = JsonSerializer.Deserialize<PublicKeyCredentialDescriptor>(o.Descriptor.ToString(),
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true  });
                 }
                 PublicKey = o.PublicKey;
                 UserHandle = o.UserHandle;
