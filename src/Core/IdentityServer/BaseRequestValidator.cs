@@ -375,7 +375,6 @@ namespace Bit.Core.IdentityServer
                 case TwoFactorProviderType.Email:
                 case TwoFactorProviderType.Duo:
                 case TwoFactorProviderType.YubiKey:
-                case TwoFactorProviderType.U2f:
                 case TwoFactorProviderType.WebAuthn:
                 case TwoFactorProviderType.Remember:
                     if (type != TwoFactorProviderType.Remember &&
@@ -403,7 +402,6 @@ namespace Bit.Core.IdentityServer
             switch (type)
             {
                 case TwoFactorProviderType.Duo:
-                case TwoFactorProviderType.U2f:
                 case TwoFactorProviderType.WebAuthn:
                 case TwoFactorProviderType.Email:
                 case TwoFactorProviderType.YubiKey:
@@ -420,16 +418,6 @@ namespace Bit.Core.IdentityServer
                         {
                             ["Host"] = provider.MetaData["Host"],
                             ["Signature"] = token
-                        };
-                    }
-                    else if (type == TwoFactorProviderType.U2f)
-                    {
-                        // TODO: Remove "Challenges" in a future update. Deprecated.
-                        var tokens = token?.Split('|');
-                        return new Dictionary<string, object>
-                        {
-                            ["Challenge"] = tokens != null && tokens.Length > 0 ? tokens[0] : null,
-                            ["Challenges"] = tokens != null && tokens.Length > 1 ? tokens[1] : null
                         };
                     }
                     else if (type == TwoFactorProviderType.WebAuthn)

@@ -7,7 +7,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Newtonsoft.Json;
 
 namespace Bit.Core.Utilities
 {
@@ -41,10 +40,8 @@ namespace Bit.Core.Utilities
                 $"Slow down! Too many requests. Try again in {rule.Period}." : _options.QuotaExceededMessage;
             httpContext.Response.Headers["Retry-After"] = retryAfter;
             httpContext.Response.StatusCode = _options.HttpStatusCode;
-
-            httpContext.Response.ContentType = "application/json";
             var errorModel = new ErrorResponseModel { Message = message };
-            return httpContext.Response.WriteAsync(JsonConvert.SerializeObject(errorModel));
+            return httpContext.Response.WriteAsJsonAsync(errorModel, cancellationToken: httpContext.RequestAborted);
         }
 
         public override void LogBlockedRequest(HttpContext httpContext, ClientRequestIdentity identity,
