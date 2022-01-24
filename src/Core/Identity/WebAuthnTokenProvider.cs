@@ -65,14 +65,14 @@ namespace Bit.Core.Identity
 
             var exts = new AuthenticationExtensionsClientInputs()
             {
-                UserVerificationIndex = true,
                 UserVerificationMethod = true,
                 AppID = CoreHelpers.U2fAppIdUrl(_globalSettings),
             };
 
             var options = _fido2.GetAssertionOptions(existingCredentials, UserVerificationRequirement.Discouraged, exts);
 
-            provider.MetaData["login"] = options;
+            // TODO: Remove this when newtonsoft legacy converters are gone
+            provider.MetaData["login"] = JsonSerializer.Serialize(options);
 
             var providers = user.GetTwoFactorProviders();
             providers[TwoFactorProviderType.WebAuthn] = provider;
@@ -98,7 +98,8 @@ namespace Bit.Core.Identity
                 return false;
             }
 
-            var clientResponse = JsonSerializer.Deserialize<AuthenticatorAssertionRawResponse>(token);
+            var clientResponse = JsonSerializer.Deserialize<AuthenticatorAssertionRawResponse>(token,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
             var jsonOptions = provider.MetaData["login"].ToString();
             var options = AssertionOptions.FromJson(jsonOptions);

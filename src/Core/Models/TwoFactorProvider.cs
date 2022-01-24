@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text.Json;
 using Bit.Core.Enums;
-using Bit.Core.Utilities;
 using Fido2NetLib.Objects;
 
 namespace Bit.Core.Models
@@ -24,8 +24,13 @@ namespace Bit.Core.Models
                 }
                 catch
                 {
-                    // Handle newtonsoft parsing
-                    Descriptor = JsonHelpers.LegacyDeserialize<PublicKeyCredentialDescriptor>(o.Descriptor.ToString());
+                    // Fallback for older newtonsoft serialized tokens.
+                    if (o.Descriptor.Type == 0)
+                    {
+                        o.Descriptor.Type = "public-key";
+                    }
+                    Descriptor = JsonSerializer.Deserialize<PublicKeyCredentialDescriptor>(o.Descriptor.ToString(),
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
                 }
                 PublicKey = o.PublicKey;
                 UserHandle = o.UserHandle;
