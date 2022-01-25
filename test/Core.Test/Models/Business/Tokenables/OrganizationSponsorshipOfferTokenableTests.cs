@@ -59,7 +59,23 @@ namespace Bit.Core.Test.Models.Business.Tokenables
         {
             var token = new OrganizationSponsorshipOfferTokenable(sponsorship);
 
-            Assert.True(token.IsValid(sponsorship));
+            Assert.True(token.IsValid(sponsorship, sponsorship.OfferedToEmail));
+        }
+
+        [Theory, BitAutoData]
+        public void IsValid_RequiresNonNullSponsorship(OrganizationSponsorship sponsorship)
+        {
+            var token = new OrganizationSponsorshipOfferTokenable(sponsorship);
+
+            Assert.False(token.IsValid(null, sponsorship.OfferedToEmail));
+        }
+
+        [Theory, BitAutoData]
+        public void IsValid_RequiresCurrentEmailToBeSameAsOfferedToEmail(OrganizationSponsorship sponsorship, string currentEmail)
+        {
+            var token = new OrganizationSponsorshipOfferTokenable(sponsorship);
+
+            Assert.False(token.IsValid(sponsorship, currentEmail));
         }
 
         [Theory, BitAutoData]
@@ -69,7 +85,7 @@ namespace Bit.Core.Test.Models.Business.Tokenables
 
             var token = new OrganizationSponsorshipOfferTokenable(sponsorship1);
 
-            Assert.False(token.IsValid(sponsorship2));
+            Assert.False(token.IsValid(sponsorship2, sponsorship1.OfferedToEmail));
         }
 
         [Theory, BitAutoData]
@@ -79,7 +95,7 @@ namespace Bit.Core.Test.Models.Business.Tokenables
 
             var token = new OrganizationSponsorshipOfferTokenable(sponsorship1);
 
-            Assert.False(token.IsValid(sponsorship2));
+            Assert.False(token.IsValid(sponsorship2, sponsorship1.OfferedToEmail));
         }
 
         [Theory, BitAutoData]
@@ -108,6 +124,29 @@ namespace Bit.Core.Test.Models.Business.Tokenables
             Assert.Equal(sponsorship.PlanSponsorshipType, token.SponsorshipType);
         }
 
+        [Theory, BitAutoData]
+        public void Constructor_DefaultId_Throws(OrganizationSponsorship sponsorship)
+        {
+            sponsorship.Id = default;
+
+            Assert.Throws<ArgumentException>(() => new OrganizationSponsorshipOfferTokenable(sponsorship));
+        }
+
+        [Theory, BitAutoData]
+        public void Constructor_NoOfferedToEmail_Throws(OrganizationSponsorship sponsorship)
+        {
+            sponsorship.OfferedToEmail = null;
+
+            Assert.Throws<ArgumentException>(() => new OrganizationSponsorshipOfferTokenable(sponsorship));
+        }
+
+        [Theory, BitAutoData]
+        public void Constructor_EmptyOfferedToEmail_Throws(OrganizationSponsorship sponsorship)
+        {
+            sponsorship.OfferedToEmail = "";
+
+            Assert.Throws<ArgumentException>(() => new OrganizationSponsorshipOfferTokenable(sponsorship));
+        }
 
         [Theory, BitAutoData]
         public void Constructor_NoPlanSponsorshipType_Throws(OrganizationSponsorship sponsorship)
