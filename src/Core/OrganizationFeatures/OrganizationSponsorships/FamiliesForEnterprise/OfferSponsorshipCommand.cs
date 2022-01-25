@@ -1,18 +1,17 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business.Tokenables;
+using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Tokens;
 using Bit.Core.Utilities;
-using Microsoft.AspNetCore.DataProtection;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise
 {
-    public class OfferSponsorshipCommand : SendSponsorshipOfferCommand
+    public class OfferSponsorshipCommand : SendSponsorshipOfferCommand, IOfferSponsorshipCommand
     {
         private readonly IOrganizationSponsorshipRepository _organizationSponsorshipRepository;
 

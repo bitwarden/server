@@ -1,12 +1,13 @@
 using System.Threading.Tasks;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
+using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise
 {
-    public class RevokeSponsorshipCommand : CancelSponsorshipCommand
+    public class RevokeSponsorshipCommand : CancelSponsorshipCommand, IRevokeSponsorshipCommand
     {
         public RevokeSponsorshipCommand(
             IOrganizationSponsorshipRepository organizationSponsorshipRepository,

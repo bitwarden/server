@@ -2,13 +2,14 @@ using System.Threading.Tasks;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
+using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise
 {
-    public class SetUpSponsorshipCommand
+    public class SetUpSponsorshipCommand : ISetUpSponsorshipCommand
     {
         private readonly IOrganizationSponsorshipRepository _organizationSponsorshipRepository;
         private readonly IOrganizationRepository _organizationRepository;

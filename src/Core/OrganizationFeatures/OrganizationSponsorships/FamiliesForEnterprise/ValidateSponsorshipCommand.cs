@@ -1,12 +1,12 @@
 using System;
 using System.Threading.Tasks;
-using Bit.Core.Entities;
+using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise
 {
-    public class ValidateSponsorshipCommand : CancelSponsorshipCommand
+    public class ValidateSponsorshipCommand : CancelSponsorshipCommand, IValidateSponsorshipCommand
     {
         public ValidateSponsorshipCommand(
             IOrganizationSponsorshipRepository organizationSponsorshipRepository,
