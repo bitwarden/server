@@ -185,16 +185,28 @@ function Update([switch] $withpull) {
 }
 
 function Uninstall() {
-    Write-Host "(WARNING: ALL DATA WILL BE REMOVED, INCLUDING THE FOLDER $outputDir) " -f red -nonewline
+    $keepDatabase = $(Write-Host "(WARNING: UNINSTALL STARTED) Would you like to save the database files? (y/n)" -f red -nonewline) + $(Read-host)
+    if ($keepDatabase -eq "y") {
+        Write-Host "Saving database."
+        Compress-Archive -Path "${outputDir}\mssql" -DestinationPath ".\bitwarden_database.zip"
+        Write-Host "(SAVED DATABASE FILES: YES) `n(WARNING: ALL DATA WILL BE REMOVED, INCLUDING THE FOLDER $outputDir) " -f red -nonewline
         $uninstallAction = $( Read-Host "Are you sure you want to uninstall Bitwarden? (y/n)" )
+    } else {
+        Write-Host "(WARNING: ALL DATA WILL BE REMOVED, INCLUDING THE FOLDER $outputDir) " -f red -nonewline
+        $uninstallAction = $( Read-Host "Are you sure you want to uninstall Bitwarden? (y/n)" )
+    }
+
     
-        if ($uninstallAction -eq "y") {
-            Write-Host "uninstalling Bitwarden..."
-            Docker-Compose-Down
-            Write-Host "Removing $outputDir"
-            Remove-Item -Path $outputDir -Force -Recurse
-            Write-Host "Bitwarden uninstall complete!"
-        }
+    if ($uninstallAction -eq "y") {
+        Write-Host "uninstalling Bitwarden..."
+        Docker-Compose-Down
+        Write-Host "Removing $outputDir"
+        Remove-Item -Path $outputDir -Force -Recurse
+        Write-Host "Bitwarden uninstall complete!"
+    } else {
+        Write-Host "Bitwarden uninstall canceled."
+        Exit
+    }
 
     Write-Host "(!) " -f red -nonewline
         $purgeAction = $( Read-Host "Would you like to purge all local Bitwarden container images? (y/n)" )

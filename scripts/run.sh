@@ -230,9 +230,20 @@ function update() {
 }
 
 function uninstall() {
+    echo -e -n "${RED}(WARNING: UNINSTALL STARTED) Would you like to save the database files? (y/n): ${NC}"
+    read KEEP_DATABASE
 
-    echo -e -n "${RED}(WARNING: ALL DATA WILL BE REMOVED, INCLUDING THE FOLDER $OUTPUT_DIR): Are you sure you want to uninstall Bitwarden? (y/n): ${NC}"
-    read UNINSTALL_ACTION
+    if [ "$KEEP_DATABASE" == "y" ]
+    then
+        echo "Saving database files."
+        zip -r "./bitwarden_database.zip" "$OUTPUT_DIR/mssql"
+        echo -e -n "${RED}(SAVED DATABASE FILES: YES): WARNING: ALL DATA WILL BE REMOVED, INCLUDING THE FOLDER $OUTPUT_DIR): Are you sure you want to uninstall Bitwarden? (y/n): ${NC}"
+        read UNINSTALL_ACTION
+    else
+        echo -e -n "${RED}WARNING: ALL DATA WILL BE REMOVED, INCLUDING THE FOLDER $OUTPUT_DIR): Are you sure you want to uninstall Bitwarden? (y/n): ${NC}"
+        read UNINSTALL_ACTION
+    fi
+
     
     if [ "$UNINSTALL_ACTION" == "y" ]
     then
@@ -243,6 +254,9 @@ function uninstall() {
         echo "Removing MSSQL docker volume."
         docker volume prune --force --filter="label=com.bitwarden.product=bitwarden"
         echo "Bitwarden uninstall complete!"
+    else
+        echo -e -n "${CYAN}(!) Bitwarden uninstall canceled. ${NC}"
+        exit 1
     fi
 
     echo -e -n "${RED}(!) Would you like to purge all local Bitwarden container images? (y/n): ${NC}"
@@ -250,6 +264,7 @@ function uninstall() {
     if [ "$PURGE_ACTION" == "y" ]
     then
         dockerPrune
+        echo -e -n "${CYAN}Bitwarden uninstall complete! ${NC}"
     fi
     
 }
