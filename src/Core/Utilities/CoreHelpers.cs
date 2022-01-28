@@ -270,31 +270,31 @@ namespace Bit.Core.Utilities
 
         private static string RandomStringCharacters(bool alpha, bool upper, bool lower, bool numeric, bool special)
         {
-            var characters = new StringBuilder();
+            var characters = string.Empty;
             if (alpha)
             {
                 if (upper)
                 {
-                    characters.Append("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
+                    characters += "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
                 }
 
                 if (lower)
                 {
-                    characters.Append("abcdefghijklmnopqrstuvwxyz");
+                    characters += "abcdefghijklmnopqrstuvwxyz";
                 }
             }
 
             if (numeric)
             {
-                characters.Append("0123456789");
+                characters += "0123456789";
             }
 
             if (special)
             {
-                characters.Append("!@#$%^*&");
+                characters += "!@#$%^*&";
             }
 
-            return characters.ToString();
+            return characters;
         }
 
         // ref: https://stackoverflow.com/a/11124118/1090359

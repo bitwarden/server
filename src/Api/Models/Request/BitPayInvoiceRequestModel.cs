@@ -34,21 +34,19 @@ namespace Bit.Api.Models.Request
                 ExtendedNotifications = true
             };
 
-            var posData = new StringBuilder();
+            var posData = string.Empty;
             if (UserId.HasValue)
             {
-                posData.Append("userId:")
-                    .Append(UserId.Value);
+                posData = "userId:" + UserId.Value;
             }
             else if (OrganizationId.HasValue)
             {
-                posData.Append("organizationId:")
-                    .Append(OrganizationId.Value);
+                posData = "organizationId:" + OrganizationId.Value;
             }
 
             if (Credit)
             {
-                posData.Append(",accountCredit:1");
+                posData += ",accountCredit:1";
                 inv.ItemDesc = "Bitwarden Account Credit";
             }
             else
@@ -56,7 +54,7 @@ namespace Bit.Api.Models.Request
                 inv.ItemDesc = "Bitwarden";
             }
 
-            inv.PosData = posData.ToString();
+            inv.PosData = posData;
             return inv;
         }
 
