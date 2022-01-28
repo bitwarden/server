@@ -5,13 +5,14 @@ using System.Data.SqlClient;
 using System.Linq;
 using System.Threading.Tasks;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Dapper;
 
 namespace Bit.Infrastructure.Dapper.Repositories
 {
-    public class OrganizationApiKeyRepository : Repository<OrganizationApiKey, Guid>, IOrganizationApiKeyRepository
+    public class OrganizationApiKeyRepository : BaseRepository, IOrganizationApiKeyRepository
     {
         public OrganizationApiKeyRepository(GlobalSettings globalSettings)
             : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
@@ -23,7 +24,7 @@ namespace Bit.Infrastructure.Dapper.Repositories
             : base(connectionString, readOnlyConnectionString)
         { }
 
-        public async Task<bool> GetCanUseByApiKeyAsync(Guid organizationId, string apiKey)
+        public async Task<bool> GetCanUseByApiKeyAsync(Guid organizationId, string apiKey, OrganizationApiKeyType type)
         {
             using (var connection = new SqlConnection(ConnectionString))
             {
@@ -33,10 +34,26 @@ namespace Bit.Infrastructure.Dapper.Repositories
                     {
                         OrganizationId = organizationId,
                         ApiKey = apiKey,
+                        Type = type,
                     },
                     commandType: CommandType.StoredProcedure);
 
                 return results;
+            }
+        }
+
+        public async Task<OrganizationApiKey> GetByOrganizationIdTypeAsync(Guid organizationId, OrganizationApiKeyType type)
+        {
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                return await connection.QuerySingleOrDefaultAsync<OrganizationApiKey>(
+                    "[dbo].[OrganizationApiKey_ReadByOrganizationIdType]",
+                    new
+                    {
+                        OrganizationId = organizationId,
+                        Type = type,
+                    },
+                    commandType: CommandType.StoredProcedure);
             }
         }
 
@@ -53,6 +70,28 @@ namespace Bit.Infrastructure.Dapper.Repositories
                     commandType: CommandType.StoredProcedure);
 
                 return results.ToList();
+            }
+        }
+
+        public async Task CreateAsync(OrganizationApiKey organizationApiKey)
+        {
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                await connection.ExecuteAsync(
+                    "[dbo].[OrganizationApiKey_Create]",
+                    organizationApiKey,
+                    commandType: CommandType.StoredProcedure);
+            }
+        }
+
+        public async Task UpdateAsync(OrganizationApiKey organizationApiKey)
+        {
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                await connection.ExecuteAsync(
+                    "[dbo].[OrganizationApiKey_Update]",
+                    organizationApiKey,
+                    commandType: CommandType.StoredProcedure);
             }
         }
     }

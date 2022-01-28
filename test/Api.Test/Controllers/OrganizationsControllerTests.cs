@@ -21,6 +21,7 @@ namespace Bit.Api.Test.Controllers
         private readonly ICurrentContext _currentContext;
         private readonly IOrganizationRepository _organizationRepository;
         private readonly IOrganizationService _organizationService;
+        private readonly IOrganizationApiKeyService _organizationApiKeyService;
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly IPaymentService _paymentService;
         private readonly IPolicyRepository _policyRepository;
@@ -36,6 +37,7 @@ namespace Bit.Api.Test.Controllers
             _globalSettings = Substitute.For<GlobalSettings>();
             _organizationRepository = Substitute.For<IOrganizationRepository>();
             _organizationService = Substitute.For<IOrganizationService>();
+            _organizationApiKeyService = Substitute.For<IOrganizationApiKeyService>();
             _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
             _paymentService = Substitute.For<IPaymentService>();
             _policyRepository = Substitute.For<IPolicyRepository>();
@@ -44,7 +46,7 @@ namespace Bit.Api.Test.Controllers
             _userService = Substitute.For<IUserService>();
 
             _sut = new OrganizationsController(_organizationRepository, _organizationUserRepository,
-                _policyRepository, _organizationService, _userService, _paymentService, _currentContext,
+                _policyRepository, _organizationService, _organizationApiKeyService, _userService, _paymentService, _currentContext,
                 _ssoConfigRepository, _ssoConfigService, _globalSettings);
         }
 
@@ -112,4 +114,3 @@ namespace Bit.Api.Test.Controllers
         }
     }
 }
-

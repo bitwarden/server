@@ -29,6 +29,7 @@ namespace Bit.Api.Controllers
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly IPolicyRepository _policyRepository;
         private readonly IOrganizationService _organizationService;
+        private readonly IOrganizationApiKeyService _organizationApiKeyService;
         private readonly IUserService _userService;
         private readonly IPaymentService _paymentService;
         private readonly ICurrentContext _currentContext;
@@ -41,6 +42,7 @@ namespace Bit.Api.Controllers
             IOrganizationUserRepository organizationUserRepository,
             IPolicyRepository policyRepository,
             IOrganizationService organizationService,
+            IOrganizationApiKeyService organizationApiKeyService,
             IUserService userService,
             IPaymentService paymentService,
             ICurrentContext currentContext,
@@ -52,6 +54,7 @@ namespace Bit.Api.Controllers
             _organizationUserRepository = organizationUserRepository;
             _policyRepository = policyRepository;
             _organizationService = organizationService;
+            _organizationApiKeyService = organizationApiKeyService;
             _userService = userService;
             _paymentService = paymentService;
             _currentContext = currentContext;
@@ -477,7 +480,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("{id}/api-key")]
-        public async Task<ApiKeyResponseModel> ApiKey(string id, [FromBody] SecretVerificationRequestModel model)
+        public async Task<ApiKeyResponseModel> ApiKey(string id, [FromBody] OrganizationApiKeyRequestModel model)
         {
             var orgIdGuid = new Guid(id);
             if (!await _currentContext.OrganizationOwner(orgIdGuid))
@@ -490,6 +493,9 @@ namespace Bit.Api.Controllers
             {
                 throw new NotFoundException();
             }
+
+            var organizationApiKey = await _organizationApiKeyService
+                .GetOrganizationApiKeyAsync(organization.Id, model.Type);
 
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)
@@ -504,13 +510,27 @@ namespace Bit.Api.Controllers
             }
             else
             {
-                var response = new ApiKeyResponseModel(organization);
+                var response = new ApiKeyResponseModel(organizationApiKey);
                 return response;
             }
         }
 
+        [HttpGet("{id}/api-key-information")]
+        public async Task<IActionResult> ApiKeyInformation(Guid id)
+        {
+            if (!await _currentContext.OrganizationOwner(id))
+            {
+                return NotFound();
+            }
+
+            var apiKeys = await _organizationApiKeyService.GetByOrganizationIdAsync(id);
+
+            return Ok(new ListResponseModel<OrganizationApiKeyInformation>(
+                apiKeys.Select(k => new OrganizationApiKeyInformation(k))));
+        }
+
         [HttpPost("{id}/rotate-api-key")]
-        public async Task<ApiKeyResponseModel> RotateApiKey(string id, [FromBody] SecretVerificationRequestModel model)
+        public async Task<ApiKeyResponseModel> RotateApiKey(string id, [FromBody] OrganizationApiKeyRequestModel model)
         {
             var orgIdGuid = new Guid(id);
             if (!await _currentContext.OrganizationOwner(orgIdGuid))
@@ -523,6 +543,9 @@ namespace Bit.Api.Controllers
             {
                 throw new NotFoundException();
             }
+
+            var organizationApiKey = await _organizationApiKeyService
+                .GetOrganizationApiKeyAsync(organization.Id, model.Type);
 
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)
@@ -537,8 +560,8 @@ namespace Bit.Api.Controllers
             }
             else
             {
-                await _organizationService.RotateApiKeyAsync(organization);
-                var response = new ApiKeyResponseModel(organization);
+                await _organizationApiKeyService.RotateApiKeyAsync(organizationApiKey);
+                var response = new ApiKeyResponseModel(organizationApiKey);
                 return response;
             }
         }

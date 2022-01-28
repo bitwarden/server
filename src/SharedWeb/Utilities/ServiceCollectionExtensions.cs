@@ -95,6 +95,7 @@ namespace Bit.SharedWeb.Utilities
             services.AddScoped<ICipherService, CipherService>();
             services.AddScoped<IUserService, UserService>();
             services.AddScoped<IOrganizationService, OrganizationService>();
+            services.AddSingleton<IOrganizationApiKeyService, OrganizationApiKeyService>();
             services.AddScoped<IOrganizationSponsorshipService, OrganizationSponsorshipService>();
             services.AddScoped<ICollectionService, CollectionService>();
             services.AddScoped<IGroupService, GroupService>();

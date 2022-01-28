@@ -6,14 +6,14 @@ namespace Bit.Api.Models.Response
 {
     public class ApiKeyResponseModel : ResponseModel
     {
-        public ApiKeyResponseModel(Organization organization, string obj = "apiKey")
+        public ApiKeyResponseModel(OrganizationApiKey organizationApiKey, string obj = "apiKey")
             : base(obj)
         {
-            if (organization == null)
+            if (organizationApiKey == null)
             {
-                throw new ArgumentNullException(nameof(organization));
+                throw new ArgumentNullException(nameof(organizationApiKey));
             }
-            ApiKey = organization.ApiKey;
+            ApiKey = organizationApiKey.ApiKey;
         }
 
         public ApiKeyResponseModel(User user, string obj = "apiKey")

@@ -114,11 +114,12 @@ namespace Bit.Api
                     policy.RequireAuthenticatedUser();
                     policy.RequireClaim(JwtClaimTypes.Scope, "api.organization");
                 });
-                config.AddPolicy("Organization:SyncSponsorhips", policy =>
+                config.AddPolicy("SyncBilling", policy =>
                 {
                     policy.RequireAuthenticatedUser();
-                    policy.RequireClaim(JwtClaimTypes.Scope, "api.organization.syncsponsorhips");
+                    policy.RequireClaim(JwtClaimTypes.Scope, "api.syncbilling");
                 });
+
             });
 
             services.AddScoped<AuthenticatorTokenProvider>();
