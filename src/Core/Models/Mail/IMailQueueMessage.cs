@@ -9,6 +9,6 @@ namespace Bit.Core.Models.Mail
         IEnumerable<string> BccEmails { get; set; }
         string Category { get; set; }
         string TemplateName { get; set; }
-        dynamic Model { get; set; }
+        object Model { get; set; }
     }
 }

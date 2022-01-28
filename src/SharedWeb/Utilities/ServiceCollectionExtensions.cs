@@ -335,8 +335,6 @@ namespace Bit.SharedWeb.Utilities
                     CoreHelpers.CustomProviderName(TwoFactorProviderType.YubiKey))
                 .AddTokenProvider<DuoWebTokenProvider>(
                     CoreHelpers.CustomProviderName(TwoFactorProviderType.Duo))
-                .AddTokenProvider<U2fTokenProvider>(
-                    CoreHelpers.CustomProviderName(TwoFactorProviderType.U2f))
                 .AddTokenProvider<TwoFactorRememberTokenProvider>(
                     CoreHelpers.CustomProviderName(TwoFactorProviderType.Remember))
                 .AddTokenProvider<EmailTokenProvider<User>>(TokenOptions.DefaultEmailProvider)

@@ -1,11 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Net.Http.Json;
 using System.Reflection;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
@@ -13,7 +14,6 @@ using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Newtonsoft.Json;
 
 namespace Bit.Billing.Controllers
 {
@@ -62,23 +62,18 @@ namespace Bit.Billing.Controllers
                 return new BadRequestResult();
             }
 
-            string body = null;
-            using (var reader = new StreamReader(HttpContext.Request.Body, Encoding.UTF8))
-            {
-                body = await reader.ReadToEndAsync();
-            }
-
-            if (string.IsNullOrWhiteSpace(body))
+            using var body = await JsonSerializer.DeserializeAsync<JsonDocument>(HttpContext.Request.Body);
+            var root = body.RootElement;
+            if (root.ValueKind != JsonValueKind.Object)
             {
                 return new BadRequestResult();
             }
 
             try
             {
-                dynamic data = JsonConvert.DeserializeObject(body);
-                string ticketId = data.ticket_id;
-                string ticketContactEmail = data.ticket_contact_email;
-                string ticketTags = data.ticket_tags;
+                var ticketId = root.GetProperty("ticket_id").GetString();
+                var ticketContactEmail = root.GetProperty("ticket_contact_email").GetString();
+                var ticketTags = root.GetProperty("ticket_tags").GetString();
                 if (string.IsNullOrWhiteSpace(ticketId) || string.IsNullOrWhiteSpace(ticketContactEmail))
                 {
                     return new BadRequestResult();
@@ -120,9 +115,11 @@ namespace Bit.Billing.Controllers
                         updateBody.Add("tags", tagsToUpdate);
                     }
                     var updateRequest = new HttpRequestMessage(HttpMethod.Put,
-                        string.Format("https://bitwarden.freshdesk.com/api/v2/tickets/{0}", ticketId));
-                    updateRequest.Content = new StringContent(JsonConvert.SerializeObject(updateBody),
-                        Encoding.UTF8, "application/json");
+                        string.Format("https://bitwarden.freshdesk.com/api/v2/tickets/{0}", ticketId))
+                    {
+                        Content = JsonContent.Create(updateBody),
+                    };
+
                     await CallFreshdeskApiAsync(updateRequest);
 
 
@@ -132,9 +129,10 @@ namespace Bit.Billing.Controllers
                         { "private", true }
                     };
                     var noteRequest = new HttpRequestMessage(HttpMethod.Post,
-                        string.Format("https://bitwarden.freshdesk.com/api/v2/tickets/{0}/notes", ticketId));
-                    noteRequest.Content = new StringContent(JsonConvert.SerializeObject(noteBody),
-                        Encoding.UTF8, "application/json");
+                        string.Format("https://bitwarden.freshdesk.com/api/v2/tickets/{0}/notes", ticketId))
+                    {
+                        Content = JsonContent.Create(noteBody),
+                    };
                     await CallFreshdeskApiAsync(noteRequest);
                 }
 

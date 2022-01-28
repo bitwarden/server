@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text.Json;
 using System.Threading.Tasks;
 using AutoFixture.Xunit2;
 using Bit.Api.Controllers;
@@ -14,7 +15,6 @@ using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 using NSubstitute;
 using Xunit;
 
@@ -66,7 +66,7 @@ namespace Bit.Api.Test.Controllers
 
             send.Id = default;
             send.Type = SendType.Text;
-            send.Data = JsonConvert.SerializeObject(new Dictionary<string, string>());
+            send.Data = JsonSerializer.Serialize(new Dictionary<string, string>());
             send.HideEmail = true;
 
             _sendService.AccessAsync(id, null).Returns((send, false, false));
@@ -81,4 +81,3 @@ namespace Bit.Api.Test.Controllers
         }
     }
 }
-

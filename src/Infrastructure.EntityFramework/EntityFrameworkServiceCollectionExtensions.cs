@@ -50,7 +50,6 @@ namespace Bit.Infrastructure.EntityFramework
             services.AddSingleton<ISsoUserRepository, SsoUserRepository>();
             services.AddSingleton<ITaxRateRepository, TaxRateRepository>();
             services.AddSingleton<ITransactionRepository, TransactionRepository>();
-            services.AddSingleton<IU2fRepository, U2fRepository>();
             services.AddSingleton<IUserRepository, UserRepository>();
             services.AddSingleton<IProviderRepository, ProviderRepository>();
             services.AddSingleton<IProviderUserRepository, ProviderUserRepository>();

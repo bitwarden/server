@@ -65,7 +65,7 @@ namespace Bit.Core.Services
                     break;
                 case DeviceType.iOS:
                     payloadTemplate = "{\"data\":{\"type\":\"#(type)\",\"payload\":\"$(payload)\"}," +
-                        "\"aps\":{\"alert\":null,\"badge\":null,\"content-available\":1}}";
+                        "\"aps\":{\"content-available\":1}}";
                     messageTemplate = "{\"data\":{\"type\":\"#(type)\"}," +
                         "\"aps\":{\"alert\":\"$(message)\",\"badge\":null,\"content-available\":1}}";
                     badgeMessageTemplate = "{\"data\":{\"type\":\"#(type)\"}," +

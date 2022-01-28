@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json.Serialization;
 using Bit.Core.Entities;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Data;
@@ -18,7 +19,7 @@ namespace Bit.Api.Models.Response
             Url = $"{globalSettings.Attachment.BaseUrl}/{cipher.Id}/{id}";
             FileName = data.FileName;
             Key = data.Key;
-            Size = data.SizeString;
+            Size = data.Size;
             SizeName = CoreHelpers.ReadableBytesSize(data.Size);
         }
 
@@ -26,7 +27,8 @@ namespace Bit.Api.Models.Response
         public string Url { get; set; }
         public string FileName { get; set; }
         public string Key { get; set; }
-        public string Size { get; set; }
+        [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString | JsonNumberHandling.WriteAsString)]
+        public long Size { get; set; }
         public string SizeName { get; set; }
 
         public static IEnumerable<AttachmentResponseModel> FromCipher(Cipher cipher, IGlobalSettings globalSettings)

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Bit.Core.Context;
@@ -13,7 +14,6 @@ using Bit.Core.Settings;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Azure.NotificationHubs;
 using Microsoft.Extensions.DependencyInjection;
-using Newtonsoft.Json;
 
 namespace Bit.Core.Services
 {
@@ -235,7 +235,7 @@ namespace Bit.Core.Services
                 new Dictionary<string, string>
                 {
                     { "type",  ((byte)type).ToString() },
-                    { "payload", JsonConvert.SerializeObject(payload) }
+                    { "payload", JsonSerializer.Serialize(payload) }
                 }, tag);
         }
 

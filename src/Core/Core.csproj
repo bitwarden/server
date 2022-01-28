@@ -25,7 +25,7 @@
     <PackageReference Include="Azure.Storage.Blobs" Version="12.10.0" />
     <PackageReference Include="Azure.Storage.Queues" Version="12.3.2" />
     <PackageReference Include="BitPay.Light" Version="1.0.1907" />
-    <PackageReference Include="Fido2.AspNet" Version="1.1.0" />
+    <PackageReference Include="Fido2.AspNet" Version="3.0.0-beta2" />
     <PackageReference Include="Handlebars.Net" Version="1.10.1" />
     <PackageReference Include="IdentityServer4.AccessTokenValidation" Version="3.0.1" />
     <PackageReference Include="MailKit" Version="2.8.0" />
@@ -50,7 +50,6 @@
     <PackageReference Include="AspNetCoreRateLimit" Version="2.1.0" />
     <PackageReference Include="Braintree" Version="4.18.0" />
     <PackageReference Include="Stripe.net" Version="37.26.0" />
-    <PackageReference Include="U2F.Core" Version="1.0.4" />
     <PackageReference Include="Otp.NET" Version="1.2.2" />
     <PackageReference Include="YubicoDotNetClient" Version="1.2.0" />
     <PackageReference Include="Microsoft.Extensions.Caching.Redis" Version="2.2.0" />
