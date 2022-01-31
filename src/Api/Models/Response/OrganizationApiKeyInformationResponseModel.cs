@@ -9,7 +9,7 @@ namespace Bit.Api.Models.Response
     {
         public OrganizationApiKeyInformation(OrganizationApiKey key) : base("keyInformation")
         {
-            
+            KeyType = key.Type;
         }
 
         public OrganizationApiKeyType KeyType { get; set; }
