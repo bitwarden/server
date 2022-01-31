@@ -39,7 +39,7 @@ jobs:
           REPO_LIST=$(az acr repository list -n $REGISTRY -o tsv)
           for REPO in $REPO_LIST
           do
-            TAG_LIST=$(az acr repository show-tags -n $REGISTRY --repository $REPO)
+            TAG_LIST=$(az acr repository show-tags -n $REGISTRY --repository $REPO -o tsv)
             for TAG in $TAG_LIST
             do
               if [ $TAG = "latest" ]; then
