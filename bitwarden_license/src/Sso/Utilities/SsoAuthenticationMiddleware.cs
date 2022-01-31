@@ -23,6 +23,12 @@ namespace Bit.Sso.Utilities
 
         public async Task Invoke(HttpContext context)
         {
+            if ((context.Request.Method == "GET" && context.Request.Query.ContainsKey("SAMLart"))
+                || (context.Request.Method == "POST" && context.Request.Form.ContainsKey("SAMLart")))
+            {
+                throw new Exception("SAMLart parameter detected. SAML Artifact binding is not allowed.");
+            }
+
             context.Features.Set<IAuthenticationFeature>(new AuthenticationFeature
             {
                 OriginalPath = context.Request.Path,
