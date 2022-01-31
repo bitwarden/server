@@ -60,20 +60,40 @@ namespace Bit.Core.Utilities
         private const string LegacyMessage = "Usage of Newtonsoft.Json should be kept to a minimum and will further be removed when we move to .NET 6";
 
         [Obsolete(LegacyMessage)]
-        public static NS.JsonSerializerSettings LegacyDefault { get; } = new NS.JsonSerializerSettings();
+        public static NS.JsonSerializerSettings LegacyEnumKeyResolver { get; } = new NS.JsonSerializerSettings
+        {
+            ContractResolver = new EnumKeyResolver<byte>(),
+        };
 
         [Obsolete(LegacyMessage)]
         public static string LegacySerialize(object value, NS.JsonSerializerSettings settings = null)
         {
-            return NS.JsonConvert.SerializeObject(value, settings ?? LegacyDefault);
+            return NS.JsonConvert.SerializeObject(value, settings);
         }
 
         [Obsolete(LegacyMessage)]
         public static T LegacyDeserialize<T>(string value, NS.JsonSerializerSettings settings = null)
         {
-            return NS.JsonConvert.DeserializeObject<T>(value, settings ?? LegacyDefault);
+            return NS.JsonConvert.DeserializeObject<T>(value, settings);
         }
         #endregion
+    }
+
+    public class EnumKeyResolver<T> : NS.Serialization.DefaultContractResolver
+        where T : struct
+    {
+        protected override NS.Serialization.JsonDictionaryContract CreateDictionaryContract(Type objectType)
+        {
+            var contract = base.CreateDictionaryContract(objectType);
+            var keyType = contract.DictionaryKeyType;
+
+            if (keyType.BaseType == typeof(Enum))
+            {
+                contract.DictionaryKeyResolver = propName => ((T)Enum.Parse(keyType, propName)).ToString();
+            }
+
+            return contract;
+        }
     }
 
     public class MsEpochConverter : JsonConverter<DateTime?>

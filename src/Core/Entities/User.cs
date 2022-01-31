@@ -133,7 +133,7 @@ namespace Bit.Core.Entities
         public void SetTwoFactorProviders(Dictionary<TwoFactorProviderType, TwoFactorProvider> providers)
         {
             // When replacing with system.text remember to remove the extra serialization in WebAuthnTokenProvider.
-            TwoFactorProviders = JsonHelpers.LegacySerialize(providers);
+            TwoFactorProviders = JsonHelpers.LegacySerialize(providers, JsonHelpers.LegacyEnumKeyResolver);
             _twoFactorProviders = providers;
         }
 
