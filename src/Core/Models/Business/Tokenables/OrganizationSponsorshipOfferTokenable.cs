@@ -8,9 +8,9 @@ namespace Bit.Core.Models.Business.Tokenables
 {
     public class OrganizationSponsorshipOfferTokenable : Tokenable
     {
-        public const string ClearTextPrefix = "BWF4EOrganizationSponsorship_";
+        public const string ClearTextPrefix = "BWOrganizationSponsorship_";
         public const string DataProtectorPurpose = "EmergencyAccessServiceDataProtector";
-        public const string TokenIdentifier = "FamiliesForEnterpriseToken";
+        public const string TokenIdentifier = "OrganizationSponsorshipOfferToken";
         public string Identifier { get; set; } = TokenIdentifier;
         public Guid Id { get; set; }
         public PlanSponsorshipType SponsorshipType { get; set; }
