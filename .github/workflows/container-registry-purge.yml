@@ -18,9 +18,16 @@ jobs:
           - name: bitwardenprod
     steps:
       - name: Login to Azure
+        if: matrix.name == 'bitwardenprod'
         uses: Azure/login@1f63701bf3e6892515f1b7ce2d2bf1708b46beaf
         with:
           creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
+
+      - name: Login to Azure
+        if: matrix.name == 'bitwardenqa'
+        uses: Azure/login@1f63701bf3e6892515f1b7ce2d2bf1708b46beaf
+        with:
+          creds: ${{ secrets.AZURE_QA_KV_CREDENTIALS }}
 
       - name: Purge images
         env:
