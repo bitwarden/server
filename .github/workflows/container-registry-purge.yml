@@ -33,13 +33,24 @@ jobs:
       - name: Purge images
         env:
           REGISTRY: ${{ matrix.name }}
+          AGO_DUR_VER: "180d"
           AGO_DUR: "30d"
         run: |
           REPO_LIST=$(az acr repository list -n $REGISTRY -o tsv)
           for REPO in $REPO_LIST
           do
-            PURGE_CMD="acr purge --filter '$REPO:.*' --ago $AGO_DUR --untagged --dry-run"
-            az acr run --cmd "$PURGE_CMD" --registry $REGISTRY /dev/null
+            TAG_LIST=$(az acr repository show-tags -n $REGISTRY --repository $REPO)
+            for TAG in $TAG_LIST
+            do
+              if [ $TAG = "latest" ]; then
+                PURGE_CMD="acr purge --filter '$REPO:$TAG' --ago $AGO_DUR_VER --untagged --keep 1 --dry-run"
+              elif [[ $TAG =~ [0-9]+\.[0-9]+\.[0-9]+ ]]; then
+                PURGE_CMD="acr purge --filter '$REPO:$TAG' --ago $AGO_DUR_VER --untagged --dry-run"
+              else
+                PURGE_CMD="acr purge --filter '$REPO:$TAG' --ago $AGO_DUR --untagged --dry-run"
+              fi
+              az acr run --cmd "$PURGE_CMD" --registry $REGISTRY /dev/null
+            done
           done
 
 
