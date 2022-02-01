@@ -122,6 +122,7 @@ namespace Bit.Core.Models.Business
         public DateTime? Expires { get; set; }
         public bool Trial { get; set; }
         // Dummy field used for validating uploaded license isn't a UserLicense.
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string Email { get; set; }
         public string Hash { get; set; }
         public string Signature { get; set; }
