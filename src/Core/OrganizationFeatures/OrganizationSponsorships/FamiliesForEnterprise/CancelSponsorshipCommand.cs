@@ -12,7 +12,10 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
         private readonly IPaymentService _paymentService;
         private readonly IMailService _mailService;
 
-        public CancelSponsorshipCommand(IOrganizationSponsorshipRepository organizationSponsorshipRepository, IOrganizationRepository organizationRepository, IPaymentService paymentService, IMailService mailService)
+        public CancelSponsorshipCommand(IOrganizationSponsorshipRepository organizationSponsorshipRepository,
+            IOrganizationRepository organizationRepository,
+            IPaymentService paymentService,
+            IMailService mailService)
         {
             _organizationSponsorshipRepository = organizationSponsorshipRepository;
             _organizationRepository = organizationRepository;
