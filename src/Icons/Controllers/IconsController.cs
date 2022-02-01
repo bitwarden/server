@@ -11,13 +11,15 @@ namespace Bit.Icons.Controllers
     [Route("")]
     public class IconsController : Controller
     {
-        // Basic fa-globe icon
-        private static readonly byte[] _notFoundImage = Convert.FromBase64String("iVBORw0KGgoAAAANSUhE" +
-            "UgAAABEAAAARCAQAAACRZI9xAAABH0lEQVQoz2WQv0sDQRCF351C4g9QkXCgIkJAEREExUpJbyFoK6nSRLT/GgtLOxE" +
-            "sgoX/QLAL2Alin0YkICJicQhHCrEIEsJYZLnsxVfNzH779s1KToTsUqNFzAOnRBoWyyS0+aSO0cEwrhnxgUOMMjOMk2" +
-            "eVOwzDeCE/cDDWXD2B0aFAnR7GPUE/Q8KJ5zjHDYHEFr8YB5IoYbymlpIIJaap0sVICMQthpEbil9xeYxIxBjGQgY4S" +
-            "wFjW27FD6bccUCBbw8piWdXNliRuKRLzQOMdXGeNj+E7FDOAMakKHptk30iHr3JU//1RuZWiysWWXKRi30kT5KBviSJ" +
-            "MWKOB0vO8uYhVUJKtCH7VaNcpEhMj3c29F/k2OSICnvM+/M/XGfnuYOrfEAAAAAASUVORK5CYII=");
+        // Basic bwi-globe icon
+        private static readonly byte[] _notFoundImage = Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUg" +
+            "AAABMAAAATCAQAAADYWf5HAAABu0lEQVR42nXSvWuTURTH8R+t0heI9Y04aJycdBLNJNrBFBU7OFgUER3q21I0bXK+JwZ" +
+            "pXISm/QdcRB3EgqBBsNihsUbbgODQQSKCuKSDOApJuuhj8tCYQj/jvYfD795z1MZ+nBKrNKhSwrMxbZTrtRnqlEjZkB/x" +
+            "C/xmhZrlc71qS0Up8yVzTCGucFNKD1JhORVd70SZNU4okNx5d4+U2UXRIpJFWLClsR79YzN88wQvLWNzzPKEeS/wkQGpW" +
+            "VhhqhW8TtDJD3Mm1x/23zLSrZCdpBY8BueTNjHSbc+8wC9HlHgU5Aj5AW5zPdcVdpq0UcknWBSr/pjixO4gfp899Kd23p" +
+            "M2qQCH7LkCnqAqGh73OK/8NPOcaibr90LrW/yWAnaUhqjaOSl9nFR2r5rsqo22ypn1B5IN8VOUMHVgOnNQIX+d62plcz6" +
+            "rg1/jskK8CMb4we4pG6OWHtR/LBJkC2E4a7ZPkuX5ntumAOM2xxveclEhLvGH6XCmLPs735Eetrw63NnOgr9P9q1viC3x" +
+            "lRUGOjImqFDuOBvrYYoaZU9z1uPpYae5NfdvbNVG2ZjDIlXq/oMi46lo++4vjjPBl2Dlg00AAAAASUVORK5CYII=");
 
         private readonly IMemoryCache _memoryCache;
         private readonly IDomainMappingService _domainMappingService;
