@@ -43,11 +43,11 @@ jobs:
             for TAG in $TAG_LIST
             do
               if [ $TAG = "latest" ]; then
-                PURGE_CMD="acr purge --filter '$REPO:$TAG' --ago $AGO_DUR_VER --untagged --keep 1 --dry-run"
+                PURGE_CMD="acr purge --filter '$REPO:$TAG' --ago $AGO_DUR_VER --untagged --keep 1"
               elif [[ $TAG =~ [0-9]+\.[0-9]+\.[0-9]+ ]]; then
-                PURGE_CMD="acr purge --filter '$REPO:$TAG' --ago $AGO_DUR_VER --untagged --dry-run"
+                PURGE_CMD="acr purge --filter '$REPO:$TAG' --ago $AGO_DUR_VER --untagged"
               else
-                PURGE_CMD="acr purge --filter '$REPO:$TAG' --ago $AGO_DUR --untagged --dry-run"
+                PURGE_CMD="acr purge --filter '$REPO:$TAG' --ago $AGO_DUR --untagged"
               fi
               az acr run --cmd "$PURGE_CMD" --registry $REGISTRY /dev/null
             done
