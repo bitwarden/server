@@ -24,7 +24,7 @@ namespace Bit.Core.Models.Business.Tokenables
 
         public OrganizationSponsorshipOfferTokenable(OrganizationSponsorship sponsorship)
         {
-            if (sponsorship.Id == null || sponsorship.Id == default)
+            if (sponsorship.Id == default)
             {
                 throw new ArgumentException("Invalid OrganizationSponsorship to create a token, Id is required", nameof(sponsorship));
             }
