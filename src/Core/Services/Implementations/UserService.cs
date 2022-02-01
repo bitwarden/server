@@ -1033,7 +1033,7 @@ namespace Bit.Core.Services
             if (license != null && !string.IsNullOrEmpty(license.Plan))
             {
                 throw new BadRequestException("Organization licenses cannot be applied to a user. "
-                    + "Upload this license from the Org settings page.");
+                    + "Upload this license from the Organization settings page.");
             }
 
             if (license == null || !_licenseService.VerifyLicense(license))
