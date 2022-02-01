@@ -2,8 +2,8 @@
 name: Container Registry Purge
 
 on:
-  #schedule:
-  #  - cron: '0 0 * * SUN'
+  schedule:
+    - cron: '0 0 * * SUN'
   workflow_dispatch:
     inputs: {}
 
