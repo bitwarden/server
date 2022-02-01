@@ -661,7 +661,7 @@ namespace Bit.Core.Services
             OrganizationLicense license, User owner, string ownerKey, string collectionName, string publicKey,
             string privateKey)
         {
-            if (license != null && !string.IsNullOrEmpty(license.Email))
+            if (license?.LicenseType != null && license.LicenseType != LicenseType.Organization)
             {
                 throw new BadRequestException("Premium licenses cannot be applied to an organization. "
                                               + "Upload this license from your personal account settings page.");
@@ -812,7 +812,7 @@ namespace Bit.Core.Services
                 throw new InvalidOperationException("Licenses require self hosting.");
             }
 
-            if (license != null && !string.IsNullOrEmpty(license.Email))
+            if (license?.LicenseType != null && license.LicenseType != LicenseType.Organization)
             {
                 throw new BadRequestException("Premium licenses cannot be applied to an organization. "
                                               + "Upload this license from your personal account settings page.");

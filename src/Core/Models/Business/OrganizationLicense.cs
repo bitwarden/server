@@ -21,6 +21,7 @@ namespace Bit.Core.Models.Business
             ILicensingService licenseService, int? version = null)
         {
             Version = version.GetValueOrDefault(CURRENT_LICENSE_FILE_VERSION); // TODO: Remember to change the constant
+            LicenseType = Enums.LicenseType.Organization;
             LicenseKey = org.LicenseKey;
             InstallationId = installationId;
             Id = org.Id;
@@ -121,9 +122,7 @@ namespace Bit.Core.Models.Business
         public DateTime? Refresh { get; set; }
         public DateTime? Expires { get; set; }
         public bool Trial { get; set; }
-        // Dummy field used for validating uploaded license isn't a UserLicense.
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public string Email { get; set; }
+        public LicenseType? LicenseType { get; set; }
         public string Hash { get; set; }
         public string Signature { get; set; }
         [JsonIgnore]
