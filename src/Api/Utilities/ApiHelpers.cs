@@ -21,15 +21,8 @@ namespace Bit.Api.Utilities
             {
                 try
                 {
-                    using (var stream = file.OpenReadStream())
-                    using (var reader = new StreamReader(stream))
-                    {
-                        var s = await reader.ReadToEndAsync();
-                        if (!string.IsNullOrWhiteSpace(s))
-                        {
-                            obj = JsonSerializer.Deserialize<T>(s);
-                        }
-                    }
+                    using var stream = file.OpenReadStream();
+                    obj = await JsonSerializer.DeserializeAsync<T>(stream, JsonHelpers.IgnoreCase);
                 }
                 catch { }
             }
