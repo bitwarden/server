@@ -9,6 +9,7 @@ namespace Bit.Core.Utilities
     {
         public static JsonSerializerOptions Default { get; }
         public static JsonSerializerOptions Indented { get; }
+        public static JsonSerializerOptions IgnoreCase { get; }
         public static JsonSerializerOptions IgnoreWritingNull { get; }
         public static JsonSerializerOptions CamelCase { get; }
         public static JsonSerializerOptions IgnoreWritingNullAndCamelCase { get; }
@@ -20,6 +21,11 @@ namespace Bit.Core.Utilities
             Indented = new JsonSerializerOptions
             {
                 WriteIndented = true,
+            };
+
+            IgnoreCase = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true,
             };
 
             IgnoreWritingNull = new JsonSerializerOptions
