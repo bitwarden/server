@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using Bit.Api.Models.Request;
@@ -19,7 +19,7 @@ namespace Bit.Api.Test.Utilities
             context.Request.ContentLength.Returns(200);
             var bytes = Encoding.UTF8.GetBytes(testFile);
             var formFile = new FormFile(new MemoryStream(bytes), 0, bytes.Length, "bitwarden_organization_license", "bitwarden_organization_license.json");
-            
+
 
             var license = await ApiHelpers.ReadJsonFileFromBody<OrganizationLicense>(context, formFile);
             Assert.Equal(8, license.Version);
