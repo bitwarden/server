@@ -1,4 +1,4 @@
-
+﻿
 using System.Threading.Tasks;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
