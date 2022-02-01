@@ -661,6 +661,12 @@ namespace Bit.Core.Services
             OrganizationLicense license, User owner, string ownerKey, string collectionName, string publicKey,
             string privateKey)
         {
+            if (license != null && !string.IsNullOrEmpty(license.Email))
+            {
+                throw new BadRequestException("Premium licenses cannot be applied to an organization. "
+                                              + "Upload this license from your personal account settings page.");
+            }
+
             if (license == null || !_licensingService.VerifyLicense(license))
             {
                 throw new BadRequestException("Invalid license.");
@@ -804,6 +810,12 @@ namespace Bit.Core.Services
             if (!_globalSettings.SelfHosted)
             {
                 throw new InvalidOperationException("Licenses require self hosting.");
+            }
+
+            if (license != null && !string.IsNullOrEmpty(license.Email))
+            {
+                throw new BadRequestException("Premium licenses cannot be applied to an organization. "
+                                              + "Upload this license from your personal account settings page.");
             }
 
             if (license == null || !_licensingService.VerifyLicense(license))

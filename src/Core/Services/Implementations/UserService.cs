@@ -1030,6 +1030,12 @@ namespace Bit.Core.Services
                 throw new InvalidOperationException("Licenses require self hosting.");
             }
 
+            if (license != null && !string.IsNullOrEmpty(license.Plan))
+            {
+                throw new BadRequestException("Organization licenses cannot be applied to a user. "
+                    + "Upload this license from the Org settings page.");
+            }
+
             if (license == null || !_licenseService.VerifyLicense(license))
             {
                 throw new BadRequestException("Invalid license.");

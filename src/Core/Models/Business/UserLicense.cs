@@ -66,6 +66,8 @@ namespace Bit.Core.Models.Business
         public DateTime? Refresh { get; set; }
         public DateTime? Expires { get; set; }
         public bool Trial { get; set; }
+        // Dummy field used for validating uploaded license isn't an OrganizationLicense.
+        public string Plan { get; set; }
         public string Hash { get; set; }
         public string Signature { get; set; }
         [JsonIgnore]
