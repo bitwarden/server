@@ -30,7 +30,7 @@ namespace Bit.Identity.Controllers
             _userService = userService;
         }
 
-        // Moved from API, If you modify this endpoint, please update Identity as well.
+        // Moved from API, If you modify this endpoint, please update API as well.
         [HttpPost("register")]
         [CaptchaProtected]
         public async Task PostRegister([FromBody] RegisterRequestModel model)
@@ -51,7 +51,7 @@ namespace Bit.Identity.Controllers
             throw new BadRequestException(ModelState);
         }
 
-        // Moved from API, If you modify this endpoint, please update Identity as well.
+        // Moved from API, If you modify this endpoint, please update API as well.
         [HttpPost("prelogin")]
         public async Task<PreloginResponseModel> PostPrelogin([FromBody] PreloginRequestModel model)
         {
