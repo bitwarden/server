@@ -15,7 +15,7 @@ namespace Bit.Core.Models.Data
 
         // We serialize Size as a string since JSON (or Javascript) doesn't support full precision for long numbers
         [JsonNumberHandling(JsonNumberHandling.WriteAsString | JsonNumberHandling.AllowReadingFromString)]
-        public long Size { get; set; }
+        public long? Size { get; set; }
 
         public string Id { get; set; }
         public string FileName { get; set; }

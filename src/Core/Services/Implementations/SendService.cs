@@ -148,7 +148,7 @@ namespace Bit.Core.Services
         {
             var fileData = JsonSerializer.Deserialize<SendFileData>(send.Data);
 
-            var (valid, realSize) = await _sendFileStorageService.ValidateFileAsync(send, fileData.Id, fileData.Size, _fileSizeLeeway);
+            var (valid, realSize) = await _sendFileStorageService.ValidateFileAsync(send, fileData.Id, fileData.Size ?? 0, _fileSizeLeeway);
 
             if (!valid || realSize > MAX_FILE_SIZE)
             {

@@ -13,7 +13,7 @@ namespace Bit.Api.Models
             Id = data.Id;
             FileName = data.FileName;
             Size = data.Size;
-            SizeName = CoreHelpers.ReadableBytesSize(data.Size);
+            SizeName = CoreHelpers.ReadableBytesSize(data.Size ?? 0);
         }
 
         public string Id { get; set; }
@@ -21,7 +21,7 @@ namespace Bit.Api.Models
         [EncryptedStringLength(1000)]
         public string FileName { get; set; }
         [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString | JsonNumberHandling.WriteAsString)]
-        public long Size { get; set; }
+        public long? Size { get; set; }
         public string SizeName { get; set; }
     }
 }

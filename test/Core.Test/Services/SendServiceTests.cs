@@ -589,7 +589,7 @@ namespace Bit.Core.Test.Services
             send.Data = JsonSerializer.Serialize(sendFileData);
 
             sutProvider.GetDependency<ISendFileStorageService>()
-                .ValidateFileAsync(send, sendFileData.Id, sendFileData.Size, Arg.Any<long>())
+                .ValidateFileAsync(send, sendFileData.Id, sendFileData.Size ?? 0, Arg.Any<long>())
                 .Returns((true, sendFileData.Size));
 
             await sutProvider.Sut.UploadFileToExistingSendAsync(new MemoryStream(Encoding.UTF8.GetBytes(fileContents)), send);
@@ -612,7 +612,7 @@ namespace Bit.Core.Test.Services
             send.Data = JsonSerializer.Serialize(sendFileData);
 
             sutProvider.GetDependency<ISendFileStorageService>()
-                .ValidateFileAsync(send, sendFileData.Id, sendFileData.Size, Arg.Any<long>())
+                .ValidateFileAsync(send, sendFileData.Id, sendFileData.Size ?? 0, Arg.Any<long>())
                 .Returns((false, sendFileData.Size));
 
             var badRequest = await Assert.ThrowsAsync<BadRequestException>(() =>
