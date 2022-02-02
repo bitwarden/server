@@ -280,6 +280,11 @@ namespace Bit.Core.Services
             await DoRemoveSponsorshipAsync(sponsoredOrg, sponsorship);
         }
 
+        public async Task<DateTime?> GetLatestSyncDate(Organization sponsoringOrg)
+        {
+            
+        }
+
         internal async Task DoRemoveSponsorshipAsync(Organization sponsoredOrganization, OrganizationSponsorship sponsorship = null)
         {
             if (sponsoredOrganization != null)

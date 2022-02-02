@@ -561,3 +561,18 @@ SELECT
 FROM
     [dbo].[Organization]
 GO
+
+
+IF OBJECT_ID('[dbo].[OrganizationSponsorship_ReadFirstBySponsoringOrganizationId') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[OrganizationSponsorship_ReadFirstBySponsoringOrganizationId];
+END
+GO
+
+CREATE PROCEDURE [dbo].[OrganizationSponsorship_ReadFirstBySponsoringOrganizationId]
+    @SponsoringOrganizationId UNIQUEIDENTIFIER
+AS
+BEGIN
+    
+END
+GO
