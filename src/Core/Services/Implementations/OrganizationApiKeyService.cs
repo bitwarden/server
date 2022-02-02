@@ -35,6 +35,7 @@ namespace Bit.Core.Services
                     OrganizationId = organizationId,
                     Type = keyType,
                     ApiKey = CoreHelpers.SecureRandomString(30),
+                    RevisionDate = DateTime.UtcNow
                 };
 
                 await _organizationApiKeyRepository.CreateAsync(apiKey);
@@ -46,6 +47,7 @@ namespace Bit.Core.Services
         public async Task<OrganizationApiKey> RotateApiKeyAsync(OrganizationApiKey organizationApiKey)
         {
             organizationApiKey.ApiKey = CoreHelpers.SecureRandomString(30);
+            organizationApiKey.RevisionDate = DateTime.UtcNow;
             await _organizationApiKeyRepository.UpdateAsync(organizationApiKey);
             return organizationApiKey;
         }

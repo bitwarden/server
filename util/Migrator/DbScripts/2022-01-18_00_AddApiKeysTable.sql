@@ -5,6 +5,7 @@ CREATE TABLE [dbo].[OrganizationApiKey] (
     [OrganizationId]    UNIQUEIDENTIFIER NOT NULL,
     [Type]              TINYINT NOT NULL,
     [ApiKey]            VARCHAR(30) NOT NULL,
+    [RevisionDate]      DATETIME2(7) NOT NULL
     CONSTRAINT [PK_OrganizationApiKey] PRIMARY KEY CLUSTERED ([OrganizationId] ASC, [Type] ASC),
     CONSTRAINT [FK_OrganizationApiKey_OrganizationId] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id])
 );
@@ -49,7 +50,8 @@ GO
 CREATE PROCEDURE [dbo].[OrganizationApiKey_Create]
     @OrganizationId UNIQUEIDENTIFIER,
     @ApiKey VARCHAR(30),
-    @Type TINYINT
+    @Type TINYINT,
+    @RevisionDate DATETIME2(7)
 AS
 BEGIN
     SET NOCOUNT ON
@@ -58,13 +60,15 @@ BEGIN
     (
         [OrganizationId],
         [ApiKey],
-        [Type]
+        [Type],
+        [RevisionDate]
     )
     VALUES
     (
         @OrganizationId,
         @ApiKey,
-        @Type
+        @Type,
+        @RevisionDate
     )
 END
 GO
@@ -78,7 +82,8 @@ GO
 CREATE PROCEDURE [dbo].[OrganizationApiKey_Update]
     @OrganizationId UNIQUEIDENTIFIER,
     @Type TINYINT,
-    @ApiKey VARCHAR(30)
+    @ApiKey VARCHAR(30),
+    @RevisionDate DATETIME2(7)
 AS
 BEGIN
     SET NOCOUNT ON
@@ -86,7 +91,8 @@ BEGIN
     UPDATE
         [dbo].[OrganizationApiKey]
     SET
-        [ApiKey] = @ApiKey
+        [ApiKey] = @ApiKey,
+        [RevisionDate] = @RevisionDate
     WHERE
         [OrganizationId] = @OrganizationId AND
         [Type] = @Type

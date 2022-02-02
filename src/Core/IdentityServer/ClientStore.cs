@@ -71,7 +71,7 @@ namespace Bit.Core.IdentityServer
                             ClientId = $"installation.{installation.Id}",
                             RequireClientSecret = true,
                             ClientSecrets = { new Secret(installation.Key.Sha256()) },
-                            AllowedScopes = new string[] { "api.push", "api.licensing", "api.syncbilling" },
+                            AllowedScopes = new string[] { "api.push", "api.licensing" },
                             AllowedGrantTypes = GrantTypes.ClientCredentials,
                             AccessTokenLifetime = 3600 * 24,
                             Enabled = installation.Enabled,

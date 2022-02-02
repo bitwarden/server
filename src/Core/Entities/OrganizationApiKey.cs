@@ -11,5 +11,6 @@ namespace Bit.Core.Entities
         [MaxLength(30)]
         public string ApiKey { get; set; }
         public OrganizationApiKeyType Type { get; set; }
+        public DateTime RevisionDate { get; set; }
     }
 }
