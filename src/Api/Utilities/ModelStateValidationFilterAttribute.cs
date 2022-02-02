@@ -10,7 +10,7 @@ namespace Bit.Api.Utilities
     {
         private readonly bool _publicApi;
 
-        public ModelStateValidationFilterAttribute(bool publicApi) : base()
+        public ModelStateValidationFilterAttribute(bool publicApi)
         {
             _publicApi = publicApi;
         }
