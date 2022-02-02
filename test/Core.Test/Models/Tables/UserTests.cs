@@ -72,12 +72,12 @@ namespace Bit.Core.Test.Models.Tables
             using var jsonDocument = JsonDocument.Parse(user.TwoFactorProviders);
             var root = jsonDocument.RootElement;
 
-            var webAuthn = AssertHelper.AssertJsonProperty(root, "WebAuthn", JsonValueKind.Object);
+            var webAuthn = AssertHelper.AssertJsonProperty(root, "7", JsonValueKind.Object);
             AssertHelper.AssertJsonProperty(webAuthn, "Enabled", JsonValueKind.True);
             var webMetaData = AssertHelper.AssertJsonProperty(webAuthn, "MetaData", JsonValueKind.Object);
             AssertHelper.AssertJsonProperty(webMetaData, "Item", JsonValueKind.String);
 
-            var email = AssertHelper.AssertJsonProperty(root, "Email", JsonValueKind.Object);
+            var email = AssertHelper.AssertJsonProperty(root, "1", JsonValueKind.Object);
             AssertHelper.AssertJsonProperty(email, "Enabled", JsonValueKind.False);
             var emailMetaData = AssertHelper.AssertJsonProperty(email, "MetaData", JsonValueKind.Object);
             AssertHelper.AssertJsonProperty(emailMetaData, "Email", JsonValueKind.String);
