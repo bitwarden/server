@@ -58,8 +58,9 @@ namespace Bit.Api.Test.Controllers
 
         [Theory]
         [BitAutoData]
-        public async Task RedeemSponsorship_NotSponsoredOrgOwner_ThrowsBadRequest(string sponsorshipToken, User user, OrganizationSponsorship sponsorship,
-            OrganizationSponsorshipRedeemRequestModel model, SutProvider<OrganizationSponsorshipsController> sutProvider)
+        public async Task RedeemSponsorship_NotSponsoredOrgOwner_ThrowsBadRequest(string sponsorshipToken, User user,
+            OrganizationSponsorship sponsorship, OrganizationSponsorshipRedeemRequestModel model,
+            SutProvider<OrganizationSponsorshipsController> sutProvider)
         {
             sutProvider.GetDependency<ICurrentContext>().UserId.Returns(user.Id);
             sutProvider.GetDependency<IUserService>().GetUserByIdAsync(user.Id)
@@ -79,7 +80,8 @@ namespace Bit.Api.Test.Controllers
 
         [Theory]
         [BitAutoData]
-        public async Task RedeemSponsorship_NotSponsoredOrgOwner_Success(string sponsorshipToken, User user, OrganizationSponsorship sponsorship, Organization sponsoringOrganization,
+        public async Task RedeemSponsorship_NotSponsoredOrgOwner_Success(string sponsorshipToken, User user,
+            OrganizationSponsorship sponsorship, Organization sponsoringOrganization,
             OrganizationSponsorshipRedeemRequestModel model, SutProvider<OrganizationSponsorshipsController> sutProvider)
         {
             sutProvider.GetDependency<ICurrentContext>().UserId.Returns(user.Id);
@@ -98,13 +100,14 @@ namespace Bit.Api.Test.Controllers
 
         [Theory]
         [BitAutoData]
-        public async Task PreValidateSponsorshipToken_ValidatesToken_Success(string sponsorshipToken, User user, OrganizationSponsorship sponsorship,
-            SutProvider<OrganizationSponsorshipsController> sutProvider)
+        public async Task PreValidateSponsorshipToken_ValidatesToken_Success(string sponsorshipToken, User user,
+            OrganizationSponsorship sponsorship, SutProvider<OrganizationSponsorshipsController> sutProvider)
         {
             sutProvider.GetDependency<ICurrentContext>().UserId.Returns(user.Id);
             sutProvider.GetDependency<IUserService>().GetUserByIdAsync(user.Id)
                 .Returns(user);
-            sutProvider.GetDependency<IOrganizationSponsorshipService>().ValidateRedemptionTokenAsync(sponsorshipToken, user.Email).Returns((true, sponsorship));
+            sutProvider.GetDependency<IOrganizationSponsorshipService>()
+                .ValidateRedemptionTokenAsync(sponsorshipToken, user.Email).Returns((true, sponsorship));
 
             await sutProvider.Sut.PreValidateSponsorshipToken(sponsorshipToken);
 
