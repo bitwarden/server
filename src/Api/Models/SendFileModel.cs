@@ -21,7 +21,7 @@ namespace Bit.Api.Models
         [EncryptedStringLength(1000)]
         public string FileName { get; set; }
         [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString | JsonNumberHandling.WriteAsString)]
-        public long Size { get; set; }
+        public long? Size { get; set; }
         public string SizeName { get; set; }
     }
 }
