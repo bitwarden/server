@@ -13,7 +13,7 @@ namespace Bit.Api.Models
             Id = data.Id;
             FileName = data.FileName;
             Size = data.Size;
-            SizeName = CoreHelpers.ReadableBytesSize(data.Size ?? 0);
+            SizeName = CoreHelpers.ReadableBytesSize(data.Size);
         }
 
         public string Id { get; set; }
