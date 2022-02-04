@@ -3,11 +3,12 @@ using Bit.Core.Models.Api;
 
 namespace Bit.Api.Models.Response
 {
-    public class OrganizationSponsorshipSyncStatus : ResponseModel
+    public class OrganizationSponsorshipSyncStatusResponseModel : ResponseModel
     {
-        public OrganizationSponsorshipSyncStatus()
+        public OrganizationSponsorshipSyncStatusResponseModel(DateTime? lastSyncDate)
             : base("syncStatus")
         {
+            LastSyncDate = lastSyncDate;
         }
 
         public DateTime? LastSyncDate { get; set; }

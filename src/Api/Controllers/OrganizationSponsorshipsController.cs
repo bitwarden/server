@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Bit.Api.Models.Request.Organizations;
+using Bit.Api.Models.Response;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -157,8 +158,15 @@ namespace Bit.Api.Controllers
         [HttpGet("{sponsoringOrgId}/sync-status")]
         public async Task<IActionResult> GetSyncStatus(Guid sponsoringOrgId)
         {
-            await Task.Delay(100);
-            return Ok(new { Message = "Hi", Org = sponsoringOrgId } );
+            var sponsoringOrg = await _organizationRepository.GetByIdAsync(sponsoringOrgId);
+
+            if (!await _currentContext.OrganizationOwner(sponsoringOrg.Id))
+            {
+                return Unauthorized();
+            }
+
+            var lastSyncDate = await _organizationsSponsorshipService.GetLatestSyncDate(sponsoringOrg);
+            return Ok(new OrganizationSponsorshipSyncStatusResponseModel(lastSyncDate));
         }
 
         private Task<User> CurrentUser => _userService.GetUserByIdAsync(_currentContext.UserId.Value);

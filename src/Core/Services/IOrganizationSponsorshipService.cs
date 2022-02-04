@@ -18,5 +18,6 @@ namespace Bit.Core.Services
         Task<bool> ValidateSponsorshipAsync(Guid sponsoredOrganizationId);
         Task RevokeSponsorshipAsync(Organization sponsoredOrganization, OrganizationSponsorship sponsorship);
         Task RemoveSponsorshipAsync(Organization sponsoredOrganization, OrganizationSponsorship sponsorship);
+        Task<DateTime?> GetLatestSyncDate(Organization sponsoringOrg);
     }
 }

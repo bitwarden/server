@@ -14,6 +14,7 @@ namespace Bit.Api.Models.Response
                 throw new ArgumentNullException(nameof(organizationApiKey));
             }
             ApiKey = organizationApiKey.ApiKey;
+            RevisionDate = organizationApiKey.RevisionDate;
         }
 
         public ApiKeyResponseModel(User user, string obj = "apiKey")
@@ -24,8 +25,10 @@ namespace Bit.Api.Models.Response
                 throw new ArgumentNullException(nameof(user));
             }
             ApiKey = user.ApiKey;
+            RevisionDate = user.RevisionDate;
         }
 
         public string ApiKey { get; set; }
+        public DateTime RevisionDate { get; set; }
     }
 }
