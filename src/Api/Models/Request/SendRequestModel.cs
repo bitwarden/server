@@ -71,7 +71,8 @@ namespace Bit.Api.Models.Request
                     existingSend.Data = JsonSerializer.Serialize(fileData, JsonHelpers.IgnoreWritingNull);
                     break;
                 case SendType.Text:
-                    existingSend.Data = JsonSerializer.Serialize(ToSendData(), JsonHelpers.IgnoreWritingNull);
+                    var sendData = ToSendData();
+                    existingSend.Data = JsonSerializer.Serialize(sendData, sendData.GetType(), JsonHelpers.IgnoreWritingNull);
                     break;
                 default:
                     throw new ArgumentException("Unsupported type: " + nameof(Type) + ".");
