@@ -175,7 +175,7 @@ namespace Bit.Api.Controllers
             var user = await _userService.GetUserByPrincipalAsync(User);
             var result =
                 await _emergencyAccessService.GetAttachmentDownloadAsync(new Guid(id), cipherId, attachmentId, user);
-            return new AttachmentResponseModel(result.Id, result.Data, result.Cipher, _globalSettings);
+            return new AttachmentResponseModel(result);
         }
     }
 }
