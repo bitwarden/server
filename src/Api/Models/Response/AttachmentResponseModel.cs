@@ -11,6 +11,16 @@ namespace Bit.Api.Models.Response
 {
     public class AttachmentResponseModel : ResponseModel
     {
+        public AttachmentResponseModel(AttachmentResponseData data) : base("attachment")
+        {
+            Id = data.Id;
+            Url = data.Url;
+            FileName = data.Data.FileName;
+            Key = data.Data.Key;
+            Size = data.Data.Size;
+            SizeName = CoreHelpers.ReadableBytesSize(data.Data.Size);
+        }
+
         public AttachmentResponseModel(string id, CipherAttachment.MetaData data, Cipher cipher,
             IGlobalSettings globalSettings)
             : base("attachment")
