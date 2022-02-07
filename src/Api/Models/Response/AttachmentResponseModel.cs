@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json.Serialization;
 using Bit.Core.Entities;
 using Bit.Core.Models.Api;
@@ -20,6 +21,18 @@ namespace Bit.Api.Models.Response
             SizeName = CoreHelpers.ReadableBytesSize(data.Data.Size);
         }
 
+        public AttachmentResponseModel(string id, CipherAttachment.MetaData data, Cipher cipher,
+            IGlobalSettings globalSettings)
+            : base("attachment")
+        {
+            Id = id;
+            Url = $"{globalSettings.Attachment.BaseUrl}/{cipher.Id}/{id}";
+            FileName = data.FileName;
+            Key = data.Key;
+            Size = data.Size;
+            SizeName = CoreHelpers.ReadableBytesSize(data.Size);
+        }
+
         public string Id { get; set; }
         public string Url { get; set; }
         public string FileName { get; set; }
@@ -36,8 +49,7 @@ namespace Bit.Api.Models.Response
                 return null;
             }
 
-            return null;
-            // return attachments.Select(a => new AttachmentResponseModel(a.Key, a.Value, cipher, globalSettings));
+            return attachments.Select(a => new AttachmentResponseModel(a.Key, a.Value, cipher, globalSettings));
         }
     }
 }
