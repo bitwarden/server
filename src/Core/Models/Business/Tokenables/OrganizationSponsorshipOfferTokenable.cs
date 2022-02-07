@@ -15,6 +15,8 @@ namespace Bit.Core.Models.Business.Tokenables
         public Guid Id { get; set; }
         public PlanSponsorshipType SponsorshipType { get; set; }
         public string Email { get; set; }
+        public string SponsoringUserEmail { get; set; }
+        public string SponsoringBillingSyncKey { get; set; }
 
         public override bool Valid => Identifier == TokenIdentifier && Id != default &&
             !string.IsNullOrWhiteSpace(Email);
@@ -52,5 +54,10 @@ namespace Bit.Core.Models.Business.Tokenables
             Email.Equals(currentUserEmail, StringComparison.InvariantCultureIgnoreCase) &&
             Email.Equals(sponsorship.OfferedToEmail, StringComparison.InvariantCultureIgnoreCase);
 
+        public bool IsValid(OrganizationSponsorship sponsorship, string currentUserEmail, string expectedBillingSyncKey) =>
+            !string.IsNullOrEmpty(SponsoringBillingSyncKey) &&
+            !string.IsNullOrEmpty(expectedBillingSyncKey) &&
+            expectedBillingSyncKey == SponsoringBillingSyncKey &&
+            IsValid(sponsorship, currentUserEmail);
     }
 }
