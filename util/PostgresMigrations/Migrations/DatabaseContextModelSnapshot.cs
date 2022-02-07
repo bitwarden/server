@@ -17,10 +17,10 @@ namespace Bit.PostgresMigrations.Migrations
             modelBuilder
                 .HasAnnotation("Npgsql:CollationDefinition:postgresIndetermanisticCollation", "en-u-ks-primary,en-u-ks-primary,icu,False")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63)
-                .HasAnnotation("ProductVersion", "5.0.9")
+                .HasAnnotation("ProductVersion", "5.0.12")
                 .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn);
 
-            modelBuilder.Entity("Bit.Core.Models.EntityFramework.Cipher", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Cipher", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
@@ -67,7 +67,7 @@ namespace Bit.PostgresMigrations.Migrations
                     b.ToTable("Cipher");
                 });
 
-            modelBuilder.Entity("Bit.Core.Models.EntityFramework.Collection", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Collection", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
@@ -95,7 +95,7 @@ namespace Bit.PostgresMigrations.Migrations
                     b.ToTable("Collection");
                 });
 
-            modelBuilder.Entity("Bit.Core.Models.EntityFramework.CollectionCipher", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.CollectionCipher", b =>
                 {
                     b.Property<Guid>("CollectionId")
                         .HasColumnType("uuid");
@@ -110,7 +110,7 @@ namespace Bit.PostgresMigrations.Migrations
                     b.ToTable("CollectionCipher");
                 });
 
-            modelBuilder.Entity("Bit.Core.Models.EntityFramework.CollectionGroup", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.CollectionGroup", b =>
                 {
                     b.Property<Guid>("CollectionId")
                         .HasColumnType("uuid");
@@ -131,7 +131,7 @@ namespace Bit.PostgresMigrations.Migrations
                     b.ToTable("CollectionGroups");
                 });
 
-            modelBuilder.Entity("Bit.Core.Models.EntityFramework.CollectionUser", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.CollectionUser", b =>
                 {
                     b.Property<Guid>("CollectionId")
                         .HasColumnType("uuid");
@@ -157,7 +157,7 @@ namespace Bit.PostgresMigrations.Migrations
                     b.ToTable("CollectionUsers");
                 });
 
-            modelBuilder.Entity("Bit.Core.Models.EntityFramework.Device", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Device", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -194,7 +194,7 @@ namespace Bit.PostgresMigrations.Migrations
                     b.ToTable("Device");
                 });
 
-            modelBuilder.Entity("Bit.Core.Models.EntityFramework.EmergencyAccess", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.EmergencyAccess", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
@@ -242,7 +242,7 @@ namespace Bit.PostgresMigrations.Migrations
                     b.ToTable("EmergencyAccess");
                 });
 
-            modelBuilder.Entity("Bit.Core.Models.EntityFramework.Event", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Event", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
@@ -298,7 +298,7 @@ namespace Bit.PostgresMigrations.Migrations
                     b.ToTable("Event");
                 });
 
-            modelBuilder.Entity("Bit.Core.Models.EntityFramework.Folder", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Folder", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
@@ -322,7 +322,7 @@ namespace Bit.PostgresMigrations.Migrations
                     b.ToTable("Folder");
                 });
 
-            modelBuilder.Entity("Bit.Core.Models.EntityFramework.Grant", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Grant", b =>
                 {
                     b.Property<string>("Key")
                         .HasMaxLength(200)
@@ -365,7 +365,7 @@ namespace Bit.PostgresMigrations.Migrations
                     b.ToTable("Grant");
                 });
 
-            modelBuilder.Entity("Bit.Core.Models.EntityFramework.Group", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Group", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
@@ -397,7 +397,7 @@ namespace Bit.PostgresMigrations.Migrations
                     b.ToTable("Group");
                 });
 
-            modelBuilder.Entity("Bit.Core.Models.EntityFramework.GroupUser", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.GroupUser", b =>
                 {
                     b.Property<Guid>("GroupId")
                         .HasColumnType("uuid");
@@ -417,7 +417,7 @@ namespace Bit.PostgresMigrations.Migrations
                     b.ToTable("GroupUser");
                 });
 
-            modelBuilder.Entity("Bit.Core.Models.EntityFramework.Installation", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Installation", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
@@ -441,7 +441,7 @@ namespace Bit.PostgresMigrations.Migrations
                     b.ToTable("Installation");
                 });
 
-            modelBuilder.Entity("Bit.Core.Models.EntityFramework.Organization", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Organization", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
@@ -475,6 +475,10 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasColumnType("character varying(50)");
 
                     b.Property<string>("BusinessTaxNumber")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<string>("CloudBillingSyncKey")
                         .HasMaxLength(30)
                         .HasColumnType("character varying(30)");
 
@@ -592,7 +596,7 @@ namespace Bit.PostgresMigrations.Migrations
                     b.ToTable("Organization");
                 });
 
-            modelBuilder.Entity("Bit.Core.Models.EntityFramework.OrganizationSponsorship", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.OrganizationSponsorship", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
@@ -643,7 +647,7 @@ namespace Bit.PostgresMigrations.Migrations
                     b.ToTable("OrganizationSponsorship");
                 });
 
-            modelBuilder.Entity("Bit.Core.Models.EntityFramework.OrganizationUser", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.OrganizationUser", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
@@ -695,7 +699,7 @@ namespace Bit.PostgresMigrations.Migrations
                     b.ToTable("OrganizationUser");
                 });
 
-            modelBuilder.Entity("Bit.Core.Models.EntityFramework.Policy", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Policy", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
@@ -725,7 +729,7 @@ namespace Bit.PostgresMigrations.Migrations
                     b.ToTable("Policy");
                 });
 
-            modelBuilder.Entity("Bit.Core.Models.EntityFramework.Provider.Provider", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Provider", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
@@ -774,7 +778,7 @@ namespace Bit.PostgresMigrations.Migrations
                     b.ToTable("Provider");
                 });
 
-            modelBuilder.Entity("Bit.Core.Models.EntityFramework.Provider.ProviderOrganization", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.ProviderOrganization", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
@@ -806,7 +810,7 @@ namespace Bit.PostgresMigrations.Migrations
                     b.ToTable("ProviderOrganization");
                 });
 
-            modelBuilder.Entity("Bit.Core.Models.EntityFramework.Provider.ProviderUser", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.ProviderUser", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
@@ -847,7 +851,7 @@ namespace Bit.PostgresMigrations.Migrations
                     b.ToTable("ProviderUser");
                 });
 
-            modelBuilder.Entity("Bit.Core.Models.EntityFramework.Send", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Send", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
@@ -904,7 +908,7 @@ namespace Bit.PostgresMigrations.Migrations
                     b.ToTable("Send");
                 });
 
-            modelBuilder.Entity("Bit.Core.Models.EntityFramework.SsoConfig", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.SsoConfig", b =>
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
@@ -933,7 +937,7 @@ namespace Bit.PostgresMigrations.Migrations
                     b.ToTable("SsoConfig");
                 });
 
-            modelBuilder.Entity("Bit.Core.Models.EntityFramework.SsoUser", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.SsoUser", b =>
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
@@ -963,7 +967,7 @@ namespace Bit.PostgresMigrations.Migrations
                     b.ToTable("SsoUser");
                 });
 
-            modelBuilder.Entity("Bit.Core.Models.EntityFramework.TaxRate", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.TaxRate", b =>
                 {
                     b.Property<string>("Id")
                         .HasMaxLength(40)
@@ -992,7 +996,7 @@ namespace Bit.PostgresMigrations.Migrations
                     b.ToTable("TaxRate");
                 });
 
-            modelBuilder.Entity("Bit.Core.Models.EntityFramework.Transaction", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Transaction", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
@@ -1041,7 +1045,7 @@ namespace Bit.PostgresMigrations.Migrations
                     b.ToTable("Transaction");
                 });
 
-            modelBuilder.Entity("Bit.Core.Models.EntityFramework.U2f", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.U2f", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -1077,7 +1081,7 @@ namespace Bit.PostgresMigrations.Migrations
                     b.ToTable("U2f");
                 });
 
-            modelBuilder.Entity("Bit.Core.Models.EntityFramework.User", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.User", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
@@ -1198,13 +1202,13 @@ namespace Bit.PostgresMigrations.Migrations
                     b.ToTable("User");
                 });
 
-            modelBuilder.Entity("Bit.Core.Models.EntityFramework.Cipher", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Cipher", b =>
                 {
-                    b.HasOne("Bit.Core.Models.EntityFramework.Organization", "Organization")
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.Organization", "Organization")
                         .WithMany("Ciphers")
                         .HasForeignKey("OrganizationId");
 
-                    b.HasOne("Bit.Core.Models.EntityFramework.User", "User")
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.User", "User")
                         .WithMany("Ciphers")
                         .HasForeignKey("UserId");
 
@@ -1213,9 +1217,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Bit.Core.Models.EntityFramework.Collection", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Collection", b =>
                 {
-                    b.HasOne("Bit.Core.Models.EntityFramework.Organization", "Organization")
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.Organization", "Organization")
                         .WithMany()
                         .HasForeignKey("OrganizationId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1224,15 +1228,15 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Navigation("Organization");
                 });
 
-            modelBuilder.Entity("Bit.Core.Models.EntityFramework.CollectionCipher", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.CollectionCipher", b =>
                 {
-                    b.HasOne("Bit.Core.Models.EntityFramework.Cipher", "Cipher")
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.Cipher", "Cipher")
                         .WithMany("CollectionCiphers")
                         .HasForeignKey("CipherId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Bit.Core.Models.EntityFramework.Collection", "Collection")
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.Collection", "Collection")
                         .WithMany("CollectionCiphers")
                         .HasForeignKey("CollectionId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1243,15 +1247,15 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Navigation("Collection");
                 });
 
-            modelBuilder.Entity("Bit.Core.Models.EntityFramework.CollectionGroup", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.CollectionGroup", b =>
                 {
-                    b.HasOne("Bit.Core.Models.EntityFramework.Collection", "Collection")
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.Collection", "Collection")
                         .WithMany("CollectionGroups")
                         .HasForeignKey("CollectionId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Bit.Core.Models.EntityFramework.Group", "Group")
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.Group", "Group")
                         .WithMany()
                         .HasForeignKey("GroupId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1262,21 +1266,21 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Navigation("Group");
                 });
 
-            modelBuilder.Entity("Bit.Core.Models.EntityFramework.CollectionUser", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.CollectionUser", b =>
                 {
-                    b.HasOne("Bit.Core.Models.EntityFramework.Collection", "Collection")
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.Collection", "Collection")
                         .WithMany("CollectionUsers")
                         .HasForeignKey("CollectionId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Bit.Core.Models.EntityFramework.OrganizationUser", "OrganizationUser")
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.OrganizationUser", "OrganizationUser")
                         .WithMany("CollectionUsers")
                         .HasForeignKey("OrganizationUserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Bit.Core.Models.EntityFramework.User", null)
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.User", null)
                         .WithMany("CollectionUsers")
                         .HasForeignKey("UserId");
 
@@ -1285,9 +1289,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Navigation("OrganizationUser");
                 });
 
-            modelBuilder.Entity("Bit.Core.Models.EntityFramework.Device", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Device", b =>
                 {
-                    b.HasOne("Bit.Core.Models.EntityFramework.User", "User")
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1296,13 +1300,13 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Bit.Core.Models.EntityFramework.EmergencyAccess", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.EmergencyAccess", b =>
                 {
-                    b.HasOne("Bit.Core.Models.EntityFramework.User", "Grantee")
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.User", "Grantee")
                         .WithMany()
                         .HasForeignKey("GranteeId");
 
-                    b.HasOne("Bit.Core.Models.EntityFramework.User", "Grantor")
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.User", "Grantor")
                         .WithMany()
                         .HasForeignKey("GrantorId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1313,9 +1317,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Navigation("Grantor");
                 });
 
-            modelBuilder.Entity("Bit.Core.Models.EntityFramework.Folder", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Folder", b =>
                 {
-                    b.HasOne("Bit.Core.Models.EntityFramework.User", "User")
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.User", "User")
                         .WithMany("Folders")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1324,9 +1328,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Bit.Core.Models.EntityFramework.Group", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Group", b =>
                 {
-                    b.HasOne("Bit.Core.Models.EntityFramework.Organization", "Organization")
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.Organization", "Organization")
                         .WithMany("Groups")
                         .HasForeignKey("OrganizationId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1335,21 +1339,21 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Navigation("Organization");
                 });
 
-            modelBuilder.Entity("Bit.Core.Models.EntityFramework.GroupUser", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.GroupUser", b =>
                 {
-                    b.HasOne("Bit.Core.Models.EntityFramework.Group", "Group")
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.Group", "Group")
                         .WithMany("GroupUsers")
                         .HasForeignKey("GroupId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Bit.Core.Models.EntityFramework.OrganizationUser", "OrganizationUser")
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.OrganizationUser", "OrganizationUser")
                         .WithMany()
                         .HasForeignKey("OrganizationUserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Bit.Core.Models.EntityFramework.User", null)
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.User", null)
                         .WithMany("GroupUsers")
                         .HasForeignKey("UserId");
 
@@ -1358,17 +1362,17 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Navigation("OrganizationUser");
                 });
 
-            modelBuilder.Entity("Bit.Core.Models.EntityFramework.OrganizationSponsorship", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.OrganizationSponsorship", b =>
                 {
-                    b.HasOne("Bit.Core.Models.EntityFramework.Installation", "Installation")
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.Installation", "Installation")
                         .WithMany()
                         .HasForeignKey("InstallationId");
 
-                    b.HasOne("Bit.Core.Models.EntityFramework.Organization", "SponsoredOrganization")
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.Organization", "SponsoredOrganization")
                         .WithMany()
                         .HasForeignKey("SponsoredOrganizationId");
 
-                    b.HasOne("Bit.Core.Models.EntityFramework.Organization", "SponsoringOrganization")
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.Organization", "SponsoringOrganization")
                         .WithMany()
                         .HasForeignKey("SponsoringOrganizationId");
 
@@ -1379,15 +1383,15 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Navigation("SponsoringOrganization");
                 });
 
-            modelBuilder.Entity("Bit.Core.Models.EntityFramework.OrganizationUser", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.OrganizationUser", b =>
                 {
-                    b.HasOne("Bit.Core.Models.EntityFramework.Organization", "Organization")
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.Organization", "Organization")
                         .WithMany("OrganizationUsers")
                         .HasForeignKey("OrganizationId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Bit.Core.Models.EntityFramework.User", "User")
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.User", "User")
                         .WithMany("OrganizationUsers")
                         .HasForeignKey("UserId");
 
@@ -1396,9 +1400,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Bit.Core.Models.EntityFramework.Policy", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Policy", b =>
                 {
-                    b.HasOne("Bit.Core.Models.EntityFramework.Organization", "Organization")
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.Organization", "Organization")
                         .WithMany("Policies")
                         .HasForeignKey("OrganizationId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1407,15 +1411,15 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Navigation("Organization");
                 });
 
-            modelBuilder.Entity("Bit.Core.Models.EntityFramework.Provider.ProviderOrganization", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.ProviderOrganization", b =>
                 {
-                    b.HasOne("Bit.Core.Models.EntityFramework.Organization", "Organization")
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.Organization", "Organization")
                         .WithMany()
                         .HasForeignKey("OrganizationId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Bit.Core.Models.EntityFramework.Provider.Provider", "Provider")
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.Provider", "Provider")
                         .WithMany()
                         .HasForeignKey("ProviderId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1426,15 +1430,15 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Navigation("Provider");
                 });
 
-            modelBuilder.Entity("Bit.Core.Models.EntityFramework.Provider.ProviderUser", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.ProviderUser", b =>
                 {
-                    b.HasOne("Bit.Core.Models.EntityFramework.Provider.Provider", "Provider")
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.Provider", "Provider")
                         .WithMany()
                         .HasForeignKey("ProviderId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Bit.Core.Models.EntityFramework.User", "User")
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId");
 
@@ -1443,13 +1447,13 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Bit.Core.Models.EntityFramework.Send", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Send", b =>
                 {
-                    b.HasOne("Bit.Core.Models.EntityFramework.Organization", "Organization")
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.Organization", "Organization")
                         .WithMany()
                         .HasForeignKey("OrganizationId");
 
-                    b.HasOne("Bit.Core.Models.EntityFramework.User", "User")
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId");
 
@@ -1458,9 +1462,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Bit.Core.Models.EntityFramework.SsoConfig", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.SsoConfig", b =>
                 {
-                    b.HasOne("Bit.Core.Models.EntityFramework.Organization", "Organization")
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.Organization", "Organization")
                         .WithMany("SsoConfigs")
                         .HasForeignKey("OrganizationId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1469,13 +1473,13 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Navigation("Organization");
                 });
 
-            modelBuilder.Entity("Bit.Core.Models.EntityFramework.SsoUser", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.SsoUser", b =>
                 {
-                    b.HasOne("Bit.Core.Models.EntityFramework.Organization", "Organization")
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.Organization", "Organization")
                         .WithMany("SsoUsers")
                         .HasForeignKey("OrganizationId");
 
-                    b.HasOne("Bit.Core.Models.EntityFramework.User", "User")
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.User", "User")
                         .WithMany("SsoUsers")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1486,13 +1490,13 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Bit.Core.Models.EntityFramework.Transaction", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Transaction", b =>
                 {
-                    b.HasOne("Bit.Core.Models.EntityFramework.Organization", "Organization")
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.Organization", "Organization")
                         .WithMany("Transactions")
                         .HasForeignKey("OrganizationId");
 
-                    b.HasOne("Bit.Core.Models.EntityFramework.User", "User")
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.User", "User")
                         .WithMany("Transactions")
                         .HasForeignKey("UserId");
 
@@ -1501,9 +1505,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Bit.Core.Models.EntityFramework.U2f", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.U2f", b =>
                 {
-                    b.HasOne("Bit.Core.Models.EntityFramework.User", "User")
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.User", "User")
                         .WithMany("U2fs")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1512,12 +1516,12 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Bit.Core.Models.EntityFramework.Cipher", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Cipher", b =>
                 {
                     b.Navigation("CollectionCiphers");
                 });
 
-            modelBuilder.Entity("Bit.Core.Models.EntityFramework.Collection", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Collection", b =>
                 {
                     b.Navigation("CollectionCiphers");
 
@@ -1526,12 +1530,12 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Navigation("CollectionUsers");
                 });
 
-            modelBuilder.Entity("Bit.Core.Models.EntityFramework.Group", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Group", b =>
                 {
                     b.Navigation("GroupUsers");
                 });
 
-            modelBuilder.Entity("Bit.Core.Models.EntityFramework.Organization", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Organization", b =>
                 {
                     b.Navigation("Ciphers");
 
@@ -1548,12 +1552,12 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Navigation("Transactions");
                 });
 
-            modelBuilder.Entity("Bit.Core.Models.EntityFramework.OrganizationUser", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.OrganizationUser", b =>
                 {
                     b.Navigation("CollectionUsers");
                 });
 
-            modelBuilder.Entity("Bit.Core.Models.EntityFramework.User", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.User", b =>
                 {
                     b.Navigation("Ciphers");
 
