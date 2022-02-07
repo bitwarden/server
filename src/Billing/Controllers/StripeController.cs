@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
+using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -30,7 +31,7 @@ namespace Bit.Billing.Controllers
         private readonly BillingSettings _billingSettings;
         private readonly IWebHostEnvironment _hostingEnvironment;
         private readonly IOrganizationService _organizationService;
-        private readonly IOrganizationSponsorshipService _organizationSponsorshipService;
+        private readonly IValidateSponsorshipCommand _validateSponsorshipCommand;
         private readonly IOrganizationRepository _organizationRepository;
         private readonly ITransactionRepository _transactionRepository;
         private readonly IUserService _userService;
@@ -47,7 +48,7 @@ namespace Bit.Billing.Controllers
             IOptions<BillingSettings> billingSettings,
             IWebHostEnvironment hostingEnvironment,
             IOrganizationService organizationService,
-            IOrganizationSponsorshipService organizationSponsorshipService,
+            IValidateSponsorshipCommand validateSponsorshipCommand,
             IOrganizationRepository organizationRepository,
             ITransactionRepository transactionRepository,
             IUserService userService,
@@ -61,7 +62,7 @@ namespace Bit.Billing.Controllers
             _billingSettings = billingSettings?.Value;
             _hostingEnvironment = hostingEnvironment;
             _organizationService = organizationService;
-            _organizationSponsorshipService = organizationSponsorshipService;
+            _validateSponsorshipCommand = validateSponsorshipCommand;
             _organizationRepository = organizationRepository;
             _transactionRepository = transactionRepository;
             _userService = userService;
@@ -171,8 +172,7 @@ namespace Bit.Billing.Controllers
                     // sponsored org
                     if (CheckSponsoredSubscription(subscription))
                     {
-                        await _organizationSponsorshipService
-                            .ValidateSponsorshipAsync(ids.Item1.Value);
+                        await _validateSponsorshipCommand.ValidateSponsorshipAsync(ids.Item1.Value);
                     }
 
                     var org = await _organizationRepository.GetByIdAsync(ids.Item1.Value);
