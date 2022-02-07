@@ -119,7 +119,7 @@ namespace Bit.Api
             services.AddScoped<AuthenticatorTokenProvider>();
 
             // Services
-            services.AddBaseServices();
+            services.AddBaseServices(globalSettings);
             services.AddDefaultServices(globalSettings);
             services.AddCoreLocalizationServices();
 
