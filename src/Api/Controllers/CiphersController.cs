@@ -717,7 +717,7 @@ namespace Bit.Api.Controllers
             var userId = _userService.GetProperUserId(User).Value;
             var cipher = await _cipherRepository.GetByIdAsync(new Guid(id), userId);
             var result = await _cipherService.GetAttachmentDownloadDataAsync(cipher, attachmentId);
-            return new AttachmentResponseModel(result.Id, result.Data, result.Cipher, _globalSettings);
+            return new AttachmentResponseModel(result);
         }
 
         [HttpPost("{id}/attachment/{attachmentId}/share")]
