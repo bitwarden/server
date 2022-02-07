@@ -19,9 +19,9 @@ namespace Bit.Core.OrganizationFeatures
 
         private static void AddOrganizationSponsorshipCommands(this IServiceCollection services)
         {
-            services.AddScoped<IOfferSponsorshipCommand, OfferSponsorshipCommand>();
+            services.AddScoped<ICreateSponsorshipCommand, CreateSponsorshipCommand>();
             services.AddScoped<IRemoveSponsorshipCommand, RemoveSponsorshipCommand>();
-            services.AddScoped<IResendSponsorshipOfferCommand, ResendSponsorshipOfferCommand>();
+            services.AddScoped<ISendSponsorshipOfferCommand, SendSponsorshipOfferCommand>();
             services.AddScoped<IRevokeSponsorshipCommand, RevokeSponsorshipCommand>();
             services.AddScoped<ISetUpSponsorshipCommand, SetUpSponsorshipCommand>();
             services.AddScoped<IValidateRedemptionTokenCommand, ValidateRedemptionTokenCommand>();

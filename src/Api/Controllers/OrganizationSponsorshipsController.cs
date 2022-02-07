@@ -21,8 +21,8 @@ namespace Bit.Api.Controllers
         private readonly IOrganizationRepository _organizationRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly IValidateRedemptionTokenCommand _validateRedemptionTokenCommand;
-        private readonly IOfferSponsorshipCommand _offerSponsorshipCommand;
-        private readonly IResendSponsorshipOfferCommand _resendSponsorshipOfferCommand;
+        private readonly ICreateSponsorshipCommand _createSponsorshipCommand;
+        private readonly ISendSponsorshipOfferCommand _sendSponsorshipOfferCommand;
         private readonly ISetUpSponsorshipCommand _setUpSponsorshipCommand;
         private readonly IRevokeSponsorshipCommand _revokeSponsorshipCommand;
         private readonly IRemoveSponsorshipCommand _removeSponsorshipCommand;
@@ -34,8 +34,8 @@ namespace Bit.Api.Controllers
             IOrganizationRepository organizationRepository,
             IOrganizationUserRepository organizationUserRepository,
             IValidateRedemptionTokenCommand validateRedemptionTokenCommand,
-            IOfferSponsorshipCommand offerSponsorshipCommand,
-            IResendSponsorshipOfferCommand resendSponsorshipOfferCommand,
+            ICreateSponsorshipCommand offerSponsorshipCommand,
+            ISendSponsorshipOfferCommand sendSponsorshipOfferCommand,
             ISetUpSponsorshipCommand setUpSponsorshipCommand,
             IRevokeSponsorshipCommand revokeSponsorshipCommand,
             IRemoveSponsorshipCommand removeSponsorshipCommand,
@@ -46,8 +46,8 @@ namespace Bit.Api.Controllers
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
             _validateRedemptionTokenCommand = validateRedemptionTokenCommand;
-            _offerSponsorshipCommand = offerSponsorshipCommand;
-            _resendSponsorshipOfferCommand = resendSponsorshipOfferCommand;
+            _createSponsorshipCommand = offerSponsorshipCommand;
+            _sendSponsorshipOfferCommand = sendSponsorshipOfferCommand;
             _setUpSponsorshipCommand = setUpSponsorshipCommand;
             _revokeSponsorshipCommand = revokeSponsorshipCommand;
             _removeSponsorshipCommand = removeSponsorshipCommand;
@@ -59,11 +59,11 @@ namespace Bit.Api.Controllers
         [SelfHosted(NotSelfHostedOnly = true)]
         public async Task CreateSponsorship(Guid sponsoringOrgId, [FromBody] OrganizationSponsorshipRequestModel model)
         {
-            await _offerSponsorshipCommand.OfferSponsorshipAsync(
+            var sponsorship = await _createSponsorshipCommand.CreateSponsorshipAsync(
                 await _organizationRepository.GetByIdAsync(sponsoringOrgId),
                 await _organizationUserRepository.GetByOrganizationAsync(sponsoringOrgId, _currentContext.UserId ?? default),
-                model.PlanSponsorshipType, model.SponsoredEmail, model.FriendlyName,
-                (await CurrentUser).Email);
+                model.PlanSponsorshipType, model.SponsoredEmail, model.FriendlyName);
+            await _sendSponsorshipOfferCommand.SendSponsorshipOfferAsync(sponsorship, (await CurrentUser).Email);
         }
 
         [HttpPost("{sponsoringOrgId}/families-for-enterprise/resend")]
@@ -73,7 +73,7 @@ namespace Bit.Api.Controllers
             var sponsoringOrgUser = await _organizationUserRepository
                 .GetByOrganizationAsync(sponsoringOrgId, _currentContext.UserId ?? default);
 
-            await _resendSponsorshipOfferCommand.ResendSponsorshipOfferAsync(
+            await _sendSponsorshipOfferCommand.SendSponsorshipOfferAsync(
                 await _organizationRepository.GetByIdAsync(sponsoringOrgId),
                 sponsoringOrgUser,
                 await _organizationSponsorshipRepository

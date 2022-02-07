@@ -11,20 +11,17 @@ using Bit.Core.Utilities;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise
 {
-    public class OfferSponsorshipCommand : SendSponsorshipOfferCommand, IOfferSponsorshipCommand
+    public class CreateSponsorshipCommand : ICreateSponsorshipCommand
     {
         private readonly IOrganizationSponsorshipRepository _organizationSponsorshipRepository;
 
-        public OfferSponsorshipCommand(IOrganizationSponsorshipRepository organizationSponsorshipRepository,
-            IUserRepository userRepository,
-            IMailService mailService,
-            IDataProtectorTokenFactory<OrganizationSponsorshipOfferTokenable> tokenFactory) : base(userRepository, mailService, tokenFactory)
+        public CreateSponsorshipCommand(IOrganizationSponsorshipRepository organizationSponsorshipRepository)
         {
             _organizationSponsorshipRepository = organizationSponsorshipRepository;
         }
 
-        public async Task OfferSponsorshipAsync(Organization sponsoringOrg, OrganizationUser sponsoringOrgUser,
-            PlanSponsorshipType sponsorshipType, string sponsoredEmail, string friendlyName, string sponsoringUserEmail)
+        public async Task<OrganizationSponsorship> CreateSponsorshipAsync(Organization sponsoringOrg, OrganizationUser sponsoringOrgUser,
+            PlanSponsorshipType sponsorshipType, string sponsoredEmail, string friendlyName)
         {
             var requiredSponsoringProductType = StaticStore.GetSponsoredPlan(sponsorshipType)?.SponsoringProductType;
             if (requiredSponsoringProductType == null ||
@@ -65,8 +62,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
             try
             {
                 await _organizationSponsorshipRepository.UpsertAsync(sponsorship);
-
-                await SendSponsorshipOfferAsync(sponsorship, sponsoringUserEmail);
+                return sponsorship;
             }
             catch
             {

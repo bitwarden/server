@@ -22,7 +22,7 @@ using Xunit;
 namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise
 {
     [SutProviderCustomize]
-    public class OfferSponsorshipCommandTests : FamiliesForEnterpriseTestsBase
+    public class CreateSponsorshipCommandTests : FamiliesForEnterpriseTestsBase
     {
         private bool SponsorshipValidator(OrganizationSponsorship sponsorship, OrganizationSponsorship expectedSponsorship)
         {
@@ -38,13 +38,13 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
         }
 
         [Theory, BitMemberAutoData(nameof(NonEnterprisePlanTypes))]
-        public async Task OfferSponsorship_BadSponsoringOrgPlan_ThrowsBadRequest(PlanType sponsoringOrgPlan,
-            Organization org, OrganizationUser orgUser, SutProvider<OfferSponsorshipCommand> sutProvider)
+        public async Task CreateSponsorship_BadSponsoringOrgPlan_ThrowsBadRequest(PlanType sponsoringOrgPlan,
+            Organization org, OrganizationUser orgUser, SutProvider<CreateSponsorshipCommand> sutProvider)
         {
             org.PlanType = sponsoringOrgPlan;
 
             var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-                sutProvider.Sut.OfferSponsorshipAsync(org, orgUser, PlanSponsorshipType.FamiliesForEnterprise, default, default, "test@bitwarden.com"));
+                sutProvider.Sut.CreateSponsorshipAsync(org, orgUser, PlanSponsorshipType.FamiliesForEnterprise, default, default, "test@bitwarden.com"));
 
             Assert.Contains("Specified Organization cannot sponsor other organizations.", exception.Message);
             await sutProvider.GetDependency<IOrganizationSponsorshipRepository>().DidNotReceiveWithAnyArgs()
@@ -53,15 +53,15 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
 
         [Theory]
         [BitMemberAutoData(nameof(NonConfirmedOrganizationUsersStatuses))]
-        public async Task OfferSponsorship_BadSponsoringUserStatus_ThrowsBadRequest(
+        public async Task CreateSponsorship_BadSponsoringUserStatus_ThrowsBadRequest(
             OrganizationUserStatusType statusType, Organization org, OrganizationUser orgUser,
-            SutProvider<OfferSponsorshipCommand> sutProvider)
+            SutProvider<CreateSponsorshipCommand> sutProvider)
         {
             org.PlanType = PlanType.EnterpriseAnnually;
             orgUser.Status = statusType;
 
             var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-                sutProvider.Sut.OfferSponsorshipAsync(org, orgUser, PlanSponsorshipType.FamiliesForEnterprise, default, default, "test@bitwarden.com"));
+                sutProvider.Sut.CreateSponsorshipAsync(org, orgUser, PlanSponsorshipType.FamiliesForEnterprise, default, default, "test@bitwarden.com"));
 
             Assert.Contains("Only confirmed users can sponsor other organizations.", exception.Message);
             await sutProvider.GetDependency<IOrganizationSponsorshipRepository>().DidNotReceiveWithAnyArgs()
@@ -70,9 +70,9 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
 
         [Theory]
         [BitAutoData]
-        public async Task OfferSponsorship_AlreadySponsoring_Throws(Organization org,
+        public async Task CreateSponsorship_AlreadySponsoring_Throws(Organization org,
             OrganizationUser orgUser, OrganizationSponsorship sponsorship,
-            SutProvider<OfferSponsorshipCommand> sutProvider)
+            SutProvider<CreateSponsorshipCommand> sutProvider)
         {
             org.PlanType = PlanType.EnterpriseAnnually;
             orgUser.Status = OrganizationUserStatusType.Confirmed;
@@ -81,16 +81,16 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
                 .GetBySponsoringOrganizationUserIdAsync(orgUser.Id).Returns(sponsorship);
 
             var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-                sutProvider.Sut.OfferSponsorshipAsync(org, orgUser, sponsorship.PlanSponsorshipType.Value, default, default, "test@bitwarden.com"));
+                sutProvider.Sut.CreateSponsorshipAsync(org, orgUser, sponsorship.PlanSponsorshipType.Value, default, default, "test@bitwarden.com"));
 
             Assert.Contains("Can only sponsor one organization per Organization User.", exception.Message);
             await sutProvider.GetDependency<IOrganizationSponsorshipRepository>().DidNotReceiveWithAnyArgs()
                 .CreateAsync(default);
         }
 
-        private async Task DoOfferSponsorship_Success(Organization sponsoringOrg, OrganizationUser sponsoringOrgUser,
+        private async Task DoCreateSponsorship_Success(Organization sponsoringOrg, OrganizationUser sponsoringOrgUser,
             string sponsoredEmail, string friendlyName, Guid sponsorshipId, OrganizationSponsorshipOfferTokenable tokenable,
-            SutProvider<OfferSponsorshipCommand> sutProvider, string email = "test@bitwarden.com")
+            SutProvider<CreateSponsorshipCommand> sutProvider, string email = "test@bitwarden.com")
         {
             sponsoringOrg.PlanType = PlanType.EnterpriseAnnually;
             sponsoringOrgUser.Status = OrganizationUserStatusType.Confirmed;
@@ -102,17 +102,17 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
                 sponsorship.Id = sponsorshipId;
             });
 
-            await sutProvider.Sut.OfferSponsorshipAsync(sponsoringOrg, sponsoringOrgUser,
+            await sutProvider.Sut.CreateSponsorshipAsync(sponsoringOrg, sponsoringOrgUser,
                 PlanSponsorshipType.FamiliesForEnterprise, sponsoredEmail, friendlyName, email);
         }
 
         [Theory]
         [BitAutoData]
-        public async Task OfferSponsorship_CreatesSponsorship(Organization sponsoringOrg, OrganizationUser sponsoringOrgUser,
+        public async Task CreateSponsorship_CreatesSponsorship(Organization sponsoringOrg, OrganizationUser sponsoringOrgUser,
             string sponsoredEmail, string friendlyName, Guid sponsorshipId, OrganizationSponsorshipOfferTokenable tokenable,
-            SutProvider<OfferSponsorshipCommand> sutProvider)
+            SutProvider<CreateSponsorshipCommand> sutProvider)
         {
-            await DoOfferSponsorship_Success(sponsoringOrg, sponsoringOrgUser, sponsoredEmail, friendlyName, sponsorshipId, tokenable, sutProvider);
+            await DoCreateSponsorship_Success(sponsoringOrg, sponsoringOrgUser, sponsoredEmail, friendlyName, sponsorshipId, tokenable, sutProvider);
 
             var expectedSponsorship = new OrganizationSponsorship
             {
@@ -131,13 +131,13 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
 
         [Theory]
         [BitAutoData]
-        public async Task OfferSponsorship_SendsSponsorshipOfferEmail(Organization sponsoringOrg, OrganizationUser sponsoringOrgUser,
+        public async Task CreateSponsorship_SendsSponsorshipOfferEmail(Organization sponsoringOrg, OrganizationUser sponsoringOrgUser,
             string sponsoredEmail, string friendlyName, Guid sponsorshipId, OrganizationSponsorshipOfferTokenable tokenable,
-            SutProvider<OfferSponsorshipCommand> sutProvider)
+            SutProvider<CreateSponsorshipCommand> sutProvider)
         {
             const string email = "test@bitwarden.com";
 
-            await DoOfferSponsorship_Success(sponsoringOrg, sponsoringOrgUser, sponsoredEmail, friendlyName, sponsorshipId, tokenable, sutProvider, email);
+            await DoCreateSponsorship_Success(sponsoringOrg, sponsoringOrgUser, sponsoredEmail, friendlyName, sponsorshipId, tokenable, sutProvider, email);
 
             await sutProvider.GetDependency<IMailService>().Received(1).
                 SendFamiliesForEnterpriseOfferEmailAsync(sponsoredEmail, email,
@@ -146,8 +146,8 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
 
         [Theory]
         [BitAutoData]
-        public async Task OfferSponsorship_CreateSponsorshipThrows_RevertsDatabase(Organization sponsoringOrg, OrganizationUser sponsoringOrgUser,
-    string sponsoredEmail, string friendlyName, SutProvider<OfferSponsorshipCommand> sutProvider)
+        public async Task CreateSponsorship_CreateSponsorshipThrows_RevertsDatabase(Organization sponsoringOrg, OrganizationUser sponsoringOrgUser,
+    string sponsoredEmail, string friendlyName, SutProvider<CreateSponsorshipCommand> sutProvider)
         {
             sponsoringOrg.PlanType = PlanType.EnterpriseAnnually;
             sponsoringOrgUser.Status = OrganizationUserStatusType.Confirmed;
@@ -162,7 +162,7 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
             });
 
             var actualException = await Assert.ThrowsAsync<Exception>(() =>
-                sutProvider.Sut.OfferSponsorshipAsync(sponsoringOrg, sponsoringOrgUser,
+                sutProvider.Sut.CreateSponsorshipAsync(sponsoringOrg, sponsoringOrgUser,
                     PlanSponsorshipType.FamiliesForEnterprise, sponsoredEmail, friendlyName, "test@bitwarden.com"));
             Assert.Same(expectedException, actualException);
 
