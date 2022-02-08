@@ -1,4 +1,4 @@
-﻿using Bit.Core.Models.Business.Tokenables;
+﻿using Bit.Core.Models.Business.Tokenables.Cloud;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.SelfHosted;
@@ -37,10 +37,10 @@ namespace Bit.Core.OrganizationFeatures
 
         private static void AddTokenizers(this IServiceCollection services)
         {
-            services.AddSingleton<IDataProtectorTokenFactory<OrganizationSponsorshipOfferTokenable>>(serviceProvider =>
-                new DataProtectorTokenFactory<OrganizationSponsorshipOfferTokenable>(
-                    OrganizationSponsorshipOfferTokenable.ClearTextPrefix,
-                    OrganizationSponsorshipOfferTokenable.DataProtectorPurpose,
+            services.AddSingleton<IDataProtectorTokenFactory<CloudOrganizationSponsorshipOfferTokenable>>(serviceProvider =>
+                new DataProtectorTokenFactory<CloudOrganizationSponsorshipOfferTokenable>(
+                    CloudOrganizationSponsorshipOfferTokenable.ClearTextPrefix,
+                    CloudOrganizationSponsorshipOfferTokenable.DataProtectorPurpose,
                     serviceProvider.GetDataProtectionProvider())
             );
         }

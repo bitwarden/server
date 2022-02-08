@@ -1,5 +1,5 @@
 ﻿using System.Threading.Tasks;
-using Bit.Core.Models.Business.Tokenables;
+using Bit.Core.Models.Business.Tokenables.Cloud;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Tokens;
@@ -9,10 +9,10 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
     public class ValidateRedemptionTokenCommand : IValidateRedemptionTokenCommand
     {
         private readonly IOrganizationSponsorshipRepository _organizationSponsorshipRepository;
-        private readonly IDataProtectorTokenFactory<OrganizationSponsorshipOfferTokenable> _tokenFactory;
+        private readonly IDataProtectorTokenFactory<CloudOrganizationSponsorshipOfferTokenable> _tokenFactory;
 
         public ValidateRedemptionTokenCommand(IOrganizationSponsorshipRepository organizationSponsorshipRepository,
-            IDataProtectorTokenFactory<OrganizationSponsorshipOfferTokenable> tokenFactory)
+            IDataProtectorTokenFactory<CloudOrganizationSponsorshipOfferTokenable> tokenFactory)
         {
             _organizationSponsorshipRepository = organizationSponsorshipRepository;
             _tokenFactory = tokenFactory;
