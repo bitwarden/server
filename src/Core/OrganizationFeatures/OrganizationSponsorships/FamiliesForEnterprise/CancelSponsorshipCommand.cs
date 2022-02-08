@@ -17,7 +17,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
             _organizationRepository = organizationRepository;
         }
 
-        protected virtual async Task CancelSponsorshipAsync(Organization sponsoredOrganization, OrganizationSponsorship sponsorship = null)
+        protected virtual async Task CancelSponsorshipAsync(OrganizationSponsorship sponsorship = null)
         {
             if (sponsorship == null)
             {

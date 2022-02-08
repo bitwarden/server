@@ -24,7 +24,7 @@ namespace Bit.Api.Controllers
         private readonly ICreateSponsorshipCommand _createSponsorshipCommand;
         private readonly ISendSponsorshipOfferCommand _sendSponsorshipOfferCommand;
         private readonly ISetUpSponsorshipCommand _setUpSponsorshipCommand;
-        private readonly IRevokeSponsorshipCommand _revokeSponsorshipCommand;
+        private readonly ICloudRevokeSponsorshipCommand _revokeSponsorshipCommand;
         private readonly IRemoveSponsorshipCommand _removeSponsorshipCommand;
         private readonly ICurrentContext _currentContext;
         private readonly IUserService _userService;
@@ -37,7 +37,7 @@ namespace Bit.Api.Controllers
             ICreateSponsorshipCommand offerSponsorshipCommand,
             ISendSponsorshipOfferCommand sendSponsorshipOfferCommand,
             ISetUpSponsorshipCommand setUpSponsorshipCommand,
-            IRevokeSponsorshipCommand revokeSponsorshipCommand,
+            ICloudRevokeSponsorshipCommand revokeSponsorshipCommand,
             IRemoveSponsorshipCommand removeSponsorshipCommand,
             IUserService userService,
             ICurrentContext currentContext)

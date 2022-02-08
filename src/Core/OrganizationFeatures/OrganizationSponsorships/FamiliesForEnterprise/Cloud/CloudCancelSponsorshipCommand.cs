@@ -19,7 +19,8 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
             _mailService = mailService;
         }
 
-        protected override async Task CancelSponsorshipAsync(Organization sponsoredOrganization, OrganizationSponsorship sponsorship = null)
+
+        protected async Task CancelSponsorshipAsync(Organization sponsoredOrganization, OrganizationSponsorship sponsorship = null)
         {
             if (sponsoredOrganization != null)
             {
@@ -30,7 +31,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
                     sponsoredOrganization.BillingEmailAddress(),
                     sponsoredOrganization.Name);
             }
-            await base.CancelSponsorshipAsync(sponsoredOrganization, sponsorship);
+            await base.CancelSponsorshipAsync(sponsorship);
         }
     }
 }

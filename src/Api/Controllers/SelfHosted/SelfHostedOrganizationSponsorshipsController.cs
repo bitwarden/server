@@ -17,7 +17,7 @@ namespace Bit.Api.Controllers.SelfHosted
     [Route("organization/sponsorship/self-hosted")]
     [Authorize("Application")]
     [SelfHosted(SelfHostedOnly = true)]
-    public class SelfHostedOrganizationSponsorshipController : Controller
+    public class SelfHostedOrganizationSponsorshipsController : Controller
     {
         private readonly IUserService _userService;
         private readonly IOrganizationRepository _organizationRepository;
@@ -25,15 +25,15 @@ namespace Bit.Api.Controllers.SelfHosted
         private readonly IOrganizationSponsorshipRepository _organizationSponsorshipRepository;
         private readonly ICreateSponsorshipCommand _offerSponsorshipCommand;
         private readonly IGenerateOfferTokenCommand _generateOfferTokenCommand;
-        private readonly IRevokeSponsorshipCommand _revokeSponsorshipCommand;
+        private readonly ISelfHostedRevokeSponsorshipCommand _revokeSponsorshipCommand;
         private readonly IGenerateCancelTokenCommand _generateCancelTokenCommand;
         private readonly ICurrentContext _currentContext;
         private readonly IGlobalSettings _globalSettings;
 
-        public SelfHostedOrganizationSponsorshipController(
+        public SelfHostedOrganizationSponsorshipsController(
             ICreateSponsorshipCommand offerSponsorshipCommand,
             IGenerateOfferTokenCommand generateOfferTokenCommand,
-            IRevokeSponsorshipCommand revokeSponsorshipCommand,
+            ISelfHostedRevokeSponsorshipCommand revokeSponsorshipCommand,
             IGenerateCancelTokenCommand generateCancelTokenCommand,
             IOrganizationRepository organizationRepository,
             IOrganizationSponsorshipRepository organizationSponsorshipRepository,
@@ -81,10 +81,7 @@ namespace Bit.Api.Controllers.SelfHosted
                 .GetBySponsoringOrganizationUserIdAsync(orgUser.Id);
 
             var cancelToken = await _generateCancelTokenCommand.GenerateToken(_globalSettings.Installation.Key, existingOrgSponsorship);
-            await _revokeSponsorshipCommand.RevokeSponsorshipAsync(
-                await _organizationRepository
-                    .GetByIdAsync(existingOrgSponsorship.SponsoredOrganizationId ?? default),
-                existingOrgSponsorship);
+            await _revokeSponsorshipCommand.RevokeSponsorshipAsync(existingOrgSponsorship);
 
             return new RevokeSponsorshipResponseModel(cancelToken);
         }

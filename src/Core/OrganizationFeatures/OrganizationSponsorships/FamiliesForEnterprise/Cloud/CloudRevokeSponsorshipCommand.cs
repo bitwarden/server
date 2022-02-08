@@ -7,9 +7,9 @@ using Bit.Core.Services;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise
 {
-    public class RevokeSponsorshipCommand : CancelSponsorshipCommand, IRevokeSponsorshipCommand
+    public class CloudRevokeSponsorshipCommand : CloudCancelSponsorshipCommand, ICloudRevokeSponsorshipCommand
     {
-        public RevokeSponsorshipCommand(
+        public CloudRevokeSponsorshipCommand(
             IOrganizationSponsorshipRepository organizationSponsorshipRepository,
             IOrganizationRepository organizationRepository,
             IPaymentService paymentService,
@@ -26,7 +26,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
 
             if (sponsorship.SponsoredOrganizationId == null)
             {
-                await CancelSponsorshipAsync(null, sponsorship);
+                await CancelSponsorshipAsync(sponsorship);
                 return;
             }
 
