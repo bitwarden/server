@@ -9,6 +9,7 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
@@ -44,14 +45,14 @@ namespace Bit.Api.Test.Controllers
             sutProvider.GetDependency<ICurrentContext>().UserId.Returns(user.Id);
             sutProvider.GetDependency<IUserService>().GetUserByIdAsync(user.Id)
                 .Returns(user);
-            sutProvider.GetDependency<IOrganizationSponsorshipService>().ValidateRedemptionTokenAsync(sponsorshipToken,
+            sutProvider.GetDependency<IValidateRedemptionTokenCommand>().ValidateRedemptionTokenAsync(sponsorshipToken,
                 user.Email).Returns(false);
 
             var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
                 sutProvider.Sut.RedeemSponsorship(sponsorshipToken, model));
 
             Assert.Contains("Failed to parse sponsorship token.", exception.Message);
-            await sutProvider.GetDependency<IOrganizationSponsorshipService>()
+            await sutProvider.GetDependency<ISetUpSponsorshipCommand>()
                 .DidNotReceiveWithAnyArgs()
                 .SetUpSponsorshipAsync(default, default);
         }
@@ -64,7 +65,7 @@ namespace Bit.Api.Test.Controllers
             sutProvider.GetDependency<ICurrentContext>().UserId.Returns(user.Id);
             sutProvider.GetDependency<IUserService>().GetUserByIdAsync(user.Id)
                 .Returns(user);
-            sutProvider.GetDependency<IOrganizationSponsorshipService>().ValidateRedemptionTokenAsync(sponsorshipToken,
+            sutProvider.GetDependency<IValidateRedemptionTokenCommand>().ValidateRedemptionTokenAsync(sponsorshipToken,
                 user.Email).Returns(true);
             sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(model.SponsoredOrganizationId).Returns(false);
 
@@ -72,7 +73,7 @@ namespace Bit.Api.Test.Controllers
                 sutProvider.Sut.RedeemSponsorship(sponsorshipToken, model));
 
             Assert.Contains("Can only redeem sponsorship for an organization you own.", exception.Message);
-            await sutProvider.GetDependency<IOrganizationSponsorshipService>()
+            await sutProvider.GetDependency<ISetUpSponsorshipCommand>()
                 .DidNotReceiveWithAnyArgs()
                 .SetUpSponsorshipAsync(default, default);
         }
@@ -88,7 +89,7 @@ namespace Bit.Api.Test.Controllers
 
             await sutProvider.Sut.PreValidateSponsorshipToken(sponsorshipToken);
 
-            await sutProvider.GetDependency<IOrganizationSponsorshipService>().Received(1)
+            await sutProvider.GetDependency<IValidateRedemptionTokenCommand>().Received(1)
                 .ValidateRedemptionTokenAsync(sponsorshipToken, user.Email);
         }
 
@@ -105,7 +106,7 @@ namespace Bit.Api.Test.Controllers
                 sutProvider.Sut.RevokeSponsorship(sponsoringOrgUser.Id));
 
             Assert.Contains("Can only revoke a sponsorship you granted.", exception.Message);
-            await sutProvider.GetDependency<IOrganizationSponsorshipService>()
+            await sutProvider.GetDependency<IRemoveSponsorshipCommand>()
                 .DidNotReceiveWithAnyArgs()
                 .RemoveSponsorshipAsync(default, default);
         }
@@ -121,7 +122,7 @@ namespace Bit.Api.Test.Controllers
                 sutProvider.Sut.RemoveSponsorship(sponsoredOrg.Id));
 
             Assert.Contains("Only the owner of an organization can remove sponsorship.", exception.Message);
-            await sutProvider.GetDependency<IOrganizationSponsorshipService>()
+            await sutProvider.GetDependency<IRemoveSponsorshipCommand>()
                 .DidNotReceiveWithAnyArgs()
                 .RemoveSponsorshipAsync(default, default);
         }
