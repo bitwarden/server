@@ -9,14 +9,12 @@ namespace Bit.Core.Models.Business.Tokenables
     public class OrganizationSponsorshipOfferTokenable : Tokenable
     {
         public const string ClearTextPrefix = "BWOrganizationSponsorship_";
-        public const string DataProtectorPurpose = "EmergencyAccessServiceDataProtector";
+        public const string DataProtectorPurpose = "OrganizationSponsorshipDataProtector";
         public const string TokenIdentifier = "OrganizationSponsorshipOfferToken";
         public string Identifier { get; set; } = TokenIdentifier;
         public Guid Id { get; set; }
         public PlanSponsorshipType SponsorshipType { get; set; }
         public string Email { get; set; }
-        public string SponsoringUserEmail { get; set; }
-        public string SponsoringBillingSyncKey { get; set; }
 
         public override bool Valid => Identifier == TokenIdentifier && Id != default &&
             !string.IsNullOrWhiteSpace(Email);
