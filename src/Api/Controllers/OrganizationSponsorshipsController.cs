@@ -155,6 +155,17 @@ namespace Bit.Api.Controllers
             return Ok(new { Message = "Hi", Key = key, Echo = syncModel});
         }
 
+        [HttpPost("sync-self")] // Temp name
+        [SelfHosted(NotSelfHostedOnly = true)]
+        public async Task<IActionResult> SyncSponsorshipsSelf(Guid organizationId)
+        {
+            // Get billing sync key
+            // Get organizationid
+            // Encrypt with installation key
+
+            
+        }
+
         [HttpGet("{sponsoringOrgId}/sync-status")]
         public async Task<IActionResult> GetSyncStatus(Guid sponsoringOrgId)
         {
