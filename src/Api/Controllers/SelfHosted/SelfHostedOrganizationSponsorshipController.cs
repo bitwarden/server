@@ -22,15 +22,21 @@ namespace Bit.Api.Controllers.SelfHosted
         private readonly IUserService _userService;
         private readonly IOrganizationRepository _organizationRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
+        private readonly IOrganizationSponsorshipRepository _organizationSponsorshipRepository;
         private readonly ICreateSponsorshipCommand _offerSponsorshipCommand;
         private readonly IGenerateOfferTokenCommand _generateOfferTokenCommand;
+        private readonly IRevokeSponsorshipCommand _revokeSponsorshipCommand;
+        private readonly IGenerateCancelTokenCommand _generateCancelTokenCommand;
         private readonly ICurrentContext _currentContext;
         private readonly IGlobalSettings _globalSettings;
 
         public SelfHostedOrganizationSponsorshipController(
             ICreateSponsorshipCommand offerSponsorshipCommand,
             IGenerateOfferTokenCommand generateOfferTokenCommand,
+            IRevokeSponsorshipCommand revokeSponsorshipCommand,
+            IGenerateCancelTokenCommand generateCancelTokenCommand,
             IOrganizationRepository organizationRepository,
+            IOrganizationSponsorshipRepository organizationSponsorshipRepository,
             IOrganizationUserRepository organizationUserRepository,
             IUserService userService,
             ICurrentContext currentContext,
@@ -39,8 +45,12 @@ namespace Bit.Api.Controllers.SelfHosted
         {
             _offerSponsorshipCommand = offerSponsorshipCommand;
             _generateOfferTokenCommand = generateOfferTokenCommand;
+            _revokeSponsorshipCommand = revokeSponsorshipCommand;
+            _generateCancelTokenCommand = generateCancelTokenCommand;
             _organizationRepository = organizationRepository;
+            _organizationSponsorshipRepository = organizationSponsorshipRepository;
             _organizationUserRepository = organizationUserRepository;
+            _userService = userService;
             _currentContext = currentContext;
             _globalSettings = globalSettings;
         }
@@ -54,10 +64,29 @@ namespace Bit.Api.Controllers.SelfHosted
                 model.PlanSponsorshipType, model.SponsoredEmail, model.FriendlyName);
 
             return new CreateSponsorshipResponseModel(
-                _generateOfferTokenCommand.GenerateToken(
+                await _generateOfferTokenCommand.GenerateToken(
                     _globalSettings.Installation.Key,
                     (await CurrentUser).Email,
                     sponsorship));
+        }
+
+        [HttpDelete("{sponsoringOrgId}")]
+        [HttpPost("{sponsoringOrgId}/delete")]
+        [SelfHosted(NotSelfHostedOnly = true)]
+        public async Task<RevokeSponsorshipResponseModel> RevokeSponsorship(Guid sponsoringOrganizationId)
+        {
+            var orgUser = await _organizationUserRepository.GetByOrganizationAsync(sponsoringOrganizationId, _currentContext.UserId ?? default);
+
+            var existingOrgSponsorship = await _organizationSponsorshipRepository
+                .GetBySponsoringOrganizationUserIdAsync(orgUser.Id);
+
+            var cancelToken = await _generateCancelTokenCommand.GenerateToken(_globalSettings.Installation.Key, existingOrgSponsorship);
+            await _revokeSponsorshipCommand.RevokeSponsorshipAsync(
+                await _organizationRepository
+                    .GetByIdAsync(existingOrgSponsorship.SponsoredOrganizationId ?? default),
+                existingOrgSponsorship);
+
+            return new RevokeSponsorshipResponseModel(cancelToken);
         }
 
         private Task<User> CurrentUser => _userService.GetUserByIdAsync(_currentContext.UserId.Value);

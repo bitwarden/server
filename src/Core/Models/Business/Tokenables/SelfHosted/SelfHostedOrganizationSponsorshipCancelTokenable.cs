@@ -12,25 +12,29 @@ namespace Bit.Core.Models.Business.Tokenables.SelfHosted
         public const string TokenIdentifier = "SelfHostedOrganizationSponsorshipCancelToken";
         public string Identifier { get; set; } = TokenIdentifier;
         public Guid SponsoringOrganizationUserId { get; set; }
-        public Guid SponsoringOrganizationId { get; set; }
         public PlanSponsorshipType SponsorshipType { get; set; }
         public Guid OrganizationId { get; set; }
         public string BillingSyncKey { get; set; }
 
         public override bool Valid => Identifier == TokenIdentifier && SponsoringOrganizationUserId != default &&
-            SponsoringOrganizationId != default && OrganizationId != default && !string.IsNullOrWhiteSpace(BillingSyncKey);
-
+            OrganizationId != default && !string.IsNullOrWhiteSpace(BillingSyncKey);
 
         [JsonConstructor]
         public SelfHostedOrganizationSponsorshipCancelTokenable() { }
 
-        public SelfHostedOrganizationSponsorshipCancelTokenable(OrganizationSponsorship sponsorship)
+        public SelfHostedOrganizationSponsorshipCancelTokenable(OrganizationSponsorship sponsorship, Guid cloudOrganizationId, string billingSyncKey)
         {
-            if (!sponsorship.SponsoringOrganizationId.HasValue || sponsorship.SponsoringOrganizationId == default)
+            if (string.IsNullOrWhiteSpace(billingSyncKey))
             {
-                throw new ArgumentException("Invalid OrganizationSponsorship to cancel a token, SponsoringOrganizationId is required", nameof(sponsorship));
+                throw new ArgumentException("Invalid Billing Sync Key to create a token", nameof(billingSyncKey));
             }
-            SponsoringOrganizationId = sponsorship.SponsoringOrganizationId.Value;
+            BillingSyncKey = billingSyncKey;
+
+            if (cloudOrganizationId == default)
+            {
+                throw new ArgumentException("Invalid cloudOrganizationId to cancel a token", nameof(cloudOrganizationId));
+            }
+            OrganizationId = cloudOrganizationId;
 
             if (!sponsorship.SponsoringOrganizationUserId.HasValue || sponsorship.SponsoringOrganizationUserId == default)
             {
@@ -45,18 +49,13 @@ namespace Bit.Core.Models.Business.Tokenables.SelfHosted
             SponsorshipType = sponsorship.PlanSponsorshipType.Value;
         }
 
-        public bool IsValid(OrganizationSponsorship sponsorship) =>
+        public bool IsValid(OrganizationSponsorship sponsorship, string expectedBillingSyncKey) =>
             sponsorship != null &&
-            SponsoringOrganizationId == sponsorship.SponsoringOrganizationId &&
+            OrganizationId == sponsorship.SponsoringOrganizationId &&
             SponsoringOrganizationUserId == sponsorship.SponsoringOrganizationUserId &&
             sponsorship.PlanSponsorshipType.HasValue &&
             SponsorshipType == sponsorship.PlanSponsorshipType.Value &&
-            !string.IsNullOrWhiteSpace(sponsorship.OfferedToEmail);
-
-        public bool IsValid(OrganizationSponsorship sponsorship, string currentUserEmail, string expectedBillingSyncKey) =>
-            !string.IsNullOrEmpty(BillingSyncKey) &&
             !string.IsNullOrEmpty(expectedBillingSyncKey) &&
-            expectedBillingSyncKey == BillingSyncKey &&
-            IsValid(sponsorship);
+            expectedBillingSyncKey == BillingSyncKey;
     }
 }
