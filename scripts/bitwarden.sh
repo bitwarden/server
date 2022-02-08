@@ -31,9 +31,9 @@ then
 fi
 if command -v docker-compose &> /dev/null
 then
-  dccmd='docker-compose'
+    dccmd='docker-compose'
 else
-  dccmd='docker compose'
+    dccmd='docker compose'
 fi
 
 SCRIPTS_DIR="$OUTPUT/scripts"
@@ -46,7 +46,11 @@ KEYCONNECTORVERSION="1.0.0"
 
 echo "bitwarden.sh version $COREVERSION"
 docker --version
-$dccmd --version
+if [[ "$dccmd" == "docker compose" ]]; then
+    $dccmd version
+else
+    $dccmd --version
+fi
 
 echo ""
 

@@ -4,9 +4,9 @@ set -e
 # Setup
 if command -v docker-compose &> /dev/null
 then
-  dccmd='docker-compose'
+    dccmd='docker-compose'
 else
-  dccmd='docker compose'
+    dccmd='docker compose'
 fi
 
 CYAN='\033[0;36m'
