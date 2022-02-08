@@ -34,10 +34,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
             }
             var sponsoringOrg = await _organizationRepository.GetByIdAsync(sponsorship.SponsoringOrganizationId.Value);
             var license = _licensingService.ReadOrganizationLicense(sponsoringOrg);
-            return _tokenFactory.Protect(key, new SelfHostedOrganizationSponsorshipOfferTokenable(sponsorship, license.Id, sponsoringOrg.CloudBillingSyncKey)
-            {
-                SponsoringUserEmail = sponsoringUserEmail
-            });
+            return _tokenFactory.Protect(key, new SelfHostedOrganizationSponsorshipOfferTokenable(sponsorship, license.Id, sponsoringUserEmail, sponsoringOrg.CloudBillingSyncKey));
         }
     }
 }

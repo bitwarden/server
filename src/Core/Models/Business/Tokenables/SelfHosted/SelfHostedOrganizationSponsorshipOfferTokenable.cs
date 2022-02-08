@@ -24,13 +24,19 @@ namespace Bit.Core.Models.Business.Tokenables
         [JsonConstructor]
         public SelfHostedOrganizationSponsorshipOfferTokenable() { }
 
-        public SelfHostedOrganizationSponsorshipOfferTokenable(OrganizationSponsorship sponsorship, Guid cloudOrganizationId, string billingSyncKey)
+        public SelfHostedOrganizationSponsorshipOfferTokenable(OrganizationSponsorship sponsorship, Guid cloudOrganizationId, string sponsoringUserEmail, string billingSyncKey)
         {
             if (string.IsNullOrWhiteSpace(billingSyncKey))
             {
                 throw new ArgumentException("Invalid Billing Sync Key to create a token", nameof(billingSyncKey));
             }
             BillingSyncKey = billingSyncKey;
+
+            if (string.IsNullOrWhiteSpace(sponsoringUserEmail))
+            {
+                throw new ArgumentException("Invalid sponsoringUserEmail to create a token", nameof(sponsoringUserEmail));
+            }
+            SponsoringUserEmail = sponsoringUserEmail;
 
             if (cloudOrganizationId == default)
             {
