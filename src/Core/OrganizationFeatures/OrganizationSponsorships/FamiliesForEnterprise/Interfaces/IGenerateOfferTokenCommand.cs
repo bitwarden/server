@@ -5,6 +5,6 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
 {
     public interface IGenerateOfferTokenCommand
     {
-        string GenerateToken(string key, string sponsoringUserEmail, OrganizationSponsorship sponsorship);
+        Task<string> GenerateToken(string key, string sponsoringUserEmail, OrganizationSponsorship sponsorship);
     }
 }

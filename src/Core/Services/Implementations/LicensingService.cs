@@ -249,7 +249,7 @@ namespace Bit.Core.Services
             return JsonConvert.DeserializeObject<UserLicense>(data);
         }
 
-        private OrganizationLicense ReadOrganizationLicense(Organization organization)
+        public OrganizationLicense ReadOrganizationLicense(Organization organization)
         {
             var filePath = $"{_globalSettings.LicenseDirectory}/organization/{organization.Id}.json";
             if (!File.Exists(filePath))
