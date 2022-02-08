@@ -17,7 +17,7 @@ namespace Bit.Api.Controllers.SelfHosted
     [Route("organization/sponsorship/self-hosted")]
     [Authorize("Application")]
     [SelfHosted(SelfHostedOnly = true)]
-    public class SelfHostedOrganizationSponsorshipConstroller : Controller
+    public class SelfHostedOrganizationSponsorshipController : Controller
     {
         private readonly IUserService _userService;
         private readonly IOrganizationRepository _organizationRepository;
@@ -27,7 +27,7 @@ namespace Bit.Api.Controllers.SelfHosted
         private readonly ICurrentContext _currentContext;
         private readonly IGlobalSettings _globalSettings;
 
-        public SelfHostedOrganizationSponsorshipConstroller(
+        public SelfHostedOrganizationSponsorshipController(
             ICreateSponsorshipCommand offerSponsorshipCommand,
             IGenerateOfferTokenCommand generateOfferTokenCommand,
             IOrganizationRepository organizationRepository,
