@@ -1,8 +1,6 @@
 ﻿using System.Collections.Generic;
-using System.Text;
-using System.Text.Json;
-using Bit.Core.Utilities;
 using Microsoft.Azure.Documents;
+using Newtonsoft.Json.Linq;
 
 namespace Bit.Admin.Models
 {
@@ -19,48 +17,40 @@ namespace Bit.Admin.Models
 
     public class LogDetailsModel : LogModel
     {
-        public JsonDocument Exception { get; set; }
+        public JObject Exception { get; set; }
 
-        public string ExceptionToString(JsonDocument e)
+        public string ExceptionToString(JObject e)
         {
             if (e == null)
             {
                 return null;
             }
 
-            var root = e.RootElement;
-
-            var sb = new StringBuilder();
-            if (root.TryGetProperty("Message", out var messageProp) && messageProp.GetString() != null)
+            var val = string.Empty;
+            if (e["Message"] != null && e["Message"].ToObject<string>() != null)
             {
-                sb.AppendLine("Message:");
-                sb.AppendLine(messageProp.GetString());
+                val += "Message:\n";
+                val += e["Message"] + "\n";
             }
 
-            if (root.TryGetProperty("StackTrace", out var stackTraceProp) && stackTraceProp.GetString() != null)
+            if (e["StackTrace"] != null && e["StackTrace"].ToObject<string>() != null)
             {
-                sb.AppendLine();
-                sb.AppendLine("Stack Trace:");
-                sb.Append(stackTraceProp.GetString());
+                val += "\nStack Trace:\n";
+                val += e["StackTrace"];
             }
-            else if (root.TryGetProperty("StackTraceString", out var stackTraceStringProp) && stackTraceStringProp.GetString() != null)
+            else if (e["StackTraceString"] != null && e["StackTraceString"].ToObject<string>() != null)
             {
-                sb.AppendLine();
-                sb.AppendLine("Stack Trace String:");
-                sb.Append(stackTraceStringProp.GetString());
+                val += "\nStack Trace String:\n";
+                val += e["StackTraceString"];
             }
 
-            if (root.TryGetProperty("InnerException", out var innerExceptionProp) && innerExceptionProp.ValueKind == JsonValueKind.Object)
+            if (e["InnerException"] != null && e["InnerException"].ToObject<JObject>() != null)
             {
-                sb.AppendLine();
-                sb.AppendLine();
-                sb.AppendLine("=== Inner Exception ===");
-                sb.AppendLine();
-                sb.AppendLine(ExceptionToString(innerExceptionProp.ToObject<JsonDocument>()));
-                sb.AppendLine();
+                val += "\n\n=== Inner Exception ===\n\n";
+                val += ExceptionToString(e["InnerException"].ToObject<JObject>());
             }
 
-            return sb.ToString();
+            return val;
         }
     }
 }
