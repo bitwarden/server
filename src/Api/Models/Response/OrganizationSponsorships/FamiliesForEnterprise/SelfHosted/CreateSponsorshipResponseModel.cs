@@ -1,4 +1,4 @@
-namespace Bit.Api.Models.Response.OrganizationSponsorships.FamiliesForEnterprise.SelfHosted
+﻿namespace Bit.Api.Models.Response.OrganizationSponsorships.FamiliesForEnterprise.SelfHosted
 {
     public class CreateSponsorshipResponseModel
     {

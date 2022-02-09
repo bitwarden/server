@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading.Tasks;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response.OrganizationSponsorships.FamiliesForEnterprise.SelfHosted;
