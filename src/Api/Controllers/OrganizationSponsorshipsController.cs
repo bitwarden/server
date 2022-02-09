@@ -186,7 +186,7 @@ namespace Bit.Api.Controllers
             // From 
             // Encrypt with installation key
 
-            var key = _tokenFactory.Protect()
+            
         }
 
         [HttpGet("{sponsoringOrgId}/sync-status")]
