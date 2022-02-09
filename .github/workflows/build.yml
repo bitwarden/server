@@ -29,6 +29,8 @@ jobs:
   testing:
     name: Testing
     runs-on: windows-2019
+    env:
+      NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
     steps:
       - name: Set up NuGet
         uses: nuget/setup-nuget@04b0c2b8d1b97922f67eca497d7cf0bf17b8ffe1
