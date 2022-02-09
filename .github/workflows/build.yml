@@ -69,7 +69,7 @@ jobs:
             ${{ runner.os }}-nuget-
 
       - name: Restore
-        run: msbuild /t:restore
+        run: msbuild /t:restore /p:RestoreLockedMode=true
         shell: pwsh
 
       - name: Build solution
