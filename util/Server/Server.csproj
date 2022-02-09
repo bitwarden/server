@@ -2,6 +2,7 @@
 
   <PropertyGroup>
     <MvcRazorCompileOnPublish>false</MvcRazorCompileOnPublish>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
   </PropertyGroup>
 
 </Project>

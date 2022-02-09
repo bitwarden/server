@@ -3,6 +3,7 @@
   <PropertyGroup>
     <UserSecretsId>bitwarden-Billing</UserSecretsId>
     <MvcRazorCompileOnPublish>false</MvcRazorCompileOnPublish>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
   </PropertyGroup>
 
   <ItemGroup>

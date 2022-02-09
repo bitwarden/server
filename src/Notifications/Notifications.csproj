@@ -2,6 +2,7 @@
 
   <PropertyGroup>
     <UserSecretsId>bitwarden-Notifications</UserSecretsId>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
   </PropertyGroup>
 
   <ItemGroup>
