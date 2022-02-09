@@ -163,7 +163,7 @@ namespace Bit.Core.Entities
                 return;
             }
 
-            TwoFactorProviders = JsonSerializer.Serialize(providers);
+            TwoFactorProviders = JsonHelpers.LegacySerialize(providers, JsonHelpers.LegacyEnumKeyResolver);
             _twoFactorProviders = providers;
         }
 
