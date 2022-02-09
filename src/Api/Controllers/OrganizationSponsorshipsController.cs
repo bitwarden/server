@@ -7,9 +7,11 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Business.Tokenables;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Tokens;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -32,6 +34,7 @@ namespace Bit.Api.Controllers
         private readonly ICurrentContext _currentContext;
         private readonly IOrganizationApiKeyRepository _organizationApiKeyRepository;
         private readonly IUserService _userService;
+        private readonly IDataProtectorTokenFactory<BillingSyncTokenable> _tokenFactory;
 
         public OrganizationSponsorshipsController(
             IOrganizationSponsorshipRepository organizationSponsorshipRepository,
@@ -45,7 +48,8 @@ namespace Bit.Api.Controllers
             IRemoveSponsorshipCommand removeSponsorshipCommand,
             IUserService userService,
             IOrganizationApiKeyRepository organizationApiKeyRepository,
-            ICurrentContext currentContext)
+            ICurrentContext currentContext,
+            IDataProtectorTokenFactory<BillingSyncTokenable> tokenFactory)
         {
             _organizationSponsorshipRepository = organizationSponsorshipRepository;
             _organizationRepository = organizationRepository;
@@ -59,6 +63,7 @@ namespace Bit.Api.Controllers
             _userService = userService;
             _organizationApiKeyRepository = organizationApiKeyRepository;
             _currentContext = currentContext;
+            _tokenFactory = tokenFactory;
         }
 
         [HttpPost("{sponsoringOrgId}/families-for-enterprise")]
@@ -176,10 +181,12 @@ namespace Bit.Api.Controllers
         public async Task<IActionResult> SyncSponsorshipsSelf(Guid organizationId)
         {
             // Get billing sync key
+            var key = CoreHelpers.SecureRandomString(30); // Fake it for now
             // Get organizationid
+            // From 
             // Encrypt with installation key
 
-            
+            var key = _tokenFactory.Protect()
         }
 
         [HttpGet("{sponsoringOrgId}/sync-status")]

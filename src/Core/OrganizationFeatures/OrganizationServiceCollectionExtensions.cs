@@ -13,6 +13,7 @@ namespace Bit.Core.OrganizationFeatures
         public static void AddOrganizationServices(this IServiceCollection services)
         {
             services.AddScoped<IOrganizationService, OrganizationService>();
+            services.AddScoped<IOrganizationApiKeyService, OrganizationApiKeyService>();
             services.AddTokenizers();
             services.AddOrganizationSponsorshipCommands();
         }
@@ -34,6 +35,13 @@ namespace Bit.Core.OrganizationFeatures
                 new DataProtectorTokenFactory<OrganizationSponsorshipOfferTokenable>(
                     OrganizationSponsorshipOfferTokenable.ClearTextPrefix,
                     OrganizationSponsorshipOfferTokenable.DataProtectorPurpose,
+                    serviceProvider.GetDataProtectionProvider())
+            );
+
+            services.AddSingleton<IDataProtectorTokenFactory<BillingSyncTokenable>>(serviceProvider =>
+                new DataProtectorTokenFactory<BillingSyncTokenable>(
+                    BillingSyncTokenable.ClearTextPrefix,
+                    BillingSyncTokenable.DataProtectorPurpose,
                     serviceProvider.GetDataProtectionProvider())
             );
         }
