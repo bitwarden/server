@@ -270,7 +270,7 @@ namespace Bit.Setup
 
                 var resultString = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
                 var result = JsonConvert.DeserializeObject<dynamic>(resultString);
-                if (!(bool)result.Enabled)
+                if (!(bool)result.enabled)
                 {
                     Console.WriteLine("Installation id has been disabled.");
                     return false;
