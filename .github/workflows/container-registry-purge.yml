@@ -65,7 +65,7 @@ jobs:
         if: |
           github.ref == 'refs/heads/master'
           || github.ref == 'refs/heads/rc'
-          || github.ref == 'refs/heads/hotfix'
+          || github.ref == 'refs/heads/hotfix-rc'
         env:
           PURGE_STATUS: ${{ needs.purge.result }}
         run: |
