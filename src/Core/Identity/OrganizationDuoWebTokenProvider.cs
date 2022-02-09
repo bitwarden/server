@@ -62,8 +62,8 @@ namespace Bit.Core.Identity
                 return Task.FromResult(false);
             }
 
-            var response = DuoWeb.VerifyResponse((string)provider.MetaData["IKey"],
-                (string)provider.MetaData["SKey"], _globalSettings.Duo.AKey, token);
+            var response = DuoWeb.VerifyResponse(provider.MetaData["IKey"].ToString(),
+                provider.MetaData["SKey"].ToString(), _globalSettings.Duo.AKey, token);
 
             return Task.FromResult(response == user.Email);
         }
