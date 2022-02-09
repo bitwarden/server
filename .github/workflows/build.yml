@@ -59,6 +59,13 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
 
+      - uses: actions/cache@937d24475381cd9c75ae6db12cb4e79714b926ed # 2.1.7
+        with:
+          path: ${{ github.workspace }}/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
       - name: Restore
         run: msbuild /t:restore
         shell: pwsh
