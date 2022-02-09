@@ -88,14 +88,14 @@ namespace Bit.Api.Test.Controllers
             sutProvider.GetDependency<ICurrentContext>().UserId.Returns(user.Id);
             sutProvider.GetDependency<IUserService>().GetUserByIdAsync(user.Id)
                 .Returns(user);
-            sutProvider.GetDependency<IOrganizationSponsorshipService>().ValidateRedemptionTokenAsync(sponsorshipToken,
+            sutProvider.GetDependency<IValidateRedemptionTokenCommand>().ValidateRedemptionTokenAsync(sponsorshipToken,
                 user.Email).Returns((true, sponsorship));
             sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(model.SponsoredOrganizationId).Returns(true);
             sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(model.SponsoredOrganizationId).Returns(sponsoringOrganization);
 
             await sutProvider.Sut.RedeemSponsorship(sponsorshipToken, model);
 
-            await sutProvider.GetDependency<IOrganizationSponsorshipService>().Received(1)
+            await sutProvider.GetDependency<ISetUpSponsorshipCommand>().Received(1)
                 .SetUpSponsorshipAsync(sponsorship, sponsoringOrganization);
         }
 
@@ -107,7 +107,7 @@ namespace Bit.Api.Test.Controllers
             sutProvider.GetDependency<ICurrentContext>().UserId.Returns(user.Id);
             sutProvider.GetDependency<IUserService>().GetUserByIdAsync(user.Id)
                 .Returns(user);
-            sutProvider.GetDependency<IOrganizationSponsorshipService>()
+            sutProvider.GetDependency<IValidateRedemptionTokenCommand>()
                 .ValidateRedemptionTokenAsync(sponsorshipToken, user.Email).Returns((true, sponsorship));
 
             await sutProvider.Sut.PreValidateSponsorshipToken(sponsorshipToken);
