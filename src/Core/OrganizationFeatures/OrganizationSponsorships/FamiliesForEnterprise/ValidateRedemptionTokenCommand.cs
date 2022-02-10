@@ -1,7 +1,6 @@
 ﻿using System.Threading.Tasks;
 using Bit.Core.Entities;
 using Bit.Core.Models.Business.Tokenables;
-using Bit.Core.Models.Business.Tokenables.Cloud;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Tokens;
@@ -11,16 +10,13 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
     public class ValidateRedemptionTokenCommand : IValidateRedemptionTokenCommand
     {
         private readonly IOrganizationSponsorshipRepository _organizationSponsorshipRepository;
-        private readonly IDataProtectorTokenFactory<CloudOrganizationSponsorshipOfferTokenable> _dataProtectorTokenFactory;
-        private readonly ISymmetricKeyProtectedTokenFactory<SelfHostedOrganizationSponsorshipOfferTokenable> _symmetricKeyTokenFactory;
+        private readonly IDataProtectorTokenFactory<OrganizationSponsorshipOfferTokenable> _dataProtectorTokenFactory;
 
         public ValidateRedemptionTokenCommand(IOrganizationSponsorshipRepository organizationSponsorshipRepository,
-            IDataProtectorTokenFactory<CloudOrganizationSponsorshipOfferTokenable> dataProtectorTokenFactory,
-            ISymmetricKeyProtectedTokenFactory<SelfHostedOrganizationSponsorshipOfferTokenable> symmetricKeyTokenFactory)
+            IDataProtectorTokenFactory<OrganizationSponsorshipOfferTokenable> dataProtectorTokenFactory)
         {
             _organizationSponsorshipRepository = organizationSponsorshipRepository;
             _dataProtectorTokenFactory = dataProtectorTokenFactory;
-            _symmetricKeyTokenFactory = symmetricKeyTokenFactory;
         }
 
         public async Task<(bool valid, OrganizationSponsorship sponsorship)> ValidateRedemptionTokenAsync(string encryptedToken, string sponsoredUserEmail)

@@ -2,7 +2,7 @@
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Business.Tokenables.Cloud;
+using Bit.Core.Models.Business.Tokenables;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -14,11 +14,11 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
     {
         private readonly IUserRepository _userRepository;
         private readonly IMailService _mailService;
-        private readonly IDataProtectorTokenFactory<CloudOrganizationSponsorshipOfferTokenable> _tokenFactory;
+        private readonly IDataProtectorTokenFactory<OrganizationSponsorshipOfferTokenable> _tokenFactory;
 
         public CloudSendSponsorshipOfferCommand(IUserRepository userRepository,
             IMailService mailService,
-            IDataProtectorTokenFactory<CloudOrganizationSponsorshipOfferTokenable> tokenFactory)
+            IDataProtectorTokenFactory<OrganizationSponsorshipOfferTokenable> tokenFactory)
         {
             _userRepository = userRepository;
             _mailService = mailService;
@@ -31,7 +31,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
             var isExistingAccount = user != null;
 
             await _mailService.SendFamiliesForEnterpriseOfferEmailAsync(sponsorship.OfferedToEmail, sponsoringEmail,
-                isExistingAccount, _tokenFactory.Protect(new CloudOrganizationSponsorshipOfferTokenable(sponsorship)));
+                isExistingAccount, _tokenFactory.Protect(new OrganizationSponsorshipOfferTokenable(sponsorship)));
         }
 
         public async Task SendSponsorshipOfferAsync(Organization sponsoringOrg, OrganizationUser sponsoringOrgUser,
