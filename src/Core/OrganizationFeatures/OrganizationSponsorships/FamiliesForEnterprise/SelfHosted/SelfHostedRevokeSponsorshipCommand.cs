@@ -14,7 +14,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
         {
         }
 
-        public async Task RevokeSponsorshipAsync(Organization sponsoredOrg, OrganizationSponsorship sponsorship)
+        public async Task RevokeSponsorshipAsync(OrganizationSponsorship sponsorship)
         {
             if (sponsorship == null)
             {

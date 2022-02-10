@@ -7,9 +7,9 @@ using Bit.Core.Services;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise
 {
-    public class RevokeSponsorshipCommand : CancelSponsorshipCommand, IRevokeSponsorshipCommand
+    public class CloudRemoveSponsorshipCommand : CloudCancelSponsorshipCommand, IRemoveSponsorshipCommand
     {
-        public RevokeSponsorshipCommand(
+        public CloudRemoveSponsorshipCommand(
             IOrganizationSponsorshipRepository organizationSponsorshipRepository,
             IOrganizationRepository organizationRepository,
             IPaymentService paymentService,
@@ -17,17 +17,11 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
         {
         }
 
-        public async Task RevokeSponsorshipAsync(Organization sponsoredOrg, OrganizationSponsorship sponsorship)
+        public async Task RemoveSponsorshipAsync(Organization sponsoredOrg, OrganizationSponsorship sponsorship)
         {
-            if (sponsorship == null)
+            if (sponsorship == null || sponsorship.SponsoredOrganizationId == null)
             {
-                throw new BadRequestException("You are not currently sponsoring an organization.");
-            }
-
-            if (sponsorship.SponsoredOrganizationId == null)
-            {
-                await CancelSponsorshipAsync(null, sponsorship);
-                return;
+                throw new BadRequestException("The requested organization is not currently being sponsored.");
             }
 
             if (sponsoredOrg == null)

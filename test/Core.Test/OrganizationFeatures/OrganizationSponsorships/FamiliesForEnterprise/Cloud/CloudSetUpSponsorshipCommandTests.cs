@@ -2,7 +2,7 @@
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise;
+using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
@@ -10,15 +10,15 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise
+namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud
 {
     [SutProviderCustomize]
-    public class SetUpSponsorshipCommandTests : FamiliesForEnterpriseTestsBase
+    public class CloudSetUpSponsorshipCommandTests : FamiliesForEnterpriseTestsBase
     {
         [Theory]
         [BitAutoData]
         public async Task SetUpSponsorship_SponsorshipNotFound_ThrowsBadRequest(Organization org,
-            SutProvider<SetUpSponsorshipCommand> sutProvider)
+            SutProvider<CloudSetUpSponsorshipCommand> sutProvider)
         {
             var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
                 sutProvider.Sut.SetUpSponsorshipAsync(null, org));
@@ -39,7 +39,7 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
         [BitAutoData]
         public async Task SetUpSponsorship_OrgAlreadySponsored_ThrowsBadRequest(Organization org,
             OrganizationSponsorship sponsorship, OrganizationSponsorship existingSponsorship,
-            SutProvider<SetUpSponsorshipCommand> sutProvider)
+            SutProvider<CloudSetUpSponsorshipCommand> sutProvider)
         {
             sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
                 .GetBySponsoredOrganizationIdAsync(org.Id).Returns(existingSponsorship);
@@ -63,7 +63,7 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
         [BitMemberAutoData(nameof(NonFamiliesPlanTypes))]
         public async Task SetUpSponsorship_OrgNotFamiles_ThrowsBadRequest(PlanType planType,
             OrganizationSponsorship sponsorship, Organization org,
-            SutProvider<SetUpSponsorshipCommand> sutProvider)
+            SutProvider<CloudSetUpSponsorshipCommand> sutProvider)
         {
             org.PlanType = planType;
 

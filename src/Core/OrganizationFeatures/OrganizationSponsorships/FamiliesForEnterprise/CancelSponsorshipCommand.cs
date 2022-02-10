@@ -7,7 +7,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
 {
     public class CancelSponsorshipCommand
     {
-        private readonly IOrganizationSponsorshipRepository _organizationSponsorshipRepository;
+        protected readonly IOrganizationSponsorshipRepository _organizationSponsorshipRepository;
         protected readonly IOrganizationRepository _organizationRepository;
 
         public CancelSponsorshipCommand(IOrganizationSponsorshipRepository organizationSponsorshipRepository,

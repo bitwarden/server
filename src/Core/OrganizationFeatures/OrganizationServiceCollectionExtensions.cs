@@ -1,5 +1,6 @@
-﻿using Bit.Core.Models.Business.Tokenables.Cloud;
+using Bit.Core.Models.Business.Tokenables.Cloud;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise;
+using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.SelfHosted;
 using Bit.Core.Services;
@@ -23,18 +24,18 @@ namespace Bit.Core.OrganizationFeatures
         {
             services.AddScoped<ICreateSponsorshipCommand, CreateSponsorshipCommand>();
 
-            services.AddScoped<IRemoveSponsorshipCommand, RemoveSponsorshipCommand>();
+            services.AddScoped<IRemoveSponsorshipCommand, CloudRemoveSponsorshipCommand>();
 
-            services.AddScoped<ISendSponsorshipOfferCommand, SendSponsorshipOfferCommand>();
+            services.AddScoped<ISendSponsorshipOfferCommand, CloudSendSponsorshipOfferCommand>();
 
             services.AddScoped<ICloudRevokeSponsorshipCommand, CloudRevokeSponsorshipCommand>();
             services.AddScoped<ISelfHostedRevokeSponsorshipCommand, ISelfHostedRevokeSponsorshipCommand>();
 
-            services.AddScoped<ISetUpSponsorshipCommand, SetUpSponsorshipCommand>();
+            services.AddScoped<ISetUpSponsorshipCommand, CloudSetUpSponsorshipCommand>();
 
             services.AddScoped<IValidateRedemptionTokenCommand, ValidateRedemptionTokenCommand>();
 
-            services.AddScoped<IValidateSponsorshipCommand, ValidateSponsorshipCommand>();
+            services.AddScoped<IValidateSponsorshipCommand, CloudValidateSponsorshipCommand>();
 
             if (globalSettings.SelfHosted)
             {

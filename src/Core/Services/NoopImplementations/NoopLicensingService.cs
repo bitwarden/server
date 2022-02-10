@@ -44,5 +44,10 @@ namespace Bit.Core.Services
         {
             return new byte[0];
         }
+
+        public OrganizationLicense ReadOrganizationLicense(Organization organization)
+        {
+            return null;
+        }
     }
 }

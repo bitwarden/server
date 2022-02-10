@@ -6,9 +6,9 @@ using Bit.Core.Services;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise
 {
-    public class ValidateSponsorshipCommand : CancelSponsorshipCommand, IValidateSponsorshipCommand
+    public class CloudValidateSponsorshipCommand : CloudCancelSponsorshipCommand, IValidateSponsorshipCommand
     {
-        public ValidateSponsorshipCommand(
+        public CloudValidateSponsorshipCommand(
             IOrganizationSponsorshipRepository organizationSponsorshipRepository,
             IOrganizationRepository organizationRepository,
             IPaymentService paymentService,

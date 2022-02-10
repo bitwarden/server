@@ -10,12 +10,12 @@ using Xunit;
 namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise
 {
     [SutProviderCustomize]
-    public class RemoveSponsorshipCommandTests : CancelSponsorshipCommandTestsBase
+    public class CloudRemoveSponsorshipCommandTests : CancelSponsorshipCommandTestsBase
     {
         [Theory]
         [BitAutoData]
         public async Task RemoveSponsorship_SponsoredOrgNull_ThrowsBadRequest(OrganizationSponsorship sponsorship,
-    SutProvider<RemoveSponsorshipCommand> sutProvider)
+    SutProvider<CloudRemoveSponsorshipCommand> sutProvider)
         {
             sponsorship.SponsoredOrganizationId = null;
 
@@ -31,7 +31,7 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
         [Theory]
         [BitAutoData]
         public async Task RemoveSponsorship_SponsorshipNotFound_ThrowsBadRequest(Organization sponsoredOrg,
-            SutProvider<RemoveSponsorshipCommand> sutProvider)
+            SutProvider<CloudRemoveSponsorshipCommand> sutProvider)
         {
             var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
                 sutProvider.Sut.RemoveSponsorshipAsync(sponsoredOrg, null));
@@ -45,7 +45,7 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
         [Theory]
         [BitAutoData]
         public async Task RemoveSponsorship_SponsoredOrgNotFound_ThrowsBadRequest(OrganizationSponsorship sponsorship,
-            SutProvider<RemoveSponsorshipCommand> sutProvider)
+            SutProvider<CloudRemoveSponsorshipCommand> sutProvider)
         {
             var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
                 sutProvider.Sut.RemoveSponsorshipAsync(null, sponsorship));

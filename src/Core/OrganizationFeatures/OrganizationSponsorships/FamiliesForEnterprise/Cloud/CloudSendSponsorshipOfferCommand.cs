@@ -8,15 +8,15 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Tokens;
 
-namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise
+namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud
 {
-    public class SendSponsorshipOfferCommand : ISendSponsorshipOfferCommand
+    public class CloudSendSponsorshipOfferCommand : ISendSponsorshipOfferCommand
     {
         private readonly IUserRepository _userRepository;
         private readonly IMailService _mailService;
         private readonly IDataProtectorTokenFactory<CloudOrganizationSponsorshipOfferTokenable> _tokenFactory;
 
-        public SendSponsorshipOfferCommand(IUserRepository userRepository,
+        public CloudSendSponsorshipOfferCommand(IUserRepository userRepository,
             IMailService mailService,
             IDataProtectorTokenFactory<CloudOrganizationSponsorshipOfferTokenable> tokenFactory)
         {

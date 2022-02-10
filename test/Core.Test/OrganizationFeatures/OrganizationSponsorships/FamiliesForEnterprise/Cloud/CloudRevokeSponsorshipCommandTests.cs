@@ -6,15 +6,15 @@ using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Xunit;
 
-namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise
+namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud
 {
     [SutProviderCustomize]
-    public class RevokeSponsorshipCommandTests : CancelSponsorshipCommandTestsBase
+    public class CloudRevokeSponsorshipCommandTests : CancelSponsorshipCommandTestsBase
     {
         [Theory]
         [BitAutoData]
         public async Task RevokeSponsorship_NoExistingSponsorship_ThrowsBadRequest(Organization org,
-    SutProvider<RevokeSponsorshipCommand> sutProvider)
+            SutProvider<CloudRevokeSponsorshipCommand> sutProvider)
         {
             var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
                 sutProvider.Sut.RevokeSponsorshipAsync(org, null));
@@ -27,7 +27,7 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
         [Theory]
         [BitAutoData]
         public async Task RevokeSponsorship_SponsorshipNotRedeemed_DeletesSponsorship(Organization org,
-            OrganizationSponsorship sponsorship, SutProvider<RevokeSponsorshipCommand> sutProvider)
+            OrganizationSponsorship sponsorship, SutProvider<CloudRevokeSponsorshipCommand> sutProvider)
         {
             sponsorship.SponsoredOrganizationId = null;
 
@@ -40,7 +40,7 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
         [Theory]
         [BitAutoData]
         public async Task RevokeSponsorship_SponsoredOrgNotFound_ThrowsBadRequest(OrganizationSponsorship sponsorship,
-            SutProvider<RevokeSponsorshipCommand> sutProvider)
+            SutProvider<CloudRevokeSponsorshipCommand> sutProvider)
         {
             var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
                 sutProvider.Sut.RevokeSponsorshipAsync(null, sponsorship));
