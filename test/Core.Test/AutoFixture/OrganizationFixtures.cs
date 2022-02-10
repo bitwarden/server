@@ -17,7 +17,7 @@ using Bit.Test.Common.AutoFixture.Attributes;
 
 namespace Bit.Core.Test.AutoFixture.OrganizationFixtures
 {
-    public class Organization : ICustomization
+    public class OrganizationCustomization : ICustomization
     {
         public bool UseGroups { get; set; }
 
@@ -26,7 +26,7 @@ namespace Bit.Core.Test.AutoFixture.OrganizationFixtures
             var organizationId = Guid.NewGuid();
             var maxConnections = (short)new Random().Next(10, short.MaxValue);
 
-            fixture.Customize<Entities.Organization>(composer => composer
+            fixture.Customize<Organization>(composer => composer
                 .With(o => o.Id, organizationId)
                 .With(o => o.MaxCollections, maxConnections)
                 .With(o => o.UseGroups, UseGroups));
@@ -51,14 +51,14 @@ namespace Bit.Core.Test.AutoFixture.OrganizationFixtures
             }
 
             var type = request as Type;
-            if (type == null || type != typeof(Entities.Organization))
+            if (type == null || type != typeof(Organization))
             {
                 return new NoSpecimen();
             }
 
             var fixture = new Fixture();
             var providers = fixture.Create<Dictionary<TwoFactorProviderType, TwoFactorProvider>>();
-            var organization = new Fixture().WithAutoNSubstitutions().Create<Entities.Organization>();
+            var organization = new Fixture().WithAutoNSubstitutions().Create<Organization>();
             organization.SetTwoFactorProviders(providers);
             return organization;
         }
@@ -73,7 +73,7 @@ namespace Bit.Core.Test.AutoFixture.OrganizationFixtures
             var lowestActivePaidPlan = validUpgradePlans.First();
             CheckedPlanType = CheckedPlanType.Equals(PlanType.Free) ? lowestActivePaidPlan : CheckedPlanType;
             validUpgradePlans.Remove(lowestActivePaidPlan);
-            fixture.Customize<Entities.Organization>(composer => composer
+            fixture.Customize<Organization>(composer => composer
                 .With(o => o.PlanType, CheckedPlanType));
             fixture.Customize<OrganizationUpgrade>(composer => composer
                 .With(ou => ou.Plan, validUpgradePlans.First()));
@@ -84,7 +84,7 @@ namespace Bit.Core.Test.AutoFixture.OrganizationFixtures
     {
         public void Customize(IFixture fixture)
         {
-            fixture.Customize<Entities.Organization>(composer => composer
+            fixture.Customize<Organization>(composer => composer
                 .With(o => o.PlanType, PlanType.Free));
         }
     }
@@ -93,7 +93,7 @@ namespace Bit.Core.Test.AutoFixture.OrganizationFixtures
     {
         public void Customize(IFixture fixture)
         {
-            fixture.Customize<Entities.Organization>(composer => composer
+            fixture.Customize<Organization>(composer => composer
                 .With(o => o.PlanType, PlanType.Free));
 
             var plansToIgnore = new List<PlanType> { PlanType.Free, PlanType.Custom };
@@ -102,7 +102,7 @@ namespace Bit.Core.Test.AutoFixture.OrganizationFixtures
             fixture.Customize<OrganizationUpgrade>(composer => composer
                 .With(ou => ou.Plan, selectedPlan.Type)
                 .With(ou => ou.PremiumAccessAddon, selectedPlan.HasPremiumAccessOption));
-            fixture.Customize<Entities.Organization>(composer => composer
+            fixture.Customize<Organization>(composer => composer
                 .Without(o => o.GatewaySubscriptionId));
         }
     }
@@ -119,7 +119,7 @@ namespace Bit.Core.Test.AutoFixture.OrganizationFixtures
             {
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             });
-            fixture.Customize<Entities.Organization>(composer => composer
+            fixture.Customize<Organization>(composer => composer
                 .With(o => o.Id, organizationId)
                 .With(o => o.Seats, (short)100));
             fixture.Customize<OrganizationUser>(composer => composer

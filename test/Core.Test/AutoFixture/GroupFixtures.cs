@@ -8,21 +8,20 @@ using Bit.Core.Test.AutoFixture.Relays;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
-using Fixtures = Bit.Core.Test.AutoFixture.OrganizationFixtures;
 
 namespace Bit.Core.Test.AutoFixture.GroupFixtures
 {
     internal class GroupOrganizationAutoDataAttribute : CustomAutoDataAttribute
     {
         public GroupOrganizationAutoDataAttribute() : base(
-            new SutProviderCustomization(), new Fixtures.Organization { UseGroups = true })
+            new SutProviderCustomization(), new OrganizationCustomization { UseGroups = true })
         { }
     }
 
     internal class GroupOrganizationNotUseGroupsAutoDataAttribute : CustomAutoDataAttribute
     {
         public GroupOrganizationNotUseGroupsAutoDataAttribute() : base(
-            new SutProviderCustomization(), new Bit.Core.Test.AutoFixture.OrganizationFixtures.Organization { UseGroups = false })
+            new SutProviderCustomization(), new OrganizationCustomization { UseGroups = false })
         { }
     }
 

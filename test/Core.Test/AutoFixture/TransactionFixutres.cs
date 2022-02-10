@@ -23,7 +23,7 @@ namespace Bit.Core.Test.AutoFixture.TransactionFixtures
             }
 
             var type = request as Type;
-            if (type == null || type != typeof(Entities.Transaction))
+            if (type == null || type != typeof(Transaction))
             {
                 return new NoSpecimen();
             }
@@ -35,7 +35,7 @@ namespace Bit.Core.Test.AutoFixture.TransactionFixtures
                         .Without(c => c.OrganizationId));
             }
             fixture.Customizations.Add(new MaxLengthStringRelay());
-            var obj = fixture.WithAutoNSubstitutions().Create<Entities.Transaction>();
+            var obj = fixture.WithAutoNSubstitutions().Create<Transaction>();
             return obj;
         }
     }
@@ -71,4 +71,3 @@ namespace Bit.Core.Test.AutoFixture.TransactionFixtures
         { }
     }
 }
-
