@@ -72,7 +72,7 @@ namespace Bit.Api.Controllers.SelfHosted
 
         [HttpDelete("{sponsoringOrgId}")]
         [HttpPost("{sponsoringOrgId}/delete")]
-        [SelfHosted(NotSelfHostedOnly = true)]
+        [SelfHosted(SelfHostedOnly = true)]
         public async Task<RevokeSponsorshipResponseModel> RevokeSponsorship(Guid sponsoringOrganizationId)
         {
             var orgUser = await _organizationUserRepository.GetByOrganizationAsync(sponsoringOrganizationId, _currentContext.UserId ?? default);
