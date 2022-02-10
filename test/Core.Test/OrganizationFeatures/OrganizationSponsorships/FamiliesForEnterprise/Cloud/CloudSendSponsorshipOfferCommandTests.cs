@@ -18,7 +18,7 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
         [BitAutoData]
         public async Task ResendSponsorshipOffer_SponsoringOrgNotFound_ThrowsBadRequest(
             OrganizationUser orgUser, OrganizationSponsorship sponsorship,
-            SutProvider<CloudSendSponsorshipOfferCommand> sutProvider)
+            SutProvider<SendSponsorshipOfferCommand> sutProvider)
         {
             var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
                 sutProvider.Sut.SendSponsorshipOfferAsync(null, orgUser, sponsorship, "test@bitwarden.com"));
@@ -32,7 +32,7 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
         [Theory]
         [BitAutoData]
         public async Task ResendSponsorshipOffer_SponsoringOrgUserNotFound_ThrowsBadRequest(Organization org,
-            OrganizationSponsorship sponsorship, SutProvider<CloudSendSponsorshipOfferCommand> sutProvider)
+            OrganizationSponsorship sponsorship, SutProvider<SendSponsorshipOfferCommand> sutProvider)
         {
             var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
                 sutProvider.Sut.SendSponsorshipOfferAsync(org, null, sponsorship, "test@bitwarden.com"));
@@ -48,7 +48,7 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
         [BitMemberAutoData(nameof(NonConfirmedOrganizationUsersStatuses))]
         public async Task ResendSponsorshipOffer_SponsoringOrgUserNotConfirmed_ThrowsBadRequest(OrganizationUserStatusType status,
             Organization org, OrganizationUser orgUser, OrganizationSponsorship sponsorship,
-            SutProvider<CloudSendSponsorshipOfferCommand> sutProvider)
+            SutProvider<SendSponsorshipOfferCommand> sutProvider)
         {
             orgUser.Status = status;
 
@@ -65,7 +65,7 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
         [BitAutoData]
         public async Task ResendSponsorshipOffer_SponsorshipNotFound_ThrowsBadRequest(Organization org,
             OrganizationUser orgUser,
-            SutProvider<CloudSendSponsorshipOfferCommand> sutProvider)
+            SutProvider<SendSponsorshipOfferCommand> sutProvider)
         {
             orgUser.Status = OrganizationUserStatusType.Confirmed;
 
@@ -82,7 +82,7 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
         [BitAutoData]
         public async Task ResendSponsorshipOffer_NoOfferToEmail_ThrowsBadRequest(Organization org,
             OrganizationUser orgUser, OrganizationSponsorship sponsorship,
-            SutProvider<CloudSendSponsorshipOfferCommand> sutProvider)
+            SutProvider<SendSponsorshipOfferCommand> sutProvider)
         {
             orgUser.Status = OrganizationUserStatusType.Confirmed;
             sponsorship.OfferedToEmail = null;

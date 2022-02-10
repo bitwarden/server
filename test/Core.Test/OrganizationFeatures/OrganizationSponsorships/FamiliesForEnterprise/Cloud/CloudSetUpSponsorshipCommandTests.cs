@@ -18,7 +18,7 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
         [Theory]
         [BitAutoData]
         public async Task SetUpSponsorship_SponsorshipNotFound_ThrowsBadRequest(Organization org,
-            SutProvider<CloudSetUpSponsorshipCommand> sutProvider)
+            SutProvider<SetUpSponsorshipCommand> sutProvider)
         {
             var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
                 sutProvider.Sut.SetUpSponsorshipAsync(null, org));
@@ -39,7 +39,7 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
         [BitAutoData]
         public async Task SetUpSponsorship_OrgAlreadySponsored_ThrowsBadRequest(Organization org,
             OrganizationSponsorship sponsorship, OrganizationSponsorship existingSponsorship,
-            SutProvider<CloudSetUpSponsorshipCommand> sutProvider)
+            SutProvider<SetUpSponsorshipCommand> sutProvider)
         {
             sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
                 .GetBySponsoredOrganizationIdAsync(org.Id).Returns(existingSponsorship);
@@ -63,7 +63,7 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
         [BitMemberAutoData(nameof(NonFamiliesPlanTypes))]
         public async Task SetUpSponsorship_OrgNotFamiles_ThrowsBadRequest(PlanType planType,
             OrganizationSponsorship sponsorship, Organization org,
-            SutProvider<CloudSetUpSponsorshipCommand> sutProvider)
+            SutProvider<SetUpSponsorshipCommand> sutProvider)
         {
             org.PlanType = planType;
 

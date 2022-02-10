@@ -5,11 +5,11 @@ using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterpri
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 
-namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise
+namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud
 {
-    public class CloudRemoveSponsorshipCommand : CloudCancelSponsorshipCommand, IRemoveSponsorshipCommand
+    public class RemoveSponsorshipCommand : CloudCancelSponsorshipCommand, IRemoveSponsorshipCommand
     {
-        public CloudRemoveSponsorshipCommand(
+        public RemoveSponsorshipCommand(
             IOrganizationSponsorshipRepository organizationSponsorshipRepository,
             IOrganizationRepository organizationRepository,
             IPaymentService paymentService,

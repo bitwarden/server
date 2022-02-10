@@ -13,29 +13,29 @@ namespace Bit.Core.OrganizationFeatures
 {
     public static class OrganizationServiceCollectionExtensions
     {
-        public static void AddOrganizationServices(this IServiceCollection services, IGlobalSettings globalSettings)
+        public static void AddOrganizationServices(this IServiceCollection services)
         {
             services.AddScoped<IOrganizationService, OrganizationService>();
             services.AddTokenizers();
-            services.AddOrganizationSponsorshipCommands(globalSettings);
+            services.AddOrganizationSponsorshipCommands();
         }
 
-        private static void AddOrganizationSponsorshipCommands(this IServiceCollection services, IGlobalSettings globalSettings)
+        private static void AddOrganizationSponsorshipCommands(this IServiceCollection services)
         {
             services.AddScoped<ICreateSponsorshipCommand, CreateSponsorshipCommand>();
 
-            services.AddScoped<IRemoveSponsorshipCommand, CloudRemoveSponsorshipCommand>();
+            services.AddScoped<IRemoveSponsorshipCommand, RemoveSponsorshipCommand>();
 
-            services.AddScoped<ISendSponsorshipOfferCommand, CloudSendSponsorshipOfferCommand>();
+            services.AddScoped<ISendSponsorshipOfferCommand, SendSponsorshipOfferCommand>();
 
             services.AddScoped<ICloudRevokeSponsorshipCommand, CloudRevokeSponsorshipCommand>();
             services.AddScoped<ISelfHostedRevokeSponsorshipCommand, SelfHostedRevokeSponsorshipCommand>();
 
-            services.AddScoped<ISetUpSponsorshipCommand, CloudSetUpSponsorshipCommand>();
+            services.AddScoped<ISetUpSponsorshipCommand, SetUpSponsorshipCommand>();
 
             services.AddScoped<IValidateRedemptionTokenCommand, ValidateRedemptionTokenCommand>();
 
-            services.AddScoped<IValidateSponsorshipCommand, CloudValidateSponsorshipCommand>();
+            services.AddScoped<IValidateSponsorshipCommand, ValidateSponsorshipCommand>();
         }
 
         private static void AddTokenizers(this IServiceCollection services)

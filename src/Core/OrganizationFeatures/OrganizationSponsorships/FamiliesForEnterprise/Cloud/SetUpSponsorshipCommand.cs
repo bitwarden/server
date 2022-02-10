@@ -1,7 +1,6 @@
 ﻿using System.Threading.Tasks;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Data;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -9,13 +8,13 @@ using Bit.Core.Utilities;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud
 {
-    public class CloudSetUpSponsorshipCommand : ISetUpSponsorshipCommand
+    public class SetUpSponsorshipCommand : ISetUpSponsorshipCommand
     {
         private readonly IOrganizationSponsorshipRepository _organizationSponsorshipRepository;
         private readonly IOrganizationRepository _organizationRepository;
         private readonly IPaymentService _paymentService;
 
-        public CloudSetUpSponsorshipCommand(IOrganizationSponsorshipRepository organizationSponsorshipRepository, IOrganizationRepository organizationRepository, IPaymentService paymentService)
+        public SetUpSponsorshipCommand(IOrganizationSponsorshipRepository organizationSponsorshipRepository, IOrganizationRepository organizationRepository, IPaymentService paymentService)
         {
             _organizationSponsorshipRepository = organizationSponsorshipRepository;
             _organizationRepository = organizationRepository;

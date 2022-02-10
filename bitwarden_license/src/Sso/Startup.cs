@@ -78,7 +78,7 @@ namespace Bit.Sso
             services.AddCustomIdentityServices(globalSettings);
 
             // Services
-            services.AddBaseServices(globalSettings);
+            services.AddBaseServices();
             services.AddDefaultServices(globalSettings);
             services.AddCoreLocalizationServices();
         }

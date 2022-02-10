@@ -3,7 +3,7 @@ using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 
-namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise
+namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud
 {
     public abstract class CloudCancelSponsorshipCommand : CancelSponsorshipCommand
     {

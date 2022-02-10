@@ -10,13 +10,13 @@ using Bit.Core.Tokens;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud
 {
-    public class CloudSendSponsorshipOfferCommand : ISendSponsorshipOfferCommand
+    public class SendSponsorshipOfferCommand : ISendSponsorshipOfferCommand
     {
         private readonly IUserRepository _userRepository;
         private readonly IMailService _mailService;
         private readonly IDataProtectorTokenFactory<OrganizationSponsorshipOfferTokenable> _tokenFactory;
 
-        public CloudSendSponsorshipOfferCommand(IUserRepository userRepository,
+        public SendSponsorshipOfferCommand(IUserRepository userRepository,
             IMailService mailService,
             IDataProtectorTokenFactory<OrganizationSponsorshipOfferTokenable> tokenFactory)
         {
