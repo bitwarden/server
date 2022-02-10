@@ -150,6 +150,12 @@ namespace Bit.Api.Controllers
                 existingOrgSponsorship);
         }
 
+        [HttpPost("self-hosted/create")]
+        public async Task Create([FromBody] SelfHostedO....)
+        {
+            
+        }
+
         private Task<User> CurrentUser => _userService.GetUserByIdAsync(_currentContext.UserId.Value);
     }
 }
