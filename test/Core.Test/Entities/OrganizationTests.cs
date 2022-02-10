@@ -69,5 +69,33 @@ namespace Bit.Core.Test.Entities
             var host = Assert.Contains("Host", (IDictionary<string, object>)duo.MetaData);
             Assert.Equal("Host_value", host);
         }
+
+        [Fact]
+        public void GetTwoFactorProviders_SavedWithName_Success()
+        {
+            var organization = new Organization();
+            // This should save items with the string name of the enum and we will validate that we can read
+            // from that just incase some organizations have it saved that way.
+            organization.TwoFactorProviders = JsonSerializer.Serialize(_testConfig);
+
+            // Preliminary Asserts to make sure we are testing what we want to be testing
+            using var jsonDocument = JsonDocument.Parse(organization.TwoFactorProviders);
+            var root = jsonDocument.RootElement;
+            // This means it saved the enum as its string name
+            AssertHelper.AssertJsonProperty(root, "OrganizationDuo", JsonValueKind.Object);
+
+            // Actual checks
+            var twoFactorProviders = organization.GetTwoFactorProviders();
+
+            var duo = Assert.Contains(TwoFactorProviderType.OrganizationDuo, (IDictionary<TwoFactorProviderType, TwoFactorProvider>)twoFactorProviders);
+            Assert.True(duo.Enabled);
+            Assert.NotNull(duo.MetaData);
+            var iKey = Assert.Contains("IKey", (IDictionary<string, object>)duo.MetaData);
+            Assert.Equal("IKey_value", iKey);
+            var sKey = Assert.Contains("SKey", (IDictionary<string, object>)duo.MetaData);
+            Assert.Equal("SKey_value", sKey);
+            var host = Assert.Contains("Host", (IDictionary<string, object>)duo.MetaData);
+            Assert.Equal("Host_value", host);
+        }
     }
 }

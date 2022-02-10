@@ -111,5 +111,36 @@ namespace Bit.Core.Test.Entities
             var emailMetaDataEmail = Assert.Contains("Email", (IDictionary<string, object>)email.MetaData);
             Assert.Equal("test@email.com", emailMetaDataEmail);
         }
+
+        [Fact]
+        public void GetTwoFactorProviders_SavedWithName_Success()
+        {
+            var user = new User();
+            // This should save items with the string name of the enum and we will validate that we can read
+            // from that just incase some users have it saved that way.
+            user.TwoFactorProviders = JsonSerializer.Serialize(_testTwoFactorConfig);
+
+            // Preliminary Asserts to make sure we are testing what we want to be testing
+            using var jsonDocument = JsonDocument.Parse(user.TwoFactorProviders);
+            var root = jsonDocument.RootElement;
+            // This means it saved the enum as its string name
+            AssertHelper.AssertJsonProperty(root, "WebAuthn", JsonValueKind.Object);
+            AssertHelper.AssertJsonProperty(root, "Email", JsonValueKind.Object);
+
+            // Actual checks
+            var twoFactorProviders = user.GetTwoFactorProviders();
+
+            var webAuthn = Assert.Contains(TwoFactorProviderType.WebAuthn, (IDictionary<TwoFactorProviderType, TwoFactorProvider>)twoFactorProviders);
+            Assert.True(webAuthn.Enabled);
+            Assert.NotNull(webAuthn.MetaData);
+            var webAuthnMetaDataItem = Assert.Contains("Item", (IDictionary<string, object>)webAuthn.MetaData);
+            Assert.Equal("thing", webAuthnMetaDataItem);
+
+            var email = Assert.Contains(TwoFactorProviderType.Email, (IDictionary<TwoFactorProviderType, TwoFactorProvider>)twoFactorProviders);
+            Assert.False(email.Enabled);
+            Assert.NotNull(email.MetaData);
+            var emailMetaDataEmail = Assert.Contains("Email", (IDictionary<string, object>)email.MetaData);
+            Assert.Equal("test@email.com", emailMetaDataEmail);
+        }
     }
 }
