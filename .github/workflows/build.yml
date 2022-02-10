@@ -29,6 +29,8 @@ jobs:
   testing:
     name: Testing
     runs-on: windows-2019
+    env:
+      NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
     steps:
       - name: Set up NuGet
         uses: nuget/setup-nuget@04b0c2b8d1b97922f67eca497d7cf0bf17b8ffe1
@@ -49,8 +51,15 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
 
+      - uses: actions/cache@937d24475381cd9c75ae6db12cb4e79714b926ed # 2.1.7
+        with:
+          path: ${{ github.workspace }}/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
       - name: Restore
-        run: msbuild /t:restore
+        run: msbuild /t:restore /p:RestoreLockedMode=true
         shell: pwsh
 
       - name: Build solution
