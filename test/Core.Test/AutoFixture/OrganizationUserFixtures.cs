@@ -5,6 +5,7 @@ using System.Text.Json;
 using AutoFixture;
 using AutoFixture.Kernel;
 using AutoFixture.Xunit2;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models;
 using Bit.Core.Models.Data;
@@ -27,10 +28,10 @@ namespace Bit.Core.Test.AutoFixture.OrganizationUserFixtures
             }
 
             var type = request as Type;
-            if (type == typeof(OrganizationUser))
+            if (type == typeof(OrganizationUserCustomization))
             {
                 var fixture = new Fixture();
-                var orgUser = fixture.WithAutoNSubstitutions().Create<Entities.OrganizationUser>();
+                var orgUser = fixture.WithAutoNSubstitutions().Create<OrganizationUser>();
                 var orgUserPermissions = fixture.WithAutoNSubstitutions().Create<Permissions>();
                 orgUser.Permissions = JsonSerializer.Serialize(orgUserPermissions, new JsonSerializerOptions()
                 {
@@ -38,10 +39,10 @@ namespace Bit.Core.Test.AutoFixture.OrganizationUserFixtures
                 });
                 return orgUser;
             }
-            else if (type == typeof(List<OrganizationUser>))
+            else if (type == typeof(List<OrganizationUserCustomization>))
             {
                 var fixture = new Fixture();
-                var orgUsers = fixture.WithAutoNSubstitutions().CreateMany<Entities.OrganizationUser>(2);
+                var orgUsers = fixture.WithAutoNSubstitutions().CreateMany<OrganizationUser>(2);
                 foreach (var orgUser in orgUsers)
                 {
                     var providers = fixture.Create<Dictionary<TwoFactorProviderType, TwoFactorProvider>>();
@@ -57,12 +58,12 @@ namespace Bit.Core.Test.AutoFixture.OrganizationUserFixtures
         }
     }
 
-    internal class OrganizationUser : ICustomization
+    internal class OrganizationUserCustomization : ICustomization
     {
         public OrganizationUserStatusType Status { get; set; }
         public OrganizationUserType Type { get; set; }
 
-        public OrganizationUser(OrganizationUserStatusType status, OrganizationUserType type)
+        public OrganizationUserCustomization(OrganizationUserStatusType status, OrganizationUserType type)
         {
             Status = status;
             Type = type;
@@ -70,7 +71,7 @@ namespace Bit.Core.Test.AutoFixture.OrganizationUserFixtures
 
         public void Customize(IFixture fixture)
         {
-            fixture.Customize<Entities.OrganizationUser>(composer => composer
+            fixture.Customize<OrganizationUser>(composer => composer
                 .With(o => o.Type, Type)
                 .With(o => o.Status, Status));
         }
@@ -91,7 +92,7 @@ namespace Bit.Core.Test.AutoFixture.OrganizationUserFixtures
 
         public override ICustomization GetCustomization(ParameterInfo parameter)
         {
-            return new OrganizationUser(_status, _type);
+            return new OrganizationUserCustomization(_status, _type);
         }
     }
 
