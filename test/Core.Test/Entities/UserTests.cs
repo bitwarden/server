@@ -6,7 +6,7 @@ using Bit.Core.Models;
 using Bit.Test.Common.Helpers;
 using Xunit;
 
-namespace Bit.Core.Test.Models.Tables
+namespace Bit.Core.Test.Entities
 {
     public class UserTests
     {
