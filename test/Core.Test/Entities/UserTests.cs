@@ -45,29 +45,31 @@ namespace Bit.Core.Test.Entities
             Assert.Equal(expectedRemainingBytes, bytesRemaining);
         }
 
+        private static readonly Dictionary<TwoFactorProviderType, TwoFactorProvider> _testTwoFactorConfig = new Dictionary<TwoFactorProviderType, TwoFactorProvider>
+        {
+            [TwoFactorProviderType.WebAuthn] = new TwoFactorProvider
+            {
+                Enabled = true,
+                MetaData = new Dictionary<string, object>
+                {
+                    ["Item"] = "thing",
+                },
+            },
+            [TwoFactorProviderType.Email] = new TwoFactorProvider
+            {
+                Enabled = false,
+                MetaData = new Dictionary<string, object>
+                {
+                    ["Email"] = "test@email.com",
+                },
+            },
+        };
+
         [Fact]
-        public void SetTwoFactorProviders()
+        public void SetTwoFactorProviders_Success()
         {
             var user = new User();
-            user.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
-            {
-                [TwoFactorProviderType.WebAuthn] = new TwoFactorProvider
-                {
-                    Enabled = true,
-                    MetaData = new Dictionary<string, object>
-                    {
-                        ["Item"] = "thing",
-                    },
-                },
-                [TwoFactorProviderType.Email] = new TwoFactorProvider
-                {
-                    Enabled = false,
-                    MetaData = new Dictionary<string, object>
-                    {
-                        ["Email"] = "test@email.com",
-                    },
-                },
-            });
+            user.SetTwoFactorProviders(_testTwoFactorConfig);
 
             using var jsonDocument = JsonDocument.Parse(user.TwoFactorProviders);
             var root = jsonDocument.RootElement;
@@ -81,6 +83,33 @@ namespace Bit.Core.Test.Entities
             AssertHelper.AssertJsonProperty(email, "Enabled", JsonValueKind.False);
             var emailMetaData = AssertHelper.AssertJsonProperty(email, "MetaData", JsonValueKind.Object);
             AssertHelper.AssertJsonProperty(emailMetaData, "Email", JsonValueKind.String);
+        }
+
+        [Fact]
+        public void GetTwoFactorProviders_Success()
+        {
+            // This is to get rid of the cached dictionary the SetTwoFactorProviders keeps so we can fully test the JSON reading
+            // It intent is to mimic a storing of the entity in the database and it being read later
+            var tempUser = new User();
+            tempUser.SetTwoFactorProviders(_testTwoFactorConfig);
+            var user = new User
+            {
+                TwoFactorProviders = tempUser.TwoFactorProviders,
+            };
+
+            var twoFactorProviders = user.GetTwoFactorProviders();
+
+            var webAuthn = Assert.Contains(TwoFactorProviderType.WebAuthn, (IDictionary<TwoFactorProviderType, TwoFactorProvider>)twoFactorProviders);
+            Assert.True(webAuthn.Enabled);
+            Assert.NotNull(webAuthn.MetaData);
+            var webAuthnMetaDataItem = Assert.Contains("Item", (IDictionary<string, object>)webAuthn.MetaData);
+            Assert.Equal("thing", webAuthnMetaDataItem);
+
+            var email = Assert.Contains(TwoFactorProviderType.Email, (IDictionary<TwoFactorProviderType, TwoFactorProvider>)twoFactorProviders);
+            Assert.False(email.Enabled);
+            Assert.NotNull(email.MetaData);
+            var emailMetaDataEmail = Assert.Contains("Email", (IDictionary<string, object>)email.MetaData);
+            Assert.Equal("test@email.com", emailMetaDataEmail);
         }
     }
 }
