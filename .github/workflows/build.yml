@@ -85,7 +85,7 @@ jobs:
         include:
           - service_name: Admin
             base_path: ./src
-            gulp: true
+            node: true
           - service_name: Api
             base_path: ./src
           - service_name: Billing
@@ -106,7 +106,7 @@ jobs:
             base_path: ./util
           - service_name: Sso
             base_path: ./bitwarden_license/src
-            gulp: true
+            node: true
     steps:
       - name: Checkout repo
         uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
@@ -122,14 +122,8 @@ jobs:
           dotnet --info
           node --version
           npm --version
-          gulp --version
           echo "GitHub ref: $GITHUB_REF"
           echo "GitHub event: $GITHUB_EVENT"
-
-      - name: Set up Gulp
-        if: ${{ matrix.gulp }}
-        working-directory: ${{ matrix.base_path }}/${{ matrix.service_name }}
-        run: npm install -g gulp
 
       - name: Restore/Clean service
         working-directory: ${{ matrix.base_path }}/${{ matrix.service_name }}
@@ -139,8 +133,8 @@ jobs:
           echo "Clean"
           dotnet clean -c "Release" -o obj/build-output/publish
 
-      - name: Execute Gulp
-        if: ${{ matrix.gulp }}
+      - name: Build node
+        if: ${{ matrix.node }}
         working-directory: ${{ matrix.base_path }}/${{ matrix.service_name }}
         run: |
           npm ci
