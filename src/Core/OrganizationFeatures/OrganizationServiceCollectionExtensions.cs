@@ -1,4 +1,4 @@
-using Bit.Core.Models.Business.Tokenables.Cloud;
+using Bit.Core.Models.Business.Tokenables;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
@@ -29,26 +29,21 @@ namespace Bit.Core.OrganizationFeatures
             services.AddScoped<ISendSponsorshipOfferCommand, CloudSendSponsorshipOfferCommand>();
 
             services.AddScoped<ICloudRevokeSponsorshipCommand, CloudRevokeSponsorshipCommand>();
-            services.AddScoped<ISelfHostedRevokeSponsorshipCommand, ISelfHostedRevokeSponsorshipCommand>();
+            services.AddScoped<ISelfHostedRevokeSponsorshipCommand, SelfHostedRevokeSponsorshipCommand>();
 
             services.AddScoped<ISetUpSponsorshipCommand, CloudSetUpSponsorshipCommand>();
 
             services.AddScoped<IValidateRedemptionTokenCommand, ValidateRedemptionTokenCommand>();
 
             services.AddScoped<IValidateSponsorshipCommand, CloudValidateSponsorshipCommand>();
-
-            if (globalSettings.SelfHosted)
-            {
-                services.AddScoped<IGenerateOfferTokenCommand, GenerateOfferTokenCommand>();
-            }
         }
 
         private static void AddTokenizers(this IServiceCollection services)
         {
-            services.AddSingleton<IDataProtectorTokenFactory<CloudOrganizationSponsorshipOfferTokenable>>(serviceProvider =>
-                new DataProtectorTokenFactory<CloudOrganizationSponsorshipOfferTokenable>(
-                    CloudOrganizationSponsorshipOfferTokenable.ClearTextPrefix,
-                    CloudOrganizationSponsorshipOfferTokenable.DataProtectorPurpose,
+            services.AddSingleton<IDataProtectorTokenFactory<OrganizationSponsorshipOfferTokenable>>(serviceProvider =>
+                new DataProtectorTokenFactory<OrganizationSponsorshipOfferTokenable>(
+                    OrganizationSponsorshipOfferTokenable.ClearTextPrefix,
+                    OrganizationSponsorshipOfferTokenable.DataProtectorPurpose,
                     serviceProvider.GetDataProtectionProvider())
             );
         }
