@@ -14,8 +14,8 @@ echo "Clean"
 dotnet clean "$DIR/Admin.csproj" -c "Release" -o "$DIR/obj/build-output/publish"
 echo "Node Build"
 cd "$DIR"
-npm install
+npm ci
+npm run build
 cd "$CUR_DIR"
-gulp --gulpfile "$DIR/gulpfile.js" build
 echo "Publish"
 dotnet publish "$DIR/Admin.csproj" -c "Release" -o "$DIR/obj/build-output/publish"
