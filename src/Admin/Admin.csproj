@@ -2,7 +2,6 @@
 
   <PropertyGroup>
     <UserSecretsId>bitwarden-Admin</UserSecretsId>
-    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
   </PropertyGroup>
   
   <ItemGroup>

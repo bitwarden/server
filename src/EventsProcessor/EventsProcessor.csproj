@@ -2,7 +2,6 @@
 
   <PropertyGroup>
     <UserSecretsId>bitwarden-EventsProcessor</UserSecretsId>
-    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
   </PropertyGroup>
 
   <ItemGroup>

@@ -3,7 +3,6 @@
   <PropertyGroup>
     <UserSecretsId>bitwarden-Icons</UserSecretsId>
     <MvcRazorCompileOnPublish>false</MvcRazorCompileOnPublish>
-    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
   </PropertyGroup>
 
   <ItemGroup>

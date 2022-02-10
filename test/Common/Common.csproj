@@ -3,7 +3,6 @@
   <PropertyGroup>
     <IsPackable>false</IsPackable>
     <RootNamespace>Bit.Test.Common</RootNamespace>
-    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
   </PropertyGroup>
 
     <ItemGroup>
