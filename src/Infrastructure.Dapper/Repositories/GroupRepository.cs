@@ -53,6 +53,27 @@ namespace Bit.Infrastructure.Dapper.Repositories
             }
         }
 
+        public async Task<ICollection<Tuple<Group, ICollection<SelectionReadOnly>>>> GetManyWithCollectionsByOrganizationIdAsync(Guid organizationId)
+        {
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                var results =
+                    await connection.QueryAsync<Group, SelectionReadOnly, (Group, SelectionReadOnly)>(
+                        $"[{Schema}].[Group_ReadWithCollectionsByOrganizationId]",
+                        (group, selectionReadOnly) =>
+                            new ValueTuple<Group, SelectionReadOnly>(group, selectionReadOnly),
+                        new { OrganizationId = organizationId },
+                        commandType: CommandType.StoredProcedure);
+
+                return results.GroupBy(r => r.Item1.Id)
+                    .Select(grouping =>
+                        new Tuple<Group, ICollection<SelectionReadOnly>>(
+                            grouping.First().Item1,
+                            grouping.Select(q => q.Item2).Where(q => q != null).ToList()))
+                    .ToList();
+            }
+        }
+
         public async Task<ICollection<Guid>> GetManyIdsByUserIdAsync(Guid organizationUserId)
         {
             using (var connection = new SqlConnection(ConnectionString))
