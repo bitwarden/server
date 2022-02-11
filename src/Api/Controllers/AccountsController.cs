@@ -1,23 +1,26 @@
-﻿using Bit.Api.Utilities;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using Bit.Api.Models.Request;
+using Bit.Api.Models.Request.Accounts;
+using Bit.Api.Models.Response;
+using Bit.Api.Utilities;
 using Bit.Core;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Enums.Provider;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Api;
 using Bit.Core.Models.Api.Request.Accounts;
+using Bit.Core.Models.Api.Response.Accounts;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
-using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Bit.Core.Enums.Provider;
 
 namespace Bit.Api.Controllers
 {
@@ -63,9 +66,12 @@ namespace Bit.Api.Controllers
             _sendService = sendService;
         }
 
+        #region DEPRECATED (Moved to Identity Service)
+
+        [Obsolete("2022-01-12 Moved to Identity, left for backwards compatability with older clients")]
         [HttpPost("prelogin")]
         [AllowAnonymous]
-        public async Task<PreloginResponseModel> PostPrelogin([FromBody]PreloginRequestModel model)
+        public async Task<PreloginResponseModel> PostPrelogin([FromBody] PreloginRequestModel model)
         {
             var kdfInformation = await _userRepository.GetKdfInformationByEmailAsync(model.Email);
             if (kdfInformation == null)
@@ -73,16 +79,17 @@ namespace Bit.Api.Controllers
                 kdfInformation = new UserKdfInformation
                 {
                     Kdf = KdfType.PBKDF2_SHA256,
-                    KdfIterations = 100000
+                    KdfIterations = 100000,
                 };
             }
             return new PreloginResponseModel(kdfInformation);
         }
 
+        [Obsolete("2022-01-12 Moved to Identity, left for backwards compatability with older clients")]
         [HttpPost("register")]
         [AllowAnonymous]
         [CaptchaProtected]
-        public async Task PostRegister([FromBody]RegisterRequestModel model)
+        public async Task PostRegister([FromBody] RegisterRequestModel model)
         {
             var result = await _userService.RegisterUserAsync(model.ToUser(), model.MasterPasswordHash,
                 model.Token, model.OrganizationUserId);
@@ -100,15 +107,17 @@ namespace Bit.Api.Controllers
             throw new BadRequestException(ModelState);
         }
 
+        #endregion
+
         [HttpPost("password-hint")]
         [AllowAnonymous]
-        public async Task PostPasswordHint([FromBody]PasswordHintRequestModel model)
+        public async Task PostPasswordHint([FromBody] PasswordHintRequestModel model)
         {
             await _userService.SendMasterPasswordHintAsync(model.Email);
         }
 
         [HttpPost("email-token")]
-        public async Task PostEmailToken([FromBody]EmailTokenRequestModel model)
+        public async Task PostEmailToken([FromBody] EmailTokenRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)
@@ -131,7 +140,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("email")]
-        public async Task PostEmail([FromBody]EmailRequestModel model)
+        public async Task PostEmail([FromBody] EmailRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)
@@ -174,7 +183,7 @@ namespace Bit.Api.Controllers
 
         [HttpPost("verify-email-token")]
         [AllowAnonymous]
-        public async Task PostVerifyEmailToken([FromBody]VerifyEmailRequestModel model)
+        public async Task PostVerifyEmailToken([FromBody] VerifyEmailRequestModel model)
         {
             var user = await _userService.GetUserByIdAsync(new Guid(model.UserId));
             if (user == null)
@@ -197,7 +206,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("password")]
-        public async Task PostPassword([FromBody]PasswordRequestModel model)
+        public async Task PostPassword([FromBody] PasswordRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)
@@ -222,7 +231,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("set-password")]
-        public async Task PostSetPasswordAsync([FromBody]SetPasswordRequestModel model)
+        public async Task PostSetPasswordAsync([FromBody] SetPasswordRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)
@@ -230,7 +239,7 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
-            var result = await _userService.SetPasswordAsync(model.ToUser(user), model.MasterPasswordHash, model.Key, 
+            var result = await _userService.SetPasswordAsync(model.ToUser(user), model.MasterPasswordHash, model.Key,
                 model.OrgIdentifier);
             if (result.Succeeded)
             {
@@ -246,7 +255,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("verify-password")]
-        public async Task PostVerifyPassword([FromBody]SecretVerificationRequestModel model)
+        public async Task PostVerifyPassword([FromBody] SecretVerificationRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)
@@ -265,7 +274,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("set-key-connector-key")]
-        public async Task PostSetKeyConnectorKeyAsync([FromBody]SetKeyConnectorKeyRequestModel model)
+        public async Task PostSetKeyConnectorKeyAsync([FromBody] SetKeyConnectorKeyRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)
@@ -311,7 +320,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("kdf")]
-        public async Task PostKdf([FromBody]KdfRequestModel model)
+        public async Task PostKdf([FromBody] KdfRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)
@@ -336,7 +345,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("key")]
-        public async Task PostKey([FromBody]UpdateKeyRequestModel model)
+        public async Task PostKey([FromBody] UpdateKeyRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)
@@ -392,7 +401,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("security-stamp")]
-        public async Task PostSecurityStamp([FromBody]SecretVerificationRequestModel model)
+        public async Task PostSecurityStamp([FromBody] SecretVerificationRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)
@@ -448,7 +457,7 @@ namespace Bit.Api.Controllers
 
         [HttpPut("profile")]
         [HttpPost("profile")]
-        public async Task<ProfileResponseModel> PutProfile([FromBody]UpdateProfileRequestModel model)
+        public async Task<ProfileResponseModel> PutProfile([FromBody] UpdateProfileRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)
@@ -476,7 +485,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("keys")]
-        public async Task<KeysResponseModel> PostKeys([FromBody]KeysRequestModel model)
+        public async Task<KeysResponseModel> PostKeys([FromBody] KeysRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)
@@ -502,7 +511,7 @@ namespace Bit.Api.Controllers
 
         [HttpDelete]
         [HttpPost("delete")]
-        public async Task Delete([FromBody]SecretVerificationRequestModel model)
+        public async Task Delete([FromBody] SecretVerificationRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)
@@ -534,14 +543,14 @@ namespace Bit.Api.Controllers
 
         [AllowAnonymous]
         [HttpPost("delete-recover")]
-        public async Task PostDeleteRecover([FromBody]DeleteRecoverRequestModel model)
+        public async Task PostDeleteRecover([FromBody] DeleteRecoverRequestModel model)
         {
             await _userService.SendDeleteConfirmationAsync(model.Email);
         }
 
         [HttpPost("delete-recover-token")]
         [AllowAnonymous]
-        public async Task PostDeleteRecoverToken([FromBody]VerifyDeleteRecoverRequestModel model)
+        public async Task PostDeleteRecoverToken([FromBody] VerifyDeleteRecoverRequestModel model)
         {
             var user = await _userService.GetUserByIdAsync(new Guid(model.UserId));
             if (user == null)
@@ -565,7 +574,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("iap-check")]
-        public async Task PostIapCheck([FromBody]IapCheckRequestModel model)
+        public async Task PostIapCheck([FromBody] IapCheckRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)
@@ -659,7 +668,7 @@ namespace Bit.Api.Controllers
 
         [HttpPost("payment")]
         [SelfHosted(NotSelfHostedOnly = true)]
-        public async Task PostPayment([FromBody]PaymentRequestModel model)
+        public async Task PostPayment([FromBody] PaymentRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)
@@ -677,7 +686,7 @@ namespace Bit.Api.Controllers
 
         [HttpPost("storage")]
         [SelfHosted(NotSelfHostedOnly = true)]
-        public async Task<PaymentResponseModel> PostStorage([FromBody]StorageRequestModel model)
+        public async Task<PaymentResponseModel> PostStorage([FromBody] StorageRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)
@@ -754,7 +763,7 @@ namespace Bit.Api.Controllers
 
         [HttpPut("tax")]
         [SelfHosted(NotSelfHostedOnly = true)]
-        public async Task PutTaxInfo([FromBody]TaxInfoUpdateRequestModel model)
+        public async Task PutTaxInfo([FromBody] TaxInfoUpdateRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)
@@ -792,7 +801,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("api-key")]
-        public async Task<ApiKeyResponseModel> ApiKey([FromBody]SecretVerificationRequestModel model)
+        public async Task<ApiKeyResponseModel> ApiKey([FromBody] SecretVerificationRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)
@@ -810,7 +819,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("rotate-api-key")]
-        public async Task<ApiKeyResponseModel> RotateApiKey([FromBody]SecretVerificationRequestModel model)
+        public async Task<ApiKeyResponseModel> RotateApiKey([FromBody] SecretVerificationRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)
@@ -828,9 +837,9 @@ namespace Bit.Api.Controllers
             var response = new ApiKeyResponseModel(user);
             return response;
         }
-        
+
         [HttpPut("update-temp-password")]
-        public async Task PutUpdateTempPasswordAsync([FromBody]UpdateTempPasswordRequestModel model)
+        public async Task PutUpdateTempPasswordAsync([FromBody] UpdateTempPasswordRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)
@@ -865,7 +874,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("verify-otp")]
-        public async Task VerifyOTP([FromBody]VerifyOTPRequestModel model)
+        public async Task VerifyOTP([FromBody] VerifyOTPRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user is not { UsesKeyConnector: true })

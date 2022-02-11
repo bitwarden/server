@@ -1,12 +1,12 @@
 ﻿using System;
-using System.Threading.Tasks;
-using Bit.Core.Exceptions;
-using Bit.Core.Models.Table;
-using Bit.Core.Repositories;
 using System.Collections.Generic;
-using Bit.Core.Models.Data;
-using Bit.Core.Models.Business;
+using System.Threading.Tasks;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Exceptions;
+using Bit.Core.Models.Business;
+using Bit.Core.Models.Data;
+using Bit.Core.Repositories;
 
 namespace Bit.Core.Services
 {

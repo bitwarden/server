@@ -1,5 +1,5 @@
-﻿using System.Threading.Tasks;
-using System;
+﻿using System;
+using System.Threading.Tasks;
 using Azure.Storage.Queues;
 using Bit.Core.Settings;
 

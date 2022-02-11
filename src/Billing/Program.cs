@@ -1,7 +1,7 @@
-﻿using Microsoft.AspNetCore.Hosting;
-using Bit.Core.Utilities;
-using Serilog.Events;
+﻿using Bit.Core.Utilities;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
+using Serilog.Events;
 
 namespace Bit.Billing
 {

@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 
 namespace Bit.Core.Services
@@ -82,7 +82,8 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Key Connector requires the Single Sign-On Authentication policy to be enabled.");
             }
 
-            if (!config.Enabled) {
+            if (!config.Enabled)
+            {
                 throw new BadRequestException("You must enable SSO to use Key Connector.");
             }
         }

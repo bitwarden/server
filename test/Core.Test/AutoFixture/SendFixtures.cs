@@ -1,12 +1,12 @@
-using System;
+﻿using System;
 using AutoFixture;
 using AutoFixture.Kernel;
-using Bit.Core.Models.Table;
-using Bit.Core.Repositories.EntityFramework;
+using Bit.Core.Entities;
 using Bit.Core.Test.AutoFixture.EntityFrameworkRepositoryFixtures;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using Bit.Core.Test.AutoFixture.Relays;
 using Bit.Core.Test.AutoFixture.UserFixtures;
+using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 
@@ -70,12 +70,12 @@ namespace Bit.Core.Test.AutoFixture.SendFixtures
         { }
     }
 
-    internal class SendBuilder: ISpecimenBuilder
+    internal class SendBuilder : ISpecimenBuilder
     {
         public bool OrganizationOwned { get; set; }
         public object Create(object request, ISpecimenContext context)
         {
-            if (context == null) 
+            if (context == null)
             {
                 throw new ArgumentNullException(nameof(context));
             }
@@ -98,7 +98,7 @@ namespace Bit.Core.Test.AutoFixture.SendFixtures
         }
     }
 
-    internal class EfSend: ICustomization 
+    internal class EfSend : ICustomization
     {
         public bool OrganizationOwned { get; set; }
         public void Customize(IFixture fixture)
@@ -122,9 +122,10 @@ namespace Bit.Core.Test.AutoFixture.SendFixtures
 
     internal class EfOrganizationSendAutoDataAttribute : CustomAutoDataAttribute
     {
-        public EfOrganizationSendAutoDataAttribute() : base(new SutProviderCustomization(), new EfSend(){
-                OrganizationOwned = true,
-            })
+        public EfOrganizationSendAutoDataAttribute() : base(new SutProviderCustomization(), new EfSend()
+        {
+            OrganizationOwned = true,
+        })
         { }
     }
 }

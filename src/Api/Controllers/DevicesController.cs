@@ -2,13 +2,14 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
-using Bit.Core.Repositories;
-using Microsoft.AspNetCore.Authorization;
-using Bit.Core.Models.Api;
+using Bit.Api.Models.Request;
+using Bit.Api.Models.Response;
+using Bit.Core.Entities;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Table;
+using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.Controllers
 {
@@ -65,7 +66,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("")]
-        public async Task<DeviceResponseModel> Post([FromBody]DeviceRequestModel model)
+        public async Task<DeviceResponseModel> Post([FromBody] DeviceRequestModel model)
         {
             var device = model.ToDevice(_userService.GetProperUserId(User));
             await _deviceService.SaveAsync(device);
@@ -76,7 +77,7 @@ namespace Bit.Api.Controllers
 
         [HttpPut("{id}")]
         [HttpPost("{id}")]
-        public async Task<DeviceResponseModel> Put(string id, [FromBody]DeviceRequestModel model)
+        public async Task<DeviceResponseModel> Put(string id, [FromBody] DeviceRequestModel model)
         {
             var device = await _deviceRepository.GetByIdAsync(new Guid(id), _userService.GetProperUserId(User).Value);
             if (device == null)
@@ -92,7 +93,7 @@ namespace Bit.Api.Controllers
 
         [HttpPut("identifier/{identifier}/token")]
         [HttpPost("identifier/{identifier}/token")]
-        public async Task PutToken(string identifier, [FromBody]DeviceTokenRequestModel model)
+        public async Task PutToken(string identifier, [FromBody] DeviceTokenRequestModel model)
         {
             var device = await _deviceRepository.GetByIdentifierAsync(identifier, _userService.GetProperUserId(User).Value);
             if (device == null)

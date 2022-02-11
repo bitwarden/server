@@ -1,18 +1,18 @@
+﻿using System;
+using System.Security.Claims;
+using System.Threading.Tasks;
 using Bit.Api.Controllers;
-using Bit.Core;
+using Bit.Api.Models.Request.Accounts;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Api;
+using Bit.Core.Models.Api.Request.Accounts;
 using Bit.Core.Models.Data;
-using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Microsoft.AspNetCore.Identity;
 using NSubstitute;
-using System;
-using System.Security.Claims;
-using System.Threading.Tasks;
 using Xunit;
 
 namespace Bit.Api.Test.Controllers
@@ -27,7 +27,6 @@ namespace Bit.Api.Test.Controllers
         private readonly IOrganizationService _organizationService;
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly IPaymentService _paymentService;
-        private readonly ISsoUserRepository _ssoUserRepository;
         private readonly IUserRepository _userRepository;
         private readonly IUserService _userService;
         private readonly ISendRepository _sendRepository;

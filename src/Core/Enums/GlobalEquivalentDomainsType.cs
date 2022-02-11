@@ -88,5 +88,7 @@
         Yandex = 83,
         Sony = 84,
         Proton = 85,
+        Ubisoft = 86,
+        TransferWise = 87,
     }
 }

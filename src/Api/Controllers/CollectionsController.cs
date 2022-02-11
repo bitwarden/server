@@ -1,15 +1,16 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
-using Bit.Core.Repositories;
-using Microsoft.AspNetCore.Authorization;
-using Bit.Core.Models.Api;
-using Bit.Core.Exceptions;
-using Bit.Core.Services;
+using Bit.Api.Models.Request;
+using Bit.Api.Models.Response;
 using Bit.Core.Context;
-using Bit.Core.Models.Table;
-using System.Collections.Generic;
+using Bit.Core.Entities;
+using Bit.Core.Exceptions;
+using Bit.Core.Repositories;
+using Bit.Core.Services;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.Controllers
 {
@@ -110,7 +111,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("")]
-        public async Task<CollectionResponseModel> Post(string orgId, [FromBody]CollectionRequestModel model)
+        public async Task<CollectionResponseModel> Post(string orgId, [FromBody] CollectionRequestModel model)
         {
             var orgIdGuid = new Guid(orgId);
             var collection = model.ToCollection(orgIdGuid);
@@ -131,7 +132,7 @@ namespace Bit.Api.Controllers
 
         [HttpPut("{id}")]
         [HttpPost("{id}")]
-        public async Task<CollectionResponseModel> Put(string orgId, string id, [FromBody]CollectionRequestModel model)
+        public async Task<CollectionResponseModel> Put(string orgId, string id, [FromBody] CollectionRequestModel model)
         {
             if (!await CanEditCollectionAsync(orgId, id))
             {
@@ -145,8 +146,13 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPut("{id}/users")]
-        public async Task PutUsers(string orgId, string id, [FromBody]IEnumerable<SelectionReadOnlyRequestModel> model)
+        public async Task PutUsers(string orgId, string id, [FromBody] IEnumerable<SelectionReadOnlyRequestModel> model)
         {
+            if (!await CanEditCollectionAsync(orgId, id))
+            {
+                throw new NotFoundException();
+            }
+
             var collection = await GetCollectionAsync(new Guid(id), new Guid(orgId));
             await _collectionRepository.UpdateUsersAsync(collection.Id, model?.Select(g => g.ToSelectionReadOnly()));
         }
@@ -219,7 +225,7 @@ namespace Bit.Api.Controllers
 
             if (await _currentContext.EditAssignedCollections(orgId))
             {
-                return null != _collectionRepository.GetByIdAsync(collectionId, _currentContext.UserId.Value);
+                return null != await _collectionRepository.GetByIdAsync(collectionId, _currentContext.UserId.Value);
             }
 
             return false;

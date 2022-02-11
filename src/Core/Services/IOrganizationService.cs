@@ -1,10 +1,9 @@
-﻿using System.Threading.Tasks;
-using Bit.Core.Models.Business;
-using Bit.Core.Models.Table;
-using System;
+﻿using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Models.Api;
+using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
 
 namespace Bit.Core.Services

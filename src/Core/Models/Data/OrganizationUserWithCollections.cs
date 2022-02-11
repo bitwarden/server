@@ -1,5 +1,5 @@
-using System.Data;
-using Bit.Core.Models.Table;
+﻿using System.Data;
+using Bit.Core.Entities;
 
 namespace Bit.Core.Models.Data
 {

@@ -1,9 +1,9 @@
-﻿using Bit.Core.Models.Table;
-using Microsoft.AspNetCore.Hosting;
-using System;
+﻿using System;
+using System.Threading.Tasks;
+using Bit.Core.Entities;
 using Bit.Core.Models.Business;
 using Bit.Core.Settings;
-using System.Threading.Tasks;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
 
 namespace Bit.Core.Services

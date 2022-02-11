@@ -1,10 +1,10 @@
-﻿using System.Threading.Tasks;
-using Bit.Core.Models.Table;
+﻿using System;
 using System.Collections.Generic;
-using System;
-using Bit.Core.Models.Mail;
-using Bit.Core.Models.Table.Provider;
+using System.Threading.Tasks;
+using Bit.Core.Entities;
+using Bit.Core.Entities.Provider;
 using Bit.Core.Models.Business;
+using Bit.Core.Models.Mail;
 
 namespace Bit.Core.Services
 {

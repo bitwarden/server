@@ -1,6 +1,6 @@
-using Bit.Core.Models.Table;
+﻿using System.Collections.Generic;
+using Bit.Core.Entities;
 using Stripe;
-using System.Collections.Generic;
 
 namespace Bit.Core.Models.Business
 {

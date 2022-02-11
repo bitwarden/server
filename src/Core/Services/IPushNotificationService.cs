@@ -1,8 +1,8 @@
 ﻿using System;
-using System.Threading.Tasks;
-using Bit.Core.Models.Table;
-using Bit.Core.Enums;
 using System.Collections.Generic;
+using System.Threading.Tasks;
+using Bit.Core.Entities;
+using Bit.Core.Enums;
 
 namespace Bit.Core.Services
 {

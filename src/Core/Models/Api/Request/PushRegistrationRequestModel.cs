@@ -1,5 +1,5 @@
-﻿using Bit.Core.Enums;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
+using Bit.Core.Enums;
 
 namespace Bit.Core.Models.Api
 {

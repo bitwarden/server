@@ -1,12 +1,12 @@
-﻿using System;
-using System.Diagnostics;
-using Microsoft.AspNetCore.Mvc;
-using Bit.Admin.Models;
-using Microsoft.AspNetCore.Authorization;
-using Bit.Core.Settings;
+﻿using System.Diagnostics;
 using System.Net.Http;
+using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
-using Newtonsoft.Json.Linq;
+using Bit.Admin.Models;
+using Bit.Core.Settings;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Admin.Controllers
 {
@@ -29,13 +29,6 @@ namespace Bit.Admin.Controllers
                 CurrentVersion = Core.Utilities.CoreHelpers.GetVersion()
             });
         }
-        
-        [HttpGet("~/alive")]
-        [HttpGet("~/now")]
-        public DateTime Get()
-        {
-            return DateTime.UtcNow;
-        }
 
         public IActionResult Error()
         {
@@ -45,20 +38,21 @@ namespace Bit.Admin.Controllers
             });
         }
 
-        public async Task<IActionResult> GetLatestDockerHubVersion(string repository)
+        public async Task<IActionResult> GetLatestDockerHubVersion(string repository, CancellationToken cancellationToken)
         {
             try
             {
                 var response = await _httpClient.GetAsync(
-                $"https://hub.docker.com/v2/repositories/bitwarden/{repository}/tags/");
+                $"https://hub.docker.com/v2/repositories/bitwarden/{repository}/tags/", cancellationToken);
                 if (response.IsSuccessStatusCode)
                 {
-                    var json = await response.Content.ReadAsStringAsync();
-                    var data = JObject.Parse(json);
-                    var results = data["results"] as JArray;
-                    foreach (var result in results)
+                    using var jsonDocument = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(cancellationToken), cancellationToken: cancellationToken);
+                    var root = jsonDocument.RootElement;
+
+                    var results = root.GetProperty("results");
+                    foreach (var result in results.EnumerateArray())
                     {
-                        var name = result["name"].ToString();
+                        var name = result.GetProperty("name").GetString();
                         if (!string.IsNullOrWhiteSpace(name) && name.Length > 0 && char.IsNumber(name[0]))
                         {
                             return new JsonResult(name);
@@ -71,17 +65,17 @@ namespace Bit.Admin.Controllers
             return new JsonResult("-");
         }
 
-        public async Task<IActionResult> GetInstalledWebVersion()
+        public async Task<IActionResult> GetInstalledWebVersion(CancellationToken cancellationToken)
         {
             try
             {
                 var response = await _httpClient.GetAsync(
-                    $"{_globalSettings.BaseServiceUri.InternalVault}/version.json");
+                    $"{_globalSettings.BaseServiceUri.InternalVault}/version.json", cancellationToken);
                 if (response.IsSuccessStatusCode)
                 {
-                    var json = await response.Content.ReadAsStringAsync();
-                    var data = JObject.Parse(json);
-                    return new JsonResult(data["version"].ToString());
+                    using var jsonDocument = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(cancellationToken), cancellationToken: cancellationToken);
+                    var root = jsonDocument.RootElement;
+                    return new JsonResult(root.GetProperty("version").GetString());
                 }
             }
             catch (HttpRequestException) { }

@@ -1,6 +1,4 @@
-using System.Collections.Generic;
-using System.Linq;
-using Bit.Core.Models.Api;
+﻿using System.Collections.Generic;
 using Bit.Core.Models.Data;
 
 namespace Bit.Core.Models.Business
@@ -13,14 +11,14 @@ namespace Bit.Core.Models.Business
         public Permissions Permissions { get; set; }
         public IEnumerable<SelectionReadOnly> Collections { get; set; }
 
-        public OrganizationUserInvite() {}
+        public OrganizationUserInvite() { }
 
-        public OrganizationUserInvite(OrganizationUserInviteRequestModel requestModel) 
+        public OrganizationUserInvite(OrganizationUserInviteData requestModel)
         {
             Emails = requestModel.Emails;
-            Type = requestModel.Type.Value;
+            Type = requestModel.Type;
             AccessAll = requestModel.AccessAll;
-            Collections = requestModel.Collections?.Select(c => c.ToSelectionReadOnly());
+            Collections = requestModel.Collections;
             Permissions = requestModel.Permissions;
         }
     }

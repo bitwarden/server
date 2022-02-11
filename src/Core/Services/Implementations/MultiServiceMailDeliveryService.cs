@@ -1,10 +1,10 @@
 ﻿using System;
+using System.Net.Http;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
+using Bit.Core.Models.Mail;
 using Bit.Core.Settings;
 using Microsoft.AspNetCore.Hosting;
-using System.Net.Http;
-using Bit.Core.Models.Mail;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Services
 {

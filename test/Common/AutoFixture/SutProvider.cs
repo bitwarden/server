@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
 using AutoFixture;
 using AutoFixture.Kernel;
-using System.Reflection;
-using System.Linq;
 
 namespace Bit.Test.Common.AutoFixture
 {
@@ -117,6 +117,11 @@ namespace Bit.Test.Common.AutoFixture
                 if (_sutProvider.DependencyIsSet(parameterInfo.ParameterType, parameterInfo.Name))
                 {
                     return _sutProvider.GetDependency(parameterInfo.ParameterType, parameterInfo.Name);
+                }
+                // Return default type if set
+                else if (_sutProvider.DependencyIsSet(parameterInfo.ParameterType, ""))
+                {
+                    return _sutProvider.GetDependency(parameterInfo.ParameterType, "");
                 }
 
 

@@ -1,30 +1,29 @@
+﻿using System;
 using AutoFixture;
-using TableModel = Bit.Core.Models.Table;
-using Bit.Core.Models.EntityFramework;
 using AutoFixture.Kernel;
-using System;
-using Bit.Core.Test.AutoFixture.OrganizationFixtures;
-using Bit.Core.Repositories.EntityFramework;
 using Bit.Core.Test.AutoFixture.EntityFrameworkRepositoryFixtures;
-using Bit.Core.Test.AutoFixture.UserFixtures;
+using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using Bit.Core.Test.AutoFixture.Relays;
+using Bit.Core.Test.AutoFixture.UserFixtures;
+using Bit.Infrastructure.EntityFramework.Models;
+using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 
 namespace Bit.Core.Test.AutoFixture.TransactionFixtures
 {
-    internal class TransactionBuilder: ISpecimenBuilder
+    internal class TransactionBuilder : ISpecimenBuilder
     {
         public bool OrganizationOwned { get; set; }
         public object Create(object request, ISpecimenContext context)
         {
-            if (context == null) 
+            if (context == null)
             {
                 throw new ArgumentNullException(nameof(context));
             }
 
             var type = request as Type;
-            if (type == null || type != typeof(TableModel.Transaction))
+            if (type == null || type != typeof(Transaction))
             {
                 return new NoSpecimen();
             }
@@ -36,12 +35,12 @@ namespace Bit.Core.Test.AutoFixture.TransactionFixtures
                         .Without(c => c.OrganizationId));
             }
             fixture.Customizations.Add(new MaxLengthStringRelay());
-            var obj = fixture.WithAutoNSubstitutions().Create<TableModel.Transaction>();
+            var obj = fixture.WithAutoNSubstitutions().Create<Transaction>();
             return obj;
         }
     }
 
-    internal class EfTransaction: ICustomization 
+    internal class EfTransaction : ICustomization
     {
         public bool OrganizationOwned { get; set; }
         public void Customize(IFixture fixture)
@@ -65,10 +64,10 @@ namespace Bit.Core.Test.AutoFixture.TransactionFixtures
 
     internal class EfOrganizationTransactionAutoDataAttribute : CustomAutoDataAttribute
     {
-        public EfOrganizationTransactionAutoDataAttribute() : base(new SutProviderCustomization(), new EfTransaction(){
-                OrganizationOwned = true,
-            })
+        public EfOrganizationTransactionAutoDataAttribute() : base(new SutProviderCustomization(), new EfTransaction()
+        {
+            OrganizationOwned = true,
+        })
         { }
     }
 }
-

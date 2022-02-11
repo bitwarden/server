@@ -1,9 +1,9 @@
-﻿using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Hosting;
+﻿using AspNetCoreRateLimit;
 using Bit.Core.Utilities;
-using Serilog.Events;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
-using AspNetCoreRateLimit;
+using Serilog.Events;
 
 namespace Bit.Api
 {

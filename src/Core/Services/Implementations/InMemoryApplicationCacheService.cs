@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Bit.Core.Entities;
+using Bit.Core.Entities.Provider;
 using Bit.Core.Models.Data;
-using Bit.Core.Models.Table;
-using Bit.Core.Models.Table.Provider;
 using Bit.Core.Repositories;
 
 namespace Bit.Core.Services
@@ -37,7 +37,7 @@ namespace Bit.Core.Services
             await InitProviderAbilitiesAsync();
             return _providerAbilities;
         }
-        
+
         public virtual async Task UpsertProviderAbilityAsync(Provider provider)
         {
             await InitProviderAbilitiesAsync();
@@ -88,7 +88,7 @@ namespace Bit.Core.Services
                 _lastOrgAbilityRefresh = now;
             }
         }
-        
+
         private async Task InitProviderAbilitiesAsync()
         {
             var now = DateTime.UtcNow;

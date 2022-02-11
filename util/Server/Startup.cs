@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Linq;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -49,12 +50,16 @@ namespace Bit.Server
             }
             else if (configuration.GetValue<bool?>("webVault") ?? false)
             {
+                // TODO: This should be removed when asp.net natively support avif
+                var provider = new FileExtensionContentTypeProvider { Mappings = { [".avif"] = "image/avif" } };
+
                 var options = new DefaultFilesOptions();
                 options.DefaultFileNames.Clear();
                 options.DefaultFileNames.Add("index.html");
                 app.UseDefaultFiles(options);
                 app.UseStaticFiles(new StaticFileOptions
                 {
+                    ContentTypeProvider = provider,
                     OnPrepareResponse = ctx =>
                     {
                         if (!ctx.Context.Request.Path.HasValue ||

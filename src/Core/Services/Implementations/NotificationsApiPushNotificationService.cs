@@ -1,15 +1,14 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Net.Http;
 using System.Threading.Tasks;
 using Bit.Core.Context;
-using Bit.Core.Models.Table;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Settings;
-using Newtonsoft.Json;
 using Bit.Core.Models;
+using Bit.Core.Settings;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
-using System.Net.Http;
-using System.Collections.Generic;
 
 namespace Bit.Core.Services
 {
@@ -17,11 +16,6 @@ namespace Bit.Core.Services
     {
         private readonly GlobalSettings _globalSettings;
         private readonly IHttpContextAccessor _httpContextAccessor;
-
-        private JsonSerializerSettings _jsonSettings = new JsonSerializerSettings
-        {
-            NullValueHandling = NullValueHandling.Ignore
-        };
 
         public NotificationsApiPushNotificationService(
             GlobalSettings globalSettings,

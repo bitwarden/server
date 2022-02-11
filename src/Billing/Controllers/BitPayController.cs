@@ -1,4 +1,10 @@
-﻿using Bit.Billing.Models;
+﻿using System;
+using System.Data.SqlClient;
+using System.Globalization;
+using System.Linq;
+using System.Threading.Tasks;
+using Bit.Billing.Models;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -6,11 +12,6 @@ using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using System;
-using System.Data.SqlClient;
-using System.Globalization;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace Bit.Billing.Controllers
 {
@@ -109,7 +110,7 @@ namespace Bit.Billing.Controllers
 
             try
             {
-                var tx = new Core.Models.Table.Transaction
+                var tx = new Transaction
                 {
                     Amount = Convert.ToDecimal(invoice.Price),
                     CreationDate = GetTransactionDate(invoice),

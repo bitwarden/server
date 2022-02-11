@@ -1,15 +1,15 @@
-using Bit.Core.Test.AutoFixture;
-using Bit.Core.Test.Helpers.Factories;
-using EfRepo = Bit.Core.Repositories.EntityFramework;
-using SqlRepo = Bit.Core.Repositories.SqlServer;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using TableModel = Bit.Core.Models.Table;
 using Bit.Core.Models.Data;
-using Xunit;
-using Bit.Core.Test.Repositories.EntityFramework.EqualityComparers;
-using Bit.Core.Test.AutoFixture.OrganizationFixtures;
+using Bit.Core.Test.AutoFixture;
 using Bit.Core.Test.AutoFixture.Attributes;
+using Bit.Core.Test.AutoFixture.OrganizationFixtures;
+using Bit.Core.Test.Helpers.Factories;
+using Bit.Core.Test.Repositories.EntityFramework.EqualityComparers;
+using Xunit;
+using EfRepo = Bit.Infrastructure.EntityFramework.Repositories;
+using Organization = Bit.Core.Entities.Organization;
+using SqlRepo = Bit.Infrastructure.Dapper.Repositories;
 
 namespace Bit.Core.Test.Repositories.EntityFramework
 {
@@ -17,11 +17,11 @@ namespace Bit.Core.Test.Repositories.EntityFramework
     {
         [CiSkippedTheory, EfOrganizationAutoData]
         public async void CreateAsync_Works_DataMatches(
-            TableModel.Organization organization,
+            Organization organization,
             SqlRepo.OrganizationRepository sqlOrganizationRepo, OrganizationCompare equalityComparer,
             List<EfRepo.OrganizationRepository> suts)
         {
-            var savedOrganizations = new List<TableModel.Organization>();
+            var savedOrganizations = new List<Organization>();
             foreach (var sut in suts)
             {
                 var postEfOrganization = await sut.CreateAsync(organization);
@@ -39,11 +39,11 @@ namespace Bit.Core.Test.Repositories.EntityFramework
         }
 
         [CiSkippedTheory, EfOrganizationAutoData]
-        public async void ReplaceAsync_Works_DataMatches(TableModel.Organization postOrganization,
-            TableModel.Organization replaceOrganization, SqlRepo.OrganizationRepository sqlOrganizationRepo,
+        public async void ReplaceAsync_Works_DataMatches(Organization postOrganization,
+            Organization replaceOrganization, SqlRepo.OrganizationRepository sqlOrganizationRepo,
             OrganizationCompare equalityComparer, List<EfRepo.OrganizationRepository> suts)
         {
-            var savedOrganizations = new List<TableModel.Organization>();
+            var savedOrganizations = new List<Organization>();
             foreach (var sut in suts)
             {
                 var postEfOrganization = await sut.CreateAsync(postOrganization);
@@ -67,8 +67,8 @@ namespace Bit.Core.Test.Repositories.EntityFramework
         }
 
         [CiSkippedTheory, EfOrganizationAutoData]
-        public async void DeleteAsync_Works_DataMatches(TableModel.Organization organization,
-            SqlRepo.OrganizationRepository sqlOrganizationRepo, OrganizationCompare equalityComparer, 
+        public async void DeleteAsync_Works_DataMatches(Organization organization,
+            SqlRepo.OrganizationRepository sqlOrganizationRepo, OrganizationCompare equalityComparer,
             List<EfRepo.OrganizationRepository> suts)
         {
             foreach (var sut in suts)
@@ -97,11 +97,11 @@ namespace Bit.Core.Test.Repositories.EntityFramework
         }
 
         [CiSkippedTheory, EfOrganizationAutoData]
-        public async void GetByIdentifierAsync_Works_DataMatches(TableModel.Organization organization,
-            SqlRepo.OrganizationRepository sqlOrganizationRepo, OrganizationCompare equalityComparer, 
+        public async void GetByIdentifierAsync_Works_DataMatches(Organization organization,
+            SqlRepo.OrganizationRepository sqlOrganizationRepo, OrganizationCompare equalityComparer,
             List<EfRepo.OrganizationRepository> suts)
         {
-            var returnedOrgs = new List<TableModel.Organization>();
+            var returnedOrgs = new List<Organization>();
             foreach (var sut in suts)
             {
                 var postEfOrg = await sut.CreateAsync(organization);
@@ -119,11 +119,11 @@ namespace Bit.Core.Test.Repositories.EntityFramework
         }
 
         [CiSkippedTheory, EfOrganizationAutoData]
-        public async void GetManyByEnabledAsync_Works_DataMatches(TableModel.Organization organization,
-            SqlRepo.OrganizationRepository sqlOrganizationRepo, OrganizationCompare equalityCompare, 
+        public async void GetManyByEnabledAsync_Works_DataMatches(Organization organization,
+            SqlRepo.OrganizationRepository sqlOrganizationRepo, OrganizationCompare equalityCompare,
             List<EfRepo.OrganizationRepository> suts)
         {
-            var returnedOrgs = new List<TableModel.Organization>();
+            var returnedOrgs = new List<Organization>();
             foreach (var sut in suts)
             {
                 var postEfOrg = await sut.CreateAsync(organization);
@@ -141,8 +141,8 @@ namespace Bit.Core.Test.Repositories.EntityFramework
 
         // testing data matches here would require manipulating all organization abilities in the db
         [CiSkippedTheory, EfOrganizationAutoData]
-        public async void GetManyAbilitiesAsync_Works(TableModel.Organization organization,
-            SqlRepo.OrganizationRepository sqlOrganizationRepo, OrganizationCompare equalityComparer, 
+        public async void GetManyAbilitiesAsync_Works(Organization organization,
+            SqlRepo.OrganizationRepository sqlOrganizationRepo, OrganizationCompare equalityComparer,
             List<EfRepo.OrganizationRepository> suts)
         {
             var list = new List<OrganizationAbility>();

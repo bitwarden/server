@@ -1,38 +1,38 @@
+﻿using System;
 using AutoFixture;
-using TableModel = Bit.Core.Models.Table;
 using AutoFixture.Kernel;
-using System;
-using Bit.Core.Repositories.EntityFramework;
+using Bit.Core.Entities;
 using Bit.Core.Test.AutoFixture.EntityFrameworkRepositoryFixtures;
 using Bit.Core.Test.AutoFixture.Relays;
+using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 
 namespace Bit.Core.Test.AutoFixture.TaxRateFixtures
 {
-    internal class TaxRateBuilder: ISpecimenBuilder
+    internal class TaxRateBuilder : ISpecimenBuilder
     {
         public object Create(object request, ISpecimenContext context)
         {
-            if (context == null) 
+            if (context == null)
             {
                 throw new ArgumentNullException(nameof(context));
             }
 
             var type = request as Type;
-            if (type == null || type != typeof(TableModel.TaxRate))
+            if (type == null || type != typeof(TaxRate))
             {
                 return new NoSpecimen();
             }
 
             var fixture = new Fixture();
             fixture.Customizations.Insert(0, new MaxLengthStringRelay());
-            var obj = fixture.WithAutoNSubstitutions().Create<TableModel.TaxRate>();
+            var obj = fixture.WithAutoNSubstitutions().Create<TaxRate>();
             return obj;
         }
     }
 
-    internal class EfTaxRate: ICustomization 
+    internal class EfTaxRate : ICustomization
     {
         public void Customize(IFixture fixture)
         {

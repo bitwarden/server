@@ -1,13 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Identity;
-using Bit.Core.Models.Table;
 using System.Security.Claims;
+using System.Threading.Tasks;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models;
 using Bit.Core.Models.Business;
 using Fido2NetLib;
+using Microsoft.AspNetCore.Identity;
 
 namespace Bit.Core.Services
 {

@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Bit.Core.Entities;
 using Microsoft.AspNetCore.Identity;
-using Bit.Core.Models.Table;
 
 namespace Bit.Core.Identity
 {

@@ -12,7 +12,7 @@ namespace Bit.Sso.Utilities
     public class SsoAuthenticationMiddleware
     {
         private readonly RequestDelegate _next;
-        
+
         public SsoAuthenticationMiddleware(RequestDelegate next, IAuthenticationSchemeProvider schemes)
         {
             _next = next ?? throw new ArgumentNullException(nameof(next));

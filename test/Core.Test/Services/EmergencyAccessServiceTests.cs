@@ -1,20 +1,40 @@
-﻿using Bit.Core.Exceptions;
-using Bit.Core.Models.Table;
+﻿using System;
+using System.Threading.Tasks;
+using Bit.Core.Entities;
+using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Test.AutoFixture.Attributes;
 using Bit.Core.Test.AutoFixture;
+using Bit.Core.Test.AutoFixture.Attributes;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
-using System.Threading.Tasks;
-using System;
 using Xunit;
 
 namespace Bit.Core.Test.Services
 {
     public class EmergencyAccessServiceTests
     {
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public async Task SaveAsync_PremiumCannotUpdate(
+            SutProvider<EmergencyAccessService> sutProvider, User savingUser)
+        {
+            savingUser.Premium = false;
+            var emergencyAccess = new EmergencyAccess
+            {
+                Type = Enums.EmergencyAccessType.Takeover,
+                GrantorId = savingUser.Id,
+            };
+
+            sutProvider.GetDependency<IUserService>().GetUserByIdAsync(savingUser.Id).Returns(savingUser);
+
+            var exception = await Assert.ThrowsAsync<BadRequestException>(
+                () => sutProvider.Sut.SaveAsync(emergencyAccess, savingUser));
+
+            Assert.Contains("Not a premium user.", exception.Message);
+            await sutProvider.GetDependency<IEmergencyAccessRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default);
+        }
+
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
         public async Task InviteAsync_UserWithKeyConnectorCannotUseTakeover(
             SutProvider<EmergencyAccessService> sutProvider, User invitingUser, string email, int waitTime)
@@ -62,10 +82,12 @@ namespace Bit.Core.Test.Services
                 GrantorId = savingUser.Id,
             };
 
-            sutProvider.GetDependency<IUserService>().GetUserByIdAsync(savingUser.Id).Returns(savingUser);
-           
+            var userService = sutProvider.GetDependency<IUserService>();
+            userService.GetUserByIdAsync(savingUser.Id).Returns(savingUser);
+            userService.CanAccessPremium(savingUser).Returns(true);
+
             var exception = await Assert.ThrowsAsync<BadRequestException>(
-                () => sutProvider.Sut.SaveAsync(emergencyAccess, savingUser.Id));
+                () => sutProvider.Sut.SaveAsync(emergencyAccess, savingUser));
 
             Assert.Contains("You cannot use Emergency Access Takeover because you are using Key Connector", exception.Message);
             await sutProvider.GetDependency<IEmergencyAccessRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default);

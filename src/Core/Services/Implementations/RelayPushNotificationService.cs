@@ -1,16 +1,16 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Net.Http;
 using System.Threading.Tasks;
 using Bit.Core.Context;
-using Bit.Core.Models.Table;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Microsoft.AspNetCore.Http;
 using Bit.Core.Models;
-using System.Net.Http;
 using Bit.Core.Models.Api;
-using Microsoft.Extensions.Logging;
-using System.Collections.Generic;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Services
 {

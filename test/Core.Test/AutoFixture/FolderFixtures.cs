@@ -1,39 +1,39 @@
+﻿using System;
 using AutoFixture;
-using TableModel = Bit.Core.Models.Table;
 using AutoFixture.Kernel;
-using System;
-using Bit.Core.Repositories.EntityFramework;
+using Bit.Core.Entities;
 using Bit.Core.Test.AutoFixture.EntityFrameworkRepositoryFixtures;
 using Bit.Core.Test.AutoFixture.Relays;
 using Bit.Core.Test.AutoFixture.UserFixtures;
+using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 
 namespace Bit.Core.Test.AutoFixture.FolderFixtures
 {
-    internal class FolderBuilder: ISpecimenBuilder
+    internal class FolderBuilder : ISpecimenBuilder
     {
         public object Create(object request, ISpecimenContext context)
         {
-            if (context == null) 
+            if (context == null)
             {
                 throw new ArgumentNullException(nameof(context));
             }
 
             var type = request as Type;
-            if (type == null || type != typeof(TableModel.Folder))
+            if (type == null || type != typeof(Folder))
             {
                 return new NoSpecimen();
             }
 
             var fixture = new Fixture();
             fixture.Customizations.Insert(0, new MaxLengthStringRelay());
-            var obj = fixture.WithAutoNSubstitutions().Create<TableModel.Folder>();
+            var obj = fixture.WithAutoNSubstitutions().Create<Folder>();
             return obj;
         }
     }
 
-    internal class EfFolder: ICustomization 
+    internal class EfFolder : ICustomization
     {
         public void Customize(IFixture fixture)
         {

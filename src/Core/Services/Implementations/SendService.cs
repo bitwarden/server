@@ -1,18 +1,18 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Bit.Core.Context;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
-using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Identity;
-using Newtonsoft.Json;
 
 namespace Bit.Core.Services
 {
@@ -104,8 +104,8 @@ namespace Bit.Core.Services
                 data.Id = fileId;
                 data.Size = fileLength;
                 data.Validated = false;
-                send.Data = JsonConvert.SerializeObject(data,
-                    new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
+                send.Data = JsonSerializer.Serialize(data,
+                    JsonHelpers.IgnoreWritingNull);
                 await SaveSendAsync(send);
                 return await _sendFileStorageService.GetSendFileUploadUrlAsync(send, fileId);
             }
@@ -129,7 +129,7 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Not a File Type Send.");
             }
 
-            var data = JsonConvert.DeserializeObject<SendFileData>(send.Data);
+            var data = JsonSerializer.Deserialize<SendFileData>(send.Data);
 
             if (data.Validated)
             {
@@ -146,7 +146,7 @@ namespace Bit.Core.Services
 
         public async Task<bool> ValidateSendFile(Send send)
         {
-            var fileData = JsonConvert.DeserializeObject<SendFileData>(send.Data);
+            var fileData = JsonSerializer.Deserialize<SendFileData>(send.Data);
 
             var (valid, realSize) = await _sendFileStorageService.ValidateFileAsync(send, fileData.Id, fileData.Size, _fileSizeLeeway);
 
@@ -163,8 +163,8 @@ namespace Bit.Core.Services
                 fileData.Size = realSize.Value;
             }
             fileData.Validated = true;
-            send.Data = JsonConvert.SerializeObject(fileData,
-                new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
+            send.Data = JsonSerializer.Serialize(fileData,
+                JsonHelpers.IgnoreWritingNull);
             await SaveSendAsync(send);
 
             return valid;
@@ -175,7 +175,7 @@ namespace Bit.Core.Services
             await _sendRepository.DeleteAsync(send);
             if (send.Type == Enums.SendType.File)
             {
-                var data = JsonConvert.DeserializeObject<SendFileData>(send.Data);
+                var data = JsonSerializer.Deserialize<SendFileData>(send.Data);
                 await _sendFileStorageService.DeleteFileAsync(send, data.Id);
             }
             await _pushService.PushSyncSendDeleteAsync(send);

@@ -1,10 +1,10 @@
-﻿using System.Threading.Tasks;
+﻿using System;
 using System.IO;
-using System;
-using Bit.Core.Models.Table;
-using Bit.Core.Settings;
 using System.Linq;
+using System.Threading.Tasks;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Settings;
 
 namespace Bit.Core.Services
 {

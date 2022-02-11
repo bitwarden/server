@@ -1,13 +1,12 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Net.Http;
+using System.Net.Http.Json;
 using System.Threading.Tasks;
 using Bit.Core.Settings;
-using Microsoft.Extensions.Logging;
-using System.Net.Http;
-using System.Collections.Generic;
-using Newtonsoft.Json;
-using Microsoft.AspNetCore.Hosting;
-using System.Text;
 using Bit.Core.Utilities;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Services
 {
@@ -76,15 +75,13 @@ namespace Bit.Core.Services
                 request.tag = string.Concat(request.tag, "-Cat_", message.Category);
             }
 
-            var reqJson = JsonConvert.SerializeObject(request);
-            var responseMessage = await httpClient.PostAsync(
+            var responseMessage = await httpClient.PostAsJsonAsync(
                 $"https://{_globalSettings.Mail.PostalDomain}/api/v1/send/message",
-                new StringContent(reqJson, Encoding.UTF8, "application/json"));
+                request);
 
             if (responseMessage.IsSuccessStatusCode)
             {
-                var json = await responseMessage.Content.ReadAsStringAsync();
-                var response = JsonConvert.DeserializeObject<PostalResponse>(json);
+                var response = await responseMessage.Content.ReadFromJsonAsync<PostalResponse>();
                 if (response.status != "success")
                 {
                     _logger.LogError("Postal send status was not successful: {0}, {1}",

@@ -1,4 +1,4 @@
-using static Bit.Core.Settings.GlobalSettings;
+﻿using static Bit.Core.Settings.GlobalSettings;
 
 namespace Bit.Core.Settings
 {

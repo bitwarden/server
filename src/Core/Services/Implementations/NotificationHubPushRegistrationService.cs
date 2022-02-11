@@ -1,12 +1,12 @@
-﻿using System.Collections.Generic;
-using System.Threading.Tasks;
-using Microsoft.Azure.NotificationHubs;
-using Bit.Core.Enums;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
-using System;
+using System.Threading.Tasks;
+using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
+using Microsoft.Azure.NotificationHubs;
 
 namespace Bit.Core.Services
 {
@@ -65,7 +65,7 @@ namespace Bit.Core.Services
                     break;
                 case DeviceType.iOS:
                     payloadTemplate = "{\"data\":{\"type\":\"#(type)\",\"payload\":\"$(payload)\"}," +
-                        "\"aps\":{\"alert\":null,\"badge\":null,\"content-available\":1}}";
+                        "\"aps\":{\"content-available\":1}}";
                     messageTemplate = "{\"data\":{\"type\":\"#(type)\"}," +
                         "\"aps\":{\"alert\":\"$(message)\",\"badge\":null,\"content-available\":1}}";
                     badgeMessageTemplate = "{\"data\":{\"type\":\"#(type)\"}," +
@@ -133,12 +133,9 @@ namespace Bit.Core.Services
                     await _installationDeviceRepository.DeleteAsync(new InstallationDeviceEntity(deviceId));
                 }
             }
-            catch (Exception e)
+            catch (Exception e) when (e.InnerException == null || !e.InnerException.Message.Contains("(404) Not Found"))
             {
-                if (e.InnerException == null || !e.InnerException.Message.Contains("(404) Not Found"))
-                {
-                    throw e;
-                }
+                throw;
             }
         }
 
@@ -192,12 +189,9 @@ namespace Bit.Core.Services
                 {
                     await _client.PatchInstallationAsync(id, new List<PartialUpdateOperation> { operation });
                 }
-                catch (Exception e)
+                catch (Exception e) when (e.InnerException == null || !e.InnerException.Message.Contains("(404) Not Found"))
                 {
-                    if (e.InnerException == null || !e.InnerException.Message.Contains("(404) Not Found"))
-                    {
-                        throw e;
-                    }
+                    throw;
                 }
             }
         }

@@ -1,6 +1,6 @@
 ﻿using System;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Models.Table;
 
 namespace Bit.Core.Models.Data
 {
@@ -12,12 +12,12 @@ namespace Bit.Core.Models.Data
             {
                 throw new ArgumentNullException(nameof(orgUser));
             }
-            
+
             if (user == null)
             {
                 throw new ArgumentNullException(nameof(user));
             }
-            
+
             if (org == null)
             {
                 throw new ArgumentNullException(nameof(org));

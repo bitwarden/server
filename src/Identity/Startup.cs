@@ -1,21 +1,22 @@
 ﻿using System;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Configuration;
+using System.Globalization;
+using System.IdentityModel.Tokens.Jwt;
+using System.Threading.Tasks;
+using AspNetCoreRateLimit;
 using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
-using AspNetCoreRateLimit;
-using System.Globalization;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Hosting;
-using Microsoft.IdentityModel.Logging;
-using System.IdentityModel.Tokens.Jwt;
-using System.Threading.Tasks;
 using Bit.Identity.Utilities;
+using Bit.SharedWeb.Utilities;
 using IdentityServer4.Extensions;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Microsoft.IdentityModel.Logging;
 
 namespace Bit.Identity
 {
@@ -57,7 +58,11 @@ namespace Bit.Identity
             services.AddMemoryCache();
 
             // Mvc
-            services.AddMvc();
+            // MVC
+            services.AddMvc(config =>
+            {
+                config.Filters.Add(new ModelStateValidationFilterAttribute());
+            });
 
             if (!globalSettings.SelfHosted)
             {

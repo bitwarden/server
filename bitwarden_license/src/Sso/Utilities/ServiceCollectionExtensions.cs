@@ -2,8 +2,9 @@
 using System.Collections.Generic;
 using Bit.Core.Business.Sso;
 using Bit.Core.IdentityServer;
-using Bit.Core.Utilities;
 using Bit.Core.Settings;
+using Bit.Core.Utilities;
+using Bit.SharedWeb.Utilities;
 using Bit.Sso.Models;
 using IdentityServer4.Models;
 using IdentityServer4.ResponseHandling;

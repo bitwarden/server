@@ -1,7 +1,6 @@
-﻿using System;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 
-namespace Bit.Core.Models.Api
+namespace Bit.Core.Models.Api.Request.Accounts
 {
     public class PreloginRequestModel
     {

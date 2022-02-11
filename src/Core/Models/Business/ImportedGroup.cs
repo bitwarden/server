@@ -1,5 +1,5 @@
-﻿using Bit.Core.Models.Table;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using Bit.Core.Entities;
 
 namespace Bit.Core.Models.Business
 {

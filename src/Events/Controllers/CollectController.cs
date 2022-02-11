@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Bit.Core.Context;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
@@ -32,16 +32,8 @@ namespace Bit.Events.Controllers
             _cipherRepository = cipherRepository;
         }
 
-        [HttpGet("~/alive")]
-        [HttpGet("~/now")]
-        [AllowAnonymous]
-        public DateTime GetAlive()
-        {
-            return DateTime.UtcNow;
-        }
-
         [HttpPost]
-        public async Task<IActionResult> Post([FromBody]IEnumerable<EventModel> model)
+        public async Task<IActionResult> Post([FromBody] IEnumerable<EventModel> model)
         {
             if (model == null || !model.Any())
             {

@@ -1,11 +1,11 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
+using Bit.Core.Entities;
+using Bit.Core.Entities.Provider;
 using Bit.Core.Models.Business;
-using Bit.Core.Models.Table;
-using Bit.Core.Models.Table.Provider;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Microsoft.Extensions.Logging;
@@ -44,7 +44,7 @@ namespace Bit.Core.Test.Services
             {
                 // TODO: Swith to use env variable
                 { ("email", typeof(string)), "test@bitwarden.com" },
-                { ("user", typeof(User)), new User 
+                { ("user", typeof(User)), new User
                 {
                     Id = Guid.NewGuid(),
                     Email = "test@bitwarden.com",
@@ -151,8 +151,8 @@ namespace Bit.Core.Test.Services
             {
                 var parameters = method.GetParameters();
                 var args = new object[parameters.Length];
-                
-                for(var i = 0; i < parameters.Length; i++)
+
+                for (var i = 0; i < parameters.Length; i++)
                 {
                     if (!namedParameters.TryGetValue((parameters[i].Name, parameters[i].ParameterType), out var value))
                     {

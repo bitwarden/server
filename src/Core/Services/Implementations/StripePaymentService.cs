@@ -1,16 +1,16 @@
 ﻿using System;
-using System.Threading.Tasks;
-using Bit.Core.Models.Table;
 using System.Collections.Generic;
-using Bit.Core.Exceptions;
 using System.Linq;
+using System.Threading.Tasks;
 using Bit.Billing.Models;
-using Bit.Core.Models.Business;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Exceptions;
+using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
 using Microsoft.Extensions.Logging;
-using TaxRate = Bit.Core.Models.Table.TaxRate;
 using StaticStore = Bit.Core.Models.StaticStore;
+using TaxRate = Bit.Core.Entities.TaxRate;
 
 namespace Bit.Core.Services
 {
@@ -171,7 +171,7 @@ namespace Bit.Core.Services
                 {
                     await _btGateway.Customer.DeleteAsync(braintreeCustomer.Id);
                 }
-                throw e;
+                throw;
             }
 
             org.Gateway = GatewayType.Stripe;
@@ -367,7 +367,7 @@ namespace Bit.Core.Services
                         var message = e.Message.ToLowerInvariant();
                         if (message.Contains("apple") || message.Contains("in-app"))
                         {
-                            throw e;
+                            throw;
                         }
                     }
                 }
@@ -466,7 +466,7 @@ namespace Bit.Core.Services
                     && !string.IsNullOrWhiteSpace(taxInfo?.BillingAddressPostalCode))
             {
                 var taxRates = await _taxRateRepository.GetByLocationAsync(
-                    new Bit.Core.Models.Table.TaxRate()
+                    new TaxRate()
                     {
                         Country = taxInfo.BillingAddressCountry,
                         PostalCode = taxInfo.BillingAddressPostalCode
@@ -692,7 +692,7 @@ namespace Bit.Core.Services
                     throw new GatewayException("Bank account is not yet verified.");
                 }
 
-                throw e;
+                throw;
             }
         }
 
@@ -742,7 +742,7 @@ namespace Bit.Core.Services
                     && !string.IsNullOrWhiteSpace(customer?.Address?.PostalCode))
             {
                 var taxRates = await _taxRateRepository.GetByLocationAsync(
-                    new Bit.Core.Models.Table.TaxRate()
+                    new TaxRate()
                     {
                         Country = customer.Address.Country,
                         PostalCode = customer.Address.PostalCode
@@ -800,6 +800,12 @@ namespace Bit.Core.Services
                     });
                     throw;
                 }
+            }
+            else if (!invoice.Paid)
+            {
+                // Pay invoice with no charge to customer this completes the invoice immediately without waiting the scheduled 1h
+                invoice = await _stripeAdapter.InvoicePayAsync(subResponse.LatestInvoiceId);
+                paymentIntentClientSecret = null;
             }
 
             // Change back the subscription collection method and/or days until due
@@ -1099,7 +1105,7 @@ namespace Bit.Core.Services
             {
                 if (e.Message != $"No such subscription: {subscriber.GatewaySubscriptionId}")
                 {
-                    throw e;
+                    throw;
                 }
             }
         }
@@ -1402,13 +1408,13 @@ namespace Bit.Core.Services
                     });
                 }
             }
-            catch (Exception e)
+            catch
             {
                 if (braintreeCustomer != null && !hadBtCustomer)
                 {
                     await _btGateway.Customer.DeleteAsync(braintreeCustomer.Id);
                 }
-                throw e;
+                throw;
             }
 
             return createdCustomer;

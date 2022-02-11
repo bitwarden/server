@@ -3,6 +3,7 @@ using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
+using Bit.SharedWeb.Utilities;
 using Bit.Sso.Utilities;
 using IdentityServer4.Extensions;
 using Microsoft.AspNetCore.Builder;
@@ -36,7 +37,8 @@ namespace Bit.Sso
             var globalSettings = services.AddGlobalSettingsServices(Configuration);
 
             // Stripe Billing
-            StripeConfiguration.ApiKey = globalSettings.StripeApiKey;
+            StripeConfiguration.ApiKey = globalSettings.Stripe.ApiKey;
+            StripeConfiguration.MaxNetworkRetries = globalSettings.Stripe.MaxNetworkRetries;
 
             // Data Protection
             services.AddCustomDataProtectionServices(Environment, globalSettings);

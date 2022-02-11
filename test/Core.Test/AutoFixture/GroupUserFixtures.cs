@@ -1,36 +1,36 @@
+﻿using System;
 using AutoFixture;
-using TableModel = Bit.Core.Models.Table;
 using AutoFixture.Kernel;
-using System;
-using Bit.Core.Repositories.EntityFramework;
+using Bit.Core.Entities;
 using Bit.Core.Test.AutoFixture.EntityFrameworkRepositoryFixtures;
+using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 
 namespace Bit.Core.Test.AutoFixture.GroupUserFixtures
 {
-    internal class GroupUserBuilder: ISpecimenBuilder
+    internal class GroupUserBuilder : ISpecimenBuilder
     {
         public object Create(object request, ISpecimenContext context)
         {
-            if (context == null) 
+            if (context == null)
             {
                 throw new ArgumentNullException(nameof(context));
             }
 
             var type = request as Type;
-            if (type == null || type != typeof(TableModel.GroupUser))
+            if (type == null || type != typeof(GroupUser))
             {
                 return new NoSpecimen();
             }
 
             var fixture = new Fixture();
-            var obj = fixture.WithAutoNSubstitutions().Create<TableModel.GroupUser>();
+            var obj = fixture.WithAutoNSubstitutions().Create<GroupUser>();
             return obj;
         }
     }
 
-    internal class EfGroupUser: ICustomization 
+    internal class EfGroupUser : ICustomization
     {
         public void Customize(IFixture fixture)
         {

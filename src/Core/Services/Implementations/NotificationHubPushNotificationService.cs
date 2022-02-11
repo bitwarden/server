@@ -1,17 +1,17 @@
 ﻿using System;
-using System.Threading.Tasks;
-using Bit.Core.Models.Table;
-using Microsoft.Azure.NotificationHubs;
-using Bit.Core.Context;
-using Bit.Core.Enums;
-using Newtonsoft.Json;
 using System.Collections.Generic;
-using Microsoft.AspNetCore.Http;
+using System.Text.Json;
+using System.Text.RegularExpressions;
+using System.Threading.Tasks;
+using Bit.Core.Context;
+using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Models;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
-using System.Text.RegularExpressions;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Azure.NotificationHubs;
 
 namespace Bit.Core.Services
 {
@@ -229,7 +229,7 @@ namespace Bit.Core.Services
                 new Dictionary<string, string>
                 {
                     { "type",  ((byte)type).ToString() },
-                    { "payload", JsonConvert.SerializeObject(payload) }
+                    { "payload", JsonSerializer.Serialize(payload) }
                 }, tag);
         }
 

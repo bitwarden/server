@@ -143,7 +143,7 @@ namespace Bit.Core.Models.Data
             {
                 return $"OrganizationId={e.OrganizationId}";
             }
-            
+
             if (e.ProviderId.HasValue)
             {
                 return $"ProviderId={e.ProviderId}";

@@ -1,18 +1,17 @@
-using System;
-using Microsoft.Extensions.Hosting;
-using Azure.Storage.Queues;
-using Microsoft.Extensions.Logging;
-using Bit.Core.Settings;
-using System.Threading.Tasks;
-using System.Threading;
-using Bit.Core.Services;
-using Newtonsoft.Json;
-using Bit.Core.Models.Mail;
-using Azure.Storage.Queues.Models;
-using System.Linq;
+﻿using System;
 using System.Collections.Generic;
-using Newtonsoft.Json.Linq;
+using System.Linq;
+using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
+using Azure.Storage.Queues;
+using Azure.Storage.Queues.Models;
+using Bit.Core.Models.Mail;
+using Bit.Core.Services;
+using Bit.Core.Settings;
 using Bit.Core.Utilities;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Admin.HostedServices
 {
@@ -30,7 +29,7 @@ namespace Bit.Admin.HostedServices
             ILogger<AzureQueueMailHostedService> logger,
             IMailService mailService,
             GlobalSettings globalSettings)
-        { 
+        {
             _logger = logger;
             _mailService = mailService;
             _globalSettings = globalSettings;
@@ -70,17 +69,19 @@ namespace Bit.Admin.HostedServices
                 {
                     try
                     {
-                        var token = JToken.Parse(message.DecodeMessageText());
-                        if (token is JArray)
+                        using var document = JsonDocument.Parse(message.DecodeMessageText());
+                        var root = document.RootElement;
+
+                        if (root.ValueKind == JsonValueKind.Array)
                         {
-                            foreach (var mailQueueMessage in token.ToObject<List<MailQueueMessage>>())
+                            foreach (var mailQueueMessage in root.ToObject<List<MailQueueMessage>>())
                             {
                                 await _mailService.SendEnqueuedMailMessageAsync(mailQueueMessage);
                             }
                         }
-                        else if (token is JObject)
+                        else if (root.ValueKind == JsonValueKind.Object)
                         {
-                            var mailQueueMessage = token.ToObject<MailQueueMessage>();
+                            var mailQueueMessage = root.ToObject<MailQueueMessage>();
                             await _mailService.SendEnqueuedMailMessageAsync(mailQueueMessage);
                         }
                     }
@@ -89,7 +90,7 @@ namespace Bit.Admin.HostedServices
                         _logger.LogError(e, "Failed to send email");
                         // TODO: retries?
                     }
-                    
+
                     await _mailQueueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt);
 
                     if (cancellationToken.IsCancellationRequested)

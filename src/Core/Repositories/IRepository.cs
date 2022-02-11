@@ -1,6 +1,6 @@
-﻿using Bit.Core.Models.Table;
-using System;
+﻿using System;
 using System.Threading.Tasks;
+using Bit.Core.Entities;
 
 namespace Bit.Core.Repositories
 {

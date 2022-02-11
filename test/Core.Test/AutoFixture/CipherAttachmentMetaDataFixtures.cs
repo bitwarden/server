@@ -1,4 +1,4 @@
-using AutoFixture;
+﻿using AutoFixture;
 using AutoFixture.Dsl;
 using Bit.Core.Models.Data;
 
@@ -9,7 +9,7 @@ namespace Bit.Core.Test.AutoFixture.CipherAttachmentMetaData
         protected virtual IPostprocessComposer<CipherAttachment.MetaData> ComposerAction(IFixture fixture,
             ICustomizationComposer<CipherAttachment.MetaData> composer)
         {
-            return composer.With(d => d.Size, fixture.Create<long>()).Without(d => d.SizeString);
+            return composer.With(d => d.Size, fixture.Create<long>());
         }
         public void Customize(IFixture fixture)
         {

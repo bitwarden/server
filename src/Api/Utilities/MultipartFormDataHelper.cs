@@ -1,13 +1,13 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using System;
+using System.IO;
+using System.Text.Json;
+using System.Threading.Tasks;
+using Bit.Api.Models.Request;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.WebUtilities;
-using Microsoft.Net.Http.Headers;
-using System;
-using System.IO;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
-using Bit.Core.Models.Api;
-using Newtonsoft.Json;
+using Microsoft.Net.Http.Headers;
 
 namespace Bit.Api.Utilities
 {
@@ -78,13 +78,6 @@ namespace Bit.Api.Utilities
             {
                 if (ContentDispositionHeaderValue.TryParse(firstSection.ContentDisposition, out _))
                 {
-                    // Request model json, then data
-                    string requestModelJson = null;
-                    using (var sr = new StreamReader(firstSection.Body))
-                    {
-                        requestModelJson = await sr.ReadToEndAsync();
-                    }
-
                     var secondSection = await reader.ReadNextSectionAsync();
                     if (secondSection != null)
                     {
@@ -94,7 +87,7 @@ namespace Bit.Api.Utilities
                             var fileName = HeaderUtilities.RemoveQuotes(secondContent.FileName).ToString();
                             using (secondSection.Body)
                             {
-                                var model = JsonConvert.DeserializeObject<SendRequestModel>(requestModelJson);
+                                var model = await JsonSerializer.DeserializeAsync<SendRequestModel>(firstSection.Body);
                                 await callback(secondSection.Body, fileName, model);
                             }
                         }

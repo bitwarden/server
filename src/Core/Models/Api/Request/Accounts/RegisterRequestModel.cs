@@ -1,13 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Models.Business;
-using Bit.Core.Models.Table;
 using Bit.Core.Utilities;
-using Newtonsoft.Json;
 
-namespace Bit.Core.Models.Api
+namespace Bit.Core.Models.Api.Request.Accounts
 {
     public class RegisterRequestModel : IValidatableObject, ICaptchaProtectedModel
     {
@@ -44,7 +43,7 @@ namespace Bit.Core.Models.Api
 
             if (ReferenceData != null)
             {
-                user.ReferenceData = JsonConvert.SerializeObject(ReferenceData);
+                user.ReferenceData = JsonSerializer.Serialize(ReferenceData);
             }
 
             if (Key != null)
