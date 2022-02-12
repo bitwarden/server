@@ -233,6 +233,8 @@ namespace Bit.Core.IdentityServer
         {
             if (user != null)
             {
+                // TODO Increment Failed login counter here
+                // Send out an email if current count == Ceiling
                 await _eventService.LogUserEventAsync(user.Id,
                     twoFactorRequest ? EventType.User_FailedLogIn2fa : EventType.User_FailedLogIn);
             }

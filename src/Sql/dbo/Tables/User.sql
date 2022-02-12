@@ -32,6 +32,8 @@
     [ApiKey]                          VARCHAR (30)     NOT NULL,
     [ForcePasswordReset]              BIT              NOT NULL,
     [UsesKeyConnector]                BIT              NOT NULL,
+    [FailedLoginCount]                TINYINT          NOT NULL,
+    [LastFailedLoginDate]             DATETIME2 (7)    NULL,
     CONSTRAINT [PK_User] PRIMARY KEY CLUSTERED ([Id] ASC)
 );
 
