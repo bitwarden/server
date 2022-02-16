@@ -19,7 +19,7 @@ namespace Bit.Core.Services
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly GlobalSettings _globalSettings;
         private readonly IDataProtectorTokenFactory<HCaptchaTokenable> _tokenizer;
-        
+
         public HCaptchaValidationService(
             ILogger<HCaptchaValidationService> logger,
             IHttpClientFactory httpClientFactory,
@@ -84,7 +84,7 @@ namespace Bit.Core.Services
         }
 
         public bool RequireCaptchaValidation(ICurrentContext currentContext) =>
-            currentContext.IsBot || 
+            currentContext.IsBot ||
             _globalSettings.Captcha.ForceCaptchaRequired ||
             currentContext.User?.FailedLoginCount >= Constants.MaximumFailedLoginAttempts;
 

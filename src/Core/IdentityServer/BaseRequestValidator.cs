@@ -269,7 +269,7 @@ namespace Bit.Core.IdentityServer
                 user.FailedLoginCount = ++user.FailedLoginCount;
                 user.LastFailedLoginDate = DateTime.UtcNow;
             }
-            
+
             user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
             await _userRepository.ReplaceAsync(user);
 
@@ -277,7 +277,7 @@ namespace Bit.Core.IdentityServer
             {
                 await _mailService.SendFailedLoginAttemptsEmailAsync(user.Email);
             }
-        } 
+        }
 
         protected abstract void SetTwoFactorResult(T context, Dictionary<string, object> customResponse);
 
