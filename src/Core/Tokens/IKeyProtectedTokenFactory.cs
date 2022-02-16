@@ -1,6 +1,6 @@
 namespace Bit.Core.Tokens
 {
-    public interface IInstallationProtectedTokenFactory<T>
+    public interface IKeyProtectedTokenFactory<T>
         where T : Tokenable
     {
         string Protect(string key, T data);

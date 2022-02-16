@@ -34,7 +34,8 @@ namespace Bit.Api.Controllers
         private readonly ICurrentContext _currentContext;
         private readonly IOrganizationApiKeyRepository _organizationApiKeyRepository;
         private readonly IUserService _userService;
-        private readonly IDataProtectorTokenFactory<BillingSyncTokenable> _tokenFactory;
+        private readonly IDataProtectorTokenFactory<OrganizationApiKeyTokenable> _tokenFactory;
+        private readonly IInstallationRepository _installationRepository;
 
         public OrganizationSponsorshipsController(
             IOrganizationSponsorshipRepository organizationSponsorshipRepository,
@@ -49,7 +50,8 @@ namespace Bit.Api.Controllers
             IUserService userService,
             IOrganizationApiKeyRepository organizationApiKeyRepository,
             ICurrentContext currentContext,
-            IDataProtectorTokenFactory<BillingSyncTokenable> tokenFactory)
+            IDataProtectorTokenFactory<OrganizationApiKeyTokenable> tokenFactory,
+            IInstallationRepository installationRepository)
         {
             _organizationSponsorshipRepository = organizationSponsorshipRepository;
             _organizationRepository = organizationRepository;
@@ -64,6 +66,8 @@ namespace Bit.Api.Controllers
             _organizationApiKeyRepository = organizationApiKeyRepository;
             _currentContext = currentContext;
             _tokenFactory = tokenFactory;
+            _installationRepository = installationRepository;
+
         }
 
         [HttpPost("{sponsoringOrgId}/families-for-enterprise")]
@@ -165,8 +169,18 @@ namespace Bit.Api.Controllers
         [HttpPost("sync")]
         [AllowAnonymous] // Only allow anonymous because we are doing manual authentication with the given key
         [SelfHosted(NotSelfHostedOnly = true)]
-        public async Task<IActionResult> SyncSponsorships([FromBody] SyncOrganizationSponsorshipsRequestModel syncModel, [FromQuery] string key)
+        public async Task<IActionResult> SyncSponsorships([FromBody] SyncOrganizationSponsorshipsRequestModel syncModel, [FromQuery(Name = "key")] string encryptedKey)
         {
+            var installation = await _installationRepository.GetByIdAsync(syncModel.InstallationId);
+
+            if (installation == null)
+            {
+                return NotFound();
+            }
+
+            // Decrypt key with installation key
+            var key = encryptedKey;
+
             if (!await _organizationApiKeyRepository.GetCanUseByApiKeyAsync(syncModel.OrganizationId, key, OrganizationApiKeyType.BillingSync))
             {
                 return Unauthorized();
@@ -174,19 +188,6 @@ namespace Bit.Api.Controllers
 
             await Task.Delay(1000);
             return Ok(new { Message = "Hi", Key = key, Echo = syncModel});
-        }
-
-        [HttpPost("sync-self")] // Temp name
-        [SelfHosted(NotSelfHostedOnly = true)]
-        public async Task<IActionResult> SyncSponsorshipsSelf(Guid organizationId)
-        {
-            // Get billing sync key
-            var key = CoreHelpers.SecureRandomString(30); // Fake it for now
-            // Get organizationid
-            // From 
-            // Encrypt with installation key
-
-            
         }
 
         [HttpGet("{sponsoringOrgId}/sync-status")]
@@ -199,7 +200,7 @@ namespace Bit.Api.Controllers
                 return Unauthorized();
             }
 
-            var lastSyncDate = await _organizationsSponsorshipService.GetLatestSyncDate(sponsoringOrg);
+            var lastSyncDate = await _organizationSponsorshipRepository.GetLatestSyncDateBySponsoringOrganizationIdAsync(sponsoringOrg.Id);
             return Ok(new OrganizationSponsorshipSyncStatusResponseModel(lastSyncDate));
         }
 

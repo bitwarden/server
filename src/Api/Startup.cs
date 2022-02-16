@@ -18,6 +18,8 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
 using System.Collections.Generic;
 using Bit.SharedWeb.Utilities;
+using Bit.Core.Enums;
+using Microsoft.AspNetCore.Authorization;
 
 #if !OSS
 using Bit.CommCore.Utilities;
@@ -114,9 +116,17 @@ namespace Bit.Api
                     policy.RequireAuthenticatedUser();
                     policy.RequireClaim(JwtClaimTypes.Scope, "api.organization");
                 });
+                config.AddPolicy("BillingSyncKey", policy =>
+                {
+                    // Purposefully do not require authenticated user as the requirement is a custom auth scheme
+                    // for endpoints opting into this policy.
+                    policy.AddRequirements(new OrganizationApiKeyRequirement(OrganizationApiKeyType.BillingSync));
+                });
             });
 
             services.AddScoped<AuthenticatorTokenProvider>();
+            
+            services.AddSingleton<IAuthorizationHandler, OrganizationApiKeyAuthorizationHandler>();
 
             // Services
             services.AddBaseServices();

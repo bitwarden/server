@@ -6,21 +6,20 @@ using Bit.Core.Tokens;
 
 namespace Bit.Core.Models.Business.Tokenables
 {
-    public class BillingSyncTokenable : Tokenable
+    public class OrganizationApiKeyTokenable : Tokenable
     {
-        public const string ClearTextPrefix = "BWBillingSync_";
-        public const string DataProtectorPurpose = "BillingSync";
+        public const string ClearTextPrefix = "BWOrgApiKey_";
+        public const string DataProtectorPurpose = "OrgApiKey";
 
         [JsonConstructor]
-        public BillingSyncTokenable() {}
+        public OrganizationApiKeyTokenable() {}
 
         // Used on cloud side
-        public BillingSyncTokenable(OrganizationApiKey apiKey)
+        public OrganizationApiKeyTokenable(OrganizationApiKey apiKey)
         {
-            if (apiKey.Type != OrganizationApiKeyType.BillingSync)
+            if (Enum.IsDefined(apiKey.Type))
             {
-                throw new ArgumentException($"Invalid OrganizationApiKey, Type must be {nameof(OrganizationApiKeyType.BillingSync)}",
-                    nameof(apiKey));
+                throw new ArgumentException($"Invalid OrganizationApiKey, Type must be a defined enum of type {typeof(OrganizationApiKeyType)}.");
             }
 
             if (apiKey.OrganizationId == default)
@@ -35,18 +34,18 @@ namespace Bit.Core.Models.Business.Tokenables
                 throw new ArgumentException($"Invalid OrganizationApiKey, Requires an {nameof(OrganizationApiKey.ApiKey)}",
                     nameof(apiKey));
             }
-            BillingSyncKey = apiKey.ApiKey;
+            Key = apiKey.ApiKey;
         }
 
         // Used on self hosted side
-        public BillingSyncTokenable(Guid organizationId, string billingSyncKey)
+        public OrganizationApiKeyTokenable(Guid organizationId, string key)
         {
             OrganizationId = organizationId;
-            BillingSyncKey = billingSyncKey;
+            Key = key;
         }
         
-        public string BillingSyncKey { get; set; }
+        public string Key { get; set; }
         public Guid OrganizationId { get; set; }
-        public override bool Valid => OrganizationId != Guid.Empty && !string.IsNullOrWhiteSpace(BillingSyncKey);
+        public override bool Valid => OrganizationId != Guid.Empty && !string.IsNullOrWhiteSpace(Key);
     }
 }

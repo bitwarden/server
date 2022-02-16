@@ -38,10 +38,10 @@ namespace Bit.Core.OrganizationFeatures
                     serviceProvider.GetDataProtectionProvider())
             );
 
-            services.AddSingleton<IDataProtectorTokenFactory<BillingSyncTokenable>>(serviceProvider =>
-                new DataProtectorTokenFactory<BillingSyncTokenable>(
-                    BillingSyncTokenable.ClearTextPrefix,
-                    BillingSyncTokenable.DataProtectorPurpose,
+            services.AddSingleton<IDataProtectorTokenFactory<OrganizationApiKeyTokenable>>(serviceProvider =>
+                new DataProtectorTokenFactory<OrganizationApiKeyTokenable>(
+                    OrganizationApiKeyTokenable.ClearTextPrefix,
+                    OrganizationApiKeyTokenable.DataProtectorPurpose,
                     serviceProvider.GetDataProtectionProvider())
             );
         }

@@ -563,7 +563,7 @@ FROM
 GO
 
 
-IF OBJECT_ID('[dbo].[OrganizationSponsorship_ReadFirstBySponsoringOrganizationId') IS NOT NULL
+IF OBJECT_ID('[dbo].[OrganizationSponsorship_ReadFirstBySponsoringOrganizationId]') IS NOT NULL
 BEGIN
     DROP PROCEDURE [dbo].[OrganizationSponsorship_ReadFirstBySponsoringOrganizationId];
 END
@@ -573,6 +573,11 @@ CREATE PROCEDURE [dbo].[OrganizationSponsorship_ReadFirstBySponsoringOrganizatio
     @SponsoringOrganizationId UNIQUEIDENTIFIER
 AS
 BEGIN
-    
+    SELECT TOP 1
+        *
+    FROM
+        [dbo].[OrganizationSponsorship]
+    WHERE
+        [SponsoringOrganizationId] = @SponsoringOrganizationId
 END
 GO
