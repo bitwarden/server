@@ -220,5 +220,10 @@ namespace Bit.Core.Services
         {
             return Task.FromResult(0);
         }
+        
+        public Task SendFailedLoginAttemptsEmailAsync(string email)
+        {
+            return Task.FromResult(0);
+        }
     }
 }

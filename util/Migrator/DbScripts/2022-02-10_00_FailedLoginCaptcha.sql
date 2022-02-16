@@ -4,7 +4,7 @@ BEGIN
     ALTER TABLE
         [dbo].[User]
     ADD
-        [ForcePasswordReset] BIT NULL
+        [FailedLoginCount] TINYINT NULL
 END
 GO
 

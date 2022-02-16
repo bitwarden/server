@@ -61,7 +61,7 @@ namespace Bit.Core.Entities
         public bool ForcePasswordReset { get; set; }
         public bool UsesKeyConnector { get; set; }
         public int FailedLoginCount { get; set; }
-        public DateTime LastFailedLoginDate { get; set; }
+        public DateTime? LastFailedLoginDate { get; set; }
 
         public void SetNewId()
         {

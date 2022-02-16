@@ -86,7 +86,7 @@ namespace Bit.Core.Services
         public bool RequireCaptchaValidation(ICurrentContext currentContext) =>
             currentContext.IsBot || 
             _globalSettings.Captcha.ForceCaptchaRequired ||
-            currentContext.User?.FailedLoginCount > Constants.MaximumFailedLoginAttempts;
+            currentContext.User?.FailedLoginCount >= Constants.MaximumFailedLoginAttempts;
 
         private static bool TokenIsApiKey(string bypassToken, User user) =>
             !string.IsNullOrWhiteSpace(bypassToken) && user != null && user.ApiKey == bypassToken;

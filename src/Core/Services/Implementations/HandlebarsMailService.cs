@@ -874,5 +874,18 @@ namespace Bit.Core.Services
             message.Category = "OTP";
             await _mailDeliveryService.SendEmailAsync(message);
         }
+        
+        public async Task SendFailedLoginAttemptsEmailAsync(string email)
+        {
+            var message = CreateDefaultMessage("Failed Login Attempts", email);
+            var model = new BaseMailModel()
+            {
+                WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+                SiteName = _globalSettings.SiteName,
+            };
+            await AddMessageContentAsync(message, "FailedLoginAttempts", model);
+            message.Category = "FailedLoginAttempts";
+            await _mailDeliveryService.SendEmailAsync(message);
+        }
     }
 }

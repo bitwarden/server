@@ -41,10 +41,12 @@ namespace Bit.Core.IdentityServer
             ICurrentContext currentContext,
             GlobalSettings globalSettings,
             IPolicyRepository policyRepository,
-            ISsoConfigRepository ssoConfigRepository)
+            ISsoConfigRepository ssoConfigRepository,
+            IUserRepository userRepository)
             : base(userManager, deviceRepository, deviceService, userService, eventService,
                   organizationDuoWebTokenProvider, organizationRepository, organizationUserRepository,
-                  applicationCacheService, mailService, logger, currentContext, globalSettings, policyRepository)
+                  applicationCacheService, mailService, logger, currentContext, globalSettings, policyRepository,
+                  userRepository)
         {
             _userManager = userManager;
             _ssoConfigRepository = ssoConfigRepository;

@@ -10,7 +10,7 @@
         public const long FileSize101mb = 101L * 1024L * 1024L;
         public const long FileSize501mb = 501L * 1024L * 1024L;
         
-        public const int MaximumFailedLoginAttempts = 5;
+        public const int MaximumFailedLoginAttempts = 1;
     }
 
     public static class TokenPurposes

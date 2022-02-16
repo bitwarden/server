@@ -37,10 +37,12 @@ namespace Bit.Core.IdentityServer
             ICurrentContext currentContext,
             GlobalSettings globalSettings,
             IPolicyRepository policyRepository,
-            ICaptchaValidationService captchaValidationService)
+            ICaptchaValidationService captchaValidationService,
+            IUserRepository userRepository)
             : base(userManager, deviceRepository, deviceService, userService, eventService,
                   organizationDuoWebTokenProvider, organizationRepository, organizationUserRepository,
-                  applicationCacheService, mailService, logger, currentContext, globalSettings, policyRepository)
+                  applicationCacheService, mailService, logger, currentContext, globalSettings, policyRepository,
+                  userRepository)
         {
             _userManager = userManager;
             _userService = userService;
@@ -59,7 +61,7 @@ namespace Bit.Core.IdentityServer
 
             string bypassToken = null;
             var user = await _userManager.FindByEmailAsync(context.UserName.ToLowerInvariant());
-            _currentContext.User = user;
+            _currentContext.User = user; // Is this necessary???
             var unknownDevice = !await KnownDeviceAsync(user, context.Request);
             if (unknownDevice && _captchaValidationService.RequireCaptchaValidation(_currentContext))
             {
