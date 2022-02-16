@@ -56,6 +56,13 @@ namespace Bit.Api.Test.Utilities
             await sut.HandleAsync(context);
 
             Assert.True(context.HasSucceeded);
+            var httpContext = Assert.IsAssignableFrom<HttpContext>(context.Resource);
+            var apiKeyFeature = httpContext.Features.Get<IApiKeyAuthorizationFeature>();
+            Assert.NotNull(apiKeyFeature);
+            Assert.NotNull(apiKeyFeature.Installation);
+            Assert.NotNull(apiKeyFeature.Token);
+            Assert.Equal(installationId, apiKeyFeature.Installation.Id);
+            Assert.Equal(organizationId, apiKeyFeature.Token.OrganizationId);
         }
 
         [Fact]

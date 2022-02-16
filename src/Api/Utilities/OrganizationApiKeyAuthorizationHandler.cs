@@ -73,7 +73,8 @@ namespace Bit.Api.Utilities
                 context.Fail();
                 return;
             }
-
+            
+            httpContext.Features.Set<IApiKeyAuthorizationFeature>(new ApiKeyAuthorizationFeature(installation, token));
             context.Succeed(requirement);
         }
     }
