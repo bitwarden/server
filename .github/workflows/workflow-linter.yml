@@ -1,0 +1,21 @@
+---
+name: Workflow Linter
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/**
+
+jobs:
+  lint:
+    name: "Workflow Linter"
+    runs-on: ubuntu-20.04
+    steps:
+
+      - name: Checkout Version Branch
+        uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579
+
+      - name: Workflow Lint
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: bitwarden/gh-actions/lint-workflow@6f6ac44e93df2aaacfb46018dbeffffaad4a18e8
