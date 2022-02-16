@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
+using System.Net.Http.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Bit.Billing.Models;
 using Bit.Core.Repositories;
@@ -9,8 +11,6 @@ using Bit.Core.Settings;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 
 namespace Bit.Core.Services
 {
@@ -97,14 +97,16 @@ namespace Bit.Core.Services
                 }
 
                 var url = string.Format("https://{0}.itunes.apple.com/verifyReceipt", prod ? "buy" : "sandbox");
-                var json = new JObject(new JProperty("receipt-data", receiptData),
-                   new JProperty("password", _globalSettings.AppleIap.Password)).ToString();
 
-                var response = await _httpClient.PostAsync(url, new StringContent(json));
+                var response = await _httpClient.PostAsJsonAsync(url, new AppleVerifyReceiptRequestModel
+                {
+                    ReceiptData = receiptData,
+                    Password = _globalSettings.AppleIap.Password
+                });
+
                 if (response.IsSuccessStatusCode)
                 {
-                    var responseJson = await response.Content.ReadAsStringAsync();
-                    var receiptStatus = JsonConvert.DeserializeObject<AppleReceiptStatus>(responseJson);
+                    var receiptStatus = await response.Content.ReadFromJsonAsync<AppleReceiptStatus>();
                     if (receiptStatus.Status == 21007)
                     {
                         return await GetReceiptStatusAsync(receiptData, false, attempt + 1, receiptStatus);
@@ -123,5 +125,13 @@ namespace Bit.Core.Services
             }
             return null;
         }
+    }
+
+    public class AppleVerifyReceiptRequestModel
+    {
+        [JsonPropertyName("receipt-data")]
+        public string ReceiptData { get; set; }
+        [JsonPropertyName("password")]
+        public string Password { get; set; }
     }
 }

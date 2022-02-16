@@ -1,4 +1,5 @@
 ﻿using System.Threading.Tasks;
+using Bit.Core.Entities;
 using Bit.Core.Models.Business.Tokenables;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
@@ -18,20 +19,20 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
             _tokenFactory = tokenFactory;
         }
 
-        public async Task<bool> ValidateRedemptionTokenAsync(string encryptedToken, string sponsoredUserEmail)
+        public async Task<(bool valid, OrganizationSponsorship sponsorship)> ValidateRedemptionTokenAsync(string encryptedToken, string sponsoredUserEmail)
         {
 
             if (!_tokenFactory.TryUnprotect(encryptedToken, out var tokenable))
             {
-                return false;
+                return (false, null);
             }
 
             var sponsorship = await _organizationSponsorshipRepository.GetByIdAsync(tokenable.Id);
             if (!tokenable.IsValid(sponsorship, sponsoredUserEmail))
             {
-                return false;
+                return (false, sponsorship);
             }
-            return true;
+            return (true, sponsorship);
         }
     }
 }
