@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Text.Json.Serialization;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -12,7 +12,7 @@ namespace Bit.Core.Models.Business.Tokenables
         public const string DataProtectorPurpose = "OrgApiKey";
 
         [JsonConstructor]
-        public OrganizationApiKeyTokenable() {}
+        public OrganizationApiKeyTokenable() { }
 
         // Used on cloud side
         public OrganizationApiKeyTokenable(OrganizationApiKey apiKey)
@@ -43,7 +43,7 @@ namespace Bit.Core.Models.Business.Tokenables
             OrganizationId = organizationId;
             Key = key;
         }
-        
+
         public string Key { get; set; }
         public Guid OrganizationId { get; set; }
         public override bool Valid => OrganizationId != Guid.Empty && !string.IsNullOrWhiteSpace(Key);

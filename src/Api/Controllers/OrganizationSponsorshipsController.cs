@@ -153,7 +153,6 @@ namespace Bit.Api.Controllers
         [HttpPost("sponsored/{sponsoredOrgId}/remove")]
         [SelfHosted(NotSelfHostedOnly = true)]
         [Authorize("Application")]
-        
         public async Task RemoveSponsorship(Guid sponsoredOrgId)
         {
 

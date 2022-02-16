@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Bit.Core.Models.Api;
 
 namespace Bit.Api.Models.Response
@@ -12,6 +12,5 @@ namespace Bit.Api.Models.Response
         }
 
         public DateTime? LastSyncDate { get; set; }
-        
     }
 }

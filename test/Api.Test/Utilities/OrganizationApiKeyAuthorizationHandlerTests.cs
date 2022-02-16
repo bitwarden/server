@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
@@ -69,7 +69,7 @@ namespace Bit.Api.Test.Utilities
         public async Task HandleRequirementAsync_BadResource_Fails()
         {
             var context = new AuthorizationHandlerContext(
-                new [] { new OrganizationApiKeyRequirement(OrganizationApiKeyType.BillingSync) },
+                new[] { new OrganizationApiKeyRequirement(OrganizationApiKeyType.BillingSync) },
                 new ClaimsPrincipal(),
                 new { Message = "Not HttpContext" }
             );
@@ -201,10 +201,10 @@ namespace Bit.Api.Test.Utilities
         }
 
         private static AuthorizationHandlerContext CreateContext(
-            Func<IInstallationRepository, IKeyProtectedTokenFactory<OrganizationApiKeyTokenable>, IOrganizationApiKeyRepository, Dictionary<string, StringValues>> configure)
+            Func<IInstallationRepository, ISymmetricKeyProtectedTokenFactory<OrganizationApiKeyTokenable>, IOrganizationApiKeyRepository, Dictionary<string, StringValues>> configure)
         {
             var installationRepo = Substitute.For<IInstallationRepository>();
-            var tokenFactory = Substitute.For<IKeyProtectedTokenFactory<OrganizationApiKeyTokenable>>();
+            var tokenFactory = Substitute.For<ISymmetricKeyProtectedTokenFactory<OrganizationApiKeyTokenable>>();
             var apiKeyRepo = Substitute.For<IOrganizationApiKeyRepository>();
 
             var serviceProvider = Substitute.For<IServiceProvider>();
@@ -212,7 +212,7 @@ namespace Bit.Api.Test.Utilities
             serviceProvider.GetService(typeof(IInstallationRepository))
                 .Returns(installationRepo);
 
-            serviceProvider.GetService(typeof(IKeyProtectedTokenFactory<OrganizationApiKeyTokenable>))
+            serviceProvider.GetService(typeof(ISymmetricKeyProtectedTokenFactory<OrganizationApiKeyTokenable>))
                 .Returns(tokenFactory);
 
             serviceProvider.GetService(typeof(IOrganizationApiKeyRepository))
@@ -221,14 +221,14 @@ namespace Bit.Api.Test.Utilities
             var query = configure(installationRepo,
                 tokenFactory,
                 apiKeyRepo);
-            
+
             var httpContext = new DefaultHttpContext();
             httpContext.Request.Query = new QueryCollection(query);
             httpContext.RequestServices = serviceProvider;
 
 
             return new AuthorizationHandlerContext(
-                new [] { new OrganizationApiKeyRequirement(OrganizationApiKeyType.BillingSync) },
+                new[] { new OrganizationApiKeyRequirement(OrganizationApiKeyType.BillingSync) },
                 new ClaimsPrincipal(),
                 httpContext);
         }

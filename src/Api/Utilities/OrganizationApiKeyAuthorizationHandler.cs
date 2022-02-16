@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading.Tasks;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business.Tokenables;
@@ -11,7 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Bit.Api.Utilities
 {
     // Custom class for the requirement
-    public class OrganizationApiKeyRequirement : IAuthorizationRequirement 
+    public class OrganizationApiKeyRequirement : IAuthorizationRequirement
     {
         public OrganizationApiKeyType ApiKeyType { get; }
         public OrganizationApiKeyRequirement(OrganizationApiKeyType apiKeyType)
@@ -39,8 +39,8 @@ namespace Bit.Api.Utilities
             // We do have a billing sync key
             var key = keys[0];
 
-            if (!httpContext.Request.Query.TryGetValue("installation", out var installationIds) 
-                || installationIds.Count != 1 
+            if (!httpContext.Request.Query.TryGetValue("installation", out var installationIds)
+                || installationIds.Count != 1
                 || !Guid.TryParse(installationIds[0], out var installationId))
             {
                 context.Fail();
@@ -58,7 +58,7 @@ namespace Bit.Api.Utilities
                 return;
             }
 
-            var tokenFactory = httpContext.RequestServices.GetRequiredService<IKeyProtectedTokenFactory<OrganizationApiKeyTokenable>>();
+            var tokenFactory = httpContext.RequestServices.GetRequiredService<ISymmetricKeyProtectedTokenFactory<OrganizationApiKeyTokenable>>();
 
             if (!tokenFactory.TryUnprotect(installation.Key, key, out var token))
             {
@@ -73,7 +73,7 @@ namespace Bit.Api.Utilities
                 context.Fail();
                 return;
             }
-            
+
             httpContext.Features.Set<IApiKeyAuthorizationFeature>(new ApiKeyAuthorizationFeature(installation, token));
             context.Succeed(requirement);
         }

@@ -1,7 +1,6 @@
-namespace Bit.Core.Tokens
+﻿namespace Bit.Core.Tokens
 {
-    public interface IKeyProtectedTokenFactory<T>
-        where T : Tokenable
+    public interface ISymmetricKeyProtectedTokenFactory<T> where T : Tokenable
     {
         string Protect(string key, T data);
         T Unprotect(string key, string token);

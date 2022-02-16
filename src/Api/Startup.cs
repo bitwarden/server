@@ -125,7 +125,7 @@ namespace Bit.Api
             });
 
             services.AddScoped<AuthenticatorTokenProvider>();
-            
+
             services.AddSingleton<IAuthorizationHandler, OrganizationApiKeyAuthorizationHandler>();
 
             // Services
