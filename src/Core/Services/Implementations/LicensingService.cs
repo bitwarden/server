@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Bit.Core.Entities;
 using Bit.Core.Models.Business;
@@ -13,7 +14,6 @@ using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 
 namespace Bit.Core.Services
 {
@@ -246,7 +246,7 @@ namespace Bit.Core.Services
             }
 
             var data = File.ReadAllText(filePath, Encoding.UTF8);
-            return JsonConvert.DeserializeObject<UserLicense>(data);
+            return JsonSerializer.Deserialize<UserLicense>(data);
         }
 
         public OrganizationLicense ReadOrganizationLicense(Organization organization)
@@ -258,7 +258,7 @@ namespace Bit.Core.Services
             }
 
             var data = File.ReadAllText(filePath, Encoding.UTF8);
-            return JsonConvert.DeserializeObject<OrganizationLicense>(data);
+            return JsonSerializer.Deserialize<OrganizationLicense>(data);
         }
     }
 }

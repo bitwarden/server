@@ -1,13 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.Messaging.EventGrid;
 using Azure.Messaging.EventGrid.SystemEvents;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Newtonsoft.Json;
 
 namespace Bit.Api.Utilities
 {
@@ -21,15 +21,8 @@ namespace Bit.Api.Utilities
             {
                 try
                 {
-                    using (var stream = file.OpenReadStream())
-                    using (var reader = new StreamReader(stream))
-                    {
-                        var s = await reader.ReadToEndAsync();
-                        if (!string.IsNullOrWhiteSpace(s))
-                        {
-                            obj = JsonConvert.DeserializeObject<T>(s);
-                        }
-                    }
+                    using var stream = file.OpenReadStream();
+                    obj = await JsonSerializer.DeserializeAsync<T>(stream, JsonHelpers.IgnoreCase);
                 }
                 catch { }
             }

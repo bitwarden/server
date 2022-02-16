@@ -1,12 +1,10 @@
 ﻿using System;
-using Newtonsoft.Json;
+using System.Text.Json.Serialization;
 
 namespace Bit.Core.Models.Data
 {
     public class SendFileData : SendData
     {
-        private long _size;
-
         public SendFileData() { }
 
         public SendFileData(string name, string notes, string fileName)
@@ -15,20 +13,9 @@ namespace Bit.Core.Models.Data
             FileName = fileName;
         }
 
-        [JsonIgnore]
-        public long Size
-        {
-            get { return _size; }
-            set { _size = value; }
-        }
-
         // We serialize Size as a string since JSON (or Javascript) doesn't support full precision for long numbers
-        [JsonProperty("Size")]
-        public string SizeString
-        {
-            get { return _size.ToString(); }
-            set { _size = Convert.ToInt64(value); }
-        }
+        [JsonNumberHandling(JsonNumberHandling.WriteAsString | JsonNumberHandling.AllowReadingFromString)]
+        public long Size { get; set; }
 
         public string Id { get; set; }
         public string FileName { get; set; }
