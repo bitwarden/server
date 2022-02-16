@@ -1,0 +1,144 @@
+---
+version: "3.9"
+
+services:
+
+  admin:
+    depends_on:
+      - mssql
+    env_file:
+      - global.env
+    image: bitwarden/admin:${CORETAG:-latest}
+    restart: always
+    volumes:
+      - attachments:/etc/bitwarden/core/attachments
+      - aspnet-dataprotection:/etc/bitwarden/core/aspnet-dataprotection
+      - ca-certificates:/etc/bitwarden/ca-certificates
+      - logs-admin:/etc/bitwarden/logs/admin
+
+  api:
+    env_file:
+      - global.env
+    image: bitwarden/api:${CORETAG:-latest}
+    restart: always
+    volumes:
+      - attachments:/etc/bitwarden/core/attachments
+      - aspnet-dataprotection:/etc/bitwarden/core/aspnet-dataprotection
+      - ca-certificates:/etc/bitwarden/ca-certificates
+      - logs-api:/etc/bitwarden/logs/api
+
+  attachments:
+    env_file:
+      - global.env
+    image: bitwarden/attachments:${CORETAG:-latest}
+    restart: always
+    volumes:
+      - attachments:/etc/bitwarden/core/attachments
+
+  events:
+    env_file:
+      - global.env
+    image: bitwarden/events:${CORETAG:-latest}
+    restart: always
+    volumes:
+      - ca-certificates:/etc/bitwarden/ca-certificates
+      - logs-events:/etc/bitwarden/logs/events
+        
+  icons:
+    env_file:
+      - global.env
+    image: bitwarden/icons:${CORETAG:-latest}
+    restart: always
+    volumes:
+      - ca-certificates:/etc/bitwarden/ca-certificates
+      - logs-icons:/etc/bitwarden/logs/icons
+
+  identity:
+    env_file:
+      - global.env
+    image: bitwarden/identity:${CORETAG:-latest}
+    restart: always
+    volumes:
+      - attachments:/etc/bitwarden/core/attachments
+      - aspnet-dataprotection:/etc/bitwarden/core/aspnet-dataprotection
+      - ca-certificates:/etc/bitwarden/ca-certificates
+      - identity:/etc/bitwarden/identity
+      - logs-identity:/etc/bitwarden/logs/identity
+      
+  mssql:
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: "Express"
+      SA_PASSWORD: "superstrongpassword"
+    image: mcr.microsoft.com/mssql/server:2017-CU18-ubuntu-16.04
+    restart: always
+    volumes:
+      - mssql_data:/var/opt/mssql/data
+      - mssql_logs:/var/opt/mssql/log
+        
+  nginx:
+    depends_on:
+      - admin
+      - api
+      - identity
+      - web
+    environment:
+      BW_ENABLE_SSL: true
+      BW_GENERATE_CERT: true
+      BW_DOMAIN: "bitwarden.localhost"
+    image: bitwarden/nginx:${CORETAG:-latest}
+    restart: always
+    ports:
+      - '8080:8080'
+      - '8443:8443'
+    volumes:
+      - ../nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ../letsencrypt:/etc/letsencrypt
+      - ssl:/bitwarden/ssl/self
+      - ../logs/nginx:/var/log/nginx
+
+  notifications:
+    env_file:
+      - global.env
+    image: bitwarden/notifications:${CORETAG:-latest}
+    restart: always
+    volumes:
+      - ca-certificates:/etc/bitwarden/ca-certificates
+      - logs-notifications:/etc/bitwarden/logs/notifications
+
+  sso:
+    env_file:
+      - global.env
+    image: bitwarden/sso:${CORETAG:-latest}
+    restart: always
+    volumes:
+      - attachments:/etc/bitwarden/core/attachments
+      - aspnet-dataprotection:/etc/bitwarden/core/aspnet-dataprotection
+      - ca-certificates:/etc/bitwarden/ca-certificates
+      - identity:/etc/bitwarden/identity
+      - logs-sso:/etc/bitwarden/logs/sso
+        
+  web:
+    env_file:
+      - global.env
+    image: bitwarden/web:${WEBTAG:-latest}
+    restart: always
+    volumes:
+      - web:/etc/bitwarden/web
+
+volumes:
+  attachments:
+  aspnet-dataprotection:
+  ca-certificates:
+  identity:
+  logs-admin:
+  logs-api:
+  logs-events:
+  logs-icons:
+  logs-identity:
+  logs-notifications:
+  logs-sso:
+  mssql_data:
+  mssql_logs:
+  ssl:
+  web:

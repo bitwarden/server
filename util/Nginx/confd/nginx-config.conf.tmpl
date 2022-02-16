@@ -1,0 +1,164 @@
+﻿server {
+  listen 8080 default_server;
+  listen [::]:8080 default_server;
+  server_name {{ getenv "BW_DOMAIN" "localhost" }};
+{{ if exists (getenv "BW_ENABLE_SSL") }}
+
+  return 301 {{ getenv "BW_DOMAIN" "localhost" }}$request_uri;
+}
+
+server {
+  listen 8443 ssl http2;
+  listen [::]:8443 ssl http2;
+  server_name {{ getenv "BW_DOMAIN" "localhost" }};
+
+  ssl_certificate {{ getenv "BW_CERT_PATH" "/bitwarden/ssl/self/certificate.crt" }};
+  ssl_certificate_key {{ getenv "BW_KEY_PATH" "/bitwarden/ssl/self/private.key" }};
+  ssl_session_timeout 30m;
+  ssl_session_cache shared:SSL:20m;
+  ssl_session_tickets off;
+{{ if exists (getenv "BW_DIFFIEHELLMAN_PATH") }}
+
+  # Diffie-Hellman parameter for DHE ciphersuites, recommended 2048 bits
+  ssl_dhparam {{ getenv "BW_DIFFIEHELLMAN_PATH" }};
+{{ end }}
+
+  ssl_protocols {{ getenv "BW_SSL_PROTOCOLS" "TLSv1.2" }};
+  ssl_ciphers "{{ getenv "BW_SSL_CIPHERS" "ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256" }}";
+  # Enables server-side protection from BEAST attacks
+  ssl_prefer_server_ciphers on;
+{{ if exists (getenv "BW_CA_PATH") }}
+
+  # OCSP Stapling ---
+  # Fetch OCSP records from URL in ssl_certificate and cache them
+  ssl_stapling on;
+  ssl_stapling_verify on;
+
+  # Verify chain of trust of OCSP response using Root CA and Intermediate certs
+  ssl_trusted_certificate {{ getenv "BW_CA_PATH" }};
+  resolver 1.1.1.1 1.0.0.1 9.9.9.9 149.112.112.112 valid=300s;
+{{ end }}
+
+  include /etc/nginx/security-headers-ssl.conf;
+{{ end }}
+  include /etc/nginx/security-headers.conf;
+{{ if exists (getenv "BW_REAL_IPS") }}
+
+{{ range (getenv "BW_REAL_IPS") }}
+  set_real_ip_from {{ .Key }};
+{{ end }}
+  real_ip_header X-Forwarded-For;
+  real_ip_recursive on;
+{{ end }}
+
+  location / {
+    proxy_pass http://{{ getenv "BW_SERVICE_NAME_WEB" "web"}}:{{ getenv "BW_SERVICE_PORT_WEB" "5000" }}/;
+{{ if exists (getenv "BW_ENABLE_SSL") }}
+    include /etc/nginx/security-headers-ssl.conf;
+{{ end }}
+    include /etc/nginx/security-headers.conf;
+    add_header Content-Security-Policy "{{ getenv "BW_CSP" "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://haveibeenpwned.com https://www.gravatar.com; child-src 'self' https://*.duosecurity.com https://*.duofederal.com; frame-src 'self' https://*.duosecurity.com https://*.duofederal.com; connect-src 'self' wss://bitwarden.localhost https://api.pwnedpasswords.com https://2fa.directory; object-src 'self' blob:;" }}";
+    add_header X-Frame-Options SAMEORIGIN;
+    add_header X-Robots-Tag "noindex, nofollow";
+  }
+
+  location /alive {
+    return 200 'alive';
+    add_header Content-Type text/plain;
+  }
+
+  location = /app-id.json {
+    proxy_pass http://{{ getenv "BW_SERVICE_NAME_WEB" "web"}}:{{ getenv "BW_SERVICE_PORT_WEB" "5000" }}/app-id.json;
+{{ if exists (getenv "BW_ENABLE_SSL") }}
+    include /etc/nginx/security-headers-ssl.conf;
+{{ end }}
+    include /etc/nginx/security-headers.conf;
+    proxy_hide_header Content-Type;
+    add_header Content-Type $fido_content_type;
+  }
+
+  location = /duo-connector.html {
+    proxy_pass http://{{ getenv "BW_SERVICE_NAME_WEB" "web"}}:{{ getenv "BW_SERVICE_PORT_WEB" "5000" }}/duo-connector.html;
+  }
+
+  location = /webauthn-connector.html {
+    proxy_pass http://{{ getenv "BW_SERVICE_NAME_WEB" "web"}}:{{ getenv "BW_SERVICE_PORT_WEB" "5000" }}/webauthn-connector.html;
+  }
+
+  location = /webauthn-fallback-connector.html {
+    proxy_pass http://{{ getenv "BW_SERVICE_NAME_WEB" "web"}}:{{ getenv "BW_SERVICE_PORT_WEB" "5000" }}/webauthn-fallback-connector.html;
+  }
+
+  location = /sso-connector.html {
+    proxy_pass http://{{ getenv "BW_SERVICE_NAME_WEB" "web"}}:{{ getenv "BW_SERVICE_PORT_WEB" "5000" }}/sso-connector.html;
+  }
+
+{{ if exists (getenv "BW_CAPTCHA") }}
+  location = /captcha-connector.html {
+    proxy_pass http://{{ getenv "BW_SERVICE_NAME_WEB" "web"}}:{{ getenv "BW_SERVICE_PORT_WEB" "5000" }}/captcha-connector.html;
+  }
+  
+  location = /captcha-mobile-connector.html {
+    proxy_pass http://{{ getenv "BW_SERVICE_NAME_WEB" "web"}}:{{ getenv "BW_SERVICE_PORT_WEB" "5000" }}/captcha-mobile-connector.html;
+  }
+{{ end }}
+
+  location /attachments/ {
+    proxy_pass http://{{ getenv "BW_SERVICE_NAME_ATTACHMENTS" "attachments"}}:{{ getenv "BW_SERVICE_PORT_ATTACHMENTS" "5000" }}/;
+  }
+
+  location /api/ {
+    proxy_pass http://{{ getenv "BW_SERVICE_NAME_API" "api"}}:{{ getenv "BW_SERVICE_PORT_API" "5000" }}/;
+  }
+
+  location /icons/ {
+    proxy_pass http://{{ getenv "BW_SERVICE_NAME_ICONS" "icons"}}:{{ getenv "BW_SERVICE_PORT_ICONS" "5000" }}/;
+  }
+
+  location /notifications/ {
+    proxy_pass http://{{ getenv "BW_SERVICE_NAME_NOTIFICATIONS" "notifications"}}:{{ getenv "BW_SERVICE_PORT_NOTIFICATIONS" "5000" }}/;
+  }
+
+  location /notifications/hub {
+    proxy_pass http://{{ getenv "BW_SERVICE_NAME_NOTIFICATIONS" "notifications"}}:{{ getenv "BW_SERVICE_PORT_NOTIFICATIONS" "5000" }}/hub;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection $http_connection;
+  }
+
+  location /events/ {
+    proxy_pass http://{{ getenv "BW_SERVICE_NAME_EVENTS" "events"}}:{{ getenv "BW_SERVICE_PORT_EVENTS" "5000" }}/;
+  }
+
+  location /sso {
+    proxy_pass http://{{ getenv "BW_SERVICE_NAME_SSO" "sso"}}:{{ getenv "BW_SERVICE_PORT_SSO" "5000" }};
+{{ if exists (getenv "BW_ENABLE_SSL") }}
+    include /etc/nginx/security-headers-ssl.conf;
+{{ end }}
+    include /etc/nginx/security-headers.conf;
+    add_header X-Frame-Options SAMEORIGIN;
+  }
+
+  location /identity {
+    proxy_pass http://{{ getenv "BW_SERVICE_NAME_IDENTITY" "identity"}}:{{ getenv "BW_SERVICE_PORT_IDENTITY" "5000" }};
+{{ if exists (getenv "BW_ENABLE_SSL") }}
+    include /etc/nginx/security-headers-ssl.conf;
+{{ end }}
+    include /etc/nginx/security-headers.conf;
+    add_header X-Frame-Options SAMEORIGIN;
+  }
+
+  location /admin {
+    proxy_pass http://{{ getenv "BW_SERVICE_NAME_ADMIN" "admin"}}:{{ getenv "BW_SERVICE_PORT_ADMIN" "5000" }};
+{{ if exists (getenv "BW_ENABLE_SSL") }}
+    include /etc/nginx/security-headers-ssl.conf;
+{{ end }}
+    include /etc/nginx/security-headers.conf;
+    add_header X-Frame-Options SAMEORIGIN;
+  }
+
+{{ if exists (getenv "BW_ENABLE_KEY_CONNECTOR") }}
+  location /key-connector/ {
+    proxy_pass http://{{ getenv "BW_SERVICE_NAME_KEY_CONNECTOR" "keyconnector"}}:{{ getenv "BW_SERVICE_PORT_KEY_CONNECTOR" "5000" }}/;
+  }
+{{ end }}
+}
