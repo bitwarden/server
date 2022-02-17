@@ -61,9 +61,8 @@ namespace Bit.Core.IdentityServer
 
             string bypassToken = null;
             var user = await _userManager.FindByEmailAsync(context.UserName.ToLowerInvariant());
-            _currentContext.User = user; // Is this necessary???
             var unknownDevice = !await KnownDeviceAsync(user, context.Request);
-            if (unknownDevice && _captchaValidationService.RequireCaptchaValidation(_currentContext))
+            if (unknownDevice && _captchaValidationService.RequireCaptchaValidation(_currentContext, user.FailedLoginCount))
             {
                 var captchaResponse = context.Request.Raw["captchaResponse"]?.ToString();
 
@@ -86,7 +85,7 @@ namespace Bit.Core.IdentityServer
                 bypassToken = _captchaValidationService.GenerateCaptchaBypassToken(user);
             }
 
-            await ValidateAsync(context, context.Request);
+            await ValidateAsync(context, context.Request, unknownDevice);
             if (context.Result.CustomResponse != null && bypassToken != null)
             {
                 context.Result.CustomResponse["CaptchaBypassToken"] = bypassToken;

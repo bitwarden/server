@@ -75,7 +75,7 @@ namespace Bit.Core.IdentityServer
             _userRepository = userRepository;
         }
 
-        protected async Task ValidateAsync(T context, ValidatedTokenRequest request)
+        protected async Task ValidateAsync(T context, ValidatedTokenRequest request, bool unknownDevice = false)
         {
             var twoFactorToken = request.Raw["TwoFactorToken"]?.ToString();
             var twoFactorProvider = request.Raw["TwoFactorProvider"]?.ToString();
@@ -86,6 +86,7 @@ namespace Bit.Core.IdentityServer
             var (user, valid) = await ValidateContextAsync(context);
             if (!valid)
             {
+                await UpdateFailedLoginDetailsAsync(user, false, unknownDevice);
                 await BuildErrorResultAsync("Username or password is incorrect. Try again.", false, context, user);
                 return;
             }
@@ -105,6 +106,7 @@ namespace Bit.Core.IdentityServer
                     twoFactorProviderType, twoFactorToken);
                 if (!verified && twoFactorProviderType != TwoFactorProviderType.Remember)
                 {
+                    await UpdateFailedLoginDetailsAsync(user, false, unknownDevice);
                     await BuildErrorResultAsync("Two-step token is invalid. Try again.", true, context, user);
                     return;
                 }
@@ -179,7 +181,7 @@ namespace Bit.Core.IdentityServer
                 customResponse.Add("TwoFactorToken", token);
             }
 
-            await UpdateFailedLoginDetailsAsync(user, true);
+            await UpdateFailedLoginDetailsAsync(user, true, false);
             await SetSuccessResult(context, user, claims, customResponse);
         }
 
@@ -237,7 +239,6 @@ namespace Bit.Core.IdentityServer
         {
             if (user != null)
             {
-                await UpdateFailedLoginDetailsAsync(user, false);
                 await _eventService.LogUserEventAsync(user.Id,
                     twoFactorRequest ? EventType.User_FailedLogIn2fa : EventType.User_FailedLogIn);
             }
@@ -255,28 +256,6 @@ namespace Bit.Core.IdentityServer
                 {{
                     "ErrorModel", new ErrorResponseModel(message)
                 }});
-        }
-
-        protected async Task UpdateFailedLoginDetailsAsync(User user, bool reset)
-        {
-            if (reset)
-            {
-                user.FailedLoginCount = 0;
-                user.LastFailedLoginDate = null; // Reset this when password correct?
-            }
-            else
-            {
-                user.FailedLoginCount = ++user.FailedLoginCount;
-                user.LastFailedLoginDate = DateTime.UtcNow;
-            }
-
-            user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
-            await _userRepository.ReplaceAsync(user);
-
-            if (user.FailedLoginCount == Constants.MaximumFailedLoginAttempts)
-            {
-                await _mailService.SendFailedLoginAttemptsEmailAsync(user.Email);
-            }
         }
 
         protected abstract void SetTwoFactorResult(T context, Dictionary<string, object> customResponse);
@@ -528,6 +507,32 @@ namespace Bit.Core.IdentityServer
             }
 
             return null;
+        }
+
+        private async Task UpdateFailedLoginDetailsAsync(User user, bool reset, bool unknownDevice)
+        {
+            switch (reset)
+            {
+                // Early escape if db hit not necessary
+                case true when user.FailedLoginCount == 0:
+                    return;
+                case true:
+                    user.FailedLoginCount = 0;
+                    break;
+                default:
+                    user.FailedLoginCount = ++user.FailedLoginCount;
+                    user.LastFailedLoginDate = DateTime.UtcNow;
+                    break;
+            }
+
+            user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
+            await _userRepository.ReplaceAsync(user);
+
+            var failedLoginCeiling = _globalSettings.Captcha.MaximumFailedLoginAttempts;
+            if (unknownDevice && failedLoginCeiling > 0 && user.FailedLoginCount == failedLoginCeiling)
+            {
+                await _mailService.SendFailedLoginAttemptsEmailAsync(user.Email);
+            }
         }
     }
 }

@@ -32,7 +32,7 @@
     @ApiKey VARCHAR(30),
     @ForcePasswordReset BIT = 0,
     @UsesKeyConnector BIT = 0,
-    @FailedLoginCount TINYINT = 0,
+    @FailedLoginCount INT = 0,
     @LastFailedLoginDate DATETIME2(7)
 AS
 BEGIN

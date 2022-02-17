@@ -4,7 +4,7 @@ BEGIN
     ALTER TABLE
         [dbo].[User]
     ADD
-        [FailedLoginCount] TINYINT NULL
+        [FailedLoginCount] INT NULL
 END
 GO
 
@@ -19,7 +19,7 @@ GO
 ALTER TABLE
     [dbo].[User]
 ALTER COLUMN
-    [FailedLoginCount] TINYINT NOT NULL
+    [FailedLoginCount] INT NOT NULL
 GO
 
 -- Table: User (LastFailedLoginDate)
@@ -88,7 +88,7 @@ CREATE PROCEDURE [dbo].[User_Create]
     @ApiKey VARCHAR(30),
     @ForcePasswordReset BIT = 0,
     @UsesKeyConnector BIT = 0,
-    @FailedLoginCount TINYINT = 0,
+    @FailedLoginCount INT = 0,
     @LastFailedLoginDate DATETIME2(7)
 AS
 BEGIN
@@ -214,7 +214,7 @@ CREATE PROCEDURE [dbo].[User_Update]
     @ApiKey VARCHAR(30),
     @ForcePasswordReset BIT = 0,
     @UsesKeyConnector BIT = 0,
-    @FailedLoginCount TINYINT,
+    @FailedLoginCount INT,
     @LastFailedLoginDate DATETIME2(7)
 AS
 BEGIN

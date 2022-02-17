@@ -464,6 +464,7 @@ namespace Bit.Core.Settings
             public bool ForceCaptchaRequired { get; set; } = false;
             public string HCaptchaSecretKey { get; set; }
             public string HCaptchaSiteKey { get; set; }
+            public int? MaximumFailedLoginAttempts { get; set; }
         }
 
         public class StripeSettings

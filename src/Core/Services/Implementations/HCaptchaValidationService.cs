@@ -83,10 +83,15 @@ namespace Bit.Core.Services
             return root.GetProperty("success").GetBoolean();
         }
 
-        public bool RequireCaptchaValidation(ICurrentContext currentContext) =>
-            currentContext.IsBot ||
-            _globalSettings.Captcha.ForceCaptchaRequired ||
-            currentContext.User?.FailedLoginCount >= Constants.MaximumFailedLoginAttempts;
+        public bool RequireCaptchaValidation(ICurrentContext currentContext, int? failedLoginCount = null)
+        {
+            var failedLoginCeiling = _globalSettings.Captcha.MaximumFailedLoginAttempts.GetValueOrDefault();
+
+            return currentContext.IsBot ||
+                 _globalSettings.Captcha.ForceCaptchaRequired ||
+                 failedLoginCeiling > 0 && failedLoginCount.GetValueOrDefault() >= failedLoginCeiling;
+        }
+
 
         private static bool TokenIsApiKey(string bypassToken, User user) =>
             !string.IsNullOrWhiteSpace(bypassToken) && user != null && user.ApiKey == bypassToken;
