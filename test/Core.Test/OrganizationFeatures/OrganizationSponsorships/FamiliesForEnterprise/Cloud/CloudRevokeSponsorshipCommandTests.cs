@@ -2,6 +2,7 @@
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise;
+using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Xunit;
