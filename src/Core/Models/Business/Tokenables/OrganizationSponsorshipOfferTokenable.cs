@@ -45,7 +45,7 @@ namespace Bit.Core.Models.Business.Tokenables
             Id = sponsorship.Id;
         }
 
-        public virtual bool IsValid(OrganizationSponsorship sponsorship, string currentUserEmail) =>
+        public bool IsValid(OrganizationSponsorship sponsorship, string currentUserEmail) =>
             sponsorship != null &&
             sponsorship.PlanSponsorshipType.HasValue &&
             SponsorshipType == sponsorship.PlanSponsorshipType.Value &&
