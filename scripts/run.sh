@@ -101,7 +101,7 @@ function install() {
 function dockerComposeUp() {
     dockerComposeFiles
     dockerComposeVolumes
-    docker-compose up -d
+    docker-compose -p bitwarden up -d
 }
 
 function dockerComposeDown() {
