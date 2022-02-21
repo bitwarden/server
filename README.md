@@ -111,7 +111,7 @@ No grant of any rights in the trademarks, service marks, or logos of Bitwarden i
 
 ### Dotnet-format
 
-We recently migrated to using dotnet-foormat as code formatter. All previous branches will need to updated to avoid large merge conflicts using the following steps:
+We recently migrated to using dotnet-format as code formatter. All previous branches will need to updated to avoid large merge conflicts using the following steps:
 
 1. Check out your local Branch
 2. Run `git merge 61dc65aa598b1f492d2f0222bb7bf0dd15d116f5`
