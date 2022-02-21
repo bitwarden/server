@@ -89,7 +89,7 @@ namespace Bit.Core.IdentityServer
             var (user, valid) = await ValidateContextAsync(context);
             if (!valid)
             {
-                await UpdateFailedLoginDetailsAsync(user,false, unknownDevice);
+                await UpdateFailedLoginDetailsAsync(user, false, unknownDevice);
                 await BuildErrorResultAsync("Username or password is incorrect. Try again.", false, context, user);
                 return;
             }
@@ -519,12 +519,12 @@ namespace Bit.Core.IdentityServer
             {
                 return;
             }
-            
+
             user.FailedLoginCount = 0;
             user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
             await _userRepository.ReplaceAsync(user);
         }
-        
+
         private async Task UpdateFailedLoginDetailsAsync(User user, bool twoFactorInvalid, bool unknownDevice)
         {
             var utcNow = DateTime.UtcNow;

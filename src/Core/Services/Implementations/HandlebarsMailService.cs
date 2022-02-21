@@ -885,13 +885,13 @@ namespace Bit.Core.Services
                 TimeZone = "UTC",
                 IpAddress = ip,
                 AffectedEmail = email
-                
+
             };
             await AddMessageContentAsync(message, "FailedLoginAttempts", model);
             message.Category = "FailedLoginAttempts";
             await _mailDeliveryService.SendEmailAsync(message);
         }
-        
+
         public async Task SendFailedTwoFactorAttemptsEmailAsync(string email, DateTime utcNow, string ip)
         {
             var message = CreateDefaultMessage("Failed login attempts detected", email);
@@ -902,7 +902,7 @@ namespace Bit.Core.Services
                 TimeZone = "UTC",
                 IpAddress = ip,
                 AffectedEmail = email
-                
+
             };
             await AddMessageContentAsync(message, "FailedTwoFactorAttempts", model);
             message.Category = "FailedTwoFactorAttempts";

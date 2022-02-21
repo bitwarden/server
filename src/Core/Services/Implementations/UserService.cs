@@ -1400,7 +1400,7 @@ namespace Bit.Core.Services
                 ? await VerifyOTPAsync(user, secret)
                 : await CheckPasswordAsync(user, secret);
         }
-        
+
         public async Task SendFailedAuthEmailAsync(string email, bool twoFactorInvalid, DateTime utcNow, string ip)
         {
             if (twoFactorInvalid)
@@ -1411,6 +1411,6 @@ namespace Bit.Core.Services
             {
                 await _mailService.SendFailedLoginAttemptsEmailAsync(email, utcNow, ip);
             }
-        } 
+        }
     }
 }

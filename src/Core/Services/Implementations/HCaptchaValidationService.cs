@@ -90,13 +90,13 @@ namespace Bit.Core.Services
                    _globalSettings.Captcha.ForceCaptchaRequired ||
                    failedLoginCeiling > 0 && failedLoginCount.GetValueOrDefault() >= failedLoginCeiling;
         }
-        
+
         public bool ValidateFailedAuthEmailConditions(bool unknownDevice, int failedLoginCount)
         {
             var failedLoginCeiling = _globalSettings.Captcha.MaximumFailedLoginAttempts.GetValueOrDefault();
             return unknownDevice && failedLoginCeiling > 0 && failedLoginCount == failedLoginCeiling;
         }
-        
+
         private static bool TokenIsApiKey(string bypassToken, User user) =>
             !string.IsNullOrWhiteSpace(bypassToken) && user != null && user.ApiKey == bypassToken;
         private bool TokenIsCaptchaBypassToken(string encryptedToken, User user)
