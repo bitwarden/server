@@ -40,6 +40,7 @@ namespace Bit.Core.IdentityServer
         private readonly GlobalSettings _globalSettings;
         private readonly IPolicyRepository _policyRepository;
         private readonly IUserRepository _userRepository;
+        private readonly ICaptchaValidationService _captchaValidationService;
 
         public BaseRequestValidator(
             UserManager<User> userManager,
@@ -56,7 +57,8 @@ namespace Bit.Core.IdentityServer
             ICurrentContext currentContext,
             GlobalSettings globalSettings,
             IPolicyRepository policyRepository,
-            IUserRepository userRepository)
+            IUserRepository userRepository,
+            ICaptchaValidationService captchaValidationService)
         {
             _userManager = userManager;
             _deviceRepository = deviceRepository;
@@ -73,6 +75,7 @@ namespace Bit.Core.IdentityServer
             _globalSettings = globalSettings;
             _policyRepository = policyRepository;
             _userRepository = userRepository;
+            _captchaValidationService = captchaValidationService;
         }
 
         protected async Task ValidateAsync(T context, ValidatedTokenRequest request, bool unknownDevice = false)
@@ -86,7 +89,7 @@ namespace Bit.Core.IdentityServer
             var (user, valid) = await ValidateContextAsync(context);
             if (!valid)
             {
-                await UpdateFailedLoginDetailsAsync(user, false, unknownDevice);
+                await UpdateFailedLoginDetailsAsync(user,false, unknownDevice);
                 await BuildErrorResultAsync("Username or password is incorrect. Try again.", false, context, user);
                 return;
             }
@@ -106,7 +109,7 @@ namespace Bit.Core.IdentityServer
                     twoFactorProviderType, twoFactorToken);
                 if (!verified && twoFactorProviderType != TwoFactorProviderType.Remember)
                 {
-                    await UpdateFailedLoginDetailsAsync(user, false, unknownDevice);
+                    await UpdateFailedLoginDetailsAsync(user, true, unknownDevice);
                     await BuildErrorResultAsync("Two-step token is invalid. Try again.", true, context, user);
                     return;
                 }
@@ -181,7 +184,7 @@ namespace Bit.Core.IdentityServer
                 customResponse.Add("TwoFactorToken", token);
             }
 
-            await UpdateFailedLoginDetailsAsync(user, true, false);
+            await ResetFailedLoginDetailsAsync(user);
             await SetSuccessResult(context, user, claims, customResponse);
         }
 
@@ -509,29 +512,30 @@ namespace Bit.Core.IdentityServer
             return null;
         }
 
-        private async Task UpdateFailedLoginDetailsAsync(User user, bool reset, bool unknownDevice)
+        private async Task ResetFailedLoginDetailsAsync(User user)
         {
-            switch (reset)
+            // Early escape if db hit not necessary
+            if (user.FailedLoginCount == 0)
             {
-                // Early escape if db hit not necessary
-                case true when user.FailedLoginCount == 0:
-                    return;
-                case true:
-                    user.FailedLoginCount = 0;
-                    break;
-                default:
-                    user.FailedLoginCount = ++user.FailedLoginCount;
-                    user.LastFailedLoginDate = DateTime.UtcNow;
-                    break;
+                return;
             }
-
+            
+            user.FailedLoginCount = 0;
             user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
             await _userRepository.ReplaceAsync(user);
+        }
+        
+        private async Task UpdateFailedLoginDetailsAsync(User user, bool twoFactorInvalid, bool unknownDevice)
+        {
+            var utcNow = DateTime.UtcNow;
+            user.FailedLoginCount = ++user.FailedLoginCount;
+            user.LastFailedLoginDate = utcNow;
+            user.RevisionDate = user.AccountRevisionDate = utcNow;
+            await _userRepository.ReplaceAsync(user);
 
-            var failedLoginCeiling = _globalSettings.Captcha.MaximumFailedLoginAttempts;
-            if (unknownDevice && failedLoginCeiling > 0 && user.FailedLoginCount == failedLoginCeiling)
+            if (_captchaValidationService.ValidateFailedAuthEmailConditions(unknownDevice, user.FailedLoginCount))
             {
-                await _mailService.SendFailedLoginAttemptsEmailAsync(user.Email);
+                await _userService.SendFailedAuthEmailAsync(user.Email, twoFactorInvalid, utcNow, _currentContext.IpAddress);
             }
         }
     }

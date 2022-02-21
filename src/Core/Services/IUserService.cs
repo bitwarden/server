@@ -78,5 +78,6 @@ namespace Bit.Core.Services
         Task SendOTPAsync(User user);
         Task<bool> VerifyOTPAsync(User user, string token);
         Task<bool> VerifySecretAsync(User user, string secret);
+        Task SendFailedAuthEmailAsync(string email, bool twoFactorInvalid, DateTime utcNow, string ip);
     }
 }

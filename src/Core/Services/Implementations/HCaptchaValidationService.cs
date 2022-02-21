@@ -86,13 +86,17 @@ namespace Bit.Core.Services
         public bool RequireCaptchaValidation(ICurrentContext currentContext, int? failedLoginCount = null)
         {
             var failedLoginCeiling = _globalSettings.Captcha.MaximumFailedLoginAttempts.GetValueOrDefault();
-
             return currentContext.IsBot ||
-                 _globalSettings.Captcha.ForceCaptchaRequired ||
-                 failedLoginCeiling > 0 && failedLoginCount.GetValueOrDefault() >= failedLoginCeiling;
+                   _globalSettings.Captcha.ForceCaptchaRequired ||
+                   failedLoginCeiling > 0 && failedLoginCount.GetValueOrDefault() >= failedLoginCeiling;
         }
-
-
+        
+        public bool ValidateFailedAuthEmailConditions(bool unknownDevice, int failedLoginCount)
+        {
+            var failedLoginCeiling = _globalSettings.Captcha.MaximumFailedLoginAttempts.GetValueOrDefault();
+            return unknownDevice && failedLoginCeiling > 0 && failedLoginCount == failedLoginCeiling;
+        }
+        
         private static bool TokenIsApiKey(string bypassToken, User user) =>
             !string.IsNullOrWhiteSpace(bypassToken) && user != null && user.ApiKey == bypassToken;
         private bool TokenIsCaptchaBypassToken(string encryptedToken, User user)

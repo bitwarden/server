@@ -875,16 +875,37 @@ namespace Bit.Core.Services
             await _mailDeliveryService.SendEmailAsync(message);
         }
 
-        public async Task SendFailedLoginAttemptsEmailAsync(string email)
+        public async Task SendFailedLoginAttemptsEmailAsync(string email, DateTime utcNow, string ip)
         {
-            var message = CreateDefaultMessage("Failed Login Attempts", email);
-            var model = new BaseMailModel()
+            var message = CreateDefaultMessage("Failed login attempts detected", email);
+            var model = new FailedAuthAttemptsModel()
             {
-                WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
-                SiteName = _globalSettings.SiteName,
+                TheDate = utcNow.ToLongDateString(),
+                TheTime = utcNow.ToShortTimeString(),
+                TimeZone = "UTC",
+                IpAddress = ip,
+                AffectedEmail = email
+                
             };
             await AddMessageContentAsync(message, "FailedLoginAttempts", model);
             message.Category = "FailedLoginAttempts";
+            await _mailDeliveryService.SendEmailAsync(message);
+        }
+        
+        public async Task SendFailedTwoFactorAttemptsEmailAsync(string email, DateTime utcNow, string ip)
+        {
+            var message = CreateDefaultMessage("Failed login attempts detected", email);
+            var model = new FailedAuthAttemptsModel()
+            {
+                TheDate = utcNow.ToLongDateString(),
+                TheTime = utcNow.ToShortTimeString(),
+                TimeZone = "UTC",
+                IpAddress = ip,
+                AffectedEmail = email
+                
+            };
+            await AddMessageContentAsync(message, "FailedTwoFactorAttempts", model);
+            message.Category = "FailedTwoFactorAttempts";
             await _mailDeliveryService.SendEmailAsync(message);
         }
     }

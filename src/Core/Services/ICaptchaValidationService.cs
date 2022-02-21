@@ -12,5 +12,6 @@ namespace Bit.Core.Services
         Task<bool> ValidateCaptchaResponseAsync(string captchResponse, string clientIpAddress);
         string GenerateCaptchaBypassToken(User user);
         bool ValidateCaptchaBypassToken(string encryptedToken, User user);
+        bool ValidateFailedAuthEmailConditions(bool unknownDevice, int failedLoginCount);
     }
 }

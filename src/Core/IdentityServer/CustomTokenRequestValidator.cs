@@ -42,11 +42,12 @@ namespace Bit.Core.IdentityServer
             GlobalSettings globalSettings,
             IPolicyRepository policyRepository,
             ISsoConfigRepository ssoConfigRepository,
-            IUserRepository userRepository)
+            IUserRepository userRepository,
+            ICaptchaValidationService captchaValidationService)
             : base(userManager, deviceRepository, deviceService, userService, eventService,
                   organizationDuoWebTokenProvider, organizationRepository, organizationUserRepository,
                   applicationCacheService, mailService, logger, currentContext, globalSettings, policyRepository,
-                  userRepository)
+                  userRepository, captchaValidationService)
         {
             _userManager = userManager;
             _ssoConfigRepository = ssoConfigRepository;

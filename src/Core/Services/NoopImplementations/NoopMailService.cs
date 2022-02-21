@@ -221,7 +221,12 @@ namespace Bit.Core.Services
             return Task.FromResult(0);
         }
 
-        public Task SendFailedLoginAttemptsEmailAsync(string email)
+        public Task SendFailedLoginAttemptsEmailAsync(string email, DateTime utcNow, string ip)
+        {
+            return Task.FromResult(0);
+        }
+        
+        public Task SendFailedTwoFactorAttemptsEmailAsync(string email, DateTime utcNow, string ip)
         {
             return Task.FromResult(0);
         }
