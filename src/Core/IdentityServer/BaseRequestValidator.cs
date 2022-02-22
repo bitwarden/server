@@ -89,7 +89,7 @@ namespace Bit.Core.IdentityServer
             var (user, valid) = await ValidateContextAsync(context);
             if (!valid)
             {
-                await UpdateFailedLoginDetailsAsync(user, false, unknownDevice);
+                await UpdateFailedAuthDetailsAsync(user, false, unknownDevice);
                 await BuildErrorResultAsync("Username or password is incorrect. Try again.", false, context, user);
                 return;
             }
@@ -109,7 +109,7 @@ namespace Bit.Core.IdentityServer
                     twoFactorProviderType, twoFactorToken);
                 if (!verified && twoFactorProviderType != TwoFactorProviderType.Remember)
                 {
-                    await UpdateFailedLoginDetailsAsync(user, true, unknownDevice);
+                    await UpdateFailedAuthDetailsAsync(user, true, unknownDevice);
                     await BuildErrorResultAsync("Two-step token is invalid. Try again.", true, context, user);
                     return;
                 }
@@ -184,7 +184,7 @@ namespace Bit.Core.IdentityServer
                 customResponse.Add("TwoFactorToken", token);
             }
 
-            await ResetFailedLoginDetailsAsync(user);
+            await ResetFailedAuthDetailsAsync(user);
             await SetSuccessResult(context, user, claims, customResponse);
         }
 
@@ -512,7 +512,7 @@ namespace Bit.Core.IdentityServer
             return null;
         }
 
-        private async Task ResetFailedLoginDetailsAsync(User user)
+        private async Task ResetFailedAuthDetailsAsync(User user)
         {
             // Early escape if db hit not necessary
             if (user.FailedLoginCount == 0)
@@ -525,7 +525,7 @@ namespace Bit.Core.IdentityServer
             await _userRepository.ReplaceAsync(user);
         }
 
-        private async Task UpdateFailedLoginDetailsAsync(User user, bool twoFactorInvalid, bool unknownDevice)
+        private async Task UpdateFailedAuthDetailsAsync(User user, bool twoFactorInvalid, bool unknownDevice)
         {
             var utcNow = DateTime.UtcNow;
             user.FailedLoginCount = ++user.FailedLoginCount;
