@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -11,7 +10,6 @@ using Bit.Core.Settings;
 using Bit.Core.Test.AutoFixture;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
-using Bit.Test.Common.Helpers;
 using Xunit;
 
 namespace Bit.Core.Test.Services
