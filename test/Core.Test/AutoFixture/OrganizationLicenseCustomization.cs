@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using AutoFixture;
 using Bit.Core.Models.Business;
 using Bit.Test.Common.AutoFixture.Attributes;

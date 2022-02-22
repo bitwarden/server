@@ -1,4 +1,8 @@
-public interface IConnectionStringSettings
+﻿namespace Bit.Core.Settings
 {
-    string ConnectionString { get; set; }
+
+    public interface IConnectionStringSettings
+    {
+        string ConnectionString { get; set; }
+    }
 }
