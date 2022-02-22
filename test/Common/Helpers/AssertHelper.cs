@@ -20,7 +20,7 @@ namespace Bit.Test.Common.Helpers
 
             if (actual == null)
             {
-                throw new Exception("Expected object is null but actual is not");
+                throw new Exception("Actual object is null but expected is not");
             }
 
             foreach (var expectedPropInfo in expected.GetType().GetProperties().Where(pi => !relevantExcludedProperties.Contains(pi.Name)))
