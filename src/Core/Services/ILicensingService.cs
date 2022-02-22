@@ -11,6 +11,6 @@ namespace Bit.Core.Services
         Task<bool> ValidateUserPremiumAsync(User user);
         bool VerifyLicense(ILicense license);
         byte[] SignLicense(ILicense license);
-        OrganizationLicense ReadOrganizationLicense(Organization organization);
+        Task<OrganizationLicense> ReadOrganizationLicense(Organization organization);
     }
 }
