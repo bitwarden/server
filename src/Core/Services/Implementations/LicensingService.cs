@@ -20,7 +20,7 @@ namespace Bit.Core.Services
     public class LicensingService : ILicensingService
     {
         private readonly X509Certificate2 _certificate;
-        private readonly GlobalSettings _globalSettings;
+        private readonly IGlobalSettings _globalSettings;
         private readonly IUserRepository _userRepository;
         private readonly IOrganizationRepository _organizationRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
@@ -36,7 +36,7 @@ namespace Bit.Core.Services
             IMailService mailService,
             IWebHostEnvironment environment,
             ILogger<LicensingService> logger,
-            GlobalSettings globalSettings)
+            IGlobalSettings globalSettings)
         {
             _userRepository = userRepository;
             _organizationRepository = organizationRepository;
