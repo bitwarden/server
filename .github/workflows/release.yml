@@ -193,9 +193,14 @@ jobs:
       - name: Tag version and latest
         env:
           SERVICE_NAME: ${{ steps.setup.outputs.service_name }}
+          RELEASE_OPTION: ${{ github.event.inputs.release_type }}
         run: |
-          docker tag bitwarden/$SERVICE_NAME:$_BRANCH_NAME bitwarden/$SERVICE_NAME:$_RELEASE_VERSION
-          docker tag bitwarden/$SERVICE_NAME:$_BRANCH_NAME bitwarden/$SERVICE_NAME:latest
+          if [[ "${{ github.event.inputs.release_type }}" == "Dry Run" ]]; then
+            docker tag bitwarden/$SERVICE_NAME:$_BRANCH_NAME bitwarden/$SERVICE_NAME:dryrun
+          else
+            docker tag bitwarden/$SERVICE_NAME:$_BRANCH_NAME bitwarden/$SERVICE_NAME:$_RELEASE_VERSION
+            docker tag bitwarden/$SERVICE_NAME:$_BRANCH_NAME bitwarden/$SERVICE_NAME:latest
+          fi
 
       - name: List Docker images
         run: docker images
