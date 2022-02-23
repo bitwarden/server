@@ -6,6 +6,8 @@ on:
     branches-ignore:
       - 'l10n_master'
       - 'gh-pages'
+    paths-ignore:
+      - '.github/workflows/**'
   workflow_dispatch:
     inputs: {}
 
@@ -51,7 +53,7 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
 
-      - uses: actions/cache@937d24475381cd9c75ae6db12cb4e79714b926ed # 2.1.7
+      - uses: actions/cache@937d24475381cd9c75ae6db12cb4e79714b926ed  # 2.1.7
         with:
           path: ${{ github.workspace }}/.nuget/packages
           key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
@@ -425,6 +427,7 @@ jobs:
         env:
           ASPNETCORE_ENVIRONMENT: Production
           swaggerGen: 'True'
+          DOTNET_ROLL_FORWARD_ON_NO_CANDIDATE_FX: 2
 
       - name: Upload Swagger artifact
         uses: actions/upload-artifact@ee69f02b3dfdecd58bb31b4d133da38ba6fe3700
