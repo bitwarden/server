@@ -236,7 +236,7 @@ function uninstall() {
     if [ "$KEEP_DATABASE" == "y" ]
     then
         echo "Saving database files."
-        zip -r "./bitwarden_database.zip" "$OUTPUT_DIR/mssql"
+        tar -cvzf "./bitwarden_database.tar.gz" "$OUTPUT_DIR/mssql"
         echo -e -n "${RED}(SAVED DATABASE FILES: YES): WARNING: ALL DATA WILL BE REMOVED, INCLUDING THE FOLDER $OUTPUT_DIR): Are you sure you want to uninstall Bitwarden? (y/n): ${NC}"
         read UNINSTALL_ACTION
     else
