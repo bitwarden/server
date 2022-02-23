@@ -48,7 +48,7 @@ namespace Bit.Core.Settings
         public virtual SqlSettings MySql { get; set; } = new SqlSettings();
         public virtual SqlSettings Sqlite { get; set; } = new SqlSettings();
         public virtual MailSettings Mail { get; set; } = new MailSettings();
-        public virtual ConnectionStringSettings Storage { get; set; } = new ConnectionStringSettings();
+        public virtual IConnectionStringSettings Storage { get; set; } = new ConnectionStringSettings();
         public virtual ConnectionStringSettings Events { get; set; } = new ConnectionStringSettings();
         public virtual NotificationsSettings Notifications { get; set; } = new NotificationsSettings();
         public virtual IFileStorageSettings Attachment { get; set; }
@@ -216,7 +216,7 @@ namespace Bit.Core.Settings
             }
         }
 
-        public class ConnectionStringSettings
+        public class ConnectionStringSettings : IConnectionStringSettings
         {
             private string _connectionString;
 

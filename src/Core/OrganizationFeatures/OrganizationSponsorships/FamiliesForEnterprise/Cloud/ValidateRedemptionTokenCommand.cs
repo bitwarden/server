@@ -5,24 +5,24 @@ using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterpri
 using Bit.Core.Repositories;
 using Bit.Core.Tokens;
 
-namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise
+namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud
 {
     public class ValidateRedemptionTokenCommand : IValidateRedemptionTokenCommand
     {
         private readonly IOrganizationSponsorshipRepository _organizationSponsorshipRepository;
-        private readonly IDataProtectorTokenFactory<OrganizationSponsorshipOfferTokenable> _tokenFactory;
+        private readonly IDataProtectorTokenFactory<OrganizationSponsorshipOfferTokenable> _dataProtectorTokenFactory;
 
         public ValidateRedemptionTokenCommand(IOrganizationSponsorshipRepository organizationSponsorshipRepository,
-            IDataProtectorTokenFactory<OrganizationSponsorshipOfferTokenable> tokenFactory)
+            IDataProtectorTokenFactory<OrganizationSponsorshipOfferTokenable> dataProtectorTokenFactory)
         {
             _organizationSponsorshipRepository = organizationSponsorshipRepository;
-            _tokenFactory = tokenFactory;
+            _dataProtectorTokenFactory = dataProtectorTokenFactory;
         }
 
         public async Task<(bool valid, OrganizationSponsorship sponsorship)> ValidateRedemptionTokenAsync(string encryptedToken, string sponsoredUserEmail)
         {
 
-            if (!_tokenFactory.TryUnprotect(encryptedToken, out var tokenable))
+            if (!_dataProtectorTokenFactory.TryUnprotect(encryptedToken, out var tokenable))
             {
                 return (false, null);
             }

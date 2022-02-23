@@ -4,9 +4,9 @@ using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterpri
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 
-namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise
+namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud
 {
-    public class ValidateSponsorshipCommand : CancelSponsorshipCommand, IValidateSponsorshipCommand
+    public class ValidateSponsorshipCommand : CloudCancelSponsorshipCommand, IValidateSponsorshipCommand
     {
         public ValidateSponsorshipCommand(
             IOrganizationSponsorshipRepository organizationSponsorshipRepository,

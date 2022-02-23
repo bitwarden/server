@@ -5,36 +5,20 @@ using Bit.Core.Services;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise
 {
-    public abstract class CancelSponsorshipCommand
+    public class CancelSponsorshipCommand
     {
         protected readonly IOrganizationSponsorshipRepository _organizationSponsorshipRepository;
         protected readonly IOrganizationRepository _organizationRepository;
-        private readonly IPaymentService _paymentService;
-        private readonly IMailService _mailService;
 
         public CancelSponsorshipCommand(IOrganizationSponsorshipRepository organizationSponsorshipRepository,
-            IOrganizationRepository organizationRepository,
-            IPaymentService paymentService,
-            IMailService mailService)
+            IOrganizationRepository organizationRepository)
         {
             _organizationSponsorshipRepository = organizationSponsorshipRepository;
             _organizationRepository = organizationRepository;
-            _paymentService = paymentService;
-            _mailService = mailService;
         }
 
-        protected async Task CancelSponsorshipAsync(Organization sponsoredOrganization, OrganizationSponsorship sponsorship = null)
+        protected virtual async Task CancelSponsorshipAsync(OrganizationSponsorship sponsorship = null)
         {
-            if (sponsoredOrganization != null)
-            {
-                await _paymentService.RemoveOrganizationSponsorshipAsync(sponsoredOrganization, sponsorship);
-                await _organizationRepository.UpsertAsync(sponsoredOrganization);
-
-                await _mailService.SendFamiliesForEnterpriseSponsorshipRevertingEmailAsync(
-                    sponsoredOrganization.BillingEmailAddress(),
-                    sponsoredOrganization.Name);
-            }
-
             if (sponsorship == null)
             {
                 return;

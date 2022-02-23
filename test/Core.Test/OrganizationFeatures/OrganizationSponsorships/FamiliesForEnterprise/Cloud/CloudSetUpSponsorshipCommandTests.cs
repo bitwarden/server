@@ -2,7 +2,7 @@
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise;
+using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
@@ -10,10 +10,10 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise
+namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud
 {
     [SutProviderCustomize]
-    public class SetUpSponsorshipCommandTests : FamiliesForEnterpriseTestsBase
+    public class CloudSetUpSponsorshipCommandTests : FamiliesForEnterpriseTestsBase
     {
         [Theory]
         [BitAutoData]
