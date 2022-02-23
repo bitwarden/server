@@ -12,7 +12,7 @@ on:
         options:
           - Initial Release
           - Redeploy
-          - dry-run
+          - Dry Run
 
 
 jobs:
@@ -24,7 +24,7 @@ jobs:
       branch-name: ${{ steps.branch.outputs.branch-name }}
     steps:
       - name: Branch check
-        if: ${{ github.event.inputs.release_type != 'dry-run' }}
+        if: ${{ github.event.inputs.release_type != 'Dry Run' }}
         run: |
           if [[ "$GITHUB_REF" != "refs/heads/rc" ]] && [[ "$GITHUB_REF" != "refs/heads/hotfix-rc" ]]; then
             echo "==================================="
@@ -192,7 +192,7 @@ jobs:
         run: docker images
 
       - name: Push version and latest image
-        if: ${{ github.event.inputs.release_type != 'dry-run' }}
+        if: ${{ github.event.inputs.release_type != 'Dry Run' }}
         env:
           DOCKER_CONTENT_TRUST: 1
           DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ steps.setup-dct.outputs.dct-delegate-repo-passphrase }}
@@ -222,7 +222,7 @@ jobs:
                       swagger.json"
 
       - name: Create release
-        if: ${{ github.event.inputs.release_type != 'dry-run' }}
+        if: ${{ github.event.inputs.release_type != 'Dry Run' }}
         uses: ncipollo/release-action@40bb172bd05f266cf9ba4ff965cb61e9ee5f6d01
         with:
           artifacts: 'docker-stub.zip,
