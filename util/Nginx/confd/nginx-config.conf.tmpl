@@ -12,8 +12,8 @@ server {
   listen [::]:8443 ssl http2;
   server_name {{ getenv "BW_DOMAIN" "localhost" }};
 
-  ssl_certificate {{ getenv "BW_CERT_PATH" "/bitwarden/ssl/self/certificate.crt" }};
-  ssl_certificate_key {{ getenv "BW_KEY_PATH" "/bitwarden/ssl/self/private.key" }};
+  ssl_certificate /bitwarden/ssl/{{ getenv "BW_SSL_CERT" "certificate.crt" }};
+  ssl_certificate_key /bitwarden/ssl/{{ getenv "BW_SSL_KEY" "private.key" }};
   ssl_session_timeout 30m;
   ssl_session_cache shared:SSL:20m;
   ssl_session_tickets off;

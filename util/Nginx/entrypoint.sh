@@ -25,15 +25,15 @@
 
 # Generate SSL certificates
 if [ "$BW_GENERATE_CERT" = "true" ]; then
-  if [ -z "$(ls -A /bitwarden/ssl/self)" ]; then
+  if [ -z "$(ls -A /bitwarden/ssl)" ]; then
     openssl req \
     -x509 \
     -newkey rsa:4096 \
     -sha256 \
     -nodes \
     -days 36500 \
-    -keyout ${BW_KEY_PATH:-/bitwarden/ssl/self/private.key} \
-    -out ${BW_CERT_PATH:-/bitwarden/ssl/self/certificate.crt} \
+    -keyout /bitwarden/ssl/${BW_SSL_KEY:-private.key} \
+    -out /bitwarden/ssl/${BW_SSL_CERT:-certificate.crt} \
     -reqexts SAN \
     -extensions SAN \
     -config <(cat /usr/lib/ssl/openssl.cnf <(printf '[SAN]\nsubjectAltName=DNS:${BW_DOMAIN:-localhost}\nbasicConstraints=CA:true')) \

@@ -94,7 +94,7 @@ services:
     volumes:
       - ../nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
       - ../letsencrypt:/etc/letsencrypt
-      - ssl:/bitwarden/ssl/self
+      - ssl:/bitwarden/ssl
       - ../logs/nginx:/var/log/nginx
 
   notifications:
