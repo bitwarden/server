@@ -1,0 +1,10 @@
+INSERT INTO "OrganizationApiKey"(
+    "OrganizationId",
+    "ApiKey",
+    "Type",
+    "RevisionDate") 
+SELECT "Id" AS "OrganizationId",
+    "ApiKey",
+    0 AS "Type",
+    "RevisionDate" 
+FROM "Organization";

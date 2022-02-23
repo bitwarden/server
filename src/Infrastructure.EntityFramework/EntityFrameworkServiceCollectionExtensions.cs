@@ -42,6 +42,7 @@ namespace Bit.Infrastructure.EntityFramework
             services.AddSingleton<IInstallationRepository, InstallationRepository>();
             services.AddSingleton<IMaintenanceRepository, MaintenanceRepository>();
             services.AddSingleton<IOrganizationRepository, OrganizationRepository>();
+            services.AddSingleton<IOrganizationApiKeyRepository, OrganizationApiKeyRepository>();
             services.AddSingleton<IOrganizationSponsorshipRepository, OrganizationSponsorshipRepository>();
             services.AddSingleton<IOrganizationUserRepository, OrganizationUserRepository>();
             services.AddSingleton<IPolicyRepository, PolicyRepository>();

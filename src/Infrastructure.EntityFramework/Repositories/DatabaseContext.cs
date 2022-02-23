@@ -25,6 +25,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
         public DbSet<GroupUser> GroupUsers { get; set; }
         public DbSet<Installation> Installations { get; set; }
         public DbSet<Organization> Organizations { get; set; }
+        public DbSet<OrganizationApiKey> OrganizationApiKeys { get; set; }
         public DbSet<OrganizationSponsorship> OrganizationSponsorships { get; set; }
         public DbSet<OrganizationUser> OrganizationUsers { get; set; }
         public DbSet<Policy> Policies { get; set; }
@@ -68,6 +69,12 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             var eTransaction = builder.Entity<Transaction>();
             var eU2f = builder.Entity<U2f>();
             var eUser = builder.Entity<User>();
+
+            builder.Entity<OrganizationApiKey>(b =>
+            {
+                b.HasKey(a => new { a.OrganizationId, a.Type });
+                b.ToTable(nameof(OrganizationApiKey));
+            });
 
             eCipher.Property(c => c.Id).ValueGeneratedNever();
             eCollection.Property(c => c.Id).ValueGeneratedNever();
