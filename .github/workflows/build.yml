@@ -427,6 +427,7 @@ jobs:
         env:
           ASPNETCORE_ENVIRONMENT: Production
           swaggerGen: 'True'
+          DOTNET_ROLL_FORWARD_ON_NO_CANDIDATE_FX: 2
 
       - name: Upload Swagger artifact
         uses: actions/upload-artifact@ee69f02b3dfdecd58bb31b4d133da38ba6fe3700
