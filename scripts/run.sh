@@ -4,6 +4,7 @@ set -e
 # Setup
 
 CYAN='\033[0;36m'
+RED='\033[1;31m'
 NC='\033[0m' # No Color
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
@@ -228,6 +229,46 @@ function update() {
         dotnet Setup.dll -update 1 -os $OS -corev $COREVERSION -webv $WEBVERSION -keyconnectorv $KEYCONNECTORVERSION
 }
 
+function uninstall() {
+    echo -e -n "${RED}(WARNING: UNINSTALL STARTED) Would you like to save the database files? (y/n): ${NC}"
+    read KEEP_DATABASE
+
+    if [ "$KEEP_DATABASE" == "y" ]
+    then
+        echo "Saving database files."
+        tar -cvzf "./bitwarden_database.tar.gz" "$OUTPUT_DIR/mssql"
+        echo -e -n "${RED}(SAVED DATABASE FILES: YES): WARNING: ALL DATA WILL BE REMOVED, INCLUDING THE FOLDER $OUTPUT_DIR): Are you sure you want to uninstall Bitwarden? (y/n): ${NC}"
+        read UNINSTALL_ACTION
+    else
+        echo -e -n "${RED}WARNING: ALL DATA WILL BE REMOVED, INCLUDING THE FOLDER $OUTPUT_DIR): Are you sure you want to uninstall Bitwarden? (y/n): ${NC}"
+        read UNINSTALL_ACTION
+    fi
+
+    
+    if [ "$UNINSTALL_ACTION" == "y" ]
+    then
+        echo "Uninstalling Bitwarden..."
+        dockerComposeDown
+        echo "Removing $OUTPUT_DIR"
+        rm -R $OUTPUT_DIR
+        echo "Removing MSSQL docker volume."
+        docker volume prune --force --filter="label=com.bitwarden.product=bitwarden"
+        echo "Bitwarden uninstall complete!"
+    else
+        echo -e -n "${CYAN}(!) Bitwarden uninstall canceled. ${NC}"
+        exit 1
+    fi
+
+    echo -e -n "${RED}(!) Would you like to purge all local Bitwarden container images? (y/n): ${NC}"
+    read PURGE_ACTION
+    if [ "$PURGE_ACTION" == "y" ]
+    then
+        dockerPrune
+        echo -e -n "${CYAN}Bitwarden uninstall complete! ${NC}"
+    fi
+    
+}
+
 function printEnvironment() {
     pullSetup
     docker run -i --rm --name setup -v $OUTPUT_DIR:/bitwarden \
@@ -284,6 +325,10 @@ case $1 in
         dockerComposeFiles
         updatebw
         updateDatabase
+        ;;
+    "uninstall")
+        dockerComposeFiles
+        uninstall
         ;;
     "rebuild")
         dockerComposeDown

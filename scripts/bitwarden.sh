@@ -95,6 +95,7 @@ updatedb
 updaterun
 updateself
 updateconf
+uninstall
 renewcert
 rebuild
 help
@@ -148,6 +149,10 @@ case $1 in
         ;;
     "updateself")
         downloadSelf && echo "Updated self." && exit
+        ;;
+    "uninstall")
+        checkOutputDirExists
+        $SCRIPTS_DIR/run.sh uninstall $OUTPUT
         ;;
     "help")
         listCommands
