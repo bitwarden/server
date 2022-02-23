@@ -1,15 +1,13 @@
 ﻿using System.Collections.Generic;
-using Bit.Core.Repositories.EntityFramework;
-using Bit.Core.Settings;
+using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Test.Common.Helpers.Factories;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 
 namespace Bit.Core.Test.Helpers.Factories
 {
     public static class DatabaseOptionsFactory
     {
-        public static List<DbContextOptions<DatabaseContext>> Options { get; } = new List<DbContextOptions<DatabaseContext>>();
+        public static List<DbContextOptions<DatabaseContext>> Options { get; } = new();
 
         static DatabaseOptionsFactory()
         {

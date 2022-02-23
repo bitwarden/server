@@ -1,8 +1,8 @@
 ﻿using System;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models;
 using Bit.Core.Models.Api;
-using Bit.Core.Models.Table;
 
 namespace Bit.Api.Models.Response.TwoFactor
 {

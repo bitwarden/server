@@ -97,6 +97,10 @@ Invoke-RestMethod -OutFile bitwarden.ps1 `
 .\bitwarden.ps1 -start
 ```
 
+## We're Hiring!
+
+Interested in contributing in a big way? Consider joining our team! We're hiring for many positions. Please take a look at our [Careers page](https://bitwarden.com/careers/) to see what opportunities are currently open as well as what it's like to work at Bitwarden.
+
 ## Contribute
 
 Code contributions are welcome! Visual Studio or VS Code is highly recommended if you are working on this project. Please commit any pull requests against the `master` branch. Please see [`CONTRIBUTING.md`](CONTRIBUTING.md) for more info (and feel free to contribute to that guide as well).
@@ -107,7 +111,7 @@ No grant of any rights in the trademarks, service marks, or logos of Bitwarden i
 
 ### Dotnet-format
 
-We recently migrated to using dotnet-foormat as code formatter. All previous branches will need to updated to avoid large merge conflicts using the following steps:
+We recently migrated to using dotnet-format as code formatter. All previous branches will need to updated to avoid large merge conflicts using the following steps:
 
 1. Check out your local Branch
 2. Run `git merge 61dc65aa598b1f492d2f0222bb7bf0dd15d116f5`

@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
+using Bit.Core.Entities.Provider;
 using Bit.Core.Enums.Provider;
-using Bit.Core.Models.Table.Provider;
 using Bit.Core.Utilities;
 
 namespace Bit.Api.Models.Request.Providers

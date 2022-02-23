@@ -1,7 +1,7 @@
 ﻿using System.Threading.Tasks;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models;
-using Bit.Core.Models.Table;
 using Bit.Core.Settings;
 using Bit.Core.Utilities.Duo;
 
@@ -44,8 +44,8 @@ namespace Bit.Core.Identity
                 return Task.FromResult<string>(null);
             }
 
-            var signatureRequest = DuoWeb.SignRequest((string)provider.MetaData["IKey"],
-                (string)provider.MetaData["SKey"], _globalSettings.Duo.AKey, user.Email);
+            var signatureRequest = DuoWeb.SignRequest(provider.MetaData["IKey"].ToString(),
+                provider.MetaData["SKey"].ToString(), _globalSettings.Duo.AKey, user.Email);
             return Task.FromResult(signatureRequest);
         }
 
@@ -62,8 +62,8 @@ namespace Bit.Core.Identity
                 return Task.FromResult(false);
             }
 
-            var response = DuoWeb.VerifyResponse((string)provider.MetaData["IKey"],
-                (string)provider.MetaData["SKey"], _globalSettings.Duo.AKey, token);
+            var response = DuoWeb.VerifyResponse(provider.MetaData["IKey"].ToString(),
+                provider.MetaData["SKey"].ToString(), _globalSettings.Duo.AKey, token);
 
             return Task.FromResult(response == user.Email);
         }

@@ -1,30 +1,22 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.Storage.Queues;
 using Bit.Core.Utilities;
-using Microsoft.EntityFrameworkCore.Internal;
-using Newtonsoft.Json;
 
 namespace Bit.Core.Services
 {
     public abstract class AzureQueueService<T>
     {
         protected QueueClient _queueClient;
-        protected JsonSerializerSettings _jsonSettings;
+        protected JsonSerializerOptions _jsonOptions;
 
-        protected AzureQueueService(QueueClient queueClient, JsonSerializerSettings jsonSettings)
+        protected AzureQueueService(QueueClient queueClient, JsonSerializerOptions jsonOptions)
         {
             _queueClient = queueClient;
-            _jsonSettings = jsonSettings;
-        }
-
-        public async Task CreateAsync(T message)
-        {
-            var json = JsonConvert.SerializeObject(message, _jsonSettings);
-            var base64 = CoreHelpers.Base64EncodeString(json);
-            await _queueClient.SendMessageAsync(base64);
+            _jsonOptions = jsonOptions;
         }
 
         public async Task CreateManyAsync(IEnumerable<T> messages)
@@ -34,19 +26,13 @@ namespace Bit.Core.Services
                 return;
             }
 
-            if (!messages.Skip(1).Any())
-            {
-                await CreateAsync(messages.First());
-                return;
-            }
-
-            foreach (var json in SerializeMany(messages, _jsonSettings))
+            foreach (var json in SerializeMany(messages, _jsonOptions))
             {
                 await _queueClient.SendMessageAsync(json);
             }
         }
 
-        protected IEnumerable<string> SerializeMany(IEnumerable<T> messages, JsonSerializerSettings jsonSettings)
+        protected IEnumerable<string> SerializeMany(IEnumerable<T> messages, JsonSerializerOptions jsonOptions)
         {
             // Calculate Base-64 encoded text with padding
             int getBase64Size(int byteCount) => ((4 * byteCount / 3) + 3) & ~3;
@@ -70,7 +56,7 @@ namespace Bit.Core.Services
             }
 
             var serializedMessages = messages.Select(message =>
-                JsonConvert.SerializeObject(message, jsonSettings));
+                JsonSerializer.Serialize(message, jsonOptions));
 
             foreach (var message in serializedMessages)
             {

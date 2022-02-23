@@ -3,13 +3,14 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Text.Json;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
-using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture.SendFixtures;
+using Bit.Core.Test.Entities;
 using Bit.Test.Common.AutoFixture;
 using Microsoft.AspNetCore.Identity;
 using NSubstitute;
@@ -254,7 +255,7 @@ namespace Bit.Core.Test.Services
                 EmailVerified = true,
                 Premium = true,
                 MaxStorageGb = 2,
-                Storage = 2 * Models.Tables.UserTests.Multiplier,
+                Storage = 2 * UserTests.Multiplier,
             };
 
             send.UserId = user.Id;
@@ -302,7 +303,7 @@ namespace Bit.Core.Test.Services
                 .SelfHosted = true;
 
             var badRequest = await Assert.ThrowsAsync<BadRequestException>(() =>
-                sutProvider.Sut.SaveFileSendAsync(send, null, 11000 * Models.Tables.UserTests.Multiplier)
+                sutProvider.Sut.SaveFileSendAsync(send, null, 11000 * UserTests.Multiplier)
             );
 
             Assert.Contains("not enough storage", badRequest.Message, StringComparison.InvariantCultureIgnoreCase);
@@ -335,7 +336,7 @@ namespace Bit.Core.Test.Services
                 .SelfHosted = false;
 
             var badRequest = await Assert.ThrowsAsync<BadRequestException>(() =>
-                sutProvider.Sut.SaveFileSendAsync(send, null, 2 * Models.Tables.UserTests.Multiplier)
+                sutProvider.Sut.SaveFileSendAsync(send, null, 2 * UserTests.Multiplier)
             );
 
             Assert.Contains("not enough storage", badRequest.Message, StringComparison.InvariantCultureIgnoreCase);
@@ -413,7 +414,7 @@ namespace Bit.Core.Test.Services
                 .Returns(org);
 
             var badRequest = await Assert.ThrowsAsync<BadRequestException>(() =>
-                sutProvider.Sut.SaveFileSendAsync(send, null, 2 * Models.Tables.UserTests.Multiplier)
+                sutProvider.Sut.SaveFileSendAsync(send, null, 2 * UserTests.Multiplier)
             );
 
             Assert.Contains("not enough storage", badRequest.Message, StringComparison.InvariantCultureIgnoreCase);
@@ -455,7 +456,7 @@ namespace Bit.Core.Test.Services
 
             var utcNow = DateTime.UtcNow;
 
-            var url = await sutProvider.Sut.SaveFileSendAsync(send, data, 1 * Models.Tables.UserTests.Multiplier);
+            var url = await sutProvider.Sut.SaveFileSendAsync(send, data, 1 * UserTests.Multiplier);
 
             Assert.Equal(testUrl, url);
             Assert.True(send.RevisionDate - utcNow < TimeSpan.FromSeconds(1));
@@ -510,7 +511,7 @@ namespace Bit.Core.Test.Services
             var utcNow = DateTime.UtcNow;
 
             var exception = await Assert.ThrowsAsync<Exception>(() =>
-                sutProvider.Sut.SaveFileSendAsync(send, data, 1 * Models.Tables.UserTests.Multiplier)
+                sutProvider.Sut.SaveFileSendAsync(send, data, 1 * UserTests.Multiplier)
             );
 
             Assert.True(send.RevisionDate - utcNow < TimeSpan.FromSeconds(1));

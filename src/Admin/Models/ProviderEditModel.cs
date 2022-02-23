@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using Bit.Core.Entities.Provider;
 using Bit.Core.Models.Data;
-using Bit.Core.Models.Table.Provider;
 
 namespace Bit.Admin.Models
 {

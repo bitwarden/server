@@ -4,9 +4,10 @@ using System.Reflection;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
-using Bit.Core.Models.Table;
+using System.Text.Json.Serialization;
+using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Services;
-using Newtonsoft.Json;
 
 namespace Bit.Core.Models.Business
 {
@@ -18,6 +19,7 @@ namespace Bit.Core.Models.Business
         public UserLicense(User user, SubscriptionInfo subscriptionInfo, ILicensingService licenseService,
             int? version = null)
         {
+            LicenseType = Enums.LicenseType.User;
             LicenseKey = user.LicenseKey;
             Id = user.Id;
             Name = user.Name;
@@ -39,6 +41,7 @@ namespace Bit.Core.Models.Business
 
         public UserLicense(User user, ILicensingService licenseService, int? version = null)
         {
+            LicenseType = Enums.LicenseType.User;
             LicenseKey = user.LicenseKey;
             Id = user.Id;
             Name = user.Name;
@@ -66,6 +69,7 @@ namespace Bit.Core.Models.Business
         public DateTime? Refresh { get; set; }
         public DateTime? Expires { get; set; }
         public bool Trial { get; set; }
+        public LicenseType? LicenseType { get; set; }
         public string Hash { get; set; }
         public string Signature { get; set; }
         [JsonIgnore]

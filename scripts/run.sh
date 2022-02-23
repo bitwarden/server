@@ -192,7 +192,7 @@ function updatebw() {
     KEY_CONNECTOR_ENABLED=$(grep -A3 'enable_key_connector:' $OUTPUT_DIR/config.yml | tail -n1 | awk '{ print $2}')
     CORE_ID=$(docker-compose ps -q admin)
     WEB_ID=$(docker-compose ps -q web)
-    if [ $KEY_CONNECTOR_ENABLED = true ];
+    if [ "$KEY_CONNECTOR_ENABLED" = true ];
     then
         KEYCONNECTOR_ID=$(docker-compose ps -q key-connector)
     fi

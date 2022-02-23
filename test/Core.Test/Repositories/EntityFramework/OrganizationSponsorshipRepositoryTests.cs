@@ -1,12 +1,12 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using Bit.Core.Entities;
 using Bit.Core.Test.AutoFixture.Attributes;
 using Bit.Core.Test.AutoFixture.OrganizationSponsorshipFixtures;
 using Bit.Core.Test.Repositories.EntityFramework.EqualityComparers;
 using Xunit;
-using EfRepo = Bit.Core.Repositories.EntityFramework;
-using SqlRepo = Bit.Core.Repositories.SqlServer;
-using TableModel = Bit.Core.Models.Table;
+using EfRepo = Bit.Infrastructure.EntityFramework.Repositories;
+using SqlRepo = Bit.Infrastructure.Dapper.Repositories;
 
 namespace Bit.Core.Test.Repositories.EntityFramework
 {
@@ -14,7 +14,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
     {
         [CiSkippedTheory, EfOrganizationSponsorshipAutoData]
         public async void CreateAsync_Works_DataMatches(
-            TableModel.OrganizationSponsorship organizationSponsorship, TableModel.Organization sponsoringOrg,
+            OrganizationSponsorship organizationSponsorship, Organization sponsoringOrg,
             List<EfRepo.OrganizationRepository> efOrgRepos,
             SqlRepo.OrganizationRepository sqlOrganizationRepo,
             SqlRepo.OrganizationSponsorshipRepository sqlOrganizationSponsorshipRepo,
@@ -24,7 +24,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
             organizationSponsorship.InstallationId = null;
             organizationSponsorship.SponsoredOrganizationId = null;
 
-            var savedOrganizationSponsorships = new List<TableModel.OrganizationSponsorship>();
+            var savedOrganizationSponsorships = new List<OrganizationSponsorship>();
             foreach (var (sut, orgRepo) in suts.Zip(efOrgRepos))
             {
                 var efSponsoringOrg = await orgRepo.CreateAsync(sponsoringOrg);
@@ -49,8 +49,8 @@ namespace Bit.Core.Test.Repositories.EntityFramework
         }
 
         [CiSkippedTheory, EfOrganizationSponsorshipAutoData]
-        public async void ReplaceAsync_Works_DataMatches(TableModel.OrganizationSponsorship postOrganizationSponsorship,
-            TableModel.OrganizationSponsorship replaceOrganizationSponsorship, TableModel.Organization sponsoringOrg,
+        public async void ReplaceAsync_Works_DataMatches(OrganizationSponsorship postOrganizationSponsorship,
+            OrganizationSponsorship replaceOrganizationSponsorship, Organization sponsoringOrg,
             List<EfRepo.OrganizationRepository> efOrgRepos,
             SqlRepo.OrganizationRepository sqlOrganizationRepo,
             SqlRepo.OrganizationSponsorshipRepository sqlOrganizationSponsorshipRepo,
@@ -61,7 +61,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
             replaceOrganizationSponsorship.InstallationId = null;
             replaceOrganizationSponsorship.SponsoredOrganizationId = null;
 
-            var savedOrganizationSponsorships = new List<TableModel.OrganizationSponsorship>();
+            var savedOrganizationSponsorships = new List<OrganizationSponsorship>();
             foreach (var (sut, orgRepo) in suts.Zip(efOrgRepos))
             {
                 var efSponsoringOrg = await orgRepo.CreateAsync(sponsoringOrg);
@@ -93,8 +93,8 @@ namespace Bit.Core.Test.Repositories.EntityFramework
         }
 
         [CiSkippedTheory, EfOrganizationSponsorshipAutoData]
-        public async void DeleteAsync_Works_DataMatches(TableModel.OrganizationSponsorship organizationSponsorship,
-            TableModel.Organization sponsoringOrg,
+        public async void DeleteAsync_Works_DataMatches(OrganizationSponsorship organizationSponsorship,
+            Organization sponsoringOrg,
             List<EfRepo.OrganizationRepository> efOrgRepos,
             SqlRepo.OrganizationRepository sqlOrganizationRepo,
             SqlRepo.OrganizationSponsorshipRepository sqlOrganizationSponsorshipRepo,

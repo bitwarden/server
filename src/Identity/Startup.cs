@@ -8,6 +8,7 @@ using Bit.Core.Context;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Identity.Utilities;
+using Bit.SharedWeb.Utilities;
 using IdentityServer4.Extensions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -57,7 +58,11 @@ namespace Bit.Identity
             services.AddMemoryCache();
 
             // Mvc
-            services.AddMvc();
+            // MVC
+            services.AddMvc(config =>
+            {
+                config.Filters.Add(new ModelStateValidationFilterAttribute());
+            });
 
             if (!globalSettings.SelfHosted)
             {

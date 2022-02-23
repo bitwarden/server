@@ -1,15 +1,15 @@
 ﻿using System;
 using AutoFixture;
 using AutoFixture.Kernel;
-using Bit.Core.Repositories.EntityFramework;
+using Bit.Core.Entities;
 using Bit.Core.Test.AutoFixture.CipherFixtures;
 using Bit.Core.Test.AutoFixture.CollectionFixtures;
 using Bit.Core.Test.AutoFixture.EntityFrameworkRepositoryFixtures;
 using Bit.Core.Test.AutoFixture.Relays;
 using Bit.Core.Test.AutoFixture.UserFixtures;
+using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
-using TableModel = Bit.Core.Models.Table;
 
 namespace Bit.Core.Test.AutoFixture.CollectionCipherFixtures
 {
@@ -23,14 +23,14 @@ namespace Bit.Core.Test.AutoFixture.CollectionCipherFixtures
             }
 
             var type = request as Type;
-            if (type == null || type != typeof(TableModel.CollectionCipher))
+            if (type == null || type != typeof(CollectionCipher))
             {
                 return new NoSpecimen();
             }
 
             var fixture = new Fixture();
             fixture.Customizations.Insert(0, new MaxLengthStringRelay());
-            var obj = fixture.WithAutoNSubstitutions().Create<TableModel.CollectionCipher>();
+            var obj = fixture.WithAutoNSubstitutions().Create<CollectionCipher>();
             return obj;
         }
     }

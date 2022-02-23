@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using Bit.Core.Enums;
-using Bit.Core.Repositories.EntityFramework;
 using Bit.Core.Settings;
+using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.Extensions.Configuration;

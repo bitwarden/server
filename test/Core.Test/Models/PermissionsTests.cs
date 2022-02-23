@@ -1,11 +1,6 @@
-﻿using System;
-using System.Text.Json;
-using AutoFixture.Xunit2;
+﻿using System.Text.Json;
 using Bit.Core.Models.Data;
-using Bit.Core.Models.Table;
 using Bit.Core.Utilities;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Serialization;
 using Xunit;
 
 namespace Bit.Core.Test.Models
@@ -34,21 +29,30 @@ namespace Bit.Core.Test.Models
         [Fact]
         public void Serialization_Success()
         {
-            // minify expected json
-            var expected = JsonConvert.SerializeObject(JsonConvert.DeserializeObject(_exampleSerializedPermissions));
-
-            DefaultContractResolver contractResolver = new DefaultContractResolver
+            var permissions = new Permissions
             {
-                NamingStrategy = new CamelCaseNamingStrategy()
+                AccessEventLogs = false,
+                AccessImportExport = false,
+                AccessReports = false,
+                CreateNewCollections = true,
+                EditAnyCollection = true,
+                DeleteAnyCollection = true,
+                EditAssignedCollections = false,
+                DeleteAssignedCollections = false,
+                ManageGroups = false,
+                ManagePolicies = false,
+                ManageSso = false,
+                ManageUsers = false,
+                ManageResetPassword = false,
             };
 
-            var actual = JsonConvert.SerializeObject(
-                CoreHelpers.LoadClassFromJsonData<Permissions>(_exampleSerializedPermissions), new JsonSerializerSettings
-                {
-                    ContractResolver = contractResolver,
-                });
+            // minify expected json
+            var expected = JsonSerializer.Serialize(permissions, JsonHelpers.CamelCase);
 
-            Console.WriteLine(actual);
+            var actual = JsonSerializer.Serialize(
+                JsonHelpers.DeserializeOrNew<Permissions>(_exampleSerializedPermissions, JsonHelpers.CamelCase),
+                JsonHelpers.CamelCase);
+
             Assert.Equal(expected, actual);
         }
     }

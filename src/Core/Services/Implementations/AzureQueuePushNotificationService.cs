@@ -1,14 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.Storage.Queues;
 using Bit.Core.Context;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models;
-using Bit.Core.Models.Table;
 using Bit.Core.Settings;
+using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Http;
-using Newtonsoft.Json;
 
 namespace Bit.Core.Services
 {
@@ -17,11 +18,6 @@ namespace Bit.Core.Services
         private readonly QueueClient _queueClient;
         private readonly GlobalSettings _globalSettings;
         private readonly IHttpContextAccessor _httpContextAccessor;
-
-        private JsonSerializerSettings _jsonSettings = new JsonSerializerSettings
-        {
-            NullValueHandling = NullValueHandling.Ignore
-        };
 
         public AzureQueuePushNotificationService(
             GlobalSettings globalSettings,
@@ -170,8 +166,8 @@ namespace Bit.Core.Services
         private async Task SendMessageAsync<T>(PushType type, T payload, bool excludeCurrentContext)
         {
             var contextId = GetContextIdentifier(excludeCurrentContext);
-            var message = JsonConvert.SerializeObject(new PushNotificationData<T>(type, payload, contextId),
-                _jsonSettings);
+            var message = JsonSerializer.Serialize(new PushNotificationData<T>(type, payload, contextId),
+                JsonHelpers.IgnoreWritingNull);
             await _queueClient.SendMessageAsync(message);
         }
 

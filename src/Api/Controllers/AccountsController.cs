@@ -7,12 +7,14 @@ using Bit.Api.Models.Request.Accounts;
 using Bit.Api.Models.Response;
 using Bit.Api.Utilities;
 using Bit.Core;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Enums.Provider;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Api.Request.Accounts;
+using Bit.Core.Models.Api.Response.Accounts;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
-using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -64,6 +66,9 @@ namespace Bit.Api.Controllers
             _sendService = sendService;
         }
 
+        #region DEPRECATED (Moved to Identity Service)
+
+        [Obsolete("2022-01-12 Moved to Identity, left for backwards compatability with older clients")]
         [HttpPost("prelogin")]
         [AllowAnonymous]
         public async Task<PreloginResponseModel> PostPrelogin([FromBody] PreloginRequestModel model)
@@ -74,12 +79,13 @@ namespace Bit.Api.Controllers
                 kdfInformation = new UserKdfInformation
                 {
                     Kdf = KdfType.PBKDF2_SHA256,
-                    KdfIterations = 100000
+                    KdfIterations = 100000,
                 };
             }
             return new PreloginResponseModel(kdfInformation);
         }
 
+        [Obsolete("2022-01-12 Moved to Identity, left for backwards compatability with older clients")]
         [HttpPost("register")]
         [AllowAnonymous]
         [CaptchaProtected]
@@ -100,6 +106,8 @@ namespace Bit.Api.Controllers
             await Task.Delay(2000);
             throw new BadRequestException(ModelState);
         }
+
+        #endregion
 
         [HttpPost("password-hint")]
         [AllowAnonymous]
