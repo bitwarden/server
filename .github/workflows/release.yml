@@ -152,11 +152,14 @@ jobs:
           - service_name: Sso
     steps:
       - name: Print environment
+        env:
+          RELEASE_OPTION: ${{ github.event.inputs.release_type }}
         run: |
           whoami
           docker --version
           echo "GitHub ref: $GITHUB_REF"
           echo "GitHub event: $GITHUB_EVENT"
+          echo "Github Release Option: $RELEASE_OPTION"
 
       - name: Setup DCT
         id: setup-dct
@@ -179,7 +182,13 @@ jobs:
       - name: Pull latest selfhost image
         env:
           SERVICE_NAME: ${{ steps.setup.outputs.service_name }}
-        run: docker pull bitwarden/$SERVICE_NAME:$_BRANCH_NAME
+          RELEASE_OPTION: ${{ github.event.inputs.release_type }}
+        run: |
+          if [[ "${{ github.event.inputs.release_type }}" == "Dry Run" ]]; then
+            docker pull bitwarden/$SERVICE_NAME:latest
+          else
+            docker pull bitwarden/$SERVICE_NAME:$_BRANCH_NAME
+          fi
 
       - name: Tag version and latest
         env:
