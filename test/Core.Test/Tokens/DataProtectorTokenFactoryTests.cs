@@ -115,6 +115,7 @@ namespace Bit.Core.Test.Tokens
         [Theory, BitAutoData]
         public void TokenValid_TrueIfSuccess(TestTokenable tokenable)
         {
+            tokenable.ForceInvalid = false;
             var sutProvider = GetSutProvider();
             var token = sutProvider.Sut.Protect(tokenable);
 
