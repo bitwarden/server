@@ -36,5 +36,15 @@ namespace Bit.Core.Models.Business
 
             Assert.Null(result);
         }
+
+        [Theory]
+        [BitAutoData]
+        public void EncryptEmptyString(string key)
+        {
+            var protString = SymmetricKeyProtectedString.Encrypt("", key).EncryptedString;
+
+            Assert.NotNull(protString);
+            Assert.NotEmpty(protString);
+        }
     }
 }

@@ -27,13 +27,13 @@ namespace Bit.Core.Models.Business
         {
             if (!encryptedString.StartsWith($"{EncryptionType.AesCbc256_HmacSha256_B64}."))
             {
-                throw new Exception("Invalid installation protected string");
+                throw new Exception("Invalid symmetric key protected string");
             }
 
             var encPieces = encryptedString[$"{EncryptionType.AesCbc256_HmacSha256_B64}.".Length..].Split("|");
             if (encPieces.Length != 3)
             {
-                throw new Exception("Invalid installation protected string");
+                throw new Exception("Invalid symmetric key protected string");
             }
 
             try
@@ -44,7 +44,7 @@ namespace Bit.Core.Models.Business
             }
             catch (Exception e)
             {
-                throw new Exception("Invalid installation protected string", e);
+                throw new Exception("Invalid symmetric key protected string", e);
             }
         }
 
