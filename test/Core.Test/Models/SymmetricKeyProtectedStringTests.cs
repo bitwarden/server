@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Xunit;
 

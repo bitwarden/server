@@ -1,4 +1,4 @@
-namespace Bit.Core.Tokens
+﻿namespace Bit.Core.Tokens
 {
     public class SymmetricKeyProtectedTokenFactory<T> : ISymmetricKeyProtectedTokenFactory<T> where T : Tokenable
     {
