@@ -1,6 +1,4 @@
-﻿using System;
-using Bit.Core.Models.Business;
-using Microsoft.AspNetCore.DataProtection;
+﻿using Microsoft.AspNetCore.DataProtection;
 
 namespace Bit.Core.Tokens
 {
@@ -33,27 +31,6 @@ namespace Bit.Core.Tokens
 
         public Token UnprotectWith(IDataProtector dataProtector) =>
             new(dataProtector.Unprotect(ToString()));
-
-        public Token ProtectWith(string key) =>
-            new(SymmetricKeyProtectedString.Encrypt(ToString(), key).EncryptedString);
-
-        /// <summary>
-        /// Decrypts token with provided key
-        /// </summary>
-        /// <param name="key">The key to use to decrypt</param>
-        /// <returns>A token populated with the decrypted string</returns>
-        /// <exception>Throw Exception if decryption fails</exception>
-        public Token UnprotectWith(string key)
-        {
-            var decrypted = new SymmetricKeyProtectedString(ToString()).Decrypt(key);
-
-            if (decrypted == null)
-            {
-                throw new Exception("Incorrect key provided to decrypt token");
-            }
-
-            return new(decrypted);
-        }
 
         public override string ToString() => _token;
     }
