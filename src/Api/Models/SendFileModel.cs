@@ -1,4 +1,5 @@
-﻿using Bit.Core.Models.Data;
+﻿using System.Text.Json.Serialization;
+using Bit.Core.Models.Data;
 using Bit.Core.Utilities;
 
 namespace Bit.Api.Models
@@ -11,7 +12,7 @@ namespace Bit.Api.Models
         {
             Id = data.Id;
             FileName = data.FileName;
-            Size = data.SizeString;
+            Size = data.Size;
             SizeName = CoreHelpers.ReadableBytesSize(data.Size);
         }
 
@@ -19,7 +20,8 @@ namespace Bit.Api.Models
         [EncryptedString]
         [EncryptedStringLength(1000)]
         public string FileName { get; set; }
-        public string Size { get; set; }
+        [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString | JsonNumberHandling.WriteAsString)]
+        public long? Size { get; set; }
         public string SizeName { get; set; }
     }
 }

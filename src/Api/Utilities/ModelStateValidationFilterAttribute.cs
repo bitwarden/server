@@ -6,7 +6,7 @@ using InternalApi = Bit.Core.Models.Api;
 
 namespace Bit.Api.Utilities
 {
-    public class ModelStateValidationFilterAttribute : ActionFilterAttribute
+    public class ModelStateValidationFilterAttribute : SharedWeb.Utilities.ModelStateValidationFilterAttribute
     {
         private readonly bool _publicApi;
 
@@ -15,24 +15,15 @@ namespace Bit.Api.Utilities
             _publicApi = publicApi;
         }
 
-        public override void OnActionExecuting(ActionExecutingContext context)
+        protected override void OnModelStateInvalid(ActionExecutingContext context)
         {
-            var model = context.ActionArguments.FirstOrDefault(a => a.Key == "model");
-            if (model.Key == "model" && model.Value == null)
+            if (_publicApi)
             {
-                context.ModelState.AddModelError(string.Empty, "Body is empty.");
+                context.Result = new BadRequestObjectResult(new ErrorResponseModel(context.ModelState));
             }
-
-            if (!context.ModelState.IsValid)
+            else
             {
-                if (_publicApi)
-                {
-                    context.Result = new BadRequestObjectResult(new ErrorResponseModel(context.ModelState));
-                }
-                else
-                {
-                    context.Result = new BadRequestObjectResult(new InternalApi.ErrorResponseModel(context.ModelState));
-                }
+                context.Result = new BadRequestObjectResult(new InternalApi.ErrorResponseModel(context.ModelState));
             }
         }
     }

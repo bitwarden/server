@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure.Storage.Queues;
@@ -11,8 +12,6 @@ using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 
 namespace Bit.Admin.HostedServices
 {
@@ -70,17 +69,19 @@ namespace Bit.Admin.HostedServices
                 {
                     try
                     {
-                        var token = JToken.Parse(message.DecodeMessageText());
-                        if (token is JArray)
+                        using var document = JsonDocument.Parse(message.DecodeMessageText());
+                        var root = document.RootElement;
+
+                        if (root.ValueKind == JsonValueKind.Array)
                         {
-                            foreach (var mailQueueMessage in token.ToObject<List<MailQueueMessage>>())
+                            foreach (var mailQueueMessage in root.ToObject<List<MailQueueMessage>>())
                             {
                                 await _mailService.SendEnqueuedMailMessageAsync(mailQueueMessage);
                             }
                         }
-                        else if (token is JObject)
+                        else if (root.ValueKind == JsonValueKind.Object)
                         {
-                            var mailQueueMessage = token.ToObject<MailQueueMessage>();
+                            var mailQueueMessage = root.ToObject<MailQueueMessage>();
                             await _mailService.SendEnqueuedMailMessageAsync(mailQueueMessage);
                         }
                     }

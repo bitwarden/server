@@ -1,12 +1,10 @@
 ﻿using System;
+using System.Text.Json.Serialization;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
-using Newtonsoft.Json.Serialization;
 
 namespace Bit.Core.Models.Business
 {
-    [JsonObject(NamingStrategyType = typeof(CamelCaseNamingStrategy))]
     public class ReferenceEvent
     {
         public ReferenceEvent() { }
@@ -22,10 +20,10 @@ namespace Bit.Core.Models.Business
             }
         }
 
-        [JsonConverter(typeof(StringEnumConverter))]
+        [JsonConverter(typeof(JsonStringEnumConverter))]
         public ReferenceEventType Type { get; set; }
 
-        [JsonConverter(typeof(StringEnumConverter))]
+        [JsonConverter(typeof(JsonStringEnumConverter))]
         public ReferenceEventSource Source { get; set; }
 
         public Guid Id { get; set; }
@@ -51,7 +49,7 @@ namespace Bit.Core.Models.Business
 
         public short? Storage { get; set; }
 
-        [JsonConverter(typeof(StringEnumConverter))]
+        [JsonConverter(typeof(JsonStringEnumConverter))]
         public SendType? SendType { get; set; }
 
         public int? MaxAccessCount { get; set; }

@@ -1,8 +1,8 @@
 ﻿using System;
+using Bit.Core.Entities.Provider;
 using Bit.Core.Enums.Provider;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Data;
-using Bit.Core.Models.Table.Provider;
 using Bit.Core.Utilities;
 
 namespace Bit.Api.Models.Response.Providers

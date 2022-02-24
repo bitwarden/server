@@ -1,28 +1,27 @@
 ﻿using System;
 using AutoFixture;
 using AutoFixture.Kernel;
-using Bit.Core.Repositories.EntityFramework;
+using Bit.Core.Entities;
 using Bit.Core.Test.AutoFixture.EntityFrameworkRepositoryFixtures;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using Bit.Core.Test.AutoFixture.Relays;
+using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
-using Fixtures = Bit.Core.Test.AutoFixture.OrganizationFixtures;
-using TableModel = Bit.Core.Models.Table;
 
 namespace Bit.Core.Test.AutoFixture.GroupFixtures
 {
     internal class GroupOrganizationAutoDataAttribute : CustomAutoDataAttribute
     {
         public GroupOrganizationAutoDataAttribute() : base(
-            new SutProviderCustomization(), new Fixtures.Organization { UseGroups = true })
+            new SutProviderCustomization(), new OrganizationCustomization { UseGroups = true })
         { }
     }
 
     internal class GroupOrganizationNotUseGroupsAutoDataAttribute : CustomAutoDataAttribute
     {
         public GroupOrganizationNotUseGroupsAutoDataAttribute() : base(
-            new SutProviderCustomization(), new Bit.Core.Test.AutoFixture.OrganizationFixtures.Organization { UseGroups = false })
+            new SutProviderCustomization(), new OrganizationCustomization { UseGroups = false })
         { }
     }
 
@@ -36,14 +35,14 @@ namespace Bit.Core.Test.AutoFixture.GroupFixtures
             }
 
             var type = request as Type;
-            if (type == null || type != typeof(TableModel.Group))
+            if (type == null || type != typeof(Group))
             {
                 return new NoSpecimen();
             }
 
             var fixture = new Fixture();
             fixture.Customizations.Insert(0, new MaxLengthStringRelay());
-            var obj = fixture.WithAutoNSubstitutions().Create<TableModel.Group>();
+            var obj = fixture.WithAutoNSubstitutions().Create<Group>();
             return obj;
         }
     }

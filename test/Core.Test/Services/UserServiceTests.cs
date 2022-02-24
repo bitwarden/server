@@ -1,10 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Text.Json;
+using System.Threading.Tasks;
 using Bit.Core.Context;
-using Bit.Core.Models.Table;
+using Bit.Core.Entities;
+using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bit.Test.Common.AutoFixture;
+using Bit.Test.Common.AutoFixture.Attributes;
+using Bit.Test.Common.Helpers;
 using Fido2NetLib;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
@@ -17,103 +24,41 @@ namespace Bit.Core.Test.Services
 {
     public class UserServiceTests
     {
-        private readonly UserService _sut;
-
-        private readonly IUserRepository _userRepository;
-        private readonly ICipherRepository _cipherRepository;
-        private readonly IOrganizationUserRepository _organizationUserRepository;
-        private readonly IOrganizationRepository _organizationRepository;
-        private readonly IMailService _mailService;
-        private readonly IPushNotificationService _pushService;
-        private readonly IUserStore<User> _userStore;
-        private readonly IOptions<IdentityOptions> _optionsAccessor;
-        private readonly IPasswordHasher<User> _passwordHasher;
-        private readonly IEnumerable<IUserValidator<User>> _userValidators;
-        private readonly IEnumerable<IPasswordValidator<User>> _passwordValidators;
-        private readonly ILookupNormalizer _keyNormalizer;
-        private readonly IdentityErrorDescriber _errors;
-        private readonly IServiceProvider _services;
-        private readonly ILogger<UserManager<User>> _logger;
-        private readonly ILicensingService _licenseService;
-        private readonly IEventService _eventService;
-        private readonly IApplicationCacheService _applicationCacheService;
-        private readonly IDataProtectionProvider _dataProtectionProvider;
-        private readonly IPaymentService _paymentService;
-        private readonly IPolicyRepository _policyRepository;
-        private readonly IReferenceEventService _referenceEventService;
-        private readonly IFido2 _fido2;
-        private readonly CurrentContext _currentContext;
-        private readonly GlobalSettings _globalSettings;
-        private readonly IOrganizationService _organizationService;
-        private readonly IProviderUserRepository _providerUserRepository;
-
-        public UserServiceTests()
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public async Task UpdateLicenseAsync_Success(SutProvider<UserService> sutProvider,
+            User user, UserLicense userLicense)
         {
-            _userRepository = Substitute.For<IUserRepository>();
-            _cipherRepository = Substitute.For<ICipherRepository>();
-            _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
-            _organizationRepository = Substitute.For<IOrganizationRepository>();
-            _mailService = Substitute.For<IMailService>();
-            _pushService = Substitute.For<IPushNotificationService>();
-            _userStore = Substitute.For<IUserStore<User>>();
-            _optionsAccessor = Substitute.For<IOptions<IdentityOptions>>();
-            _passwordHasher = Substitute.For<IPasswordHasher<User>>();
-            _userValidators = new List<IUserValidator<User>>();
-            _passwordValidators = new List<IPasswordValidator<User>>();
-            _keyNormalizer = Substitute.For<ILookupNormalizer>();
-            _errors = new IdentityErrorDescriber();
-            _services = Substitute.For<IServiceProvider>();
-            _logger = Substitute.For<ILogger<UserManager<User>>>();
-            _licenseService = Substitute.For<ILicensingService>();
-            _eventService = Substitute.For<IEventService>();
-            _applicationCacheService = Substitute.For<IApplicationCacheService>();
-            _dataProtectionProvider = Substitute.For<IDataProtectionProvider>();
-            _paymentService = Substitute.For<IPaymentService>();
-            _policyRepository = Substitute.For<IPolicyRepository>();
-            _referenceEventService = Substitute.For<IReferenceEventService>();
-            _fido2 = Substitute.For<IFido2>();
-            _currentContext = new CurrentContext(null);
-            _globalSettings = new GlobalSettings();
-            _organizationService = Substitute.For<IOrganizationService>();
-            _providerUserRepository = Substitute.For<IProviderUserRepository>();
+            using var tempDir = new TempDirectory();
 
-            _sut = new UserService(
-                _userRepository,
-                _cipherRepository,
-                _organizationUserRepository,
-                _organizationRepository,
-                _mailService,
-                _pushService,
-                _userStore,
-                _optionsAccessor,
-                _passwordHasher,
-                _userValidators,
-                _passwordValidators,
-                _keyNormalizer,
-                _errors,
-                _services,
-                _logger,
-                _licenseService,
-                _eventService,
-                _applicationCacheService,
-                _dataProtectionProvider,
-                _paymentService,
-                _policyRepository,
-                _referenceEventService,
-                _fido2,
-                _currentContext,
-                _globalSettings,
-                _organizationService,
-                _providerUserRepository
-            );
-        }
+            var now = DateTime.UtcNow;
+            userLicense.Issued = now.AddDays(-10);
+            userLicense.Expires = now.AddDays(10);
+            userLicense.Version = 1;
+            userLicense.Premium = true;
 
-        // Remove this test when we add actual tests. It only proves that
-        // we've properly constructed the system under test.
-        [Fact]
-        public void ServiceExists()
-        {
-            Assert.NotNull(_sut);
+            user.EmailVerified = true;
+            user.Email = userLicense.Email;
+
+            sutProvider.GetDependency<Settings.GlobalSettings>().SelfHosted = true;
+            sutProvider.GetDependency<Settings.GlobalSettings>().LicenseDirectory = tempDir.Directory;
+            sutProvider.GetDependency<ILicensingService>()
+                .VerifyLicense(userLicense)
+                .Returns(true);
+
+            await sutProvider.Sut.UpdateLicenseAsync(user, userLicense);
+
+            var filePath = Path.Combine(tempDir.Directory, "user", $"{user.Id}.json");
+            Assert.True(File.Exists(filePath));
+            var document = JsonDocument.Parse(File.OpenRead(filePath));
+            var root = document.RootElement;
+            Assert.Equal(JsonValueKind.Object, root.ValueKind);
+            // Sort of a lazy way to test that it is indented but not sure of a better way
+            Assert.Contains('\n', root.GetRawText());
+            AssertHelper.AssertJsonProperty(root, "LicenseKey", JsonValueKind.String);
+            AssertHelper.AssertJsonProperty(root, "Id", JsonValueKind.String);
+            AssertHelper.AssertJsonProperty(root, "Premium", JsonValueKind.True);
+            var versionProp = AssertHelper.AssertJsonProperty(root, "Version", JsonValueKind.Number);
+            Assert.Equal(1, versionProp.GetInt32());
         }
     }
 }

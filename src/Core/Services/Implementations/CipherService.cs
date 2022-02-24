@@ -2,17 +2,17 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
-using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Core.Models.Data;
-using Newtonsoft.Json;
 
 namespace Bit.Core.Services
 {
@@ -208,7 +208,7 @@ namespace Bit.Core.Services
                 UserId = cipher.UserId,
                 OrganizationId = cipher.OrganizationId,
                 AttachmentId = attachmentId,
-                AttachmentData = JsonConvert.SerializeObject(data)
+                AttachmentData = JsonSerializer.Serialize(data)
             });
             cipher.AddAttachment(attachmentId, data);
             await _pushService.PushSyncCipherUpdateAsync(cipher, null);
@@ -241,7 +241,7 @@ namespace Bit.Core.Services
                     UserId = cipher.UserId,
                     OrganizationId = cipher.OrganizationId,
                     AttachmentId = attachmentId,
-                    AttachmentData = JsonConvert.SerializeObject(data)
+                    AttachmentData = JsonSerializer.Serialize(data)
                 };
 
                 await _cipherRepository.UpdateAttachmentAsync(attachment);
@@ -312,7 +312,7 @@ namespace Bit.Core.Services
                     UserId = cipher.UserId,
                     OrganizationId = cipher.OrganizationId,
                     AttachmentId = attachmentId,
-                    AttachmentData = JsonConvert.SerializeObject(attachments[attachmentId])
+                    AttachmentData = JsonSerializer.Serialize(attachments[attachmentId])
                 };
 
                 await _cipherRepository.UpdateAttachmentAsync(updatedAttachment);
@@ -347,7 +347,7 @@ namespace Bit.Core.Services
                 UserId = cipher.UserId,
                 OrganizationId = cipher.OrganizationId,
                 AttachmentId = attachmentData.AttachmentId,
-                AttachmentData = JsonConvert.SerializeObject(attachmentData)
+                AttachmentData = JsonSerializer.Serialize(attachmentData)
             };
 
 

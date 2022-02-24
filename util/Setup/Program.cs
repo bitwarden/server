@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Globalization;
 using System.Net.Http;
+using System.Net.Http.Json;
 using Bit.Migrator;
-using Newtonsoft.Json;
 
 namespace Bit.Setup
 {
@@ -272,9 +272,8 @@ namespace Bit.Setup
                     return false;
                 }
 
-                var resultString = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-                var result = JsonConvert.DeserializeObject<dynamic>(resultString);
-                if (!(bool)result.Enabled)
+                var result = response.Content.ReadFromJsonAsync<InstallationValidationResponseModel>().GetAwaiter().GetResult();
+                if (!result.Enabled)
                 {
                     Console.WriteLine("Installation id has been disabled.");
                     return false;
@@ -324,6 +323,11 @@ namespace Bit.Setup
 
                 _context.Parameters.Add(_context.Args[i].Substring(1), _context.Args[i + 1]);
             }
+        }
+
+        class InstallationValidationResponseModel
+        {
+            public bool Enabled { get; init; }
         }
     }
 }

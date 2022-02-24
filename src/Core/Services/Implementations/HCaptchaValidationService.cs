@@ -1,44 +1,41 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Net.Http;
+using System.Net.Http.Json;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Bit.Core.Context;
-using Bit.Core.Models.Table;
+using Bit.Core.Entities;
+using Bit.Core.Models.Business.Tokenables;
 using Bit.Core.Settings;
-using Bit.Core.Utilities;
-using Microsoft.AspNetCore.DataProtection;
+using Bit.Core.Tokens;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 
 namespace Bit.Core.Services
 {
     public class HCaptchaValidationService : ICaptchaValidationService
     {
-        private const double TokenLifetimeInHours = (double)5 / 60; // 5 minutes
-        private const string TokenName = "CaptchaBypassToken";
-        private const string TokenClearTextPrefix = "BWCaptchaBypass_";
         private readonly ILogger<HCaptchaValidationService> _logger;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly GlobalSettings _globalSettings;
-        private readonly IDataProtector _dataProtector;
+        private readonly IDataProtectorTokenFactory<HCaptchaTokenable> _tokenizer;
 
         public HCaptchaValidationService(
             ILogger<HCaptchaValidationService> logger,
             IHttpClientFactory httpClientFactory,
-            IDataProtectionProvider dataProtectorProvider,
+            IDataProtectorTokenFactory<HCaptchaTokenable> tokenizer,
             GlobalSettings globalSettings)
         {
             _logger = logger;
             _httpClientFactory = httpClientFactory;
             _globalSettings = globalSettings;
-            _dataProtector = dataProtectorProvider.CreateProtector("CaptchaServiceDataProtector");
+            _tokenizer = tokenizer;
         }
 
         public string SiteKeyResponseKeyName => "HCaptcha_SiteKey";
         public string SiteKey => _globalSettings.Captcha.HCaptchaSiteKey;
 
-        public string GenerateCaptchaBypassToken(User user) =>
-            $"{TokenClearTextPrefix}{_dataProtector.Protect(CaptchaBypassTokenContent(user))}";
+        public string GenerateCaptchaBypassToken(User user) => _tokenizer.Protect(new HCaptchaTokenable(user));
 
         public bool ValidateCaptchaBypassToken(string bypassToken, User user) =>
             TokenIsApiKey(bypassToken, user) || TokenIsCaptchaBypassToken(bypassToken, user);
@@ -81,28 +78,20 @@ namespace Bit.Core.Services
                 return false;
             }
 
-            var responseContent = await responseMessage.Content.ReadAsStringAsync();
-            dynamic jsonResponse = JsonConvert.DeserializeObject(responseContent);
-            return (bool)jsonResponse.success;
+            using var jsonDocument = await responseMessage.Content.ReadFromJsonAsync<JsonDocument>();
+            var root = jsonDocument.RootElement;
+            return root.GetProperty("success").GetBoolean();
         }
 
         public bool RequireCaptchaValidation(ICurrentContext currentContext) =>
             currentContext.IsBot || _globalSettings.Captcha.ForceCaptchaRequired;
 
-        private static string CaptchaBypassTokenContent(User user) =>
-            string.Join(' ', new object[] {
-                TokenName,
-                user?.Id,
-                user?.Email,
-                CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow.AddHours(TokenLifetimeInHours))
-            });
-
         private static bool TokenIsApiKey(string bypassToken, User user) =>
             !string.IsNullOrWhiteSpace(bypassToken) && user != null && user.ApiKey == bypassToken;
-        private bool TokenIsCaptchaBypassToken(string encryptedToken, User user) =>
-            encryptedToken.StartsWith(TokenClearTextPrefix) && user != null &&
-            CoreHelpers.TokenIsValid(TokenName, _dataProtector, encryptedToken[TokenClearTextPrefix.Length..],
-            user.Email, user.Id, TokenLifetimeInHours);
-
+        private bool TokenIsCaptchaBypassToken(string encryptedToken, User user)
+        {
+            return _tokenizer.TryUnprotect(encryptedToken, out var data) &&
+                data.Valid && data.TokenIsValid(user);
+        }
     }
 }

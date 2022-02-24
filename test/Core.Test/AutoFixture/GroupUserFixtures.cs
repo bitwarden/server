@@ -1,11 +1,11 @@
 ﻿using System;
 using AutoFixture;
 using AutoFixture.Kernel;
-using Bit.Core.Repositories.EntityFramework;
+using Bit.Core.Entities;
 using Bit.Core.Test.AutoFixture.EntityFrameworkRepositoryFixtures;
+using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
-using TableModel = Bit.Core.Models.Table;
 
 namespace Bit.Core.Test.AutoFixture.GroupUserFixtures
 {
@@ -19,13 +19,13 @@ namespace Bit.Core.Test.AutoFixture.GroupUserFixtures
             }
 
             var type = request as Type;
-            if (type == null || type != typeof(TableModel.GroupUser))
+            if (type == null || type != typeof(GroupUser))
             {
                 return new NoSpecimen();
             }
 
             var fixture = new Fixture();
-            var obj = fixture.WithAutoNSubstitutions().Create<TableModel.GroupUser>();
+            var obj = fixture.WithAutoNSubstitutions().Create<GroupUser>();
             return obj;
         }
     }

@@ -2,8 +2,8 @@
 using System.Threading.Tasks;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Core.Context;
+using Bit.Core.Entities;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
@@ -68,14 +68,16 @@ namespace Bit.Api.Controllers
         [SelfHosted(NotSelfHostedOnly = true)]
         public async Task<bool> PreValidateSponsorshipToken([FromQuery] string sponsorshipToken)
         {
-            return await _organizationsSponsorshipService.ValidateRedemptionTokenAsync(sponsorshipToken, (await CurrentUser).Email);
+            return (await _organizationsSponsorshipService.ValidateRedemptionTokenAsync(sponsorshipToken, (await CurrentUser).Email)).valid;
         }
 
         [HttpPost("redeem")]
         [SelfHosted(NotSelfHostedOnly = true)]
         public async Task RedeemSponsorship([FromQuery] string sponsorshipToken, [FromBody] OrganizationSponsorshipRedeemRequestModel model)
         {
-            if (!await _organizationsSponsorshipService.ValidateRedemptionTokenAsync(sponsorshipToken, (await CurrentUser).Email))
+            var (valid, sponsorship) = await _organizationsSponsorshipService.ValidateRedemptionTokenAsync(sponsorshipToken, (await CurrentUser).Email);
+
+            if (!valid)
             {
                 throw new BadRequestException("Failed to parse sponsorship token.");
             }
@@ -86,8 +88,7 @@ namespace Bit.Api.Controllers
             }
 
             await _organizationsSponsorshipService.SetUpSponsorshipAsync(
-                await _organizationSponsorshipRepository
-                    .GetByOfferedToEmailAsync((await CurrentUser).Email),
+                sponsorship,
                 // Check org to sponsor's product type
                 await _organizationRepository.GetByIdAsync(model.SponsoredOrganizationId));
         }

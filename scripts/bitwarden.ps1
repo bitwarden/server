@@ -10,6 +10,7 @@ param (
     [switch] $updatedb,
     [switch] $updaterun,
     [switch] $updateself,
+    [switch] $uninstall,
     [switch] $help,
     [string] $output = ""
 )
@@ -26,9 +27,9 @@ $scriptsDir = "${output}\scripts"
 $githubBaseUrl = "https://raw.githubusercontent.com/bitwarden/server/master"
 
 # Please do not create pull requests modifying the version numbers.
-$coreVersion = "1.45.2"
-$webVersion = "2.25.0"
-$keyConnectorVersion = "1.0.0"
+$coreVersion = "1.46.2"
+$webVersion = "2.26.1"
+$keyConnectorVersion = "1.0.1"
 
 # Functions
 
@@ -68,6 +69,7 @@ Available commands:
 -updaterun
 -updateself
 -updateconf
+-uninstall
 -renewcert
 -rebuild
 -help
@@ -154,6 +156,10 @@ elseif ($updaterun) {
 elseif ($updateself) {
     Get-Self
     Write-Line "Updated self."
+}
+elseif ($uninstall) {
+    Test-Output-Dir-Exists
+    Invoke-Expression "& `"$scriptsDir\run.ps1`" -uninstall -outputDir `"$output`" "
 }
 elseif ($help) {
     Show-Commands

@@ -40,9 +40,9 @@ SCRIPTS_DIR="$OUTPUT/scripts"
 GITHUB_BASE_URL="https://raw.githubusercontent.com/bitwarden/server/master"
 
 # Please do not create pull requests modifying the version numbers.
-COREVERSION="1.45.2"
-WEBVERSION="2.25.0"
-KEYCONNECTORVERSION="1.0.0"
+COREVERSION="1.46.2"
+WEBVERSION="2.26.1"
+KEYCONNECTORVERSION="1.0.1"
 
 echo "bitwarden.sh version $COREVERSION"
 docker --version
@@ -105,6 +105,7 @@ updatedb
 updaterun
 updateself
 updateconf
+uninstall
 renewcert
 rebuild
 help
@@ -158,6 +159,10 @@ case $1 in
         ;;
     "updateself")
         downloadSelf && echo "Updated self." && exit
+        ;;
+    "uninstall")
+        checkOutputDirExists
+        $SCRIPTS_DIR/run.sh uninstall $OUTPUT
         ;;
     "help")
         listCommands

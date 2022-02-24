@@ -1,14 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Net.Http;
-using System.Text;
+using System.Net.Http.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Bit.Core.Settings;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Newtonsoft.Json;
 
 namespace Bit.Admin.HostedServices
 {
@@ -65,7 +64,7 @@ namespace Bit.Admin.HostedServices
             request.RequestUri = new Uri("https://api.cloudflare.com/" +
                 $"client/v4/zones/{_adminSettings.Cloudflare.ZoneId}/firewall/access_rules/rules");
 
-            var bodyContent = JsonConvert.SerializeObject(new
+            request.Content = JsonContent.Create(new
             {
                 mode = "block",
                 configuration = new
@@ -75,7 +74,6 @@ namespace Bit.Admin.HostedServices
                 },
                 notes = $"Rate limit abuse on {DateTime.UtcNow.ToString()}."
             });
-            request.Content = new StringContent(bodyContent, Encoding.UTF8, "application/json");
 
             var response = await _httpClient.SendAsync(request, cancellationToken);
             if (!response.IsSuccessStatusCode)
@@ -83,8 +81,7 @@ namespace Bit.Admin.HostedServices
                 return;
             }
 
-            var responseString = await response.Content.ReadAsStringAsync();
-            var accessRuleResponse = JsonConvert.DeserializeObject<AccessRuleResponse>(responseString);
+            var accessRuleResponse = await response.Content.ReadFromJsonAsync<AccessRuleResponse>(cancellationToken: cancellationToken);
             if (!accessRuleResponse.Success)
             {
                 return;
@@ -118,8 +115,7 @@ namespace Bit.Admin.HostedServices
                     return;
                 }
 
-                var responseString = await response.Content.ReadAsStringAsync();
-                var listResponse = JsonConvert.DeserializeObject<ListResponse>(responseString);
+                var listResponse = await response.Content.ReadFromJsonAsync<ListResponse>(cancellationToken: cancellationToken);
                 if (!listResponse.Success)
                 {
                     return;
