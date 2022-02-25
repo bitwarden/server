@@ -10,26 +10,28 @@ RUN apk add --update-cache \
 
 # Copy csproj files as distinct layers
 WORKDIR /source
-COPY bitwarden_license/src/Sso/*.csproj ./src/Sso/
-#COPY util/Migrator/*.csproj ./util/Migrator/
-#COPY src/Core/*.csproj ./src/Core/
-#COPY bitwarden_license/src/CommCore/*.csproj ./bitwarden_license/src/CommCore/
-#COPY Directory.Build.props .
+COPY bitwarden_license/src/Sso/*.csproj ./bitwarden_license/src/Sso/
+COPY src/Core/*.csproj ./src/Core/
+COPY src/Infrastructure.Dapper/*.csproj ./src/Infrastructure.Dapper/
+COPY src/Infrastructure.EntityFramework/*.csproj ./src/Infrastructure.EntityFramework/
+COPY src/SharedWeb/*.csproj ./src/SharedWeb/
+COPY Directory.Build.props .
 
 # Restore project dependencies and tools
-WORKDIR /source/src/Sso
+WORKDIR /source/bitwarden_license/src/Sso
 RUN dotnet restore
 RUN dotnet clean
 
 # Copy required project files
 WORKDIR /source
-COPY bitwarden_license/src/Sso/. ./src/Sso/
-#COPY util/Migrator/. ./util/Migrator/
-#COPY src/Core/. ./src/Core/
-#COPY bitwarden_license/src/CommCore/. ./bitwarden_license/src/CommCore/
+COPY bitwarden_license/src/Sso/. ./bitwarden_license/src/Sso/
+COPY src/Core/. ./src/Core/
+COPY src/Infrastructure.Dapper/. ./src/Infrastructure.Dapper/
+COPY src/Infrastructure.EntityFramework/. ./src/Infrastructure.EntityFramework/
+COPY src/SharedWeb/. ./src/SharedWeb/
 
 # Build app
-WORKDIR /source/src/Sso
+WORKDIR /source/bitwarden_license/src/Sso
 RUN npm install -g gulp
 RUN npm install
 RUN gulp --gulpfile "gulpfile.js" build
@@ -59,7 +61,7 @@ WORKDIR /app
 COPY --from=build /app ./
 
 # Copy entrypoint script and make it executable
-COPY entrypoint.sh /
+COPY docker/sso/entrypoint.sh /
 RUN chmod +x /entrypoint.sh
 
 # Create non-root user to run app

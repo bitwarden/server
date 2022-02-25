@@ -6,9 +6,11 @@ FROM mcr.microsoft.com/dotnet/sdk:5.0-alpine AS build
 # Copy csproj files as distinct layers
 WORKDIR /source
 COPY src/Events/*.csproj ./src/Events/
-#COPY src/Core/*.csproj ./src/Core/
-#COPY bitwarden_license/src/CommCore/*.csproj ./bitwarden_license/src/CommCore/
-#COPY Directory.Build.props .
+COPY src/Core/*.csproj ./src/Core/
+COPY src/Infrastructure.Dapper/*.csproj ./src/Infrastructure.Dapper/
+COPY src/Infrastructure.EntityFramework/*.csproj ./src/Infrastructure.EntityFramework/
+COPY src/SharedWeb/*.csproj ./src/SharedWeb/
+COPY Directory.Build.props .
 
 # Restore project dependencies and tools
 WORKDIR /source/src/Events
@@ -18,8 +20,10 @@ RUN dotnet clean
 # Copy required project files
 WORKDIR /source
 COPY src/Events/. ./src/Events/
-#COPY src/Core/. ./src/Core/
-#COPY bitwarden_license/src/CommCore/. ./bitwarden_license/src/CommCore/
+COPY src/Core/. ./src/Core/
+COPY src/Infrastructure.Dapper/. ./src/Infrastructure.Dapper/
+COPY src/Infrastructure.EntityFramework/. ./src/Infrastructure.EntityFramework/
+COPY src/SharedWeb/. ./src/SharedWeb/
 
 # Build app
 WORKDIR /source/src/Events
@@ -49,7 +53,7 @@ WORKDIR /app
 COPY --from=build /app ./
 
 # Copy entrypoint script and make it executable
-COPY entrypoint.sh /
+COPY docker/events/entrypoint.sh /
 RUN chmod +x /entrypoint.sh
 
 # Create non-root user to run app

@@ -7,6 +7,9 @@ FROM mcr.microsoft.com/dotnet/sdk:5.0-alpine AS build
 WORKDIR /source
 COPY src/Identity/*.csproj ./src/Identity/
 COPY src/Core/*.csproj ./src/Core/
+COPY src/Infrastructure.Dapper/*.csproj ./src/Infrastructure.Dapper/
+COPY src/Infrastructure.EntityFramework/*.csproj ./src/Infrastructure.EntityFramework/
+COPY src/SharedWeb/*.csproj ./src/SharedWeb/
 COPY Directory.Build.props .
 
 # Restore project dependencies and tools
@@ -18,6 +21,9 @@ RUN dotnet clean
 WORKDIR /source
 COPY src/Identity/. ./src/Identity/
 COPY src/Core/. ./src/Core/
+COPY src/Infrastructure.Dapper/. ./src/Infrastructure.Dapper/
+COPY src/Infrastructure.EntityFramework/. ./src/Infrastructure.EntityFramework/
+COPY src/SharedWeb/. ./src/SharedWeb/
 
 # Build app
 WORKDIR /source/src/Identity
@@ -49,7 +55,7 @@ WORKDIR /app
 COPY --from=build /app ./
 
 # Copy entrypoint script and make it executable
-COPY entrypoint.sh /
+COPY docker/identity/entrypoint.sh /
 RUN chmod +x /entrypoint.sh
 
 # Create non-root user to run app
