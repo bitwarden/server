@@ -214,6 +214,8 @@ services:
 
 volumes:
   mssql_data:
+    labels:
+      com.bitwarden.product: bitwarden
 {{/if}}
 
 networks:

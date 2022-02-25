@@ -58,6 +58,7 @@ namespace Bit.Core.Models
             {
                 case TwoFactorProviderType.Duo:
                 case TwoFactorProviderType.YubiKey:
+                case TwoFactorProviderType.U2f: // Keep to ensure old U2f keys are considered premium
                 case TwoFactorProviderType.WebAuthn:
                     return true;
                 default:

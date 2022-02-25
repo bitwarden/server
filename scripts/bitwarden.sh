@@ -29,18 +29,28 @@ if [ $# -eq 2 ]
 then
     OUTPUT=$2
 fi
+if command -v docker-compose &> /dev/null
+then
+    dccmd='docker-compose'
+else
+    dccmd='docker compose'
+fi
 
 SCRIPTS_DIR="$OUTPUT/scripts"
 GITHUB_BASE_URL="https://raw.githubusercontent.com/bitwarden/server/master"
 
 # Please do not create pull requests modifying the version numbers.
-COREVERSION="1.45.4"
-WEBVERSION="2.25.0"
-KEYCONNECTORVERSION="1.0.0"
+COREVERSION="1.46.2"
+WEBVERSION="2.26.1"
+KEYCONNECTORVERSION="1.0.1"
 
 echo "bitwarden.sh version $COREVERSION"
 docker --version
-docker-compose --version
+if [[ "$dccmd" == "docker compose" ]]; then
+    $dccmd version
+else
+    $dccmd --version
+fi
 
 echo ""
 
@@ -95,6 +105,7 @@ updatedb
 updaterun
 updateself
 updateconf
+uninstall
 renewcert
 rebuild
 help
@@ -148,6 +159,10 @@ case $1 in
         ;;
     "updateself")
         downloadSelf && echo "Updated self." && exit
+        ;;
+    "uninstall")
+        checkOutputDirExists
+        $SCRIPTS_DIR/run.sh uninstall $OUTPUT
         ;;
     "help")
         listCommands
