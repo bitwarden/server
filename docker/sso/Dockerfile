@@ -19,6 +19,7 @@ COPY bitwarden_license/src/Sso/*.csproj ./src/Sso/
 # Restore project dependencies and tools
 WORKDIR /source/src/Sso
 RUN dotnet restore
+RUN dotnet clean
 
 # Copy required project files
 WORKDIR /source
@@ -49,9 +50,9 @@ RUN apk add --update-cache \
     && rm -rf /var/cache/apk/*
 
 # Create required directories
-#RUN mkdir -p /etc/bitwarden/core
-#RUN mkdir -p /etc/bitwarden/logs
-#RUN mkdir -p /etc/bitwarden/ca-certificates
+RUN mkdir -p /etc/bitwarden/core
+RUN mkdir -p /etc/bitwarden/logs
+RUN mkdir -p /etc/bitwarden/ca-certificates
 
 # Copy app from build stage
 WORKDIR /app

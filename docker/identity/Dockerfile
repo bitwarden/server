@@ -12,6 +12,7 @@ COPY Directory.Build.props .
 # Restore project dependencies and tools
 WORKDIR /source/src/Identity
 RUN dotnet restore
+RUN dotnet clean
 
 # Copy required project files
 WORKDIR /source
@@ -39,10 +40,9 @@ RUN apk add --update-cache \
     && rm -rf /var/cache/apk/*
 
 # Create required directories
-# TODO: Is this still necessary?
-#RUN mkdir -p /etc/bitwarden/core
-#RUN mkdir -p /etc/bitwarden/logs
-#RUN mkdir -p /etc/bitwarden/ca-certificates
+RUN mkdir -p /etc/bitwarden/core
+RUN mkdir -p /etc/bitwarden/logs
+RUN mkdir -p /etc/bitwarden/ca-certificates
 
 # Copy app from build stage
 WORKDIR /app

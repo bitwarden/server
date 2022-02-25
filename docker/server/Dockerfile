@@ -15,6 +15,7 @@ COPY util/Server/*.csproj ./src/Server/
 # Restore project dependencies and tools
 WORKDIR /source/src/Server
 RUN dotnet restore
+RUN dotnet clean
 
 # Copy required project files
 WORKDIR /source
