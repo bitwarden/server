@@ -72,6 +72,7 @@ namespace Bit.Api.Models.Request.Organizations
         public Saml2BindingType IdpBindingType { get; set; }
         public string IdpSingleSignOnServiceUrl { get; set; }
         public string IdpSingleLogoutServiceUrl { get; set; }
+        public string IdpArtifactResolutionServiceUrl { get => null; set { /*IGNORE*/ } }
         public string IdpX509PublicCert { get; set; }
         public string IdpOutboundSigningAlgorithm { get; set; }
         public bool? IdpAllowUnsolicitedAuthnResponse { get; set; }
@@ -177,6 +178,7 @@ namespace Bit.Api.Models.Request.Organizations
                 IdpBindingType = IdpBindingType,
                 IdpSingleSignOnServiceUrl = IdpSingleSignOnServiceUrl,
                 IdpSingleLogoutServiceUrl = IdpSingleLogoutServiceUrl,
+                IdpArtifactResolutionServiceUrl = null,
                 IdpX509PublicCert = StripPemCertificateElements(IdpX509PublicCert),
                 IdpOutboundSigningAlgorithm = IdpOutboundSigningAlgorithm,
                 IdpAllowUnsolicitedAuthnResponse = IdpAllowUnsolicitedAuthnResponse.GetValueOrDefault(),
