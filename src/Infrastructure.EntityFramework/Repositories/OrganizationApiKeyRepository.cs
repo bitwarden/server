@@ -27,6 +27,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             using (var scope = _serviceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
+                dbContext.OrganizationApiKeys.Include(a => a.Organization);
                 dbContext.OrganizationApiKeys.Add(_mapper.Map<Models.OrganizationApiKey>(organizationApiKey));
                 await dbContext.SaveChangesAsync();
             }

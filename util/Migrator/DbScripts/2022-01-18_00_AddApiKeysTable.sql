@@ -5,14 +5,14 @@ CREATE TABLE [dbo].[OrganizationApiKey] (
     [OrganizationId]    UNIQUEIDENTIFIER NOT NULL,
     [Type]              TINYINT NOT NULL,
     [ApiKey]            VARCHAR(30) NOT NULL,
-    [RevisionDate]      DATETIME2(7) NOT NULL
+    [RevisionDate]      DATETIME2(7) NOT NULL,
     CONSTRAINT [PK_OrganizationApiKey] PRIMARY KEY CLUSTERED ([OrganizationId] ASC, [Type] ASC),
     CONSTRAINT [FK_OrganizationApiKey_OrganizationId] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id])
 );
 END
 GO
 
--- Create indexes
+-- Create indexes for OrganizationApiKey
 IF NOT EXISTS(SELECT name FROM sys.indexes WHERE name = 'IX_OrganizationApiKey_OrganizationId')
 BEGIN
 CREATE NONCLUSTERED INDEX [IX_OrganizationApiKey_OrganizationId]
@@ -579,5 +579,166 @@ BEGIN
         [dbo].[OrganizationSponsorship]
     WHERE
         [SponsoringOrganizationId] = @SponsoringOrganizationId
+END
+GO
+
+
+IF OBJECT_ID('[dbo].[OrganizationConnection]') IS NULL
+BEGIN
+CREATE TABLE [dbo].[OrganizationConnection] (
+    [Id]                UNIQUEIDENTIFIER NOT NULL,
+    [OrganizationId]    UNIQUEIDENTIFIER NOT NULL,
+    [Type]              TINYINT NOT NULL,
+    [Enabled]           BIT NOT NULL,
+    [Config]            NVARCHAR (MAX) NULL,
+    CONSTRAINT [PK_OrganizationConnection] PRIMARY KEY CLUSTERED ([Id] ASC),
+    CONSTRAINT [FK_OrganizationConnection_OrganizationId] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id])
+)
+
+-- Create indexes for OrganizationConnection
+IF NOT EXISTS(SELECT name FROM sys.indexes WHERE name = 'IX_OrganizationConnection_OrganizationId')
+BEGIN
+CREATE NONCLUSTERED INDEX [IX_OrganizationConnection_OrganizationId]
+    ON [dbo].[OrganizationConnection]([OrganizationId] ASC);
+END
+
+-- Create View
+IF EXISTS(SELECT * FROM sys.views WHERE [Name] = 'OrganizationConnectionView')
+BEGIN
+    DROP VIEW [dbo].[OrganizationConnectionView]
+END
+GO
+
+CREATE VIEW [dbo].[OrganizationConnectionView]
+AS
+SELECT
+    *
+FROM
+    [dbo].[OrganizationConnection]
+GO
+
+-- Create Stored Procedures
+IF OBJECT_ID('[dbo].[OrganizationConnection_ReadById]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[OrganizationConnection_ReadById];
+END
+
+CREATE PROCEDURE [dbo].[OrganizationConnection_ReadById]
+    @Id UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    SELECT
+        *
+    FROM
+        [dbo].[OrganizationConnectionView]
+    WHERE
+        [Id] = @Id
+END
+GO
+
+
+IF OBJECT_ID('[dbo].[OrganizationConnection_Create]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[OrganizationConnection_Create]
+END
+GO
+
+CREATE PROCEDURE [dbo].[OrganizationConnection_Create]
+    @Id UNIQUEIDENTIFIER,
+    @OrganizationId UNIQUEIDENTIFIER,
+    @Type TINYINT,
+    @Enabled BIT,
+    @Config NVARCHAR(MAX)
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    INSERT INTO [dbo].[OrganizationConnection]
+    (
+        [Id],
+        [OrganizationId],
+        [Type],
+        [Enabled],
+        [Config]
+    )
+    VALUES
+    (
+        @Id,
+        @OrganizationId,
+        @Type,
+        @Enabled,
+        @Config
+    )
+END
+GO
+
+IF OBJECT_ID('[dbo].[OrganizationConnection_Update]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[OrganizationConnection_Update]
+END
+GO
+
+CREATE PROCEDURE [dbo].[OrganizationConnection_Update]
+    @Id UNIQUEIDENTIFIER,
+    @OrganizationId UNIQUEIDENTIFIER,
+    @Type TINYINT,
+    @Enabled BIT,
+    @Config NVARCHAR(MAX)
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    UPDATE
+        [dbo].[OrganizationConnection]
+    SET
+        [OrganizationId] = @OrganizationId,
+        [Type] = @Type,
+        [Enabled] = @Enabled,
+        [Config] = @Config
+    WHERE
+        [Id] = @Id
+END
+GO
+
+IF OBJECT_ID('[dbo].[OrganizationConnection_DeleteById]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[OrganizationConnection_DeleteById]
+END
+GO
+
+CREATE PROCEDURE [dbo].[OrganizationConnection_DeleteById]
+    @Id UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    DELETE FROM
+        [dbo].[OrganizationConnection]
+    WHERE
+        [Id] = @Id
+END
+GO
+
+IF OBJECT_ID('[dbo].[OrganizationConnection_ReadByOrganizationIdType]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[OrganizationConnection_ReadByOrganizationIdType];
+END
+
+CREATE PROCEDURE [dbo].[OrganizationConnection_ReadByOrganizationIdType]
+    @OrganizationId UNIQUEIDENTIFIER,
+    @Type TINYINT
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    SELECT
+        *
+    FROM
+        [dbo].[OrganizationConnectionView]
+    WHERE
+        [OrganizationId] = @OrganizationId AND
+        [Type] = @Type
 END
 GO

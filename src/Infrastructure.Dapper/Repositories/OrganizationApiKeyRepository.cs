@@ -78,7 +78,7 @@ namespace Bit.Infrastructure.Dapper.Repositories
             using (var connection = new SqlConnection(ConnectionString))
             {
                 await connection.ExecuteAsync(
-                    "[dbo].[OrganizationApiKey_Create]",
+                    "[dbo].[OrganizationApiKey_Create]  ",
                     organizationApiKey,
                     commandType: CommandType.StoredProcedure);
             }

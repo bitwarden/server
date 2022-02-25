@@ -8,6 +8,7 @@ namespace Bit.Infrastructure.Dapper.Repositories
         static BaseRepository()
         {
             SqlMapper.AddTypeHandler(new DateTimeHandler());
+            SqlMapper.AddTypeHandler(new JsonElementHandler());
         }
 
         public BaseRepository(string connectionString, string readOnlyConnectionString)
