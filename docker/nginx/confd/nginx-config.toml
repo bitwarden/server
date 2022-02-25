@@ -2,10 +2,10 @@
 src = "nginx-config.conf.tmpl"
 dest = "/etc/nginx/server.conf"
 keys = [
-  "BW_CA_PATH",
+  "BW_CA_ENABLE",
+  "BW_CA_CERT",
   "BW_CAPTCHA",
   "BW_CSP",
-  "BW_DIFFIEHELLMAN_PATH",
   "BW_DOMAIN",
   "BW_ENABLE_KEY_CONNECTOR",
   "BW_ENABLE_SSL",

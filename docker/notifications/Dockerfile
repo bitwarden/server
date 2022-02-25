@@ -5,23 +5,23 @@ FROM mcr.microsoft.com/dotnet/sdk:5.0-alpine AS build
 
 # Copy csproj files as distinct layers
 WORKDIR /source
-COPY src/Identity/*.csproj ./src/Identity/
-COPY src/Core/*.csproj ./src/Core/
+COPY src/Notifications/*.csproj ./src/Notifications/
+#COPY src/Core/*.csproj ./src/Core/
 #COPY bitwarden_license/src/CommCore/*.csproj ./bitwarden_license/src/CommCore/
-COPY Directory.Build.props .
+#COPY Directory.Build.props .
 
 # Restore project dependencies and tools
-WORKDIR /source/src/Identity
+WORKDIR /source/src/Notifications
 RUN dotnet restore
 
 # Copy required project files
 WORKDIR /source
-COPY src/Identity/. ./src/Identity/
-COPY src/Core/. ./src/Core/
+COPY src/Notifications/. ./src/Notifications/
+#COPY src/Core/. ./src/Core/
 #COPY bitwarden_license/src/CommCore/. ./bitwarden_license/src/CommCore/
 
 # Build app
-WORKDIR /source/src/Identity
+WORKDIR /source/src/Notifications
 RUN dotnet publish -c release -o /app --no-restore
 
 ###############################################
@@ -30,30 +30,30 @@ RUN dotnet publish -c release -o /app --no-restore
 FROM mcr.microsoft.com/dotnet/aspnet:5.0-alpine
 LABEL com.bitwarden.product="bitwarden"
 ENV ASPNETCORE_URLS http://+:5000
-ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false
 EXPOSE 5000
 
 # Add packages
 RUN apk add --update-cache \
     curl \
-    icu-libs \
+    su-exec \
     && rm -rf /var/cache/apk/*
 
 # Create required directories
-RUN mkdir -p /etc/bitwarden/core
-RUN mkdir -p /etc/bitwarden/logs
-RUN mkdir -p /etc/bitwarden/ca-certificates
+#RUN mkdir -p /etc/bitwarden/core
+#RUN mkdir -p /etc/bitwarden/logs
+#RUN mkdir -p /etc/bitwarden/ca-certificates
 
 # Copy app from build stage
 WORKDIR /app
 COPY --from=build /app ./
 
+# Copy entrypoint script and make it executable
+COPY entrypoint.sh /
+RUN chmod +x /entrypoint.sh
+
 # Create non-root user to run app
 RUN adduser -s /bin/false -D bitwarden && chown -R bitwarden:bitwarden /app /etc/bitwarden
 
-#RUN cp /etc/bitwarden/ca-certificates/*.crt /usr/local/share/ca-certificates/ >/dev/null 2>&1 \
-#    && update-ca-certificates
-
 USER bitwarden:bitwarden
-HEALTHCHECK CMD curl -f http://localhost:5000/.well-known/openid-configuration || exit 1
-ENTRYPOINT ["dotnet", "/app/Identity.dll"]
+HEALTHCHECK CMD curl -f http://localhost:5000/alive || exit 1
+ENTRYPOINT ["/entrypoint.sh"]

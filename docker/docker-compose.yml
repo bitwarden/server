@@ -92,10 +92,9 @@ services:
       - '8080:8080'
       - '8443:8443'
     volumes:
-      - ../nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
-      - ../letsencrypt:/etc/letsencrypt
+      - ca-certificates:/etc/bitwarden/ca-certificates
       - ssl:/bitwarden/ssl
-      - ../logs/nginx:/var/log/nginx
+      - logs-nginx:/var/log/nginx
 
   notifications:
     env_file:
@@ -136,6 +135,7 @@ volumes:
   logs-events:
   logs-icons:
   logs-identity:
+  logs-nginx:
   logs-notifications:
   logs-sso:
   mssql_data:
