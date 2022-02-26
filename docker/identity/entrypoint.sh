@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 if [ ! -f /etc/bitwarden/identity/identity.pfx ]; then
   openssl req \
@@ -26,4 +26,4 @@ cp /etc/bitwarden/identity/identity.pfx /app/identity.pfx
 cp /etc/bitwarden/ca-certificates/*.crt /usr/local/share/ca-certificates/ >/dev/null 2>&1 \
   && update-ca-certificates
 
-exec su-exec bitwarden:bitwarden dotnet /app/Identity.dll
+exec dotnet /app/Identity.dll

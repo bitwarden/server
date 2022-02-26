@@ -15,7 +15,6 @@ COPY Directory.Build.props .
 # Restore project dependencies and tools
 WORKDIR /source/src/Events
 RUN dotnet restore
-RUN dotnet clean
 
 # Copy required project files
 WORKDIR /source
@@ -40,11 +39,9 @@ EXPOSE 5000
 # Add packages
 RUN apk add --update-cache \
     curl \
-    su-exec \
     && rm -rf /var/cache/apk/*
 
 # Create required directories
-RUN mkdir -p /etc/bitwarden/core
 RUN mkdir -p /etc/bitwarden/logs
 RUN mkdir -p /etc/bitwarden/ca-certificates
 

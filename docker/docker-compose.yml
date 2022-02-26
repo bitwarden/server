@@ -14,7 +14,7 @@ services:
       - attachments:/etc/bitwarden/core/attachments
       - aspnet-dataprotection:/etc/bitwarden/core/aspnet-dataprotection
       - ca-certificates:/etc/bitwarden/ca-certificates
-      - logs-admin:/etc/bitwarden/logs/admin
+      - logs-admin:/etc/bitwarden/logs/Admin
 
   api:
     env_file:
@@ -25,7 +25,7 @@ services:
       - attachments:/etc/bitwarden/core/attachments
       - aspnet-dataprotection:/etc/bitwarden/core/aspnet-dataprotection
       - ca-certificates:/etc/bitwarden/ca-certificates
-      - logs-api:/etc/bitwarden/logs/api
+      - logs-api:/etc/bitwarden/logs/Api
 
   attachments:
     env_file:
@@ -42,7 +42,7 @@ services:
     restart: always
     volumes:
       - ca-certificates:/etc/bitwarden/ca-certificates
-      - logs-events:/etc/bitwarden/logs/events
+      - logs-events:/etc/bitwarden/logs/Events
         
   icons:
     env_file:
@@ -51,7 +51,7 @@ services:
     restart: always
     volumes:
       - ca-certificates:/etc/bitwarden/ca-certificates
-      - logs-icons:/etc/bitwarden/logs/icons
+      - logs-icons:/etc/bitwarden/logs/Icons
 
   identity:
     env_file:
@@ -63,7 +63,7 @@ services:
       - aspnet-dataprotection:/etc/bitwarden/core/aspnet-dataprotection
       - ca-certificates:/etc/bitwarden/ca-certificates
       - identity:/etc/bitwarden/identity
-      - logs-identity:/etc/bitwarden/logs/identity
+      - logs-identity:/etc/bitwarden/logs/Identity
       
   mssql:
     environment:
@@ -93,7 +93,7 @@ services:
       - '8443:8443'
     volumes:
       - ca-certificates:/etc/bitwarden/ca-certificates
-      - ssl:/bitwarden/ssl
+      - ssl:/etc/bitwarden/ssl
       - logs-nginx:/var/log/nginx
 
   notifications:
@@ -115,7 +115,7 @@ services:
       - aspnet-dataprotection:/etc/bitwarden/core/aspnet-dataprotection
       - ca-certificates:/etc/bitwarden/ca-certificates
       - identity:/etc/bitwarden/identity
-      - logs-sso:/etc/bitwarden/logs/sso
+      - logs-sso:/etc/bitwarden/logs/SSO
         
   web:
     env_file:

@@ -5,12 +5,16 @@ LABEL com.bitwarden.product="bitwarden"
 EXPOSE 8080
 EXPOSE 8443
 
-WORKDIR /bitwarden
-RUN mkdir -p /bitwarden/ssl
+WORKDIR /etc/bitwarden
+RUN mkdir -p /etc/bitwarden/ssl
+RUN mkdir -p /etc/bitwarden/nginx
+RUN mkdir -p /var/run/nginx
+RUN chown -R nginx:nginx /var/run/nginx
+RUN chown -R nginx:nginx /var/cache/nginx
+RUN chown -R nginx:nginx /var/log/nginx
 
 # TODO: Remove Vim after testing
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        gosu \
         curl \
         wget \
         vim \
@@ -33,6 +37,8 @@ COPY docker/nginx/entrypoint.sh /
 RUN chmod +x /entrypoint.sh
 RUN chmod +x /logrotate.sh
 
-HEALTHCHECK CMD curl --insecure -Lfs https://localhost:8443/alive || curl -Lfs http://localhost:8080/alive || exit 1
+RUN chown -R nginx:nginx /etc/bitwarden
 
+USER nginx:nginx
+HEALTHCHECK CMD curl --insecure -Lfs https://localhost:8443/alive || curl -Lfs http://localhost:8080/alive || exit 1
 ENTRYPOINT ["/entrypoint.sh"]

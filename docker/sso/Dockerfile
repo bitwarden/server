@@ -20,7 +20,6 @@ COPY Directory.Build.props .
 # Restore project dependencies and tools
 WORKDIR /source/bitwarden_license/src/Sso
 RUN dotnet restore
-RUN dotnet clean
 
 # Copy required project files
 WORKDIR /source
@@ -48,7 +47,6 @@ EXPOSE 5000
 # Add packages
 RUN apk add --update-cache \
     curl \
-    su-exec \
     && rm -rf /var/cache/apk/*
 
 # Create required directories

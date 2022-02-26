@@ -15,7 +15,6 @@ COPY Directory.Build.props .
 # Restore project dependencies and tools
 WORKDIR /source/src/Identity
 RUN dotnet restore
-RUN dotnet clean
 
 # Copy required project files
 WORKDIR /source
@@ -34,7 +33,7 @@ RUN dotnet publish -c release -o /app --no-restore
 ###############################################
 FROM mcr.microsoft.com/dotnet/aspnet:5.0-alpine
 LABEL com.bitwarden.product="bitwarden"
-ENV ASPNETCORE_URLS http://+:5000
+  ENV ASPNETCORE_URLS http://+:5000
 ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false
 EXPOSE 5000
 
@@ -42,11 +41,12 @@ EXPOSE 5000
 RUN apk add --update-cache \
     curl \
     icu-libs \
-    su-exec \
+    openssl \
     && rm -rf /var/cache/apk/*
 
 # Create required directories
 RUN mkdir -p /etc/bitwarden/core
+RUN mkdir -p /etc/bitwarden/identity
 RUN mkdir -p /etc/bitwarden/logs
 RUN mkdir -p /etc/bitwarden/ca-certificates
 

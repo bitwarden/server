@@ -2,15 +2,15 @@
 
 # Generate SSL certificates
 if [ "$BW_GENERATE_CERT" = "true" ]; then
-  if [ -z "$(ls -A /bitwarden/ssl)" ]; then
+  if [ -z "$(ls -A /etc/bitwarden/ssl)" ]; then
     openssl req \
     -x509 \
     -newkey rsa:4096 \
     -sha256 \
     -nodes \
     -days 36500 \
-    -keyout /bitwarden/ssl/${BW_SSL_KEY:-private.key} \
-    -out /bitwarden/ssl/${BW_SSL_CERT:-certificate.crt} \
+    -keyout /etc/bitwarden/ssl/${BW_SSL_KEY:-private.key} \
+    -out /etc/bitwarden/ssl/${BW_SSL_CERT:-certificate.crt} \
     -reqexts SAN \
     -extensions SAN \
     -config <(cat /usr/lib/ssl/openssl.cnf <(printf "[SAN]\nsubjectAltName=DNS:${BW_DOMAIN:-localhost}\nbasicConstraints=CA:true")) \
@@ -21,6 +21,6 @@ fi
 /usr/local/bin/confd -onetime -backend env
 
 # Launch a loop to rotate nginx logs on a daily basis
-gosu nginx:nginx /bin/sh -c "/logrotate.sh loop >/dev/null 2>&1 &"
+/bin/sh -c "/logrotate.sh loop >/dev/null 2>&1 &"
 
-exec gosu nginx:nginx nginx -g 'daemon off;'
+exec nginx -g 'daemon off;'

@@ -16,7 +16,6 @@ COPY Directory.Build.props .
 # Restore project dependencies and tools
 WORKDIR /source/src/Server
 RUN dotnet restore
-RUN dotnet clean
 
 # Copy required project files
 WORKDIR /source
@@ -34,15 +33,12 @@ LABEL com.bitwarden.product="bitwarden"
 
 RUN apk add --update-cache \
     curl \
-    su-exec \
     && rm -rf /var/cache/apk/*
 
 COPY --from=build /app /bitwarden_server
 
 # Create required directories
-RUN mkdir -p /etc/bitwarden
+RUN mkdir -p /etc/bitwarden/core/attachments
 
 # Create non-root user to run app
 RUN adduser -s /bin/false -D bitwarden && chown -R bitwarden:bitwarden /bitwarden_server /etc/bitwarden
-
-USER bitwarden:bitwarden
