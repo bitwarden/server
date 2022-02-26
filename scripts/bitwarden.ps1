@@ -10,6 +10,7 @@ param (
     [switch] $updatedb,
     [switch] $updaterun,
     [switch] $updateself,
+    [switch] $uninstall,
     [switch] $help,
     [string] $output = ""
 )
@@ -68,6 +69,7 @@ Available commands:
 -updaterun
 -updateself
 -updateconf
+-uninstall
 -renewcert
 -rebuild
 -help
@@ -154,6 +156,10 @@ elseif ($updaterun) {
 elseif ($updateself) {
     Get-Self
     Write-Line "Updated self."
+}
+elseif ($uninstall) {
+    Test-Output-Dir-Exists
+    Invoke-Expression "& `"$scriptsDir\run.ps1`" -uninstall -outputDir `"$output`" "
 }
 elseif ($help) {
     Show-Commands
