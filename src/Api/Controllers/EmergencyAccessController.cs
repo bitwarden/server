@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 using Bit.Api.Models.Request;
 using Bit.Api.Models.Request.Organizations;
@@ -93,8 +94,15 @@ namespace Bit.Api.Controllers
         [HttpPost("{id}/delete")]
         public async Task Delete(string id)
         {
-            var userId = _userService.GetProperUserId(User);
-            await _emergencyAccessService.DeleteAsync(new Guid(id), userId.Value);
+            if (Guid.TryParse(id, out var userGuid))
+            {
+                var userId = _userService.GetProperUserId(User);
+                await _emergencyAccessService.DeleteAsync(userGuid, userId.Value);
+            }
+            else
+            {
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+            }
         }
 
         [HttpPost("invite")]
