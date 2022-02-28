@@ -233,6 +233,7 @@ jobs:
           workflow_conclusion: success
           branch: ${{ needs.setup.outputs.branch-name }}
           artifacts: "docker-stub.zip,
+                      docker-stub-sha256.txt,
                       swagger.json"
 
       - name: Create release
@@ -240,6 +241,7 @@ jobs:
         uses: ncipollo/release-action@40bb172bd05f266cf9ba4ff965cb61e9ee5f6d01
         with:
           artifacts: 'docker-stub.zip,
+                      docker-stub-sha256.txt,
                       swagger.json'
           commit: ${{ github.sha }}
           tag: "v${{ needs.setup.outputs.release_version }}"
