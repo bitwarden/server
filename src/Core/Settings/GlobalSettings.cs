@@ -37,6 +37,7 @@ namespace Bit.Core.Settings
         public virtual string HibpApiKey { get; set; }
         public virtual bool DisableUserRegistration { get; set; }
         public virtual bool DisableEmailNewDevice { get; set; }
+        public virtual bool EnableCloudCommunication { get; set; }
         public virtual int OrganizationInviteExpirationHours { get; set; } = 120; // 5 days
         public virtual string EventGridKey { get; set; }
         public virtual CaptchaSettings Captcha { get; set; } = new CaptchaSettings();

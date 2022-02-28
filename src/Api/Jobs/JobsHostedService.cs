@@ -47,20 +47,31 @@ namespace Bit.Api.Jobs
                 .WithCronSchedule("0 30 */12 * * ?")
                 .Build();
 
-            Jobs = new List<Tuple<Type, ITrigger>>
+            var jobs = new List<Tuple<IJobDetail, ITrigger>>
             {
-                new Tuple<Type, ITrigger>(typeof(AliveJob), everyTopOfTheHourTrigger),
-                new Tuple<Type, ITrigger>(typeof(EmergencyAccessNotificationJob), emergencyAccessNotificationTrigger),
-                new Tuple<Type, ITrigger>(typeof(EmergencyAccessTimeoutJob), emergencyAccessTimeoutTrigger),
-                new Tuple<Type, ITrigger>(typeof(ValidateUsersJob), everyTopOfTheSixthHourTrigger),
-                new Tuple<Type, ITrigger>(typeof(ValidateOrganizationsJob), everyTwelfthHourAndThirtyMinutesTrigger)
+                new Tuple<IJobDetail, ITrigger>(CreateDefaultJob(typeof(AliveJob)), everyTopOfTheHourTrigger),
+                new Tuple<IJobDetail, ITrigger>(CreateDefaultJob(typeof(EmergencyAccessNotificationJob)), emergencyAccessNotificationTrigger),
+                new Tuple<IJobDetail, ITrigger>(CreateDefaultJob(typeof(EmergencyAccessTimeoutJob)), emergencyAccessTimeoutTrigger),
+                new Tuple<IJobDetail, ITrigger>(CreateDefaultJob(typeof(ValidateUsersJob)), everyTopOfTheSixthHourTrigger),
+                new Tuple<IJobDetail, ITrigger>(CreateDefaultJob(typeof(ValidateOrganizationsJob)), everyTwelfthHourAndThirtyMinutesTrigger)
             };
 
+            // if (_globalSettings.SelfHosted)
+            // {
+                jobs.Add(new Tuple<IJobDetail, ITrigger>(CreateDurableJob(typeof(SelfHostedSponsorshipSyncJob)), null));
+            // }
+
+            Jobs = jobs;
             await base.StartAsync(cancellationToken);
+            await AddTriggerToExistingJob(typeof(SelfHostedSponsorshipSyncJob), CreateRandomDailyTrigger());
         }
 
-        public static void AddJobsServices(IServiceCollection services)
+        public static void AddJobsServices(IServiceCollection services, bool selfHosted)
         {
+            if (selfHosted) 
+            {
+                services.AddTransient<SelfHostedSponsorshipSyncJob>();
+            }
             services.AddTransient<AliveJob>();
             services.AddTransient<EmergencyAccessNotificationJob>();
             services.AddTransient<EmergencyAccessTimeoutJob>();

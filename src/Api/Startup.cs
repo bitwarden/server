@@ -137,15 +137,9 @@ namespace Bit.Api
             });
 
             services.AddSwagger(globalSettings);
-            Jobs.JobsHostedService.AddJobsServices(services);
+            Jobs.JobsHostedService.AddJobsServices(services, globalSettings.SelfHosted);
             services.AddHostedService<Jobs.JobsHostedService>();
 
-            if (globalSettings.SelfHosted)
-            {
-                // Jobs service
-                Jobs.JobsHostedService.AddJobsServices(services);
-                services.AddHostedService<Jobs.JobsHostedService>();
-            }
             if (CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ConnectionString) &&
                 CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ApplicationCacheTopicName))
             {

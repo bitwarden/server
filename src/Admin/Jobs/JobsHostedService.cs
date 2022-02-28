@@ -61,18 +61,18 @@ namespace Bit.Admin.Jobs
                 .WithCronSchedule("0 0 0 * * ?")
                 .Build();
 
-            var jobs = new List<Tuple<Type, ITrigger>>
+            var jobs = new List<Tuple<IJobDetail, ITrigger>>
             {
-                new Tuple<Type, ITrigger>(typeof(DeleteSendsJob), everyFiveMinutesTrigger),
-                new Tuple<Type, ITrigger>(typeof(DatabaseExpiredGrantsJob), everyFridayAt10pmTrigger),
-                new Tuple<Type, ITrigger>(typeof(DatabaseUpdateStatisticsJob), everySaturdayAtMidnightTrigger),
-                new Tuple<Type, ITrigger>(typeof(DatabaseRebuildlIndexesJob), everySundayAtMidnightTrigger),
-                new Tuple<Type, ITrigger>(typeof(DeleteCiphersJob), everyDayAtMidnightUtc)
+                new Tuple<IJobDetail, ITrigger>(CreateDefaultJob(typeof(DeleteSendsJob)), everyFiveMinutesTrigger),
+                new Tuple<IJobDetail, ITrigger>(CreateDefaultJob(typeof(DatabaseExpiredGrantsJob)), everyFridayAt10pmTrigger),
+                new Tuple<IJobDetail, ITrigger>(CreateDefaultJob(typeof(DatabaseUpdateStatisticsJob)), everySaturdayAtMidnightTrigger),
+                new Tuple<IJobDetail, ITrigger>(CreateDefaultJob(typeof(DatabaseRebuildlIndexesJob)), everySundayAtMidnightTrigger),
+                new Tuple<IJobDetail, ITrigger>(CreateDefaultJob(typeof(DeleteCiphersJob)), everyDayAtMidnightUtc)
             };
 
             if (!_globalSettings.SelfHosted)
             {
-                jobs.Add(new Tuple<Type, ITrigger>(typeof(AliveJob), everyTopOfTheHourTrigger));
+                jobs.Add(new Tuple<IJobDetail, ITrigger>(CreateDefaultJob(typeof(AliveJob)), everyTopOfTheHourTrigger));
             }
 
             Jobs = jobs;

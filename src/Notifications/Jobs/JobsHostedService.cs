@@ -27,9 +27,9 @@ namespace Bit.Notifications.Jobs
                 .WithCronSchedule("0 */30 * * * ?")
                 .Build();
 
-            Jobs = new List<Tuple<Type, ITrigger>>
+            Jobs = new List<Tuple<IJobDetail, ITrigger>>
             {
-                new Tuple<Type, ITrigger>(typeof(LogConnectionCounterJob), everyFiveMinutesTrigger)
+                new Tuple<IJobDetail, ITrigger>(CreateDefaultJob(typeof(LogConnectionCounterJob)), everyFiveMinutesTrigger)
             };
 
             await base.StartAsync(cancellationToken);

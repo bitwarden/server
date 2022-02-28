@@ -36,7 +36,7 @@ namespace Bit.Core.Jobs
             _globalSettings = globalSettings;
         }
 
-        public IEnumerable<Tuple<Type, ITrigger>> Jobs { get; protected set; }
+        public IEnumerable<Tuple<IJobDetail, ITrigger>> Jobs { get; protected set; }
 
         public virtual async Task StartAsync(CancellationToken cancellationToken)
         {
@@ -75,23 +75,27 @@ namespace Bit.Core.Jobs
                         // There's a race condition when starting multiple containers simultaneously, retry until it succeeds..
                         try
                         {
-                            var dupeT = await _scheduler.GetTrigger(trigger.Key);
-                            if (dupeT != null)
+                            if (trigger != null)
                             {
-                                await _scheduler.RescheduleJob(trigger.Key, trigger);
+                                var dupeT = await _scheduler.GetTrigger(trigger.Key);
+                                if (dupeT != null)
+                                {
+                                    await _scheduler.RescheduleJob(trigger.Key, trigger);
+                                }
+
+                                var dupeJ = await _scheduler.GetJobDetail(job.Key);
+                                if (dupeJ != null)
+                                {
+                                    await _scheduler.DeleteJob(job.Key);
+                                }
+
+                                await _scheduler.ScheduleJob(job, trigger);
                             }
-
-                            var jobDetail = JobBuilder.Create(job)
-                                .WithIdentity(job.FullName)
-                                .Build();
-
-                            var dupeJ = await _scheduler.GetJobDetail(jobDetail.Key);
-                            if (dupeJ != null)
+                            else 
                             {
-                                await _scheduler.DeleteJob(jobDetail.Key);
+                                await _scheduler.AddJob(job, true);
                             }
-
-                            await _scheduler.ScheduleJob(jobDetail, trigger);
+                            
                             break;
                         }
                         catch (Exception e)
@@ -101,7 +105,7 @@ namespace Bit.Core.Jobs
                                 throw new Exception("Job failed to start after 10 retries.");
                             }
 
-                            _logger.LogWarning($"Exception while trying to schedule job: {job.FullName}, {e}");
+                            _logger.LogWarning($"Exception while trying to schedule job: {job.Key}, {e}");
                             var random = new Random();
                             Thread.Sleep(random.Next(50, 250));
                         }
@@ -114,9 +118,7 @@ namespace Bit.Core.Jobs
             var jobKeys = Jobs.Select(j =>
             {
                 var job = j.Item1;
-                return JobBuilder.Create(job)
-                    .WithIdentity(job.FullName)
-                    .Build().Key;
+                return job.Key;
             });
 
             foreach (var key in existingJobKeys)
@@ -148,6 +150,53 @@ namespace Bit.Core.Jobs
         public virtual async Task StopAsync(CancellationToken cancellationToken)
         {
             await _scheduler?.Shutdown(cancellationToken);
+        }
+
+        protected virtual IJobDetail CreateDefaultJob(Type job) 
+        {
+            return JobBuilder.Create(job)
+                .WithIdentity(job.FullName)
+                .Build();
+        }
+
+        protected virtual IJobDetail CreateDurableJob(Type job) 
+        {
+            return JobBuilder.Create(job)
+                .StoreDurably()
+                .WithIdentity(job.FullName)
+                .Build();
+        }
+
+        protected virtual ITrigger CreateRandomDailyTrigger()
+        {
+            return TriggerBuilder.Create()
+                .StartAt(DateBuilder.FutureDate(new Random().Next(24), IntervalUnit.Hour)) 
+                .WithSimpleSchedule(x => x
+                    .WithIntervalInHours(24)
+                    .RepeatForever())
+                .Build();
+        }
+
+        protected virtual async Task AddTriggerToExistingJob(Type job, ITrigger trigger)
+        {
+            if (_scheduler == null)
+            {
+                throw new Exception("Scheduler not started");
+            }
+            var dupeT = await _scheduler.GetTrigger(trigger.Key);
+            if (dupeT != null)
+            {
+                throw new Exception("Trigger already exists");
+            }
+            var existingJ = await _scheduler.GetJobDetail(new JobKey(job.FullName));
+            if (existingJ == null)
+            {
+                throw new Exception("Job does not exist");
+            }
+            var newTrigger = trigger.GetTriggerBuilder()
+                .ForJob(new JobKey(job.FullName))
+                .Build();
+            await _scheduler.ScheduleJob(newTrigger);
         }
 
         public virtual void Dispose()

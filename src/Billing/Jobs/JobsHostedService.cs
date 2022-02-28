@@ -36,7 +36,7 @@ namespace Bit.Billing.Jobs
                 .WithCronSchedule("0 0 21 * * ?", x => x.InTimeZone(timeZone))
                 .Build();
 
-            Jobs = new List<Tuple<Type, ITrigger>>();
+            Jobs = new List<Tuple<IJobDetail, ITrigger>>();
 
             // Add jobs here
 
