@@ -474,6 +474,10 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasMaxLength(30)
                         .HasColumnType("character varying(30)");
 
+                    b.Property<string>("CloudBillingSyncKey")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("timestamp without time zone");
 
@@ -588,6 +592,7 @@ namespace Bit.PostgresMigrations.Migrations
                     b.ToTable("Organization");
                 });
 
+<<<<<<< HEAD
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.OrganizationApiKey", b =>
                 {
                     b.Property<Guid>("OrganizationId")
@@ -632,6 +637,8 @@ namespace Bit.PostgresMigrations.Migrations
                     b.ToTable("OrganizationConnection");
                 });
 
+=======
+>>>>>>> feature/self-hosted-families-for-enterprise
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.OrganizationSponsorship", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1081,6 +1088,7 @@ namespace Bit.PostgresMigrations.Migrations
                     b.ToTable("Transaction");
                 });
 
+<<<<<<< HEAD
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.U2f", b =>
                 {
                     b.Property<int>("Id")
@@ -1117,6 +1125,8 @@ namespace Bit.PostgresMigrations.Migrations
                     b.ToTable("U2f");
                 });
 
+=======
+>>>>>>> feature/self-hosted-families-for-enterprise
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.User", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1398,6 +1408,7 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Navigation("OrganizationUser");
                 });
 
+<<<<<<< HEAD
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.OrganizationApiKey", b =>
                 {
                     b.HasOne("Bit.Infrastructure.EntityFramework.Models.Organization", "Organization")
@@ -1422,6 +1433,10 @@ namespace Bit.PostgresMigrations.Migrations
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.OrganizationSponsorship", b =>
                 {
+=======
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.OrganizationSponsorship", b =>
+                {
+>>>>>>> feature/self-hosted-families-for-enterprise
                     b.HasOne("Bit.Infrastructure.EntityFramework.Models.Installation", "Installation")
                         .WithMany()
                         .HasForeignKey("InstallationId");
@@ -1563,6 +1578,7 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Navigation("User");
                 });
 
+<<<<<<< HEAD
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.U2f", b =>
                 {
                     b.HasOne("Bit.Infrastructure.EntityFramework.Models.User", "User")
@@ -1574,6 +1590,8 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Navigation("User");
                 });
 
+=======
+>>>>>>> feature/self-hosted-families-for-enterprise
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Cipher", b =>
                 {
                     b.Navigation("CollectionCiphers");
@@ -1632,8 +1650,6 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Navigation("SsoUsers");
 
                     b.Navigation("Transactions");
-
-                    b.Navigation("U2fs");
                 });
 #pragma warning restore 612, 618
         }

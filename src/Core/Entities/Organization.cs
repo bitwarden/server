@@ -2,10 +2,10 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
+using System.Text.Json;
 using Bit.Core.Enums;
 using Bit.Core.Models;
 using Bit.Core.Utilities;
-using Newtonsoft.Json;
 
 namespace Bit.Core.Entities
 {
@@ -68,6 +68,8 @@ namespace Bit.Core.Entities
         public DateTime RevisionDate { get; set; } = DateTime.UtcNow;
         public int? MaxAutoscaleSeats { get; set; } = null;
         public DateTime? OwnersNotifiedOfAutoscaling { get; set; } = null;
+        [MaxLength(30)]
+        public string CloudBillingSyncKey { get; set; }
 
         public void SetNewId()
         {
@@ -140,13 +142,13 @@ namespace Bit.Core.Entities
                 if (_twoFactorProviders == null)
                 {
                     _twoFactorProviders =
-                        JsonConvert.DeserializeObject<Dictionary<TwoFactorProviderType, TwoFactorProvider>>(
+                        JsonHelpers.LegacyDeserialize<Dictionary<TwoFactorProviderType, TwoFactorProvider>>(
                             TwoFactorProviders);
                 }
 
                 return _twoFactorProviders;
             }
-            catch (JsonSerializationException)
+            catch (JsonException)
             {
                 return null;
             }
@@ -161,10 +163,7 @@ namespace Bit.Core.Entities
                 return;
             }
 
-            TwoFactorProviders = JsonConvert.SerializeObject(providers, new JsonSerializerSettings
-            {
-                ContractResolver = new EnumKeyResolver<byte>()
-            });
+            TwoFactorProviders = JsonHelpers.LegacySerialize(providers, JsonHelpers.LegacyEnumKeyResolver);
             _twoFactorProviders = providers;
         }
 

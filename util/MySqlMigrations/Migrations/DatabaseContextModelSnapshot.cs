@@ -471,6 +471,10 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasMaxLength(30)
                         .HasColumnType("varchar(30)");
 
+                    b.Property<string>("CloudBillingSyncKey")
+                        .HasMaxLength(30)
+                        .HasColumnType("varchar(30)");
+
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("datetime(6)");
 
@@ -1625,8 +1629,6 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Navigation("SsoUsers");
 
                     b.Navigation("Transactions");
-
-                    b.Navigation("U2fs");
                 });
 #pragma warning restore 612, 618
         }

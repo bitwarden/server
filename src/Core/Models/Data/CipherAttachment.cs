@@ -1,5 +1,5 @@
 ﻿using System;
-using Newtonsoft.Json;
+using System.Text.Json.Serialization;
 
 namespace Bit.Core.Models.Data
 {
@@ -15,19 +15,12 @@ namespace Bit.Core.Models.Data
         {
             private long _size;
 
-            [JsonIgnore]
+            // We serialize Size as a string since JSON (or Javascript) doesn't support full precision for long numbers
+            [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString | JsonNumberHandling.WriteAsString)]
             public long Size
             {
                 get { return _size; }
                 set { _size = value; }
-            }
-
-            // We serialize Size as a string since JSON (or Javascript) doesn't support full precision for long numbers
-            [JsonProperty("Size")]
-            public string SizeString
-            {
-                get { return _size.ToString(); }
-                set { _size = Convert.ToInt64(value); }
             }
 
             public string FileName { get; set; }

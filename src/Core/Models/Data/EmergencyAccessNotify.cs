@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Newtonsoft.Json;
 
 namespace Bit.Core.Models.Data
 {

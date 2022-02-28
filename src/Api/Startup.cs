@@ -134,7 +134,7 @@ namespace Bit.Api
             services.AddCoreLocalizationServices();
 
 #if OSS
-                services.AddOosServices();
+            services.AddOosServices();
 #else
             services.AddCommCoreServices();
 #endif

@@ -72,13 +72,6 @@ BEGIN
     WHERE
         [UserId] = @Id
 
-    -- Delete U2F logins
-    DELETE
-    FROM
-        [dbo].[U2f]
-    WHERE
-        [UserId] = @Id
-
     -- Delete SSO Users
     DELETE
     FROM

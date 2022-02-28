@@ -40,7 +40,6 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
         public DbSet<SsoUser> SsoUsers { get; set; }
         public DbSet<TaxRate> TaxRates { get; set; }
         public DbSet<Transaction> Transactions { get; set; }
-        public DbSet<U2f> U2fs { get; set; }
         public DbSet<User> Users { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
@@ -70,7 +69,6 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             var eSsoUser = builder.Entity<SsoUser>();
             var eTaxRate = builder.Entity<TaxRate>();
             var eTransaction = builder.Entity<Transaction>();
-            var eU2f = builder.Entity<U2f>();
             var eUser = builder.Entity<User>();
 
             builder.Entity<OrganizationApiKey>(b =>
@@ -151,7 +149,6 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             eSsoUser.ToTable(nameof(SsoUser));
             eTaxRate.ToTable(nameof(TaxRate));
             eTransaction.ToTable(nameof(Transaction));
-            eU2f.ToTable(nameof(U2f));
             eUser.ToTable(nameof(User));
         }
     }

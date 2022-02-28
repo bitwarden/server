@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Bit.Core.Entities;
 using Bit.Core.Models.Business;
@@ -13,14 +14,13 @@ using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 
 namespace Bit.Core.Services
 {
     public class LicensingService : ILicensingService
     {
         private readonly X509Certificate2 _certificate;
-        private readonly GlobalSettings _globalSettings;
+        private readonly IGlobalSettings _globalSettings;
         private readonly IUserRepository _userRepository;
         private readonly IOrganizationRepository _organizationRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
@@ -36,7 +36,7 @@ namespace Bit.Core.Services
             IMailService mailService,
             IWebHostEnvironment environment,
             ILogger<LicensingService> logger,
-            GlobalSettings globalSettings)
+            IGlobalSettings globalSettings)
         {
             _userRepository = userRepository;
             _organizationRepository = organizationRepository;
@@ -90,7 +90,7 @@ namespace Bit.Core.Services
 
             foreach (var org in enabledOrgs)
             {
-                var license = ReadOrganizationLicense(org);
+                var license = await ReadOrganizationLicense(org);
                 if (license == null)
                 {
                     await DisableOrganizationAsync(org, null, "No license file.");
@@ -246,19 +246,19 @@ namespace Bit.Core.Services
             }
 
             var data = File.ReadAllText(filePath, Encoding.UTF8);
-            return JsonConvert.DeserializeObject<UserLicense>(data);
+            return JsonSerializer.Deserialize<UserLicense>(data);
         }
 
-        private OrganizationLicense ReadOrganizationLicense(Organization organization)
+        public async Task<OrganizationLicense> ReadOrganizationLicense(Organization organization)
         {
-            var filePath = $"{_globalSettings.LicenseDirectory}/organization/{organization.Id}.json";
+            var filePath = Path.Combine(_globalSettings.LicenseDirectory, "organization", $"{organization.Id}.json");
             if (!File.Exists(filePath))
             {
                 return null;
             }
 
-            var data = File.ReadAllText(filePath, Encoding.UTF8);
-            return JsonConvert.DeserializeObject<OrganizationLicense>(data);
+            using var fs = File.OpenRead(filePath);
+            return await JsonSerializer.DeserializeAsync<OrganizationLicense>(fs);
         }
     }
 }
