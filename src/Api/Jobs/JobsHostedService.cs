@@ -48,7 +48,7 @@ namespace Bit.Api.Jobs
                 .Build();
             var randomDailySponsorshipSyncTrigger = TriggerBuilder.Create()
                 .WithIdentity("randomDailySponsorshipSyncTrigger")
-                .StartAt(DateBuilder.FutureDate(new Random().Next(24), IntervalUnit.Hour)) 
+                .StartAt(DateBuilder.FutureDate(new Random().Next(24), IntervalUnit.Hour))
                 .WithSimpleSchedule(x => x
                     .WithIntervalInHours(24)
                     .RepeatForever())
@@ -74,7 +74,7 @@ namespace Bit.Api.Jobs
 
         public static void AddJobsServices(IServiceCollection services, bool selfHosted)
         {
-            if (selfHosted) 
+            if (selfHosted)
             {
                 services.AddTransient<SelfHostedSponsorshipSyncJob>();
             }

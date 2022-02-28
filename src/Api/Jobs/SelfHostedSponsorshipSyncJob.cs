@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading.Tasks;
 using Bit.Core.Jobs;
 using Bit.Core.Settings;
@@ -13,23 +13,21 @@ namespace Bit.Api.Jobs
 
         public SelfHostedSponsorshipSyncJob(
             ILogger<SelfHostedSponsorshipSyncJob> logger,
-            GlobalSettings globalSettings) 
+            GlobalSettings globalSettings)
             : base(logger)
         {
             _globalSettings = globalSettings;
         }
 
-        protected override async Task ExecuteJobAsync(IJobExecutionContext context)
+        protected override Task ExecuteJobAsync(IJobExecutionContext context)
         {
             if (!_globalSettings.EnableCloudCommunication)
             {
                 _logger.LogInformation($"Failed to sync instance with cloud - Cloud communication is disabled in global settings");
-                return;
+                return Task.CompletedTask;
             }
 
-            
-            
+            return Task.CompletedTask;
         }
-
     }
 }
