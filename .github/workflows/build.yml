@@ -406,7 +406,7 @@ jobs:
       - name: Make Docker stub checksum
         #if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc'
         run: |
-          sha256sum ./docker-stub.zip > docker-stub-sha256.txt
+          sha256sum docker-stub.zip > docker-stub-sha256.txt
           cat docker-stub-sha256.txt
 
       - name: Upload Docker stub artifact
@@ -414,7 +414,7 @@ jobs:
         uses: actions/upload-artifact@ee69f02b3dfdecd58bb31b4d133da38ba6fe3700
         with:
           name: docker-stub.zip
-          path: ./docker-stub.zip
+          path: docker-stub.zip
           if-no-files-found: error
 
       - name: Upload Docker stub checksum artifact
@@ -422,7 +422,7 @@ jobs:
         uses: actions/upload-artifact@ee69f02b3dfdecd58bb31b4d133da38ba6fe3700
         with:
           name: docker-stub-sha256.txt
-          path: ./docker-stub-sha256.txt
+          path: docker-stub-sha256.txt
           if-no-files-found: error
 
       - name: Build Swagger
@@ -447,7 +447,7 @@ jobs:
         uses: actions/upload-artifact@ee69f02b3dfdecd58bb31b4d133da38ba6fe3700
         with:
           name: swagger.json
-          path: ./swagger.json
+          path: swagger.json
           if-no-files-found: error
 
 
