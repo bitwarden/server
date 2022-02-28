@@ -384,7 +384,7 @@ jobs:
         run: dotnet tool restore
 
       - name: Make Docker stub
-        #if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc'
+        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc'
         run: |
           if [[ "${{ github.ref }}" == "rc" ]]; then
             SETUP_IMAGE="bitwarden/setup:rc"
@@ -404,13 +404,11 @@ jobs:
           cd docker-stub; zip -r ../docker-stub.zip *; cd ..
 
       - name: Make Docker stub checksum
-        #if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc'
-        run: |
-          sha256sum docker-stub.zip > docker-stub-sha256.txt
-          cat docker-stub-sha256.txt
+        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc'
+        run: sha256sum docker-stub.zip > docker-stub-sha256.txt
 
       - name: Upload Docker stub artifact
-        #if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc'
+        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc'
         uses: actions/upload-artifact@ee69f02b3dfdecd58bb31b4d133da38ba6fe3700
         with:
           name: docker-stub.zip
@@ -418,7 +416,7 @@ jobs:
           if-no-files-found: error
 
       - name: Upload Docker stub checksum artifact
-        #if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc'
+        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc'
         uses: actions/upload-artifact@ee69f02b3dfdecd58bb31b4d133da38ba6fe3700
         with:
           name: docker-stub-sha256.txt
