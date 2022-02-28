@@ -75,27 +75,19 @@ namespace Bit.Core.Jobs
                         // There's a race condition when starting multiple containers simultaneously, retry until it succeeds..
                         try
                         {
-                            if (trigger != null)
+                            var dupeT = await _scheduler.GetTrigger(trigger.Key);
+                            if (dupeT != null)
                             {
-                                var dupeT = await _scheduler.GetTrigger(trigger.Key);
-                                if (dupeT != null)
-                                {
-                                    await _scheduler.RescheduleJob(trigger.Key, trigger);
-                                }
-
-                                var dupeJ = await _scheduler.GetJobDetail(job.Key);
-                                if (dupeJ != null)
-                                {
-                                    await _scheduler.DeleteJob(job.Key);
-                                }
-
-                                await _scheduler.ScheduleJob(job, trigger);
+                                await _scheduler.RescheduleJob(trigger.Key, trigger);
                             }
-                            else 
+
+                            var dupeJ = await _scheduler.GetJobDetail(job.Key);
+                            if (dupeJ != null)
                             {
-                                await _scheduler.AddJob(job, true);
+                                await _scheduler.DeleteJob(job.Key);
                             }
-                            
+
+                            await _scheduler.ScheduleJob(job, trigger);
                             break;
                         }
                         catch (Exception e)
