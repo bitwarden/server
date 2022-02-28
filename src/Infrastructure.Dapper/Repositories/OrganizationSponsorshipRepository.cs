@@ -48,21 +48,5 @@ namespace Bit.Infrastructure.Dapper.Repositories
                 return results.SingleOrDefault();
             }
         }
-
-        public async Task<OrganizationSponsorship> GetByOfferedToEmailAsync(string offeredToEmail)
-        {
-            using (var connection = new SqlConnection(ConnectionString))
-            {
-                var results = await connection.QueryAsync<OrganizationSponsorship>(
-                    "[dbo].[OrganizationSponsorship_ReadByOfferedToEmail]",
-                    new
-                    {
-                        OfferedToEmail = offeredToEmail
-                    },
-                    commandType: CommandType.StoredProcedure);
-
-                return results.SingleOrDefault();
-            }
-        }
     }
 }

@@ -1,0 +1,8 @@
+START TRANSACTION;
+
+ALTER TABLE "Organization" ADD "CloudBillingSyncKey" character varying(30) NULL;
+
+INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+VALUES ('20220207221818_AddCloudBillingSyncKeyToOrganization', '5.0.12');
+
+COMMIT;

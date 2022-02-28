@@ -58,7 +58,11 @@ namespace Bit.Identity
             services.AddMemoryCache();
 
             // Mvc
-            services.AddMvc();
+            // MVC
+            services.AddMvc(config =>
+            {
+                config.Filters.Add(new ModelStateValidationFilterAttribute());
+            });
 
             if (!globalSettings.SelfHosted)
             {

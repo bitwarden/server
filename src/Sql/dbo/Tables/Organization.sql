@@ -38,10 +38,11 @@
     [TwoFactorProviders]            NVARCHAR (MAX)   NULL,
     [ExpirationDate]                DATETIME2 (7)    NULL,
     [CreationDate]                  DATETIME2 (7)    NOT NULL,
-    [RevisionDate]                  DATETIME2 (7)   NOT NULL,
-    [OwnersNotifiedOfAutoscaling]   DATETIME2(7)    NULL,
-    [MaxAutoscaleSeats]             INT             NULL,
-    [UseKeyConnector]               BIT             NOT NULL,
+    [RevisionDate]                  DATETIME2 (7)    NOT NULL,
+    [OwnersNotifiedOfAutoscaling]   DATETIME2(7)     NULL,
+    [MaxAutoscaleSeats]             INT              NULL,
+    [UseKeyConnector]               BIT              NOT NULL,
+    [CloudBillingSyncKey]           VARCHAR (30)     NULL,
     CONSTRAINT [PK_Organization] PRIMARY KEY CLUSTERED ([Id] ASC)
 );
 
