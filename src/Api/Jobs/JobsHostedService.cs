@@ -46,6 +46,13 @@ namespace Bit.Api.Jobs
                 .StartNow()
                 .WithCronSchedule("0 30 */12 * * ?")
                 .Build();
+            var randomDailySponsorshipSyncTrigger = TriggerBuilder.Create()
+                .WithIdentity("randomDailySponsorshipSyncTrigger")
+                .StartAt(DateBuilder.FutureDate(new Random().Next(24), IntervalUnit.Hour)) 
+                .WithSimpleSchedule(x => x
+                    .WithIntervalInHours(24)
+                    .RepeatForever())
+                .Build();
 
             var jobs = new List<Tuple<IJobDetail, ITrigger>>
             {
@@ -56,14 +63,13 @@ namespace Bit.Api.Jobs
                 new Tuple<IJobDetail, ITrigger>(CreateDefaultJob(typeof(ValidateOrganizationsJob)), everyTwelfthHourAndThirtyMinutesTrigger)
             };
 
-            // if (_globalSettings.SelfHosted)
-            // {
-                jobs.Add(new Tuple<IJobDetail, ITrigger>(CreateDurableJob(typeof(SelfHostedSponsorshipSyncJob)), null));
-            // }
+            if (_globalSettings.SelfHosted && _globalSettings.EnableCloudCommunication)
+            {
+                jobs.Add(new Tuple<IJobDetail, ITrigger>(CreateDefaultJob(typeof(SelfHostedSponsorshipSyncJob)), randomDailySponsorshipSyncTrigger));
+            }
 
             Jobs = jobs;
             await base.StartAsync(cancellationToken);
-            await AddTriggerToExistingJob(typeof(SelfHostedSponsorshipSyncJob), CreateRandomDailyTrigger());
         }
 
         public static void AddJobsServices(IServiceCollection services, bool selfHosted)

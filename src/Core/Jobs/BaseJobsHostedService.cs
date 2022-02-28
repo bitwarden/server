@@ -147,56 +147,16 @@ namespace Bit.Core.Jobs
             }
         }
 
+         protected virtual IJobDetail CreateDefaultJob(Type job) 
+        {
+            return JobBuilder.Create(job)
+                .WithIdentity(job.FullName)
+                .Build();
+        }
+
         public virtual async Task StopAsync(CancellationToken cancellationToken)
         {
             await _scheduler?.Shutdown(cancellationToken);
-        }
-
-        protected virtual IJobDetail CreateDefaultJob(Type job) 
-        {
-            return JobBuilder.Create(job)
-                .WithIdentity(job.FullName)
-                .Build();
-        }
-
-        protected virtual IJobDetail CreateDurableJob(Type job) 
-        {
-            return JobBuilder.Create(job)
-                .StoreDurably()
-                .WithIdentity(job.FullName)
-                .Build();
-        }
-
-        protected virtual ITrigger CreateRandomDailyTrigger()
-        {
-            return TriggerBuilder.Create()
-                .StartAt(DateBuilder.FutureDate(new Random().Next(24), IntervalUnit.Hour)) 
-                .WithSimpleSchedule(x => x
-                    .WithIntervalInHours(24)
-                    .RepeatForever())
-                .Build();
-        }
-
-        protected virtual async Task AddTriggerToExistingJob(Type job, ITrigger trigger)
-        {
-            if (_scheduler == null)
-            {
-                throw new Exception("Scheduler not started");
-            }
-            var dupeT = await _scheduler.GetTrigger(trigger.Key);
-            if (dupeT != null)
-            {
-                throw new Exception("Trigger already exists");
-            }
-            var existingJ = await _scheduler.GetJobDetail(new JobKey(job.FullName));
-            if (existingJ == null)
-            {
-                throw new Exception("Job does not exist");
-            }
-            var newTrigger = trigger.GetTriggerBuilder()
-                .ForJob(new JobKey(job.FullName))
-                .Build();
-            await _scheduler.ScheduleJob(newTrigger);
         }
 
         public virtual void Dispose()
