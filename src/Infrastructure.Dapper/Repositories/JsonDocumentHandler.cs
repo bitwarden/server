@@ -7,21 +7,20 @@ using Dapper;
 
 namespace Bit.Infrastructure.Dapper.Repositories
 {
-    public class JsonElementHandler : SqlMapper.TypeHandler<JsonElement>
+    public class JsonDocumentHandler : SqlMapper.TypeHandler<JsonDocument>
     {
-        public override JsonElement Parse(object value)
+        public override JsonDocument Parse(object value)
         {
             Debug.Assert(value.GetType() == typeof(string));
-            var doc = JsonDocument.Parse((string)value);
-            return doc.RootElement;
+            return JsonDocument.Parse((string)value);
+            
         }
 
-        public override void SetValue(IDbDataParameter parameter, JsonElement value)
+        public override void SetValue(IDbDataParameter parameter, JsonDocument value)
         {
             parameter.DbType = DbType.String;
             parameter.Value = JsonSerializer.Serialize(value, new JsonSerializerOptions
             {
-                WriteIndented = false,
                 DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
             });
         }

@@ -17,11 +17,9 @@ namespace Bit.Core.Entities
         [MaxLength(256)]
         public string OfferedToEmail { get; set; }
         public PlanSponsorshipType? PlanSponsorshipType { get; set; }
-        [Required]
-        public bool CloudSponsor { get; set; }
         public DateTime? LastSyncDate { get; set; }
-        public byte TimesRenewedWithoutValidation { get; set; }
-        public DateTime? SponsorshipLapsedDate { get; set; }
+        public DateTime? ValidUntil { get; set; }
+        public bool ToDelete { get; set; }
 
         public void SetNewId()
         {

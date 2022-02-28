@@ -1,4 +1,6 @@
-﻿using Bit.Infrastructure.EntityFramework.Models;
+﻿using System.Text.Json;
+using System.Text.Json.Serialization;
+using Bit.Infrastructure.EntityFramework.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories
@@ -27,6 +29,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
         public DbSet<Organization> Organizations { get; set; }
         public DbSet<OrganizationApiKey> OrganizationApiKeys { get; set; }
         public DbSet<OrganizationSponsorship> OrganizationSponsorships { get; set; }
+        public DbSet<OrganizationConnection> OrganizationConnections { get; set; }
         public DbSet<OrganizationUser> OrganizationUsers { get; set; }
         public DbSet<Policy> Policies { get; set; }
         public DbSet<Provider> Providers { get; set; }
@@ -74,6 +77,19 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             {
                 b.HasKey(a => new { a.OrganizationId, a.Type });
                 b.ToTable(nameof(OrganizationApiKey));
+            });
+
+            builder.Entity<OrganizationConnection>(b => 
+            {
+                b.Property(oc => oc.Id).ValueGeneratedNever();
+
+                b.ToTable(nameof(OrganizationConnection));
+
+                b.Property(oc => oc.Config)
+                    .HasConversion(jsonDocument => JsonSerializer.Serialize(jsonDocument, new JsonSerializerOptions
+                    {
+                        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+                    }), jsonString => JsonDocument.Parse(jsonString, default));
             });
 
             eCipher.Property(c => c.Id).ValueGeneratedNever();

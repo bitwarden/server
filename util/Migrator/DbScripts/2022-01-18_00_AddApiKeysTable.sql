@@ -721,9 +721,9 @@ BEGIN
 END
 GO
 
-IF OBJECT_ID('[dbo].[OrganizationConnection_ReadByOrganizationIdType]') IS NOT NULL
+IF OBJECT_ID('[dbo].[OrganizationConnection_ReadEnabledByOrganizationIdType]') IS NOT NULL
 BEGIN
-    DROP PROCEDURE [dbo].[OrganizationConnection_ReadByOrganizationIdType];
+    DROP PROCEDURE [dbo].[OrganizationConnection_ReadEnabledByOrganizationIdType];
 END
 
 CREATE PROCEDURE [dbo].[OrganizationConnection_ReadByOrganizationIdType]
@@ -739,6 +739,7 @@ BEGIN
         [dbo].[OrganizationConnectionView]
     WHERE
         [OrganizationId] = @OrganizationId AND
-        [Type] = @Type
+        [Type] = @Type AND
+        [Enabled] = 1
 END
 GO
