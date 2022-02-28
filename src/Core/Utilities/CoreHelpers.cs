@@ -462,18 +462,6 @@ namespace Bit.Core.Utilities
             return val.ToString();
         }
 
-        public static string GetVersion()
-        {
-            if (string.IsNullOrWhiteSpace(_version))
-            {
-                _version = Assembly.GetEntryAssembly()
-                    .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
-                    .InformationalVersion;
-            }
-
-            return _version;
-        }
-
         public static string Dvorak2Qwerty(string value)
         {
             return Other2Qwerty(value, _dvorakMap, _qwertyDvorakMap);

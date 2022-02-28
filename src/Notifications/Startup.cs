@@ -2,6 +2,7 @@
 using System.Globalization;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
+using Bit.SharedKernel.Utilities;
 using Bit.SharedWeb.Utilities;
 using IdentityModel;
 using Microsoft.AspNetCore.Builder;

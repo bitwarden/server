@@ -17,6 +17,7 @@ using Microsoft.IdentityModel.Logging;
 using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
 using System.Collections.Generic;
+using Bit.SharedKernel.Utilities;
 using Bit.SharedWeb.Utilities;
 
 #if !OSS

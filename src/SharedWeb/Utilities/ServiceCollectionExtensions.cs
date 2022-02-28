@@ -17,6 +17,7 @@ using Bit.Core.Tokens;
 using Bit.Core.Utilities;
 using Bit.Infrastructure.Dapper;
 using Bit.Infrastructure.EntityFramework;
+using Bit.SharedKernel.Utilities;
 using IdentityModel;
 using IdentityServer4.AccessTokenValidation;
 using IdentityServer4.Configuration;
@@ -494,7 +495,7 @@ namespace Bit.SharedWeb.Utilities
                 {
                     httpContext.Response.OnStarting((state) =>
                     {
-                        httpContext.Response.Headers.Append("Server-Version", CoreHelpers.GetVersion());
+                        httpContext.Response.Headers.Append("Server-Version", VersionHelper.GetVersion());
                         return Task.FromResult(0);
                     }, null);
                     await next.Invoke();

@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Bit.Admin.Models;
 using Bit.Core.Settings;
+using Bit.SharedKernel.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -26,7 +27,7 @@ namespace Bit.Admin.Controllers
             return View(new HomeModel
             {
                 GlobalSettings = _globalSettings,
-                CurrentVersion = Core.Utilities.CoreHelpers.GetVersion()
+                CurrentVersion = VersionHelper.GetVersion()
             });
         }
 

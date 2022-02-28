@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Globalization;
-using Bit.Core.Settings;
-using Bit.Core.Utilities;
 using Bit.Icons.Services;
-using Bit.SharedWeb.Utilities;
+using Bit.SharedKernel.Utilities;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -30,10 +28,9 @@ namespace Bit.Icons
             services.AddOptions();
 
             // Settings
-            var globalSettings = services.AddGlobalSettingsServices(Configuration);
             var iconsSettings = new IconsSettings();
             ConfigurationBinder.Bind(Configuration.GetSection("IconsSettings"), iconsSettings);
-            services.AddSingleton(s => iconsSettings);
+            services.AddSingleton(_ => iconsSettings);
 
             // Cache
             services.AddMemoryCache(options =>
@@ -52,11 +49,8 @@ namespace Bit.Icons
         public void Configure(
             IApplicationBuilder app,
             IWebHostEnvironment env,
-            IHostApplicationLifetime appLifetime,
-            GlobalSettings globalSettings)
+            IHostApplicationLifetime appLifetime)
         {
-            app.UseSerilog(env, appLifetime, globalSettings);
-
             // Add general security headers
             app.UseMiddleware<SecurityHeadersMiddleware>();
 

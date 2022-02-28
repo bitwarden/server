@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
 
-namespace Bit.Core.Utilities
+namespace Bit.SharedKernel.Utilities
 {
     public sealed class SecurityHeadersMiddleware
     {

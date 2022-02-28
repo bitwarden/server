@@ -1,7 +1,7 @@
-﻿using Bit.Core.Utilities;
+﻿using System;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
-using Serilog.Events;
+using Serilog;
 
 namespace Bit.Icons
 {
@@ -9,16 +9,33 @@ namespace Bit.Icons
     {
         public static void Main(string[] args)
         {
-            Host
-                .CreateDefaultBuilder(args)
-                .ConfigureWebHostDefaults(webBuilder =>
-                {
-                    webBuilder.UseStartup<Startup>();
-                    webBuilder.ConfigureLogging((hostingContext, logging) =>
-                        logging.AddSerilog(hostingContext, e => e.Level >= LogEventLevel.Error));
-                })
-                .Build()
-                .Run();
+            Log.Logger = new LoggerConfiguration()
+                .WriteTo.Console()
+                .CreateBootstrapLogger();
+
+            try
+            {
+                Host
+                    .CreateDefaultBuilder(args)
+                    .UseSerilog((context, configuration) =>
+                    {
+                        configuration.ReadFrom.Configuration(context.Configuration);
+                    })
+                    .ConfigureWebHostDefaults(webBuilder =>
+                    {
+                        webBuilder.UseStartup<Startup>();
+                    })
+                    .Build()
+                    .Run();
+            }
+            catch (Exception ex)
+            {
+                Log.Fatal(ex, "Host terminated unexpectedly");
+            }
+            finally
+            {
+                Log.CloseAndFlush();
+            }
         }
     }
 }
