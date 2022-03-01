@@ -25,7 +25,7 @@ if curl -L -s -w "http_code %{http_code}" -o $SCRIPT_PATH.1 $BITWARDEN_SCRIPT_UR
 then
     mv $SCRIPT_PATH.1 $SCRIPT_PATH
     chmod u+x $SCRIPT_PATH
-    echo "We have updated the location of our scripts, please run 'bitwarden.sh' again."
+    echo "We have moved our self-hosted scripts to their own repository (https://github.com/bitwarden/self-host).  Your 'bitwarden.sh' script has been automatically upgraded. Please run it again."
 else
     rm -f $SCRIPT_PATH.1
 fi

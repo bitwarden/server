@@ -32,7 +32,7 @@ for i in *.sh; do
     then
       mv bitwarden.sh.1 bitwarden.sh
       chmod u+x bitwarden.sh
-      echo "We have updated the location of our scripts, please run 'bitwarden.sh' again."
+      echo "We have moved our self-hosted scripts to their own repository (https://github.com/bitwarden/self-host).  Your 'bitwarden.sh' script has been automatically upgraded. Please run it again."
     else
       rm -f bitwarden.sh.1
     fi
@@ -41,5 +41,5 @@ done
 
 if [ $FOUND = false ]
 then
-  echo "We have updated our script locations, please run 'bitwarden.sh updateself' before updating."
+  echo "We have moved our self-hosted scripts to their own repository (https://github.com/bitwarden/self-host). Please run 'bitwarden.sh updateself' before updating."
 fi
