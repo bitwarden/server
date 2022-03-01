@@ -612,6 +612,15 @@ namespace Bit.Core.Services
                     throw new BadRequestException("One or more ciphers do not belong to you.");
                 }
 
+                var attachments = cipher.GetAttachments();
+                var hasAttachments = attachments?.Any() ?? false;
+                var org = await _organizationRepository.GetByIdAsync(organizationId);
+
+                if (hasAttachments && !org.MaxStorageGb.HasValue)
+                {
+                    throw new BadRequestException("This organization cannot use attachments.");
+                }
+
                 ValidateCipherLastKnownRevisionDateAsync(cipher, lastKnownRevisionDate);
 
                 cipher.UserId = null;
