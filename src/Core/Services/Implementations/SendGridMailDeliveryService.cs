@@ -16,7 +16,7 @@ namespace Bit.Core.Services
         private readonly GlobalSettings _globalSettings;
         private readonly IWebHostEnvironment _hostingEnvironment;
         private readonly ILogger<SendGridMailDeliveryService> _logger;
-        private readonly SendGridClient _client;
+        private readonly ISendGridClient _client;
         private readonly string _senderTag;
         private readonly string _replyToEmail;
 
@@ -35,7 +35,7 @@ namespace Bit.Core.Services
         }
 
         public SendGridMailDeliveryService(
-            SendGridClient client,
+            ISendGridClient client,
             GlobalSettings globalSettings,
             IWebHostEnvironment hostingEnvironment,
             ILogger<SendGridMailDeliveryService> logger)

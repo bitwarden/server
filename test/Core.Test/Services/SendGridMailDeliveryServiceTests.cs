@@ -21,7 +21,7 @@ namespace Bit.Core.Test.Services
         private readonly GlobalSettings _globalSettings;
         private readonly IWebHostEnvironment _hostingEnvironment;
         private readonly ILogger<SendGridMailDeliveryService> _logger;
-        private readonly SendGridClient _sendGridClient;
+        private readonly ISendGridClient _sendGridClient;
 
         public SendGridMailDeliveryServiceTests()
         {
@@ -35,7 +35,7 @@ namespace Bit.Core.Test.Services
 
             _hostingEnvironment = Substitute.For<IWebHostEnvironment>();
             _logger = Substitute.For<ILogger<SendGridMailDeliveryService>>();
-            _sendGridClient = Substitute.For<SendGridClient>();
+            _sendGridClient = Substitute.For<ISendGridClient>();
 
             _sut = new SendGridMailDeliveryService(
                 _sendGridClient,
@@ -63,6 +63,8 @@ namespace Bit.Core.Test.Services
                 Category = "Category"
             };
 
+            _sendGridClient.SendEmailAsync(Arg.Any<SendGridMessage>()).Returns(
+                new Response(System.Net.HttpStatusCode.OK, null, null));
             await _sut.SendEmailAsync(mailMessage);
 
             await _sendGridClient.Received(1).SendEmailAsync(
