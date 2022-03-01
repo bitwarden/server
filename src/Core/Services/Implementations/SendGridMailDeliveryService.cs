@@ -81,13 +81,6 @@ namespace Bit.Core.Services
                 msg.SetBypassListManagement(true);
             }
 
-            var response = await _client.SendEmailAsync(msg);
-            if (!response.IsSuccessStatusCode)
-            {
-                var responseBody = await response.Body.ReadAsStringAsync();
-                _logger.LogError("SendGrid email sending failed with {0}: {1}", response.StatusCode, responseBody);
-            }
-
             try
             {
                 var success = await SendAsync(msg, false);
