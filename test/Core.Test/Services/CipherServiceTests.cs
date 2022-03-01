@@ -55,6 +55,13 @@ namespace Bit.Core.Test.Services
         public async Task ShareManyAsync_WrongRevisionDate_Throws(SutProvider<CipherService> sutProvider,
             IEnumerable<Cipher> ciphers, Guid organizationId, List<Guid> collectionIds)
         {
+            sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId)
+                .Returns(new Organization
+                {
+                    PlanType = Enums.PlanType.EnterpriseAnnually,
+                    MaxStorageGb = 100
+                });
+
             var cipherInfos = ciphers.Select(c => (c, (DateTime?)c.RevisionDate.AddDays(-1)));
 
             var exception = await Assert.ThrowsAsync<BadRequestException>(
@@ -108,6 +115,13 @@ namespace Bit.Core.Test.Services
         public async Task ShareManyAsync_CorrectRevisionDate_Passes(string revisionDateString,
             SutProvider<CipherService> sutProvider, IEnumerable<Cipher> ciphers, Organization organization, List<Guid> collectionIds)
         {
+            sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id)
+                .Returns(new Organization
+                {
+                    PlanType = Enums.PlanType.EnterpriseAnnually,
+                    MaxStorageGb = 100
+                });
+
             var cipherInfos = ciphers.Select(c => (c,
                 string.IsNullOrEmpty(revisionDateString) ? null : (DateTime?)c.RevisionDate));
             var sharingUserId = ciphers.First().UserId.Value;

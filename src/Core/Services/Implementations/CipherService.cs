@@ -495,7 +495,6 @@ namespace Bit.Core.Services
             IEnumerable<Guid> collectionIds, Guid sharingUserId, DateTime? lastKnownRevisionDate)
         {
             var attachments = cipher.GetAttachments();
-            var hasAttachments = attachments?.Any() ?? false;
             var hasOldAttachments = attachments?.Any(a => a.Key == null) ?? false;
             var updatedCipher = false;
             var migratedAttachments = false;
@@ -503,34 +502,7 @@ namespace Bit.Core.Services
 
             try
             {
-                if (cipher.Id == default(Guid))
-                {
-                    throw new BadRequestException(nameof(cipher.Id));
-                }
-
-                if (cipher.OrganizationId.HasValue)
-                {
-                    throw new BadRequestException("Already belongs to an organization.");
-                }
-
-                if (!cipher.UserId.HasValue || cipher.UserId.Value != sharingUserId)
-                {
-                    throw new NotFoundException();
-                }
-
-                var org = await _organizationRepository.GetByIdAsync(organizationId);
-                if (hasAttachments && !org.MaxStorageGb.HasValue)
-                {
-                    throw new BadRequestException("This organization cannot use attachments.");
-                }
-
-                var storageAdjustment = attachments?.Sum(a => a.Value.Size) ?? 0;
-                if (org.StorageBytesRemaining() < storageAdjustment)
-                {
-                    throw new BadRequestException("Not enough storage available for this organization.");
-                }
-
-                ValidateCipherLastKnownRevisionDateAsync(cipher, lastKnownRevisionDate);
+                await ValidateCipherCanBeShared(cipher, sharingUserId, organizationId, attachments, lastKnownRevisionDate);
 
                 // Sproc will not save this UserId on the cipher. It is used limit scope of the collectionIds.
                 cipher.UserId = sharingUserId;
@@ -597,31 +569,8 @@ namespace Bit.Core.Services
             var cipherIds = new List<Guid>();
             foreach (var (cipher, lastKnownRevisionDate) in cipherInfos)
             {
-                if (cipher.Id == default(Guid))
-                {
-                    throw new BadRequestException("All ciphers must already exist.");
-                }
-
-                if (cipher.OrganizationId.HasValue)
-                {
-                    throw new BadRequestException("One or more ciphers already belong to an organization.");
-                }
-
-                if (!cipher.UserId.HasValue || cipher.UserId.Value != sharingUserId)
-                {
-                    throw new BadRequestException("One or more ciphers do not belong to you.");
-                }
-
                 var attachments = cipher.GetAttachments();
-                var hasAttachments = attachments?.Any() ?? false;
-                var org = await _organizationRepository.GetByIdAsync(organizationId);
-
-                if (hasAttachments && !org.MaxStorageGb.HasValue)
-                {
-                    throw new BadRequestException("This organization cannot use attachments.");
-                }
-
-                ValidateCipherLastKnownRevisionDateAsync(cipher, lastKnownRevisionDate);
+                await ValidateCipherCanBeShared(cipher, sharingUserId, organizationId, attachments, lastKnownRevisionDate);
 
                 cipher.UserId = null;
                 cipher.OrganizationId = organizationId;
@@ -1007,6 +956,50 @@ namespace Bit.Core.Services
             }
 
             return storageBytesRemaining;
+        }
+
+        private async Task ValidateCipherCanBeShared(
+            Cipher cipher,
+            Guid sharingUserId,
+            Guid organizationId,
+            Dictionary<string, CipherAttachment.MetaData> attachments,
+            DateTime? lastKnownRevisionDate)
+        {
+            if (cipher.Id == default(Guid))
+            {
+                throw new BadRequestException("Cipher must already exist.");
+            }
+
+            if (cipher.OrganizationId.HasValue)
+            {
+                throw new BadRequestException("One or more ciphers already belong to an organization.");
+            }
+
+            if (!cipher.UserId.HasValue || cipher.UserId.Value != sharingUserId)
+            {
+                throw new BadRequestException("One or more ciphers do not belong to you.");
+            }
+
+            var hasAttachments = attachments?.Any() ?? false;
+            var org = await _organizationRepository.GetByIdAsync(organizationId);
+
+            if (org == null)
+            {
+                throw new BadRequestException("Could not find organization.");
+            }
+
+            if (hasAttachments && !org.MaxStorageGb.HasValue)
+            {
+                throw new BadRequestException("This organization cannot use attachments.");
+            }
+
+            var storageAdjustment = attachments?.Sum(a => a.Value.Size) ?? 0;
+            if (org.StorageBytesRemaining() < storageAdjustment)
+            {
+                throw new BadRequestException("Not enough storage available for this organization.");
+            }
+
+            ValidateCipherLastKnownRevisionDateAsync(cipher, lastKnownRevisionDate);
         }
     }
 }
