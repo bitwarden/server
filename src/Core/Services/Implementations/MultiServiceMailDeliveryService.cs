@@ -31,7 +31,7 @@ namespace Bit.Core.Services
         public async Task SendEmailAsync(MailMessage message)
         {
             var roll = _random.Next(0, 99);
-            if (roll <= _sendGridPercentage)
+            if (roll < _sendGridPercentage)
             {
                 await _sendGridService.SendEmailAsync(message);
             }
