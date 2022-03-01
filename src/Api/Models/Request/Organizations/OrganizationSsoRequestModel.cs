@@ -4,13 +4,13 @@ using System.ComponentModel.DataAnnotations;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.RegularExpressions;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
-using Bit.Core.Models.Table;
 using Bit.Core.Services;
 using Bit.Core.Sso;
+using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
-using U2F.Core.Utils;
 
 namespace Bit.Api.Models.Request.Organizations
 {
@@ -72,7 +72,7 @@ namespace Bit.Api.Models.Request.Organizations
         public Saml2BindingType IdpBindingType { get; set; }
         public string IdpSingleSignOnServiceUrl { get; set; }
         public string IdpSingleLogoutServiceUrl { get; set; }
-        public string IdpArtifactResolutionServiceUrl { get; set; }
+        public string IdpArtifactResolutionServiceUrl { get => null; set { /*IGNORE*/ } }
         public string IdpX509PublicCert { get; set; }
         public string IdpOutboundSigningAlgorithm { get; set; }
         public bool? IdpAllowUnsolicitedAuthnResponse { get; set; }
@@ -111,12 +111,6 @@ namespace Bit.Api.Models.Request.Organizations
                         new[] { nameof(IdpEntityId) });
                 }
 
-                if (IdpBindingType == Saml2BindingType.Artifact && string.IsNullOrWhiteSpace(IdpArtifactResolutionServiceUrl))
-                {
-                    yield return new ValidationResult(i18nService.GetLocalizedHtmlString("Saml2BindingTypeValidationError"),
-                        new[] { nameof(IdpArtifactResolutionServiceUrl) });
-                }
-
                 if (!Uri.IsWellFormedUriString(IdpEntityId, UriKind.Absolute) && string.IsNullOrWhiteSpace(IdpSingleSignOnServiceUrl))
                 {
                     yield return new ValidationResult(i18nService.GetLocalizedHtmlString("IdpSingleSignOnServiceUrlValidationError"),
@@ -127,12 +121,6 @@ namespace Bit.Api.Models.Request.Organizations
                 {
                     yield return new ValidationResult(i18nService.GetLocalizedHtmlString("IdpSingleSignOnServiceUrlInvalid"),
                         new[] { nameof(IdpSingleSignOnServiceUrl) });
-                }
-
-                if (InvalidServiceUrl(IdpArtifactResolutionServiceUrl))
-                {
-                    yield return new ValidationResult(i18nService.GetLocalizedHtmlString("IdpArtifactResolutionServiceUrlInvalid"),
-                        new[] { nameof(IdpArtifactResolutionServiceUrl) });
                 }
 
                 if (InvalidServiceUrl(IdpSingleLogoutServiceUrl))
@@ -147,7 +135,7 @@ namespace Bit.Api.Models.Request.Organizations
                     ValidationResult failedResult = null;
                     try
                     {
-                        var certData = StripPemCertificateElements(IdpX509PublicCert).Base64StringToByteArray();
+                        var certData = CoreHelpers.Base64UrlDecode(StripPemCertificateElements(IdpX509PublicCert));
                         new X509Certificate2(certData);
                     }
                     catch (FormatException)
@@ -190,7 +178,7 @@ namespace Bit.Api.Models.Request.Organizations
                 IdpBindingType = IdpBindingType,
                 IdpSingleSignOnServiceUrl = IdpSingleSignOnServiceUrl,
                 IdpSingleLogoutServiceUrl = IdpSingleLogoutServiceUrl,
-                IdpArtifactResolutionServiceUrl = IdpArtifactResolutionServiceUrl,
+                IdpArtifactResolutionServiceUrl = null,
                 IdpX509PublicCert = StripPemCertificateElements(IdpX509PublicCert),
                 IdpOutboundSigningAlgorithm = IdpOutboundSigningAlgorithm,
                 IdpAllowUnsolicitedAuthnResponse = IdpAllowUnsolicitedAuthnResponse.GetValueOrDefault(),

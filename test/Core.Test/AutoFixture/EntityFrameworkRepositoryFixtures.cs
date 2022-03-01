@@ -4,11 +4,10 @@ using System.Reflection;
 using AutoFixture;
 using AutoFixture.Kernel;
 using AutoMapper;
-using Bit.Core.Models.EntityFramework;
-using Bit.Core.Models.EntityFramework.Provider;
-using Bit.Core.Repositories.EntityFramework;
 using Bit.Core.Settings;
 using Bit.Core.Test.Helpers.Factories;
+using Bit.Infrastructure.EntityFramework.Models;
+using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
@@ -89,7 +88,6 @@ namespace Bit.Core.Test.AutoFixture.EntityFrameworkRepositoryFixtures
                         cfg.AddProfile<SsoUserMapperProfile>();
                         cfg.AddProfile<TaxRateMapperProfile>();
                         cfg.AddProfile<TransactionMapperProfile>();
-                        cfg.AddProfile<U2fMapperProfile>();
                         cfg.AddProfile<UserMapperProfile>();
                     })
                 .CreateMapper()));

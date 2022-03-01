@@ -17,7 +17,7 @@
     <ModelCollation>1033,CI</ModelCollation>
     <DefaultFileStructure>BySchemaAndSchemaType</DefaultFileStructure>
     <DeployToDatabase>True</DeployToDatabase>
-    <TargetFrameworkVersion>v4.6</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <TargetLanguage>CS</TargetLanguage>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <SqlServerVerification>False</SqlServerVerification>
@@ -83,7 +83,6 @@
     <Build Include="dbo\Tables\Grant.sql" />
     <Build Include="dbo\Tables\SsoConfig.sql" />
     <Build Include="dbo\Tables\User.sql" />
-    <Build Include="dbo\Tables\U2f.sql" />
     <Build Include="dbo\Tables\Device.sql" />
     <Build Include="dbo\Tables\Folder.sql" />
     <Build Include="dbo\Tables\Cipher.sql" />
@@ -103,7 +102,6 @@
     <Build Include="dbo\Views\SsoConfigView.sql" />
     <Build Include="dbo\Views\SsoUserView.sql" />
     <Build Include="dbo\Views\UserView.sql" />
-    <Build Include="dbo\Views\U2fView.sql" />
     <Build Include="dbo\Views\CipherView.sql" />
     <Build Include="dbo\Views\DeviceView.sql" />
     <Build Include="dbo\Views\GroupView.sql" />
@@ -164,9 +162,6 @@
     <Build Include="dbo\Stored Procedures\CollectionCipher_Delete.sql" />
     <Build Include="dbo\Stored Procedures\CollectionCipher_UpdateCollections.sql" />
     <Build Include="dbo\Stored Procedures\CollectionCipher_UpdateCollectionsAdmin.sql" />
-    <Build Include="dbo\Stored Procedures\U2f_Create.sql" />
-    <Build Include="dbo\Stored Procedures\U2f_DeleteByUserId.sql" />
-    <Build Include="dbo\Stored Procedures\U2f_ReadByUserId.sql" />
     <Build Include="dbo\Stored Procedures\Folder_Create.sql" />
     <Build Include="dbo\Stored Procedures\Folder_DeleteById.sql" />
     <Build Include="dbo\Stored Procedures\Folder_Update.sql" />
@@ -271,7 +266,6 @@
     <Build Include="dbo\Stored Procedures\CollectionCipher_UpdateCollectionsForCiphers.sql" />
     <Build Include="dbo\Stored Procedures\User_UpdateRenewalReminderDate.sql" />
     <Build Include="dbo\Stored Procedures\Grant_DeleteExpired.sql" />
-    <Build Include="dbo\Stored Procedures\U2f_DeleteOld.sql" />
     <Build Include="dbo\Stored Procedures\User_ReadKdfByEmail.sql" />
     <Build Include="dbo\Stored Procedures\Cipher_DeleteByOrganizationId.sql" />
     <Build Include="dbo\Stored Procedures\AzureSQLMaintenance.sql" />

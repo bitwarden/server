@@ -1,9 +1,10 @@
 ﻿using System;
 using System.IO;
+using System.Text;
 using System.Threading.Tasks;
 using AutoFixture;
+using Bit.Core.Entities;
 using Bit.Core.Models.Data;
-using Bit.Core.Models.Table;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Test.AutoFixture.CipherAttachmentMetaData;
@@ -11,7 +12,6 @@ using Bit.Core.Test.AutoFixture.CipherFixtures;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
-using U2F.Core.Utils;
 using Xunit;
 
 namespace Bit.Core.Test.Services
@@ -35,7 +35,8 @@ namespace Bit.Core.Test.Services
             {
                 var sutProvider = GetSutProvider(tempDirectory);
 
-                await sutProvider.Sut.UploadNewAttachmentAsync(new MemoryStream(stream.GetBytes()), cipher, attachmentData);
+                await sutProvider.Sut.UploadNewAttachmentAsync(new MemoryStream(Encoding.UTF8.GetBytes(stream)),
+                    cipher, attachmentData);
 
                 AssertFileCreation($"{tempDirectory}/{cipher.Id}/{attachmentData.AttachmentId}", stream);
             }
@@ -51,8 +52,8 @@ namespace Bit.Core.Test.Services
             {
                 var sutProvider = GetSutProvider(tempDirectory);
 
-                await sutProvider.Sut.UploadShareAttachmentAsync(new MemoryStream(stream.GetBytes()), cipher.Id,
-                    cipher.OrganizationId.Value, attachmentData);
+                await sutProvider.Sut.UploadShareAttachmentAsync(new MemoryStream(Encoding.UTF8.GetBytes(stream)),
+                    cipher.Id, cipher.OrganizationId.Value, attachmentData);
 
                 AssertFileCreation($"{tempDirectory}/temp/{cipher.Id}/{cipher.OrganizationId}/{attachmentData.AttachmentId}", stream);
             }

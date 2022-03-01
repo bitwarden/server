@@ -4,8 +4,8 @@ using System.Threading.Tasks;
 using Bit.Api.Models.Request;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
+using Bit.Core.Entities;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -85,8 +85,8 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            var userId = _userService.GetProperUserId(User);
-            await _emergencyAccessService.SaveAsync(model.ToEmergencyAccess(emergencyAccess), userId.Value);
+            var user = await _userService.GetUserByPrincipalAsync(User);
+            await _emergencyAccessService.SaveAsync(model.ToEmergencyAccess(emergencyAccess), user);
         }
 
         [HttpDelete("{id}")]
@@ -175,7 +175,7 @@ namespace Bit.Api.Controllers
             var user = await _userService.GetUserByPrincipalAsync(User);
             var result =
                 await _emergencyAccessService.GetAttachmentDownloadAsync(new Guid(id), cipherId, attachmentId, user);
-            return new AttachmentResponseModel(result.Id, result.Data, result.Cipher, _globalSettings);
+            return new AttachmentResponseModel(result);
         }
     }
 }

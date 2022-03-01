@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.DataProtection;
@@ -37,11 +37,11 @@ namespace Bit.Core.Services
             _dataProtector = dataProtectionProvider.CreateProtector("OrganizationSponsorshipServiceDataProtector");
         }
 
-        public async Task<bool> ValidateRedemptionTokenAsync(string encryptedToken, string sponsoredUserEmail)
+        public async Task<(bool valid, OrganizationSponsorship sponsorship)> ValidateRedemptionTokenAsync(string encryptedToken, string sponsoredUserEmail)
         {
             if (!encryptedToken.StartsWith(TokenClearTextPrefix) || sponsoredUserEmail == null)
             {
-                return false;
+                return (false, null);
             }
 
             var decryptedToken = _dataProtector.Unprotect(encryptedToken[TokenClearTextPrefix.Length..]);
@@ -49,7 +49,7 @@ namespace Bit.Core.Services
 
             if (dataParts.Length != 3)
             {
-                return false;
+                return (false, null);
             }
 
             if (dataParts[0].Equals(FamiliesForEnterpriseTokenName))
@@ -57,7 +57,7 @@ namespace Bit.Core.Services
                 if (!Guid.TryParse(dataParts[1], out Guid sponsorshipId) ||
                     !Enum.TryParse<PlanSponsorshipType>(dataParts[2], true, out var sponsorshipType))
                 {
-                    return false;
+                    return (false, null);
                 }
 
                 var sponsorship = await _organizationSponsorshipRepository.GetByIdAsync(sponsorshipId);
@@ -65,13 +65,13 @@ namespace Bit.Core.Services
                     sponsorship.PlanSponsorshipType != sponsorshipType ||
                     sponsorship.OfferedToEmail != sponsoredUserEmail)
                 {
-                    return false;
+                    return (false, sponsorship);
                 }
 
-                return true;
+                return (true, sponsorship);
             }
 
-            return false;
+            return (false, null);
         }
 
         private string RedemptionToken(Guid sponsorshipId, PlanSponsorshipType sponsorshipType) =>

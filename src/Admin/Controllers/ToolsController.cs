@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Bit.Admin.Models;
-using Bit.Core;
-using Bit.Core.Models.Table;
+using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -14,7 +14,6 @@ using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Newtonsoft.Json;
 
 namespace Bit.Admin.Controllers
 {
@@ -264,14 +263,16 @@ namespace Bit.Admin.Controllers
             {
                 var license = await _organizationService.GenerateLicenseAsync(organization,
                     model.InstallationId.Value, model.Version);
-                return File(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(license, Formatting.Indented)),
-                    "text/plain", "bitwarden_organization_license.json");
+                var ms = new MemoryStream();
+                await JsonSerializer.SerializeAsync(ms, license, JsonHelpers.Indented);
+                return File(ms, "text/plain", "bitwarden_organization_license.json");
             }
             else if (user != null)
             {
                 var license = await _userService.GenerateLicenseAsync(user, null, model.Version);
-                return File(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(license, Formatting.Indented)),
-                    "text/plain", "bitwarden_premium_license.json");
+                var ms = new MemoryStream();
+                await JsonSerializer.SerializeAsync(ms, license, JsonHelpers.Indented);
+                return File(ms, "text/plain", "bitwarden_premium_license.json");
             }
             else
             {

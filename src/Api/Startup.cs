@@ -17,6 +17,7 @@ using Microsoft.IdentityModel.Logging;
 using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
 using System.Collections.Generic;
+using Bit.SharedWeb.Utilities;
 
 #if !OSS
 using Bit.CommCore.Utilities;
@@ -123,7 +124,7 @@ namespace Bit.Api
             services.AddCoreLocalizationServices();
 
 #if OSS
-                services.AddOosServices();
+            services.AddOosServices();
 #else
             services.AddCommCoreServices();
 #endif

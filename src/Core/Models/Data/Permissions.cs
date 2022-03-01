@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using Newtonsoft.Json;
+using System.Text.Json.Serialization;
 
 namespace Bit.Core.Models.Data
 {
@@ -25,7 +25,6 @@ namespace Bit.Core.Models.Data
         public bool ManageResetPassword { get; set; }
 
         [JsonIgnore]
-        [System.Text.Json.Serialization.JsonIgnore]
         public List<(bool Permission, string ClaimName)> ClaimsMap => new()
         {
             (AccessEventLogs, "accesseventlogs"),

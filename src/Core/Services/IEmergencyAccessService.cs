@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
-using Bit.Core.Models.Table;
 
 namespace Bit.Core.Services
 {
@@ -15,7 +15,7 @@ namespace Bit.Core.Services
         Task DeleteAsync(Guid emergencyAccessId, Guid grantorId);
         Task<EmergencyAccess> ConfirmUserAsync(Guid emergencyAccessId, string key, Guid grantorId);
         Task<EmergencyAccessDetails> GetAsync(Guid emergencyAccessId, Guid userId);
-        Task SaveAsync(EmergencyAccess emergencyAccess, Guid savingUserId);
+        Task SaveAsync(EmergencyAccess emergencyAccess, User savingUser);
         Task InitiateAsync(Guid id, User initiatingUser);
         Task ApproveAsync(Guid id, User approvingUser);
         Task RejectAsync(Guid id, User rejectingUser);

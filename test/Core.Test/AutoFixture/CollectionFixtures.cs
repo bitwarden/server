@@ -1,13 +1,13 @@
 ﻿using System;
 using AutoFixture;
 using AutoFixture.Kernel;
-using Bit.Core.Repositories.EntityFramework;
+using Bit.Core.Entities;
 using Bit.Core.Test.AutoFixture.EntityFrameworkRepositoryFixtures;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using Bit.Core.Test.AutoFixture.Relays;
+using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
-using TableModel = Bit.Core.Models.Table;
 
 namespace Bit.Core.Test.AutoFixture.CollectionFixtures
 {
@@ -21,14 +21,14 @@ namespace Bit.Core.Test.AutoFixture.CollectionFixtures
             }
 
             var type = request as Type;
-            if (type == null || type != typeof(TableModel.Collection))
+            if (type == null || type != typeof(Collection))
             {
                 return new NoSpecimen();
             }
 
             var fixture = new Fixture();
             fixture.Customizations.Insert(0, new MaxLengthStringRelay());
-            var obj = fixture.WithAutoNSubstitutions().Create<TableModel.Collection>();
+            var obj = fixture.WithAutoNSubstitutions().Create<Collection>();
             return obj;
         }
     }
@@ -61,7 +61,7 @@ namespace Bit.Core.Test.AutoFixture.CollectionFixtures
 
     internal class CollectionAutoDataAttribute : CustomAutoDataAttribute
     {
-        public CollectionAutoDataAttribute() : base(new SutProviderCustomization(), new Bit.Core.Test.AutoFixture.OrganizationFixtures.Organization())
+        public CollectionAutoDataAttribute() : base(new SutProviderCustomization(), new OrganizationCustomization())
         { }
     }
 }

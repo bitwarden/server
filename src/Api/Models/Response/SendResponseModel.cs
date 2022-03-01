@@ -1,11 +1,11 @@
 ﻿using System;
+using System.Text.Json;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Data;
-using Bit.Core.Models.Table;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
-using Newtonsoft.Json;
 
 namespace Bit.Api.Models.Response
 {
@@ -36,12 +36,12 @@ namespace Bit.Api.Models.Response
             switch (send.Type)
             {
                 case SendType.File:
-                    var fileData = JsonConvert.DeserializeObject<SendFileData>(send.Data);
+                    var fileData = JsonSerializer.Deserialize<SendFileData>(send.Data);
                     sendData = fileData;
                     File = new SendFileModel(fileData);
                     break;
                 case SendType.Text:
-                    var textData = JsonConvert.DeserializeObject<SendTextData>(send.Data);
+                    var textData = JsonSerializer.Deserialize<SendTextData>(send.Data);
                     sendData = textData;
                     Text = new SendTextModel(textData);
                     break;
