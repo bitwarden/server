@@ -874,5 +874,39 @@ namespace Bit.Core.Services
             message.Category = "OTP";
             await _mailDeliveryService.SendEmailAsync(message);
         }
+
+        public async Task SendFailedLoginAttemptsEmailAsync(string email, DateTime utcNow, string ip)
+        {
+            var message = CreateDefaultMessage("Failed login attempts detected", email);
+            var model = new FailedAuthAttemptsModel()
+            {
+                TheDate = utcNow.ToLongDateString(),
+                TheTime = utcNow.ToShortTimeString(),
+                TimeZone = "UTC",
+                IpAddress = ip,
+                AffectedEmail = email
+
+            };
+            await AddMessageContentAsync(message, "FailedLoginAttempts", model);
+            message.Category = "FailedLoginAttempts";
+            await _mailDeliveryService.SendEmailAsync(message);
+        }
+
+        public async Task SendFailedTwoFactorAttemptsEmailAsync(string email, DateTime utcNow, string ip)
+        {
+            var message = CreateDefaultMessage("Failed login attempts detected", email);
+            var model = new FailedAuthAttemptsModel()
+            {
+                TheDate = utcNow.ToLongDateString(),
+                TheTime = utcNow.ToShortTimeString(),
+                TimeZone = "UTC",
+                IpAddress = ip,
+                AffectedEmail = email
+
+            };
+            await AddMessageContentAsync(message, "FailedTwoFactorAttempts", model);
+            message.Category = "FailedTwoFactorAttempts";
+            await _mailDeliveryService.SendEmailAsync(message);
+        }
     }
 }
