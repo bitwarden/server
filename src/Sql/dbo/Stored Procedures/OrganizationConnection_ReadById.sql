@@ -1,27 +1,13 @@
-CREATE PROCEDURE [dbo].[OrganizationConnection_Create]
-    @Id UNIQUEIDENTIFIER,
-    @OrganizationId UNIQUEIDENTIFIER,
-    @Type TINYINT,
-    @Enabled BIT,
-    @Config NVARCHAR(MAX)
+CREATE PROCEDURE [dbo].[OrganizationConnection_ReadById]
+    @Id UNIQUEIDENTIFIER
 AS
 BEGIN
     SET NOCOUNT ON
 
-    INSERT INTO [dbo].[OrganizationConnection]
-    (
-        [Id],
-        [OrganizationId],
-        [Type],
-        [Enabled],
-        [Config]
-    )
-    VALUES
-    (
-        @Id,
-        @OrganizationId,
-        @Type,
-        @Enabled,
-        @Config
-    )
+    SELECT
+        *
+    FROM
+        [dbo].[OrganizationConnectionView]
+    WHERE
+        [Id] = @Id
 END
