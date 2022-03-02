@@ -156,8 +156,7 @@ namespace Bit.SharedWeb.Utilities
             }
 
             var awsConfigured = CoreHelpers.SettingHasValue(globalSettings.Amazon?.AccessKeySecret);
-            if (!globalSettings.SelfHosted && awsConfigured &&
-                CoreHelpers.SettingHasValue(globalSettings.Mail?.PostalApiKey))
+            if (awsConfigured && CoreHelpers.SettingHasValue(globalSettings.Mail?.SendGridApiKey))
             {
                 services.AddSingleton<IMailDeliveryService, MultiServiceMailDeliveryService>();
             }
