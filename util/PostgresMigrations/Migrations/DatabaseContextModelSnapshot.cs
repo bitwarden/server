@@ -1373,7 +1373,7 @@ namespace Bit.PostgresMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.OrganizationConnection", b =>
                 {
                     b.HasOne("Bit.Infrastructure.EntityFramework.Models.Organization", "Organization")
-                        .WithMany()
+                        .WithMany("Connections")
                         .HasForeignKey("OrganizationId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -1548,6 +1548,8 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Navigation("ApiKeys");
 
                     b.Navigation("Ciphers");
+
+                    b.Navigation("Connections");
 
                     b.Navigation("Groups");
 

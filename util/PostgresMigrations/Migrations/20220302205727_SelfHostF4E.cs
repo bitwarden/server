@@ -1,23 +1,27 @@
 ﻿using System;
-using Bit.Core.Utilities;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace Bit.PostgresMigrations.Migrations
 {
     public partial class SelfHostF4E : Migration
     {
-        private const string _scriptLocationTemplate = "Scripts.2022-03-01_00_{0}_MigrateOrganizationApiKeys.psql";
-
-        private static string SqlContents(string dir)
-        {
-            return CoreHelpers.GetEmbeddedResourceContentsAsync(string.Format(_scriptLocationTemplate, dir));
-        }
+        private const string _scriptLocationTemplate = "2022-03-01_00_{0}_MigrateOrganizationApiKeys.psql";
 
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropColumn(
                 name: "TimesRenewedWithoutValidation",
                 table: "OrganizationSponsorship");
+
+            migrationBuilder.RenameColumn(
+                name: "SponsorshipLapsedDate",
+                table: "OrganizationSponsorship",
+                newName: "ValidUntil");
+
+            migrationBuilder.RenameColumn(
+                name: "CloudSponsor",
+                table: "OrganizationSponsorship",
+                newName: "ToDelete");
 
             migrationBuilder.CreateTable(
                 name: "OrganizationApiKey",
@@ -39,23 +43,11 @@ namespace Bit.PostgresMigrations.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
-            migrationBuilder.Sql(SqlContents("Up"));
-
+            migrationBuilder.SqlResource(_scriptLocationTemplate, "Up");
+            
             migrationBuilder.DropColumn(
                 name: "ApiKey",
                 table: "Organization");
-
-            migrationBuilder.RenameColumn(
-                name: "SponsorshipLapsedDate",
-                table: "OrganizationSponsorship",
-                newName: "ValidUntil");
-
-            migrationBuilder.RenameColumn(
-                name: "CloudSponsor",
-                table: "OrganizationSponsorship",
-                newName: "ToDelete");
-
-
 
             migrationBuilder.CreateTable(
                 name: "OrganizationConnection",
@@ -93,7 +85,7 @@ namespace Bit.PostgresMigrations.Migrations
                 maxLength: 30,
                 nullable: true);
 
-            migrationBuilder.Sql(SqlContents("Down"));
+            migrationBuilder.SqlResource(_scriptLocationTemplate, "Down");
 
             migrationBuilder.DropTable(
                 name: "OrganizationApiKey");
