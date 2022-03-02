@@ -4,6 +4,5 @@
     {
         HttpRedirect = 1,
         HttpPost = 2,
-        Artifact = 4
     }
 }

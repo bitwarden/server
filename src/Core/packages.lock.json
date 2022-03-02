@@ -247,6 +247,16 @@
           "System.Diagnostics.DiagnosticSource": "4.7.1"
         }
       },
+      "SendGrid": {
+        "type": "Direct",
+        "requested": "[9.25.3, )",
+        "resolved": "9.25.3",
+        "contentHash": "Dldhsc4+jV28rfa53W+09A549lDfKqGEFFtdOU4uOxHvS/pFhBN8lRkAEzvbMbycwZJJCzfrDdKc/qT1MxWynQ==",
+        "dependencies": {
+          "Newtonsoft.Json": "9.0.1",
+          "starkbank-ecdsa": "[1.3.3, 2.0.0)"
+        }
+      },
       "Sentry.Serilog": {
         "type": "Direct",
         "requested": "[2.1.5, )",
@@ -1717,6 +1727,11 @@
           "System.Threading.ThreadPool": "4.3.0",
           "System.Threading.Timer": "4.3.0"
         }
+      },
+      "starkbank-ecdsa": {
+        "type": "Transitive",
+        "resolved": "1.3.3",
+        "contentHash": "OblOaKb1enXn+dSp7tsx9yjwV+/BEKM9jFhshIkZTwCk7LuTFTp+wSon6rFzuPiIiTGtvVWQNUw2slHjGktJog=="
       },
       "System.AppContext": {
         "type": "Transitive",

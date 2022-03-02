@@ -400,10 +400,6 @@ namespace Bit.Core.Business.Sso
             {
                 idp.SingleLogoutServiceUrl = new Uri(config.IdpSingleLogoutServiceUrl);
             }
-            if (!string.IsNullOrWhiteSpace(config.IdpArtifactResolutionServiceUrl))
-            {
-                idp.ArtifactResolutionServiceUrls.TryAdd(0, new Uri(config.IdpArtifactResolutionServiceUrl));
-            }
             if (!string.IsNullOrWhiteSpace(config.IdpOutboundSigningAlgorithm))
             {
                 idp.OutboundSigningAlgorithm = config.IdpOutboundSigningAlgorithm;
@@ -413,6 +409,7 @@ namespace Bit.Core.Business.Sso
                 var cert = CoreHelpers.Base64UrlDecode(config.IdpX509PublicCert);
                 idp.SigningKeys.AddConfiguredKey(new X509Certificate2(cert));
             }
+            idp.ArtifactResolutionServiceUrls.Clear();
             // This must happen last since it calls Validate() internally.
             idp.LoadMetadata = false;
 
@@ -461,7 +458,6 @@ namespace Bit.Core.Business.Sso
             {
                 Saml2BindingType.HttpRedirect => Sustainsys.Saml2.WebSso.Saml2BindingType.HttpRedirect,
                 Saml2BindingType.HttpPost => Sustainsys.Saml2.WebSso.Saml2BindingType.HttpPost,
-                Saml2BindingType.Artifact => Sustainsys.Saml2.WebSso.Saml2BindingType.Artifact,
                 _ => Sustainsys.Saml2.WebSso.Saml2BindingType.HttpPost,
             };
         }

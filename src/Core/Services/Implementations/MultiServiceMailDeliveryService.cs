@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Net.Http;
 using System.Threading.Tasks;
 using Bit.Core.Models.Mail;
 using Bit.Core.Settings;
@@ -11,32 +10,30 @@ namespace Bit.Core.Services
     public class MultiServiceMailDeliveryService : IMailDeliveryService
     {
         private readonly IMailDeliveryService _sesService;
-        private readonly IMailDeliveryService _postalService;
-        private readonly int _postalPercentage;
+        private readonly IMailDeliveryService _sendGridService;
+        private readonly int _sendGridPercentage;
 
         private static Random _random = new Random();
 
         public MultiServiceMailDeliveryService(
             GlobalSettings globalSettings,
             IWebHostEnvironment hostingEnvironment,
-            IHttpClientFactory httpClientFactory,
             ILogger<AmazonSesMailDeliveryService> sesLogger,
-            ILogger<PostalMailDeliveryService> postalLogger)
+            ILogger<SendGridMailDeliveryService> sendGridLogger)
         {
             _sesService = new AmazonSesMailDeliveryService(globalSettings, hostingEnvironment, sesLogger);
-            _postalService = new PostalMailDeliveryService(globalSettings, postalLogger, hostingEnvironment,
-                httpClientFactory);
+            _sendGridService = new SendGridMailDeliveryService(globalSettings, hostingEnvironment, sendGridLogger);
 
-            // 2% by default
-            _postalPercentage = (globalSettings.Mail?.PostalPercentage).GetValueOrDefault(2);
+            // disabled by default (-1)
+            _sendGridPercentage = (globalSettings.Mail?.SendGridPercentage).GetValueOrDefault(-1);
         }
 
         public async Task SendEmailAsync(MailMessage message)
         {
             var roll = _random.Next(0, 99);
-            if (roll < _postalPercentage)
+            if (roll < _sendGridPercentage)
             {
-                await _postalService.SendEmailAsync(message);
+                await _sendGridService.SendEmailAsync(message);
             }
             else
             {
