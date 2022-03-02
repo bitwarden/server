@@ -280,12 +280,14 @@ BEGIN
         (
             [OrganizationId], 
             [ApiKey], 
-            [Type]
+            [Type],
+            [RevisionDate]
         )
         SELECT
             [Id] AS [OrganizationId], 
             [ApiKey] AS [ApiKey], 
-            0 AS [Type] -- 0 represents 'Default' type
+            0 AS [Type], -- 0 represents 'Default' type
+            [RevisionDate]
         FROM [dbo].[Organization]
 
     COMMIT TRANSACTION MigrateOrganizationApiKeys;
@@ -595,6 +597,7 @@ CREATE TABLE [dbo].[OrganizationConnection] (
     CONSTRAINT [PK_OrganizationConnection] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_OrganizationConnection_OrganizationId] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id])
 )
+END
 
 -- Create indexes for OrganizationConnection
 IF NOT EXISTS(SELECT name FROM sys.indexes WHERE name = 'IX_OrganizationConnection_OrganizationId')
@@ -727,7 +730,7 @@ BEGIN
     DROP PROCEDURE [dbo].[OrganizationConnection_ReadEnabledByOrganizationIdType];
 END
 
-CREATE PROCEDURE [dbo].[OrganizationConnection_ReadByOrganizationIdType]
+CREATE PROCEDURE [dbo].[OrganizationConnection_ReadEnabledByOrganizationIdType]
     @OrganizationId UNIQUEIDENTIFIER,
     @Type TINYINT
 AS
