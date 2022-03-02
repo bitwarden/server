@@ -93,7 +93,6 @@ namespace Bit.PostgresMigrations.Migrations
                 maxLength: 30,
                 nullable: true);
 
-            // TODO: Migration
             migrationBuilder.Sql(SqlContents("Down"));
 
             migrationBuilder.DropTable(

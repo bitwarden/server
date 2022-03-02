@@ -576,9 +576,10 @@ BEGIN
     SELECT TOP 1
         *
     FROM
-        [dbo].[OrganizationSponsorship]
+        [dbo].[OrganizationSponsorshipView]
     WHERE
-        [SponsoringOrganizationId] = @SponsoringOrganizationId
+        [SponsoringOrganizationId] = @SponsoringOrganizationId AND
+        [LastSyncDate] IS NOT NULL
 END
 GO
 

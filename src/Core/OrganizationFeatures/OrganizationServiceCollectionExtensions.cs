@@ -47,13 +47,6 @@ namespace Bit.Core.OrganizationFeatures
                     OrganizationSponsorshipOfferTokenable.DataProtectorPurpose,
                     serviceProvider.GetDataProtectionProvider())
             );
-
-            services.AddSingleton<IDataProtectorTokenFactory<OrganizationApiKeyTokenable>>(serviceProvider =>
-                new DataProtectorTokenFactory<OrganizationApiKeyTokenable>(
-                    OrganizationApiKeyTokenable.ClearTextPrefix,
-                    OrganizationApiKeyTokenable.DataProtectorPurpose,
-                    serviceProvider.GetDataProtectionProvider())
-            );
         }
     }
 }

@@ -32,10 +32,7 @@ namespace Bit.Api.Controllers
         private readonly ICloudRevokeSponsorshipCommand _revokeSponsorshipCommand;
         private readonly IRemoveSponsorshipCommand _removeSponsorshipCommand;
         private readonly ICurrentContext _currentContext;
-        private readonly IOrganizationApiKeyRepository _organizationApiKeyRepository;
         private readonly IUserService _userService;
-        private readonly IDataProtectorTokenFactory<OrganizationApiKeyTokenable> _tokenFactory;
-        private readonly IInstallationRepository _installationRepository;
 
         public OrganizationSponsorshipsController(
             IOrganizationSponsorshipRepository organizationSponsorshipRepository,
@@ -48,10 +45,7 @@ namespace Bit.Api.Controllers
             ICloudRevokeSponsorshipCommand revokeSponsorshipCommand,
             IRemoveSponsorshipCommand removeSponsorshipCommand,
             IUserService userService,
-            IOrganizationApiKeyRepository organizationApiKeyRepository,
-            ICurrentContext currentContext,
-            IDataProtectorTokenFactory<OrganizationApiKeyTokenable> tokenFactory,
-            IInstallationRepository installationRepository)
+            ICurrentContext currentContext)
         {
             _organizationSponsorshipRepository = organizationSponsorshipRepository;
             _organizationRepository = organizationRepository;
@@ -63,10 +57,7 @@ namespace Bit.Api.Controllers
             _revokeSponsorshipCommand = revokeSponsorshipCommand;
             _removeSponsorshipCommand = removeSponsorshipCommand;
             _userService = userService;
-            _organizationApiKeyRepository = organizationApiKeyRepository;
             _currentContext = currentContext;
-            _tokenFactory = tokenFactory;
-            _installationRepository = installationRepository;
 
         }
 

@@ -116,17 +116,14 @@ namespace Bit.Api
                     policy.RequireAuthenticatedUser();
                     policy.RequireClaim(JwtClaimTypes.Scope, "api.organization");
                 });
-                config.AddPolicy("BillingSyncKey", policy =>
+                config.AddPolicy("Installation", policy =>
                 {
-                    // Purposefully do not require authenticated user as the requirement is a custom auth scheme
-                    // for endpoints opting into this policy.
-                    policy.AddRequirements(new OrganizationApiKeyRequirement(OrganizationApiKeyType.BillingSync));
+                    policy.RequireAuthenticatedUser();
+                    policy.RequireClaim(JwtClaimTypes.Scope, "api.installation");
                 });
             });
 
             services.AddScoped<AuthenticatorTokenProvider>();
-
-            services.AddSingleton<IAuthorizationHandler, OrganizationApiKeyAuthorizationHandler>();
 
             // Services
             services.AddBaseServices();
