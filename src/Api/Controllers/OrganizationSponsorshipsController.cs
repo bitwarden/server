@@ -58,7 +58,6 @@ namespace Bit.Api.Controllers
             _removeSponsorshipCommand = removeSponsorshipCommand;
             _userService = userService;
             _currentContext = currentContext;
-
         }
 
         [HttpPost("{sponsoringOrgId}/families-for-enterprise")]

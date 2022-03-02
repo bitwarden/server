@@ -30,7 +30,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
             sponsorship.FriendlyName = null;
             sponsorship.OfferedToEmail = null;
             sponsorship.PlanSponsorshipType = null;
-            // sponsorship.ToDelete = true;
+            sponsorship.ToDelete = true;
 
             if (sponsorship.ValidUntil.HasValue && sponsorship.ValidUntil.Value < DateTime.UtcNow)
             {

@@ -18,8 +18,6 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
 using System.Collections.Generic;
 using Bit.SharedWeb.Utilities;
-using Bit.Core.Enums;
-using Microsoft.AspNetCore.Authorization;
 
 #if !OSS
 using Bit.CommCore.Utilities;
