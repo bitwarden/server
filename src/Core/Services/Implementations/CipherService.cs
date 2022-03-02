@@ -502,7 +502,7 @@ namespace Bit.Core.Services
 
             try
             {
-                await ValidateCipherCanBeShared(cipher, sharingUserId, organizationId, attachments, lastKnownRevisionDate);
+                await ValidateCipherCanBeShared(cipher, sharingUserId, organizationId, lastKnownRevisionDate);
 
                 // Sproc will not save this UserId on the cipher. It is used limit scope of the collectionIds.
                 cipher.UserId = sharingUserId;
@@ -569,8 +569,7 @@ namespace Bit.Core.Services
             var cipherIds = new List<Guid>();
             foreach (var (cipher, lastKnownRevisionDate) in cipherInfos)
             {
-                var attachments = cipher.GetAttachments();
-                await ValidateCipherCanBeShared(cipher, sharingUserId, organizationId, attachments, lastKnownRevisionDate);
+                await ValidateCipherCanBeShared(cipher, sharingUserId, organizationId, lastKnownRevisionDate);
 
                 cipher.UserId = null;
                 cipher.OrganizationId = organizationId;
@@ -962,7 +961,6 @@ namespace Bit.Core.Services
             Cipher cipher,
             Guid sharingUserId,
             Guid organizationId,
-            Dictionary<string, CipherAttachment.MetaData> attachments,
             DateTime? lastKnownRevisionDate)
         {
             if (cipher.Id == default(Guid))
@@ -980,6 +978,7 @@ namespace Bit.Core.Services
                 throw new BadRequestException("One or more ciphers do not belong to you.");
             }
 
+            var attachments = cipher.GetAttachments();
             var hasAttachments = attachments?.Any() ?? false;
             var org = await _organizationRepository.GetByIdAsync(organizationId);
 
