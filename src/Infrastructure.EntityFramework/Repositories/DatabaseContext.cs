@@ -77,7 +77,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
                 b.ToTable(nameof(OrganizationApiKey));
             });
 
-            builder.Entity<OrganizationConnection>(b => 
+            builder.Entity<OrganizationConnection>(b =>
             {
                 b.Property(oc => oc.Id).ValueGeneratedNever();
 

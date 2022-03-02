@@ -40,7 +40,7 @@ namespace Bit.MySqlMigrations.Migrations
                         onDelete: ReferentialAction.Cascade);
                 })
                 .Annotation("MySql:CharSet", "utf8mb4");
-            
+
             migrationBuilder.Sql(SqlContents("Up"));
 
             migrationBuilder.DropColumn(
@@ -57,7 +57,7 @@ namespace Bit.MySqlMigrations.Migrations
                 table: "OrganizationSponsorship",
                 newName: "ToDelete");
 
-            
+
 
             migrationBuilder.CreateTable(
                 name: "OrganizationConnection",
@@ -123,7 +123,7 @@ namespace Bit.MySqlMigrations.Migrations
                 nullable: false,
                 defaultValue: (byte)0);
 
-            
+
         }
     }
 }

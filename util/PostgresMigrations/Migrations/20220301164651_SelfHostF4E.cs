@@ -55,7 +55,7 @@ namespace Bit.PostgresMigrations.Migrations
                 table: "OrganizationSponsorship",
                 newName: "ToDelete");
 
-            
+
 
             migrationBuilder.CreateTable(
                 name: "OrganizationConnection",

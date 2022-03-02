@@ -1,4 +1,4 @@
-namespace Bit.Infrastructure.Dapper.Repositories
+﻿namespace Bit.Infrastructure.Dapper.Repositories
 {
-    
+
 }

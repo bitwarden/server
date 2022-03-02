@@ -23,7 +23,7 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
         protected async Task AssertRemovedSponsorshipAsync<T>(OrganizationSponsorship sponsorship,
             SutProvider<T> sutProvider)
         {
-            if (sponsorship.ValidUntil.HasValue && sponsorship.ValidUntil.Value < DateTime.UtcNow )
+            if (sponsorship.ValidUntil.HasValue && sponsorship.ValidUntil.Value < DateTime.UtcNow)
             {
                 await sutProvider.GetDependency<IOrganizationSponsorshipRepository>().Received(1)
                     .DeleteAsync(sponsorship);

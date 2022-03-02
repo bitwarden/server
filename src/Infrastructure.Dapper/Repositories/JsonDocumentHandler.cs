@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Data;
 using System.Diagnostics;
 using System.Text.Json;
@@ -13,7 +13,7 @@ namespace Bit.Infrastructure.Dapper.Repositories
         {
             Debug.Assert(value.GetType() == typeof(string));
             return JsonDocument.Parse((string)value);
-            
+
         }
 
         public override void SetValue(IDbDataParameter parameter, JsonDocument value)
