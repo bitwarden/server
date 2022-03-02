@@ -626,6 +626,7 @@ IF OBJECT_ID('[dbo].[OrganizationConnection_ReadById]') IS NOT NULL
 BEGIN
     DROP PROCEDURE [dbo].[OrganizationConnection_ReadById];
 END
+GO
 
 CREATE PROCEDURE [dbo].[OrganizationConnection_ReadById]
     @Id UNIQUEIDENTIFIER
@@ -729,6 +730,7 @@ IF OBJECT_ID('[dbo].[OrganizationConnection_ReadEnabledByOrganizationIdType]') I
 BEGIN
     DROP PROCEDURE [dbo].[OrganizationConnection_ReadEnabledByOrganizationIdType];
 END
+GO
 
 CREATE PROCEDURE [dbo].[OrganizationConnection_ReadEnabledByOrganizationIdType]
     @OrganizationId UNIQUEIDENTIFIER,
