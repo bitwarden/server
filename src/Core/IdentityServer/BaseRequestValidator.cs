@@ -521,7 +521,7 @@ namespace Bit.Core.IdentityServer
             }
 
             user.FailedLoginCount = 0;
-            user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
+            user.RevisionDate = DateTime.UtcNow;
             await _userRepository.ReplaceAsync(user);
         }
 
@@ -529,13 +529,19 @@ namespace Bit.Core.IdentityServer
         {
             var utcNow = DateTime.UtcNow;
             user.FailedLoginCount = ++user.FailedLoginCount;
-            user.LastFailedLoginDate = utcNow;
-            user.RevisionDate = user.AccountRevisionDate = utcNow;
+            user.LastFailedLoginDate = user.RevisionDate = utcNow;
             await _userRepository.ReplaceAsync(user);
 
             if (_captchaValidationService.ValidateFailedAuthEmailConditions(unknownDevice, user.FailedLoginCount))
             {
-                await _userService.SendFailedAuthEmailAsync(user.Email, twoFactorInvalid, utcNow, _currentContext.IpAddress);
+                if (twoFactorInvalid)
+                {
+                    await _mailService.SendFailedTwoFactorAttemptsEmailAsync(user.Email, utcNow, _currentContext.IpAddress);
+                }
+                else
+                {
+                    await _mailService.SendFailedLoginAttemptsEmailAsync(user.Email, utcNow, _currentContext.IpAddress);
+                }
             }
         }
     }
