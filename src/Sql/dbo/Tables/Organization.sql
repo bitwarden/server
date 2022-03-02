@@ -32,7 +32,6 @@
     [ReferenceData]                 NVARCHAR (MAX)   NULL,
     [Enabled]                       BIT              NOT NULL,
     [LicenseKey]                    VARCHAR (100)    NULL,
-    [ApiKey]                        VARCHAR (30)     NOT NULL,
     [PublicKey]                     VARCHAR (MAX)    NULL,
     [PrivateKey]                    VARCHAR (MAX)    NULL,
     [TwoFactorProviders]            NVARCHAR (MAX)   NULL,
