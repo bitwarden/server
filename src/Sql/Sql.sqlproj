@@ -389,7 +389,7 @@
     <Build Include="dbo\Stored Procedures\OrganizationConnection_Update.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationConnection_DeleteById.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationConnection_ReadById.sql" />
-    <Build Include="dbo\Stored Procedures\OrganizationConnection_ReadEnabledByOrganizationId.sql" />
+    <Build Include="dbo\Stored Procedures\OrganizationConnection_ReadEnabledByOrganizationIdType.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationSponsorship_ReadFirstBySponsoringOrganizationId.sql" />
     <Build Include="dbo\Views\OrganizationApiKeyView.sql" />
     <Build Include="dbo\Views\OrganizationConnectionView.sql" />
