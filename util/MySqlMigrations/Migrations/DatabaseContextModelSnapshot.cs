@@ -471,10 +471,6 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasMaxLength(30)
                         .HasColumnType("varchar(30)");
 
-                    b.Property<string>("CloudBillingSyncKey")
-                        .HasMaxLength(30)
-                        .HasColumnType("varchar(30)");
-
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("datetime(6)");
 
@@ -611,11 +607,9 @@ namespace Bit.MySqlMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.OrganizationConnection", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("char(36)");
 
                     b.Property<string>("Config")
-                        .IsRequired()
                         .HasColumnType("longtext");
 
                     b.Property<bool>("Enabled")
@@ -638,9 +632,6 @@ namespace Bit.MySqlMigrations.Migrations
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("char(36)");
-
-                    b.Property<bool>("CloudSponsor")
-                        .HasColumnType("tinyint(1)");
 
                     b.Property<string>("FriendlyName")
                         .HasMaxLength(256)
@@ -668,11 +659,11 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<Guid?>("SponsoringOrganizationUserId")
                         .HasColumnType("char(36)");
 
-                    b.Property<DateTime?>("SponsorshipLapsedDate")
-                        .HasColumnType("datetime(6)");
+                    b.Property<bool>("ToDelete")
+                        .HasColumnType("tinyint(1)");
 
-                    b.Property<byte>("TimesRenewedWithoutValidation")
-                        .HasColumnType("tinyint unsigned");
+                    b.Property<DateTime?>("ValidUntil")
+                        .HasColumnType("datetime(6)");
 
                     b.HasKey("Id");
 
@@ -1078,41 +1069,6 @@ namespace Bit.MySqlMigrations.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("Transaction");
-                });
-
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.U2f", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    b.Property<string>("AppId")
-                        .HasMaxLength(50)
-                        .HasColumnType("varchar(50)");
-
-                    b.Property<string>("Challenge")
-                        .HasMaxLength(200)
-                        .HasColumnType("varchar(200)");
-
-                    b.Property<DateTime>("CreationDate")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<string>("KeyHandle")
-                        .HasMaxLength(200)
-                        .HasColumnType("varchar(200)");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<string>("Version")
-                        .HasMaxLength(20)
-                        .HasColumnType("varchar(20)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("U2f");
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.User", b =>
@@ -1556,17 +1512,6 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasForeignKey("UserId");
 
                     b.Navigation("Organization");
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.U2f", b =>
-                {
-                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.User", "User")
-                        .WithMany("U2fs")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
 
                     b.Navigation("User");
                 });

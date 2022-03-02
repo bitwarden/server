@@ -13,9 +13,8 @@ namespace Bit.Core.Test.Repositories.EntityFramework.EqualityComparers
                 x.SponsoringOrganizationUserId.Equals(y.SponsoringOrganizationUserId) &&
                 x.SponsoredOrganizationId.Equals(y.SponsoredOrganizationId) &&
                 x.OfferedToEmail.Equals(y.OfferedToEmail) &&
-                x.CloudSponsor.Equals(y.CloudSponsor) &&
-                x.TimesRenewedWithoutValidation.Equals(y.TimesRenewedWithoutValidation) &&
-                x.SponsorshipLapsedDate.ToString().Equals(y.SponsorshipLapsedDate.ToString());
+                x.ToDelete.Equals(y.ToDelete) &&
+                x.ValidUntil.ToString().Equals(y.ValidUntil.ToString());
         }
 
         public int GetHashCode([DisallowNull] OrganizationSponsorship obj)

@@ -68,8 +68,6 @@ namespace Bit.Core.Entities
         public DateTime RevisionDate { get; set; } = DateTime.UtcNow;
         public int? MaxAutoscaleSeats { get; set; } = null;
         public DateTime? OwnersNotifiedOfAutoscaling { get; set; } = null;
-        [MaxLength(30)]
-        public string CloudBillingSyncKey { get; set; }
 
         public void SetNewId()
         {

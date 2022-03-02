@@ -474,10 +474,6 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasMaxLength(30)
                         .HasColumnType("character varying(30)");
 
-                    b.Property<string>("CloudBillingSyncKey")
-                        .HasMaxLength(30)
-                        .HasColumnType("character varying(30)");
-
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("timestamp without time zone");
 
@@ -592,7 +588,6 @@ namespace Bit.PostgresMigrations.Migrations
                     b.ToTable("Organization");
                 });
 
-<<<<<<< HEAD
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.OrganizationApiKey", b =>
                 {
                     b.Property<Guid>("OrganizationId")
@@ -637,15 +632,10 @@ namespace Bit.PostgresMigrations.Migrations
                     b.ToTable("OrganizationConnection");
                 });
 
-=======
->>>>>>> feature/self-hosted-families-for-enterprise
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.OrganizationSponsorship", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
-
-                    b.Property<bool>("CloudSponsor")
-                        .HasColumnType("boolean");
 
                     b.Property<string>("FriendlyName")
                         .HasMaxLength(256)
@@ -673,11 +663,11 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<Guid?>("SponsoringOrganizationUserId")
                         .HasColumnType("uuid");
 
-                    b.Property<DateTime?>("SponsorshipLapsedDate")
-                        .HasColumnType("timestamp without time zone");
+                    b.Property<bool>("ToDelete")
+                        .HasColumnType("boolean");
 
-                    b.Property<byte>("TimesRenewedWithoutValidation")
-                        .HasColumnType("smallint");
+                    b.Property<DateTime?>("ValidUntil")
+                        .HasColumnType("timestamp without time zone");
 
                     b.HasKey("Id");
 
@@ -1088,45 +1078,6 @@ namespace Bit.PostgresMigrations.Migrations
                     b.ToTable("Transaction");
                 });
 
-<<<<<<< HEAD
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.U2f", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn);
-
-                    b.Property<string>("AppId")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<string>("Challenge")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<DateTime>("CreationDate")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<string>("KeyHandle")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Version")
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("U2f");
-                });
-
-=======
->>>>>>> feature/self-hosted-families-for-enterprise
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.User", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1408,7 +1359,6 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Navigation("OrganizationUser");
                 });
 
-<<<<<<< HEAD
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.OrganizationApiKey", b =>
                 {
                     b.HasOne("Bit.Infrastructure.EntityFramework.Models.Organization", "Organization")
@@ -1433,10 +1383,6 @@ namespace Bit.PostgresMigrations.Migrations
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.OrganizationSponsorship", b =>
                 {
-=======
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.OrganizationSponsorship", b =>
-                {
->>>>>>> feature/self-hosted-families-for-enterprise
                     b.HasOne("Bit.Infrastructure.EntityFramework.Models.Installation", "Installation")
                         .WithMany()
                         .HasForeignKey("InstallationId");
@@ -1578,20 +1524,6 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Navigation("User");
                 });
 
-<<<<<<< HEAD
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.U2f", b =>
-                {
-                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.User", "User")
-                        .WithMany("U2fs")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
-=======
->>>>>>> feature/self-hosted-families-for-enterprise
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Cipher", b =>
                 {
                     b.Navigation("CollectionCiphers");

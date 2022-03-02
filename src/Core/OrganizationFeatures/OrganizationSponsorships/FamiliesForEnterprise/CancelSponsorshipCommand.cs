@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -29,10 +30,9 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
             sponsorship.FriendlyName = null;
             sponsorship.OfferedToEmail = null;
             sponsorship.PlanSponsorshipType = null;
-            sponsorship.TimesRenewedWithoutValidation = 0;
-            sponsorship.SponsorshipLapsedDate = null;
+            // sponsorship.ToDelete = true;
 
-            if (sponsorship.CloudSponsor || sponsorship.SponsorshipLapsedDate.HasValue)
+            if (sponsorship.ValidUntil.HasValue && sponsorship.ValidUntil.Value < DateTime.UtcNow)
             {
                 await _organizationSponsorshipRepository.DeleteAsync(sponsorship);
             }
