@@ -183,7 +183,6 @@ jobs:
       - name: Pull latest selfhost image
         env:
           SERVICE_NAME: ${{ steps.setup.outputs.service_name }}
-          RELEASE_OPTION: ${{ github.event.inputs.release_type }}
         run: |
           if [[ "${{ github.event.inputs.release_type }}" == "Dry Run" ]]; then
             docker pull bitwarden/$SERVICE_NAME:latest
@@ -194,7 +193,6 @@ jobs:
       - name: Tag version and latest
         env:
           SERVICE_NAME: ${{ steps.setup.outputs.service_name }}
-          RELEASE_OPTION: ${{ github.event.inputs.release_type }}
         run: |
           if [[ "${{ github.event.inputs.release_type }}" == "Dry Run" ]]; then
             docker tag bitwarden/$SERVICE_NAME:latest bitwarden/$SERVICE_NAME:dryrun
