@@ -161,13 +161,6 @@ jobs:
           echo "GitHub event: $GITHUB_EVENT"
           echo "Github Release Option: $RELEASE_OPTION"
 
-      - name: Setup DCT
-        id: setup-dct
-        uses: bitwarden/gh-actions/setup-docker-trust@a8c384a05a974c05c48374c818b004be221d43ff
-        with:
-          azure-creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
-          azure-keyvault-name: "bitwarden-prod-kv"
-
       - name: Checkout repo
         uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579
 
@@ -178,6 +171,14 @@ jobs:
           echo "Matrix name: ${{ matrix.service_name }}"
           echo "SERVICE_NAME: $SERVICE_NAME"
           echo "::set-output name=service_name::$SERVICE_NAME"
+
+      ########## DockerHub ##########
+      - name: Setup DCT
+        id: setup-dct
+        uses: bitwarden/gh-actions/setup-docker-trust@a8c384a05a974c05c48374c818b004be221d43ff
+        with:
+          azure-creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
+          azure-keyvault-name: "bitwarden-prod-kv"
 
       - name: Pull latest selfhost image
         env:
@@ -202,9 +203,6 @@ jobs:
             docker tag bitwarden/$SERVICE_NAME:$_BRANCH_NAME bitwarden/$SERVICE_NAME:latest
           fi
 
-      - name: List Docker images
-        run: docker images
-
       - name: Push version and latest image
         if: ${{ github.event.inputs.release_type != 'Dry Run' }}
         env:
@@ -215,8 +213,44 @@ jobs:
           docker push bitwarden/$SERVICE_NAME:$_RELEASE_VERSION
           docker push bitwarden/$SERVICE_NAME:latest
 
+      - name: Log out of Docker and disable Docker Notary
+        run: |
+          docker logout
+          echo "DOCKER_CONTENT_TRUST=0" >> $GITHUB_ENV
+
+      ########## ACR ##########
+      - name: Login to Azure - QA Subscription
+        uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a
+        with:
+          creds: ${{ secrets.AZURE_QA_KV_CREDENTIALS }}
+
+      - name: Login to Azure ACR
+        run: az acr login -n bitwardenqa
+
+      - name: Tag version and latest
+        env:
+          SERVICE_NAME: ${{ steps.setup.outputs.service_name }}
+          REGISTRY: bitwardenqa.azurecr.io
+          RELEASE_OPTION: ${{ github.event.inputs.release_type }}
+        run: |
+          if [[ "${{ github.event.inputs.release_type }}" == "Dry Run" ]]; then
+            docker tag bitwarden/$SERVICE_NAME:latest $REGISTRY/$SERVICE_NAME:dryrun
+          else
+            docker tag bitwarden/$SERVICE_NAME:$_BRANCH_NAME $REGISTRY/$SERVICE_NAME:$_RELEASE_VERSION
+            docker tag bitwarden/$SERVICE_NAME:$_BRANCH_NAME $REGISTRY/$SERVICE_NAME:latest
+          fi
+
+      - name: Push version and latest image
+        if: ${{ github.event.inputs.release_type != 'Dry Run' }}
+        env:
+          SERVICE_NAME: ${{ steps.setup.outputs.service_name }}
+        run: |
+          docker push $REGISTRY/$SERVICE_NAME:$_RELEASE_VERSION
+          docker push $REGISTRY/$SERVICE_NAME:latest
+
       - name: Log out of Docker
         run: docker logout
+      
 
 
   release:
