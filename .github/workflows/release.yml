@@ -243,6 +243,7 @@ jobs:
         if: ${{ github.event.inputs.release_type != 'Dry Run' }}
         env:
           SERVICE_NAME: ${{ steps.setup.outputs.service_name }}
+          REGISTRY: bitwardenqa.azurecr.io
         run: |
           docker push $REGISTRY/$SERVICE_NAME:$_RELEASE_VERSION
           docker push $REGISTRY/$SERVICE_NAME:latest
