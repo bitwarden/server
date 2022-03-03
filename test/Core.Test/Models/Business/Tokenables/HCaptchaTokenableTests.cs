@@ -31,7 +31,7 @@ namespace Bit.Core.Test.Models.Business.Tokenables
         }
 
         [Theory, BitAutoData]
-        public void TokenValidityCheckNullUserIsFalse(User user)
+        public void TokenValidityCheckNullUserIdIsInvalid(User user)
         {
             var token = new HCaptchaTokenable(user)
             {
