@@ -311,8 +311,8 @@ namespace Bit.Core.Business.Sso
                     NameClaimType = JwtClaimTypes.Name,
                     RoleClaimType = JwtClaimTypes.Role,
                 },
-                CallbackPath = config.BuildCallbackPath(),
-                SignedOutCallbackPath = config.BuildSignedOutCallbackPath(),
+                CallbackPath = SsoConfigurationData.BuildCallbackPath(),
+                SignedOutCallbackPath = SsoConfigurationData.BuildSignedOutCallbackPath(),
                 MetadataAddress = config.MetadataAddress,
                 // Prevents URLs that go beyond 1024 characters which may break for some servers
                 AuthenticationMethod = config.RedirectBehavior,
@@ -356,7 +356,7 @@ namespace Bit.Core.Business.Sso
             }
 
             var spEntityId = new Sustainsys.Saml2.Metadata.EntityId(
-                config.BuildSaml2ModulePath(_globalSettings.BaseServiceUri.Sso));
+                SsoConfigurationData.BuildSaml2ModulePath(_globalSettings.BaseServiceUri.Sso));
             bool? allowCreate = null;
             if (config.SpNameIdFormat != Saml2NameIdFormat.Transient)
             {
@@ -365,7 +365,7 @@ namespace Bit.Core.Business.Sso
             var spOptions = new SPOptions
             {
                 EntityId = spEntityId,
-                ModulePath = config.BuildSaml2ModulePath(null, name),
+                ModulePath = SsoConfigurationData.BuildSaml2ModulePath(null, name),
                 NameIdPolicy = new Saml2NameIdPolicy(allowCreate, GetNameIdFormat(config.SpNameIdFormat)),
                 WantAssertionsSigned = config.SpWantAssertionsSigned,
                 AuthenticateRequestSigningBehavior = GetSigningBehavior(config.SpSigningBehavior),
