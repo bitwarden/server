@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using NS = Newtonsoft.Json;
@@ -49,6 +50,12 @@ namespace Bit.Core.Utilities
         public static T ToObject<T>(this JsonElement element, JsonSerializerOptions options = null)
         {
             return JsonSerializer.Deserialize<T>(element.GetRawText(), options ?? Default);
+        }
+
+        // NOTE: This is built into .NET 6, it SHOULD be removed when we upgrade
+        public static JsonDocument SerializeToDocument<T>(T value, JsonSerializerOptions options = null)
+        {
+            return JsonSerializer.Deserialize<JsonDocument>(JsonSerializer.Serialize(value, options), options);
         }
 
         public static T DeserializeOrNew<T>(string json, JsonSerializerOptions options = null)

@@ -589,5 +589,16 @@ namespace Bit.SharedWeb.Utilities
                 options.TimestampDriftTolerance = 300000;
             });
         }
+
+        public static IServiceCollection AddOrganizationConnectionValidation(this IServiceCollection services)
+        {
+            services.AddSingleton<IOrganizationConnectionService, OrganizationConnectionService>();
+            services.AddSingleton<IOrganizationConnectionValidatorFactory, OrganizationConnectionValidatorFactory>();
+
+            return services;
+        }
+
+        public static IServiceCollection AddOrganizationConnectionValidator(this IServiceCollection services, Action<OrganizationConnectionValidatorOptions> configure)
+            => services.Configure(configure);
     }
 }
