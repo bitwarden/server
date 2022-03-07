@@ -49,7 +49,8 @@ namespace Bit.Core.Test.Utilities
 
             var jsonElement = JsonDocument.Parse(json).RootElement;
 
-            AssertHelper.AssertJsonProperty(jsonElement, "StringProp", JsonValueKind.String);
+            var stringProp = AssertHelper.AssertJsonProperty(jsonElement, "StringProp", JsonValueKind.String);
+            Assert.Equal("1", stringProp.GetString());
             var list = AssertHelper.AssertJsonProperty(jsonElement, "EnumerableStringProp", JsonValueKind.Array);
             Assert.Equal(2, list.GetArrayLength());
             var firstElement = list[0];
