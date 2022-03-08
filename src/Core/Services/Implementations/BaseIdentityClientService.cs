@@ -52,7 +52,7 @@ namespace Bit.Core.Services
         protected HttpClient IdentityClient { get; private set; }
         protected string AccessToken { get; private set; }
 
-        protected async Task SendAsync(HttpMethod method, string path, object requestModel = null)
+        protected async Task SendAsync<T>(HttpMethod method, string path, T requestModel = default) where T : new()
         {
             var tokenStateResponse = await HandleTokenStateAsync();
             if (!tokenStateResponse)
