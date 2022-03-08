@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using NS = Newtonsoft.Json;
@@ -132,7 +134,7 @@ namespace Bit.Core.Utilities
     }
 
     /// <summary>
-    /// Allows reading a string from a number or string, should only be used on string properties
+    /// Allows reading a string from a JSON number or string, should only be used on <see cref="string" /> properties
     /// </summary>
     public class PermissiveStringConverter : JsonConverter<string>
     {
@@ -143,8 +145,9 @@ namespace Bit.Core.Utilities
             return reader.TokenType switch
             {
                 JsonTokenType.String => reader.GetString(),
-                JsonTokenType.Number => reader.GetInt64().ToString(),
-                JsonTokenType.Null => null,
+                JsonTokenType.Number => reader.GetDecimal().ToString(),
+                JsonTokenType.True => bool.TrueString,
+                JsonTokenType.False => bool.FalseString,
                 _ => throw new JsonException($"Unsupported TokenType: {reader.TokenType}"),
             };
         }
@@ -156,18 +159,26 @@ namespace Bit.Core.Utilities
     }
 
     /// <summary>
-    /// Allows reading a string from a number or string, should only be used on string properties
+    /// Allows reading a JSON array of number or string, should only be used on <see cref="IEnumerable{T}" /> whose generic type is <see cref="string" />
     /// </summary>
     public class PermissiveStringEnumerableConverter : JsonConverter<IEnumerable<string>>
     {
         public override IEnumerable<string> Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
+            var stringList = new List<string>();
+
+            // Handle special cases or throw
             if (reader.TokenType != JsonTokenType.StartArray)
             {
-                throw new JsonException("Should only be used on a JSON Array");
-            }
+                // An array was expected but to be extra permissive allow reading from anything other than an object
+                if (reader.TokenType == JsonTokenType.StartObject)
+                {
+                    throw new JsonException("Cannot read JSON Object to an IEnumerable<string>.");
+                }
 
-            var stringList = new List<string>();
+                stringList.Add(PermissiveStringConverter.Instance.Read(ref reader, typeof(string), options));
+                return stringList;
+            }
 
             while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
             {
