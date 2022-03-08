@@ -2,11 +2,12 @@
 IF OBJECT_ID('[dbo].[OrganizationApiKey]') IS NULL
 BEGIN
 CREATE TABLE [dbo].[OrganizationApiKey] (
+    [Id]                UNIQUEIDENTIFIER NOT NULL,
     [OrganizationId]    UNIQUEIDENTIFIER NOT NULL,
     [Type]              TINYINT NOT NULL,
     [ApiKey]            VARCHAR(30) NOT NULL,
     [RevisionDate]      DATETIME2(7) NOT NULL,
-    CONSTRAINT [PK_OrganizationApiKey] PRIMARY KEY CLUSTERED ([OrganizationId] ASC, [Type] ASC),
+    CONSTRAINT [PK_OrganizationApiKey] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_OrganizationApiKey_OrganizationId] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id])
 );
 END
@@ -80,6 +81,7 @@ END
 GO
 
 CREATE PROCEDURE [dbo].[OrganizationApiKey_Update]
+    @Id UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
     @Type TINYINT,
     @ApiKey VARCHAR(30),
@@ -94,8 +96,7 @@ BEGIN
         [ApiKey] = @ApiKey,
         [RevisionDate] = @RevisionDate
     WHERE
-        [OrganizationId] = @OrganizationId AND
-        [Type] = @Type
+        [Id] = @Id
 END
 GO
 
@@ -205,12 +206,14 @@ BEGIN
     BEGIN TRANSACTION MigrateOrganizationApiKeys
     INSERT INTO [dbo].[OrganizationApiKey]
         (
+            [Id],
             [OrganizationId], 
             [ApiKey], 
             [Type],
             [RevisionDate]
         )
         SELECT
+            NEWID(), -- TODO: Validate that this is the ID we want to use
             [Id] AS [OrganizationId], 
             [ApiKey] AS [ApiKey], 
             0 AS [Type], -- 0 represents 'Default' type
