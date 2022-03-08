@@ -18,7 +18,7 @@ namespace Bit.Core.Test.Utilities
         private const string boolJson = "{ \"StringProp\": true, \"EnumerableStringProp\": [ false, 1.2]}";
         private const string objectJsonOne = "{ \"StringProp\": { \"Message\": \"Hi\"}, \"EnumerableStringProp\": []}";
         private const string objectJsonTwo = "{ \"StringProp\": \"Hi\", \"EnumerableStringProp\": {}}";
-        private readonly string bigNumbersJson = 
+        private readonly string bigNumbersJson =
         "{ \"StringProp\":" + decimal.MinValue + ", \"EnumerableStringProp\": [" + ulong.MaxValue + ", " + long.MinValue + "]}";
 
         [Theory]
