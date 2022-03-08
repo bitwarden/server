@@ -24,12 +24,17 @@ namespace Bit.Core.Models.Business.Tokenables
 
         public HCaptchaTokenable(User user) : this()
         {
-            Id = user.Id;
-            Email = user.Email;
+            Id = user?.Id ?? default;
+            Email = user?.Email;
         }
 
         public bool TokenIsValid(User user)
         {
+            if (Id == default || Email == default || user == null)
+            {
+                return false;
+            }
+
             return Id == user.Id &&
             Email.Equals(user.Email, StringComparison.InvariantCultureIgnoreCase);
         }
