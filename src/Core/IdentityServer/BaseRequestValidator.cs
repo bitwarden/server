@@ -515,7 +515,7 @@ namespace Bit.Core.IdentityServer
         private async Task ResetFailedAuthDetailsAsync(User user)
         {
             // Early escape if db hit not necessary
-            if (user.FailedLoginCount == 0)
+            if (user == null || user.FailedLoginCount == 0)
             {
                 return;
             }
@@ -527,6 +527,11 @@ namespace Bit.Core.IdentityServer
 
         private async Task UpdateFailedAuthDetailsAsync(User user, bool twoFactorInvalid, bool unknownDevice)
         {
+            if (user == null)
+            {
+                return;
+            }
+            
             var utcNow = DateTime.UtcNow;
             user.FailedLoginCount = ++user.FailedLoginCount;
             user.LastFailedLoginDate = user.RevisionDate = utcNow;
