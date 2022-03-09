@@ -124,6 +124,9 @@ jobs:
           package: ./${{ matrix.name }}.zip
           slot-name: "staging"
 
+      - name: Start staging slot
+        run: az webapp start -n ${{ steps.retrieve-secrets.outputs.webapp-name }} -g bitwarden -s staging
+
 
   release-docker:
     name: Build Docker images
