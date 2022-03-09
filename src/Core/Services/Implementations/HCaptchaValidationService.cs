@@ -83,17 +83,17 @@ namespace Bit.Core.Services
             return root.GetProperty("success").GetBoolean();
         }
 
-        public bool RequireCaptchaValidation(ICurrentContext currentContext, int? failedLoginCount = null)
+        public bool RequireCaptchaValidation(ICurrentContext currentContext, int failedLoginCount = 0)
         {
-            var failedLoginCeiling = _globalSettings.Captcha.MaximumFailedLoginAttempts.GetValueOrDefault();
+            var failedLoginCeiling = _globalSettings.Captcha.MaximumFailedLoginAttempts;
             return currentContext.IsBot ||
                    _globalSettings.Captcha.ForceCaptchaRequired ||
-                   failedLoginCeiling > 0 && failedLoginCount.GetValueOrDefault() >= failedLoginCeiling;
+                   failedLoginCeiling > 0 && failedLoginCount >= failedLoginCeiling;
         }
 
         public bool ValidateFailedAuthEmailConditions(bool unknownDevice, int failedLoginCount)
         {
-            var failedLoginCeiling = _globalSettings.Captcha.MaximumFailedLoginAttempts.GetValueOrDefault();
+            var failedLoginCeiling = _globalSettings.Captcha.MaximumFailedLoginAttempts;
             return unknownDevice && failedLoginCeiling > 0 && failedLoginCount == failedLoginCeiling;
         }
 
