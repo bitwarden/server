@@ -531,7 +531,7 @@ namespace Bit.Core.IdentityServer
             {
                 return;
             }
-            
+
             var utcNow = DateTime.UtcNow;
             user.FailedLoginCount = ++user.FailedLoginCount;
             user.LastFailedLoginDate = user.RevisionDate = utcNow;
