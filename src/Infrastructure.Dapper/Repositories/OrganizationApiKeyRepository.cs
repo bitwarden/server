@@ -8,6 +8,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
+using Bit.Core.Utilities;
 using Dapper;
 
 namespace Bit.Infrastructure.Dapper.Repositories
@@ -75,6 +76,8 @@ namespace Bit.Infrastructure.Dapper.Repositories
 
         public async Task CreateAsync(OrganizationApiKey organizationApiKey)
         {
+            organizationApiKey.Id = CoreHelpers.GenerateComb();
+
             using (var connection = new SqlConnection(ConnectionString))
             {
                 await connection.ExecuteAsync(
@@ -90,7 +93,7 @@ namespace Bit.Infrastructure.Dapper.Repositories
             {
                 await connection.ExecuteAsync(
                     "[dbo].[OrganizationApiKey_Update]",
-                    organizationApiKey,
+                    new { Id = organizationApiKey.Id },
                     commandType: CommandType.StoredProcedure);
             }
         }

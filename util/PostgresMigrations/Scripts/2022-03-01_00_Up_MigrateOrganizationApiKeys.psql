@@ -1,9 +1,11 @@
 INSERT INTO "OrganizationApiKey"(
+    "Id",
     "OrganizationId",
     "ApiKey",
     "Type",
     "RevisionDate") 
-SELECT "Id" AS "OrganizationId",
+SELECT gen_random_uuid(),
+    "Id" AS "OrganizationId",
     "ApiKey",
     0 AS "Type",
     "RevisionDate" 

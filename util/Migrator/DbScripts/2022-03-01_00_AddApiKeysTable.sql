@@ -49,6 +49,7 @@ END
 GO
 
 CREATE PROCEDURE [dbo].[OrganizationApiKey_Create]
+    @Id UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
     @ApiKey VARCHAR(30),
     @Type TINYINT,

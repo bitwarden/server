@@ -7,6 +7,7 @@ namespace Bit.Core.Entities
 {
     public class OrganizationApiKey
     {
+        public Guid Id { get; set; }
         public Guid OrganizationId { get; set; }
         public OrganizationApiKeyType Type { get; set; }
         [MaxLength(30)]

@@ -73,7 +73,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
 
             builder.Entity<OrganizationApiKey>(b =>
             {
-                b.HasKey(a => new { a.OrganizationId, a.Type });
+                b.Property(a => a.Id).ValueGeneratedNever();
                 b.ToTable(nameof(OrganizationApiKey));
             });
 

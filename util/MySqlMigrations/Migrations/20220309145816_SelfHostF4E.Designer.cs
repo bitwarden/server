@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.MySqlMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20220302205049_SelfHostF4E")]
+    [Migration("20220309145816_SelfHostF4E")]
     partial class SelfHostF4E
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -588,20 +588,25 @@ namespace Bit.MySqlMigrations.Migrations
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.OrganizationApiKey", b =>
                 {
-                    b.Property<Guid>("OrganizationId")
+                    b.Property<Guid>("Id")
                         .HasColumnType("char(36)");
-
-                    b.Property<byte>("Type")
-                        .HasColumnType("tinyint unsigned");
 
                     b.Property<string>("ApiKey")
                         .HasMaxLength(30)
                         .HasColumnType("varchar(30)");
 
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("char(36)");
+
                     b.Property<DateTime>("RevisionDate")
                         .HasColumnType("datetime(6)");
 
-                    b.HasKey("OrganizationId", "Type");
+                    b.Property<byte>("Type")
+                        .HasColumnType("tinyint unsigned");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId");
 
                     b.ToTable("OrganizationApiKey");
                 });

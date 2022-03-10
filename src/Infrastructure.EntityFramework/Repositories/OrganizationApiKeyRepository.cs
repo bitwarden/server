@@ -6,6 +6,7 @@ using AutoMapper;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
+using Bit.Core.Utilities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -24,10 +25,10 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
 
         public async Task CreateAsync(OrganizationApiKey organizationApiKey)
         {
+            organizationApiKey.Id = CoreHelpers.GenerateComb();
             using (var scope = _serviceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
-                dbContext.OrganizationApiKeys.Include(a => a.Organization);
                 dbContext.OrganizationApiKeys.Add(_mapper.Map<Models.OrganizationApiKey>(organizationApiKey));
                 await dbContext.SaveChangesAsync();
             }
