@@ -48,4 +48,8 @@ jobs:
           echo "::set-output name=webapp-name::$webapp_name"
 
       - name: Stop staging slot
-        run: az webapp stop -n ${{ steps.retrieve-secrets.outputs.webapp-name }} -g bitwarden -s staging
+        env:
+          WEBAPP_NAME: ${{ steps.retrieve-secrets.outputs.webapp-name }}
+        run: |
+          RESOURCE_GROUP=$(az webapp list --query "[?name=='$WEBAPP_NAME'].resourceGroup" -o tsv)
+          az webapp stop -n $WEBAPP_NAME -g $RESOURCE_GROUP -s staging
