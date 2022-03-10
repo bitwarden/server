@@ -83,18 +83,17 @@ services:
       - identity
       - web
     environment:
-      BW_ENABLE_SSL: true
-      BW_GENERATE_CERT: true
+      BW_ENABLE_SSL: "true"
+      BW_GENERATE_CERT: "true"
       BW_DOMAIN: "bitwarden.localhost"
     image: bitwarden/nginx:${CORETAG:-latest}
     restart: always
     ports:
-      - '8080:8080'
-      - '8443:8443'
+      - '80:8080'
+      - '443:8443'
     volumes:
       - ca-certificates:/etc/bitwarden/ca-certificates
       - ssl:/etc/bitwarden/ssl
-      - logs-nginx:/var/log/nginx
 
   notifications:
     env_file:
@@ -103,7 +102,7 @@ services:
     restart: always
     volumes:
       - ca-certificates:/etc/bitwarden/ca-certificates
-      - logs-notifications:/etc/bitwarden/logs/notifications
+      - logs-notifications:/etc/bitwarden/logs/Notifications
 
   sso:
     env_file:
@@ -135,7 +134,6 @@ volumes:
   logs-events:
   logs-icons:
   logs-identity:
-  logs-nginx:
   logs-notifications:
   logs-sso:
   mssql_data:
