@@ -25,7 +25,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
         IOrganizationUserRepository organizationUserRepository,
         ILicensingService licensingService,
         IGlobalSettings globalSettings,
-        ILogger<SyncOrganizationSponsorshipsCommand> logger) : base("vault.bitwarden.com", "identity.bitwarden.com", "instalation", globalSettings.Installation.Id.ToString(), globalSettings.Installation.Key, logger)
+        ILogger<SyncOrganizationSponsorshipsCommand> logger) : base("vault.bitwarden.com", "identity.bitwarden.com", "api.installation", globalSettings.Installation.Id.ToString(), globalSettings.Installation.Key, logger)
         {
             _organizationUserRepository = organizationUserRepository;
             _organizationSponsorshipRepository = organizationSponsorshipRepository;
@@ -49,11 +49,15 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
             {
                 await SendAsync(HttpMethod.Post, "organizationSponsorships/sync", new OrganizationSponsorshipSyncRequestModel
                 {
+                    SponsoringOrganizationCloudId = cloudOrganizationId,
                     AllOrganizationUserIds = orgUsers.Select(u => u.Id),
                     SponsorshipsBatch = orgSponsorshipsBatch.Select(s => new OrganizationSponsorshipModel
                     {
-                        SponsoringOrganizationCloudId = cloudOrganizationId,
-                        SponsoringOrganizationUserId = s.SponsoringOrganizationUserId
+                        SponsoringOrganizationUserId = s.SponsoringOrganizationUserId,
+                        FriendlyName = s.FriendlyName,
+                        OfferedToEmail = s.OfferedToEmail,
+                        PlanSponsorshipType = s.PlanSponsorshipType,
+                        // ValidUntil = s.ValidUntil
                     })
                 });
             }

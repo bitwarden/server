@@ -9,6 +9,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business.Tokenables;
+using Bit.Core.Models.Api.Request.OrganizationSponsorships;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -32,6 +33,7 @@ namespace Bit.Api.Controllers
         private readonly ISetUpSponsorshipCommand _setUpSponsorshipCommand;
         private readonly IRevokeSponsorshipCommand _revokeSponsorshipCommand;
         private readonly IRemoveSponsorshipCommand _removeSponsorshipCommand;
+        private readonly ICloudSyncOrganizationSponsorshipsCommand _syncOrganizationSponsorshipsCommand;
         private readonly ICurrentContext _currentContext;
         private readonly IUserService _userService;
 
@@ -45,6 +47,7 @@ namespace Bit.Api.Controllers
             ISetUpSponsorshipCommand setUpSponsorshipCommand,
             IRevokeSponsorshipCommand revokeSponsorshipCommand,
             IRemoveSponsorshipCommand removeSponsorshipCommand,
+            ICloudSyncOrganizationSponsorshipsCommand syncOrganizationSponsorshipsCommand,
             IUserService userService,
             ICurrentContext currentContext)
         {
@@ -57,6 +60,7 @@ namespace Bit.Api.Controllers
             _setUpSponsorshipCommand = setUpSponsorshipCommand;
             _revokeSponsorshipCommand = revokeSponsorshipCommand;
             _removeSponsorshipCommand = removeSponsorshipCommand;
+            _syncOrganizationSponsorshipsCommand = syncOrganizationSponsorshipsCommand;
             _userService = userService;
             _currentContext = currentContext;
         }
@@ -113,6 +117,13 @@ namespace Bit.Api.Controllers
             await _setUpSponsorshipCommand.SetUpSponsorshipAsync(
                 sponsorship,
                 await _organizationRepository.GetByIdAsync(model.SponsoredOrganizationId));
+        }
+
+        [HttpPost("sync")]
+        [Authorize("Installation")]
+        public async Task Sync([FromBody] OrganizationSponsorshipSyncRequestModel model)
+        {
+            await _syncOrganizationSponsorshipsCommand.SyncOrganization(model);
         }
 
         [HttpDelete("{sponsoringOrganizationId}")]
