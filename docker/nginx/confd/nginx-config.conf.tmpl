@@ -9,7 +9,7 @@ server {
 
 server {
   listen 8443 ssl http2;
-  #listen [::]:8443 ssl http2;
+  listen [::]:8443 ssl http2;
   server_name {{ getenv "BW_DOMAIN" "localhost" }};
 
   ssl_certificate /etc/bitwarden/ssl/{{ getenv "BW_SSL_CERT" "certificate.crt" }};

@@ -36,11 +36,13 @@ RUN dotnet publish -c release -o /app --no-restore
 FROM mcr.microsoft.com/dotnet/aspnet:5.0-alpine
 LABEL com.bitwarden.product="bitwarden"
 ENV ASPNETCORE_URLS http://+:5000
+ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false
 EXPOSE 5000
 
 # Add packages
 RUN apk add --update-cache \
     curl \
+    icu-libs \
     && rm -rf /var/cache/apk/*
 
 # Create required directories
