@@ -230,7 +230,7 @@ namespace Bit.Api.Controllers
 
             var collectionCiphers = await _collectionCipherRepository.GetManyByOrganizationIdAsync(orgIdGuid);
             var collectionCiphersGroupDict = collectionCiphers
-                .Where(c => orgCipherIds.Contains(c.CollectionId))
+                .Where(c => orgCipherIds.Contains(c.CipherId))
                 .GroupBy(c => c.CipherId).ToDictionary(s => s.Key);
 
 
