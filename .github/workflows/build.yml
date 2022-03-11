@@ -28,6 +28,18 @@ jobs:
         run: cloc --include-lang C#,SQL,Razor,"Bourne Shell",PowerShell,HTML,CSS,Sass,JavaScript,TypeScript --vcs git
 
 
+  lint:
+    name: Lint
+    runs-on: ubuntu-20.04
+    steps:
+      # TODO: This can be removed when upgrading to .NET 6
+      - name: Restore tools
+        run: dotnet tool restore
+
+      - name: Verify Format
+        run: dotnet tool run dotnet-format --check
+
+
   testing:
     name: Testing
     runs-on: windows-2019
@@ -71,10 +83,6 @@ jobs:
       # TODO: This can be removed when upgrading to .NET 6
       - name: Restore tools
         run: dotnet tool restore
-        shell: pwsh
-
-      - name: Verify Format
-        run: dotnet tool run dotnet-format --check
         shell: pwsh
 
       - name: Test OSS solution
@@ -455,6 +463,7 @@ jobs:
     runs-on: ubuntu-20.04
     needs:
       - cloc
+      - lint
       - testing
       - build-artifacts
       - build-docker
@@ -467,12 +476,15 @@ jobs:
           || github.ref == 'refs/heads/hotfix-rc'
         env:
           CLOC_STATUS: ${{ needs.cloc.result }}
+          LINT_STATUS: ${{ needs.lint.result }}
           TESTING_STATUS: ${{ needs.testing.result }}
           BUILD_ARTIFACTS_STATUS: ${{ needs.build-artifacts.result }}
           BUILD_DOCKER_STATUS: ${{ needs.build-docker.result }}
           UPLOAD_STATUS: ${{ needs.upload.result }}
         run: |
           if [ "$CLOC_STATUS" = "failure" ]; then
+              exit 1
+          elif [ "$LINT_STATUS" = "failure" ]; then
               exit 1
           elif [ "$TESTING_STATUS" = "failure" ]; then
               exit 1
