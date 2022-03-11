@@ -4,22 +4,8 @@ BEGIN
     ALTER TABLE
         [dbo].[User]
     ADD
-        [FailedLoginCount] INT NULL
+        [FailedLoginCount] INT NOT NULL CONSTRAINT D_User_FailedLoginCount DEFAULT 0
 END
-GO
-
-UPDATE
-    [dbo].[User]
-SET
-    [FailedLoginCount] = 0
-WHERE
-    [FailedLoginCount] IS NULL
-GO
-
-ALTER TABLE
-    [dbo].[User]
-ALTER COLUMN
-    [FailedLoginCount] INT NOT NULL
 GO
 
 -- Table: User (LastFailedLoginDate)
