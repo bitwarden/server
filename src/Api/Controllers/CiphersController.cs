@@ -224,12 +224,17 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            var ciphers = await _cipherRepository.GetManyByOrganizationIdAsync(orgIdGuid);
+            var ciphers = await _cipherRepository.GetManyByUserIdAsync(userId, true);
+            var orgCiphers = ciphers.Where(c => c.OrganizationId == orgIdGuid);
+            var orgCipherIds = orgCiphers.Select(c => c.Id);
 
             var collectionCiphers = await _collectionCipherRepository.GetManyByOrganizationIdAsync(orgIdGuid);
-            var collectionCiphersGroupDict = collectionCiphers.GroupBy(c => c.CipherId).ToDictionary(s => s.Key);
+            var collectionCiphersGroupDict = collectionCiphers
+                .Where(c => orgCipherIds.Contains(c.CollectionId))
+                .GroupBy(c => c.CipherId).ToDictionary(s => s.Key);
 
-            var responses = ciphers.Select(c => new CipherMiniDetailsResponseModel(c, _globalSettings,
+
+            var responses = orgCiphers.Select(c => new CipherMiniDetailsResponseModel(c, _globalSettings,
                 collectionCiphersGroupDict));
 
             var providerId = await _currentContext.ProviderIdForOrg(orgIdGuid);
