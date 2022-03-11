@@ -1,7 +1,7 @@
 ﻿using Bit.Core.Context;
-using Bit.Core.Exceptions;
 using Bit.Core.Models.Api;
 using Bit.Core.Services;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -22,14 +22,18 @@ namespace Bit.Core.Utilities
 
                 if (string.IsNullOrWhiteSpace(captchaResponse))
                 {
-                    throw new BadRequestException(captchaValidationService.SiteKeyResponseKeyName, captchaValidationService.SiteKey);
+                    context.HttpContext.Response.StatusCode = 400;
+                    context.Result = new ObjectResult(new ErrorResponseModel(captchaValidationService.SiteKeyResponseKeyName, captchaValidationService.SiteKey));
+                    return;
                 }
 
                 var captchaValid = captchaValidationService.ValidateCaptchaResponseAsync(captchaResponse,
                     currentContext.IpAddress).GetAwaiter().GetResult();
                 if (!captchaValid)
                 {
-                    throw new BadRequestException("Captcha is invalid. Please refresh and try again");
+                    context.HttpContext.Response.StatusCode = 400;
+                    context.Result = new ObjectResult(new ErrorResponseModel("Captcha is invalid. Please refresh and try again"));
+                    return;
                 }
             }
         }
