@@ -125,7 +125,13 @@ jobs:
           slot-name: "staging"
 
       - name: Start staging slot
-        run: az webapp start -n ${{ steps.retrieve-secrets.outputs.webapp-name }} -g bitwarden -s staging
+        run: |
+          if [[ "$SERVICE" = "Api" ]] || [[ "$SERVICE" = "Identity" ]]; then
+            RESOURCE_GROUP=bitwardenappservices
+          else
+            RESOURCE_GROUP=bitwarden
+          fi
+          az webapp start -n $WEBAPP_NAME -g $RESOURCE_GROUP -s staging
 
 
   release-docker:

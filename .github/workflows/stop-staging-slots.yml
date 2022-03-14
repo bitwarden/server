@@ -49,8 +49,12 @@ jobs:
 
       - name: Stop staging slot
         env:
+          SERVICE: ${{ matrix.name }}
           WEBAPP_NAME: ${{ steps.retrieve-secrets.outputs.webapp-name }}
         run: |
-          RESOURCE_GROUP=$(az webapp list --query "[?name=='${{ steps.retrieve-secrets.outputs.webapp-name }}'].resourceGroup" -o tsv)
-          az webapp list --query "[?name=='${{ steps.retrieve-secrets.outputs.webapp-name }}'].resourceGroup" -o tsv
+          if [[ "$SERVICE" = "Api" ]] || [[ "$SERVICE" = "Identity" ]]; then
+            RESOURCE_GROUP=bitwardenappservices
+          else
+            RESOURCE_GROUP=bitwarden
+          fi
           az webapp stop -n $WEBAPP_NAME -g $RESOURCE_GROUP -s staging
