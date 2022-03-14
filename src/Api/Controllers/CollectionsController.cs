@@ -87,8 +87,9 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            var collections = await _collectionRepository.GetManyByOrganizationIdAsync(orgIdGuid);
-            var responses = collections.Select(c => new CollectionResponseModel(c));
+            var collections = await _collectionRepository.GetManyByUserIdAsync(_currentContext.UserId.Value);
+            var orgCollections = collections.Where(c => c.OrganizationId == orgIdGuid);
+            var responses = orgCollections.Select(c => new CollectionResponseModel(c));
             return new ListResponseModel<CollectionResponseModel>(responses);
         }
 
