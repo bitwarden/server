@@ -50,7 +50,6 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
                 await SendAsync(HttpMethod.Post, "organizationSponsorships/sync", new OrganizationSponsorshipSyncRequestModel
                 {
                     SponsoringOrganizationCloudId = cloudOrganizationId,
-                    AllOrganizationUserIds = orgUsers.Select(u => u.Id),
                     SponsorshipsBatch = orgSponsorshipsBatch.Select(s => new OrganizationSponsorshipModel
                     {
                         SponsoringOrganizationUserId = s.SponsoringOrganizationUserId,
