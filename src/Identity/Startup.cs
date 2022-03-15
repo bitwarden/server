@@ -58,7 +58,6 @@ namespace Bit.Identity
             services.AddMemoryCache();
 
             // Mvc
-            // MVC
             services.AddMvc(config =>
             {
                 config.Filters.Add(new ModelStateValidationFilterAttribute());
