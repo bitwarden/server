@@ -1,6 +1,4 @@
-Bitwarden believes that working with security researchers across the globe is crucial to keeping our users safe. If you believe you've found a security issue in our product or service, we encourage you to notify us. We welcome working with you to resolve the issue promptly. Thanks in advance!
-
-If you believe you've found a potential security issue, please submit a report through our [HackerOne Program](https://hackerone.com/bitwarden/).
+Bitwarden believes that working with security researchers across the globe is crucial to keeping our users safe. If you believe you've found a security issue in our product or service, we encourage you to please submit a report through our [HackerOne Program](https://hackerone.com/bitwarden/). We welcome working with you to resolve the issue promptly. Thanks in advance!
 
 # Disclosure Policy
 
