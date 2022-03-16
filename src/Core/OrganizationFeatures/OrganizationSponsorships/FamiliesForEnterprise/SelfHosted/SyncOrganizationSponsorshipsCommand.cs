@@ -47,7 +47,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
 
             foreach (var orgSponsorshipsBatch in CoreHelpers.Batch(organizationSponsorships, 1000))
             {
-                await SendAsync(HttpMethod.Post, "organizationSponsorships/sync", new OrganizationSponsorshipSyncRequestModel
+                 var response = await SendAsync(HttpMethod.Post, "organizationSponsorships/sync", new OrganizationSponsorshipSyncRequestModel
                 {
                     SponsoringOrganizationCloudId = cloudOrganizationId,
                     SponsorshipsBatch = orgSponsorshipsBatch.Select(s => new OrganizationSponsorshipModel
@@ -56,7 +56,8 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
                         FriendlyName = s.FriendlyName,
                         OfferedToEmail = s.OfferedToEmail,
                         PlanSponsorshipType = s.PlanSponsorshipType,
-                        // ValidUntil = s.ValidUntil
+                        ValidUntil = s.ValidUntil,
+                        ToDelete = s.ToDelete
                     })
                 });
             }

@@ -12,5 +12,6 @@ namespace Bit.Core.Models.Api.Request.OrganizationSponsorships
         public PlanSponsorshipType? PlanSponsorshipType { get; set; }
         public DateTime? LastSyncDate { get; set; }
         public DateTime? ValidUntil { get; set; }
+        public bool ToDelete { get; set; }
     }
 }
