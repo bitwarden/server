@@ -274,6 +274,7 @@ namespace Bit.Admin.Controllers
                 var ms = new MemoryStream();
                 ms.Seek(0, SeekOrigin.Begin);
                 await JsonSerializer.SerializeAsync(ms, license, JsonHelpers.Indented);
+                ms.Seek(0, SeekOrigin.Begin);
                 return File(ms, "text/plain", "bitwarden_premium_license.json");
             }
             else
