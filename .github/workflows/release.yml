@@ -143,12 +143,9 @@ jobs:
           - service_name: Events
           - service_name: Icons
           - service_name: Identity
-          - service_name: K8S-Proxy
-          - service_name: MsSql
           - service_name: Nginx
           - service_name: Notifications
           - service_name: Server
-          - service_name: Setup
           - service_name: Sso
     steps:
       - name: Print environment
@@ -226,21 +223,19 @@ jobs:
       - setup
       - deploy
     steps:
-      - name: Download latest Release docker-stub
+      - name: Download latest Release swagger.json
         uses: bitwarden/gh-actions/download-artifacts@23433be15ed6fd046ce12b6889c5184a8d9c8783
         with:
           workflow: build.yml
           workflow_conclusion: success
           branch: ${{ needs.setup.outputs.branch-name }}
-          artifacts: "docker-stub.zip,
-                      swagger.json"
+          artifacts: "swagger.json"
 
       - name: Create release
         if: ${{ github.event.inputs.release_type != 'Dry Run' }}
         uses: ncipollo/release-action@40bb172bd05f266cf9ba4ff965cb61e9ee5f6d01
         with:
-          artifacts: 'docker-stub.zip,
-                      swagger.json'
+          artifacts: 'swagger.json'
           commit: ${{ github.sha }}
           tag: "v${{ needs.setup.outputs.release_version }}"
           name: "Version ${{ needs.setup.outputs.release_version }}"

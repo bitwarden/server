@@ -9,23 +9,8 @@ echo -e ''
 echo -e 'Installing Bitwarden...'
 echo -e ''
 
-/root/bitwarden.sh install
-
-echo -e ''
-echo -e 'Starting Bitwarden containers...'
-echo -e ''
-
-/root/bitwarden.sh start
-
-echo -e ''
-echo -e 'Waiting for Bitwarden database container to come online...'
-
-sleep 30s
-
-echo -e 'Initializing Bitwarden database...'
-echo -e ''
-
-/root/bitwarden.sh updatedb
+cd /root
+docker-compose up -d
 
 echo -e ''
 echo -e 'Bitwarden installation complete.'
@@ -36,7 +21,7 @@ echo -e ''
 # ref: https://help.bitwarden.com/article/updating-on-premise/
 #
 
-echo -e '#!/usr/bin/env bash\n/root/bitwarden.sh updateself\n/root/bitwarden.sh update' \
+echo -e '#!/usr/bin/env bash\ncd /root\ndocker-composes pull\ndocker-compose up -d' \
     > /etc/cron.weekly/bitwardenupdate
 
 chmod +x /etc/cron.weekly/bitwardenupdate

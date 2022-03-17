@@ -78,23 +78,24 @@ Full documentation for deploying Bitwarden with Docker can be found in our help 
 
 *These dependencies are free to use.*
 
-### Linux & macOS
+### Linux, macOS, Windows
 
-```
-curl -s -o bitwarden.sh \
-    https://raw.githubusercontent.com/bitwarden/server/master/scripts/bitwarden.sh \
-    && chmod +x bitwarden.sh
-./bitwarden.sh install
-./bitwarden.sh start
+```bash
+curl -s -o docker-compose.yml https://raw.githubusercontent.com/bitwarden/server/master/docker/docker-compose.yml
+curl -s -o global.env https://raw.githubusercontent.com/bitwarden/server/master/docker/global.env.example
 ```
 
-### Windows
+#### Edit `global.env` and update the following values
+- globalSettings__baseServiceUri__vault
+- globalSettings__installation__id
+- globalSettings__installation__key
 
-```
-Invoke-RestMethod -OutFile bitwarden.ps1 `
-    -Uri https://raw.githubusercontent.com/bitwarden/server/master/scripts/bitwarden.ps1
-.\bitwarden.ps1 -install
-.\bitwarden.ps1 -start
+The `Installation ID` and `Installation Key` can be retrieved from [here](https://bitwarden.com/host/)
+
+Finally, use Docker Compose to bring up the stack.
+
+```bash
+docker-compose up -d
 ```
 
 ## We're Hiring!

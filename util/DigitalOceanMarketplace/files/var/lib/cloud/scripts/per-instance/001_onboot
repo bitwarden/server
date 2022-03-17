@@ -9,9 +9,5 @@
 # ref: https://help.bitwarden.com/article/install-on-premise/
 #
 
-docker pull bitwarden/setup
-
-curl -s -o /root/bitwarden.sh \
-    https://raw.githubusercontent.com/bitwarden/server/master/scripts/bitwarden.sh
-
-chmod +x /root/bitwarden.sh
+curl -s -o docker-compose.yml https://raw.githubusercontent.com/bitwarden/server/master/docker/docker-compose.yml
+curl -s -o global.env https://raw.githubusercontent.com/bitwarden/server/master/docker/global.env.example

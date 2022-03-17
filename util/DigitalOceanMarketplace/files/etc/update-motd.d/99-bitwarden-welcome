@@ -13,13 +13,13 @@ Complete documentation:
   https://help.bitwarden.com/hosting/
 
 Configuration:
-  Configuration changes can be made in /root/bwdata/config.yml and
-  /root/bwdata/env/global.override.env
+  Configuration changes can be made in /root/global.env
 
 Common commands:
-  /root/bitwarden.sh stop
-  /root/bitwarden.sh restart
-  /root/bitwarden.sh rebuild
+  docker-compose up -d
+  docker-compose down
+  docker-compose pull
+  docker-compose restart
 
 ********************************************************************************
 To delete this message of the day: rm -rf $(readlink -f ${0})

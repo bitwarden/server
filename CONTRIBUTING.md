@@ -8,9 +8,9 @@ Here is how you can get involved:
 
 * **Request a new feature:** Go to the [Feature Requests category](https://community.bitwarden.com/c/feature-requests/) of the Community Forums. Please search existing feature requests before making a new one
   
-* **Write code for a new feature:** Make a new post in the [Github Contributions category](https://community.bitwarden.com/c/github-contributions/) of the Community Forums. Include a description of your proposed contribution, screeshots, and links to any relevant feature requests. This helps get feedback from the community and Bitwarden team members before you start writing code
+* **Write code for a new feature:** Make a new post in the [GitHub Contributions category](https://community.bitwarden.com/c/github-contributions/) of the Community Forums. Include a description of your proposed contribution, screenshots, and links to any relevant feature requests. This helps get feedback from the community and Bitwarden team members before you start writing code.
   
-* **Report a bug or submit a bugfix:** Use Github issues and pull requests
+* **Report a bug or submit a bugfix:** Use GitHub issues and pull requests
   
 * **Write documentation:** Submit a pull request to the [Bitwarden help repository](https://github.com/bitwarden/help)
   
@@ -18,13 +18,13 @@ Here is how you can get involved:
 
 ## Contributor Agreement
 
-Please sign the [Contributor Agreement](https://cla-assistant.io/bitwarden/server) if you intend on contributing to any Github repository. Pull requests cannot be accepted and merged unless the author has signed the Contributor Agreement.
+Please sign the [Contributor Agreement](https://cla-assistant.io/bitwarden/server) if you intend on contributing to any GitHub repository. Pull requests cannot be accepted and merged unless the author has signed the Contributor Agreement.
 
 ## Pull Request Guidelines
 
-* commit any pull requests against the `master` branch
-* include a link to your Community Forums post
-* please do **not** submit version number updates/bumps
+* Commit any pull requests against the `master` branch
+* Include a link to your Community Forums post
+* Please do **not** submit version number updates/bumps
 
 # Setup guide
 

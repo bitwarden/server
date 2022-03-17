@@ -35,12 +35,9 @@ jobs:
               - EventsProcessor
               - Icons
               - Identity
-              - K8S-Proxy
-              - MsSql
               - Nginx
               - Notifications
               - Server
-              - Setup
               - Sso
         run: |
           for SERVICE in $(echo "${{ env.SERVICES }}" | yq e ".services[]" - )
