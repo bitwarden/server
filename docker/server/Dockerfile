@@ -29,7 +29,6 @@ RUN dotnet publish -c release -o /app --no-restore
 #                  App stage                  #
 ###############################################
 FROM mcr.microsoft.com/dotnet/aspnet:5.0-alpine
-LABEL com.bitwarden.product="bitwarden"
 
 RUN apk add --update-cache \
     curl \

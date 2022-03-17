@@ -1,6 +1,7 @@
 FROM nginx:stable
 
 LABEL com.bitwarden.product="bitwarden"
+LABEL com.bitwarden.project="nginx"
 
 EXPOSE 8080
 EXPOSE 8443

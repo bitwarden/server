@@ -1,6 +1,8 @@
 FROM bitwarden/server
 
 LABEL com.bitwarden.product="bitwarden"
+LABEL com.bitwarden.project="attachments"
+ENV ASPNETCORE_ENVIRONMENT=Production
 ENV ASPNETCORE_URLS http://+:5000
 EXPOSE 5000
 

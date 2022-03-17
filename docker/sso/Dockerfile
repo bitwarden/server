@@ -41,6 +41,8 @@ RUN dotnet publish -c release -o /app --no-restore
 ###############################################
 FROM mcr.microsoft.com/dotnet/aspnet:5.0-alpine
 LABEL com.bitwarden.product="bitwarden"
+LABEL com.bitwarden.project="sso"
+ENV ASPNETCORE_ENVIRONMENT=Production
 ENV ASPNETCORE_URLS http://+:5000
 EXPOSE 5000
 
