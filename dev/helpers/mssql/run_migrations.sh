@@ -12,6 +12,14 @@ DATABASE="vault_dev"
 USER="SA"
 PASSWD=$MSSQL_PASSWORD
 
+echo "all params"
+echo "$@"
+echo "all params"
+if [[ "$@" =~ "self-host" ]]; then
+  LAST_MIGRATION_FILE="/mnt/data/last_self_host_migration"
+  DATABASE="vault_dev_self_host"
+fi
+
 if [ ! -f "$LAST_MIGRATION_FILE" ]; then
   echo "$LAST_MIGRATION_FILE not found!"
   echo "This will run all migrations which might cause unexpected behaviour if the database is not empty."
