@@ -13,6 +13,33 @@ namespace Bit.PostgresMigrations.Migrations
                 name: "TimesRenewedWithoutValidation",
                 table: "OrganizationSponsorship");
 
+            migrationBuilder.CreateTable(
+                name: "OrganizationApiKey",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    OrganizationId = table.Column<Guid>(type: "uuid", nullable: false),
+                    Type = table.Column<byte>(type: "smallint", nullable: false),
+                    ApiKey = table.Column<string>(type: "character varying(30)", maxLength: 30, nullable: true),
+                    RevisionDate = table.Column<DateTime>(type: "timestamp without time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_OrganizationApiKey", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_OrganizationApiKey_Organization_OrganizationId",
+                        column: x => x.OrganizationId,
+                        principalTable: "Organization",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.SqlResource(_scriptLocationTemplate);
+
+            migrationBuilder.DropColumn(
+                name: "ApiKey",
+                table: "Organization");
+
             migrationBuilder.RenameColumn(
                 name: "SponsorshipLapsedDate",
                 table: "OrganizationSponsorship",
@@ -22,32 +49,6 @@ namespace Bit.PostgresMigrations.Migrations
                 name: "CloudSponsor",
                 table: "OrganizationSponsorship",
                 newName: "ToDelete");
-
-            migrationBuilder.CreateTable(
-                name: "OrganizationApiKey",
-                columns: table => new
-                {
-                    OrganizationId = table.Column<Guid>(type: "uuid", nullable: false),
-                    Type = table.Column<byte>(type: "smallint", nullable: false),
-                    ApiKey = table.Column<string>(type: "character varying(30)", maxLength: 30, nullable: true),
-                    RevisionDate = table.Column<DateTime>(type: "timestamp without time zone", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_OrganizationApiKey", x => new { x.OrganizationId, x.Type });
-                    table.ForeignKey(
-                        name: "FK_OrganizationApiKey_Organization_OrganizationId",
-                        column: x => x.OrganizationId,
-                        principalTable: "Organization",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.SqlResource(_scriptLocationTemplate, "Up");
-            
-            migrationBuilder.DropColumn(
-                name: "ApiKey",
-                table: "Organization");
 
             migrationBuilder.CreateTable(
                 name: "OrganizationConnection",
@@ -71,6 +72,11 @@ namespace Bit.PostgresMigrations.Migrations
                 });
 
             migrationBuilder.CreateIndex(
+                name: "IX_OrganizationApiKey_OrganizationId",
+                table: "OrganizationApiKey",
+                column: "OrganizationId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_OrganizationConnection_OrganizationId",
                 table: "OrganizationConnection",
                 column: "OrganizationId");
@@ -85,7 +91,7 @@ namespace Bit.PostgresMigrations.Migrations
                 maxLength: 30,
                 nullable: true);
 
-            migrationBuilder.SqlResource(_scriptLocationTemplate, "Down");
+            migrationBuilder.SqlResource(_scriptLocationTemplate);
 
             migrationBuilder.DropTable(
                 name: "OrganizationApiKey");
@@ -109,6 +115,8 @@ namespace Bit.PostgresMigrations.Migrations
                 type: "smallint",
                 nullable: false,
                 defaultValue: (byte)0);
+
+            
         }
     }
 }

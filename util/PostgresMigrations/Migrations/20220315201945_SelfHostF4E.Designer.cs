@@ -10,7 +10,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Bit.PostgresMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20220302205727_SelfHostF4E")]
+    [Migration("20220315201945_SelfHostF4E")]
     partial class SelfHostF4E
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -592,20 +592,25 @@ namespace Bit.PostgresMigrations.Migrations
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.OrganizationApiKey", b =>
                 {
-                    b.Property<Guid>("OrganizationId")
+                    b.Property<Guid>("Id")
                         .HasColumnType("uuid");
-
-                    b.Property<byte>("Type")
-                        .HasColumnType("smallint");
 
                     b.Property<string>("ApiKey")
                         .HasMaxLength(30)
                         .HasColumnType("character varying(30)");
 
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime>("RevisionDate")
                         .HasColumnType("timestamp without time zone");
 
-                    b.HasKey("OrganizationId", "Type");
+                    b.Property<byte>("Type")
+                        .HasColumnType("smallint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId");
 
                     b.ToTable("OrganizationApiKey");
                 });

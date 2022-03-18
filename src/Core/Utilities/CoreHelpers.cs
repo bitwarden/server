@@ -48,14 +48,27 @@ namespace Bit.Core.Utilities
         /// </summary>
         /// <returns>A comb Guid.</returns>
         public static Guid GenerateComb()
-        {
-            var guidArray = Guid.NewGuid().ToByteArray();
+            => GenerateComb(Guid.NewGuid(), DateTime.UtcNow);
 
-            var now = DateTime.UtcNow;
+        /// <summary>
+        /// Generate sequential Guid for Sql Server.
+        /// ref: https://github.com/nhibernate/nhibernate-core/blob/master/src/NHibernate/Id/GuidCombGenerator.cs
+        /// </summary>
+        /// <returns>A comb Guid.</returns>
+        public static Guid GenerateComb(DateTime time)
+            => GenerateComb(Guid.NewGuid(), time);
+
+
+        /// <summary>
+        /// Implementation of GenerateComb that has inputs that make it repeatable for purposes of testing
+        /// </summary>
+        internal static Guid GenerateComb(Guid startingGuid, DateTime time)
+        {
+            var guidArray = startingGuid.ToByteArray();
 
             // Get the days and milliseconds which will be used to build the byte string 
-            var days = new TimeSpan(now.Ticks - _baseDateTicks);
-            var msecs = now.TimeOfDay;
+            var days = new TimeSpan(time.Ticks - _baseDateTicks);
+            var msecs = time.TimeOfDay;
 
             // Convert to a byte array 
             // Note that SQL Server is accurate to 1/300th of a millisecond so we divide by 3.333333 

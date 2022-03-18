@@ -590,20 +590,25 @@ namespace Bit.PostgresMigrations.Migrations
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.OrganizationApiKey", b =>
                 {
-                    b.Property<Guid>("OrganizationId")
+                    b.Property<Guid>("Id")
                         .HasColumnType("uuid");
-
-                    b.Property<byte>("Type")
-                        .HasColumnType("smallint");
 
                     b.Property<string>("ApiKey")
                         .HasMaxLength(30)
                         .HasColumnType("character varying(30)");
 
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime>("RevisionDate")
                         .HasColumnType("timestamp without time zone");
 
-                    b.HasKey("OrganizationId", "Type");
+                    b.Property<byte>("Type")
+                        .HasColumnType("smallint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId");
 
                     b.ToTable("OrganizationApiKey");
                 });

@@ -202,6 +202,21 @@ BEGIN
 END
 GO
 
+CREATE OR ALTER FUNCTION [dbo].[GenerateComb] (@time DATETIME, @uuid UNIQUEIDENTIFIER)
+RETURNS UNIQUEIDENTIFIER
+AS
+BEGIN
+    DECLARE @comb UNIQUEIDENTIFIER;
+
+    SELECT @comb = CAST(
+        CAST(@uuid AS BINARY(10)) +
+        CAST(@time AS BINARY(6))
+    AS UNIQUEIDENTIFIER);
+
+    RETURN @comb
+END;
+GO
+
 IF COL_LENGTH('[dbo].[Organization]', 'ApiKey') IS NOT NULl
 BEGIN
     BEGIN TRANSACTION MigrateOrganizationApiKeys
@@ -214,7 +229,7 @@ BEGIN
             [RevisionDate]
         )
         SELECT
-            NEWID(), -- TODO: Validate that this is the ID we want to use
+            [dbo].[GenerateComb]([CreationDate], NEWID()),
             [Id] AS [OrganizationId], 
             [ApiKey] AS [ApiKey], 
             0 AS [Type], -- 0 represents 'Default' type
@@ -230,6 +245,10 @@ BEGIN
         [ApiKey]
     COMMIT TRANSACTION DeleteOldApiKeys;
 END
+GO
+
+
+DROP FUNCTION [dbo].[GenerateComb];
 GO
 
 
@@ -770,5 +789,227 @@ BEGIN
         [Id] = @Id
 
     COMMIT TRANSACTION Organization_DeleteById
+END
+GO
+
+IF COL_LENGTH('[dbo].[OrganizationSponsorship]', 'TimesRenewedWithoutValidation') IS NOT NULL
+BEGIN
+    ALTER TABLE [dbo].[OrganizationSponsorship] DROP CONSTRAINT DF__Organizat__Times__2B2A60FE
+    ALTER TABLE [dbo].[OrganizationSponsorship] DROP COLUMN [TimesRenewedWithoutValidation]
+END
+
+IF COL_LENGTH('[dbo].[OrganizationSponsorship]', 'SponsorshipLapsedDate') IS NOT NULL
+BEGIN
+    EXEC sp_rename '[dbo].[OrganizationSponsorship].[SponsorshipLapsedDate]', 'ValidUntil'
+END
+
+IF COL_LENGTH('[dbo].[OrganizationSponsorship]', 'CloudSponsor') IS NOT NULL
+BEGIN
+    ALTER TABLE [dbo].[OrganizationSponsorship] DROP COLUMN [CloudSponsor]
+END
+
+IF COL_LENGTH('[dbo].[OrganizationSponsorship]', 'ToDelete') IS NULL
+BEGIN
+    ALTER TABLE [dbo].[OrganizationSponsorship] ADD [ToDelete] BIT NOT NULL
+END
+
+-- Remake View
+IF EXISTS(SELECT * FROM sys.views WHERE [Name] = 'OrganizationSponsorshipView')
+BEGIN
+    DROP VIEW [dbo].[OrganizationSponsorshipView];
+END
+GO
+
+CREATE VIEW [dbo].[OrganizationSponsorshipView]
+AS
+SELECT
+    *
+FROM
+    [dbo].[OrganizationSponsorship]
+GO
+
+IF OBJECT_ID('[dbo].[OrganizationSponsorship_Create]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[OrganizationSponsorship_Create]
+END
+GO
+
+-- OrganizationSponsorship_Create
+IF OBJECT_ID('[dbo].[OrganizationSponsorship_Create]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[OrganizationSponsorship_Create]
+END
+GO
+
+CREATE PROCEDURE [dbo].[OrganizationSponsorship_Create]
+    @Id UNIQUEIDENTIFIER OUTPUT,
+    @InstallationId UNIQUEIDENTIFIER,
+    @SponsoringOrganizationId UNIQUEIDENTIFIER,
+    @SponsoringOrganizationUserID UNIQUEIDENTIFIER,
+    @SponsoredOrganizationId UNIQUEIDENTIFIER,
+    @FriendlyName NVARCHAR(256),
+    @OfferedToEmail NVARCHAR(256),
+    @PlanSponsorshipType TINYINT,
+    @ToDelete BIT,
+    @LastSyncDate DATETIME2 (7),
+    @ValidUntil DATETIME2 (7)
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    INSERT INTO [dbo].[OrganizationSponsorship]
+    (
+        [Id],
+        [InstallationId],
+        [SponsoringOrganizationId],
+        [SponsoringOrganizationUserID],
+        [SponsoredOrganizationId],
+        [FriendlyName],
+        [OfferedToEmail],
+        [PlanSponsorshipType],
+        [ToDelete],
+        [LastSyncDate],
+        [ValidUntil]
+    )
+    VALUES
+    (
+        @Id,
+        @InstallationId,
+        @SponsoringOrganizationId,
+        @SponsoringOrganizationUserID,
+        @SponsoredOrganizationId,
+        @FriendlyName,
+        @OfferedToEmail,
+        @PlanSponsorshipType,
+        @ToDelete,
+        @LastSyncDate,
+        @ValidUntil
+    )
+END
+GO
+
+-- OrganizationSponsorship_Update
+IF OBJECT_ID('[dbo].[OrganizationSponsorship_Update]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[OrganizationSponsorship_Update]
+END
+GO
+
+CREATE PROCEDURE [dbo].[OrganizationSponsorship_Update]
+    @Id UNIQUEIDENTIFIER,
+    @InstallationId UNIQUEIDENTIFIER,
+    @SponsoringOrganizationId UNIQUEIDENTIFIER,
+    @SponsoringOrganizationUserID UNIQUEIDENTIFIER,
+    @SponsoredOrganizationId UNIQUEIDENTIFIER,
+    @FriendlyName NVARCHAR(256),
+    @OfferedToEmail NVARCHAR(256),
+    @PlanSponsorshipType TINYINT,
+    @ToDelete BIT,
+    @LastSyncDate DATETIME2 (7),
+    @ValidUntil DATETIME2 (7)
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    UPDATE
+        [dbo].[OrganizationSponsorship]
+    SET
+        [InstallationId] = @InstallationId,
+        [SponsoringOrganizationId] = @SponsoringOrganizationId,
+        [SponsoringOrganizationUserID] = @SponsoringOrganizationUserID,
+        [SponsoredOrganizationId] = @SponsoredOrganizationId,
+        [FriendlyName] = @FriendlyName,
+        [OfferedToEmail] = @OfferedToEmail,
+        [PlanSponsorshipType] = @PlanSponsorshipType,
+        [ToDelete] = @ToDelete,
+        [LastSyncDate] = @LastSyncDate,
+        [ValidUntil] = @ValidUntil
+    WHERE
+        [Id] = @Id
+END
+GO
+
+IF OBJECT_ID('[dbo].[Organization_DeleteById]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[OrganizationSponsorship_OrganizationDeleted]
+END
+GO
+
+CREATE PROCEDURE [dbo].[Organization_DeleteById]
+    @Id UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationId] @Id
+
+    DECLARE @BatchSize INT = 100
+    WHILE @BatchSize > 0
+    BEGIN
+        BEGIN TRANSACTION Organization_DeleteById_Ciphers
+
+        DELETE TOP(@BatchSize)
+        FROM
+            [dbo].[Cipher]
+        WHERE
+            [UserId] IS NULL
+            AND [OrganizationId] = @Id
+
+        SET @BatchSize = @@ROWCOUNT
+
+        COMMIT TRANSACTION Organization_DeleteById_Ciphers
+    END
+
+    BEGIN TRANSACTION Organization_DeleteById
+
+    DELETE
+    FROM
+        [dbo].[SsoUser]
+    WHERE
+        [OrganizationId] = @Id
+
+    DELETE
+    FROM
+        [dbo].[SsoConfig]
+    WHERE
+        [OrganizationId] = @Id
+
+    DELETE CU
+    FROM 
+        [dbo].[CollectionUser] CU
+    INNER JOIN 
+        [dbo].[OrganizationUser] OU ON [CU].[OrganizationUserId] = [OU].[Id]
+    WHERE 
+        [OU].[OrganizationId] = @Id
+
+    DELETE
+    FROM 
+        [dbo].[OrganizationUser]
+    WHERE 
+        [OrganizationId] = @Id
+
+    DELETE
+    FROM
+         [dbo].[ProviderOrganization]
+    WHERE
+        [OrganizationId] = @Id
+
+    EXEC [dbo].[OrganizationApiKey_OrganizationDeleted] @Id
+    EXEC [dbo].[OrganizationConnection_OrganizationDeleted] @Id
+
+    DELETE
+    FROM
+        [dbo].[Organization]
+    WHERE
+        [Id] = @Id
+
+    COMMIT TRANSACTION Organization_DeleteById
+END
+GO
+
+-- OrganizationSponsorship have a different delete process for whether or not server is SH or not
+IF OBJECT_ID('[dbo].[OrganizationSponsorship_OrganizationDeleted]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[OrganizationSponsorship_OrganizationDeleted]
 END
 GO
