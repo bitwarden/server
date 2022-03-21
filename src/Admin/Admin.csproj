@@ -4,8 +4,6 @@
     <UserSecretsId>bitwarden-Admin</UserSecretsId>
   </PropertyGroup>
   
-  <PropertyGroup Condition=" '$(RunConfiguration)' == 'Admin' " />
-  <PropertyGroup Condition=" '$(RunConfiguration)' == 'Admin-SelfHost' " />
   <ItemGroup>
     <ProjectReference Include="..\SharedWeb\SharedWeb.csproj" />
     <ProjectReference Include="..\..\util\Migrator\Migrator.csproj" />
