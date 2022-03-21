@@ -381,7 +381,6 @@
     <Build Include="dbo\Stored Procedures\OrganizationApiKey_OrganizationDeleted.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationApiKey_ReadByOrganizationId.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationApiKey_ReadByOrganizationIdType.sql" />
-    <Build Include="dbo\Stored Procedures\OrganizationApiKey_ReadCanUseByOrganizationIdApiKey.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationApiKey_Update.sql" />
     <Build Include="dbo\Tables\OrganizationApiKey.sql" />
     <Build Include="dbo\Tables\OrganizationConnection.sql" />
