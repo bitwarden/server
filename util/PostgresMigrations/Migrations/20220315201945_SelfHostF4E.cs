@@ -116,7 +116,7 @@ namespace Bit.PostgresMigrations.Migrations
                 nullable: false,
                 defaultValue: (byte)0);
 
-            
+
         }
     }
 }

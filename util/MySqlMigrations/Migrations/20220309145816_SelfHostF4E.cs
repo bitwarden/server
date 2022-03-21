@@ -35,7 +35,7 @@ namespace Bit.MySqlMigrations.Migrations
                         onDelete: ReferentialAction.Cascade);
                 })
                 .Annotation("MySql:CharSet", "utf8mb4");
-            
+
             migrationBuilder.SqlResource(_scriptLocationTemplate);
 
             migrationBuilder.DropColumn(

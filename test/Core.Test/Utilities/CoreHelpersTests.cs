@@ -36,9 +36,9 @@ namespace Bit.Core.Test.Utilities
             // the comb are working properly
         }
 
-        public static IEnumerable<object[]> GenerateCombCases = new []
+        public static IEnumerable<object[]> GenerateCombCases = new[]
         {
-            new object[] 
+            new object[]
             {
                 Guid.Parse("a58db474-43d8-42f1-b4ee-0c17647cd0c0"), // Input Guid
                 new DateTime(2022, 3, 12, 12, 12, 0, DateTimeKind.Utc), // Input Time

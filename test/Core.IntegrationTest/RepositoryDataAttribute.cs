@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
 using Bit.Core.Settings;
@@ -31,7 +31,7 @@ namespace Bit.Core.IntegrationTest
                 parameters[i] = services.GetRequiredService(parameterType);
             }
 
-            return new []
+            return new[]
             {
                 parameters,
             };

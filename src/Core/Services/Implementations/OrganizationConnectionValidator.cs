@@ -1,11 +1,11 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Threading.Tasks;
 using Bit.Core.Entities;
 using Bit.Core.Utilities;
 
 namespace Bit.Core.Services
 {
-    
+
 
     public abstract class OrganizationConnectionValidator<T> : IOrganizationConnectionValidator
     {

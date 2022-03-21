@@ -1,4 +1,4 @@
-using Bit.Test.Common.AutoFixture.Attributes;
+﻿using Bit.Test.Common.AutoFixture.Attributes;
 
 namespace Bit.Core.IntegrationTest
 {
@@ -7,7 +7,7 @@ namespace Bit.Core.IntegrationTest
         public RequireDatabaseTheoryAttribute()
             : base("INTTEST_CONNSTR", "INTTEST_PROVIDER")
         {
-            
+
         }
     }
 }
