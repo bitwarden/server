@@ -8,8 +8,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework.EqualityComparers
     {
         public bool Equals(OrganizationSponsorship x, OrganizationSponsorship y)
         {
-            return x.InstallationId.Equals(y.InstallationId) &&
-                x.SponsoringOrganizationId.Equals(y.SponsoringOrganizationId) &&
+            return x.SponsoringOrganizationId.Equals(y.SponsoringOrganizationId) &&
                 x.SponsoringOrganizationUserId.Equals(y.SponsoringOrganizationUserId) &&
                 x.SponsoredOrganizationId.Equals(y.SponsoredOrganizationId) &&
                 x.OfferedToEmail.Equals(y.OfferedToEmail) &&

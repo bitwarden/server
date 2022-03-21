@@ -60,6 +60,7 @@ BEGIN
 
     INSERT INTO [dbo].[OrganizationApiKey]
     (
+        [Id],
         [OrganizationId],
         [ApiKey],
         [Type],
@@ -67,6 +68,7 @@ BEGIN
     )
     VALUES
     (
+        @Id,
         @OrganizationId,
         @ApiKey,
         @Type,
@@ -119,36 +121,6 @@ BEGIN
         [dbo].[OrganizationApiKeyView]
     WHERE
         [OrganizationId] = @OrganizationId
-END
-GO
-
-IF OBJECT_ID('[dbo].[OrganizationApiKey_ReadCanUseByOrganizationIdApiKey]') IS NOT NULL
-BEGIN
-    DROP PROCEDURE [dbo].[OrganizationApiKey_ReadCanUseByOrganizationIdApiKey]
-END
-GO
-
-CREATE PROCEDURE [dbo].[OrganizationApiKey_ReadCanUseByOrganizationIdApiKey]
-    @OrganizationId UNIQUEIDENTIFIER,
-    @ApiKey VARCHAR(30),
-    @Type TINYINT
-AS
-BEGIN
-    SET NOCOUNT ON
-
-    DECLARE @CanUse BIT
-
-    SELECT
-        @CanUse = CASE
-            WHEN COUNT(1) > 0 THEN 1
-            ELSE 0
-        END
-    FROM
-        [dbo].[OrganizationApiKeyView]
-    WHERE
-        [OrganizationId] = @OrganizationId AND
-        [ApiKey] = @ApiKey AND
-        [Type] = @Type
 END
 GO
 
@@ -231,7 +203,7 @@ BEGIN
         SELECT
             [dbo].[GenerateComb]([CreationDate], NEWID()),
             [Id] AS [OrganizationId], 
-            [ApiKey] AS [ApiKey], 
+            [ApiKey] AS [ApiKey],
             0 AS [Type], -- 0 represents 'Default' type
             [RevisionDate]
         FROM [dbo].[Organization]
@@ -778,7 +750,6 @@ BEGIN
     WHERE
         [OrganizationId] = @Id
 
-    EXEC [dbo].[OrganizationSponsorship_OrganizationDeleted] @Id
     EXEC [dbo].[OrganizationApiKey_OrganizationDeleted] @Id
     EXEC [dbo].[OrganizationConnection_OrganizationDeleted] @Id
 
@@ -813,6 +784,19 @@ BEGIN
     ALTER TABLE [dbo].[OrganizationSponsorship] ADD [ToDelete] BIT NOT NULL
 END
 
+IF EXISTS(SELECT name FROM sys.indexes WHERE name = 'IX_OrganizationSponsorship_InstallationId')
+BEGIN
+    DROP INDEX [IX_OrganizationSponsorship_InstallationId]
+        ON [dbo].[OrganizationSponsorship]
+END
+GO
+
+IF COL_LENGTH('[dbo].[OrganizationSponsorship]', 'InstallationId') IS NOT NULL
+BEGIN
+    ALTER TABLE [dbo].[OrganizationSponsorship] DROP CONSTRAINT [FK_OrganizationSponsorship_InstallationId]
+    ALTER TABLE [dbo].[OrganizationSponsorship] DROP COLUMN [InstallationId]
+END
+
 -- Remake View
 IF EXISTS(SELECT * FROM sys.views WHERE [Name] = 'OrganizationSponsorshipView')
 BEGIN
@@ -843,7 +827,6 @@ GO
 
 CREATE PROCEDURE [dbo].[OrganizationSponsorship_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
-    @InstallationId UNIQUEIDENTIFIER,
     @SponsoringOrganizationId UNIQUEIDENTIFIER,
     @SponsoringOrganizationUserID UNIQUEIDENTIFIER,
     @SponsoredOrganizationId UNIQUEIDENTIFIER,
@@ -860,7 +843,6 @@ BEGIN
     INSERT INTO [dbo].[OrganizationSponsorship]
     (
         [Id],
-        [InstallationId],
         [SponsoringOrganizationId],
         [SponsoringOrganizationUserID],
         [SponsoredOrganizationId],
@@ -874,7 +856,6 @@ BEGIN
     VALUES
     (
         @Id,
-        @InstallationId,
         @SponsoringOrganizationId,
         @SponsoringOrganizationUserID,
         @SponsoredOrganizationId,
@@ -897,7 +878,6 @@ GO
 
 CREATE PROCEDURE [dbo].[OrganizationSponsorship_Update]
     @Id UNIQUEIDENTIFIER,
-    @InstallationId UNIQUEIDENTIFIER,
     @SponsoringOrganizationId UNIQUEIDENTIFIER,
     @SponsoringOrganizationUserID UNIQUEIDENTIFIER,
     @SponsoredOrganizationId UNIQUEIDENTIFIER,
@@ -914,7 +894,6 @@ BEGIN
     UPDATE
         [dbo].[OrganizationSponsorship]
     SET
-        [InstallationId] = @InstallationId,
         [SponsoringOrganizationId] = @SponsoringOrganizationId,
         [SponsoringOrganizationUserID] = @SponsoringOrganizationUserID,
         [SponsoredOrganizationId] = @SponsoredOrganizationId,
@@ -931,7 +910,7 @@ GO
 
 IF OBJECT_ID('[dbo].[Organization_DeleteById]') IS NOT NULL
 BEGIN
-    DROP PROCEDURE [dbo].[OrganizationSponsorship_OrganizationDeleted]
+    DROP PROCEDURE [dbo].[Organization_DeleteById]
 END
 GO
 

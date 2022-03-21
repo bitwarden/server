@@ -749,6 +749,7 @@ namespace Bit.Core.Services
                     OrganizationId = organization.Id,
                     ApiKey = CoreHelpers.SecureRandomString(30),
                     Type = OrganizationApiKeyType.Default,
+                    RevisionDate = DateTime.UtcNow,
                 });
                 await _applicationCacheService.UpsertOrganizationAbilityAsync(organization);
 

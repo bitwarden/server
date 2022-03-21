@@ -8,7 +8,6 @@ namespace Bit.Core.Entities
     public class OrganizationSponsorship : ITableObject<Guid>
     {
         public Guid Id { get; set; }
-        public Guid? InstallationId { get; set; }
         public Guid? SponsoringOrganizationId { get; set; }
         public Guid? SponsoringOrganizationUserId { get; set; }
         public Guid? SponsoredOrganizationId { get; set; }

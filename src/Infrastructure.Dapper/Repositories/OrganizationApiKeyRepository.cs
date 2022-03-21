@@ -25,24 +25,6 @@ namespace Bit.Infrastructure.Dapper.Repositories
             : base(connectionString, readOnlyConnectionString)
         { }
 
-        public async Task<bool> GetCanUseByApiKeyAsync(Guid organizationId, string apiKey, OrganizationApiKeyType type)
-        {
-            using (var connection = new SqlConnection(ConnectionString))
-            {
-                var results = await connection.QueryFirstOrDefaultAsync<bool>(
-                    "[dbo].[OrganizationApiKey_ReadCanUseByOrganizationIdApiKey]",
-                    new
-                    {
-                        OrganizationId = organizationId,
-                        ApiKey = apiKey,
-                        Type = type,
-                    },
-                    commandType: CommandType.StoredProcedure);
-
-                return results;
-            }
-        }
-
         public async Task<OrganizationApiKey> GetByOrganizationIdTypeAsync(Guid organizationId, OrganizationApiKeyType type)
         {
             using (var connection = new SqlConnection(ConnectionString))
@@ -81,7 +63,7 @@ namespace Bit.Infrastructure.Dapper.Repositories
             using (var connection = new SqlConnection(ConnectionString))
             {
                 await connection.ExecuteAsync(
-                    "[dbo].[OrganizationApiKey_Create]  ",
+                    "[dbo].[OrganizationApiKey_Create]",
                     organizationApiKey,
                     commandType: CommandType.StoredProcedure);
             }
