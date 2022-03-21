@@ -30,7 +30,7 @@ namespace Bit.EventsProcessor
             services.AddOptions();
 
             // Settings
-            services.AddGlobalSettingsServices(Configuration, Environment.IsDevelopment());
+            services.AddGlobalSettingsServices(Configuration, Environment);
 
             // Hosted Services
             services.AddHostedService<AzureQueueHostedService>();

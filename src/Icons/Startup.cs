@@ -32,7 +32,7 @@ namespace Bit.Icons
             services.AddOptions();
 
             // Settings
-            var globalSettings = services.AddGlobalSettingsServices(Configuration, Environment.IsDevelopment());
+            var globalSettings = services.AddGlobalSettingsServices(Configuration, Environment);
             var iconsSettings = new IconsSettings();
             ConfigurationBinder.Bind(Configuration.GetSection("IconsSettings"), iconsSettings);
             services.AddSingleton(s => iconsSettings);

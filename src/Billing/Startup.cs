@@ -34,7 +34,7 @@ namespace Bit.Billing
             services.AddOptions();
 
             // Settings
-            var globalSettings = services.AddGlobalSettingsServices(Configuration, Environment.IsDevelopment());
+            var globalSettings = services.AddGlobalSettingsServices(Configuration, Environment);
             services.Configure<BillingSettings>(Configuration.GetSection("BillingSettings"));
 
             // Stripe Billing

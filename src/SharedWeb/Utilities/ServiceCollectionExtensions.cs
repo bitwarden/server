@@ -462,12 +462,12 @@ namespace Bit.SharedWeb.Utilities
         }
 
         public static GlobalSettings AddGlobalSettingsServices(this IServiceCollection services,
-            IConfiguration configuration, bool isDev)
+            IConfiguration configuration, IWebHostEnvironment environment)
         {
             var globalSettings = new GlobalSettings();
             ConfigurationBinder.Bind(configuration.GetSection("GlobalSettings"), globalSettings);
 
-            if (isDev && configuration.GetValue<bool>("developSelfHosted"))
+            if (environment.IsDevelopment() && configuration.GetValue<bool>("developSelfHosted"))
             {
                 // Override settings with selfHostedOverride settings
                 ConfigurationBinder.Bind(configuration.GetSection("Dev:SelfHostOverride:GlobalSettings"), globalSettings);
