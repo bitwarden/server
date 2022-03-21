@@ -3,6 +3,7 @@ CREATE TABLE [dbo].[OrganizationSponsorship] (
     [SponsoringOrganizationId]      UNIQUEIDENTIFIER NULL,
     [SponsoringOrganizationUserID]  UNIQUEIDENTIFIER NULL,
     [SponsoredOrganizationId]       UNIQUEIDENTIFIER NULL,
+    [FriendlyName]                  NVARCHAR(256)    NULL,
     [OfferedToEmail]                NVARCHAR (256)   NULL,
     [PlanSponsorshipType]           TINYINT          NULL,
     [ToDelete]                      BIT              NULL,
