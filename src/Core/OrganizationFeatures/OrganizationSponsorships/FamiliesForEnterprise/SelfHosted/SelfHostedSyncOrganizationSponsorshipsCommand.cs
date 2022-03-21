@@ -13,19 +13,19 @@ using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.SelfHosted
 {
-    public class SyncOrganizationSponsorshipsCommand : BaseIdentityClientService, ISyncOrganizationSponsorshipsCommand
+    public class SelfHostedSyncOrganizationSponsorshipsCommand : BaseIdentityClientService, ISelfHostedSyncOrganizationSponsorshipsCommand
     {
         private readonly IOrganizationSponsorshipRepository _organizationSponsorshipRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
 
         private readonly ILicensingService _licensingService;
 
-        public SyncOrganizationSponsorshipsCommand(
+        public SelfHostedSyncOrganizationSponsorshipsCommand(
         IOrganizationSponsorshipRepository organizationSponsorshipRepository,
         IOrganizationUserRepository organizationUserRepository,
         ILicensingService licensingService,
         IGlobalSettings globalSettings,
-        ILogger<SyncOrganizationSponsorshipsCommand> logger) : base("vault.bitwarden.com", "identity.bitwarden.com", "api.installation", globalSettings.Installation.Id.ToString(), globalSettings.Installation.Key, logger)
+        ILogger<SelfHostedSyncOrganizationSponsorshipsCommand> logger) : base("vault.bitwarden.com", "identity.bitwarden.com", "api.installation", globalSettings.Installation.Id.ToString(), globalSettings.Installation.Key, logger)
         {
             _organizationUserRepository = organizationUserRepository;
             _organizationSponsorshipRepository = organizationSponsorshipRepository;
@@ -47,7 +47,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
 
             foreach (var orgSponsorshipsBatch in CoreHelpers.Batch(organizationSponsorships, 1000))
             {
-                 var response = await SendAsync(HttpMethod.Post, "organizationSponsorships/sync", new OrganizationSponsorshipSyncRequestModel
+                var response = await SendAsync<OrganizationSponsorshipSyncModel, OrganizationSponsorshipSyncModel>(HttpMethod.Post, "organizationSponsorships/sync", new OrganizationSponsorshipSyncModel
                 {
                     SponsoringOrganizationCloudId = cloudOrganizationId,
                     SponsorshipsBatch = orgSponsorshipsBatch.Select(s => new OrganizationSponsorshipModel
@@ -56,10 +56,44 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
                         FriendlyName = s.FriendlyName,
                         OfferedToEmail = s.OfferedToEmail,
                         PlanSponsorshipType = s.PlanSponsorshipType,
-                        ValidUntil = s.ValidUntil,
-                        ToDelete = s.ToDelete
+                        // ValidUntil = s.ValidUntil,
+                        // ToDelete = s.ToDelete
                     })
                 });
+
+                foreach (var sponsorshipModel in response.SponsorshipsBatch)
+                {
+                    var existingOrgSponsorship = await _organizationSponsorshipRepository
+                        .GetBySponsoringOrganizationUserIdAsync(sponsorshipModel.SponsoringOrganizationUserId.GetValueOrDefault());
+                    if (existingOrgSponsorship == null)
+                    {
+                        break;
+                    }
+
+                    if (sponsorshipModel.CloudSponsorshipRemoved)
+                    {
+                        await _organizationSponsorshipRepository.DeleteAsync(existingOrgSponsorship);
+                    }
+
+                    if (sponsorshipModel.LastSyncDate != null)
+                    {
+                        existingOrgSponsorship.LastSyncDate = sponsorshipModel.LastSyncDate;
+                    }
+                    
+                    if (sponsorshipModel.ToDelete)
+                    {
+                        // existingOrgSponsorship.ToDelete = sponsorshipModel.ToDelete;
+                    }
+
+                    if (existingOrgSponsorship.SponsoredOrganizationId == null)
+                    {
+                        if (sponsorshipModel.SponsoredOrganizationId != null)
+                        {
+                            existingOrgSponsorship.SponsoredOrganizationId  = sponsorshipModel.SponsoredOrganizationId;
+                            // existingOrgSponsorship.ValidUntil = sponsorshipModel.ValidUntil;
+                        }
+                    }
+                }
             }
         }
 

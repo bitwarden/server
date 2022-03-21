@@ -803,7 +803,7 @@ namespace Bit.Core.Services
             await _mailDeliveryService.SendEmailAsync(message);
         }
 
-        public async Task SendFamiliesForEnterpriseOfferEmailAsync(string email, string sponsorEmail, bool existingAccount, string token)
+        public async Task SendFamiliesForEnterpriseOfferEmailAsync(string email, string sponsorOrgName, bool existingAccount, string token)
         {
             var message = CreateDefaultMessage("Accept Your Free Families Subscription", email);
 
@@ -811,7 +811,7 @@ namespace Bit.Core.Services
             {
                 var model = new FamiliesForEnterpriseOfferExistingAccountViewModel
                 {
-                    SponsorEmail = CoreHelpers.ObfuscateEmail(sponsorEmail),
+                    SponsorOrgName = CoreHelpers.ObfuscateEmail(sponsorOrgName),
                     SponsoredEmail = WebUtility.UrlEncode(email),
                     WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
                     SiteName = _globalSettings.SiteName,
@@ -824,7 +824,7 @@ namespace Bit.Core.Services
             {
                 var model = new FamiliesForEnterpriseOfferNewAccountViewModel
                 {
-                    SponsorEmail = sponsorEmail,
+                    SponsorOrgName = sponsorOrgName,
                     SponsoredEmail = WebUtility.UrlEncode(email),
                     WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
                     SiteName = _globalSettings.SiteName,

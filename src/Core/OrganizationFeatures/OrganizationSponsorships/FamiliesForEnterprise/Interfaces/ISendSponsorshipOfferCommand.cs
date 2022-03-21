@@ -5,8 +5,8 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
 {
     public interface ISendSponsorshipOfferCommand
     {
-        Task SendSponsorshipOfferAsync(OrganizationSponsorship sponsorship, string sponsoringEmail);
+        Task SendSponsorshipOfferAsync(OrganizationSponsorship sponsorship, string sponsoringOrgName);
         Task SendSponsorshipOfferAsync(Organization sponsoringOrg, OrganizationUser sponsoringOrgUser,
-            OrganizationSponsorship sponsorship, string sponsoringUserEmail);
+            OrganizationSponsorship sponsorship);
     }
 }

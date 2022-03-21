@@ -42,7 +42,7 @@ namespace Bit.Api.Controllers
             IOrganizationRepository organizationRepository,
             IOrganizationUserRepository organizationUserRepository,
             IValidateRedemptionTokenCommand validateRedemptionTokenCommand,
-            ICreateSponsorshipCommand offerSponsorshipCommand,
+            ICreateSponsorshipCommand createSponsorshipCommand,
             ISendSponsorshipOfferCommand sendSponsorshipOfferCommand,
             ISetUpSponsorshipCommand setUpSponsorshipCommand,
             IRevokeSponsorshipCommand revokeSponsorshipCommand,
@@ -55,7 +55,7 @@ namespace Bit.Api.Controllers
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
             _validateRedemptionTokenCommand = validateRedemptionTokenCommand;
-            _createSponsorshipCommand = offerSponsorshipCommand;
+            _createSponsorshipCommand = createSponsorshipCommand;
             _sendSponsorshipOfferCommand = sendSponsorshipOfferCommand;
             _setUpSponsorshipCommand = setUpSponsorshipCommand;
             _revokeSponsorshipCommand = revokeSponsorshipCommand;
@@ -87,8 +87,7 @@ namespace Bit.Api.Controllers
                 await _organizationRepository.GetByIdAsync(sponsoringOrgId),
                 sponsoringOrgUser,
                 await _organizationSponsorshipRepository
-                    .GetBySponsoringOrganizationUserIdAsync(sponsoringOrgUser.Id),
-                (await CurrentUser).Email);
+                    .GetBySponsoringOrganizationUserIdAsync(sponsoringOrgUser.Id));
         }
 
         [HttpPost("validate-token")]
@@ -121,9 +120,14 @@ namespace Bit.Api.Controllers
 
         [HttpPost("sync")]
         [Authorize("Installation")]
-        public async Task Sync([FromBody] OrganizationSponsorshipSyncRequestModel model)
+        public async Task<OrganizationSponsorshipSyncModel> Sync([FromBody] OrganizationSponsorshipSyncModel model)
         {
-            await _syncOrganizationSponsorshipsCommand.SyncOrganization(model);
+            var sponsoringOrg = await _organizationRepository.GetByIdAsync(model.SponsoringOrganizationCloudId);
+            if (sponsoringOrg == null)
+            {
+                throw new BadRequestException("Failed to sync sponsorship - missing organization");
+            }
+            return await _syncOrganizationSponsorshipsCommand.SyncOrganization(sponsoringOrg, model.SponsorshipsBatch);
         }
 
         [HttpDelete("{sponsoringOrganizationId}")]

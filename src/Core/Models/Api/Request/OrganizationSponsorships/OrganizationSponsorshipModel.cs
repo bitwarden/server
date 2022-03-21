@@ -13,5 +13,7 @@ namespace Bit.Core.Models.Api.Request.OrganizationSponsorships
         public DateTime? LastSyncDate { get; set; }
         public DateTime? ValidUntil { get; set; }
         public bool ToDelete { get; set; }
+
+        public bool CloudSponsorshipRemoved { get; set; }
     }
 }

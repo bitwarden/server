@@ -2,7 +2,7 @@
 {
     public class FamiliesForEnterpriseOfferExistingAccountViewModel : BaseMailModel
     {
-        public string SponsorEmail { get; set; }
+        public string SponsorOrgName { get; set; }
         public string SponsoredEmail { get; set; }
         public string SponsorshipToken { get; set; }
         public string Url => $"{WebVaultUrl}/?sponsorshipToken={SponsorshipToken}&email={SponsoredEmail}";

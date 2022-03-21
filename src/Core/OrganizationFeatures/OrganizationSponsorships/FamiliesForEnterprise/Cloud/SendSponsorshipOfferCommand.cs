@@ -25,17 +25,17 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
             _tokenFactory = tokenFactory;
         }
 
-        public async Task SendSponsorshipOfferAsync(OrganizationSponsorship sponsorship, string sponsoringEmail)
+        public async Task SendSponsorshipOfferAsync(OrganizationSponsorship sponsorship, string sponsoringOrgName)
         {
             var user = await _userRepository.GetByEmailAsync(sponsorship.OfferedToEmail);
             var isExistingAccount = user != null;
 
-            await _mailService.SendFamiliesForEnterpriseOfferEmailAsync(sponsorship.OfferedToEmail, sponsoringEmail,
+            await _mailService.SendFamiliesForEnterpriseOfferEmailAsync(sponsorship.OfferedToEmail, sponsoringOrgName,
                 isExistingAccount, _tokenFactory.Protect(new OrganizationSponsorshipOfferTokenable(sponsorship)));
         }
 
         public async Task SendSponsorshipOfferAsync(Organization sponsoringOrg, OrganizationUser sponsoringOrgUser,
-            OrganizationSponsorship sponsorship, string sponsoringUserEmail)
+            OrganizationSponsorship sponsorship)
         {
             if (sponsoringOrg == null)
             {
@@ -52,7 +52,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
                 throw new BadRequestException("Cannot find an outstanding sponsorship offer for this organization.");
             }
 
-            await SendSponsorshipOfferAsync(sponsorship, sponsoringUserEmail);
+            await SendSponsorshipOfferAsync(sponsorship, sponsoringOrg.Name);
         }
     }
 }
