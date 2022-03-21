@@ -43,7 +43,7 @@ namespace Bit.Api
             services.AddOptions();
 
             // Settings
-            var globalSettings = services.AddGlobalSettingsServices(Configuration);
+            var globalSettings = services.AddGlobalSettingsServices(Configuration, Environment.IsDevelopment());
             if (!globalSettings.SelfHosted)
             {
                 services.Configure<IpRateLimitOptions>(Configuration.GetSection("IpRateLimitOptions"));

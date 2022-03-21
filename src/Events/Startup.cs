@@ -31,7 +31,7 @@ namespace Bit.Events
             services.AddOptions();
 
             // Settings
-            var globalSettings = services.AddGlobalSettingsServices(Configuration);
+            var globalSettings = services.AddGlobalSettingsServices(Configuration, Environment.IsDevelopment());
 
             // Repositories
             services.AddSqlServerRepositories(globalSettings);

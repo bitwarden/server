@@ -38,7 +38,7 @@ namespace Bit.Admin
             services.AddOptions();
 
             // Settings
-            var globalSettings = services.AddGlobalSettingsServices(Configuration);
+            var globalSettings = services.AddGlobalSettingsServices(Configuration, Environment.IsDevelopment());
             services.Configure<AdminSettings>(Configuration.GetSection("AdminSettings"));
 
             // Data Protection
