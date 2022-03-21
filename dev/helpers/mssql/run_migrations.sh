@@ -12,9 +12,6 @@ DATABASE="vault_dev"
 USER="SA"
 PASSWD=$MSSQL_PASSWORD
 
-echo "all params"
-echo "$@"
-echo "all params"
 if [[ "$@" =~ "self-host" ]]; then
   LAST_MIGRATION_FILE="/mnt/data/last_self_host_migration"
   DATABASE="vault_dev_self_host"
