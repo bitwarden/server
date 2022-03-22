@@ -21,7 +21,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
             _organizationSponsorshipRepository = organizationSponsorshipRepository;
         }
 
-        public async Task<OrganizationSponsorship> CreateSponsorshipAsync(Organization sponsoringOrg, Guid? sponsoringOrgUserId,
+        protected async Task<OrganizationSponsorship> CreateSponsorshipAsync(Organization sponsoringOrg, Guid? sponsoringOrgUserId,
             PlanSponsorshipType? sponsorshipType, string sponsoredEmail, string friendlyName)
         {
             var requiredSponsoringProductType = StaticStore.GetSponsoredPlan(sponsorshipType.GetValueOrDefault())?.SponsoringProductType;

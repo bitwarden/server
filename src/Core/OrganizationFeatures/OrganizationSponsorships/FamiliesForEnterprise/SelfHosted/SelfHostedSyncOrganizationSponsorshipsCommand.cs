@@ -49,6 +49,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
             {
                 var response = await SendAsync<OrganizationSponsorshipSyncModel, OrganizationSponsorshipSyncModel>(HttpMethod.Post, "organizationSponsorships/sync", new OrganizationSponsorshipSyncModel
                 {
+                    BillingSyncKey = billingSyncKey,
                     SponsoringOrganizationCloudId = cloudOrganizationId,
                     SponsorshipsBatch = orgSponsorshipsBatch.Select(s => new OrganizationSponsorshipModel
                     {
@@ -60,6 +61,11 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
                         // ToDelete = s.ToDelete
                     })
                 });
+
+                if (response == null) 
+                {
+                    throw new BadRequestException("Organization sync failed");
+                }
 
                 foreach (var sponsorshipModel in response.SponsorshipsBatch)
                 {

@@ -9,26 +9,24 @@ using Bit.Core.Models.Api.Request.OrganizationSponsorships;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 using Microsoft.Extensions.Logging;
+using System;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud
 {
-    public class CloudSyncOrganizationSponsorshipsCommand : ICloudSyncOrganizationSponsorshipsCommand
+    public class CloudSyncOrganizationSponsorshipsCommand : CreateSponsorshipCommand, ICloudSyncOrganizationSponsorshipsCommand
     {
         private readonly IOrganizationSponsorshipRepository _organizationSponsorshipRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
-        private readonly ICreateSponsorshipCommand _createSponsorshipCommand;
         private readonly ISendSponsorshipOfferCommand _sendSponsorshipOfferCommand;
 
 
-        public CloudSyncOrganizationSponsorshipsCommand(
+        public CloudSyncOrganizationSponsorshipsCommand (
         IOrganizationSponsorshipRepository organizationSponsorshipRepository,
         IOrganizationUserRepository organizationUserRepository,
-        ICreateSponsorshipCommand createSponsorshipCommand,
-        ISendSponsorshipOfferCommand sendSponsorshipOfferCommand)
+        ISendSponsorshipOfferCommand sendSponsorshipOfferCommand) : base(organizationSponsorshipRepository)
         {
             _organizationUserRepository = organizationUserRepository;
             _organizationSponsorshipRepository = organizationSponsorshipRepository;
-            _createSponsorshipCommand = createSponsorshipCommand;
             _sendSponsorshipOfferCommand = sendSponsorshipOfferCommand;
         }
 
@@ -53,7 +51,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
                 
                 if (existingOrgSponsorship == null)
                 {
-                    existingOrgSponsorship = await _createSponsorshipCommand.CreateSponsorshipAsync(
+                    existingOrgSponsorship = await CreateSponsorshipAsync(
                         sponsoringOrg, 
                         selfHostedSponsorship.SponsoringOrganizationUserId, 
                         selfHostedSponsorship.PlanSponsorshipType, 
@@ -79,16 +77,18 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
 
                 }
 
-                syncResponseModel.SponsorshipsBatch.Append( 
-                    new OrganizationSponsorshipModel {
-                        SponsoringOrganizationUserId = selfHostedSponsorship.SponsoringOrganizationUserId,
-                        FriendlyName = selfHostedSponsorship.FriendlyName,
-                        OfferedToEmail = selfHostedSponsorship.OfferedToEmail,
-                        PlanSponsorshipType = selfHostedSponsorship.PlanSponsorshipType,
-                        // ValidUntil = selfHostedSponsorship.ValidUntil,
-                        // ToDelete = selfHostedSponsorship.ToDelete
+                if (selfHostedSponsorship.SponsoredOrganizationId == null)
+                {
+                    if (existingOrgSponsorship.SponsoredOrganizationId != null)
+                    {
+                        selfHostedSponsorship.SponsoredOrganizationId = existingOrgSponsorship.SponsoredOrganizationId;
+                        // selfHostedSponsorship.ValidUntil = existingOrgSponsorship.ValidUntil;
                     }
-                );
+                }
+
+                selfHostedSponsorship.LastSyncDate = DateTime.UtcNow;
+
+                syncResponseModel.SponsorshipsBatch.Append(selfHostedSponsorship);
             }
 
             return syncResponseModel;
