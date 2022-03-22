@@ -43,6 +43,42 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
 
         [Theory]
         [BitAutoData]
+        public async Task ValidateSponsorshipAsync_SponsoringOrgNull_UpdatesStripePlan(Organization sponsoredOrg,
+            OrganizationSponsorship existingSponsorship, SutProvider<ValidateSponsorshipCommand> sutProvider)
+        {
+            existingSponsorship.SponsoringOrganizationId = null;
+
+            sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
+                .GetBySponsoredOrganizationIdAsync(sponsoredOrg.Id).Returns(existingSponsorship);
+            sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(sponsoredOrg.Id).Returns(sponsoredOrg);
+
+            var result = await sutProvider.Sut.ValidateSponsorshipAsync(sponsoredOrg.Id);
+
+            Assert.False(result);
+            await AssertRemovedSponsoredPaymentAsync(sponsoredOrg, existingSponsorship, sutProvider);
+            await AssertDeletedSponsorshipAsync(existingSponsorship, sutProvider);
+        }
+
+        [Theory]
+        [BitAutoData]
+        public async Task ValidateSponsorshipAsync_SponsoringOrgUserNull_UpdatesStripePlan(Organization sponsoredOrg,
+            OrganizationSponsorship existingSponsorship, SutProvider<ValidateSponsorshipCommand> sutProvider)
+        {
+            existingSponsorship.SponsoringOrganizationUserId = null;
+
+            sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
+                .GetBySponsoredOrganizationIdAsync(sponsoredOrg.Id).Returns(existingSponsorship);
+            sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(sponsoredOrg.Id).Returns(sponsoredOrg);
+
+            var result = await sutProvider.Sut.ValidateSponsorshipAsync(sponsoredOrg.Id);
+
+            Assert.False(result);
+            await AssertRemovedSponsoredPaymentAsync(sponsoredOrg, existingSponsorship, sutProvider);
+            await AssertDeletedSponsorshipAsync(existingSponsorship, sutProvider);
+        }
+
+        [Theory]
+        [BitAutoData]
         public async Task ValidateSponsorshipAsync_SponsorshipTypeNull_UpdatesStripePlan(Organization sponsoredOrg,
             OrganizationSponsorship existingSponsorship, SutProvider<ValidateSponsorshipCommand> sutProvider)
         {
@@ -56,7 +92,7 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
 
             Assert.False(result);
             await AssertRemovedSponsoredPaymentAsync(sponsoredOrg, existingSponsorship, sutProvider);
-            await AssertRemovedSponsorshipAsync(existingSponsorship, sutProvider);
+            await AssertDeletedSponsorshipAsync(existingSponsorship, sutProvider);
         }
 
         [Theory]
@@ -72,7 +108,7 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
 
             Assert.False(result);
             await AssertRemovedSponsoredPaymentAsync(sponsoredOrg, existingSponsorship, sutProvider);
-            await AssertRemovedSponsorshipAsync(existingSponsorship, sutProvider);
+            await AssertDeletedSponsorshipAsync(existingSponsorship, sutProvider);
         }
 
         [Theory]
@@ -93,7 +129,7 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
 
             Assert.False(result);
             await AssertRemovedSponsoredPaymentAsync(sponsoredOrg, existingSponsorship, sutProvider);
-            await AssertRemovedSponsorshipAsync(existingSponsorship, sutProvider);
+            await AssertDeletedSponsorshipAsync(existingSponsorship, sutProvider);
         }
 
         [Theory]
@@ -115,8 +151,33 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
 
             Assert.False(result);
             await AssertRemovedSponsoredPaymentAsync(sponsoredOrg, existingSponsorship, sutProvider);
-            await AssertRemovedSponsorshipAsync(existingSponsorship, sutProvider);
+            await AssertDeletedSponsorshipAsync(existingSponsorship, sutProvider);
         }
+
+        [Theory]
+        [BitAutoData(nameof(EnterprisePlanTypes))]
+        public async Task ValidateSponsorshipAsync_ToDeleteSponsorship_IsInvalid(PlanType planType,
+            Organization sponsoredOrg, OrganizationSponsorship sponsorship, Organization sponsoringOrg,
+            SutProvider<ValidateSponsorshipCommand> sutProvider)
+        {
+            //TODO MDG: set toDelete to true
+            sponsoringOrg.PlanType = planType;
+            sponsoringOrg.Enabled = true;
+            sponsorship.SponsoringOrganizationId = sponsoringOrg.Id;
+
+            sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
+                .GetBySponsoredOrganizationIdAsync(sponsoredOrg.Id).Returns(sponsorship);
+            sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(sponsoredOrg.Id).Returns(sponsoredOrg);
+            sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(sponsoringOrg.Id).Returns(sponsoringOrg);
+
+            var result = await sutProvider.Sut.ValidateSponsorshipAsync(sponsoredOrg.Id);
+
+            Assert.False(result);
+
+            await AssertRemovedSponsoredPaymentAsync(sponsoredOrg, sponsorship, sutProvider);
+            await AssertDeletedSponsorshipAsync(sponsorship, sutProvider);
+        }
+
 
         [Theory]
         [BitMemberAutoData(nameof(EnterprisePlanTypes))]
@@ -124,6 +185,7 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
             Organization sponsoredOrg, OrganizationSponsorship existingSponsorship, Organization sponsoringOrg,
             SutProvider<ValidateSponsorshipCommand> sutProvider)
         {
+            //TODO MDG: set toDelete to false
             sponsoringOrg.PlanType = planType;
             sponsoringOrg.Enabled = true;
             existingSponsorship.SponsoringOrganizationId = sponsoringOrg.Id;

@@ -12,7 +12,7 @@ using Xunit;
 namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise
 {
     [SutProviderCustomize]
-    public class CloudSendSponsorshipOfferCommandTests : FamiliesForEnterpriseTestsBase
+    public class SendSponsorshipOfferCommandTests : FamiliesForEnterpriseTestsBase
     {
         [Theory]
         [BitAutoData]
