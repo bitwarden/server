@@ -1,14 +1,26 @@
 ﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
-namespace Bit.PostgresMigrations.Migrations
+namespace Bit.MySqlMigrations.Migrations
 {
     public partial class SelfHostF4E : Migration
     {
-        private const string _scriptLocationTemplate = "2022-03-01_00_{0}_MigrateOrganizationApiKeys.psql";
+        private const string _scriptLocationTemplate = "2022-03-01_00_{0}_MigrateOrganizationApiKeys.sql";
 
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropForeignKey(
+                name: "FK_OrganizationSponsorship_Installation_InstallationId",
+                table: "OrganizationSponsorship");
+
+            migrationBuilder.DropIndex(
+                name: "IX_OrganizationSponsorship_InstallationId",
+                table: "OrganizationSponsorship");
+
+            migrationBuilder.DropColumn(
+                name: "InstallationId",
+                table: "OrganizationSponsorship");
+
             migrationBuilder.DropColumn(
                 name: "TimesRenewedWithoutValidation",
                 table: "OrganizationSponsorship");
@@ -17,11 +29,12 @@ namespace Bit.PostgresMigrations.Migrations
                 name: "OrganizationApiKey",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    OrganizationId = table.Column<Guid>(type: "uuid", nullable: false),
-                    Type = table.Column<byte>(type: "smallint", nullable: false),
-                    ApiKey = table.Column<string>(type: "character varying(30)", maxLength: 30, nullable: true),
-                    RevisionDate = table.Column<DateTime>(type: "timestamp without time zone", nullable: false)
+                    Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    OrganizationId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    Type = table.Column<byte>(type: "tinyint unsigned", nullable: false),
+                    ApiKey = table.Column<string>(type: "varchar(30)", maxLength: 30, nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    RevisionDate = table.Column<DateTime>(type: "datetime(6)", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -32,7 +45,8 @@ namespace Bit.PostgresMigrations.Migrations
                         principalTable: "Organization",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
-                });
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.SqlResource(_scriptLocationTemplate);
 
@@ -50,15 +64,18 @@ namespace Bit.PostgresMigrations.Migrations
                 table: "OrganizationSponsorship",
                 newName: "ToDelete");
 
+            
+
             migrationBuilder.CreateTable(
                 name: "OrganizationConnection",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    Type = table.Column<byte>(type: "smallint", nullable: false),
-                    OrganizationId = table.Column<Guid>(type: "uuid", nullable: false),
-                    Enabled = table.Column<bool>(type: "boolean", nullable: false),
-                    Config = table.Column<string>(type: "text", nullable: true)
+                    Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    Type = table.Column<byte>(type: "tinyint unsigned", nullable: false),
+                    OrganizationId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    Enabled = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    Config = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4")
                 },
                 constraints: table =>
                 {
@@ -69,7 +86,8 @@ namespace Bit.PostgresMigrations.Migrations
                         principalTable: "Organization",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
-                });
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateIndex(
                 name: "IX_OrganizationApiKey_OrganizationId",
@@ -87,9 +105,10 @@ namespace Bit.PostgresMigrations.Migrations
             migrationBuilder.AddColumn<string>(
                 name: "ApiKey",
                 table: "Organization",
-                type: "character varying(30)",
+                type: "varchar(30)",
                 maxLength: 30,
-                nullable: true);
+                nullable: true)
+                .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.SqlResource(_scriptLocationTemplate);
 
@@ -109,14 +128,32 @@ namespace Bit.PostgresMigrations.Migrations
                 table: "OrganizationSponsorship",
                 newName: "CloudSponsor");
 
+            migrationBuilder.AddColumn<Guid>(
+                name: "InstallationId",
+                table: "OrganizationSponsorship",
+                type: "char(36)",
+                nullable: true,
+                collation: "ascii_general_ci");
+
             migrationBuilder.AddColumn<byte>(
                 name: "TimesRenewedWithoutValidation",
                 table: "OrganizationSponsorship",
-                type: "smallint",
+                type: "tinyint unsigned",
                 nullable: false,
                 defaultValue: (byte)0);
 
+            migrationBuilder.CreateIndex(
+                name: "IX_OrganizationSponsorship_InstallationId",
+                table: "OrganizationSponsorship",
+                column: "InstallationId");
 
+            migrationBuilder.AddForeignKey(
+                name: "FK_OrganizationSponsorship_Installation_InstallationId",
+                table: "OrganizationSponsorship",
+                column: "InstallationId",
+                principalTable: "Installation",
+                principalColumn: "Id",
+                onDelete: ReferentialAction.Restrict);
         }
     }
 }
