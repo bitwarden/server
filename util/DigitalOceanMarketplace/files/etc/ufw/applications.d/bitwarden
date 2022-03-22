@@ -1,0 +1,4 @@
+[Bitwarden]
+title=Bitwarden server
+description=Bitwarden is an open source password management tool that allows you to securely store, share, and sync passwords and other senitive data.
+ports=80/tcp|443/tcp
