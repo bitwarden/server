@@ -3,12 +3,7 @@ using Bit.Core.Entities;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces
 {
-    public interface ICloudRevokeSponsorshipCommand
-    {
-        Task RevokeSponsorshipAsync(Organization sponsoredOrg, OrganizationSponsorship sponsorship);
-    }
-
-    public interface ISelfHostedRevokeSponsorshipCommand
+    public interface IRevokeSponsorshipCommand
     {
         Task RevokeSponsorshipAsync(OrganizationSponsorship sponsorship);
     }
