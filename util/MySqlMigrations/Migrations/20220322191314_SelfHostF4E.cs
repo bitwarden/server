@@ -64,7 +64,7 @@ namespace Bit.MySqlMigrations.Migrations
                 table: "OrganizationSponsorship",
                 newName: "ToDelete");
 
-            
+
 
             migrationBuilder.CreateTable(
                 name: "OrganizationConnection",

@@ -62,7 +62,7 @@ namespace Bit.PostgresMigrations.Migrations
                 table: "OrganizationSponsorship",
                 newName: "ToDelete");
 
-            
+
 
             migrationBuilder.CreateTable(
                 name: "OrganizationConnection",
@@ -136,7 +136,7 @@ namespace Bit.PostgresMigrations.Migrations
                 nullable: false,
                 defaultValue: (byte)0);
 
-            
+
 
             migrationBuilder.CreateIndex(
                 name: "IX_OrganizationSponsorship_InstallationId",
