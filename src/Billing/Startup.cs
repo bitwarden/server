@@ -56,7 +56,7 @@ namespace Bit.Billing
             //services.AddPasswordlessIdentityServices<ReadOnlyDatabaseIdentityUserStore>(globalSettings);
 
             // Services
-            services.AddBaseServices();
+            services.AddBaseServices(globalSettings);
             services.AddDefaultServices(globalSettings);
 
             services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();

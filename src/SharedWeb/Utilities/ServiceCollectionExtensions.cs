@@ -91,11 +91,11 @@ namespace Bit.SharedWeb.Utilities
             }
         }
 
-        public static void AddBaseServices(this IServiceCollection services)
+        public static void AddBaseServices(this IServiceCollection services, IGlobalSettings globalSettings)
         {
             services.AddScoped<ICipherService, CipherService>();
             services.AddScoped<IUserService, UserService>();
-            services.AddOrganizationServices();
+            services.AddOrganizationServices(globalSettings);
             services.AddScoped<ICollectionService, CollectionService>();
             services.AddScoped<IGroupService, GroupService>();
             services.AddScoped<IPolicyService, PolicyService>();
