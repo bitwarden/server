@@ -785,7 +785,7 @@ END
 
 IF COL_LENGTH('[dbo].[OrganizationSponsorship]', 'ToDelete') IS NULL
 BEGIN
-    ALTER TABLE [dbo].[OrganizationSponsorship] ADD [ToDelete] BIT NOT NULL
+    ALTER TABLE [dbo].[OrganizationSponsorship] ADD [ToDelete] BIT NOT NULL DEFAULT(0)
 END
 
 IF EXISTS(SELECT name FROM sys.indexes WHERE name = 'IX_OrganizationSponsorship_InstallationId')
