@@ -174,6 +174,9 @@ BEGIN
 END
 GO
 
+PRINT N'Creating GenerateComb Function'
+GO
+
 CREATE OR ALTER FUNCTION [dbo].[GenerateComb] (@time DATETIME, @uuid UNIQUEIDENTIFIER)
 RETURNS UNIQUEIDENTIFIER
 AS
@@ -192,6 +195,8 @@ GO
 IF COL_LENGTH('[dbo].[Organization]', 'ApiKey') IS NOT NULl
 BEGIN
     BEGIN TRANSACTION MigrateOrganizationApiKeys
+    PRINT N'Migrating Organization ApiKeys'
+
     INSERT INTO [dbo].[OrganizationApiKey]
         (
             [Id],
@@ -203,23 +208,22 @@ BEGIN
         SELECT
             [dbo].[GenerateComb]([CreationDate], NEWID()),
             [Id] AS [OrganizationId], 
-            [ApiKey] AS [ApiKey],
+            [ApiKey],
             0 AS [Type], -- 0 represents 'Default' type
             [RevisionDate]
         FROM [dbo].[Organization]
 
-    COMMIT TRANSACTION MigrateOrganizationApiKeys;
-    
-    BEGIN TRANSACTION DeleteOldApiKeys
+    PRINT N'Dropping old column'
     ALTER TABLE
         [dbo].[Organization]
     DROP COLUMN
         [ApiKey]
-    COMMIT TRANSACTION DeleteOldApiKeys;
+
+    COMMIT TRANSACTION MigrateOrganizationApiKeys;
 END
 GO
 
-
+PRINT N'Deleting GenerateComb function'
 DROP FUNCTION [dbo].[GenerateComb];
 GO
 
