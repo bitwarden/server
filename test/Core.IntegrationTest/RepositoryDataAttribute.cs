@@ -58,16 +58,6 @@ namespace Bit.Core.IntegrationTest
 
             var services = new ServiceCollection();
 
-            if (provider.Equals("sqlServer", StringComparison.OrdinalIgnoreCase))
-            {
-                services.AddSingleton<IDatabaseHelper, NoopDatabaseHelper>();
-            }
-            else
-            {
-                // Assume it's EF
-                services.AddSingleton<IDatabaseHelper, EfDatabaseHelper>();
-            }
-
             var globalSettings = config.GetSection("globalSettings").Get<GlobalSettings>();
 
             services.AddSingleton<IConfiguration>(config);
@@ -77,30 +67,5 @@ namespace Bit.Core.IntegrationTest
 
             return services.BuildServiceProvider();
         }
-    }
-
-    public class EfDatabaseHelper : IDatabaseHelper
-    {
-        private readonly DatabaseContext _dbContext;
-
-        public EfDatabaseHelper(DatabaseContext dbContext)
-        {
-            _dbContext = dbContext;
-        }
-
-        public void Clean()
-        {
-            _dbContext.ChangeTracker.Clear();
-        }
-    }
-
-    public class NoopDatabaseHelper : IDatabaseHelper
-    {
-        public void Clean() { }
-    }
-
-    public interface IDatabaseHelper
-    {
-        void Clean();
     }
 }
