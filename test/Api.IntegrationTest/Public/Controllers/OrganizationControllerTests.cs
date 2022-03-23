@@ -5,24 +5,21 @@ using Xunit;
 
 namespace Bit.Api.IntegrationTest.Public.Controllers
 {
-    public class OrganizationControllerTests : IClassFixture<WebApplicationFactory<Startup>>
+    public class OrganizationControllerTests : IClassFixture<ApiApplicationFactory>
     {
-        private readonly WebApplicationFactory<Startup> _factory;
+        private readonly ApiApplicationFactory _factory;
 
-        public OrganizationControllerTests(WebApplicationFactory<Startup> factory)
+        public OrganizationControllerTests(ApiApplicationFactory factory)
         {
             _factory = factory;
-            _factory.WithWebHostBuilder(b => b)
         }
 
         [Fact]
         public async Task Import_Sucess()
         {
-            var client = _factory.CreateClient();
-
             var json = "{ \"groups\": [], \"members\": []}";
 
-            var response = await client.PostAsync("public/organization/import", new StringContent(json, null, "application/json"));
+            var response = await _factory.Server.SendAsync().PostAsync("public/organization/import", new StringContent(json, null, "application/json"));
             response.EnsureSuccessStatusCode();
         }
     }
