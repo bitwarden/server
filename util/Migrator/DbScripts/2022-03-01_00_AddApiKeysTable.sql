@@ -85,8 +85,6 @@ GO
 
 CREATE PROCEDURE [dbo].[OrganizationApiKey_Update]
     @Id UNIQUEIDENTIFIER,
-    @OrganizationId UNIQUEIDENTIFIER,
-    @Type TINYINT,
     @ApiKey VARCHAR(30),
     @RevisionDate DATETIME2(7)
 AS

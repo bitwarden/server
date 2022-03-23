@@ -75,7 +75,12 @@ namespace Bit.Infrastructure.Dapper.Repositories
             {
                 await connection.ExecuteAsync(
                     "[dbo].[OrganizationApiKey_Update]",
-                    new { Id = organizationApiKey.Id },
+                    new 
+                    { 
+                        organizationApiKey.Id,
+                        organizationApiKey.ApiKey,
+                        organizationApiKey.RevisionDate,
+                    },
                     commandType: CommandType.StoredProcedure);
             }
         }
