@@ -50,7 +50,7 @@ namespace Bit.Core.Test.Services
 
             File.WriteAllText(licenseFilePath(organization.Id), JsonSerializer.Serialize(license));
 
-            var actual = await sutProvider.Sut.ReadOrganizationLicense(organization);
+            var actual = await sutProvider.Sut.ReadOrganizationLicenseAsync(organization);
             try
             {
                 Assert.Equal(JsonSerializer.Serialize(license), JsonSerializer.Serialize(actual));
