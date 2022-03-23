@@ -96,7 +96,7 @@ namespace Bit.Core.IntegrationTest
 
     public class NoopDatabaseHelper : IDatabaseHelper
     {
-        public void Clean(){ }
+        public void Clean() { }
     }
 
     public interface IDatabaseHelper
