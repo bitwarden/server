@@ -11,7 +11,8 @@ namespace Bit.Core.IntegrationTest
         [RequireDatabaseTheory, RepositoryData]
         public async Task NewUser_CreatesUser(IUserRepository userRepository,
             IOrganizationRepository organizationRepository,
-            IOrganizationUserRepository organizationUserRepository)
+            IOrganizationUserRepository organizationUserRepository,
+            IOrganizationSponsorshipRepository organizationSponsorshipRepository)
         {
             await using var userItem = await TemporaryItem.CreateAsync(async () =>
             {
@@ -61,6 +62,21 @@ namespace Bit.Core.IntegrationTest
             async (orgUser) =>
             {
                 await organizationUserRepository.DeleteAsync(orgUser);
+            });
+
+            await using var orgSponsorshipItem = await TemporaryItem.CreateAsync(async () =>
+            {
+                return await organizationSponsorshipRepository.CreateAsync(new OrganizationSponsorship
+                {
+                    SponsoringOrganizationId = orgItem.Item.Id,
+                    OfferedToEmail = "test+offer@email.com",
+                    FriendlyName = "test+offset@email.com",
+                    SponsoringOrganizationUserId = userItem.Item.Id,
+                });
+            },
+            async (orgSponsorship) =>
+            {
+                await organizationSponsorshipRepository.DeleteAsync(orgSponsorship);
             });
         }
     }
