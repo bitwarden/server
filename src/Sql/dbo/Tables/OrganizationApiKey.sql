@@ -1,5 +1,5 @@
 CREATE TABLE [dbo].[OrganizationApiKey] (
-    [Id]                UNIQUEIDENTIFIER
+    [Id]                UNIQUEIDENTIFIER,
     [OrganizationId]    UNIQUEIDENTIFIER NOT NULL,
     [Type]              TINYINT NOT NULL,
     [ApiKey]            VARCHAR(30) NOT NULL,

@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[OrganizationApiKey_ReadByOrganizationId]
+CREATE PROCEDURE [dbo].[OrganizationApiKey_ReadManyByOrganizationId]
     @OrganizationId UNIQUEIDENTIFIER
 AS
 BEGIN
