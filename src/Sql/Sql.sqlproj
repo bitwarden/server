@@ -10,7 +10,8 @@
     <ProjectGuid>{58554e52-fdec-4832-aff9-302b01e08dca}</ProjectGuid>
     <DSP>Microsoft.Data.Tools.Schema.Sql.SqlAzureV12DatabaseSchemaProvider</DSP>
     <OutputType>Database</OutputType>
-    <RootPath></RootPath>
+    <RootPath>
+    </RootPath>
     <RootNamespace>Sql</RootNamespace>
     <AssemblyName>Sql</AssemblyName>
     <ModelCollation>1033,CI</ModelCollation>
