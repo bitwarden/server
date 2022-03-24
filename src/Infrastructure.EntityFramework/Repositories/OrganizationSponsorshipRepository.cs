@@ -47,20 +47,5 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
                 return orgSponsorship;
             }
         }
-
-        public async Task<DateTime?> GetLatestSyncDateBySponsoringOrganizationIdAsync(Guid sponsoringOrganizationId)
-        {
-            using (var scope = ServiceScopeFactory.CreateScope())
-            {
-                var dbContext = GetDatabaseContext(scope);
-                var orgSponsorship = await dbContext.OrganizationSponsorships
-                    .Where(os => os.SponsoringOrganizationId == sponsoringOrganizationId
-                        && os.LastSyncDate != null)
-                    .OrderByDescending(os => os.LastSyncDate)
-                    .FirstOrDefaultAsync();
-
-                return orgSponsorship?.LastSyncDate;
-            }
-        }
     }
 }

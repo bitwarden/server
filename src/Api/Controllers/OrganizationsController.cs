@@ -12,6 +12,7 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
+using Bit.Core.OrganizationFeatures.OrganizationApiKeys.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -29,12 +30,14 @@ namespace Bit.Api.Controllers
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly IPolicyRepository _policyRepository;
         private readonly IOrganizationService _organizationService;
-        private readonly IOrganizationApiKeyService _organizationApiKeyService;
         private readonly IUserService _userService;
         private readonly IPaymentService _paymentService;
         private readonly ICurrentContext _currentContext;
         private readonly ISsoConfigRepository _ssoConfigRepository;
         private readonly ISsoConfigService _ssoConfigService;
+        private readonly IGetOrganizationApiKeyCommand _getOrganizationApiKeyCommand;
+        private readonly IRotateOrganizationApiKeyCommand _rotateOrganizationApiKeyCommand;
+        private readonly IOrganizationApiKeyRepository _organizationApiKeyRepository;
         private readonly GlobalSettings _globalSettings;
 
         public OrganizationsController(
@@ -42,24 +45,28 @@ namespace Bit.Api.Controllers
             IOrganizationUserRepository organizationUserRepository,
             IPolicyRepository policyRepository,
             IOrganizationService organizationService,
-            IOrganizationApiKeyService organizationApiKeyService,
             IUserService userService,
             IPaymentService paymentService,
             ICurrentContext currentContext,
             ISsoConfigRepository ssoConfigRepository,
             ISsoConfigService ssoConfigService,
+            IGetOrganizationApiKeyCommand getOrganizationApiKeyCommand,
+            IRotateOrganizationApiKeyCommand rotateOrganizationApiKeyCommand,
+            IOrganizationApiKeyRepository organizationApiKeyRepository,
             GlobalSettings globalSettings)
         {
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
             _policyRepository = policyRepository;
             _organizationService = organizationService;
-            _organizationApiKeyService = organizationApiKeyService;
             _userService = userService;
             _paymentService = paymentService;
             _currentContext = currentContext;
             _ssoConfigRepository = ssoConfigRepository;
             _ssoConfigService = ssoConfigService;
+            _getOrganizationApiKeyCommand = getOrganizationApiKeyCommand;
+            _rotateOrganizationApiKeyCommand = rotateOrganizationApiKeyCommand;
+            _organizationApiKeyRepository = organizationApiKeyRepository;
             _globalSettings = globalSettings;
         }
 
@@ -494,7 +501,7 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            var organizationApiKey = await _organizationApiKeyService
+            var organizationApiKey = await _getOrganizationApiKeyCommand
                 .GetOrganizationApiKeyAsync(organization.Id, model.Type);
 
             var user = await _userService.GetUserByPrincipalAsync(User);
@@ -523,7 +530,7 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            var apiKeys = await _organizationApiKeyService.GetByOrganizationIdAsync(id);
+            var apiKeys = await _organizationApiKeyRepository.GetManyByOrganizationIdAsync(id);
 
             return new ListResponseModel<OrganizationApiKeyInformation>(
                 apiKeys.Select(k => new OrganizationApiKeyInformation(k)));
@@ -544,7 +551,7 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            var organizationApiKey = await _organizationApiKeyService
+            var organizationApiKey = await _getOrganizationApiKeyCommand
                 .GetOrganizationApiKeyAsync(organization.Id, model.Type);
 
             var user = await _userService.GetUserByPrincipalAsync(User);
@@ -560,7 +567,7 @@ namespace Bit.Api.Controllers
             }
             else
             {
-                await _organizationApiKeyService.RotateApiKeyAsync(organizationApiKey);
+                await _rotateOrganizationApiKeyCommand.RotateApiKeyAsync(organizationApiKey);
                 var response = new ApiKeyResponseModel(organizationApiKey);
                 return response;
             }

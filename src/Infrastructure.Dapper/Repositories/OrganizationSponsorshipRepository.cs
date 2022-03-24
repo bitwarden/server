@@ -48,18 +48,5 @@ namespace Bit.Infrastructure.Dapper.Repositories
                 return results.SingleOrDefault();
             }
         }
-
-        public async Task<DateTime?> GetLatestSyncDateBySponsoringOrganizationIdAsync(Guid sponsoringOrganizationId)
-        {
-            using (var connection = new SqlConnection(ConnectionString))
-            {
-                var result = await connection.QueryFirstOrDefaultAsync<OrganizationSponsorship>(
-                    "[dbo].[OrganizationSponsorship_ReadLatestSyncDateBySponsoringOrganizationId]",
-                    new { SponsoringOrganizationId = sponsoringOrganizationId },
-                    commandType: CommandType.StoredProcedure);
-
-                return result?.LastSyncDate;
-            }
-        }
     }
 }

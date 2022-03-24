@@ -1,4 +1,6 @@
 ﻿using Bit.Core.Models.Business.Tokenables;
+using Bit.Core.OrganizationFeatures.OrganizationApiKeys;
+using Bit.Core.OrganizationFeatures.OrganizationApiKeys.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
@@ -16,9 +18,9 @@ namespace Bit.Core.OrganizationFeatures
         public static void AddOrganizationServices(this IServiceCollection services)
         {
             services.AddScoped<IOrganizationService, OrganizationService>();
-            services.AddScoped<IOrganizationApiKeyService, OrganizationApiKeyService>();
             services.AddTokenizers();
             services.AddOrganizationSponsorshipCommands();
+            services.AddOrganizationApiKeyCommands();
         }
 
         private static void AddOrganizationSponsorshipCommands(this IServiceCollection services)
@@ -37,6 +39,12 @@ namespace Bit.Core.OrganizationFeatures
             services.AddScoped<IValidateRedemptionTokenCommand, ValidateRedemptionTokenCommand>();
 
             services.AddScoped<IValidateSponsorshipCommand, ValidateSponsorshipCommand>();
+        }
+
+        private static void AddOrganizationApiKeyCommands(this IServiceCollection services)
+        {
+            services.AddSingleton<IGetOrganizationApiKeyCommand, GetOrganizationApiKeyCommand>();
+            services.AddSingleton<IRotateOrganizationApiKeyCommand, RotateOrganizationApiKeyCommand>();
         }
 
         private static void AddTokenizers(this IServiceCollection services)

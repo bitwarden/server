@@ -1,23 +1,23 @@
-﻿using System;
-using System.Collections.Generic;
+using System;
 using System.Threading.Tasks;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.OrganizationFeatures.OrganizationApiKeys.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Utilities;
 
-namespace Bit.Core.Services
+namespace Bit.Core.OrganizationFeatures.OrganizationApiKeys
 {
-    public class OrganizationApiKeyService : IOrganizationApiKeyService
+    public class GetOrganizationApiKeyCommand : IGetOrganizationApiKeyCommand
     {
         private readonly IOrganizationApiKeyRepository _organizationApiKeyRepository;
 
-        public OrganizationApiKeyService(IOrganizationApiKeyRepository organizationApiKeyRepository)
+        public GetOrganizationApiKeyCommand(IOrganizationApiKeyRepository organizationApiKeyRepository)
         {
             _organizationApiKeyRepository = organizationApiKeyRepository;
         }
 
-        public async Task<OrganizationApiKey> GetOrganizationApiKeyAsync(Guid organizationId, OrganizationApiKeyType? organizationApiKeyType = null)
+        public async Task<OrganizationApiKey> GetOrganizationApiKeyAsync(Guid organizationId, OrganizationApiKeyType? organizationApiKeyType)
         {
             var keyType = organizationApiKeyType ?? OrganizationApiKeyType.Default;
 
@@ -42,19 +42,6 @@ namespace Bit.Core.Services
             }
 
             return apiKey;
-        }
-
-        public async Task<OrganizationApiKey> RotateApiKeyAsync(OrganizationApiKey organizationApiKey)
-        {
-            organizationApiKey.ApiKey = CoreHelpers.SecureRandomString(30);
-            organizationApiKey.RevisionDate = DateTime.UtcNow;
-            await _organizationApiKeyRepository.UpdateAsync(organizationApiKey);
-            return organizationApiKey;
-        }
-
-        public async Task<ICollection<OrganizationApiKey>> GetByOrganizationIdAsync(Guid organizationId)
-        {
-            return await _organizationApiKeyRepository.GetManyByOrganizationIdAsync(organizationId);
         }
     }
 }
