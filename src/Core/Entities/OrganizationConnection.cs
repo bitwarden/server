@@ -11,7 +11,7 @@ namespace Bit.Core.Entities
         public OrganizationConnectionType Type { get; set; }
         public Guid OrganizationId { get; set; }
         public bool Enabled { get; set; }
-        public JsonDocument Config { get; set; }
+        public string Config { get; set; }
 
         public void SetNewId()
         {

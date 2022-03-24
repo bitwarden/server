@@ -34,7 +34,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             }
         }
 
-        public async Task<ICollection<OrganizationApiKey>> GetByOrganizationIdAsync(Guid organizationId)
+        public async Task<ICollection<OrganizationApiKey>> GetManyByOrganizationIdAsync(Guid organizationId)
         {
             using (var scope = _serviceScopeFactory.CreateScope())
             {
@@ -53,20 +53,9 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
                 var dbContext = GetDatabaseContext(scope);
                 var apiKey = await dbContext.OrganizationApiKeys
                     .FirstOrDefaultAsync(o => o.OrganizationId == organizationId && o.Type == type);
-                return _mapper.Map<OrganizationApiKey>(apiKey);
+                return apiKey;
             }
         }
-
-        public async Task<bool> GetCanUseByApiKeyAsync(Guid organizationId, string apiKey, OrganizationApiKeyType type)
-        {
-            using (var scope = _serviceScopeFactory.CreateScope())
-            {
-                var dbContext = GetDatabaseContext(scope);
-                return await dbContext.OrganizationApiKeys
-                    .AnyAsync(o => o.OrganizationId == organizationId && o.ApiKey == apiKey && o.Type == type);
-            }
-        }
-
         public async Task UpdateAsync(OrganizationApiKey organizationApiKey)
         {
             using (var scope = _serviceScopeFactory.CreateScope())

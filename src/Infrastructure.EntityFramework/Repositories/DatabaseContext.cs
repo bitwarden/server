@@ -70,25 +70,8 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             var eTaxRate = builder.Entity<TaxRate>();
             var eTransaction = builder.Entity<Transaction>();
             var eUser = builder.Entity<User>();
-
-            builder.Entity<OrganizationApiKey>(b =>
-            {
-                b.Property(a => a.Id).ValueGeneratedNever();
-                b.ToTable(nameof(OrganizationApiKey));
-            });
-
-            builder.Entity<OrganizationConnection>(b =>
-            {
-                b.Property(oc => oc.Id).ValueGeneratedNever();
-
-                b.ToTable(nameof(OrganizationConnection));
-
-                b.Property(oc => oc.Config)
-                    .HasConversion(jsonDocument => JsonSerializer.Serialize(jsonDocument, new JsonSerializerOptions
-                    {
-                        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-                    }), jsonString => JsonDocument.Parse(jsonString, default));
-            });
+            var eOrganizationApiKey = builder.Entity<OrganizationApiKey>();
+            var eOrganizationConnection = builder.Entity<OrganizationConnection>();
 
             eCipher.Property(c => c.Id).ValueGeneratedNever();
             eCollection.Property(c => c.Id).ValueGeneratedNever();
@@ -107,6 +90,8 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             eSend.Property(c => c.Id).ValueGeneratedNever();
             eTransaction.Property(c => c.Id).ValueGeneratedNever();
             eUser.Property(c => c.Id).ValueGeneratedNever();
+            eOrganizationApiKey.Property(c => c.Id).ValueGeneratedNever();
+            eOrganizationConnection.Property(c => c.Id).ValueGeneratedNever();
 
             eCollectionCipher.HasKey(cc => new { cc.CollectionId, cc.CipherId });
             eCollectionUser.HasKey(cu => new { cu.CollectionId, cu.OrganizationUserId });
@@ -150,6 +135,8 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             eTaxRate.ToTable(nameof(TaxRate));
             eTransaction.ToTable(nameof(Transaction));
             eUser.ToTable(nameof(User));
+            eOrganizationApiKey.ToTable(nameof(OrganizationApiKey));
+            eOrganizationConnection.ToTable(nameof(OrganizationConnection));
         }
     }
 }

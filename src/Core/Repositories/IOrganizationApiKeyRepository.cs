@@ -8,7 +8,7 @@ namespace Bit.Core.Repositories
 {
     public interface IOrganizationApiKeyRepository
     {
-        Task<ICollection<OrganizationApiKey>> GetByOrganizationIdAsync(Guid organizationId);
+        Task<ICollection<OrganizationApiKey>> GetManyByOrganizationIdAsync(Guid organizationId);
         Task<OrganizationApiKey> GetByOrganizationIdTypeAsync(Guid organizationId, OrganizationApiKeyType type);
         Task CreateAsync(OrganizationApiKey organizationApiKey);
         Task UpdateAsync(OrganizationApiKey organizationApiKey);

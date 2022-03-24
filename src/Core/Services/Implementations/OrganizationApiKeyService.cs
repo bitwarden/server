@@ -54,7 +54,7 @@ namespace Bit.Core.Services
 
         public async Task<ICollection<OrganizationApiKey>> GetByOrganizationIdAsync(Guid organizationId)
         {
-            return await _organizationApiKeyRepository.GetByOrganizationIdAsync(organizationId);
+            return await _organizationApiKeyRepository.GetManyByOrganizationIdAsync(organizationId);
         }
     }
 }

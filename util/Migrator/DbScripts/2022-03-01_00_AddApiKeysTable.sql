@@ -101,13 +101,13 @@ BEGIN
 END
 GO
 
-IF OBJECT_ID('[dbo].[OrganizationApiKey_ReadByOrganizationId]') IS NOT NULL
+IF OBJECT_ID('[dbo].[OrganizationApiKey_ReadManuByOrganizationId]') IS NOT NULL
 BEGIN
-    DROP PROCEDURE [dbo].[OrganizationApiKey_ReadByOrganizationId]
+    DROP PROCEDURE [dbo].[OrganizationApiKey_ReadManyByOrganizationId]
 END
 GO
 
-CREATE PROCEDURE [dbo].[OrganizationApiKey_ReadByOrganizationId]
+CREATE PROCEDURE [dbo].[OrganizationApiKey_ReadManyByOrganizationId]
     @OrganizationId UNIQUEIDENTIFIER
 AS
 BEGIN
@@ -489,13 +489,13 @@ FROM
 GO
 
 
-IF OBJECT_ID('[dbo].[OrganizationSponsorship_ReadFirstBySponsoringOrganizationId]') IS NOT NULL
+IF OBJECT_ID('[dbo].[OrganizationSponsorship_ReadLatestSyncDateBySponsoringOrganizationId]') IS NOT NULL
 BEGIN
-    DROP PROCEDURE [dbo].[OrganizationSponsorship_ReadFirstBySponsoringOrganizationId];
+    DROP PROCEDURE [dbo].[OrganizationSponsorship_ReadLatestSyncDateBySponsoringOrganizationId];
 END
 GO
 
-CREATE PROCEDURE [dbo].[OrganizationSponsorship_ReadFirstBySponsoringOrganizationId]
+CREATE PROCEDURE [dbo].[OrganizationSponsorship_ReadLatestSyncDateBySponsoringOrganizationId]
     @SponsoringOrganizationId UNIQUEIDENTIFIER
 AS
 BEGIN
@@ -506,9 +506,9 @@ BEGIN
     WHERE
         [SponsoringOrganizationId] = @SponsoringOrganizationId AND
         [LastSyncDate] IS NOT NULL
+    ORDER BY [LastSyncDate] DESC
 END
 GO
-
 
 IF OBJECT_ID('[dbo].[OrganizationConnection]') IS NULL
 BEGIN

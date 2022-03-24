@@ -56,6 +56,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
                 var orgSponsorship = await dbContext.OrganizationSponsorships
                     .Where(os => os.SponsoringOrganizationId == sponsoringOrganizationId
                         && os.LastSyncDate != null)
+                    .OrderByDescending(os => os.LastSyncDate)
                     .FirstOrDefaultAsync();
 
                 return orgSponsorship?.LastSyncDate;

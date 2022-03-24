@@ -40,12 +40,12 @@ namespace Bit.Infrastructure.Dapper.Repositories
             }
         }
 
-        public async Task<ICollection<OrganizationApiKey>> GetByOrganizationIdAsync(Guid organizationId)
+        public async Task<ICollection<OrganizationApiKey>> GetManyByOrganizationIdAsync(Guid organizationId)
         {
             using (var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.QueryAsync<OrganizationApiKey>(
-                    "[dbo].[OrganizationApiKey_ReadByOrganizationId]",
+                    "[dbo].[OrganizationApiKey_ReadManyByOrganizationId]",
                     new
                     {
                         OrganizationId = organizationId,
