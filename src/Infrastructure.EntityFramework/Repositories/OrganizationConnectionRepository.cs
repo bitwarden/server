@@ -24,7 +24,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
-                var connections =  await dbContext.OrganizationConnections
+                var connections = await dbContext.OrganizationConnections
                     .Where(oc => oc.OrganizationId == organizationId && oc.Type == type && oc.Enabled)
                     .ToListAsync();
                 return Mapper.Map<List<OrganizationConnection>>(connections);
