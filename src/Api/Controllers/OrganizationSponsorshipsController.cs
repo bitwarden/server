@@ -20,6 +20,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Bit.Api.Controllers
 {
     [Route("organization/sponsorship")]
+    [Authorize("Application")]
     public class OrganizationSponsorshipsController : Controller
     {
         private readonly IOrganizationSponsorshipRepository _organizationSponsorshipRepository;
@@ -62,7 +63,6 @@ namespace Bit.Api.Controllers
 
         [HttpPost("{sponsoringOrgId}/families-for-enterprise")]
         [SelfHosted(NotSelfHostedOnly = true)]
-        [Authorize("Application")]
         public async Task CreateSponsorship(Guid sponsoringOrgId, [FromBody] OrganizationSponsorshipRequestModel model)
         {
             var sponsorship = await _createSponsorshipCommand.CreateSponsorshipAsync(
@@ -74,7 +74,6 @@ namespace Bit.Api.Controllers
 
         [HttpPost("{sponsoringOrgId}/families-for-enterprise/resend")]
         [SelfHosted(NotSelfHostedOnly = true)]
-        [Authorize("Application")]
         public async Task ResendSponsorshipOffer(Guid sponsoringOrgId)
         {
             var sponsoringOrgUser = await _organizationUserRepository
@@ -90,7 +89,6 @@ namespace Bit.Api.Controllers
 
         [HttpPost("validate-token")]
         [SelfHosted(NotSelfHostedOnly = true)]
-        [Authorize("Application")]
         public async Task<bool> PreValidateSponsorshipToken([FromQuery] string sponsorshipToken)
         {
             return (await _validateRedemptionTokenCommand.ValidateRedemptionTokenAsync(sponsorshipToken, (await CurrentUser).Email)).valid;
@@ -98,7 +96,6 @@ namespace Bit.Api.Controllers
 
         [HttpPost("redeem")]
         [SelfHosted(NotSelfHostedOnly = true)]
-        [Authorize("Application")]
         public async Task RedeemSponsorship([FromQuery] string sponsorshipToken, [FromBody] OrganizationSponsorshipRedeemRequestModel model)
         {
             var (valid, sponsorship) = await _validateRedemptionTokenCommand.ValidateRedemptionTokenAsync(sponsorshipToken, (await CurrentUser).Email);
@@ -121,7 +118,6 @@ namespace Bit.Api.Controllers
         [HttpDelete("{sponsoringOrganizationId}")]
         [HttpPost("{sponsoringOrganizationId}/delete")]
         [SelfHosted(NotSelfHostedOnly = true)]
-        [Authorize("Application")]
         public async Task RevokeSponsorship(Guid sponsoringOrganizationId)
         {
 
@@ -143,7 +139,6 @@ namespace Bit.Api.Controllers
         [HttpDelete("sponsored/{sponsoredOrgId}")]
         [HttpPost("sponsored/{sponsoredOrgId}/remove")]
         [SelfHosted(NotSelfHostedOnly = true)]
-        [Authorize("Application")]
         public async Task RemoveSponsorship(Guid sponsoredOrgId)
         {
 
@@ -159,21 +154,6 @@ namespace Bit.Api.Controllers
                 await _organizationRepository
                     .GetByIdAsync(existingOrgSponsorship.SponsoredOrganizationId.Value),
                 existingOrgSponsorship);
-        }
-
-        [HttpGet("{sponsoringOrgId}/sync-status")]
-        [Authorize("Application")]
-        public async Task<IActionResult> GetSyncStatus(Guid sponsoringOrgId)
-        {
-            var sponsoringOrg = await _organizationRepository.GetByIdAsync(sponsoringOrgId);
-
-            if (!await _currentContext.OrganizationOwner(sponsoringOrg.Id))
-            {
-                return Unauthorized();
-            }
-
-            var lastSyncDate = await _organizationSponsorshipRepository.GetLatestSyncDateBySponsoringOrganizationIdAsync(sponsoringOrg.Id);
-            return Ok(new OrganizationSponsorshipSyncStatusResponseModel(lastSyncDate));
         }
 
         private Task<User> CurrentUser => _userService.GetUserByIdAsync(_currentContext.UserId.Value);

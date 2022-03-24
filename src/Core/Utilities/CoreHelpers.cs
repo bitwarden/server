@@ -51,17 +51,12 @@ namespace Bit.Core.Utilities
             => GenerateComb(Guid.NewGuid(), DateTime.UtcNow);
 
         /// <summary>
-        /// Generate sequential Guid for Sql Server.
-        /// ref: https://github.com/nhibernate/nhibernate-core/blob/master/src/NHibernate/Id/GuidCombGenerator.cs
+        /// Implementation of <see cref="GenerateComb()" /> with input parameters to remove randomness.
+        /// This should NOT be used outside of testing.
         /// </summary>
-        /// <returns>A comb Guid.</returns>
-        public static Guid GenerateComb(DateTime time)
-            => GenerateComb(Guid.NewGuid(), time);
-
-
-        /// <summary>
-        /// Implementation of GenerateComb that has inputs that make it repeatable for purposes of testing
-        /// </summary>
+        /// <remarks>
+        /// You probably don't want to use this method and instead want to use <see cref="GenerateComb()" /> with no parameters
+        /// </remarks>
         internal static Guid GenerateComb(Guid startingGuid, DateTime time)
         {
             var guidArray = startingGuid.ToByteArray();

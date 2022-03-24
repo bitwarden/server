@@ -52,12 +52,6 @@ namespace Bit.Core.Utilities
             return JsonSerializer.Deserialize<T>(element.GetRawText(), options ?? Default);
         }
 
-        // NOTE: This is built into .NET 6, it SHOULD be removed when we upgrade
-        public static JsonDocument SerializeToDocument<T>(T value, JsonSerializerOptions options = null)
-        {
-            return JsonSerializer.Deserialize<JsonDocument>(JsonSerializer.Serialize(value, options), options);
-        }
-
         public static T DeserializeOrNew<T>(string json, JsonSerializerOptions options = null)
             where T : new()
         {

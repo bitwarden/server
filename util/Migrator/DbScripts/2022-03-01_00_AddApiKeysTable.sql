@@ -488,28 +488,6 @@ FROM
     [dbo].[Organization]
 GO
 
-
-IF OBJECT_ID('[dbo].[OrganizationSponsorship_ReadLatestSyncDateBySponsoringOrganizationId]') IS NOT NULL
-BEGIN
-    DROP PROCEDURE [dbo].[OrganizationSponsorship_ReadLatestSyncDateBySponsoringOrganizationId];
-END
-GO
-
-CREATE PROCEDURE [dbo].[OrganizationSponsorship_ReadLatestSyncDateBySponsoringOrganizationId]
-    @SponsoringOrganizationId UNIQUEIDENTIFIER
-AS
-BEGIN
-    SELECT TOP 1
-        *
-    FROM
-        [dbo].[OrganizationSponsorshipView]
-    WHERE
-        [SponsoringOrganizationId] = @SponsoringOrganizationId AND
-        [LastSyncDate] IS NOT NULL
-    ORDER BY [LastSyncDate] DESC
-END
-GO
-
 IF OBJECT_ID('[dbo].[OrganizationConnection]') IS NULL
 BEGIN
 CREATE TABLE [dbo].[OrganizationConnection] (

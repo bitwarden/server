@@ -13,7 +13,7 @@ using Dapper;
 
 namespace Bit.Infrastructure.Dapper.Repositories
 {
-    public class OrganizationApiKeyRepository : BaseRepository, IOrganizationApiKeyRepository
+    public class OrganizationApiKeyRepository : Repository<OrganizationApiKey, Guid>, IOrganizationApiKeyRepository
     {
         public OrganizationApiKeyRepository(GlobalSettings globalSettings)
             : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
@@ -53,19 +53,6 @@ namespace Bit.Infrastructure.Dapper.Repositories
                     commandType: CommandType.StoredProcedure);
 
                 return results.ToList();
-            }
-        }
-
-        public async Task CreateAsync(OrganizationApiKey organizationApiKey)
-        {
-            organizationApiKey.Id = CoreHelpers.GenerateComb();
-
-            using (var connection = new SqlConnection(ConnectionString))
-            {
-                await connection.ExecuteAsync(
-                    "[dbo].[OrganizationApiKey_Create]",
-                    organizationApiKey,
-                    commandType: CommandType.StoredProcedure);
             }
         }
 

@@ -516,17 +516,17 @@ namespace Bit.Api.Controllers
         }
 
         [HttpGet("{id}/api-key-information")]
-        public async Task<IActionResult> ApiKeyInformation(Guid id)
+        public async Task<ListResponseModel<OrganizationApiKeyInformation>> ApiKeyInformation(Guid id)
         {
             if (!await _currentContext.OrganizationOwner(id))
             {
-                return NotFound();
+                throw new NotFoundException();
             }
 
             var apiKeys = await _organizationApiKeyService.GetByOrganizationIdAsync(id);
 
-            return Ok(new ListResponseModel<OrganizationApiKeyInformation>(
-                apiKeys.Select(k => new OrganizationApiKeyInformation(k))));
+            return new ListResponseModel<OrganizationApiKeyInformation>(
+                apiKeys.Select(k => new OrganizationApiKeyInformation(k)));
         }
 
         [HttpPost("{id}/rotate-api-key")]
