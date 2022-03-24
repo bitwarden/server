@@ -1076,6 +1076,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<string>("ExcludedGlobalEquivalentDomains")
                         .HasColumnType("text");
 
+                    b.Property<int>("FailedLoginCount")
+                        .HasColumnType("integer");
+
                     b.Property<bool>("ForcePasswordReset")
                         .HasColumnType("boolean");
 
@@ -1098,6 +1101,9 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.Property<string>("Key")
                         .HasColumnType("text");
+
+                    b.Property<DateTime?>("LastFailedLoginDate")
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<string>("LicenseKey")
                         .HasMaxLength(100)

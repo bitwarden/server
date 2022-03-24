@@ -147,6 +147,7 @@ namespace Bit.Core.Models.Business
                     .Where(p =>
                         !p.Name.Equals(nameof(Signature)) &&
                         !p.Name.Equals(nameof(SignatureBytes)) &&
+                        !p.Name.Equals(nameof(LicenseType)) &&
                         // UsersGetPremium was added in Version 2
                         (Version >= 2 || !p.Name.Equals(nameof(UsersGetPremium))) &&
                         // UseEvents was added in Version 3

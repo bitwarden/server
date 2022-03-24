@@ -9,5 +9,15 @@
 # ref: https://help.bitwarden.com/article/install-on-premise/
 #
 
-curl -s -o docker-compose.yml https://raw.githubusercontent.com/bitwarden/server/master/docker/docker-compose.yml
-curl -s -o global.env https://raw.githubusercontent.com/bitwarden/server/master/docker/global.env.example
+docker pull bitwarden/setup
+
+curl -L -s -o /root/bitwarden.sh https://go.btwrdn.co/bw-sh
+
+chmod +x /root/bitwarden.sh
+
+# Remove the ssh force logout command
+sed -e '/Match User root/d' \
+    -e '/.*ForceCommand.*droplet.*/d' \
+    -i /etc/ssh/sshd_config
+
+systemctl restart ssh

@@ -37,10 +37,12 @@ namespace Bit.Core.IdentityServer
             ICurrentContext currentContext,
             GlobalSettings globalSettings,
             IPolicyRepository policyRepository,
-            ICaptchaValidationService captchaValidationService)
+            ICaptchaValidationService captchaValidationService,
+            IUserRepository userRepository)
             : base(userManager, deviceRepository, deviceService, userService, eventService,
                   organizationDuoWebTokenProvider, organizationRepository, organizationUserRepository,
-                  applicationCacheService, mailService, logger, currentContext, globalSettings, policyRepository)
+                  applicationCacheService, mailService, logger, currentContext, globalSettings, policyRepository,
+                  userRepository, captchaValidationService)
         {
             _userManager = userManager;
             _userService = userService;
@@ -60,7 +62,7 @@ namespace Bit.Core.IdentityServer
             string bypassToken = null;
             var user = await _userManager.FindByEmailAsync(context.UserName.ToLowerInvariant());
             var unknownDevice = !await KnownDeviceAsync(user, context.Request);
-            if (unknownDevice && _captchaValidationService.RequireCaptchaValidation(_currentContext))
+            if (unknownDevice && _captchaValidationService.RequireCaptchaValidation(_currentContext, user?.FailedLoginCount ?? 0))
             {
                 var captchaResponse = context.Request.Raw["captchaResponse"]?.ToString();
 
@@ -83,7 +85,7 @@ namespace Bit.Core.IdentityServer
                 bypassToken = _captchaValidationService.GenerateCaptchaBypassToken(user);
             }
 
-            await ValidateAsync(context, context.Request);
+            await ValidateAsync(context, context.Request, unknownDevice);
             if (context.Result.CustomResponse != null && bypassToken != null)
             {
                 context.Result.CustomResponse["CaptchaBypassToken"] = bypassToken;

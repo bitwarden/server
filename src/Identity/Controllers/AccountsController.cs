@@ -8,12 +8,14 @@ using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
+using Bit.SharedWeb.Utilities;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 
 namespace Bit.Identity.Controllers
 {
     [Route("accounts")]
+    [ExceptionHandlerFilter]
     public class AccountsController : Controller
     {
         private readonly ILogger<AccountsController> _logger;

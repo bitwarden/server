@@ -32,7 +32,7 @@ namespace Bit.Notifications
             services.AddOptions();
 
             // Settings
-            var globalSettings = services.AddGlobalSettingsServices(Configuration);
+            var globalSettings = services.AddGlobalSettingsServices(Configuration, Environment);
 
             // Identity
             services.AddIdentityAuthenticationServices(globalSettings, Environment, config =>

@@ -1068,6 +1068,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<string>("ExcludedGlobalEquivalentDomains")
                         .HasColumnType("longtext");
 
+                    b.Property<int>("FailedLoginCount")
+                        .HasColumnType("int");
+
                     b.Property<bool>("ForcePasswordReset")
                         .HasColumnType("tinyint(1)");
 
@@ -1090,6 +1093,9 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.Property<string>("Key")
                         .HasColumnType("longtext");
+
+                    b.Property<DateTime?>("LastFailedLoginDate")
+                        .HasColumnType("datetime(6)");
 
                     b.Property<string>("LicenseKey")
                         .HasMaxLength(100)

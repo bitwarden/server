@@ -15,12 +15,8 @@ namespace Bit.Api.Models.Response
                 Enabled = config.Enabled;
                 Data = config.GetData();
             }
-            else
-            {
-                Data = new SsoConfigurationData();
-            }
 
-            Urls = new SsoUrls(organization.Id.ToString(), Data, globalSettings);
+            Urls = new SsoUrls(organization.Id.ToString(), globalSettings);
         }
 
         public bool Enabled { get; set; }
@@ -30,13 +26,13 @@ namespace Bit.Api.Models.Response
 
     public class SsoUrls
     {
-        public SsoUrls(string organizationId, SsoConfigurationData configurationData, GlobalSettings globalSettings)
+        public SsoUrls(string organizationId, GlobalSettings globalSettings)
         {
-            CallbackPath = configurationData.BuildCallbackPath(globalSettings.BaseServiceUri.Sso);
-            SignedOutCallbackPath = configurationData.BuildSignedOutCallbackPath(globalSettings.BaseServiceUri.Sso);
-            SpEntityId = configurationData.BuildSaml2ModulePath(globalSettings.BaseServiceUri.Sso);
-            SpMetadataUrl = configurationData.BuildSaml2MetadataUrl(globalSettings.BaseServiceUri.Sso, organizationId);
-            SpAcsUrl = configurationData.BuildSaml2AcsUrl(globalSettings.BaseServiceUri.Sso, organizationId);
+            CallbackPath = SsoConfigurationData.BuildCallbackPath(globalSettings.BaseServiceUri.Sso);
+            SignedOutCallbackPath = SsoConfigurationData.BuildSignedOutCallbackPath(globalSettings.BaseServiceUri.Sso);
+            SpEntityId = SsoConfigurationData.BuildSaml2ModulePath(globalSettings.BaseServiceUri.Sso);
+            SpMetadataUrl = SsoConfigurationData.BuildSaml2MetadataUrl(globalSettings.BaseServiceUri.Sso, organizationId);
+            SpAcsUrl = SsoConfigurationData.BuildSaml2AcsUrl(globalSettings.BaseServiceUri.Sso, organizationId);
         }
 
         public string CallbackPath { get; set; }

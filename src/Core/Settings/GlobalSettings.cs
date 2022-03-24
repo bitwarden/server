@@ -280,9 +280,8 @@ namespace Bit.Core.Settings
             public string ReplyToEmail { get; set; }
             public string AmazonConfigSetName { get; set; }
             public SmtpSettings Smtp { get; set; } = new SmtpSettings();
-            public string PostalDomain { get; set; }
-            public string PostalApiKey { get; set; }
-            public int? PostalPercentage { get; set; }
+            public string SendGridApiKey { get; set; }
+            public int? SendGridPercentage { get; set; }
 
             public class SmtpSettings
             {
@@ -425,6 +424,7 @@ namespace Bit.Core.Settings
         public class InstallationSettings
         {
             private string _identityUri;
+            private string _apiUri;
 
             public Guid Id { get; set; }
             public string Key { get; set; }
@@ -432,6 +432,10 @@ namespace Bit.Core.Settings
             {
                 get => string.IsNullOrWhiteSpace(_identityUri) ? "https://identity.bitwarden.com" : _identityUri;
                 set => _identityUri = value;
+            }
+            public string ApiUri
+            {
+                get => string.IsNullOrWhiteSpace(_apiUri) ? "https://api.biwarden.com" : _apiUri;
             }
         }
 
@@ -464,6 +468,7 @@ namespace Bit.Core.Settings
             public bool ForceCaptchaRequired { get; set; } = false;
             public string HCaptchaSecretKey { get; set; }
             public string HCaptchaSiteKey { get; set; }
+            public int MaximumFailedLoginAttempts { get; set; }
         }
 
         public class StripeSettings

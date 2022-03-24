@@ -8,9 +8,10 @@ namespace Bit.Core.Services
     {
         string SiteKey { get; }
         string SiteKeyResponseKeyName { get; }
-        bool RequireCaptchaValidation(ICurrentContext currentContext);
+        bool RequireCaptchaValidation(ICurrentContext currentContext, int failedLoginCount = 0);
         Task<bool> ValidateCaptchaResponseAsync(string captchResponse, string clientIpAddress);
         string GenerateCaptchaBypassToken(User user);
         bool ValidateCaptchaBypassToken(string encryptedToken, User user);
+        bool ValidateFailedAuthEmailConditions(bool unknownDevice, int failedLoginCount);
     }
 }
