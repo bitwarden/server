@@ -2,9 +2,10 @@
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
+using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Api.Request.OrganizationSponsorships;
-using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
+using Bit.Core.Models.Api.Response.OrganizationSponsorships;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -13,19 +14,19 @@ using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.SelfHosted
 {
-    public class SelfHostedSyncOrganizationSponsorshipsCommand : BaseIdentityClientService, ISelfHostedSyncOrganizationSponsorshipsCommand
+    public class SelfHostedSyncSponsorshipsCommand : BaseIdentityClientService, ISelfHostedSyncSponsorshipsCommand
     {
         private readonly IOrganizationSponsorshipRepository _organizationSponsorshipRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
 
         private readonly ILicensingService _licensingService;
 
-        public SelfHostedSyncOrganizationSponsorshipsCommand(
+        public SelfHostedSyncSponsorshipsCommand(
         IOrganizationSponsorshipRepository organizationSponsorshipRepository,
         IOrganizationUserRepository organizationUserRepository,
         ILicensingService licensingService,
         IGlobalSettings globalSettings,
-        ILogger<SelfHostedSyncOrganizationSponsorshipsCommand> logger) : base("vault.bitwarden.com", "identity.bitwarden.com", "api.installation", globalSettings.Installation.Id.ToString(), globalSettings.Installation.Key, logger)
+        ILogger<SelfHostedSyncSponsorshipsCommand> logger) : base("vault.bitwarden.com", "identity.bitwarden.com", "api.installation", globalSettings.Installation.Id.ToString(), globalSettings.Installation.Key, logger)
         {
             _organizationUserRepository = organizationUserRepository;
             _organizationSponsorshipRepository = organizationSponsorshipRepository;
@@ -47,16 +48,17 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
 
             foreach (var orgSponsorshipsBatch in CoreHelpers.Batch(organizationSponsorships, 1000))
             {
-                var response = await SendAsync<OrganizationSponsorshipSyncModel, OrganizationSponsorshipSyncModel>(HttpMethod.Post, "organizationSponsorships/sync", new OrganizationSponsorshipSyncModel
+                var response = await SendAsync<OrganizationSponsorshipSyncRequestModel, OrganizationSponsorshipSyncResponseModel>(HttpMethod.Post, "organizationSponsorships/sync", new OrganizationSponsorshipSyncRequestModel
                 {
                     BillingSyncKey = billingSyncKey,
                     SponsoringOrganizationCloudId = cloudOrganizationId,
-                    SponsorshipsBatch = orgSponsorshipsBatch.Select(s => new OrganizationSponsorshipModel
+                    SponsorshipsBatch = orgSponsorshipsBatch.Select(s => new OrganizationSponsorshipRequestModel
                     {
                         SponsoringOrganizationUserId = s.SponsoringOrganizationUserId,
                         FriendlyName = s.FriendlyName,
                         OfferedToEmail = s.OfferedToEmail,
                         PlanSponsorshipType = s.PlanSponsorshipType,
+                        // TODO
                         // ValidUntil = s.ValidUntil,
                         // ToDelete = s.ToDelete
                     })
@@ -88,6 +90,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
                     
                     if (sponsorshipModel.ToDelete)
                     {
+                        // TODO
                         // existingOrgSponsorship.ToDelete = sponsorshipModel.ToDelete;
                     }
 
@@ -96,6 +99,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
                         if (sponsorshipModel.SponsoredOrganizationId != null)
                         {
                             existingOrgSponsorship.SponsoredOrganizationId  = sponsorshipModel.SponsoredOrganizationId;
+                            // TODO
                             // existingOrgSponsorship.ValidUntil = sponsorshipModel.ValidUntil;
                         }
                     }

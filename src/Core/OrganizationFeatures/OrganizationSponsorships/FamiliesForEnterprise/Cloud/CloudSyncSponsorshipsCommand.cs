@@ -10,17 +10,18 @@ using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterpri
 using Bit.Core.Repositories;
 using Microsoft.Extensions.Logging;
 using System;
+using Bit.Core.Models.Data;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud
 {
-    public class CloudSyncOrganizationSponsorshipsCommand : CreateSponsorshipCommand, ICloudSyncOrganizationSponsorshipsCommand
+    public class CloudSyncSponsorshipsCommand : CreateSponsorshipCommand, ICloudSyncSponsorshipsCommand
     {
         private readonly IOrganizationSponsorshipRepository _organizationSponsorshipRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly ISendSponsorshipOfferCommand _sendSponsorshipOfferCommand;
 
 
-        public CloudSyncOrganizationSponsorshipsCommand (
+        public CloudSyncSponsorshipsCommand (
         IOrganizationSponsorshipRepository organizationSponsorshipRepository,
         IOrganizationUserRepository organizationUserRepository,
         ISendSponsorshipOfferCommand sendSponsorshipOfferCommand) : base(organizationSponsorshipRepository)
@@ -30,16 +31,16 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
             _sendSponsorshipOfferCommand = sendSponsorshipOfferCommand;
         }
 
-        public async Task<OrganizationSponsorshipSyncModel> SyncOrganization(Organization sponsoringOrg, IEnumerable<OrganizationSponsorshipModel> sponsorshipsBatch)
+        public async Task<OrganizationSponsorshipSyncData> SyncOrganization(OrganizationSponsorshipSyncData syncData)
         {
 
-            var syncResponseModel = new OrganizationSponsorshipSyncModel
+            var syncResponseModel = new OrganizationSponsorshipSyncData
             {
-                SponsoringOrganizationCloudId = sponsoringOrg.Id,
+                SponsoringOrganizationCloudId = syncData.SponsoringOrganizationCloudId,
             };
 
 
-            foreach (var selfHostedSponsorship in sponsorshipsBatch)
+            foreach (var selfHostedSponsorship in syncData.SponsorshipsBatch)
             {
                 if (selfHostedSponsorship.SponsoringOrganizationUserId == null)
                 {
@@ -72,6 +73,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
                     }
                     else 
                     {
+                        // TODO
                         // existingOrgSponsorship.ToDelete = selfHostedSponsorship.ToDelete;
                     }
 
@@ -82,6 +84,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
                     if (existingOrgSponsorship.SponsoredOrganizationId != null)
                     {
                         selfHostedSponsorship.SponsoredOrganizationId = existingOrgSponsorship.SponsoredOrganizationId;
+                        // TODO
                         // selfHostedSponsorship.ValidUntil = existingOrgSponsorship.ValidUntil;
                     }
                 }

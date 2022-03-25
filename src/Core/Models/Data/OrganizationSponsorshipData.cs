@@ -1,9 +1,9 @@
-﻿using System;
+using System;
 using Bit.Core.Enums;
 
-namespace Bit.Core.Models.Api.Request.OrganizationSponsorships
+namespace Bit.Core.Models.Data
 {
-    public class OrganizationSponsorshipModel
+    public class OrganizationSponsorshipData
     {
         public Guid? SponsoringOrganizationUserId { get; set; }
         public Guid? SponsoredOrganizationId { get; set; }
@@ -15,5 +15,6 @@ namespace Bit.Core.Models.Api.Request.OrganizationSponsorships
         public bool ToDelete { get; set; }
 
         public bool CloudSponsorshipRemoved { get; set; }
+
     }
 }

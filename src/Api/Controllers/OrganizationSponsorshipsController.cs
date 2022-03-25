@@ -10,6 +10,7 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business.Tokenables;
 using Bit.Core.Models.Api.Request.OrganizationSponsorships;
+using Bit.Core.Models.Api.Response.OrganizationSponsorships;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -32,7 +33,7 @@ namespace Bit.Api.Controllers
         private readonly ISetUpSponsorshipCommand _setUpSponsorshipCommand;
         private readonly IRevokeSponsorshipCommand _revokeSponsorshipCommand;
         private readonly IRemoveSponsorshipCommand _removeSponsorshipCommand;
-        private readonly ICloudSyncOrganizationSponsorshipsCommand _syncOrganizationSponsorshipsCommand;
+        private readonly ICloudSyncSponsorshipsCommand _syncSponsorshipsCommand;
         private readonly ICurrentContext _currentContext;
         private readonly IUserService _userService;
 
@@ -46,7 +47,7 @@ namespace Bit.Api.Controllers
             ISetUpSponsorshipCommand setUpSponsorshipCommand,
             IRevokeSponsorshipCommand revokeSponsorshipCommand,
             IRemoveSponsorshipCommand removeSponsorshipCommand,
-            ICloudSyncOrganizationSponsorshipsCommand syncOrganizationSponsorshipsCommand,
+            ICloudSyncSponsorshipsCommand syncSponsorshipsCommand,
             IUserService userService,
             ICurrentContext currentContext)
         {
@@ -59,7 +60,7 @@ namespace Bit.Api.Controllers
             _setUpSponsorshipCommand = setUpSponsorshipCommand;
             _revokeSponsorshipCommand = revokeSponsorshipCommand;
             _removeSponsorshipCommand = removeSponsorshipCommand;
-            _syncOrganizationSponsorshipsCommand = syncOrganizationSponsorshipsCommand;
+            _syncSponsorshipsCommand = syncSponsorshipsCommand;
             _userService = userService;
             _currentContext = currentContext;
         }
@@ -67,7 +68,7 @@ namespace Bit.Api.Controllers
         [Authorize("Application")]
         [HttpPost("{sponsoringOrgId}/families-for-enterprise")]
         [SelfHosted(NotSelfHostedOnly = true)]
-        public async Task CreateSponsorship(Guid sponsoringOrgId, [FromBody] OrganizationSponsorshipRequestModel model)
+        public async Task CreateSponsorship(Guid sponsoringOrgId, [FromBody] OrganizationCreateSponsorshipRequestModel model)
         {
             var sponsorship = await _createSponsorshipCommand.CreateSponsorshipAsync(
                 await _organizationRepository.GetByIdAsync(sponsoringOrgId),
@@ -123,14 +124,16 @@ namespace Bit.Api.Controllers
 
         [Authorize("Installation")]
         [HttpPost("sync")]
-        public async Task<OrganizationSponsorshipSyncModel> Sync([FromBody] OrganizationSponsorshipSyncModel model)
+        public async Task<OrganizationSponsorshipSyncResponseModel> Sync([FromBody] OrganizationSponsorshipSyncRequestModel model)
         {
             var sponsoringOrg = await _organizationRepository.GetByIdAsync(model.SponsoringOrganizationCloudId);
             if (sponsoringOrg == null)
             {
                 throw new BadRequestException("Failed to sync sponsorship - missing organization");
             }
-            return await _syncOrganizationSponsorshipsCommand.SyncOrganization(sponsoringOrg, model.SponsorshipsBatch);
+            
+            var syncData = await _syncSponsorshipsCommand.SyncOrganization(model.ToOrganizationSponsorshipSync());
+            return new OrganizationSponsorshipSyncResponseModel(syncData);
         }
 
         [Authorize("Application")]

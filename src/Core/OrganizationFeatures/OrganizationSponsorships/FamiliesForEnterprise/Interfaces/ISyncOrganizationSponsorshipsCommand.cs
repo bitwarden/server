@@ -2,17 +2,17 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Bit.Core.Entities;
-using Bit.Core.Models.Api.Request.OrganizationSponsorships;
+using Bit.Core.Models.Data;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces
 {
-    public interface ISelfHostedSyncOrganizationSponsorshipsCommand
+    public interface ISelfHostedSyncSponsorshipsCommand
     {
         Task SyncOrganization(Guid organizationId);
     }
 
-    public interface ICloudSyncOrganizationSponsorshipsCommand
+    public interface ICloudSyncSponsorshipsCommand
     {
-        Task<OrganizationSponsorshipSyncModel> SyncOrganization(Organization sponsoringOrg, IEnumerable<OrganizationSponsorshipModel> sponsorshipsBatch);
+        Task<OrganizationSponsorshipSyncData> SyncOrganization(OrganizationSponsorshipSyncData syncData);
     }
 }
