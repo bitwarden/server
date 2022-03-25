@@ -37,5 +37,9 @@ namespace Bit.Core.Models.Data
         public string ProviderName { get; set; }
         public string FamilySponsorshipFriendlyName { get; set; }
         public string SsoConfig { get; set; }
+        public DateTime? SponsorshipLastSyncDate { get; set; }
+        public DateTime? SponsorshipValidUntil { get; set; }
+        public bool? SponsorshipToDelete { get; set; }
+        public bool HasSponsoredOrg { get; set; }
     }
 }
