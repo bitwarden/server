@@ -31,12 +31,6 @@
           "Microsoft.VisualStudio.Web.CodeGenerators.Mvc": "5.0.2"
         }
       },
-      "NewRelic.Agent": {
-        "type": "Direct",
-        "requested": "[8.41.0, )",
-        "resolved": "8.41.0",
-        "contentHash": "Bg4gOSPWZgFg4aDTt2mclPkYDipK62O+D1y0fN10J/kpJl1Ecg6rfHulLOzXdB522ujVyLHF6Dga61FLRNzIYA=="
-      },
       "AspNetCoreRateLimit": {
         "type": "Transitive",
         "resolved": "2.1.0",

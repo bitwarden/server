@@ -1512,11 +1512,6 @@
           "System.Xml.XDocument": "4.3.0"
         }
       },
-      "NewRelic.Agent": {
-        "type": "Transitive",
-        "resolved": "8.41.0",
-        "contentHash": "Bg4gOSPWZgFg4aDTt2mclPkYDipK62O+D1y0fN10J/kpJl1Ecg6rfHulLOzXdB522ujVyLHF6Dga61FLRNzIYA=="
-      },
       "Newtonsoft.Json": {
         "type": "Transitive",
         "resolved": "12.0.3",
@@ -3535,7 +3530,6 @@
           "CommCore": "1.46.2",
           "Core": "1.46.2",
           "Microsoft.AspNetCore.Mvc.NewtonsoftJson": "5.0.9",
-          "NewRelic.Agent": "8.41.0",
           "SharedWeb": "1.46.2",
           "Swashbuckle.AspNetCore": "6.2.3"
         }
