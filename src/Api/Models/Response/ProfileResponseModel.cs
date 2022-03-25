@@ -5,7 +5,6 @@ using Bit.Api.Models.Response.Providers;
 using Bit.Core.Entities;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Data;
-using Bit.Core.Settings;
 
 namespace Bit.Api.Models.Response
 {
