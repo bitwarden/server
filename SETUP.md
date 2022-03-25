@@ -152,6 +152,17 @@ dotnet run
 
 NOTE: check the output of the running project to find the port it is listening on. If this is different to the default in `appsettings.json`, you may need to update your user secrets to override this (typically the Api user secrets for the Identity URL).
 
+### Troubleshooting
+
+If you get an error while restoring the nuget packages like `error NU1403: Package content hash validation failed for ...` then these following commands should fix the problem:
+```
+dotnet nuget locals all --clear
+git clean -xfd
+git rm **/packages.lock.json -f
+dotnet restore
+```
+The thing is that on differnet OS the hash is done differently so if you've downloaded the `packages.lock.json` files from git and they were created on a different OS then you might run into this issue, and the previous commands should clear everything, remove the `packages.lock.json` files and create them again on the restoring. ([source](http://thecodemanual.pl/2020/03/11/caching-not-only-nuget-packages-on-azure-devops.html))
+
 ### Rider
 From within Rider, launch both the Api project and the Identity project by clicking the "play" button for each project separately.
 
