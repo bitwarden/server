@@ -48,7 +48,6 @@ namespace Bit.Api.Test.Controllers
             _getOrganizationApiKeyCommand = Substitute.For<IGetOrganizationApiKeyCommand>();
             _rotateOrganizationApiKeyCommand = Substitute.For<IRotateOrganizationApiKeyCommand>();
             _organizationApiKeyRepository = Substitute.For<IOrganizationApiKeyRepository>();
-            
             _userService = Substitute.For<IUserService>();
 
             _sut = new OrganizationsController(_organizationRepository, _organizationUserRepository,

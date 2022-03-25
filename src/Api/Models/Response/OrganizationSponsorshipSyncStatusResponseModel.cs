@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Bit.Core.Models.Api;
 
 namespace Bit.Api.Models.Response
