@@ -27,7 +27,7 @@
   <ItemGroup>
     <EmbeddedResource Include="Scripts\2021-09-21_01_SplitManageCollectionsPermission.psql" />
     <EmbeddedResource Include="Scripts\2021-10-21_00_SetMaxAutoscaleSeatCount.psql" />
-    <EmbeddedResource Include="Scripts\2022-03-01_00_Up_MigrateOrganizationApiKeys.psql" />
-    <EmbeddedResource Include="Scripts\2022-03-01_00_Down_MigrateOrganizationApiKeys.psql" />
+    <EmbeddedResource Include="HelperScripts\2022-03-01_00_Up_MigrateOrganizationApiKeys.psql" />
+    <EmbeddedResource Include="HelperScripts\2022-03-01_00_Down_MigrateOrganizationApiKeys.psql" />
   </ItemGroup>
 </Project>

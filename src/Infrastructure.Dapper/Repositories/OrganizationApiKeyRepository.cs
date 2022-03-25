@@ -55,21 +55,5 @@ namespace Bit.Infrastructure.Dapper.Repositories
                 return results.ToList();
             }
         }
-
-        public async Task UpdateAsync(OrganizationApiKey organizationApiKey)
-        {
-            using (var connection = new SqlConnection(ConnectionString))
-            {
-                await connection.ExecuteAsync(
-                    "[dbo].[OrganizationApiKey_Update]",
-                    new
-                    {
-                        organizationApiKey.Id,
-                        organizationApiKey.ApiKey,
-                        organizationApiKey.RevisionDate,
-                    },
-                    commandType: CommandType.StoredProcedure);
-            }
-        }
     }
 }

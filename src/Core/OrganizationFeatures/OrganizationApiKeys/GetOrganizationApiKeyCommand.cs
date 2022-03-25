@@ -17,25 +17,23 @@ namespace Bit.Core.OrganizationFeatures.OrganizationApiKeys
             _organizationApiKeyRepository = organizationApiKeyRepository;
         }
 
-        public async Task<OrganizationApiKey> GetOrganizationApiKeyAsync(Guid organizationId, OrganizationApiKeyType? organizationApiKeyType)
+        public async Task<OrganizationApiKey> GetOrganizationApiKeyAsync(Guid organizationId, OrganizationApiKeyType organizationApiKeyType)
         {
-            var keyType = organizationApiKeyType ?? OrganizationApiKeyType.Default;
-
-            if (!Enum.IsDefined(keyType))
+            if (!Enum.IsDefined(organizationApiKeyType))
             {
                 throw new ArgumentOutOfRangeException(nameof(organizationApiKeyType), $"Invalid value for enum {nameof(OrganizationApiKeyType)}");
             }
 
-            var apiKey = await _organizationApiKeyRepository.GetByOrganizationIdTypeAsync(organizationId, keyType);
+            var apiKey = await _organizationApiKeyRepository.GetByOrganizationIdTypeAsync(organizationId, organizationApiKeyType);
 
             if (apiKey == null)
             {
                 apiKey = new OrganizationApiKey
                 {
                     OrganizationId = organizationId,
-                    Type = keyType,
+                    Type = organizationApiKeyType,
                     ApiKey = CoreHelpers.SecureRandomString(30),
-                    RevisionDate = DateTime.UtcNow
+                    RevisionDate = DateTime.UtcNow,
                 };
 
                 await _organizationApiKeyRepository.CreateAsync(apiKey);

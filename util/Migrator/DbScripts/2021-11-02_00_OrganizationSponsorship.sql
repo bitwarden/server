@@ -120,7 +120,7 @@ CREATE PROCEDURE [dbo].[OrganizationSponsorship_Create]
     @FriendlyName NVARCHAR(256),
     @OfferedToEmail NVARCHAR(256),
     @PlanSponsorshipType TINYINT,
-    @CloudSponsor BIT NULL,
+    @CloudSponsor BIT,
     @LastSyncDate DATETIME2 (7),
     @TimesRenewedWithoutValidation TINYINT,
     @SponsorshipLapsedDate DATETIME2 (7)

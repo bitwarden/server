@@ -85,6 +85,8 @@ GO
 
 CREATE PROCEDURE [dbo].[OrganizationApiKey_Update]
     @Id UNIQUEIDENTIFIER,
+    @OrganizationId UNIQUEIDENTIFIER,
+    @Type TINYINT,
     @ApiKey VARCHAR(30),
     @RevisionDate DATETIME2(7)
 AS
@@ -98,6 +100,23 @@ BEGIN
         [RevisionDate] = @RevisionDate
     WHERE
         [Id] = @Id
+END
+GO
+
+IF OBJECT_ID('[dbo].[OrganizationApiKey_DeleteById]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[OrganizationApiKey_DeleteById]
+END
+GO
+
+CREATE PROCEDURE [dbo].[OrganizationApiKey_DeleteById]
+    @Id UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    DELETE FROM [dbo].[OrganizationApiKey]
+    WHERE [Id] = @Id
 END
 GO
 
@@ -162,13 +181,6 @@ BEGIN
         [dbo].[OrganizationApiKey]
     WHERE
         [OrganizationId] = @OrganizationId
-END
-GO
-
--- Update Organization delete sprocs to handle organization api key
-IF OBJECT_ID('[dbo].[Organization_DeleteById]') IS NOT NULL
-BEGIN
-    DROP PROCEDURE [dbo].[Organization_DeleteById]
 END
 GO
 
@@ -671,78 +683,6 @@ BEGIN
 END
 GO
 
-CREATE PROCEDURE [dbo].[Organization_DeleteById]
-    @Id UNIQUEIDENTIFIER
-AS
-BEGIN
-    SET NOCOUNT ON
-
-    EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationId] @Id
-
-    DECLARE @BatchSize INT = 100
-    WHILE @BatchSize > 0
-    BEGIN
-        BEGIN TRANSACTION Organization_DeleteById_Ciphers
-
-        DELETE TOP(@BatchSize)
-        FROM
-            [dbo].[Cipher]
-        WHERE
-            [UserId] IS NULL
-            AND [OrganizationId] = @Id
-
-        SET @BatchSize = @@ROWCOUNT
-
-        COMMIT TRANSACTION Organization_DeleteById_Ciphers
-    END
-
-    BEGIN TRANSACTION Organization_DeleteById
-
-    DELETE
-    FROM
-        [dbo].[SsoUser]
-    WHERE
-        [OrganizationId] = @Id
-
-    DELETE
-    FROM
-        [dbo].[SsoConfig]
-    WHERE
-        [OrganizationId] = @Id
-
-    DELETE CU
-    FROM 
-        [dbo].[CollectionUser] CU
-    INNER JOIN 
-        [dbo].[OrganizationUser] OU ON [CU].[OrganizationUserId] = [OU].[Id]
-    WHERE 
-        [OU].[OrganizationId] = @Id
-
-    DELETE
-    FROM 
-        [dbo].[OrganizationUser]
-    WHERE 
-        [OrganizationId] = @Id
-
-    DELETE
-    FROM
-         [dbo].[ProviderOrganization]
-    WHERE
-        [OrganizationId] = @Id
-
-    EXEC [dbo].[OrganizationApiKey_OrganizationDeleted] @Id
-    EXEC [dbo].[OrganizationConnection_OrganizationDeleted] @Id
-
-    DELETE
-    FROM
-        [dbo].[Organization]
-    WHERE
-        [Id] = @Id
-
-    COMMIT TRANSACTION Organization_DeleteById
-END
-GO
-
 IF COL_LENGTH('[dbo].[OrganizationSponsorship]', 'TimesRenewedWithoutValidation') IS NOT NULL
 BEGIN
     ALTER TABLE [dbo].[OrganizationSponsorship] DROP CONSTRAINT DF__Organizat__Times__2B2A60FE
@@ -888,6 +828,27 @@ BEGIN
 END
 GO
 
+IF OBJECT_ID('[dbo].[OrganizationSponsorship_ReadLatestBySponsoringOrganizationId]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[OrganizationSponsorship_ReadLatestBySponsoringOrganizationId];
+END
+GO
+
+CREATE PROCEDURE [dbo].[OrganizationSponsorship_ReadLatestBySponsoringOrganizationId]
+    @SponsoringOrganizationId UNIQUEIDENTIFIER
+AS
+BEGIN
+    SELECT TOP 1
+        *
+    FROM
+        [dbo].[OrganizationSponsorshipView]
+    WHERE
+        [SponsoringOrganizationId] = @SponsoringOrganizationId AND
+        [LastSyncDate] IS NOT NULL
+    ORDER BY [LastSyncDate] DESC
+END
+GO
+
 IF OBJECT_ID('[dbo].[Organization_DeleteById]') IS NOT NULL
 BEGIN
     DROP PROCEDURE [dbo].[Organization_DeleteById]
@@ -971,4 +932,67 @@ IF OBJECT_ID('[dbo].[OrganizationSponsorship_OrganizationDeleted]') IS NOT NULL
 BEGIN
     DROP PROCEDURE [dbo].[OrganizationSponsorship_OrganizationDeleted]
 END
+GO
+
+
+IF EXISTS(SELECT * FROM sys.views WHERE [Name] = 'OrganizationUserOrganizationDetailsView')
+    BEGIN
+        DROP VIEW [dbo].[OrganizationUserOrganizationDetailsView]
+    END
+GO
+
+CREATE VIEW [dbo].[OrganizationUserOrganizationDetailsView]
+AS
+SELECT
+    OU.[UserId],
+    OU.[OrganizationId],
+    O.[Name],
+    O.[Enabled],
+    O.[PlanType],
+    O.[UsePolicies],
+    O.[UseSso],
+    O.[UseKeyConnector],
+    O.[UseGroups],
+    O.[UseDirectory],
+    O.[UseEvents],
+    O.[UseTotp],
+    O.[Use2fa],
+    O.[UseApi],
+    O.[UseResetPassword],
+    O.[SelfHost],
+    O.[UsersGetPremium],
+    O.[Seats],
+    O.[MaxCollections],
+    O.[MaxStorageGb],
+    O.[Identifier],
+    OU.[Key],
+    OU.[ResetPasswordKey],
+    O.[PublicKey],
+    O.[PrivateKey],
+    OU.[Status],
+    OU.[Type],
+    SU.[ExternalId] SsoExternalId,
+    OU.[Permissions],
+    PO.[ProviderId],
+    P.[Name] ProviderName,
+    SS.[Data] SsoConfig,
+    OS.[FriendlyName] FamilySponsorshipFriendlyName,
+    OS.[LastSyncDate] SponsorshipLastSyncDate,
+    OS.[ToDelete] SponsorshipToDelete,
+    OS.[ValidUntil] SponsorshipValidUntil,
+    CASE WHEN OS.[SponsoredOrganizationId] IS NOT NULL THEN 1 ELSE 0 END HasSponsoredOrg
+FROM
+    [dbo].[OrganizationUser] OU
+LEFT JOIN
+    [dbo].[Organization] O ON O.[Id] = OU.[OrganizationId]
+LEFT JOIN
+    [dbo].[SsoUser] SU ON SU.[UserId] = OU.[UserId] AND SU.[OrganizationId] = OU.[OrganizationId]
+LEFT JOIN
+    [dbo].[ProviderOrganization] PO ON PO.[OrganizationId] = O.[Id]
+LEFT JOIN
+    [dbo].[Provider] P ON P.[Id] = PO.[ProviderId]
+LEFT JOIN
+    [dbo].[SsoConfig] SS ON SS.[OrganizationId] = OU.[OrganizationId]
+LEFT JOIN
+    [dbo].[OrganizationSponsorship] OS ON OS.[SponsoringOrganizationUserID] = OU.[Id]
 GO

@@ -43,8 +43,8 @@ namespace Bit.Core.OrganizationFeatures
 
         private static void AddOrganizationApiKeyCommands(this IServiceCollection services)
         {
-            services.AddSingleton<IGetOrganizationApiKeyCommand, GetOrganizationApiKeyCommand>();
-            services.AddSingleton<IRotateOrganizationApiKeyCommand, RotateOrganizationApiKeyCommand>();
+            services.AddScoped<IGetOrganizationApiKeyCommand, GetOrganizationApiKeyCommand>();
+            services.AddScoped<IRotateOrganizationApiKeyCommand, RotateOrganizationApiKeyCommand>();
         }
 
         private static void AddTokenizers(this IServiceCollection services)

@@ -156,6 +156,20 @@ namespace Bit.Api.Controllers
                 existingOrgSponsorship);
         }
 
+        [HttpGet("{sponsoringOrgId}/sync-status")]
+        public async Task<object> GetSyncStatus(Guid sponsoringOrgId)
+        {
+            var sponsoringOrg = await _organizationRepository.GetByIdAsync(sponsoringOrgId);
+
+            if (!await _currentContext.OrganizationOwner(sponsoringOrg.Id))
+            {
+                throw new NotFoundException();
+            }
+
+            var lastSyncDate = await _organizationSponsorshipRepository.GetLatestSyncDateBySponsoringOrganizationIdAsync(sponsoringOrg.Id);
+            return new OrganizationSponsorshipSyncStatusResponseModel(lastSyncDate);
+        }
+
         private Task<User> CurrentUser => _userService.GetUserByIdAsync(_currentContext.UserId.Value);
     }
 }

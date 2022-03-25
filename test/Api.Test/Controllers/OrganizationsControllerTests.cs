@@ -7,6 +7,7 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
+using Bit.Core.OrganizationFeatures.OrganizationApiKeys.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -21,13 +22,15 @@ namespace Bit.Api.Test.Controllers
         private readonly ICurrentContext _currentContext;
         private readonly IOrganizationRepository _organizationRepository;
         private readonly IOrganizationService _organizationService;
-        private readonly IOrganizationApiKeyService _organizationApiKeyService;
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly IPaymentService _paymentService;
         private readonly IPolicyRepository _policyRepository;
         private readonly ISsoConfigRepository _ssoConfigRepository;
         private readonly ISsoConfigService _ssoConfigService;
         private readonly IUserService _userService;
+        private readonly IGetOrganizationApiKeyCommand _getOrganizationApiKeyCommand;
+        private readonly IRotateOrganizationApiKeyCommand _rotateOrganizationApiKeyCommand;
+        private readonly IOrganizationApiKeyRepository _organizationApiKeyRepository;
 
         private readonly OrganizationsController _sut;
 
@@ -37,17 +40,21 @@ namespace Bit.Api.Test.Controllers
             _globalSettings = Substitute.For<GlobalSettings>();
             _organizationRepository = Substitute.For<IOrganizationRepository>();
             _organizationService = Substitute.For<IOrganizationService>();
-            _organizationApiKeyService = Substitute.For<IOrganizationApiKeyService>();
             _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
             _paymentService = Substitute.For<IPaymentService>();
             _policyRepository = Substitute.For<IPolicyRepository>();
             _ssoConfigRepository = Substitute.For<ISsoConfigRepository>();
             _ssoConfigService = Substitute.For<ISsoConfigService>();
+            _getOrganizationApiKeyCommand = Substitute.For<IGetOrganizationApiKeyCommand>();
+            _rotateOrganizationApiKeyCommand = Substitute.For<IRotateOrganizationApiKeyCommand>();
+            _organizationApiKeyRepository = Substitute.For<IOrganizationApiKeyRepository>();
+            
             _userService = Substitute.For<IUserService>();
 
             _sut = new OrganizationsController(_organizationRepository, _organizationUserRepository,
-                _policyRepository, _organizationService, _organizationApiKeyService, _userService, _paymentService, _currentContext,
-                _ssoConfigRepository, _ssoConfigService, _globalSettings);
+                _policyRepository, _organizationService, _userService, _paymentService, _currentContext,
+                _ssoConfigRepository, _ssoConfigService, _getOrganizationApiKeyCommand, _rotateOrganizationApiKeyCommand,
+                _organizationApiKeyRepository, _globalSettings);
         }
 
         public void Dispose()

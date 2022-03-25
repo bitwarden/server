@@ -4,6 +4,6 @@ namespace Bit.Api.Models.Request.Accounts
 {
     public class OrganizationApiKeyRequestModel : SecretVerificationRequestModel
     {
-        public OrganizationApiKeyType? Type { get; set; }
+        public OrganizationApiKeyType Type { get; set; }
     }
 }
