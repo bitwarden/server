@@ -117,8 +117,9 @@ namespace Bit.Core.IdentityServer
                     var org = await _organizationRepository.GetByIdAsync(id);
                     if (org != null)
                     {
-                        var orgApiKey = await _organizationApiKeyRepository
-                            .GetByOrganizationIdTypeAsync(org.Id, OrganizationApiKeyType.Default);
+                        var orgApiKey = (await _organizationApiKeyRepository
+                            .GetManyByOrganizationIdTypeAsync(org.Id, OrganizationApiKeyType.Default))
+                            .First();
                         return new Client
                         {
                             ClientId = $"organization.{org.Id}",

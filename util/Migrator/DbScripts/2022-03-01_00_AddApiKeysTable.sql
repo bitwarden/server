@@ -120,36 +120,15 @@ BEGIN
 END
 GO
 
-IF OBJECT_ID('[dbo].[OrganizationApiKey_ReadManuByOrganizationId]') IS NOT NULL
+IF OBJECT_ID('[dbo].[OrganizationApiKey_ReadManyByOrganizationIdType]') IS NOT NULL
 BEGIN
-    DROP PROCEDURE [dbo].[OrganizationApiKey_ReadManyByOrganizationId]
+    DROP PROCEDURE [dbo].[OrganizationApiKey_ReadManyByOrganizationIdType]
 END
 GO
 
-CREATE PROCEDURE [dbo].[OrganizationApiKey_ReadManyByOrganizationId]
-    @OrganizationId UNIQUEIDENTIFIER
-AS
-BEGIN
-    SET NOCOUNT ON
-
-    SELECT
-        *
-    FROM
-        [dbo].[OrganizationApiKeyView]
-    WHERE
-        [OrganizationId] = @OrganizationId
-END
-GO
-
-IF OBJECT_ID('[dbo].[OrganizationApiKey_ReadByOrganizationIdType]') IS NOT NULL
-BEGIN
-    DROP PROCEDURE [dbo].[OrganizationApiKey_ReadByOrganizationIdType]
-END
-GO
-
-CREATE PROCEDURE [dbo].[OrganizationApiKey_ReadByOrganizationIdType]
+CREATE PROCEDURE [dbo].[OrganizationApiKey_ReadManyByOrganizationIdType]
     @OrganizationId UNIQUEIDENTIFIER,
-    @Type TINYINT
+    @Type TINYINT = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -160,7 +139,7 @@ BEGIN
         [dbo].[OrganizationApiKeyView]
     WHERE
         [OrganizationId] = @OrganizationId AND
-        [Type] = @Type
+        (@Type IS NULL OR [Type] = @Type)
 END
 GO
 
@@ -977,10 +956,10 @@ SELECT
     P.[Name] ProviderName,
     SS.[Data] SsoConfig,
     OS.[FriendlyName] FamilySponsorshipFriendlyName,
-    OS.[LastSyncDate] SponsorshipLastSyncDate,
-    OS.[ToDelete] SponsorshipToDelete,
-    OS.[ValidUntil] SponsorshipValidUntil,
-    CASE WHEN OS.[SponsoredOrganizationId] IS NOT NULL THEN 1 ELSE 0 END HasSponsoredOrg
+    OS.[LastSyncDate] FamilySponsorshipLastSyncDate,
+    OS.[ToDelete] FamilySponsorshipToDelete,
+    OS.[ValidUntil] FamilySponsorshipValidUntil,
+    CASE WHEN OS.[SponsoredOrganizationId] IS NOT NULL THEN 1 ELSE 0 END FamilySponsorshipHasSponsoredOrg
 FROM
     [dbo].[OrganizationUser] OU
 LEFT JOIN

@@ -46,10 +46,10 @@ namespace Bit.Api.Models.Response
                 StaticStore.GetSponsoredPlan(PlanSponsorshipType.FamiliesForEnterprise)
                 .UsersCanSponsor(organization);
             PlanProductType = StaticStore.GetPlan(organization.PlanType).Product;
-            SponsorshipLastSyncDate = organization.SponsorshipLastSyncDate;
-            SponsorshipToDelete = organization.SponsorshipToDelete;
-            SponsorshipValidUntil = organization.SponsorshipValidUntil;
-            SponsorshipHasSponsoredOrg = organization.HasSponsoredOrg;
+            SponsorshipLastSyncDate = organization.FamilySponsorshipLastSyncDate;
+            FamilySponsorshipToDelete = organization.FamilySponsorshipToDelete;
+            FamilySponsorshipValidUntil = organization.FamilySponsorshipValidUntil;
+            FamilySponsorshipHasSponsoredOrg = organization.FamilySponsorshipHasSponsoredOrg;
 
             if (organization.SsoConfig != null)
             {
@@ -94,9 +94,9 @@ namespace Bit.Api.Models.Response
         public bool KeyConnectorEnabled { get; set; }
         public string KeyConnectorUrl { get; set; }
         public DateTime? SponsorshipLastSyncDate { get; set; }
-        public DateTime? SponsorshipValidUntil { get; set; }
-        public bool? SponsorshipToDelete { get; set; }
-        public bool SponsorshipHasSponsoredOrg { get; set; }
+        public DateTime? FamilySponsorshipValidUntil { get; set; }
+        public bool? FamilySponsorshipToDelete { get; set; }
+        public bool FamilySponsorshipHasSponsoredOrg { get; set; }
 
     }
 }

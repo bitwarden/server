@@ -23,43 +23,15 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
 
         }
 
-        public async Task<ICollection<OrganizationApiKey>> GetManyByOrganizationIdAsync(Guid organizationId)
+        public async Task<IEnumerable<OrganizationApiKey>> GetManyByOrganizationIdTypeAsync(Guid organizationId, OrganizationApiKeyType? type = null)
         {
             using (var scope = _serviceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
                 var apiKeys = await dbContext.OrganizationApiKeys
-                    .Where(o => o.OrganizationId == organizationId)
+                    .Where(o => o.OrganizationId == organizationId && (type == null || o.Type == type))
                     .ToListAsync();
                 return _mapper.Map<List<OrganizationApiKey>>(apiKeys);
-            }
-        }
-
-        public async Task<OrganizationApiKey> GetByOrganizationIdTypeAsync(Guid organizationId, OrganizationApiKeyType type)
-        {
-            using (var scope = _serviceScopeFactory.CreateScope())
-            {
-                var dbContext = GetDatabaseContext(scope);
-                var apiKey = await dbContext.OrganizationApiKeys
-                    .FirstOrDefaultAsync(o => o.OrganizationId == organizationId && o.Type == type);
-                return apiKey;
-            }
-        }
-        public async Task UpdateAsync(OrganizationApiKey organizationApiKey)
-        {
-            using (var scope = _serviceScopeFactory.CreateScope())
-            {
-                var dbContext = GetDatabaseContext(scope);
-                var orgApiKey = await dbContext.OrganizationApiKeys
-                    .FirstOrDefaultAsync(o => o.OrganizationId == organizationApiKey.OrganizationId
-                        && o.Type == organizationApiKey.Type);
-
-                if (orgApiKey != null)
-                {
-                    orgApiKey.ApiKey = organizationApiKey.ApiKey;
-                    orgApiKey.RevisionDate = organizationApiKey.RevisionDate;
-                    await dbContext.SaveChangesAsync();
-                }
             }
         }
     }

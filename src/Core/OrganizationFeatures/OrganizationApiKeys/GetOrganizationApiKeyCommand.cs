@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -24,11 +25,12 @@ namespace Bit.Core.OrganizationFeatures.OrganizationApiKeys
                 throw new ArgumentOutOfRangeException(nameof(organizationApiKeyType), $"Invalid value for enum {nameof(OrganizationApiKeyType)}");
             }
 
-            var apiKey = await _organizationApiKeyRepository.GetByOrganizationIdTypeAsync(organizationId, organizationApiKeyType);
+            var apiKeys = await _organizationApiKeyRepository
+                .GetManyByOrganizationIdTypeAsync(organizationId, organizationApiKeyType);
 
-            if (apiKey == null)
+            if (apiKeys == null || !apiKeys.Any())
             {
-                apiKey = new OrganizationApiKey
+                var apiKey = new OrganizationApiKey
                 {
                     OrganizationId = organizationId,
                     Type = organizationApiKeyType,
@@ -39,7 +41,8 @@ namespace Bit.Core.OrganizationFeatures.OrganizationApiKeys
                 await _organizationApiKeyRepository.CreateAsync(apiKey);
             }
 
-            return apiKey;
+            // NOTE: Currently we only allow one type of api key per organization
+            return apiKeys.Single();
         }
     }
 }

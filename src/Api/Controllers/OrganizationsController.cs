@@ -530,7 +530,7 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            var apiKeys = await _organizationApiKeyRepository.GetManyByOrganizationIdAsync(id);
+            var apiKeys = await _organizationApiKeyRepository.GetManyByOrganizationIdTypeAsync(id);
 
             return new ListResponseModel<OrganizationApiKeyInformation>(
                 apiKeys.Select(k => new OrganizationApiKeyInformation(k)));
