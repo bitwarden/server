@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Bit.Admin.Models;
 using Bit.Core.Settings;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 
@@ -66,6 +67,7 @@ namespace Bit.Admin.Controllers
             catch (HttpRequestException e)
             {
                 _logger.LogError(e, $"Error encountered while sending GET request to {requestUri}");
+                return new JsonResult("HttpRequestException occurred, additional info in the logs") { StatusCode = StatusCodes.Status500InternalServerError };
             }
 
             return new JsonResult("-");
@@ -87,6 +89,7 @@ namespace Bit.Admin.Controllers
             catch (HttpRequestException e)
             {
                 _logger.LogError(e, $"Error encountered while sending GET request to {requestUri}");
+                return new JsonResult("HttpRequestException occurred, additional info in the logs") { StatusCode = StatusCodes.Status500InternalServerError };
             }
 
             return new JsonResult("-");
