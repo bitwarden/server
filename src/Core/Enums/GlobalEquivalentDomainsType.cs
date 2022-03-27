@@ -90,5 +90,6 @@
         Proton = 85,
         Ubisoft = 86,
         TransferWise = 87,
+        TakeawayEU = 88,
     }
 }
