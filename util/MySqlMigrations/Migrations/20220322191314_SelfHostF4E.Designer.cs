@@ -9,8 +9,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.MySqlMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20220207221514_AddCloudBillingSyncKeyToOrganization")]
-    partial class AddCloudBillingSyncKeyToOrganization
+    [Migration("20220322191314_SelfHostF4E")]
+    partial class SelfHostF4E
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
@@ -445,10 +445,6 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("char(36)");
 
-                    b.Property<string>("ApiKey")
-                        .HasMaxLength(30)
-                        .HasColumnType("varchar(30)");
-
                     b.Property<string>("BillingEmail")
                         .HasMaxLength(256)
                         .HasColumnType("varchar(256)");
@@ -474,10 +470,6 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasColumnType("varchar(50)");
 
                     b.Property<string>("BusinessTaxNumber")
-                        .HasMaxLength(30)
-                        .HasColumnType("varchar(30)");
-
-                    b.Property<string>("CloudBillingSyncKey")
                         .HasMaxLength(30)
                         .HasColumnType("varchar(30)");
 
@@ -594,20 +586,63 @@ namespace Bit.MySqlMigrations.Migrations
                     b.ToTable("Organization");
                 });
 
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.OrganizationApiKey", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("ApiKey")
+                        .HasMaxLength(30)
+                        .HasColumnType("varchar(30)");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("RevisionDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<byte>("Type")
+                        .HasColumnType("tinyint unsigned");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.ToTable("OrganizationApiKey");
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.OrganizationConnection", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("Config")
+                        .HasColumnType("longtext");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<byte>("Type")
+                        .HasColumnType("tinyint unsigned");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.ToTable("OrganizationConnection");
+                });
+
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.OrganizationSponsorship", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("char(36)");
 
-                    b.Property<bool>("CloudSponsor")
-                        .HasColumnType("tinyint(1)");
-
                     b.Property<string>("FriendlyName")
                         .HasMaxLength(256)
                         .HasColumnType("varchar(256)");
-
-                    b.Property<Guid?>("InstallationId")
-                        .HasColumnType("char(36)");
 
                     b.Property<DateTime?>("LastSyncDate")
                         .HasColumnType("datetime(6)");
@@ -628,15 +663,13 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<Guid?>("SponsoringOrganizationUserId")
                         .HasColumnType("char(36)");
 
-                    b.Property<DateTime?>("SponsorshipLapsedDate")
+                    b.Property<bool>("ToDelete")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<DateTime?>("ValidUntil")
                         .HasColumnType("datetime(6)");
 
-                    b.Property<byte>("TimesRenewedWithoutValidation")
-                        .HasColumnType("tinyint unsigned");
-
                     b.HasKey("Id");
-
-                    b.HasIndex("InstallationId");
 
                     b.HasIndex("SponsoredOrganizationId");
 
@@ -1040,41 +1073,6 @@ namespace Bit.MySqlMigrations.Migrations
                     b.ToTable("Transaction");
                 });
 
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.U2f", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    b.Property<string>("AppId")
-                        .HasMaxLength(50)
-                        .HasColumnType("varchar(50)");
-
-                    b.Property<string>("Challenge")
-                        .HasMaxLength(200)
-                        .HasColumnType("varchar(200)");
-
-                    b.Property<DateTime>("CreationDate")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<string>("KeyHandle")
-                        .HasMaxLength(200)
-                        .HasColumnType("varchar(200)");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<string>("Version")
-                        .HasMaxLength(20)
-                        .HasColumnType("varchar(20)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("U2f");
-                });
-
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.User", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1355,12 +1353,30 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Navigation("OrganizationUser");
                 });
 
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.OrganizationApiKey", b =>
+                {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.Organization", "Organization")
+                        .WithMany("ApiKeys")
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Organization");
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.OrganizationConnection", b =>
+                {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.Organization", "Organization")
+                        .WithMany("Connections")
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Organization");
+                });
+
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.OrganizationSponsorship", b =>
                 {
-                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.Installation", "Installation")
-                        .WithMany()
-                        .HasForeignKey("InstallationId");
-
                     b.HasOne("Bit.Infrastructure.EntityFramework.Models.Organization", "SponsoredOrganization")
                         .WithMany()
                         .HasForeignKey("SponsoredOrganizationId");
@@ -1368,8 +1384,6 @@ namespace Bit.MySqlMigrations.Migrations
                     b.HasOne("Bit.Infrastructure.EntityFramework.Models.Organization", "SponsoringOrganization")
                         .WithMany()
                         .HasForeignKey("SponsoringOrganizationId");
-
-                    b.Navigation("Installation");
 
                     b.Navigation("SponsoredOrganization");
 
@@ -1498,17 +1512,6 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.U2f", b =>
-                {
-                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.User", "User")
-                        .WithMany("U2fs")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Cipher", b =>
                 {
                     b.Navigation("CollectionCiphers");
@@ -1530,7 +1533,11 @@ namespace Bit.MySqlMigrations.Migrations
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Organization", b =>
                 {
+                    b.Navigation("ApiKeys");
+
                     b.Navigation("Ciphers");
+
+                    b.Navigation("Connections");
 
                     b.Navigation("Groups");
 
@@ -1565,8 +1572,6 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Navigation("SsoUsers");
 
                     b.Navigation("Transactions");
-
-                    b.Navigation("U2fs");
                 });
 #pragma warning restore 612, 618
         }

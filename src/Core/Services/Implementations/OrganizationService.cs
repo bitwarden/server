@@ -42,6 +42,7 @@ namespace Bit.Core.Services
         private readonly IReferenceEventService _referenceEventService;
         private readonly IGlobalSettings _globalSettings;
         private readonly ITaxRateRepository _taxRateRepository;
+        private readonly IOrganizationApiKeyRepository _organizationApiKeyRepository;
         private readonly ICurrentContext _currentContext;
         private readonly ILogger<OrganizationService> _logger;
 
@@ -68,6 +69,7 @@ namespace Bit.Core.Services
             IReferenceEventService referenceEventService,
             IGlobalSettings globalSettings,
             ITaxRateRepository taxRateRepository,
+            IOrganizationApiKeyRepository organizationApiKeyRepository,
             ICurrentContext currentContext,
             ILogger<OrganizationService> logger)
         {
@@ -92,6 +94,7 @@ namespace Bit.Core.Services
             _referenceEventService = referenceEventService;
             _globalSettings = globalSettings;
             _taxRateRepository = taxRateRepository;
+            _organizationApiKeyRepository = organizationApiKeyRepository;
             _currentContext = currentContext;
             _logger = logger;
         }
@@ -611,7 +614,6 @@ namespace Bit.Core.Services
                 ReferenceData = signup.Owner.ReferenceData,
                 Enabled = true,
                 LicenseKey = CoreHelpers.SecureRandomString(20),
-                ApiKey = CoreHelpers.SecureRandomString(30),
                 PublicKey = signup.PublicKey,
                 PrivateKey = signup.PrivateKey,
                 CreationDate = DateTime.UtcNow,
@@ -721,7 +723,6 @@ namespace Bit.Core.Services
                 Enabled = license.Enabled,
                 ExpirationDate = license.Expires,
                 LicenseKey = license.LicenseKey,
-                ApiKey = CoreHelpers.SecureRandomString(30),
                 PublicKey = publicKey,
                 PrivateKey = privateKey,
                 CreationDate = DateTime.UtcNow,
@@ -743,6 +744,13 @@ namespace Bit.Core.Services
             try
             {
                 await _organizationRepository.CreateAsync(organization);
+                await _organizationApiKeyRepository.CreateAsync(new OrganizationApiKey
+                {
+                    OrganizationId = organization.Id,
+                    ApiKey = CoreHelpers.SecureRandomString(30),
+                    Type = OrganizationApiKeyType.Default,
+                    RevisionDate = DateTime.UtcNow,
+                });
                 await _applicationCacheService.UpsertOrganizationAbilityAsync(organization);
 
                 if (!string.IsNullOrWhiteSpace(collectionName))
@@ -2009,13 +2017,6 @@ namespace Bit.Core.Services
 
             await _referenceEventService.RaiseEventAsync(
                 new ReferenceEvent(ReferenceEventType.DirectorySynced, organization));
-        }
-
-        public async Task RotateApiKeyAsync(Organization organization)
-        {
-            organization.ApiKey = CoreHelpers.SecureRandomString(30);
-            organization.RevisionDate = DateTime.UtcNow;
-            await ReplaceAndUpdateCache(organization);
         }
 
         public async Task DeleteSsoUserAsync(Guid userId, Guid? organizationId)

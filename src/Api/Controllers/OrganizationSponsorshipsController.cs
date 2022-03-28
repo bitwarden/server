@@ -1,12 +1,18 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Bit.Api.Models.Request.Organizations;
+using Bit.Api.Models.Response;
+using Bit.Api.Utilities;
 using Bit.Core.Context;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Business.Tokenables;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Tokens;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -148,6 +154,20 @@ namespace Bit.Api.Controllers
                 await _organizationRepository
                     .GetByIdAsync(existingOrgSponsorship.SponsoredOrganizationId.Value),
                 existingOrgSponsorship);
+        }
+
+        [HttpGet("{sponsoringOrgId}/sync-status")]
+        public async Task<object> GetSyncStatus(Guid sponsoringOrgId)
+        {
+            var sponsoringOrg = await _organizationRepository.GetByIdAsync(sponsoringOrgId);
+
+            if (!await _currentContext.OrganizationOwner(sponsoringOrg.Id))
+            {
+                throw new NotFoundException();
+            }
+
+            var lastSyncDate = await _organizationSponsorshipRepository.GetLatestSyncDateBySponsoringOrganizationIdAsync(sponsoringOrg.Id);
+            return new OrganizationSponsorshipSyncStatusResponseModel(lastSyncDate);
         }
 
         private Task<User> CurrentUser => _userService.GetUserByIdAsync(_currentContext.UserId.Value);

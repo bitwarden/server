@@ -32,6 +32,8 @@ namespace Bit.Infrastructure.Dapper
             services.AddSingleton<IProviderOrganizationRepository, ProviderOrganizationRepository>();
             services.AddSingleton<ITransactionRepository, TransactionRepository>();
             services.AddSingleton<IUserRepository, UserRepository>();
+            services.AddSingleton<IOrganizationApiKeyRepository, OrganizationApiKeyRepository>();
+            services.AddSingleton<IOrganizationConnectionRepository, OrganizationConnectionRepository>();
 
             if (selfHosted)
             {

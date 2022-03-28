@@ -1,15 +1,14 @@
 CREATE PROCEDURE [dbo].[OrganizationSponsorship_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
-    @InstallationId UNIQUEIDENTIFIER,
     @SponsoringOrganizationId UNIQUEIDENTIFIER,
     @SponsoringOrganizationUserID UNIQUEIDENTIFIER,
     @SponsoredOrganizationId UNIQUEIDENTIFIER,
+    @FriendlyName NVARCHAR(256),
     @OfferedToEmail NVARCHAR(256),
     @PlanSponsorshipType TINYINT,
-    @CloudSponsor BIT,
+    @ToDelete BIT,
     @LastSyncDate DATETIME2 (7),
-    @TimesRenewedWithoutValidation TINYINT,
-    @SponsorshipLapsedDate DATETIME2 (7)
+    @ValidUntil DATETIME2 (7)
 AS
 BEGIN
     SET NOCOUNT ON
@@ -17,30 +16,28 @@ BEGIN
     INSERT INTO [dbo].[OrganizationSponsorship]
     (
         [Id],
-        [InstallationId],
         [SponsoringOrganizationId],
         [SponsoringOrganizationUserID],
         [SponsoredOrganizationId],
+        [FriendlyName],
         [OfferedToEmail],
         [PlanSponsorshipType],
-        [CloudSponsor],
+        [ToDelete],
         [LastSyncDate],
-        [TimesRenewedWithoutValidation],
-        [SponsorshipLapsedDate]
+        [ValidUntil]
     )
     VALUES
     (
         @Id,
-        @InstallationId,
         @SponsoringOrganizationId,
         @SponsoringOrganizationUserID,
         @SponsoredOrganizationId,
+        @FriendlyName,
         @OfferedToEmail,
         @PlanSponsorshipType,
-        @CloudSponsor,
+        @ToDelete,
         @LastSyncDate,
-        @TimesRenewedWithoutValidation,
-        @SponsorshipLapsedDate
+        @ValidUntil
     )
 END
 GO

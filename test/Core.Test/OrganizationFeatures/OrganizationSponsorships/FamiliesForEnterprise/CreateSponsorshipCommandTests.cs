@@ -106,7 +106,6 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
                 FriendlyName = friendlyName,
                 OfferedToEmail = sponsoredEmail,
                 PlanSponsorshipType = PlanSponsorshipType.FamiliesForEnterprise,
-                CloudSponsor = true,
             };
 
             await sutProvider.GetDependency<IOrganizationSponsorshipRepository>().Received(1)

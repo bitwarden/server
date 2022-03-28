@@ -377,5 +377,19 @@
     <Build Include="dbo\Stored Procedures\Policy_CountByTypeApplicableToUser.sql" />
     <Build Include="dbo\Stored Procedures\Policy_ReadByTypeApplicableToUser.sql" />
     <Build Include="dbo\Functions\PolicyApplicableToUser.sql" />
+    <Build Include="dbo\Stored Procedures\OrganizationApiKey_Create.sql" />
+    <Build Include="dbo\Stored Procedures\OrganizationApiKey_OrganizationDeleted.sql" />
+    <Build Include="dbo\Stored Procedures\OrganizationApiKey_ReadManyByOrganizationId.sql" />
+    <Build Include="dbo\Stored Procedures\OrganizationApiKey_ReadByOrganizationIdType.sql" />
+    <Build Include="dbo\Stored Procedures\OrganizationApiKey_Update.sql" />
+    <Build Include="dbo\Tables\OrganizationApiKey.sql" />
+    <Build Include="dbo\Tables\OrganizationConnection.sql" />
+    <Build Include="dbo\Stored Procedures\OrganizationConnection_Create.sql" />
+    <Build Include="dbo\Stored Procedures\OrganizationConnection_Update.sql" />
+    <Build Include="dbo\Stored Procedures\OrganizationConnection_DeleteById.sql" />
+    <Build Include="dbo\Stored Procedures\OrganizationConnection_ReadById.sql" />
+    <Build Include="dbo\Stored Procedures\OrganizationConnection_ReadEnabledByOrganizationIdType.sql" />
+    <Build Include="dbo\Views\OrganizationApiKeyView.sql" />
+    <Build Include="dbo\Views\OrganizationConnectionView.sql" />
   </ItemGroup>
 </Project>

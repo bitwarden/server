@@ -60,8 +60,6 @@ namespace Bit.Core.Entities
         public bool Enabled { get; set; } = true;
         [MaxLength(100)]
         public string LicenseKey { get; set; }
-        [MaxLength(30)]
-        public string ApiKey { get; set; }
         public string PublicKey { get; set; }
         public string PrivateKey { get; set; }
         public string TwoFactorProviders { get; set; }
@@ -70,8 +68,6 @@ namespace Bit.Core.Entities
         public DateTime RevisionDate { get; set; } = DateTime.UtcNow;
         public int? MaxAutoscaleSeats { get; set; } = null;
         public DateTime? OwnersNotifiedOfAutoscaling { get; set; } = null;
-        [MaxLength(30)]
-        public string CloudBillingSyncKey { get; set; }
 
         public void SetNewId()
         {

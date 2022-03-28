@@ -50,7 +50,6 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
                 FriendlyName = friendlyName,
                 OfferedToEmail = sponsoredEmail,
                 PlanSponsorshipType = sponsorshipType,
-                CloudSponsor = true,
             };
 
             if (existingOrgSponsorship != null)
