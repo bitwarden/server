@@ -165,13 +165,11 @@ From within Rider, launch both the Api project and the Identity project by click
 ### Troubleshooting
 * If you get a 404 error, the projects may be listening on a non-default port. Check the output of your running projects to check the port they are listening on.
 * If you get an error while restoring the nuget packages like `error NU1403: Package content hash validation failed for ...` then these following commands should fix the problem:
-```
-dotnet nuget locals all --clear
-git clean -xfd
-git rm **/packages.lock.json -f
-dotnet restore
-```
-The thing is that on differnet OS the hash is done differently so if you've downloaded the `packages.lock.json` files from git and they were created on a different OS then you might run into this issue, and the previous commands should clear everything, remove the `packages.lock.json` files and create them again on the restoring. ([source](http://thecodemanual.pl/2020/03/11/caching-not-only-nuget-packages-on-azure-devops.html))
+  ```dotnet nuget locals all --clear
+  git clean -xfd
+  git rm **/packages.lock.json -f
+  dotnet restore```
+  For more details read https://github.com/NuGet/Home/issues/7921#issuecomment-478152479
 
 
 # <a name="user-secrets"></a>Appendix A (User Secrets)
