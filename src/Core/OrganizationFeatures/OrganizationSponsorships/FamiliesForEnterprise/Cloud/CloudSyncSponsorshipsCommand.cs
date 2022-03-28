@@ -16,16 +16,19 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
 {
     public class CloudSyncSponsorshipsCommand : CreateSponsorshipCommand, ICloudSyncSponsorshipsCommand
     {
+        private readonly IOrganizationRepository _organizationRepository;
         private readonly IOrganizationSponsorshipRepository _organizationSponsorshipRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly ISendSponsorshipOfferCommand _sendSponsorshipOfferCommand;
 
 
         public CloudSyncSponsorshipsCommand (
+        IOrganizationRepository organizationRepository,
         IOrganizationSponsorshipRepository organizationSponsorshipRepository,
         IOrganizationUserRepository organizationUserRepository,
         ISendSponsorshipOfferCommand sendSponsorshipOfferCommand) : base(organizationSponsorshipRepository)
         {
+            _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
             _organizationSponsorshipRepository = organizationSponsorshipRepository;
             _sendSponsorshipOfferCommand = sendSponsorshipOfferCommand;
@@ -34,67 +37,75 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
         public async Task<OrganizationSponsorshipSyncData> SyncOrganization(OrganizationSponsorshipSyncData syncData)
         {
 
-            var syncResponseModel = new OrganizationSponsorshipSyncData
+            var sponsoringOrg = await _organizationRepository.GetByIdAsync(syncData.SponsoringOrganizationCloudId);
+            if (sponsoringOrg == null)
             {
-                SponsoringOrganizationCloudId = syncData.SponsoringOrganizationCloudId,
-            };
+                throw new BadRequestException("Failed to sync sponsorship - missing organization");
+            }
 
+            var existingSponsorships = await _organizationSponsorshipRepository.GetManyBySponsoringOrganizationAsync(sponsoringOrg.Id);
+            var existingSponsorshipsDict = existingSponsorships.ToDictionary(i => i.SponsoringOrganizationUserId);
+
+            var sponsorshipsToUpsert = new List<OrganizationSponsorship>();
+            var sponsorshipIdsToDelete = new List<Guid>();
+            
 
             foreach (var selfHostedSponsorship in syncData.SponsorshipsBatch)
             {
-                if (selfHostedSponsorship.SponsoringOrganizationUserId == null)
+                var cloudSponsorship = existingSponsorshipsDict[selfHostedSponsorship.SponsoringOrganizationUserId];
+                if (cloudSponsorship == null)
                 {
-                    throw new BadRequestException("Cannot sync sponsorship - missing user");
+                    sponsorshipsToUpsert.Add(new OrganizationSponsorship
+                        {
+                           SponsoringOrganizationId = sponsoringOrg.Id,
+                           SponsoringOrganizationUserId = selfHostedSponsorship.SponsoringOrganizationUserId,
+                           SponsoredOrganizationId = selfHostedSponsorship.SponsoredOrganizationId,
+                           FriendlyName = selfHostedSponsorship.FriendlyName,
+                           OfferedToEmail = selfHostedSponsorship.OfferedToEmail,
+                           PlanSponsorshipType = selfHostedSponsorship.PlanSponsorshipType,
+                           LastSyncDate = DateTime.UtcNow,
+                        //    TODO
+                        //    ValidUntil = selfHostedSponsorship.ValidUntil
+                        });
                 }
-                
-                var existingOrgSponsorship = await _organizationSponsorshipRepository
-                    .GetBySponsoringOrganizationUserIdAsync(selfHostedSponsorship.SponsoringOrganizationUserId.GetValueOrDefault());
-                
-                if (existingOrgSponsorship == null)
+                else
                 {
-                    existingOrgSponsorship = await CreateSponsorshipAsync(
-                        sponsoringOrg, 
-                        selfHostedSponsorship.SponsoringOrganizationUserId, 
-                        selfHostedSponsorship.PlanSponsorshipType, 
-                        selfHostedSponsorship.OfferedToEmail, selfHostedSponsorship.FriendlyName);
-
-                    await _sendSponsorshipOfferCommand.SendSponsorshipOfferAsync(existingOrgSponsorship, sponsoringOrg.Name);
+                    cloudSponsorship.LastSyncDate = DateTime.UtcNow;
+                    sponsorshipsToUpsert.Add(cloudSponsorship);
                 }
 
                 if (selfHostedSponsorship.ToDelete)
                 {
-                    if (existingOrgSponsorship.SponsoredOrganizationId == null)
+                    if (cloudSponsorship.SponsoredOrganizationId == null)
                     {
-                        await _organizationSponsorshipRepository.DeleteAsync(existingOrgSponsorship);
-
+                        sponsorshipIdsToDelete.Add(cloudSponsorship.Id);
                         selfHostedSponsorship.CloudSponsorshipRemoved = true;
-                        syncResponseModel.SponsorshipsBatch.Append(selfHostedSponsorship);
-                        continue;
                     }
                     else 
                     {
                         // TODO
-                        // existingOrgSponsorship.ToDelete = selfHostedSponsorship.ToDelete;
+                        // cloudSponsorship.ToDelete = true;
                     }
-
                 }
 
                 if (selfHostedSponsorship.SponsoredOrganizationId == null)
                 {
-                    if (existingOrgSponsorship.SponsoredOrganizationId != null)
+                    if (cloudSponsorship.SponsoredOrganizationId != null)
                     {
-                        selfHostedSponsorship.SponsoredOrganizationId = existingOrgSponsorship.SponsoredOrganizationId;
+                        selfHostedSponsorship.SponsoredOrganizationId = cloudSponsorship.SponsoredOrganizationId;
                         // TODO
                         // selfHostedSponsorship.ValidUntil = existingOrgSponsorship.ValidUntil;
                     }
                 }
 
                 selfHostedSponsorship.LastSyncDate = DateTime.UtcNow;
-
-                syncResponseModel.SponsorshipsBatch.Append(selfHostedSponsorship);
             }
 
-            return syncResponseModel;
+            await _organizationSponsorshipRepository.UpsertManyAsync(sponsorshipsToUpsert);
+            await _organizationSponsorshipRepository.DeleteManyAsync(sponsorshipIdsToDelete);
+
+
+            return syncData;
         }
 
     }

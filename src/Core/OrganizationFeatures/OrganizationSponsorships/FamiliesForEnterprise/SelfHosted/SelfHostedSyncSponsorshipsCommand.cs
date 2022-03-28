@@ -44,7 +44,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
 
             var cloudOrganizationId = (await _licensingService.ReadOrganizationLicenseAsync(organizationId)).Id;
             var orgUsers = await _organizationUserRepository.GetManyByOrganizationAsync(organizationId, null);
-            var organizationSponsorships = await _organizationSponsorshipRepository.GetBySponsoringOrganizationAsync(organizationId);
+            var organizationSponsorships = await _organizationSponsorshipRepository.GetManyBySponsoringOrganizationAsync(organizationId);
 
             foreach (var orgSponsorshipsBatch in CoreHelpers.Batch(organizationSponsorships, 1000))
             {

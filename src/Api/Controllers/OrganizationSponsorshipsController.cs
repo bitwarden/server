@@ -126,12 +126,6 @@ namespace Bit.Api.Controllers
         [HttpPost("sync")]
         public async Task<OrganizationSponsorshipSyncResponseModel> Sync([FromBody] OrganizationSponsorshipSyncRequestModel model)
         {
-            var sponsoringOrg = await _organizationRepository.GetByIdAsync(model.SponsoringOrganizationCloudId);
-            if (sponsoringOrg == null)
-            {
-                throw new BadRequestException("Failed to sync sponsorship - missing organization");
-            }
-            
             var syncData = await _syncSponsorshipsCommand.SyncOrganization(model.ToOrganizationSponsorshipSync());
             return new OrganizationSponsorshipSyncResponseModel(syncData);
         }
