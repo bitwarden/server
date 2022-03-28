@@ -54,7 +54,7 @@ namespace Bit.Infrastructure.Dapper.Repositories
             using (var connection = new SqlConnection(ConnectionString))
             {
                 return await connection.QuerySingleOrDefaultAsync<DateTime?>(
-                    "[dbo].[OrganizationSponsorship_ReadLatestBySponsoringOrganizationId}",
+                    "[dbo].[OrganizationSponsorship_ReadLatestBySponsoringOrganizationId]",
                     new { SponsoringOrganizationId = sponsoringOrganizationId },
                     commandType: CommandType.StoredProcedure);
             }

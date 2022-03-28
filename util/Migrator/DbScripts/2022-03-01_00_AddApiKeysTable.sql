@@ -818,7 +818,7 @@ CREATE PROCEDURE [dbo].[OrganizationSponsorship_ReadLatestBySponsoringOrganizati
 AS
 BEGIN
     SELECT TOP 1
-        *
+        [LastSyncDate]
     FROM
         [dbo].[OrganizationSponsorshipView]
     WHERE
