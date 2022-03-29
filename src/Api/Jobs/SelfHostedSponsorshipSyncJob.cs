@@ -1,7 +1,12 @@
 using System;
+using System.Linq;
 using System.Threading.Tasks;
+using Bit.Core.Enums;
 using Bit.Core.Jobs;
+using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
+using Bit.Core.Repositories;
 using Bit.Core.Settings;
+using Bit.Infrastructure.Dapper.Repositories;
 using Microsoft.Extensions.Logging;
 using Quartz;
 
@@ -9,27 +14,51 @@ namespace Bit.Api.Jobs
 {
     public class SelfHostedSponsorshipSyncJob : BaseJob
     {
+        private IOrganizationRepository _organizationRepository;
+        private IOrganizationConnectionRepository _organizationConnectionRepository;
+        private ISelfHostedSyncSponsorshipsCommand _syncSponsorshipsCommand;
         private GlobalSettings _globalSettings;
 
         public SelfHostedSponsorshipSyncJob(
+            IOrganizationRepository organizationRepository,
+            IOrganizationConnectionRepository organizationConnectionRepository,
+            ISelfHostedSyncSponsorshipsCommand syncSponsorshipsCommand,
             ILogger<SelfHostedSponsorshipSyncJob> logger,
             GlobalSettings globalSettings)
             : base(logger)
         {
+            _organizationRepository = organizationRepository;
+            _organizationConnectionRepository = organizationConnectionRepository;
+            _syncSponsorshipsCommand = syncSponsorshipsCommand;
             _globalSettings = globalSettings;
         }
 
-        protected override Task ExecuteJobAsync(IJobExecutionContext context)
+        protected override async Task ExecuteJobAsync(IJobExecutionContext context)
         {
             if (!_globalSettings.EnableCloudCommunication)
             {
                 _logger.LogInformation($"Failed to sync instance with cloud - Cloud communication is disabled in global settings");
-                return Task.CompletedTask;
+                return;
             }
 
-            // TODO: add job to sync sponsorships in self hosted organizations that support it
+            var organizations = await _organizationRepository.GetManyByEnabledAsync();
 
-            return Task.CompletedTask;
+            foreach (var org in organizations)
+            {
+                var connection = await _organizationConnectionRepository.GetEnabledByOrganizationIdTypeAsync(org.Id, OrganizationConnectionType.CloudBillingSync);
+                if (connection.FirstOrDefault() != null)
+                {
+                    try
+                    {
+                        await _syncSponsorshipsCommand.SyncOrganization(org.Id);
+                    }
+                    catch
+                    {
+                        _logger.LogInformation($"Failed to sync {0} sponsorships with cloud", org.Name);
+                    }
+                }
+            }
+
         }
     }
 }
