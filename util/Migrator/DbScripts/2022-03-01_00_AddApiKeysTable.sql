@@ -719,6 +719,7 @@ GO
 
 IF COLUMNPROPERTY(OBJECT_ID('[dbo].[OrganizationSponsorship]', 'U'), 'SponsoringOrganizationUserID', 'AllowsNull') = 1
 BEGIN
+    PRINT N'Setting all null SponsoringOrganizationUserID to empty guid'
     UPDATE
         [dbo].[OrganizationSponsorship]
     SET
@@ -738,6 +739,7 @@ GO
 
 IF COLUMNPROPERTY(OBJECT_ID('[dbo].[OrganizationSponsorship]', 'U'), 'SponsoringOrganizationId', 'AllowsNull') = 1
 BEGIN
+    PRINT N'Setting all null SponsoringOrganizationId to empty guid'
     UPDATE
         [dbo].[OrganizationSponsorship]
     SET
@@ -758,7 +760,7 @@ GO
 -- Remake View
 IF EXISTS(SELECT * FROM sys.views WHERE [Name] = 'OrganizationSponsorshipView')
 BEGIN
-    DROP VIEW [dbo].[OrganizationSponsorshipView];
+    DROP VIEW [dbo].[OrganizationSponsorshipView]
 END
 GO
 
@@ -868,7 +870,7 @@ GO
 
 IF OBJECT_ID('[dbo].[OrganizationSponsorship_ReadLatestBySponsoringOrganizationId]') IS NOT NULL
 BEGIN
-    DROP PROCEDURE [dbo].[OrganizationSponsorship_ReadLatestBySponsoringOrganizationId];
+    DROP PROCEDURE [dbo].[OrganizationSponsorship_ReadLatestBySponsoringOrganizationId]
 END
 GO
 
