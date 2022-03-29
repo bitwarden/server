@@ -662,26 +662,43 @@ BEGIN
 END
 GO
 
+DECLARE @TimesRenewedDefaultConstraint NVARCHAR = (SELECT [con].[name]
+FROM [sys].[default_constraints] [con]
+INNER JOIN sys.objects obj ON obj.object_id = con.parent_object_id AND obj.type = 'U' AND obj.name = 'OrganizationSponsorship'
+INNER JOIN sys.columns col ON col.column_id = con.parent_column_id AND col.object_id = obj.object_id AND col.name = 'TimesRenewedWithoutValidation'
+INNER JOIN sys.schemas sch ON sch.schema_id = obj.schema_id AND sch.name = 'dbo'
+WHERE con.[type] = 'D')
+
+IF @TimesRenewedDefaultConstraint IS NOT NULL
+BEGIN
+    DECLARE @sql NVARCHAR = 'ALTER TABLE [dbo].[OrganizationSponsorship] DROP CONSTRAINT ' + @TimesRenewedDefaultConstraint
+    EXEC sp_executesql @sql
+END
+GO
+
 IF COL_LENGTH('[dbo].[OrganizationSponsorship]', 'TimesRenewedWithoutValidation') IS NOT NULL
 BEGIN
-    ALTER TABLE [dbo].[OrganizationSponsorship] DROP CONSTRAINT DF__Organizat__Times__2B2A60FE
     ALTER TABLE [dbo].[OrganizationSponsorship] DROP COLUMN [TimesRenewedWithoutValidation]
 END
+GO
 
 IF COL_LENGTH('[dbo].[OrganizationSponsorship]', 'SponsorshipLapsedDate') IS NOT NULL
 BEGIN
     EXEC sp_rename '[dbo].[OrganizationSponsorship].[SponsorshipLapsedDate]', 'ValidUntil'
 END
+GO
 
 IF COL_LENGTH('[dbo].[OrganizationSponsorship]', 'CloudSponsor') IS NOT NULL
 BEGIN
     ALTER TABLE [dbo].[OrganizationSponsorship] DROP COLUMN [CloudSponsor]
 END
+GO
 
 IF COL_LENGTH('[dbo].[OrganizationSponsorship]', 'ToDelete') IS NULL
 BEGIN
     ALTER TABLE [dbo].[OrganizationSponsorship] ADD [ToDelete] BIT NOT NULL DEFAULT(0)
 END
+GO
 
 IF EXISTS(SELECT name FROM sys.indexes WHERE name = 'IX_OrganizationSponsorship_InstallationId')
 BEGIN
@@ -690,11 +707,55 @@ BEGIN
 END
 GO
 
-IF COL_LENGTH('[dbo].[OrganizationSponsorship]', 'InstallationId') IS NOT NULL
+IF EXISTS(SELECT name FROM sys.objects WHERE name = 'FK_OrganizationSponsorship_InstallationId' AND type = 'F')
 BEGIN
     ALTER TABLE [dbo].[OrganizationSponsorship] DROP CONSTRAINT [FK_OrganizationSponsorship_InstallationId]
+END
+GO
+
+IF COL_LENGTH('[dbo].[OrganizationSponsorship]', 'InstallationId') IS NOT NULL
+BEGIN
     ALTER TABLE [dbo].[OrganizationSponsorship] DROP COLUMN [InstallationId]
 END
+GO
+
+IF COLUMNPROPERTY(OBJECT_ID('[dbo].[OrganizationSponsorship]', 'U'), 'SponsoringOrganizationUserID', 'AllowsNull') = 1
+BEGIN
+    UPDATE
+        [dbo].[OrganizationSponsorship]
+    SET
+        [SponsoringOrganizationUserID] = '00000000-0000-0000-0000-000000000000'
+    WHERE
+        [SponsoringOrganizationUserID] IS NULL;
+
+    DROP INDEX [IX_OrganizationSponsorship_SponsoringOrganizationUserId]
+    ON [dbo].[OrganizationSponsorship]
+
+    ALTER TABLE [dbo].[OrganizationSponsorship] ALTER COLUMN [SponsoringOrganizationUserID] UNIQUEIDENTIFIER NOT NULL;
+
+    CREATE NONCLUSTERED INDEX [IX_OrganizationSponsorship_SponsoringOrganizationUserId]
+    ON [dbo].[OrganizationSponsorship]([SponsoringOrganizationUserID] ASC);
+END
+GO
+
+IF COLUMNPROPERTY(OBJECT_ID('[dbo].[OrganizationSponsorship]', 'U'), 'SponsoringOrganizationId', 'AllowsNull') = 1
+BEGIN
+    UPDATE
+        [dbo].[OrganizationSponsorship]
+    SET
+        [SponsoringOrganizationId] = '00000000-0000-0000-0000-000000000000'
+    WHERE
+        [SponsoringOrganizationId] IS NULL;
+
+    DROP INDEX [IX_OrganizationSponsorship_SponsoringOrganizationId]
+    ON [dbo].[OrganizationSponsorship]
+
+    ALTER TABLE [dbo].[OrganizationSponsorship] ALTER COLUMN [SponsoringOrganizationId] UNIQUEIDENTIFIER NOT NULL;
+
+    CREATE NONCLUSTERED INDEX [IX_OrganizationSponsorship_SponsoringOrganizationId]
+    ON [dbo].[OrganizationSponsorship]([SponsoringOrganizationId] ASC);
+END
+GO
 
 -- Remake View
 IF EXISTS(SELECT * FROM sys.views WHERE [Name] = 'OrganizationSponsorshipView')
