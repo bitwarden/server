@@ -11,23 +11,34 @@ using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.Extensions.Logging;
+using System.Collections.Generic;
+using Bit.Core.Models.Data;
+using Bit.Core.Entities;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.SelfHosted
 {
     public class SelfHostedSyncSponsorshipsCommand : BaseIdentityClientService, ISelfHostedSyncSponsorshipsCommand
     {
+        private readonly GlobalSettings _globalSettings;
         private readonly IOrganizationSponsorshipRepository _organizationSponsorshipRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
-
         private readonly ILicensingService _licensingService;
 
         public SelfHostedSyncSponsorshipsCommand(
         IOrganizationSponsorshipRepository organizationSponsorshipRepository,
         IOrganizationUserRepository organizationUserRepository,
         ILicensingService licensingService,
-        IGlobalSettings globalSettings,
-        ILogger<SelfHostedSyncSponsorshipsCommand> logger) : base("vault.bitwarden.com", "identity.bitwarden.com", "api.installation", globalSettings.Installation.Id.ToString(), globalSettings.Installation.Key, logger)
+        GlobalSettings globalSettings,
+        ILogger<SelfHostedSyncSponsorshipsCommand> logger) 
+        : base(
+            globalSettings.BaseServiceUri.InternalVault, 
+            globalSettings.BaseServiceUri.InternalIdentity, 
+            "api.installation", 
+            globalSettings.Installation.Id.ToString(), 
+            globalSettings.Installation.Key, 
+            logger)
         {
+            _globalSettings = globalSettings;
             _organizationUserRepository = organizationUserRepository;
             _organizationSponsorshipRepository = organizationSponsorshipRepository;
             _licensingService = licensingService;
@@ -43,8 +54,8 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
             }
 
             var cloudOrganizationId = (await _licensingService.ReadOrganizationLicenseAsync(organizationId)).Id;
-            var orgUsers = await _organizationUserRepository.GetManyByOrganizationAsync(organizationId, null);
             var organizationSponsorships = await _organizationSponsorshipRepository.GetManyBySponsoringOrganizationAsync(organizationId);
+            var syncedSponsorships = new List<OrganizationSponsorshipData>();
 
             foreach (var orgSponsorshipsBatch in CoreHelpers.Batch(organizationSponsorships, 1000))
             {
@@ -54,10 +65,10 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
                     SponsoringOrganizationCloudId = cloudOrganizationId,
                     SponsorshipsBatch = orgSponsorshipsBatch.Select(s => new OrganizationSponsorshipRequestModel
                     {
-                        SponsoringOrganizationUserId = s.SponsoringOrganizationUserId,
+                        SponsoringOrganizationUserId = s.SponsoringOrganizationUserId.GetValueOrDefault(),
                         FriendlyName = s.FriendlyName,
                         OfferedToEmail = s.OfferedToEmail,
-                        PlanSponsorshipType = s.PlanSponsorshipType,
+                        PlanSponsorshipType = s.PlanSponsorshipType.GetValueOrDefault(),
                         // TODO
                         // ValidUntil = s.ValidUntil,
                         // ToDelete = s.ToDelete
@@ -69,42 +80,45 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
                     throw new BadRequestException("Organization sync failed");
                 }
 
-                foreach (var sponsorshipModel in response.SponsorshipsBatch)
-                {
-                    var existingOrgSponsorship = await _organizationSponsorshipRepository
-                        .GetBySponsoringOrganizationUserIdAsync(sponsorshipModel.SponsoringOrganizationUserId.GetValueOrDefault());
-                    if (existingOrgSponsorship == null)
-                    {
-                        break;
-                    }
-
-                    if (sponsorshipModel.CloudSponsorshipRemoved)
-                    {
-                        await _organizationSponsorshipRepository.DeleteAsync(existingOrgSponsorship);
-                    }
-
-                    if (sponsorshipModel.LastSyncDate != null)
-                    {
-                        existingOrgSponsorship.LastSyncDate = sponsorshipModel.LastSyncDate;
-                    }
-                    
-                    if (sponsorshipModel.ToDelete)
-                    {
-                        // TODO
-                        // existingOrgSponsorship.ToDelete = sponsorshipModel.ToDelete;
-                    }
-
-                    if (existingOrgSponsorship.SponsoredOrganizationId == null)
-                    {
-                        if (sponsorshipModel.SponsoredOrganizationId != null)
-                        {
-                            existingOrgSponsorship.SponsoredOrganizationId  = sponsorshipModel.SponsoredOrganizationId;
-                            // TODO
-                            // existingOrgSponsorship.ValidUntil = sponsorshipModel.ValidUntil;
-                        }
-                    }
-                }
+                syncedSponsorships.AddRange(response.ToOrganizationSponsorshipSync().SponsorshipsBatch);
             }
+
+            var organizationSponsorshipsDict = organizationSponsorships.ToDictionary(i => i.SponsoringOrganizationUserId);
+            var sponsorshipsToDelete = syncedSponsorships.Where(s => s.CloudSponsorshipRemoved).Select(i => organizationSponsorshipsDict[i.SponsoringOrganizationUserId].Id);
+            var sponsorshipsToUpsert = syncedSponsorships.Where(s => !s.CloudSponsorshipRemoved).Select(i => 
+            {
+                var existingSponsorship = organizationSponsorshipsDict[i.SponsoringOrganizationUserId];
+                if (existingSponsorship != null)
+                {
+                    existingSponsorship.SponsoredOrganizationId = i.SponsoredOrganizationId;
+                    existingSponsorship.LastSyncDate = i.LastSyncDate;
+                    // TODO
+                    // existingSponsorship.ValidUntil = i.ValidUntil;
+                    // existingSponsorship.ToDelete = i.ToDelete;
+
+                }
+                else 
+                {
+                    existingSponsorship = new OrganizationSponsorship
+                    {
+                        SponsoringOrganizationId = cloudOrganizationId,
+                        SponsoringOrganizationUserId = i.SponsoringOrganizationUserId,
+                        SponsoredOrganizationId = i.SponsoredOrganizationId,
+                        FriendlyName = i.FriendlyName,
+                        OfferedToEmail = i.OfferedToEmail,
+                        PlanSponsorshipType = i.PlanSponsorshipType,
+                        LastSyncDate = i.LastSyncDate,
+                        // TODO
+                        // ValidUntil = i.ValidUntil,
+                        // ToDelete = i.ToDelete
+                    };
+                }
+                return existingSponsorship;
+            });
+
+            await _organizationSponsorshipRepository.DeleteManyAsync(sponsorshipsToDelete);
+            await _organizationSponsorshipRepository.UpsertManyAsync(sponsorshipsToUpsert);
+
         }
 
         private Task<string> GetBillingSyncKey(Guid organizationId) => throw new NotImplementedException();
