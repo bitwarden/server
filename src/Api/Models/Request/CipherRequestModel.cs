@@ -86,7 +86,8 @@ namespace Bit.Api.Models.Request
                     existingCipher.Data = JsonSerializer.Serialize(ToCipherSecureNoteData(), JsonHelpers.IgnoreWritingNull);
                     break;
                 default:
-                    throw new ArgumentException("Unsupported type: " + nameof(Type) + ".");
+                    existingCipher.Data = JsonSerializer.Serialize(ToCipherCustomData(), JsonHelpers.IgnoreWritingNull);
+                    break;
             }
 
             existingCipher.Reprompt = Reprompt;
@@ -227,8 +228,18 @@ namespace Bit.Api.Models.Request
                 Notes = Notes,
                 Fields = Fields?.Select(f => f.ToCipherFieldData()),
                 PasswordHistory = PasswordHistory?.Select(ph => ph.ToCipherPasswordHistoryData()),
-
                 Type = SecureNote.Type,
+            };
+        }
+
+        private CipherCustomData ToCipherCustomData()
+        {
+            return new CipherCustomData
+            {
+                Name = Name,
+                Notes = Notes,
+                Fields = Fields?.Select(f => f.ToCipherFieldData()),
+                PasswordHistory = PasswordHistory?.Select(ph => ph.ToCipherPasswordHistoryData()),
             };
         }
     }
