@@ -18,7 +18,6 @@ namespace Bit.Core.Services
     {
         private readonly IDeviceRepository _deviceRepository;
         private readonly IHttpContextAccessor _httpContextAccessor;
-        private readonly ILogger<RelayPushNotificationService> _logger;
 
         public RelayPushNotificationService(
             IDeviceRepository deviceRepository,
@@ -35,7 +34,6 @@ namespace Bit.Core.Services
         {
             _deviceRepository = deviceRepository;
             _httpContextAccessor = httpContextAccessor;
-            _logger = logger;
         }
 
         public async Task PushSyncCipherCreateAsync(Cipher cipher, IEnumerable<Guid> collectionIds)

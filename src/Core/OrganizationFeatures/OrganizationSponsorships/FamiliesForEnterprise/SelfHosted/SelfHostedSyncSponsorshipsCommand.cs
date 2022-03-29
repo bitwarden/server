@@ -46,6 +46,12 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
 
         public async Task SyncOrganization(Guid organizationId)
         {
+            if (!_globalSettings.EnableCloudCommunication)
+            {
+                _logger.LogInformation($"Failed to sync instance with cloud - Cloud communication is disabled in global settings");
+                return;
+            }
+
             var billingSyncKey = await GetBillingSyncKey(organizationId);
 
             if (string.IsNullOrWhiteSpace(billingSyncKey))

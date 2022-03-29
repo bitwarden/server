@@ -17,7 +17,7 @@ namespace Bit.Core.Services
         private readonly string _identityScope;
         private readonly string _identityClientId;
         private readonly string _identityClientSecret;
-        private readonly ILogger<BaseIdentityClientService> _logger;
+        protected readonly ILogger<BaseIdentityClientService> _logger;
 
         private JsonDocument _decodedToken;
         private DateTime? _nextAuthAttempt = null;

@@ -11,7 +11,6 @@ namespace Bit.Core.Services
 {
     public class RelayPushRegistrationService : BaseIdentityClientService, IPushRegistrationService
     {
-        private readonly ILogger<RelayPushRegistrationService> _logger;
 
         public RelayPushRegistrationService(
             GlobalSettings globalSettings,
@@ -24,7 +23,6 @@ namespace Bit.Core.Services
                   globalSettings.Installation.Key,
                   logger)
         {
-            _logger = logger;
         }
 
         public async Task CreateOrUpdateRegistrationAsync(string pushToken, string deviceId, string userId,
