@@ -89,7 +89,7 @@ namespace Bit.Api.Jobs
             {
                 services.AddTransient<SelfHostedSponsorshipSyncJob>();
             }
-            else 
+            else
             {
                 services.AddTransient<CleanOldSponsorshipsJob>();
             }

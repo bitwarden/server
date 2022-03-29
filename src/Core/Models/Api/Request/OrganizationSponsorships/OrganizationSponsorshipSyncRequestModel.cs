@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using Bit.Core.Models.Data;
@@ -34,6 +34,6 @@ namespace Bit.Core.Models.Api.Request.OrganizationSponsorships
                 SponsorshipsBatch = SponsorshipsBatch.Select(o => o.ToOrganizationSponsorship())
             };
         }
-         
+
     }
 }

@@ -1,16 +1,15 @@
-using System.Linq;
-
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Api.Request.OrganizationSponsorships;
+using Bit.Core.Models.Data;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 using Microsoft.Extensions.Logging;
-using System;
-using Bit.Core.Models.Data;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud
 {
@@ -22,7 +21,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
         private readonly ISendSponsorshipOfferCommand _sendSponsorshipOfferCommand;
 
 
-        public CloudSyncSponsorshipsCommand (
+        public CloudSyncSponsorshipsCommand(
         IOrganizationRepository organizationRepository,
         IOrganizationSponsorshipRepository organizationSponsorshipRepository,
         IOrganizationUserRepository organizationUserRepository,
@@ -48,7 +47,6 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
 
             var sponsorshipsToUpsert = new List<OrganizationSponsorship>();
             var sponsorshipIdsToDelete = new List<Guid>();
-            
 
             foreach (var selfHostedSponsorship in syncData.SponsorshipsBatch)
             {
@@ -56,17 +54,17 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
                 if (cloudSponsorship == null)
                 {
                     sponsorshipsToUpsert.Add(new OrganizationSponsorship
-                        {
-                           SponsoringOrganizationId = sponsoringOrg.Id,
-                           SponsoringOrganizationUserId = selfHostedSponsorship.SponsoringOrganizationUserId,
-                           SponsoredOrganizationId = selfHostedSponsorship.SponsoredOrganizationId,
-                           FriendlyName = selfHostedSponsorship.FriendlyName,
-                           OfferedToEmail = selfHostedSponsorship.OfferedToEmail,
-                           PlanSponsorshipType = selfHostedSponsorship.PlanSponsorshipType,
-                           LastSyncDate = DateTime.UtcNow,
-                        //    TODO
-                        //    ValidUntil = selfHostedSponsorship.ValidUntil
-                        });
+                    {
+                        SponsoringOrganizationId = sponsoringOrg.Id,
+                        SponsoringOrganizationUserId = selfHostedSponsorship.SponsoringOrganizationUserId,
+                        SponsoredOrganizationId = selfHostedSponsorship.SponsoredOrganizationId,
+                        FriendlyName = selfHostedSponsorship.FriendlyName,
+                        OfferedToEmail = selfHostedSponsorship.OfferedToEmail,
+                        PlanSponsorshipType = selfHostedSponsorship.PlanSponsorshipType,
+                        LastSyncDate = DateTime.UtcNow,
+                        ValidUntil = selfHostedSponsorship.ValidUntil,
+                        ToDelete = selfHostedSponsorship.ToDelete
+                    });
                 }
                 else
                 {
@@ -81,10 +79,9 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
                         sponsorshipIdsToDelete.Add(cloudSponsorship.Id);
                         selfHostedSponsorship.CloudSponsorshipRemoved = true;
                     }
-                    else 
+                    else
                     {
-                        // TODO
-                        // cloudSponsorship.ToDelete = true;
+                        cloudSponsorship.ToDelete = true;
                     }
                 }
 
@@ -93,8 +90,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
                     if (cloudSponsorship.SponsoredOrganizationId != null)
                     {
                         selfHostedSponsorship.SponsoredOrganizationId = cloudSponsorship.SponsoredOrganizationId.GetValueOrDefault();
-                        // TODO
-                        // selfHostedSponsorship.ValidUntil = existingOrgSponsorship.ValidUntil;
+                        selfHostedSponsorship.ValidUntil = cloudSponsorship.ValidUntil;
                     }
                 }
 

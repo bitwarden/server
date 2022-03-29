@@ -54,7 +54,7 @@ namespace Bit.Core.Services
 
         protected Task SendAsync(HttpMethod method, string path) =>
             SendAsync<object, object>(method, path);
-        
+
         protected Task SendAsync<TRequest>(HttpMethod method, string path, TRequest body) =>
             SendAsync<TRequest, object>(method, path, body);
 

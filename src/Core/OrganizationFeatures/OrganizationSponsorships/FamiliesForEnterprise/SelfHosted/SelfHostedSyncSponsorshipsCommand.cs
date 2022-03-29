@@ -1,19 +1,19 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
-using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
+using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Api.Request.OrganizationSponsorships;
 using Bit.Core.Models.Api.Response.OrganizationSponsorships;
+using Bit.Core.Models.Data;
+using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.Extensions.Logging;
-using System.Collections.Generic;
-using Bit.Core.Models.Data;
-using Bit.Core.Entities;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.SelfHosted
 {
@@ -29,13 +29,13 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
         IOrganizationUserRepository organizationUserRepository,
         ILicensingService licensingService,
         GlobalSettings globalSettings,
-        ILogger<SelfHostedSyncSponsorshipsCommand> logger) 
+        ILogger<SelfHostedSyncSponsorshipsCommand> logger)
         : base(
-            globalSettings.BaseServiceUri.InternalVault, 
-            globalSettings.BaseServiceUri.InternalIdentity, 
-            "api.installation", 
-            globalSettings.Installation.Id.ToString(), 
-            globalSettings.Installation.Key, 
+            globalSettings.BaseServiceUri.InternalVault,
+            globalSettings.BaseServiceUri.InternalIdentity,
+            "api.installation",
+            globalSettings.Installation.Id.ToString(),
+            globalSettings.Installation.Key,
             logger)
         {
             _globalSettings = globalSettings;
@@ -69,13 +69,12 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
                         FriendlyName = s.FriendlyName,
                         OfferedToEmail = s.OfferedToEmail,
                         PlanSponsorshipType = s.PlanSponsorshipType.GetValueOrDefault(),
-                        // TODO
-                        // ValidUntil = s.ValidUntil,
-                        // ToDelete = s.ToDelete
+                        ValidUntil = s.ValidUntil,
+                        ToDelete = s.ToDelete
                     })
                 });
 
-                if (response == null) 
+                if (response == null)
                 {
                     throw new BadRequestException("Organization sync failed");
                 }
@@ -85,19 +84,18 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
 
             var organizationSponsorshipsDict = organizationSponsorships.ToDictionary(i => i.SponsoringOrganizationUserId);
             var sponsorshipsToDelete = syncedSponsorships.Where(s => s.CloudSponsorshipRemoved).Select(i => organizationSponsorshipsDict[i.SponsoringOrganizationUserId].Id);
-            var sponsorshipsToUpsert = syncedSponsorships.Where(s => !s.CloudSponsorshipRemoved).Select(i => 
+            var sponsorshipsToUpsert = syncedSponsorships.Where(s => !s.CloudSponsorshipRemoved).Select(i =>
             {
                 var existingSponsorship = organizationSponsorshipsDict[i.SponsoringOrganizationUserId];
                 if (existingSponsorship != null)
                 {
                     existingSponsorship.SponsoredOrganizationId = i.SponsoredOrganizationId;
                     existingSponsorship.LastSyncDate = i.LastSyncDate;
-                    // TODO
-                    // existingSponsorship.ValidUntil = i.ValidUntil;
-                    // existingSponsorship.ToDelete = i.ToDelete;
+                    existingSponsorship.ValidUntil = i.ValidUntil;
+                    existingSponsorship.ToDelete = i.ToDelete;
 
                 }
-                else 
+                else
                 {
                     existingSponsorship = new OrganizationSponsorship
                     {
@@ -108,9 +106,8 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
                         OfferedToEmail = i.OfferedToEmail,
                         PlanSponsorshipType = i.PlanSponsorshipType,
                         LastSyncDate = i.LastSyncDate,
-                        // TODO
-                        // ValidUntil = i.ValidUntil,
-                        // ToDelete = i.ToDelete
+                        ValidUntil = i.ValidUntil,
+                        ToDelete = i.ToDelete
                     };
                 }
                 return existingSponsorship;

@@ -29,6 +29,6 @@ namespace Bit.Core.Models.Api.Response.OrganizationSponsorships
                 SponsorshipsBatch = SponsorshipsBatch.Select(o => o.ToOrganizationSponsorship())
             };
         }
-         
+
     }
 }
