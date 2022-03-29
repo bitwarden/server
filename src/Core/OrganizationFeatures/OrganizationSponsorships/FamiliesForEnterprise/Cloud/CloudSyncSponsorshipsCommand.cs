@@ -92,7 +92,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
                 {
                     if (cloudSponsorship.SponsoredOrganizationId != null)
                     {
-                        selfHostedSponsorship.SponsoredOrganizationId = cloudSponsorship.SponsoredOrganizationId;
+                        selfHostedSponsorship.SponsoredOrganizationId = cloudSponsorship.SponsoredOrganizationId.GetValueOrDefault();
                         // TODO
                         // selfHostedSponsorship.ValidUntil = existingOrgSponsorship.ValidUntil;
                     }
@@ -102,6 +102,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
             }
 
             await _organizationSponsorshipRepository.UpsertManyAsync(sponsorshipsToUpsert);
+            await _sendSponsorshipOfferCommand.BulkSendSponsorshipOfferAsync(sponsoringOrg.Name, sponsorshipsToUpsert.Where(s => s.Id == null));
             await _organizationSponsorshipRepository.DeleteManyAsync(sponsorshipIdsToDelete);
 
 

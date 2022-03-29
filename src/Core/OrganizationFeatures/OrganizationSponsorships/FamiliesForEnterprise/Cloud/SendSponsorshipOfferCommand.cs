@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.Collections.Generic;
+using System.Threading.Tasks;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -23,6 +24,19 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
             _userRepository = userRepository;
             _mailService = mailService;
             _tokenFactory = tokenFactory;
+        }
+
+        public async Task BulkSendSponsorshipOfferAsync(string sponsoringOrgName, IEnumerable<OrganizationSponsorship> sponsorships)
+        {
+            var invites = new List<(string, bool, string)>();
+            foreach (var sponsorship in sponsorships)
+            {
+                var user = await _userRepository.GetByEmailAsync(sponsorship.OfferedToEmail);
+                var isExistingAccount = user != null;
+                invites.Add((sponsorship.OfferedToEmail, user != null, _tokenFactory.Protect(new OrganizationSponsorshipOfferTokenable(sponsorship))));
+            }
+
+            await _mailService.BulkSendFamiliesForEnterpriseOfferEmailAsync(sponsoringOrgName, invites);
         }
 
         public async Task SendSponsorshipOfferAsync(OrganizationSponsorship sponsorship, string sponsoringOrgName)

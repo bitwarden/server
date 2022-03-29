@@ -803,39 +803,44 @@ namespace Bit.Core.Services
             await _mailDeliveryService.SendEmailAsync(message);
         }
 
-        public async Task SendFamiliesForEnterpriseOfferEmailAsync(string email, string sponsorOrgName, bool existingAccount, string token)
+        public async Task SendFamiliesForEnterpriseOfferEmailAsync(string sponsorOrgName, string email, bool existingAccount, string token) =>
+            await BulkSendFamiliesForEnterpriseOfferEmailAsync(sponsorOrgName, new[] { (email, existingAccount, token) });
+
+        public async Task BulkSendFamiliesForEnterpriseOfferEmailAsync(string sponsorOrgName, IEnumerable<(string email, bool existingAccount, string token)> invites)
         {
-            var message = CreateDefaultMessage("Accept Your Free Families Subscription", email);
-
-            if (existingAccount)
+            MailQueueMessage CreateMessage((string email, bool existingAccount, string token) invite)
             {
-                var model = new FamiliesForEnterpriseOfferExistingAccountViewModel
+                var message = CreateDefaultMessage("Accept Your Free Families Subscription", invite.email);
+                message.Category = "FamiliesForEnterpriseOffer";
+                if (invite.existingAccount)
                 {
-                    SponsorOrgName = CoreHelpers.ObfuscateEmail(sponsorOrgName),
-                    SponsoredEmail = WebUtility.UrlEncode(email),
-                    WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
-                    SiteName = _globalSettings.SiteName,
-                    SponsorshipToken = token,
-                };
+                    var model = new FamiliesForEnterpriseOfferExistingAccountViewModel
+                    {
+                        SponsorOrgName = CoreHelpers.SanitizeForEmail(sponsorOrgName),
+                        SponsoredEmail = WebUtility.UrlEncode(invite.email),
+                        WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+                        SiteName = _globalSettings.SiteName,
+                        SponsorshipToken = invite.token,
+                    };
 
-                await AddMessageContentAsync(message, "FamiliesForEnterprise.FamiliesForEnterpriseOfferExistingAccount", model);
-            }
-            else
-            {
-                var model = new FamiliesForEnterpriseOfferNewAccountViewModel
+                    return new MailQueueMessage(message, "FamiliesForEnterprise.FamiliesForEnterpriseOfferExistingAccount", model);
+                }
+                else
                 {
-                    SponsorOrgName = sponsorOrgName,
-                    SponsoredEmail = WebUtility.UrlEncode(email),
-                    WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
-                    SiteName = _globalSettings.SiteName,
-                    SponsorshipToken = token,
-                };
+                    var model = new FamiliesForEnterpriseOfferNewAccountViewModel
+                    {
+                        SponsorOrgName = CoreHelpers.SanitizeForEmail(sponsorOrgName),
+                        SponsoredEmail = WebUtility.UrlEncode(invite.email),
+                        WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+                        SiteName = _globalSettings.SiteName,
+                        SponsorshipToken = invite.token,
+                    };
 
-                await AddMessageContentAsync(message, "FamiliesForEnterprise.FamiliesForEnterpriseOfferNewAccount", model);
+                    return new MailQueueMessage(message, "FamiliesForEnterprise.FamiliesForEnterpriseOfferNewAccount", model);
+                }
             }
-
-            message.Category = "FamiliesForEnterpriseOffer";
-            await _mailDeliveryService.SendEmailAsync(message);
+            var messageModels = invites.Select(invite => CreateMessage(invite));
+            await EnqueueMailAsync(messageModels);
         }
 
         public async Task SendFamiliesForEnterpriseRedeemedEmailsAsync(string familyUserEmail, string sponsorEmail)
