@@ -53,7 +53,11 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
                 var cloudSponsorship = existingSponsorshipsDict[selfHostedSponsorship.SponsoringOrganizationUserId];
                 if (cloudSponsorship == null)
                 {
-                    sponsorshipsToUpsert.Add(new OrganizationSponsorship
+                    if (selfHostedSponsorship.ToDelete && selfHostedSponsorship.LastSyncDate == null)
+                    {
+                        continue; // prevent invalid sponsorships in cloud. These should have been deleted by self hosted
+                    }
+                    cloudSponsorship = new OrganizationSponsorship
                     {
                         SponsoringOrganizationId = sponsoringOrg.Id,
                         SponsoringOrganizationUserId = selfHostedSponsorship.SponsoringOrganizationUserId,
@@ -64,7 +68,8 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
                         LastSyncDate = DateTime.UtcNow,
                         ValidUntil = selfHostedSponsorship.ValidUntil,
                         ToDelete = selfHostedSponsorship.ToDelete
-                    });
+                    };
+                    sponsorshipsToUpsert.Add(cloudSponsorship);
                 }
                 else
                 {
