@@ -212,10 +212,8 @@ BEGIN
 END
 GO
 
-PRINT N'Deleting GenerateComb function'
 DROP FUNCTION [dbo].[GenerateComb];
 GO
-
 
 IF OBJECT_ID('[dbo].[Organization_Create]') IS NOT NULL
 BEGIN
@@ -662,7 +660,7 @@ BEGIN
 END
 GO
 
-DECLARE @TimesRenewedDefaultConstraint NVARCHAR = (SELECT [con].[name]
+DECLARE @TimesRenewedDefaultConstraint NVARCHAR(MAX) = (SELECT [con].[name]
 FROM [sys].[default_constraints] [con]
 INNER JOIN sys.objects obj ON obj.object_id = con.parent_object_id AND obj.type = 'U' AND obj.name = 'OrganizationSponsorship'
 INNER JOIN sys.columns col ON col.column_id = con.parent_column_id AND col.object_id = obj.object_id AND col.name = 'TimesRenewedWithoutValidation'
@@ -671,7 +669,7 @@ WHERE con.[type] = 'D')
 
 IF @TimesRenewedDefaultConstraint IS NOT NULL
 BEGIN
-    DECLARE @sql NVARCHAR = 'ALTER TABLE [dbo].[OrganizationSponsorship] DROP CONSTRAINT ' + @TimesRenewedDefaultConstraint
+    DECLARE @sql NVARCHAR(MAX) = 'ALTER TABLE [dbo].[OrganizationSponsorship] DROP CONSTRAINT ' + @TimesRenewedDefaultConstraint
     EXEC sp_executesql @sql
 END
 GO
