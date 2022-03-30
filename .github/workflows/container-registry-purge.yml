@@ -42,7 +42,7 @@ jobs:
             TAG_LIST=$(az acr repository show-tags -n $REGISTRY --repository $REPO -o tsv)
             for TAG in $TAG_LIST
             do
-              if [ $TAG = "latest" ]; then
+              if [ $TAG = "latest" ] || [ $TAG = "dev" ]; then
                 PURGE_CMD="acr purge --filter '$REPO:$TAG' --ago $AGO_DUR_VER --untagged --keep 1"
               elif [[ $TAG =~ [0-9]+\.[0-9]+\.[0-9]+ ]]; then
                 PURGE_CMD="acr purge --filter '$REPO:$TAG' --ago $AGO_DUR_VER --untagged"
@@ -81,14 +81,14 @@ jobs:
 
       - name: Retrieve secrets
         id: retrieve-secrets
-        uses: Azure/get-keyvault-secrets@470858ec5d16542d1a87e1998c0988130ef304dd
+        uses: Azure/get-keyvault-secrets@b5c723b9ac7870c022b8c35befe620b7009b336f
         if: failure()
         with:
           keyvault: "bitwarden-prod-kv"
           secrets: "devops-alerts-slack-webhook-url"
 
       - name: Notify Slack on failure
-        uses: act10ns/slack@186ef8b81dc1f91522af6998d8019e2e886da2ca  # v1.2.2
+        uses: act10ns/slack@da3191ebe2e67f49b46880b4633f5591a96d1d33
         if: failure()
         env:
           SLACK_WEBHOOK_URL: ${{ steps.retrieve-secrets.outputs.devops-alerts-slack-webhook-url }}
