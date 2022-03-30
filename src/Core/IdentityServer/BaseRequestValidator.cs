@@ -108,7 +108,7 @@ namespace Bit.Core.IdentityServer
                 BeforeVerifyTwoFactor(user, twoFactorProviderType, requires2FABecauseNewDevice);
 
                 var verified = await VerifyTwoFactor(user, twoFactorOrganization,
-                    twoFactorProviderType, twoFactorToken, requires2FABecauseNewDevice);
+                    twoFactorProviderType, twoFactorToken);
 
                 AfterVerifyTwoFactor(user, twoFactorProviderType, requires2FABecauseNewDevice);
 
