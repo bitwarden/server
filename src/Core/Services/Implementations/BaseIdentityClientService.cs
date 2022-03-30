@@ -63,7 +63,7 @@ namespace Bit.Core.Services
             var tokenStateResponse = await HandleTokenStateAsync();
             if (!tokenStateResponse)
             {
-                return (TResult)(object)null;
+                return default;
             }
 
             var message = new TokenHttpRequestMessage(requestModel, AccessToken)
@@ -81,7 +81,7 @@ namespace Bit.Core.Services
             catch (Exception e)
             {
                 _logger.LogError(12334, e, "Failed to send to {0}.", message.RequestUri.ToString());
-                return (TResult)(object)null;
+                return default;
             }
         }
 

@@ -7,7 +7,6 @@ namespace Bit.Core.Models.Api.Response.OrganizationSponsorships
     public class OrganizationSponsorshipResponseModel
     {
         public Guid SponsoringOrganizationUserId { get; set; }
-        public Guid? SponsoredOrganizationId { get; set; }
         public string FriendlyName { get; set; }
         public string OfferedToEmail { get; set; }
         public PlanSponsorshipType PlanSponsorshipType { get; set; }
@@ -20,7 +19,6 @@ namespace Bit.Core.Models.Api.Response.OrganizationSponsorships
         public OrganizationSponsorshipResponseModel(OrganizationSponsorshipData sponsorshipData)
         {
             SponsoringOrganizationUserId = SponsoringOrganizationUserId;
-            SponsoredOrganizationId = SponsoredOrganizationId;
             FriendlyName = FriendlyName;
             OfferedToEmail = OfferedToEmail;
             PlanSponsorshipType = PlanSponsorshipType;
@@ -35,7 +33,6 @@ namespace Bit.Core.Models.Api.Response.OrganizationSponsorships
             return new OrganizationSponsorshipData
             {
                 SponsoringOrganizationUserId = SponsoringOrganizationUserId,
-                SponsoredOrganizationId = SponsoredOrganizationId,
                 FriendlyName = FriendlyName,
                 OfferedToEmail = OfferedToEmail,
                 PlanSponsorshipType = PlanSponsorshipType,

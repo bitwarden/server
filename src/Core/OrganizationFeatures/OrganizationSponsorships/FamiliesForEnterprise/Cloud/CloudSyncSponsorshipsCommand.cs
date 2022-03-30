@@ -61,7 +61,6 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
                     {
                         SponsoringOrganizationId = sponsoringOrg.Id,
                         SponsoringOrganizationUserId = selfHostedSponsorship.SponsoringOrganizationUserId,
-                        SponsoredOrganizationId = selfHostedSponsorship.SponsoredOrganizationId,
                         FriendlyName = selfHostedSponsorship.FriendlyName,
                         OfferedToEmail = selfHostedSponsorship.OfferedToEmail,
                         PlanSponsorshipType = selfHostedSponsorship.PlanSponsorshipType,
@@ -90,20 +89,12 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
                     }
                 }
 
-                if (selfHostedSponsorship.SponsoredOrganizationId == null)
-                {
-                    if (cloudSponsorship.SponsoredOrganizationId != null)
-                    {
-                        selfHostedSponsorship.SponsoredOrganizationId = cloudSponsorship.SponsoredOrganizationId.GetValueOrDefault();
-                        selfHostedSponsorship.ValidUntil = cloudSponsorship.ValidUntil;
-                    }
-                }
-
+                selfHostedSponsorship.ValidUntil = cloudSponsorship.ValidUntil;
                 selfHostedSponsorship.LastSyncDate = DateTime.UtcNow;
             }
-
+            var sponsorshipsToEmailOffer = sponsorshipsToUpsert.Where(s => s.Id == null);
             await _organizationSponsorshipRepository.UpsertManyAsync(sponsorshipsToUpsert);
-            await _sendSponsorshipOfferCommand.BulkSendSponsorshipOfferAsync(sponsoringOrg.Name, sponsorshipsToUpsert.Where(s => s.Id == null));
+            await _sendSponsorshipOfferCommand.BulkSendSponsorshipOfferAsync(sponsoringOrg.Name, sponsorshipsToEmailOffer);
             await _organizationSponsorshipRepository.DeleteManyAsync(sponsorshipIdsToDelete);
 
 

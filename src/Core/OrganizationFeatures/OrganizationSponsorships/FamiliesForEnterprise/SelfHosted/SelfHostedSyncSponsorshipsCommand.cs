@@ -95,7 +95,6 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
                 var existingSponsorship = organizationSponsorshipsDict[i.SponsoringOrganizationUserId];
                 if (existingSponsorship != null)
                 {
-                    existingSponsorship.SponsoredOrganizationId = i.SponsoredOrganizationId;
                     existingSponsorship.LastSyncDate = i.LastSyncDate;
                     existingSponsorship.ValidUntil = i.ValidUntil;
                     existingSponsorship.ToDelete = i.ToDelete;
@@ -105,9 +104,8 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
                 {
                     existingSponsorship = new OrganizationSponsorship
                     {
-                        SponsoringOrganizationId = cloudOrganizationId,
+                        SponsoringOrganizationId = organizationId,
                         SponsoringOrganizationUserId = i.SponsoringOrganizationUserId,
-                        SponsoredOrganizationId = i.SponsoredOrganizationId,
                         FriendlyName = i.FriendlyName,
                         OfferedToEmail = i.OfferedToEmail,
                         PlanSponsorshipType = i.PlanSponsorshipType,
