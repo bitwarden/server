@@ -1459,24 +1459,24 @@ namespace Bit.Core.Services
 
             return billingInfo;
         }
-        
+
         public async Task<BillingInfo> GetBillingBalanceAndSourceAsync(ISubscriber subscriber)
         {
             var customer = await GetCustomerAsync(subscriber.GatewayCustomerId, true);
-            var billingInfo = new BillingInfo 
-            { 
+            var billingInfo = new BillingInfo
+            {
                 Balance = GetBillingBalance(customer),
                 PaymentSource = await GetBillingPaymentSourceAsync(customer)
             };
 
             return billingInfo;
         }
-        
+
         public async Task<BillingInfo> GetBillingHistoryAsync(ISubscriber subscriber)
         {
             var customer = await GetCustomerAsync(subscriber.GatewayCustomerId);
-            var billingInfo = new BillingInfo 
-            { 
+            var billingInfo = new BillingInfo
+            {
                 Transactions = await GetBillingTransactionsAsync(subscriber),
                 Invoices = await GetBillingInvoicesAsync(customer)
             };
@@ -1670,7 +1670,7 @@ namespace Bit.Core.Services
             {
                 return null;
             }
-            
+
             if (customer.Metadata?.ContainsKey("appleReceipt") ?? false)
             {
                 return new BillingInfo.BillingSource
@@ -1678,7 +1678,7 @@ namespace Bit.Core.Services
                     Type = PaymentMethodType.AppleInApp
                 };
             }
-            
+
             if (customer.Metadata?.ContainsKey("btCustomerId") ?? false)
             {
                 try
@@ -1693,19 +1693,19 @@ namespace Bit.Core.Services
                 }
                 catch (Braintree.Exceptions.NotFoundException) { }
             }
-            
+
             if (customer.InvoiceSettings?.DefaultPaymentMethod?.Type == "card")
             {
                 return new BillingInfo.BillingSource(
                     customer.InvoiceSettings.DefaultPaymentMethod);
             }
-            
+
             if (customer.DefaultSource != null &&
                 (customer.DefaultSource is Stripe.Card || customer.DefaultSource is Stripe.BankAccount))
             {
                 return new BillingInfo.BillingSource(customer.DefaultSource);
             }
-            
+
             var paymentMethod = GetLatestCardPaymentMethod(customer.Id);
             return paymentMethod != null ? new BillingInfo.BillingSource(paymentMethod) : null;
         }
@@ -1716,7 +1716,7 @@ namespace Bit.Core.Services
             {
                 return null;
             }
-            
+
             Stripe.Customer customer = null;
             try
             {
@@ -1733,7 +1733,7 @@ namespace Bit.Core.Services
 
             return customer;
         }
-        
+
         private async Task<IEnumerable<BillingInfo.BillingTransaction>> GetBillingTransactionsAsync(ISubscriber subscriber)
         {
             ICollection<Transaction> transactions = null;
@@ -1748,25 +1748,25 @@ namespace Bit.Core.Services
 
             return transactions?.OrderByDescending(i => i.CreationDate)
                 .Select(t => new BillingInfo.BillingTransaction(t));
-            
+
         }
-        
+
         private async Task<IEnumerable<BillingInfo.BillingInvoice>> GetBillingInvoicesAsync(Stripe.Customer customer)
         {
             if (customer == null)
             {
                 return null;
             }
-            
+
             var invoices = await _stripeAdapter.InvoiceListAsync(new Stripe.InvoiceListOptions
             {
                 Customer = customer.Id,
                 Limit = 50
             });
-                
+
             return invoices.Data.Where(i => i.Status != "void" && i.Status != "draft")
                 .OrderByDescending(i => i.Created).Select(i => new BillingInfo.BillingInvoice(i));
-            
+
         }
     }
 }

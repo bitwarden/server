@@ -639,7 +639,7 @@ namespace Bit.Api.Controllers
             var billingInfo = await _paymentService.GetBillingAsync(user);
             return new BillingResponseModel(billingInfo);
         }
-        
+
         [HttpGet("billing-history")]
         [SelfHosted(NotSelfHostedOnly = true)]
         public async Task<BillingHistoryResponseModel> GetBillingHistory()
@@ -653,7 +653,7 @@ namespace Bit.Api.Controllers
             var billingInfo = await _paymentService.GetBillingHistoryAsync(user);
             return new BillingHistoryResponseModel(billingInfo);
         }
-        
+
         [HttpGet("billing-payment")]
         [SelfHosted(NotSelfHostedOnly = true)]
         public async Task<BillingPaymentResponseModel> GetPaymentMethod()
