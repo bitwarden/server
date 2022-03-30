@@ -41,7 +41,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
             var sponsoredPlan = Utilities.StaticStore.GetSponsoredPlan(existingSponsorship.PlanSponsorshipType.Value);
 
             var sponsoringOrganization = await _organizationRepository
-                .GetByIdAsync(existingSponsorship.SponsoringOrganizationId.Value);
+                .GetByIdAsync(existingSponsorship.SponsoringOrganizationId);
             if (sponsoringOrganization == null)
             {
                 await CancelSponsorshipAsync(sponsoredOrganization, existingSponsorship);

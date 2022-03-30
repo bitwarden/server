@@ -8,8 +8,8 @@ namespace Bit.Core.Entities
     public class OrganizationSponsorship : ITableObject<Guid>
     {
         public Guid Id { get; set; }
-        public Guid? SponsoringOrganizationId { get; set; }
-        public Guid? SponsoringOrganizationUserId { get; set; }
+        public Guid SponsoringOrganizationId { get; set; }
+        public Guid SponsoringOrganizationUserId { get; set; }
         public Guid? SponsoredOrganizationId { get; set; }
         [MaxLength(256)]
         public string FriendlyName { get; set; }

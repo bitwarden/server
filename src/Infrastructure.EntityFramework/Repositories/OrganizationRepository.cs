@@ -102,18 +102,6 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             {
                 var dbContext = GetDatabaseContext(scope);
                 var orgEntity = await dbContext.FindAsync<Organization>(organization.Id);
-                var sponsorships = dbContext.OrganizationSponsorships
-                    .Where(os =>
-                        os.SponsoringOrganizationId == organization.Id ||
-                        os.SponsoredOrganizationId == organization.Id);
-
-                Guid? UpdatedOrgId(Guid? orgId) => orgId == organization.Id ? null : organization.Id;
-                foreach (var sponsorship in sponsorships)
-                {
-                    sponsorship.SponsoredOrganizationId = UpdatedOrgId(sponsorship.SponsoredOrganizationId);
-                    sponsorship.SponsoringOrganizationId = UpdatedOrgId(sponsorship.SponsoringOrganizationId);
-                    sponsorship.FriendlyName = null;
-                }
 
                 dbContext.Remove(orgEntity);
                 await dbContext.SaveChangesAsync();
