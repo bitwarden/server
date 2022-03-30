@@ -40,6 +40,5 @@ namespace Bit.Core.Models.Data
         public DateTime? FamilySponsorshipLastSyncDate { get; set; }
         public DateTime? FamilySponsorshipValidUntil { get; set; }
         public bool? FamilySponsorshipToDelete { get; set; }
-        public bool FamilySponsorshipHasSponsoredOrg { get; set; }
     }
 }

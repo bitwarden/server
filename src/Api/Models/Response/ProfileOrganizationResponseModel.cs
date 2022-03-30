@@ -49,7 +49,6 @@ namespace Bit.Api.Models.Response
             SponsorshipLastSyncDate = organization.FamilySponsorshipLastSyncDate;
             FamilySponsorshipToDelete = organization.FamilySponsorshipToDelete;
             FamilySponsorshipValidUntil = organization.FamilySponsorshipValidUntil;
-            FamilySponsorshipHasSponsoredOrg = organization.FamilySponsorshipHasSponsoredOrg;
 
             if (organization.SsoConfig != null)
             {
@@ -96,7 +95,5 @@ namespace Bit.Api.Models.Response
         public DateTime? SponsorshipLastSyncDate { get; set; }
         public DateTime? FamilySponsorshipValidUntil { get; set; }
         public bool? FamilySponsorshipToDelete { get; set; }
-        public bool FamilySponsorshipHasSponsoredOrg { get; set; }
-
     }
 }

@@ -1019,8 +1019,7 @@ SELECT
     OS.[FriendlyName] FamilySponsorshipFriendlyName,
     OS.[LastSyncDate] FamilySponsorshipLastSyncDate,
     OS.[ToDelete] FamilySponsorshipToDelete,
-    OS.[ValidUntil] FamilySponsorshipValidUntil,
-    CASE WHEN OS.[SponsoredOrganizationId] IS NOT NULL THEN 1 ELSE 0 END FamilySponsorshipHasSponsoredOrg
+    OS.[ValidUntil] FamilySponsorshipValidUntil
 FROM
     [dbo].[OrganizationUser] OU
 LEFT JOIN
