@@ -7,13 +7,15 @@ using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Api.Request.OrganizationSponsorships;
 using Bit.Core.Models.Data;
+using Bit.Core.Models.StaticStore;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
+using Bit.Core.Utilities;
 using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud
 {
-    public class CloudSyncSponsorshipsCommand : CreateSponsorshipCommand, ICloudSyncSponsorshipsCommand
+    public class CloudSyncSponsorshipsCommand : ICloudSyncSponsorshipsCommand
     {
         private readonly IOrganizationRepository _organizationRepository;
         private readonly IOrganizationSponsorshipRepository _organizationSponsorshipRepository;
@@ -25,7 +27,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
         IOrganizationRepository organizationRepository,
         IOrganizationSponsorshipRepository organizationSponsorshipRepository,
         IOrganizationUserRepository organizationUserRepository,
-        ISendSponsorshipOfferCommand sendSponsorshipOfferCommand) : base(organizationSponsorshipRepository)
+        ISendSponsorshipOfferCommand sendSponsorshipOfferCommand)
         {
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
@@ -37,11 +39,11 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
         {
             if (sponsoringOrg == null)
             {
-                throw new BadRequestException("Failed to sync sponsorship - missing organization");
+                throw new BadRequestException("Failed to sync sponsorship - missing organization.");
             }
             if (!sponsorshipsData.Any())
             {
-                return default;
+                throw new BadRequestException("Failed to sync sponsorship - missing sponsorships.");
             }
 
             var existingSponsorships = await _organizationSponsorshipRepository.GetManyBySponsoringOrganizationAsync(sponsoringOrg.Id);
@@ -52,6 +54,13 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
 
             foreach (var selfHostedSponsorship in sponsorshipsData)
             {
+                var requiredSponsoringProductType = StaticStore.GetSponsoredPlan(selfHostedSponsorship.PlanSponsorshipType)?.SponsoringProductType;
+                if (requiredSponsoringProductType == null ||
+                    StaticStore.GetPlan(sponsoringOrg.PlanType).Product != requiredSponsoringProductType.Value)
+                {
+                    throw new BadRequestException("Specified Organization does not support this type of sponsorship.");
+                }
+
                 var cloudSponsorship = existingSponsorshipsDict[selfHostedSponsorship.SponsoringOrganizationUserId];
                 if (cloudSponsorship == null)
                 {
