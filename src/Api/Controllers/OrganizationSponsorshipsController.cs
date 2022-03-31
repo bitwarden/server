@@ -28,6 +28,7 @@ namespace Bit.Api.Controllers
         private readonly IOrganizationRepository _organizationRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly IValidateRedemptionTokenCommand _validateRedemptionTokenCommand;
+        private readonly IValidateBillingSyncKeyCommand _validateBillingSyncKeyCommand;
         private readonly ICreateSponsorshipCommand _createSponsorshipCommand;
         private readonly ISendSponsorshipOfferCommand _sendSponsorshipOfferCommand;
         private readonly ISetUpSponsorshipCommand _setUpSponsorshipCommand;
@@ -42,6 +43,7 @@ namespace Bit.Api.Controllers
             IOrganizationRepository organizationRepository,
             IOrganizationUserRepository organizationUserRepository,
             IValidateRedemptionTokenCommand validateRedemptionTokenCommand,
+            IValidateBillingSyncKeyCommand validateBillingSyncKeyCommand,
             ICreateSponsorshipCommand createSponsorshipCommand,
             ISendSponsorshipOfferCommand sendSponsorshipOfferCommand,
             ISetUpSponsorshipCommand setUpSponsorshipCommand,
@@ -55,6 +57,7 @@ namespace Bit.Api.Controllers
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
             _validateRedemptionTokenCommand = validateRedemptionTokenCommand;
+            _validateBillingSyncKeyCommand = validateBillingSyncKeyCommand;
             _createSponsorshipCommand = createSponsorshipCommand;
             _sendSponsorshipOfferCommand = sendSponsorshipOfferCommand;
             _setUpSponsorshipCommand = setUpSponsorshipCommand;
@@ -126,7 +129,13 @@ namespace Bit.Api.Controllers
         [HttpPost("sync")]
         public async Task<OrganizationSponsorshipSyncResponseModel> Sync([FromBody] OrganizationSponsorshipSyncRequestModel model)
         {
-            var syncData = await _syncSponsorshipsCommand.SyncOrganization(model.ToOrganizationSponsorshipSync());
+            var sponsoringOrg = await _organizationRepository.GetByIdAsync(model.SponsoringOrganizationCloudId);
+            if (!await _validateBillingSyncKeyCommand.ValidateBillingSyncKeyAsync(sponsoringOrg, model.BillingSyncKey))
+            {
+                throw new BadRequestException("Invalid Billing Sync Key");
+            }
+
+            var syncData = await _syncSponsorshipsCommand.SyncOrganization(sponsoringOrg, model.ToOrganizationSponsorshipSync().SponsorshipsBatch);
             return new OrganizationSponsorshipSyncResponseModel(syncData);
         }
 

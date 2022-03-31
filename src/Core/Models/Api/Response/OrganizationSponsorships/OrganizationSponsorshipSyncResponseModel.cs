@@ -7,7 +7,6 @@ namespace Bit.Core.Models.Api.Response.OrganizationSponsorships
 {
     public class OrganizationSponsorshipSyncResponseModel
     {
-        public Guid SponsoringOrganizationCloudId { get; set; }
         public IEnumerable<OrganizationSponsorshipResponseModel> SponsorshipsBatch { get; set; }
 
         public OrganizationSponsorshipSyncResponseModel(OrganizationSponsorshipSyncData syncData)
@@ -16,7 +15,6 @@ namespace Bit.Core.Models.Api.Response.OrganizationSponsorships
             {
                 return;
             }
-            SponsoringOrganizationCloudId = syncData.SponsoringOrganizationCloudId;
             SponsorshipsBatch = syncData.SponsorshipsBatch.Select(o => new OrganizationSponsorshipResponseModel(o));
 
         }
@@ -25,7 +23,6 @@ namespace Bit.Core.Models.Api.Response.OrganizationSponsorships
         {
             return new OrganizationSponsorshipSyncData()
             {
-                SponsoringOrganizationCloudId = SponsoringOrganizationCloudId,
                 SponsorshipsBatch = SponsorshipsBatch.Select(o => o.ToOrganizationSponsorship())
             };
         }

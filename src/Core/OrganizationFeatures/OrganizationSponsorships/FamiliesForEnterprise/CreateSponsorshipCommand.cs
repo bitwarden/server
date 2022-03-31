@@ -1,5 +1,4 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -21,10 +20,10 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
             _organizationSponsorshipRepository = organizationSponsorshipRepository;
         }
 
-        protected async Task<OrganizationSponsorship> CreateSponsorshipAsync(Organization sponsoringOrg, Guid? sponsoringOrgUserId,
-            PlanSponsorshipType? sponsorshipType, string sponsoredEmail, string friendlyName)
+        public async Task<OrganizationSponsorship> CreateSponsorshipAsync(Organization sponsoringOrg, OrganizationUser sponsoringOrgUser,
+            PlanSponsorshipType sponsorshipType, string sponsoredEmail, string friendlyName)
         {
-            var requiredSponsoringProductType = StaticStore.GetSponsoredPlan(sponsorshipType.GetValueOrDefault())?.SponsoringProductType;
+            var requiredSponsoringProductType = StaticStore.GetSponsoredPlan(sponsorshipType)?.SponsoringProductType;
             if (requiredSponsoringProductType == null ||
                 sponsoringOrg == null ||
                 StaticStore.GetPlan(sponsoringOrg.PlanType).Product != requiredSponsoringProductType.Value)
@@ -32,8 +31,13 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
                 throw new BadRequestException("Specified Organization cannot sponsor other organizations.");
             }
 
+            if (sponsoringOrgUser == null || sponsoringOrgUser.Status != OrganizationUserStatusType.Confirmed)
+            {
+                throw new BadRequestException("Only confirmed users can sponsor other organizations.");
+            }
+
             var existingOrgSponsorship = await _organizationSponsorshipRepository
-                .GetBySponsoringOrganizationUserIdAsync(sponsoringOrgUserId.GetValueOrDefault());
+                .GetBySponsoringOrganizationUserIdAsync(sponsoringOrgUser.Id);
             if (existingOrgSponsorship?.SponsoredOrganizationId != null)
             {
                 throw new BadRequestException("Can only sponsor one organization per Organization User.");
@@ -42,7 +46,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
             var sponsorship = new OrganizationSponsorship
             {
                 SponsoringOrganizationId = sponsoringOrg.Id,
-                SponsoringOrganizationUserId = sponsoringOrgUserId,
+                SponsoringOrganizationUserId = sponsoringOrgUser.Id,
                 FriendlyName = friendlyName,
                 OfferedToEmail = sponsoredEmail,
                 PlanSponsorshipType = sponsorshipType,
@@ -67,17 +71,6 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
                 }
                 throw;
             }
-        }
-
-        public async Task<OrganizationSponsorship> CreateSponsorshipAsync(Organization sponsoringOrg, OrganizationUser sponsoringOrgUser,
-            PlanSponsorshipType? sponsorshipType, string sponsoredEmail, string friendlyName)
-        {
-            if (sponsoringOrgUser == null || sponsoringOrgUser.Status != OrganizationUserStatusType.Confirmed)
-            {
-                throw new BadRequestException("Only confirmed users can sponsor other organizations.");
-            }
-
-            return await CreateSponsorshipAsync(sponsoringOrg, sponsoringOrgUser.Id, sponsorshipType, sponsoredEmail, friendlyName);
         }
     }
 }

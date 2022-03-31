@@ -22,11 +22,13 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
         private readonly GlobalSettings _globalSettings;
         private readonly IOrganizationSponsorshipRepository _organizationSponsorshipRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
+        private readonly IOrganizationConnectionRepository _organizationConnectionRepository;
         private readonly ILicensingService _licensingService;
 
         public SelfHostedSyncSponsorshipsCommand(
         IOrganizationSponsorshipRepository organizationSponsorshipRepository,
         IOrganizationUserRepository organizationUserRepository,
+        IOrganizationConnectionRepository organizationConnectionRepository,
         ILicensingService licensingService,
         GlobalSettings globalSettings,
         ILogger<SelfHostedSyncSponsorshipsCommand> logger)
@@ -41,20 +43,22 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
             _globalSettings = globalSettings;
             _organizationUserRepository = organizationUserRepository;
             _organizationSponsorshipRepository = organizationSponsorshipRepository;
+            _organizationConnectionRepository = organizationConnectionRepository;
             _licensingService = licensingService;
         }
 
-        public async Task SyncOrganization(Guid organizationId)
+        public async Task SyncOrganization(Guid organizationId, OrganizationConnection billingSyncKey)
         {
             if (!_globalSettings.EnableCloudCommunication)
             {
                 _logger.LogInformation($"Failed to sync instance with cloud - Cloud communication is disabled in global settings");
                 return;
             }
-
-            var billingSyncKey = await GetBillingSyncKey(organizationId);
-
-            if (string.IsNullOrWhiteSpace(billingSyncKey))
+            if (!billingSyncKey.Enabled)
+            {
+                throw new BadRequestException($"Billing Sync Key disabled for organization {organizationId}");
+            }
+            if (string.IsNullOrWhiteSpace(billingSyncKey.Config))
             {
                 throw new BadRequestException($"No Billing Sync Key known for organization {organizationId}");
             }
@@ -67,7 +71,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
             {
                 var response = await SendAsync<OrganizationSponsorshipSyncRequestModel, OrganizationSponsorshipSyncResponseModel>(HttpMethod.Post, "organizationSponsorships/sync", new OrganizationSponsorshipSyncRequestModel
                 {
-                    BillingSyncKey = billingSyncKey,
+                    BillingSyncKey = billingSyncKey.Config,
                     SponsoringOrganizationCloudId = cloudOrganizationId,
                     SponsorshipsBatch = orgSponsorshipsBatch.Select(s => new OrganizationSponsorshipRequestModel
                     {
@@ -119,9 +123,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
 
             await _organizationSponsorshipRepository.DeleteManyAsync(sponsorshipsToDelete);
             await _organizationSponsorshipRepository.UpsertManyAsync(sponsorshipsToUpsert);
-
         }
 
-        private Task<string> GetBillingSyncKey(Guid organizationId) => throw new NotImplementedException();
     }
 }

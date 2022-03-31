@@ -8,11 +8,11 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
 {
     public interface ISelfHostedSyncSponsorshipsCommand
     {
-        Task SyncOrganization(Guid organizationId);
+        Task SyncOrganization(Guid organizationId, OrganizationConnection billingSyncKey);
     }
 
     public interface ICloudSyncSponsorshipsCommand
     {
-        Task<OrganizationSponsorshipSyncData> SyncOrganization(OrganizationSponsorshipSyncData syncData);
+        Task<OrganizationSponsorshipSyncData> SyncOrganization(Organization sponsoringOrg, IEnumerable<OrganizationSponsorshipData> sponsorshipsData);
     }
 }

@@ -45,12 +45,12 @@ namespace Bit.Api.Jobs
 
             foreach (var org in organizations)
             {
-                var connection = await _organizationConnectionRepository.GetEnabledByOrganizationIdTypeAsync(org.Id, OrganizationConnectionType.CloudBillingSync);
-                if (connection.FirstOrDefault() != null)
+                var connection = (await _organizationConnectionRepository.GetEnabledByOrganizationIdTypeAsync(org.Id, OrganizationConnectionType.CloudBillingSync)).FirstOrDefault();
+                if (connection != null)
                 {
                     try
                     {
-                        await _syncSponsorshipsCommand.SyncOrganization(org.Id);
+                        await _syncSponsorshipsCommand.SyncOrganization(org.Id, connection);
                     }
                     catch
                     {

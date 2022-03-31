@@ -33,13 +33,15 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
             _sendSponsorshipOfferCommand = sendSponsorshipOfferCommand;
         }
 
-        public async Task<OrganizationSponsorshipSyncData> SyncOrganization(OrganizationSponsorshipSyncData syncData)
+        public async Task<OrganizationSponsorshipSyncData> SyncOrganization(Organization sponsoringOrg, IEnumerable<OrganizationSponsorshipData> sponsorshipsData)
         {
-
-            var sponsoringOrg = await _organizationRepository.GetByIdAsync(syncData.SponsoringOrganizationCloudId);
             if (sponsoringOrg == null)
             {
                 throw new BadRequestException("Failed to sync sponsorship - missing organization");
+            }
+            if (!sponsorshipsData.Any())
+            {
+                return default;
             }
 
             var existingSponsorships = await _organizationSponsorshipRepository.GetManyBySponsoringOrganizationAsync(sponsoringOrg.Id);
@@ -48,7 +50,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
             var sponsorshipsToUpsert = new List<OrganizationSponsorship>();
             var sponsorshipIdsToDelete = new List<Guid>();
 
-            foreach (var selfHostedSponsorship in syncData.SponsorshipsBatch)
+            foreach (var selfHostedSponsorship in sponsorshipsData)
             {
                 var cloudSponsorship = existingSponsorshipsDict[selfHostedSponsorship.SponsoringOrganizationUserId];
                 if (cloudSponsorship == null)
@@ -97,8 +99,10 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
             await _sendSponsorshipOfferCommand.BulkSendSponsorshipOfferAsync(sponsoringOrg.Name, sponsorshipsToEmailOffer);
             await _organizationSponsorshipRepository.DeleteManyAsync(sponsorshipIdsToDelete);
 
-
-            return syncData;
+            return new OrganizationSponsorshipSyncData
+            {
+                SponsorshipsBatch = sponsorshipsData
+            };
         }
 
     }
