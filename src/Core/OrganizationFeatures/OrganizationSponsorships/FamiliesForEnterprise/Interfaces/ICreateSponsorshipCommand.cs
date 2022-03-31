@@ -1,5 +1,4 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 
@@ -8,6 +7,6 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
     public interface ICreateSponsorshipCommand
     {
         Task<OrganizationSponsorship> CreateSponsorshipAsync(Organization sponsoringOrg, OrganizationUser sponsoringOrgUser,
-            PlanSponsorshipType? sponsorshipType, string sponsoredEmail, string friendlyName);
+            PlanSponsorshipType sponsorshipType, string sponsoredEmail, string friendlyName);
     }
 }
