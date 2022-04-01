@@ -501,6 +501,16 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
+            if (model.Type == OrganizationApiKeyType.BillingSync)
+            {
+                // Non-enterprise orgs should not be able to create or view an apikey of billing sync key type
+                var plan = StaticStore.GetPlan(organization.PlanType);
+                if (plan.Product != ProductType.Enterprise)
+                {
+                    throw new NotFoundException();
+                }
+            }
+
             var organizationApiKey = await _getOrganizationApiKeyCommand
                 .GetOrganizationApiKeyAsync(organization.Id, model.Type);
 
