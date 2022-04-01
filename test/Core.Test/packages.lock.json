@@ -3544,6 +3544,18 @@
           "Core": "1.47.1"
         }
       },
+      "common": {
+        "type": "Project",
+        "dependencies": {
+          "Api": "1.47.1",
+          "AutoFixture.AutoNSubstitute": "4.14.0",
+          "AutoFixture.Xunit2": "4.14.0",
+          "Core": "1.47.1",
+          "Microsoft.NET.Test.Sdk": "16.6.1",
+          "NSubstitute": "4.2.2",
+          "xunit": "2.4.1"
+        }
+      },
       "core": {
         "type": "Project",
         "dependencies": {
