@@ -73,6 +73,15 @@
           "System.ComponentModel.Annotations": "4.3.0"
         }
       },
+      "AutoFixture.AutoNSubstitute": {
+        "type": "Transitive",
+        "resolved": "4.14.0",
+        "contentHash": "/CykcrwvB6/LD1zFvYXSGKwNMSCKx71p7Rd3pSWH47y5Iz0kwgI8zyI17+CQQ4ZQ16zlZEoz+l238K1DT4a6mw==",
+        "dependencies": {
+          "AutoFixture": "4.14.0",
+          "NSubstitute": "[2.0.3, 5.0.0)"
+        }
+      },
       "AutoMapper": {
         "type": "Transitive",
         "resolved": "10.0.0",
@@ -3522,6 +3531,18 @@
         "type": "Project",
         "dependencies": {
           "Core": "1.47.1"
+        }
+      },
+      "common": {
+        "type": "Project",
+        "dependencies": {
+          "Api": "1.47.1",
+          "AutoFixture.AutoNSubstitute": "4.14.0",
+          "AutoFixture.Xunit2": "4.14.0",
+          "Core": "1.47.1",
+          "Microsoft.NET.Test.Sdk": "16.6.1",
+          "NSubstitute": "4.2.2",
+          "xunit": "2.4.1"
         }
       },
       "core": {
