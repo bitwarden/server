@@ -51,13 +51,11 @@ namespace Bit.Api.Models.Response
                     cipherData = identityData;
                     Identity = new CipherIdentityModel(identityData);
                     break;
-                case CipherType.Custom:
+                default:
                     var customData = JsonSerializer.Deserialize<CipherCustomData>(cipher.Data);
                     Data = customData;
                     cipherData = customData;
                     break;
-                default:
-                    throw new ArgumentException("Unsupported " + nameof(Type) + ".");
             }
 
             Name = cipherData.Name;
