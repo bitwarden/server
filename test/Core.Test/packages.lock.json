@@ -3531,29 +3531,17 @@
         "type": "Project",
         "dependencies": {
           "Azure.Messaging.EventGrid": "4.7.0",
-          "CommCore": "1.46.2",
-          "Core": "1.46.2",
+          "CommCore": "1.47.1",
+          "Core": "1.47.1",
           "Microsoft.AspNetCore.Mvc.NewtonsoftJson": "5.0.9",
-          "SharedWeb": "1.46.2",
+          "SharedWeb": "1.47.1",
           "Swashbuckle.AspNetCore": "6.2.3"
         }
       },
       "commcore": {
         "type": "Project",
         "dependencies": {
-          "Core": "1.46.2"
-        }
-      },
-      "common": {
-        "type": "Project",
-        "dependencies": {
-          "Api": "1.46.2",
-          "AutoFixture.AutoNSubstitute": "4.14.0",
-          "AutoFixture.Xunit2": "4.14.0",
-          "Core": "1.46.2",
-          "Microsoft.NET.Test.Sdk": "16.6.1",
-          "NSubstitute": "4.2.2",
-          "xunit": "2.4.1"
+          "Core": "1.47.1"
         }
       },
       "core": {
@@ -3598,7 +3586,7 @@
       "infrastructure.dapper": {
         "type": "Project",
         "dependencies": {
-          "Core": "1.46.2",
+          "Core": "1.47.1",
           "Dapper": "2.0.123",
           "System.Data.SqlClient": "4.8.3"
         }
@@ -3607,7 +3595,7 @@
         "type": "Project",
         "dependencies": {
           "AutoMapper.Extensions.Microsoft.DependencyInjection": "8.0.1",
-          "Core": "1.46.2",
+          "Core": "1.47.1",
           "Microsoft.EntityFrameworkCore.Relational": "5.0.12",
           "Npgsql.EntityFrameworkCore.PostgreSQL": "5.0.2",
           "Pomelo.EntityFrameworkCore.MySql": "5.0.3",
@@ -3617,9 +3605,9 @@
       "sharedweb": {
         "type": "Project",
         "dependencies": {
-          "Core": "1.46.2",
-          "Infrastructure.Dapper": "1.46.2",
-          "Infrastructure.EntityFramework": "1.46.2"
+          "Core": "1.47.1",
+          "Infrastructure.Dapper": "1.47.1",
+          "Infrastructure.EntityFramework": "1.47.1"
         }
       }
     }
