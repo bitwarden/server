@@ -1448,7 +1448,7 @@ namespace Bit.Core.Services
 
         public async Task<BillingInfo> GetBillingAsync(ISubscriber subscriber)
         {
-            var customer = await GetCustomerAsync(subscriber.GatewayCustomerId, true);
+            var customer = await GetCustomerAsync(subscriber.GatewayCustomerId, GetCustomerPaymentOptions());
             var billingInfo = new BillingInfo
             {
                 Balance = GetBillingBalance(customer),
@@ -1462,7 +1462,7 @@ namespace Bit.Core.Services
 
         public async Task<BillingInfo> GetBillingBalanceAndSourceAsync(ISubscriber subscriber)
         {
-            var customer = await GetCustomerAsync(subscriber.GatewayCustomerId, true);
+            var customer = await GetCustomerAsync(subscriber.GatewayCustomerId, GetCustomerPaymentOptions());
             var billingInfo = new BillingInfo
             {
                 Balance = GetBillingBalance(customer),
@@ -1710,7 +1710,15 @@ namespace Bit.Core.Services
             return paymentMethod != null ? new BillingInfo.BillingSource(paymentMethod) : null;
         }
 
-        private async Task<Stripe.Customer> GetCustomerAsync(string gatewayCustomerId, bool expandForPayments = false)
+        private Stripe.CustomerGetOptions GetCustomerPaymentOptions()
+        {
+            var customerOptions = new Stripe.CustomerGetOptions();
+            customerOptions.AddExpand("default_source");
+            customerOptions.AddExpand("invoice_settings.default_payment_method");
+            return customerOptions;
+        }
+
+        private async Task<Stripe.Customer> GetCustomerAsync(string gatewayCustomerId, Stripe.CustomerGetOptions options = null)
         {
             if (string.IsNullOrWhiteSpace(gatewayCustomerId))
             {
@@ -1720,14 +1728,7 @@ namespace Bit.Core.Services
             Stripe.Customer customer = null;
             try
             {
-                Stripe.CustomerGetOptions customerOptions = null;
-                if (expandForPayments)
-                {
-                    customerOptions = new Stripe.CustomerGetOptions();
-                    customerOptions.AddExpand("default_source");
-                    customerOptions.AddExpand("invoice_settings.default_payment_method");
-                }
-                customer = await _stripeAdapter.CustomerGetAsync(gatewayCustomerId, customerOptions);
+                customer = await _stripeAdapter.CustomerGetAsync(gatewayCustomerId, options);
             }
             catch (Stripe.StripeException) { }
 
