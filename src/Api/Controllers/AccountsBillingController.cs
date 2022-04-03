@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading.Tasks;
 using Bit.Api.Models.Response;
 using Bit.Core.Services;
@@ -28,7 +28,7 @@ namespace Bit.Api.Controllers
         public async Task<BillingHistoryResponseModel> GetBillingHistory()
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
-            if(user == null)
+            if (user == null)
             {
                 throw new UnauthorizedAccessException();
             }
@@ -42,7 +42,7 @@ namespace Bit.Api.Controllers
         public async Task<BillingPaymentResponseModel> GetPaymentMethod()
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
-            if(user == null)
+            if (user == null)
             {
                 throw new UnauthorizedAccessException();
             }

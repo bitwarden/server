@@ -640,7 +640,7 @@ namespace Bit.Api.Controllers
             var billingInfo = await _paymentService.GetBillingAsync(user);
             return new BillingResponseModel(billingInfo);
         }
-        
+
         [HttpGet("subscription")]
         public async Task<SubscriptionResponseModel> GetSubscription()
         {
