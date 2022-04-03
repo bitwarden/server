@@ -170,7 +170,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpGet("{id}/{cipherId}/attachment/{attachmentId}")]
-        public async Task<AttachmentResponseModel> GetAttachmentData(Guid id, string cipherId, string attachmentId)
+        public async Task<AttachmentResponseModel> GetAttachmentData(Guid id, Guid cipherId, string attachmentId)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             var result =
