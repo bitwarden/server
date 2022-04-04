@@ -1,7 +1,9 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using System.Linq;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud;
@@ -16,7 +18,7 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
 {
 
     [SutProviderCustomize]
-    public class CloudSyncSponsorshipsCommandTests : CancelSponsorshipCommandTestsBase
+    public class CloudSyncSponsorshipsCommandTests : FamiliesForEnterpriseTestsBase
     {
 
         [Theory]
@@ -48,7 +50,7 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
             SutProvider<CloudSyncSponsorshipsCommand> sutProvider)
         {
             var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-                sutProvider.Sut.SyncOrganization(organization, null));
+                sutProvider.Sut.SyncOrganization(organization, Enumerable.Empty<OrganizationSponsorshipData>()));
 
             Assert.Contains("Failed to sync sponsorship - missing sponsorships.", exception.Message);
 
@@ -62,5 +64,33 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
                 .DidNotReceiveWithAnyArgs()
                 .DeleteManyAsync(default);
         }
+
+
+        [Theory]
+        [BitMemberAutoData(nameof(NonEnterprisePlanTypes))]
+        public async Task SyncOrganization_BadSponsoringOrgPlan_ThrowsBadRequest(
+            PlanType planType,
+            Organization organization, IEnumerable<OrganizationSponsorshipData> sponsorshipsData,
+            SutProvider<CloudSyncSponsorshipsCommand> sutProvider)
+        {
+            organization.PlanType = planType;
+            
+
+            var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+                sutProvider.Sut.SyncOrganization(organization, sponsorshipsData));
+
+           Assert.Contains("Specified Organization does not support this type of sponsorship.", exception.Message);
+ 
+            await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
+                .DidNotReceiveWithAnyArgs()
+                .UpsertManyAsync(default);
+            await sutProvider.GetDependency<ISendSponsorshipOfferCommand>()
+                .DidNotReceiveWithAnyArgs()
+                .BulkSendSponsorshipOfferAsync(default, default);
+            await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
+                .DidNotReceiveWithAnyArgs()
+                .DeleteManyAsync(default);
+        }
+
     }
 }
