@@ -53,11 +53,6 @@ namespace Bit.Api.Jobs
                     .WithIntervalInHours(24)
                     .RepeatForever())
                 .Build();
-            var everySixMonthsTrigger = TriggerBuilder.Create()
-                .WithIdentity("EverySixMonthsTrigger")
-                .StartNow()
-                .WithCronSchedule("0 0 0 ? 1/6 * *")
-                .Build();
 
             var jobs = new List<Tuple<Type, ITrigger>>
             {
@@ -73,11 +68,6 @@ namespace Bit.Api.Jobs
                 jobs.Add(new Tuple<Type, ITrigger>(typeof(SelfHostedSponsorshipSyncJob), randomDailySponsorshipSyncTrigger));
             }
 
-            if (!_globalSettings.SelfHosted)
-            {
-                jobs.Add(new Tuple<Type, ITrigger>(typeof(CleanOldSponsorshipsJob), everySixMonthsTrigger));
-            }
-
             Jobs = jobs;
 
             await base.StartAsync(cancellationToken);
@@ -88,10 +78,6 @@ namespace Bit.Api.Jobs
             if (selfHosted)
             {
                 services.AddTransient<SelfHostedSponsorshipSyncJob>();
-            }
-            else
-            {
-                services.AddTransient<CleanOldSponsorshipsJob>();
             }
             services.AddTransient<AliveJob>();
             services.AddTransient<EmergencyAccessNotificationJob>();

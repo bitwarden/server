@@ -62,5 +62,16 @@ namespace Bit.Infrastructure.Dapper.Repositories
                     commandTimeout: 172800);
             }
         }
+
+        public async Task DeleteExpiredSponsorshipsAsync()
+        {
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                await connection.ExecuteAsync(
+                    "[dbo].[OrganizationSponsorship_DeleteExpired]",
+                    commandType: CommandType.StoredProcedure,
+                    commandTimeout: 172800);
+            }
+        }
     }
 }

@@ -8,5 +8,6 @@ namespace Bit.Core.Repositories
         Task DisableCipherAutoStatsAsync();
         Task RebuildIndexesAsync();
         Task DeleteExpiredGrantsAsync();
+        Task DeleteExpiredSponsorshipsAsync();
     }
 }

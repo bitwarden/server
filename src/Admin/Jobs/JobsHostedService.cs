@@ -67,7 +67,8 @@ namespace Bit.Admin.Jobs
                 new Tuple<Type, ITrigger>(typeof(DatabaseExpiredGrantsJob), everyFridayAt10pmTrigger),
                 new Tuple<Type, ITrigger>(typeof(DatabaseUpdateStatisticsJob), everySaturdayAtMidnightTrigger),
                 new Tuple<Type, ITrigger>(typeof(DatabaseRebuildlIndexesJob), everySundayAtMidnightTrigger),
-                new Tuple<Type, ITrigger>(typeof(DeleteCiphersJob), everyDayAtMidnightUtc)
+                new Tuple<Type, ITrigger>(typeof(DeleteCiphersJob), everyDayAtMidnightUtc),
+                new Tuple<Type, ITrigger>(typeof(DatabaseExpiredSponsorshipsJob), everySundayAtMidnightTrigger)
             };
 
             if (!_globalSettings.SelfHosted)
@@ -88,6 +89,7 @@ namespace Bit.Admin.Jobs
             services.AddTransient<DatabaseUpdateStatisticsJob>();
             services.AddTransient<DatabaseRebuildlIndexesJob>();
             services.AddTransient<DatabaseExpiredGrantsJob>();
+            services.AddTransient<DatabaseExpiredSponsorshipsJob>();
             services.AddTransient<DeleteSendsJob>();
             services.AddTransient<DeleteCiphersJob>();
         }
