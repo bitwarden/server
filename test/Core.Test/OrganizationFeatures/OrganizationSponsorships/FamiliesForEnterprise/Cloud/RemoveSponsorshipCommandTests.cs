@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud;
+using Bit.Core.Test.AutoFixture.OrganizationSponsorshipFixtures;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Xunit;
@@ -10,6 +11,7 @@ using Xunit;
 namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise
 {
     [SutProviderCustomize]
+    [OrganizationSponsorshipCustomize]
     public class RemoveSponsorshipCommandTests : CancelSponsorshipCommandTestsBase
     {
         [Theory]
@@ -23,7 +25,7 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
                 sutProvider.Sut.RemoveSponsorshipAsync(sponsorship));
 
             Assert.Contains("The requested organization is not currently being sponsored.", exception.Message);
-            //TODO MDG: Assert not marked for deletion
+            Assert.False(sponsorship.ToDelete);
         }
 
         [Theory]
@@ -34,7 +36,6 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
                 sutProvider.Sut.RemoveSponsorshipAsync(null));
 
             Assert.Contains("The requested organization is not currently being sponsored.", exception.Message);
-            //TODO MDG: Assert not marked for deletion
         }
     }
 }

@@ -4,6 +4,7 @@ using Bit.Core.Entities;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud
 {
@@ -11,15 +12,18 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
     {
         private readonly IPaymentService _paymentService;
         private readonly IMailService _mailService;
+        private readonly ILogger<ValidateSponsorshipCommand> _logger;
 
         public ValidateSponsorshipCommand(
             IOrganizationSponsorshipRepository organizationSponsorshipRepository,
             IOrganizationRepository organizationRepository,
             IPaymentService paymentService,
-            IMailService mailService) : base(organizationSponsorshipRepository, organizationRepository)
+            IMailService mailService,
+            ILogger<ValidateSponsorshipCommand> logger) : base(organizationSponsorshipRepository, organizationRepository)
         {
             _paymentService = paymentService;
             _mailService = mailService;
+            _logger = logger;
         }
 
         public async Task<bool> ValidateSponsorshipAsync(Guid sponsoredOrganizationId)
@@ -39,7 +43,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
                 return false;
             }
 
-            if (existingSponsorship.SponsoringOrganizationId == null || existingSponsorship.SponsoringOrganizationUserId == null || existingSponsorship.PlanSponsorshipType == null)
+            if (existingSponsorship.SponsoringOrganizationId == default || existingSponsorship.SponsoringOrganizationUserId == default || existingSponsorship.PlanSponsorshipType == null)
             {
                 await CancelSponsorshipAsync(sponsoredOrganization, existingSponsorship);
                 return false;
@@ -55,8 +59,9 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
             }
 
             var sponsoringOrgPlan = Utilities.StaticStore.GetPlan(sponsoringOrganization.PlanType);
-            // TODO MDG: Add validation that toDelete is false or null
-            if (!sponsoringOrganization.Enabled || sponsoredPlan.SponsoringProductType != sponsoringOrgPlan.Product)
+            if (!sponsoringOrganization.Enabled ||
+                sponsoredPlan.SponsoringProductType != sponsoringOrgPlan.Product ||
+                existingSponsorship.ToDelete)
             {
                 await CancelSponsorshipAsync(sponsoredOrganization, existingSponsorship);
                 return false;
@@ -69,13 +74,19 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
         {
             if (sponsoredOrganization != null)
             {
-                // TODO MDG: update sponsorship with toDelete and validUntil
                 await _paymentService.RemoveOrganizationSponsorshipAsync(sponsoredOrganization, sponsorship);
                 await _organizationRepository.UpsertAsync(sponsoredOrganization);
 
-                await _mailService.SendFamiliesForEnterpriseSponsorshipRevertingEmailAsync(
-                    sponsoredOrganization.BillingEmailAddress(),
-                    sponsoredOrganization.Name);
+                try
+                {
+                    await _mailService.SendFamiliesForEnterpriseSponsorshipRevertingEmailAsync(
+                        sponsoredOrganization.BillingEmailAddress(),
+                        sponsoredOrganization.Name);
+                }
+                catch (Exception e)
+                {
+                    _logger.LogError("Error sending Family sponsorship removed email.", e);
+                }
             }
             await base.DeleteSponsorshipAsync(sponsorship);
         }

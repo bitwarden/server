@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.SelfHosted;
+using Bit.Core.Test.AutoFixture.OrganizationSponsorshipFixtures;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Xunit;
@@ -10,6 +11,7 @@ using Xunit;
 namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.SelfHosted
 {
     [SutProviderCustomize]
+    [OrganizationSponsorshipCustomize]
     public class SelfHostedRevokeSponsorshipCommandTests : CancelSponsorshipCommandTestsBase
     {
         [Theory]
@@ -21,7 +23,6 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
                 sutProvider.Sut.RevokeSponsorshipAsync(null));
 
             Assert.Contains("You are not currently sponsoring an organization.", exception.Message);
-            //TODO MDG: Assert not marked for deletion
         }
 
         [Theory]
@@ -43,7 +44,7 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
             sponsorship.LastSyncDate = DateTime.UtcNow;
 
             await sutProvider.Sut.RevokeSponsorshipAsync(sponsorship);
-            //TODO MDG: assert sponsorship is marked as toDelete
+            Assert.False(sponsorship.ToDelete);
         }
     }
 }

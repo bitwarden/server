@@ -5,6 +5,7 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise;
 using Bit.Core.Repositories;
+using Bit.Core.Test.AutoFixture.OrganizationSponsorshipFixtures;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
@@ -62,6 +63,7 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
         }
 
         [Theory]
+        [OrganizationSponsorshipCustomize]
         [BitAutoData]
         public async Task CreateSponsorship_AlreadySponsoring_Throws(Organization org,
             OrganizationUser orgUser, OrganizationSponsorship sponsorship,

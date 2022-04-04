@@ -4,6 +4,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud;
 using Bit.Core.Repositories;
+using Bit.Core.Test.AutoFixture.OrganizationSponsorshipFixtures;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -12,6 +13,7 @@ using Xunit;
 namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud
 {
     [SutProviderCustomize]
+    [OrganizationSponsorshipCustomize]
     public class ValidateSponsorshipCommandTests : CancelSponsorshipCommandTestsBase
     {
         [Theory]
@@ -43,10 +45,10 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
 
         [Theory]
         [BitAutoData]
-        public async Task ValidateSponsorshipAsync_SponsoringOrgNull_UpdatesStripePlan(Organization sponsoredOrg,
+        public async Task ValidateSponsorshipAsync_SponsoringOrgDefault_UpdatesStripePlan(Organization sponsoredOrg,
             OrganizationSponsorship existingSponsorship, SutProvider<ValidateSponsorshipCommand> sutProvider)
         {
-            existingSponsorship.SponsoringOrganizationId = null;
+            existingSponsorship.SponsoringOrganizationId = default;
 
             sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
                 .GetBySponsoredOrganizationIdAsync(sponsoredOrg.Id).Returns(existingSponsorship);
@@ -61,10 +63,10 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
 
         [Theory]
         [BitAutoData]
-        public async Task ValidateSponsorshipAsync_SponsoringOrgUserNull_UpdatesStripePlan(Organization sponsoredOrg,
+        public async Task ValidateSponsorshipAsync_SponsoringOrgUserDefault_UpdatesStripePlan(Organization sponsoredOrg,
             OrganizationSponsorship existingSponsorship, SutProvider<ValidateSponsorshipCommand> sutProvider)
         {
-            existingSponsorship.SponsoringOrganizationUserId = null;
+            existingSponsorship.SponsoringOrganizationUserId = default;
 
             sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
                 .GetBySponsoredOrganizationIdAsync(sponsoredOrg.Id).Returns(existingSponsorship);
@@ -155,12 +157,12 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
         }
 
         [Theory]
-        [BitAutoData(nameof(EnterprisePlanTypes))]
+        [OrganizationSponsorshipCustomize(ToDelete = true)]
+        [BitMemberAutoData(nameof(EnterprisePlanTypes))]
         public async Task ValidateSponsorshipAsync_ToDeleteSponsorship_IsInvalid(PlanType planType,
             Organization sponsoredOrg, OrganizationSponsorship sponsorship, Organization sponsoringOrg,
             SutProvider<ValidateSponsorshipCommand> sutProvider)
         {
-            //TODO MDG: set toDelete to true
             sponsoringOrg.PlanType = planType;
             sponsoringOrg.Enabled = true;
             sponsorship.SponsoringOrganizationId = sponsoringOrg.Id;
@@ -185,7 +187,6 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
             Organization sponsoredOrg, OrganizationSponsorship existingSponsorship, Organization sponsoringOrg,
             SutProvider<ValidateSponsorshipCommand> sutProvider)
         {
-            //TODO MDG: set toDelete to false
             sponsoringOrg.PlanType = planType;
             sponsoringOrg.Enabled = true;
             existingSponsorship.SponsoringOrganizationId = sponsoringOrg.Id;

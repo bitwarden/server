@@ -35,7 +35,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
                 throw new BadRequestException("The sponsorship you are trying to cancel does not exist");
             }
 
-            //TODO MDG: update sponsorship with toDelete = true
+            sponsorship.ToDelete = true;
             await _organizationSponsorshipRepository.UpsertAsync(sponsorship);
         }
     }
