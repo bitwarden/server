@@ -27,7 +27,7 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
 
             Assert.False(result);
             await AssertDidNotRemoveSponsoredPaymentAsync(sutProvider);
-            await AssertDidNotRemoveSponsorshipAsync(sutProvider);
+            await AssertDidNotDeleteSponsorshipAsync(sutProvider);
         }
 
         [Theory]
@@ -201,7 +201,7 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
             Assert.True(result);
 
             await AssertDidNotRemoveSponsoredPaymentAsync(sutProvider);
-            await AssertDidNotRemoveSponsorshipAsync(sutProvider);
+            await AssertDidNotDeleteSponsorshipAsync(sutProvider);
         }
     }
 }

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading.Tasks;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
@@ -23,6 +23,8 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
                 sutProvider.Sut.RevokeSponsorshipAsync(null));
 
             Assert.Contains("You are not currently sponsoring an organization.", exception.Message);
+            await AssertDidNotDeleteSponsorshipAsync(sutProvider);
+            await AssertDidNotUpdateSponsorshipAsync(sutProvider);
         }
 
         [Theory]
@@ -44,7 +46,10 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
             sponsorship.LastSyncDate = DateTime.UtcNow;
 
             await sutProvider.Sut.RevokeSponsorshipAsync(sponsorship);
-            Assert.False(sponsorship.ToDelete);
+
+            Assert.True(sponsorship.ToDelete);
+            await AssertUpdatedSponsorshipAsync(sponsorship, sutProvider);
+            await AssertDidNotDeleteSponsorshipAsync(sutProvider);
         }
     }
 }

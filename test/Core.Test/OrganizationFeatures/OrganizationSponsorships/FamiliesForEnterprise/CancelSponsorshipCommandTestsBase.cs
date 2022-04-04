@@ -37,12 +37,22 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
                 .SendFamiliesForEnterpriseSponsorshipRevertingEmailAsync(default, default);
         }
 
-        protected static async Task AssertDidNotRemoveSponsorshipAsync<T>(SutProvider<T> sutProvider)
+        protected static async Task AssertDidNotDeleteSponsorshipAsync<T>(SutProvider<T> sutProvider)
         {
             await sutProvider.GetDependency<IOrganizationSponsorshipRepository>().DidNotReceiveWithAnyArgs()
                 .DeleteAsync(default);
+        }
+
+        protected static async Task AssertDidNotUpdateSponsorshipAsync<T>(SutProvider<T> sutProvider)
+        {
             await sutProvider.GetDependency<IOrganizationSponsorshipRepository>().DidNotReceiveWithAnyArgs()
                 .UpsertAsync(default);
+        }
+
+        protected static async Task AssertUpdatedSponsorshipAsync<T>(OrganizationSponsorship sponsorship,
+            SutProvider<T> sutProvider)
+        {
+            await sutProvider.GetDependency<IOrganizationSponsorshipRepository>().Received(1).UpsertAsync(sponsorship);
         }
     }
 }

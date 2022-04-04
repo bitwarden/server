@@ -26,6 +26,8 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
 
             Assert.Contains("The requested organization is not currently being sponsored.", exception.Message);
             Assert.False(sponsorship.ToDelete);
+            await AssertDidNotDeleteSponsorshipAsync(sutProvider);
+            await AssertDidNotUpdateSponsorshipAsync(sutProvider);
         }
 
         [Theory]
@@ -36,6 +38,8 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
                 sutProvider.Sut.RemoveSponsorshipAsync(null));
 
             Assert.Contains("The requested organization is not currently being sponsored.", exception.Message);
+            await AssertDidNotDeleteSponsorshipAsync(sutProvider);
+            await AssertDidNotUpdateSponsorshipAsync(sutProvider);
         }
     }
 }
