@@ -68,6 +68,10 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
                     {
                         continue; // prevent invalid sponsorships in cloud. These should have been deleted by self hosted
                     }
+                    if (!sponsoringOrg.Enabled)
+                    {
+                        continue; // prevent new sponsorships from disabled orgs
+                    }
                     cloudSponsorship = new OrganizationSponsorship
                     {
                         SponsoringOrganizationId = sponsoringOrg.Id,
