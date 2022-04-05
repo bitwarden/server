@@ -6,7 +6,7 @@ using Bit.Core.Repositories;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise
 {
-    public class CancelSponsorshipCommand
+    public abstract class CancelSponsorshipCommand
     {
         protected readonly IOrganizationSponsorshipRepository _organizationSponsorshipRepository;
         protected readonly IOrganizationRepository _organizationRepository;
