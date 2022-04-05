@@ -61,7 +61,8 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
             var sponsoringOrgPlan = Utilities.StaticStore.GetPlan(sponsoringOrganization.PlanType);
             if (!sponsoringOrganization.Enabled ||
                 sponsoredPlan.SponsoringProductType != sponsoringOrgPlan.Product ||
-                existingSponsorship.ToDelete)
+                existingSponsorship.ToDelete ||
+                SponsorshipIsSelfHostedOutOfSync(existingSponsorship))
             {
                 await CancelSponsorshipAsync(sponsoredOrganization, existingSponsorship);
                 return false;
@@ -90,5 +91,13 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
             }
             await base.DeleteSponsorshipAsync(sponsorship);
         }
+
+        /// <summary>
+        /// True if Sponsorship is from a self-hosted instance that has failed to sync for more than 6 months
+        /// </summary>
+        /// <param name="sponsorship"></param>
+        private bool SponsorshipIsSelfHostedOutOfSync(OrganizationSponsorship sponsorship) =>
+            sponsorship.LastSyncDate.HasValue &&
+            DateTime.UtcNow.Subtract(sponsorship.LastSyncDate.Value).TotalDays > 182.5;
     }
 }
