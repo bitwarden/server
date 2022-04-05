@@ -20,19 +20,11 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
                 .SendFamiliesForEnterpriseSponsorshipRevertingEmailAsync(sponsoredOrg.BillingEmailAddress(), sponsoredOrg.Name);
         }
 
-        protected async Task AssertRemovedSponsorshipAsync<T>(OrganizationSponsorship sponsorship,
+        protected async Task AssertDeletedSponsorshipAsync<T>(OrganizationSponsorship sponsorship,
             SutProvider<T> sutProvider)
         {
-            if (sponsorship.ValidUntil.HasValue && sponsorship.ValidUntil.Value < DateTime.UtcNow)
-            {
-                await sutProvider.GetDependency<IOrganizationSponsorshipRepository>().Received(1)
-                    .DeleteAsync(sponsorship);
-            }
-            else
-            {
-                await sutProvider.GetDependency<IOrganizationSponsorshipRepository>().Received(1)
-                    .UpsertAsync(sponsorship);
-            }
+            await sutProvider.GetDependency<IOrganizationSponsorshipRepository>().Received(1)
+                .DeleteAsync(sponsorship);
         }
 
         protected static async Task AssertDidNotRemoveSponsoredPaymentAsync<T>(SutProvider<T> sutProvider)
@@ -45,12 +37,22 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
                 .SendFamiliesForEnterpriseSponsorshipRevertingEmailAsync(default, default);
         }
 
-        protected static async Task AssertDidNotRemoveSponsorshipAsync<T>(SutProvider<T> sutProvider)
+        protected static async Task AssertDidNotDeleteSponsorshipAsync<T>(SutProvider<T> sutProvider)
         {
             await sutProvider.GetDependency<IOrganizationSponsorshipRepository>().DidNotReceiveWithAnyArgs()
                 .DeleteAsync(default);
+        }
+
+        protected static async Task AssertDidNotUpdateSponsorshipAsync<T>(SutProvider<T> sutProvider)
+        {
             await sutProvider.GetDependency<IOrganizationSponsorshipRepository>().DidNotReceiveWithAnyArgs()
                 .UpsertAsync(default);
+        }
+
+        protected static async Task AssertUpdatedSponsorshipAsync<T>(OrganizationSponsorship sponsorship,
+            SutProvider<T> sutProvider)
+        {
+            await sutProvider.GetDependency<IOrganizationSponsorshipRepository>().Received(1).UpsertAsync(sponsorship);
         }
     }
 }

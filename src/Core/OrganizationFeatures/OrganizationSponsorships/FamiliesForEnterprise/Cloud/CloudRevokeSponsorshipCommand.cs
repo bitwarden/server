@@ -3,21 +3,18 @@ using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud
 {
-    public class CloudRevokeSponsorshipCommand : CloudCancelSponsorshipCommand, ICloudRevokeSponsorshipCommand
+    public class CloudRevokeSponsorshipCommand : CancelSponsorshipCommand, IRevokeSponsorshipCommand
     {
         public CloudRevokeSponsorshipCommand(
             IOrganizationSponsorshipRepository organizationSponsorshipRepository,
-            IOrganizationRepository organizationRepository,
-            IPaymentService paymentService,
-            IMailService mailService) : base(organizationSponsorshipRepository, organizationRepository, paymentService, mailService)
+            IOrganizationRepository organizationRepository) : base(organizationSponsorshipRepository, organizationRepository)
         {
         }
 
-        public async Task RevokeSponsorshipAsync(Organization sponsoredOrg, OrganizationSponsorship sponsorship)
+        public async Task RevokeSponsorshipAsync(OrganizationSponsorship sponsorship)
         {
             if (sponsorship == null)
             {
@@ -26,16 +23,12 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
 
             if (sponsorship.SponsoredOrganizationId == null)
             {
-                await CancelSponsorshipAsync(sponsorship);
-                return;
+                await base.DeleteSponsorshipAsync(sponsorship);
             }
-
-            if (sponsoredOrg == null)
+            else
             {
-                throw new BadRequestException("Unable to find the sponsored Organization.");
+                await MarkToDeleteSponsorshipAsync(sponsorship);
             }
-
-            await CancelSponsorshipAsync(sponsoredOrg, sponsorship);
         }
     }
 }

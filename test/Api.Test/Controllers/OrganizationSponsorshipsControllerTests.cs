@@ -131,7 +131,7 @@ namespace Bit.Api.Test.Controllers
             Assert.Contains("Can only revoke a sponsorship you granted.", exception.Message);
             await sutProvider.GetDependency<IRemoveSponsorshipCommand>()
                 .DidNotReceiveWithAnyArgs()
-                .RemoveSponsorshipAsync(default, default);
+                .RemoveSponsorshipAsync(default);
         }
 
         [Theory]
@@ -147,7 +147,7 @@ namespace Bit.Api.Test.Controllers
             Assert.Contains("Only the owner of an organization can remove sponsorship.", exception.Message);
             await sutProvider.GetDependency<IRemoveSponsorshipCommand>()
                 .DidNotReceiveWithAnyArgs()
-                .RemoveSponsorshipAsync(default, default);
+                .RemoveSponsorshipAsync(default);
         }
     }
 }

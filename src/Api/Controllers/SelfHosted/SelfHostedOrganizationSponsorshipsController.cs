@@ -19,12 +19,12 @@ namespace Bit.Api.Controllers.SelfHosted
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly IOrganizationSponsorshipRepository _organizationSponsorshipRepository;
         private readonly ICreateSponsorshipCommand _offerSponsorshipCommand;
-        private readonly ISelfHostedRevokeSponsorshipCommand _revokeSponsorshipCommand;
+        private readonly IRevokeSponsorshipCommand _revokeSponsorshipCommand;
         private readonly ICurrentContext _currentContext;
 
         public SelfHostedOrganizationSponsorshipsController(
             ICreateSponsorshipCommand offerSponsorshipCommand,
-            ISelfHostedRevokeSponsorshipCommand revokeSponsorshipCommand,
+            IRevokeSponsorshipCommand revokeSponsorshipCommand,
             IOrganizationRepository organizationRepository,
             IOrganizationSponsorshipRepository organizationSponsorshipRepository,
             IOrganizationUserRepository organizationUserRepository,

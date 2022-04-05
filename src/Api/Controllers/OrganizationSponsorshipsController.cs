@@ -30,7 +30,7 @@ namespace Bit.Api.Controllers
         private readonly ICreateSponsorshipCommand _createSponsorshipCommand;
         private readonly ISendSponsorshipOfferCommand _sendSponsorshipOfferCommand;
         private readonly ISetUpSponsorshipCommand _setUpSponsorshipCommand;
-        private readonly ICloudRevokeSponsorshipCommand _revokeSponsorshipCommand;
+        private readonly IRevokeSponsorshipCommand _revokeSponsorshipCommand;
         private readonly IRemoveSponsorshipCommand _removeSponsorshipCommand;
         private readonly ICurrentContext _currentContext;
         private readonly IUserService _userService;
@@ -43,7 +43,7 @@ namespace Bit.Api.Controllers
             ICreateSponsorshipCommand offerSponsorshipCommand,
             ISendSponsorshipOfferCommand sendSponsorshipOfferCommand,
             ISetUpSponsorshipCommand setUpSponsorshipCommand,
-            ICloudRevokeSponsorshipCommand revokeSponsorshipCommand,
+            IRevokeSponsorshipCommand revokeSponsorshipCommand,
             IRemoveSponsorshipCommand removeSponsorshipCommand,
             IUserService userService,
             ICurrentContext currentContext)
@@ -130,10 +130,7 @@ namespace Bit.Api.Controllers
             var existingOrgSponsorship = await _organizationSponsorshipRepository
                 .GetBySponsoringOrganizationUserIdAsync(orgUser.Id);
 
-            await _revokeSponsorshipCommand.RevokeSponsorshipAsync(
-                await _organizationRepository
-                    .GetByIdAsync(existingOrgSponsorship.SponsoredOrganizationId ?? default),
-                existingOrgSponsorship);
+            await _revokeSponsorshipCommand.RevokeSponsorshipAsync(existingOrgSponsorship);
         }
 
         [HttpDelete("sponsored/{sponsoredOrgId}")]
@@ -150,10 +147,7 @@ namespace Bit.Api.Controllers
             var existingOrgSponsorship = await _organizationSponsorshipRepository
                 .GetBySponsoredOrganizationIdAsync(sponsoredOrgId);
 
-            await _removeSponsorshipCommand.RemoveSponsorshipAsync(
-                await _organizationRepository
-                    .GetByIdAsync(existingOrgSponsorship.SponsoredOrganizationId.Value),
-                existingOrgSponsorship);
+            await _removeSponsorshipCommand.RemoveSponsorshipAsync(existingOrgSponsorship);
         }
 
         [HttpGet("{sponsoringOrgId}/sync-status")]

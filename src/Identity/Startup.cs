@@ -127,7 +127,7 @@ namespace Bit.Identity
             services.AddCustomIdentityServices(globalSettings);
 
             // Services
-            services.AddBaseServices();
+            services.AddBaseServices(globalSettings);
             services.AddDefaultServices(globalSettings);
             services.AddCoreLocalizationServices();
 

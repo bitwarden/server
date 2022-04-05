@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Bit.Core.Entities;
+using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise
 {
-    public class CancelSponsorshipCommand
+    public abstract class CancelSponsorshipCommand
     {
         protected readonly IOrganizationSponsorshipRepository _organizationSponsorshipRepository;
         protected readonly IOrganizationRepository _organizationRepository;
@@ -18,28 +18,25 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
             _organizationRepository = organizationRepository;
         }
 
-        protected virtual async Task CancelSponsorshipAsync(OrganizationSponsorship sponsorship = null)
+        protected virtual async Task DeleteSponsorshipAsync(OrganizationSponsorship sponsorship = null)
         {
             if (sponsorship == null)
             {
                 return;
             }
 
-            // Initialize the record as available
-            sponsorship.SponsoredOrganizationId = null;
-            sponsorship.FriendlyName = null;
-            sponsorship.OfferedToEmail = null;
-            sponsorship.PlanSponsorshipType = null;
-            sponsorship.ToDelete = true;
+            await _organizationSponsorshipRepository.DeleteAsync(sponsorship);
+        }
 
-            if (sponsorship.ValidUntil.HasValue && sponsorship.ValidUntil.Value < DateTime.UtcNow)
+        protected async Task MarkToDeleteSponsorshipAsync(OrganizationSponsorship sponsorship)
+        {
+            if (sponsorship == null)
             {
-                await _organizationSponsorshipRepository.DeleteAsync(sponsorship);
+                throw new BadRequestException("The sponsorship you are trying to cancel does not exist");
             }
-            else
-            {
-                await _organizationSponsorshipRepository.UpsertAsync(sponsorship);
-            }
+
+            sponsorship.ToDelete = true;
+            await _organizationSponsorshipRepository.UpsertAsync(sponsorship);
         }
     }
 }

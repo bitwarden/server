@@ -15,15 +15,15 @@ namespace Bit.Core.OrganizationFeatures
 {
     public static class OrganizationServiceCollectionExtensions
     {
-        public static void AddOrganizationServices(this IServiceCollection services)
+        public static void AddOrganizationServices(this IServiceCollection services, IGlobalSettings globalSettings)
         {
             services.AddScoped<IOrganizationService, OrganizationService>();
             services.AddTokenizers();
-            services.AddOrganizationSponsorshipCommands();
+            services.AddOrganizationSponsorshipCommands(globalSettings);
             services.AddOrganizationApiKeyCommands();
         }
 
-        private static void AddOrganizationSponsorshipCommands(this IServiceCollection services)
+        private static void AddOrganizationSponsorshipCommands(this IServiceCollection services, IGlobalSettings globalSettings)
         {
             services.AddScoped<ICreateSponsorshipCommand, CreateSponsorshipCommand>();
 
@@ -31,14 +31,20 @@ namespace Bit.Core.OrganizationFeatures
 
             services.AddScoped<ISendSponsorshipOfferCommand, SendSponsorshipOfferCommand>();
 
-            services.AddScoped<ICloudRevokeSponsorshipCommand, CloudRevokeSponsorshipCommand>();
-            services.AddScoped<ISelfHostedRevokeSponsorshipCommand, SelfHostedRevokeSponsorshipCommand>();
-
             services.AddScoped<ISetUpSponsorshipCommand, SetUpSponsorshipCommand>();
 
             services.AddScoped<IValidateRedemptionTokenCommand, ValidateRedemptionTokenCommand>();
 
             services.AddScoped<IValidateSponsorshipCommand, ValidateSponsorshipCommand>();
+
+            if (globalSettings.SelfHosted)
+            {
+                services.AddScoped<IRevokeSponsorshipCommand, SelfHostedRevokeSponsorshipCommand>();
+            }
+            else
+            {
+                services.AddScoped<IRevokeSponsorshipCommand, CloudRevokeSponsorshipCommand>();
+            }
         }
 
         private static void AddOrganizationApiKeyCommands(this IServiceCollection services)

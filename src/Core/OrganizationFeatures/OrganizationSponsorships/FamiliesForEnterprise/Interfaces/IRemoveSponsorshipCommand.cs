@@ -5,6 +5,6 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
 {
     public interface IRemoveSponsorshipCommand
     {
-        Task RemoveSponsorshipAsync(Organization sponsoredOrg, OrganizationSponsorship sponsorship);
+        Task RemoveSponsorshipAsync(OrganizationSponsorship sponsorship);
     }
 }

@@ -6,7 +6,7 @@ using Bit.Core.Repositories;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.SelfHosted
 {
-    public class SelfHostedRevokeSponsorshipCommand : CancelSponsorshipCommand, ISelfHostedRevokeSponsorshipCommand
+    public class SelfHostedRevokeSponsorshipCommand : CancelSponsorshipCommand, IRevokeSponsorshipCommand
     {
         public SelfHostedRevokeSponsorshipCommand(
             IOrganizationSponsorshipRepository organizationSponsorshipRepository,
@@ -21,7 +21,14 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
                 throw new BadRequestException("You are not currently sponsoring an organization.");
             }
 
-            await CancelSponsorshipAsync(sponsorship);
+            if (sponsorship.LastSyncDate == null)
+            {
+                await base.DeleteSponsorshipAsync(sponsorship);
+            }
+            else
+            {
+                await MarkToDeleteSponsorshipAsync(sponsorship);
+            }
         }
     }
 }
