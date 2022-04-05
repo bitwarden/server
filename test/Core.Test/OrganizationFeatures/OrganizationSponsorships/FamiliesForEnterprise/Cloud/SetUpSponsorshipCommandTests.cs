@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -26,15 +27,7 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
                 sutProvider.Sut.SetUpSponsorshipAsync(null, org));
 
             Assert.Contains("No unredeemed sponsorship offer exists for you.", exception.Message);
-            await sutProvider.GetDependency<IPaymentService>()
-                .DidNotReceiveWithAnyArgs()
-                .SponsorOrganizationAsync(default, default);
-            await sutProvider.GetDependency<IOrganizationRepository>()
-                .DidNotReceiveWithAnyArgs()
-                .UpsertAsync(default);
-            await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
-                .DidNotReceiveWithAnyArgs()
-                .UpsertAsync(default);
+            await AssertDidNotSetUpAsync(sutProvider);
         }
 
         [Theory]
@@ -50,15 +43,26 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
                 sutProvider.Sut.SetUpSponsorshipAsync(sponsorship, org));
 
             Assert.Contains("Cannot redeem a sponsorship offer for an organization that is already sponsored. Revoke existing sponsorship first.", exception.Message);
-            await sutProvider.GetDependency<IPaymentService>()
-                .DidNotReceiveWithAnyArgs()
-                .SponsorOrganizationAsync(default, default);
-            await sutProvider.GetDependency<IOrganizationRepository>()
-                .DidNotReceiveWithAnyArgs()
-                .UpsertAsync(default);
+            await AssertDidNotSetUpAsync(sutProvider);
+        }
+
+        [Theory]
+        [BitMemberAutoData(nameof(FamiliesPlanTypes))]
+        public async Task SetUpSponsorship_TooLongSinceLastSync_ThrowsBadRequest(PlanType planType, Organization org,
+            OrganizationSponsorship sponsorship,
+            SutProvider<SetUpSponsorshipCommand> sutProvider)
+        {
+            org.PlanType = planType;
+            sponsorship.LastSyncDate = DateTime.UtcNow.AddDays(-365);
+
+            var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+                sutProvider.Sut.SetUpSponsorshipAsync(sponsorship, org));
+
+            Assert.Contains("This sponsorship offer is more than 6 months old and has expired.", exception.Message);
             await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
-                .DidNotReceiveWithAnyArgs()
-                .UpsertAsync(default);
+                .Received(1)
+                .DeleteAsync(sponsorship);
+            await AssertDidNotSetUpAsync(sutProvider);
         }
 
         [Theory]
@@ -68,11 +72,17 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
             SutProvider<SetUpSponsorshipCommand> sutProvider)
         {
             org.PlanType = planType;
+            sponsorship.LastSyncDate = DateTime.UtcNow;
 
             var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
                 sutProvider.Sut.SetUpSponsorshipAsync(sponsorship, org));
 
             Assert.Contains("Can only redeem sponsorship offer on families organizations.", exception.Message);
+            await AssertDidNotSetUpAsync(sutProvider);
+        }
+
+        private static async Task AssertDidNotSetUpAsync(SutProvider<SetUpSponsorshipCommand> sutProvider)
+        {
             await sutProvider.GetDependency<IPaymentService>()
                 .DidNotReceiveWithAnyArgs()
                 .SponsorOrganizationAsync(default, default);
