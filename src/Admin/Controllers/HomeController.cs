@@ -67,7 +67,7 @@ namespace Bit.Admin.Controllers
             catch (HttpRequestException e)
             {
                 _logger.LogError(e, $"Error encountered while sending GET request to {requestUri}");
-                return new JsonResult("HttpRequestException occurred, additional info in the logs") { StatusCode = StatusCodes.Status500InternalServerError };
+                return new JsonResult("Unable to fetch latest version") { StatusCode = StatusCodes.Status500InternalServerError };
             }
 
             return new JsonResult("-");
@@ -89,7 +89,7 @@ namespace Bit.Admin.Controllers
             catch (HttpRequestException e)
             {
                 _logger.LogError(e, $"Error encountered while sending GET request to {requestUri}");
-                return new JsonResult("HttpRequestException occurred, additional info in the logs") { StatusCode = StatusCodes.Status500InternalServerError };
+                return new JsonResult("Unable to fetch installed version") { StatusCode = StatusCodes.Status500InternalServerError };
             }
 
             return new JsonResult("-");
