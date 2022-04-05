@@ -2,12 +2,6 @@
   "version": 1,
   "dependencies": {
     ".NETCoreApp,Version=v5.0": {
-      "NewRelic.Agent": {
-        "type": "Direct",
-        "requested": "[8.41.0, )",
-        "resolved": "8.41.0",
-        "contentHash": "Bg4gOSPWZgFg4aDTt2mclPkYDipK62O+D1y0fN10J/kpJl1Ecg6rfHulLOzXdB522ujVyLHF6Dga61FLRNzIYA=="
-      },
       "Sustainsys.Saml2.AspNetCore2": {
         "type": "Direct",
         "requested": "[2.8.0, )",
@@ -3398,7 +3392,7 @@
       "infrastructure.dapper": {
         "type": "Project",
         "dependencies": {
-          "Core": "1.46.2",
+          "Core": "1.47.1",
           "Dapper": "2.0.123",
           "System.Data.SqlClient": "4.8.3"
         }
@@ -3407,7 +3401,7 @@
         "type": "Project",
         "dependencies": {
           "AutoMapper.Extensions.Microsoft.DependencyInjection": "8.0.1",
-          "Core": "1.46.2",
+          "Core": "1.47.1",
           "Microsoft.EntityFrameworkCore.Relational": "5.0.12",
           "Npgsql.EntityFrameworkCore.PostgreSQL": "5.0.2",
           "Pomelo.EntityFrameworkCore.MySql": "5.0.3",
@@ -3417,9 +3411,9 @@
       "sharedweb": {
         "type": "Project",
         "dependencies": {
-          "Core": "1.46.2",
-          "Infrastructure.Dapper": "1.46.2",
-          "Infrastructure.EntityFramework": "1.46.2"
+          "Core": "1.47.1",
+          "Infrastructure.Dapper": "1.47.1",
+          "Infrastructure.EntityFramework": "1.47.1"
         }
       }
     }

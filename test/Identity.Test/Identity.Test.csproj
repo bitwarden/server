@@ -23,7 +23,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Core\Core.csproj" />
     <ProjectReference Include="..\..\src\Identity\Identity.csproj" />
-    <ProjectReference Include="..\common\Common.csproj" />
+    <ProjectReference Include="..\Common\Common.csproj" />
   </ItemGroup>
 
 </Project>
