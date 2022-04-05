@@ -75,7 +75,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
                     SponsoringOrganizationCloudId = cloudOrganizationId,
                     SponsorshipsBatch = orgSponsorshipsBatch.Select(s => new OrganizationSponsorshipRequestModel
                     {
-                        SponsoringOrganizationUserId = s.SponsoringOrganizationUserId.GetValueOrDefault(),
+                        SponsoringOrganizationUserId = s.SponsoringOrganizationUserId,
                         FriendlyName = s.FriendlyName,
                         OfferedToEmail = s.OfferedToEmail,
                         PlanSponsorshipType = s.PlanSponsorshipType.GetValueOrDefault(),

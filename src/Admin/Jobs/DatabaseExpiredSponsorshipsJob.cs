@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Bit.Core;
-using Bit.Core.Repositories;
 using Bit.Core.Jobs;
+using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Microsoft.Extensions.Logging;
 using Quartz;

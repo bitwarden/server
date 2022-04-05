@@ -1,7 +1,7 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using System.Linq;
+using System.Threading.Tasks;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -74,13 +74,13 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
             SutProvider<CloudSyncSponsorshipsCommand> sutProvider)
         {
             organization.PlanType = planType;
-            
+
 
             var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
                 sutProvider.Sut.SyncOrganization(organization, sponsorshipsData));
 
-           Assert.Contains("Specified Organization does not support this type of sponsorship.", exception.Message);
- 
+            Assert.Contains("Specified Organization does not support this type of sponsorship.", exception.Message);
+
             await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
                 .DidNotReceiveWithAnyArgs()
                 .UpsertManyAsync(default);
