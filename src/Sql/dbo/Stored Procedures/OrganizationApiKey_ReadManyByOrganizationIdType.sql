@@ -1,6 +1,6 @@
-CREATE PROCEDURE [dbo].[OrganizationApiKey_ReadByOrganizationIdType]
+CREATE PROCEDURE [dbo].[OrganizationApiKey_ReadManyByOrganizationIdType]
     @OrganizationId UNIQUEIDENTIFIER,
-    @Type TINYINT
+    @Type TINYINT = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -11,5 +11,5 @@ BEGIN
         [dbo].[OrganizationApiKeyView]
     WHERE
         [OrganizationId] = @OrganizationId AND
-        [Type] = @Type
+        (@Type IS NULL OR [Type] = @Type)
 END
