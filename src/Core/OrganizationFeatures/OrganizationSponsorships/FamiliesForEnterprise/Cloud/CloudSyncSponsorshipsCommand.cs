@@ -70,7 +70,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
                 if (requiredSponsoringProductType == null ||
                     StaticStore.GetPlan(sponsoringOrg.PlanType).Product != requiredSponsoringProductType.Value)
                 {
-                    throw new BadRequestException("Specified Organization does not support this type of sponsorship.");
+                    continue; // prevent unsupported sponsorships
                 }
 
                 var cloudSponsorship = existingSponsorshipsDict[selfHostedSponsorship.SponsoringOrganizationUserId];
