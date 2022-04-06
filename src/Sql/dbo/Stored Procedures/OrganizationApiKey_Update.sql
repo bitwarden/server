@@ -1,4 +1,5 @@
 CREATE PROCEDURE [dbo].[OrganizationApiKey_Update]
+    @Id UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
     @Type TINYINT,
     @ApiKey VARCHAR(30),
@@ -13,6 +14,5 @@ BEGIN
         [ApiKey] = @ApiKey,
         [RevisionDate] = @RevisionDate
     WHERE
-        [OrganizationId] = @OrganizationId AND
-        [Type] = @Type
+        [Id] = @Id
 END
