@@ -22,7 +22,6 @@ namespace Bit.Core.Models.Api.Request.OrganizationSponsorships
             BillingSyncKey = syncData.BillingSyncKey;
             SponsoringOrganizationCloudId = syncData.SponsoringOrganizationCloudId;
             SponsorshipsBatch = syncData.SponsorshipsBatch.Select(o => new OrganizationSponsorshipRequestModel(o));
-
         }
 
         public OrganizationSponsorshipSyncData ToOrganizationSponsorshipSync()
