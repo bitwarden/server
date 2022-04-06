@@ -1,4 +1,5 @@
 ﻿using System;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 
@@ -25,6 +26,17 @@ namespace Bit.Core.Models.Api.Request.OrganizationSponsorships
             LastSyncDate = sponsorshipData.LastSyncDate;
             ValidUntil = sponsorshipData.ValidUntil;
             ToDelete = sponsorshipData.ToDelete;
+        }
+
+        public OrganizationSponsorshipRequestModel(OrganizationSponsorship sponsorship)
+        {
+            SponsoringOrganizationUserId = sponsorship.SponsoringOrganizationUserId;
+            FriendlyName = sponsorship.FriendlyName;
+            OfferedToEmail = sponsorship.OfferedToEmail;
+            PlanSponsorshipType = sponsorship.PlanSponsorshipType.GetValueOrDefault();
+            LastSyncDate = sponsorship.LastSyncDate;
+            ValidUntil = sponsorship.ValidUntil;
+            ToDelete = sponsorship.ToDelete;
         }
 
         public OrganizationSponsorshipData ToOrganizationSponsorship()

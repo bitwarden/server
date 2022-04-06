@@ -70,15 +70,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
                 {
                     BillingSyncKey = billingSyncKey.Config,
                     SponsoringOrganizationCloudId = cloudOrganizationId,
-                    SponsorshipsBatch = orgSponsorshipsBatch.Select(s => new OrganizationSponsorshipRequestModel
-                    {
-                        SponsoringOrganizationUserId = s.SponsoringOrganizationUserId,
-                        FriendlyName = s.FriendlyName,
-                        OfferedToEmail = s.OfferedToEmail,
-                        PlanSponsorshipType = s.PlanSponsorshipType.GetValueOrDefault(),
-                        ValidUntil = s.ValidUntil,
-                        ToDelete = s.ToDelete
-                    })
+                    SponsorshipsBatch = orgSponsorshipsBatch.Select(s => new OrganizationSponsorshipRequestModel(s))
                 });
 
                 if (response == null)

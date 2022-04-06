@@ -80,7 +80,6 @@ namespace Bit.Infrastructure.Dapper.Repositories
 
             await CreateManyAsync(createSponsorships);
             await ReplaceManyAsync(replaceSponsorships);
-
         }
 
         public async Task DeleteManyAsync(IEnumerable<Guid> organizationSponsorshipIds)
