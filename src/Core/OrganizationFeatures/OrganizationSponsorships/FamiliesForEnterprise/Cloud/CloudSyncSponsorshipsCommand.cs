@@ -6,10 +6,13 @@ using System.Threading.Tasks;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Api.Request.OrganizationSponsorships;
+using Bit.Core.Models.Business.Tokenables;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.StaticStore;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
+using Bit.Core.Tokens;
 using Bit.Core.Utilities;
 using Microsoft.Extensions.Logging;
 
@@ -20,19 +23,25 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
         private readonly IOrganizationRepository _organizationRepository;
         private readonly IOrganizationSponsorshipRepository _organizationSponsorshipRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
-        private readonly ISendSponsorshipOfferCommand _sendSponsorshipOfferCommand;
+        private readonly IUserRepository _userRepository;
+        private readonly IMailService _mailService;
+        private readonly IDataProtectorTokenFactory<OrganizationSponsorshipOfferTokenable> _tokenFactory;
 
 
         public CloudSyncSponsorshipsCommand(
         IOrganizationRepository organizationRepository,
         IOrganizationSponsorshipRepository organizationSponsorshipRepository,
         IOrganizationUserRepository organizationUserRepository,
-        ISendSponsorshipOfferCommand sendSponsorshipOfferCommand)
+        IUserRepository userRepository,
+        IMailService mailService,
+        IDataProtectorTokenFactory<OrganizationSponsorshipOfferTokenable> tokenFactory)
         {
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
             _organizationSponsorshipRepository = organizationSponsorshipRepository;
-            _sendSponsorshipOfferCommand = sendSponsorshipOfferCommand;
+            _userRepository = userRepository;
+            _mailService = mailService;
+            _tokenFactory = tokenFactory;
         }
 
         public async Task<OrganizationSponsorshipSyncData> SyncOrganization(Organization sponsoringOrg, IEnumerable<OrganizationSponsorshipData> sponsorshipsData)
@@ -43,11 +52,14 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
             }
             if (!sponsorshipsData.Any())
             {
-                throw new BadRequestException("Failed to sync sponsorship - missing sponsorships.");
+                return new OrganizationSponsorshipSyncData
+                {
+                    SponsorshipsBatch = sponsorshipsData
+                };
             }
 
-            var existingSponsorships = await _organizationSponsorshipRepository.GetManyBySponsoringOrganizationAsync(sponsoringOrg.Id);
-            var existingSponsorshipsDict = existingSponsorships.ToDictionary(i => i.SponsoringOrganizationUserId);
+            var existingSponsorshipsDict = (await _organizationSponsorshipRepository.GetManyBySponsoringOrganizationAsync(sponsoringOrg.Id))
+                .ToDictionary(i => i.SponsoringOrganizationUserId);
 
             var sponsorshipsToUpsert = new List<OrganizationSponsorship>();
             var sponsorshipIdsToDelete = new List<Guid>();
@@ -80,15 +92,11 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
                         OfferedToEmail = selfHostedSponsorship.OfferedToEmail,
                         PlanSponsorshipType = selfHostedSponsorship.PlanSponsorshipType,
                         LastSyncDate = DateTime.UtcNow,
-                        ValidUntil = selfHostedSponsorship.ValidUntil,
-                        ToDelete = selfHostedSponsorship.ToDelete
                     };
-                    sponsorshipsToUpsert.Add(cloudSponsorship);
                 }
                 else
                 {
                     cloudSponsorship.LastSyncDate = DateTime.UtcNow;
-                    sponsorshipsToUpsert.Add(cloudSponsorship);
                 }
 
                 if (selfHostedSponsorship.ToDelete)
@@ -103,19 +111,32 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
                         cloudSponsorship.ToDelete = true;
                     }
                 }
+                sponsorshipsToUpsert.Add(cloudSponsorship);
 
                 selfHostedSponsorship.ValidUntil = cloudSponsorship.ValidUntil;
                 selfHostedSponsorship.LastSyncDate = DateTime.UtcNow;
             }
             var sponsorshipsToEmailOffer = sponsorshipsToUpsert.Where(s => s.Id == null);
             await _organizationSponsorshipRepository.UpsertManyAsync(sponsorshipsToUpsert);
-            await _sendSponsorshipOfferCommand.BulkSendSponsorshipOfferAsync(sponsoringOrg.Name, sponsorshipsToEmailOffer);
+            await BulkSendSponsorshipOfferAsync(sponsoringOrg.Name, sponsorshipsToEmailOffer);
             await _organizationSponsorshipRepository.DeleteManyAsync(sponsorshipIdsToDelete);
 
             return new OrganizationSponsorshipSyncData
             {
                 SponsorshipsBatch = sponsorshipsData
             };
+        }
+        private async Task BulkSendSponsorshipOfferAsync(string sponsoringOrgName, IEnumerable<OrganizationSponsorship> sponsorships)
+        {
+            var invites = new List<(string, bool, string)>();
+            foreach (var sponsorship in sponsorships)
+            {
+                var user = await _userRepository.GetByEmailAsync(sponsorship.OfferedToEmail);
+                var isExistingAccount = user != null;
+                invites.Add((sponsorship.OfferedToEmail, user != null, _tokenFactory.Protect(new OrganizationSponsorshipOfferTokenable(sponsorship))));
+            }
+
+            await _mailService.BulkSendFamiliesForEnterpriseOfferEmailAsync(sponsoringOrgName, invites);
         }
 
     }
