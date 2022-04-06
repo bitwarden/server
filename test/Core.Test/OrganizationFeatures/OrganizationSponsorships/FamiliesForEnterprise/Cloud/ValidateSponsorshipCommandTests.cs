@@ -136,12 +136,13 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
 
         [Theory]
         [BitMemberAutoData(nameof(EnterprisePlanTypes))]
-        public async Task ValidateSponsorshipAsync_SponsoringOrgDisabled_UpdatesStripePlan(PlanType planType,
+        public async Task ValidateSponsorshipAsync_SponsoringOrgDisabledLongerThanGrace_UpdatesStripePlan(PlanType planType,
             Organization sponsoredOrg, OrganizationSponsorship existingSponsorship, Organization sponsoringOrg,
             SutProvider<ValidateSponsorshipCommand> sutProvider)
         {
             sponsoringOrg.PlanType = planType;
             sponsoringOrg.Enabled = false;
+            sponsoringOrg.ExpirationDate = DateTime.UtcNow.AddDays(-100);
             existingSponsorship.SponsoringOrganizationId = sponsoringOrg.Id;
 
             sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
@@ -178,6 +179,54 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
 
             await AssertRemovedSponsoredPaymentAsync(sponsoredOrg, sponsorship, sutProvider);
             await AssertDeletedSponsorshipAsync(sponsorship, sutProvider);
+        }
+
+
+        [Theory]
+        [BitMemberAutoData(nameof(EnterprisePlanTypes))]
+        public async Task ValidateSponsorshipAsync_SponsoringOrgDisabledUnknownTime_UpdatesStripePlan(PlanType planType,
+            Organization sponsoredOrg, OrganizationSponsorship existingSponsorship, Organization sponsoringOrg,
+            SutProvider<ValidateSponsorshipCommand> sutProvider)
+        {
+            sponsoringOrg.PlanType = planType;
+            sponsoringOrg.Enabled = false;
+            sponsoringOrg.ExpirationDate = null;
+            existingSponsorship.SponsoringOrganizationId = sponsoringOrg.Id;
+
+            sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
+                .GetBySponsoredOrganizationIdAsync(sponsoredOrg.Id).Returns(existingSponsorship);
+            sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(sponsoredOrg.Id).Returns(sponsoredOrg);
+            sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(sponsoringOrg.Id).Returns(sponsoringOrg);
+
+            var result = await sutProvider.Sut.ValidateSponsorshipAsync(sponsoredOrg.Id);
+
+            Assert.False(result);
+            await AssertRemovedSponsoredPaymentAsync(sponsoredOrg, existingSponsorship, sutProvider);
+            await AssertRemovedSponsorshipAsync(existingSponsorship, sutProvider);
+        }
+
+        [Theory]
+        [BitMemberAutoData(nameof(EnterprisePlanTypes))]
+        public async Task ValidateSponsorshipAsync_SponsoringOrgDisabledLessThanGrace_Valid(PlanType planType,
+            Organization sponsoredOrg, OrganizationSponsorship existingSponsorship, Organization sponsoringOrg,
+            SutProvider<ValidateSponsorshipCommand> sutProvider)
+        {
+            sponsoringOrg.PlanType = planType;
+            sponsoringOrg.Enabled = true;
+            sponsoringOrg.ExpirationDate = DateTime.UtcNow.AddDays(-1);
+            existingSponsorship.SponsoringOrganizationId = sponsoringOrg.Id;
+
+            sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
+                .GetBySponsoredOrganizationIdAsync(sponsoredOrg.Id).Returns(existingSponsorship);
+            sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(sponsoredOrg.Id).Returns(sponsoredOrg);
+            sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(sponsoringOrg.Id).Returns(sponsoringOrg);
+
+            var result = await sutProvider.Sut.ValidateSponsorshipAsync(sponsoredOrg.Id);
+
+            Assert.True(result);
+
+            await AssertDidNotRemoveSponsoredPaymentAsync(sutProvider);
+            await AssertDidNotRemoveSponsorshipAsync(sutProvider);
         }
 
 
