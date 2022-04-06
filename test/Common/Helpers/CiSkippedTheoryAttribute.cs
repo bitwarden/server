@@ -1,11 +1,11 @@
-﻿using System;
+using System;
 
-namespace Bit.Core.Test.AutoFixture.Attributes
+namespace Bit.Test.Common.Helpers
 {
-    public sealed class CiSkippedTheory : Xunit.TheoryAttribute
+    public sealed class CiSkippedTheoryAttribute : Xunit.TheoryAttribute
     {
         private static bool IsGithubActions() => Environment.GetEnvironmentVariable("CI") != null;
-        public CiSkippedTheory()
+        public CiSkippedTheoryAttribute()
         {
             if (IsGithubActions())
             {

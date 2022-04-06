@@ -1,18 +1,18 @@
 ﻿using System.Threading.Tasks;
 using Bit.Icons.Services;
+using Bit.Test.Common.Helpers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
 namespace Bit.Icons.Test.Services
 {
     public class IconFetchingServiceTests
     {
-        [Theory]
+        [CiSkippedTheory]
         [InlineData("www.google.com")] // https site
         [InlineData("neverssl.com")] // http site
-        [InlineData("ameritrade.com")]
+        [InlineData("tdameritrade.com")]
         [InlineData("icloud.com")]
         [InlineData("bofa.com")]
         public async Task GetIconAsync_Success(string domain)
