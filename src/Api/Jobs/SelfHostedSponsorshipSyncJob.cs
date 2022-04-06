@@ -5,6 +5,7 @@ using Bit.Core.Enums;
 using Bit.Core.Jobs;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Infrastructure.Dapper.Repositories;
 using Microsoft.Extensions.Logging;
@@ -16,12 +17,14 @@ namespace Bit.Api.Jobs
     {
         private IOrganizationRepository _organizationRepository;
         private IOrganizationConnectionRepository _organizationConnectionRepository;
+        private readonly ILicensingService _licensingService;
         private ISelfHostedSyncSponsorshipsCommand _syncSponsorshipsCommand;
         private GlobalSettings _globalSettings;
 
         public SelfHostedSponsorshipSyncJob(
             IOrganizationRepository organizationRepository,
             IOrganizationConnectionRepository organizationConnectionRepository,
+            ILicensingService licensingService,
             ISelfHostedSyncSponsorshipsCommand syncSponsorshipsCommand,
             ILogger<SelfHostedSponsorshipSyncJob> logger,
             GlobalSettings globalSettings)
@@ -29,6 +32,7 @@ namespace Bit.Api.Jobs
         {
             _organizationRepository = organizationRepository;
             _organizationConnectionRepository = organizationConnectionRepository;
+            _licensingService = licensingService;
             _syncSponsorshipsCommand = syncSponsorshipsCommand;
             _globalSettings = globalSettings;
         }
@@ -37,7 +41,7 @@ namespace Bit.Api.Jobs
         {
             if (!_globalSettings.EnableCloudCommunication)
             {
-                _logger.LogInformation($"Failed to sync instance with cloud - Cloud communication is disabled in global settings");
+                _logger.LogError("Failed to sync instance with cloud - Cloud communication is disabled in global settings");
                 return;
             }
 
@@ -50,15 +54,16 @@ namespace Bit.Api.Jobs
                 {
                     try
                     {
-                        await _syncSponsorshipsCommand.SyncOrganization(org.Id, connection);
+
+                        var cloudOrganizationId = (await _licensingService.ReadOrganizationLicenseAsync(org.Id)).Id;
+                        await _syncSponsorshipsCommand.SyncOrganization(org.Id, cloudOrganizationId, connection);
                     }
-                    catch
+                    catch (Exception e)
                     {
-                        _logger.LogInformation($"Failed to sync {0} sponsorships with cloud", org.Name);
+                        _logger.LogError($"Failed to sync {org.Name} sponsorships with cloud", e);
                     }
                 }
             }
-
         }
     }
 }

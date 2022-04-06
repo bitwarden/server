@@ -23,13 +23,11 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
         private readonly IOrganizationSponsorshipRepository _organizationSponsorshipRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly IOrganizationConnectionRepository _organizationConnectionRepository;
-        private readonly ILicensingService _licensingService;
 
         public SelfHostedSyncSponsorshipsCommand(
         IOrganizationSponsorshipRepository organizationSponsorshipRepository,
         IOrganizationUserRepository organizationUserRepository,
         IOrganizationConnectionRepository organizationConnectionRepository,
-        ILicensingService licensingService,
         GlobalSettings globalSettings,
         ILogger<SelfHostedSyncSponsorshipsCommand> logger)
         : base(
@@ -44,10 +42,9 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
             _organizationUserRepository = organizationUserRepository;
             _organizationSponsorshipRepository = organizationSponsorshipRepository;
             _organizationConnectionRepository = organizationConnectionRepository;
-            _licensingService = licensingService;
         }
 
-        public async Task SyncOrganization(Guid organizationId, OrganizationConnection billingSyncKey)
+        public async Task SyncOrganization(Guid organizationId, Guid cloudOrganizationId, OrganizationConnection billingSyncKey)
         {
             if (!_globalSettings.EnableCloudCommunication)
             {
@@ -63,7 +60,6 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
                 throw new BadRequestException($"No Billing Sync Key known for organization {organizationId}");
             }
 
-            var cloudOrganizationId = (await _licensingService.ReadOrganizationLicenseAsync(organizationId)).Id;
             var organizationSponsorships = await _organizationSponsorshipRepository.GetManyBySponsoringOrganizationAsync(organizationId);
             var syncedSponsorships = new List<OrganizationSponsorshipData>();
 
