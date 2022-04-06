@@ -1,4 +1,3 @@
-
 -- Create OrganizationSponsorshipType
 IF NOT EXISTS (
     SELECT
