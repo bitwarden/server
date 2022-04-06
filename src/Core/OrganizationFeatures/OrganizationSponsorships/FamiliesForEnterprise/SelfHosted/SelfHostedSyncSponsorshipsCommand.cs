@@ -31,8 +31,8 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
         GlobalSettings globalSettings,
         ILogger<SelfHostedSyncSponsorshipsCommand> logger)
         : base(
-            globalSettings.BaseServiceUri.InternalVault,
-            globalSettings.BaseServiceUri.InternalIdentity,
+            globalSettings.Installation.IdentityUri,
+            globalSettings.Installation.ApiUri,
             "api.installation",
             globalSettings.Installation.Id.ToString(),
             globalSettings.Installation.Key,
@@ -60,10 +60,11 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
                 throw new BadRequestException($"No Billing Sync Key known for organization {organizationId}");
             }
 
-            var organizationSponsorships = await _organizationSponsorshipRepository.GetManyBySponsoringOrganizationAsync(organizationId);
+            var organizationSponsorshipsDict = (await _organizationSponsorshipRepository.GetManyBySponsoringOrganizationAsync(organizationId))
+                .ToDictionary(i => i.SponsoringOrganizationUserId);
             var syncedSponsorships = new List<OrganizationSponsorshipData>();
 
-            foreach (var orgSponsorshipsBatch in CoreHelpers.Batch(organizationSponsorships, 1000))
+            foreach (var orgSponsorshipsBatch in CoreHelpers.Batch(organizationSponsorshipsDict.Values, 1000))
             {
                 var response = await SendAsync<OrganizationSponsorshipSyncRequestModel, OrganizationSponsorshipSyncResponseModel>(HttpMethod.Post, "organizationSponsorships/sync", new OrganizationSponsorshipSyncRequestModel
                 {
@@ -88,7 +89,6 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
                 syncedSponsorships.AddRange(response.ToOrganizationSponsorshipSync().SponsorshipsBatch);
             }
 
-            var organizationSponsorshipsDict = organizationSponsorships.ToDictionary(i => i.SponsoringOrganizationUserId);
             var sponsorshipsToDelete = syncedSponsorships.Where(s => s.CloudSponsorshipRemoved).Select(i => organizationSponsorshipsDict[i.SponsoringOrganizationUserId].Id);
             var sponsorshipsToUpsert = syncedSponsorships.Where(s => !s.CloudSponsorshipRemoved).Select(i =>
             {
@@ -98,10 +98,10 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
                     existingSponsorship.LastSyncDate = i.LastSyncDate;
                     existingSponsorship.ValidUntil = i.ValidUntil;
                     existingSponsorship.ToDelete = i.ToDelete;
-
                 }
                 else
                 {
+                    // shouldn't occur, added in case self hosted loses a sponsorship
                     existingSponsorship = new OrganizationSponsorship
                     {
                         SponsoringOrganizationId = organizationId,
