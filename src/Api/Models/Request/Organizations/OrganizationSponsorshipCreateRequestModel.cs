@@ -4,7 +4,7 @@ using Bit.Core.Utilities;
 
 namespace Bit.Api.Models.Request.Organizations
 {
-    public class OrganizationCreateSponsorshipRequestModel
+    public class OrganizationSponsorshipCreateRequestModel
     {
         [Required]
         public PlanSponsorshipType PlanSponsorshipType { get; set; }

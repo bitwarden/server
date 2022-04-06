@@ -71,7 +71,7 @@ namespace Bit.Api.Controllers
         [Authorize("Application")]
         [HttpPost("{sponsoringOrgId}/families-for-enterprise")]
         [SelfHosted(NotSelfHostedOnly = true)]
-        public async Task CreateSponsorship(Guid sponsoringOrgId, [FromBody] OrganizationCreateSponsorshipRequestModel model)
+        public async Task CreateSponsorship(Guid sponsoringOrgId, [FromBody] OrganizationSponsorshipCreateRequestModel model)
         {
             var sponsorship = await _createSponsorshipCommand.CreateSponsorshipAsync(
                 await _organizationRepository.GetByIdAsync(sponsoringOrgId),
