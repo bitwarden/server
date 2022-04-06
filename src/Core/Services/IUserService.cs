@@ -22,7 +22,7 @@ namespace Bit.Core.Services
         Task<IdentityResult> RegisterUserAsync(User user, string masterPassword, string token, Guid? orgUserId);
         Task<IdentityResult> RegisterUserAsync(User user);
         Task SendMasterPasswordHintAsync(string email);
-        Task SendTwoFactorEmailAsync(User user);
+        Task SendTwoFactorEmailAsync(User user, bool isBecauseNewDeviceLogin = false);
         Task<bool> VerifyTwoFactorEmailAsync(User user, string token);
         Task<CredentialCreateOptions> StartWebAuthnRegistrationAsync(User user);
         Task<bool> DeleteWebAuthnKeyAsync(User user, int id);

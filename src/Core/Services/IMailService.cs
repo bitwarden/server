@@ -16,6 +16,7 @@ namespace Bit.Core.Services
         Task SendChangeEmailAlreadyExistsEmailAsync(string fromEmail, string toEmail);
         Task SendChangeEmailEmailAsync(string newEmailAddress, string token);
         Task SendTwoFactorEmailAsync(string email, string token);
+        Task SendNewDeviceLoginTwoFactorEmailAsync(string email, string token);
         Task SendNoMasterPasswordHintEmailAsync(string email);
         Task SendMasterPasswordHintEmailAsync(string email, string hint);
         Task SendOrganizationInviteEmailAsync(string organizationName, bool orgCanSponsor, OrganizationUser orgUser, ExpiringToken token);
@@ -53,5 +54,7 @@ namespace Bit.Core.Services
         Task SendFamiliesForEnterpriseRedeemedEmailsAsync(string familyUserEmail, string sponsorEmail);
         Task SendFamiliesForEnterpriseSponsorshipRevertingEmailAsync(string email, string familyOrgName);
         Task SendOTPEmailAsync(string email, string token);
+        Task SendFailedLoginAttemptsEmailAsync(string email, DateTime utcNow, string ip);
+        Task SendFailedTwoFactorAttemptsEmailAsync(string email, DateTime utcNow, string ip);
     }
 }

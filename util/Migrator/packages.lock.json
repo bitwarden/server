@@ -1495,6 +1495,15 @@
         "resolved": "4.4.0",
         "contentHash": "YhEdSQUsTx+C8m8Bw7ar5/VesXvCFMItyZF7G1AUY+OM0VPZUOeAVpJ4Wl6fydBGUYZxojTDR3I6Bj/+BPkJNA=="
       },
+      "SendGrid": {
+        "type": "Transitive",
+        "resolved": "9.25.3",
+        "contentHash": "Dldhsc4+jV28rfa53W+09A549lDfKqGEFFtdOU4uOxHvS/pFhBN8lRkAEzvbMbycwZJJCzfrDdKc/qT1MxWynQ==",
+        "dependencies": {
+          "Newtonsoft.Json": "9.0.1",
+          "starkbank-ecdsa": "[1.3.3, 2.0.0)"
+        }
+      },
       "Sentry": {
         "type": "Transitive",
         "resolved": "2.1.5",
@@ -1709,6 +1718,11 @@
           "System.Threading.ThreadPool": "4.3.0",
           "System.Threading.Timer": "4.3.0"
         }
+      },
+      "starkbank-ecdsa": {
+        "type": "Transitive",
+        "resolved": "1.3.3",
+        "contentHash": "OblOaKb1enXn+dSp7tsx9yjwV+/BEKM9jFhshIkZTwCk7LuTFTp+wSon6rFzuPiIiTGtvVWQNUw2slHjGktJog=="
       },
       "Stripe.net": {
         "type": "Transitive",
@@ -3247,6 +3261,7 @@
           "Newtonsoft.Json": "12.0.3",
           "Otp.NET": "1.2.2",
           "Quartz": "3.1.0",
+          "SendGrid": "9.25.3",
           "Sentry.Serilog": "2.1.5",
           "Serilog.AspNetCore": "3.4.0",
           "Serilog.Extensions.Logging": "3.0.1",

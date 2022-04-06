@@ -6,6 +6,8 @@ on:
     branches-ignore:
       - 'l10n_master'
       - 'gh-pages'
+    paths-ignore:
+      - '.github/workflows/**'
   workflow_dispatch:
     inputs: {}
 
@@ -15,7 +17,7 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - name: Checkout repo
-        uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
+        uses: actions/checkout@a12a3943b4bdde767164f792f33f40b04645d846
 
       - name: Install cloc
         run: |
@@ -24,6 +26,21 @@ jobs:
 
       - name: Print lines of code
         run: cloc --include-lang C#,SQL,Razor,"Bourne Shell",PowerShell,HTML,CSS,Sass,JavaScript,TypeScript --vcs git
+
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@a12a3943b4bdde767164f792f33f40b04645d846
+
+      # TODO: This can be removed when upgrading to .NET 6
+      - name: Restore tools
+        run: dotnet tool restore
+
+      - name: Verify Format
+        run: dotnet tool run dotnet-format --check
 
 
   testing:
@@ -38,7 +55,7 @@ jobs:
           nuget-version: '5'
 
       - name: Set up MSBuild
-        uses: microsoft/setup-msbuild@c26a08ba26249b81327e26f6ef381897b6a8754d
+        uses: microsoft/setup-msbuild@ab534842b4bdf384b8aaf93765dc6f721d9f5fab
 
       - name: Print environment
         run: |
@@ -49,14 +66,7 @@ jobs:
           echo "GitHub event: $GITHUB_EVENT"
 
       - name: Checkout repo
-        uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
-
-      - uses: actions/cache@937d24475381cd9c75ae6db12cb4e79714b926ed # 2.1.7
-        with:
-          path: ${{ github.workspace }}/.nuget/packages
-          key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-nuget-
+        uses: actions/checkout@a12a3943b4bdde767164f792f33f40b04645d846
 
       - name: Restore
         run: msbuild /t:restore /p:RestoreLockedMode=true
@@ -69,10 +79,6 @@ jobs:
       # TODO: This can be removed when upgrading to .NET 6
       - name: Restore tools
         run: dotnet tool restore
-        shell: pwsh
-
-      - name: Verify Format
-        run: dotnet tool run dotnet-format --check
         shell: pwsh
 
       - name: Test OSS solution
@@ -94,7 +100,7 @@ jobs:
         include:
           - service_name: Admin
             base_path: ./src
-            gulp: true
+            node: true
           - service_name: Api
             base_path: ./src
           - service_name: Billing
@@ -115,18 +121,17 @@ jobs:
             base_path: ./util
           - service_name: Sso
             base_path: ./bitwarden_license/src
-            gulp: true
+            node: true
     steps:
       - name: Checkout repo
-        uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
+        uses: actions/checkout@a12a3943b4bdde767164f792f33f40b04645d846
 
       - name: Set up Node
-        uses: actions/setup-node@46071b5c7a2e0c34e49c3cb8a0e792e86e18d5ea
+        uses: actions/setup-node@9ced9a43a244f3ac94f13bfd896db8c8f30da67a  # v3.0.0
         with:
-          node-version: '14'
-
-      - name: Update NPM
-        run: npm install -g npm@7
+          cache: 'npm'
+          cache-dependency-path: '**/package-lock.json'
+          node-version: '16'
 
       - name: Print environment
         run: |
@@ -134,14 +139,8 @@ jobs:
           dotnet --info
           node --version
           npm --version
-          gulp --version
           echo "GitHub ref: $GITHUB_REF"
           echo "GitHub event: $GITHUB_EVENT"
-
-      - name: Set up Gulp
-        if: ${{ matrix.gulp }}
-        working-directory: ${{ matrix.base_path }}/${{ matrix.service_name }}
-        run: npm install -g gulp
 
       - name: Restore/Clean service
         working-directory: ${{ matrix.base_path }}/${{ matrix.service_name }}
@@ -151,12 +150,12 @@ jobs:
           echo "Clean"
           dotnet clean -c "Release" -o obj/build-output/publish
 
-      - name: Execute Gulp
-        if: ${{ matrix.gulp }}
+      - name: Build node
+        if: ${{ matrix.node }}
         working-directory: ${{ matrix.base_path }}/${{ matrix.service_name }}
         run: |
-          npm install
-          gulp --gulpfile gulpfile.js build
+          npm ci
+          npm run build
 
       - name: Publish service
         working-directory: ${{ matrix.base_path }}/${{ matrix.service_name }}
@@ -172,7 +171,7 @@ jobs:
           ls -atlh ../../../
 
       - name: Upload service artifact
-        uses: actions/upload-artifact@ee69f02b3dfdecd58bb31b4d133da38ba6fe3700
+        uses: actions/upload-artifact@6673cd052c4cd6fcf4b4e6e60ea986c889389535
         with:
           name: ${{ matrix.service_name }}.zip
           path: ${{ matrix.base_path }}/${{ matrix.service_name }}/${{ matrix.service_name }}.zip
@@ -241,7 +240,7 @@ jobs:
             dotnet: true
     steps:
       - name: Checkout repo
-        uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
+        uses: actions/checkout@a12a3943b4bdde767164f792f33f40b04645d846
 
       ########## Build Docker Image ##########
       - name: Setup service name
@@ -254,7 +253,7 @@ jobs:
 
       - name: Get build artifact
         if: ${{ matrix.dotnet }}
-        uses: actions/download-artifact@3be87be14a055c47b01d3bd88f8fe02320a9bb60  # v2.0.10
+        uses: actions/download-artifact@fb598a63ae348fa914e94cd0ff38f362e927b741
         with:
           name: ${{ matrix.service_name }}.zip
 
@@ -277,7 +276,7 @@ jobs:
 
       ########## ACR ##########
       - name: Login to Azure - QA Subscription
-        uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a
+        uses: Azure/login@1f63701bf3e6892515f1b7ce2d2bf1708b46beaf
         with:
           creds: ${{ secrets.AZURE_QA_KV_CREDENTIALS }}
 
@@ -304,17 +303,21 @@ jobs:
       - name: Login to Azure - Prod Subscription
         if: |
           contains(matrix.docker_repos, 'bitwarden')
-          && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc')
-        uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a
+          && (github.ref == 'refs/heads/master' ||
+            github.ref == 'refs/heads/rc' ||
+            github.ref == 'refs/heads/hotfix-rc')
+        uses: Azure/login@1f63701bf3e6892515f1b7ce2d2bf1708b46beaf
         with:
           creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
 
       - name: Retrieve secrets
         if: |
           contains(matrix.docker_repos, 'bitwarden')
-          && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc')
+          && (github.ref == 'refs/heads/master' ||
+            github.ref == 'refs/heads/rc' ||
+            github.ref == 'refs/heads/hotfix-rc')
         id: retrieve-secrets
-        uses: Azure/get-keyvault-secrets@80ccd3fafe5662407cc2e55f202ee34bfff8c403
+        uses: Azure/get-keyvault-secrets@b5c723b9ac7870c022b8c35befe620b7009b336f
         with:
           keyvault: "bitwarden-prod-kv"
           secrets: "docker-password,
@@ -325,7 +328,9 @@ jobs:
       - name: Log into Docker
         if: |
           contains(matrix.docker_repos, 'bitwarden')
-          && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc')
+          && (github.ref == 'refs/heads/master' ||
+            github.ref == 'refs/heads/rc' ||
+            github.ref == 'refs/heads/hotfix-rc')
         env:
           DOCKER_USERNAME: ${{ steps.retrieve-secrets.outputs.docker-username }}
           DOCKER_PASSWORD: ${{ steps.retrieve-secrets.outputs.docker-password }}
@@ -334,7 +339,9 @@ jobs:
       - name: Setup Docker Trust
         if: |
           contains(matrix.docker_repos, 'bitwarden')
-          && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc')
+          && (github.ref == 'refs/heads/master' ||
+            github.ref == 'refs/heads/rc' ||
+            github.ref == 'refs/heads/hotfix-rc')
         env:
           DCT_DELEGATION_KEY_ID: "c9bde8ec820701516491e5e03d3a6354e7bd66d05fa3df2b0062f68b116dc59c"
           DCT_DELEGATE_KEY: ${{ steps.retrieve-secrets.outputs.dct-delegate-2-key }}
@@ -348,7 +355,9 @@ jobs:
       - name: Tag and Push RC to Docker Hub
         if: |
           contains(matrix.docker_repos, 'bitwarden')
-          && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc')
+          && (github.ref == 'refs/heads/master' ||
+            github.ref == 'refs/heads/rc' ||
+            github.ref == 'refs/heads/hotfix-rc')
         env:
           REGISTRY: bitwarden
         run: |
@@ -364,7 +373,9 @@ jobs:
       - name: Log out of Docker and disable Docker Notary
         if: |
           contains(matrix.docker_repos, 'bitwarden')
-          && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc')
+          && (github.ref == 'refs/heads/master' ||
+            github.ref == 'refs/heads/rc' ||
+            github.ref == 'refs/heads/hotfix-rc')
         run: |
           docker logout
           echo "DOCKER_CONTENT_TRUST=0" >> $GITHUB_ENV
@@ -376,13 +387,15 @@ jobs:
     needs: build-docker
     steps:
       - name: Checkout repo
-        uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
+        uses: actions/checkout@a12a3943b4bdde767164f792f33f40b04645d846
 
       - name: Restore
         run: dotnet tool restore
 
       - name: Make Docker stub
-        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc'
+        if: github.ref == 'refs/heads/master' ||
+          github.ref == 'refs/heads/rc' ||
+          github.ref == 'refs/heads/hotfix-rc'
         run: |
           if [[ "${{ github.ref }}" == "rc" ]]; then
             SETUP_IMAGE="bitwarden/setup:rc"
@@ -401,12 +414,24 @@ jobs:
           touch $STUB_OUTPUT/env/uid.env
           cd docker-stub; zip -r ../docker-stub.zip *; cd ..
 
+      - name: Make Docker stub checksum
+        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc'
+        run: sha256sum docker-stub.zip > docker-stub-sha256.txt
+
       - name: Upload Docker stub artifact
         if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc'
-        uses: actions/upload-artifact@ee69f02b3dfdecd58bb31b4d133da38ba6fe3700
+        uses: actions/upload-artifact@6673cd052c4cd6fcf4b4e6e60ea986c889389535
         with:
           name: docker-stub.zip
-          path: ./docker-stub.zip
+          path: docker-stub.zip
+          if-no-files-found: error
+
+      - name: Upload Docker stub checksum artifact
+        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc'
+        uses: actions/upload-artifact@6673cd052c4cd6fcf4b4e6e60ea986c889389535
+        with:
+          name: docker-stub-sha256.txt
+          path: docker-stub-sha256.txt
           if-no-files-found: error
 
       - name: Build Swagger
@@ -425,12 +450,13 @@ jobs:
         env:
           ASPNETCORE_ENVIRONMENT: Production
           swaggerGen: 'True'
+          DOTNET_ROLL_FORWARD_ON_NO_CANDIDATE_FX: 2
 
       - name: Upload Swagger artifact
-        uses: actions/upload-artifact@ee69f02b3dfdecd58bb31b4d133da38ba6fe3700
+        uses: actions/upload-artifact@6673cd052c4cd6fcf4b4e6e60ea986c889389535
         with:
           name: swagger.json
-          path: ./swagger.json
+          path: swagger.json
           if-no-files-found: error
 
 
@@ -440,6 +466,7 @@ jobs:
     runs-on: ubuntu-20.04
     needs:
       - cloc
+      - lint
       - testing
       - build-artifacts
       - build-docker
@@ -452,12 +479,15 @@ jobs:
           || github.ref == 'refs/heads/hotfix-rc'
         env:
           CLOC_STATUS: ${{ needs.cloc.result }}
+          LINT_STATUS: ${{ needs.lint.result }}
           TESTING_STATUS: ${{ needs.testing.result }}
           BUILD_ARTIFACTS_STATUS: ${{ needs.build-artifacts.result }}
           BUILD_DOCKER_STATUS: ${{ needs.build-docker.result }}
           UPLOAD_STATUS: ${{ needs.upload.result }}
         run: |
           if [ "$CLOC_STATUS" = "failure" ]; then
+              exit 1
+          elif [ "$LINT_STATUS" = "failure" ]; then
               exit 1
           elif [ "$TESTING_STATUS" = "failure" ]; then
               exit 1
@@ -470,21 +500,21 @@ jobs:
           fi
 
       - name: Login to Azure - Prod Subscription
-        uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a
+        uses: Azure/login@1f63701bf3e6892515f1b7ce2d2bf1708b46beaf
         if: failure()
         with:
           creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
 
       - name: Retrieve secrets
         id: retrieve-secrets
-        uses: Azure/get-keyvault-secrets@80ccd3fafe5662407cc2e55f202ee34bfff8c403
+        uses: Azure/get-keyvault-secrets@b5c723b9ac7870c022b8c35befe620b7009b336f
         if: failure()
         with:
           keyvault: "bitwarden-prod-kv"
           secrets: "devops-alerts-slack-webhook-url"
 
       - name: Notify Slack on failure
-        uses: act10ns/slack@e4e71685b9b239384b0f676a63c32367f59c2522  # v1.2.2
+        uses: act10ns/slack@da3191ebe2e67f49b46880b4633f5591a96d1d33  # v1.2.2
         if: failure()
         env:
           SLACK_WEBHOOK_URL: ${{ steps.retrieve-secrets.outputs.devops-alerts-slack-webhook-url }}

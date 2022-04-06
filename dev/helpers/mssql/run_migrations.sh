@@ -12,6 +12,20 @@ DATABASE="vault_dev"
 USER="SA"
 PASSWD=$MSSQL_PASSWORD
 
+while getopts "rs" arg; do
+  case $arg in
+    r)
+      echo "Rerunning the last migration"
+      RERUN=1
+      ;;
+    s)
+      echo "Running for self-host environment"
+      LAST_MIGRATION_FILE="/mnt/data/last_self_host_migration"
+      DATABASE="vault_dev_self_host"
+      ;;
+  esac
+done
+
 if [ ! -f "$LAST_MIGRATION_FILE" ]; then
   echo "$LAST_MIGRATION_FILE not found!"
   echo "This will run all migrations which might cause unexpected behaviour if the database is not empty."
@@ -30,17 +44,6 @@ fi
 [ -z "$LAST_MIGRATION" ]
 PERFORM_MIGRATION=$?
 
-while getopts "r" arg; do
-  case $arg in
-    r)
-      RERUN=1
-      ;;
-  esac
-done
-
-if [ -n "$RERUN" ]; then
-  echo "Rerunning the last migration"
-fi
 
 # Create database if it does not already exist
 QUERY="IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = '$DATABASE')

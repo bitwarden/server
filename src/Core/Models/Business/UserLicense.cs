@@ -85,6 +85,7 @@ namespace Bit.Core.Models.Business
                     .Where(p =>
                         !p.Name.Equals(nameof(Signature)) &&
                         !p.Name.Equals(nameof(SignatureBytes)) &&
+                        !p.Name.Equals(nameof(LicenseType)) &&
                         (
                             !forHash ||
                             (

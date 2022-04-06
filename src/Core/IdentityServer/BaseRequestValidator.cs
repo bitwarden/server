@@ -39,6 +39,8 @@ namespace Bit.Core.IdentityServer
         private readonly ICurrentContext _currentContext;
         private readonly GlobalSettings _globalSettings;
         private readonly IPolicyRepository _policyRepository;
+        private readonly IUserRepository _userRepository;
+        private readonly ICaptchaValidationService _captchaValidationService;
 
         public BaseRequestValidator(
             UserManager<User> userManager,
@@ -54,7 +56,9 @@ namespace Bit.Core.IdentityServer
             ILogger<ResourceOwnerPasswordValidator> logger,
             ICurrentContext currentContext,
             GlobalSettings globalSettings,
-            IPolicyRepository policyRepository)
+            IPolicyRepository policyRepository,
+            IUserRepository userRepository,
+            ICaptchaValidationService captchaValidationService)
         {
             _userManager = userManager;
             _deviceRepository = deviceRepository;
@@ -70,9 +74,11 @@ namespace Bit.Core.IdentityServer
             _currentContext = currentContext;
             _globalSettings = globalSettings;
             _policyRepository = policyRepository;
+            _userRepository = userRepository;
+            _captchaValidationService = captchaValidationService;
         }
 
-        protected async Task ValidateAsync(T context, ValidatedTokenRequest request)
+        protected async Task ValidateAsync(T context, ValidatedTokenRequest request, bool unknownDevice = false)
         {
             var twoFactorToken = request.Raw["TwoFactorToken"]?.ToString();
             var twoFactorProvider = request.Raw["TwoFactorProvider"]?.ToString();
@@ -83,25 +89,32 @@ namespace Bit.Core.IdentityServer
             var (user, valid) = await ValidateContextAsync(context);
             if (!valid)
             {
+                await UpdateFailedAuthDetailsAsync(user, false, unknownDevice);
                 await BuildErrorResultAsync("Username or password is incorrect. Try again.", false, context, user);
                 return;
             }
 
-            var twoFactorRequirement = await RequiresTwoFactorAsync(user, request.GrantType);
-            if (twoFactorRequirement.Item1)
+            var (isTwoFactorRequired, requires2FABecauseNewDevice, twoFactorOrganization) = await RequiresTwoFactorAsync(user, request);
+            if (isTwoFactorRequired)
             {
                 // Just defaulting it
                 var twoFactorProviderType = TwoFactorProviderType.Authenticator;
                 if (!twoFactorRequest || !Enum.TryParse(twoFactorProvider, out twoFactorProviderType))
                 {
-                    await BuildTwoFactorResultAsync(user, twoFactorRequirement.Item2, context);
+                    await BuildTwoFactorResultAsync(user, twoFactorOrganization, context, requires2FABecauseNewDevice);
                     return;
                 }
 
-                var verified = await VerifyTwoFactor(user, twoFactorRequirement.Item2,
+                BeforeVerifyTwoFactor(user, twoFactorProviderType, requires2FABecauseNewDevice);
+
+                var verified = await VerifyTwoFactor(user, twoFactorOrganization,
                     twoFactorProviderType, twoFactorToken);
+
+                AfterVerifyTwoFactor(user, twoFactorProviderType, requires2FABecauseNewDevice);
+
                 if (!verified && twoFactorProviderType != TwoFactorProviderType.Remember)
                 {
+                    await UpdateFailedAuthDetailsAsync(user, true, unknownDevice);
                     await BuildErrorResultAsync("Two-step token is invalid. Try again.", true, context, user);
                     return;
                 }
@@ -109,7 +122,7 @@ namespace Bit.Core.IdentityServer
                 {
                     // Delay for brute force.
                     await Task.Delay(2000);
-                    await BuildTwoFactorResultAsync(user, twoFactorRequirement.Item2, context);
+                    await BuildTwoFactorResultAsync(user, twoFactorOrganization, context, requires2FABecauseNewDevice);
                     return;
                 }
             }
@@ -176,10 +189,11 @@ namespace Bit.Core.IdentityServer
                 customResponse.Add("TwoFactorToken", token);
             }
 
+            await ResetFailedAuthDetailsAsync(user);
             await SetSuccessResult(context, user, claims, customResponse);
         }
 
-        protected async Task BuildTwoFactorResultAsync(User user, Organization organization, T context)
+        protected async Task BuildTwoFactorResultAsync(User user, Organization organization, T context, bool requires2FABecauseNewDevice)
         {
             var providerKeys = new List<byte>();
             var providers = new Dictionary<string, Dictionary<string, object>>();
@@ -204,8 +218,23 @@ namespace Bit.Core.IdentityServer
 
             if (!enabledProviders.Any())
             {
-                await BuildErrorResultAsync("No two-step providers enabled.", false, context, user);
-                return;
+                if (!requires2FABecauseNewDevice)
+                {
+                    await BuildErrorResultAsync("No two-step providers enabled.", false, context, user);
+                    return;
+                }
+
+                var emailProvider = new TwoFactorProvider
+                {
+                    MetaData = new Dictionary<string, object> { ["Email"] = user.Email.ToLowerInvariant() },
+                    Enabled = true
+                };
+                enabledProviders.Add(new KeyValuePair<TwoFactorProviderType, TwoFactorProvider>(
+                    TwoFactorProviderType.Email, emailProvider));
+                user.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
+                {
+                    [TwoFactorProviderType.Email] = emailProvider
+                });
             }
 
             foreach (var provider in enabledProviders)
@@ -225,7 +254,7 @@ namespace Bit.Core.IdentityServer
             if (enabledProviders.Count() == 1 && enabledProviders.First().Key == TwoFactorProviderType.Email)
             {
                 // Send email now if this is their only 2FA method
-                await _userService.SendTwoFactorEmailAsync(user);
+                await _userService.SendTwoFactorEmailAsync(user, requires2FABecauseNewDevice);
             }
         }
 
@@ -261,12 +290,12 @@ namespace Bit.Core.IdentityServer
 
         protected abstract void SetErrorResult(T context, Dictionary<string, object> customResponse);
 
-        private async Task<Tuple<bool, Organization>> RequiresTwoFactorAsync(User user, string grantType)
+        private async Task<Tuple<bool, bool, Organization>> RequiresTwoFactorAsync(User user, ValidatedTokenRequest request)
         {
-            if (grantType == "client_credentials")
+            if (request.GrantType == "client_credentials")
             {
                 // Do not require MFA for api key logins
-                return new Tuple<bool, Organization>(false, null);
+                return new Tuple<bool, bool, Organization>(false, false, null);
             }
 
             var individualRequired = _userManager.SupportsUserTwoFactor &&
@@ -288,7 +317,15 @@ namespace Bit.Core.IdentityServer
                 }
             }
 
-            return new Tuple<bool, Organization>(individualRequired || firstEnabledOrg != null, firstEnabledOrg);
+            var requires2FA = individualRequired || firstEnabledOrg != null;
+            var requires2FABecauseNewDevice = !requires2FA
+                                              && user.EmailVerified
+                                              && request.GrantType != "authorization_code"
+                                              && await IsNewDeviceAndNotTheFirstOneAsync(user, request);
+
+            requires2FA = requires2FA || requires2FABecauseNewDevice;
+
+            return new Tuple<bool, bool, Organization>(requires2FA, requires2FABecauseNewDevice, firstEnabledOrg);
         }
 
         private async Task<bool> IsValidAuthTypeAsync(User user, string grantType)
@@ -364,6 +401,33 @@ namespace Bit.Core.IdentityServer
                 Type = type,
                 PushToken = string.IsNullOrWhiteSpace(devicePushToken) ? null : devicePushToken
             };
+        }
+
+        private void BeforeVerifyTwoFactor(User user, TwoFactorProviderType type, bool requires2FABecauseNewDevice)
+        {
+            if (type == TwoFactorProviderType.Email
+                &&
+                requires2FABecauseNewDevice)
+            {
+                user.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
+                {
+                    [TwoFactorProviderType.Email] = new TwoFactorProvider
+                    {
+                        MetaData = new Dictionary<string, object> { ["Email"] = user.Email.ToLowerInvariant() },
+                        Enabled = true
+                    }
+                });
+            }
+        }
+
+        private void AfterVerifyTwoFactor(User user, TwoFactorProviderType type, bool requires2FABecauseNewDevice)
+        {
+            if (type == TwoFactorProviderType.Email
+                &&
+                requires2FABecauseNewDevice)
+            {
+                user.ClearTwoFactorProviders();
+            }
         }
 
         private async Task<bool> VerifyTwoFactor(User user, Organization organization, TwoFactorProviderType type,
@@ -471,6 +535,23 @@ namespace Bit.Core.IdentityServer
 
             return await _deviceRepository.GetByIdentifierAsync(GetDeviceFromRequest(request).Identifier, user.Id);
         }
+
+        protected async Task<bool> IsNewDeviceAndNotTheFirstOneAsync(User user, ValidatedTokenRequest request)
+        {
+            if (user == null)
+            {
+                return default;
+            }
+
+            var devices = await _deviceRepository.GetManyByUserIdAsync(user.Id);
+            if (!devices.Any())
+            {
+                return false;
+            }
+
+            return !devices.Any(d => d.Identifier == GetDeviceFromRequest(request)?.Identifier);
+        }
+
         private async Task<Device> SaveDeviceAsync(User user, ValidatedTokenRequest request)
         {
             var device = GetDeviceFromRequest(request);
@@ -501,6 +582,44 @@ namespace Bit.Core.IdentityServer
             }
 
             return null;
+        }
+
+        private async Task ResetFailedAuthDetailsAsync(User user)
+        {
+            // Early escape if db hit not necessary
+            if (user == null || user.FailedLoginCount == 0)
+            {
+                return;
+            }
+
+            user.FailedLoginCount = 0;
+            user.RevisionDate = DateTime.UtcNow;
+            await _userRepository.ReplaceAsync(user);
+        }
+
+        private async Task UpdateFailedAuthDetailsAsync(User user, bool twoFactorInvalid, bool unknownDevice)
+        {
+            if (user == null)
+            {
+                return;
+            }
+
+            var utcNow = DateTime.UtcNow;
+            user.FailedLoginCount = ++user.FailedLoginCount;
+            user.LastFailedLoginDate = user.RevisionDate = utcNow;
+            await _userRepository.ReplaceAsync(user);
+
+            if (_captchaValidationService.ValidateFailedAuthEmailConditions(unknownDevice, user.FailedLoginCount))
+            {
+                if (twoFactorInvalid)
+                {
+                    await _mailService.SendFailedTwoFactorAttemptsEmailAsync(user.Email, utcNow, _currentContext.IpAddress);
+                }
+                else
+                {
+                    await _mailService.SendFailedLoginAttemptsEmailAsync(user.Email, utcNow, _currentContext.IpAddress);
+                }
+            }
         }
     }
 }

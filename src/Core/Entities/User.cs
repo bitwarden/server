@@ -60,6 +60,8 @@ namespace Bit.Core.Entities
         public DateTime RevisionDate { get; set; } = DateTime.UtcNow;
         public bool ForcePasswordReset { get; set; }
         public bool UsesKeyConnector { get; set; }
+        public int FailedLoginCount { get; set; }
+        public DateTime? LastFailedLoginDate { get; set; }
 
         public void SetNewId()
         {
@@ -135,6 +137,11 @@ namespace Bit.Core.Entities
             // When replacing with system.text remember to remove the extra serialization in WebAuthnTokenProvider.
             TwoFactorProviders = JsonHelpers.LegacySerialize(providers, JsonHelpers.LegacyEnumKeyResolver);
             _twoFactorProviders = providers;
+        }
+
+        public void ClearTwoFactorProviders()
+        {
+            SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>());
         }
 
         public TwoFactorProvider GetTwoFactorProvider(TwoFactorProviderType provider)

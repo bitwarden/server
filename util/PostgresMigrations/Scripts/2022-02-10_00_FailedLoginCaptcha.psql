@@ -1,0 +1,10 @@
+START TRANSACTION;
+
+ALTER TABLE "User" ADD "FailedLoginCount" integer NOT NULL DEFAULT 0;
+
+ALTER TABLE "User" ADD "LastFailedLoginDate" timestamp without time zone NULL;
+
+INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+VALUES ('20220301211818_FailedLoginCaptcha', '5.0.12');
+
+COMMIT;

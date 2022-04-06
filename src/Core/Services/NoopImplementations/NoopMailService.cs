@@ -75,6 +75,11 @@ namespace Bit.Core.Services
             return Task.FromResult(0);
         }
 
+        public Task SendNewDeviceLoginTwoFactorEmailAsync(string email, string token)
+        {
+            return Task.CompletedTask;
+        }
+
         public Task SendWelcomeEmailAsync(User user)
         {
             return Task.FromResult(0);
@@ -217,6 +222,16 @@ namespace Bit.Core.Services
         }
 
         public Task SendOTPEmailAsync(string email, string token)
+        {
+            return Task.FromResult(0);
+        }
+
+        public Task SendFailedLoginAttemptsEmailAsync(string email, DateTime utcNow, string ip)
+        {
+            return Task.FromResult(0);
+        }
+
+        public Task SendFailedTwoFactorAttemptsEmailAsync(string email, DateTime utcNow, string ip)
         {
             return Task.FromResult(0);
         }
