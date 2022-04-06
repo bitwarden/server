@@ -1,10 +1,10 @@
 CREATE PROCEDURE [dbo].[OrganizationSponsorship_DeleteExpired]
+    @ValidUntilBeforeDate DATETIME2 (7)
 AS
 BEGIN
     SET NOCOUNT ON
 
     DECLARE @BatchSize INT = 100
-    DECLARE @Now DATETIME2(7) = GETUTCDATE()
 
     WHILE @BatchSize > 0
     BEGIN
@@ -12,7 +12,7 @@ BEGIN
         FROM
             [dbo].[OrganizationSponsorship]
         WHERE
-            [ValidUntil] < @Now
+            [ValidUntil] < @ValidUntilBeforeDate
 
         SET @BatchSize = @@ROWCOUNT
     END

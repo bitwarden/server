@@ -31,7 +31,11 @@ namespace Bit.Admin.Jobs
                 return;
             }
             _logger.LogInformation(Constants.BypassFiltersEventId, "Execute job task: DeleteExpiredSponsorshipsAsync");
-            await _maintenanceRepository.DeleteExpiredSponsorshipsAsync();
+
+            // allow a 90 day grace period before deleting
+            var deleteDate = DateTime.UtcNow.AddDays(-90);
+
+            await _maintenanceRepository.DeleteExpiredSponsorshipsAsync(deleteDate);
             _logger.LogInformation(Constants.BypassFiltersEventId, "Finished job task: DeleteExpiredSponsorshipsAsync");
         }
     }
