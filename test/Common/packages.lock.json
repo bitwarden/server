@@ -22,6 +22,16 @@
           "xunit.extensibility.core": "[2.2.0, 3.0.0)"
         }
       },
+      "Kralizek.AutoFixture.Extensions.MockHttp": {
+        "type": "Direct",
+        "requested": "[1.2.0, )",
+        "resolved": "1.2.0",
+        "contentHash": "6zmks7/5mVczazv910N7V2EdiU6B+rY61lwdgVO0o2iZuTI6KI3T+Hgkrjv0eGOKYucq2OMC+gnAc5Ej2ajoTQ==",
+        "dependencies": {
+          "AutoFixture": "4.11.0",
+          "RichardSzalay.MockHttp": "6.0.0"
+        }
+      },
       "Microsoft.NET.Test.Sdk": {
         "type": "Direct",
         "requested": "[16.6.1, )",
@@ -1585,6 +1595,11 @@
           "System.Configuration.ConfigurationManager": "4.7.0",
           "System.Diagnostics.DiagnosticSource": "4.7.1"
         }
+      },
+      "RichardSzalay.MockHttp": {
+        "type": "Transitive",
+        "resolved": "6.0.0",
+        "contentHash": "bStGNqIX/MGYtML7K3EzdsE/k5HGVAcg7XgN23TQXGXqxNC9fvYFR94fA0sGM5hAT36R+BBGet6ZDQxXL/IPxg=="
       },
       "runtime.debian.8-x64.runtime.native.System.Security.Cryptography.OpenSsl": {
         "type": "Transitive",

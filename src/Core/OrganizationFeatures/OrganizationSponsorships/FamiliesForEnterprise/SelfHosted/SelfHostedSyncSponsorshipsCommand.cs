@@ -20,18 +20,20 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
 {
     public class SelfHostedSyncSponsorshipsCommand : BaseIdentityClientService, ISelfHostedSyncSponsorshipsCommand
     {
-        private readonly GlobalSettings _globalSettings;
+        private readonly IGlobalSettings _globalSettings;
         private readonly IOrganizationSponsorshipRepository _organizationSponsorshipRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly IOrganizationConnectionRepository _organizationConnectionRepository;
 
         public SelfHostedSyncSponsorshipsCommand(
+        IHttpClientFactory httpFactory,
         IOrganizationSponsorshipRepository organizationSponsorshipRepository,
         IOrganizationUserRepository organizationUserRepository,
         IOrganizationConnectionRepository organizationConnectionRepository,
         GlobalSettings globalSettings,
         ILogger<SelfHostedSyncSponsorshipsCommand> logger)
         : base(
+            httpFactory,
             globalSettings.Installation.IdentityUri,
             globalSettings.Installation.ApiUri,
             "api.installation",

@@ -13,5 +13,6 @@ namespace Bit.Core.Settings
         InstallationSettings Installation { get; set; }
         IFileStorageSettings Attachment { get; set; }
         IConnectionStringSettings Storage { get; set; }
+        IBaseServiceUriSettings BaseServiceUri { get; set; }
     }
 }

@@ -14,6 +14,7 @@ namespace Bit.Core.Services
 {
     public abstract class BaseIdentityClientService : IDisposable
     {
+        private readonly IHttpClientFactory _httpFactory;
         private readonly string _identityScope;
         private readonly string _identityClientId;
         private readonly string _identityClientSecret;
@@ -23,6 +24,7 @@ namespace Bit.Core.Services
         private DateTime? _nextAuthAttempt = null;
 
         public BaseIdentityClientService(
+            IHttpClientFactory httpFactory,
             string baseClientServerUri,
             string baseIdentityServerUri,
             string identityScope,
@@ -30,21 +32,18 @@ namespace Bit.Core.Services
             string identityClientSecret,
             ILogger<BaseIdentityClientService> logger)
         {
+            _httpFactory = httpFactory;
             _identityScope = identityScope;
             _identityClientId = identityClientId;
             _identityClientSecret = identityClientSecret;
             _logger = logger;
 
-            Client = new HttpClient
-            {
-                BaseAddress = new Uri(baseClientServerUri)
-            };
+            Client = _httpFactory.CreateClient();
+            Client.BaseAddress = new Uri(baseClientServerUri);
             Client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
-            IdentityClient = new HttpClient
-            {
-                BaseAddress = new Uri(baseIdentityServerUri)
-            };
+            IdentityClient = _httpFactory.CreateClient();
+            IdentityClient.BaseAddress = new Uri(baseIdentityServerUri);
             IdentityClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
         }
 
@@ -53,12 +52,12 @@ namespace Bit.Core.Services
         protected string AccessToken { get; private set; }
 
         protected Task SendAsync(HttpMethod method, string path) =>
-            SendAsync<object, object>(method, path);
+            SendAsync<object, object>(method, path, null);
 
         protected Task SendAsync<TRequest>(HttpMethod method, string path, TRequest body) =>
             SendAsync<TRequest, object>(method, path, body);
 
-        protected async Task<TResult> SendAsync<TRequest, TResult>(HttpMethod method, string path, TRequest requestModel = default)
+        protected async Task<TResult> SendAsync<TRequest, TResult>(HttpMethod method, string path, TRequest requestModel)
         {
             var tokenStateResponse = await HandleTokenStateAsync();
             if (!tokenStateResponse)
