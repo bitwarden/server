@@ -18,14 +18,14 @@ namespace Bit.Core.Models.Api.Response.OrganizationSponsorships
 
         public OrganizationSponsorshipResponseModel(OrganizationSponsorshipData sponsorshipData)
         {
-            SponsoringOrganizationUserId = SponsoringOrganizationUserId;
-            FriendlyName = FriendlyName;
-            OfferedToEmail = OfferedToEmail;
-            PlanSponsorshipType = PlanSponsorshipType;
-            LastSyncDate = LastSyncDate;
-            ValidUntil = ValidUntil;
-            ToDelete = ToDelete;
-            CloudSponsorshipRemoved = CloudSponsorshipRemoved;
+            SponsoringOrganizationUserId = sponsorshipData.SponsoringOrganizationUserId;
+            FriendlyName = sponsorshipData.FriendlyName;
+            OfferedToEmail = sponsorshipData.OfferedToEmail;
+            PlanSponsorshipType = sponsorshipData.PlanSponsorshipType;
+            LastSyncDate = sponsorshipData.LastSyncDate;
+            ValidUntil = sponsorshipData.ValidUntil;
+            ToDelete = sponsorshipData.ToDelete;
+            CloudSponsorshipRemoved = sponsorshipData.CloudSponsorshipRemoved;
         }
 
         public OrganizationSponsorshipData ToOrganizationSponsorship()

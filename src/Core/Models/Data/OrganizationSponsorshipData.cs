@@ -15,6 +15,5 @@ namespace Bit.Core.Models.Data
         public bool ToDelete { get; set; }
 
         public bool CloudSponsorshipRemoved { get; set; }
-
     }
 }

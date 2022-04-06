@@ -8,7 +8,5 @@ namespace Bit.Core.Models.Data
         public string BillingSyncKey { get; set; }
         public Guid SponsoringOrganizationCloudId { get; set; }
         public IEnumerable<OrganizationSponsorshipData> SponsorshipsBatch { get; set; }
-
     }
-
 }
