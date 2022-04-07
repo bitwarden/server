@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
+using Bit.Core.Models;
 using Bit.Core.Models.Api.Request.OrganizationSponsorships;
 using Bit.Core.Models.Api.Response.OrganizationSponsorships;
 using Bit.Core.Models.Data;
@@ -44,20 +45,25 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
             _organizationConnectionRepository = organizationConnectionRepository;
         }
 
-        public async Task SyncOrganization(Guid organizationId, Guid cloudOrganizationId, OrganizationConnection billingSyncKey)
+        public async Task SyncOrganization(Guid organizationId, Guid cloudOrganizationId, OrganizationConnection billingSyncConnection)
         {
             if (!_globalSettings.EnableCloudCommunication)
             {
                 _logger.LogInformation("Failed to sync instance with cloud - Cloud communication is disabled in global settings");
                 return;
             }
-            if (!billingSyncKey.Enabled)
+            if (!billingSyncConnection.Enabled)
             {
                 throw new BadRequestException($"Billing Sync Key disabled for organization {organizationId}");
             }
-            if (string.IsNullOrWhiteSpace(billingSyncKey.Config))
+            if (string.IsNullOrWhiteSpace(billingSyncConnection.Config))
             {
                 throw new BadRequestException($"No Billing Sync Key known for organization {organizationId}");
+            }
+            var billingSyncConfig = billingSyncConnection.GetConfig<BillingSyncConfig>();
+            if (billingSyncConfig == null || string.IsNullOrWhiteSpace(billingSyncConfig.BillingSyncKey))
+            {
+                throw new BadRequestException($"Failed to get Billing Sync Key for organization {organizationId}");
             }
 
             var organizationSponsorshipsDict = (await _organizationSponsorshipRepository.GetManyBySponsoringOrganizationAsync(organizationId))
@@ -68,7 +74,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
             {
                 var response = await SendAsync<OrganizationSponsorshipSyncRequestModel, OrganizationSponsorshipSyncResponseModel>(HttpMethod.Post, "organizationSponsorships/sync", new OrganizationSponsorshipSyncRequestModel
                 {
-                    BillingSyncKey = billingSyncKey.Config,
+                    BillingSyncKey = billingSyncConfig.BillingSyncKey,
                     SponsoringOrganizationCloudId = cloudOrganizationId,
                     SponsorshipsBatch = orgSponsorshipsBatch.Select(s => new OrganizationSponsorshipRequestModel(s))
                 });
