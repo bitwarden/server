@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
@@ -39,6 +40,13 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
             if (sponsorship.PlanSponsorshipType == null)
             {
                 throw new BadRequestException("Cannot set up sponsorship without a known sponsorship type.");
+            }
+
+            // Do not allow self-hosted sponsorships that haven't been synced for > 0.5 year
+            if (sponsorship.LastSyncDate != null && DateTime.UtcNow.Subtract(sponsorship.LastSyncDate.Value).TotalDays > 182.5)
+            {
+                await _organizationSponsorshipRepository.DeleteAsync(sponsorship);
+                throw new BadRequestException("This sponsorship offer is more than 6 months old and has expired.");
             }
 
             // Check org to sponsor's product type
