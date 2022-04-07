@@ -10,8 +10,4 @@
     <ProjectReference Include="..\Core\Core.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Include="NewRelic.Agent" Version="8.41.0" />
-  </ItemGroup>
-
 </Project>

@@ -25,6 +25,6 @@ namespace Bit.Core.Services
         Task SendNotificationsAsync();
         Task HandleTimedOutRequestsAsync();
         Task<EmergencyAccessViewData> ViewAsync(Guid id, User user);
-        Task<AttachmentResponseData> GetAttachmentDownloadAsync(Guid id, string cipherId, string attachmentId, User user);
+        Task<AttachmentResponseData> GetAttachmentDownloadAsync(Guid id, Guid cipherId, string attachmentId, User user);
     }
 }

@@ -139,6 +139,11 @@ namespace Bit.Core.Entities
             _twoFactorProviders = providers;
         }
 
+        public void ClearTwoFactorProviders()
+        {
+            SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>());
+        }
+
         public TwoFactorProvider GetTwoFactorProvider(TwoFactorProviderType provider)
         {
             var providers = GetTwoFactorProviders();

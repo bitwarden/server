@@ -59,27 +59,27 @@ namespace Bit.Api.Controllers
         }
 
         [HttpGet("{id}")]
-        public async Task<EmergencyAccessGranteeDetailsResponseModel> Get(string id)
+        public async Task<EmergencyAccessGranteeDetailsResponseModel> Get(Guid id)
         {
             var userId = _userService.GetProperUserId(User);
-            var result = await _emergencyAccessService.GetAsync(new Guid(id), userId.Value);
+            var result = await _emergencyAccessService.GetAsync(id, userId.Value);
             return new EmergencyAccessGranteeDetailsResponseModel(result);
         }
 
         [HttpGet("{id}/policies")]
-        public async Task<ListResponseModel<PolicyResponseModel>> Policies(string id)
+        public async Task<ListResponseModel<PolicyResponseModel>> Policies(Guid id)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
-            var policies = await _emergencyAccessService.GetPoliciesAsync(new Guid(id), user);
+            var policies = await _emergencyAccessService.GetPoliciesAsync(id, user);
             var responses = policies.Select<Policy, PolicyResponseModel>(policy => new PolicyResponseModel(policy));
             return new ListResponseModel<PolicyResponseModel>(responses);
         }
 
         [HttpPut("{id}")]
         [HttpPost("{id}")]
-        public async Task Put(string id, [FromBody] EmergencyAccessUpdateRequestModel model)
+        public async Task Put(Guid id, [FromBody] EmergencyAccessUpdateRequestModel model)
         {
-            var emergencyAccess = await _emergencyAccessRepository.GetByIdAsync(new Guid(id));
+            var emergencyAccess = await _emergencyAccessRepository.GetByIdAsync(id);
             if (emergencyAccess == null)
             {
                 throw new NotFoundException();
@@ -91,10 +91,10 @@ namespace Bit.Api.Controllers
 
         [HttpDelete("{id}")]
         [HttpPost("{id}/delete")]
-        public async Task Delete(string id)
+        public async Task Delete(Guid id)
         {
             var userId = _userService.GetProperUserId(User);
-            await _emergencyAccessService.DeleteAsync(new Guid(id), userId.Value);
+            await _emergencyAccessService.DeleteAsync(id, userId.Value);
         }
 
         [HttpPost("invite")]
@@ -105,76 +105,76 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("{id}/reinvite")]
-        public async Task Reinvite(string id)
+        public async Task Reinvite(Guid id)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
-            await _emergencyAccessService.ResendInviteAsync(user, new Guid(id));
+            await _emergencyAccessService.ResendInviteAsync(user, id);
         }
 
         [HttpPost("{id}/accept")]
-        public async Task Accept(string id, [FromBody] OrganizationUserAcceptRequestModel model)
+        public async Task Accept(Guid id, [FromBody] OrganizationUserAcceptRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
-            await _emergencyAccessService.AcceptUserAsync(new Guid(id), user, model.Token, _userService);
+            await _emergencyAccessService.AcceptUserAsync(id, user, model.Token, _userService);
         }
 
         [HttpPost("{id}/confirm")]
-        public async Task Confirm(string id, [FromBody] OrganizationUserConfirmRequestModel model)
+        public async Task Confirm(Guid id, [FromBody] OrganizationUserConfirmRequestModel model)
         {
             var userId = _userService.GetProperUserId(User);
-            await _emergencyAccessService.ConfirmUserAsync(new Guid(id), model.Key, userId.Value);
+            await _emergencyAccessService.ConfirmUserAsync(id, model.Key, userId.Value);
         }
 
         [HttpPost("{id}/initiate")]
-        public async Task Initiate(string id)
+        public async Task Initiate(Guid id)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
-            await _emergencyAccessService.InitiateAsync(new Guid(id), user);
+            await _emergencyAccessService.InitiateAsync(id, user);
         }
 
         [HttpPost("{id}/approve")]
-        public async Task Accept(string id)
+        public async Task Accept(Guid id)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
-            await _emergencyAccessService.ApproveAsync(new Guid(id), user);
+            await _emergencyAccessService.ApproveAsync(id, user);
         }
 
         [HttpPost("{id}/reject")]
-        public async Task Reject(string id)
+        public async Task Reject(Guid id)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
-            await _emergencyAccessService.RejectAsync(new Guid(id), user);
+            await _emergencyAccessService.RejectAsync(id, user);
         }
 
         [HttpPost("{id}/takeover")]
-        public async Task<EmergencyAccessTakeoverResponseModel> Takeover(string id)
+        public async Task<EmergencyAccessTakeoverResponseModel> Takeover(Guid id)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
-            var (result, grantor) = await _emergencyAccessService.TakeoverAsync(new Guid(id), user);
+            var (result, grantor) = await _emergencyAccessService.TakeoverAsync(id, user);
             return new EmergencyAccessTakeoverResponseModel(result, grantor);
         }
 
         [HttpPost("{id}/password")]
-        public async Task Password(string id, [FromBody] EmergencyAccessPasswordRequestModel model)
+        public async Task Password(Guid id, [FromBody] EmergencyAccessPasswordRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
-            await _emergencyAccessService.PasswordAsync(new Guid(id), user, model.NewMasterPasswordHash, model.Key);
+            await _emergencyAccessService.PasswordAsync(id, user, model.NewMasterPasswordHash, model.Key);
         }
 
         [HttpPost("{id}/view")]
-        public async Task<EmergencyAccessViewResponseModel> ViewCiphers(string id)
+        public async Task<EmergencyAccessViewResponseModel> ViewCiphers(Guid id)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
-            var viewResult = await _emergencyAccessService.ViewAsync(new Guid(id), user);
+            var viewResult = await _emergencyAccessService.ViewAsync(id, user);
             return new EmergencyAccessViewResponseModel(_globalSettings, viewResult.EmergencyAccess, viewResult.Ciphers);
         }
 
         [HttpGet("{id}/{cipherId}/attachment/{attachmentId}")]
-        public async Task<AttachmentResponseModel> GetAttachmentData(string id, string cipherId, string attachmentId)
+        public async Task<AttachmentResponseModel> GetAttachmentData(Guid id, Guid cipherId, string attachmentId)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             var result =
-                await _emergencyAccessService.GetAttachmentDownloadAsync(new Guid(id), cipherId, attachmentId, user);
+                await _emergencyAccessService.GetAttachmentDownloadAsync(id, cipherId, attachmentId, user);
             return new AttachmentResponseModel(result);
         }
     }

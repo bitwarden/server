@@ -6,18 +6,22 @@ using System.Threading.Tasks;
 using Bit.Admin.Models;
 using Bit.Core.Settings;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Admin.Controllers
 {
     public class HomeController : Controller
     {
         private readonly GlobalSettings _globalSettings;
-        private HttpClient _httpClient = new HttpClient();
+        private readonly HttpClient _httpClient = new HttpClient();
+        private readonly ILogger<HomeController> _logger;
 
-        public HomeController(GlobalSettings globalSettings)
+        public HomeController(GlobalSettings globalSettings, ILogger<HomeController> logger)
         {
             _globalSettings = globalSettings;
+            _logger = logger;
         }
 
         [Authorize]
@@ -40,10 +44,10 @@ namespace Bit.Admin.Controllers
 
         public async Task<IActionResult> GetLatestDockerHubVersion(string repository, CancellationToken cancellationToken)
         {
+            var requestUri = $"https://hub.docker.com/v2/repositories/bitwarden/{repository}/tags/";
             try
             {
-                var response = await _httpClient.GetAsync(
-                $"https://hub.docker.com/v2/repositories/bitwarden/{repository}/tags/", cancellationToken);
+                var response = await _httpClient.GetAsync(requestUri, cancellationToken);
                 if (response.IsSuccessStatusCode)
                 {
                     using var jsonDocument = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(cancellationToken), cancellationToken: cancellationToken);
@@ -60,17 +64,21 @@ namespace Bit.Admin.Controllers
                     }
                 }
             }
-            catch (HttpRequestException) { }
+            catch (HttpRequestException e)
+            {
+                _logger.LogError(e, $"Error encountered while sending GET request to {requestUri}");
+                return new JsonResult("Unable to fetch latest version") { StatusCode = StatusCodes.Status500InternalServerError };
+            }
 
             return new JsonResult("-");
         }
 
         public async Task<IActionResult> GetInstalledWebVersion(CancellationToken cancellationToken)
         {
+            var requestUri = $"{_globalSettings.BaseServiceUri.InternalVault}/version.json";
             try
             {
-                var response = await _httpClient.GetAsync(
-                    $"{_globalSettings.BaseServiceUri.InternalVault}/version.json", cancellationToken);
+                var response = await _httpClient.GetAsync(requestUri, cancellationToken);
                 if (response.IsSuccessStatusCode)
                 {
                     using var jsonDocument = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(cancellationToken), cancellationToken: cancellationToken);
@@ -78,7 +86,11 @@ namespace Bit.Admin.Controllers
                     return new JsonResult(root.GetProperty("version").GetString());
                 }
             }
-            catch (HttpRequestException) { }
+            catch (HttpRequestException e)
+            {
+                _logger.LogError(e, $"Error encountered while sending GET request to {requestUri}");
+                return new JsonResult("Unable to fetch installed version") { StatusCode = StatusCodes.Status500InternalServerError };
+            }
 
             return new JsonResult("-");
         }
