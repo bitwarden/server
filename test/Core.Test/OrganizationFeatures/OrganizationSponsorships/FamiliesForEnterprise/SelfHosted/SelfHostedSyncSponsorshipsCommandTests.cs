@@ -55,13 +55,13 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
         [Theory]
         [BitAutoData]
         public async Task SyncOrganization_BillingSyncKeyDisabled_ThrowsBadRequest(
-            Guid organizationId, OrganizationConnection billingSyncKey)
+            Guid organizationId, Guid cloudOrganizationId, OrganizationConnection billingSyncConnection)
         {
             var sutProvider = GetSutProvider();
-            billingSyncKey.Enabled = false;
+            billingSyncConnection.Enabled = false;
 
             var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-                sutProvider.Sut.SyncOrganization(organizationId, billingSyncKey));
+                sutProvider.Sut.SyncOrganization(organizationId, cloudOrganizationId, billingSyncConnection));
 
             Assert.Contains($"Billing Sync Key disabled for organization {organizationId}", exception.Message);
 
@@ -76,13 +76,13 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
         [Theory]
         [BitAutoData]
         public async Task SyncOrganization_BillingSyncKeyEmpty_ThrowsBadRequest(
-            Guid organizationId, OrganizationConnection billingSyncKey)
+            Guid organizationId, Guid cloudOrganizationId, OrganizationConnection billingSyncConnection)
         {
             var sutProvider = GetSutProvider();
-            billingSyncKey.Config = "";
+            billingSyncConnection.Config = "";
 
             var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-                sutProvider.Sut.SyncOrganization(organizationId, billingSyncKey));
+                sutProvider.Sut.SyncOrganization(organizationId, cloudOrganizationId, billingSyncConnection));
 
             Assert.Contains($"No Billing Sync Key known for organization {organizationId}", exception.Message);
 
@@ -97,11 +97,11 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
         [Theory]
         [BitAutoData]
         public async Task SyncOrganization_CloudCommunicationDisabled_EarlyReturn(
-            Guid organizationId, OrganizationConnection billingSyncKey)
+            Guid organizationId, Guid cloudOrganizationId, OrganizationConnection billingSyncConnection)
         {
             var sutProvider = GetSutProvider(false);
 
-            await sutProvider.Sut.SyncOrganization(organizationId, billingSyncKey);
+            await sutProvider.Sut.SyncOrganization(organizationId, cloudOrganizationId, billingSyncConnection);
 
             await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
                 .DidNotReceiveWithAnyArgs()
