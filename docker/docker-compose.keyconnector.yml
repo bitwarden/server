@@ -1,0 +1,25 @@
+---
+version: "3.8"
+
+services:
+
+  key-connector:
+    environment:
+      keyConnectorSettings__webVaultUri: https://${DOMAIN:-bitwarden.localhost}
+      keyConnectorSettings__identityServerUri: "http://identity:5000"
+      keyConnectorSettings__database__provider: "json"
+      keyConnectorSettings__database__jsonFilePath: "/etc/bitwarden/key-connector/data.json"
+      keyConnectorSettings__rsaKey__provider: "certificate"
+      keyConnectorSettings__certificate__provider: "filesystem"
+      keyConnectorSettings__certificate__filesystemPath: "/etc/bitwarden/key-connector/bwkc.pfx"
+      keyConnectorSettings__certificate__filesystemPassword: "superstrongpassword"
+    image: bitwarden/key-connector:${KEYCONNECTORTAG:-latest}
+    restart: always
+    volumes:
+      - key-connector:/etc/bitwarden/key-connector
+      - ca-certificates:/etc/bitwarden/ca-certificates
+      - logs-key-connector:/etc/bitwarden/logs/KeyConnector
+
+volumes:
+  key-connector:
+  logs-key-connector:

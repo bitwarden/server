@@ -24,7 +24,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY docker/nginx/confd/nginx-config.toml /etc/confd/conf.d/
 COPY docker/nginx/confd/nginx-config.conf.tmpl /etc/confd/templates/
 
-RUN wget -O /usr/local/bin/confd https://github.com/kelseyhightower/confd/releases/download/v0.16.0/confd-0.16.0-linux-amd64
+ADD https://github.com/kelseyhightower/confd/releases/download/v0.16.0/confd-0.16.0-linux-amd64 /usr/local/bin/confd
 RUN chmod +x /usr/local/bin/confd
 
 COPY docker/nginx/nginx.conf /etc/nginx
