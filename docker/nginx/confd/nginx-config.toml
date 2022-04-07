@@ -6,7 +6,6 @@ keys = [
   "BW_CA_CERT",
   "BW_CAPTCHA",
   "BW_CSP",
-  "BW_DOMAIN",
   "BW_ENABLE_KEY_CONNECTOR",
   "BW_ENABLE_SSL",
   "BW_REAL_IPS",

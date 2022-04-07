@@ -6,10 +6,8 @@ services:
   admin:
     depends_on:
       - mssql
-    environment:
-      globalSettings__baseServiceUri__vault: https://${DOMAIN:-bitwarden.localhost}
     env_file:
-      - global.env
+      - global-settings.env
     image: bitwarden/admin:${CORETAG:-latest}
     restart: always
     volumes:
@@ -19,10 +17,8 @@ services:
       - logs-admin:/etc/bitwarden/logs/Admin
 
   api:
-    environment:
-      globalSettings__baseServiceUri__vault: https://${DOMAIN:-bitwarden.localhost}
     env_file:
-      - global.env
+      - global-settings.env
     image: bitwarden/api:${CORETAG:-latest}
     restart: always
     volumes:
@@ -32,20 +28,16 @@ services:
       - logs-api:/etc/bitwarden/logs/Api
 
   attachments:
-    environment:
-      globalSettings__baseServiceUri__vault: https://${DOMAIN:-bitwarden.localhost}
     env_file:
-      - global.env
+      - global-settings.env
     image: bitwarden/attachments:${CORETAG:-latest}
     restart: always
     volumes:
       - attachments:/etc/bitwarden/core/attachments
 
   events:
-    environment:
-      globalSettings__baseServiceUri__vault: https://${DOMAIN:-bitwarden.localhost}
     env_file:
-      - global.env
+      - global-settings.env
     image: bitwarden/events:${CORETAG:-latest}
     restart: always
     volumes:
@@ -53,10 +45,8 @@ services:
       - logs-events:/etc/bitwarden/logs/Events
         
   icons:
-    environment:
-      globalSettings__baseServiceUri__vault: https://${DOMAIN:-bitwarden.localhost}
     env_file:
-      - global.env
+      - global-settings.env
     image: bitwarden/icons:${CORETAG:-latest}
     restart: always
     volumes:
@@ -64,10 +54,8 @@ services:
       - logs-icons:/etc/bitwarden/logs/Icons
 
   identity:
-    environment:
-      globalSettings__baseServiceUri__vault: https://${DOMAIN:-bitwarden.localhost}
     env_file:
-      - global.env
+      - global-settings.env
     image: bitwarden/identity:${CORETAG:-latest}
     restart: always
     volumes:
@@ -78,10 +66,11 @@ services:
       - logs-identity:/etc/bitwarden/logs/Identity
       
   mssql:
+    env_file:
+      - global-settings.env
     environment:
       ACCEPT_EULA: "Y"
       MSSQL_PID: "Express"
-      SA_PASSWORD: "${SA_PASSWORD:-superstrongpassword}"
     image: mcr.microsoft.com/mssql/server:2017-CU18-ubuntu-16.04
     restart: always
     volumes:
@@ -94,10 +83,11 @@ services:
       - api
       - identity
       - web
+    env_file:
+      - global-settings.env
     environment:
       BW_ENABLE_SSL: "true"
       BW_GENERATE_CERT: "true"
-      BW_DOMAIN: ${DOMAIN:-bitwarden.localhost}
     image: bitwarden/nginx:${CORETAG:-latest}
     restart: always
     ports:
@@ -108,10 +98,8 @@ services:
       - ssl:/etc/bitwarden/ssl
 
   notifications:
-    environment:
-      globalSettings__baseServiceUri__vault: https://${DOMAIN:-bitwarden.localhost}
     env_file:
-      - global.env
+      - global-settings.env
     image: bitwarden/notifications:${CORETAG:-latest}
     restart: always
     volumes:
@@ -119,10 +107,8 @@ services:
       - logs-notifications:/etc/bitwarden/logs/Notifications
 
   sso:
-    environment:
-      globalSettings__baseServiceUri__vault: https://${DOMAIN:-bitwarden.localhost}
     env_file:
-      - global.env
+      - global-settings.env
     image: bitwarden/sso:${CORETAG:-latest}
     restart: always
     volumes:
@@ -133,10 +119,8 @@ services:
       - logs-sso:/etc/bitwarden/logs/SSO
         
   web:
-    environment:
-      globalSettings__baseServiceUri__vault: https://${DOMAIN:-bitwarden.localhost}
     env_file:
-      - global.env
+      - global-settings.env
     image: bitwarden/web:${WEBTAG:-latest}
     restart: always
     volumes:

@@ -225,6 +225,3 @@ src/Identity/Identity.zip
 src/Notifications/Notifications.zip
 bitwarden_license/src/Portal/Portal.zip
 bitwarden_license/src/Sso/Sso.zip
-
-# Self-hosted environment file
-global.env
