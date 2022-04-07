@@ -57,11 +57,6 @@ server {
     add_header X-Robots-Tag "noindex, nofollow";
   }
 
-  location /alive {
-    return 200 'alive';
-    add_header Content-Type text/plain;
-  }
-
   location = /app-id.json {
     proxy_pass http://{{ getenv "BW_SERVICE_NAME_WEB" "web"}}:{{ getenv "BW_SERVICE_PORT_WEB" "5000" }}/app-id.json;
 {{ if getenv "BW_ENABLE_SSL" }}
