@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using Bit.Core.Services;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -39,6 +40,17 @@ namespace Bit.Test.Common.ApplicationFactories
                         .UseInMemoryDatabase("test_database")
                         .Options;
                 });
+
+                // QUESTION: The normal licensing service should run fine on developer machines but not in CI
+                // should we have a fork here to leave the normal service for developers?
+                var licensingService = services.First(sd => sd.ServiceType == typeof(ILicensingService));
+                services.Remove(licensingService);
+                services.AddSingleton<ILicensingService, NoopLicensingService>();
+
+                // QUESTION: Should these unit tests instead run as self hosted installs so this is done automatically?
+                var pushRegistrationService = services.First(sd => sd.ServiceType == typeof(IPushRegistrationService));
+                services.Remove(pushRegistrationService);
+                services.AddSingleton<IPushRegistrationService, NoopPushRegistrationService>();
             });
         }
 
