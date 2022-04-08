@@ -51,6 +51,12 @@ namespace Bit.Test.Common.ApplicationFactories
                 var pushRegistrationService = services.First(sd => sd.ServiceType == typeof(IPushRegistrationService));
                 services.Remove(pushRegistrationService);
                 services.AddSingleton<IPushRegistrationService, NoopPushRegistrationService>();
+
+                // Even though we are cloud we might as well use the repository version so **some** events are tested
+                // instead of using Noop for this service
+                var eventWriteService = services.First(sd => sd.ServiceType == typeof(IEventWriteService));
+                services.Remove(eventWriteService);
+                services.AddSingleton<IEventWriteService, RepositoryEventWriteService>();
             });
         }
 
