@@ -25,7 +25,7 @@ namespace Bit.Test.Common.ApplicationFactories
                     // Manually insert a EF provider so that ConfigureServices will add EF repositories but we will override
                     // DbContextOptions to use an in memory database
                     new KeyValuePair<string, string>("globalSettings:databaseProvider", "postgres"),
-                    new KeyValuePair<string, string>("globalSettings:mySql:connectionString", "Host=localhost;Username=test;Password=test;Database=test"),
+                    new KeyValuePair<string, string>("globalSettings:postgres:connectionString", "Host=localhost;Username=test;Password=test;Database=test"),
                 });
             });
 
