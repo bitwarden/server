@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -13,15 +13,15 @@ namespace Bit.Test.Common.ApplicationFactories
 {
     public static class WebApplicationFactoryExtensions
     {
-        public static async Task<HttpContext> SendAsync(this TestServer server, 
-            HttpMethod method, 
-            string requestUri, 
+        public static async Task<HttpContext> SendAsync(this TestServer server,
+            HttpMethod method,
+            string requestUri,
             HttpContent content = null,
             Action<HttpContext> extraConfiguration = null)
         {
 
 
-            return await server.SendAsync(httpContext => 
+            return await server.SendAsync(httpContext =>
             {
                 httpContext.Connection.RemoteIpAddress = IPAddress.Parse("1.1.1.1");
 
