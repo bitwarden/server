@@ -11,12 +11,7 @@ namespace Bit.Api
     {
         public static void Main(string[] args)
         {
-            CreateHostBuilder(args).Build().Run();
-        }
-
-        public static IHostBuilder CreateHostBuilder(string[] args)
-        {
-            return Host
+            Host
                 .CreateDefaultBuilder(args)
                 .ConfigureCustomAppConfiguration(args)
                 .ConfigureWebHostDefaults(webBuilder =>
@@ -47,7 +42,9 @@ namespace Bit.Api
 
                             return e.Level >= LogEventLevel.Error;
                         }));
-                });
+                })
+                    .Build()
+                    .Run();
         }
     }
 }
