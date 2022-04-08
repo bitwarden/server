@@ -17,7 +17,7 @@ chmod +x /etc/update-motd.d/99-bitwarden-welcome
 
 #
 # Setup First Run Script
-# ref: https://github.com/digitalocean/marketplace-partners/blob/master/marketplace_docs/build-an-image-fabric.md#running-commands-on-first-login
+# ref: https://github.com/digitalocean/marketplace-partners#running-commands-on-first-login
 #
 
 chmod +x /opt/bitwarden/install-bitwarden.sh

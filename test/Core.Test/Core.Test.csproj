@@ -25,7 +25,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Core\Core.csproj" />
     <ProjectReference Include="..\..\src\Api\Api.csproj" />
-    <ProjectReference Include="..\common\Common.csproj" />
+    <ProjectReference Include="..\Common\Common.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Remove="Utilities\data\embeddedResource.txt" />

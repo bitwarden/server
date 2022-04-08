@@ -1,0 +1,86 @@
+{
+  "variables": {
+    "do_token": "{{env `DIGITALOCEAN_TOKEN`}}",
+    "image_name": "bitwarden-20-04-snapshot-{{timestamp}}",
+    "apt_packages_1": "fail2ban ca-certificates curl gnupg lsb-release",
+    "apt_packages_2": "docker-ce docker-ce-cli containerd.io",
+    "application_name": "Bitwarden",
+    "application_version": "1.47.1"
+  },
+  "sensitive-variables": [
+    "do_token"
+  ],
+  "builders": [
+    {
+      "type": "digitalocean",
+      "api_token": "{{user `do_token`}}",
+      "image": "ubuntu-20-04-x64",
+      "region": "nyc3",
+      "size": "s-1vcpu-1gb",
+      "ssh_username": "root",
+      "snapshot_name": "{{user `image_name`}}"
+    }
+  ],
+  "provisioners": [
+    {
+      "type": "shell",
+      "inline": [
+        "cloud-init status --wait"
+      ]
+    },
+    {
+      "type": "file",
+      "source": "files/etc/",
+      "destination": "/etc/"
+    },
+    {
+      "type": "file",
+      "source": "files/opt/",
+      "destination": "/opt/"
+    },
+    {
+      "type": "file",
+      "source": "files/var/",
+      "destination": "/var/"
+    },
+    {
+      "type": "shell",
+      "environment_vars": [
+        "DEBIAN_FRONTEND=noninteractive",
+        "LC_ALL=C",
+        "LANG=en_US.UTF-8",
+        "LC_CTYPE=en_US.UTF-8"
+      ],
+      "inline": [
+        "apt -qqy update",
+        "apt -qqy -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' full-upgrade",
+        "apt -qqy -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' install {{user `apt_packages_1`}}",
+        "curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg",
+        "echo \"deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable\" | tee /etc/apt/sources.list.d/docker.list > /dev/null",
+        "apt -qqy update",
+        "apt -qqy -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' install {{user `apt_packages_2`}}",
+        "apt -qqy clean",
+        "curl -L \"https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)\" -o /usr/local/bin/docker-compose",
+        "chmod +x /usr/local/bin/docker-compose"
+      ]
+    },
+    {
+      "type": "shell",
+      "environment_vars": [
+        "application_name={{user `application_name`}}",
+        "application_version={{user `application_version`}}",
+        "DEBIAN_FRONTEND=noninteractive",
+        "LC_ALL=C",
+        "LANG=en_US.UTF-8",
+        "LC_CTYPE=en_US.UTF-8"
+      ],
+      "scripts": [
+        "scripts/01-setup-first-run.sh",
+        "scripts/02-ufw-bitwarden.sh",
+        "scripts/03-force-ssh-logout.sh",
+        "scripts/90-cleanup.sh",
+        "scripts/99-img-check.sh"
+      ]
+    }
+  ]
+}

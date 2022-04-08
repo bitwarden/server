@@ -38,7 +38,7 @@ namespace Bit.Identity
             services.AddOptions();
 
             // Settings
-            var globalSettings = services.AddGlobalSettingsServices(Configuration);
+            var globalSettings = services.AddGlobalSettingsServices(Configuration, Environment);
             if (!globalSettings.SelfHosted)
             {
                 services.Configure<IpRateLimitOptions>(Configuration.GetSection("IpRateLimitOptions"));

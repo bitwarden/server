@@ -22,6 +22,15 @@
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       }
+    },
+    "Sso-SelfHost": {
+      "commandName": "Project",
+      "launchBrowser": false,
+      "applicationUrl": "http://localhost:51823",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "developSelfHosted": "true"
+      }
     }
   }
 }

@@ -164,6 +164,14 @@ From within Rider, launch both the Api project and the Identity project by click
 
 ### Troubleshooting
 * If you get a 404 error, the projects may be listening on a non-default port. Check the output of your running projects to check the port they are listening on.
+* If you get an error while restoring the nuget packages like `error NU1403: Package content hash validation failed for ...` then these following commands should fix the problem:
+  ```
+  dotnet nuget locals all --clear
+  git clean -xfd
+  git rm **/packages.lock.json -f
+  dotnet restore
+  ```
+  For more details read https://github.com/NuGet/Home/issues/7921#issuecomment-478152479
 
 
 # <a name="user-secrets"></a>Appendix A (User Secrets)

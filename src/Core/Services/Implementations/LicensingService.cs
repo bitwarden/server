@@ -45,12 +45,12 @@ namespace Bit.Core.Services
             _logger = logger;
             _globalSettings = globalSettings;
 
-            var certThumbprint = environment.IsDevelopment() && !_globalSettings.SelfHosted ?
+            var certThumbprint = environment.IsDevelopment() ?
                 "207E64A231E8AA32AAF68A61037C075EBEBD553F" :
                 "‎B34876439FCDA2846505B2EFBBA6C4A951313EBE";
             if (_globalSettings.SelfHosted)
             {
-                _certificate = CoreHelpers.GetEmbeddedCertificateAsync("licensing.cer", null)
+                _certificate = CoreHelpers.GetEmbeddedCertificateAsync(environment.IsDevelopment() ? "licensing_dev.cer" : "licensing.cer", null)
                     .GetAwaiter().GetResult();
             }
             else if (CoreHelpers.SettingHasValue(_globalSettings.Storage?.ConnectionString) &&
