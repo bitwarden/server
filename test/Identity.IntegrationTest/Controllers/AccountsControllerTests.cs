@@ -7,6 +7,7 @@ using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Bit.Core.Enums;
 using Bit.Core.Models.Api.Request.Accounts;
 using Bit.Core.Utilities;
 using Bit.Infrastructure.EntityFramework.Repositories;
@@ -101,10 +102,10 @@ namespace Bit.Identity.IntegrationTest.Controllers
         }
 
         [Fact]
-        public async Task TokenEndpoint_Success()
+        public async Task TokenEndpoint_GrantTypePassword_Success()
         {
             var deviceId = "92b9d953-b9b6-4eaf-9d3e-11d57144dfeb";
-            var username = "test+token@email.com";
+            var username = "test+tokenpassword@email.com";
 
             await _factory.RegisterAsync(new RegisterRequestModel
             {
@@ -124,7 +125,83 @@ namespace Bit.Identity.IntegrationTest.Controllers
                 new KeyValuePair<string, string>("password", "master_password_hash"),
             }), context => context.Request.Headers.Add("Auth-Email", CoreHelpers.Base64UrlEncodeString(username)));
 
+            using var body = await AssertDefaultTokenBodyAsync(context);
+            var root = body.RootElement;
+            AssertHelper.AssertJsonProperty(root, "ForcePasswordReset", JsonValueKind.False);
+            AssertHelper.AssertJsonProperty(root, "ResetMasterPassword", JsonValueKind.False);
+            var kdf = AssertHelper.AssertJsonProperty(root, "Kdf", JsonValueKind.Number).GetInt32();
+            Assert.Equal(0, kdf);
+            var kdfIterations = AssertHelper.AssertJsonProperty(root, "KdfIterations", JsonValueKind.Number).GetInt32();
+            Assert.Equal(5000, kdfIterations);
+        }
+
+        [Fact]
+        public async Task TokenEndpoint_GrantTypeRefreshToken_Success()
+        {
+            var deviceId = "5a7b19df-0c9d-46bf-a104-8034b5a17182";
+            var username = "test+tokenrefresh@email.com";
+
+            await _factory.RegisterAsync(new RegisterRequestModel
+            {
+                Email = username,
+                MasterPasswordHash = "master_password_hash",
+            });
+
+            var (_, refreshToken) = await _factory.TokenFromPasswordAsync(username, "master_password_hash", deviceId);
+
+            var context = await _factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new List<KeyValuePair<string, string>>
+            {
+                new KeyValuePair<string, string>("grant_type", "refresh_token"),
+                new KeyValuePair<string, string>("client_id", "web"),
+                new KeyValuePair<string, string>("refresh_token", refreshToken),
+            }));
+
+            await AssertDefaultTokenBodyAsync(context);
+        }
+
+        [Fact]
+        public async Task TokenEndpoint_GrantTypeClientCredentials_Success()
+        {
+            var username = "test+tokenclientcredentials@email.com";
+            var deviceId = "8f14a393-edfe-40ba-8c67-a856cb89c509";
+
+            await _factory.RegisterAsync(new RegisterRequestModel
+            {
+                Email = username,
+                MasterPasswordHash = "master_password_hash",
+            });
+
+            var database = _factory.GetDatabaseContext();
+            var user = await database.Users
+                .FirstAsync(u => u.Email == username);
+
+            var context = await _factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new List<KeyValuePair<string, string>>
+            {
+                new KeyValuePair<string, string>("grant_type", "client_credentials"),
+                new KeyValuePair<string, string>("client_id", $"user.{user.Id}"),
+                new KeyValuePair<string, string>("client_secret", user.ApiKey),
+                new KeyValuePair<string, string>("scope", "api"),
+                new KeyValuePair<string, string>("DeviceIdentifier", deviceId),
+                new KeyValuePair<string, string>("DeviceType", ((int)DeviceType.FirefoxBrowser).ToString()),
+                new KeyValuePair<string, string>("DeviceName", "firefox")
+            }));
+
             using var body = await AssertHelper.ResponseIsAsync<JsonDocument>(context);
+            var root = body.RootElement;
+
+            Assert.Equal(JsonValueKind.Object, root.ValueKind);
+            AssertHelper.AssertJsonProperty(root, "access_token", JsonValueKind.String);
+            var expiresIn = AssertHelper.AssertJsonProperty(root, "expires_in", JsonValueKind.Number).GetInt32();
+            Assert.Equal(3600, expiresIn);
+            var tokenType = AssertHelper.AssertJsonProperty(root, "token_type", JsonValueKind.String).GetString();
+            Assert.Equal("Bearer", tokenType);
+            var scope = AssertHelper.AssertJsonProperty(root, "scope", JsonValueKind.String).GetString();
+            Assert.Equal("api", scope);
+        }
+
+        private static async Task<JsonDocument> AssertDefaultTokenBodyAsync(HttpContext httpContext)
+        {
+            var body = await AssertHelper.ResponseIsAsync<JsonDocument>(httpContext);
             var root = body.RootElement;
 
             Assert.Equal(JsonValueKind.Object, root.ValueKind);
@@ -136,34 +213,8 @@ namespace Bit.Identity.IntegrationTest.Controllers
             AssertHelper.AssertJsonProperty(root, "refresh_token", JsonValueKind.String);
             var scope = AssertHelper.AssertJsonProperty(root, "scope", JsonValueKind.String).GetString();
             Assert.Equal("api offline_access", scope);
-            AssertHelper.AssertJsonProperty(root, "ForcePasswordReset", JsonValueKind.False);
-            AssertHelper.AssertJsonProperty(root, "ResetMasterPassword", JsonValueKind.False);
-            var kdf = AssertHelper.AssertJsonProperty(root, "Kdf", JsonValueKind.Number).GetInt32();
-            Assert.Equal(0, kdf);
-            var kdfIterations = AssertHelper.AssertJsonProperty(root, "KdfIterations", JsonValueKind.Number).GetInt32();
-            Assert.Equal(5000, kdfIterations);
+
+            return body;
         }
-
-        // [Fact]
-        // public async Task AuthorizeEndpoint_Success()
-        // {
-        //     var email = "test+authorize@email.com";
-
-        //     await _factory.RegisterAsync(new RegisterRequestModel
-        //     {
-        //         Email = email,
-        //         MasterPasswordHash = "master_password_hash"
-        //     });
-
-        //     var database = _factory.GetDatabaseContext();
-        //     var user = await database.Users.SingleAsync(u => u.Email == email);
-
-        //     var context = await _factory.Server.PostAsync("/connect/authorize", new FormUrlEncodedContent(new List<KeyValuePair<string, string>>
-        //     {
-        //         new KeyValuePair<string, string>("client_id", "something")
-        //     }));
-
-        //     Assert.Equal(200, context.Response.StatusCode);
-        // }
     }
 }
