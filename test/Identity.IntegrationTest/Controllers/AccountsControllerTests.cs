@@ -144,26 +144,26 @@ namespace Bit.Identity.IntegrationTest.Controllers
             Assert.Equal(5000, kdfIterations);
         }
 
-        [Fact]
-        public async Task AuthorizeEndpoint_Success()
-        {
-            var email = "test+authorize@email.com";
+        // [Fact]
+        // public async Task AuthorizeEndpoint_Success()
+        // {
+        //     var email = "test+authorize@email.com";
 
-            await _factory.RegisterAsync(new RegisterRequestModel
-            {
-                Email = email,
-                MasterPasswordHash = "master_password_hash"
-            });
+        //     await _factory.RegisterAsync(new RegisterRequestModel
+        //     {
+        //         Email = email,
+        //         MasterPasswordHash = "master_password_hash"
+        //     });
 
-            var database = _factory.GetDatabaseContext();
-            var user = await database.Users.SingleAsync(u => u.Email == email);
+        //     var database = _factory.GetDatabaseContext();
+        //     var user = await database.Users.SingleAsync(u => u.Email == email);
 
-            var context = await _factory.Server.PostAsync("/connect/authorize", new FormUrlEncodedContent(new List<KeyValuePair<string, string>>
-            {
-                new KeyValuePair<string, string>("client_id", "something")
-            }));
+        //     var context = await _factory.Server.PostAsync("/connect/authorize", new FormUrlEncodedContent(new List<KeyValuePair<string, string>>
+        //     {
+        //         new KeyValuePair<string, string>("client_id", "something")
+        //     }));
 
-            Assert.Equal(200, context.Response.StatusCode);
-        }
+        //     Assert.Equal(200, context.Response.StatusCode);
+        // }
     }
 }

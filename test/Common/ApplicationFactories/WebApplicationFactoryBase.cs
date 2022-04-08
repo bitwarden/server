@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.AspNetCore.Hosting;
@@ -54,9 +55,14 @@ namespace Bit.Test.Common.ApplicationFactories
 
                 // Even though we are cloud we might as well use the repository version so **some** events are tested
                 // instead of using Noop for this service
+                // TODO: Install and use azurite in CI pipeline
                 var eventWriteService = services.First(sd => sd.ServiceType == typeof(IEventWriteService));
                 services.Remove(eventWriteService);
                 services.AddSingleton<IEventWriteService, RepositoryEventWriteService>();
+
+                var eventRepositoryService = services.First(sd => sd.ServiceType == typeof(IEventRepository));
+                services.Remove(eventRepositoryService);
+                services.AddSingleton<IEventRepository, EventRepository>();
             });
         }
 
