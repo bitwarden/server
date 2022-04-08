@@ -950,11 +950,11 @@
       },
       "Microsoft.EntityFrameworkCore": {
         "type": "Transitive",
-        "resolved": "5.0.12",
-        "contentHash": "NsGCTrPfGUXS4QFCLM5SlnfyED8JUswpcnguA3MSTBq6Zjnmkxjzrm6eDg4MBuiebZX2nfGONMavOKRWaZDjMw==",
+        "resolved": "5.0.15",
+        "contentHash": "ThCWW0PV3EgUtgOsSHyNsOdJCzMTAPLDf31CHV0YG3NA45vRNJYyas9JVwmQbNg3ZaFR5UOJd4XlaKBcHs10ZA==",
         "dependencies": {
-          "Microsoft.EntityFrameworkCore.Abstractions": "5.0.12",
-          "Microsoft.EntityFrameworkCore.Analyzers": "5.0.12",
+          "Microsoft.EntityFrameworkCore.Abstractions": "5.0.15",
+          "Microsoft.EntityFrameworkCore.Analyzers": "5.0.15",
           "Microsoft.Extensions.Caching.Memory": "5.0.0",
           "Microsoft.Extensions.DependencyInjection": "5.0.2",
           "Microsoft.Extensions.Logging": "5.0.0",
@@ -965,13 +965,21 @@
       },
       "Microsoft.EntityFrameworkCore.Abstractions": {
         "type": "Transitive",
-        "resolved": "5.0.12",
-        "contentHash": "AWRxHGp55hAAT4P8E/9soD5TpSaD1uBByvEMnhdRopILgbZSh90War+wVBAou3h+6kxV2MSp1WErE1w+BVZtjA=="
+        "resolved": "5.0.15",
+        "contentHash": "dI4246ydDdlwgZJ/9XD+VN2NpnIN118hrupp5TS+vStPmHZrCEo5YLjn9yfch7uta4MtBrVdVDBq6dBNBFWD5w=="
       },
       "Microsoft.EntityFrameworkCore.Analyzers": {
         "type": "Transitive",
-        "resolved": "5.0.12",
-        "contentHash": "MTxvfKtEeQN5E5fBJO/jNfBdcKqw///Pro4uI2o0q8ukMaLsff4TgC8cfPBtzkz6wh55z0b4kldUv2r34Ix3sg=="
+        "resolved": "5.0.15",
+        "contentHash": "QfJBhr49Jmvt+zJf1VPSBPq2ZPY5PlpiDSF3UFV37joyKiWMDyEsNTHd3RLFzagC4k8cmSKTgk+7Y49XwDvPJQ=="
+      },
+      "Microsoft.EntityFrameworkCore.InMemory": {
+        "type": "Transitive",
+        "resolved": "5.0.15",
+        "contentHash": "G0M1/0ejm6RuHqRywt9bgBdOn0czWmSJBLpNyRtw0KDtBPDEVSNmXSM1a60b0r14Fd/uaPWkWFVPaHngslAiwg==",
+        "dependencies": {
+          "Microsoft.EntityFrameworkCore": "5.0.15"
+        }
       },
       "Microsoft.EntityFrameworkCore.Relational": {
         "type": "Transitive",
@@ -3660,6 +3668,8 @@
           "Core": "1.47.1",
           "Identity": "1.47.1",
           "Microsoft.AspNetCore.Mvc.Testing": "5.0.15",
+          "Microsoft.EntityFrameworkCore.InMemory": "5.0.15",
+          "Microsoft.Extensions.Configuration": "5.0.0",
           "Microsoft.NET.Test.Sdk": "16.6.1",
           "NSubstitute": "4.2.2",
           "xunit": "2.4.1"
