@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Linq;
 using System.Text.Json;
+using System.Threading.Tasks;
 using Bit.Core.Utilities;
+using Microsoft.AspNetCore.Http;
 using Xunit;
 using Xunit.Sdk;
 
@@ -63,6 +65,11 @@ namespace Bit.Test.Common.Helpers
 
             Assert.Equal(jsonValueKind, subElement.ValueKind);
             return subElement;
+        }
+
+        public async static Task<T> ResponseIsAsync<T>(HttpContext context)
+        {
+            return await JsonSerializer.DeserializeAsync<T>(context.Response.Body);
         }
     }
 }
