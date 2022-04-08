@@ -279,7 +279,7 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException("Invalid user name or password");
             }
 
-            var callingUserId = _userService.GetProperUserId(User);
+            var callingUserId = user.Id;
             await _organizationService.UpdateUserResetPasswordEnrollmentAsync(
                 new Guid(orgId), new Guid(userId), model.ResetPasswordKey, callingUserId);
         }
