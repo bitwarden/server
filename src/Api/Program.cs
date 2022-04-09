@@ -43,8 +43,8 @@ namespace Bit.Api
                             return e.Level >= LogEventLevel.Error;
                         }));
                 })
-                    .Build()
-                    .Run();
+                .Build()
+                .Run();
         }
     }
 }

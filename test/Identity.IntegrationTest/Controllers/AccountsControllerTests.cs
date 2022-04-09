@@ -113,16 +113,16 @@ namespace Bit.Identity.IntegrationTest.Controllers
                 MasterPasswordHash = "master_password_hash"
             });
 
-            var context = await _factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new List<KeyValuePair<string, string>>
+            var context = await _factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
             {
-                new KeyValuePair<string, string>("scope", "api offline_access"),
-                new KeyValuePair<string, string>("client_id", "web"),
-                new KeyValuePair<string, string>("deviceType", "10"),
-                new KeyValuePair<string, string>("deviceIdentifier", deviceId),
-                new KeyValuePair<string, string>("deviceName", "firefox"),
-                new KeyValuePair<string, string>("grant_type", "password"),
-                new KeyValuePair<string, string>("username", username),
-                new KeyValuePair<string, string>("password", "master_password_hash"),
+                { "scope", "api offline_access" },
+                { "client_id", "web" },
+                { "deviceType", "10" },
+                { "deviceIdentifier", deviceId },
+                { "deviceName", "firefox" },
+                { "grant_type", "password" },
+                { "username", username },
+                { "password", "master_password_hash" },
             }), context => context.Request.Headers.Add("Auth-Email", CoreHelpers.Base64UrlEncodeString(username)));
 
             using var body = await AssertDefaultTokenBodyAsync(context);
@@ -149,11 +149,11 @@ namespace Bit.Identity.IntegrationTest.Controllers
 
             var (_, refreshToken) = await _factory.TokenFromPasswordAsync(username, "master_password_hash", deviceId);
 
-            var context = await _factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new List<KeyValuePair<string, string>>
+            var context = await _factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
             {
-                new KeyValuePair<string, string>("grant_type", "refresh_token"),
-                new KeyValuePair<string, string>("client_id", "web"),
-                new KeyValuePair<string, string>("refresh_token", refreshToken),
+                { "grant_type", "refresh_token" },
+                { "client_id", "web" },
+                { "refresh_token", refreshToken },
             }));
 
             await AssertDefaultTokenBodyAsync(context);
@@ -175,15 +175,15 @@ namespace Bit.Identity.IntegrationTest.Controllers
             var user = await database.Users
                 .FirstAsync(u => u.Email == username);
 
-            var context = await _factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new List<KeyValuePair<string, string>>
+            var context = await _factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
             {
-                new KeyValuePair<string, string>("grant_type", "client_credentials"),
-                new KeyValuePair<string, string>("client_id", $"user.{user.Id}"),
-                new KeyValuePair<string, string>("client_secret", user.ApiKey),
-                new KeyValuePair<string, string>("scope", "api"),
-                new KeyValuePair<string, string>("DeviceIdentifier", deviceId),
-                new KeyValuePair<string, string>("DeviceType", ((int)DeviceType.FirefoxBrowser).ToString()),
-                new KeyValuePair<string, string>("DeviceName", "firefox")
+                { "grant_type", "client_credentials" },
+                { "client_id", $"user.{user.Id}" },
+                { "client_secret", user.ApiKey },
+                { "scope", "api" },
+                { "DeviceIdentifier", deviceId },
+                { "DeviceType", ((int)DeviceType.FirefoxBrowser).ToString() },
+                { "DeviceName", "firefox" },
             }));
 
             using var body = await AssertHelper.ResponseIsAsync<JsonDocument>(context);

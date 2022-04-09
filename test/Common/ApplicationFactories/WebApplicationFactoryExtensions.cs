@@ -5,10 +5,8 @@ using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Primitives;
-
 namespace Bit.Test.Common.ApplicationFactories
 {
     public static class WebApplicationFactoryExtensions
@@ -19,8 +17,6 @@ namespace Bit.Test.Common.ApplicationFactories
             HttpContent content = null,
             Action<HttpContext> extraConfiguration = null)
         {
-
-
             return await server.SendAsync(httpContext =>
             {
                 httpContext.Connection.RemoteIpAddress = IPAddress.Parse("1.1.1.1");
@@ -41,18 +37,15 @@ namespace Bit.Test.Common.ApplicationFactories
                 extraConfiguration?.Invoke(httpContext);
             });
         }
-
         public static Task<HttpContext> PostAsync(this TestServer server,
             string requestUri,
             HttpContent content,
             Action<HttpContext> extraConfiguration = null)
             => SendAsync(server, HttpMethod.Post, requestUri, content, extraConfiguration);
-
         public static Task<HttpContext> GetAsync(this TestServer server,
             string requestUri,
             Action<HttpContext> extraConfiguration = null)
             => SendAsync(server, HttpMethod.Get, requestUri, content: null, extraConfiguration);
-
         public static async Task<string> ReadBodyAsStringAsync(this HttpContext context)
         {
             using var sr = new StreamReader(context.Response.Body);

@@ -24,16 +24,16 @@ namespace Bit.Test.Common.ApplicationFactories
 
         public async Task<(string Token, string RefreshToken)> TokenFromPasswordAsync(string username, string password, string deviceIdentifier = DefaultDeviceIdentifier, string clientId = "web", DeviceType deviceType = DeviceType.FirefoxBrowser, string deviceName = "firefox")
         {
-            var context = await Server.PostAsync("/connect/token", new FormUrlEncodedContent(new List<KeyValuePair<string, string>>
+            var context = await Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
             {
-                new KeyValuePair<string, string>("scope", "api offline_access"),
-                new KeyValuePair<string, string>("client_id", clientId),
-                new KeyValuePair<string, string>("deviceType", ((int)deviceType).ToString()),
-                new KeyValuePair<string, string>("deviceIdentifier", deviceIdentifier),
-                new KeyValuePair<string, string>("deviceName", deviceName),
-                new KeyValuePair<string, string>("grant_type", "password"),
-                new KeyValuePair<string, string>("username", username),
-                new KeyValuePair<string, string>("password", password),
+                { "scope", "api offline_access" },
+                { "client_id", clientId },
+                { "deviceType", ((int)deviceType).ToString() },
+                { "deviceIdentifier", deviceIdentifier },
+                { "deviceName", deviceName },
+                { "grant_type", "password" },
+                { "username", username },
+                { "password", password },
             }), context => context.Request.Headers.Add("Auth-Email", CoreHelpers.Base64UrlEncodeString(username)));
 
             using var body = await AssertHelper.ResponseIsAsync<JsonDocument>(context);

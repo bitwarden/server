@@ -22,12 +22,12 @@ namespace Bit.Test.Common.ApplicationFactories
         {
             builder.ConfigureAppConfiguration(c =>
             {
-                c.AddInMemoryCollection(new List<KeyValuePair<string, string>>()
+                c.AddInMemoryCollection(new Dictionary<string, string>
                 {
                     // Manually insert a EF provider so that ConfigureServices will add EF repositories but we will override
                     // DbContextOptions to use an in memory database
-                    new KeyValuePair<string, string>("globalSettings:databaseProvider", "postgres"),
-                    new KeyValuePair<string, string>("globalSettings:postgreSql:connectionString", "Host=localhost;Username=test;Password=test;Database=test"),
+                    { "globalSettings:databaseProvider", "postgres" },
+                    { "globalSettings:postgreSql:connectionString", "Host=localhost;Username=test;Password=test;Database=test" },
                 });
             });
 
@@ -48,12 +48,12 @@ namespace Bit.Test.Common.ApplicationFactories
                 services.Remove(licensingService);
                 services.AddSingleton<ILicensingService, NoopLicensingService>();
 
-                // QUESTION: Should these unit tests instead run as self hosted installs so this is done automatically?
+                // QUESTION: Should these integration tests instead run as self hosted installs so this is done automatically?
                 var pushRegistrationService = services.First(sd => sd.ServiceType == typeof(IPushRegistrationService));
                 services.Remove(pushRegistrationService);
                 services.AddSingleton<IPushRegistrationService, NoopPushRegistrationService>();
 
-                // Even though we are cloud we might as well use the repository version so **some** events are tested
+                // Even though we are cloud we currently set this up as cloud, we can use the EF/selfhosted service
                 // instead of using Noop for this service
                 // TODO: Install and use azurite in CI pipeline
                 var eventWriteService = services.First(sd => sd.ServiceType == typeof(IEventWriteService));
