@@ -1,7 +1,7 @@
 {
   "version": 1,
   "dependencies": {
-    ".NETCoreApp,Version=v5.0": {
+    "net6.0": {
       "Handlebars.Net": {
         "type": "Direct",
         "requested": "[1.10.1, )",
@@ -3282,7 +3282,7 @@
       "migrator": {
         "type": "Project",
         "dependencies": {
-          "Core": "1.46.2",
+          "Core": "1.47.1",
           "Microsoft.Extensions.Logging": "5.0.0",
           "dbup-sqlserver": "4.4.0"
         }

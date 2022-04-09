@@ -1,7 +1,7 @@
 {
   "version": 1,
   "dependencies": {
-    ".NETCoreApp,Version=v5.0": {
+    "net6.0": {
       "AutoFixture.Xunit2": {
         "type": "Direct",
         "requested": "[4.14.0, )",

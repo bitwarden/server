@@ -1,7 +1,7 @@
 {
   "version": 1,
   "dependencies": {
-    ".NETCoreApp,Version=v5.0": {
+    "net6.0": {
       "dbup-sqlserver": {
         "type": "Direct",
         "requested": "[4.4.0, )",

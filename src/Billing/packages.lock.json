@@ -1,7 +1,7 @@
 {
   "version": 1,
   "dependencies": {
-    ".NETCoreApp,Version=v5.0": {
+    "net6.0": {
       "Microsoft.VisualStudio.Web.CodeGeneration.Design": {
         "type": "Direct",
         "requested": "[5.0.2, )",

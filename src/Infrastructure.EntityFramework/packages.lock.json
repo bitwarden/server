@@ -1,7 +1,7 @@
 {
   "version": 1,
   "dependencies": {
-    ".NETCoreApp,Version=v5.0": {
+    "net6.0": {
       "AutoMapper.Extensions.Microsoft.DependencyInjection": {
         "type": "Direct",
         "requested": "[8.0.1, )",

@@ -1,10 +1,42 @@
 <Project>
 
 	<PropertyGroup>
-		<TargetFramework>net5.0</TargetFramework>
+		<TargetFramework>net6.0</TargetFramework>
 		<Version>1.47.1</Version>
 		<RootNamespace>Bit.$(MSBuildProjectName)</RootNamespace>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
 	</PropertyGroup>
+
+  <!--
+    This section is for packages that we use multiple times throughout the solution
+    It gives us a single place to manage the version to ensure we are using the same version
+    across the solution.
+  -->
+  <PropertyGroup>
+    <!--
+      NuGet: https://www.nuget.org/packages/Microsoft.NET.Test.Sdk
+    -->
+    <MicrosoftNetSdkVersion>17.1.0</MicrosoftNetSdkVersion>
+    <!--
+      NuGet: https://www.nuget.org/packages/xunit
+    -->
+    <XUnitVersion>2.4.1</XUnitVersion>
+    <!--
+      NuGet: https://www.nuget.org/packages/xunit
+    -->
+    <XUnitRunnerVisualStudioVersion>2.4.3</XUnitRunnerVisualStudioVersion>
+    <!--
+      NuGet: https://www.nuget.org/packages/coverlet.collector/
+    -->
+    <CoverletCollectorVersion>3.1.2</CoverletCollectorVersion>
+    <!--
+      NuGet: https://www.nuget.org/packages/Swashbuckle.AspNetCore/
+    -->
+    <SwashbuckleAspNetCoreVersion>6.3.0</SwashbuckleAspNetCoreVersion>
+    <!--
+      NuGet: https://www.nuget.org/packages/Swashbuckle.AspNetCore/
+    -->
+    <MicrosoftVisualStudioWebCodeGenerationDesignVersion>6.0.2</MicrosoftVisualStudioWebCodeGenerationDesignVersion>
+  </PropertyGroup>
 
 </Project>

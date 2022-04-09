@@ -1,7 +1,7 @@
 {
   "version": 1,
   "dependencies": {
-    ".NETCoreApp,Version=v5.0": {
+    "net6.0": {
       "AspNetCoreRateLimit": {
         "type": "Direct",
         "requested": "[2.1.0, )",

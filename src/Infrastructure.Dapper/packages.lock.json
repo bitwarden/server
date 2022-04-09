@@ -1,7 +1,7 @@
 {
   "version": 1,
   "dependencies": {
-    ".NETCoreApp,Version=v5.0": {
+    "net6.0": {
       "Dapper": {
         "type": "Direct",
         "requested": "[2.0.123, )",

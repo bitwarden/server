@@ -1,7 +1,7 @@
 {
   "version": 1,
   "dependencies": {
-    ".NETCoreApp,Version=v5.0": {
+    "net6.0": {
       "Azure.Messaging.EventGrid": {
         "type": "Direct",
         "requested": "[4.7.0, )",
