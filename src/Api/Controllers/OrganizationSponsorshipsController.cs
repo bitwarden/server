@@ -135,8 +135,9 @@ namespace Bit.Api.Controllers
                 throw new BadRequestException("Invalid Billing Sync Key");
             }
 
-            var syncData = await _syncSponsorshipsCommand.SyncOrganization(sponsoringOrg, model.ToOrganizationSponsorshipSync().SponsorshipsBatch);
-            return new OrganizationSponsorshipSyncResponseModel(syncData);
+            var (syncResponseData, offersToSend) = await _syncSponsorshipsCommand.SyncOrganization(sponsoringOrg, model.ToOrganizationSponsorshipSync().SponsorshipsBatch);
+            await _sendSponsorshipOfferCommand.BulkSendSponsorshipOfferAsync(sponsoringOrg.Name, offersToSend);
+            return new OrganizationSponsorshipSyncResponseModel(syncResponseData);
         }
 
         [Authorize("Application")]

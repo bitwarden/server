@@ -44,7 +44,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
             _tokenFactory = tokenFactory;
         }
 
-        public async Task<OrganizationSponsorshipSyncData> SyncOrganization(Organization sponsoringOrg, IEnumerable<OrganizationSponsorshipData> sponsorshipsData)
+        public async Task<(OrganizationSponsorshipSyncData, IEnumerable<OrganizationSponsorship>)> SyncOrganization(Organization sponsoringOrg, IEnumerable<OrganizationSponsorshipData> sponsorshipsData)
         {
             if (sponsoringOrg == null)
             {
@@ -52,10 +52,10 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
             }
             if (!sponsorshipsData.Any())
             {
-                return new OrganizationSponsorshipSyncData
+                return (new OrganizationSponsorshipSyncData
                 {
                     SponsorshipsBatch = sponsorshipsData
-                };
+                }, Enumerable.Empty<OrganizationSponsorship>());
             }
 
             var existingSponsorshipsDict = (await _organizationSponsorshipRepository.GetManyBySponsoringOrganizationAsync(sponsoringOrg.Id))
@@ -118,25 +118,12 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
             }
             var sponsorshipsToEmailOffer = sponsorshipsToUpsert.Where(s => s.Id == null);
             await _organizationSponsorshipRepository.UpsertManyAsync(sponsorshipsToUpsert);
-            await BulkSendSponsorshipOfferAsync(sponsoringOrg.Name, sponsorshipsToEmailOffer);
             await _organizationSponsorshipRepository.DeleteManyAsync(sponsorshipIdsToDelete);
 
-            return new OrganizationSponsorshipSyncData
+            return (new OrganizationSponsorshipSyncData
             {
                 SponsorshipsBatch = sponsorshipsData
-            };
-        }
-        private async Task BulkSendSponsorshipOfferAsync(string sponsoringOrgName, IEnumerable<OrganizationSponsorship> sponsorships)
-        {
-            var invites = new List<(string, bool, string)>();
-            foreach (var sponsorship in sponsorships)
-            {
-                var user = await _userRepository.GetByEmailAsync(sponsorship.OfferedToEmail);
-                var isExistingAccount = user != null;
-                invites.Add((sponsorship.OfferedToEmail, user != null, _tokenFactory.Protect(new OrganizationSponsorshipOfferTokenable(sponsorship))));
-            }
-
-            await _mailService.BulkSendFamiliesForEnterpriseOfferEmailAsync(sponsoringOrgName, invites);
+            }, sponsorshipsToEmailOffer);
         }
 
         /// <summary>
