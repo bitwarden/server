@@ -80,7 +80,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
                     {
                         continue; // prevent invalid sponsorships in cloud. These should have been deleted by self hosted
                     }
-                    if (!sponsoringOrg.Enabled)
+                    if (OrgDisabledForMoreThanGracePeriod(sponsoringOrg))
                     {
                         continue; // prevent new sponsorships from disabled orgs
                     }
@@ -138,6 +138,17 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
 
             await _mailService.BulkSendFamiliesForEnterpriseOfferEmailAsync(sponsoringOrgName, invites);
         }
+
+        /// <summary>
+        /// True if Organization is disabled and the expiration date is more than three months ago
+        /// </summary>
+        /// <param name="organization"></param>
+        private bool OrgDisabledForMoreThanGracePeriod(Organization organization) =>
+            !organization.Enabled &&
+            (
+                !organization.ExpirationDate.HasValue ||
+                DateTime.UtcNow.Subtract(organization.ExpirationDate.Value).TotalDays > 93
+            );
 
     }
 }
