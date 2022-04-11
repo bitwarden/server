@@ -38,11 +38,11 @@ namespace Bit.Core.Services
             _identityClientSecret = identityClientSecret;
             _logger = logger;
 
-            Client = _httpFactory.CreateClient();
+            Client = _httpFactory.CreateClient("client");
             Client.BaseAddress = new Uri(baseClientServerUri);
             Client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
-            IdentityClient = _httpFactory.CreateClient();
+            IdentityClient = _httpFactory.CreateClient("identity");
             IdentityClient.BaseAddress = new Uri(baseIdentityServerUri);
             IdentityClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
         }
@@ -70,12 +70,11 @@ namespace Bit.Core.Services
                 Method = method,
                 RequestUri = new Uri(string.Concat(Client.BaseAddress, path))
             };
-
             try
             {
                 var response = await Client.SendAsync(message);
-                var responseJsonString = await response.Content.ReadAsStringAsync();
-                return JsonSerializer.Deserialize<TResult>(responseJsonString);
+                var responseJsonStream = await response.Content.ReadAsStreamAsync();
+                return await JsonSerializer.DeserializeAsync<TResult>(responseJsonStream);
             }
             catch (Exception e)
             {

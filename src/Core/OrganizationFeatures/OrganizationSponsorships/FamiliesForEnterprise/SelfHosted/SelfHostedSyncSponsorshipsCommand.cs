@@ -30,12 +30,12 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
         IOrganizationSponsorshipRepository organizationSponsorshipRepository,
         IOrganizationUserRepository organizationUserRepository,
         IOrganizationConnectionRepository organizationConnectionRepository,
-        GlobalSettings globalSettings,
+        IGlobalSettings globalSettings,
         ILogger<SelfHostedSyncSponsorshipsCommand> logger)
         : base(
             httpFactory,
-            globalSettings.Installation.IdentityUri,
             globalSettings.Installation.ApiUri,
+            globalSettings.Installation.IdentityUri,
             "api.installation",
             globalSettings.Installation.Id.ToString(),
             globalSettings.Installation.Key,

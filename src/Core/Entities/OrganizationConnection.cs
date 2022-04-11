@@ -5,6 +5,15 @@ using Bit.Core.Utilities;
 
 namespace Bit.Core.Entities
 {
+    public class OrganizationConnection<T> : OrganizationConnection where T: new()
+    {
+        public new T Config
+        {
+            get => base.GetConfig<T>();
+            set => base.SetConfig<T>(value);
+        }
+    }
+
     public class OrganizationConnection : ITableObject<Guid>
     {
         public Guid Id { get; set; }
