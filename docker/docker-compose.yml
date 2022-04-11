@@ -87,7 +87,6 @@ services:
       - global-settings.env
     environment:
       BW_ENABLE_SSL: "true"
-      BW_GENERATE_CERT: "true"
     image: bitwarden/nginx:${CORE_TAG:-latest}
     restart: always
     ports:
