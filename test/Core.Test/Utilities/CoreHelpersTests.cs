@@ -358,9 +358,9 @@ namespace Bit.Core.Test.Utilities
 
         public static IEnumerable<object[]> TokenIsValidData()
         {
-            return new []
+            return new[]
             {
-                new object[] 
+                new object[]
                 {
                     "first_part 476669d4-9642-4af8-9b29-9366efad4ed3 test@email.com {0}", // unprotectedTokenTemplate
                     "first_part", // firstPart
