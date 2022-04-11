@@ -52,15 +52,26 @@ namespace Bit.Api.Jobs
                 var connection = (await _organizationConnectionRepository.GetEnabledByOrganizationIdTypeAsync(org.Id, OrganizationConnectionType.CloudBillingSync)).FirstOrDefault();
                 if (connection != null)
                 {
+                    Guid cloudOrganizationId = new Guid();
                     try
                     {
-
-                        var cloudOrganizationId = (await _licensingService.ReadOrganizationLicenseAsync(org.Id)).Id;
-                        await _syncSponsorshipsCommand.SyncOrganization(org.Id, cloudOrganizationId, connection);
+                        cloudOrganizationId = (await _licensingService.ReadOrganizationLicenseAsync(org.Id)).Id;
+                        if (cloudOrganizationId == default)
+                        {
+                            throw new Exception();
+                        }
                     }
                     catch
                     {
                         _logger.LogInformation($"Skipping {org.Name} sponsorships sync with cloud - Billing Sync is not set up for the organization.");
+                    }
+                    try
+                    {
+                        await _syncSponsorshipsCommand.SyncOrganization(org.Id, cloudOrganizationId, connection);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, $"Sponsorship sync for organization {org.Name} Failed");
                     }
                 }
             }
