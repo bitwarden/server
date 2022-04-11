@@ -68,6 +68,11 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
 
             var organizationSponsorshipsDict = (await _organizationSponsorshipRepository.GetManyBySponsoringOrganizationAsync(organizationId))
                 .ToDictionary(i => i.SponsoringOrganizationUserId);
+            if (!organizationSponsorshipsDict.Any())
+            {
+                _logger.LogInformation($"No existing sponsorships to sync for organization {organizationId}");
+                return;
+            }
             var syncedSponsorships = new List<OrganizationSponsorshipData>();
 
             foreach (var orgSponsorshipsBatch in CoreHelpers.Batch(organizationSponsorshipsDict.Values, 1000))
