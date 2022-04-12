@@ -117,8 +117,14 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
                 selfHostedSponsorship.LastSyncDate = DateTime.UtcNow;
             }
             var sponsorshipsToEmailOffer = sponsorshipsToUpsert.Where(s => s.Id == null);
-            await _organizationSponsorshipRepository.UpsertManyAsync(sponsorshipsToUpsert);
-            await _organizationSponsorshipRepository.DeleteManyAsync(sponsorshipIdsToDelete);
+            if (sponsorshipsToUpsert.Any())
+            {
+                await _organizationSponsorshipRepository.UpsertManyAsync(sponsorshipsToUpsert);
+            }
+            if (sponsorshipIdsToDelete.Any())
+            {
+                await _organizationSponsorshipRepository.DeleteManyAsync(sponsorshipIdsToDelete);
+            }
 
             return (new OrganizationSponsorshipSyncData
             {
