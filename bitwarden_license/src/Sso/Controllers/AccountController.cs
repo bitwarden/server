@@ -13,6 +13,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
+using Bit.Core.Tokens;
 using Bit.Sso.Models;
 using Bit.Sso.Utilities;
 using IdentityModel;
@@ -30,6 +31,8 @@ namespace Bit.Sso.Controllers
 {
     public class AccountController : Controller
     {
+        #region Members
+
         private readonly IAuthenticationSchemeProvider _schemeProvider;
         private readonly IClientStore _clientStore;
 
@@ -47,6 +50,10 @@ namespace Bit.Sso.Controllers
         private readonly UserManager<User> _userManager;
         private readonly IGlobalSettings _globalSettings;
         private readonly Core.Services.IEventService _eventService;
+
+        #endregion
+
+        #region Ctor
 
         public AccountController(
             IAuthenticationSchemeProvider schemeProvider,
@@ -84,6 +91,9 @@ namespace Bit.Sso.Controllers
             _globalSettings = globalSettings;
         }
 
+        #endregion
+
+        #region Public Methods
         [HttpGet]
         public async Task<IActionResult> PreValidate(string domainHint)
         {
@@ -163,21 +173,39 @@ namespace Bit.Sso.Controllers
         [HttpGet]
         public async Task<IActionResult> Login(string returnUrl)
         {
-            var context = await _interaction.GetAuthorizationContextAsync(returnUrl);
-            if (context.Parameters.AllKeys.Contains("domain_hint") &&
-                !string.IsNullOrWhiteSpace(context.Parameters["domain_hint"]))
+            try
             {
-                return RedirectToAction(nameof(ExternalChallenge), new
+                var redirectToken = Request.Cookies[SsoRedirectToken.SSO_REDIRECT_COOKIE_NAME];
+                if (string.IsNullOrEmpty(redirectToken))
                 {
-                    scheme = context.Parameters["domain_hint"],
-                    returnUrl,
-                    state = context.Parameters["state"],
-                    userIdentifier = context.Parameters["session_state"]
-                });
+                    throw new BadHttpRequestException(_i18nService.T("SsoRedirectTokenValidationMissing"));
+                }
+
+                if (!SsoRedirectToken.ValidateSsoRedirectToken(redirectToken))
+                {
+                    throw new BadHttpRequestException(_i18nService.T("InvalidSsoRedirectToken"));
+                }
+
+                var context = await _interaction.GetAuthorizationContextAsync(returnUrl);
+                if (context.Parameters.AllKeys.Contains("domain_hint") &&
+                    !string.IsNullOrWhiteSpace(context.Parameters["domain_hint"]))
+                {
+                    return RedirectToAction(nameof(ExternalChallenge), new
+                    {
+                        scheme = context.Parameters["domain_hint"],
+                        returnUrl,
+                        state = context.Parameters["state"],
+                        userIdentifier = context.Parameters["session_state"]
+                    });
+                }
+                else
+                {
+                    throw new Exception(_i18nService.T("NoDomainHintProvided"));
+                }
             }
-            else
+            finally
             {
-                throw new Exception(_i18nService.T("NoDomainHintProvided"));
+                Response.Cookies.Delete(SsoRedirectToken.SSO_REDIRECT_COOKIE_NAME);
             }
         }
 
@@ -315,6 +343,15 @@ namespace Bit.Sso.Controllers
                 return Redirect("~/");
             }
         }
+
+        public bool IsNativeClient(IdentityServer4.Models.AuthorizationRequest context)
+        {
+            return !context.RedirectUri.StartsWith("https", StringComparison.Ordinal)
+               && !context.RedirectUri.StartsWith("http", StringComparison.Ordinal);
+        }
+        #endregion
+
+        #region Private Methods
 
         private async Task<(User user, string provider, string providerUserId, IEnumerable<Claim> claims, SsoConfigurationData config)>
             FindUserFromExternalProviderAsync(AuthenticateResult result)
@@ -679,10 +716,6 @@ namespace Bit.Sso.Controllers
             return (logoutId, logout?.PostLogoutRedirectUri, externalAuthenticationScheme);
         }
 
-        public bool IsNativeClient(IdentityServer4.Models.AuthorizationRequest context)
-        {
-            return !context.RedirectUri.StartsWith("https", StringComparison.Ordinal)
-               && !context.RedirectUri.StartsWith("http", StringComparison.Ordinal);
-        }
+        #endregion
     }
 }

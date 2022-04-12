@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Bit.Core.Entities;
 using Bit.Core.Models.Api;
 using Bit.Core.Repositories;
+using Bit.Core.Tokens;
 using Bit.Identity.Models;
 using IdentityModel;
 using IdentityServer4;
@@ -24,11 +25,17 @@ namespace Bit.Identity.Controllers
     [Route("sso/[action]")]
     public class SsoController : Controller
     {
+        #region Members
+
         private readonly IIdentityServerInteractionService _interaction;
         private readonly ILogger<SsoController> _logger;
         private readonly ISsoConfigRepository _ssoConfigRepository;
         private readonly IUserRepository _userRepository;
         private readonly IHttpClientFactory _clientFactory;
+
+        #endregion
+
+        #region Ctor
 
         public SsoController(
             IIdentityServerInteractionService interaction,
@@ -43,6 +50,10 @@ namespace Bit.Identity.Controllers
             _userRepository = userRepository;
             _clientFactory = clientFactory;
         }
+
+        #endregion
+
+        #region Public Methods
 
         [HttpGet]
         public async Task<IActionResult> PreValidate(string domainHint)
@@ -62,10 +73,17 @@ namespace Bit.Identity.Controllers
                 using var responseMessage = await httpClient.GetAsync(requestPath);
                 if (responseMessage.IsSuccessStatusCode)
                 {
-                    // All is good!
+                    var token = SsoRedirectToken.GenerateSsoRedirectToken();
+                    var options = new CookieOptions
+                    {
+                        Expires = DateTime.Now.AddMinutes(60)
+                    };
+
+                    Response.Cookies.Append(SsoRedirectToken.SSO_REDIRECT_COOKIE_NAME, token, options);
                     return new EmptyResult();
                 }
                 Response.StatusCode = (int)responseMessage.StatusCode;
+
                 var responseJson = await responseMessage.Content.ReadAsStringAsync();
                 return Content(responseJson, "application/json");
             }
@@ -225,6 +243,10 @@ namespace Bit.Identity.Controllers
             }
         }
 
+        #endregion
+
+        #region Private Methods
+
         private async Task<(User user, string provider, string providerUserId, IEnumerable<Claim> claims)>
             FindUserFromExternalProviderAsync(AuthenticateResult result)
         {
@@ -273,5 +295,7 @@ namespace Bit.Identity.Controllers
             return !context.RedirectUri.StartsWith("https", StringComparison.Ordinal)
                && !context.RedirectUri.StartsWith("http", StringComparison.Ordinal);
         }
+
+        #endregion
     }
 }
