@@ -346,7 +346,7 @@ namespace Bit.Core.Services
             await _mailService.SendMasterPasswordHintEmailAsync(email, user.MasterPasswordHint);
         }
 
-        public async Task SendTwoFactorEmailAsync(User user, bool isBecauseNewDeviceLogin = false)
+        public async Task SendTwoFactorEmailAsync(User user)
         {
             var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Email);
             if (provider == null || provider.MetaData == null || !provider.MetaData.ContainsKey("Email"))
@@ -357,15 +357,7 @@ namespace Bit.Core.Services
             var email = ((string)provider.MetaData["Email"]).ToLowerInvariant();
             var token = await base.GenerateUserTokenAsync(user, TokenOptions.DefaultEmailProvider,
                 "2faEmail:" + email);
-
-            if (isBecauseNewDeviceLogin)
-            {
-                await _mailService.SendNewDeviceLoginTwoFactorEmailAsync(email, token);
-            }
-            else
-            {
-                await _mailService.SendTwoFactorEmailAsync(email, token);
-            }
+            await _mailService.SendTwoFactorEmailAsync(email, token);
         }
 
         public async Task<bool> VerifyTwoFactorEmailAsync(User user, string token)
