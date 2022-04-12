@@ -131,16 +131,16 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
         [Theory]
         [OrganizationSponsorshipCustomize]
         [BitAutoData]
-        public async Task SyncOrganization_(
+        public async Task SyncOrganization_SyncsSponsorships(
             Guid cloudOrganizationId, OrganizationConnection billingSyncConnection, IEnumerable<OrganizationSponsorship> sponsorships)
         {
-            var k = JsonSerializer.Serialize(new OrganizationSponsorshipSyncResponseModel(
+            var syncJsonResponse = JsonSerializer.Serialize(new OrganizationSponsorshipSyncResponseModel(
                 new OrganizationSponsorshipSyncData 
                 { 
                     SponsorshipsBatch = sponsorships.Select(o => new OrganizationSponsorshipData(o)) 
                 }));
 
-            var sutProvider = GetSutProvider(apiResponse: k);
+            var sutProvider = GetSutProvider(apiResponse: syncJsonResponse);
             billingSyncConnection.SetConfig(new BillingSyncConfig
             {
                BillingSyncKey = "okslkcslkjf" 
@@ -150,12 +150,42 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
 
             await sutProvider.Sut.SyncOrganization(billingSyncConnection.OrganizationId, cloudOrganizationId, billingSyncConnection);
 
-            // await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
-            //     .DidNotReceiveWithAnyArgs()
-            //     .DeleteManyAsync(default);
-            // await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
-            //     .DidNotReceiveWithAnyArgs()
-            //     .UpsertManyAsync(default);
+            await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
+                .DidNotReceiveWithAnyArgs()
+                .DeleteManyAsync(default);
+            await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
+                .Received(1)
+                .UpsertManyAsync(Arg.Any<IEnumerable<OrganizationSponsorship>>());
+        }
+
+        [Theory]
+        [OrganizationSponsorshipCustomize(ToDelete = true)]
+        [BitAutoData]
+        public async Task SyncOrganization_DeletesSponsorships(
+            Guid cloudOrganizationId, OrganizationConnection billingSyncConnection, IEnumerable<OrganizationSponsorship> sponsorships)
+        {
+            var syncJsonResponse = JsonSerializer.Serialize(new OrganizationSponsorshipSyncResponseModel(
+                new OrganizationSponsorshipSyncData 
+                { 
+                    SponsorshipsBatch = sponsorships.Select(o => new OrganizationSponsorshipData(o) { CloudSponsorshipRemoved = true }) 
+                }));
+
+            var sutProvider = GetSutProvider(apiResponse: syncJsonResponse);
+            billingSyncConnection.SetConfig(new BillingSyncConfig
+            {
+               BillingSyncKey = "okslkcslkjf" 
+            });
+            sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
+                .GetManyBySponsoringOrganizationAsync(Arg.Any<Guid>()).Returns(sponsorships.ToList());
+
+            await sutProvider.Sut.SyncOrganization(billingSyncConnection.OrganizationId, cloudOrganizationId, billingSyncConnection);
+
+            await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
+                .Received(1)
+                .DeleteManyAsync(Arg.Any<IEnumerable<Guid>>());
+            await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
+                .DidNotReceiveWithAnyArgs()
+                .UpsertManyAsync(default);
         }
     }
 }
