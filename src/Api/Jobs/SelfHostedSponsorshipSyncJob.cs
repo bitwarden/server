@@ -7,7 +7,6 @@ using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterpri
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Infrastructure.Dapper.Repositories;
 using Microsoft.Extensions.Logging;
 using Quartz;
 
