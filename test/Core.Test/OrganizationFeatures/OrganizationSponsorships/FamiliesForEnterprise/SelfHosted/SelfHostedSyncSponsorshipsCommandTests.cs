@@ -1,4 +1,4 @@
-
+﻿
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -74,7 +74,7 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
             billingSyncConnection.Enabled = false;
             billingSyncConnection.SetConfig(new BillingSyncConfig
             {
-               BillingSyncKey = "okslkcslkjf" 
+                BillingSyncKey = "okslkcslkjf"
             });
 
             var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
@@ -127,7 +127,7 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
                 .DidNotReceiveWithAnyArgs()
                 .UpsertManyAsync(default);
         }
-        
+
         [Theory]
         [OrganizationSponsorshipCustomize]
         [BitAutoData]
@@ -135,15 +135,15 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
             Guid cloudOrganizationId, OrganizationConnection billingSyncConnection, IEnumerable<OrganizationSponsorship> sponsorships)
         {
             var syncJsonResponse = JsonSerializer.Serialize(new OrganizationSponsorshipSyncResponseModel(
-                new OrganizationSponsorshipSyncData 
-                { 
-                    SponsorshipsBatch = sponsorships.Select(o => new OrganizationSponsorshipData(o)) 
+                new OrganizationSponsorshipSyncData
+                {
+                    SponsorshipsBatch = sponsorships.Select(o => new OrganizationSponsorshipData(o))
                 }));
 
             var sutProvider = GetSutProvider(apiResponse: syncJsonResponse);
             billingSyncConnection.SetConfig(new BillingSyncConfig
             {
-               BillingSyncKey = "okslkcslkjf" 
+                BillingSyncKey = "okslkcslkjf"
             });
             sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
                 .GetManyBySponsoringOrganizationAsync(Arg.Any<Guid>()).Returns(sponsorships.ToList());
@@ -165,15 +165,15 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
             Guid cloudOrganizationId, OrganizationConnection billingSyncConnection, IEnumerable<OrganizationSponsorship> sponsorships)
         {
             var syncJsonResponse = JsonSerializer.Serialize(new OrganizationSponsorshipSyncResponseModel(
-                new OrganizationSponsorshipSyncData 
-                { 
-                    SponsorshipsBatch = sponsorships.Select(o => new OrganizationSponsorshipData(o) { CloudSponsorshipRemoved = true }) 
+                new OrganizationSponsorshipSyncData
+                {
+                    SponsorshipsBatch = sponsorships.Select(o => new OrganizationSponsorshipData(o) { CloudSponsorshipRemoved = true })
                 }));
 
             var sutProvider = GetSutProvider(apiResponse: syncJsonResponse);
             billingSyncConnection.SetConfig(new BillingSyncConfig
             {
-               BillingSyncKey = "okslkcslkjf" 
+                BillingSyncKey = "okslkcslkjf"
             });
             sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
                 .GetManyBySponsoringOrganizationAsync(Arg.Any<Guid>()).Returns(sponsorships.ToList());

@@ -1,4 +1,4 @@
-
+﻿
 namespace Bit.Core.Settings
 {
     public interface IBaseServiceUriSettings

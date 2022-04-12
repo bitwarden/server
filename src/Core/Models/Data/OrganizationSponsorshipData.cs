@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 

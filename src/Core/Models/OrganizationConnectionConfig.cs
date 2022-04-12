@@ -1,4 +1,4 @@
-namespace Bit.Core.Models
+﻿namespace Bit.Core.Models
 {
     public class BillingSyncConfig
     {
