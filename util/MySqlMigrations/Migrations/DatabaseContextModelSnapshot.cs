@@ -655,10 +655,10 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<Guid?>("SponsoredOrganizationId")
                         .HasColumnType("char(36)");
 
-                    b.Property<Guid?>("SponsoringOrganizationId")
+                    b.Property<Guid>("SponsoringOrganizationId")
                         .HasColumnType("char(36)");
 
-                    b.Property<Guid?>("SponsoringOrganizationUserId")
+                    b.Property<Guid>("SponsoringOrganizationUserId")
                         .HasColumnType("char(36)");
 
                     b.Property<bool>("ToDelete")
@@ -1387,7 +1387,9 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.HasOne("Bit.Infrastructure.EntityFramework.Models.Organization", "SponsoringOrganization")
                         .WithMany()
-                        .HasForeignKey("SponsoringOrganizationId");
+                        .HasForeignKey("SponsoringOrganizationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("SponsoredOrganization");
 

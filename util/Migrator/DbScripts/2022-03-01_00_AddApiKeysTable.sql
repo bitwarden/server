@@ -772,12 +772,6 @@ FROM
     [dbo].[OrganizationSponsorship]
 GO
 
-IF OBJECT_ID('[dbo].[OrganizationSponsorship_Create]') IS NOT NULL
-BEGIN
-    DROP PROCEDURE [dbo].[OrganizationSponsorship_Create]
-END
-GO
-
 -- OrganizationSponsorship_Create
 IF OBJECT_ID('[dbo].[OrganizationSponsorship_Create]') IS NOT NULL
 BEGIN

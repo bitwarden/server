@@ -90,7 +90,7 @@ namespace Bit.Core.Services
 
             foreach (var org in enabledOrgs)
             {
-                var license = await ReadOrganizationLicense(org);
+                var license = await ReadOrganizationLicenseAsync(org);
                 if (license == null)
                 {
                     await DisableOrganizationAsync(org, null, "No license file.");
@@ -249,9 +249,11 @@ namespace Bit.Core.Services
             return JsonSerializer.Deserialize<UserLicense>(data);
         }
 
-        public async Task<OrganizationLicense> ReadOrganizationLicense(Organization organization)
+        public Task<OrganizationLicense> ReadOrganizationLicenseAsync(Organization organization) =>
+            ReadOrganizationLicenseAsync(organization.Id);
+        public async Task<OrganizationLicense> ReadOrganizationLicenseAsync(Guid organizationId)
         {
-            var filePath = Path.Combine(_globalSettings.LicenseDirectory, "organization", $"{organization.Id}.json");
+            var filePath = Path.Combine(_globalSettings.LicenseDirectory, "organization", $"{organizationId}.json");
             if (!File.Exists(filePath))
             {
                 return null;

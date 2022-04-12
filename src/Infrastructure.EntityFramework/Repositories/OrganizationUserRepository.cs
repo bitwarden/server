@@ -61,6 +61,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
                 var dbContext = GetDatabaseContext(scope);
                 var entities = Mapper.Map<List<OrganizationUser>>(organizationUsers);
                 await dbContext.AddRangeAsync(entities);
+                await dbContext.SaveChangesAsync();
             }
 
             return organizationUsers.Select(u => u.Id).ToList();
