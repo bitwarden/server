@@ -9,7 +9,7 @@ namespace Bit.Core.Models.Api.Response.OrganizationSponsorships
     {
         public IEnumerable<OrganizationSponsorshipResponseModel> SponsorshipsBatch { get; set; }
 
-        public OrganizationSponsorshipSyncResponseModel() {}
+        public OrganizationSponsorshipSyncResponseModel() { }
 
         public OrganizationSponsorshipSyncResponseModel(OrganizationSponsorshipSyncData syncData)
         {

@@ -35,9 +35,6 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
             await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
                 .DidNotReceiveWithAnyArgs()
                 .UpsertManyAsync(default);
-            await sutProvider.GetDependency<ISendSponsorshipOfferCommand>()
-                .DidNotReceiveWithAnyArgs()
-                .BulkSendSponsorshipOfferAsync(default, default);
             await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
                 .DidNotReceiveWithAnyArgs()
                 .DeleteManyAsync(default);
@@ -45,48 +42,37 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
 
         [Theory]
         [BitAutoData]
-        public async Task SyncOrganization_NoSponsorships_ThrowsBadRequest(
+        public async Task SyncOrganization_NoSponsorships_EarlyReturn(
             Organization organization,
             SutProvider<CloudSyncSponsorshipsCommand> sutProvider)
         {
-            var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-                sutProvider.Sut.SyncOrganization(organization, Enumerable.Empty<OrganizationSponsorshipData>()));
+            var result = await sutProvider.Sut.SyncOrganization(organization, Enumerable.Empty<OrganizationSponsorshipData>());
 
-            Assert.Contains("Failed to sync sponsorship - missing sponsorships.", exception.Message);
+            Assert.Empty(result.Item1.SponsorshipsBatch);
+            Assert.Empty(result.Item2);
 
             await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
                 .DidNotReceiveWithAnyArgs()
                 .UpsertManyAsync(default);
-            await sutProvider.GetDependency<ISendSponsorshipOfferCommand>()
-                .DidNotReceiveWithAnyArgs()
-                .BulkSendSponsorshipOfferAsync(default, default);
             await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
                 .DidNotReceiveWithAnyArgs()
                 .DeleteManyAsync(default);
         }
 
-
         [Theory]
         [BitMemberAutoData(nameof(NonEnterprisePlanTypes))]
-        public async Task SyncOrganization_BadSponsoringOrgPlan_ThrowsBadRequest(
+        public async Task SyncOrganization_BadSponsoringOrgPlan_NoSync(
             PlanType planType,
             Organization organization, IEnumerable<OrganizationSponsorshipData> sponsorshipsData,
             SutProvider<CloudSyncSponsorshipsCommand> sutProvider)
         {
             organization.PlanType = planType;
 
-
-            var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-                sutProvider.Sut.SyncOrganization(organization, sponsorshipsData));
-
-            Assert.Contains("Specified Organization does not support this type of sponsorship.", exception.Message);
+            await sutProvider.Sut.SyncOrganization(organization, sponsorshipsData);
 
             await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
                 .DidNotReceiveWithAnyArgs()
                 .UpsertManyAsync(default);
-            await sutProvider.GetDependency<ISendSponsorshipOfferCommand>()
-                .DidNotReceiveWithAnyArgs()
-                .BulkSendSponsorshipOfferAsync(default, default);
             await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
                 .DidNotReceiveWithAnyArgs()
                 .DeleteManyAsync(default);

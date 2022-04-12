@@ -16,7 +16,7 @@ namespace Bit.Core.Models.Api.Response.OrganizationSponsorships
 
         public bool CloudSponsorshipRemoved { get; set; }
 
-        public OrganizationSponsorshipResponseModel() {}
+        public OrganizationSponsorshipResponseModel() { }
 
         public OrganizationSponsorshipResponseModel(OrganizationSponsorshipData sponsorshipData)
         {

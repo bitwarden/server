@@ -44,7 +44,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
             _tokenFactory = tokenFactory;
         }
 
-        public async Task<OrganizationSponsorshipSyncData> SyncOrganization(Organization sponsoringOrg, IEnumerable<OrganizationSponsorshipData> sponsorshipsData)
+        public async Task<(OrganizationSponsorshipSyncData, IEnumerable<OrganizationSponsorship>)> SyncOrganization(Organization sponsoringOrg, IEnumerable<OrganizationSponsorshipData> sponsorshipsData)
         {
             if (sponsoringOrg == null)
             {
@@ -52,10 +52,10 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
             }
             if (!sponsorshipsData.Any())
             {
-                return new OrganizationSponsorshipSyncData
+                return (new OrganizationSponsorshipSyncData
                 {
                     SponsorshipsBatch = sponsorshipsData
-                };
+                }, Enumerable.Empty<OrganizationSponsorship>());
             }
 
             var existingSponsorshipsDict = (await _organizationSponsorshipRepository.GetManyBySponsoringOrganizationAsync(sponsoringOrg.Id))
@@ -80,7 +80,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
                     {
                         continue; // prevent invalid sponsorships in cloud. These should have been deleted by self hosted
                     }
-                    if (!sponsoringOrg.Enabled)
+                    if (OrgDisabledForMoreThanGracePeriod(sponsoringOrg))
                     {
                         continue; // prevent new sponsorships from disabled orgs
                     }
@@ -117,27 +117,31 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
                 selfHostedSponsorship.LastSyncDate = DateTime.UtcNow;
             }
             var sponsorshipsToEmailOffer = sponsorshipsToUpsert.Where(s => s.Id == null);
-            await _organizationSponsorshipRepository.UpsertManyAsync(sponsorshipsToUpsert);
-            await BulkSendSponsorshipOfferAsync(sponsoringOrg.Name, sponsorshipsToEmailOffer);
-            await _organizationSponsorshipRepository.DeleteManyAsync(sponsorshipIdsToDelete);
-
-            return new OrganizationSponsorshipSyncData
+            if (sponsorshipsToUpsert.Any())
             {
-                SponsorshipsBatch = sponsorshipsData
-            };
-        }
-        private async Task BulkSendSponsorshipOfferAsync(string sponsoringOrgName, IEnumerable<OrganizationSponsorship> sponsorships)
-        {
-            var invites = new List<(string, bool, string)>();
-            foreach (var sponsorship in sponsorships)
+                await _organizationSponsorshipRepository.UpsertManyAsync(sponsorshipsToUpsert);
+            }
+            if (sponsorshipIdsToDelete.Any())
             {
-                var user = await _userRepository.GetByEmailAsync(sponsorship.OfferedToEmail);
-                var isExistingAccount = user != null;
-                invites.Add((sponsorship.OfferedToEmail, user != null, _tokenFactory.Protect(new OrganizationSponsorshipOfferTokenable(sponsorship))));
+                await _organizationSponsorshipRepository.DeleteManyAsync(sponsorshipIdsToDelete);
             }
 
-            await _mailService.BulkSendFamiliesForEnterpriseOfferEmailAsync(sponsoringOrgName, invites);
+            return (new OrganizationSponsorshipSyncData
+            {
+                SponsorshipsBatch = sponsorshipsData
+            }, sponsorshipsToEmailOffer);
         }
+
+        /// <summary>
+        /// True if Organization is disabled and the expiration date is more than three months ago
+        /// </summary>
+        /// <param name="organization"></param>
+        private bool OrgDisabledForMoreThanGracePeriod(Organization organization) =>
+            !organization.Enabled &&
+            (
+                !organization.ExpirationDate.HasValue ||
+                DateTime.UtcNow.Subtract(organization.ExpirationDate.Value).TotalDays > 93
+            );
 
     }
 }

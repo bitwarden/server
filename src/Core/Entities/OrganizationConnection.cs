@@ -5,7 +5,7 @@ using Bit.Core.Utilities;
 
 namespace Bit.Core.Entities
 {
-    public class OrganizationConnection<T> : OrganizationConnection where T: new()
+    public class OrganizationConnection<T> : OrganizationConnection where T : new()
     {
         public new T Config
         {
@@ -40,13 +40,8 @@ namespace Bit.Core.Entities
             }
         }
 
-        public void SetConfig<T>(T config)
+        public void SetConfig<T>(T config) where T : new()
         {
-            if (config == null)
-            {
-                return;
-            }
-            
             Config = JsonSerializer.Serialize(config);
         }
     }

@@ -8,9 +8,11 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Business.Tokenables;
+using Bit.Core.Models.Api.Request.OrganizationSponsorships;
 using Bit.Core.Models.Api.Request.OrganizationSponsorships;
 using Bit.Core.Models.Api.Response.OrganizationSponsorships;
+using Bit.Core.Models.Api.Response.OrganizationSponsorships;
+using Bit.Core.Models.Business.Tokenables;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -135,8 +137,9 @@ namespace Bit.Api.Controllers
                 throw new BadRequestException("Invalid Billing Sync Key");
             }
 
-            var syncData = await _syncSponsorshipsCommand.SyncOrganization(sponsoringOrg, model.ToOrganizationSponsorshipSync().SponsorshipsBatch);
-            return new OrganizationSponsorshipSyncResponseModel(syncData);
+            var (syncResponseData, offersToSend) = await _syncSponsorshipsCommand.SyncOrganization(sponsoringOrg, model.ToOrganizationSponsorshipSync().SponsorshipsBatch);
+            await _sendSponsorshipOfferCommand.BulkSendSponsorshipOfferAsync(sponsoringOrg.Name, offersToSend);
+            return new OrganizationSponsorshipSyncResponseModel(syncResponseData);
         }
 
         [Authorize("Application")]

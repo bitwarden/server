@@ -6,11 +6,11 @@ namespace Bit.Core.Models.Data
 {
     public class OrganizationSponsorshipData
     {
-        public OrganizationSponsorshipData() {}
+        public OrganizationSponsorshipData() { }
         public OrganizationSponsorshipData(OrganizationSponsorship sponsorship)
         {
             SponsoringOrganizationUserId = sponsorship.SponsoringOrganizationUserId;
-            SponsoredOrganizationId = sponsorship.SponsoredOrganizationId; 
+            SponsoredOrganizationId = sponsorship.SponsoredOrganizationId;
             FriendlyName = sponsorship.FriendlyName;
             OfferedToEmail = sponsorship.OfferedToEmail;
             PlanSponsorshipType = sponsorship.PlanSponsorshipType.GetValueOrDefault();

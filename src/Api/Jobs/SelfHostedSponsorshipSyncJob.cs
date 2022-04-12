@@ -41,7 +41,7 @@ namespace Bit.Api.Jobs
         {
             if (!_globalSettings.EnableCloudCommunication)
             {
-                _logger.LogError("Failed to sync instance with cloud - Cloud communication is disabled in global settings");
+                _logger.LogInformation("Skipping Organization sync with cloud - Cloud communication is disabled in global settings");
                 return;
             }
 
@@ -52,15 +52,26 @@ namespace Bit.Api.Jobs
                 var connection = (await _organizationConnectionRepository.GetEnabledByOrganizationIdTypeAsync(org.Id, OrganizationConnectionType.CloudBillingSync)).FirstOrDefault();
                 if (connection != null)
                 {
+                    Guid cloudOrganizationId = new Guid();
                     try
                     {
-
-                        var cloudOrganizationId = (await _licensingService.ReadOrganizationLicenseAsync(org.Id)).Id;
+                        cloudOrganizationId = (await _licensingService.ReadOrganizationLicenseAsync(org.Id)).Id;
+                        if (cloudOrganizationId == default)
+                        {
+                            throw new Exception();
+                        }
+                    }
+                    catch
+                    {
+                        _logger.LogInformation($"Skipping {org.Name} sponsorships sync with cloud - Billing Sync is not set up for the organization.");
+                    }
+                    try
+                    {
                         await _syncSponsorshipsCommand.SyncOrganization(org.Id, cloudOrganizationId, connection);
                     }
-                    catch (Exception e)
+                    catch (Exception ex)
                     {
-                        _logger.LogError($"Failed to sync {org.Name} sponsorships with cloud", e);
+                        _logger.LogError(ex, $"Sponsorship sync for organization {org.Name} Failed");
                     }
                 }
             }
