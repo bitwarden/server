@@ -17,7 +17,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationConnections
             _organizationConnectionRepository = organizationConnectionRepository;
         }
 
-        public async Task<OrganizationConnection> UpdateAsync(OrganizationConnectionData connectionData)
+        public async Task<OrganizationConnection> UpdateAsync<T>(OrganizationConnectionData<T> connectionData) where T : new()
         {
             if (!connectionData.Id.HasValue)
             {

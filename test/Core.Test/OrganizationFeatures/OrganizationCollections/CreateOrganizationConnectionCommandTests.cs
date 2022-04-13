@@ -1,6 +1,7 @@
 using System.Threading.Tasks;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data.Organizations.OrganizationConnections;
+using Bit.Core.Models.OrganizationConnectionConfigs;
 using Bit.Core.OrganizationFeatures.OrganizationConnections;
 using Bit.Core.Repositories;
 using Bit.Test.Common.AutoFixture;
@@ -16,7 +17,7 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationConnections
     {
         [Theory]
         [BitAutoData]
-        public async Task CreateAsync_CallsCreate(OrganizationConnectionData data,
+        public async Task CreateAsync_CallsCreate(OrganizationConnectionData<BillingSyncConfig> data,
             SutProvider<CreateOrganizationConnectionCommand> sutProvider)
         {
             await sutProvider.Sut.CreateAsync(data);

@@ -10,15 +10,15 @@ namespace Bit.Api.Models.Response.Organizations
         public OrganizationConnectionType Type { get; set; }
         public Guid OrganizationId { get; set; }
         public bool Enabled { get; set; }
-        public string Config { get; set; }
+        public object Config { get; set; }
 
-        public OrganizationConnectionResponseModel(OrganizationConnection connection)
+        public OrganizationConnectionResponseModel(OrganizationConnection connection, Type configType)
         {
             Id = connection.Id;
             Type = connection.Type;
             OrganizationId = connection.OrganizationId;
             Enabled = connection.Enabled;
-            Config = connection.Config;
+            Config = connection.GetConfig(configType);
         }
     }
 }

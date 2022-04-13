@@ -1,5 +1,7 @@
 using System;
+using System.Text.Json;
 using Bit.Core.Enums;
+using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations.OrganizationConnections;
 
 namespace Bit.Api.Models.Request.Organizations
@@ -12,15 +14,38 @@ namespace Bit.Api.Models.Request.Organizations
         public string Config { get; set; }
 
         public OrganizationConnectionRequestModel() { }
+    }
 
-        public OrganizationConnectionData ToData(Guid? id = null) =>
+
+    public class OrganizationConnectionRequestModel<T> : OrganizationConnectionRequestModel where T : new()
+    {
+        public T ParsedConfig { get; private set; }
+
+        public OrganizationConnectionRequestModel(OrganizationConnectionRequestModel model)
+        {
+            Type = model.Type;
+            OrganizationId = model.OrganizationId;
+            Enabled = model.Enabled;
+            Config = model.Config;
+
+            try
+            {
+                ParsedConfig = JsonSerializer.Deserialize<T>(model.Config);
+            }
+            catch (JsonException)
+            {
+                throw new BadRequestException("Organization Connection configuration malformed");
+            }
+        }
+
+        public OrganizationConnectionData<T> ToData(Guid? id = null) =>
             new()
             {
                 Id = id,
                 Type = Type,
                 OrganizationId = OrganizationId,
                 Enabled = Enabled,
-                Config = Config,
+                Config = ParsedConfig,
             };
     }
 }

@@ -15,7 +15,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationConnections
             _organizationConnectionRepository = organizationConnectionRepository;
         }
 
-        public async Task<OrganizationConnection> CreateAsync(OrganizationConnectionData connectionData)
+        public async Task<OrganizationConnection> CreateAsync<T>(OrganizationConnectionData<T> connectionData) where T : new()
         {
             return await _organizationConnectionRepository.CreateAsync(connectionData.ToEntity());
         }

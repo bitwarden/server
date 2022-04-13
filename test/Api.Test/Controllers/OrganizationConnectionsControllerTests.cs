@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Bit.Api.Controllers;
 using Bit.Api.Models.Request.Organizations;
@@ -10,6 +11,7 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.OrganizationConnectionConfigs;
 using Bit.Core.OrganizationFeatures.OrganizationConnections.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Test.Common.AutoFixture;
@@ -40,11 +42,13 @@ namespace Bit.Api.Test.Controllers
         [Theory]
         [BitMemberAutoData(nameof(ConnectionTypes))]
         public async Task CreateConnection_OnlyOneConnectionOfEachType(OrganizationConnectionType type,
-            OrganizationConnectionRequestModel model, Guid existingEntityId,
+            OrganizationConnectionRequestModel model, BillingSyncConfig config, Guid existingEntityId,
             SutProvider<OrganizationConnectionsController> sutProvider)
         {
             model.Type = type;
-            var existing = model.ToData(existingEntityId).ToEntity();
+            model.Config = JsonSerializer.Serialize(config);
+            var typedModel = new OrganizationConnectionRequestModel<BillingSyncConfig>(model);
+            var existing = typedModel.ToData(existingEntityId).ToEntity();
 
             sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(model.OrganizationId).Returns(true);
 
@@ -57,17 +61,20 @@ namespace Bit.Api.Test.Controllers
 
         [Theory]
         [BitAutoData]
-        public async Task CreateConnection_Success(OrganizationConnectionRequestModel model,
+        public async Task CreateConnection_Success(OrganizationConnectionRequestModel model, BillingSyncConfig config,
             SutProvider<OrganizationConnectionsController> sutProvider)
         {
-            sutProvider.GetDependency<ICreateOrganizationConnectionCommand>().CreateAsync(default)
-                .ReturnsForAnyArgs(model.ToData(Guid.NewGuid()).ToEntity());
+            model.Config = JsonSerializer.Serialize(config);
+            var typedModel = new OrganizationConnectionRequestModel<BillingSyncConfig>(model);
+
+            sutProvider.GetDependency<ICreateOrganizationConnectionCommand>().CreateAsync<BillingSyncConfig>(default)
+                .ReturnsForAnyArgs(typedModel.ToData(Guid.NewGuid()).ToEntity());
             sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(model.OrganizationId).Returns(true);
 
             await sutProvider.Sut.CreateConnection(model);
 
             await sutProvider.GetDependency<ICreateOrganizationConnectionCommand>().Received(1)
-                .CreateAsync(Arg.Is(AssertHelper.AssertPropertyEqual(model.ToData())));
+                .CreateAsync(Arg.Is(AssertHelper.AssertPropertyEqual(typedModel.ToData())));
         }
 
         [Theory]
@@ -82,35 +89,39 @@ namespace Bit.Api.Test.Controllers
         [Theory]
         [BitMemberAutoData(nameof(ConnectionTypes))]
         public async Task UpdateConnection_OnlyOneConnectionOfEachType(OrganizationConnectionType type,
-            OrganizationConnection existing1, OrganizationConnection existing2,
+            OrganizationConnection existing1, OrganizationConnection existing2, BillingSyncConfig config,
             SutProvider<OrganizationConnectionsController> sutProvider)
         {
-            var model = RequestModelFromEntity(existing1);
+            existing1.Config = JsonSerializer.Serialize(config);
+            var typedModel = RequestModelFromEntity(existing1);
 
-            sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(model.OrganizationId).Returns(true);
+            sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(typedModel.OrganizationId).Returns(true);
 
-            sutProvider.GetDependency<IOrganizationConnectionRepository>().GetByOrganizationIdTypeAsync(model.OrganizationId, type).Returns(new[] { existing1, existing2 });
+            sutProvider.GetDependency<IOrganizationConnectionRepository>().GetByOrganizationIdTypeAsync(typedModel.OrganizationId, type).Returns(new[] { existing1, existing2 });
 
-            var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateConnection(existing1.Id, model));
+            var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateConnection(existing1.Id, typedModel));
 
-            Assert.Contains($"The requested organization already has a connection of type {model.Type}. Only one of each connection type may exist per organization.", exception.Message);
+            Assert.Contains($"The requested organization already has a connection of type {typedModel.Type}. Only one of each connection type may exist per organization.", exception.Message);
         }
 
         [Theory]
         [BitAutoData]
-        public async Task UpdateConnection_Success(OrganizationConnection existing, OrganizationConnection updated,
+        public async Task UpdateConnection_Success(OrganizationConnection existing, BillingSyncConfig config,
+            OrganizationConnection updated,
             SutProvider<OrganizationConnectionsController> sutProvider)
         {
+            updated.Config = JsonSerializer.Serialize(config);
             updated.Id = existing.Id;
             var model = RequestModelFromEntity(updated);
 
             sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(model.OrganizationId).Returns(true);
             sutProvider.GetDependency<IOrganizationConnectionRepository>().GetByOrganizationIdTypeAsync(model.OrganizationId, model.Type).Returns(new[] { existing });
-            sutProvider.GetDependency<IUpdateOrganizationConnectionCommand>().UpdateAsync(default).ReturnsForAnyArgs(updated);
+            sutProvider.GetDependency<IUpdateOrganizationConnectionCommand>().UpdateAsync<BillingSyncConfig>(default).ReturnsForAnyArgs(updated);
 
+            var expected = new OrganizationConnectionResponseModel(updated, typeof(BillingSyncConfig));
             var result = await sutProvider.Sut.UpdateConnection(existing.Id, model);
 
-            AssertHelper.AssertPropertyEqual(updated, result);
+            AssertHelper.AssertPropertyEqual(expected, result);
             await sutProvider.GetDependency<IUpdateOrganizationConnectionCommand>().Received(1)
                 .UpdateAsync(Arg.Is(AssertHelper.AssertPropertyEqual(model.ToData(updated.Id))));
         }
@@ -127,13 +138,15 @@ namespace Bit.Api.Test.Controllers
 
         [Theory]
         [BitAutoData]
-        public async Task GetConnection_Success(OrganizationConnection connection,
+        public async Task GetConnection_Success(OrganizationConnection connection, BillingSyncConfig config,
             SutProvider<OrganizationConnectionsController> sutProvider)
         {
-            var expected = new OrganizationConnectionResponseModel(connection);
+            connection.Config = JsonSerializer.Serialize(config);
+
             sutProvider.GetDependency<IOrganizationConnectionRepository>().GetByOrganizationIdTypeAsync(connection.OrganizationId, connection.Type).Returns(new[] { connection });
             sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(connection.OrganizationId).Returns(true);
 
+            var expected = new OrganizationConnectionResponseModel(connection, typeof(BillingSyncConfig));
             var actual = await sutProvider.Sut.GetConnection(connection.OrganizationId, connection.Type);
 
             AssertHelper.AssertPropertyEqual(expected, actual);
@@ -172,15 +185,15 @@ namespace Bit.Api.Test.Controllers
             await sutProvider.GetDependency<IDeleteOrganizationConnectionCommand>().DeleteAsync(connection);
         }
 
-        private OrganizationConnectionRequestModel RequestModelFromEntity(OrganizationConnection entity)
+        private static OrganizationConnectionRequestModel<BillingSyncConfig> RequestModelFromEntity(OrganizationConnection entity)
         {
-            return new()
+            return new(new OrganizationConnectionRequestModel()
             {
                 Type = entity.Type,
                 OrganizationId = entity.OrganizationId,
                 Enabled = entity.Enabled,
                 Config = entity.Config,
-            };
+            });
         }
     }
 }

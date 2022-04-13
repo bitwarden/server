@@ -8,6 +8,7 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.OrganizationConnectionConfigs;
 using Bit.Core.OrganizationFeatures.OrganizationConnections.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Utilities;
@@ -55,8 +56,15 @@ namespace Bit.Api.Controllers
                 throw new BadRequestException($"The requested organization already has a connection of type {model.Type}. Only one of each connection type may exist per organization.");
             }
 
-            var connection = await _createOrganizationConnectionCommand.CreateAsync(model.ToData());
-            return new OrganizationConnectionResponseModel(connection);
+            switch (model.Type)
+            {
+                case OrganizationConnectionType.CloudBillingSync:
+                    var typedModel = new OrganizationConnectionRequestModel<BillingSyncConfig>(model);
+                    var connection = await _createOrganizationConnectionCommand.CreateAsync(typedModel.ToData());
+                    return new OrganizationConnectionResponseModel(connection, typeof(BillingSyncConfig));
+                default:
+                    throw new BadRequestException($"Unkown Organization connection Type: {model.Type}");
+            }
         }
 
         [HttpPut("{organizationConnectionId}")]
@@ -72,8 +80,15 @@ namespace Bit.Api.Controllers
                 throw new BadRequestException($"The requested organization already has a connection of type {model.Type}. Only one of each connection type may exist per organization.");
             }
 
-            var connection = await _updateOrganizationConnectionCommand.UpdateAsync(model.ToData(organizationConnectionId));
-            return new OrganizationConnectionResponseModel(connection);
+            switch (model.Type)
+            {
+                case OrganizationConnectionType.CloudBillingSync:
+                    var typedModel = new OrganizationConnectionRequestModel<BillingSyncConfig>(model);
+                    var connection = await _updateOrganizationConnectionCommand.UpdateAsync(typedModel.ToData(organizationConnectionId));
+                    return new OrganizationConnectionResponseModel(connection, typeof(BillingSyncConfig));
+                default:
+                    throw new BadRequestException($"Unkown Organization connection Type: {model.Type}");
+            }
         }
 
         [HttpGet("{organizationId}/{type}")]
@@ -85,7 +100,16 @@ namespace Bit.Api.Controllers
             }
 
             var connections = await GetConnectionsAsync(organizationId);
-            return new OrganizationConnectionResponseModel(connections.FirstOrDefault(c => c.Type == type));
+            var connection = connections.FirstOrDefault(c => c.Type == type);
+
+            switch (type)
+            {
+                case OrganizationConnectionType.CloudBillingSync:
+                    return new OrganizationConnectionResponseModel(connection, typeof(BillingSyncConfig));
+                default:
+                    throw new BadRequestException($"Unkown Organization connection Type: {type}");
+            }
+
         }
 
         [HttpDelete("{organizationConnectionId}")]

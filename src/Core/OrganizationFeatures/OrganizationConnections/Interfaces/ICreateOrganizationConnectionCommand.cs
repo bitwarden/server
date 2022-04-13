@@ -6,6 +6,6 @@ namespace Bit.Core.OrganizationFeatures.OrganizationConnections.Interfaces
 {
     public interface ICreateOrganizationConnectionCommand
     {
-        Task<OrganizationConnection> CreateAsync(OrganizationConnectionData connectionData);
+        Task<OrganizationConnection> CreateAsync<T>(OrganizationConnectionData<T> connectionData) where T : new();
     }
 }

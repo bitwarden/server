@@ -6,13 +6,13 @@ using Bit.Core.Enums;
 
 namespace Bit.Core.Models.Data.Organizations.OrganizationConnections
 {
-    public class OrganizationConnectionData
+    public class OrganizationConnectionData<T> where T : new()
     {
         public Guid? Id { get; set; }
         public OrganizationConnectionType Type { get; set; }
         public Guid OrganizationId { get; set; }
         public bool Enabled { get; set; }
-        public string Config { get; set; }
+        public T Config { get; set; }
 
         public OrganizationConnection ToEntity()
         {
@@ -21,8 +21,8 @@ namespace Bit.Core.Models.Data.Organizations.OrganizationConnections
                 Type = Type,
                 OrganizationId = OrganizationId,
                 Enabled = Enabled,
-                Config = Config,
             };
+            result.SetConfig(Config);
 
             if (Id.HasValue)
             {

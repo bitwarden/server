@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations.OrganizationConnections;
+using Bit.Core.Models.OrganizationConnectionConfigs;
 using Bit.Core.OrganizationFeatures.OrganizationConnections;
 using Bit.Core.Repositories;
 using Bit.Test.Common.AutoFixture;
@@ -18,7 +19,7 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationConnections
     {
         [Theory]
         [BitAutoData]
-        public async Task UpdateAsync_NoId_Fails(OrganizationConnectionData data,
+        public async Task UpdateAsync_NoId_Fails(OrganizationConnectionData<BillingSyncConfig> data,
             SutProvider<UpdateOrganizationConnectionCommand> sutProvider)
         {
             data.Id = null;
@@ -32,7 +33,8 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationConnections
 
         [Theory]
         [BitAutoData]
-        public async Task UpdateAsync_ConnectionDoesNotExist_ThrowsNotFound(OrganizationConnectionData data,
+        public async Task UpdateAsync_ConnectionDoesNotExist_ThrowsNotFound(
+            OrganizationConnectionData<BillingSyncConfig> data,
             SutProvider<UpdateOrganizationConnectionCommand> sutProvider)
         {
             var exception = await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.UpdateAsync(data));
@@ -43,7 +45,8 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationConnections
 
         [Theory]
         [BitAutoData]
-        public async Task UpdateAsync_CallsUpsert(OrganizationConnectionData data, OrganizationConnection existing,
+        public async Task UpdateAsync_CallsUpsert(OrganizationConnectionData<BillingSyncConfig> data,
+            OrganizationConnection existing,
             SutProvider<UpdateOrganizationConnectionCommand> sutProvider)
         {
             data.Id = existing.Id;
