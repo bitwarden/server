@@ -1,6 +1,8 @@
 ﻿using Bit.Core.Models.Business.Tokenables;
 using Bit.Core.OrganizationFeatures.OrganizationApiKeys;
 using Bit.Core.OrganizationFeatures.OrganizationApiKeys.Interfaces;
+using Bit.Core.OrganizationFeatures.OrganizationConnections;
+using Bit.Core.OrganizationFeatures.OrganizationConnections.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
@@ -19,8 +21,16 @@ namespace Bit.Core.OrganizationFeatures
         {
             services.AddScoped<IOrganizationService, OrganizationService>();
             services.AddTokenizers();
+            services.AddOrganizationConnectionCommands();
             services.AddOrganizationSponsorshipCommands(globalSettings);
             services.AddOrganizationApiKeyCommands();
+        }
+
+        private static void AddOrganizationConnectionCommands(this IServiceCollection services)
+        {
+            services.AddScoped<ICreateOrganizationConnectionCommand, CreateOrganizationConnectionCommand>();
+            services.AddScoped<IDeleteOrganizationConnectionCommand, DeleteOrganizationConnectionCommand>();
+            services.AddScoped<IUpdateOrganizationConnectionCommand, UpdateOrganizationConnectionCommand>();
         }
 
         private static void AddOrganizationSponsorshipCommands(this IServiceCollection services, IGlobalSettings globalSettings)
@@ -36,6 +46,12 @@ namespace Bit.Core.OrganizationFeatures
             services.AddScoped<IValidateRedemptionTokenCommand, ValidateRedemptionTokenCommand>();
 
             services.AddScoped<IValidateSponsorshipCommand, ValidateSponsorshipCommand>();
+
+            services.AddScoped<IValidateBillingSyncKeyCommand, ValidateBillingSyncKeyCommand>();
+
+            services.AddScoped<ICloudSyncSponsorshipsCommand, CloudSyncSponsorshipsCommand>();
+
+            services.AddScoped<ISelfHostedSyncSponsorshipsCommand, SelfHostedSyncSponsorshipsCommand>();
 
             if (globalSettings.SelfHosted)
             {
