@@ -14,9 +14,6 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
 {
     public class OrganizationApiKeyRepository : Repository<OrganizationApiKey, Models.OrganizationApiKey, Guid>, IOrganizationApiKeyRepository
     {
-        private readonly IServiceScopeFactory _serviceScopeFactory;
-        private readonly IMapper _mapper;
-
         public OrganizationApiKeyRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
             : base(serviceScopeFactory, mapper, db => db.OrganizationApiKeys)
         {
@@ -25,13 +22,13 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
 
         public async Task<IEnumerable<OrganizationApiKey>> GetManyByOrganizationIdTypeAsync(Guid organizationId, OrganizationApiKeyType? type = null)
         {
-            using (var scope = _serviceScopeFactory.CreateScope())
+            using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
                 var apiKeys = await dbContext.OrganizationApiKeys
                     .Where(o => o.OrganizationId == organizationId && (type == null || o.Type == type))
                     .ToListAsync();
-                return _mapper.Map<List<OrganizationApiKey>>(apiKeys);
+                return Mapper.Map<List<OrganizationApiKey>>(apiKeys);
             }
         }
     }
