@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[OrganizationConnection_ReadEnabledByOrganizationIdType]
+CREATE PROCEDURE [dbo].[OrganizationConnection_ReadByOrganizationIdType]
     @OrganizationId UNIQUEIDENTIFIER,
     @Type TINYINT
 AS
@@ -11,6 +11,5 @@ BEGIN
         [dbo].[OrganizationConnectionView]
     WHERE
         [OrganizationId] = @OrganizationId AND
-        [Type] = @Type AND
-        [Enabled] = 1
+        [Type] = @Type
 END

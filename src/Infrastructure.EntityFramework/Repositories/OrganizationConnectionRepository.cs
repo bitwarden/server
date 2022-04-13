@@ -19,6 +19,18 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
         {
         }
 
+        public async Task<ICollection<OrganizationConnection>> GetByOrganizationIdTypeAsync(Guid organizationId, OrganizationConnectionType type)
+        {
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var connections = await dbContext.OrganizationConnections
+                    .Where(oc => oc.OrganizationId == organizationId && oc.Type == type)
+                    .ToListAsync();
+                return Mapper.Map<List<OrganizationConnection>>(connections);
+            }
+        }
+
         public async Task<ICollection<OrganizationConnection>> GetEnabledByOrganizationIdTypeAsync(Guid organizationId, OrganizationConnectionType type)
         {
             using (var scope = ServiceScopeFactory.CreateScope())

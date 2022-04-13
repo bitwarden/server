@@ -108,7 +108,7 @@ namespace Bit.Api.Controllers
         }
 
         private async Task<ICollection<OrganizationConnection>> GetConnectionsAsync(Guid organizationId) =>
-            await _organizationConnectionRepository.GetEnabledByOrganizationIdTypeAsync(organizationId, OrganizationConnectionType.CloudBillingSync);
+            await _organizationConnectionRepository.GetByOrganizationIdTypeAsync(organizationId, OrganizationConnectionType.CloudBillingSync);
 
         private async Task<bool> HasConnectionTypeAsync(OrganizationConnectionRequestModel model, Guid? connectionId = null)
         {

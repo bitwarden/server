@@ -48,7 +48,7 @@ namespace Bit.Api.Test.Controllers
 
             sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(model.OrganizationId).Returns(true);
 
-            sutProvider.GetDependency<IOrganizationConnectionRepository>().GetEnabledByOrganizationIdTypeAsync(model.OrganizationId, type).Returns(new[] { existing });
+            sutProvider.GetDependency<IOrganizationConnectionRepository>().GetByOrganizationIdTypeAsync(model.OrganizationId, type).Returns(new[] { existing });
 
             var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.CreateConnection(model));
 
@@ -89,7 +89,7 @@ namespace Bit.Api.Test.Controllers
 
             sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(model.OrganizationId).Returns(true);
 
-            sutProvider.GetDependency<IOrganizationConnectionRepository>().GetEnabledByOrganizationIdTypeAsync(model.OrganizationId, type).Returns(new[] { existing1, existing2 });
+            sutProvider.GetDependency<IOrganizationConnectionRepository>().GetByOrganizationIdTypeAsync(model.OrganizationId, type).Returns(new[] { existing1, existing2 });
 
             var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateConnection(existing1.Id, model));
 
@@ -105,7 +105,7 @@ namespace Bit.Api.Test.Controllers
             var model = RequestModelFromEntity(updated);
 
             sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(model.OrganizationId).Returns(true);
-            sutProvider.GetDependency<IOrganizationConnectionRepository>().GetEnabledByOrganizationIdTypeAsync(model.OrganizationId, model.Type).Returns(new[] { existing });
+            sutProvider.GetDependency<IOrganizationConnectionRepository>().GetByOrganizationIdTypeAsync(model.OrganizationId, model.Type).Returns(new[] { existing });
             sutProvider.GetDependency<IUpdateOrganizationConnectionCommand>().UpdateAsync(default).ReturnsForAnyArgs(updated);
 
             var result = await sutProvider.Sut.UpdateConnection(existing.Id, model);
@@ -131,7 +131,7 @@ namespace Bit.Api.Test.Controllers
             SutProvider<OrganizationConnectionsController> sutProvider)
         {
             var expected = new OrganizationConnectionResponseModel(connection);
-            sutProvider.GetDependency<IOrganizationConnectionRepository>().GetEnabledByOrganizationIdTypeAsync(connection.OrganizationId, connection.Type).Returns(new[] { connection });
+            sutProvider.GetDependency<IOrganizationConnectionRepository>().GetByOrganizationIdTypeAsync(connection.OrganizationId, connection.Type).Returns(new[] { connection });
             sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(connection.OrganizationId).Returns(true);
 
             var actual = await sutProvider.Sut.GetConnection(connection.OrganizationId, connection.Type);
