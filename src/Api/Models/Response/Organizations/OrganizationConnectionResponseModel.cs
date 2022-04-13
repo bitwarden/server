@@ -1,0 +1,24 @@
+using System;
+using Bit.Core.Entities;
+using Bit.Core.Enums;
+
+namespace Bit.Api.Models.Response.Organizations
+{
+    public class OrganizationConnectionResponseModel
+    {
+        public Guid Id { get; set; }
+        public OrganizationConnectionType Type { get; set; }
+        public Guid OrganizationId { get; set; }
+        public bool Enabled { get; set; }
+        public string Config { get; set; }
+
+        public OrganizationConnectionResponseModel(OrganizationConnection connection)
+        {
+            Id = connection.Id;
+            Type = connection.Type;
+            OrganizationId = connection.OrganizationId;
+            Enabled = connection.Enabled;
+            Config = connection.Config;
+        }
+    }
+}
