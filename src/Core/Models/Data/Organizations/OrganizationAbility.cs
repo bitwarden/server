@@ -1,7 +1,7 @@
 ﻿using System;
 using Bit.Core.Entities;
 
-namespace Bit.Core.Models.Data
+namespace Bit.Core.Models.Data.Organizations
 {
     public class OrganizationAbility
     {

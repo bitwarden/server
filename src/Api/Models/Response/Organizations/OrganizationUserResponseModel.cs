@@ -5,9 +5,10 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Data;
+using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Utilities;
 
-namespace Bit.Api.Models.Response
+namespace Bit.Api.Models.Response.Organizations
 {
     public class OrganizationUserResponseModel : ResponseModel
     {
