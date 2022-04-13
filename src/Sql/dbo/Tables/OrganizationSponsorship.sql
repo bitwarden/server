@@ -1,6 +1,6 @@
 CREATE TABLE [dbo].[OrganizationSponsorship] (
     [Id]                            UNIQUEIDENTIFIER NOT NULL,
-    [SponsoringOrganizationId]      UNIQUEIDENTIFIER NOT NULl,
+    [SponsoringOrganizationId]      UNIQUEIDENTIFIER NULl,
     [SponsoringOrganizationUserID]  UNIQUEIDENTIFIER NOT NULL,
     [SponsoredOrganizationId]       UNIQUEIDENTIFIER NULL,
     [FriendlyName]                  NVARCHAR(256)    NULL,
@@ -17,7 +17,8 @@ CREATE TABLE [dbo].[OrganizationSponsorship] (
 
 GO
 CREATE NONCLUSTERED INDEX [IX_OrganizationSponsorship_SponsoringOrganizationId]
-    ON [dbo].[OrganizationSponsorship]([SponsoringOrganizationId] ASC);
+    ON [dbo].[OrganizationSponsorship]([SponsoringOrganizationId] ASC)
+    WHERE [SponsoringOrganizationId] IS NOT NULL;
 
 GO
 CREATE NONCLUSTERED INDEX [IX_OrganizationSponsorship_SponsoringOrganizationUserId]

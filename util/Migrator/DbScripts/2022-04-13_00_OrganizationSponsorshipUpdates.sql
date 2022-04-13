@@ -1,4 +1,52 @@
-﻿CREATE PROCEDURE [dbo].[Organization_DeleteById]
+IF COLUMNPROPERTY(OBJECT_ID('[dbo].[OrganizationSponsorship]', 'U'), 'SponsoringOrganizationId', 'AllowsNull') = 0
+BEGIN
+    DROP INDEX [IX_OrganizationSponsorship_SponsoringOrganizationId]
+    ON [dbo].[OrganizationSponsorship]
+
+    ALTER TABLE [dbo].[OrganizationSponsorship]
+    ALTER COLUMN [SponsoringOrganizationId] UNIQUEIDENTIFIER NULL;
+
+    CREATE NONCLUSTERED INDEX [IX_OrganizationSponsorship_SponsoringOrganizationId]
+    ON [dbo].[OrganizationSponsorship]([SponsoringOrganizationId] ASC)
+    WHERE [SponsoringOrganizationId] IS NOT NULL;
+END
+GO
+
+IF OBJECT_ID('[dbo].[OrganizationSponsorship_OrganizationDeleted') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[OrganizationSponsorship_OrganizationDeleted]
+END
+GO
+
+CREATE PROCEDURE [dbo].[OrganizationSponsorship_OrganizationDeleted]
+    @OrganizationId UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    UPDATE
+        [dbo].[OrganizationSponsorship]
+    SET
+        [SponsoringOrganizationId] = NULL
+    WHERE
+        [SponsoringOrganizationId] = @OrganizationId
+
+    UPDATE
+        [dbo].[OrganizationSponsorship]
+    SET
+        [SponsoredOrganizationId] = NULL
+    WHERE
+        [SponsoredOrganizationId] = @OrganizationId
+END
+GO
+
+IF OBJECT_ID('[dbo].[Organization_DeleteById]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[Organization_DeleteById]
+END
+GO
+
+CREATE PROCEDURE [dbo].[Organization_DeleteById]
     @Id UNIQUEIDENTIFIER
 AS
 BEGIN
@@ -69,3 +117,4 @@ BEGIN
 
     COMMIT TRANSACTION Organization_DeleteById
 END
+GO

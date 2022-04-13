@@ -43,7 +43,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
                 return false;
             }
 
-            if (existingSponsorship.SponsoringOrganizationId == default || existingSponsorship.SponsoringOrganizationUserId == default || existingSponsorship.PlanSponsorshipType == null)
+            if (existingSponsorship.SponsoringOrganizationId == null || existingSponsorship.SponsoringOrganizationUserId == default || existingSponsorship.PlanSponsorshipType == null)
             {
                 await CancelSponsorshipAsync(sponsoredOrganization, existingSponsorship);
                 return false;
@@ -51,7 +51,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
             var sponsoredPlan = Utilities.StaticStore.GetSponsoredPlan(existingSponsorship.PlanSponsorshipType.Value);
 
             var sponsoringOrganization = await _organizationRepository
-                .GetByIdAsync(existingSponsorship.SponsoringOrganizationId);
+                .GetByIdAsync(existingSponsorship.SponsoringOrganizationId.Value);
             if (sponsoringOrganization == null)
             {
                 await CancelSponsorshipAsync(sponsoredOrganization, existingSponsorship);
