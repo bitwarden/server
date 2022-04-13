@@ -11,6 +11,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.OrganizationConnectionConfigs;
 using Bit.Core.OrganizationFeatures.OrganizationConnections.Interfaces;
 using Bit.Core.Repositories;
+using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -27,21 +28,29 @@ namespace Bit.Api.Controllers
         private readonly IDeleteOrganizationConnectionCommand _deleteOrganizationConnectionCommand;
         private readonly IOrganizationConnectionRepository _organizationConnectionRepository;
         private readonly ICurrentContext _currentContext;
+        private readonly IGlobalSettings _globalSettings;
 
         public OrganizationConnectionsController(
             ICreateOrganizationConnectionCommand createOrganizationConnectionCommand,
             IUpdateOrganizationConnectionCommand updateOrganizationConnectionCommand,
             IDeleteOrganizationConnectionCommand deleteOrganizationConnectionCommand,
             IOrganizationConnectionRepository organizationConnectionRepository,
-            ICurrentContext currentContext)
+            ICurrentContext currentContext,
+            IGlobalSettings globalSettings)
         {
             _createOrganizationConnectionCommand = createOrganizationConnectionCommand;
             _updateOrganizationConnectionCommand = updateOrganizationConnectionCommand;
             _deleteOrganizationConnectionCommand = deleteOrganizationConnectionCommand;
             _organizationConnectionRepository = organizationConnectionRepository;
             _currentContext = currentContext;
+            _globalSettings = globalSettings;
         }
 
+        [HttpGet("enabled")]
+        public bool ConnectionsEnabled()
+        {
+            return _globalSettings.SelfHosted && _globalSettings.EnableCloudCommunication;
+        }
 
         [HttpPost("")]
         public async Task<OrganizationConnectionResponseModel> CreateConnection([FromBody] OrganizationConnectionRequestModel model)
@@ -113,7 +122,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpDelete("{organizationConnectionId}")]
-        [HttpPost("{organizationConnectionId}}/delete")]
+        [HttpPost("{organizationConnectionId}/delete")]
         public async Task DeleteConnection(Guid organizationConnectionId)
         {
             var connection = await _organizationConnectionRepository.GetByIdAsync(organizationConnectionId);
