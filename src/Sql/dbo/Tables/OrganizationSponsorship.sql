@@ -1,6 +1,6 @@
 CREATE TABLE [dbo].[OrganizationSponsorship] (
     [Id]                            UNIQUEIDENTIFIER NOT NULL,
-    [SponsoringOrganizationId]      UNIQUEIDENTIFIER NULl,
+    [SponsoringOrganizationId]      UNIQUEIDENTIFIER NULL,
     [SponsoringOrganizationUserID]  UNIQUEIDENTIFIER NOT NULL,
     [SponsoredOrganizationId]       UNIQUEIDENTIFIER NULL,
     [FriendlyName]                  NVARCHAR(256)    NULL,
