@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Bit.Admin.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
+using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -19,11 +21,14 @@ namespace Bit.Admin.Controllers
     {
         private readonly IOrganizationRepository _organizationRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
+        private readonly IOrganizationConnectionRepository _organizationConnectionRepository;
+        private readonly ISelfHostedSyncSponsorshipsCommand _syncSponsorshipsCommand;
         private readonly ICipherRepository _cipherRepository;
         private readonly ICollectionRepository _collectionRepository;
         private readonly IGroupRepository _groupRepository;
         private readonly IPolicyRepository _policyRepository;
         private readonly IPaymentService _paymentService;
+        private readonly ILicensingService _licensingService;
         private readonly IApplicationCacheService _applicationCacheService;
         private readonly GlobalSettings _globalSettings;
         private readonly IReferenceEventService _referenceEventService;
@@ -32,11 +37,14 @@ namespace Bit.Admin.Controllers
         public OrganizationsController(
             IOrganizationRepository organizationRepository,
             IOrganizationUserRepository organizationUserRepository,
+            IOrganizationConnectionRepository organizationConnectionRepository,
+            ISelfHostedSyncSponsorshipsCommand syncSponsorshipsCommand,
             ICipherRepository cipherRepository,
             ICollectionRepository collectionRepository,
             IGroupRepository groupRepository,
             IPolicyRepository policyRepository,
             IPaymentService paymentService,
+            ILicensingService licensingService,
             IApplicationCacheService applicationCacheService,
             GlobalSettings globalSettings,
             IReferenceEventService referenceEventService,
@@ -44,11 +52,14 @@ namespace Bit.Admin.Controllers
         {
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
+            _organizationConnectionRepository = organizationConnectionRepository;
+            _syncSponsorshipsCommand = syncSponsorshipsCommand;
             _cipherRepository = cipherRepository;
             _collectionRepository = collectionRepository;
             _groupRepository = groupRepository;
             _policyRepository = policyRepository;
             _paymentService = paymentService;
+            _licensingService = licensingService;
             _applicationCacheService = applicationCacheService;
             _globalSettings = globalSettings;
             _referenceEventService = referenceEventService;
@@ -130,8 +141,9 @@ namespace Bit.Admin.Controllers
             }
             var users = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(id);
             var billingInfo = await _paymentService.GetBillingAsync(organization);
+            var billingSyncConnection = await _organizationConnectionRepository.GetEnabledByOrganizationIdTypeAsync(id, OrganizationConnectionType.CloudBillingSync);
             return View(new OrganizationEditModel(organization, users, ciphers, collections, groups, policies,
-                billingInfo, _globalSettings));
+                billingInfo, billingSyncConnection, _globalSettings));
         }
 
         [HttpPost]
@@ -164,5 +176,36 @@ namespace Bit.Admin.Controllers
 
             return RedirectToAction("Index");
         }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> TriggerBillingSync(Guid id)
+        {
+            var organization = await _organizationRepository.GetByIdAsync(id);
+            if (organization == null)
+            {
+                return RedirectToAction("Index");
+            }
+            var connection = (await _organizationConnectionRepository.GetEnabledByOrganizationIdTypeAsync(id, OrganizationConnectionType.CloudBillingSync)).FirstOrDefault();
+            if (connection != null)
+            {
+                Guid cloudOrganizationId = new Guid();
+                try
+                {
+                    cloudOrganizationId = (await _licensingService.ReadOrganizationLicenseAsync(id)).Id;
+                    if (cloudOrganizationId == default)
+                    {
+                        throw new Exception();
+                    }
+                    await _syncSponsorshipsCommand.SyncOrganization(id, cloudOrganizationId, connection);
+                    TempData["ConnectionActivated"] = id;
+                }
+                catch { }
+
+                return RedirectToAction("Edit", new { id });
+            }
+            return RedirectToAction("Index");
+        }
+
     }
 }

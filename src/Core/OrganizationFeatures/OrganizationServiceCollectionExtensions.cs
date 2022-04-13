@@ -40,10 +40,12 @@ namespace Bit.Core.OrganizationFeatures
             if (globalSettings.SelfHosted)
             {
                 services.AddScoped<IRevokeSponsorshipCommand, SelfHostedRevokeSponsorshipCommand>();
+                services.AddScoped<ISelfHostedSyncSponsorshipsCommand, SelfHostedSyncSponsorshipsCommand>();
             }
             else
             {
                 services.AddScoped<IRevokeSponsorshipCommand, CloudRevokeSponsorshipCommand>();
+                services.AddScoped<ICloudSyncSponsorshipsCommand, CloudSyncSponsorshipsCommand>();
             }
         }
 
