@@ -1,4 +1,4 @@
-@model OrganizationEditModel
+@model OrganizationViewModel
 <h2>Connections</h2>
 <div class="row">
     <div class="col-8">
@@ -26,11 +26,18 @@
                                 <td class="align-middle">
                                     @if(connection.Type == OrganizationConnectionType.CloudBillingSync)
                                     {
-                                        <p>Billing Sync</p>
+                                        @:Billing Sync
                                     }
                                 </td>
                                 <td class="align-middle">
-                                    @connection.Enabled
+                                    @if(connection.Enabled)
+                                    {
+                                        @:Enabled
+                                    }
+                                    else
+                                    {
+                                        @:Disabled
+                                    }
                                 </td>
                                 <td>
                                     @if(connection.Enabled) 

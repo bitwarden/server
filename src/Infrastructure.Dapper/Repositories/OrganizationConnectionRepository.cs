@@ -23,7 +23,7 @@ namespace Bit.Infrastructure.Dapper.Repositories
             using (var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.QueryAsync<OrganizationConnection>(
-                    $"[{Schema}].[OrganizationConnection_ReadByOrganizationIdType]",
+                    $"[{Schema}].[OrganizationConnection_ReadEnabledByOrganizationIdType]",
                     new
                     {
                         OrganizationId = organizationId,

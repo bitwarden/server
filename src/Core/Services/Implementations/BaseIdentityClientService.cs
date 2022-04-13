@@ -201,7 +201,7 @@ namespace Bit.Core.Services
 
         public void Dispose()
         {
-            _decodedToken.Dispose();
+            _decodedToken?.Dispose();
         }
     }
 }

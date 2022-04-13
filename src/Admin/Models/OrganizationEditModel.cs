@@ -18,10 +18,9 @@ namespace Bit.Admin.Models
             IEnumerable<Cipher> ciphers, IEnumerable<Collection> collections, IEnumerable<Group> groups,
             IEnumerable<Policy> policies, BillingInfo billingInfo, IEnumerable<OrganizationConnection> connections,
             GlobalSettings globalSettings)
-            : base(org, orgUsers, ciphers, collections, groups, policies)
+            : base(org, connections, orgUsers, ciphers, collections, groups, policies)
         {
             BillingInfo = billingInfo;
-            Connections = connections;
             BraintreeMerchantId = globalSettings.Braintree.MerchantId;
 
             Name = org.Name;
@@ -54,7 +53,6 @@ namespace Bit.Admin.Models
         }
 
         public BillingInfo BillingInfo { get; set; }
-        public IEnumerable<OrganizationConnection> Connections { get; set; }
         public string RandomLicenseKey => CoreHelpers.SecureRandomString(20);
         public string FourteenDayExpirationDate => DateTime.Now.AddDays(14).ToString("yyyy-MM-ddTHH:mm");
         public string BraintreeMerchantId { get; set; }

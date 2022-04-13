@@ -115,7 +115,8 @@ namespace Bit.Admin.Controllers
                 policies = await _policyRepository.GetManyByOrganizationIdAsync(id);
             }
             var users = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(id);
-            return View(new OrganizationViewModel(organization, users, ciphers, collections, groups, policies));
+            var billingSyncConnection = await _organizationConnectionRepository.GetEnabledByOrganizationIdTypeAsync(id, OrganizationConnectionType.CloudBillingSync);
+            return View(new OrganizationViewModel(organization, _globalSettings.EnableCloudCommunication ? billingSyncConnection : null, users, ciphers, collections, groups, policies));
         }
 
         [SelfHosted(NotSelfHostedOnly = true)]
@@ -143,7 +144,7 @@ namespace Bit.Admin.Controllers
             var billingInfo = await _paymentService.GetBillingAsync(organization);
             var billingSyncConnection = await _organizationConnectionRepository.GetEnabledByOrganizationIdTypeAsync(id, OrganizationConnectionType.CloudBillingSync);
             return View(new OrganizationEditModel(organization, users, ciphers, collections, groups, policies,
-                billingInfo, billingSyncConnection, _globalSettings));
+                billingInfo, _globalSettings.EnableCloudCommunication ? billingSyncConnection : null, _globalSettings));
         }
 
         [HttpPost]
@@ -177,8 +178,6 @@ namespace Bit.Admin.Controllers
             return RedirectToAction("Index");
         }
 
-        [HttpPost]
-        [ValidateAntiForgeryToken]
         public async Task<IActionResult> TriggerBillingSync(Guid id)
         {
             var organization = await _organizationRepository.GetByIdAsync(id);
@@ -202,7 +201,14 @@ namespace Bit.Admin.Controllers
                 }
                 catch { }
 
-                return RedirectToAction("Edit", new { id });
+                if (_globalSettings.SelfHosted)
+                {
+                    return RedirectToAction("View", new { id });
+                }
+                else
+                {
+                    return RedirectToAction("Edit", new { id });
+                }
             }
             return RedirectToAction("Index");
         }
