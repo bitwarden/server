@@ -8,6 +8,8 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Api.Request.OrganizationSponsorships;
+using Bit.Core.Models.Api.Response.OrganizationSponsorships;
 using Bit.Core.Models.Business.Tokenables;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
@@ -20,18 +22,19 @@ using Microsoft.AspNetCore.Mvc;
 namespace Bit.Api.Controllers
 {
     [Route("organization/sponsorship")]
-    [Authorize("Application")]
     public class OrganizationSponsorshipsController : Controller
     {
         private readonly IOrganizationSponsorshipRepository _organizationSponsorshipRepository;
         private readonly IOrganizationRepository _organizationRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly IValidateRedemptionTokenCommand _validateRedemptionTokenCommand;
+        private readonly IValidateBillingSyncKeyCommand _validateBillingSyncKeyCommand;
         private readonly ICreateSponsorshipCommand _createSponsorshipCommand;
         private readonly ISendSponsorshipOfferCommand _sendSponsorshipOfferCommand;
         private readonly ISetUpSponsorshipCommand _setUpSponsorshipCommand;
         private readonly IRevokeSponsorshipCommand _revokeSponsorshipCommand;
         private readonly IRemoveSponsorshipCommand _removeSponsorshipCommand;
+        private readonly ICloudSyncSponsorshipsCommand _syncSponsorshipsCommand;
         private readonly ICurrentContext _currentContext;
         private readonly IUserService _userService;
 
@@ -40,11 +43,13 @@ namespace Bit.Api.Controllers
             IOrganizationRepository organizationRepository,
             IOrganizationUserRepository organizationUserRepository,
             IValidateRedemptionTokenCommand validateRedemptionTokenCommand,
-            ICreateSponsorshipCommand offerSponsorshipCommand,
+            IValidateBillingSyncKeyCommand validateBillingSyncKeyCommand,
+            ICreateSponsorshipCommand createSponsorshipCommand,
             ISendSponsorshipOfferCommand sendSponsorshipOfferCommand,
             ISetUpSponsorshipCommand setUpSponsorshipCommand,
             IRevokeSponsorshipCommand revokeSponsorshipCommand,
             IRemoveSponsorshipCommand removeSponsorshipCommand,
+            ICloudSyncSponsorshipsCommand syncSponsorshipsCommand,
             IUserService userService,
             ICurrentContext currentContext)
         {
@@ -52,18 +57,21 @@ namespace Bit.Api.Controllers
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
             _validateRedemptionTokenCommand = validateRedemptionTokenCommand;
-            _createSponsorshipCommand = offerSponsorshipCommand;
+            _validateBillingSyncKeyCommand = validateBillingSyncKeyCommand;
+            _createSponsorshipCommand = createSponsorshipCommand;
             _sendSponsorshipOfferCommand = sendSponsorshipOfferCommand;
             _setUpSponsorshipCommand = setUpSponsorshipCommand;
             _revokeSponsorshipCommand = revokeSponsorshipCommand;
             _removeSponsorshipCommand = removeSponsorshipCommand;
+            _syncSponsorshipsCommand = syncSponsorshipsCommand;
             _userService = userService;
             _currentContext = currentContext;
         }
 
+        [Authorize("Application")]
         [HttpPost("{sponsoringOrgId}/families-for-enterprise")]
         [SelfHosted(NotSelfHostedOnly = true)]
-        public async Task CreateSponsorship(Guid sponsoringOrgId, [FromBody] OrganizationSponsorshipRequestModel model)
+        public async Task CreateSponsorship(Guid sponsoringOrgId, [FromBody] OrganizationSponsorshipCreateRequestModel model)
         {
             var sponsorship = await _createSponsorshipCommand.CreateSponsorshipAsync(
                 await _organizationRepository.GetByIdAsync(sponsoringOrgId),
@@ -72,6 +80,7 @@ namespace Bit.Api.Controllers
             await _sendSponsorshipOfferCommand.SendSponsorshipOfferAsync(sponsorship, (await CurrentUser).Email);
         }
 
+        [Authorize("Application")]
         [HttpPost("{sponsoringOrgId}/families-for-enterprise/resend")]
         [SelfHosted(NotSelfHostedOnly = true)]
         public async Task ResendSponsorshipOffer(Guid sponsoringOrgId)
@@ -83,10 +92,10 @@ namespace Bit.Api.Controllers
                 await _organizationRepository.GetByIdAsync(sponsoringOrgId),
                 sponsoringOrgUser,
                 await _organizationSponsorshipRepository
-                    .GetBySponsoringOrganizationUserIdAsync(sponsoringOrgUser.Id),
-                (await CurrentUser).Email);
+                    .GetBySponsoringOrganizationUserIdAsync(sponsoringOrgUser.Id));
         }
 
+        [Authorize("Application")]
         [HttpPost("validate-token")]
         [SelfHosted(NotSelfHostedOnly = true)]
         public async Task<bool> PreValidateSponsorshipToken([FromQuery] string sponsorshipToken)
@@ -94,6 +103,7 @@ namespace Bit.Api.Controllers
             return (await _validateRedemptionTokenCommand.ValidateRedemptionTokenAsync(sponsorshipToken, (await CurrentUser).Email)).valid;
         }
 
+        [Authorize("Application")]
         [HttpPost("redeem")]
         [SelfHosted(NotSelfHostedOnly = true)]
         public async Task RedeemSponsorship([FromQuery] string sponsorshipToken, [FromBody] OrganizationSponsorshipRedeemRequestModel model)
@@ -115,6 +125,22 @@ namespace Bit.Api.Controllers
                 await _organizationRepository.GetByIdAsync(model.SponsoredOrganizationId));
         }
 
+        [Authorize("Installation")]
+        [HttpPost("sync")]
+        public async Task<OrganizationSponsorshipSyncResponseModel> Sync([FromBody] OrganizationSponsorshipSyncRequestModel model)
+        {
+            var sponsoringOrg = await _organizationRepository.GetByIdAsync(model.SponsoringOrganizationCloudId);
+            if (!await _validateBillingSyncKeyCommand.ValidateBillingSyncKeyAsync(sponsoringOrg, model.BillingSyncKey))
+            {
+                throw new BadRequestException("Invalid Billing Sync Key");
+            }
+
+            var (syncResponseData, offersToSend) = await _syncSponsorshipsCommand.SyncOrganization(sponsoringOrg, model.ToOrganizationSponsorshipSync().SponsorshipsBatch);
+            await _sendSponsorshipOfferCommand.BulkSendSponsorshipOfferAsync(sponsoringOrg.Name, offersToSend);
+            return new OrganizationSponsorshipSyncResponseModel(syncResponseData);
+        }
+
+        [Authorize("Application")]
         [HttpDelete("{sponsoringOrganizationId}")]
         [HttpPost("{sponsoringOrganizationId}/delete")]
         [SelfHosted(NotSelfHostedOnly = true)]
@@ -133,6 +159,7 @@ namespace Bit.Api.Controllers
             await _revokeSponsorshipCommand.RevokeSponsorshipAsync(existingOrgSponsorship);
         }
 
+        [Authorize("Application")]
         [HttpDelete("sponsored/{sponsoredOrgId}")]
         [HttpPost("sponsored/{sponsoredOrgId}/remove")]
         [SelfHosted(NotSelfHostedOnly = true)]

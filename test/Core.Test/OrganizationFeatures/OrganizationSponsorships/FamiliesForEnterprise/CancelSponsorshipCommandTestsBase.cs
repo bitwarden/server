@@ -27,6 +27,21 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
                 .DeleteAsync(sponsorship);
         }
 
+        protected static async Task AssertDidNotRemoveSponsorshipAsync<T>(SutProvider<T> sutProvider)
+        {
+            await sutProvider.GetDependency<IOrganizationSponsorshipRepository>().DidNotReceiveWithAnyArgs()
+                .DeleteAsync(default);
+            await sutProvider.GetDependency<IOrganizationSponsorshipRepository>().DidNotReceiveWithAnyArgs()
+                .UpsertAsync(default);
+        }
+
+        protected async Task AssertRemovedSponsorshipAsync<T>(OrganizationSponsorship sponsorship,
+            SutProvider<T> sutProvider)
+        {
+            await sutProvider.GetDependency<IOrganizationSponsorshipRepository>().Received(1)
+                .DeleteAsync(sponsorship);
+        }
+
         protected static async Task AssertDidNotRemoveSponsoredPaymentAsync<T>(SutProvider<T> sutProvider)
         {
             await sutProvider.GetDependency<IPaymentService>().DidNotReceiveWithAnyArgs()

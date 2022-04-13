@@ -36,6 +36,7 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
             Organization org, OrganizationUser orgUser, SutProvider<CreateSponsorshipCommand> sutProvider)
         {
             org.PlanType = sponsoringOrgPlan;
+            orgUser.Status = OrganizationUserStatusType.Confirmed;
 
             var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
                 sutProvider.Sut.CreateSponsorshipAsync(org, orgUser, PlanSponsorshipType.FamiliesForEnterprise, default, default));

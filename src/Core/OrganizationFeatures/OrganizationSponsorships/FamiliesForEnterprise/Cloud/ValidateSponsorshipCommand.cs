@@ -59,7 +59,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
             }
 
             var sponsoringOrgPlan = Utilities.StaticStore.GetPlan(sponsoringOrganization.PlanType);
-            if (!sponsoringOrganization.Enabled ||
+            if (OrgDisabledForMoreThanGracePeriod(sponsoringOrganization) ||
                 sponsoredPlan.SponsoringProductType != sponsoringOrgPlan.Product ||
                 existingSponsorship.ToDelete ||
                 SponsorshipIsSelfHostedOutOfSync(existingSponsorship))
@@ -99,5 +99,16 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
         private bool SponsorshipIsSelfHostedOutOfSync(OrganizationSponsorship sponsorship) =>
             sponsorship.LastSyncDate.HasValue &&
             DateTime.UtcNow.Subtract(sponsorship.LastSyncDate.Value).TotalDays > 182.5;
+
+        /// <summary>
+        /// True if Organization is disabled and the expiration date is more than three months ago
+        /// </summary>
+        /// <param name="organization"></param>
+        private bool OrgDisabledForMoreThanGracePeriod(Organization organization) =>
+            !organization.Enabled &&
+            (
+                !organization.ExpirationDate.HasValue ||
+                DateTime.UtcNow.Subtract(organization.ExpirationDate.Value).TotalDays > 93
+            );
     }
 }

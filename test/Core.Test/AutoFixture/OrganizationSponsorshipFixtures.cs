@@ -24,7 +24,8 @@ namespace Bit.Core.Test.AutoFixture.OrganizationSponsorshipFixtures
         public void Customize(IFixture fixture)
         {
             fixture.Customize<OrganizationSponsorship>(composer => composer
-                .With(s => s.ToDelete, false));
+                .With(s => s.ToDelete, false)
+                .With(s => s.LastSyncDate, DateTime.UtcNow.AddDays(new Random().Next(-90, 0))));
         }
     }
 
