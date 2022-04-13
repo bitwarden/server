@@ -18,7 +18,7 @@ namespace Bit.Api.Controllers
 {
     [SelfHosted(SelfHostedOnly = true)]
     [Authorize("Application")]
-    [Route("organization/connection")]
+    [Route("organizations/connections")]
     public class OrganizationConnectionsController : Controller
     {
         private readonly ICreateOrganizationConnectionCommand _createOrganizationConnectionCommand;
