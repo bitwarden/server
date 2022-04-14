@@ -32,10 +32,10 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
         GlobalSettings globalSettings,
         ILogger<SelfHostedSyncSponsorshipsCommand> logger)
         : base(
-            globalSettings.Installation.IdentityUri,
             globalSettings.Installation.ApiUri,
+            globalSettings.Installation.IdentityUri,
             "api.installation",
-            globalSettings.Installation.Id.ToString(),
+            $"installation.{globalSettings.Installation.Id}",
             globalSettings.Installation.Key,
             logger)
         {
@@ -77,7 +77,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
 
             foreach (var orgSponsorshipsBatch in CoreHelpers.Batch(organizationSponsorshipsDict.Values, 1000))
             {
-                var response = await SendAsync<OrganizationSponsorshipSyncRequestModel, OrganizationSponsorshipSyncResponseModel>(HttpMethod.Post, "organizationSponsorships/sync", new OrganizationSponsorshipSyncRequestModel
+                var response = await SendAsync<OrganizationSponsorshipSyncRequestModel, OrganizationSponsorshipSyncResponseModel>(HttpMethod.Post, "organization/sponsorship/sync", new OrganizationSponsorshipSyncRequestModel
                 {
                     BillingSyncKey = billingSyncConfig.BillingSyncKey,
                     SponsoringOrganizationCloudId = cloudOrganizationId,
