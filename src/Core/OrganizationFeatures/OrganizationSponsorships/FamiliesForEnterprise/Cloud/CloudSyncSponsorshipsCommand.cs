@@ -73,8 +73,8 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
                     continue; // prevent unsupported sponsorships
                 }
 
-                var cloudSponsorship = existingSponsorshipsDict[selfHostedSponsorship.SponsoringOrganizationUserId];
-                if (cloudSponsorship == null)
+                OrganizationSponsorship cloudSponsorship;
+                if (!existingSponsorshipsDict.TryGetValue(selfHostedSponsorship.SponsoringOrganizationUserId, out cloudSponsorship))
                 {
                     if (selfHostedSponsorship.ToDelete && selfHostedSponsorship.LastSyncDate == null)
                     {
@@ -116,7 +116,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
                 selfHostedSponsorship.ValidUntil = cloudSponsorship.ValidUntil;
                 selfHostedSponsorship.LastSyncDate = DateTime.UtcNow;
             }
-            var sponsorshipsToEmailOffer = sponsorshipsToUpsert.Where(s => s.Id == null);
+            var sponsorshipsToEmailOffer = sponsorshipsToUpsert.Where(s => s.Id == default);
             if (sponsorshipsToUpsert.Any())
             {
                 await _organizationSponsorshipRepository.UpsertManyAsync(sponsorshipsToUpsert);

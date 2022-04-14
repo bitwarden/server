@@ -46,6 +46,7 @@ namespace Bit.Core.OrganizationFeatures
             {
                 services.AddScoped<IRevokeSponsorshipCommand, CloudRevokeSponsorshipCommand>();
                 services.AddScoped<ICloudSyncSponsorshipsCommand, CloudSyncSponsorshipsCommand>();
+                services.AddScoped<IValidateBillingSyncKeyCommand, ValidateBillingSyncKeyCommand>();
             }
         }
 

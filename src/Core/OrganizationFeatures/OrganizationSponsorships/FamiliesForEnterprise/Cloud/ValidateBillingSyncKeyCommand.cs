@@ -3,10 +3,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Business.Tokenables;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
-using Bit.Core.Tokens;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud
 {
@@ -20,6 +18,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
             IOrganizationApiKeyRepository organizationApiKeyRepository)
         {
             _organizationSponsorshipRepository = organizationSponsorshipRepository;
+            _apiKeyRepository = organizationApiKeyRepository;
         }
 
         public async Task<bool> ValidateBillingSyncKeyAsync(Organization organization, string billingSyncKey)
@@ -33,10 +32,10 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
                 return false;
             }
 
-            var key = (await _apiKeyRepository.GetManyByOrganizationIdTypeAsync(organization.Id, Enums.OrganizationApiKeyType.BillingSync)).FirstOrDefault();
-            if (key != null)
+            var orgApiKey = (await _apiKeyRepository.GetManyByOrganizationIdTypeAsync(organization.Id, Enums.OrganizationApiKeyType.BillingSync)).FirstOrDefault();
+            if (!string.IsNullOrWhiteSpace(orgApiKey.ApiKey))
             {
-                if (billingSyncKey.Equals(key))
+                if (billingSyncKey.Equals(orgApiKey.ApiKey))
                 {
                     return true;
                 }
