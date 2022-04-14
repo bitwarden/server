@@ -1,4 +1,5 @@
 CREATE PROCEDURE [dbo].[OrganizationApiKey_Create]
+    @Id UNIQUEIDENTIFIER OUTPUT,
     @OrganizationId UNIQUEIDENTIFIER,
     @ApiKey VARCHAR(30),
     @Type TINYINT,
@@ -9,6 +10,7 @@ BEGIN
 
     INSERT INTO [dbo].[OrganizationApiKey]
     (
+        [Id],
         [OrganizationId],
         [ApiKey],
         [Type],
@@ -16,6 +18,7 @@ BEGIN
     )
     VALUES
     (
+        @Id,
         @OrganizationId,
         @ApiKey,
         @Type,

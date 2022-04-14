@@ -10,8 +10,9 @@ namespace Bit.Core.Settings
         string LicenseDirectory { get; set; }
         string LicenseCertificatePassword { get; set; }
         int OrganizationInviteExpirationHours { get; set; }
-        InstallationSettings Installation { get; set; }
+        IInstallationSettings Installation { get; set; }
         IFileStorageSettings Attachment { get; set; }
         IConnectionStringSettings Storage { get; set; }
+        IBaseServiceUriSettings BaseServiceUri { get; set; }
     }
 }

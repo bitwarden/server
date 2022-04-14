@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Net.Http;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Microsoft.AspNetCore.Http;
@@ -12,17 +13,20 @@ namespace Bit.Core.Test.Services
     {
         private readonly NotificationsApiPushNotificationService _sut;
 
+        private readonly IHttpClientFactory _httpFactory;
         private readonly GlobalSettings _globalSettings;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly ILogger<NotificationsApiPushNotificationService> _logger;
 
         public NotificationsApiPushNotificationServiceTests()
         {
+            _httpFactory = Substitute.For<IHttpClientFactory>();
             _globalSettings = new GlobalSettings();
             _httpContextAccessor = Substitute.For<IHttpContextAccessor>();
             _logger = Substitute.For<ILogger<NotificationsApiPushNotificationService>>();
 
             _sut = new NotificationsApiPushNotificationService(
+                _httpFactory,
                 _globalSettings,
                 _httpContextAccessor,
                 _logger

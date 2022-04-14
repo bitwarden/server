@@ -41,8 +41,8 @@ namespace Bit.Core.Settings
         public virtual int OrganizationInviteExpirationHours { get; set; } = 120; // 5 days
         public virtual string EventGridKey { get; set; }
         public virtual CaptchaSettings Captcha { get; set; } = new CaptchaSettings();
-        public virtual InstallationSettings Installation { get; set; } = new InstallationSettings();
-        public virtual BaseServiceUriSettings BaseServiceUri { get; set; }
+        public virtual IInstallationSettings Installation { get; set; } = new InstallationSettings();
+        public virtual IBaseServiceUriSettings BaseServiceUri { get; set; }
         public virtual string DatabaseProvider { get; set; }
         public virtual SqlSettings SqlServer { get; set; } = new SqlSettings();
         public virtual SqlSettings PostgreSql { get; set; } = new SqlSettings();
@@ -109,7 +109,7 @@ namespace Bit.Core.Settings
             return string.Concat("/etc/bitwarden", appendedPath);
         }
 
-        public class BaseServiceUriSettings
+        public class BaseServiceUriSettings : IBaseServiceUriSettings
         {
             private readonly GlobalSettings _globalSettings;
 
@@ -422,7 +422,7 @@ namespace Bit.Core.Settings
             public string NotificationUrl { get; set; }
         }
 
-        public class InstallationSettings
+        public class InstallationSettings : IInstallationSettings
         {
             private string _identityUri;
             private string _apiUri;

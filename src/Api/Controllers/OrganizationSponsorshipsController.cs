@@ -9,6 +9,8 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Api.Request.OrganizationSponsorships;
+using Bit.Core.Models.Api.Request.OrganizationSponsorships;
+using Bit.Core.Models.Api.Response.OrganizationSponsorships;
 using Bit.Core.Models.Api.Response.OrganizationSponsorships;
 using Bit.Core.Models.Business.Tokenables;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;

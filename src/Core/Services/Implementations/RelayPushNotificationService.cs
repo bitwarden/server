@@ -20,17 +20,19 @@ namespace Bit.Core.Services
         private readonly IHttpContextAccessor _httpContextAccessor;
 
         public RelayPushNotificationService(
+            IHttpClientFactory httpFactory,
             IDeviceRepository deviceRepository,
             GlobalSettings globalSettings,
             IHttpContextAccessor httpContextAccessor,
             ILogger<RelayPushNotificationService> logger)
             : base(
-                  globalSettings.PushRelayBaseUri,
-                  globalSettings.Installation.IdentityUri,
-                  "api.push",
-                  $"installation.{globalSettings.Installation.Id}",
-                  globalSettings.Installation.Key,
-                  logger)
+                httpFactory,
+                globalSettings.PushRelayBaseUri,
+                globalSettings.Installation.IdentityUri,
+                "api.push",
+                $"installation.{globalSettings.Installation.Id}",
+                globalSettings.Installation.Key,
+                logger)
         {
             _deviceRepository = deviceRepository;
             _httpContextAccessor = httpContextAccessor;
