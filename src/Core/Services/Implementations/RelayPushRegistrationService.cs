@@ -13,15 +13,17 @@ namespace Bit.Core.Services
     {
 
         public RelayPushRegistrationService(
+            IHttpClientFactory httpFactory,
             GlobalSettings globalSettings,
             ILogger<RelayPushRegistrationService> logger)
             : base(
-                  globalSettings.PushRelayBaseUri,
-                  globalSettings.Installation.IdentityUri,
-                  "api.push",
-                  $"installation.{globalSettings.Installation.Id}",
-                  globalSettings.Installation.Key,
-                  logger)
+                httpFactory,
+                globalSettings.PushRelayBaseUri,
+                globalSettings.Installation.IdentityUri,
+                "api.push",
+                $"installation.{globalSettings.Installation.Id}",
+                globalSettings.Installation.Key,
+                logger)
         {
         }
 

@@ -127,6 +127,8 @@ namespace Bit.SharedWeb.Utilities
         {
             // Required for UserService
             services.AddWebAuthn(globalSettings);
+            // Required for HTTP calls
+            services.AddHttpClient();
 
             services.AddSingleton<IStripeAdapter, StripeAdapter>();
             services.AddSingleton<Braintree.IBraintreeGateway>((serviceProvider) =>

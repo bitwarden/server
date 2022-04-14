@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Net.Http;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -13,6 +14,7 @@ namespace Bit.Core.Test.Services
     {
         private readonly RelayPushNotificationService _sut;
 
+        private readonly IHttpClientFactory _httpFactory;
         private readonly IDeviceRepository _deviceRepository;
         private readonly GlobalSettings _globalSettings;
         private readonly IHttpContextAccessor _httpContextAccessor;
@@ -20,12 +22,14 @@ namespace Bit.Core.Test.Services
 
         public RelayPushNotificationServiceTests()
         {
+            _httpFactory = Substitute.For<IHttpClientFactory>();
             _deviceRepository = Substitute.For<IDeviceRepository>();
             _globalSettings = new GlobalSettings();
             _httpContextAccessor = Substitute.For<IHttpContextAccessor>();
             _logger = Substitute.For<ILogger<RelayPushNotificationService>>();
 
             _sut = new RelayPushNotificationService(
+                _httpFactory,
                 _deviceRepository,
                 _globalSettings,
                 _httpContextAccessor,

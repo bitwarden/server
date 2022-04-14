@@ -20,20 +20,22 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
 {
     public class SelfHostedSyncSponsorshipsCommand : BaseIdentityClientService, ISelfHostedSyncSponsorshipsCommand
     {
-        private readonly GlobalSettings _globalSettings;
+        private readonly IGlobalSettings _globalSettings;
         private readonly IOrganizationSponsorshipRepository _organizationSponsorshipRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly IOrganizationConnectionRepository _organizationConnectionRepository;
 
         public SelfHostedSyncSponsorshipsCommand(
+        IHttpClientFactory httpFactory,
         IOrganizationSponsorshipRepository organizationSponsorshipRepository,
         IOrganizationUserRepository organizationUserRepository,
         IOrganizationConnectionRepository organizationConnectionRepository,
-        GlobalSettings globalSettings,
+        IGlobalSettings globalSettings,
         ILogger<SelfHostedSyncSponsorshipsCommand> logger)
         : base(
-            globalSettings.Installation.IdentityUri,
+            httpFactory,
             globalSettings.Installation.ApiUri,
+            globalSettings.Installation.IdentityUri,
             "api.installation",
             globalSettings.Installation.Id.ToString(),
             globalSettings.Installation.Key,
@@ -120,8 +122,14 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
                 return existingSponsorship;
             });
 
-            await _organizationSponsorshipRepository.DeleteManyAsync(sponsorshipsToDelete);
-            await _organizationSponsorshipRepository.UpsertManyAsync(sponsorshipsToUpsert);
+            if (sponsorshipsToDelete.Any())
+            {
+                await _organizationSponsorshipRepository.DeleteManyAsync(sponsorshipsToDelete);
+            }
+            if (sponsorshipsToUpsert.Any())
+            {
+                await _organizationSponsorshipRepository.UpsertManyAsync(sponsorshipsToUpsert);
+            }
         }
 
     }
