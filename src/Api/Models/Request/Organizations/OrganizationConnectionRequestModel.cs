@@ -3,6 +3,7 @@ using System.Text.Json;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations.OrganizationConnections;
+using Bit.Core.Utilities;
 
 namespace Bit.Api.Models.Request.Organizations
 {
@@ -30,7 +31,7 @@ namespace Bit.Api.Models.Request.Organizations
 
             try
             {
-                ParsedConfig = JsonSerializer.Deserialize<T>(model.Config);
+                ParsedConfig = JsonSerializer.Deserialize<T>(model.Config, JsonHelpers.IgnoreCase);
             }
             catch (JsonException)
             {
