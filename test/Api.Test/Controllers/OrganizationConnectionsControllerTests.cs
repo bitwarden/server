@@ -14,6 +14,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.OrganizationConnectionConfigs;
 using Bit.Core.OrganizationFeatures.OrganizationConnections.Interfaces;
 using Bit.Core.Repositories;
+using Bit.Core.Settings;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
@@ -29,6 +30,24 @@ namespace Bit.Api.Test.Controllers
         public static IEnumerable<object[]> ConnectionTypes =>
             Enum.GetValues<OrganizationConnectionType>().Select(p => new object[] { p });
 
+
+        [Theory]
+        [BitAutoData(true, true)]
+        [BitAutoData(false, true)]
+        [BitAutoData(true, false)]
+        [BitAutoData(false, false)]
+        public void ConnectionEnabled_RequiresBothSelfHostAndCommunications(bool selfHosted, bool enableCloudCommunication, SutProvider<OrganizationConnectionsController> sutProvider)
+        {
+            var globalSettingsMock = sutProvider.GetDependency<IGlobalSettings>();
+            globalSettingsMock.SelfHosted.Returns(selfHosted);
+            globalSettingsMock.EnableCloudCommunication.Returns(enableCloudCommunication);
+
+            Action<bool> assert = selfHosted && enableCloudCommunication ? Assert.True : Assert.False;
+
+            var result = sutProvider.Sut.ConnectionsEnabled();
+
+            assert(result);
+        }
 
         [Theory]
         [BitAutoData]
