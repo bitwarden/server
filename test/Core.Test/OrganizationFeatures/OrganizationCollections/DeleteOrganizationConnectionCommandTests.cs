@@ -1,4 +1,4 @@
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data.Organizations.OrganizationConnections;
 using Bit.Core.OrganizationFeatures.OrganizationConnections;
