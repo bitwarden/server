@@ -1,3 +1,9 @@
+IF OBJECT_ID('[dbo].[OrganizationConnection_Create]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[OrganizationConnection_Create]
+END
+GO
+
 CREATE PROCEDURE [dbo].[OrganizationConnection_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
     @OrganizationId UNIQUEIDENTIFIER,
@@ -25,3 +31,4 @@ BEGIN
         @Config
     )
 END
+GO
