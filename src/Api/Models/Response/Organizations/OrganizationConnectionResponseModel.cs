@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Text.Json;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 
@@ -10,7 +11,7 @@ namespace Bit.Api.Models.Response.Organizations
         public OrganizationConnectionType Type { get; set; }
         public Guid OrganizationId { get; set; }
         public bool Enabled { get; set; }
-        public object Config { get; set; }
+        public JsonDocument Config { get; set; }
 
         public OrganizationConnectionResponseModel(OrganizationConnection connection, Type configType)
         {
@@ -23,7 +24,7 @@ namespace Bit.Api.Models.Response.Organizations
             Type = connection.Type;
             OrganizationId = connection.OrganizationId;
             Enabled = connection.Enabled;
-            Config = connection.GetConfig(configType);
+            Config = JsonDocument.Parse(connection.Config);
         }
     }
 }

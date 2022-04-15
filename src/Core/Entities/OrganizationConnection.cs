@@ -27,12 +27,11 @@ namespace Bit.Core.Entities
             Id = CoreHelpers.GenerateComb();
         }
 
-        public T GetConfig<T>() where T : new() => (T)GetConfig(typeof(T));
-        public object GetConfig(Type type)
+        public T GetConfig<T>() where T : new()
         {
             try
             {
-                return JsonSerializer.Deserialize(Config, type);
+                return JsonSerializer.Deserialize<T>(Config);
             }
             catch (JsonException)
             {

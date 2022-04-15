@@ -12,7 +12,7 @@ namespace Bit.Api.Models.Request.Organizations
         public OrganizationConnectionType Type { get; set; }
         public Guid OrganizationId { get; set; }
         public bool Enabled { get; set; }
-        public string Config { get; set; }
+        public JsonDocument Config { get; set; }
 
         public OrganizationConnectionRequestModel() { }
     }
@@ -31,7 +31,7 @@ namespace Bit.Api.Models.Request.Organizations
 
             try
             {
-                ParsedConfig = JsonSerializer.Deserialize<T>(model.Config, JsonHelpers.IgnoreCase);
+                ParsedConfig = model.Config.ToObject<T>(JsonHelpers.IgnoreCase);
             }
             catch (JsonException)
             {

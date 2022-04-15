@@ -65,7 +65,7 @@ namespace Bit.Api.Test.Controllers
             SutProvider<OrganizationConnectionsController> sutProvider)
         {
             model.Type = type;
-            model.Config = JsonSerializer.Serialize(config);
+            model.Config = JsonDocumentFromObject(config);
             var typedModel = new OrganizationConnectionRequestModel<BillingSyncConfig>(model);
             var existing = typedModel.ToData(existingEntityId).ToEntity();
 
@@ -83,7 +83,7 @@ namespace Bit.Api.Test.Controllers
         public async Task CreateConnection_Success(OrganizationConnectionRequestModel model, BillingSyncConfig config,
             SutProvider<OrganizationConnectionsController> sutProvider)
         {
-            model.Config = JsonSerializer.Serialize(config);
+            model.Config = JsonDocumentFromObject(config);
             var typedModel = new OrganizationConnectionRequestModel<BillingSyncConfig>(model);
 
             sutProvider.GetDependency<ICreateOrganizationConnectionCommand>().CreateAsync<BillingSyncConfig>(default)
@@ -211,8 +211,10 @@ namespace Bit.Api.Test.Controllers
                 Type = entity.Type,
                 OrganizationId = entity.OrganizationId,
                 Enabled = entity.Enabled,
-                Config = entity.Config,
+                Config = JsonDocument.Parse(entity.Config),
             });
         }
+
+        private static JsonDocument JsonDocumentFromObject<T>(T obj) => JsonDocument.Parse(JsonSerializer.Serialize(obj));
     }
 }
