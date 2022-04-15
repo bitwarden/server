@@ -6,7 +6,7 @@ namespace Bit.Api.Models.Response.Organizations
 {
     public class OrganizationConnectionResponseModel
     {
-        public Guid Id { get; set; }
+        public Guid? Id { get; set; }
         public OrganizationConnectionType Type { get; set; }
         public Guid OrganizationId { get; set; }
         public bool Enabled { get; set; }
@@ -14,6 +14,11 @@ namespace Bit.Api.Models.Response.Organizations
 
         public OrganizationConnectionResponseModel(OrganizationConnection connection, Type configType)
         {
+            if (connection == null)
+            {
+                return;
+            }
+
             Id = connection.Id;
             Type = connection.Type;
             OrganizationId = connection.OrganizationId;
