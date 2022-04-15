@@ -52,7 +52,7 @@ namespace Bit.Api.Controllers
             return _globalSettings.SelfHosted && _globalSettings.EnableCloudCommunication;
         }
 
-        [HttpPost("")]
+        [HttpPost]
         public async Task<OrganizationConnectionResponseModel> CreateConnection([FromBody] OrganizationConnectionRequestModel model)
         {
             if (!await HasPermissionAsync(model?.OrganizationId))
