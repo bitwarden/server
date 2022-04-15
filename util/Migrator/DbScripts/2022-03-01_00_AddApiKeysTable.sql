@@ -737,26 +737,6 @@ BEGIN
 END
 GO
 
-IF COLUMNPROPERTY(OBJECT_ID('[dbo].[OrganizationSponsorship]', 'U'), 'SponsoringOrganizationId', 'AllowsNull') = 1
-BEGIN
-    PRINT N'Setting all null SponsoringOrganizationId to empty guid'
-    UPDATE
-        [dbo].[OrganizationSponsorship]
-    SET
-        [SponsoringOrganizationId] = '00000000-0000-0000-0000-000000000000'
-    WHERE
-        [SponsoringOrganizationId] IS NULL;
-
-    DROP INDEX [IX_OrganizationSponsorship_SponsoringOrganizationId]
-    ON [dbo].[OrganizationSponsorship]
-
-    ALTER TABLE [dbo].[OrganizationSponsorship] ALTER COLUMN [SponsoringOrganizationId] UNIQUEIDENTIFIER NOT NULL;
-
-    CREATE NONCLUSTERED INDEX [IX_OrganizationSponsorship_SponsoringOrganizationId]
-    ON [dbo].[OrganizationSponsorship]([SponsoringOrganizationId] ASC);
-END
-GO
-
 -- Remake View
 IF EXISTS(SELECT * FROM sys.views WHERE [Name] = 'OrganizationSponsorshipView')
 BEGIN
