@@ -4,6 +4,12 @@ BEGIN
 END
 GO
 
+IF OBJECT_ID('[dbo].[OrganizationConnection_ReadByOrganizationIdType]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[OrganizationConnection_ReadByOrganizationIdType];
+END
+GO
+
 CREATE PROCEDURE [dbo].[OrganizationConnection_ReadByOrganizationIdType]
     @OrganizationId UNIQUEIDENTIFIER,
     @Type TINYINT
