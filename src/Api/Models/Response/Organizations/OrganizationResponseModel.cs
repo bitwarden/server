@@ -6,7 +6,7 @@ using Bit.Core.Models.Api;
 using Bit.Core.Models.Business;
 using Bit.Core.Utilities;
 
-namespace Bit.Api.Models.Response
+namespace Bit.Api.Models.Response.Organizations
 {
     public class OrganizationResponseModel : ResponseModel
     {

@@ -1,7 +1,7 @@
 ﻿using System;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Models.Data;
+using Bit.Core.Models.Data.Organizations.OrganizationSponsorships;
 
 namespace Bit.Core.Models.Api.Request.OrganizationSponsorships
 {

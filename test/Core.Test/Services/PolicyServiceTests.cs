@@ -276,7 +276,7 @@ namespace Bit.Core.Test.Services
                     Enabled = false,
                 });
 
-            var orgUserDetail = new Core.Models.Data.OrganizationUserUserDetails
+            var orgUserDetail = new Core.Models.Data.Organizations.OrganizationUsers.OrganizationUserUserDetails
             {
                 Id = Guid.NewGuid(),
                 Status = OrganizationUserStatusType.Accepted,
@@ -289,7 +289,7 @@ namespace Bit.Core.Test.Services
 
             sutProvider.GetDependency<IOrganizationUserRepository>()
                 .GetManyDetailsByOrganizationAsync(policy.OrganizationId)
-                .Returns(new List<Core.Models.Data.OrganizationUserUserDetails>
+                .Returns(new List<Core.Models.Data.Organizations.OrganizationUsers.OrganizationUserUserDetails>
                 {
                     orgUserDetail,
                 });
@@ -345,7 +345,7 @@ namespace Bit.Core.Test.Services
                     Enabled = false,
                 });
 
-            var orgUserDetail = new Core.Models.Data.OrganizationUserUserDetails
+            var orgUserDetail = new Core.Models.Data.Organizations.OrganizationUsers.OrganizationUserUserDetails
             {
                 Id = Guid.NewGuid(),
                 Status = OrganizationUserStatusType.Accepted,
@@ -358,7 +358,7 @@ namespace Bit.Core.Test.Services
 
             sutProvider.GetDependency<IOrganizationUserRepository>()
                 .GetManyDetailsByOrganizationAsync(policy.OrganizationId)
-                .Returns(new List<Core.Models.Data.OrganizationUserUserDetails>
+                .Returns(new List<Core.Models.Data.Organizations.OrganizationUsers.OrganizationUserUserDetails>
                 {
                     orgUserDetail,
                 });
