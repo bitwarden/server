@@ -1,4 +1,4 @@
-using AutoFixture;
+﻿using AutoFixture;
 using Bit.Test.Common.AutoFixture.JsonDocumentFixtures;
 
 namespace Bit.Test.Common.AutoFixture.Attributes
