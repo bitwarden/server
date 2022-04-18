@@ -25,6 +25,7 @@ namespace Bit.Api.Test.Controllers
 {
     [ControllerCustomize(typeof(OrganizationConnectionsController))]
     [SutProviderCustomize]
+    [JsonDocumentCustomize]
     public class OrganizationConnectionsControllerTests
     {
         public static IEnumerable<object[]> ConnectionTypes =>
