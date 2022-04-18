@@ -44,7 +44,7 @@ namespace Bit.Icons.Models
 
             if (Priority == 0)
             {
-                Priority = 200;
+                Priority = 80;
             }
         }
 

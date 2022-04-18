@@ -119,7 +119,7 @@ namespace Bit.Icons.Services
                     return null;
                 }
 
-                var baseUrl = "/";
+                var baseUrl = uri.ToString();
                 var baseUrlNode = document.QuerySelector("head base[href]");
                 if (baseUrlNode != null)
                 {
@@ -173,7 +173,7 @@ namespace Bit.Icons.Services
                 }
 
                 var iconResultTasks = new List<Task>();
-                foreach (var icon in icons.OrderBy(i => i.Priority).Take(10))
+                foreach (var icon in icons.OrderBy(i => i.Priority).Take(20))
                 {
                     Uri iconUri = null;
                     if (icon.Path.StartsWith("//") && Uri.TryCreate($"{GetScheme(uri)}://{icon.Path.Substring(2)}",
