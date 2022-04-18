@@ -812,32 +812,18 @@ namespace Bit.Core.Services
             {
                 var message = CreateDefaultMessage("Accept Your Free Families Subscription", invite.email);
                 message.Category = "FamiliesForEnterpriseOffer";
-                if (invite.existingAccount)
+                var model = new FamiliesForEnterpriseOfferExistingAccountViewModel
                 {
-                    var model = new FamiliesForEnterpriseOfferExistingAccountViewModel
-                    {
-                        SponsorOrgName = CoreHelpers.SanitizeForEmail(sponsorOrgName),
-                        SponsoredEmail = WebUtility.UrlEncode(invite.email),
-                        WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
-                        SiteName = _globalSettings.SiteName,
-                        SponsorshipToken = invite.token,
-                    };
-
-                    return new MailQueueMessage(message, "FamiliesForEnterprise.FamiliesForEnterpriseOfferExistingAccount", model);
-                }
-                else
-                {
-                    var model = new FamiliesForEnterpriseOfferNewAccountViewModel
-                    {
-                        SponsorOrgName = CoreHelpers.SanitizeForEmail(sponsorOrgName),
-                        SponsoredEmail = WebUtility.UrlEncode(invite.email),
-                        WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
-                        SiteName = _globalSettings.SiteName,
-                        SponsorshipToken = invite.token,
-                    };
-
-                    return new MailQueueMessage(message, "FamiliesForEnterprise.FamiliesForEnterpriseOfferNewAccount", model);
-                }
+                    SponsorOrgName = sponsorOrgName,
+                    SponsoredEmail = WebUtility.UrlEncode(invite.email),
+                    WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+                    SiteName = _globalSettings.SiteName,
+                    SponsorshipToken = invite.token,
+                };
+                var templateName = invite.existingAccount ?
+                    "FamiliesForEnterprise.FamiliesForEnterpriseOfferExistingAccount" :
+                    "FamiliesForEnterprise.FamiliesForEnterpriseOfferNewAccount";
+                return new MailQueueMessage(message, templateName, model);
             }
             var messageModels = invites.Select(invite => CreateMessage(invite));
             await EnqueueMailAsync(messageModels);
