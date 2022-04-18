@@ -13,6 +13,11 @@ namespace Bit.Core.Models.Api.Request.OrganizationSponsorships
 
         public OrganizationSponsorshipSyncRequestModel() { }
 
+        public OrganizationSponsorshipSyncRequestModel(IEnumerable<OrganizationSponsorshipRequestModel> sponsorshipsBatch)
+        {
+            SponsorshipsBatch = sponsorshipsBatch;
+        }
+
         public OrganizationSponsorshipSyncRequestModel(OrganizationSponsorshipSyncData syncData)
         {
             if (syncData == null)

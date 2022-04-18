@@ -1,15 +1,21 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json.Serialization;
 using Bit.Core.Models.Data;
 
 namespace Bit.Core.Models.Api.Response.OrganizationSponsorships
 {
     public class OrganizationSponsorshipSyncResponseModel
     {
+        [JsonPropertyName("SponsorshipsBatch")]
         public IEnumerable<OrganizationSponsorshipResponseModel> SponsorshipsBatch { get; set; }
 
-        public OrganizationSponsorshipSyncResponseModel() { }
+        [JsonConstructor]
+        public OrganizationSponsorshipSyncResponseModel(IEnumerable<OrganizationSponsorshipResponseModel> sponsorshipsBatch)
+        {
+            SponsorshipsBatch = sponsorshipsBatch;
+        }
 
         public OrganizationSponsorshipSyncResponseModel(OrganizationSponsorshipSyncData syncData)
         {
