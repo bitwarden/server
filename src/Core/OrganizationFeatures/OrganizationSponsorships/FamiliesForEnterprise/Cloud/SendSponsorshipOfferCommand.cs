@@ -44,7 +44,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
             var user = await _userRepository.GetByEmailAsync(sponsorship.OfferedToEmail);
             var isExistingAccount = user != null;
 
-            await _mailService.SendFamiliesForEnterpriseOfferEmailAsync(sponsorship.OfferedToEmail, sponsoringOrgName,
+            await _mailService.SendFamiliesForEnterpriseOfferEmailAsync(sponsoringOrgName, sponsorship.OfferedToEmail,
                 isExistingAccount, _tokenFactory.Protect(new OrganizationSponsorshipOfferTokenable(sponsorship)));
         }
 
