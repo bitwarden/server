@@ -74,7 +74,8 @@ namespace Bit.Core.Services
             {
                 var response = await Client.SendAsync(message);
                 var responseJsonStream = await response.Content.ReadAsStreamAsync();
-                return await JsonSerializer.DeserializeAsync<TResult>(responseJsonStream);
+                var deserializedResponse = await JsonSerializer.DeserializeAsync<TResult>(responseJsonStream);
+                return deserializedResponse;
             }
             catch (Exception e)
             {
