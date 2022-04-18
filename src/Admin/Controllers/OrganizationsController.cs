@@ -198,8 +198,12 @@ namespace Bit.Admin.Controllers
                     }
                     await _syncSponsorshipsCommand.SyncOrganization(id, cloudOrganizationId, connection);
                     TempData["ConnectionActivated"] = id;
+                    TempData["ConnectionError"] = null;
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    TempData["ConnectionError"] = ex.Message;
+                }
 
                 if (_globalSettings.SelfHosted)
                 {

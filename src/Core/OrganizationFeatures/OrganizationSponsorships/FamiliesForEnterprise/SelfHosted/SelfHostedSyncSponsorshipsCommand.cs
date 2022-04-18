@@ -51,8 +51,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
         {
             if (!_globalSettings.EnableCloudCommunication)
             {
-                _logger.LogInformation("Failed to sync instance with cloud - Cloud communication is disabled in global settings");
-                return;
+                throw new BadRequestException("Failed to sync instance with cloud - Cloud communication is disabled in global settings");
             }
             if (!billingSyncConnection.Enabled)
             {

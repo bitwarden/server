@@ -30,13 +30,22 @@
                                     }
                                 </td>
                                 <td class="align-middle">
-                                    @if(connection.Enabled)
+                                    @if(@TempData["ConnectionError"] != null)
                                     {
-                                        @:Enabled
+                                        <span class="text-danger">
+                                            @TempData["ConnectionError"]
+                                        </span>
                                     }
                                     else
                                     {
-                                        @:Disabled
+                                        @if(connection.Enabled)
+                                        {
+                                            @:Enabled
+                                        }
+                                        else
+                                        {
+                                            @:Disabled
+                                        }
                                     }
                                 </td>
                                 <td>
