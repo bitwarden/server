@@ -3,7 +3,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Api;
 
-namespace Bit.Api.Models.Response
+namespace Bit.Api.Models.Response.Organizations
 {
     public class OrganizationApiKeyInformation : ResponseModel
     {

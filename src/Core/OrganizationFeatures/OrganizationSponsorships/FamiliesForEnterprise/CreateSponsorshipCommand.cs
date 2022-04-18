@@ -1,12 +1,11 @@
 ﻿using System.Threading.Tasks;
+using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Business.Tokenables;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Tokens;
 using Bit.Core.Utilities;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise
@@ -14,15 +13,24 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
     public class CreateSponsorshipCommand : ICreateSponsorshipCommand
     {
         private readonly IOrganizationSponsorshipRepository _organizationSponsorshipRepository;
+        private readonly IUserService _userService;
 
-        public CreateSponsorshipCommand(IOrganizationSponsorshipRepository organizationSponsorshipRepository)
+        public CreateSponsorshipCommand(IOrganizationSponsorshipRepository organizationSponsorshipRepository,
+        IUserService userService)
         {
             _organizationSponsorshipRepository = organizationSponsorshipRepository;
+            _userService = userService;
         }
 
         public async Task<OrganizationSponsorship> CreateSponsorshipAsync(Organization sponsoringOrg, OrganizationUser sponsoringOrgUser,
             PlanSponsorshipType sponsorshipType, string sponsoredEmail, string friendlyName)
         {
+            var sponsoringUser = await _userService.GetUserByIdAsync(sponsoringOrgUser.UserId.Value);
+            if (sponsoringUser == null || string.Equals(sponsoringUser.Email, sponsoredEmail, System.StringComparison.InvariantCultureIgnoreCase))
+            {
+                throw new BadRequestException("Cannot offer a Families Organization Sponsorship to yourself. Choose a different email.");
+            }
+
             var requiredSponsoringProductType = StaticStore.GetSponsoredPlan(sponsorshipType)?.SponsoringProductType;
             if (requiredSponsoringProductType == null ||
                 sponsoringOrg == null ||

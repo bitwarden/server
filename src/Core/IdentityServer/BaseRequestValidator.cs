@@ -12,7 +12,7 @@ using Bit.Core.Enums;
 using Bit.Core.Identity;
 using Bit.Core.Models;
 using Bit.Core.Models.Api;
-using Bit.Core.Models.Data;
+using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;

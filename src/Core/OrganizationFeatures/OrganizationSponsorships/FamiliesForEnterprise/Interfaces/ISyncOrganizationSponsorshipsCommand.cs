@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Bit.Core.Entities;
-using Bit.Core.Models.Data;
+using Bit.Core.Models.Data.Organizations.OrganizationSponsorships;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces
 {

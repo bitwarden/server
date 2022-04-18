@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text.Json;
 using Bit.Core.Enums;
 using Bit.Core.Utilities;
 
-namespace Bit.Core.Models.Data
+namespace Bit.Core.Models.Data.Organizations.OrganizationUsers
 {
     public class OrganizationUserUserDetails : IExternal, ITwoFactorProvidersUser
     {

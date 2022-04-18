@@ -2,6 +2,6 @@
 {
     public enum OrganizationConnectionType : byte
     {
-        CloudBillingSync,
+        CloudBillingSync = 1,
     }
 }
