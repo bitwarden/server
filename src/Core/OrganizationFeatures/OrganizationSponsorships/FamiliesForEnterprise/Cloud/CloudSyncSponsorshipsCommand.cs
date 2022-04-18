@@ -63,6 +63,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
 
             var sponsorshipsToUpsert = new List<OrganizationSponsorship>();
             var sponsorshipIdsToDelete = new List<Guid>();
+            var sponsorshipsToReturn = new List<OrganizationSponsorshipData>();
 
             foreach (var selfHostedSponsorship in sponsorshipsData)
             {
@@ -115,6 +116,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
 
                 selfHostedSponsorship.ValidUntil = cloudSponsorship.ValidUntil;
                 selfHostedSponsorship.LastSyncDate = DateTime.UtcNow;
+                sponsorshipsToReturn.Add(selfHostedSponsorship);
             }
             var sponsorshipsToEmailOffer = sponsorshipsToUpsert.Where(s => s.Id == default);
             if (sponsorshipsToUpsert.Any())
@@ -128,7 +130,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
 
             return (new OrganizationSponsorshipSyncData
             {
-                SponsorshipsBatch = sponsorshipsData
+                SponsorshipsBatch = sponsorshipsToReturn
             }, sponsorshipsToEmailOffer);
         }
 
