@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
@@ -12,8 +13,8 @@ using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Core.Utilities;
 using Bit.Core.Tokens;
+using Bit.Core.Utilities;
 using Bit.Sso.Models;
 using Bit.Sso.Utilities;
 using IdentityModel;
@@ -26,13 +27,13 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Primitives;
+using Microsoft.IdentityModel.Tokens;
 
 namespace Bit.Sso.Controllers
 {
     public class AccountController : Controller
     {
-        #region Members
-
         private readonly IAuthenticationSchemeProvider _schemeProvider;
         private readonly IClientStore _clientStore;
 
@@ -50,10 +51,6 @@ namespace Bit.Sso.Controllers
         private readonly UserManager<User> _userManager;
         private readonly IGlobalSettings _globalSettings;
         private readonly Core.Services.IEventService _eventService;
-
-        #endregion
-
-        #region Ctor
 
         public AccountController(
             IAuthenticationSchemeProvider schemeProvider,
@@ -91,9 +88,6 @@ namespace Bit.Sso.Controllers
             _globalSettings = globalSettings;
         }
 
-        #endregion
-
-        #region Public Methods
         [HttpGet]
         public async Task<IActionResult> PreValidate(string domainHint)
         {
@@ -167,45 +161,42 @@ namespace Bit.Sso.Controllers
             }
 
             // Everything is good!
-            return new EmptyResult();
+            var generator = new TokenGenerator();
+            var json = Json(new
+            {
+                token = generator.GenerateToken()
+            });
+
+            return json;
         }
 
         [HttpGet]
         public async Task<IActionResult> Login(string returnUrl)
         {
-            try
+            var context = await _interaction.GetAuthorizationContextAsync(returnUrl);
+            var ssoToken = context.Parameters["ssoToken"];
+
+            var generator = new TokenGenerator();
+
+            if (!generator.ValidateToken(ssoToken))
             {
-                var redirectToken = Request.Cookies[SsoRedirectToken.SSO_REDIRECT_COOKIE_NAME];
-                if (string.IsNullOrEmpty(redirectToken))
-                {
-                    throw new BadHttpRequestException(_i18nService.T("SsoRedirectTokenValidationMissing"));
-                }
-
-                if (!SsoRedirectToken.ValidateSsoRedirectToken(redirectToken))
-                {
-                    throw new BadHttpRequestException(_i18nService.T("InvalidSsoRedirectToken"));
-                }
-
-                var context = await _interaction.GetAuthorizationContextAsync(returnUrl);
-                if (context.Parameters.AllKeys.Contains("domain_hint") &&
-                    !string.IsNullOrWhiteSpace(context.Parameters["domain_hint"]))
-                {
-                    return RedirectToAction(nameof(ExternalChallenge), new
-                    {
-                        scheme = context.Parameters["domain_hint"],
-                        returnUrl,
-                        state = context.Parameters["state"],
-                        userIdentifier = context.Parameters["session_state"]
-                    });
-                }
-                else
-                {
-                    throw new Exception(_i18nService.T("NoDomainHintProvided"));
-                }
+                return Unauthorized();
             }
-            finally
+
+            if (context.Parameters.AllKeys.Contains("domain_hint") &&
+                !string.IsNullOrWhiteSpace(context.Parameters["domain_hint"]))
             {
-                Response.Cookies.Delete(SsoRedirectToken.SSO_REDIRECT_COOKIE_NAME);
+                return RedirectToAction(nameof(ExternalChallenge), new
+                {
+                    scheme = context.Parameters["domain_hint"],
+                    returnUrl,
+                    state = context.Parameters["state"],
+                    userIdentifier = context.Parameters["session_state"]
+                });
+            }
+            else
+            {
+                throw new Exception(_i18nService.T("NoDomainHintProvided"));
             }
         }
 
@@ -343,15 +334,6 @@ namespace Bit.Sso.Controllers
                 return Redirect("~/");
             }
         }
-
-        public bool IsNativeClient(IdentityServer4.Models.AuthorizationRequest context)
-        {
-            return !context.RedirectUri.StartsWith("https", StringComparison.Ordinal)
-               && !context.RedirectUri.StartsWith("http", StringComparison.Ordinal);
-        }
-        #endregion
-
-        #region Private Methods
 
         private async Task<(User user, string provider, string providerUserId, IEnumerable<Claim> claims, SsoConfigurationData config)>
             FindUserFromExternalProviderAsync(AuthenticateResult result)
@@ -716,6 +698,10 @@ namespace Bit.Sso.Controllers
             return (logoutId, logout?.PostLogoutRedirectUri, externalAuthenticationScheme);
         }
 
-        #endregion
+        public bool IsNativeClient(IdentityServer4.Models.AuthorizationRequest context)
+        {
+            return !context.RedirectUri.StartsWith("https", StringComparison.Ordinal)
+               && !context.RedirectUri.StartsWith("http", StringComparison.Ordinal);
+        }
     }
 }

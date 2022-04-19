@@ -3326,6 +3326,7 @@
           "Serilog.Sinks.AzureCosmosDB": "1.0.0",
           "Serilog.Sinks.SyslogMessages": "1.0.5",
           "Stripe.net": "37.26.0",
+          "System.Text.Encoding": "4.3.0",
           "System.Text.Json": "4.7.2",
           "YubicoDotNetClient": "1.2.0"
         }

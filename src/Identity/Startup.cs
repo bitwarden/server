@@ -114,6 +114,13 @@ namespace Bit.Identity
                             {
                                 context.ProtocolMessage.SessionState = context.Properties.Items["user_identifier"];
                             }
+
+                            var ssoRedirectTokenKey = "ssoToken";
+                            if(context.Properties.Parameters.Count > 0 && context.Properties.Parameters.ContainsKey(ssoRedirectTokenKey))
+                            {
+                                var token = context.Properties.Parameters[ssoRedirectTokenKey].ToString();
+                                context.ProtocolMessage.Parameters.Add(ssoRedirectTokenKey, token);
+                            }
                             return Task.FromResult(0);
                         }
                     };
