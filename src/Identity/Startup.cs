@@ -5,7 +5,9 @@ using System.Threading.Tasks;
 using AspNetCoreRateLimit;
 using Bit.Core;
 using Bit.Core.Context;
+using Bit.Core.Models.Data;
 using Bit.Core.Settings;
+using Bit.Core.Tokens;
 using Bit.Core.Utilities;
 using Bit.Identity.Utilities;
 using Bit.SharedWeb.Utilities;
@@ -110,16 +112,16 @@ namespace Bit.Identity
                         {
                             // Pass domain_hint onto the sso idp
                             context.ProtocolMessage.DomainHint = context.Properties.Items["domain_hint"];
+                            context.ProtocolMessage.Parameters.Add("organizationId", context.Properties.Items["organizationId"]);
                             if (context.Properties.Items.ContainsKey("user_identifier"))
                             {
                                 context.ProtocolMessage.SessionState = context.Properties.Items["user_identifier"];
                             }
 
-                            var ssoRedirectTokenKey = "ssoToken";
-                            if(context.Properties.Parameters.Count > 0 && context.Properties.Parameters.ContainsKey(ssoRedirectTokenKey))
+                            if(context.Properties.Parameters.Count > 0 && context.Properties.Parameters.ContainsKey(SsoToken.TokenName))
                             {
-                                var token = context.Properties.Parameters[ssoRedirectTokenKey].ToString();
-                                context.ProtocolMessage.Parameters.Add(ssoRedirectTokenKey, token);
+                                var token = context.Properties.Parameters[SsoToken.TokenName].ToString();
+                                context.ProtocolMessage.Parameters.Add(SsoToken.TokenName, token);
                             }
                             return Task.FromResult(0);
                         }

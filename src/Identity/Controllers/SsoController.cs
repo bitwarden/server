@@ -64,18 +64,16 @@ namespace Bit.Identity.Controllers
                 var requestPath = $"/Account/PreValidate?domainHint={domainHint}&culture={culture}";
                 var httpClient = _clientFactory.CreateClient("InternalSso");
                 using var responseMessage = await httpClient.GetAsync(requestPath);
+                var responseJson = await responseMessage.Content.ReadAsStringAsync();
 
                 if (responseMessage.IsSuccessStatusCode)
                 {
-                    var res = responseMessage.Content.ReadAsStringAsync().Result;
-                    var obj = JsonConvert.DeserializeObject<ExpandoObject>(res, new ExpandoObjectConverter());
-
+                    var obj = JsonConvert.DeserializeObject<ExpandoObject>(responseJson, new ExpandoObjectConverter());
                     return Json(obj);
                 }
 
                 Response.StatusCode = (int)responseMessage.StatusCode;
 
-                var responseJson = await responseMessage.Content.ReadAsStringAsync();
                 return Content(responseJson, "application/json");
             }
             catch (Exception ex)
@@ -95,7 +93,6 @@ namespace Bit.Identity.Controllers
         public async Task<IActionResult> Login(string returnUrl)
         {
             var context = await _interaction.GetAuthorizationContextAsync(returnUrl);
-            var query = Request.Query;
 
             var domainHint = context.Parameters.AllKeys.Contains("domain_hint") ?
                 context.Parameters["domain_hint"] : null;
@@ -111,28 +108,28 @@ namespace Bit.Identity.Controllers
 
             return RedirectToAction(nameof(ExternalChallenge), new
             {
-                organizationIdentifier = domainHint,
+                domain_hint = domainHint,
                 returnUrl,
                 userIdentifier,
-                ssoToken
+                ssoToken,
             });
         }
 
         [HttpGet]
-        public async Task<IActionResult> ExternalChallenge(string organizationIdentifier, string returnUrl,
+        public async Task<IActionResult> ExternalChallenge(string domain_hint, string returnUrl,
             string userIdentifier, string ssoToken)
         {
-            if (string.IsNullOrWhiteSpace(organizationIdentifier))
+            if (string.IsNullOrWhiteSpace(domain_hint))
             {
                 throw new Exception("Invalid organization reference id.");
             }
 
-            var ssoConfig = await _ssoConfigRepository.GetByIdentifierAsync(organizationIdentifier);
+            var ssoConfig = await _ssoConfigRepository.GetByIdentifierAsync(domain_hint);
             if (ssoConfig == null || !ssoConfig.Enabled)
             {
                 throw new Exception("Organization not found or SSO configuration not enabled");
             }
-            var domainHint = ssoConfig.OrganizationId.ToString();
+            var organizationId = ssoConfig.OrganizationId.ToString();
 
             var scheme = "sso";
             var props = new AuthenticationProperties
@@ -141,12 +138,13 @@ namespace Bit.Identity.Controllers
                 Items =
                 {
                     { "return_url", returnUrl },
-                    { "domain_hint", domainHint },
+                    { "domain_hint", domain_hint },
+                    { "organizationId", organizationId },
                     { "scheme", scheme },
                 },
                 Parameters =
                 {
-                    { "ssoToken", ssoToken }
+                    { "ssoToken", ssoToken },
                 }
             };
 
@@ -155,8 +153,7 @@ namespace Bit.Identity.Controllers
                 props.Items.Add("user_identifier", userIdentifier);
             }
 
-            var challenge = Challenge(props, scheme);
-            return challenge;
+            return Challenge(props, scheme);
         }
 
         [HttpGet]
@@ -190,7 +187,7 @@ namespace Bit.Identity.Controllers
                 IsPersistent = true,
                 ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(1)
             };
-            if (result.Properties != null && result.Properties.Items.TryGetValue("domain_hint", out var organization))
+            if (result.Properties != null && result.Properties.Items.TryGetValue("organizationId", out var organization))
             {
                 additionalLocalClaims.Add(new Claim("organizationId", organization));
             }

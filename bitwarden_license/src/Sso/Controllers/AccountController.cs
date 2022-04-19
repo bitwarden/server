@@ -5,10 +5,12 @@ using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using Bit.Core;
+using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models;
 using Bit.Core.Models.Api;
+using Bit.Core.Models.Business.Tokenables;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -51,6 +53,7 @@ namespace Bit.Sso.Controllers
         private readonly UserManager<User> _userManager;
         private readonly IGlobalSettings _globalSettings;
         private readonly Core.Services.IEventService _eventService;
+        private readonly IDataProtectorTokenFactory<SsoTokenable> _dataProtector;
 
         public AccountController(
             IAuthenticationSchemeProvider schemeProvider,
@@ -68,7 +71,8 @@ namespace Bit.Sso.Controllers
             II18nService i18nService,
             UserManager<User> userManager,
             IGlobalSettings globalSettings,
-            Core.Services.IEventService eventService)
+            Core.Services.IEventService eventService,
+            IDataProtectorTokenFactory<SsoTokenable> dataProtector)
         {
             _schemeProvider = schemeProvider;
             _clientStore = clientStore;
@@ -86,57 +90,47 @@ namespace Bit.Sso.Controllers
             _userManager = userManager;
             _eventService = eventService;
             _globalSettings = globalSettings;
+            _dataProtector = dataProtector;
         }
 
         [HttpGet]
         public async Task<IActionResult> PreValidate(string domainHint)
         {
-            IActionResult invalidJson(string errorMessageKey, Exception ex = null)
-            {
-                Response.StatusCode = ex == null ? 400 : 500;
-                return Json(new ErrorResponseModel(_i18nService.T(errorMessageKey))
-                {
-                    ExceptionMessage = ex?.Message,
-                    ExceptionStackTrace = ex?.StackTrace,
-                    InnerExceptionMessage = ex?.InnerException?.Message,
-                });
-            }
-
             try
             {
                 // Validate domain_hint provided
                 if (string.IsNullOrWhiteSpace(domainHint))
                 {
-                    return invalidJson("NoOrganizationIdentifierProvidedError");
+                    return InvalidJson("NoOrganizationIdentifierProvidedError");
                 }
 
                 // Validate organization exists from domain_hint
                 var organization = await _organizationRepository.GetByIdentifierAsync(domainHint);
                 if (organization == null)
                 {
-                    return invalidJson("OrganizationNotFoundByIdentifierError");
+                    return InvalidJson("OrganizationNotFoundByIdentifierError");
                 }
                 if (!organization.UseSso)
                 {
-                    return invalidJson("SsoNotAllowedForOrganizationError");
+                    return InvalidJson("SsoNotAllowedForOrganizationError");
                 }
 
                 // Validate SsoConfig exists and is Enabled
                 var ssoConfig = await _ssoConfigRepository.GetByIdentifierAsync(domainHint);
                 if (ssoConfig == null)
                 {
-                    return invalidJson("SsoConfigurationNotFoundForOrganizationError");
+                    return InvalidJson("SsoConfigurationNotFoundForOrganizationError");
                 }
                 if (!ssoConfig.Enabled)
                 {
-                    return invalidJson("SsoNotEnabledForOrganizationError");
+                    return InvalidJson("SsoNotEnabledForOrganizationError");
                 }
 
                 // Validate Authentication Scheme exists and is loaded (cache)
                 var scheme = await _schemeProvider.GetSchemeAsync(organization.Id.ToString());
                 if (scheme == null || !(scheme is IDynamicAuthenticationScheme dynamicScheme))
                 {
-                    return invalidJson("NoSchemeOrHandlerForSsoConfigurationFoundError");
+                    return InvalidJson("NoSchemeOrHandlerForSsoConfigurationFoundError");
                 }
 
                 // Run scheme validation
@@ -152,52 +146,65 @@ namespace Bit.Sso.Controllers
                     {
                         errorKey = ex.Message;
                     }
-                    return invalidJson(errorKey, translatedException.ResourceNotFound ? ex : null);
+                    return InvalidJson(errorKey, translatedException.ResourceNotFound ? ex : null);
                 }
+
+                var ssoToken = new SsoToken()
+                {
+                    DomainHint = domainHint,
+                    OrganizationId = organization.Id
+                };
+
+                var tokenable = new SsoTokenable(ssoToken);
+                var token = _dataProtector.Protect(tokenable);
+
+                var json = Json(new
+                {
+                    token
+                });
+
+                return json;
             }
             catch (Exception ex)
             {
-                return invalidJson("PreValidationError", ex);
+                return InvalidJson("PreValidationError", ex);
             }
-
-            // Everything is good!
-            var generator = new TokenGenerator();
-            var json = Json(new
-            {
-                token = generator.GenerateToken()
-            });
-
-            return json;
         }
 
         [HttpGet]
         public async Task<IActionResult> Login(string returnUrl)
         {
             var context = await _interaction.GetAuthorizationContextAsync(returnUrl);
-            var ssoToken = context.Parameters["ssoToken"];
 
-            var generator = new TokenGenerator();
+            if (!context.Parameters.AllKeys.Contains("domain_hint") &&
+                string.IsNullOrWhiteSpace(context.Parameters["domain_hint"]))
+            {
+                throw new Exception(_i18nService.T("NoDomainHintProvided"));
+            }
+                
+            var ssoToken = context.Parameters[SsoToken.TokenName];
+            var domainHint = context.Parameters["domain_hint"];
+            var organization = await _organizationRepository.GetByIdentifierAsync(domainHint);
 
-            if (!generator.ValidateToken(ssoToken))
+            if (organization == null)
+            {
+                return InvalidJson("OrganizationNotFoundByIdentifierError");
+            }
+
+            var tokenable = _dataProtector.Unprotect(ssoToken);
+
+            if (!tokenable.TokenIsValid(new SsoToken() { OrganizationId = organization.Id, DomainHint = domainHint}))
             {
                 return Unauthorized();
             }
 
-            if (context.Parameters.AllKeys.Contains("domain_hint") &&
-                !string.IsNullOrWhiteSpace(context.Parameters["domain_hint"]))
+            return RedirectToAction(nameof(ExternalChallenge), new
             {
-                return RedirectToAction(nameof(ExternalChallenge), new
-                {
-                    scheme = context.Parameters["domain_hint"],
-                    returnUrl,
-                    state = context.Parameters["state"],
-                    userIdentifier = context.Parameters["session_state"]
-                });
-            }
-            else
-            {
-                throw new Exception(_i18nService.T("NoDomainHintProvided"));
-            }
+                scheme = context.Parameters["organizationId"],
+                returnUrl,
+                state = context.Parameters["state"],
+                userIdentifier = context.Parameters["session_state"]
+            });
         }
 
         [HttpGet]
@@ -565,6 +572,17 @@ namespace Bit.Sso.Controllers
             await CreateSsoUserRecord(providerUserId, user.Id, orgId, orgUser);
 
             return user;
+        }
+
+        private IActionResult InvalidJson(string errorMessageKey, Exception ex = null)
+        {
+            Response.StatusCode = ex == null ? 400 : 500;
+            return Json(new ErrorResponseModel(_i18nService.T(errorMessageKey))
+            {
+                ExceptionMessage = ex?.Message,
+                ExceptionStackTrace = ex?.StackTrace,
+                InnerExceptionMessage = ex?.InnerException?.Message,
+            });
         }
 
         private string GetEmailAddress(IEnumerable<Claim> claims, IEnumerable<string> additionalClaimTypes)
