@@ -261,7 +261,7 @@ namespace Bit.Core.Context
 
             if (Providers.Any())
             {
-                return (await GetProviderOrganizations()).Any(po => po.OrganizationId == orgId);
+                return (await ProviderUserForOrgAsync(orgId));
             }
 
             return false;
@@ -388,6 +388,11 @@ namespace Bit.Core.Context
         public bool ProviderUser(Guid providerId)
         {
             return Providers?.Any(o => o.Id == providerId) ?? false;
+        }
+
+        public async Task<bool> ProviderUserForOrgAsync(Guid orgId)
+        {
+            return (await GetProviderOrganizations()).Any(po => po.OrganizationId == orgId);
         }
 
         public async Task<Guid?> ProviderIdForOrg(Guid orgId)

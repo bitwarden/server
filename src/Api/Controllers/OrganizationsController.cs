@@ -34,6 +34,7 @@ namespace Bit.Api.Controllers
         private readonly ICurrentContext _currentContext;
         private readonly ISsoConfigRepository _ssoConfigRepository;
         private readonly ISsoConfigService _ssoConfigService;
+        private readonly IProviderOrganizationRepository _providerOrganizationRepository;
         private readonly GlobalSettings _globalSettings;
 
         public OrganizationsController(
@@ -46,6 +47,7 @@ namespace Bit.Api.Controllers
             ICurrentContext currentContext,
             ISsoConfigRepository ssoConfigRepository,
             ISsoConfigService ssoConfigService,
+            IProviderOrganizationRepository providerOrganizationRepository,
             GlobalSettings globalSettings)
         {
             _organizationRepository = organizationRepository;
@@ -57,6 +59,7 @@ namespace Bit.Api.Controllers
             _currentContext = currentContext;
             _ssoConfigRepository = ssoConfigRepository;
             _ssoConfigService = ssoConfigService;
+            _providerOrganizationRepository = providerOrganizationRepository;
             _globalSettings = globalSettings;
         }
 
@@ -90,6 +93,12 @@ namespace Bit.Api.Controllers
 
             var organization = await _organizationRepository.GetByIdAsync(orgIdGuid);
             if (organization == null)
+            {
+                throw new NotFoundException();
+            }
+
+            var provider = await _providerOrganizationRepository.GetByOrganizationId(orgIdGuid);
+            if (provider != null && !await _currentContext.ProviderUserForOrgAsync(orgIdGuid))
             {
                 throw new NotFoundException();
             }
