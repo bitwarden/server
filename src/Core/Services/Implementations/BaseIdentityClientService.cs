@@ -4,7 +4,6 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Bit.Core.Utilities;
@@ -73,9 +72,7 @@ namespace Bit.Core.Services
             try
             {
                 var response = await Client.SendAsync(message);
-                var responseJsonStream = await response.Content.ReadAsStreamAsync();
-                var deserializedResponse = await JsonSerializer.DeserializeAsync<TResult>(responseJsonStream);
-                return deserializedResponse;
+                return await response.Content.ReadFromJsonAsync<TResult>();
             }
             catch (Exception e)
             {

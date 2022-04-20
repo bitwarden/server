@@ -7,14 +7,9 @@ namespace Bit.Core.Models.Api.Response.OrganizationSponsorships
 {
     public class OrganizationSponsorshipSyncResponseModel
     {
-        [JsonPropertyName("SponsorshipsBatch")]
         public IEnumerable<OrganizationSponsorshipResponseModel> SponsorshipsBatch { get; set; }
 
-        [JsonConstructor]
-        public OrganizationSponsorshipSyncResponseModel(IEnumerable<OrganizationSponsorshipResponseModel> sponsorshipsBatch)
-        {
-            SponsorshipsBatch = sponsorshipsBatch;
-        }
+        public OrganizationSponsorshipSyncResponseModel() { }
 
         public OrganizationSponsorshipSyncResponseModel(OrganizationSponsorshipSyncData syncData)
         {

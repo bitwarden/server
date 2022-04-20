@@ -7,22 +7,14 @@ namespace Bit.Core.Models.Api.Response.OrganizationSponsorships
 {
     public class OrganizationSponsorshipResponseModel
     {
-        [JsonPropertyName("SponsoringOrganizationUserId")]
         public Guid SponsoringOrganizationUserId { get; set; }
-        [JsonPropertyName("FriendlyName")]
         public string FriendlyName { get; set; }
-        [JsonPropertyName("OfferedToEmail")]
         public string OfferedToEmail { get; set; }
-        [JsonPropertyName("PlanSponsorshipType")]
         public PlanSponsorshipType PlanSponsorshipType { get; set; }
-        [JsonPropertyName("LastSyncDate")]
         public DateTime? LastSyncDate { get; set; }
-        [JsonPropertyName("ValidUntil")]
         public DateTime? ValidUntil { get; set; }
-        [JsonPropertyName("ToDelete")]
         public bool ToDelete { get; set; }
 
-        [JsonPropertyName("CloudSponsorshipRemoved")]
         public bool CloudSponsorshipRemoved { get; set; }
 
         public OrganizationSponsorshipResponseModel() { }
