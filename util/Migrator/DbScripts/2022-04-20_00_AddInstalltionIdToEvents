@@ -1,0 +1,8 @@
+IF COL_LENGTH('[dbo].[Event]', 'InstallationId') IS NULL
+    BEGIN
+        ALTER TABLE
+            [dbo].[Event]
+        ADD
+            [InstallationId] UNIQUEIDENTIFIER NULL
+    END
+GO

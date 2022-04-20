@@ -265,6 +265,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<Guid?>("GroupId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("InstallationId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("IpAddress")
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
@@ -659,7 +662,7 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<Guid?>("SponsoredOrganizationId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid>("SponsoringOrganizationId")
+                    b.Property<Guid?>("SponsoringOrganizationId")
                         .HasColumnType("uuid");
 
                     b.Property<Guid>("SponsoringOrganizationUserId")
@@ -1395,9 +1398,7 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.HasOne("Bit.Infrastructure.EntityFramework.Models.Organization", "SponsoringOrganization")
                         .WithMany()
-                        .HasForeignKey("SponsoringOrganizationId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("SponsoringOrganizationId");
 
                     b.Navigation("SponsoredOrganization");
 
