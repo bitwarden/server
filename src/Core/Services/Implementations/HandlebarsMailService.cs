@@ -776,38 +776,24 @@ namespace Bit.Core.Services
         public async Task SendFamiliesForEnterpriseOfferEmailAsync(string sponsorOrgName, string email, bool existingAccount, string token) =>
             await BulkSendFamiliesForEnterpriseOfferEmailAsync(sponsorOrgName, new[] { (email, existingAccount, token) });
 
-        public async Task BulkSendFamiliesForEnterpriseOfferEmailAsync(string sponsorOrgName, IEnumerable<(string email, bool existingAccount, string token)> invites)
+        public async Task BulkSendFamiliesForEnterpriseOfferEmailAsync(string sponsorOrgName, IEnumerable<(string Email, bool ExistingAccount, string Token)> invites)
         {
-            MailQueueMessage CreateMessage((string email, bool existingAccount, string token) invite)
+            MailQueueMessage CreateMessage((string Email, bool ExistingAccount, string Token) invite)
             {
-                var message = CreateDefaultMessage("Accept Your Free Families Subscription", invite.email);
+                var message = CreateDefaultMessage("Accept Your Free Families Subscription", invite.Email);
                 message.Category = "FamiliesForEnterpriseOffer";
-                if (invite.existingAccount)
+                var model = new FamiliesForEnterpriseOfferExistingAccountViewModel
                 {
-                    var model = new FamiliesForEnterpriseOfferExistingAccountViewModel
-                    {
-                        SponsorOrgName = CoreHelpers.SanitizeForEmail(sponsorOrgName),
-                        SponsoredEmail = WebUtility.UrlEncode(invite.email),
-                        WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
-                        SiteName = _globalSettings.SiteName,
-                        SponsorshipToken = invite.token,
-                    };
-
-                    return new MailQueueMessage(message, "FamiliesForEnterprise.FamiliesForEnterpriseOfferExistingAccount", model);
-                }
-                else
-                {
-                    var model = new FamiliesForEnterpriseOfferNewAccountViewModel
-                    {
-                        SponsorOrgName = CoreHelpers.SanitizeForEmail(sponsorOrgName),
-                        SponsoredEmail = WebUtility.UrlEncode(invite.email),
-                        WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
-                        SiteName = _globalSettings.SiteName,
-                        SponsorshipToken = invite.token,
-                    };
-
-                    return new MailQueueMessage(message, "FamiliesForEnterprise.FamiliesForEnterpriseOfferNewAccount", model);
-                }
+                    SponsorOrgName = sponsorOrgName,
+                    SponsoredEmail = WebUtility.UrlEncode(invite.Email),
+                    WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+                    SiteName = _globalSettings.SiteName,
+                    SponsorshipToken = invite.Token,
+                };
+                var templateName = invite.ExistingAccount ?
+                    "FamiliesForEnterprise.FamiliesForEnterpriseOfferExistingAccount" :
+                    "FamiliesForEnterprise.FamiliesForEnterpriseOfferNewAccount";
+                return new MailQueueMessage(message, templateName, model);
             }
             var messageModels = invites.Select(invite => CreateMessage(invite));
             await EnqueueMailAsync(messageModels);

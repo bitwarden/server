@@ -51,7 +51,7 @@ namespace Bit.Core.Services
         Task SendProviderUserRemoved(string providerName, string email);
         Task SendUpdatedTempPasswordEmailAsync(string email, string userName);
         Task SendFamiliesForEnterpriseOfferEmailAsync(string sponsorOrgName, string email, bool existingAccount, string token);
-        Task BulkSendFamiliesForEnterpriseOfferEmailAsync(string SponsorOrgName, IEnumerable<(string email, bool existingAccount, string token)> invites);
+        Task BulkSendFamiliesForEnterpriseOfferEmailAsync(string SponsorOrgName, IEnumerable<(string Email, bool ExistingAccount, string Token)> invites);
         Task SendFamiliesForEnterpriseRedeemedEmailsAsync(string familyUserEmail, string sponsorEmail);
         Task SendFamiliesForEnterpriseSponsorshipRevertingEmailAsync(string email, string familyOrgName);
         Task SendOTPEmailAsync(string email, string token);

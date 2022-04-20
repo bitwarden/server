@@ -211,7 +211,7 @@ namespace Bit.Core.Services
             return Task.FromResult(0);
         }
 
-        public Task BulkSendFamiliesForEnterpriseOfferEmailAsync(string SponsorOrgName, IEnumerable<(string email, bool existingAccount, string token)> invites)
+        public Task BulkSendFamiliesForEnterpriseOfferEmailAsync(string SponsorOrgName, IEnumerable<(string Email, bool ExistingAccount, string Token)> invites)
         {
             return Task.FromResult(0);
         }

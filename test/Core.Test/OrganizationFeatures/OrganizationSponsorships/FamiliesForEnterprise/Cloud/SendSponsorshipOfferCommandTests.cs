@@ -3,6 +3,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud;
+using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture.OrganizationSponsorshipFixtures;
 using Bit.Test.Common.AutoFixture;
@@ -16,6 +17,29 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
     [OrganizationSponsorshipCustomize]
     public class SendSponsorshipOfferCommandTests : FamiliesForEnterpriseTestsBase
     {
+        [Theory]
+        [BitAutoData]
+        public async Task SendSponsorshipOffer_SendSponsorshipOfferAsync_ExistingAccount_Success(OrganizationSponsorship sponsorship, string sponsoringOrgName, User user, SutProvider<SendSponsorshipOfferCommand> sutProvider)
+        {
+            sutProvider.GetDependency<IUserRepository>().GetByEmailAsync(sponsorship.OfferedToEmail).Returns(user);
+
+            await sutProvider.Sut.SendSponsorshipOfferAsync(sponsorship, sponsoringOrgName);
+
+            await sutProvider.GetDependency<IMailService>().Received(1).SendFamiliesForEnterpriseOfferEmailAsync(sponsoringOrgName, sponsorship.OfferedToEmail, true, Arg.Any<string>());
+        }
+
+
+        [Theory]
+        [BitAutoData]
+        public async Task SendSponsorshipOffer_SendSponsorshipOfferAsync_NewAccount_Success(OrganizationSponsorship sponsorship, string sponsoringOrgName, SutProvider<SendSponsorshipOfferCommand> sutProvider)
+        {
+            sutProvider.GetDependency<IUserRepository>().GetByEmailAsync(sponsorship.OfferedToEmail).Returns((User)null);
+
+            await sutProvider.Sut.SendSponsorshipOfferAsync(sponsorship, sponsoringOrgName);
+
+            await sutProvider.GetDependency<IMailService>().Received(1).SendFamiliesForEnterpriseOfferEmailAsync(sponsoringOrgName, sponsorship.OfferedToEmail, false, Arg.Any<string>());
+        }
+
         [Theory]
         [BitAutoData]
         public async Task ResendSponsorshipOffer_SponsoringOrgNotFound_ThrowsBadRequest(
