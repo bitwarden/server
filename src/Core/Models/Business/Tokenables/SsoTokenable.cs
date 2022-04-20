@@ -1,4 +1,5 @@
-﻿using System;
+﻿
+using System;
 using System.Text.Json.Serialization;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data;
@@ -34,6 +35,9 @@ namespace Bit.Core.Models.Business.Tokenables
         }
 
         // Validates deserialized 
-        protected override bool TokenIsValid() => Identifier == TokenIdentifier && Token.OrganizationId != Guid.Empty && !string.IsNullOrEmpty(Token.DomainHint);
+        protected override bool TokenIsValid() =>
+            Identifier == TokenIdentifier
+            && Token.OrganizationId != Guid.Empty
+            && !string.IsNullOrWhiteSpace(Token.DomainHint);
     }
 }

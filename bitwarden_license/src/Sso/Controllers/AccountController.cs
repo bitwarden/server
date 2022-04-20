@@ -152,7 +152,7 @@ namespace Bit.Sso.Controllers
                 var ssoToken = new SsoToken()
                 {
                     DomainHint = domainHint,
-                    OrganizationId = organization.Id
+                    OrganizationId = organization.Id,
                 };
 
                 var tokenable = new SsoTokenable(ssoToken);
@@ -176,7 +176,7 @@ namespace Bit.Sso.Controllers
         {
             var context = await _interaction.GetAuthorizationContextAsync(returnUrl);
 
-            if (!context.Parameters.AllKeys.Contains("domain_hint") &&
+            if (!context.Parameters.AllKeys.Contains("domain_hint") ||
                 string.IsNullOrWhiteSpace(context.Parameters["domain_hint"]))
             {
                 throw new Exception(_i18nService.T("NoDomainHintProvided"));
@@ -193,7 +193,7 @@ namespace Bit.Sso.Controllers
 
             var tokenable = _dataProtector.Unprotect(ssoToken);
 
-            if (!tokenable.TokenIsValid(new SsoToken() { OrganizationId = organization.Id, DomainHint = domainHint}))
+            if (!tokenable.TokenIsValid(new SsoToken() { OrganizationId = organization.Id, DomainHint = domainHint }))
             {
                 return Unauthorized();
             }
@@ -203,7 +203,7 @@ namespace Bit.Sso.Controllers
                 scheme = context.Parameters["organizationId"],
                 returnUrl,
                 state = context.Parameters["state"],
-                userIdentifier = context.Parameters["session_state"]
+                userIdentifier = context.Parameters["session_state"],
             });
         }
 

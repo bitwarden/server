@@ -7,6 +7,7 @@ using System.Security.Claims;
 using System.Threading.Tasks;
 using Bit.Core.Entities;
 using Bit.Core.Models.Api;
+using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Tokens;
 using Bit.Identity.Models;
@@ -96,7 +97,7 @@ namespace Bit.Identity.Controllers
 
             var domainHint = context.Parameters.AllKeys.Contains("domain_hint") ?
                 context.Parameters["domain_hint"] : null;
-            var ssoToken = context.Parameters["ssoToken"];
+            var ssoToken = context.Parameters[SsoToken.TokenName];
 
             if (string.IsNullOrWhiteSpace(domainHint))
             {
@@ -108,7 +109,7 @@ namespace Bit.Identity.Controllers
 
             return RedirectToAction(nameof(ExternalChallenge), new
             {
-                domain_hint = domainHint,
+                domainHint = domainHint,
                 returnUrl,
                 userIdentifier,
                 ssoToken,
@@ -116,15 +117,15 @@ namespace Bit.Identity.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> ExternalChallenge(string domain_hint, string returnUrl,
+        public async Task<IActionResult> ExternalChallenge(string domainHint, string returnUrl,
             string userIdentifier, string ssoToken)
         {
-            if (string.IsNullOrWhiteSpace(domain_hint))
+            if (string.IsNullOrWhiteSpace(domainHint))
             {
                 throw new Exception("Invalid organization reference id.");
             }
 
-            var ssoConfig = await _ssoConfigRepository.GetByIdentifierAsync(domain_hint);
+            var ssoConfig = await _ssoConfigRepository.GetByIdentifierAsync(domainHint);
             if (ssoConfig == null || !ssoConfig.Enabled)
             {
                 throw new Exception("Organization not found or SSO configuration not enabled");
@@ -138,7 +139,7 @@ namespace Bit.Identity.Controllers
                 Items =
                 {
                     { "return_url", returnUrl },
-                    { "domain_hint", domain_hint },
+                    { "domain_hint", domainHint },
                     { "organizationId", organizationId },
                     { "scheme", scheme },
                 },
