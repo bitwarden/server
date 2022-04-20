@@ -67,14 +67,7 @@ namespace Bit.Identity.Controllers
                 using var responseMessage = await httpClient.GetAsync(requestPath);
                 var responseJson = await responseMessage.Content.ReadAsStringAsync();
 
-                if (responseMessage.IsSuccessStatusCode)
-                {
-                    var obj = JsonConvert.DeserializeObject<ExpandoObject>(responseJson, new ExpandoObjectConverter());
-                    return Json(obj);
-                }
-
                 Response.StatusCode = (int)responseMessage.StatusCode;
-
                 return Content(responseJson, "application/json");
             }
             catch (Exception ex)
