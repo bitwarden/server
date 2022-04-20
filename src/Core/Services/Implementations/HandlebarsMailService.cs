@@ -806,21 +806,21 @@ namespace Bit.Core.Services
         public async Task SendFamiliesForEnterpriseOfferEmailAsync(string sponsorOrgName, string email, bool existingAccount, string token) =>
             await BulkSendFamiliesForEnterpriseOfferEmailAsync(sponsorOrgName, new[] { (email, existingAccount, token) });
 
-        public async Task BulkSendFamiliesForEnterpriseOfferEmailAsync(string sponsorOrgName, IEnumerable<(string email, bool existingAccount, string token)> invites)
+        public async Task BulkSendFamiliesForEnterpriseOfferEmailAsync(string sponsorOrgName, IEnumerable<(string Email, bool ExistingAccount, string Token)> invites)
         {
-            MailQueueMessage CreateMessage((string email, bool existingAccount, string token) invite)
+            MailQueueMessage CreateMessage((string Email, bool ExistingAccount, string Token) invite)
             {
-                var message = CreateDefaultMessage("Accept Your Free Families Subscription", invite.email);
+                var message = CreateDefaultMessage("Accept Your Free Families Subscription", invite.Email);
                 message.Category = "FamiliesForEnterpriseOffer";
                 var model = new FamiliesForEnterpriseOfferExistingAccountViewModel
                 {
                     SponsorOrgName = sponsorOrgName,
-                    SponsoredEmail = WebUtility.UrlEncode(invite.email),
+                    SponsoredEmail = WebUtility.UrlEncode(invite.Email),
                     WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
                     SiteName = _globalSettings.SiteName,
-                    SponsorshipToken = invite.token,
+                    SponsorshipToken = invite.Token,
                 };
-                var templateName = invite.existingAccount ?
+                var templateName = invite.ExistingAccount ?
                     "FamiliesForEnterprise.FamiliesForEnterpriseOfferExistingAccount" :
                     "FamiliesForEnterprise.FamiliesForEnterpriseOfferNewAccount";
                 return new MailQueueMessage(message, templateName, model);
