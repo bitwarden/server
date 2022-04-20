@@ -70,8 +70,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
                     continue; // prevent unsupported sponsorships
                 }
 
-                OrganizationSponsorship cloudSponsorship;
-                if (!existingSponsorshipsDict.TryGetValue(selfHostedSponsorship.SponsoringOrganizationUserId, out cloudSponsorship))
+                if (!existingSponsorshipsDict.TryGetValue(selfHostedSponsorship.SponsoringOrganizationUserId, out var cloudSponsorship))
                 {
                     if (selfHostedSponsorship.ToDelete && selfHostedSponsorship.LastSyncDate == null)
                     {
