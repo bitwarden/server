@@ -115,8 +115,8 @@ namespace Bit.Admin.Controllers
                 policies = await _policyRepository.GetManyByOrganizationIdAsync(id);
             }
             var users = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(id);
-            var billingSyncConnection = await _organizationConnectionRepository.GetEnabledByOrganizationIdTypeAsync(id, OrganizationConnectionType.CloudBillingSync);
-            return View(new OrganizationViewModel(organization, _globalSettings.EnableCloudCommunication ? billingSyncConnection : null, users, ciphers, collections, groups, policies));
+            var billingSyncConnection = _globalSettings.EnableCloudCommunication ? await _organizationConnectionRepository.GetByOrganizationIdTypeAsync(id, OrganizationConnectionType.CloudBillingSync) : null;
+            return View(new OrganizationViewModel(organization, billingSyncConnection, users, ciphers, collections, groups, policies));
         }
 
         [SelfHosted(NotSelfHostedOnly = true)]
@@ -142,9 +142,9 @@ namespace Bit.Admin.Controllers
             }
             var users = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(id);
             var billingInfo = await _paymentService.GetBillingAsync(organization);
-            var billingSyncConnection = await _organizationConnectionRepository.GetEnabledByOrganizationIdTypeAsync(id, OrganizationConnectionType.CloudBillingSync);
+            var billingSyncConnection = _globalSettings.EnableCloudCommunication ? await _organizationConnectionRepository.GetByOrganizationIdTypeAsync(id, OrganizationConnectionType.CloudBillingSync) : null;
             return View(new OrganizationEditModel(organization, users, ciphers, collections, groups, policies,
-                billingInfo, _globalSettings.EnableCloudCommunication ? billingSyncConnection : null, _globalSettings));
+                billingInfo, billingSyncConnection, _globalSettings));
         }
 
         [HttpPost]
