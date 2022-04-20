@@ -236,7 +236,7 @@ namespace Bit.Api.Controllers
                 var ciphers = await _cipherRepository.GetManyByUserIdAsync(userId, true);
                 orgCiphers = ciphers.Where(c => c.OrganizationId == orgIdGuid);
             }
-            
+
             var orgCipherIds = orgCiphers.Select(c => c.Id);
 
             var collectionCiphers = await _collectionCipherRepository.GetManyByOrganizationIdAsync(orgIdGuid);
