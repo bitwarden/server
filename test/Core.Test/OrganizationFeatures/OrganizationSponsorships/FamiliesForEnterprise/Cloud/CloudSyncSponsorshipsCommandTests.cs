@@ -87,7 +87,7 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
             sutProvider.GetDependency<ICurrentContext>().InstallationId.Returns(installationId);
             await sutProvider.Sut.SyncOrganization(organization, Array.Empty<OrganizationSponsorshipData>());
 
-            await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationEventAsync(organization, EventType.Organization_SponsorshipsSynced, Arg.Any<DateTime?>(), installationId);
+            await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationEventAsync(organization, EventType.Organization_SponsorshipsSynced, Arg.Any<DateTime?>());
         }
 
     }

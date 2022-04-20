@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using Bit.Test.Common.Helpers;
 using Xunit;
