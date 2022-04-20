@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Linq;
+using System.Linq.Expressions;
+using System.Reflection;
 using System.Text.Json;
 using Bit.Core.Utilities;
 using Xunit;
@@ -38,6 +40,11 @@ namespace Bit.Test.Common.Helpers
                 {
                     Assert.Equal(expectedPropInfo.GetValue(expected), actualPropInfo.GetValue(actual));
                 }
+                else if (expectedPropInfo.PropertyType == typeof(JsonDocument) && actualPropInfo.PropertyType == typeof(JsonDocument))
+                {
+                    static string JsonDocString(PropertyInfo info, object obj) => JsonSerializer.Serialize(info.GetValue(obj));
+                    Assert.Equal(JsonDocString(expectedPropInfo, expected), JsonDocString(actualPropInfo, actual));
+                }
                 else
                 {
                     var prefix = $"{expectedPropInfo.PropertyType.Name}.";
@@ -48,11 +55,23 @@ namespace Bit.Test.Common.Helpers
             }
         }
 
-        public static Predicate<T> AssertEqualExpectedPredicate<T>(T expected) => (actual) =>
+        private static Predicate<T> AssertPropertyEqualPredicate<T>(T expected, params string[] excludedPropertyStrings) => (actual) =>
+        {
+            AssertPropertyEqual(expected, actual, excludedPropertyStrings);
+            return true;
+        };
+
+        public static Expression<Predicate<T>> AssertPropertyEqual<T>(T expected, params string[] excludedPropertyStrings) =>
+            (T actual) => AssertPropertyEqualPredicate(expected, excludedPropertyStrings)(actual);
+
+        private static Predicate<T> AssertEqualExpectedPredicate<T>(T expected) => (actual) =>
         {
             Assert.Equal(expected, actual);
             return true;
         };
+
+        public static Expression<Predicate<T>> AssertEqualExpected<T>(T expected) =>
+            (T actual) => AssertEqualExpectedPredicate(expected)(actual);
 
         public static JsonElement AssertJsonProperty(JsonElement element, string propertyName, JsonValueKind jsonValueKind)
         {

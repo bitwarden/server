@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using Bit.Core.Models.Data;
+using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 
 namespace Bit.Core.Models.Business
 {

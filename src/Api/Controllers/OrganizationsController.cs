@@ -6,6 +6,7 @@ using Bit.Api.Models.Request;
 using Bit.Api.Models.Request.Accounts;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
+using Bit.Api.Models.Response.Organizations;
 using Bit.Api.Utilities;
 using Bit.Core.Context;
 using Bit.Core.Enums;

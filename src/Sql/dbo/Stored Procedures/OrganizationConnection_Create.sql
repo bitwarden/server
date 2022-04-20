@@ -1,5 +1,5 @@
 CREATE PROCEDURE [dbo].[OrganizationConnection_Create]
-    @Id UNIQUEIDENTIFIER,
+    @Id UNIQUEIDENTIFIER OUTPUT,
     @OrganizationId UNIQUEIDENTIFIER,
     @Type TINYINT,
     @Enabled BIT,

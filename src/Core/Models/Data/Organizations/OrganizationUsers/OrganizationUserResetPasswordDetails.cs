@@ -2,7 +2,7 @@
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 
-namespace Bit.Core.Models.Data
+namespace Bit.Core.Models.Data.Organizations.OrganizationUsers
 {
     public class OrganizationUserResetPasswordDetails
     {

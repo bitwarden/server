@@ -29,7 +29,6 @@ namespace Bit.Core.Entities
 
         public T GetConfig<T>() where T : new()
         {
-
             try
             {
                 return JsonSerializer.Deserialize<T>(Config);

@@ -3,11 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
+using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using DataModel = Bit.Core.Models.Data;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories
 {
@@ -71,13 +71,13 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             }
         }
 
-        public async Task<ICollection<DataModel.OrganizationAbility>> GetManyAbilitiesAsync()
+        public async Task<ICollection<OrganizationAbility>> GetManyAbilitiesAsync()
         {
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
                 return await GetDbSet(dbContext)
-                .Select(e => new DataModel.OrganizationAbility
+                .Select(e => new OrganizationAbility
                 {
                     Enabled = e.Enabled,
                     Id = e.Id,

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace Bit.Core.Models.Data
+namespace Bit.Core.Models.Data.Organizations.OrganizationSponsorships
 {
     public class OrganizationSponsorshipSyncData
     {

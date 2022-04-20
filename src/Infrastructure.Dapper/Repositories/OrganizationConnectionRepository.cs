@@ -18,7 +18,7 @@ namespace Bit.Infrastructure.Dapper.Repositories
             : base(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
         { }
 
-        public async Task<ICollection<OrganizationConnection>> GetEnabledByOrganizationIdTypeAsync(Guid organizationId, OrganizationConnectionType type)
+        public async Task<ICollection<OrganizationConnection>> GetByOrganizationIdTypeAsync(Guid organizationId, OrganizationConnectionType type)
         {
             using (var connection = new SqlConnection(ConnectionString))
             {
@@ -34,5 +34,8 @@ namespace Bit.Infrastructure.Dapper.Repositories
                 return results.ToList();
             }
         }
+
+        public async Task<ICollection<OrganizationConnection>> GetEnabledByOrganizationIdTypeAsync(Guid organizationId, OrganizationConnectionType type) =>
+            (await GetByOrganizationIdTypeAsync(organizationId, type)).Where(c => c.Enabled).ToList();
     }
 }

@@ -39,6 +39,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationApiKeys
                 };
 
                 await _organizationApiKeyRepository.CreateAsync(apiKey);
+                return apiKey;
             }
 
             // NOTE: Currently we only allow one type of api key per organization
