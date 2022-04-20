@@ -33,12 +33,9 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
             }
 
             var orgApiKey = (await _apiKeyRepository.GetManyByOrganizationIdTypeAsync(organization.Id, Enums.OrganizationApiKeyType.BillingSync)).FirstOrDefault();
-            if (!string.IsNullOrWhiteSpace(orgApiKey.ApiKey))
+            if (string.Equals(orgApiKey.ApiKey, billingSyncKey))
             {
-                if (billingSyncKey.Equals(orgApiKey.ApiKey))
-                {
-                    return true;
-                }
+                return true;
             }
             return false;
         }
