@@ -183,6 +183,12 @@ namespace Bit.Sso.Controllers
             }
                 
             var ssoToken = context.Parameters[SsoToken.TokenName];
+
+            if(string.IsNullOrWhiteSpace(ssoToken))
+            {
+                return Unauthorized("A valid SSO token is required to continue with SSO login");
+            }
+
             var domainHint = context.Parameters["domain_hint"];
             var organization = await _organizationRepository.GetByIdentifierAsync(domainHint);
 
@@ -200,7 +206,7 @@ namespace Bit.Sso.Controllers
 
             return RedirectToAction(nameof(ExternalChallenge), new
             {
-                scheme = context.Parameters["organizationId"],
+                scheme = organization.Id.ToString(),
                 returnUrl,
                 state = context.Parameters["state"],
                 userIdentifier = context.Parameters["session_state"],
