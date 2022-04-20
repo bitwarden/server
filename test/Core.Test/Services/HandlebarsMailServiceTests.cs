@@ -115,7 +115,6 @@ namespace Bit.Core.Test.Services
                 { ("familyUserEmail", typeof(string)), "test@bitwarden.com" },
                 { ("sponsorEmail", typeof(string)), "test@bitwarden.com" },
                 { ("familyOrgName", typeof(string)), "Test Org Name" },
-                { ("orgCanSponsor", typeof(bool)), true },
                 { ("existingAccount", typeof(bool)), true },
                 { ("sponsorshipEndDate", typeof(DateTime)), DateTime.UtcNow.AddDays(1)},
             };

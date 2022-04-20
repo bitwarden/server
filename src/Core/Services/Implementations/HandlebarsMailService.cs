@@ -221,10 +221,10 @@ namespace Bit.Core.Services
             await _mailDeliveryService.SendEmailAsync(message);
         }
 
-        public Task SendOrganizationInviteEmailAsync(string organizationName, bool orgCanSponsor, OrganizationUser orgUser, ExpiringToken token) =>
-            BulkSendOrganizationInviteEmailAsync(organizationName, orgCanSponsor, new[] { (orgUser, token) });
+        public Task SendOrganizationInviteEmailAsync(string organizationName, OrganizationUser orgUser, ExpiringToken token) =>
+            BulkSendOrganizationInviteEmailAsync(organizationName, new[] { (orgUser, token) });
 
-        public async Task BulkSendOrganizationInviteEmailAsync(string organizationName, bool organizationCanSponsor, IEnumerable<(OrganizationUser orgUser, ExpiringToken token)> invites)
+        public async Task BulkSendOrganizationInviteEmailAsync(string organizationName, IEnumerable<(OrganizationUser orgUser, ExpiringToken token)> invites)
         {
             MailQueueMessage CreateMessage(string email, object model)
             {
@@ -244,7 +244,6 @@ namespace Bit.Core.Services
                     OrganizationNameUrlEncoded = WebUtility.UrlEncode(organizationName),
                     WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
                     SiteName = _globalSettings.SiteName,
-                    OrganizationCanSponsor = organizationCanSponsor,
                 }
             ));
 
@@ -580,35 +579,6 @@ namespace Bit.Core.Services
 
                 var clickTrackingText = (clickTrackingOff ? "clicktracking=off" : string.Empty);
                 writer.WriteSafeString($"<a href=\"{href}\" target=\"_blank\" {clickTrackingText}>{text}</a>");
-            });
-
-            Handlebars.RegisterHelper("jsonIf", (output, options, context, arguments) =>
-            {
-                // Special case for JsonElement
-                if (arguments[0] is JsonElement jsonElement
-                    && (jsonElement.ValueKind == JsonValueKind.True || jsonElement.ValueKind == JsonValueKind.False))
-                {
-                    if (jsonElement.GetBoolean())
-                    {
-                        options.Template(output, context);
-                    }
-                    else
-                    {
-                        options.Inverse(output, context);
-                    }
-
-                    return;
-                }
-
-                // Fallback to normal
-                if (HandlebarsUtils.IsTruthy(arguments[0]))
-                {
-                    options.Template(output, context);
-                }
-                else
-                {
-                    options.Inverse(output, context);
-                }
             });
         }
 
