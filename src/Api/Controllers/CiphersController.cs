@@ -224,8 +224,19 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            var ciphers = await _cipherRepository.GetManyByUserIdAsync(userId, true);
-            var orgCiphers = ciphers.Where(c => c.OrganizationId == orgIdGuid);
+            IEnumerable<Cipher> orgCiphers;
+            if (await _currentContext.OrganizationOwner(orgIdGuid))
+            {
+                // User may be a Provider for the organization, in which case GetManyByUserIdAsync won't return any results
+                // But they have access to all organization ciphers, so we can safely get by orgId instead
+                orgCiphers = await _cipherRepository.GetManyByOrganizationIdAsync(orgIdGuid);
+            }
+            else
+            {
+                var ciphers = await _cipherRepository.GetManyByUserIdAsync(userId, true);
+                orgCiphers = ciphers.Where(c => c.OrganizationId == orgIdGuid);
+            }
+
             var orgCipherIds = orgCiphers.Select(c => c.Id);
 
             var collectionCiphers = await _collectionCipherRepository.GetManyByOrganizationIdAsync(orgIdGuid);
