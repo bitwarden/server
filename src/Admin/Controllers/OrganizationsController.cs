@@ -194,7 +194,7 @@ namespace Bit.Admin.Controllers
                     cloudOrganizationId = (await _licensingService.ReadOrganizationLicenseAsync(id)).Id;
                     if (cloudOrganizationId == default)
                     {
-                        throw new Exception();
+                        throw new Exception("No enabled Billing Sync connection found for organization.");
                     }
                     await _syncSponsorshipsCommand.SyncOrganization(id, cloudOrganizationId, connection);
                     TempData["ConnectionActivated"] = id;
