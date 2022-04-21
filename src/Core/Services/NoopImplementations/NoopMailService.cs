@@ -55,12 +55,12 @@ namespace Bit.Core.Services
             return Task.FromResult(0);
         }
 
-        public Task SendOrganizationInviteEmailAsync(string organizationName, bool orgCanSponsor, OrganizationUser orgUser, ExpiringToken token)
+        public Task SendOrganizationInviteEmailAsync(string organizationName, OrganizationUser orgUser, ExpiringToken token)
         {
             return Task.FromResult(0);
         }
 
-        public Task BulkSendOrganizationInviteEmailAsync(string organizationName, bool orgCanSponsor, IEnumerable<(OrganizationUser orgUser, ExpiringToken token)> invites)
+        public Task BulkSendOrganizationInviteEmailAsync(string organizationName, IEnumerable<(OrganizationUser orgUser, ExpiringToken token)> invites)
         {
             return Task.FromResult(0);
         }
@@ -211,7 +211,7 @@ namespace Bit.Core.Services
             return Task.FromResult(0);
         }
 
-        public Task BulkSendFamiliesForEnterpriseOfferEmailAsync(string SponsorOrgName, IEnumerable<(string email, bool existingAccount, string token)> invites)
+        public Task BulkSendFamiliesForEnterpriseOfferEmailAsync(string SponsorOrgName, IEnumerable<(string Email, bool ExistingAccount, string Token)> invites)
         {
             return Task.FromResult(0);
         }

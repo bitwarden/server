@@ -67,7 +67,6 @@ namespace Bit.Core.Test.Services
                 .CreateManyAsync(Arg.Is<IEnumerable<OrganizationUser>>(users => users.Count() == expectedNewUsersCount));
             await sutProvider.GetDependency<IMailService>().Received(1)
                 .BulkSendOrganizationInviteEmailAsync(org.Name,
-                Arg.Any<bool>(),
                 Arg.Is<IEnumerable<(OrganizationUser, ExpiringToken)>>(messages => messages.Count() == expectedNewUsersCount));
 
             // Send events
@@ -126,7 +125,6 @@ namespace Bit.Core.Test.Services
                 .CreateManyAsync(Arg.Is<IEnumerable<OrganizationUser>>(users => users.Count() == expectedNewUsersCount));
             await sutProvider.GetDependency<IMailService>().Received(1)
                 .BulkSendOrganizationInviteEmailAsync(org.Name,
-                Arg.Any<bool>(),
                 Arg.Is<IEnumerable<(OrganizationUser, ExpiringToken)>>(messages => messages.Count() == expectedNewUsersCount));
 
             // Sent events
@@ -363,7 +361,7 @@ namespace Bit.Core.Test.Services
             await sutProvider.Sut.InviteUsersAsync(organization.Id, invitor.UserId, invites);
 
             await sutProvider.GetDependency<IMailService>().Received(1)
-                .BulkSendOrganizationInviteEmailAsync(organization.Name, Arg.Any<bool>(),
+                .BulkSendOrganizationInviteEmailAsync(organization.Name,
                     Arg.Is<IEnumerable<(OrganizationUser, ExpiringToken)>>(v => v.Count() == invites.SelectMany(i => i.invite.Emails).Count()));
         }
 

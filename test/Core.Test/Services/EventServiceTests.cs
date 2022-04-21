@@ -1,49 +1,44 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using Bit.Core.Context;
-using Bit.Core.Repositories;
+using Bit.Core.Entities;
+using Bit.Core.Enums;
+using Bit.Core.Models.Data;
 using Bit.Core.Services;
-using Bit.Core.Settings;
+using Bit.Test.Common.AutoFixture;
+using Bit.Test.Common.AutoFixture.Attributes;
+using Bit.Test.Common.Helpers;
 using NSubstitute;
 using Xunit;
 
 namespace Bit.Core.Test.Services
 {
+    [SutProviderCustomize]
     public class EventServiceTests
     {
-        private readonly EventService _sut;
+        public static IEnumerable<object[]> InstallationIdTestCases => TestCaseHelper.GetCombinationsOfMultipleLists(
+            new object[] { Guid.NewGuid(), null },
+            Enum.GetValues<EventType>().Select(e => (object)e)
+        ).Select(p => p.ToArray());
 
-        private readonly IEventWriteService _eventWriteService;
-        private readonly IOrganizationUserRepository _organizationUserRepository;
-        private readonly IProviderUserRepository _providerUserRepository;
-        private readonly IApplicationCacheService _applicationCacheService;
-        private readonly CurrentContext _currentContext;
-        private readonly GlobalSettings _globalSettings;
-
-        public EventServiceTests()
+        [Theory]
+        [BitMemberAutoData(nameof(InstallationIdTestCases))]
+        public async Task LogOrganizationEvent_ProvidesInstallationId(Guid? installationId, EventType eventType,
+            Organization organization, SutProvider<EventService> sutProvider)
         {
-            _eventWriteService = Substitute.For<IEventWriteService>();
-            _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
-            _providerUserRepository = Substitute.For<IProviderUserRepository>();
-            _applicationCacheService = Substitute.For<IApplicationCacheService>();
-            _currentContext = new CurrentContext(null);
-            _globalSettings = new GlobalSettings();
+            organization.Enabled = true;
+            organization.UseEvents = true;
 
-            _sut = new EventService(
-                _eventWriteService,
-                _organizationUserRepository,
-                _providerUserRepository,
-                _applicationCacheService,
-                _currentContext,
-                _globalSettings
-            );
-        }
+            sutProvider.GetDependency<ICurrentContext>().InstallationId.Returns(installationId);
 
-        // Remove this test when we add actual tests. It only proves that
-        // we've properly constructed the system under test.
-        [Fact]
-        public void ServiceExists()
-        {
-            Assert.NotNull(_sut);
+            await sutProvider.Sut.LogOrganizationEventAsync(organization, eventType);
+
+            await sutProvider.GetDependency<IEventWriteService>().Received(1).CreateAsync(Arg.Is<IEvent>(e =>
+                e.OrganizationId == organization.Id &&
+                e.Type == eventType &&
+                e.InstallationId == installationId));
         }
     }
 }

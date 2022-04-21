@@ -60,6 +60,7 @@
         Organization_DisabledSso = 1605,
         Organization_EnabledKeyConnector = 1606,
         Organization_DisabledKeyConnector = 1607,
+        Organization_SponsorshipsSynced = 1608,
 
         Policy_Updated = 1700,
 
