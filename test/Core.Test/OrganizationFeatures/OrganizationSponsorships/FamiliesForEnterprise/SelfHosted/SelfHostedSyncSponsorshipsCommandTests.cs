@@ -43,7 +43,7 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
 
             var apiHandler = new MockHttpMessageHandler();
             var identityHandler = new MockHttpMessageHandler();
-            var syncUri = string.Concat(apiUri, "organizationSponsorships/sync");
+            var syncUri = string.Concat(apiUri, "organization/sponsorship/sync");
             var tokenUri = string.Concat(identityUri, "connect/token");
 
             apiHandler.When(HttpMethod.Post, syncUri)
@@ -118,7 +118,10 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
         {
             var sutProvider = GetSutProvider(false);
 
-            await sutProvider.Sut.SyncOrganization(billingSyncConnection.OrganizationId, cloudOrganizationId, billingSyncConnection);
+            var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+                sutProvider.Sut.SyncOrganization(billingSyncConnection.OrganizationId, cloudOrganizationId, billingSyncConnection));
+
+            Assert.Contains($"Cloud communication is disabled", exception.Message);
 
             await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
                 .DidNotReceiveWithAnyArgs()

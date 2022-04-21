@@ -37,7 +37,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
             globalSettings.Installation.ApiUri,
             globalSettings.Installation.IdentityUri,
             "api.installation",
-            globalSettings.Installation.Id.ToString(),
+            $"installation.{globalSettings.Installation.Id}",
             globalSettings.Installation.Key,
             logger)
         {
@@ -51,8 +51,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
         {
             if (!_globalSettings.EnableCloudCommunication)
             {
-                _logger.LogInformation("Failed to sync instance with cloud - Cloud communication is disabled in global settings");
-                return;
+                throw new BadRequestException("Failed to sync instance with cloud - Cloud communication is disabled in global settings");
             }
             if (!billingSyncConnection.Enabled)
             {
@@ -79,7 +78,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
 
             foreach (var orgSponsorshipsBatch in CoreHelpers.Batch(organizationSponsorshipsDict.Values, 1000))
             {
-                var response = await SendAsync<OrganizationSponsorshipSyncRequestModel, OrganizationSponsorshipSyncResponseModel>(HttpMethod.Post, "organizationSponsorships/sync", new OrganizationSponsorshipSyncRequestModel
+                var response = await SendAsync<OrganizationSponsorshipSyncRequestModel, OrganizationSponsorshipSyncResponseModel>(HttpMethod.Post, "organization/sponsorship/sync", new OrganizationSponsorshipSyncRequestModel
                 {
                     BillingSyncKey = billingSyncConfig.BillingSyncKey,
                     SponsoringOrganizationCloudId = cloudOrganizationId,

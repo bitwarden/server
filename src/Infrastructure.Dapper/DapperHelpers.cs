@@ -93,13 +93,13 @@ namespace Bit.Infrastructure.Dapper
                 (nameof(OrganizationSponsorship.Id), typeof(Guid), ou => ou.Id),
                 (nameof(OrganizationSponsorship.SponsoringOrganizationId), typeof(Guid), ou => ou.SponsoringOrganizationId),
                 (nameof(OrganizationSponsorship.SponsoringOrganizationUserId), typeof(Guid), ou => ou.SponsoringOrganizationUserId),
-                (nameof(OrganizationSponsorship.SponsoredOrganizationId), typeof(string), ou => ou.SponsoredOrganizationId),
+                (nameof(OrganizationSponsorship.SponsoredOrganizationId), typeof(Guid), ou => ou.SponsoredOrganizationId),
                 (nameof(OrganizationSponsorship.FriendlyName), typeof(string), ou => ou.FriendlyName),
-                (nameof(OrganizationSponsorship.OfferedToEmail), typeof(byte), ou => ou.OfferedToEmail),
+                (nameof(OrganizationSponsorship.OfferedToEmail), typeof(string), ou => ou.OfferedToEmail),
                 (nameof(OrganizationSponsorship.PlanSponsorshipType), typeof(byte), ou => ou.PlanSponsorshipType),
-                (nameof(OrganizationSponsorship.LastSyncDate), typeof(bool), ou => ou.LastSyncDate),
-                (nameof(OrganizationSponsorship.ValidUntil), typeof(string), ou => ou.ValidUntil),
-                (nameof(OrganizationSponsorship.ToDelete), typeof(DateTime), ou => ou.ToDelete),
+                (nameof(OrganizationSponsorship.LastSyncDate), typeof(DateTime), ou => ou.LastSyncDate),
+                (nameof(OrganizationSponsorship.ValidUntil), typeof(DateTime), ou => ou.ValidUntil),
+                (nameof(OrganizationSponsorship.ToDelete), typeof(bool), ou => ou.ToDelete),
             };
 
             return organizationSponsorships.BuildTable(table, columnData);

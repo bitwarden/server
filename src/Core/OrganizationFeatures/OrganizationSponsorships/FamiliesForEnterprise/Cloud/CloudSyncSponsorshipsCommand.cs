@@ -52,6 +52,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
 
             var sponsorshipsToUpsert = new List<OrganizationSponsorship>();
             var sponsorshipIdsToDelete = new List<Guid>();
+            var sponsorshipsToReturn = new List<OrganizationSponsorshipData>();
 
             foreach (var selfHostedSponsorship in sponsorshipsData)
             {
@@ -62,8 +63,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
                     continue; // prevent unsupported sponsorships
                 }
 
-                var cloudSponsorship = existingSponsorshipsDict[selfHostedSponsorship.SponsoringOrganizationUserId];
-                if (cloudSponsorship == null)
+                if (!existingSponsorshipsDict.TryGetValue(selfHostedSponsorship.SponsoringOrganizationUserId, out var cloudSponsorship))
                 {
                     if (selfHostedSponsorship.ToDelete && selfHostedSponsorship.LastSyncDate == null)
                     {
@@ -104,8 +104,9 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
 
                 selfHostedSponsorship.ValidUntil = cloudSponsorship.ValidUntil;
                 selfHostedSponsorship.LastSyncDate = DateTime.UtcNow;
+                sponsorshipsToReturn.Add(selfHostedSponsorship);
             }
-            var sponsorshipsToEmailOffer = sponsorshipsToUpsert.Where(s => s.Id == null);
+            var sponsorshipsToEmailOffer = sponsorshipsToUpsert.Where(s => s.Id == default);
             if (sponsorshipsToUpsert.Any())
             {
                 await _organizationSponsorshipRepository.UpsertManyAsync(sponsorshipsToUpsert);

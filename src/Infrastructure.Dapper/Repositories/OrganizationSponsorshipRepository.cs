@@ -56,7 +56,7 @@ namespace Bit.Infrastructure.Dapper.Repositories
             using (var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.ExecuteAsync(
-                    $"[dbo].[OrganizationSponsorship_InsertMany]",
+                    $"[dbo].[OrganizationSponsorship_UpdateMany]",
                     new { OrganizationSponsorshipsInput = orgSponsorshipsTVP },
                     commandType: CommandType.StoredProcedure);
             }

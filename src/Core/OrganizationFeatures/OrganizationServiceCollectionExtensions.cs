@@ -36,23 +36,17 @@ namespace Bit.Core.OrganizationFeatures
         private static void AddOrganizationSponsorshipCommands(this IServiceCollection services, IGlobalSettings globalSettings)
         {
             services.AddScoped<ICreateSponsorshipCommand, CreateSponsorshipCommand>();
-
             services.AddScoped<IRemoveSponsorshipCommand, RemoveSponsorshipCommand>();
-
             services.AddScoped<ISendSponsorshipOfferCommand, SendSponsorshipOfferCommand>();
-
             services.AddScoped<ISetUpSponsorshipCommand, SetUpSponsorshipCommand>();
-
             services.AddScoped<IValidateRedemptionTokenCommand, ValidateRedemptionTokenCommand>();
-
             services.AddScoped<IValidateSponsorshipCommand, ValidateSponsorshipCommand>();
-
             services.AddScoped<IValidateBillingSyncKeyCommand, ValidateBillingSyncKeyCommand>();
-
             services.AddScoped<ICloudSyncSponsorshipsCommand, CloudSyncSponsorshipsCommand>();
-
             services.AddScoped<ISelfHostedSyncSponsorshipsCommand, SelfHostedSyncSponsorshipsCommand>();
-
+            services.AddScoped<ISelfHostedSyncSponsorshipsCommand, SelfHostedSyncSponsorshipsCommand>();
+            services.AddScoped<ICloudSyncSponsorshipsCommand, CloudSyncSponsorshipsCommand>();
+            services.AddScoped<IValidateBillingSyncKeyCommand, ValidateBillingSyncKeyCommand>();
             if (globalSettings.SelfHosted)
             {
                 services.AddScoped<IRevokeSponsorshipCommand, SelfHostedRevokeSponsorshipCommand>();

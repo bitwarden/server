@@ -16,8 +16,9 @@ namespace Bit.Admin.Models
 
         public OrganizationEditModel(Organization org, IEnumerable<OrganizationUserUserDetails> orgUsers,
             IEnumerable<Cipher> ciphers, IEnumerable<Collection> collections, IEnumerable<Group> groups,
-            IEnumerable<Policy> policies, BillingInfo billingInfo, GlobalSettings globalSettings)
-            : base(org, orgUsers, ciphers, collections, groups, policies)
+            IEnumerable<Policy> policies, BillingInfo billingInfo, IEnumerable<OrganizationConnection> connections,
+            GlobalSettings globalSettings)
+            : base(org, connections, orgUsers, ciphers, collections, groups, policies)
         {
             BillingInfo = billingInfo;
             BraintreeMerchantId = globalSettings.Braintree.MerchantId;
