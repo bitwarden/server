@@ -32,6 +32,7 @@ namespace Bit.Billing.Controllers
         private readonly IWebHostEnvironment _hostingEnvironment;
         private readonly IOrganizationService _organizationService;
         private readonly IValidateSponsorshipCommand _validateSponsorshipCommand;
+        private readonly IOrganizationSponsorshipRenewCommand _organizationSponsorshipRenewCommand;
         private readonly IOrganizationRepository _organizationRepository;
         private readonly ITransactionRepository _transactionRepository;
         private readonly IUserService _userService;
@@ -49,6 +50,7 @@ namespace Bit.Billing.Controllers
             IWebHostEnvironment hostingEnvironment,
             IOrganizationService organizationService,
             IValidateSponsorshipCommand validateSponsorshipCommand,
+            IOrganizationSponsorshipRenewCommand organizationSponsorshipRenewCommand,
             IOrganizationRepository organizationRepository,
             ITransactionRepository transactionRepository,
             IUserService userService,
@@ -63,6 +65,7 @@ namespace Bit.Billing.Controllers
             _hostingEnvironment = hostingEnvironment;
             _organizationService = organizationService;
             _validateSponsorshipCommand = validateSponsorshipCommand;
+            _organizationSponsorshipRenewCommand = organizationSponsorshipRenewCommand;
             _organizationRepository = organizationRepository;
             _transactionRepository = transactionRepository;
             _userService = userService;
@@ -143,6 +146,10 @@ namespace Bit.Billing.Controllers
                     {
                         await _organizationService.UpdateExpirationDateAsync(ids.Item1.Value,
                             subscription.CurrentPeriodEnd);
+                        if (IsSponsoredSubscription(subscription))
+                        {
+                            await _organizationSponsorshipRenewCommand.UpdateExpirationDateAsync(ids.Item1.Value, subscription.CurrentPeriodEnd);
+                        }
                     }
                     // user
                     else if (ids.Item2.HasValue)
@@ -170,7 +177,7 @@ namespace Bit.Billing.Controllers
                 if (ids.Item1.HasValue)
                 {
                     // sponsored org
-                    if (CheckSponsoredSubscription(subscription))
+                    if (IsSponsoredSubscription(subscription))
                     {
                         await _validateSponsorshipCommand.ValidateSponsorshipAsync(ids.Item1.Value);
                     }
@@ -795,7 +802,7 @@ namespace Bit.Billing.Controllers
             return subscription;
         }
 
-        private static bool CheckSponsoredSubscription(Subscription subscription) =>
+        private static bool IsSponsoredSubscription(Subscription subscription) =>
             StaticStore.SponsoredPlans.Any(p => p.StripePlanId == subscription.Id);
     }
 }
