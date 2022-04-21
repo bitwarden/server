@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Bit.Core.Entities;
@@ -7,6 +8,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations.OrganizationSponsorships;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -74,6 +76,16 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
             await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
                 .DidNotReceiveWithAnyArgs()
                 .DeleteManyAsync(default);
+        }
+
+        [Theory]
+        [BitAutoData]
+        public async Task SyncOrganization_Success_RecordsEvent(Organization organization,
+            SutProvider<CloudSyncSponsorshipsCommand> sutProvider)
+        {
+            await sutProvider.Sut.SyncOrganization(organization, Array.Empty<OrganizationSponsorshipData>());
+
+            await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationEventAsync(organization, EventType.Organization_SponsorshipsSynced, Arg.Any<DateTime?>());
         }
 
     }
