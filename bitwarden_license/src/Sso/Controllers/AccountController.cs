@@ -181,10 +181,10 @@ namespace Bit.Sso.Controllers
             {
                 throw new Exception(_i18nService.T("NoDomainHintProvided"));
             }
-                
+
             var ssoToken = context.Parameters[SsoToken.TokenName];
 
-            if(string.IsNullOrWhiteSpace(ssoToken))
+            if (string.IsNullOrWhiteSpace(ssoToken))
             {
                 return Unauthorized("A valid SSO token is required to continue with SSO login");
             }

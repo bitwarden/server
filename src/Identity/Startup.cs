@@ -118,7 +118,7 @@ namespace Bit.Identity
                                 context.ProtocolMessage.SessionState = context.Properties.Items["user_identifier"];
                             }
 
-                            if(context.Properties.Parameters.Count > 0 && context.Properties.Parameters.ContainsKey(SsoToken.TokenName))
+                            if (context.Properties.Parameters.Count > 0 && context.Properties.Parameters.ContainsKey(SsoToken.TokenName))
                             {
                                 var token = context.Properties.Parameters[SsoToken.TokenName].ToString();
                                 context.ProtocolMessage.Parameters.Add(SsoToken.TokenName, token);
