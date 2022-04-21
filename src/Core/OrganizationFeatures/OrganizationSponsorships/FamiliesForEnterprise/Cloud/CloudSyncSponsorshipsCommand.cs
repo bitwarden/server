@@ -116,10 +116,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
                 await _organizationSponsorshipRepository.DeleteManyAsync(sponsorshipIdsToDelete);
             }
 
-            return (new OrganizationSponsorshipSyncData
-            {
-                SponsorshipsBatch = sponsorshipsToReturn
-            }, sponsorshipsToEmailOffer);
+            return (sponsorshipsData, sponsorshipsToEmailOffer);
         }
 
         /// <summary>
