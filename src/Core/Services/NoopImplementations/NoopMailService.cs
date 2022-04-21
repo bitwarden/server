@@ -221,7 +221,7 @@ namespace Bit.Core.Services
             return Task.FromResult(0);
         }
 
-        public Task SendFamiliesForEnterpriseSponsorshipRevertingEmailAsync(string email, string familyOrgName)
+        public Task SendFamiliesForEnterpriseSponsorshipRevertingEmailAsync(string email, DateTime expirationDate)
         {
             return Task.FromResult(0);
         }

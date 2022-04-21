@@ -16,8 +16,11 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
             await sutProvider.GetDependency<IPaymentService>().Received(1)
                 .RemoveOrganizationSponsorshipAsync(sponsoredOrg, sponsorship);
             await sutProvider.GetDependency<IOrganizationRepository>().Received(1).UpsertAsync(sponsoredOrg);
-            await sutProvider.GetDependency<IMailService>().Received(1)
-                .SendFamiliesForEnterpriseSponsorshipRevertingEmailAsync(sponsoredOrg.BillingEmailAddress(), sponsoredOrg.Name);
+            if (sponsorship != null)
+            {
+                await sutProvider.GetDependency<IMailService>().Received(1)
+                    .SendFamiliesForEnterpriseSponsorshipRevertingEmailAsync(sponsoredOrg.BillingEmailAddress(), sponsorship.ValidUntil.GetValueOrDefault());
+            }
         }
 
         protected async Task AssertDeletedSponsorshipAsync<T>(OrganizationSponsorship sponsorship,

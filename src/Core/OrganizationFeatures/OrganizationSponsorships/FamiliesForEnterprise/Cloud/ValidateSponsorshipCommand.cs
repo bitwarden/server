@@ -80,9 +80,12 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
 
                 try
                 {
-                    await _mailService.SendFamiliesForEnterpriseSponsorshipRevertingEmailAsync(
-                        sponsoredOrganization.BillingEmailAddress(),
-                        sponsoredOrganization.Name);
+                    if (sponsorship != null)
+                    {
+                        await _mailService.SendFamiliesForEnterpriseSponsorshipRevertingEmailAsync(
+                            sponsoredOrganization.BillingEmailAddress(),
+                            sponsorship.ValidUntil.GetValueOrDefault());
+                    }
                 }
                 catch (Exception e)
                 {
