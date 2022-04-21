@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Text.Json;
@@ -29,52 +30,16 @@ namespace Bit.Identity.IntegrationTest.Endpoints
             var context = await _factory.Server.GetAsync("/.well-known/openid-configuration");
 
             using var body = await AssertHelper.ResponseIsAsync<JsonDocument>(context);
-            var root = body.RootElement;
-            Assert.Equal(JsonValueKind.Object, root.ValueKind);
-            AssertHelper.AssertJsonProperty(root, "issuer", JsonValueKind.String);
+            var endpointRoot = body.RootElement;
+            
+            // WARNING: Edits to this file should NOT just be made to "get the test to work" they should be made when intentional 
+            // changes were made to this endpoint and proper testing will take place to ensure clients are backwards compatible
+            // or loss of functionality is properly noted.
+            using var fs = File.OpenRead("openid-configuration.json");
+            using var knownConfiguration = await JsonSerializer.DeserializeAsync<JsonDocument>(fs);
+            var knownConfigurationRoot = knownConfiguration.RootElement;
 
-            var scopesSupported = AssertHelper.AssertJsonProperty(root, "scopes_supported", JsonValueKind.Array)
-                .EnumerateArray()
-                .Select(je => je.GetString());
-
-            Assert.Contains("api", scopesSupported);
-            Assert.Contains("api.push", scopesSupported);
-            Assert.Contains("api.licensing", scopesSupported);
-            Assert.Contains("api.organization", scopesSupported);
-            Assert.Contains("internal", scopesSupported);
-            Assert.Contains("offline_access", scopesSupported);
-
-            var claimsSupported = AssertHelper.AssertJsonProperty(root, "claims_supported", JsonValueKind.Array)
-                .EnumerateArray()
-                .Select(je => je.GetString());
-
-            Assert.Contains("name", claimsSupported);
-            Assert.Contains("email", claimsSupported);
-            Assert.Contains("email_verified", claimsSupported);
-            Assert.Contains("sstamp", claimsSupported);
-            Assert.Contains("premium", claimsSupported);
-            Assert.Contains("device", claimsSupported);
-            Assert.Contains("orgowner", claimsSupported);
-            Assert.Contains("orgadmin", claimsSupported);
-            Assert.Contains("orgmanager", claimsSupported);
-            Assert.Contains("orguser", claimsSupported);
-            Assert.Contains("orgcustom", claimsSupported);
-            Assert.Contains("providerprovideradmin", claimsSupported);
-            Assert.Contains("providerserviceuser", claimsSupported);
-            Assert.Contains("sub", claimsSupported);
-
-            var grantTypesSupported = AssertHelper.AssertJsonProperty(root, "grant_types_supported", JsonValueKind.Array)
-                .EnumerateArray()
-                .Select(je => je.GetString());
-
-            Assert.Contains("authorization_code", grantTypesSupported);
-            Assert.Contains("client_credentials", grantTypesSupported);
-            Assert.Contains("refresh_token", grantTypesSupported);
-            Assert.Contains("implicit", grantTypesSupported);
-            Assert.Contains("password", grantTypesSupported);
-            Assert.Contains("urn:ietf:params:oauth:grant-type:device_code", grantTypesSupported);
-
-            // QUESTION: What are other breaking changes from this configuration that we should assert
+            AssertHelper.AssertEqualJson(endpointRoot, knownConfigurationRoot);
         }
 
         [Fact]
@@ -93,7 +58,7 @@ namespace Bit.Identity.IntegrationTest.Endpoints
             {
                 { "scope", "api offline_access" },
                 { "client_id", "web" },
-                { "deviceType", "10" },
+                { "deviceType", DeviceTypeAsString(DeviceType.FirefoxBrowser) },
                 { "deviceIdentifier", deviceId },
                 { "deviceName", "firefox" },
                 { "grant_type", "password" },
@@ -127,7 +92,7 @@ namespace Bit.Identity.IntegrationTest.Endpoints
             {
                 { "scope", "api offline_access" },
                 { "client_id", "web" },
-                { "deviceType", "10" },
+                { "deviceType", DeviceTypeAsString(DeviceType.FirefoxBrowser) },
                 { "deviceIdentifier", deviceId },
                 { "deviceName", "firefox" },
                 { "grant_type", "password" },
@@ -161,7 +126,7 @@ namespace Bit.Identity.IntegrationTest.Endpoints
             {
                 { "scope", "api offline_access" },
                 { "client_id", "web" },
-                { "deviceType", "10" },
+                { "deviceType", DeviceTypeAsString(DeviceType.FirefoxBrowser) },
                 { "deviceIdentifier", deviceId },
                 { "deviceName", "firefox" },
                 { "grant_type", "password" },
@@ -195,7 +160,7 @@ namespace Bit.Identity.IntegrationTest.Endpoints
             {
                 { "scope", "api offline_access" },
                 { "client_id", "web" },
-                { "deviceType", "10" },
+                { "deviceType", DeviceTypeAsString(DeviceType.FirefoxBrowser) },
                 { "deviceIdentifier", deviceId },
                 { "deviceName", "firefox" },
                 { "grant_type", "password" },
@@ -260,7 +225,7 @@ namespace Bit.Identity.IntegrationTest.Endpoints
                 { "client_secret", user.ApiKey },
                 { "scope", "api" },
                 { "DeviceIdentifier", deviceId },
-                { "DeviceType", ((int)DeviceType.FirefoxBrowser).ToString() },
+                { "DeviceType", DeviceTypeAsString(DeviceType.FirefoxBrowser) },
                 { "DeviceName", "firefox" },
             }));
 
@@ -275,6 +240,11 @@ namespace Bit.Identity.IntegrationTest.Endpoints
             Assert.Equal("Bearer", tokenType);
             var scope = AssertHelper.AssertJsonProperty(root, "scope", JsonValueKind.String).GetString();
             Assert.Equal("api", scope);
+        }
+
+        private static string DeviceTypeAsString(DeviceType deviceType)
+        {
+            return ((int)deviceType).ToString();
         }
 
         private static async Task<JsonDocument> AssertDefaultTokenBodyAsync(HttpContext httpContext)
