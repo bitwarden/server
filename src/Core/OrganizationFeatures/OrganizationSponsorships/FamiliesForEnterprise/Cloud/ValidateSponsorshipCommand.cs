@@ -84,7 +84,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
                     {
                         await _mailService.SendFamiliesForEnterpriseSponsorshipRevertingEmailAsync(
                             sponsoredOrganization.BillingEmailAddress(),
-                            sponsorship.ValidUntil.GetValueOrDefault());
+                            sponsorship.ValidUntil ?? DateTime.UtcNow.AddDays(15));
                     }
                 }
                 catch (Exception e)
