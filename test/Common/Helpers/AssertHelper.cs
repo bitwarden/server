@@ -7,7 +7,6 @@ using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Http;
 using Xunit;
 using Xunit.Sdk;
-using static System.Text.Json.JsonElement;
 
 namespace Bit.Test.Common.Helpers
 {
