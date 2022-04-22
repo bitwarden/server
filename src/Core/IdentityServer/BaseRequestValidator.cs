@@ -92,9 +92,12 @@ namespace Bit.Core.IdentityServer
 
             var valid = await ValidateContextAsync(context, validatorContext);
             var user = validatorContext.User;
-            if (!valid || isBot)
+            if (!valid)
             {
                 await UpdateFailedAuthDetailsAsync(user, false, !validatorContext.KnownDevice);
+            }
+            if (!valid || isBot)
+            {
                 await BuildErrorResultAsync("Username or password is incorrect. Try again.", false, context, user);
                 return;
             }

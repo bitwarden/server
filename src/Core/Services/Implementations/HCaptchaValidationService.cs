@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Net.Http.Json;
-using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Bit.Core.Context;
@@ -85,7 +84,7 @@ namespace Bit.Core.Services
                 return response;
             }
 
-            using var hcaptchResponse = await responseMessage.Content.ReadFromJsonAsync<HCpatchaResponse>();
+            using var hcaptchResponse = await responseMessage.Content.ReadFromJsonAsync<HCaptchaResponse>();
             response.Success = hcaptchResponse.Success;
             var score = hcaptchResponse.Score.GetValueOrDefault();
             response.MaybeBot = score >= _globalSettings.Captcha.MaybeBotScoreThreshold;
@@ -121,14 +120,14 @@ namespace Bit.Core.Services
         private bool ValidateCaptchaBypassToken(string bypassToken, User user) =>
             TokenIsValidApiKey(bypassToken, user) || TokenIsValidCaptchaBypassToken(bypassToken, user);
 
-        public class HCpatchaResponse : IDisposable
+        public class HCaptchaResponse : IDisposable
         {
             [JsonPropertyName("success")]
             public bool Success { get; set; }
             [JsonPropertyName("score")]
             public double? Score { get; set; }
             [JsonPropertyName("score_reason")]
-            public string ScoreReason { get; set; }
+            public List<string> ScoreReason { get; set; }
 
             public void Dispose() { }
         }
