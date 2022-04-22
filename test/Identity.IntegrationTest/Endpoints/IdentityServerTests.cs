@@ -31,7 +31,7 @@ namespace Bit.Identity.IntegrationTest.Endpoints
 
             using var body = await AssertHelper.AssertResponseTypeIsAsync<JsonDocument>(context);
             var endpointRoot = body.RootElement;
-            
+
             // WARNING: Edits to this file should NOT just be made to "get the test to work" they should be made when intentional 
             // changes were made to this endpoint and proper testing will take place to ensure clients are backwards compatible
             // or loss of functionality is properly noted.
