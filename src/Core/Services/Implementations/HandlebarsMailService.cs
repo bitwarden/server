@@ -824,12 +824,12 @@ namespace Bit.Core.Services
             await _mailDeliveryService.SendEmailAsync(message);
         }
 
-        public async Task SendFamiliesForEnterpriseSponsorshipRevertingEmailAsync(string email, string familyOrgName)
+        public async Task SendFamiliesForEnterpriseSponsorshipRevertingEmailAsync(string email, DateTime expirationDate)
         {
-            var message = CreateDefaultMessage($"{familyOrgName} Organization Sponsorship Is No Longer Valid", email);
+            var message = CreateDefaultMessage("Your Families Sponsorship was Removed", email);
             var model = new FamiliesForEnterpriseSponsorshipRevertingViewModel
             {
-                OrganizationName = CoreHelpers.SanitizeForEmail(familyOrgName, false),
+                ExpirationDate = expirationDate,
             };
             await AddMessageContentAsync(message, "FamiliesForEnterprise.FamiliesForEnterpriseSponsorshipReverting", model);
             message.Category = "FamiliesForEnterpriseSponsorshipReverting";
