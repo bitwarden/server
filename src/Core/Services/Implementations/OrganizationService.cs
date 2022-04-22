@@ -1405,10 +1405,15 @@ namespace Bit.Core.Services
 
             await _organizationUserRepository.ReplaceAsync(orgUser);
 
-            await _mailService.SendOrganizationAcceptedEmailAsync(
-                (await _organizationRepository.GetByIdAsync(orgUser.OrganizationId)),
-                user.Email,
-                (await _organizationUserRepository.GetManyByMinimumRoleAsync(orgUser.OrganizationId, OrganizationUserType.Admin)).Select(a => a.Email).Distinct());
+            var admins = await _organizationUserRepository.GetManyByMinimumRoleAsync(orgUser.OrganizationId, OrganizationUserType.Admin);
+            var adminEmails = admins.Select(a => a.Email).Distinct().ToList();
+
+            if (adminEmails.Count > 0)
+            {
+                var organization = await _organizationRepository.GetByIdAsync(orgUser.OrganizationId);
+                await _mailService.SendOrganizationAcceptedEmailAsync(organization, user.Email, adminEmails);
+            }
+
             return orgUser;
         }
 
