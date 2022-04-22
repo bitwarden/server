@@ -27,7 +27,7 @@ namespace Bit.Core.Utilities
 
                 var captchaValidationResponse = captchaValidationService.ValidateCaptchaResponseAsync(captchaResponse,
                     currentContext.IpAddress, null).GetAwaiter().GetResult();
-                if (!captchaValidationResponse.Success)
+                if (!captchaValidationResponse.Success || captchaValidationResponse.IsBot)
                 {
                     throw new BadRequestException("Captcha is invalid. Please refresh and try again");
                 }
