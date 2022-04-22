@@ -10,11 +10,21 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Bit.Test.Common.ApplicationFactories
+namespace Bit.IntegrationTestCommon.Factories
 {
     public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
         where T : class
     {
+        public const string DefaultDatabaseName = "test_database";
+
+        /// <summary>
+        /// The database name to use for this instance of the factory. By default it will use a shared database name so all instances will connect to the same database during it's lifetime.
+        /// </summary>
+        /// <remarks>
+        /// This will need to be set BEFORE using the <c>Server</c> property
+        /// </remarks>
+        public string DatabaseName { get; set; } = DefaultDatabaseName;
+
         /// <summary>
         /// Configure the web host to use an EF in memory database
         /// </summary>
@@ -38,7 +48,7 @@ namespace Bit.Test.Common.ApplicationFactories
                 services.AddScoped(_ =>
                 {
                     return new DbContextOptionsBuilder<DatabaseContext>()
-                        .UseInMemoryDatabase("test_database")
+                        .UseInMemoryDatabase(DatabaseName)
                         .Options;
                 });
 
@@ -48,7 +58,7 @@ namespace Bit.Test.Common.ApplicationFactories
                 services.Remove(licensingService);
                 services.AddSingleton<ILicensingService, NoopLicensingService>();
 
-                // QUESTION: Should these integration tests instead run as self hosted installs so this is done automatically?
+                // FUTURE CONSIDERATION: Add way to run this self hosted/cloud, for now it is cloud only
                 var pushRegistrationService = services.First(sd => sd.ServiceType == typeof(IPushRegistrationService));
                 services.Remove(pushRegistrationService);
                 services.AddSingleton<IPushRegistrationService, NoopPushRegistrationService>();

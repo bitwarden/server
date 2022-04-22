@@ -145,6 +145,7 @@ namespace Bit.Test.Common.Helpers
 
             var aArrayEnumerator = a.EnumerateArray();
             var bArrayEnumerator = b.EnumerateArray();
+
             while (true)
             {
                 var aCanMove = aArrayEnumerator.MoveNext();
@@ -163,7 +164,7 @@ namespace Bit.Test.Common.Helpers
                 {
                     // They both can't continue to enumerate at the same time, that is valid
                     break;
-}
+                }
 
                 var aElement = aArrayEnumerator.Current;
                 var bElement = bArrayEnumerator.Current;
@@ -173,7 +174,7 @@ namespace Bit.Test.Common.Helpers
             }
         }
 
-        public async static Task<T> ResponseIsAsync<T>(HttpContext context)
+        public async static Task<T> AssertResponseTypeIsAsync<T>(HttpContext context)
         {
             return await JsonSerializer.DeserializeAsync<T>(context.Response.Body);
         }

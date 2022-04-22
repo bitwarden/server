@@ -3660,10 +3660,6 @@
           "AutoFixture.AutoNSubstitute": "4.14.0",
           "AutoFixture.Xunit2": "4.14.0",
           "Core": "1.47.1",
-          "Identity": "1.47.1",
-          "Microsoft.AspNetCore.Mvc.Testing": "5.0.15",
-          "Microsoft.EntityFrameworkCore.InMemory": "5.0.15",
-          "Microsoft.Extensions.Configuration": "5.0.0",
           "Microsoft.NET.Test.Sdk": "16.6.1",
           "NSubstitute": "4.2.2",
           "xunit": "2.4.1"
@@ -3732,6 +3728,16 @@
           "Npgsql.EntityFrameworkCore.PostgreSQL": "5.0.2",
           "Pomelo.EntityFrameworkCore.MySql": "5.0.3",
           "linq2db.EntityFrameworkCore": "5.2.1"
+        }
+      },
+      "integrationtestcommon": {
+        "type": "Project",
+        "dependencies": {
+          "Common": "1.47.1",
+          "Identity": "1.47.1",
+          "Microsoft.AspNetCore.Mvc.Testing": "5.0.15",
+          "Microsoft.EntityFrameworkCore.InMemory": "5.0.15",
+          "Microsoft.Extensions.Configuration": "5.0.0"
         }
       },
       "sharedweb": {

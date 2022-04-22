@@ -11,7 +11,7 @@ using Bit.Identity;
 using Bit.Test.Common.Helpers;
 using Microsoft.AspNetCore.Http;
 
-namespace Bit.Test.Common.ApplicationFactories
+namespace Bit.IntegrationTestCommon.Factories
 {
     public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
     {
@@ -22,7 +22,12 @@ namespace Bit.Test.Common.ApplicationFactories
             return await Server.PostAsync("/accounts/register", JsonContent.Create(model));
         }
 
-        public async Task<(string Token, string RefreshToken)> TokenFromPasswordAsync(string username, string password, string deviceIdentifier = DefaultDeviceIdentifier, string clientId = "web", DeviceType deviceType = DeviceType.FirefoxBrowser, string deviceName = "firefox")
+        public async Task<(string Token, string RefreshToken)> TokenFromPasswordAsync(string username,
+            string password,
+            string deviceIdentifier = DefaultDeviceIdentifier,
+            string clientId = "web",
+            DeviceType deviceType = DeviceType.FirefoxBrowser,
+            string deviceName = "firefox")
         {
             var context = await Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
             {
@@ -36,7 +41,7 @@ namespace Bit.Test.Common.ApplicationFactories
                 { "password", password },
             }), context => context.Request.Headers.Add("Auth-Email", CoreHelpers.Base64UrlEncodeString(username)));
 
-            using var body = await AssertHelper.ResponseIsAsync<JsonDocument>(context);
+            using var body = await AssertHelper.AssertResponseTypeIsAsync<JsonDocument>(context);
             var root = body.RootElement;
 
             return (root.GetProperty("access_token").GetString(), root.GetProperty("refresh_token").GetString());

@@ -7,7 +7,8 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Primitives;
-namespace Bit.Test.Common.ApplicationFactories
+
+namespace Bit.IntegrationTestCommon.Factories
 {
     public static class WebApplicationFactoryExtensions
     {

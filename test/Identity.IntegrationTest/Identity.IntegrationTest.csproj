@@ -23,6 +23,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Identity\Identity.csproj" />
     <ProjectReference Include="..\Common\Common.csproj" />
+    <ProjectReference Include="..\IntegrationTestCommon\IntegrationTestCommon.csproj" />
   </ItemGroup>
 
 </Project>

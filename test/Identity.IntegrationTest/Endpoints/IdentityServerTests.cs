@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using Bit.Core.Enums;
 using Bit.Core.Models.Api.Request.Accounts;
 using Bit.Core.Utilities;
-using Bit.Test.Common.ApplicationFactories;
+using Bit.IntegrationTestCommon.Factories;
 using Bit.Test.Common.Helpers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
@@ -29,13 +29,13 @@ namespace Bit.Identity.IntegrationTest.Endpoints
         {
             var context = await _factory.Server.GetAsync("/.well-known/openid-configuration");
 
-            using var body = await AssertHelper.ResponseIsAsync<JsonDocument>(context);
+            using var body = await AssertHelper.AssertResponseTypeIsAsync<JsonDocument>(context);
             var endpointRoot = body.RootElement;
             
             // WARNING: Edits to this file should NOT just be made to "get the test to work" they should be made when intentional 
             // changes were made to this endpoint and proper testing will take place to ensure clients are backwards compatible
             // or loss of functionality is properly noted.
-            using var fs = File.OpenRead("openid-configuration.json");
+            await using var fs = File.OpenRead("openid-configuration.json");
             using var knownConfiguration = await JsonSerializer.DeserializeAsync<JsonDocument>(fs);
             var knownConfigurationRoot = knownConfiguration.RootElement;
 
@@ -102,7 +102,7 @@ namespace Bit.Identity.IntegrationTest.Endpoints
 
             Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
 
-            var body = await AssertHelper.ResponseIsAsync<JsonDocument>(context);
+            var body = await AssertHelper.AssertResponseTypeIsAsync<JsonDocument>(context);
             var root = body.RootElement;
 
             var error = AssertHelper.AssertJsonProperty(root, "error", JsonValueKind.String).GetString();
@@ -136,7 +136,7 @@ namespace Bit.Identity.IntegrationTest.Endpoints
 
             Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
 
-            var body = await AssertHelper.ResponseIsAsync<JsonDocument>(context);
+            var body = await AssertHelper.AssertResponseTypeIsAsync<JsonDocument>(context);
             var root = body.RootElement;
 
             var error = AssertHelper.AssertJsonProperty(root, "error", JsonValueKind.String).GetString();
@@ -170,7 +170,7 @@ namespace Bit.Identity.IntegrationTest.Endpoints
 
             Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
 
-            var body = await AssertHelper.ResponseIsAsync<JsonDocument>(context);
+            var body = await AssertHelper.AssertResponseTypeIsAsync<JsonDocument>(context);
             var root = body.RootElement;
 
             var error = AssertHelper.AssertJsonProperty(root, "error", JsonValueKind.String).GetString();
@@ -229,7 +229,7 @@ namespace Bit.Identity.IntegrationTest.Endpoints
                 { "DeviceName", "firefox" },
             }));
 
-            using var body = await AssertHelper.ResponseIsAsync<JsonDocument>(context);
+            using var body = await AssertHelper.AssertResponseTypeIsAsync<JsonDocument>(context);
             var root = body.RootElement;
 
             Assert.Equal(JsonValueKind.Object, root.ValueKind);
@@ -249,7 +249,7 @@ namespace Bit.Identity.IntegrationTest.Endpoints
 
         private static async Task<JsonDocument> AssertDefaultTokenBodyAsync(HttpContext httpContext)
         {
-            var body = await AssertHelper.ResponseIsAsync<JsonDocument>(httpContext);
+            var body = await AssertHelper.AssertResponseTypeIsAsync<JsonDocument>(httpContext);
             var root = body.RootElement;
 
             Assert.Equal(JsonValueKind.Object, root.ValueKind);
