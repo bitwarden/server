@@ -42,6 +42,7 @@ namespace Bit.Core.OrganizationFeatures
             services.AddScoped<IValidateRedemptionTokenCommand, ValidateRedemptionTokenCommand>();
             services.AddScoped<IValidateSponsorshipCommand, ValidateSponsorshipCommand>();
             services.AddScoped<IValidateBillingSyncKeyCommand, ValidateBillingSyncKeyCommand>();
+            services.AddScoped<IOrganizationSponsorshipRenewCommand, OrganizationSponsorshipRenewCommand>();
             services.AddScoped<ICloudSyncSponsorshipsCommand, CloudSyncSponsorshipsCommand>();
             services.AddScoped<ISelfHostedSyncSponsorshipsCommand, SelfHostedSyncSponsorshipsCommand>();
             services.AddScoped<ISelfHostedSyncSponsorshipsCommand, SelfHostedSyncSponsorshipsCommand>();
