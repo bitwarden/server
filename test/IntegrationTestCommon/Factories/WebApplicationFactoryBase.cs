@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using AspNetCoreRateLimit;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Infrastructure.EntityFramework.Repositories;
@@ -12,18 +13,22 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.IntegrationTestCommon.Factories
 {
+    public static class FactoryConstants
+    {
+        public const string DefaultDatabaseName = "test_database";
+        public const string WhitelistedIp = "1.1.1.1";
+    }
+
     public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
         where T : class
     {
-        public const string DefaultDatabaseName = "test_database";
-
         /// <summary>
         /// The database name to use for this instance of the factory. By default it will use a shared database name so all instances will connect to the same database during it's lifetime.
         /// </summary>
         /// <remarks>
         /// This will need to be set BEFORE using the <c>Server</c> property
         /// </remarks>
-        public string DatabaseName { get; set; } = DefaultDatabaseName;
+        public string DatabaseName { get; set; } = FactoryConstants.DefaultDatabaseName;
 
         /// <summary>
         /// Configure the web host to use an EF in memory database
@@ -73,6 +78,17 @@ namespace Bit.IntegrationTestCommon.Factories
                 var eventRepositoryService = services.First(sd => sd.ServiceType == typeof(IEventRepository));
                 services.Remove(eventRepositoryService);
                 services.AddSingleton<IEventRepository, EventRepository>();
+
+                // Our Rate limiter works so well that it begins to fail tests unless we carve out
+                // one whitelisted ip. We should still test the rate limiter though and they should change the Ip 
+                // to something that is NOT whitelisted
+                services.Configure<IpRateLimitOptions>(options =>
+                {
+                    options.IpWhitelist = new List<string>
+                    {
+                        FactoryConstants.WhitelistedIp,
+                    };
+                });
             });
         }
 

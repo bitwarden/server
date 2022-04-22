@@ -20,7 +20,10 @@ namespace Bit.IntegrationTestCommon.Factories
         {
             return await server.SendAsync(httpContext =>
             {
-                httpContext.Connection.RemoteIpAddress = IPAddress.Parse("1.1.1.1");
+                // Automatically set the whitelisted IP so normal tests do not run into rate limit issues
+                // to test rate limiter, use the extraConfiguration parameter to set Connection.RemoteIpAddress
+                // it runs after this so it will take precedence.
+                httpContext.Connection.RemoteIpAddress = IPAddress.Parse(FactoryConstants.WhitelistedIp);
 
                 httpContext.Request.Path = new PathString(requestUri);
                 httpContext.Request.Method = method.Method;

@@ -25,8 +25,6 @@ namespace Bit.Identity.IntegrationTest.Controllers
                 MasterPasswordHash = "master_password_hash"
             });
 
-            var body = await context.ReadBodyAsStringAsync();
-
             Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
 
             var database = _factory.GetDatabaseContext();

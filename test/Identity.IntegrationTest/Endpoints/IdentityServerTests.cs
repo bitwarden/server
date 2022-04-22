@@ -1,21 +1,29 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Api.Request.Accounts;
+using Bit.Core.Repositories;
 using Bit.Core.Utilities;
 using Bit.IntegrationTestCommon.Factories;
+using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace Bit.Identity.IntegrationTest.Endpoints
 {
     public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
     {
+        private const int SecondsInMinute = 60;
+        private const int MinutesInHour = 60;
+        private const int SecondsInHour = SecondsInMinute * MinutesInHour;
         private readonly IdentityApplicationFactory _factory;
 
         public IdentityServerTests(IdentityApplicationFactory factory)
@@ -67,6 +75,7 @@ namespace Bit.Identity.IntegrationTest.Endpoints
 
             using var body = await AssertDefaultTokenBodyAsync(context);
             var root = body.RootElement;
+            AssertRefreshTokenExists(root);
             AssertHelper.AssertJsonProperty(root, "ForcePasswordReset", JsonValueKind.False);
             AssertHelper.AssertJsonProperty(root, "ResetMasterPassword", JsonValueKind.False);
             var kdf = AssertHelper.AssertJsonProperty(root, "Kdf", JsonValueKind.Number).GetInt32();
@@ -198,7 +207,8 @@ namespace Bit.Identity.IntegrationTest.Endpoints
                 { "refresh_token", refreshToken },
             }));
 
-            await AssertDefaultTokenBodyAsync(context);
+            using var body = await AssertDefaultTokenBodyAsync(context);
+            AssertRefreshTokenExists(body.RootElement);
         }
 
         [Fact]
@@ -228,17 +238,161 @@ namespace Bit.Identity.IntegrationTest.Endpoints
                 { "DeviceName", "firefox" },
             }));
 
-            using var body = await AssertHelper.AssertResponseTypeIsAsync<JsonDocument>(context);
-            var root = body.RootElement;
+            await AssertDefaultTokenBodyAsync(context, "api");
+        }
 
-            Assert.Equal(JsonValueKind.Object, root.ValueKind);
-            AssertHelper.AssertJsonProperty(root, "access_token", JsonValueKind.String);
-            var expiresIn = AssertHelper.AssertJsonProperty(root, "expires_in", JsonValueKind.Number).GetInt32();
-            Assert.Equal(3600, expiresIn);
-            var tokenType = AssertHelper.AssertJsonProperty(root, "token_type", JsonValueKind.String).GetString();
-            Assert.Equal("Bearer", tokenType);
-            var scope = AssertHelper.AssertJsonProperty(root, "scope", JsonValueKind.String).GetString();
-            Assert.Equal("api", scope);
+        [Theory, BitAutoData]
+        public async Task TokenEndpoint_GrantTypeClientCredentials_AsOrganization_Success(Organization organization)
+        {
+            var orgRepo = _factory.Services.GetRequiredService<IOrganizationRepository>();
+            organization = await orgRepo.CreateAsync(organization);
+
+            var context = await _factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                { "grant_type", "client_credentials" },
+                { "client_id", $"organization.{organization.Id}" },
+                { "client_secret", organization.ApiKey },
+                { "scope", "api.organization" },
+            }));
+
+            Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
+
+            await AssertDefaultTokenBodyAsync(context, "api.organization");
+        }
+
+        [Fact]
+        public async Task TokenEndpoint_GrantTypeClientCredentials_AsOrganization_BadOrgId_Fails()
+        {
+            var context = await _factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                { "grant_type", "client_credentials" },
+                { "client_id", "organization.bad_guid_zz&" },
+                { "client_secret", "something" },
+                { "scope", "api.organization" },
+            }));
+
+            Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
+
+            var errorBody = await AssertHelper.AssertResponseTypeIsAsync<JsonDocument>(context);
+            var error = AssertHelper.AssertJsonProperty(errorBody.RootElement, "error", JsonValueKind.String).GetString();
+            Assert.Equal("invalid_client", error);
+        }
+
+        /// <summary>
+        /// This test currently does not test any code that is not covered by other tests but 
+        /// it shows that we probably have some dead code in <see cref="Core.IdentityServer.ClientStore"/>
+        /// for installation, organization, and user they split on a <c>'.'</c> but have already checked that at least one
+        /// <c>'.'</c> exists in the <c>client_id</c> by checking it with <see cref="string.StartsWith(string)"/> 
+        /// I believe that idParts.Length > 1 will ALWAYS return true
+        /// </summary>
+        [Fact]
+        public async Task TokenEndpoint_GrantTypeClientCredentials_AsOrganization_NoIdPart_Fails()
+        {
+            var context = await _factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                { "grant_type", "client_credentials" },
+                { "client_id", "organization." },
+                { "client_secret", "something" },
+                { "scope", "api.organization" },
+            }));
+
+            Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
+
+            var errorBody = await AssertHelper.AssertResponseTypeIsAsync<JsonDocument>(context);
+            var error = AssertHelper.AssertJsonProperty(errorBody.RootElement, "error", JsonValueKind.String).GetString();
+            Assert.Equal("invalid_client", error);
+        }
+
+        [Fact]
+        public async Task TokenEndpoint_GrantTypeClientCredentials_AsOrganization_OrgDoesNotExist_Fails()
+        {
+            var context = await _factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                { "grant_type", "client_credentials" },
+                { "client_id", $"organization.{Guid.NewGuid()}" },
+                { "client_secret", "something" },
+                { "scope", "api.organization" },
+            }));
+
+            Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
+
+            var errorBody = await AssertHelper.AssertResponseTypeIsAsync<JsonDocument>(context);
+            var error = AssertHelper.AssertJsonProperty(errorBody.RootElement, "error", JsonValueKind.String).GetString();
+            Assert.Equal("invalid_client", error);
+        }
+
+        // This is test is commented out await confirmation from QA is our one service using this is broken or not.
+        [Theory, BitAutoData]
+        public async Task TokenEndpoint_GrantTypeClientCredentials_AsInstallation_InstallationExists_Succeeds(Installation installation)
+        {
+            var installationRepo = _factory.Services.GetRequiredService<IInstallationRepository>();
+            installation = await installationRepo.CreateAsync(installation);
+
+            var context = await _factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                { "grant_type", "client_credentials" },
+                { "client_id", $"installation.{installation.Id}" },
+                { "client_secret", installation.Key },
+                { "scope", "api.push" },
+            }));
+
+            Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
+            await AssertDefaultTokenBodyAsync(context, "api.push", 24 * SecondsInHour);
+        }
+
+        [Fact]
+        public async Task TokenEndpoint_GrantTypeClientCredentials_AsInstallation_InstallationDoesNotExist_Fails()
+        {
+            var context = await _factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                { "grant_type", "client_credentials" },
+                { "client_id", $"installation.{Guid.NewGuid()}" },
+                { "client_secret", "something" },
+                { "scope", "api.push" },
+            }));
+
+            Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
+
+            var errorBody = await AssertHelper.AssertResponseTypeIsAsync<JsonDocument>(context);
+            var error = AssertHelper.AssertJsonProperty(errorBody.RootElement, "error", JsonValueKind.String).GetString();
+            Assert.Equal("invalid_client", error);
+        }
+
+        [Fact]
+        public async Task TokenEndpoint_GrantTypeClientCredentials_AsInstallation_BadInsallationId_Fails()
+        {
+            var context = await _factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                { "grant_type", "client_credentials" },
+                { "client_id", "organization.bad_guid_zz&" },
+                { "client_secret", "something" },
+                { "scope", "api.organization" },
+            }));
+
+            Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
+
+            var errorBody = await AssertHelper.AssertResponseTypeIsAsync<JsonDocument>(context);
+            var error = AssertHelper.AssertJsonProperty(errorBody.RootElement, "error", JsonValueKind.String).GetString();
+            Assert.Equal("invalid_client", error);
+        }
+
+        /// <inheritdoc cref="TokenEndpoint_GrantTypeClientCredentials_AsOrganization_NoIdPart_Fails"/>
+        [Fact]
+        public async Task TokenEndpoint_GrantTypeClientCredentials_AsInstallation_NoIdPart_Fails()
+        {
+            var context = await _factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                { "grant_type", "client_credentials" },
+                { "client_id", "installation." },
+                { "client_secret", "something" },
+                { "scope", "api.push" },
+            }));
+
+            Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
+
+            var errorBody = await AssertHelper.AssertResponseTypeIsAsync<JsonDocument>(context);
+            var error = AssertHelper.AssertJsonProperty(errorBody.RootElement, "error", JsonValueKind.String).GetString();
+            Assert.Equal("invalid_client", error);
         }
 
         private static string DeviceTypeAsString(DeviceType deviceType)
@@ -246,22 +400,51 @@ namespace Bit.Identity.IntegrationTest.Endpoints
             return ((int)deviceType).ToString();
         }
 
-        private static async Task<JsonDocument> AssertDefaultTokenBodyAsync(HttpContext httpContext)
+        private static async Task<JsonDocument> AssertDefaultTokenBodyAsync(HttpContext httpContext, string expectedScope = "api offline_access", int expectedExpiresIn = SecondsInHour * 1)
         {
             var body = await AssertHelper.AssertResponseTypeIsAsync<JsonDocument>(httpContext);
             var root = body.RootElement;
 
             Assert.Equal(JsonValueKind.Object, root.ValueKind);
-            AssertHelper.AssertJsonProperty(root, "access_token", JsonValueKind.String);
-            var expiresIn = AssertHelper.AssertJsonProperty(root, "expires_in", JsonValueKind.Number).GetInt32();
-            Assert.Equal(3600, expiresIn);
-            var tokenType = AssertHelper.AssertJsonProperty(root, "token_type", JsonValueKind.String).GetString();
-            Assert.Equal("Bearer", tokenType);
-            AssertHelper.AssertJsonProperty(root, "refresh_token", JsonValueKind.String);
-            var scope = AssertHelper.AssertJsonProperty(root, "scope", JsonValueKind.String).GetString();
-            Assert.Equal("api offline_access", scope);
-
+            AssertAccessTokenExists(root);
+            AssertExpiresIn(root, expectedExpiresIn);
+            AssertTokenType(root);
+            AssertScope(root, expectedScope);
             return body;
+        }
+
+        private static void AssertTokenType(JsonElement tokenResponse)
+        {
+            var tokenTypeProperty = AssertHelper.AssertJsonProperty(tokenResponse, "token_type", JsonValueKind.String).GetString();
+            Assert.Equal("Bearer", tokenTypeProperty);
+        }
+
+        private static int AssertExpiresIn(JsonElement tokenResponse, int expectedExpiresIn = 3600)
+        {
+            var expiresIn = AssertHelper.AssertJsonProperty(tokenResponse, "expires_in", JsonValueKind.Number).GetInt32();
+            Assert.Equal(expectedExpiresIn, expiresIn);
+            return expiresIn;
+        }
+
+        private static string AssertAccessTokenExists(JsonElement tokenResponse)
+        {
+            return AssertHelper.AssertJsonProperty(tokenResponse, "access_token", JsonValueKind.String).GetString();
+        }
+
+        private static string AssertRefreshTokenExists(JsonElement tokenResponse)
+        {
+            return AssertHelper.AssertJsonProperty(tokenResponse, "refresh_token", JsonValueKind.String).GetString();
+        }
+
+        private static string AssertScopeExists(JsonElement tokenResponse)
+        {
+            return AssertHelper.AssertJsonProperty(tokenResponse, "scope", JsonValueKind.String).GetString();
+        }
+
+        private static void AssertScope(JsonElement tokenResponse, string expectedScope)
+        {
+            var actualScope = AssertScopeExists(tokenResponse);
+            Assert.Equal(expectedScope, actualScope);
         }
     }
 }
