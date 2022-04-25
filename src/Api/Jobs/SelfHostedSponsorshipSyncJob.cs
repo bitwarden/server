@@ -7,6 +7,7 @@ using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterpri
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Quartz;
 
@@ -14,25 +15,25 @@ namespace Bit.Api.Jobs
 {
     public class SelfHostedSponsorshipSyncJob : BaseJob
     {
+        private readonly IServiceProvider _serviceProvider;
         private IOrganizationRepository _organizationRepository;
         private IOrganizationConnectionRepository _organizationConnectionRepository;
         private readonly ILicensingService _licensingService;
-        private ISelfHostedSyncSponsorshipsCommand _syncSponsorshipsCommand;
         private GlobalSettings _globalSettings;
 
         public SelfHostedSponsorshipSyncJob(
+            IServiceProvider serviceProvider,
             IOrganizationRepository organizationRepository,
             IOrganizationConnectionRepository organizationConnectionRepository,
             ILicensingService licensingService,
-            ISelfHostedSyncSponsorshipsCommand syncSponsorshipsCommand,
             ILogger<SelfHostedSponsorshipSyncJob> logger,
             GlobalSettings globalSettings)
             : base(logger)
         {
+            _serviceProvider = serviceProvider;
             _organizationRepository = organizationRepository;
             _organizationConnectionRepository = organizationConnectionRepository;
             _licensingService = licensingService;
-            _syncSponsorshipsCommand = syncSponsorshipsCommand;
             _globalSettings = globalSettings;
         }
 
@@ -46,31 +47,32 @@ namespace Bit.Api.Jobs
 
             var organizations = await _organizationRepository.GetManyByEnabledAsync();
 
-            foreach (var org in organizations)
+            using (var scope = _serviceProvider.CreateScope())
             {
-                var connection = (await _organizationConnectionRepository.GetEnabledByOrganizationIdTypeAsync(org.Id, OrganizationConnectionType.CloudBillingSync)).FirstOrDefault();
-                if (connection != null)
+                var syncCommand = scope.ServiceProvider.GetRequiredService<ISelfHostedSyncSponsorshipsCommand>();
+                foreach (var org in organizations)
                 {
-                    Guid cloudOrganizationId = new Guid();
-                    try
+                    var connection = (await _organizationConnectionRepository.GetEnabledByOrganizationIdTypeAsync(org.Id, OrganizationConnectionType.CloudBillingSync)).FirstOrDefault();
+                    if (connection != null)
                     {
-                        cloudOrganizationId = (await _licensingService.ReadOrganizationLicenseAsync(org.Id)).Id;
-                        if (cloudOrganizationId == default)
+                        try
                         {
-                            throw new Exception();
+                            var cloudOrgLicense = await _licensingService.ReadOrganizationLicenseAsync(org.Id);
+                            if (cloudOrgLicense == null)
+                            {
+                                _logger.LogInformation($"Skipping {org.Name} sponsorships sync with cloud - No license found for organization.");
+                            }
+                            if (cloudOrgLicense.Id == default)
+                            {
+                                _logger.LogInformation($"Skipping {org.Name} sponsorships sync with cloud - No enabled Billing Sync connection found for organization.");
+                            }
+
+                            await syncCommand.SyncOrganization(org.Id, cloudOrgLicense.Id, connection);
                         }
-                    }
-                    catch
-                    {
-                        _logger.LogInformation($"Skipping {org.Name} sponsorships sync with cloud - Billing Sync is not set up for the organization.");
-                    }
-                    try
-                    {
-                        await _syncSponsorshipsCommand.SyncOrganization(org.Id, cloudOrganizationId, connection);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, $"Sponsorship sync for organization {org.Name} Failed");
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, $"Sponsorship sync for organization {org.Name} Failed");
+                        }
                     }
                 }
             }
