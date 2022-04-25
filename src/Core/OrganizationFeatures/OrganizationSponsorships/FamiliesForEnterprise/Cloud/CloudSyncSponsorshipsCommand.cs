@@ -106,7 +106,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
                 selfHostedSponsorship.LastSyncDate = DateTime.UtcNow;
                 sponsorshipsToReturn.Add(selfHostedSponsorship);
             }
-            var sponsorshipsToEmailOffer = sponsorshipsToUpsert.Where(s => s.Id == default);
+            var sponsorshipsToEmailOffer = sponsorshipsToUpsert.Where(s => s.Id == default).ToArray();
             if (sponsorshipsToUpsert.Any())
             {
                 await _organizationSponsorshipRepository.UpsertManyAsync(sponsorshipsToUpsert);
