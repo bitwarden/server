@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Core.Context;
+using Bit.Core.Exceptions;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Utilities;
@@ -50,9 +51,14 @@ namespace Bit.Api.Controllers.SelfHosted
 
         [HttpDelete("{sponsoringOrgId}")]
         [HttpPost("{sponsoringOrgId}/delete")]
-        public async Task RevokeSponsorship(Guid sponsoringOrganizationId)
+        public async Task RevokeSponsorship(Guid sponsoringOrgId)
         {
-            var orgUser = await _organizationUserRepository.GetByOrganizationAsync(sponsoringOrganizationId, _currentContext.UserId ?? default);
+            var orgUser = await _organizationUserRepository.GetByOrganizationAsync(sponsoringOrgId, _currentContext.UserId ?? default);
+
+            if (orgUser == null)
+            {
+                throw new BadRequestException("Unknown Organization User");
+            }
 
             var existingOrgSponsorship = await _organizationSponsorshipRepository
                 .GetBySponsoringOrganizationUserIdAsync(orgUser.Id);
