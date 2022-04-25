@@ -191,7 +191,13 @@ namespace Bit.Admin.Controllers
                 Guid cloudOrganizationId = new Guid();
                 try
                 {
-                    cloudOrganizationId = (await _licensingService.ReadOrganizationLicenseAsync(id))?.Id ?? default;
+                    var license = await _licensingService.ReadOrganizationLicenseAsync(id);
+                    if (license == null)
+                    {
+                        throw new Exception("Unable to locate the Organization's license, please make sure your license directory is an absolute path.");
+                    }
+
+                    cloudOrganizationId = license.Id;
                     if (cloudOrganizationId == default)
                     {
                         throw new Exception("No enabled Billing Sync connection found for organization.");
