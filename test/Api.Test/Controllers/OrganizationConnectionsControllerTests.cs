@@ -84,10 +84,11 @@ namespace Bit.Api.Test.Controllers
         [Theory]
         [BitAutoData]
         public async Task CreateConnection_Success(OrganizationConnectionRequestModel model, BillingSyncConfig config,
-            SutProvider<OrganizationConnectionsController> sutProvider)
+            Guid cloudOrgId, SutProvider<OrganizationConnectionsController> sutProvider)
         {
             model.Config = JsonDocumentFromObject(config);
             var typedModel = new OrganizationConnectionRequestModel<BillingSyncConfig>(model);
+            typedModel.ParsedConfig.CloudOrganizationId = cloudOrgId;
 
             sutProvider.GetDependency<ICreateOrganizationConnectionCommand>().CreateAsync<BillingSyncConfig>(default)
                 .ReturnsForAnyArgs(typedModel.ToData(Guid.NewGuid()).ToEntity());
@@ -96,7 +97,7 @@ namespace Bit.Api.Test.Controllers
                 .ReadOrganizationLicenseAsync(Arg.Any<Guid>())
                 .Returns(new OrganizationLicense
                 {
-                    Id = Guid.NewGuid(),
+                    Id = cloudOrgId,
                 });
 
             await sutProvider.Sut.CreateConnection(model);
