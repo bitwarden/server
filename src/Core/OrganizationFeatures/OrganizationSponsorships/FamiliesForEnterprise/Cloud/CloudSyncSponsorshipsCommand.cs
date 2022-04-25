@@ -116,7 +116,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
                 await _organizationSponsorshipRepository.DeleteManyAsync(sponsorshipIdsToDelete);
             }
 
-            return (sponsorshipsData, sponsorshipsToEmailOffer);
+            return (sponsorshipsToReturn, sponsorshipsToEmailOffer);
         }
 
         /// <summary>
