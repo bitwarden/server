@@ -230,10 +230,6 @@ namespace Bit.Api.Controllers
         public async Task<OrganizationResponseModel> Put(string id, [FromBody] OrganizationUpdateRequestModel model)
         {
             var orgIdGuid = new Guid(id);
-            if (!await _currentContext.OrganizationOwner(orgIdGuid))
-            {
-                throw new NotFoundException();
-            }
 
             var organization = await _organizationRepository.GetByIdAsync(orgIdGuid);
             if (organization == null)
@@ -241,10 +237,15 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            var updatebilling = !_globalSettings.SelfHosted && (model.BusinessName != organization.BusinessName ||
+            var updateBilling = !_globalSettings.SelfHosted && (model.BusinessName != organization.BusinessName ||
                 model.BillingEmail != organization.BillingEmail);
 
-            await _organizationService.UpdateAsync(model.ToOrganization(organization, _globalSettings), updatebilling);
+            if ((updateBilling && !await _currentContext.ManageBilling(orgIdGuid)) || !await _currentContext.OrganizationOwner(orgIdGuid))
+            {
+                throw new NotFoundException();
+            }
+
+            await _organizationService.UpdateAsync(model.ToOrganization(organization, _globalSettings), updateBilling);
             return new OrganizationResponseModel(organization);
         }
 
