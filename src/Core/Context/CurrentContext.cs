@@ -360,6 +360,12 @@ namespace Bit.Core.Context
                         && (o.Permissions?.ManageResetPassword ?? false)) ?? false);
         }
 
+        public async Task<bool> ManageBilling(Guid orgId)
+        {
+            return await OrganizationOwner(orgId) &&
+                (await ProviderUserForOrgAsync(orgId) || ProviderIdForOrg(orgId) == null);
+        }
+
         public bool ProviderProviderAdmin(Guid providerId)
         {
             return Providers?.Any(o => o.Id == providerId && o.Type == ProviderUserType.ProviderAdmin) ?? false;
