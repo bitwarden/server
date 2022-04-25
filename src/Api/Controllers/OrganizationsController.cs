@@ -253,7 +253,7 @@ namespace Bit.Api.Controllers
         public async Task PostPayment(string id, [FromBody] PaymentRequestModel model)
         {
             var orgIdGuid = new Guid(id);
-            if (!await _currentContext.OrganizationOwner(orgIdGuid))
+            if (!await _currentContext.ManageBilling(orgIdGuid))
             {
                 throw new NotFoundException();
             }
@@ -276,7 +276,7 @@ namespace Bit.Api.Controllers
         public async Task<PaymentResponseModel> PostUpgrade(string id, [FromBody] OrganizationUpgradeRequestModel model)
         {
             var orgIdGuid = new Guid(id);
-            if (!await _currentContext.OrganizationOwner(orgIdGuid))
+            if (!await _currentContext.ManageBilling(orgIdGuid))
             {
                 throw new NotFoundException();
             }
@@ -294,7 +294,7 @@ namespace Bit.Api.Controllers
         public async Task PostSubscription(string id, [FromBody] OrganizationSubscriptionUpdateRequestModel model)
         {
             var orgIdGuid = new Guid(id);
-            if (!await _currentContext.OrganizationOwner(orgIdGuid))
+            if (!await _currentContext.ManageBilling(orgIdGuid))
             {
                 throw new NotFoundException();
             }
@@ -307,7 +307,7 @@ namespace Bit.Api.Controllers
         public async Task<PaymentResponseModel> PostSeat(string id, [FromBody] OrganizationSeatRequestModel model)
         {
             var orgIdGuid = new Guid(id);
-            if (!await _currentContext.OrganizationOwner(orgIdGuid))
+            if (!await _currentContext.ManageBilling(orgIdGuid))
             {
                 throw new NotFoundException();
             }
@@ -325,7 +325,7 @@ namespace Bit.Api.Controllers
         public async Task<PaymentResponseModel> PostStorage(string id, [FromBody] StorageRequestModel model)
         {
             var orgIdGuid = new Guid(id);
-            if (!await _currentContext.OrganizationOwner(orgIdGuid))
+            if (!await _currentContext.ManageBilling(orgIdGuid))
             {
                 throw new NotFoundException();
             }
@@ -343,7 +343,7 @@ namespace Bit.Api.Controllers
         public async Task PostVerifyBank(string id, [FromBody] OrganizationVerifyBankRequestModel model)
         {
             var orgIdGuid = new Guid(id);
-            if (!await _currentContext.OrganizationOwner(orgIdGuid))
+            if (!await _currentContext.ManageBilling(orgIdGuid))
             {
                 throw new NotFoundException();
             }
@@ -356,7 +356,7 @@ namespace Bit.Api.Controllers
         public async Task PostCancel(string id)
         {
             var orgIdGuid = new Guid(id);
-            if (!await _currentContext.OrganizationOwner(orgIdGuid))
+            if (!await _currentContext.ManageBilling(orgIdGuid))
             {
                 throw new NotFoundException();
             }
@@ -369,7 +369,7 @@ namespace Bit.Api.Controllers
         public async Task PostReinstate(string id)
         {
             var orgIdGuid = new Guid(id);
-            if (!await _currentContext.OrganizationOwner(orgIdGuid))
+            if (!await _currentContext.ManageBilling(orgIdGuid))
             {
                 throw new NotFoundException();
             }
