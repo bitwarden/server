@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Bit.Core.Enums;
 using Bit.Core.Jobs;
+using Bit.Core.Models.OrganizationConnectionConfigs;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -57,17 +58,8 @@ namespace Bit.Api.Jobs
                     {
                         try
                         {
-                            var cloudOrgLicense = await _licensingService.ReadOrganizationLicenseAsync(org.Id);
-                            if (cloudOrgLicense == null)
-                            {
-                                _logger.LogInformation($"Skipping {org.Name} sponsorships sync with cloud - No license found for organization.");
-                            }
-                            if (cloudOrgLicense.Id == default)
-                            {
-                                _logger.LogInformation($"Skipping {org.Name} sponsorships sync with cloud - No enabled Billing Sync connection found for organization.");
-                            }
-
-                            await syncCommand.SyncOrganization(org.Id, cloudOrgLicense.Id, connection);
+                            var config = connection.GetConfig<BillingSyncConfig>();
+                            await syncCommand.SyncOrganization(org.Id, config.CloudOrganizationId, connection);
                         }
                         catch (Exception ex)
                         {
