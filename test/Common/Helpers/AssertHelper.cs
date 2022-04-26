@@ -89,7 +89,7 @@ namespace Bit.Test.Common.Helpers
 
         public static TimeSpan AssertRecent(DateTime dateTime, TimeSpan skew)
         {
-            var difference = dateTime - DateTime.UtcNow;
+            var difference = DateTime.UtcNow - dateTime;
             Assert.True(difference < skew);
             return difference;
         }
