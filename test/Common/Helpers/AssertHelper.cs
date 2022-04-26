@@ -84,11 +84,13 @@ namespace Bit.Test.Common.Helpers
             return subElement;
         }
 
-        public static TimeSpan AssertRecent(DateTime dateTime, TimeSpan? skew = null)
+        public static TimeSpan AssertRecent(DateTime dateTime, int skewSeconds = 2)
+            => AssertRecent(dateTime, TimeSpan.FromSeconds(skewSeconds));
+
+        public static TimeSpan AssertRecent(DateTime dateTime, TimeSpan skew)
         {
-            var actualSkew = skew ?? TimeSpan.FromSeconds(2);
             var difference = dateTime - DateTime.UtcNow;
-            Assert.True(difference < actualSkew);
+            Assert.True(difference < skew);
             return difference;
         }
     }

@@ -54,13 +54,11 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
             var sponsorshipIdsToDelete = new List<Guid>();
             var sponsorshipsToReturn = new List<OrganizationSponsorshipData>();
 
-            var sponsoringOrganizationProduct = StaticStore.GetPlan(sponsoringOrg.PlanType).Product;
-            var sponsoringOrgDisabledForMoreThanGracePeriod = OrgDisabledForMoreThanGracePeriod(sponsoringOrg);
-
             foreach (var selfHostedSponsorship in sponsorshipsData)
             {
                 var requiredSponsoringProductType = StaticStore.GetSponsoredPlan(selfHostedSponsorship.PlanSponsorshipType)?.SponsoringProductType;
-                if (requiredSponsoringProductType == null || sponsoringOrganizationProduct != requiredSponsoringProductType.Value)
+                if (requiredSponsoringProductType == null 
+                    || StaticStore.GetPlan(sponsoringOrg.PlanType).Product != requiredSponsoringProductType.Value)
                 {
                     continue; // prevent unsupported sponsorships
                 }
@@ -71,7 +69,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
                     {
                         continue; // prevent invalid sponsorships in cloud. These should have been deleted by self hosted
                     }
-                    if (sponsoringOrgDisabledForMoreThanGracePeriod)
+                    if (OrgDisabledForMoreThanGracePeriod(sponsoringOrg))
                     {
                         continue; // prevent new sponsorships from disabled orgs
                     }
