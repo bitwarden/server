@@ -102,14 +102,14 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
             sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
                 .GetManyBySponsoringOrganizationAsync(sponsoringOrganization.Id)
                 .Returns(new List<OrganizationSponsorship>
-                { 
+                {
                     existingSponsorship,
                 });
 
             // Act
-            var (syncData, toEmailSponsorships) = await sutProvider.Sut.SyncOrganization(sponsoringOrganization, new[] 
-            { 
-                new OrganizationSponsorshipData(existingSponsorship), 
+            var (syncData, toEmailSponsorships) = await sutProvider.Sut.SyncOrganization(sponsoringOrganization, new[]
+            {
+                new OrganizationSponsorshipData(existingSponsorship),
                 new OrganizationSponsorshipData(newSponsorship),
             });
 
@@ -118,12 +118,12 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
             await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
                 .Received(1)
                 .UpsertManyAsync(Arg.Is<IEnumerable<OrganizationSponsorship>>(sponsorships => sponsorships.Count() == 2));
-            
+
             // Neither were marked as delete, should not have deleted
             await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
                 .DidNotReceiveWithAnyArgs()
                 .DeleteManyAsync(default);
-            
+
             // Only one sponsorship was new so it should only send one
             Assert.Single(toEmailSponsorships);
         }

@@ -36,7 +36,7 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
 
         [Theory]
         [BitAutoData]
-        public async Task ValidateBillingSyncKeyAsync_KeyEquals_ReturnsTrue(SutProvider<ValidateBillingSyncKeyCommand> sutProvider, 
+        public async Task ValidateBillingSyncKeyAsync_KeyEquals_ReturnsTrue(SutProvider<ValidateBillingSyncKeyCommand> sutProvider,
             Organization organization, OrganizationApiKey orgApiKey, string billingSyncKey)
         {
             orgApiKey.ApiKey = billingSyncKey;

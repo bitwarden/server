@@ -21,7 +21,7 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
     {
         [Theory]
         [BitAutoData]
-        public async Task ValidateRedemptionTokenAsync_CannotUnprotect_ReturnsFalse(SutProvider<ValidateRedemptionTokenCommand> sutProvider, 
+        public async Task ValidateRedemptionTokenAsync_CannotUnprotect_ReturnsFalse(SutProvider<ValidateRedemptionTokenCommand> sutProvider,
             string encryptedString)
         {
             sutProvider
