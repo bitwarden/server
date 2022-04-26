@@ -6,6 +6,7 @@ using Bit.Admin.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
+using Bit.Core.Models.OrganizationConnectionConfigs;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -190,16 +191,8 @@ namespace Bit.Admin.Controllers
             {
                 try
                 {
-                    var cloudOrgLicense = await _licensingService.ReadOrganizationLicenseAsync(id);
-                    if (cloudOrgLicense == null)
-                    {
-                        throw new Exception("No license found for organization.");
-                    }
-                    if (cloudOrgLicense.Id == default)
-                    {
-                        throw new Exception("No enabled Billing Sync connection found for organization.");
-                    }
-                    await _syncSponsorshipsCommand.SyncOrganization(id, cloudOrgLicense.Id, connection);
+                    var config = connection.GetConfig<BillingSyncConfig>();
+                    await _syncSponsorshipsCommand.SyncOrganization(id, config.CloudOrganizationId, connection);
                     TempData["ConnectionActivated"] = id;
                     TempData["ConnectionError"] = null;
                 }

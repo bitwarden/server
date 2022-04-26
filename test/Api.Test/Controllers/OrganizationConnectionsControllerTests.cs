@@ -11,9 +11,11 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Business;
 using Bit.Core.Models.OrganizationConnectionConfigs;
 using Bit.Core.OrganizationFeatures.OrganizationConnections.Interfaces;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -82,14 +84,21 @@ namespace Bit.Api.Test.Controllers
         [Theory]
         [BitAutoData]
         public async Task CreateConnection_Success(OrganizationConnectionRequestModel model, BillingSyncConfig config,
-            SutProvider<OrganizationConnectionsController> sutProvider)
+            Guid cloudOrgId, SutProvider<OrganizationConnectionsController> sutProvider)
         {
             model.Config = JsonDocumentFromObject(config);
             var typedModel = new OrganizationConnectionRequestModel<BillingSyncConfig>(model);
+            typedModel.ParsedConfig.CloudOrganizationId = cloudOrgId;
 
             sutProvider.GetDependency<ICreateOrganizationConnectionCommand>().CreateAsync<BillingSyncConfig>(default)
                 .ReturnsForAnyArgs(typedModel.ToData(Guid.NewGuid()).ToEntity());
             sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(model.OrganizationId).Returns(true);
+            sutProvider.GetDependency<ILicensingService>()
+                .ReadOrganizationLicenseAsync(Arg.Any<Guid>())
+                .Returns(new OrganizationLicense
+                {
+                    Id = cloudOrgId,
+                });
 
             await sutProvider.Sut.CreateConnection(model);
 

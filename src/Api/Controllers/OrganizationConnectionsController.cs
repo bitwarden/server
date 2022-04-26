@@ -11,6 +11,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.OrganizationConnectionConfigs;
 using Bit.Core.OrganizationFeatures.OrganizationConnections.Interfaces;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
@@ -29,6 +30,7 @@ namespace Bit.Api.Controllers
         private readonly IOrganizationConnectionRepository _organizationConnectionRepository;
         private readonly ICurrentContext _currentContext;
         private readonly IGlobalSettings _globalSettings;
+        private readonly ILicensingService _licensingService;
 
         public OrganizationConnectionsController(
             ICreateOrganizationConnectionCommand createOrganizationConnectionCommand,
@@ -36,7 +38,8 @@ namespace Bit.Api.Controllers
             IDeleteOrganizationConnectionCommand deleteOrganizationConnectionCommand,
             IOrganizationConnectionRepository organizationConnectionRepository,
             ICurrentContext currentContext,
-            IGlobalSettings globalSettings)
+            IGlobalSettings globalSettings,
+            ILicensingService licensingService)
         {
             _createOrganizationConnectionCommand = createOrganizationConnectionCommand;
             _updateOrganizationConnectionCommand = updateOrganizationConnectionCommand;
@@ -44,6 +47,7 @@ namespace Bit.Api.Controllers
             _organizationConnectionRepository = organizationConnectionRepository;
             _currentContext = currentContext;
             _globalSettings = globalSettings;
+            _licensingService = licensingService;
         }
 
         [HttpGet("enabled")]
@@ -69,10 +73,12 @@ namespace Bit.Api.Controllers
             {
                 case OrganizationConnectionType.CloudBillingSync:
                     var typedModel = new OrganizationConnectionRequestModel<BillingSyncConfig>(model);
+                    var license = await _licensingService.ReadOrganizationLicenseAsync(model.OrganizationId);
+                    typedModel.ParsedConfig.CloudOrganizationId = license.Id;
                     var connection = await _createOrganizationConnectionCommand.CreateAsync(typedModel.ToData());
                     return new OrganizationConnectionResponseModel(connection, typeof(BillingSyncConfig));
                 default:
-                    throw new BadRequestException($"Unkown Organization connection Type: {model.Type}");
+                    throw new BadRequestException($"Unknown Organization connection Type: {model.Type}");
             }
         }
 
