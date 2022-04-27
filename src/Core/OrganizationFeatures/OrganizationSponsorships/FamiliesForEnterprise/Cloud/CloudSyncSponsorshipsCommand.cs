@@ -57,8 +57,8 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
             foreach (var selfHostedSponsorship in sponsorshipsData)
             {
                 var requiredSponsoringProductType = StaticStore.GetSponsoredPlan(selfHostedSponsorship.PlanSponsorshipType)?.SponsoringProductType;
-                if (requiredSponsoringProductType == null ||
-                    StaticStore.GetPlan(sponsoringOrg.PlanType).Product != requiredSponsoringProductType.Value)
+                if (requiredSponsoringProductType == null
+                    || StaticStore.GetPlan(sponsoringOrg.PlanType).Product != requiredSponsoringProductType.Value)
                 {
                     continue; // prevent unsupported sponsorships
                 }

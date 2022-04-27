@@ -83,5 +83,15 @@ namespace Bit.Test.Common.Helpers
             Assert.Equal(jsonValueKind, subElement.ValueKind);
             return subElement;
         }
+
+        public static TimeSpan AssertRecent(DateTime dateTime, int skewSeconds = 2)
+            => AssertRecent(dateTime, TimeSpan.FromSeconds(skewSeconds));
+
+        public static TimeSpan AssertRecent(DateTime dateTime, TimeSpan skew)
+        {
+            var difference = DateTime.UtcNow - dateTime;
+            Assert.True(difference < skew);
+            return difference;
+        }
     }
 }
