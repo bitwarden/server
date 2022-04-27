@@ -176,6 +176,55 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
             Organization sponsoringOrganization, OrganizationSponsorship badOrganizationSponsorship)
         {
             sponsoringOrganization.PlanType = PlanType.EnterpriseAnnually;
+
+            badOrganizationSponsorship.ToDelete = true;
+            badOrganizationSponsorship.LastSyncDate = null;
+
+            sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
+                .GetManyBySponsoringOrganizationAsync(sponsoringOrganization.Id)
+                .Returns(new List<OrganizationSponsorship>());
+
+            var (syncData, toEmailSponsorships) = await sutProvider.Sut.SyncOrganization(sponsoringOrganization, new[]
+            {
+                new OrganizationSponsorshipData(badOrganizationSponsorship),
+            });
+
+            await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
+                .DidNotReceiveWithAnyArgs()
+                .UpsertManyAsync(default);
+
+            await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
+                .DidNotReceiveWithAnyArgs()
+                .DeleteManyAsync(default);
+        }
+
+        [Theory]
+        [BitAutoData]
+        public async Task SyncOrganization_OrgDisabledForFourMonths_DoesNotSave(SutProvider<CloudSyncSponsorshipsCommand> sutProvider,
+            Organization sponsoringOrganization, OrganizationSponsorship organizationSponsorship)
+        {
+            sponsoringOrganization.PlanType = PlanType.EnterpriseAnnually;
+            sponsoringOrganization.Enabled = false;
+            sponsoringOrganization.ExpirationDate = DateTime.UtcNow.AddDays(-120);
+
+            organizationSponsorship.ToDelete = false;
+
+            sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
+                .GetManyBySponsoringOrganizationAsync(sponsoringOrganization.Id)
+                .Returns(new List<OrganizationSponsorship>());
+
+            var (syncData, toEmailSponsorships) = await sutProvider.Sut.SyncOrganization(sponsoringOrganization, new[]
+            {
+                new OrganizationSponsorshipData(organizationSponsorship),
+            });
+
+            await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
+                .DidNotReceiveWithAnyArgs()
+                .UpsertManyAsync(default);
+
+            await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
+                .DidNotReceiveWithAnyArgs()
+                .DeleteManyAsync(default);
         }
     }
 }
