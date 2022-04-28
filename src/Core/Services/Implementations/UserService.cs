@@ -877,7 +877,7 @@ namespace Bit.Core.Services
             await SaveUserAsync(user);
             if (logEvent)
             {
-                await _eventService.LogUserEventAsync(user.Id, EventType.User_Updated2fa); 
+                await _eventService.LogUserEventAsync(user.Id, EventType.User_Updated2fa);
             }
         }
 
