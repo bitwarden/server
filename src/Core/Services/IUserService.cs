@@ -43,7 +43,7 @@ namespace Bit.Core.Services
         Task<IdentityResult> UpdateKeyAsync(User user, string masterPassword, string key, string privateKey,
             IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders, IEnumerable<Send> sends);
         Task<IdentityResult> RefreshSecurityStampAsync(User user, string masterPasswordHash);
-        Task UpdateTwoFactorProviderAsync(User user, TwoFactorProviderType type, bool setEnabled = true);
+        Task UpdateTwoFactorProviderAsync(User user, TwoFactorProviderType type, bool setEnabled = true, bool logEvent = true);
         Task DisableTwoFactorProviderAsync(User user, TwoFactorProviderType type,
             IOrganizationService organizationService);
         Task<bool> RecoverTwoFactorAsync(string email, string masterPassword, string recoveryCode,

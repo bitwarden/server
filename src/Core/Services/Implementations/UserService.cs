@@ -879,11 +879,14 @@ namespace Bit.Core.Services
             return IdentityResult.Failed(_identityErrorDescriber.PasswordMismatch());
         }
 
-        public async Task UpdateTwoFactorProviderAsync(User user, TwoFactorProviderType type, bool setEnabled = true)
+        public async Task UpdateTwoFactorProviderAsync(User user, TwoFactorProviderType type, bool setEnabled = true, bool logEvent = true)
         {
             SetTwoFactorProvider(user, type, setEnabled);
             await SaveUserAsync(user);
-            await _eventService.LogUserEventAsync(user.Id, EventType.User_Updated2fa);
+            if (logEvent)
+            {
+                await _eventService.LogUserEventAsync(user.Id, EventType.User_Updated2fa);
+            }
         }
 
         public async Task DisableTwoFactorProviderAsync(User user, TwoFactorProviderType type,
