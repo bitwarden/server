@@ -626,6 +626,7 @@ namespace Bit.Api.Controllers
             };
         }
 
+        [Obsolete("2022-04-01 Use separate Billing History/Payment APIs, left for backwards compatability with older clients")]
         [HttpGet("billing")]
         [SelfHosted(NotSelfHostedOnly = true)]
         public async Task<BillingResponseModel> GetBilling()

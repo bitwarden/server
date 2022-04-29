@@ -119,6 +119,21 @@ namespace Bit.Core.Services
             await _mailDeliveryService.SendEmailAsync(message);
         }
 
+        public async Task SendNewDeviceLoginTwoFactorEmailAsync(string email, string token)
+        {
+            var message = CreateDefaultMessage("New Device Login Verification Code", email);
+            var model = new EmailTokenViewModel
+            {
+                Token = token,
+                WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+                SiteName = _globalSettings.SiteName
+            };
+            await AddMessageContentAsync(message, "NewDeviceLoginTwoFactorEmail", model);
+            message.MetaData.Add("SendGridBypassListManagement", true);
+            message.Category = "TwoFactorEmail";
+            await _mailDeliveryService.SendEmailAsync(message);
+        }
+
         public async Task SendMasterPasswordHintEmailAsync(string email, string hint)
         {
             var message = CreateDefaultMessage("Your Master Password Hint", email);
@@ -792,32 +807,20 @@ namespace Bit.Core.Services
         {
             var message = CreateDefaultMessage("Accept Your Free Families Subscription", email);
 
-            if (existingAccount)
+            var model = new FamiliesForEnterpriseOfferViewModel
             {
-                var model = new FamiliesForEnterpriseOfferExistingAccountViewModel
-                {
-                    SponsorEmail = CoreHelpers.ObfuscateEmail(sponsorEmail),
-                    SponsoredEmail = WebUtility.UrlEncode(email),
-                    WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
-                    SiteName = _globalSettings.SiteName,
-                    SponsorshipToken = token,
-                };
+                SponsorEmail = CoreHelpers.ObfuscateEmail(sponsorEmail),
+                SponsoredEmail = WebUtility.UrlEncode(email),
+                ExistingAccount = existingAccount,
+                WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+                SiteName = _globalSettings.SiteName,
+                SponsorshipToken = token,
+            };
+            var templateName = existingAccount ?
+                "FamiliesForEnterprise.FamiliesForEnterpriseOfferExistingAccount" :
+                "FamiliesForEnterprise.FamiliesForEnterpriseOfferNewAccount";
 
-                await AddMessageContentAsync(message, "FamiliesForEnterprise.FamiliesForEnterpriseOfferExistingAccount", model);
-            }
-            else
-            {
-                var model = new FamiliesForEnterpriseOfferNewAccountViewModel
-                {
-                    SponsorEmail = sponsorEmail,
-                    SponsoredEmail = WebUtility.UrlEncode(email),
-                    WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
-                    SiteName = _globalSettings.SiteName,
-                    SponsorshipToken = token,
-                };
-
-                await AddMessageContentAsync(message, "FamiliesForEnterprise.FamiliesForEnterpriseOfferNewAccount", model);
-            }
+            await AddMessageContentAsync(message, templateName, model);
 
             message.Category = "FamiliesForEnterpriseOffer";
             await _mailDeliveryService.SendEmailAsync(message);

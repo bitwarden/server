@@ -5,7 +5,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="NewRelic.Agent" Version="8.41.0" />
     <PackageReference Include="Sustainsys.Saml2.AspNetCore2" Version="2.8.0" />
   </ItemGroup>
 

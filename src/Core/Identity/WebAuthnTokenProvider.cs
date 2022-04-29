@@ -77,7 +77,7 @@ namespace Bit.Core.Identity
             var providers = user.GetTwoFactorProviders();
             providers[TwoFactorProviderType.WebAuthn] = provider;
             user.SetTwoFactorProviders(providers);
-            await userService.UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.WebAuthn);
+            await userService.UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.WebAuthn, logEvent: false);
 
             return options.ToJson();
         }
@@ -123,7 +123,7 @@ namespace Bit.Core.Identity
             var providers = user.GetTwoFactorProviders();
             providers[TwoFactorProviderType.WebAuthn].MetaData[webAuthCred.Item1] = webAuthCred.Item2;
             user.SetTwoFactorProviders(providers);
-            await userService.UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.WebAuthn);
+            await userService.UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.WebAuthn, logEvent: false);
 
             return res.Status == "ok";
         }

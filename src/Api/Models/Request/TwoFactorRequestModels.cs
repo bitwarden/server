@@ -203,6 +203,8 @@ namespace Bit.Api.Models.Request
         [StringLength(256)]
         public string Email { get; set; }
 
+        public string DeviceIdentifier { get; set; }
+
         public User ToUser(User extistingUser)
         {
             var providers = extistingUser.GetTwoFactorProviders();

@@ -17,7 +17,9 @@ using Bit.Core.Utilities;
 using Fido2NetLib;
 using Fido2NetLib.Objects;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using File = System.IO.File;
@@ -51,6 +53,8 @@ namespace Bit.Core.Services
         private readonly GlobalSettings _globalSettings;
         private readonly IOrganizationService _organizationService;
         private readonly IProviderUserRepository _providerUserRepository;
+        private readonly IDeviceRepository _deviceRepository;
+        private readonly IWebHostEnvironment _environment;
 
         public UserService(
             IUserRepository userRepository,
@@ -79,7 +83,9 @@ namespace Bit.Core.Services
             ICurrentContext currentContext,
             GlobalSettings globalSettings,
             IOrganizationService organizationService,
-            IProviderUserRepository providerUserRepository)
+            IProviderUserRepository providerUserRepository,
+            IDeviceRepository deviceRepository,
+            IWebHostEnvironment environment)
             : base(
                   store,
                   optionsAccessor,
@@ -114,6 +120,8 @@ namespace Bit.Core.Services
             _globalSettings = globalSettings;
             _organizationService = organizationService;
             _providerUserRepository = providerUserRepository;
+            _deviceRepository = deviceRepository;
+            _environment = environment;
         }
 
         public Guid? GetProperUserId(ClaimsPrincipal principal)
@@ -346,7 +354,7 @@ namespace Bit.Core.Services
             await _mailService.SendMasterPasswordHintEmailAsync(email, user.MasterPasswordHint);
         }
 
-        public async Task SendTwoFactorEmailAsync(User user)
+        public async Task SendTwoFactorEmailAsync(User user, bool isBecauseNewDeviceLogin = false)
         {
             var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Email);
             if (provider == null || provider.MetaData == null || !provider.MetaData.ContainsKey("Email"))
@@ -357,7 +365,15 @@ namespace Bit.Core.Services
             var email = ((string)provider.MetaData["Email"]).ToLowerInvariant();
             var token = await base.GenerateUserTokenAsync(user, TokenOptions.DefaultEmailProvider,
                 "2faEmail:" + email);
-            await _mailService.SendTwoFactorEmailAsync(email, token);
+
+            if (isBecauseNewDeviceLogin)
+            {
+                await _mailService.SendNewDeviceLoginTwoFactorEmailAsync(email, token);
+            }
+            else
+            {
+                await _mailService.SendTwoFactorEmailAsync(email, token);
+            }
         }
 
         public async Task<bool> VerifyTwoFactorEmailAsync(User user, string token)
@@ -863,11 +879,14 @@ namespace Bit.Core.Services
             return IdentityResult.Failed(_identityErrorDescriber.PasswordMismatch());
         }
 
-        public async Task UpdateTwoFactorProviderAsync(User user, TwoFactorProviderType type, bool setEnabled = true)
+        public async Task UpdateTwoFactorProviderAsync(User user, TwoFactorProviderType type, bool setEnabled = true, bool logEvent = true)
         {
             SetTwoFactorProvider(user, type, setEnabled);
             await SaveUserAsync(user);
-            await _eventService.LogUserEventAsync(user.Id, EventType.User_Updated2fa);
+            if (logEvent)
+            {
+                await _eventService.LogUserEventAsync(user.Id, EventType.User_Updated2fa);
+            }
         }
 
         public async Task DisableTwoFactorProviderAsync(User user, TwoFactorProviderType type,
@@ -1399,6 +1418,30 @@ namespace Bit.Core.Services
             return user.UsesKeyConnector
                 ? await VerifyOTPAsync(user, secret)
                 : await CheckPasswordAsync(user, secret);
+        }
+
+        public async Task<bool> Needs2FABecauseNewDeviceAsync(User user, string deviceIdentifier, string grantType)
+        {
+            return user.EmailVerified
+                   && grantType != "authorization_code"
+                   && !_environment.IsDevelopment()
+                   && await IsNewDeviceAndNotTheFirstOneAsync(user, deviceIdentifier);
+        }
+
+        private async Task<bool> IsNewDeviceAndNotTheFirstOneAsync(User user, string deviceIdentifier)
+        {
+            if (user == null)
+            {
+                return default;
+            }
+
+            var devices = await _deviceRepository.GetManyByUserIdAsync(user.Id);
+            if (!devices.Any())
+            {
+                return false;
+            }
+
+            return !devices.Any(d => d.Identifier == deviceIdentifier);
         }
     }
 }

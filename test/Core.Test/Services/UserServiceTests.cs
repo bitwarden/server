@@ -3,21 +3,20 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Bit.Core.Context;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
+using Bit.Core.Models;
 using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Settings;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
-using Fido2NetLib;
-using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Hosting;
 using NSubstitute;
+using NSubstitute.ReceivedExtensions;
 using Xunit;
 
 namespace Bit.Core.Test.Services
@@ -59,6 +58,213 @@ namespace Bit.Core.Test.Services
             AssertHelper.AssertJsonProperty(root, "Premium", JsonValueKind.True);
             var versionProp = AssertHelper.AssertJsonProperty(root, "Version", JsonValueKind.Number);
             Assert.Equal(1, versionProp.GetInt32());
+        }
+
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public async Task SendTwoFactorEmailAsync_Success(SutProvider<UserService> sutProvider, User user)
+        {
+            var email = user.Email.ToLowerInvariant();
+            var token = "thisisatokentocompare";
+
+            var userTwoFactorTokenProvider = Substitute.For<IUserTwoFactorTokenProvider<User>>();
+            userTwoFactorTokenProvider
+                .CanGenerateTwoFactorTokenAsync(Arg.Any<UserManager<User>>(), user)
+                .Returns(Task.FromResult(true));
+            userTwoFactorTokenProvider
+                .GenerateAsync("2faEmail:" + email, Arg.Any<UserManager<User>>(), user)
+                .Returns(Task.FromResult(token));
+
+            sutProvider.Sut.RegisterTokenProvider("Email", userTwoFactorTokenProvider);
+
+            user.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
+            {
+                [TwoFactorProviderType.Email] = new TwoFactorProvider
+                {
+                    MetaData = new Dictionary<string, object> { ["Email"] = email },
+                    Enabled = true
+                }
+            });
+            await sutProvider.Sut.SendTwoFactorEmailAsync(user);
+
+            await sutProvider.GetDependency<IMailService>()
+                .Received(1)
+                .SendTwoFactorEmailAsync(email, token);
+        }
+
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public async Task SendTwoFactorEmailBecauseNewDeviceLoginAsync_Success(SutProvider<UserService> sutProvider, User user)
+        {
+            var email = user.Email.ToLowerInvariant();
+            var token = "thisisatokentocompare";
+
+            var userTwoFactorTokenProvider = Substitute.For<IUserTwoFactorTokenProvider<User>>();
+            userTwoFactorTokenProvider
+                .CanGenerateTwoFactorTokenAsync(Arg.Any<UserManager<User>>(), user)
+                .Returns(Task.FromResult(true));
+            userTwoFactorTokenProvider
+                .GenerateAsync("2faEmail:" + email, Arg.Any<UserManager<User>>(), user)
+                .Returns(Task.FromResult(token));
+
+            sutProvider.Sut.RegisterTokenProvider("Email", userTwoFactorTokenProvider);
+
+            user.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
+            {
+                [TwoFactorProviderType.Email] = new TwoFactorProvider
+                {
+                    MetaData = new Dictionary<string, object> { ["Email"] = email },
+                    Enabled = true
+                }
+            });
+            await sutProvider.Sut.SendTwoFactorEmailAsync(user, true);
+
+            await sutProvider.GetDependency<IMailService>()
+                .Received(1)
+                .SendNewDeviceLoginTwoFactorEmailAsync(email, token);
+        }
+
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public async Task SendTwoFactorEmailAsync_ExceptionBecauseNoProviderOnUser(SutProvider<UserService> sutProvider, User user)
+        {
+            user.TwoFactorProviders = null;
+
+            await Assert.ThrowsAsync<ArgumentNullException>("No email.", () => sutProvider.Sut.SendTwoFactorEmailAsync(user));
+        }
+
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public async Task SendTwoFactorEmailAsync_ExceptionBecauseNoProviderMetadataOnUser(SutProvider<UserService> sutProvider, User user)
+        {
+            user.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
+            {
+                [TwoFactorProviderType.Email] = new TwoFactorProvider
+                {
+                    MetaData = null,
+                    Enabled = true
+                }
+            });
+
+            await Assert.ThrowsAsync<ArgumentNullException>("No email.", () => sutProvider.Sut.SendTwoFactorEmailAsync(user));
+        }
+
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public async Task SendTwoFactorEmailAsync_ExceptionBecauseNoProviderEmailMetadataOnUser(SutProvider<UserService> sutProvider, User user)
+        {
+            user.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
+            {
+                [TwoFactorProviderType.Email] = new TwoFactorProvider
+                {
+                    MetaData = new Dictionary<string, object> { ["qweqwe"] = user.Email.ToLowerInvariant() },
+                    Enabled = true
+                }
+            });
+
+            await Assert.ThrowsAsync<ArgumentNullException>("No email.", () => sutProvider.Sut.SendTwoFactorEmailAsync(user));
+        }
+
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public async Task Needs2FABecauseNewDeviceAsync_ReturnsTrue(SutProvider<UserService> sutProvider, User user)
+        {
+            user.Id = Guid.NewGuid();
+            user.EmailVerified = true;
+            const string deviceIdToCheck = "7b01b586-b210-499f-8d52-0c3fdaa646fc";
+            const string deviceIdInRepo = "ea29126c-91b7-4cc4-8ce6-00105b37f64a";
+
+            sutProvider.GetDependency<IDeviceRepository>()
+                       .GetManyByUserIdAsync(user.Id)
+                       .Returns(Task.FromResult<ICollection<Device>>(new List<Device>
+                       {
+                            new Device { Identifier = deviceIdInRepo }
+                       }));
+
+            Assert.True(await sutProvider.Sut.Needs2FABecauseNewDeviceAsync(user, deviceIdToCheck, "password"));
+        }
+
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public async Task Needs2FABecauseNewDeviceAsync_ReturnsFalse_When_GranType_Is_AuthorizationCode(SutProvider<UserService> sutProvider, User user)
+        {
+            user.Id = Guid.NewGuid();
+            user.EmailVerified = true;
+            const string deviceIdToCheck = "7b01b586-b210-499f-8d52-0c3fdaa646fc";
+            const string deviceIdInRepo = "ea29126c-91b7-4cc4-8ce6-00105b37f64a";
+
+            sutProvider.GetDependency<IDeviceRepository>()
+                       .GetManyByUserIdAsync(user.Id)
+                       .Returns(Task.FromResult<ICollection<Device>>(new List<Device>
+                       {
+                            new Device { Identifier = deviceIdInRepo }
+                       }));
+
+            Assert.False(await sutProvider.Sut.Needs2FABecauseNewDeviceAsync(user, deviceIdToCheck, "authorization_code"));
+        }
+
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public async Task Needs2FABecauseNewDeviceAsync_ReturnsFalse_When_Email_Is_Not_Verified(SutProvider<UserService> sutProvider, User user)
+        {
+            user.Id = Guid.NewGuid();
+            user.EmailVerified = false;
+            const string deviceIdToCheck = "7b01b586-b210-499f-8d52-0c3fdaa646fc";
+            const string deviceIdInRepo = "ea29126c-91b7-4cc4-8ce6-00105b37f64a";
+
+            sutProvider.GetDependency<IDeviceRepository>()
+                       .GetManyByUserIdAsync(user.Id)
+                       .Returns(Task.FromResult<ICollection<Device>>(new List<Device>
+                       {
+                            new Device { Identifier = deviceIdInRepo }
+                       }));
+
+            Assert.False(await sutProvider.Sut.Needs2FABecauseNewDeviceAsync(user, deviceIdToCheck, "password"));
+        }
+
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public async Task Needs2FABecauseNewDeviceAsync_ReturnsFalse_When_Is_The_First_Device(SutProvider<UserService> sutProvider, User user)
+        {
+            user.Id = Guid.NewGuid();
+            user.EmailVerified = true;
+            const string deviceIdToCheck = "7b01b586-b210-499f-8d52-0c3fdaa646fc";
+
+            sutProvider.GetDependency<IDeviceRepository>()
+                       .GetManyByUserIdAsync(user.Id)
+                       .Returns(Task.FromResult<ICollection<Device>>(new List<Device>()));
+
+            Assert.False(await sutProvider.Sut.Needs2FABecauseNewDeviceAsync(user, deviceIdToCheck, "password"));
+        }
+
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public async Task Needs2FABecauseNewDeviceAsync_ReturnsFalse_When_DeviceId_Is_Already_In_Repo(SutProvider<UserService> sutProvider, User user)
+        {
+            user.Id = Guid.NewGuid();
+            user.EmailVerified = true;
+            const string deviceIdToCheck = "7b01b586-b210-499f-8d52-0c3fdaa646fc";
+
+            sutProvider.GetDependency<IDeviceRepository>()
+                       .GetManyByUserIdAsync(user.Id)
+                       .Returns(Task.FromResult<ICollection<Device>>(new List<Device>
+                       {
+                            new Device { Identifier = deviceIdToCheck }
+                       }));
+
+            Assert.False(await sutProvider.Sut.Needs2FABecauseNewDeviceAsync(user, deviceIdToCheck, "password"));
+        }
+
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public async Task Needs2FABecauseNewDeviceAsync_ReturnsFalse_When_Environment_Is_Development(SutProvider<UserService> sutProvider, User user)
+        {
+            user.Id = Guid.NewGuid();
+            user.EmailVerified = true;
+            const string deviceIdToCheck = "7b01b586-b210-499f-8d52-0c3fdaa646fc";
+            const string deviceIdInRepo = "ea29126c-91b7-4cc4-8ce6-00105b37f64a";
+
+            sutProvider.GetDependency<IDeviceRepository>()
+                       .GetManyByUserIdAsync(user.Id)
+                       .Returns(Task.FromResult<ICollection<Device>>(new List<Device>
+                       {
+                            new Device { Identifier = deviceIdInRepo }
+                       }));
+
+            sutProvider.GetDependency<IWebHostEnvironment>()
+                       .EnvironmentName
+                       .Returns(Environments.Development);
+
+            Assert.False(await sutProvider.Sut.Needs2FABecauseNewDeviceAsync(user, deviceIdToCheck, "password"));
         }
     }
 }
