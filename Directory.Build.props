@@ -16,7 +16,7 @@
     <!--
       NuGet: https://www.nuget.org/packages/Microsoft.NET.Test.Sdk
     -->
-    <MicrosoftNetSdkVersion>17.1.0</MicrosoftNetSdkVersion>
+    <MicrosoftNetTestSdkVersion>17.1.0</MicrosoftNetTestSdkVersion>
     <!--
       NuGet: https://www.nuget.org/packages/xunit
     -->
@@ -32,11 +32,19 @@
     <!--
       NuGet: https://www.nuget.org/packages/Swashbuckle.AspNetCore/
     -->
-    <SwashbuckleAspNetCoreVersion>6.3.0</SwashbuckleAspNetCoreVersion>
+    <MicrosoftVisualStudioWebCodeGenerationDesignVersion>6.0.3</MicrosoftVisualStudioWebCodeGenerationDesignVersion>
     <!--
-      NuGet: https://www.nuget.org/packages/Swashbuckle.AspNetCore/
+      NuGet: https://www.nuget.org/packages/NSubstitute/
     -->
-    <MicrosoftVisualStudioWebCodeGenerationDesignVersion>6.0.2</MicrosoftVisualStudioWebCodeGenerationDesignVersion>
+    <NSubstitueVersion>4.3.0</NSubstitueVersion>
+    <!--
+      NuGet: https://www.nuget.org/packages/AutoFixture.Xunit2/
+    -->
+    <AutoFixtureXUnit2Version>4.17.0</AutoFixtureXUnit2Version>
+    <!--
+      NuGet: https://www.nuget.org/packages/AutoFixture.AutoNSubstitute/
+    -->
+    <AutoFixtureAutoNSubstituteVersion>4.17.0</AutoFixtureAutoNSubstituteVersion>
   </PropertyGroup>
 
 </Project>
