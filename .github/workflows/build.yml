@@ -56,6 +56,7 @@ jobs:
       - name: Print environment
         run: |
           dotnet --info
+          msbuild -version
           nuget help | grep Version
           echo "GitHub ref: $GITHUB_REF"
           echo "GitHub event: $GITHUB_EVENT"
@@ -68,7 +69,7 @@ jobs:
         shell: pwsh
 
       - name: Build solution
-        run: dotnet build --no-restore --verbosity m --configuration Debug
+        run: msbuild bitwarden-server.sln /p:Configuration=Debug /verbosity=minimal
         shell: pwsh
 
       - name: Test OSS solution
