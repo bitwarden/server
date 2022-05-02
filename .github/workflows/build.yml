@@ -69,7 +69,7 @@ jobs:
         shell: pwsh
 
       - name: Build solution
-        run: msbuild bitwarden-server.sln /p:Configuration=Debug /verbosity=minimal
+        run: msbuild bitwarden-server.sln /p:Configuration=Debug /verbosity:minimal
         shell: pwsh
 
       - name: Test OSS solution
