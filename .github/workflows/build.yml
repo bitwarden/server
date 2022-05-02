@@ -45,13 +45,10 @@ jobs:
     env:
       NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
     steps:
-      - name: Set up NuGet
-        uses: nuget/setup-nuget@04b0c2b8d1b97922f67eca497d7cf0bf17b8ffe1
+      - name: Set up dotnet
+        uses: actions/setup-dotnet@9211491ffb35dd6a6657ca4f45d43dfe6e97c829
         with:
-          nuget-version: '5'
-
-      - name: Set up MSBuild
-        uses: microsoft/setup-msbuild@ab534842b4bdf384b8aaf93765dc6f721d9f5fab
+          dotnet-version: '6.0.x'
 
       - name: Print environment
         run: |
@@ -70,11 +67,6 @@ jobs:
 
       - name: Build solution
         run: msbuild bitwarden-server.sln /p:Configuration=Debug /verbosity:minimal
-        shell: pwsh
-
-      # TODO: This can be removed when upgrading to .NET 6
-      - name: Restore tools
-        run: dotnet tool restore
         shell: pwsh
 
       - name: Test OSS solution
