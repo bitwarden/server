@@ -161,7 +161,7 @@ namespace Bit.Core.Services
                     }
                 }
             }
-            catch (Exception e)
+            catch
             {
                 if (customer != null)
                 {

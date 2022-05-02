@@ -224,7 +224,7 @@ namespace Bit.Core.Services
 
                 return (true, length);
             }
-            catch (Exception ex)
+            catch
             {
                 return (false, null);
             }
