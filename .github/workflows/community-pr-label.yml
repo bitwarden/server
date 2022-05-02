@@ -1,0 +1,3 @@
+# See pr-labeler.yml for context
+community-pr:
+  - '*'   # Apply the label regardless of what files have been changed
