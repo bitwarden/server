@@ -80,6 +80,10 @@ namespace Bit.Api
                 // Rate limiting
                 services.AddSingleton<IIpPolicyStore, MemoryCacheIpPolicyStore>();
                 services.AddSingleton<IRateLimitCounterStore, MemoryCacheRateLimitCounterStore>();
+                // Ref: https://github.com/stefanprodan/AspNetCoreRateLimit/issues/216
+                services.AddSingleton<IProcessingStrategy, AsyncKeyLockProcessingStrategy>();
+                // Ref: https://github.com/stefanprodan/AspNetCoreRateLimit/issues/66
+                services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
             }
 
             // Identity
