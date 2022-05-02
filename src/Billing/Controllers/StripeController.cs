@@ -19,6 +19,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Stripe;
 using TaxRate = Bit.Core.Entities.TaxRate;
+using Bit.Billing.Enums;
 
 namespace Bit.Billing.Controllers
 {
@@ -113,8 +114,8 @@ namespace Bit.Billing.Controllers
                 return new BadRequestResult();
             }
 
-            var subDeleted = parsedEvent.Type.Equals("customer.subscription.deleted");
-            var subUpdated = parsedEvent.Type.Equals("customer.subscription.updated");
+            var subDeleted = parsedEvent.Type.Equals(HandledStripeWebhook.SubscriptionDeleted);
+            var subUpdated = parsedEvent.Type.Equals(HandledStripeWebhook.SubscriptionUpdated);
 
             if (subDeleted || subUpdated)
             {
@@ -159,7 +160,7 @@ namespace Bit.Billing.Controllers
                     }
                 }
             }
-            else if (parsedEvent.Type.Equals("invoice.upcoming"))
+            else if (parsedEvent.Type.Equals(HandledStripeWebhook.UpcomingInvoice))
             {
                 var invoice = await GetInvoiceAsync(parsedEvent);
                 var subscriptionService = new SubscriptionService();
@@ -205,7 +206,7 @@ namespace Bit.Billing.Controllers
                         invoice.NextPaymentAttempt.Value, items, true);
                 }
             }
-            else if (parsedEvent.Type.Equals("charge.succeeded"))
+            else if (parsedEvent.Type.Equals(HandledStripeWebhook.ChargeSucceeded))
             {
                 var charge = await GetChargeAsync(parsedEvent);
                 var chargeTransaction = await _transactionRepository.GetByGatewayIdAsync(
@@ -332,7 +333,7 @@ namespace Bit.Billing.Controllers
                 // Catch foreign key violations because user/org could have been deleted.
                 catch (SqlException e) when (e.Number == 547) { }
             }
-            else if (parsedEvent.Type.Equals("charge.refunded"))
+            else if (parsedEvent.Type.Equals(HandledStripeWebhook.ChargeRefunded))
             {
                 var charge = await GetChargeAsync(parsedEvent);
                 var chargeTransaction = await _transactionRepository.GetByGatewayIdAsync(
@@ -382,7 +383,7 @@ namespace Bit.Billing.Controllers
                     _logger.LogWarning("Charge refund amount doesn't seem correct. " + charge.Id);
                 }
             }
-            else if (parsedEvent.Type.Equals("invoice.payment_succeeded"))
+            else if (parsedEvent.Type.Equals(HandledStripeWebhook.PaymentSucceeded))
             {
                 var invoice = await GetInvoiceAsync(parsedEvent, true);
                 if (invoice.Paid && invoice.BillingReason == "subscription_create")
@@ -434,7 +435,7 @@ namespace Bit.Billing.Controllers
                     }
                 }
             }
-            else if (parsedEvent.Type.Equals("invoice.payment_failed"))
+            else if (parsedEvent.Type.Equals(HandledStripeWebhook.PaymentFailed))
             {
                 var invoice = await GetInvoiceAsync(parsedEvent, true);
                 if (!invoice.Paid && invoice.AttemptCount > 1 && UnpaidAutoChargeInvoiceForSubscriptionCycle(invoice))
@@ -442,7 +443,7 @@ namespace Bit.Billing.Controllers
                     await AttemptToPayInvoiceAsync(invoice);
                 }
             }
-            else if (parsedEvent.Type.Equals("invoice.created"))
+            else if (parsedEvent.Type.Equals(HandledStripeWebhook.InvoiceCreated))
             {
                 var invoice = await GetInvoiceAsync(parsedEvent, true);
                 if (!invoice.Paid && UnpaidAutoChargeInvoiceForSubscriptionCycle(invoice))
