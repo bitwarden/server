@@ -49,6 +49,9 @@ jobs:
         uses: actions/setup-dotnet@9211491ffb35dd6a6657ca4f45d43dfe6e97c829
         with:
           dotnet-version: '6.0.x'
+        
+      - name: Set up MSBuild
+        uses: microsoft/setup-msbuild@ab534842b4bdf384b8aaf93765dc6f721d9f5fab
 
       - name: Print environment
         run: |
