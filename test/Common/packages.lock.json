@@ -2842,16 +2842,16 @@
         "type": "Project",
         "dependencies": {
           "Azure.Messaging.EventGrid": "4.10.0",
-          "CommCore": "1.47.1",
-          "Core": "1.47.1",
-          "SharedWeb": "1.47.1",
+          "CommCore": "1.48.1",
+          "Core": "1.48.1",
+          "SharedWeb": "1.48.1",
           "Swashbuckle.AspNetCore": "6.3.1"
         }
       },
       "commcore": {
         "type": "Project",
         "dependencies": {
-          "Core": "1.47.1"
+          "Core": "1.48.1"
         }
       },
       "core": {
@@ -2895,7 +2895,7 @@
       "infrastructure.dapper": {
         "type": "Project",
         "dependencies": {
-          "Core": "1.47.1",
+          "Core": "1.48.1",
           "Dapper": "2.0.123",
           "System.Data.SqlClient": "4.8.3"
         }
@@ -2904,7 +2904,7 @@
         "type": "Project",
         "dependencies": {
           "AutoMapper.Extensions.Microsoft.DependencyInjection": "11.0.0",
-          "Core": "1.47.1",
+          "Core": "1.48.1",
           "Microsoft.EntityFrameworkCore.Relational": "6.0.4",
           "Npgsql.EntityFrameworkCore.PostgreSQL": "6.0.4",
           "Pomelo.EntityFrameworkCore.MySql": "6.0.1",
@@ -2914,9 +2914,9 @@
       "sharedweb": {
         "type": "Project",
         "dependencies": {
-          "Core": "1.47.1",
-          "Infrastructure.Dapper": "1.47.1",
-          "Infrastructure.EntityFramework": "1.47.1"
+          "Core": "1.48.1",
+          "Infrastructure.Dapper": "1.48.1",
+          "Infrastructure.EntityFramework": "1.48.1"
         }
       }
     }
