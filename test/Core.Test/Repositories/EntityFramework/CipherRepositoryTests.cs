@@ -72,7 +72,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
         }
 
         [CiSkippedTheory, EfUserCipherAutoData]
-        public async void CreateAsync_BumpsUserAccountRevisionDate(Cipher cipher, User user, List<EfRepo.CipherRepository> suts, List<EfRepo.UserRepository> efUserRepos, SqlRepo.UserRepository sqlUserRepo)
+        public async void CreateAsync_BumpsUserAccountRevisionDate(Cipher cipher, User user, List<EfRepo.CipherRepository> suts, List<EfRepo.UserRepository> efUserRepos)
         {
             var bumpedUsers = new List<User>();
             foreach (var sut in suts)
