@@ -41,7 +41,7 @@ jobs:
 
   testing:
     name: Testing
-    runs-on: windows-2019
+    runs-on: windows-2022
     env:
       NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
     steps:
