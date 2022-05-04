@@ -240,7 +240,11 @@ namespace Bit.Api.Controllers
             var updateBilling = !_globalSettings.SelfHosted && (model.BusinessName != organization.BusinessName ||
                 model.BillingEmail != organization.BillingEmail);
 
-            if ((updateBilling && !await _currentContext.ManageBilling(orgIdGuid)) || !await _currentContext.OrganizationOwner(orgIdGuid))
+            var hasRequiredPermissions = updateBilling
+                ? await _currentContext.ManageBilling(orgIdGuid)
+                : await _currentContext.OrganizationOwner(orgIdGuid);
+
+            if (!hasRequiredPermissions)
             {
                 throw new NotFoundException();
             }
