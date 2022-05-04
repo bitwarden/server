@@ -261,7 +261,7 @@ namespace Bit.Core.Context
 
             if (Providers.Any())
             {
-                return (await ProviderUserForOrgAsync(orgId));
+                return await ProviderUserForOrgAsync(orgId);
             }
 
             return false;
