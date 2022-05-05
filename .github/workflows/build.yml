@@ -99,26 +99,26 @@ jobs:
       matrix:
         include:
           - service_name: Admin
-            base_path: ./src
+            base_path: src
             node: true
           - service_name: Api
-            base_path: ./src
+            base_path: src
           - service_name: Billing
-            base_path: ./src
+            base_path: src
           - service_name: Events
-            base_path: ./src
+            base_path: src
           - service_name: EventsProcessor
-            base_path: ./src
+            base_path: src
           - service_name: Icons
-            base_path: ./src
+            base_path: src
           - service_name: Identity
-            base_path: ./src
+            base_path: src
           - service_name: Notifications
-            base_path: ./src
+            base_path: src
           - service_name: Server
-            base_path: ./util
+            base_path: util
           - service_name: Sso
-            base_path: ./bitwarden_license/src
+            base_path: bitwarden_license/src
             node: true
     steps:
       - name: Checkout repo
