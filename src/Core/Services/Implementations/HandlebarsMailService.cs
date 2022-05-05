@@ -807,32 +807,20 @@ namespace Bit.Core.Services
         {
             var message = CreateDefaultMessage("Accept Your Free Families Subscription", email);
 
-            if (existingAccount)
+            var model = new FamiliesForEnterpriseOfferViewModel
             {
-                var model = new FamiliesForEnterpriseOfferExistingAccountViewModel
-                {
-                    SponsorEmail = CoreHelpers.ObfuscateEmail(sponsorEmail),
-                    SponsoredEmail = WebUtility.UrlEncode(email),
-                    WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
-                    SiteName = _globalSettings.SiteName,
-                    SponsorshipToken = token,
-                };
+                SponsorEmail = CoreHelpers.ObfuscateEmail(sponsorEmail),
+                SponsoredEmail = WebUtility.UrlEncode(email),
+                ExistingAccount = existingAccount,
+                WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+                SiteName = _globalSettings.SiteName,
+                SponsorshipToken = token,
+            };
+            var templateName = existingAccount ?
+                "FamiliesForEnterprise.FamiliesForEnterpriseOfferExistingAccount" :
+                "FamiliesForEnterprise.FamiliesForEnterpriseOfferNewAccount";
 
-                await AddMessageContentAsync(message, "FamiliesForEnterprise.FamiliesForEnterpriseOfferExistingAccount", model);
-            }
-            else
-            {
-                var model = new FamiliesForEnterpriseOfferNewAccountViewModel
-                {
-                    SponsorEmail = sponsorEmail,
-                    SponsoredEmail = WebUtility.UrlEncode(email),
-                    WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
-                    SiteName = _globalSettings.SiteName,
-                    SponsorshipToken = token,
-                };
-
-                await AddMessageContentAsync(message, "FamiliesForEnterprise.FamiliesForEnterpriseOfferNewAccount", model);
-            }
+            await AddMessageContentAsync(message, templateName, model);
 
             message.Category = "FamiliesForEnterpriseOffer";
             await _mailDeliveryService.SendEmailAsync(message);

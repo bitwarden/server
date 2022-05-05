@@ -7,11 +7,14 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models;
 using Bit.Core.Models.Business;
+using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Hosting;
 using NSubstitute;
 using NSubstitute.ReceivedExtensions;
 using Xunit;
@@ -155,6 +158,113 @@ namespace Bit.Core.Test.Services
             });
 
             await Assert.ThrowsAsync<ArgumentNullException>("No email.", () => sutProvider.Sut.SendTwoFactorEmailAsync(user));
+        }
+
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public async Task Needs2FABecauseNewDeviceAsync_ReturnsTrue(SutProvider<UserService> sutProvider, User user)
+        {
+            user.Id = Guid.NewGuid();
+            user.EmailVerified = true;
+            const string deviceIdToCheck = "7b01b586-b210-499f-8d52-0c3fdaa646fc";
+            const string deviceIdInRepo = "ea29126c-91b7-4cc4-8ce6-00105b37f64a";
+
+            sutProvider.GetDependency<IDeviceRepository>()
+                       .GetManyByUserIdAsync(user.Id)
+                       .Returns(Task.FromResult<ICollection<Device>>(new List<Device>
+                       {
+                            new Device { Identifier = deviceIdInRepo }
+                       }));
+
+            Assert.True(await sutProvider.Sut.Needs2FABecauseNewDeviceAsync(user, deviceIdToCheck, "password"));
+        }
+
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public async Task Needs2FABecauseNewDeviceAsync_ReturnsFalse_When_GranType_Is_AuthorizationCode(SutProvider<UserService> sutProvider, User user)
+        {
+            user.Id = Guid.NewGuid();
+            user.EmailVerified = true;
+            const string deviceIdToCheck = "7b01b586-b210-499f-8d52-0c3fdaa646fc";
+            const string deviceIdInRepo = "ea29126c-91b7-4cc4-8ce6-00105b37f64a";
+
+            sutProvider.GetDependency<IDeviceRepository>()
+                       .GetManyByUserIdAsync(user.Id)
+                       .Returns(Task.FromResult<ICollection<Device>>(new List<Device>
+                       {
+                            new Device { Identifier = deviceIdInRepo }
+                       }));
+
+            Assert.False(await sutProvider.Sut.Needs2FABecauseNewDeviceAsync(user, deviceIdToCheck, "authorization_code"));
+        }
+
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public async Task Needs2FABecauseNewDeviceAsync_ReturnsFalse_When_Email_Is_Not_Verified(SutProvider<UserService> sutProvider, User user)
+        {
+            user.Id = Guid.NewGuid();
+            user.EmailVerified = false;
+            const string deviceIdToCheck = "7b01b586-b210-499f-8d52-0c3fdaa646fc";
+            const string deviceIdInRepo = "ea29126c-91b7-4cc4-8ce6-00105b37f64a";
+
+            sutProvider.GetDependency<IDeviceRepository>()
+                       .GetManyByUserIdAsync(user.Id)
+                       .Returns(Task.FromResult<ICollection<Device>>(new List<Device>
+                       {
+                            new Device { Identifier = deviceIdInRepo }
+                       }));
+
+            Assert.False(await sutProvider.Sut.Needs2FABecauseNewDeviceAsync(user, deviceIdToCheck, "password"));
+        }
+
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public async Task Needs2FABecauseNewDeviceAsync_ReturnsFalse_When_Is_The_First_Device(SutProvider<UserService> sutProvider, User user)
+        {
+            user.Id = Guid.NewGuid();
+            user.EmailVerified = true;
+            const string deviceIdToCheck = "7b01b586-b210-499f-8d52-0c3fdaa646fc";
+
+            sutProvider.GetDependency<IDeviceRepository>()
+                       .GetManyByUserIdAsync(user.Id)
+                       .Returns(Task.FromResult<ICollection<Device>>(new List<Device>()));
+
+            Assert.False(await sutProvider.Sut.Needs2FABecauseNewDeviceAsync(user, deviceIdToCheck, "password"));
+        }
+
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public async Task Needs2FABecauseNewDeviceAsync_ReturnsFalse_When_DeviceId_Is_Already_In_Repo(SutProvider<UserService> sutProvider, User user)
+        {
+            user.Id = Guid.NewGuid();
+            user.EmailVerified = true;
+            const string deviceIdToCheck = "7b01b586-b210-499f-8d52-0c3fdaa646fc";
+
+            sutProvider.GetDependency<IDeviceRepository>()
+                       .GetManyByUserIdAsync(user.Id)
+                       .Returns(Task.FromResult<ICollection<Device>>(new List<Device>
+                       {
+                            new Device { Identifier = deviceIdToCheck }
+                       }));
+
+            Assert.False(await sutProvider.Sut.Needs2FABecauseNewDeviceAsync(user, deviceIdToCheck, "password"));
+        }
+
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public async Task Needs2FABecauseNewDeviceAsync_ReturnsFalse_When_Environment_Is_Development(SutProvider<UserService> sutProvider, User user)
+        {
+            user.Id = Guid.NewGuid();
+            user.EmailVerified = true;
+            const string deviceIdToCheck = "7b01b586-b210-499f-8d52-0c3fdaa646fc";
+            const string deviceIdInRepo = "ea29126c-91b7-4cc4-8ce6-00105b37f64a";
+
+            sutProvider.GetDependency<IDeviceRepository>()
+                       .GetManyByUserIdAsync(user.Id)
+                       .Returns(Task.FromResult<ICollection<Device>>(new List<Device>
+                       {
+                            new Device { Identifier = deviceIdInRepo }
+                       }));
+
+            sutProvider.GetDependency<IWebHostEnvironment>()
+                       .EnvironmentName
+                       .Returns(Environments.Development);
+
+            Assert.False(await sutProvider.Sut.Needs2FABecauseNewDeviceAsync(user, deviceIdToCheck, "password"));
         }
     }
 }

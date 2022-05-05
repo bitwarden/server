@@ -319,9 +319,11 @@ namespace Bit.Core.IdentityServer
 
             var requires2FA = individualRequired || firstEnabledOrg != null;
             var requires2FABecauseNewDevice = !requires2FA
-                                              && user.EmailVerified
-                                              && request.GrantType != "authorization_code"
-                                              && await IsNewDeviceAndNotTheFirstOneAsync(user, request);
+                                              &&
+                                              await _userService.Needs2FABecauseNewDeviceAsync(
+                                                    user,
+                                                    GetDeviceFromRequest(request)?.Identifier,
+                                                    request.GrantType);
 
             requires2FA = requires2FA || requires2FABecauseNewDevice;
 
@@ -534,22 +536,6 @@ namespace Bit.Core.IdentityServer
             }
 
             return await _deviceRepository.GetByIdentifierAsync(GetDeviceFromRequest(request).Identifier, user.Id);
-        }
-
-        protected async Task<bool> IsNewDeviceAndNotTheFirstOneAsync(User user, ValidatedTokenRequest request)
-        {
-            if (user == null)
-            {
-                return default;
-            }
-
-            var devices = await _deviceRepository.GetManyByUserIdAsync(user.Id);
-            if (!devices.Any())
-            {
-                return false;
-            }
-
-            return !devices.Any(d => d.Identifier == GetDeviceFromRequest(request)?.Identifier);
         }
 
         private async Task<Device> SaveDeviceAsync(User user, ValidatedTokenRequest request)

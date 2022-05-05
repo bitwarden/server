@@ -289,7 +289,16 @@ namespace Bit.Api.Controllers
             {
                 if (await _userService.VerifySecretAsync(user, model.Secret))
                 {
-                    await _userService.SendTwoFactorEmailAsync(user);
+                    var isBecauseNewDeviceLogin = false;
+                    if (user.GetTwoFactorProvider(TwoFactorProviderType.Email) is null
+                        &&
+                        await _userService.Needs2FABecauseNewDeviceAsync(user, model.DeviceIdentifier, null))
+                    {
+                        model.ToUser(user);
+                        isBecauseNewDeviceLogin = true;
+                    }
+
+                    await _userService.SendTwoFactorEmailAsync(user, isBecauseNewDeviceLogin);
                     return;
                 }
             }
