@@ -13,7 +13,6 @@ services:
     volumes:
       - attachments:/etc/bitwarden/core/attachments
       - aspnet-dataprotection:/etc/bitwarden/core/aspnet-dataprotection
-      - ca-certificates:/etc/bitwarden/ca-certificates
       - logs-admin:/etc/bitwarden/logs/Admin
 
   api:
@@ -24,7 +23,6 @@ services:
     volumes:
       - attachments:/etc/bitwarden/core/attachments
       - aspnet-dataprotection:/etc/bitwarden/core/aspnet-dataprotection
-      - ca-certificates:/etc/bitwarden/ca-certificates
       - logs-api:/etc/bitwarden/logs/Api
 
   attachments:
@@ -41,7 +39,6 @@ services:
     image: bitwarden/events:${CORE_TAG:-latest}
     restart: always
     volumes:
-      - ca-certificates:/etc/bitwarden/ca-certificates
       - logs-events:/etc/bitwarden/logs/Events
         
   icons:
@@ -50,7 +47,6 @@ services:
     image: bitwarden/icons:${CORE_TAG:-latest}
     restart: always
     volumes:
-      - ca-certificates:/etc/bitwarden/ca-certificates
       - logs-icons:/etc/bitwarden/logs/Icons
 
   identity:
@@ -61,7 +57,6 @@ services:
     volumes:
       - attachments:/etc/bitwarden/core/attachments
       - aspnet-dataprotection:/etc/bitwarden/core/aspnet-dataprotection
-      - ca-certificates:/etc/bitwarden/ca-certificates
       - identity:/etc/bitwarden/identity
       - logs-identity:/etc/bitwarden/logs/Identity
       
@@ -93,7 +88,6 @@ services:
       - '80:8080'
       - '443:8443'
     volumes:
-      - ca-certificates:/etc/bitwarden/ca-certificates
       - ssl:/etc/bitwarden/ssl
 
   notifications:
@@ -102,7 +96,6 @@ services:
     image: bitwarden/notifications:${CORE_TAG:-latest}
     restart: always
     volumes:
-      - ca-certificates:/etc/bitwarden/ca-certificates
       - logs-notifications:/etc/bitwarden/logs/Notifications
 
   sso:
@@ -113,7 +106,6 @@ services:
     volumes:
       - attachments:/etc/bitwarden/core/attachments
       - aspnet-dataprotection:/etc/bitwarden/core/aspnet-dataprotection
-      - ca-certificates:/etc/bitwarden/ca-certificates
       - identity:/etc/bitwarden/identity
       - logs-sso:/etc/bitwarden/logs/SSO
         
@@ -128,7 +120,6 @@ services:
 volumes:
   attachments:
   aspnet-dataprotection:
-  ca-certificates:
   identity:
   logs-admin:
   logs-api:

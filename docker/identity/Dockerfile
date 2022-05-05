@@ -50,7 +50,6 @@ RUN apk add --update-cache \
 RUN mkdir -p /etc/bitwarden/core
 RUN mkdir -p /etc/bitwarden/identity
 RUN mkdir -p /etc/bitwarden/logs
-RUN mkdir -p /etc/bitwarden/ca-certificates
 
 # Copy app from build stage
 WORKDIR /app

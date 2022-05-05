@@ -45,19 +45,14 @@ RUN apk add --update-cache \
 
 # Create required directories
 RUN mkdir -p /etc/bitwarden/logs
-RUN mkdir -p /etc/bitwarden/ca-certificates
 
 # Copy app from build stage
 WORKDIR /app
 COPY --from=build /app ./
-
-# Copy entrypoint script and make it executable
-COPY docker/icons/entrypoint.sh /
-RUN chmod +x /entrypoint.sh
 
 # Create non-root user to run app
 RUN adduser -s /bin/false -D bitwarden && chown -R bitwarden:bitwarden /app /etc/bitwarden
 
 USER bitwarden:bitwarden
 HEALTHCHECK CMD curl -f http://localhost:5000/alive || exit 1
-ENTRYPOINT ["/entrypoint.sh"]
+ENTRYPOINT ["dotnet", "/app/Icons.dll"]
