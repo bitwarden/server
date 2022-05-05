@@ -103,6 +103,8 @@ jobs:
             node: true
           - service_name: Api
             base_path: src
+          - service_name: Attachments
+            base_path: src
           - service_name: Billing
             base_path: src
           - service_name: Events
@@ -115,8 +117,6 @@ jobs:
             base_path: src
           - service_name: Notifications
             base_path: src
-          - service_name: Server
-            base_path: util
           - service_name: Sso
             base_path: bitwarden_license/src
             node: true
@@ -185,45 +185,31 @@ jobs:
       matrix:
         include:
           - service_name: Admin
-            base_path: ./src
             docker_repos: [bitwarden, bitwardenqa.azurecr.io]
             dotnet: true
           - service_name: Api
-            base_path: ./src
             docker_repos: [bitwarden, bitwardenqa.azurecr.io]
             dotnet: true
           - service_name: Attachments
-            base_path: ./util
             docker_repos: [bitwarden, bitwardenqa.azurecr.io]
           - service_name: Events
-            base_path: ./src
             docker_repos: [bitwarden, bitwardenqa.azurecr.io]
             dotnet: true
           - service_name: EventsProcessor
-            base_path: ./src
             docker_repos: [bitwardenqa.azurecr.io]
             dotnet: true
           - service_name: Icons
-            base_path: ./src
             docker_repos: [bitwarden, bitwardenqa.azurecr.io]
             dotnet: true
           - service_name: Identity
-            base_path: ./src
             docker_repos: [bitwarden, bitwardenqa.azurecr.io]
             dotnet: true
           - service_name: Nginx
-            base_path: ./util
             docker_repos: [bitwarden, bitwardenqa.azurecr.io]
           - service_name: Notifications
-            base_path: ./src
-            docker_repos: [bitwarden, bitwardenqa.azurecr.io]
-            dotnet: true
-          - service_name: Server
-            base_path: ./util
             docker_repos: [bitwarden, bitwardenqa.azurecr.io]
             dotnet: true
           - service_name: Sso
-            base_path: ./bitwarden_license/src
             docker_repos: [bitwarden, bitwardenqa.azurecr.io]
             dotnet: true
     steps:
@@ -238,19 +224,6 @@ jobs:
           echo "Matrix name: ${{ matrix.service_name }}"
           echo "SERVICE_NAME: $SERVICE_NAME"
           echo "::set-output name=service_name::$SERVICE_NAME"
-
-      - name: Get build artifact
-        if: ${{ matrix.dotnet }}
-        uses: actions/download-artifact@fb598a63ae348fa914e94cd0ff38f362e927b741
-        with:
-          name: ${{ matrix.service_name }}.zip
-
-      - name: Setup build artifact
-        if: ${{ matrix.dotnet }}
-        run: |
-          mkdir -p ${{ matrix.base_path}}/${{ matrix.service_name }}/obj/build-output/publish
-          unzip ${{ matrix.service_name }}.zip \
-            -d ${{ matrix.base_path }}/${{ matrix.service_name }}/obj/build-output/publish
 
       - name: Build Docker images
         run: docker build -t ${{ steps.setup.outputs.service_name }} docker/${{ steps.setup.outputs.service_name }}
