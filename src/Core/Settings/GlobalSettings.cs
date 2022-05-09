@@ -469,6 +469,8 @@ namespace Bit.Core.Settings
             public string HCaptchaSecretKey { get; set; }
             public string HCaptchaSiteKey { get; set; }
             public int MaximumFailedLoginAttempts { get; set; }
+            public double MaybeBotScoreThreshold { get; set; } = double.MaxValue;
+            public double IsBotScoreThreshold { get; set; } = double.MaxValue;
         }
 
         public class StripeSettings
