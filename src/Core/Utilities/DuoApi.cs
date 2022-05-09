@@ -46,7 +46,8 @@ namespace Bit.Core.Utilities.Duo
         {
             if (Uri.TryCreate($"https://{host}", UriKind.Absolute, out var uri))
             {
-                return uri.Host.StartsWith("api-") &&
+                return (string.IsNullOrWhiteSpace(uri.PathAndQuery) || uri.PathAndQuery == "/") &&
+                    uri.Host.StartsWith("api-") &&
                     (uri.Host.EndsWith(".duosecurity.com") || uri.Host.EndsWith(".duofederal.com"));
             }
             return false;
