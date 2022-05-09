@@ -84,9 +84,9 @@ namespace Bit.Core.Services
                 return response;
             }
 
-            using var hcaptchResponse = await responseMessage.Content.ReadFromJsonAsync<HCaptchaResponse>();
-            response.Success = hcaptchResponse.Success;
-            var score = hcaptchResponse.Score.GetValueOrDefault();
+            using var hcaptchaResponse = await responseMessage.Content.ReadFromJsonAsync<HCaptchaResponse>();
+            response.Success = hcaptchaResponse.Success;
+            var score = hcaptchaResponse.Score.GetValueOrDefault();
             response.MaybeBot = score >= _globalSettings.Captcha.MaybeBotScoreThreshold;
             response.IsBot = score >= _globalSettings.Captcha.IsBotScoreThreshold;
             return response;
