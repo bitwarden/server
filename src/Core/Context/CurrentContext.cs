@@ -362,8 +362,9 @@ namespace Bit.Core.Context
 
         public async Task<bool> ManageBilling(Guid orgId)
         {
-            return await OrganizationOwner(orgId) &&
-                (await ProviderUserForOrgAsync(orgId) || ProviderIdForOrg(orgId) == null);
+            return ProviderIdForOrg(orgId) == null
+                ? await OrganizationOwner(orgId)
+                : await ProviderUserForOrgAsync(orgId);
         }
 
         public bool ProviderProviderAdmin(Guid providerId)
