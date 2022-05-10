@@ -63,15 +63,20 @@ namespace Bit.Core.IdentityServer
             {
                 return;
             }
-            await ValidateAsync(context, context.Result.ValidatedRequest);
+            await ValidateAsync(context, context.Result.ValidatedRequest,
+                new CustomValidatorRequestContext { KnownDevice = true });
         }
 
-        protected async override Task<(User, bool)> ValidateContextAsync(CustomTokenRequestValidationContext context)
+        protected async override Task<bool> ValidateContextAsync(CustomTokenRequestValidationContext context,
+            CustomValidatorRequestContext validatorContext)
         {
             var email = context.Result.ValidatedRequest.Subject?.GetDisplayName()
                 ?? context.Result.ValidatedRequest.ClientClaims?.FirstOrDefault(claim => claim.Type == JwtClaimTypes.Email)?.Value;
-            var user = string.IsNullOrWhiteSpace(email) ? null : await _userManager.FindByEmailAsync(email);
-            return (user, user != null);
+            if (!string.IsNullOrWhiteSpace(email))
+            {
+                validatorContext.User = await _userManager.FindByEmailAsync(email);
+            }
+            return validatorContext.User != null;
         }
 
         protected override async Task SetSuccessResult(CustomTokenRequestValidationContext context, User user,

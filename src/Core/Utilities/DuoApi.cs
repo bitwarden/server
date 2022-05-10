@@ -35,6 +35,22 @@ namespace Bit.Core.Utilities.Duo
             _ikey = ikey;
             _skey = skey;
             _host = host;
+
+            if (!ValidHost(host))
+            {
+                throw new DuoException("Invalid Duo host configured.", new ArgumentException(nameof(host)));
+            }
+        }
+
+        public static bool ValidHost(string host)
+        {
+            if (Uri.TryCreate($"https://{host}", UriKind.Absolute, out var uri))
+            {
+                return (string.IsNullOrWhiteSpace(uri.PathAndQuery) || uri.PathAndQuery == "/") &&
+                    uri.Host.StartsWith("api-") &&
+                    (uri.Host.EndsWith(".duosecurity.com") || uri.Host.EndsWith(".duofederal.com"));
+            }
+            return false;
         }
 
         public static string CanonicalizeParams(Dictionary<string, string> parameters)
@@ -245,6 +261,10 @@ namespace Bit.Core.Utilities.Duo
     public class DuoException : Exception
     {
         public int HttpStatus { get; private set; }
+
+        public DuoException(string message, Exception inner)
+            : base(message, inner)
+        { }
 
         public DuoException(int httpStatus, string message, Exception inner)
             : base(message, inner)
