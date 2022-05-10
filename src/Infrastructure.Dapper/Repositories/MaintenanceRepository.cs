@@ -1,4 +1,5 @@
-﻿using System.Data;
+﻿using System;
+using System.Data;
 using System.Data.SqlClient;
 using System.Threading.Tasks;
 using Bit.Core.Repositories;
@@ -58,6 +59,18 @@ namespace Bit.Infrastructure.Dapper.Repositories
             {
                 await connection.ExecuteAsync(
                     "[dbo].[Grant_DeleteExpired]",
+                    commandType: CommandType.StoredProcedure,
+                    commandTimeout: 172800);
+            }
+        }
+
+        public async Task DeleteExpiredSponsorshipsAsync(DateTime validUntilBeforeDate)
+        {
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                await connection.ExecuteAsync(
+                    "[dbo].[OrganizationSponsorship_DeleteExpired]",
+                    new { ValidUntilBeforeDate = validUntilBeforeDate },
                     commandType: CommandType.StoredProcedure,
                     commandTimeout: 172800);
             }

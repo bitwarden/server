@@ -8,6 +8,7 @@ namespace Bit.Core.Models.Data
         EventType Type { get; set; }
         Guid? UserId { get; set; }
         Guid? OrganizationId { get; set; }
+        Guid? InstallationId { get; set; }
         Guid? ProviderId { get; set; }
         Guid? CipherId { get; set; }
         Guid? CollectionId { get; set; }

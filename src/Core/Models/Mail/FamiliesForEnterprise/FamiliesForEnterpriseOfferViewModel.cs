@@ -2,7 +2,7 @@
 {
     public class FamiliesForEnterpriseOfferViewModel : BaseMailModel
     {
-        public string SponsorEmail { get; set; }
+        public string SponsorOrgName { get; set; }
         public string SponsoredEmail { get; set; }
         public string SponsorshipToken { get; set; }
         public bool ExistingAccount { get; set; }

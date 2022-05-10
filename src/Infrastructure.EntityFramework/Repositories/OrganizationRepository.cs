@@ -3,11 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
+using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using DataModel = Bit.Core.Models.Data;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories
 {
@@ -71,13 +71,13 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             }
         }
 
-        public async Task<ICollection<DataModel.OrganizationAbility>> GetManyAbilitiesAsync()
+        public async Task<ICollection<OrganizationAbility>> GetManyAbilitiesAsync()
         {
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
                 return await GetDbSet(dbContext)
-                .Select(e => new DataModel.OrganizationAbility
+                .Select(e => new OrganizationAbility
                 {
                     Enabled = e.Enabled,
                     Id = e.Id,
@@ -102,18 +102,6 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             {
                 var dbContext = GetDatabaseContext(scope);
                 var orgEntity = await dbContext.FindAsync<Organization>(organization.Id);
-                var sponsorships = dbContext.OrganizationSponsorships
-                    .Where(os =>
-                        os.SponsoringOrganizationId == organization.Id ||
-                        os.SponsoredOrganizationId == organization.Id);
-
-                Guid? UpdatedOrgId(Guid? orgId) => orgId == organization.Id ? null : organization.Id;
-                foreach (var sponsorship in sponsorships)
-                {
-                    sponsorship.SponsoredOrganizationId = UpdatedOrgId(sponsorship.SponsoredOrganizationId);
-                    sponsorship.SponsoringOrganizationId = UpdatedOrgId(sponsorship.SponsoringOrganizationId);
-                    sponsorship.FriendlyName = null;
-                }
 
                 dbContext.Remove(orgEntity);
                 await dbContext.SaveChangesAsync();

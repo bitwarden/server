@@ -1,10 +1,14 @@
-﻿using Bit.Core.Tokens;
+﻿using System.Text.Json.Serialization;
+using Bit.Core.Tokens;
 
 namespace Bit.Core.Test.Tokens
 {
     public class TestTokenable : Tokenable
     {
-        public override bool Valid => true;
+        public bool ForceInvalid { get; set; } = false;
+
+        [JsonIgnore]
+        public override bool Valid => !ForceInvalid;
     }
 
     public class TestExpiringTokenable : ExpiringTokenable

@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using NS = Newtonsoft.Json;
@@ -48,10 +46,16 @@ namespace Bit.Core.Utilities
             };
         }
 
-        // NOTE: This is built into .NET 6, it SHOULD be removed when we upgrade
+        [Obsolete("This is built into .NET 6, it SHOULD be removed when we upgrade")]
         public static T ToObject<T>(this JsonElement element, JsonSerializerOptions options = null)
         {
             return JsonSerializer.Deserialize<T>(element.GetRawText(), options ?? Default);
+        }
+
+        [Obsolete("This is built into .NET 6, it SHOULD be removed when we upgrade")]
+        public static T ToObject<T>(this JsonDocument document, JsonSerializerOptions options = null)
+        {
+            return JsonSerializer.Deserialize<T>(document.RootElement.GetRawText(), options ?? default);
         }
 
         public static T DeserializeOrNew<T>(string json, JsonSerializerOptions options = null)

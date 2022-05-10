@@ -12,6 +12,8 @@ namespace Bit.Infrastructure.EntityFramework.Models
         public virtual ICollection<SsoConfig> SsoConfigs { get; set; }
         public virtual ICollection<SsoUser> SsoUsers { get; set; }
         public virtual ICollection<Transaction> Transactions { get; set; }
+        public virtual ICollection<OrganizationApiKey> ApiKeys { get; set; }
+        public virtual ICollection<OrganizationConnection> Connections { get; set; }
     }
 
     public class OrganizationMapperProfile : Profile

@@ -210,7 +210,7 @@ namespace Bit.Core.Models.Business
             }
         }
 
-        public bool VerifyData(Organization organization, GlobalSettings globalSettings)
+        public bool VerifyData(Organization organization, IGlobalSettings globalSettings)
         {
             if (Issued > DateTime.UtcNow || Expires < DateTime.UtcNow)
             {

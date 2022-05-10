@@ -37,18 +37,19 @@ namespace Bit.Core.Settings
         public virtual string HibpApiKey { get; set; }
         public virtual bool DisableUserRegistration { get; set; }
         public virtual bool DisableEmailNewDevice { get; set; }
+        public virtual bool EnableCloudCommunication { get; set; } = false;
         public virtual int OrganizationInviteExpirationHours { get; set; } = 120; // 5 days
         public virtual string EventGridKey { get; set; }
         public virtual CaptchaSettings Captcha { get; set; } = new CaptchaSettings();
-        public virtual InstallationSettings Installation { get; set; } = new InstallationSettings();
-        public virtual BaseServiceUriSettings BaseServiceUri { get; set; }
+        public virtual IInstallationSettings Installation { get; set; } = new InstallationSettings();
+        public virtual IBaseServiceUriSettings BaseServiceUri { get; set; }
         public virtual string DatabaseProvider { get; set; }
         public virtual SqlSettings SqlServer { get; set; } = new SqlSettings();
         public virtual SqlSettings PostgreSql { get; set; } = new SqlSettings();
         public virtual SqlSettings MySql { get; set; } = new SqlSettings();
         public virtual SqlSettings Sqlite { get; set; } = new SqlSettings();
         public virtual MailSettings Mail { get; set; } = new MailSettings();
-        public virtual ConnectionStringSettings Storage { get; set; } = new ConnectionStringSettings();
+        public virtual IConnectionStringSettings Storage { get; set; } = new ConnectionStringSettings();
         public virtual ConnectionStringSettings Events { get; set; } = new ConnectionStringSettings();
         public virtual NotificationsSettings Notifications { get; set; } = new NotificationsSettings();
         public virtual IFileStorageSettings Attachment { get; set; }
@@ -108,7 +109,7 @@ namespace Bit.Core.Settings
             return string.Concat("/etc/bitwarden", appendedPath);
         }
 
-        public class BaseServiceUriSettings
+        public class BaseServiceUriSettings : IBaseServiceUriSettings
         {
             private readonly GlobalSettings _globalSettings;
 
@@ -216,7 +217,7 @@ namespace Bit.Core.Settings
             }
         }
 
-        public class ConnectionStringSettings
+        public class ConnectionStringSettings : IConnectionStringSettings
         {
             private string _connectionString;
 
@@ -421,7 +422,7 @@ namespace Bit.Core.Settings
             public string NotificationUrl { get; set; }
         }
 
-        public class InstallationSettings
+        public class InstallationSettings : IInstallationSettings
         {
             private string _identityUri;
             private string _apiUri;
@@ -436,6 +437,7 @@ namespace Bit.Core.Settings
             public string ApiUri
             {
                 get => string.IsNullOrWhiteSpace(_apiUri) ? "https://api.biwarden.com" : _apiUri;
+                set => _apiUri = value;
             }
         }
 

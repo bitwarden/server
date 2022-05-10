@@ -16,6 +16,13 @@ namespace Bit.Core.Tokens
         public string Protect(T data) =>
             data.ToToken().ProtectWith(_dataProtector).WithPrefix(_clearTextPrefix).ToString();
 
+        /// <summary>
+        /// Unprotect token
+        /// </summary>
+        /// <param name="token">The token to parse</param>
+        /// <typeparam name="T">The tokenable type to parse to</typeparam>
+        /// <returns>The parsed tokenable</returns>
+        /// <exception>Throws CryptographicException if fails to unprotect</exception>
         public T Unprotect(string token) =>
             Tokenable.FromToken<T>(new Token(token).RemovePrefix(_clearTextPrefix).UnprotectWith(_dataProtector).ToString());
 

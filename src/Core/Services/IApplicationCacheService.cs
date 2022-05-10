@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Bit.Core.Entities;
 using Bit.Core.Entities.Provider;
 using Bit.Core.Models.Data;
+using Bit.Core.Models.Data.Organizations;
 
 namespace Bit.Core.Services
 {

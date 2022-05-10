@@ -204,6 +204,7 @@ namespace Bit.Core.Services
 
             var sub = await _stripeAdapter.SubscriptionGetAsync(org.GatewaySubscriptionId);
             org.ExpirationDate = sub.CurrentPeriodEnd;
+            sponsorship.ValidUntil = sub.CurrentPeriodEnd;
 
         }
 

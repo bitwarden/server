@@ -5,6 +5,7 @@ using System.Linq;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
+using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 
 namespace Bit.Api.Models.Public.Response
 {
