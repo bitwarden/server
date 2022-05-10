@@ -80,16 +80,16 @@ END
 GO
 
 -- View: Event
-IF EXISTS(SELECT * FROM sys.views WHERE [Name] = 'UserView')
+IF EXISTS(SELECT * FROM sys.views WHERE [Name] = 'EventView')
 BEGIN
-    DROP VIEW [dbo].[UserView]
+    DROP VIEW [dbo].[EventView]
 END
 GO
 
-CREATE VIEW [dbo].[UserView]
+CREATE VIEW [dbo].[EventView]
 AS
 SELECT
     *
 FROM
-    [dbo].[User]
+    [dbo].[Event]
 GO
