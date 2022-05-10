@@ -94,7 +94,7 @@ namespace Bit.Api.Controllers
         public async Task<BillingResponseModel> GetBilling(string id)
         {
             var orgIdGuid = new Guid(id);
-            if (!await _currentContext.OrganizationOwner(orgIdGuid))
+            if (!await _currentContext.ManageBilling(orgIdGuid))
             {
                 throw new NotFoundException();
             }
@@ -113,7 +113,7 @@ namespace Bit.Api.Controllers
         public async Task<OrganizationSubscriptionResponseModel> GetSubscription(string id)
         {
             var orgIdGuid = new Guid(id);
-            if (!await _currentContext.OrganizationOwner(orgIdGuid))
+            if (!await _currentContext.ManageBilling(orgIdGuid))
             {
                 throw new NotFoundException();
             }
@@ -241,10 +241,6 @@ namespace Bit.Api.Controllers
         public async Task<OrganizationResponseModel> Put(string id, [FromBody] OrganizationUpdateRequestModel model)
         {
             var orgIdGuid = new Guid(id);
-            if (!await _currentContext.OrganizationOwner(orgIdGuid))
-            {
-                throw new NotFoundException();
-            }
 
             var organization = await _organizationRepository.GetByIdAsync(orgIdGuid);
             if (organization == null)
@@ -252,10 +248,19 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            var updatebilling = !_globalSettings.SelfHosted && (model.BusinessName != organization.BusinessName ||
+            var updateBilling = !_globalSettings.SelfHosted && (model.BusinessName != organization.BusinessName ||
                 model.BillingEmail != organization.BillingEmail);
 
-            await _organizationService.UpdateAsync(model.ToOrganization(organization, _globalSettings), updatebilling);
+            var hasRequiredPermissions = updateBilling
+                ? await _currentContext.ManageBilling(orgIdGuid)
+                : await _currentContext.OrganizationOwner(orgIdGuid);
+
+            if (!hasRequiredPermissions)
+            {
+                throw new NotFoundException();
+            }
+
+            await _organizationService.UpdateAsync(model.ToOrganization(organization, _globalSettings), updateBilling);
             return new OrganizationResponseModel(organization);
         }
 
@@ -264,7 +269,7 @@ namespace Bit.Api.Controllers
         public async Task PostPayment(string id, [FromBody] PaymentRequestModel model)
         {
             var orgIdGuid = new Guid(id);
-            if (!await _currentContext.OrganizationOwner(orgIdGuid))
+            if (!await _currentContext.ManageBilling(orgIdGuid))
             {
                 throw new NotFoundException();
             }
@@ -287,7 +292,7 @@ namespace Bit.Api.Controllers
         public async Task<PaymentResponseModel> PostUpgrade(string id, [FromBody] OrganizationUpgradeRequestModel model)
         {
             var orgIdGuid = new Guid(id);
-            if (!await _currentContext.OrganizationOwner(orgIdGuid))
+            if (!await _currentContext.ManageBilling(orgIdGuid))
             {
                 throw new NotFoundException();
             }
@@ -305,7 +310,7 @@ namespace Bit.Api.Controllers
         public async Task PostSubscription(string id, [FromBody] OrganizationSubscriptionUpdateRequestModel model)
         {
             var orgIdGuid = new Guid(id);
-            if (!await _currentContext.OrganizationOwner(orgIdGuid))
+            if (!await _currentContext.ManageBilling(orgIdGuid))
             {
                 throw new NotFoundException();
             }
@@ -318,7 +323,7 @@ namespace Bit.Api.Controllers
         public async Task<PaymentResponseModel> PostSeat(string id, [FromBody] OrganizationSeatRequestModel model)
         {
             var orgIdGuid = new Guid(id);
-            if (!await _currentContext.OrganizationOwner(orgIdGuid))
+            if (!await _currentContext.ManageBilling(orgIdGuid))
             {
                 throw new NotFoundException();
             }
@@ -336,7 +341,7 @@ namespace Bit.Api.Controllers
         public async Task<PaymentResponseModel> PostStorage(string id, [FromBody] StorageRequestModel model)
         {
             var orgIdGuid = new Guid(id);
-            if (!await _currentContext.OrganizationOwner(orgIdGuid))
+            if (!await _currentContext.ManageBilling(orgIdGuid))
             {
                 throw new NotFoundException();
             }
@@ -354,7 +359,7 @@ namespace Bit.Api.Controllers
         public async Task PostVerifyBank(string id, [FromBody] OrganizationVerifyBankRequestModel model)
         {
             var orgIdGuid = new Guid(id);
-            if (!await _currentContext.OrganizationOwner(orgIdGuid))
+            if (!await _currentContext.ManageBilling(orgIdGuid))
             {
                 throw new NotFoundException();
             }
@@ -367,7 +372,7 @@ namespace Bit.Api.Controllers
         public async Task PostCancel(string id)
         {
             var orgIdGuid = new Guid(id);
-            if (!await _currentContext.OrganizationOwner(orgIdGuid))
+            if (!await _currentContext.ManageBilling(orgIdGuid))
             {
                 throw new NotFoundException();
             }
@@ -380,7 +385,7 @@ namespace Bit.Api.Controllers
         public async Task PostReinstate(string id)
         {
             var orgIdGuid = new Guid(id);
-            if (!await _currentContext.OrganizationOwner(orgIdGuid))
+            if (!await _currentContext.ManageBilling(orgIdGuid))
             {
                 throw new NotFoundException();
             }
