@@ -16,7 +16,7 @@ namespace Bit.Core.Utilities
             var currentContext = context.HttpContext.RequestServices.GetRequiredService<ICurrentContext>();
             var captchaValidationService = context.HttpContext.RequestServices.GetRequiredService<ICaptchaValidationService>();
 
-            if (captchaValidationService.RequireCaptchaValidation(currentContext))
+            if (captchaValidationService.RequireCaptchaValidation(currentContext, null))
             {
                 var captchaResponse = (context.ActionArguments[ModelParameterName] as ICaptchaProtectedModel)?.CaptchaResponse;
 
@@ -25,9 +25,9 @@ namespace Bit.Core.Utilities
                     throw new BadRequestException(captchaValidationService.SiteKeyResponseKeyName, captchaValidationService.SiteKey);
                 }
 
-                var captchaValid = captchaValidationService.ValidateCaptchaResponseAsync(captchaResponse,
-                    currentContext.IpAddress).GetAwaiter().GetResult();
-                if (!captchaValid)
+                var captchaValidationResponse = captchaValidationService.ValidateCaptchaResponseAsync(captchaResponse,
+                    currentContext.IpAddress, null).GetAwaiter().GetResult();
+                if (!captchaValidationResponse.Success || captchaValidationResponse.IsBot)
                 {
                     throw new BadRequestException("Captcha is invalid. Please refresh and try again");
                 }

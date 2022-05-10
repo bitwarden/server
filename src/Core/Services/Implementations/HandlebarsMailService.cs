@@ -782,10 +782,11 @@ namespace Bit.Core.Services
             {
                 var message = CreateDefaultMessage("Accept Your Free Families Subscription", invite.Email);
                 message.Category = "FamiliesForEnterpriseOffer";
-                var model = new FamiliesForEnterpriseOfferExistingAccountViewModel
+                var model = new FamiliesForEnterpriseOfferViewModel
                 {
                     SponsorOrgName = sponsorOrgName,
                     SponsoredEmail = WebUtility.UrlEncode(invite.Email),
+                    ExistingAccount = invite.ExistingAccount,
                     WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
                     SiteName = _globalSettings.SiteName,
                     SponsorshipToken = invite.Token,
@@ -793,6 +794,7 @@ namespace Bit.Core.Services
                 var templateName = invite.ExistingAccount ?
                     "FamiliesForEnterprise.FamiliesForEnterpriseOfferExistingAccount" :
                     "FamiliesForEnterprise.FamiliesForEnterpriseOfferNewAccount";
+
                 return new MailQueueMessage(message, templateName, model);
             }
             var messageModels = invites.Select(invite => CreateMessage(invite));
