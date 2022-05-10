@@ -261,7 +261,7 @@ namespace Bit.Core.Context
 
             if (Providers.Any())
             {
-                return (await GetProviderOrganizations()).Any(po => po.OrganizationId == orgId);
+                return await ProviderUserForOrgAsync(orgId);
             }
 
             return false;
@@ -360,6 +360,15 @@ namespace Bit.Core.Context
                         && (o.Permissions?.ManageResetPassword ?? false)) ?? false);
         }
 
+        public async Task<bool> ManageBilling(Guid orgId)
+        {
+            var orgManagedByProvider = await ProviderIdForOrg(orgId) != null;
+
+            return orgManagedByProvider
+                ? await ProviderUserForOrgAsync(orgId)
+                : await OrganizationOwner(orgId);
+        }
+
         public bool ProviderProviderAdmin(Guid providerId)
         {
             return Providers?.Any(o => o.Id == providerId && o.Type == ProviderUserType.ProviderAdmin) ?? false;
@@ -388,6 +397,11 @@ namespace Bit.Core.Context
         public bool ProviderUser(Guid providerId)
         {
             return Providers?.Any(o => o.Id == providerId) ?? false;
+        }
+
+        public async Task<bool> ProviderUserForOrgAsync(Guid orgId)
+        {
+            return (await GetProviderOrganizations()).Any(po => po.OrganizationId == orgId);
         }
 
         public async Task<Guid?> ProviderIdForOrg(Guid orgId)
