@@ -8,7 +8,7 @@ services:
       - mssql
     env_file:
       - global-settings.env
-    image: bitwarden/admin:${CORE_TAG:-latest}
+    image: ${REGISTRY:-bitwarden}/admin:${CORE_TAG:-latest}
     restart: always
     volumes:
       - attachments:/etc/bitwarden/core/attachments
@@ -18,7 +18,7 @@ services:
   api:
     env_file:
       - global-settings.env
-    image: bitwarden/api:${CORE_TAG:-latest}
+    image: ${REGISTRY:-bitwarden}/api:${CORE_TAG:-latest}
     restart: always
     volumes:
       - attachments:/etc/bitwarden/core/attachments
@@ -28,7 +28,7 @@ services:
   attachments:
     env_file:
       - global-settings.env
-    image: bitwarden/attachments:${CORE_TAG:-latest}
+    image: ${REGISTRY:-bitwarden}/attachments:${CORE_TAG:-latest}
     restart: always
     volumes:
       - attachments:/etc/bitwarden/core/attachments
@@ -36,7 +36,7 @@ services:
   events:
     env_file:
       - global-settings.env
-    image: bitwarden/events:${CORE_TAG:-latest}
+    image: ${REGISTRY:-bitwarden}/events:${CORE_TAG:-latest}
     restart: always
     volumes:
       - logs-events:/etc/bitwarden/logs/Events
@@ -44,7 +44,7 @@ services:
   icons:
     env_file:
       - global-settings.env
-    image: bitwarden/icons:${CORE_TAG:-latest}
+    image: ${REGISTRY:-bitwarden}/icons:${CORE_TAG:-latest}
     restart: always
     volumes:
       - logs-icons:/etc/bitwarden/logs/Icons
@@ -52,7 +52,7 @@ services:
   identity:
     env_file:
       - global-settings.env
-    image: bitwarden/identity:${CORE_TAG:-latest}
+    image: ${REGISTRY:-bitwarden}/identity:${CORE_TAG:-latest}
     restart: always
     volumes:
       - attachments:/etc/bitwarden/core/attachments
@@ -82,7 +82,7 @@ services:
       - global-settings.env
     environment:
       BW_ENABLE_SSL: "true"
-    image: bitwarden/nginx:${CORE_TAG:-latest}
+    image: ${REGISTRY:-bitwarden}/nginx:${CORE_TAG:-latest}
     restart: always
     ports:
       - '80:8080'
@@ -93,7 +93,7 @@ services:
   notifications:
     env_file:
       - global-settings.env
-    image: bitwarden/notifications:${CORE_TAG:-latest}
+    image: ${REGISTRY:-bitwarden}/notifications:${CORE_TAG:-latest}
     restart: always
     volumes:
       - logs-notifications:/etc/bitwarden/logs/Notifications
@@ -101,7 +101,7 @@ services:
   sso:
     env_file:
       - global-settings.env
-    image: bitwarden/sso:${CORE_TAG:-latest}
+    image: ${REGISTRY:-bitwarden}/sso:${CORE_TAG:-latest}
     restart: always
     volumes:
       - attachments:/etc/bitwarden/core/attachments
@@ -112,7 +112,7 @@ services:
   web:
     env_file:
       - global-settings.env
-    image: bitwarden/web:${WEB_TAG:-latest}
+    image: ${REGISTRY:-bitwarden}/web:${WEB_TAG:-latest}
     restart: always
     volumes:
       - web:/etc/bitwarden/web
