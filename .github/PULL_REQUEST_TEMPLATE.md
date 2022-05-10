@@ -16,11 +16,6 @@
 
 * **file.ext:** Description of what was changed and why
 
-## Testing requirements
-<!--What functionality requires testing by QA? This includes testing new behavior and regression testing-->
-
-
-
 ## Before you submit
 - [ ] I have checked for formatting errors (`dotnet tool run dotnet-format --check`) (required)
 - [ ] If making database changes - I have also updated Entity Framework queries and/or migrations
