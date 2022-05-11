@@ -19,7 +19,6 @@ using Fido2NetLib.Objects;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using File = System.IO.File;
@@ -54,7 +53,6 @@ namespace Bit.Core.Services
         private readonly IOrganizationService _organizationService;
         private readonly IProviderUserRepository _providerUserRepository;
         private readonly IDeviceRepository _deviceRepository;
-        private readonly IWebHostEnvironment _environment;
 
         public UserService(
             IUserRepository userRepository,
@@ -84,8 +82,7 @@ namespace Bit.Core.Services
             GlobalSettings globalSettings,
             IOrganizationService organizationService,
             IProviderUserRepository providerUserRepository,
-            IDeviceRepository deviceRepository,
-            IWebHostEnvironment environment)
+            IDeviceRepository deviceRepository)
             : base(
                   store,
                   optionsAccessor,
@@ -121,7 +118,6 @@ namespace Bit.Core.Services
             _organizationService = organizationService;
             _providerUserRepository = providerUserRepository;
             _deviceRepository = deviceRepository;
-            _environment = environment;
         }
 
         public Guid? GetProperUserId(ClaimsPrincipal principal)
@@ -1422,8 +1418,7 @@ namespace Bit.Core.Services
 
         public async Task<bool> Needs2FABecauseNewDeviceAsync(User user, string deviceIdentifier, string grantType)
         {
-            return !_environment.IsDevelopment()
-                   && _globalSettings.TwoFactorAuth.EmailOnNewDeviceLogin
+            return _globalSettings.TwoFactorAuth.EmailOnNewDeviceLogin
                    && user.EmailVerified
                    && grantType != "authorization_code"
                    && await IsNewDeviceAndNotTheFirstOneAsync(user, deviceIdentifier);

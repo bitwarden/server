@@ -9,13 +9,10 @@ using Bit.Core.Models;
 using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Settings;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.Hosting;
 using NSubstitute;
 using NSubstitute.ReceivedExtensions;
 using Xunit;
@@ -176,6 +173,11 @@ namespace Bit.Core.Test.Services
                             new Device { Identifier = deviceIdInRepo }
                        }));
 
+            sutProvider.GetDependency<Settings.GlobalSettings>().TwoFactorAuth = new Settings.GlobalSettings.TwoFactorAuthSettings
+            {
+                EmailOnNewDeviceLogin = true
+            };
+
             Assert.True(await sutProvider.Sut.Needs2FABecauseNewDeviceAsync(user, deviceIdToCheck, "password"));
         }
 
@@ -242,28 +244,6 @@ namespace Bit.Core.Test.Services
                        {
                             new Device { Identifier = deviceIdToCheck }
                        }));
-
-            Assert.False(await sutProvider.Sut.Needs2FABecauseNewDeviceAsync(user, deviceIdToCheck, "password"));
-        }
-
-        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
-        public async Task Needs2FABecauseNewDeviceAsync_ReturnsFalse_When_Environment_Is_Development(SutProvider<UserService> sutProvider, User user)
-        {
-            user.Id = Guid.NewGuid();
-            user.EmailVerified = true;
-            const string deviceIdToCheck = "7b01b586-b210-499f-8d52-0c3fdaa646fc";
-            const string deviceIdInRepo = "ea29126c-91b7-4cc4-8ce6-00105b37f64a";
-
-            sutProvider.GetDependency<IDeviceRepository>()
-                       .GetManyByUserIdAsync(user.Id)
-                       .Returns(Task.FromResult<ICollection<Device>>(new List<Device>
-                       {
-                            new Device { Identifier = deviceIdInRepo }
-                       }));
-
-            sutProvider.GetDependency<IWebHostEnvironment>()
-                       .EnvironmentName
-                       .Returns(Environments.Development);
 
             Assert.False(await sutProvider.Sut.Needs2FABecauseNewDeviceAsync(user, deviceIdToCheck, "password"));
         }
