@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
 using AngleSharp.Html.Parser;
@@ -292,6 +293,8 @@ namespace Bit.Icons.Services
             }
 
             // Resolve host to make sure it is not an internal/private IP address
+            //  and also store the resolved IP address for the subsequent GET
+            var requestHost = uri.Host;
             try
             {
                 var hostEntry = Dns.GetHostEntry(uri.Host);
@@ -299,6 +302,11 @@ namespace Bit.Icons.Services
                 {
                     return null;
                 }
+                requestHost = hostEntry.AddressList
+                    .FirstOrDefault(ip => ip.AddressFamily == AddressFamily.InterNetwork || ip.IsIPv4MappedToIPv6)?
+                    .MapToIPv4()
+                    .ToString()
+                    ?? uri.Host;
             }
             catch
             {
@@ -307,7 +315,8 @@ namespace Bit.Icons.Services
 
             using (var message = new HttpRequestMessage())
             {
-                message.RequestUri = uri;
+                message.RequestUri = new UriBuilder(uri) { Host = requestHost }.Uri;
+                message.Headers.Host = uri.Host;
                 message.Method = HttpMethod.Get;
 
                 // Let's add some headers to look like we're coming from a web browser request. Some websites
