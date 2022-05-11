@@ -69,6 +69,7 @@ namespace Bit.Core.Settings
         public virtual AppleIapSettings AppleIap { get; set; } = new AppleIapSettings();
         public virtual SsoSettings Sso { get; set; } = new SsoSettings();
         public virtual StripeSettings Stripe { get; set; } = new StripeSettings();
+        public virtual TwoFactorAuthSettings TwoFactorAuth { get; set; } = new TwoFactorAuthSettings();
 
         public string BuildExternalUri(string explicitValue, string name)
         {
@@ -479,6 +480,11 @@ namespace Bit.Core.Settings
         {
             public string ApiKey { get; set; }
             public int MaxNetworkRetries { get; set; } = 2;
+        }
+
+        public class TwoFactorAuthSettings
+        {
+            public bool EmailOnNewDeviceLogin { get; set; } = true;
         }
     }
 }

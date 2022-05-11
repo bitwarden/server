@@ -1422,9 +1422,10 @@ namespace Bit.Core.Services
 
         public async Task<bool> Needs2FABecauseNewDeviceAsync(User user, string deviceIdentifier, string grantType)
         {
-            return user.EmailVerified
+            return !_environment.IsDevelopment()
+                   && _globalSettings.TwoFactorAuth.EmailOnNewDeviceLogin
+                   && user.EmailVerified
                    && grantType != "authorization_code"
-                   && !_environment.IsDevelopment()
                    && await IsNewDeviceAndNotTheFirstOneAsync(user, deviceIdentifier);
         }
 
