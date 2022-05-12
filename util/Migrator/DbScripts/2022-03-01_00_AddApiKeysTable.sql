@@ -201,6 +201,7 @@ BEGIN
             0 AS [Type], -- 0 represents 'Default' type
             [RevisionDate]
         FROM [dbo].[Organization]
+        WHERE NOT EXISTS(SELECT [Id] FROM [dbo].[OrganizationApiKey] [ApiKey] WHERE [ApiKey].[OrganizationId] = [OrganizationId] AND [ApiKey].[Type] = 0)
 
     PRINT N'Dropping old column'
     ALTER TABLE
