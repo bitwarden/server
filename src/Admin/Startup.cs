@@ -6,6 +6,7 @@ using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
 using Microsoft.AspNetCore.Identity;
 using Stripe;
+using Bit.Core.Enums;
 
 #if !OSS
 using Bit.Commercial.Core.Utilities;
@@ -83,7 +84,10 @@ public class Startup
         services.AddHostedService<Jobs.JobsHostedService>();
         if (globalSettings.SelfHosted)
         {
-            services.AddHostedService<HostedServices.DatabaseMigrationHostedService>();
+            if (globalSettings.SelectedDatabaseProvider == SupportedDatabaseProviders.SqlServer)
+            {
+                services.AddHostedService<HostedServices.DatabaseMigrationHostedService>();
+            }
         }
         else
         {

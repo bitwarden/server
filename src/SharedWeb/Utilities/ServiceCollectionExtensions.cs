@@ -51,23 +51,16 @@ public static class ServiceCollectionExtensions
         var selectedDatabaseProvider = globalSettings.DatabaseProvider;
         var provider = SupportedDatabaseProviders.SqlServer;
         var connectionString = string.Empty;
-        if (!string.IsNullOrWhiteSpace(selectedDatabaseProvider))
+        switch (globalSettings.SelectedDatabaseProvider)
         {
-            switch (selectedDatabaseProvider.ToLowerInvariant())
-            {
-                case "postgres":
-                case "postgresql":
-                    provider = SupportedDatabaseProviders.Postgres;
-                    connectionString = globalSettings.PostgreSql.ConnectionString;
-                    break;
-                case "mysql":
-                case "mariadb":
-                    provider = SupportedDatabaseProviders.MySql;
-                    connectionString = globalSettings.MySql.ConnectionString;
-                    break;
-                default:
-                    break;
-            }
+            case SupportedDatabaseProviders.Postgres:
+                connectionString = globalSettings.PostgreSql.ConnectionString;
+                break;
+            case SupportedDatabaseProviders.MySql:
+                connectionString = globalSettings.MySql.ConnectionString;
+                break;
+            default:
+                break;
         }
 
         var useEf = (provider != SupportedDatabaseProviders.SqlServer);

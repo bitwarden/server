@@ -1,4 +1,6 @@
-﻿namespace Bit.Core.Settings;
+﻿using Bit.Core.Enums;
+
+namespace Bit.Core.Settings;
 
 public class GlobalSettings : IGlobalSettings
 {
@@ -42,6 +44,23 @@ public class GlobalSettings : IGlobalSettings
     public virtual IInstallationSettings Installation { get; set; } = new InstallationSettings();
     public virtual IBaseServiceUriSettings BaseServiceUri { get; set; }
     public virtual string DatabaseProvider { get; set; }
+    public SupportedDatabaseProviders SelectedDatabaseProvider
+    {
+        get
+        {
+            switch ((DatabaseProvider ?? "").ToLowerInvariant())
+            {
+                case "postgres":
+                case "postgresql":
+                    return SupportedDatabaseProviders.Postgres;
+                case "mysql":
+                case "mariadb":
+                    return SupportedDatabaseProviders.MySql;
+                default:
+                    return SupportedDatabaseProviders.SqlServer;
+            }
+        }
+    }
     public virtual SqlSettings SqlServer { get; set; } = new SqlSettings();
     public virtual SqlSettings PostgreSql { get; set; } = new SqlSettings();
     public virtual SqlSettings MySql { get; set; } = new SqlSettings();
