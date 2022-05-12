@@ -53,10 +53,8 @@ jobs:
           MSSQL_DATABASE: vault
           MSSQL_MIGRATIONS_DIRECTORY: util/Migrator/DbScripts
         run: |
-          echo $GITHUB_WORKSPACE
-          ls -alh $GITHUB_WORKSPACE
-          #echo "Running database migrations..."
-          #$GITHUB_WORKSPACE/dev/helpers/mssql/run_migrations.sh -p
+          echo "Running database migrations..."
+          $GITHUB_WORKSPACE/dev/helpers/mssql/run_migrations.sh -p
 
 
   deploy:
