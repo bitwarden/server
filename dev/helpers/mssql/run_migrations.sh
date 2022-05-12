@@ -11,7 +11,7 @@ DATABASE="vault_dev"
 USER="SA"
 PASSWD=$MSSQL_PASSWORD
 
-while getopts "rs" arg; do
+while getopts "sp" arg; do
   case $arg in
     s)
       echo "Running for self-host environment"
@@ -68,7 +68,6 @@ migrate () {
   local file=$1
   echo "Performing $file"
   /opt/mssql-tools/bin/sqlcmd -S $SERVER -d $DATABASE -U $USER -P $PASSWD -I -i $file
-  echo $file > $LAST_MIGRATION_FILE
 }
 
 for f in `ls -v $MIGRATE_DIRECTORY/*.sql`; do
