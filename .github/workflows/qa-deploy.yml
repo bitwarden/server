@@ -50,13 +50,13 @@ jobs:
           MSSQL_HOST: ${{ steps.retrieve-secrets.outputs.mssql-server-host }}
           MSSQL_USER: ${{ steps.retrieve-secrets.outputs.mssql-admin-login }}
           MSSQL_PASS: ${{ steps.retrieve-secrets.outputs.mssql-admin-login-password }}
-        working-directory: ./util/Migrator/DbScripts
+          MSSQL_DATABASE: vault
+          MSSQL_MIGRATIONS_DIRECTORY: util/Migrator/DbScripts
         run: |
+          echo $GITHUB_WORKSPACE
+          ls -alh $GITHUB_WORKSPACE
           echo "Running database migrations..."
-          for f in `ls -v ./*.sql`; do
-            echo "Executing file: ${f}..."
-            sqlcmd -S $MSSQL_HOST -d vault -U $MSSQL_USER -P $MSSQL_PASS -I -i $f
-          done;
+          $GITHUB_WORKSPACE/dev/helpers/mssql/run_migrations.sh -p
 
 
   deploy:
