@@ -74,7 +74,7 @@ migrate () {
 for f in `ls -v $MIGRATE_DIRECTORY/*.sql`; do
   BASENAME=$(basename $f)
   if should_migrate $f == 1 ; then
-    migrate $f
+    #migrate $f
     record_migration $f
   else
     echo "Skipping $f, $BASENAME"

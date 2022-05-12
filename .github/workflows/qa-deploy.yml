@@ -55,14 +55,15 @@ jobs:
         run: |
           echo $GITHUB_WORKSPACE
           ls -alh $GITHUB_WORKSPACE
-          echo "Running database migrations..."
-          $GITHUB_WORKSPACE/dev/helpers/mssql/run_migrations.sh -p
+          #echo "Running database migrations..."
+          #$GITHUB_WORKSPACE/dev/helpers/mssql/run_migrations.sh -p
 
 
   deploy:
     name: Deploy
     runs-on: ubuntu-20.04
-    if: always()
+    #if: always()
+    if: false
     needs:
       - reset-db
       - update-db
