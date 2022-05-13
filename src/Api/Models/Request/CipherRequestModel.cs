@@ -22,6 +22,7 @@ namespace Bit.Api.Models.Request
         public string FolderId { get; set; }
         public bool Favorite { get; set; }
         public CipherRepromptType Reprompt { get; set; }
+        public EncObject Data { get; set; }
         [Required]
         [EncryptedString]
         [EncryptedStringLength(1000)]
@@ -86,7 +87,7 @@ namespace Bit.Api.Models.Request
                     existingCipher.Data = JsonSerializer.Serialize(ToCipherSecureNoteData(), JsonHelpers.IgnoreWritingNull);
                     break;
                 default:
-                    //existingCipher.Data = JsonSerializer.Serialize(ToCipherCustomData(), JsonHelpers.IgnoreWritingNull);
+                    existingCipher.Data = JsonSerializer.Serialize(Data, JsonHelpers.IgnoreWritingNull);
                     break;
             }
 
