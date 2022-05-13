@@ -52,16 +52,19 @@ namespace Bit.Api.Models.Response
                     Identity = new CipherIdentityModel(identityData);
                     break;
                 default:
-                    var customData = JsonSerializer.Deserialize<CipherCustomData>(cipher.Data);
+                    var customData = JsonSerializer.Deserialize<EncObject>(cipher.Data);
                     Data = customData;
-                    cipherData = customData;
+                    cipherData = null;
                     break;
             }
 
-            Name = cipherData.Name;
-            Notes = cipherData.Notes;
-            Fields = cipherData.Fields?.Select(f => new CipherFieldModel(f));
-            PasswordHistory = cipherData.PasswordHistory?.Select(ph => new CipherPasswordHistoryModel(ph));
+            if (cipherData != null)
+            {
+                Name = cipherData.Name;
+                Notes = cipherData.Notes;
+                Fields = cipherData.Fields?.Select(f => new CipherFieldModel(f));
+                PasswordHistory = cipherData.PasswordHistory?.Select(ph => new CipherPasswordHistoryModel(ph));
+            }
             RevisionDate = cipher.RevisionDate;
             OrganizationId = cipher.OrganizationId?.ToString();
             Attachments = AttachmentResponseModel.FromCipher(cipher, globalSettings);

@@ -86,7 +86,7 @@ namespace Bit.Api.Models.Request
                     existingCipher.Data = JsonSerializer.Serialize(ToCipherSecureNoteData(), JsonHelpers.IgnoreWritingNull);
                     break;
                 default:
-                    existingCipher.Data = JsonSerializer.Serialize(ToCipherCustomData(), JsonHelpers.IgnoreWritingNull);
+                    //existingCipher.Data = JsonSerializer.Serialize(ToCipherCustomData(), JsonHelpers.IgnoreWritingNull);
                     break;
             }
 
@@ -229,17 +229,6 @@ namespace Bit.Api.Models.Request
                 Fields = Fields?.Select(f => f.ToCipherFieldData()),
                 PasswordHistory = PasswordHistory?.Select(ph => ph.ToCipherPasswordHistoryData()),
                 Type = SecureNote.Type,
-            };
-        }
-
-        private CipherCustomData ToCipherCustomData()
-        {
-            return new CipherCustomData
-            {
-                Name = Name,
-                Notes = Notes,
-                Fields = Fields?.Select(f => f.ToCipherFieldData()),
-                PasswordHistory = PasswordHistory?.Select(ph => ph.ToCipherPasswordHistoryData()),
             };
         }
     }
