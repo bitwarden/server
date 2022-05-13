@@ -1,0 +1,12 @@
+INSERT INTO "OrganizationApiKey"(
+    "Id",
+    "OrganizationId",
+    "ApiKey",
+    "Type",
+    "RevisionDate") 
+SELECT gen_random_uuid(),
+    "Id" AS "OrganizationId",
+    "ApiKey",
+    0 AS "Type",
+    "RevisionDate" 
+FROM "Organization";

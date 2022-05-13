@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using AutoMapper;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
+using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Infrastructure.EntityFramework.Repositories.Queries;
@@ -61,6 +62,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
                 var dbContext = GetDatabaseContext(scope);
                 var entities = Mapper.Map<List<OrganizationUser>>(organizationUsers);
                 await dbContext.AddRangeAsync(entities);
+                await dbContext.SaveChangesAsync();
             }
 
             return organizationUsers.Select(u => u.Id).ToList();
@@ -73,14 +75,6 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             {
                 var dbContext = GetDatabaseContext(scope);
                 var orgUser = await dbContext.FindAsync<OrganizationUser>(organizationUserId);
-                var sponsorships = dbContext.OrganizationSponsorships
-                    .Where(os => os.SponsoringOrganizationUserId != default &&
-                        os.SponsoringOrganizationUserId.Value == organizationUserId);
-                foreach (var sponsorship in sponsorships)
-                {
-                    sponsorship.SponsoringOrganizationUserId = null;
-                    sponsorship.FriendlyName = null;
-                }
 
                 dbContext.Remove(orgUser);
                 await dbContext.SaveChangesAsync();
@@ -95,15 +89,6 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
                 var entities = await dbContext.OrganizationUsers
                     .Where(ou => organizationUserIds.Contains(ou.Id))
                     .ToListAsync();
-
-                var sponsorships = dbContext.OrganizationSponsorships
-                    .Where(os => os.SponsoringOrganizationUserId != default &&
-                        organizationUserIds.Contains(os.SponsoringOrganizationUserId ?? default));
-                foreach (var sponsorship in sponsorships)
-                {
-                    sponsorship.SponsoringOrganizationUserId = null;
-                    sponsorship.FriendlyName = null;
-                }
 
                 dbContext.OrganizationUsers.RemoveRange(entities);
                 await dbContext.SaveChangesAsync();

@@ -1,0 +1,81 @@
+@model OrganizationViewModel
+<h2>Connections</h2>
+<div class="row">
+    <div class="col-8">
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th style="width: 190px;">Type</th>
+                        <th style="width: 40px;">Status</th>
+                        <th style="width: 30px;"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if(!Model.Connections.Any())
+                    {
+                        <tr>
+                            <td colspan="6">No results to list.</td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach(var connection in Model.Connections)
+                        {
+                            <tr>
+                                <td class="align-middle">
+                                    @if(connection.Type == OrganizationConnectionType.CloudBillingSync)
+                                    {
+                                        @:Billing Sync
+                                    }
+                                </td>
+                                <td class="align-middle">
+                                    @if(@TempData["ConnectionError"] != null)
+                                    {
+                                        <span class="text-danger">
+                                            @TempData["ConnectionError"]
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        @if(connection.Enabled)
+                                        {
+                                            @:Enabled
+                                        }
+                                        else
+                                        {
+                                            @:Disabled
+                                        }
+                                    }
+                                </td>
+                                <td>
+                                    @if(connection.Enabled) 
+                                    {
+                                        @if(@TempData["ConnectionActivated"] != null && @TempData["ConnectionActivated"].ToString() == @Model.Organization.Id.ToString())
+                                        {
+                                            @if(connection.Type.Equals(OrganizationConnectionType.CloudBillingSync))
+                                            {
+                                                <button class="btn btn-outline-success btn-sm disabled" disabled>Billing Synced!</button>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            @if(connection.Type.Equals(OrganizationConnectionType.CloudBillingSync))
+                                            {
+                                                <a class="btn btn-outline-secondary btn-sm" 
+                                                    data-id="@connection.Id" asp-controller="Organizations" 
+                                                    asp-action="TriggerBillingSync" asp-route-id="@Model.Organization.Id">
+                                                    Manually Sync
+                                                </a>
+                                            }
+                                        }
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

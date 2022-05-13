@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 
 namespace Bit.Core.Repositories
 {
@@ -8,5 +9,6 @@ namespace Bit.Core.Repositories
         Task DisableCipherAutoStatsAsync();
         Task RebuildIndexesAsync();
         Task DeleteExpiredGrantsAsync();
+        Task DeleteExpiredSponsorshipsAsync(DateTime validUntilBeforeDate);
     }
 }
