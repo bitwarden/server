@@ -36,8 +36,8 @@ namespace Bit.Core.Test.Services
             user.EmailVerified = true;
             user.Email = userLicense.Email;
 
-            sutProvider.GetDependency<Settings.GlobalSettings>().SelfHosted = true;
-            sutProvider.GetDependency<Settings.GlobalSettings>().LicenseDirectory = tempDir.Directory;
+            sutProvider.GetDependency<Settings.IGlobalSettings>().SelfHosted = true;
+            sutProvider.GetDependency<Settings.IGlobalSettings>().LicenseDirectory = tempDir.Directory;
             sutProvider.GetDependency<ILicensingService>()
                 .VerifyLicense(userLicense)
                 .Returns(true);
@@ -173,10 +173,8 @@ namespace Bit.Core.Test.Services
                             new Device { Identifier = deviceIdInRepo }
                        }));
 
-            sutProvider.GetDependency<Settings.GlobalSettings>().TwoFactorAuth = new Settings.GlobalSettings.TwoFactorAuthSettings
-            {
-                EmailOnNewDeviceLogin = true
-            };
+
+            sutProvider.GetDependency<Settings.IGlobalSettings>().TwoFactorAuth.EmailOnNewDeviceLogin.Returns(true);
 
             Assert.True(await sutProvider.Sut.Needs2FABecauseNewDeviceAsync(user, deviceIdToCheck, "password"));
         }
@@ -263,10 +261,7 @@ namespace Bit.Core.Test.Services
                             new Device { Identifier = deviceIdInRepo }
                        }));
 
-            sutProvider.GetDependency<Settings.GlobalSettings>().TwoFactorAuth = new Settings.GlobalSettings.TwoFactorAuthSettings
-            {
-                EmailOnNewDeviceLogin = false
-            };
+            sutProvider.GetDependency<Settings.IGlobalSettings>().TwoFactorAuth.EmailOnNewDeviceLogin.Returns(false);
 
             Assert.False(await sutProvider.Sut.Needs2FABecauseNewDeviceAsync(user, deviceIdToCheck, "password"));
         }
