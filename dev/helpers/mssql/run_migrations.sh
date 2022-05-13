@@ -68,7 +68,6 @@ migrate () {
   local file=$1
   echo "Performing $file"
   /opt/mssql-tools/bin/sqlcmd -S $SERVER -d $DATABASE -U $USER -P $PASSWD -I -i $file
-  echo $file > $LAST_MIGRATION_FILE
 }
 
 for f in `ls -v $MIGRATE_DIRECTORY/*.sql`; do
