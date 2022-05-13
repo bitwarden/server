@@ -83,9 +83,39 @@ namespace Bit.Api.Test.Controllers
 
         [Theory]
         [BitAutoData]
-        public async Task CreateConnection_Success(OrganizationConnectionRequestModel model, BillingSyncConfig config,
-            Guid cloudOrgId, SutProvider<OrganizationConnectionsController> sutProvider)
+        public async Task CreateConnection_BillingSyncType_InvalidLicense_Throws(OrganizationConnectionRequestModel model,
+            BillingSyncConfig config, Guid cloudOrgId, OrganizationLicense organizationLicense,
+            SutProvider<OrganizationConnectionsController> sutProvider)
         {
+            model.Type = OrganizationConnectionType.CloudBillingSync;
+            organizationLicense.Id = cloudOrgId;
+
+            model.Config = JsonDocumentFromObject(config);
+            var typedModel = new OrganizationConnectionRequestModel<BillingSyncConfig>(model);
+            typedModel.ParsedConfig.CloudOrganizationId = cloudOrgId;
+
+            sutProvider.GetDependency<ICurrentContext>()
+                .OrganizationOwner(model.OrganizationId)
+                .Returns(true);
+
+            sutProvider.GetDependency<ILicensingService>()
+                .ReadOrganizationLicenseAsync(model.OrganizationId)
+                .Returns(organizationLicense);
+
+            sutProvider.GetDependency<ILicensingService>()
+                .VerifyLicense(organizationLicense)
+                .Returns(false);
+
+            await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.CreateConnection(model));
+        }
+
+        [Theory]
+        [BitAutoData]
+        public async Task CreateConnection_Success(OrganizationConnectionRequestModel model, BillingSyncConfig config,
+            Guid cloudOrgId, OrganizationLicense organizationLicense, SutProvider<OrganizationConnectionsController> sutProvider)
+        {
+            organizationLicense.Id = cloudOrgId;
+
             model.Config = JsonDocumentFromObject(config);
             var typedModel = new OrganizationConnectionRequestModel<BillingSyncConfig>(model);
             typedModel.ParsedConfig.CloudOrganizationId = cloudOrgId;
@@ -95,10 +125,11 @@ namespace Bit.Api.Test.Controllers
             sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(model.OrganizationId).Returns(true);
             sutProvider.GetDependency<ILicensingService>()
                 .ReadOrganizationLicenseAsync(Arg.Any<Guid>())
-                .Returns(new OrganizationLicense
-                {
-                    Id = cloudOrgId,
-                });
+                .Returns(organizationLicense);
+
+            sutProvider.GetDependency<ILicensingService>()
+                .VerifyLicense(organizationLicense)
+                .Returns(true);
 
             await sutProvider.Sut.CreateConnection(model);
 
