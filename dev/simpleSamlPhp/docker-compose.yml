@@ -1,0 +1,13 @@
+version: "3"
+services:
+  idp:
+    image: kenchan0130/simplesamlphp:1.19.3
+    container_name: idp
+    ports:
+      - "8090:8080"
+    environment:
+      SIMPLESAMLPHP_SP_ENTITY_ID: ${SP_ENTITY_ID}
+      SIMPLESAMLPHP_SP_ASSERTION_CONSUMER_SERVICE: ${SP_ACS_URL}
+      SIMPLESAMLPHP_SP_SINGLE_LOGOUT_SERVICE: null
+    volumes:
+      - ./authsources.php:/var/www/simplesamlphp/config/authsources.php
