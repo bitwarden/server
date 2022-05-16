@@ -124,9 +124,17 @@ namespace Bit.Core.Services
 
             if (!response.IsSuccessStatusCode)
             {
+                _logger.LogInformation("Unsuccessful token response with status code {StatusCode}", response.StatusCode);
+
                 if (response.StatusCode == HttpStatusCode.BadRequest)
                 {
                     _nextAuthAttempt = DateTime.UtcNow.AddDays(1);
+                }
+
+                if (_logger.IsEnabled(LogLevel.Debug))
+                {
+                    var responseBody = await response.Content.ReadAsStringAsync();
+                    _logger.LogDebug("Error response body:\n{ResponseBody}", responseBody);
                 }
 
                 return false;
