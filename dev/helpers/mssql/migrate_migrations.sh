@@ -6,36 +6,44 @@
 sleep 0.1;
 
 MIGRATE_DIRECTORY="/mnt/migrator/DbScripts"
+LAST_MIGRATION_FILE="/mnt/data/last_migration"
 SERVER='mssql'
 DATABASE="vault_dev"
 USER="SA"
 PASSWD=$MSSQL_PASSWORD
 
-while getopts "sp" arg; do
+while getopts "s" arg; do
   case $arg in
     s)
       echo "Running for self-host environment"
+      LAST_MIGRATION_FILE="/mnt/data/last_self_host_migration"
       DATABASE="vault_dev_self_host"
       ;;
-    p)
-      echo "Running for pipeline"
-      MIGRATE_DIRECTORY=$MSSQL_MIGRATIONS_DIRECTORY
-      SERVER=$MSSQL_HOST
-      DATABASE=$MSSQL_DATABASE
-      USER=$MSSQL_USER
-      PASSWD=$MSSQL_PASS
   esac
 done
 
-# Create databases if they do not already exist
-QUERY="IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = '$DATABASE')
-BEGIN
-  CREATE DATABASE $DATABASE;
-END;
+if [ ! -f "$LAST_MIGRATION_FILE" ]; then
+  echo "No migration file, nothing to migrate to a database store"
+  exit 1
+else
+  LAST_MIGRATION=$(cat $LAST_MIGRATION_FILE)
+  rm $LAST_MIGRATION_FILE
+fi
 
-IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = 'migrations_$DATABASE')
+[ -z "$LAST_MIGRATION" ]
+PERFORM_MIGRATION=$?
+
+# Create database if it does not already exist
+QUERY="IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = 'migrations_$DATABASE')
 BEGIN
   CREATE DATABASE migrations_$DATABASE;
+END;
+"
+
+/opt/mssql-tools/bin/sqlcmd -S $SERVER -d master -U $USER -P $PASSWD -I -Q "$QUERY"
+
+QUERY="IF OBJECT_ID('[dbo].[migrations_$DATABASE]') IS NULL
+BEGIN
   CREATE TABLE [migrations_$DATABASE].[dbo].[migrations] (
       [Id]                   INT IDENTITY(1,1) PRIMARY KEY,
       [Filename]             NVARCHAR(MAX) NOT NULL,
@@ -45,17 +53,6 @@ END;"
 
 /opt/mssql-tools/bin/sqlcmd -S $SERVER -d master -U $USER -P $PASSWD -I -Q "$QUERY"
 
-should_migrate () {
-  local file=$(basename $1)
-  local query="SELECT * FROM [migrations] WHERE [Filename] = '$file'"
-  local result=$(/opt/mssql-tools/bin/sqlcmd -S $SERVER -d migrations_$DATABASE -U $USER -P $PASSWD -I -Q "$query")
-  if [[ "$result" =~ .*"$file".* ]]; then
-    return 1;
-  else
-    return 0;
-  fi
-}
-
 record_migration () {
   echo "recording $1"
   local file=$(basename $1)
@@ -64,18 +61,13 @@ record_migration () {
   /opt/mssql-tools/bin/sqlcmd -S $SERVER -d migrations_$DATABASE -U $USER -P $PASSWD -I -Q "$query"
 }
 
-migrate () {
-  local file=$1
-  echo "Performing $file"
-  /opt/mssql-tools/bin/sqlcmd -S $SERVER -d $DATABASE -U $USER -P $PASSWD -I -i $file
-}
-
 for f in `ls -v $MIGRATE_DIRECTORY/*.sql`; do
-  BASENAME=$(basename $f)
-  if should_migrate $f == 1 ; then
-    migrate $f
-    record_migration $f
+  if (( PERFORM_MIGRATION == 0 )); then
+    echo "Still need to migrate $f"
   else
-    echo "Skipping $f, $BASENAME"
+    record_migration $f
+    if [ "$LAST_MIGRATION" == "$f" ]; then
+      PERFORM_MIGRATION=0
+    fi
   fi
 done;
