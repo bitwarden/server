@@ -74,6 +74,10 @@ namespace Bit.Api.Controllers
                 case OrganizationConnectionType.CloudBillingSync:
                     var typedModel = new OrganizationConnectionRequestModel<BillingSyncConfig>(model);
                     var license = await _licensingService.ReadOrganizationLicenseAsync(model.OrganizationId);
+                    if (!_licensingService.VerifyLicense(license))
+                    {
+                        throw new BadRequestException("Cannot verify license file.");
+                    }
                     typedModel.ParsedConfig.CloudOrganizationId = license.Id;
                     var connection = await _createOrganizationConnectionCommand.CreateAsync(typedModel.ToData());
                     return new OrganizationConnectionResponseModel(connection, typeof(BillingSyncConfig));

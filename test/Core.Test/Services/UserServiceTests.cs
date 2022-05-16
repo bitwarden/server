@@ -12,9 +12,7 @@ using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.Hosting;
 using NSubstitute;
 using NSubstitute.ReceivedExtensions;
 using Xunit;
@@ -38,8 +36,8 @@ namespace Bit.Core.Test.Services
             user.EmailVerified = true;
             user.Email = userLicense.Email;
 
-            sutProvider.GetDependency<Settings.GlobalSettings>().SelfHosted = true;
-            sutProvider.GetDependency<Settings.GlobalSettings>().LicenseDirectory = tempDir.Directory;
+            sutProvider.GetDependency<Settings.IGlobalSettings>().SelfHosted = true;
+            sutProvider.GetDependency<Settings.IGlobalSettings>().LicenseDirectory = tempDir.Directory;
             sutProvider.GetDependency<ILicensingService>()
                 .VerifyLicense(userLicense)
                 .Returns(true);
@@ -175,6 +173,9 @@ namespace Bit.Core.Test.Services
                             new Device { Identifier = deviceIdInRepo }
                        }));
 
+
+            sutProvider.GetDependency<Settings.IGlobalSettings>().TwoFactorAuth.EmailOnNewDeviceLogin.Returns(true);
+
             Assert.True(await sutProvider.Sut.Needs2FABecauseNewDeviceAsync(user, deviceIdToCheck, "password"));
         }
 
@@ -246,7 +247,7 @@ namespace Bit.Core.Test.Services
         }
 
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
-        public async Task Needs2FABecauseNewDeviceAsync_ReturnsFalse_When_Environment_Is_Development(SutProvider<UserService> sutProvider, User user)
+        public async Task Needs2FABecauseNewDeviceAsync_ReturnsFalse_When_GlobalSettings_2FA_EmailOnNewDeviceLogin_Is_Disabled(SutProvider<UserService> sutProvider, User user)
         {
             user.Id = Guid.NewGuid();
             user.EmailVerified = true;
@@ -260,9 +261,7 @@ namespace Bit.Core.Test.Services
                             new Device { Identifier = deviceIdInRepo }
                        }));
 
-            sutProvider.GetDependency<IWebHostEnvironment>()
-                       .EnvironmentName
-                       .Returns(Environments.Development);
+            sutProvider.GetDependency<Settings.IGlobalSettings>().TwoFactorAuth.EmailOnNewDeviceLogin.Returns(false);
 
             Assert.False(await sutProvider.Sut.Needs2FABecauseNewDeviceAsync(user, deviceIdToCheck, "password"));
         }

@@ -12,7 +12,7 @@ DATABASE="vault_dev"
 USER="SA"
 PASSWD=$MSSQL_PASSWORD
 
-while getopts "rs" arg; do
+while getopts "s" arg; do
   case $arg in
     s)
       echo "Running for self-host environment"
