@@ -87,6 +87,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
 
                 if (response == null)
                 {
+                    _logger.LogDebug("Organization sync failed for '{OrgId}'", organizationId);
                     throw new BadRequestException("Organization sync failed");
                 }
 
