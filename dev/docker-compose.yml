@@ -84,7 +84,6 @@ services:
     profiles:
       - idp
 
-
 volumes:
   edgesql_dev_data:
   postgres_dev_data:
