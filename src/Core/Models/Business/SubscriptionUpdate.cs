@@ -35,7 +35,6 @@ namespace Bit.Core.Models.Business
 
     public class SeatSubscriptionUpdate : SubscriptionUpdate
     {
-        private readonly Organization _organization;
         private readonly int _previousSeats;
         private readonly StaticStore.Plan _plan;
         private readonly long? _additionalSeats;
@@ -44,7 +43,6 @@ namespace Bit.Core.Models.Business
 
         public SeatSubscriptionUpdate(Organization organization, StaticStore.Plan plan, long? additionalSeats)
         {
-            _organization = organization;
             _plan = plan;
             _additionalSeats = additionalSeats;
             _previousSeats = organization.Seats ?? 0;
