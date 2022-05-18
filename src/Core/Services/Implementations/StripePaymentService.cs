@@ -710,6 +710,8 @@ namespace Bit.Core.Services
         private async Task<string> FinalizeSubscriptionChangeAsync(IStorableSubscriber storableSubscriber,
             SubscriptionUpdate subscriptionUpdate, DateTime? prorationDate)
         {
+            // remember, when in doubt, throw
+
             var sub = await _stripeAdapter.SubscriptionGetAsync(storableSubscriber.GatewaySubscriptionId);
             if (sub == null)
             {
@@ -789,16 +791,25 @@ namespace Bit.Core.Services
                 }
                 catch
                 {
-                    // Need to revert the subscription
-                    await _stripeAdapter.SubscriptionUpdateAsync(sub.Id, new Stripe.SubscriptionUpdateOptions
+                    try
                     {
-                        Items = subscriptionUpdate.RevertItemsOptions(sub),
-                        // This proration behavior prevents a false "credit" from
-                        //  being applied forward to the next month's invoice
-                        ProrationBehavior = "none",
-                        CollectionMethod = collectionMethod,
-                        DaysUntilDue = daysUntilDue,
-                    });
+                        // Need to revert the subscription
+                        await _stripeAdapter.SubscriptionUpdateAsync(sub.Id, new Stripe.SubscriptionUpdateOptions
+                        {
+                            Items = subscriptionUpdate.RevertItemsOptions(sub),
+                            // This proration behavior prevents a false "credit" from
+                            //  being applied forward to the next month's invoice
+                            ProrationBehavior = "none",
+                            CollectionMethod = collectionMethod,
+                            DaysUntilDue = daysUntilDue,
+                        });
+                    }
+                    catch
+                    {
+                        // Revert can fail, so we need to throw no matter what
+                        throw;
+                    }
+
                     throw;
                 }
             }
