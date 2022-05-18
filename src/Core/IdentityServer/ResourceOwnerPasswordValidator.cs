@@ -82,7 +82,7 @@ namespace Bit.Core.IdentityServer
                 }
 
                 validatorContext.CaptchaResponse = await _captchaValidationService.ValidateCaptchaResponseAsync(
-                    captchaResponse, _currentContext.IpAddress, null);
+                    captchaResponse, _currentContext.IpAddress, user);
                 if (!validatorContext.CaptchaResponse.Success)
                 {
                     await BuildErrorResultAsync("Captcha is invalid. Please refresh and try again", false, context, null);
