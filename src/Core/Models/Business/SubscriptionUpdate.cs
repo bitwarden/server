@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Bit.Core.Entities;
 using Stripe;
@@ -35,15 +36,18 @@ namespace Bit.Core.Models.Business
     public class SeatSubscriptionUpdate : SubscriptionUpdate
     {
         private readonly Organization _organization;
+        private readonly int _previousSeats;
         private readonly StaticStore.Plan _plan;
         private readonly long? _additionalSeats;
         protected override List<string> PlanIds => new() { _plan.StripeSeatPlanId };
+
 
         public SeatSubscriptionUpdate(Organization organization, StaticStore.Plan plan, long? additionalSeats)
         {
             _organization = organization;
             _plan = plan;
             _additionalSeats = additionalSeats;
+            _previousSeats = organization.Seats ?? 0;
         }
 
         public override List<SubscriptionItemOptions> UpgradeItemsOptions(Subscription subscription)
@@ -63,6 +67,7 @@ namespace Bit.Core.Models.Business
 
         public override List<SubscriptionItemOptions> RevertItemsOptions(Subscription subscription)
         {
+
             var item = SubscriptionItem(subscription, PlanIds.Single());
             return new()
             {
@@ -70,8 +75,8 @@ namespace Bit.Core.Models.Business
                 {
                     Id = item?.Id,
                     Plan = PlanIds.Single(),
-                    Quantity = _organization.Seats,
-                    Deleted = item?.Id != null ? true : (bool?)null,
+                    Quantity = _previousSeats,
+                    Deleted = _previousSeats == 0 ? true : (bool?)null,
                 }
             };
         }
@@ -79,6 +84,7 @@ namespace Bit.Core.Models.Business
 
     public class StorageSubscriptionUpdate : SubscriptionUpdate
     {
+        private Nullable<long> _prevStorage;
         private readonly string _plan;
         private readonly long? _additionalStorage;
         protected override List<string> PlanIds => new() { _plan };
@@ -92,6 +98,7 @@ namespace Bit.Core.Models.Business
         public override List<SubscriptionItemOptions> UpgradeItemsOptions(Subscription subscription)
         {
             var item = SubscriptionItem(subscription, PlanIds.Single());
+            _prevStorage = item.Quantity;
             return new()
             {
                 new SubscriptionItemOptions
@@ -106,6 +113,11 @@ namespace Bit.Core.Models.Business
 
         public override List<SubscriptionItemOptions> RevertItemsOptions(Subscription subscription)
         {
+            if (!_prevStorage.HasValue)
+            {
+                throw new Exception("Unknown previous value, must first call UpgradeItemsOptions");
+            }
+
             var item = SubscriptionItem(subscription, PlanIds.Single());
             return new()
             {
@@ -113,8 +125,8 @@ namespace Bit.Core.Models.Business
                 {
                     Id = item?.Id,
                     Plan = _plan,
-                    Quantity = item?.Quantity ?? 0,
-                    Deleted = item?.Id != null ? true : (bool?)null,
+                    Quantity = _prevStorage.Value,
+                    Deleted = _prevStorage.Value == 0 ? true : (bool?)null,
                 }
             };
         }
