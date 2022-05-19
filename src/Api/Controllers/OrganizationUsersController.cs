@@ -271,8 +271,23 @@ namespace Bit.Api.Controllers
         [HttpPut("{userId}/reset-password-enrollment")]
         public async Task PutResetPasswordEnrollment(string orgId, string userId, [FromBody] OrganizationUserResetPasswordEnrollmentRequestModel model)
         {
-            var callingUserId = _userService.GetProperUserId(User);
-            await _organizationService.UpdateUserResetPasswordEnrollmentAsync(new Guid(orgId), new Guid(userId), model.ResetPasswordKey, callingUserId);
+            var user = await _userService.GetUserByPrincipalAsync(User);
+            if (user == null)
+            {
+                throw new UnauthorizedAccessException();
+            }
+
+            if (!await _userService.VerifySecretAsync(user, model.Secret))
+            {
+                await Task.Delay(2000);
+                throw new BadRequestException("MasterPasswordHash", "Invalid password.");
+            }
+            else
+            {
+                var callingUserId = user.Id;
+                await _organizationService.UpdateUserResetPasswordEnrollmentAsync(
+                   new Guid(orgId), new Guid(userId), model.ResetPasswordKey, callingUserId);
+            }
         }
 
         [HttpPut("{id}/reset-password")]
