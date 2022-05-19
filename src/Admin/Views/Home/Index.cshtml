@@ -19,7 +19,7 @@
                 }
             });
 
-            fetch('@Url.Action("GetLatestVersion", new { repository = "api" })').then((response) => {
+            fetch('@Url.Action("GetLatestVersion", new { repository = "core" })').then((response) => {
                 return response.json();
             }).then((version) => {
                 document.getElementById('server-latest').innerText = version;

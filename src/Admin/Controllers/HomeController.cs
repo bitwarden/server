@@ -44,7 +44,7 @@ namespace Bit.Admin.Controllers
             });
         }
 
-        public async Task<IActionResult> GetLatestVersion(string repository, CancellationToken cancellationToken)
+        public async Task<IActionResult> GetLatestVersion(string project, CancellationToken cancellationToken)
         {
             var requestUri = $"https://raw.githubusercontent.com/bitwarden/self-host/master/version.json";
             try
@@ -55,22 +55,8 @@ namespace Bit.Admin.Controllers
                     using var jsonDocument = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(cancellationToken), cancellationToken: cancellationToken);
                     var root = jsonDocument.RootElement;
                     var versionsNode = root.GetProperty("versions");
-                    if (repository == "web")
-                    {
-                        var name = versionsNode.GetProperty("webVersion").GetString();
-                        if (!string.IsNullOrWhiteSpace(name) && name.Length > 0 && char.IsNumber(name[0]))
-                        {
-                            return new JsonResult(name);
-                        }
-                    }
-                    if (repository == "api")
-                    {
-                        var name = versionsNode.GetProperty("coreVersion").GetString();
-                        if (!string.IsNullOrWhiteSpace(name) && name.Length > 0 && char.IsNumber(name[0]))
-                        {
-                            return new JsonResult(name);
-                        }
-                    }
+                    var version = versionsNode.GetProperty($"{project}Version").GetString();
+                    return new JsonResult(version);
                 }
             }
             catch (HttpRequestException e)
