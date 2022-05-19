@@ -1,5 +1,7 @@
 ﻿using System.Diagnostics;
+using System.IO;
 using System.Net.Http;
+using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -42,9 +44,10 @@ namespace Bit.Admin.Controllers
             });
         }
 
-        public async Task<IActionResult> GetLatestDockerHubVersion(string repository, CancellationToken cancellationToken)
+        public async Task<IActionResult> GetLatestVersion(string repository, CancellationToken cancellationToken)
         {
-            var requestUri = $"https://hub.docker.com/v2/repositories/bitwarden/{repository}/tags/";
+            var requestUri = $"https://raw.githubusercontent.com/bitwarden/self-host/master/version.json";
+
             try
             {
                 var response = await _httpClient.GetAsync(requestUri, cancellationToken);
@@ -52,11 +55,19 @@ namespace Bit.Admin.Controllers
                 {
                     using var jsonDocument = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(cancellationToken), cancellationToken: cancellationToken);
                     var root = jsonDocument.RootElement;
-
-                    var results = root.GetProperty("results");
-                    foreach (var result in results.EnumerateArray())
+                    
+                    var versionsNode = root.GetProperty("versions");
+                    if(repository == "web")
                     {
-                        var name = result.GetProperty("name").GetString();
+                        var name = versionsNode.GetProperty("webVersion").GetString();
+                        if (!string.IsNullOrWhiteSpace(name) && name.Length > 0 && char.IsNumber(name[0]))
+                        {
+                            return new JsonResult(name);
+                        }
+                    }
+                    if(repository == "api")
+                    {
+                        var name = versionsNode.GetProperty("coreVersion").GetString();
                         if (!string.IsNullOrWhiteSpace(name) && name.Length > 0 && char.IsNumber(name[0]))
                         {
                             return new JsonResult(name);

@@ -9,7 +9,7 @@
             let loadedWebLatest = false;
             let loadedWebInstalled = false;
 
-            fetch('@Url.Action("GetLatestDockerHubVersion", new { repository = "web" })').then((response) => {
+            fetch('@Url.Action("GetLatestVersion", new { repository = "web" })').then((response) => {
                 return response.json();
             }).then((version) => {
                 document.getElementById('web-latest').innerText = version;
@@ -19,7 +19,7 @@
                 }
             });
 
-            fetch('@Url.Action("GetLatestDockerHubVersion", new { repository = "api" })').then((response) => {
+            fetch('@Url.Action("GetLatestVersion", new { repository = "api" })').then((response) => {
                 return response.json();
             }).then((version) => {
                 document.getElementById('server-latest').innerText = version;
