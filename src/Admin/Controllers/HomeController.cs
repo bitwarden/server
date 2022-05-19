@@ -47,7 +47,6 @@ namespace Bit.Admin.Controllers
         public async Task<IActionResult> GetLatestVersion(string repository, CancellationToken cancellationToken)
         {
             var requestUri = $"https://raw.githubusercontent.com/bitwarden/self-host/master/version.json";
-
             try
             {
                 var response = await _httpClient.GetAsync(requestUri, cancellationToken);
@@ -55,9 +54,8 @@ namespace Bit.Admin.Controllers
                 {
                     using var jsonDocument = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(cancellationToken), cancellationToken: cancellationToken);
                     var root = jsonDocument.RootElement;
-                    
                     var versionsNode = root.GetProperty("versions");
-                    if(repository == "web")
+                    if (repository == "web")
                     {
                         var name = versionsNode.GetProperty("webVersion").GetString();
                         if (!string.IsNullOrWhiteSpace(name) && name.Length > 0 && char.IsNumber(name[0]))
@@ -65,7 +63,7 @@ namespace Bit.Admin.Controllers
                             return new JsonResult(name);
                         }
                     }
-                    if(repository == "api")
+                    if (repository == "api")
                     {
                         var name = versionsNode.GetProperty("coreVersion").GetString();
                         if (!string.IsNullOrWhiteSpace(name) && name.Length > 0 && char.IsNumber(name[0]))
