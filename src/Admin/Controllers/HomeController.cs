@@ -6,11 +6,13 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Bit.Admin.Models;
+using Bit.Core.Enums;
 using Bit.Core.Settings;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 
 namespace Bit.Admin.Controllers
 {
@@ -44,7 +46,8 @@ namespace Bit.Admin.Controllers
             });
         }
 
-        public async Task<IActionResult> GetLatestVersion(string project, CancellationToken cancellationToken)
+ 
+        public async Task<IActionResult> GetLatestVersion(ProjectType project, CancellationToken cancellationToken)
         {
             var requestUri = $"https://raw.githubusercontent.com/bitwarden/self-host/master/version.json";
             try
@@ -52,11 +55,13 @@ namespace Bit.Admin.Controllers
                 var response = await _httpClient.GetAsync(requestUri, cancellationToken);
                 if (response.IsSuccessStatusCode)
                 {
-                    using var jsonDocument = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(cancellationToken), cancellationToken: cancellationToken);
-                    var root = jsonDocument.RootElement;
-                    var versionsNode = root.GetProperty("versions");
-                    var version = versionsNode.GetProperty($"{project}Version").GetString();
-                    return new JsonResult(version);
+                    var latestVersions = JsonConvert.DeserializeObject<LatestVersions>(await response.Content.ReadAsStringAsync());
+                    return project switch
+                    {
+                        ProjectType.Core => new JsonResult(latestVersions.Versions.WebVersion),
+                        ProjectType.Web => new JsonResult(latestVersions.Versions.CoreVersion),
+                        _ => throw new System.NotImplementedException(),
+                    };
                 }
             }
             catch (HttpRequestException e)
@@ -88,6 +93,24 @@ namespace Bit.Admin.Controllers
             }
 
             return new JsonResult("-");
+        }
+
+        private class LatestVersions
+        {
+            [JsonProperty("versions")]
+            public Versions Versions { get; set; }
+        }
+
+        private class Versions
+        {
+            [JsonProperty("coreVersion")]
+            public string CoreVersion { get; set; }
+
+            [JsonProperty("webVersion")]
+            public string WebVersion { get; set; }
+
+            [JsonProperty("keyConnectorVersion")]
+            public string KeyConnectorVersion { get; set; }
         }
     }
 }
