@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Net.Http;
 using System.Threading.Tasks;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -17,6 +18,7 @@ namespace Bit.Core.Services
         private readonly ILogger<MultiServicePushNotificationService> _logger;
 
         public MultiServicePushNotificationService(
+            IHttpClientFactory httpFactory,
             IDeviceRepository deviceRepository,
             IInstallationDeviceRepository installationDeviceRepository,
             GlobalSettings globalSettings,
@@ -31,14 +33,14 @@ namespace Bit.Core.Services
                     globalSettings.Installation?.Id != null &&
                     CoreHelpers.SettingHasValue(globalSettings.Installation?.Key))
                 {
-                    _services.Add(new RelayPushNotificationService(deviceRepository, globalSettings,
+                    _services.Add(new RelayPushNotificationService(httpFactory, deviceRepository, globalSettings,
                         httpContextAccessor, relayLogger));
                 }
                 if (CoreHelpers.SettingHasValue(globalSettings.InternalIdentityKey) &&
                     CoreHelpers.SettingHasValue(globalSettings.BaseServiceUri.InternalNotifications))
                 {
                     _services.Add(new NotificationsApiPushNotificationService(
-                        globalSettings, httpContextAccessor, hubLogger));
+                        httpFactory, globalSettings, httpContextAccessor, hubLogger));
                 }
             }
             else

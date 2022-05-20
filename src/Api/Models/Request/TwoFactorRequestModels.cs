@@ -105,7 +105,7 @@ namespace Bit.Api.Models.Request
 
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {
-            if (!Host.StartsWith("api-") || (!Host.EndsWith(".duosecurity.com") && !Host.EndsWith(".duofederal.com")))
+            if (!Core.Utilities.Duo.DuoApi.ValidHost(Host))
             {
                 yield return new ValidationResult("Host is invalid.", new string[] { nameof(Host) });
             }
@@ -202,6 +202,8 @@ namespace Bit.Api.Models.Request
         [EmailAddress]
         [StringLength(256)]
         public string Email { get; set; }
+
+        public string DeviceIdentifier { get; set; }
 
         public User ToUser(User extistingUser)
         {

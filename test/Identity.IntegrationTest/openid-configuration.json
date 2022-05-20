@@ -9,6 +9,7 @@
     "api.push",
     "api.licensing",
     "api.organization",
+    "api.installation",
     "internal",
     "offline_access"
   ],

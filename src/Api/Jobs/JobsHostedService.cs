@@ -46,8 +46,15 @@ namespace Bit.Api.Jobs
                 .StartNow()
                 .WithCronSchedule("0 30 */12 * * ?")
                 .Build();
+            var randomDailySponsorshipSyncTrigger = TriggerBuilder.Create()
+                .WithIdentity("RandomDailySponsorshipSyncTrigger")
+                .StartAt(DateBuilder.FutureDate(new Random().Next(24), IntervalUnit.Hour))
+                .WithSimpleSchedule(x => x
+                    .WithIntervalInHours(24)
+                    .RepeatForever())
+                .Build();
 
-            Jobs = new List<Tuple<Type, ITrigger>>
+            var jobs = new List<Tuple<Type, ITrigger>>
             {
                 new Tuple<Type, ITrigger>(typeof(AliveJob), everyTopOfTheHourTrigger),
                 new Tuple<Type, ITrigger>(typeof(EmergencyAccessNotificationJob), emergencyAccessNotificationTrigger),
@@ -56,11 +63,22 @@ namespace Bit.Api.Jobs
                 new Tuple<Type, ITrigger>(typeof(ValidateOrganizationsJob), everyTwelfthHourAndThirtyMinutesTrigger)
             };
 
+            if (_globalSettings.SelfHosted && _globalSettings.EnableCloudCommunication)
+            {
+                jobs.Add(new Tuple<Type, ITrigger>(typeof(SelfHostedSponsorshipSyncJob), randomDailySponsorshipSyncTrigger));
+            }
+
+            Jobs = jobs;
+
             await base.StartAsync(cancellationToken);
         }
 
-        public static void AddJobsServices(IServiceCollection services)
+        public static void AddJobsServices(IServiceCollection services, bool selfHosted)
         {
+            if (selfHosted)
+            {
+                services.AddTransient<SelfHostedSponsorshipSyncJob>();
+            }
             services.AddTransient<AliveJob>();
             services.AddTransient<EmergencyAccessNotificationJob>();
             services.AddTransient<EmergencyAccessTimeoutJob>();

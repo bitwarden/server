@@ -4,11 +4,12 @@ using System.Linq;
 using System.Threading.Tasks;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
+using Bit.Api.Models.Response.Organizations;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
-using Bit.Core.Models.Data;
+using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -270,8 +271,23 @@ namespace Bit.Api.Controllers
         [HttpPut("{userId}/reset-password-enrollment")]
         public async Task PutResetPasswordEnrollment(string orgId, string userId, [FromBody] OrganizationUserResetPasswordEnrollmentRequestModel model)
         {
-            var callingUserId = _userService.GetProperUserId(User);
-            await _organizationService.UpdateUserResetPasswordEnrollmentAsync(new Guid(orgId), new Guid(userId), model.ResetPasswordKey, callingUserId);
+            var user = await _userService.GetUserByPrincipalAsync(User);
+            if (user == null)
+            {
+                throw new UnauthorizedAccessException();
+            }
+
+            if (!await _userService.VerifySecretAsync(user, model.Secret))
+            {
+                await Task.Delay(2000);
+                throw new BadRequestException("MasterPasswordHash", "Invalid password.");
+            }
+            else
+            {
+                var callingUserId = user.Id;
+                await _organizationService.UpdateUserResetPasswordEnrollmentAsync(
+                   new Guid(orgId), new Guid(userId), model.ResetPasswordKey, callingUserId);
+            }
         }
 
         [HttpPut("{id}/reset-password")]

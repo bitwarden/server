@@ -242,16 +242,21 @@ namespace Bit.Identity.IntegrationTest.Endpoints
         }
 
         [Theory, BitAutoData]
-        public async Task TokenEndpoint_GrantTypeClientCredentials_AsOrganization_Success(Organization organization)
+        public async Task TokenEndpoint_GrantTypeClientCredentials_AsOrganization_Success(Organization organization, OrganizationApiKey organizationApiKey)
         {
             var orgRepo = _factory.Services.GetRequiredService<IOrganizationRepository>();
             organization = await orgRepo.CreateAsync(organization);
+            organizationApiKey.OrganizationId = organization.Id;
+            organizationApiKey.Type = OrganizationApiKeyType.Default;
+
+            var orgApiKeyRepo = _factory.Services.GetRequiredService<IOrganizationApiKeyRepository>();
+            await orgApiKeyRepo.CreateAsync(organizationApiKey);
 
             var context = await _factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
             {
                 { "grant_type", "client_credentials" },
                 { "client_id", $"organization.{organization.Id}" },
-                { "client_secret", organization.ApiKey },
+                { "client_secret", organizationApiKey.ApiKey },
                 { "scope", "api.organization" },
             }));
 

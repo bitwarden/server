@@ -7,6 +7,7 @@ using Xunit.Sdk;
 
 namespace Bit.Test.Common.AutoFixture.Attributes
 {
+    [DataDiscoverer("AutoFixture.Xunit2.NoPreDiscoveryDataDiscoverer", "AutoFixture.Xunit2")]
     public class BitAutoDataAttribute : DataAttribute
     {
         private readonly Func<IFixture> _createFixture;

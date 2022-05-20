@@ -80,18 +80,45 @@ namespace Bit.Infrastructure.Dapper
                 (nameof(OrganizationUser.ResetPasswordKey), typeof(string), ou => ou.ResetPasswordKey),
             };
 
+            return orgUsers.BuildTable(table, columnData);
+        }
+
+        public static DataTable ToTvp(this IEnumerable<OrganizationSponsorship> organizationSponsorships)
+        {
+            var table = new DataTable();
+            table.SetTypeName("[dbo].[OrganizationSponsorshipType]");
+
+            var columnData = new List<(string name, Type type, Func<OrganizationSponsorship, object> getter)>
+            {
+                (nameof(OrganizationSponsorship.Id), typeof(Guid), ou => ou.Id),
+                (nameof(OrganizationSponsorship.SponsoringOrganizationId), typeof(Guid), ou => ou.SponsoringOrganizationId),
+                (nameof(OrganizationSponsorship.SponsoringOrganizationUserId), typeof(Guid), ou => ou.SponsoringOrganizationUserId),
+                (nameof(OrganizationSponsorship.SponsoredOrganizationId), typeof(Guid), ou => ou.SponsoredOrganizationId),
+                (nameof(OrganizationSponsorship.FriendlyName), typeof(string), ou => ou.FriendlyName),
+                (nameof(OrganizationSponsorship.OfferedToEmail), typeof(string), ou => ou.OfferedToEmail),
+                (nameof(OrganizationSponsorship.PlanSponsorshipType), typeof(byte), ou => ou.PlanSponsorshipType),
+                (nameof(OrganizationSponsorship.LastSyncDate), typeof(DateTime), ou => ou.LastSyncDate),
+                (nameof(OrganizationSponsorship.ValidUntil), typeof(DateTime), ou => ou.ValidUntil),
+                (nameof(OrganizationSponsorship.ToDelete), typeof(bool), ou => ou.ToDelete),
+            };
+
+            return organizationSponsorships.BuildTable(table, columnData);
+        }
+
+        private static DataTable BuildTable<T>(this IEnumerable<T> entities, DataTable table, List<(string name, Type type, Func<T, object> getter)> columnData)
+        {
             foreach (var (name, type, getter) in columnData)
             {
                 var column = new DataColumn(name, type);
                 table.Columns.Add(column);
             }
 
-            foreach (var orgUser in orgUsers ?? new OrganizationUser[] { })
+            foreach (var entity in entities ?? new T[] { })
             {
                 var row = table.NewRow();
                 foreach (var (name, type, getter) in columnData)
                 {
-                    var val = getter(orgUser);
+                    var val = getter(entity);
                     if (val == null)
                     {
                         row[name] = DBNull.Value;

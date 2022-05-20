@@ -317,6 +317,15 @@
           "IdentityModel": "4.3.0"
         }
       },
+      "Kralizek.AutoFixture.Extensions.MockHttp": {
+        "type": "Transitive",
+        "resolved": "1.2.0",
+        "contentHash": "6zmks7/5mVczazv910N7V2EdiU6B+rY61lwdgVO0o2iZuTI6KI3T+Hgkrjv0eGOKYucq2OMC+gnAc5Ej2ajoTQ==",
+        "dependencies": {
+          "AutoFixture": "4.11.0",
+          "RichardSzalay.MockHttp": "6.0.0"
+        }
+      },
       "libsodium": {
         "type": "Transitive",
         "resolved": "1.0.18",
@@ -1662,6 +1671,11 @@
           "System.Configuration.ConfigurationManager": "4.7.0",
           "System.Diagnostics.DiagnosticSource": "4.7.1"
         }
+      },
+      "RichardSzalay.MockHttp": {
+        "type": "Transitive",
+        "resolved": "6.0.0",
+        "contentHash": "bStGNqIX/MGYtML7K3EzdsE/k5HGVAcg7XgN23TQXGXqxNC9fvYFR94fA0sGM5hAT36R+BBGet6ZDQxXL/IPxg=="
       },
       "runtime.debian.8-x64.runtime.native.System.Security.Cryptography.OpenSsl": {
         "type": "Transitive",
@@ -3611,34 +3625,35 @@
         "type": "Project",
         "dependencies": {
           "Azure.Messaging.EventGrid": "4.7.0",
-          "CommCore": "1.47.1",
-          "Core": "1.47.1",
+          "CommCore": "1.48.1",
+          "Core": "1.48.1",
           "Microsoft.AspNetCore.Mvc.NewtonsoftJson": "5.0.9",
-          "SharedWeb": "1.47.1",
+          "SharedWeb": "1.48.1",
           "Swashbuckle.AspNetCore": "6.2.3"
         }
       },
       "billing": {
         "type": "Project",
         "dependencies": {
-          "Core": "1.47.1",
+          "Core": "1.48.1",
           "Microsoft.VisualStudio.Web.CodeGeneration.Design": "5.0.2",
-          "SharedWeb": "1.47.1"
+          "SharedWeb": "1.48.1"
         }
       },
       "commcore": {
         "type": "Project",
         "dependencies": {
-          "Core": "1.47.1"
+          "Core": "1.48.1"
         }
       },
       "common": {
         "type": "Project",
         "dependencies": {
-          "Api": "1.47.1",
+          "Api": "1.48.1",
           "AutoFixture.AutoNSubstitute": "4.14.0",
           "AutoFixture.Xunit2": "4.14.0",
-          "Core": "1.47.1",
+          "Core": "1.48.1",
+          "Kralizek.AutoFixture.Extensions.MockHttp": "1.2.0",
           "Microsoft.NET.Test.Sdk": "16.6.1",
           "NSubstitute": "4.2.2",
           "xunit": "2.4.1"
@@ -3686,7 +3701,7 @@
       "infrastructure.dapper": {
         "type": "Project",
         "dependencies": {
-          "Core": "1.47.1",
+          "Core": "1.48.1",
           "Dapper": "2.0.123",
           "System.Data.SqlClient": "4.8.3"
         }
@@ -3695,7 +3710,7 @@
         "type": "Project",
         "dependencies": {
           "AutoMapper.Extensions.Microsoft.DependencyInjection": "8.0.1",
-          "Core": "1.47.1",
+          "Core": "1.48.1",
           "Microsoft.EntityFrameworkCore.Relational": "5.0.12",
           "Npgsql.EntityFrameworkCore.PostgreSQL": "5.0.2",
           "Pomelo.EntityFrameworkCore.MySql": "5.0.3",
@@ -3705,9 +3720,9 @@
       "sharedweb": {
         "type": "Project",
         "dependencies": {
-          "Core": "1.47.1",
-          "Infrastructure.Dapper": "1.47.1",
-          "Infrastructure.EntityFramework": "1.47.1"
+          "Core": "1.48.1",
+          "Infrastructure.Dapper": "1.48.1",
+          "Infrastructure.EntityFramework": "1.48.1"
         }
       }
     }

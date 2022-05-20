@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using AutoFixture;
@@ -37,6 +38,43 @@ namespace Bit.Core.Test.Utilities
             Assert.NotEqual(Guid.Empty, comb);
             // TODO: Add more asserts to make sure important aspects of
             // the comb are working properly
+        }
+
+        public static IEnumerable<object[]> GenerateCombCases = new[]
+        {
+            new object[]
+            {
+                Guid.Parse("a58db474-43d8-42f1-b4ee-0c17647cd0c0"), // Input Guid
+                new DateTime(2022, 3, 12, 12, 12, 0, DateTimeKind.Utc), // Input Time
+                Guid.Parse("a58db474-43d8-42f1-b4ee-ae5600c90cc1"), // Expected Comb
+            },
+            new object[]
+            {
+                Guid.Parse("f776e6ee-511f-4352-bb28-88513002bdeb"),
+                new DateTime(2021, 5, 10, 10, 52, 0, DateTimeKind.Utc),
+                Guid.Parse("f776e6ee-511f-4352-bb28-ad2400b313c1"),
+            },
+            new object[]
+            {
+                Guid.Parse("51a25fc7-3cad-497d-8e2f-8d77011648a1"),
+                new DateTime(1999, 2, 26, 16, 53, 13, DateTimeKind.Utc),
+                Guid.Parse("51a25fc7-3cad-497d-8e2f-8d77011649cd"),
+            },
+            new object[]
+            {
+                Guid.Parse("bfb8f353-3b32-4a9e-bef6-24fe0b54bfb0"),
+                new DateTime(2024, 10, 20, 1, 32, 16, DateTimeKind.Utc),
+                Guid.Parse("bfb8f353-3b32-4a9e-bef6-b20f00195780"),
+            }
+        };
+
+        [Theory]
+        [MemberData(nameof(GenerateCombCases))]
+        public void GenerateComb_WithInputs_Success(Guid inputGuid, DateTime inputTime, Guid expectedComb)
+        {
+            var comb = CoreHelpers.GenerateComb(inputGuid, inputTime);
+
+            Assert.Equal(expectedComb, comb);
         }
 
         [Theory]

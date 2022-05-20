@@ -58,7 +58,6 @@ namespace Bit.Core.Services
         Task ImportAsync(Guid organizationId, Guid? importingUserId, IEnumerable<ImportedGroup> groups,
             IEnumerable<ImportedOrganizationUser> newUsers, IEnumerable<string> removeUserExternalIds,
             bool overwriteExisting);
-        Task RotateApiKeyAsync(Organization organization);
         Task DeleteSsoUserAsync(Guid userId, Guid? organizationId);
         Task<Organization> UpdateOrganizationKeysAsync(Guid orgId, string publicKey, string privateKey);
         Task<bool> HasConfirmedOwnersExceptAsync(Guid organizationId, IEnumerable<Guid> organizationUsersId, bool includeProvider = true);

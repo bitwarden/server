@@ -21,7 +21,6 @@ namespace Bit.Core.Test.Repositories.EntityFramework
             OrganizationSponsorshipCompare equalityComparer,
             List<EfRepo.OrganizationSponsorshipRepository> suts)
         {
-            organizationSponsorship.InstallationId = null;
             organizationSponsorship.SponsoredOrganizationId = null;
 
             var savedOrganizationSponsorships = new List<OrganizationSponsorship>();
@@ -56,9 +55,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
             SqlRepo.OrganizationSponsorshipRepository sqlOrganizationSponsorshipRepo,
             OrganizationSponsorshipCompare equalityComparer, List<EfRepo.OrganizationSponsorshipRepository> suts)
         {
-            postOrganizationSponsorship.InstallationId = null;
             postOrganizationSponsorship.SponsoredOrganizationId = null;
-            replaceOrganizationSponsorship.InstallationId = null;
             replaceOrganizationSponsorship.SponsoredOrganizationId = null;
 
             var savedOrganizationSponsorships = new List<OrganizationSponsorship>();
@@ -100,7 +97,6 @@ namespace Bit.Core.Test.Repositories.EntityFramework
             SqlRepo.OrganizationSponsorshipRepository sqlOrganizationSponsorshipRepo,
             List<EfRepo.OrganizationSponsorshipRepository> suts)
         {
-            organizationSponsorship.InstallationId = null;
             organizationSponsorship.SponsoredOrganizationId = null;
 
             foreach (var (sut, orgRepo) in suts.Zip(efOrgRepos))

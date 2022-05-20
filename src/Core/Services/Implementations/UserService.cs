@@ -48,9 +48,10 @@ namespace Bit.Core.Services
         private readonly IReferenceEventService _referenceEventService;
         private readonly IFido2 _fido2;
         private readonly ICurrentContext _currentContext;
-        private readonly GlobalSettings _globalSettings;
+        private readonly IGlobalSettings _globalSettings;
         private readonly IOrganizationService _organizationService;
         private readonly IProviderUserRepository _providerUserRepository;
+        private readonly IDeviceRepository _deviceRepository;
 
         public UserService(
             IUserRepository userRepository,
@@ -77,9 +78,10 @@ namespace Bit.Core.Services
             IReferenceEventService referenceEventService,
             IFido2 fido2,
             ICurrentContext currentContext,
-            GlobalSettings globalSettings,
+            IGlobalSettings globalSettings,
             IOrganizationService organizationService,
-            IProviderUserRepository providerUserRepository)
+            IProviderUserRepository providerUserRepository,
+            IDeviceRepository deviceRepository)
             : base(
                   store,
                   optionsAccessor,
@@ -114,6 +116,7 @@ namespace Bit.Core.Services
             _globalSettings = globalSettings;
             _organizationService = organizationService;
             _providerUserRepository = providerUserRepository;
+            _deviceRepository = deviceRepository;
         }
 
         public Guid? GetProperUserId(ClaimsPrincipal principal)
@@ -871,11 +874,14 @@ namespace Bit.Core.Services
             return IdentityResult.Failed(_identityErrorDescriber.PasswordMismatch());
         }
 
-        public async Task UpdateTwoFactorProviderAsync(User user, TwoFactorProviderType type, bool setEnabled = true)
+        public async Task UpdateTwoFactorProviderAsync(User user, TwoFactorProviderType type, bool setEnabled = true, bool logEvent = true)
         {
             SetTwoFactorProvider(user, type, setEnabled);
             await SaveUserAsync(user);
-            await _eventService.LogUserEventAsync(user.Id, EventType.User_Updated2fa);
+            if (logEvent)
+            {
+                await _eventService.LogUserEventAsync(user.Id, EventType.User_Updated2fa);
+            }
         }
 
         public async Task DisableTwoFactorProviderAsync(User user, TwoFactorProviderType type,
@@ -1407,6 +1413,30 @@ namespace Bit.Core.Services
             return user.UsesKeyConnector
                 ? await VerifyOTPAsync(user, secret)
                 : await CheckPasswordAsync(user, secret);
+        }
+
+        public async Task<bool> Needs2FABecauseNewDeviceAsync(User user, string deviceIdentifier, string grantType)
+        {
+            return _globalSettings.TwoFactorAuth.EmailOnNewDeviceLogin
+                   && user.EmailVerified
+                   && grantType != "authorization_code"
+                   && await IsNewDeviceAndNotTheFirstOneAsync(user, deviceIdentifier);
+        }
+
+        private async Task<bool> IsNewDeviceAndNotTheFirstOneAsync(User user, string deviceIdentifier)
+        {
+            if (user == null)
+            {
+                return default;
+            }
+
+            var devices = await _deviceRepository.GetManyByUserIdAsync(user.Id);
+            if (!devices.Any())
+            {
+                return false;
+            }
+
+            return !devices.Any(d => d.Identifier == deviceIdentifier);
         }
     }
 }

@@ -22,6 +22,7 @@ namespace Bit.Core.Entities
             PolicyId = e.PolicyId;
             GroupId = e.GroupId;
             OrganizationUserId = e.OrganizationUserId;
+            InstallationId = e.InstallationId;
             ProviderUserId = e.ProviderUserId;
             ProviderOrganizationId = e.ProviderOrganizationId;
             DeviceType = e.DeviceType;
@@ -34,6 +35,7 @@ namespace Bit.Core.Entities
         public EventType Type { get; set; }
         public Guid? UserId { get; set; }
         public Guid? OrganizationId { get; set; }
+        public Guid? InstallationId { get; set; }
         public Guid? ProviderId { get; set; }
         public Guid? CipherId { get; set; }
         public Guid? CollectionId { get; set; }

@@ -60,8 +60,6 @@ namespace Bit.Core.Entities
         public bool Enabled { get; set; } = true;
         [MaxLength(100)]
         public string LicenseKey { get; set; }
-        [MaxLength(30)]
-        public string ApiKey { get; set; }
         public string PublicKey { get; set; }
         public string PrivateKey { get; set; }
         public string TwoFactorProviders { get; set; }

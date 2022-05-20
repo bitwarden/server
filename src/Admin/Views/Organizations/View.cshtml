@@ -1,4 +1,5 @@
-﻿@model OrganizationViewModel
+﻿@inject Bit.Core.Settings.GlobalSettings GlobalSettings
+@model OrganizationViewModel
 @{
     ViewData["Title"] = "Organization: " + Model.Organization.Name;
 }
@@ -7,6 +8,10 @@
 
 <h2>Information</h2>
 @await Html.PartialAsync("_ViewInformation", Model)
+@if(GlobalSettings.SelfHosted)
+{
+    @await Html.PartialAsync("Connections", Model)
+}
 <form asp-action="Delete" asp-route-id="@Model.Organization.Id"
       onsubmit="return confirm('Are you sure you want to delete this organization?')">
     <button class="btn btn-danger" type="submit">Delete</button>
