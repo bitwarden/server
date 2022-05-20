@@ -40,7 +40,7 @@ namespace Bit.IntegrationTestCommon.Factories
                 { "password", password },
             }), context => context.Request.Headers.Add("Auth-Email", CoreHelpers.Base64UrlEncodeString(username)));
 
-            using var body = await AssertHelper.AssertResponseTypeIsAsync<JsonDocument>(context);
+            using var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
             var root = body.RootElement;
 
             return (root.GetProperty("access_token").GetString(), root.GetProperty("refresh_token").GetString());

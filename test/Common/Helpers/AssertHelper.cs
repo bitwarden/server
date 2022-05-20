@@ -192,7 +192,7 @@ namespace Bit.Test.Common.Helpers
             }
         }
 
-        public async static Task<T> AssertResponseTypeIsAsync<T>(HttpContext context)
+        public async static Task<T> AssertResponseTypeIs<T>(HttpContext context)
         {
             return await JsonSerializer.DeserializeAsync<T>(context.Response.Body);
         }

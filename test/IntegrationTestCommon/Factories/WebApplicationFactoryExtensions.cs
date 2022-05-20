@@ -12,7 +12,7 @@ namespace Bit.IntegrationTestCommon.Factories
 {
     public static class WebApplicationFactoryExtensions
     {
-        public static async Task<HttpContext> SendAsync(this TestServer server,
+        private static async Task<HttpContext> SendAsync(this TestServer server,
             HttpMethod method,
             string requestUri,
             HttpContent content = null,

@@ -36,7 +36,7 @@ namespace Bit.Identity.IntegrationTest.Endpoints
         {
             var context = await _factory.Server.GetAsync("/.well-known/openid-configuration");
 
-            using var body = await AssertHelper.AssertResponseTypeIsAsync<JsonDocument>(context);
+            using var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
             var endpointRoot = body.RootElement;
 
             // WARNING: Edits to this file should NOT just be made to "get the test to work" they should be made when intentional 
@@ -110,7 +110,7 @@ namespace Bit.Identity.IntegrationTest.Endpoints
 
             Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
 
-            var body = await AssertHelper.AssertResponseTypeIsAsync<JsonDocument>(context);
+            var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
             var root = body.RootElement;
 
             var error = AssertHelper.AssertJsonProperty(root, "error", JsonValueKind.String).GetString();
@@ -144,7 +144,7 @@ namespace Bit.Identity.IntegrationTest.Endpoints
 
             Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
 
-            var body = await AssertHelper.AssertResponseTypeIsAsync<JsonDocument>(context);
+            var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
             var root = body.RootElement;
 
             var error = AssertHelper.AssertJsonProperty(root, "error", JsonValueKind.String).GetString();
@@ -178,7 +178,7 @@ namespace Bit.Identity.IntegrationTest.Endpoints
 
             Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
 
-            var body = await AssertHelper.AssertResponseTypeIsAsync<JsonDocument>(context);
+            var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
             var root = body.RootElement;
 
             var error = AssertHelper.AssertJsonProperty(root, "error", JsonValueKind.String).GetString();
@@ -278,7 +278,7 @@ namespace Bit.Identity.IntegrationTest.Endpoints
 
             Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
 
-            var errorBody = await AssertHelper.AssertResponseTypeIsAsync<JsonDocument>(context);
+            var errorBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
             var error = AssertHelper.AssertJsonProperty(errorBody.RootElement, "error", JsonValueKind.String).GetString();
             Assert.Equal("invalid_client", error);
         }
@@ -303,7 +303,7 @@ namespace Bit.Identity.IntegrationTest.Endpoints
 
             Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
 
-            var errorBody = await AssertHelper.AssertResponseTypeIsAsync<JsonDocument>(context);
+            var errorBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
             var error = AssertHelper.AssertJsonProperty(errorBody.RootElement, "error", JsonValueKind.String).GetString();
             Assert.Equal("invalid_client", error);
         }
@@ -321,12 +321,11 @@ namespace Bit.Identity.IntegrationTest.Endpoints
 
             Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
 
-            var errorBody = await AssertHelper.AssertResponseTypeIsAsync<JsonDocument>(context);
+            var errorBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
             var error = AssertHelper.AssertJsonProperty(errorBody.RootElement, "error", JsonValueKind.String).GetString();
             Assert.Equal("invalid_client", error);
         }
 
-        // This is test is commented out await confirmation from QA is our one service using this is broken or not.
         [Theory, BitAutoData]
         public async Task TokenEndpoint_GrantTypeClientCredentials_AsInstallation_InstallationExists_Succeeds(Installation installation)
         {
@@ -358,7 +357,7 @@ namespace Bit.Identity.IntegrationTest.Endpoints
 
             Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
 
-            var errorBody = await AssertHelper.AssertResponseTypeIsAsync<JsonDocument>(context);
+            var errorBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
             var error = AssertHelper.AssertJsonProperty(errorBody.RootElement, "error", JsonValueKind.String).GetString();
             Assert.Equal("invalid_client", error);
         }
@@ -376,7 +375,7 @@ namespace Bit.Identity.IntegrationTest.Endpoints
 
             Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
 
-            var errorBody = await AssertHelper.AssertResponseTypeIsAsync<JsonDocument>(context);
+            var errorBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
             var error = AssertHelper.AssertJsonProperty(errorBody.RootElement, "error", JsonValueKind.String).GetString();
             Assert.Equal("invalid_client", error);
         }
@@ -395,7 +394,7 @@ namespace Bit.Identity.IntegrationTest.Endpoints
 
             Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
 
-            var errorBody = await AssertHelper.AssertResponseTypeIsAsync<JsonDocument>(context);
+            var errorBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
             var error = AssertHelper.AssertJsonProperty(errorBody.RootElement, "error", JsonValueKind.String).GetString();
             Assert.Equal("invalid_client", error);
         }
@@ -407,7 +406,7 @@ namespace Bit.Identity.IntegrationTest.Endpoints
 
         private static async Task<JsonDocument> AssertDefaultTokenBodyAsync(HttpContext httpContext, string expectedScope = "api offline_access", int expectedExpiresIn = SecondsInHour * 1)
         {
-            var body = await AssertHelper.AssertResponseTypeIsAsync<JsonDocument>(httpContext);
+            var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(httpContext);
             var root = body.RootElement;
 
             Assert.Equal(JsonValueKind.Object, root.ValueKind);

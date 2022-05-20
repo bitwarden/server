@@ -59,6 +59,7 @@ namespace Bit.IntegrationTestCommon.Factories
 
                 // QUESTION: The normal licensing service should run fine on developer machines but not in CI
                 // should we have a fork here to leave the normal service for developers?
+                // TODO: Eventually add the license file to CI
                 var licensingService = services.First(sd => sd.ServiceType == typeof(ILicensingService));
                 services.Remove(licensingService);
                 services.AddSingleton<ILicensingService, NoopLicensingService>();
