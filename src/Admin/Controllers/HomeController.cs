@@ -46,7 +46,7 @@ namespace Bit.Admin.Controllers
             });
         }
 
- 
+
         public async Task<IActionResult> GetLatestVersion(ProjectType project, CancellationToken cancellationToken)
         {
             var requestUri = $"https://raw.githubusercontent.com/bitwarden/self-host/master/version.json";
