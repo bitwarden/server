@@ -1,12 +1,9 @@
 ﻿using System.Diagnostics;
-using System.IO;
 using System.Net.Http;
-using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Bit.Admin.Models;
-using Bit.Core.Enums;
 using Bit.Core.Settings;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -112,5 +109,11 @@ namespace Bit.Admin.Controllers
             [JsonProperty("keyConnectorVersion")]
             public string KeyConnectorVersion { get; set; }
         }
+    }
+
+    public enum ProjectType
+    {
+        Core,
+        Web,
     }
 }
