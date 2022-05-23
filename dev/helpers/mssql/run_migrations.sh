@@ -36,11 +36,16 @@ END;
 IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = 'migrations_$DATABASE')
 BEGIN
   CREATE DATABASE migrations_$DATABASE;
-  CREATE TABLE [migrations_$DATABASE].[dbo].[migrations] (
+END;
+
+GO
+IF OBJECT_ID('[migrations_$DATABASE].[dbo].[migrations]') IS NULL
+BEGIN
+    CREATE TABLE [migrations_$DATABASE].[dbo].[migrations] (
       [Id]                   INT IDENTITY(1,1) PRIMARY KEY,
       [Filename]             NVARCHAR(MAX) NOT NULL,
       [CreationDate]         DATETIME2 (7)    NULL,
-  );
+    );
 END;"
 
 /opt/mssql-tools/bin/sqlcmd -S $SERVER -d master -U $USER -P $PASSWD -I -Q "$QUERY"
