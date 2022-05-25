@@ -96,7 +96,7 @@ namespace Bit.Core.Models.Business
         public override List<SubscriptionItemOptions> UpgradeItemsOptions(Subscription subscription)
         {
             var item = SubscriptionItem(subscription, PlanIds.Single());
-            _prevStorage = item.Quantity;
+            _prevStorage = item?.Quantity ?? 0;
             return new()
             {
                 new SubscriptionItemOptions
