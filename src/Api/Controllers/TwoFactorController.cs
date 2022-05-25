@@ -394,7 +394,7 @@ namespace Bit.Api.Controllers
                 return new DeviceVerificationResponseModel(false, false);
             }
 
-            return new DeviceVerificationResponseModel(_userService.NeedsDeviceVerificationSettings(user), user.GetUnknownDeviceVerificationEnabled());
+            return new DeviceVerificationResponseModel(_userService.CanEditDeviceVerificationSettings(user), user.GetUnknownDeviceVerificationEnabled());
         }
 
         [HttpPut("device-verification-settings")]
@@ -405,7 +405,7 @@ namespace Bit.Api.Controllers
             {
                 throw new UnauthorizedAccessException();
             }
-            if (!_userService.NeedsDeviceVerificationSettings(user)
+            if (!_userService.CanEditDeviceVerificationSettings(user)
                 ||
                 User.Claims.HasSSOIdP())
             {
