@@ -604,7 +604,7 @@ namespace Bit.Core.Services
             var message = CreateDefaultMessage($"Accepted Emergency Access", email);
             var model = new EmergencyAccessAcceptedViewModel
             {
-                GranteeEmail = CoreHelpers.SanitizeForEmail(granteeEmail),
+                GranteeEmail = granteeEmail,
                 WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
                 SiteName = _globalSettings.SiteName
             };
