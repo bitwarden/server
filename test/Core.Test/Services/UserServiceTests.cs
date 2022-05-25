@@ -349,7 +349,8 @@ namespace Bit.Core.Test.Services
         {
             user.Id = Guid.NewGuid();
             user.EmailVerified = true;
-            user.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider> {
+            user.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
+            {
                 [TwoFactorProviderType.Email] = new TwoFactorProvider
                 {
                     MetaData = new Dictionary<string, object> { ["Email"] = "asdfasf" },
