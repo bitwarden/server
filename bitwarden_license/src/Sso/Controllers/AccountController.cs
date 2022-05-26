@@ -186,7 +186,7 @@ namespace Bit.Sso.Controllers
 
             if (!tokenable.TokenIsValid(organization))
             {
-                return Unauthorized();
+                return Unauthorized("The SSO token associated with your request is expired. A valid SSO token is required to continue.");
             }
 
             return RedirectToAction(nameof(ExternalChallenge), new
