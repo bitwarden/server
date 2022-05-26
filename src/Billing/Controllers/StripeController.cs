@@ -4,6 +4,7 @@ using System.Data.SqlClient;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Bit.Billing.Constants;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
@@ -19,7 +20,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Stripe;
 using TaxRate = Bit.Core.Entities.TaxRate;
-using Bit.Billing.Enums;
 
 namespace Bit.Billing.Controllers
 {
@@ -437,11 +437,7 @@ namespace Bit.Billing.Controllers
             }
             else if (parsedEvent.Type.Equals(HandledStripeWebhook.PaymentFailed))
             {
-                var invoice = await GetInvoiceAsync(parsedEvent, true);
-                if (!invoice.Paid && invoice.AttemptCount > 1 && UnpaidAutoChargeInvoiceForSubscriptionCycle(invoice))
-                {
-                    await AttemptToPayInvoiceAsync(invoice);
-                }
+                await HandlePaymentFailed(await GetInvoiceAsync(parsedEvent, true));
             }
             else if (parsedEvent.Type.Equals(HandledStripeWebhook.InvoiceCreated))
             {
@@ -805,5 +801,42 @@ namespace Bit.Billing.Controllers
 
         private static bool IsSponsoredSubscription(Subscription subscription) =>
             StaticStore.SponsoredPlans.Any(p => p.StripePlanId == subscription.Id);
+
+        private async Task HandlePaymentFailed(Invoice invoice)
+        {
+            if (!invoice.Paid && invoice.AttemptCount > 1 && UnpaidAutoChargeInvoiceForSubscriptionCycle(invoice))
+            {
+                // attempt count 4 = 11 days after initial failure
+                if (invoice.AttemptCount > 3)
+                {
+                    await CancelSubscription(invoice.SubscriptionId);
+                    await VoidOpenInvoices(invoice.SubscriptionId);
+                }
+                else
+                {
+                    await AttemptToPayInvoiceAsync(invoice);
+                }
+            }
+        }
+
+        private async Task CancelSubscription(string subscriptionId)
+        {
+            await new SubscriptionService().CancelAsync(subscriptionId, new SubscriptionCancelOptions());
+        }
+
+        private async Task VoidOpenInvoices(string subscriptionId)
+        {
+            var invoiceService = new InvoiceService();
+            var options = new InvoiceListOptions
+            {
+                Status = "open",
+                Subscription = subscriptionId
+            };
+            var invoices = invoiceService.List(options);
+            foreach (var invoice in invoices)
+            {
+                await invoiceService.VoidInvoiceAsync(invoice.Id);
+            }
+        }
     }
 }
