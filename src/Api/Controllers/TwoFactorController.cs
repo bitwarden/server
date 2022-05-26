@@ -389,7 +389,7 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
-            if (User.Claims.HasSSOIdP())
+            if (User.Claims.HasSsoIdP())
             {
                 return new DeviceVerificationResponseModel(false, false);
             }
@@ -406,8 +406,7 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
             if (!_userService.CanEditDeviceVerificationSettings(user)
-                ||
-                User.Claims.HasSSOIdP())
+                || User.Claims.HasSsoIdP())
             {
                 throw new InvalidOperationException("Can't update device verification settings");
             }

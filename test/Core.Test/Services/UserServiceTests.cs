@@ -161,7 +161,6 @@ namespace Bit.Core.Test.Services
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
         public async Task Needs2FABecauseNewDeviceAsync_ReturnsTrue(SutProvider<UserService> sutProvider, User user)
         {
-            user.Id = Guid.NewGuid();
             user.EmailVerified = true;
             user.TwoFactorProviders = null;
             user.UnknownDeviceVerificationEnabled = true;
@@ -184,7 +183,6 @@ namespace Bit.Core.Test.Services
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
         public async Task Needs2FABecauseNewDeviceAsync_ReturnsFalse_When_GranType_Is_AuthorizationCode(SutProvider<UserService> sutProvider, User user)
         {
-            user.Id = Guid.NewGuid();
             user.EmailVerified = true;
             user.TwoFactorProviders = null;
             const string deviceIdToCheck = "7b01b586-b210-499f-8d52-0c3fdaa646fc";
@@ -203,7 +201,6 @@ namespace Bit.Core.Test.Services
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
         public async Task Needs2FABecauseNewDeviceAsync_ReturnsFalse_When_Email_Is_Not_Verified(SutProvider<UserService> sutProvider, User user)
         {
-            user.Id = Guid.NewGuid();
             user.EmailVerified = false;
             user.TwoFactorProviders = null;
             const string deviceIdToCheck = "7b01b586-b210-499f-8d52-0c3fdaa646fc";
@@ -222,7 +219,6 @@ namespace Bit.Core.Test.Services
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
         public async Task Needs2FABecauseNewDeviceAsync_ReturnsFalse_When_Is_The_First_Device(SutProvider<UserService> sutProvider, User user)
         {
-            user.Id = Guid.NewGuid();
             user.EmailVerified = true;
             user.TwoFactorProviders = null;
             const string deviceIdToCheck = "7b01b586-b210-499f-8d52-0c3fdaa646fc";
@@ -237,7 +233,6 @@ namespace Bit.Core.Test.Services
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
         public async Task Needs2FABecauseNewDeviceAsync_ReturnsFalse_When_DeviceId_Is_Already_In_Repo(SutProvider<UserService> sutProvider, User user)
         {
-            user.Id = Guid.NewGuid();
             user.EmailVerified = true;
             user.TwoFactorProviders = null;
             const string deviceIdToCheck = "7b01b586-b210-499f-8d52-0c3fdaa646fc";
@@ -255,7 +250,6 @@ namespace Bit.Core.Test.Services
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
         public async Task Needs2FABecauseNewDeviceAsync_ReturnsFalse_When_GlobalSettings_2FA_EmailOnNewDeviceLogin_Is_Disabled(SutProvider<UserService> sutProvider, User user)
         {
-            user.Id = Guid.NewGuid();
             user.EmailVerified = true;
             user.TwoFactorProviders = null;
             const string deviceIdToCheck = "7b01b586-b210-499f-8d52-0c3fdaa646fc";
@@ -276,7 +270,6 @@ namespace Bit.Core.Test.Services
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
         public async Task Needs2FABecauseNewDeviceAsync_ReturnsFalse_When_UnknownDeviceVerification_Is_Disabled(SutProvider<UserService> sutProvider, User user)
         {
-            user.Id = Guid.NewGuid();
             user.EmailVerified = true;
             user.TwoFactorProviders = null;
             user.UnknownDeviceVerificationEnabled = false;
@@ -298,7 +291,6 @@ namespace Bit.Core.Test.Services
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
         public void CanEditDeviceVerificationSettings_ReturnsTrue(SutProvider<UserService> sutProvider, User user)
         {
-            user.Id = Guid.NewGuid();
             user.EmailVerified = true;
             user.TwoFactorProviders = null;
 
@@ -310,7 +302,6 @@ namespace Bit.Core.Test.Services
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
         public void CanEditDeviceVerificationSettings_ReturnsFalse_When_GlobalSettings_2FA_EmailOnNewDeviceLogin_Is_Disabled(SutProvider<UserService> sutProvider, User user)
         {
-            user.Id = Guid.NewGuid();
             user.EmailVerified = true;
             user.TwoFactorProviders = null;
 
@@ -322,7 +313,6 @@ namespace Bit.Core.Test.Services
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
         public void CanEditDeviceVerificationSettings_ReturnsFalse_When_Email_Is_Not_Verified(SutProvider<UserService> sutProvider, User user)
         {
-            user.Id = Guid.NewGuid();
             user.EmailVerified = false;
             user.TwoFactorProviders = null;
 
@@ -334,7 +324,6 @@ namespace Bit.Core.Test.Services
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
         public void CanEditDeviceVerificationSettings_ReturnsFalse_When_User_Uses_Key_Connector(SutProvider<UserService> sutProvider, User user)
         {
-            user.Id = Guid.NewGuid();
             user.EmailVerified = true;
             user.TwoFactorProviders = null;
             user.UsesKeyConnector = true;
@@ -347,7 +336,6 @@ namespace Bit.Core.Test.Services
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
         public void CanEditDeviceVerificationSettings_ReturnsFalse_When_User_Has_A_2FA_Already_Set_Up(SutProvider<UserService> sutProvider, User user)
         {
-            user.Id = Guid.NewGuid();
             user.EmailVerified = true;
             user.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
             {
