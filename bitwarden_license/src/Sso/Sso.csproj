@@ -4,8 +4,6 @@
     <UserSecretsId>bitwarden-Sso</UserSecretsId>
   </PropertyGroup>
 
-  <PropertyGroup Condition=" '$(RunConfiguration)' == 'Sso' " />
-  <PropertyGroup Condition=" '$(RunConfiguration)' == 'Sso-SelfHost' " />
   <ItemGroup>
     <PackageReference Include="Sustainsys.Saml2.AspNetCore2" Version="2.8.0" />
   </ItemGroup>
@@ -14,4 +12,5 @@
     <ProjectReference Include="..\..\..\src\Core\Core.csproj" />
     <ProjectReference Include="..\..\..\src\SharedWeb\SharedWeb.csproj" />
   </ItemGroup>
+
 </Project>
