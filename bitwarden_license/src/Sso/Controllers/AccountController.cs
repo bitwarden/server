@@ -148,12 +148,7 @@ namespace Bit.Sso.Controllers
                 var tokenable = new SsoTokenable(organization, _globalSettings.Constants.SsoTokenLifetime);
                 var token = _dataProtector.Protect(tokenable);
 
-                var json = Json(new
-                {
-                    token
-                });
-
-                return json;
+                return new SsoPreValidateResponseModel(token);
             }
             catch (Exception ex)
             {
