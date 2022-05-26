@@ -8,15 +8,10 @@
   <PropertyGroup Condition=" '$(RunConfiguration)' == 'Sso-SelfHost' " />
   <ItemGroup>
     <PackageReference Include="Sustainsys.Saml2.AspNetCore2" Version="2.8.0" />
-    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="6.17.0" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\src\Core\Core.csproj" />
     <ProjectReference Include="..\..\..\src\SharedWeb\SharedWeb.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Remove="System.IdentityModel.Tokens.Jwt" />
   </ItemGroup>
 </Project>

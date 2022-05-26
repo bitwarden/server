@@ -54,14 +54,10 @@
     <PackageReference Include="Otp.NET" Version="1.2.2" />
     <PackageReference Include="YubicoDotNetClient" Version="1.2.0" />
     <PackageReference Include="Microsoft.Extensions.Caching.Redis" Version="2.2.0" />
-    <PackageReference Include="System.Text.Encoding" Version="4.3.0" />
   </ItemGroup>
 
   <ItemGroup>
     <Folder Include="Resources\" />
     <Folder Include="Properties\" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Remove="System.Text.Encoding" />
   </ItemGroup>
 </Project>
