@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using AutoFixture.Xunit2;
 using Bit.Core.Entities;
 using Bit.Core.Models.Business.Tokenables;
