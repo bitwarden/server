@@ -89,6 +89,7 @@ namespace Bit.Core.Services
             var score = hcaptchaResponse.Score.GetValueOrDefault();
             response.MaybeBot = score >= _globalSettings.Captcha.MaybeBotScoreThreshold;
             response.IsBot = score >= _globalSettings.Captcha.IsBotScoreThreshold;
+            response.Score = score;
             return response;
         }
 
