@@ -1,15 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Dynamic;
 using System.Linq;
 using System.Net.Http;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using Bit.Core.Entities;
 using Bit.Core.Models.Api;
-using Bit.Core.Models.Data;
+using Bit.Core.Models.Business.Tokenables;
 using Bit.Core.Repositories;
-using Bit.Core.Tokens;
 using Bit.Identity.Models;
 using IdentityModel;
 using IdentityServer4;
@@ -19,8 +17,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
 
 namespace Bit.Identity.Controllers
 {
@@ -64,9 +60,10 @@ namespace Bit.Identity.Controllers
                 var culture = requestCultureFeature.RequestCulture.Culture.Name;
                 var requestPath = $"/Account/PreValidate?domainHint={domainHint}&culture={culture}";
                 var httpClient = _clientFactory.CreateClient("InternalSso");
+
+                // Forward the internal SSO result
                 using var responseMessage = await httpClient.GetAsync(requestPath);
                 var responseJson = await responseMessage.Content.ReadAsStringAsync();
-
                 Response.StatusCode = (int)responseMessage.StatusCode;
                 return Content(responseJson, "application/json");
             }
@@ -90,7 +87,7 @@ namespace Bit.Identity.Controllers
 
             var domainHint = context.Parameters.AllKeys.Contains("domain_hint") ?
                 context.Parameters["domain_hint"] : null;
-            var ssoToken = context.Parameters[SsoToken.TokenName];
+            var ssoToken = context.Parameters[SsoTokenable.TokenIdentifier];
 
             if (string.IsNullOrWhiteSpace(domainHint))
             {

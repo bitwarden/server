@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using Bit.Core;
-using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models;
@@ -29,8 +27,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Primitives;
-using Microsoft.IdentityModel.Tokens;
 
 namespace Bit.Sso.Controllers
 {
@@ -149,13 +145,7 @@ namespace Bit.Sso.Controllers
                     return InvalidJson(errorKey, translatedException.ResourceNotFound ? ex : null);
                 }
 
-                var ssoToken = new SsoToken()
-                {
-                    DomainHint = domainHint,
-                    OrganizationId = organization.Id,
-                };
-
-                var tokenable = new SsoTokenable(ssoToken);
+                var tokenable = new SsoTokenable(organization, _globalSettings.Constants.SsoTokenLifetime);
                 var token = _dataProtector.Protect(tokenable);
 
                 var json = Json(new
@@ -182,7 +172,7 @@ namespace Bit.Sso.Controllers
                 throw new Exception(_i18nService.T("NoDomainHintProvided"));
             }
 
-            var ssoToken = context.Parameters[SsoToken.TokenName];
+            var ssoToken = context.Parameters[SsoTokenable.TokenIdentifier];
 
             if (string.IsNullOrWhiteSpace(ssoToken))
             {
@@ -199,7 +189,7 @@ namespace Bit.Sso.Controllers
 
             var tokenable = _dataProtector.Unprotect(ssoToken);
 
-            if (!tokenable.TokenIsValid(new SsoToken() { OrganizationId = organization.Id, DomainHint = domainHint }))
+            if (!tokenable.TokenIsValid(organization))
             {
                 return Unauthorized();
             }

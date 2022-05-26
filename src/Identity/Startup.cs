@@ -5,9 +5,8 @@ using System.Threading.Tasks;
 using AspNetCoreRateLimit;
 using Bit.Core;
 using Bit.Core.Context;
-using Bit.Core.Models.Data;
+using Bit.Core.Models.Business.Tokenables;
 using Bit.Core.Settings;
-using Bit.Core.Tokens;
 using Bit.Core.Utilities;
 using Bit.Identity.Utilities;
 using Bit.SharedWeb.Utilities;
@@ -118,10 +117,10 @@ namespace Bit.Identity
                                 context.ProtocolMessage.SessionState = context.Properties.Items["user_identifier"];
                             }
 
-                            if (context.Properties.Parameters.Count > 0 && context.Properties.Parameters.ContainsKey(SsoToken.TokenName))
+                            if (context.Properties.Parameters.Count > 0 && context.Properties.Parameters.ContainsKey(SsoTokenable.TokenIdentifier))
                             {
-                                var token = context.Properties.Parameters[SsoToken.TokenName].ToString();
-                                context.ProtocolMessage.Parameters.Add(SsoToken.TokenName, token);
+                                var token = context.Properties.Parameters[SsoTokenable.TokenIdentifier].ToString();
+                                context.ProtocolMessage.Parameters.Add(SsoTokenable.TokenIdentifier, token);
                             }
                             return Task.FromResult(0);
                         }
