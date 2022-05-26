@@ -82,9 +82,12 @@ namespace Bit.Core.IdentityServer
             CustomValidatorRequestContext validatorContext)
         {
             var isBot = (validatorContext.CaptchaResponse?.IsBot ?? false);
-            _logger.LogInformation(Constants.BypassFiltersEventId,
-                "Login attempt for {0} detected as a captcha bot with score {1}.",
-                request.UserName, validatorContext.CaptchaResponse.Score);
+            if (isBot)
+            {
+                _logger.LogInformation(Constants.BypassFiltersEventId,
+                    "Login attempt for {0} detected as a captcha bot with score {1}.",
+                    request.UserName, validatorContext.CaptchaResponse.Score);
+            }
 
             var twoFactorToken = request.Raw["TwoFactorToken"]?.ToString();
             var twoFactorProvider = request.Raw["TwoFactorProvider"]?.ToString();
