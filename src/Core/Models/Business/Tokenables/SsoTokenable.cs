@@ -8,7 +8,6 @@ namespace Bit.Core.Models.Business.Tokenables
 {
     public class SsoTokenable : ExpiringTokenable
     {
-        public static double TokenLifetimeInSeconds { get; set; } = 5;
         public const string ClearTextPrefix = "BWUserPrefix_";
         public const string DataProtectorPurpose = "SsoTokenDataProtector";
         public const string TokenIdentifier = "ssoToken";
@@ -29,7 +28,7 @@ namespace Bit.Core.Models.Business.Tokenables
 
         public bool TokenIsValid(Organization organization)
         {
-            if (OrganizationId == default || DomainHint == default || organization == null)
+            if (OrganizationId == default || DomainHint == default || organization == null || !Valid)
             {
                 return false;
             }

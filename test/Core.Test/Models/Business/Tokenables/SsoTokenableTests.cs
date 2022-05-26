@@ -72,5 +72,19 @@ namespace Bit.Core.Test.Models.Business.Tokenables
 
             Assert.Equal(expectedDateTime, result.ExpirationDate, TimeSpan.FromMilliseconds(10));
         }
+
+        [Theory, AutoData]
+        public void TokenIsValidFailsWhenExpired(Organization organization)
+        {
+            var expectedDateTime = DateTime.UtcNow.AddHours(-5);
+            var token = new SsoTokenable(organization, default)
+            {
+                ExpirationDate = expectedDateTime
+            };
+
+            var result = token.TokenIsValid(organization);
+
+            Assert.False(result);
+        }
     }
 }
