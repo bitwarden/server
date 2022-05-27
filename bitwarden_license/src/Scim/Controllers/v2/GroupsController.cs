@@ -4,9 +4,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace Bit.Scim.Controllers
+namespace Bit.Scim.Controllers.v2
 {
-    [Route("groups")]
+    [Route("v2/{organizationId}/groups")]
     public class GroupsController : Controller
     {
         private readonly ScimSettings _scimSettings;
@@ -21,7 +21,7 @@ namespace Bit.Scim.Controllers
         }
 
         [HttpPost("")]
-        public async Task<IActionResult> PostCreate([FromBody] object model)
+        public async Task<IActionResult> PostCreate(Guid organizationId, [FromBody] object model)
         {
             return new CreatedResult("", new { });
         }
