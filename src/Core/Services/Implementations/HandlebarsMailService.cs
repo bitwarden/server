@@ -139,7 +139,7 @@ namespace Bit.Core.Services
             var message = CreateDefaultMessage("Your Master Password Hint", email);
             var model = new MasterPasswordHintViewModel
             {
-                Hint = CoreHelpers.SanitizeForEmail(hint),
+                Hint = CoreHelpers.SanitizeForEmail(hint, false),
                 WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
                 SiteName = _globalSettings.SiteName
             };
