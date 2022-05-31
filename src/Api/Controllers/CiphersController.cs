@@ -243,11 +243,11 @@ namespace Bit.Api.Controllers
             var collectionCiphersGroupDict = collectionCiphers
                 .Where(c => orgCipherIds.Contains(c.CipherId))
                 .GroupBy(c => c.CipherId).ToDictionary(s => s.Key);
-            
 
-            var responses = orgCiphers.Select(c => new CipherMiniDetailsResponseModel(c, _globalSettings, 
+
+            var responses = orgCiphers.Select(c => new CipherMiniDetailsResponseModel(c, _globalSettings,
                 collectionCiphersGroupDict, c.OrganizationUseTotp));
-            
+
 
             var providerId = await _currentContext.ProviderIdForOrg(orgIdGuid);
             if (providerId.HasValue)
