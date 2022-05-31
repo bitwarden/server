@@ -40,7 +40,7 @@ jobs:
         id: version
         uses: bitwarden/gh-actions@master
         with:
-          release-type: Initial Deploy
+          release-type: ${{ github.event.inputs.release_type }}
           project-type: csharp
           file: Directory.Build.props
 
