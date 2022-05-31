@@ -82,7 +82,7 @@ namespace Bit.Core.Models.Business
 
     public class StorageSubscriptionUpdate : SubscriptionUpdate
     {
-        private Nullable<long> _prevStorage;
+        private long? _prevStorage;
         private readonly string _plan;
         private readonly long? _additionalStorage;
         protected override List<string> PlanIds => new() { _plan };
