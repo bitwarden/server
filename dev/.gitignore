@@ -1,6 +1,7 @@
 .data
 secrets.json
 .env
+authsources.php
 
 identity_server_dev.crt
 identity_server_dev.key
