@@ -38,7 +38,7 @@ jobs:
 
       - name: Check Release Version
         id: version
-        uses: bitwarden/gh-actions@master
+        uses: bitwarden/gh-actions@ea9fab01d76940267b4147cc1c4542431246b9f6
         with:
           release-type: ${{ github.event.inputs.release_type }}
           project-type: csharp
