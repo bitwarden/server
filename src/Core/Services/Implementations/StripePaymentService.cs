@@ -791,25 +791,16 @@ namespace Bit.Core.Services
                 }
                 catch
                 {
-                    try
+                    // Need to revert the subscription
+                    await _stripeAdapter.SubscriptionUpdateAsync(sub.Id, new Stripe.SubscriptionUpdateOptions
                     {
-                        // Need to revert the subscription
-                        await _stripeAdapter.SubscriptionUpdateAsync(sub.Id, new Stripe.SubscriptionUpdateOptions
-                        {
-                            Items = subscriptionUpdate.RevertItemsOptions(sub),
-                            // This proration behavior prevents a false "credit" from
-                            //  being applied forward to the next month's invoice
-                            ProrationBehavior = "none",
-                            CollectionMethod = collectionMethod,
-                            DaysUntilDue = daysUntilDue,
-                        });
-                    }
-                    catch
-                    {
-                        // Revert can fail, so we need to throw no matter what
-                        throw;
-                    }
-
+                        Items = subscriptionUpdate.RevertItemsOptions(sub),
+                        // This proration behavior prevents a false "credit" from
+                        //  being applied forward to the next month's invoice
+                        ProrationBehavior = "none",
+                        CollectionMethod = collectionMethod,
+                        DaysUntilDue = daysUntilDue,
+                    });
                     throw;
                 }
             }
