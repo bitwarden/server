@@ -3,7 +3,7 @@
     public static class HandledStripeWebhook
     {
         public static string SubscriptionDeleted => "customer.subscription.deleted";
-        public static string SubscriptionUpdated => "customer.subscriptions.updated";
+        public static string SubscriptionUpdated => "customer.subscription.updated";
         public static string UpcomingInvoice => "invoice.upcoming";
         public static string ChargeSucceeded => "charge.succeeded";
         public static string ChargeRefunded => "charge.refunded";
