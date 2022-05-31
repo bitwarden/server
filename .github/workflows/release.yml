@@ -38,19 +38,11 @@ jobs:
 
       - name: Check Release Version
         id: version
-        run: |
-          version=$( grep -o "<Version>.*</Version>" Directory.Build.props | grep -Eo "[0-9]{4}\.[0-9]{2}\.[0-9]+")
-          previous_release_tag_version=$(
-            curl -sL https://api.github.com/repos/$GITHUB_REPOSITORY/releases/latest | jq -r ".tag_name"
-          )
-
-          if [ "v$version" == "$previous_release_tag_version" ] && \
-          [ "${{ github.event.inputs.release_type }}" == "Initial Release" ]; then
-            echo "[!] Already released v$version. Please bump version to continue"
-            exit 1
-          fi
-
-          echo "::set-output name=package::$version"
+        uses: bitwarden/gh-actions@master
+        with:
+          release-type: Initial Deploy
+          project-type: csharp
+          file: Directory.Build.props
 
       - name: Get branch name
         id: branch
