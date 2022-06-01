@@ -7,7 +7,7 @@ BEGIN
     UPDATE
         OS
     SET
-        [SponsoringOrganizationUserId] = NULL
+        [ToDelete] = 1
     FROM
         [dbo].[OrganizationSponsorship] OS
     WHERE

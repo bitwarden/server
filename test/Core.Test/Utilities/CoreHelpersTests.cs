@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Text;
 using AutoFixture;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -13,6 +14,9 @@ using Bit.Infrastructure.Dapper;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using IdentityModel;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.WebUtilities;
+using NSubstitute;
 using Xunit;
 
 namespace Bit.Core.Test.Utilities
@@ -387,6 +391,47 @@ namespace Bit.Core.Test.Utilities
             foreach (var claim in claims)
             {
                 Assert.Contains(claim, actual);
+            }
+        }
+
+        public static IEnumerable<object[]> TokenIsValidData()
+        {
+            return new[]
+            {
+                new object[]
+                {
+                    "first_part 476669d4-9642-4af8-9b29-9366efad4ed3 test@email.com {0}", // unprotectedTokenTemplate
+                    "first_part", // firstPart
+                    "test@email.com", // email
+                    Guid.Parse("476669d4-9642-4af8-9b29-9366efad4ed3"), // id
+                    DateTime.UtcNow.AddHours(-1), // creationTime
+                    12, // expirationInHours
+                    true, // isValid
+                }
+            };
+        }
+
+        [Theory]
+        [MemberData(nameof(TokenIsValidData))]
+        public void TokenIsValid_Success(string unprotectedTokenTemplate, string firstPart, string userEmail, Guid id, DateTime creationTime, double expirationInHours, bool isValid)
+        {
+            var protector = new TestDataProtector(string.Format(unprotectedTokenTemplate, CoreHelpers.ToEpocMilliseconds(creationTime)));
+
+            Assert.Equal(isValid, CoreHelpers.TokenIsValid(firstPart, protector, "protected_token", userEmail, id, expirationInHours));
+        }
+
+        private class TestDataProtector : IDataProtector
+        {
+            private readonly string _token;
+            public TestDataProtector(string token)
+            {
+                _token = token;
+            }
+            public IDataProtector CreateProtector(string purpose) => throw new NotImplementedException();
+            public byte[] Protect(byte[] plaintext) => throw new NotImplementedException();
+            public byte[] Unprotect(byte[] protectedData)
+            {
+                return Encoding.UTF8.GetBytes(_token);
             }
         }
 

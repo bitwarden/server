@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text.Json;
+using Bit.Api.Models.Request.Accounts;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
@@ -92,7 +93,7 @@ namespace Bit.Api.Models.Request.Organizations
         public IEnumerable<string> GroupIds { get; set; }
     }
 
-    public class OrganizationUserResetPasswordEnrollmentRequestModel
+    public class OrganizationUserResetPasswordEnrollmentRequestModel : SecretVerificationRequestModel
     {
         public string ResetPasswordKey { get; set; }
     }
