@@ -67,7 +67,7 @@ namespace Bit.Core.Settings
         public virtual AmazonSettings Amazon { get; set; } = new AmazonSettings();
         public virtual ServiceBusSettings ServiceBus { get; set; } = new ServiceBusSettings();
         public virtual AppleIapSettings AppleIap { get; set; } = new AppleIapSettings();
-        public virtual SsoSettings Sso { get; set; } = new SsoSettings();
+        public virtual ISsoSettings Sso { get; set; } = new SsoSettings();
         public virtual StripeSettings Stripe { get; set; } = new StripeSettings();
         public virtual ITwoFactorAuthSettings TwoFactorAuth { get; set; } = new TwoFactorAuthSettings();
 

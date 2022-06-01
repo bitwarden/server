@@ -2,7 +2,7 @@
 {
     public interface ISsoSettings
     {
-        int CacheLifetimeInSeconds { get; set; };
+        int CacheLifetimeInSeconds { get; set; }
         double SsoTokenLifetimeInSeconds { get; set; }
     }
 }
