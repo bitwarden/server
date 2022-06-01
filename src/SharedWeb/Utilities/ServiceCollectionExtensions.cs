@@ -121,6 +121,11 @@ namespace Bit.SharedWeb.Utilities
                     HCaptchaTokenable.DataProtectorPurpose,
                     serviceProvider.GetDataProtectionProvider())
             );
+            services.AddSingleton<IDataProtectorTokenFactory<SsoTokenable>>(serviceProvider =>
+                new DataProtectorTokenFactory<SsoTokenable>(
+                    SsoTokenable.ClearTextPrefix,
+                    SsoTokenable.DataProtectorPurpose,
+                    serviceProvider.GetDataProtectionProvider()));
         }
 
         public static void AddDefaultServices(this IServiceCollection services, GlobalSettings globalSettings)
