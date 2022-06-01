@@ -70,7 +70,6 @@ namespace Bit.Core.Settings
         public virtual SsoSettings Sso { get; set; } = new SsoSettings();
         public virtual StripeSettings Stripe { get; set; } = new StripeSettings();
         public virtual ITwoFactorAuthSettings TwoFactorAuth { get; set; } = new TwoFactorAuthSettings();
-        public virtual IConstantsSettings Constants { get; set; } = new ConstantsSettings();
 
         public string BuildExternalUri(string explicitValue, string name)
         {
@@ -462,9 +461,10 @@ namespace Bit.Core.Settings
             public bool AppInReview { get; set; }
         }
 
-        public class SsoSettings
+        public class SsoSettings : ISsoSettings
         {
             public int CacheLifetimeInSeconds { get; set; } = 60;
+            public double SsoTokenLifetimeInSeconds { get; set; } = 5;
         }
 
         public class CaptchaSettings
@@ -486,11 +486,6 @@ namespace Bit.Core.Settings
         public class TwoFactorAuthSettings : ITwoFactorAuthSettings
         {
             public bool EmailOnNewDeviceLogin { get; set; } = true;
-        }
-
-        public class ConstantsSettings : IConstantsSettings
-        {
-            public double SsoTokenLifetime { get; set; } = 5;
         }
     }
 }

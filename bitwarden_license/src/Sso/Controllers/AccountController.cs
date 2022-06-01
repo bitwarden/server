@@ -145,7 +145,7 @@ namespace Bit.Sso.Controllers
                     return InvalidJson(errorKey, translatedException.ResourceNotFound ? ex : null);
                 }
 
-                var tokenable = new SsoTokenable(organization, _globalSettings.Constants.SsoTokenLifetime);
+                var tokenable = new SsoTokenable(organization, _globalSettings.Sso.SsoTokenLifetimeInSeconds);
                 var token = _dataProtector.Protect(tokenable);
 
                 return new SsoPreValidateResponseModel(token);
