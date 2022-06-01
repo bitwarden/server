@@ -11,6 +11,6 @@ BEGIN
     FROM
         [dbo].[OrganizationSponsorship] OS
     INNER JOIN
-        @SponsoringOrganizationUserIds I ON I.Id = OS.SponsoringOrganizationUserId
+        @SponsoringOrganizationUserIds I ON I.Id = OS.SponsoringOrganizationUserID
 END
 GO
