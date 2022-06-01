@@ -46,7 +46,7 @@ namespace Bit.Admin.Controllers
 
         public async Task<IActionResult> GetLatestVersion(ProjectType project, CancellationToken cancellationToken)
         {
-            var requestUri = $"https://raw.githubusercontent.com/bitwarden/self-host/master/version.json";
+            var requestUri = $"https://public-s3-bitwarden-selfhost-version-artifact.s3.us-west-2.amazonaws.com/version.json";
             try
             {
                 var response = await _httpClient.GetAsync(requestUri, cancellationToken);
