@@ -146,7 +146,7 @@ namespace Bit.Core.Test.Services
             SutProvider<EmergencyAccessService> sutProvider, User requestingUser, User grantor)
         {
             grantor.UsesKeyConnector = true;
-            grantor.UnknownDeviceVerificationEnabled = null;
+            grantor.UnknownDeviceVerificationEnabled = true;
             grantor.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
             {
                 [TwoFactorProviderType.Email] = new TwoFactorProvider

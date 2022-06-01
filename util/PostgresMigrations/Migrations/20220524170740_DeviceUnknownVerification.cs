@@ -10,7 +10,8 @@ namespace Bit.PostgresMigrations.Migrations
                 name: "UnknownDeviceVerificationEnabled",
                 table: "User",
                 type: "boolean",
-                nullable: true);
+                nullable: false,
+                defaultValue: true);
         }
 
         protected override void Down(MigrationBuilder migrationBuilder)

@@ -394,7 +394,7 @@ namespace Bit.Api.Controllers
                 return new DeviceVerificationResponseModel(false, false);
             }
 
-            return new DeviceVerificationResponseModel(_userService.CanEditDeviceVerificationSettings(user), user.GetUnknownDeviceVerificationEnabled());
+            return new DeviceVerificationResponseModel(_userService.CanEditDeviceVerificationSettings(user), user.UnknownDeviceVerificationEnabled);
         }
 
         [HttpPut("device-verification-settings")]
@@ -413,7 +413,7 @@ namespace Bit.Api.Controllers
 
             model.ToUser(user);
             await _userService.SaveUserAsync(user);
-            return new DeviceVerificationResponseModel(true, user.GetUnknownDeviceVerificationEnabled());
+            return new DeviceVerificationResponseModel(true, user.UnknownDeviceVerificationEnabled);
         }
 
         private async Task<User> CheckAsync(SecretVerificationRequestModel model, bool premium)

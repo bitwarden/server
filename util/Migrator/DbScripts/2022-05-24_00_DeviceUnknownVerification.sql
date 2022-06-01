@@ -4,7 +4,7 @@ BEGIN
     ALTER TABLE
         [dbo].[User]
     ADD
-        [UnknownDeviceVerificationEnabled] BIT NULL
+        [UnknownDeviceVerificationEnabled] BIT NOT NULL CONSTRAINT D_User_UnknownDeviceVerificationEnabled DEFAULT 1
 END
 GO
 
@@ -66,7 +66,7 @@ CREATE PROCEDURE [dbo].[User_Create]
     @UsesKeyConnector BIT = 0,
     @FailedLoginCount INT = 0,
     @LastFailedLoginDate DATETIME2(7),
-    @UnknownDeviceVerificationEnabled BIT NULL
+    @UnknownDeviceVerificationEnabled BIT = 1
 AS
 BEGIN
     SET NOCOUNT ON

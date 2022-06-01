@@ -10,7 +10,8 @@ namespace Bit.MySqlMigrations.Migrations
                 name: "UnknownDeviceVerificationEnabled",
                 table: "User",
                 type: "tinyint(1)",
-                nullable: true);
+                nullable: false,
+                defaultValue: true);
         }
 
         protected override void Down(MigrationBuilder migrationBuilder)

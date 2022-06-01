@@ -1194,7 +1194,7 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("varchar(32)");
 
-                    b.Property<bool?>("UnknownDeviceVerificationEnabled")
+                    b.Property<bool>("UnknownDeviceVerificationEnabled")
                         .HasColumnType("tinyint(1)");
 
                     b.Property<bool>("UsesKeyConnector")

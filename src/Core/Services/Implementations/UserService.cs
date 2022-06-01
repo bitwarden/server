@@ -1418,7 +1418,7 @@ namespace Bit.Core.Services
         public async Task<bool> Needs2FABecauseNewDeviceAsync(User user, string deviceIdentifier, string grantType)
         {
             return CanEditDeviceVerificationSettings(user)
-                   && user.GetUnknownDeviceVerificationEnabled()
+                   && user.UnknownDeviceVerificationEnabled
                    && grantType != "authorization_code"
                    && await IsNewDeviceAndNotTheFirstOneAsync(user, deviceIdentifier);
         }
