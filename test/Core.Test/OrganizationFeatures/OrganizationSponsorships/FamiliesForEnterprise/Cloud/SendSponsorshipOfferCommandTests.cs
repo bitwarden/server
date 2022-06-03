@@ -3,8 +3,8 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud;
+using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture.OrganizationSponsorshipFixtures;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -25,7 +25,7 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
 
             await sutProvider.Sut.SendSponsorshipOfferAsync(sponsorship, sponsoringOrgName);
 
-            await sutProvider.GetDependency<IMailService>().Received(1).SendFamiliesForEnterpriseOfferEmailAsync(sponsoringOrgName, sponsorship.OfferedToEmail, true, Arg.Any<string>());
+            await sutProvider.GetDependency<IFamiliesForEnterpriseMailer>().Received(1).SendFamiliesForEnterpriseOfferEmailAsync(sponsoringOrgName, sponsorship.OfferedToEmail, true, Arg.Any<string>());
         }
 
 
@@ -37,7 +37,7 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
 
             await sutProvider.Sut.SendSponsorshipOfferAsync(sponsorship, sponsoringOrgName);
 
-            await sutProvider.GetDependency<IMailService>().Received(1).SendFamiliesForEnterpriseOfferEmailAsync(sponsoringOrgName, sponsorship.OfferedToEmail, false, Arg.Any<string>());
+            await sutProvider.GetDependency<IFamiliesForEnterpriseMailer>().Received(1).SendFamiliesForEnterpriseOfferEmailAsync(sponsoringOrgName, sponsorship.OfferedToEmail, false, Arg.Any<string>());
         }
 
         [Theory]
@@ -50,7 +50,7 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
                 sutProvider.Sut.SendSponsorshipOfferAsync(null, orgUser, sponsorship));
 
             Assert.Contains("Cannot find the requested sponsoring organization.", exception.Message);
-            await sutProvider.GetDependency<IMailService>()
+            await sutProvider.GetDependency<IFamiliesForEnterpriseMailer>()
                 .DidNotReceiveWithAnyArgs()
                 .SendFamiliesForEnterpriseOfferEmailAsync(default, default, default, default);
         }
@@ -64,7 +64,7 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
                 sutProvider.Sut.SendSponsorshipOfferAsync(org, null, sponsorship));
 
             Assert.Contains("Only confirmed users can sponsor other organizations.", exception.Message);
-            await sutProvider.GetDependency<IMailService>()
+            await sutProvider.GetDependency<IFamiliesForEnterpriseMailer>()
                 .DidNotReceiveWithAnyArgs()
                 .SendFamiliesForEnterpriseOfferEmailAsync(default, default, default, default);
         }
@@ -82,7 +82,7 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
                 sutProvider.Sut.SendSponsorshipOfferAsync(org, orgUser, sponsorship));
 
             Assert.Contains("Only confirmed users can sponsor other organizations.", exception.Message);
-            await sutProvider.GetDependency<IMailService>()
+            await sutProvider.GetDependency<IFamiliesForEnterpriseMailer>()
                 .DidNotReceiveWithAnyArgs()
                 .SendFamiliesForEnterpriseOfferEmailAsync(default, default, default, default);
         }
@@ -99,7 +99,7 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
                 sutProvider.Sut.SendSponsorshipOfferAsync(org, orgUser, null));
 
             Assert.Contains("Cannot find an outstanding sponsorship offer for this organization.", exception.Message);
-            await sutProvider.GetDependency<IMailService>()
+            await sutProvider.GetDependency<IFamiliesForEnterpriseMailer>()
                 .DidNotReceiveWithAnyArgs()
                 .SendFamiliesForEnterpriseOfferEmailAsync(default, default, default, default);
         }
@@ -117,7 +117,7 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
                 sutProvider.Sut.SendSponsorshipOfferAsync(org, orgUser, sponsorship));
 
             Assert.Contains("Cannot find an outstanding sponsorship offer for this organization.", exception.Message);
-            await sutProvider.GetDependency<IMailService>()
+            await sutProvider.GetDependency<IFamiliesForEnterpriseMailer>()
                 .DidNotReceiveWithAnyArgs()
                 .SendFamiliesForEnterpriseOfferEmailAsync(default, default, default, default);
         }

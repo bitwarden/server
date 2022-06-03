@@ -14,15 +14,15 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
     public class SendSponsorshipOfferCommand : ISendSponsorshipOfferCommand
     {
         private readonly IUserRepository _userRepository;
-        private readonly IMailService _mailService;
+        private readonly IFamiliesForEnterpriseMailer _mailer;
         private readonly IDataProtectorTokenFactory<OrganizationSponsorshipOfferTokenable> _tokenFactory;
 
         public SendSponsorshipOfferCommand(IUserRepository userRepository,
-            IMailService mailService,
+            IFamiliesForEnterpriseMailer mailer,
             IDataProtectorTokenFactory<OrganizationSponsorshipOfferTokenable> tokenFactory)
         {
             _userRepository = userRepository;
-            _mailService = mailService;
+            _mailer = mailer;
             _tokenFactory = tokenFactory;
         }
 
@@ -36,7 +36,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
                 invites.Add((sponsorship.OfferedToEmail, user != null, _tokenFactory.Protect(new OrganizationSponsorshipOfferTokenable(sponsorship))));
             }
 
-            await _mailService.BulkSendFamiliesForEnterpriseOfferEmailAsync(sponsoringOrgName, invites);
+            await _mailer.BulkSendFamiliesForEnterpriseOfferEmailAsync(sponsoringOrgName, invites);
         }
 
         public async Task SendSponsorshipOfferAsync(OrganizationSponsorship sponsorship, string sponsoringOrgName)
@@ -44,7 +44,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
             var user = await _userRepository.GetByEmailAsync(sponsorship.OfferedToEmail);
             var isExistingAccount = user != null;
 
-            await _mailService.SendFamiliesForEnterpriseOfferEmailAsync(sponsoringOrgName, sponsorship.OfferedToEmail,
+            await _mailer.SendFamiliesForEnterpriseOfferEmailAsync(sponsoringOrgName, sponsorship.OfferedToEmail,
                 isExistingAccount, _tokenFactory.Protect(new OrganizationSponsorshipOfferTokenable(sponsorship)));
         }
 

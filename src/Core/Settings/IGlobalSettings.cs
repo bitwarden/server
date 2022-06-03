@@ -3,6 +3,7 @@
     public interface IGlobalSettings
     {
         // This interface exists for testing. Add settings here as needed for testing
+        string SiteName { get; set; }
         bool SelfHosted { get; set; }
         bool EnableCloudCommunication { get; set; }
         string LicenseDirectory { get; set; }

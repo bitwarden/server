@@ -11,18 +11,18 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
     public class ValidateSponsorshipCommand : CancelSponsorshipCommand, IValidateSponsorshipCommand
     {
         private readonly IPaymentService _paymentService;
-        private readonly IMailService _mailService;
+        private readonly IFamiliesForEnterpriseMailer _mailer;
         private readonly ILogger<ValidateSponsorshipCommand> _logger;
 
         public ValidateSponsorshipCommand(
             IOrganizationSponsorshipRepository organizationSponsorshipRepository,
             IOrganizationRepository organizationRepository,
             IPaymentService paymentService,
-            IMailService mailService,
+            IFamiliesForEnterpriseMailer mailer,
             ILogger<ValidateSponsorshipCommand> logger) : base(organizationSponsorshipRepository, organizationRepository)
         {
             _paymentService = paymentService;
-            _mailService = mailService;
+            _mailer = mailer;
             _logger = logger;
         }
 
@@ -82,7 +82,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
                 {
                     if (sponsorship != null)
                     {
-                        await _mailService.SendFamiliesForEnterpriseSponsorshipRevertingEmailAsync(
+                        await _mailer.SendFamiliesForEnterpriseSponsorshipRevertingEmailAsync(
                             sponsoredOrganization.BillingEmailAddress(),
                             sponsorship.ValidUntil ?? DateTime.UtcNow.AddDays(15));
                     }

@@ -1,6 +1,6 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Bit.Core.Entities;
+using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
@@ -18,7 +18,7 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
             await sutProvider.GetDependency<IOrganizationRepository>().Received(1).UpsertAsync(sponsoredOrg);
             if (sponsorship != null)
             {
-                await sutProvider.GetDependency<IMailService>().Received(1)
+                await sutProvider.GetDependency<IFamiliesForEnterpriseMailer>().Received(1)
                     .SendFamiliesForEnterpriseSponsorshipRevertingEmailAsync(sponsoredOrg.BillingEmailAddress(), sponsorship.ValidUntil.GetValueOrDefault());
             }
         }
@@ -51,7 +51,7 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
                 .RemoveOrganizationSponsorshipAsync(default, default);
             await sutProvider.GetDependency<IOrganizationRepository>().DidNotReceiveWithAnyArgs()
                 .UpsertAsync(default);
-            await sutProvider.GetDependency<IMailService>().DidNotReceiveWithAnyArgs()
+            await sutProvider.GetDependency<IFamiliesForEnterpriseMailer>().DidNotReceiveWithAnyArgs()
                 .SendFamiliesForEnterpriseSponsorshipRevertingEmailAsync(default, default);
         }
 

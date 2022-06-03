@@ -24,6 +24,7 @@ namespace Bit.Core.OrganizationFeatures
             services.AddOrganizationConnectionCommands();
             services.AddOrganizationSponsorshipCommands(globalSettings);
             services.AddOrganizationApiKeyCommands();
+            services.AddMailers();
         }
 
         private static void AddOrganizationConnectionCommands(this IServiceCollection services)
@@ -72,6 +73,11 @@ namespace Bit.Core.OrganizationFeatures
                     OrganizationSponsorshipOfferTokenable.DataProtectorPurpose,
                     serviceProvider.GetDataProtectionProvider())
             );
+        }
+
+        private static void AddMailers(this IServiceCollection services)
+        {
+            services.AddScoped<IFamiliesForEnterpriseMailer, FamiliesForEnterpriseMailer>();
         }
     }
 }
