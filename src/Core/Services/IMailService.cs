@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Bit.Core.Entities;
-using Bit.Core.Entities.Provider;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Mail;
 
@@ -45,10 +44,6 @@ namespace Bit.Core.Services
         Task SendEmergencyAccessRecoveryTimedOut(EmergencyAccess ea, string initiatingName, string email);
         Task SendEnqueuedMailMessageAsync(IMailQueueMessage queueMessage);
         Task SendAdminResetPasswordEmailAsync(string email, string userName, string orgName);
-        Task SendProviderSetupInviteEmailAsync(Provider provider, string token, string email);
-        Task SendProviderInviteEmailAsync(string providerName, ProviderUser providerUser, string token, string email);
-        Task SendProviderConfirmedEmailAsync(string providerName, string email);
-        Task SendProviderUserRemoved(string providerName, string email);
         Task SendUpdatedTempPasswordEmailAsync(string email, string userName);
         Task SendOTPEmailAsync(string email, string token);
         Task SendFailedLoginAttemptsEmailAsync(string email, DateTime utcNow, string ip);

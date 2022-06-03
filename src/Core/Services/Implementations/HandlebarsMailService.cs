@@ -695,69 +695,6 @@ namespace Bit.Core.Services
             await _mailDeliveryService.SendEmailAsync(message);
         }
 
-        public async Task SendProviderSetupInviteEmailAsync(Provider provider, string token, string email)
-        {
-            var message = CreateDefaultMessage($"Create a Provider", email);
-            var model = new ProviderSetupInviteViewModel
-            {
-                WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
-                SiteName = _globalSettings.SiteName,
-                ProviderId = provider.Id.ToString(),
-                Email = WebUtility.UrlEncode(email),
-                Token = WebUtility.UrlEncode(token),
-            };
-            await AddMessageContentAsync(message, "Provider.ProviderSetupInvite", model);
-            message.Category = "ProviderSetupInvite";
-            await _mailDeliveryService.SendEmailAsync(message);
-        }
-
-        public async Task SendProviderInviteEmailAsync(string providerName, ProviderUser providerUser, string token, string email)
-        {
-            var message = CreateDefaultMessage($"Join {providerName}", email);
-            var model = new ProviderUserInvitedViewModel
-            {
-                ProviderName = CoreHelpers.SanitizeForEmail(providerName),
-                Email = WebUtility.UrlEncode(providerUser.Email),
-                ProviderId = providerUser.ProviderId.ToString(),
-                ProviderUserId = providerUser.Id.ToString(),
-                ProviderNameUrlEncoded = WebUtility.UrlEncode(providerName),
-                Token = WebUtility.UrlEncode(token),
-                WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
-                SiteName = _globalSettings.SiteName,
-            };
-            await AddMessageContentAsync(message, "Provider.ProviderUserInvited", model);
-            message.Category = "ProviderSetupInvite";
-            await _mailDeliveryService.SendEmailAsync(message);
-        }
-
-        public async Task SendProviderConfirmedEmailAsync(string providerName, string email)
-        {
-            var message = CreateDefaultMessage($"You Have Been Confirmed To {providerName}", email);
-            var model = new ProviderUserConfirmedViewModel
-            {
-                ProviderName = CoreHelpers.SanitizeForEmail(providerName),
-                WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
-                SiteName = _globalSettings.SiteName
-            };
-            await AddMessageContentAsync(message, "Provider.ProviderUserConfirmed", model);
-            message.Category = "ProviderUserConfirmed";
-            await _mailDeliveryService.SendEmailAsync(message);
-        }
-
-        public async Task SendProviderUserRemoved(string providerName, string email)
-        {
-            var message = CreateDefaultMessage($"You Have Been Removed from {providerName}", email);
-            var model = new ProviderUserRemovedViewModel
-            {
-                ProviderName = CoreHelpers.SanitizeForEmail(providerName),
-                WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
-                SiteName = _globalSettings.SiteName
-            };
-            await AddMessageContentAsync(message, "Provider.ProviderUserRemoved", model);
-            message.Category = "ProviderUserRemoved";
-            await _mailDeliveryService.SendEmailAsync(message);
-        }
-
         public async Task SendUpdatedTempPasswordEmailAsync(string email, string userName)
         {
             var message = CreateDefaultMessage("Master Password Has Been Changed", email);

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Bit.CommCore.ProviderFeatures.Interfaces;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Entities.Provider;
@@ -24,7 +25,7 @@ namespace Bit.CommCore.Services
         public static PlanType[] ProviderDisllowedOrganizationTypes = new[] { PlanType.Free, PlanType.FamiliesAnnually, PlanType.FamiliesAnnually2019 };
 
         private readonly IDataProtector _dataProtector;
-        private readonly IMailService _mailService;
+        private readonly IProviderMailer _mailer;
         private readonly IEventService _eventService;
         private readonly GlobalSettings _globalSettings;
         private readonly IProviderRepository _providerRepository;
@@ -38,7 +39,7 @@ namespace Bit.CommCore.Services
 
         public ProviderService(IProviderRepository providerRepository, IProviderUserRepository providerUserRepository,
             IProviderOrganizationRepository providerOrganizationRepository, IUserRepository userRepository,
-            IUserService userService, IOrganizationService organizationService, IMailService mailService,
+            IUserService userService, IOrganizationService organizationService, IProviderMailer mailer,
             IDataProtectionProvider dataProtectionProvider, IEventService eventService,
             IOrganizationRepository organizationRepository, GlobalSettings globalSettings,
             ICurrentContext currentContext)
@@ -50,7 +51,7 @@ namespace Bit.CommCore.Services
             _userRepository = userRepository;
             _userService = userService;
             _organizationService = organizationService;
-            _mailService = mailService;
+            _mailer = mailer;
             _eventService = eventService;
             _globalSettings = globalSettings;
             _dataProtector = dataProtectionProvider.CreateProtector("ProviderServiceDataProtector");
@@ -281,7 +282,7 @@ namespace Bit.CommCore.Services
 
                     await _providerUserRepository.ReplaceAsync(providerUser);
                     events.Add((providerUser, EventType.ProviderUser_Confirmed, null));
-                    await _mailService.SendProviderConfirmedEmailAsync(provider.Name, user.Email);
+                    await _mailer.SendProviderConfirmedEmailAsync(provider.Name, user.Email);
                     result.Add(Tuple.Create(providerUser, ""));
                 }
                 catch (BadRequestException e)
@@ -355,7 +356,7 @@ namespace Bit.CommCore.Services
                     var email = user == null ? providerUser.Email : user.Email;
                     if (!string.IsNullOrWhiteSpace(email))
                     {
-                        await _mailService.SendProviderUserRemoved(provider.Name, email);
+                        await _mailer.SendProviderUserRemoved(provider.Name, email);
                     }
 
                     result.Add(Tuple.Create(providerUser, ""));
@@ -463,7 +464,7 @@ namespace Bit.CommCore.Services
         private async Task SendProviderSetupInviteEmailAsync(Provider provider, string ownerEmail)
         {
             var token = _dataProtector.Protect($"ProviderSetupInvite {provider.Id} {ownerEmail} {CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow)}");
-            await _mailService.SendProviderSetupInviteEmailAsync(provider, token, ownerEmail);
+            await _mailer.SendProviderSetupInviteEmailAsync(provider, token, ownerEmail);
         }
 
         public async Task LogProviderAccessToOrganizationAsync(Guid organizationId)
@@ -490,7 +491,7 @@ namespace Bit.CommCore.Services
             var nowMillis = CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow);
             var token = _dataProtector.Protect(
                 $"ProviderUserInvite {providerUser.Id} {providerUser.Email} {nowMillis}");
-            await _mailService.SendProviderInviteEmailAsync(provider.Name, providerUser, token, providerUser.Email);
+            await _mailer.SendProviderInviteEmailAsync(provider.Name, providerUser, token, providerUser.Email);
         }
 
         private async Task<bool> HasConfirmedProviderAdminExceptAsync(Guid providerId, IEnumerable<Guid> providerUserIds)
