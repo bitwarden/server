@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
+using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Scim.Models;
@@ -17,6 +19,7 @@ namespace Bit.Scim.Controllers.v2
         private readonly IUserService _userService;
         private readonly IUserRepository _userRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
+        private readonly IOrganizationService _organizationService;
         private readonly ScimSettings _scimSettings;
         private readonly ILogger<UsersController> _logger;
 
@@ -24,12 +27,14 @@ namespace Bit.Scim.Controllers.v2
             IUserService userService,
             IUserRepository userRepository,
             IOrganizationUserRepository organizationUserRepository,
+            IOrganizationService organizationService,
             IOptions<ScimSettings> billingSettings,
             ILogger<UsersController> logger)
         {
             _userService = userService;
             _userRepository = userRepository;
             _organizationUserRepository = organizationUserRepository;
+            _organizationService = organizationService;
             _scimSettings = billingSettings?.Value;
             _logger = logger;
         }
@@ -40,7 +45,11 @@ namespace Bit.Scim.Controllers.v2
             var orgUser = await _organizationUserRepository.GetDetailsByIdAsync(id);
             if (orgUser == null || orgUser.OrganizationId != organizationId)
             {
-                return new ObjectResult(new ScimErrorResponseModel { Status = 404, Detail = "User not found." });
+                return new NotFoundObjectResult(new ScimErrorResponseModel
+                {
+                    Status = 404,
+                    Detail = "User not found."
+                });
             }
             return new ObjectResult(new ScimUserResponseModel(orgUser));
         }
@@ -112,9 +121,98 @@ namespace Bit.Scim.Controllers.v2
         }
 
         [HttpPost("")]
-        public async Task<IActionResult> PostCreate(Guid organizationId, [FromBody] object model)
+        public async Task<IActionResult> Post(Guid organizationId, [FromBody] ScimUserRequestModel model)
         {
-            return new CreatedResult("", new { });
+            var email = model.PrimaryEmail;
+            if (string.IsNullOrWhiteSpace(email) || !model.Active)
+            {
+                return new BadRequestResult();
+            }
+
+            var orgUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(organizationId);
+            var orgUserByEmail = orgUsers.FirstOrDefault(ou => ou.Email == email);
+            if (orgUserByEmail != null)
+            {
+                return new StatusCodeResult((int)HttpStatusCode.Conflict);
+            }
+            var orgUserByExternalId = orgUsers.FirstOrDefault(ou => ou.ExternalId == model.UserName);
+            if (orgUserByExternalId != null)
+            {
+                return new StatusCodeResult((int)HttpStatusCode.Conflict);
+            }
+
+            var invitedOrgUser = await _organizationService.InviteUserAsync(organizationId, null, email,
+                Core.Enums.OrganizationUserType.User, false, model.UserName, new List<SelectionReadOnly>());
+            var orgUser = await _organizationUserRepository.GetDetailsByIdAsync(invitedOrgUser.Id);
+            var response = new ScimUserResponseModel(orgUser);
+            // TODO: Absolute URL generation using global settings service URLs for SCIM service
+            return new CreatedResult(Url.Action(nameof(Get), new { orgUser.OrganizationId, orgUser.Id }), response);
+        }
+
+        [HttpPut("{id}")]
+        public async Task<IActionResult> Put(Guid organizationId, Guid id, [FromBody] ScimUserRequestModel model)
+        {
+            var orgUser = await _organizationUserRepository.GetDetailsByIdAsync(id);
+            if (orgUser == null || orgUser.OrganizationId != organizationId)
+            {
+                return new NotFoundObjectResult(new ScimErrorResponseModel
+                {
+                    Status = 404,
+                    Detail = "User not found."
+                });
+            }
+            if (model.Active)
+            {
+                // No change if already active?
+            }
+            return new ObjectResult(new ScimUserResponseModel(orgUser));
+        }
+
+        [HttpPatch("{id}")]
+        public async Task<IActionResult> Patch(Guid organizationId, Guid id, [FromBody] ScimPatchModel model)
+        {
+            var orgUser = await _organizationUserRepository.GetDetailsByIdAsync(id);
+            if (orgUser == null || orgUser.OrganizationId != organizationId)
+            {
+                return new NotFoundObjectResult(new ScimErrorResponseModel
+                {
+                    Status = 404,
+                    Detail = "User not found."
+                });
+            }
+            var replaceOp = model.Operations?.FirstOrDefault(o => o.Op == "replace" && o.Value != null);
+            if (replaceOp != null)
+            {
+                var valueDict = replaceOp.Value as Dictionary<string, object>;
+                if(valueDict.ContainsKey("active"))
+                {
+                    var active = (bool)valueDict["active"];
+                    if (active)
+                    {
+                        // No change if already active?
+                    }
+                }
+            }
+            return new StatusCodeResult((int)HttpStatusCode.NoContent);
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(Guid organizationId, Guid id, [FromBody] ScimUserRequestModel model)
+        {
+            var orgUser = await _organizationUserRepository.GetDetailsByIdAsync(id);
+            if (orgUser == null || orgUser.OrganizationId != organizationId)
+            {
+                return new NotFoundObjectResult(new ScimErrorResponseModel
+                {
+                    Status = 404,
+                    Detail = "User not found."
+                });
+            }
+            if (model.Active)
+            {
+                // No change if already active?
+            }
+            return new ObjectResult(new ScimUserResponseModel(orgUser));
         }
     }
 }

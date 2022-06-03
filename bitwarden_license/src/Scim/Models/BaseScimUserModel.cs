@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using Bit.Scim.Utilities;
 
 namespace Bit.Scim.Models
@@ -16,6 +17,7 @@ namespace Bit.Scim.Models
         public string UserName { get; set; }
         public NameModel Name { get; set; }
         public List<EmailModel> Emails { get; set; }
+        public string PrimaryEmail => Emails?.FirstOrDefault(e => e.Primary)?.Value;
         public string DisplayName { get; set; }
         public bool Active { get; set; }
         public List<string> Groups { get; set; }
@@ -31,6 +33,7 @@ namespace Bit.Scim.Models
 
             public string Formatted { get; set; }
             public string GivenName { get; set; }
+            public string MiddleName { get; set; }
             public string FamilyName { get; set; }
         }
 

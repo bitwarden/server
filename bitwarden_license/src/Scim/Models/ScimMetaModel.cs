@@ -1,4 +1,6 @@
-﻿namespace Bit.Scim.Models
+﻿using System;
+
+namespace Bit.Scim.Models
 {
     public class ScimMetaModel
     {
@@ -8,5 +10,7 @@
         }
 
         public string ResourceType { get; set; }
+        public DateTime? Created { get; set; }
+        public DateTime? LastModified { get; set; }
     }
 }
