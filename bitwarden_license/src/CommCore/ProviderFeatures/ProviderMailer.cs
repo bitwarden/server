@@ -1,6 +1,7 @@
 using System.Net;
 using System.Threading.Tasks;
 using Bit.CommCore.ProviderFeatures.Interfaces;
+using Bit.Core.Entities;
 using Bit.Core.Entities.Provider;
 using Bit.Core.Models.Mail;
 using Bit.Core.Models.Mail.Provider;
@@ -41,21 +42,21 @@ namespace Bit.CommCore.ProviderFeatures
             await _mailService.EnqueueMailAsync(message, "Provider.ProviderSetupInvite", model);
         }
 
-        public async Task SendProviderInviteEmailAsync(string providerName, ProviderUser providerUser, string token, string email)
+        public async Task SendProviderInviteEmailAsync(Provider provider, ProviderUser providerUser, string token)
         {
             var message = new MailMessage
             {
-                Subject = $"Join {providerName}",
-                ToEmails = new[] { email },
+                Subject = $"Join {provider.Name}",
+                ToEmails = new[] { providerUser.Email },
                 Category = "ProviderSetupInvite",
             };
             var model = new ProviderUserInvitedViewModel
             {
-                ProviderName = CoreHelpers.SanitizeForEmail(providerName),
+                ProviderName = CoreHelpers.SanitizeForEmail(provider.Name),
                 Email = WebUtility.UrlEncode(providerUser.Email),
                 ProviderId = providerUser.ProviderId.ToString(),
                 ProviderUserId = providerUser.Id.ToString(),
-                ProviderNameUrlEncoded = WebUtility.UrlEncode(providerName),
+                ProviderNameUrlEncoded = WebUtility.UrlEncode(provider.Name),
                 Token = WebUtility.UrlEncode(token),
                 WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
                 SiteName = _globalSettings.SiteName,
@@ -63,34 +64,34 @@ namespace Bit.CommCore.ProviderFeatures
             await _mailService.EnqueueMailAsync(message, "Provider.ProviderUserInvited", model);
         }
 
-        public async Task SendProviderConfirmedEmailAsync(string providerName, string email)
+        public async Task SendProviderConfirmedEmailAsync(Provider provider, User user)
         {
             var message = new MailMessage
             {
-                Subject = $"You Have Been Confirmed To {providerName}",
-                ToEmails = new[] { email },
+                Subject = $"You Have Been Confirmed To {provider.Name}",
+                ToEmails = new[] { user.Email },
                 Category = "ProviderUserConfirmed",
             };
             var model = new ProviderUserConfirmedViewModel
             {
-                ProviderName = CoreHelpers.SanitizeForEmail(providerName),
+                ProviderName = CoreHelpers.SanitizeForEmail(provider.Name),
                 WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
                 SiteName = _globalSettings.SiteName
             };
             await _mailService.EnqueueMailAsync(message, "Provider.ProviderUserConfirmed", model);
         }
 
-        public async Task SendProviderUserRemoved(string providerName, string email)
+        public async Task SendProviderUserRemoved(Provider provider, string email)
         {
             var message = new MailMessage
             {
-                Subject = $"You Have Been Removed from {providerName}",
+                Subject = $"You Have Been Removed from {provider.Name}",
                 ToEmails = new[] { email },
                 Category = "ProviderUserRemoved",
             };
             var model = new ProviderUserRemovedViewModel
             {
-                ProviderName = CoreHelpers.SanitizeForEmail(providerName),
+                ProviderName = CoreHelpers.SanitizeForEmail(provider.Name),
                 WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
                 SiteName = _globalSettings.SiteName
             };

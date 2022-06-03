@@ -282,7 +282,7 @@ namespace Bit.CommCore.Services
 
                     await _providerUserRepository.ReplaceAsync(providerUser);
                     events.Add((providerUser, EventType.ProviderUser_Confirmed, null));
-                    await _mailer.SendProviderConfirmedEmailAsync(provider.Name, user.Email);
+                    await _mailer.SendProviderConfirmedEmailAsync(provider, user);
                     result.Add(Tuple.Create(providerUser, ""));
                 }
                 catch (BadRequestException e)
@@ -356,7 +356,7 @@ namespace Bit.CommCore.Services
                     var email = user == null ? providerUser.Email : user.Email;
                     if (!string.IsNullOrWhiteSpace(email))
                     {
-                        await _mailer.SendProviderUserRemoved(provider.Name, email);
+                        await _mailer.SendProviderUserRemoved(provider, email);
                     }
 
                     result.Add(Tuple.Create(providerUser, ""));
@@ -491,7 +491,7 @@ namespace Bit.CommCore.Services
             var nowMillis = CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow);
             var token = _dataProtector.Protect(
                 $"ProviderUserInvite {providerUser.Id} {providerUser.Email} {nowMillis}");
-            await _mailer.SendProviderInviteEmailAsync(provider.Name, providerUser, token, providerUser.Email);
+            await _mailer.SendProviderInviteEmailAsync(provider, providerUser, token);
         }
 
         private async Task<bool> HasConfirmedProviderAdminExceptAsync(Guid providerId, IEnumerable<Guid> providerUserIds)
