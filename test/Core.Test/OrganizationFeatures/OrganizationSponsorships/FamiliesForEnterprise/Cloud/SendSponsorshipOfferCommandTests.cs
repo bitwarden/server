@@ -19,25 +19,25 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
     {
         [Theory]
         [BitAutoData]
-        public async Task SendSponsorshipOffer_SendSponsorshipOfferAsync_ExistingAccount_Success(OrganizationSponsorship sponsorship, string sponsoringOrgName, User user, SutProvider<SendSponsorshipOfferCommand> sutProvider)
+        public async Task SendSponsorshipOffer_SendSponsorshipOfferAsync_ExistingAccount_Success(OrganizationSponsorship sponsorship, Organization sponsoringOrg, User user, SutProvider<SendSponsorshipOfferCommand> sutProvider)
         {
             sutProvider.GetDependency<IUserRepository>().GetByEmailAsync(sponsorship.OfferedToEmail).Returns(user);
 
-            await sutProvider.Sut.SendSponsorshipOfferAsync(sponsorship, sponsoringOrgName);
+            await sutProvider.Sut.SendSponsorshipOfferAsync(sponsorship, sponsoringOrg);
 
-            await sutProvider.GetDependency<IFamiliesForEnterpriseMailer>().Received(1).SendFamiliesForEnterpriseOfferEmailAsync(sponsoringOrgName, sponsorship.OfferedToEmail, true, Arg.Any<string>());
+            await sutProvider.GetDependency<IFamiliesForEnterpriseMailer>().Received(1).SendFamiliesForEnterpriseOfferEmailAsync(sponsoringOrg, sponsorship, true, Arg.Any<string>());
         }
 
 
         [Theory]
         [BitAutoData]
-        public async Task SendSponsorshipOffer_SendSponsorshipOfferAsync_NewAccount_Success(OrganizationSponsorship sponsorship, string sponsoringOrgName, SutProvider<SendSponsorshipOfferCommand> sutProvider)
+        public async Task SendSponsorshipOffer_SendSponsorshipOfferAsync_NewAccount_Success(OrganizationSponsorship sponsorship, Organization sponsoringOrg, SutProvider<SendSponsorshipOfferCommand> sutProvider)
         {
             sutProvider.GetDependency<IUserRepository>().GetByEmailAsync(sponsorship.OfferedToEmail).Returns((User)null);
 
-            await sutProvider.Sut.SendSponsorshipOfferAsync(sponsorship, sponsoringOrgName);
+            await sutProvider.Sut.SendSponsorshipOfferAsync(sponsorship, sponsoringOrg);
 
-            await sutProvider.GetDependency<IFamiliesForEnterpriseMailer>().Received(1).SendFamiliesForEnterpriseOfferEmailAsync(sponsoringOrgName, sponsorship.OfferedToEmail, false, Arg.Any<string>());
+            await sutProvider.GetDependency<IFamiliesForEnterpriseMailer>().Received(1).SendFamiliesForEnterpriseOfferEmailAsync(sponsoringOrg, sponsorship, false, Arg.Any<string>());
         }
 
         [Theory]

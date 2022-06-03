@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Bit.CommCore.ProviderFeatures.Interfaces;
 using Bit.CommCore.Services;
 using Bit.CommCore.Test.AutoFixture.ProviderUserFixtures;
 using Bit.Core.Context;
@@ -44,7 +45,7 @@ namespace Bit.CommCore.Test.Services
             await sutProvider.Sut.CreateAsync(user.Email);
 
             await sutProvider.GetDependency<IProviderRepository>().ReceivedWithAnyArgs().CreateAsync(default);
-            await sutProvider.GetDependency<IMailService>().ReceivedWithAnyArgs().SendProviderSetupInviteEmailAsync(default, default, default);
+            await sutProvider.GetDependency<IProviderMailer>().ReceivedWithAnyArgs().SendProviderSetupInviteEmailAsync(default, default, default);
         }
 
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
