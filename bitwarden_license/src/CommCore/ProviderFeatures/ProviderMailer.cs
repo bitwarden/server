@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Threading.Tasks;
 using Bit.CommCore.ProviderFeatures.Interfaces;
 using Bit.Core.Entities;
