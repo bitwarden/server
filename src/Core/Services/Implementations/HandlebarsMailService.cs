@@ -524,59 +524,7 @@ namespace Bit.Core.Services
                 writer.WriteSafeString(((decimal)parameters[0]).ToString("C"));
             });
 
-            Handlebars.RegisterHelper("link", (writer, context, parameters) =>
-            {
-                if (parameters.Length == 0)
-                {
-                    writer.WriteSafeString(string.Empty);
-                    return;
-                }
-
-                var text = parameters[0].ToString();
-                var href = text;
-                var clickTrackingOff = false;
-                if (parameters.Length == 2)
-                {
-                    if (parameters[1] is string)
-                    {
-                        var p1 = parameters[1].ToString();
-                        if (p1 == "true" || p1 == "false")
-                        {
-                            clickTrackingOff = p1 == "true";
-                        }
-                        else
-                        {
-                            href = p1;
-                        }
-                    }
-                    else if (parameters[1] is bool)
-                    {
-                        clickTrackingOff = (bool)parameters[1];
-                    }
-                }
-                else if (parameters.Length > 2)
-                {
-                    if (parameters[1] is string)
-                    {
-                        href = parameters[1].ToString();
-                    }
-                    if (parameters[2] is string)
-                    {
-                        var p2 = parameters[2].ToString();
-                        if (p2 == "true" || p2 == "false")
-                        {
-                            clickTrackingOff = p2 == "true";
-                        }
-                    }
-                    else if (parameters[2] is bool)
-                    {
-                        clickTrackingOff = (bool)parameters[2];
-                    }
-                }
-
-                var clickTrackingText = (clickTrackingOff ? "clicktracking=off" : string.Empty);
-                writer.WriteSafeString($"<a href=\"{href}\" target=\"_blank\" {clickTrackingText}>{text}</a>");
-            });
+            Handlebars.RegisterHelper("link", HandlebarsLinkHelper.Helper);
         }
 
         public async Task SendEmergencyAccessInviteEmailAsync(EmergencyAccess emergencyAccess, string name, string token)
