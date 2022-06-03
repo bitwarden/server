@@ -55,37 +55,6 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
             await _mailService.EnqueueMailAsync(messageModels);
         }
 
-        public async Task SendFamiliesForEnterpriseRedeemedEmailsAsync(string familyUserEmail, string sponsorEmail)
-        {
-            // Email family user
-            await SendFamiliesForEnterpriseInviteRedeemedToFamilyUserEmailAsync(familyUserEmail);
-
-            // Email enterprise org user
-            await SendFamiliesForEnterpriseInviteRedeemedToEnterpriseUserEmailAsync(sponsorEmail);
-        }
-
-        private async Task SendFamiliesForEnterpriseInviteRedeemedToFamilyUserEmailAsync(string email)
-        {
-            var message = new MailMessage
-            {
-                Subject = "Success! Families Subscription Accepted",
-                ToEmails = new[] { email },
-                Category = "FamilyForEnterpriseRedeemedToFamilyUser"
-            };
-            await _mailService.EnqueueMailAsync(message, "FamiliesForEnterprise.FamiliesForEnterpriseRedeemedToFamilyUser", new BaseMailModel());
-        }
-
-        private async Task SendFamiliesForEnterpriseInviteRedeemedToEnterpriseUserEmailAsync(string email)
-        {
-            var message = new MailMessage
-            {
-                Subject = "Success! Families Subscription Accepted",
-                ToEmails = new[] { email },
-                Category = "FamilyForEnterpriseRedeemedToEnterpriseUser",
-            };
-            await _mailService.EnqueueMailAsync(message, "FamiliesForEnterprise.FamiliesForEnterpriseRedeemedToEnterpriseUser", new BaseMailModel());
-        }
-
         public async Task SendFamiliesForEnterpriseSponsorshipRevertingEmailAsync(string email, DateTime expirationDate)
         {
             var message = new MailMessage
