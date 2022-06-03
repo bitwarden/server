@@ -10,6 +10,6 @@ namespace Bit.Core.Models.Mail
         public string HtmlContent { get; set; }
         public string TextContent { get; set; }
         public string Category { get; set; }
-        public IDictionary<string, object> MetaData { get; set; }
+        public IDictionary<string, object> MetaData { get; set; } = new Dictionary<string, object>();
     }
 }
