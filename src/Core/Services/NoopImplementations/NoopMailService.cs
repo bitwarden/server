@@ -206,25 +206,6 @@ namespace Bit.Core.Services
             return Task.FromResult(0);
         }
 
-        public Task SendFamiliesForEnterpriseOfferEmailAsync(string SponsorOrgName, string email, bool existingAccount, string token)
-        {
-            return Task.FromResult(0);
-        }
-
-        public Task BulkSendFamiliesForEnterpriseOfferEmailAsync(string SponsorOrgName, IEnumerable<(string Email, bool ExistingAccount, string Token)> invites)
-        {
-            return Task.FromResult(0);
-        }
-
-        public Task SendFamiliesForEnterpriseRedeemedEmailsAsync(string familyUserEmail, string sponsorEmail)
-        {
-            return Task.FromResult(0);
-        }
-
-        public Task SendFamiliesForEnterpriseSponsorshipRevertingEmailAsync(string email, DateTime expirationDate)
-        {
-            return Task.FromResult(0);
-        }
 
         public Task SendOTPEmailAsync(string email, string token)
         {
@@ -237,6 +218,16 @@ namespace Bit.Core.Services
         }
 
         public Task SendFailedTwoFactorAttemptsEmailAsync(string email, DateTime utcNow, string ip)
+        {
+            return Task.FromResult(0);
+        }
+
+        public Task EnqueueMailAsync<T>(MailMessage message, string templateName, T model)
+        {
+            return Task.FromResult(0);
+        }
+
+        public Task EnqueueMailAsync(IEnumerable<IMailQueueMessage> messages)
         {
             return Task.FromResult(0);
         }
