@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+using Bit.Core.Entities;
 using Bit.Core.Models.Mail;
 using Bit.Core.Models.Mail.FamiliesForEnterprise;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
@@ -22,23 +23,23 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
             _globalSettings = globalSettings;
         }
 
-        public async Task SendFamiliesForEnterpriseOfferEmailAsync(string sponsorOrgName, string email, bool existingAccount, string token) =>
-            await BulkSendFamiliesForEnterpriseOfferEmailAsync(sponsorOrgName, new[] { (email, existingAccount, token) });
+        public async Task SendFamiliesForEnterpriseOfferEmailAsync(Organization sponsoringOrg, OrganizationSponsorship sponsorship, bool existingAccount, string token) =>
+            await BulkSendFamiliesForEnterpriseOfferEmailAsync(sponsoringOrg, new[] { (sponsorship, existingAccount, token) });
 
-        public async Task BulkSendFamiliesForEnterpriseOfferEmailAsync(string sponsorOrgName, IEnumerable<(string Email, bool ExistingAccount, string Token)> invites)
+        public async Task BulkSendFamiliesForEnterpriseOfferEmailAsync(Organization sponsoringOrg, IEnumerable<(OrganizationSponsorship sponsorship, bool ExistingAccount, string Token)> invites)
         {
-            MailQueueMessage CreateMessage((string Email, bool ExistingAccount, string Token) invite)
+            MailQueueMessage CreateMessage((OrganizationSponsorship Sponsorship, bool ExistingAccount, string Token) invite)
             {
                 var message = new MailMessage
                 {
                     Subject = "Accept Your Free Families Subscription",
-                    ToEmails = new[] { invite.Email },
+                    ToEmails = new[] { invite.Sponsorship.OfferedToEmail },
                     Category = "FamiliesForEnterpriseOffer",
                 };
                 var model = new FamiliesForEnterpriseOfferViewModel
                 {
-                    SponsorOrgName = sponsorOrgName,
-                    SponsoredEmail = WebUtility.UrlEncode(invite.Email),
+                    SponsoringOrgName = sponsoringOrg.Name,
+                    SponsoredEmail = WebUtility.UrlEncode(invite.Sponsorship.OfferedToEmail),
                     ExistingAccount = invite.ExistingAccount,
                     WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
                     SiteName = _globalSettings.SiteName,

@@ -6,7 +6,6 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Business.Tokenables;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Tokens;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud
@@ -26,25 +25,24 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
             _tokenFactory = tokenFactory;
         }
 
-        public async Task BulkSendSponsorshipOfferAsync(string sponsoringOrgName, IEnumerable<OrganizationSponsorship> sponsorships)
+        public async Task BulkSendSponsorshipOfferAsync(Organization sponsoringOrg, IEnumerable<OrganizationSponsorship> sponsorships)
         {
-            var invites = new List<(string, bool, string)>();
+            var invites = new List<(OrganizationSponsorship, bool, string)>();
             foreach (var sponsorship in sponsorships)
             {
                 var user = await _userRepository.GetByEmailAsync(sponsorship.OfferedToEmail);
-                var isExistingAccount = user != null;
-                invites.Add((sponsorship.OfferedToEmail, user != null, _tokenFactory.Protect(new OrganizationSponsorshipOfferTokenable(sponsorship))));
+                invites.Add((sponsorship, user != null, _tokenFactory.Protect(new OrganizationSponsorshipOfferTokenable(sponsorship))));
             }
 
-            await _mailer.BulkSendFamiliesForEnterpriseOfferEmailAsync(sponsoringOrgName, invites);
+            await _mailer.BulkSendFamiliesForEnterpriseOfferEmailAsync(sponsoringOrg, invites);
         }
 
-        public async Task SendSponsorshipOfferAsync(OrganizationSponsorship sponsorship, string sponsoringOrgName)
+        public async Task SendSponsorshipOfferAsync(OrganizationSponsorship sponsorship, Organization sponsoringOrg)
         {
             var user = await _userRepository.GetByEmailAsync(sponsorship.OfferedToEmail);
             var isExistingAccount = user != null;
 
-            await _mailer.SendFamiliesForEnterpriseOfferEmailAsync(sponsoringOrgName, sponsorship.OfferedToEmail,
+            await _mailer.SendFamiliesForEnterpriseOfferEmailAsync(sponsoringOrg, sponsorship,
                 isExistingAccount, _tokenFactory.Protect(new OrganizationSponsorshipOfferTokenable(sponsorship)));
         }
 
@@ -66,7 +64,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
                 throw new BadRequestException("Cannot find an outstanding sponsorship offer for this organization.");
             }
 
-            await SendSponsorshipOfferAsync(sponsorship, sponsoringOrg.Name);
+            await SendSponsorshipOfferAsync(sponsorship, sponsoringOrg);
         }
     }
 }

@@ -6,8 +6,6 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Api.Request.OrganizationSponsorships;
-using Bit.Core.Models.Api.Request.OrganizationSponsorships;
-using Bit.Core.Models.Api.Response.OrganizationSponsorships;
 using Bit.Core.Models.Api.Response.OrganizationSponsorships;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
@@ -76,7 +74,7 @@ namespace Bit.Api.Controllers
                 sponsoringOrg,
                 await _organizationUserRepository.GetByOrganizationAsync(sponsoringOrgId, _currentContext.UserId ?? default),
                 model.PlanSponsorshipType, model.SponsoredEmail, model.FriendlyName);
-            await _sendSponsorshipOfferCommand.SendSponsorshipOfferAsync(sponsorship, sponsoringOrg.Name);
+            await _sendSponsorshipOfferCommand.SendSponsorshipOfferAsync(sponsorship, sponsoringOrg);
         }
 
         [Authorize("Application")]
@@ -135,7 +133,7 @@ namespace Bit.Api.Controllers
             }
 
             var (syncResponseData, offersToSend) = await _syncSponsorshipsCommand.SyncOrganization(sponsoringOrg, model.ToOrganizationSponsorshipSync().SponsorshipsBatch);
-            await _sendSponsorshipOfferCommand.BulkSendSponsorshipOfferAsync(sponsoringOrg.Name, offersToSend);
+            await _sendSponsorshipOfferCommand.BulkSendSponsorshipOfferAsync(sponsoringOrg, offersToSend);
             return new OrganizationSponsorshipSyncResponseModel(syncResponseData);
         }
 
