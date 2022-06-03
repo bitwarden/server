@@ -50,12 +50,10 @@ namespace Bit.Core.Services
         Task SendProviderConfirmedEmailAsync(string providerName, string email);
         Task SendProviderUserRemoved(string providerName, string email);
         Task SendUpdatedTempPasswordEmailAsync(string email, string userName);
-        Task SendFamiliesForEnterpriseOfferEmailAsync(string sponsorOrgName, string email, bool existingAccount, string token);
-        Task BulkSendFamiliesForEnterpriseOfferEmailAsync(string SponsorOrgName, IEnumerable<(string Email, bool ExistingAccount, string Token)> invites);
-        Task SendFamiliesForEnterpriseRedeemedEmailsAsync(string familyUserEmail, string sponsorEmail);
-        Task SendFamiliesForEnterpriseSponsorshipRevertingEmailAsync(string email, DateTime expirationDate);
         Task SendOTPEmailAsync(string email, string token);
         Task SendFailedLoginAttemptsEmailAsync(string email, DateTime utcNow, string ip);
         Task SendFailedTwoFactorAttemptsEmailAsync(string email, DateTime utcNow, string ip);
+        Task EnqueueMailAsync<T>(MailMessage message, string templateName, T model);
+        Task EnqueueMailAsync(IEnumerable<IMailQueueMessage> messages);
     }
 }

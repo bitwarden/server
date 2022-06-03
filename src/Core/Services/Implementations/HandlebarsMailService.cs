@@ -4,13 +4,11 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Reflection;
-using System.Text.Json;
 using System.Threading.Tasks;
 using Bit.Core.Entities;
 using Bit.Core.Entities.Provider;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Mail;
-using Bit.Core.Models.Mail.FamiliesForEnterprise;
 using Bit.Core.Models.Mail.Provider;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
@@ -426,10 +424,10 @@ namespace Bit.Core.Services
             await _mailDeliveryService.SendEmailAsync(message);
         }
 
-        private Task EnqueueMailAsync(IMailQueueMessage queueMessage) =>
-            _mailEnqueuingService.EnqueueAsync(queueMessage, SendEnqueuedMailMessageAsync);
+        public Task EnqueueMailAsync<T>(MailMessage message, string templateName, T model) =>
+            _mailEnqueuingService.EnqueueAsync(new MailQueueMessage(message, templateName, model), SendEnqueuedMailMessageAsync);
 
-        private Task EnqueueMailAsync(IEnumerable<IMailQueueMessage> queueMessages) =>
+        public Task EnqueueMailAsync(IEnumerable<IMailQueueMessage> queueMessages) =>
             _mailEnqueuingService.EnqueueManyAsync(queueMessages, SendEnqueuedMailMessageAsync);
 
         private MailMessage CreateDefaultMessage(string subject, string toEmail)
@@ -442,8 +440,7 @@ namespace Bit.Core.Services
             return new MailMessage
             {
                 ToEmails = toEmails,
-                Subject = subject,
-                MetaData = new Dictionary<string, object>()
+                Subject = subject
             };
         }
 
@@ -770,71 +767,6 @@ namespace Bit.Core.Services
             };
             await AddMessageContentAsync(message, "UpdatedTempPassword", model);
             message.Category = "UpdatedTempPassword";
-            await _mailDeliveryService.SendEmailAsync(message);
-        }
-
-        public async Task SendFamiliesForEnterpriseOfferEmailAsync(string sponsorOrgName, string email, bool existingAccount, string token) =>
-            await BulkSendFamiliesForEnterpriseOfferEmailAsync(sponsorOrgName, new[] { (email, existingAccount, token) });
-
-        public async Task BulkSendFamiliesForEnterpriseOfferEmailAsync(string sponsorOrgName, IEnumerable<(string Email, bool ExistingAccount, string Token)> invites)
-        {
-            MailQueueMessage CreateMessage((string Email, bool ExistingAccount, string Token) invite)
-            {
-                var message = CreateDefaultMessage("Accept Your Free Families Subscription", invite.Email);
-                message.Category = "FamiliesForEnterpriseOffer";
-                var model = new FamiliesForEnterpriseOfferViewModel
-                {
-                    SponsorOrgName = sponsorOrgName,
-                    SponsoredEmail = WebUtility.UrlEncode(invite.Email),
-                    ExistingAccount = invite.ExistingAccount,
-                    WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
-                    SiteName = _globalSettings.SiteName,
-                    SponsorshipToken = invite.Token,
-                };
-                var templateName = invite.ExistingAccount ?
-                    "FamiliesForEnterprise.FamiliesForEnterpriseOfferExistingAccount" :
-                    "FamiliesForEnterprise.FamiliesForEnterpriseOfferNewAccount";
-
-                return new MailQueueMessage(message, templateName, model);
-            }
-            var messageModels = invites.Select(invite => CreateMessage(invite));
-            await EnqueueMailAsync(messageModels);
-        }
-
-        public async Task SendFamiliesForEnterpriseRedeemedEmailsAsync(string familyUserEmail, string sponsorEmail)
-        {
-            // Email family user
-            await SendFamiliesForEnterpriseInviteRedeemedToFamilyUserEmailAsync(familyUserEmail);
-
-            // Email enterprise org user
-            await SendFamiliesForEnterpriseInviteRedeemedToEnterpriseUserEmailAsync(sponsorEmail);
-        }
-
-        private async Task SendFamiliesForEnterpriseInviteRedeemedToFamilyUserEmailAsync(string email)
-        {
-            var message = CreateDefaultMessage("Success! Families Subscription Accepted", email);
-            await AddMessageContentAsync(message, "FamiliesForEnterprise.FamiliesForEnterpriseRedeemedToFamilyUser", new BaseMailModel());
-            message.Category = "FamilyForEnterpriseRedeemedToFamilyUser";
-            await _mailDeliveryService.SendEmailAsync(message);
-        }
-
-        private async Task SendFamiliesForEnterpriseInviteRedeemedToEnterpriseUserEmailAsync(string email)
-        {
-            var message = CreateDefaultMessage("Success! Families Subscription Accepted", email);
-            await AddMessageContentAsync(message, "FamiliesForEnterprise.FamiliesForEnterpriseRedeemedToEnterpriseUser", new BaseMailModel());
-            message.Category = "FamilyForEnterpriseRedeemedToEnterpriseUser";
-            await _mailDeliveryService.SendEmailAsync(message);
-        }
-
-        public async Task SendFamiliesForEnterpriseSponsorshipRevertingEmailAsync(string email, DateTime expirationDate)
-        {
-            var message = CreateDefaultMessage("Your Families Sponsorship was Removed", email);
-            var model = new FamiliesForEnterpriseSponsorshipRevertingViewModel
-            {
-                ExpirationDate = expirationDate,
-            };
-            await AddMessageContentAsync(message, "FamiliesForEnterprise.FamiliesForEnterpriseSponsorshipReverting", model);
-            message.Category = "FamiliesForEnterpriseSponsorshipReverting";
             await _mailDeliveryService.SendEmailAsync(message);
         }
 
