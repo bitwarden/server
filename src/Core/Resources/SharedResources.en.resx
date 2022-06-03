@@ -679,4 +679,10 @@
   <data name="IdpSingleSignOnServiceUrlInvalid" xml:space="preserve">
     <value>Single sign on service URL contains illegal characters.</value>
   </data>
+  <data name="SsoRedirectTokenValidationMissing" xml:space="preserve">
+    <value>Single sign on redirect token is missing from the request.</value>
+  </data>
+  <data name="InvalidSsoRedirectToken" xml:space="preserve">
+    <value>Single sign on redirect token is invalid or expired.</value>
+  </data>
 </root>
