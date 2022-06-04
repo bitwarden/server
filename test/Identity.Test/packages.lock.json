@@ -3603,7 +3603,8 @@
         "type": "Project",
         "dependencies": {
           "Core": "1.48.1",
-          "SharedWeb": "1.48.1"
+          "SharedWeb": "1.48.1",
+          "Swashbuckle.AspNetCore.SwaggerGen": "5.6.3"
         }
       },
       "infrastructure.dapper": {
