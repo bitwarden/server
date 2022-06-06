@@ -1417,10 +1417,18 @@ namespace Bit.Core.Services
 
         public async Task<bool> Needs2FABecauseNewDeviceAsync(User user, string deviceIdentifier, string grantType)
         {
-            return _globalSettings.TwoFactorAuth.EmailOnNewDeviceLogin
-                   && user.EmailVerified
+            return CanEditDeviceVerificationSettings(user)
+                   && user.UnknownDeviceVerificationEnabled
                    && grantType != "authorization_code"
                    && await IsNewDeviceAndNotTheFirstOneAsync(user, deviceIdentifier);
+        }
+
+        public bool CanEditDeviceVerificationSettings(User user)
+        {
+            return _globalSettings.TwoFactorAuth.EmailOnNewDeviceLogin
+                   && user.EmailVerified
+                   && !user.UsesKeyConnector
+                   && !(user.GetTwoFactorProviders()?.Any() ?? false);
         }
 
         private async Task<bool> IsNewDeviceAndNotTheFirstOneAsync(User user, string deviceIdentifier)

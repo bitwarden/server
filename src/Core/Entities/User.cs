@@ -62,6 +62,7 @@ namespace Bit.Core.Entities
         public bool UsesKeyConnector { get; set; }
         public int FailedLoginCount { get; set; }
         public DateTime? LastFailedLoginDate { get; set; }
+        public bool UnknownDeviceVerificationEnabled { get; set; }
 
         public void SetNewId()
         {
