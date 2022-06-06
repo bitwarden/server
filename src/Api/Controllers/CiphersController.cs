@@ -225,9 +225,9 @@ namespace Bit.Api.Controllers
             }
 
             IEnumerable<Cipher> orgCiphers;
-            // Admins, Owners and Providers can access all items even if not assigned to them
             if (await _currentContext.OrganizationAdmin(orgIdGuid))
             {
+                // Admins, Owners and Providers can access all items even if not assigned to them
                 orgCiphers = await _cipherRepository.GetManyByOrganizationIdAsync(orgIdGuid);
             }
             else
