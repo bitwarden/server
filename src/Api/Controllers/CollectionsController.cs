@@ -88,10 +88,9 @@ namespace Bit.Api.Controllers
             }
 
             IEnumerable<Collection> orgCollections;
-            if (await _currentContext.OrganizationOwner(orgIdGuid))
+            // Admins, Owners and Providers can access all items even if not assigned to them
+            if (await _currentContext.OrganizationAdmin(orgIdGuid))
             {
-                // User may be a Provider for the organization, in which case GetManyByUserIdAsync won't return any results
-                // But they have access to all organization collections, so we can safely get by orgId instead
                 orgCollections = await _collectionRepository.GetManyByOrganizationIdAsync(orgIdGuid);
             }
             else
