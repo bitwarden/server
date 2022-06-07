@@ -89,8 +89,8 @@ namespace Bit.Api.Controllers
 
             IEnumerable<Collection> orgCollections;
             if (await _currentContext.OrganizationAdmin(orgIdGuid))
-            // Admins, Owners and Providers can access all items even if not assigned to them
             {
+                // Admins, Owners and Providers can access all items even if not assigned to them
                 orgCollections = await _collectionRepository.GetManyByOrganizationIdAsync(orgIdGuid);
             }
             else
