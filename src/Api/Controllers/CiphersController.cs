@@ -224,11 +224,12 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            IEnumerable<Cipher> orgCiphers;
-            if (await _currentContext.OrganizationAdmin(orgIdGuid))
+            IEnumerable<CipherOrganizationDetails> orgCiphers;
+            if (await _currentContext.OrganizationOwner(orgIdGuid))
             {
-                // Admins, Owners and Providers can access all items even if not assigned to them
-                orgCiphers = await _cipherRepository.GetManyByOrganizationIdAsync(orgIdGuid);
+                // User may be a Provider for the organization, in which case GetManyByUserIdAsync won't return any results
+                // But they have access to all organization ciphers, so we can safely get by orgId instead
+                orgCiphers = await _cipherRepository.GetManyOrganizationDetailsByOrganizationIdAsync(orgIdGuid);
             }
             else
             {
@@ -245,7 +246,8 @@ namespace Bit.Api.Controllers
 
 
             var responses = orgCiphers.Select(c => new CipherMiniDetailsResponseModel(c, _globalSettings,
-                collectionCiphersGroupDict));
+                collectionCiphersGroupDict, c.OrganizationUseTotp));
+
 
             var providerId = await _currentContext.ProviderIdForOrg(orgIdGuid);
             if (providerId.HasValue)

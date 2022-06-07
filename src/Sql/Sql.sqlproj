@@ -390,5 +390,6 @@
     <Build Include="dbo\Stored Procedures\OrganizationConnection_ReadByOrganizationIdType.sql" />
     <Build Include="dbo\Views\OrganizationApiKeyView.sql" />
     <Build Include="dbo\Views\OrganizationConnectionView.sql" />
+    <Build Include="dbo\Stored Procedures\CipherOrganizationDetails_ReadByOrganizationId.sql" />
   </ItemGroup>
 </Project>
