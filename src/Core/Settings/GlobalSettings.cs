@@ -44,6 +44,7 @@ namespace Bit.Core.Settings
         public virtual IInstallationSettings Installation { get; set; } = new InstallationSettings();
         public virtual IBaseServiceUriSettings BaseServiceUri { get; set; }
         public virtual string DatabaseProvider { get; set; }
+
         public virtual SqlSettings SqlServer { get; set; } = new SqlSettings();
         public virtual SqlSettings PostgreSql { get; set; } = new SqlSettings();
         public virtual SqlSettings MySql { get; set; } = new SqlSettings();
@@ -51,6 +52,7 @@ namespace Bit.Core.Settings
         public virtual MailSettings Mail { get; set; } = new MailSettings();
         public virtual IConnectionStringSettings Storage { get; set; } = new ConnectionStringSettings();
         public virtual ConnectionStringSettings Events { get; set; } = new ConnectionStringSettings();
+        public virtual IConnectionStringSettings Redis { get; set; } = new ConnectionStringSettings();
         public virtual NotificationsSettings Notifications { get; set; } = new NotificationsSettings();
         public virtual IFileStorageSettings Attachment { get; set; }
         public virtual FileStorageSettings Send { get; set; }

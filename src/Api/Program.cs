@@ -1,6 +1,8 @@
-﻿using AspNetCoreRateLimit;
+﻿using System.Threading.Tasks;
+using AspNetCoreRateLimit;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
 using Serilog.Events;
@@ -9,9 +11,27 @@ namespace Bit.Api
 {
     public class Program
     {
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
-            Host
+            var webHost = CreateHostBuilder(args).Build();
+
+            using (var scope = webHost.Services.CreateScope())
+            {
+                var ipPolicyStore = scope.ServiceProvider.GetRequiredService<IIpPolicyStore>();
+
+                await ipPolicyStore.SeedAsync();
+
+                var clientPolicySTore = scope.ServiceProvider.GetRequiredService<IClientPolicyStore>();
+
+                await clientPolicySTore.SeedAsync();
+            }
+
+            await webHost.RunAsync();
+        }
+
+        private static IHostBuilder CreateHostBuilder(string[] args)
+        {
+            return Host
                 .CreateDefaultBuilder(args)
                 .ConfigureCustomAppConfiguration(args)
                 .ConfigureWebHostDefaults(webBuilder =>
@@ -23,7 +43,7 @@ namespace Bit.Api
                             var context = e.Properties["SourceContext"].ToString();
                             if (e.Exception != null &&
                                 (e.Exception.GetType() == typeof(SecurityTokenValidationException) ||
-                                    e.Exception.Message == "Bad security stamp."))
+                                 e.Exception.Message == "Bad security stamp."))
                             {
                                 return false;
                             }
@@ -42,9 +62,7 @@ namespace Bit.Api
 
                             return e.Level >= LogEventLevel.Error;
                         }));
-                })
-                .Build()
-                .Run();
+                });
         }
     }
 }

@@ -23,6 +23,14 @@
         "ASPNETCORE_ENVIRONMENT": "Development"
       }
     },
+    "Api-Two": {
+      "commandName": "Project",
+      "launchBrowser": false,
+      "applicationUrl": "http://localhost:4002",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    },
     "Api-SelfHost": {
       "commandName": "Project",
       "launchBrowser": false,

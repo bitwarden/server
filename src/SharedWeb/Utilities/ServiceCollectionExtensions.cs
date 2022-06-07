@@ -574,7 +574,7 @@ namespace Bit.SharedWeb.Utilities
             }
             else
             {
-                services.AddDistributedRedisCache(options =>
+                services.AddStackExchangeRedisCache(options =>
                     options.Configuration = globalSettings.IdentityServer.RedisConnectionString);
             }
 

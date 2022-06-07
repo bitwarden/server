@@ -13,11 +13,14 @@ using Bit.SharedWeb.Utilities;
 using IdentityServer4.Extensions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Logging;
+using StackExchange.Redis;
 
 namespace Bit.Identity
 {
@@ -52,8 +55,15 @@ namespace Bit.Identity
             // Repositories
             services.AddSqlServerRepositories(globalSettings);
 
+            // Redis Connection
+            if (!globalSettings.SelfHosted && !string.IsNullOrEmpty(globalSettings.Redis.ConnectionString))
+            {
+                services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(globalSettings.Redis.ConnectionString));
+            }
+
             // Context
             services.AddScoped<ICurrentContext, CurrentContext>();
+            services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 
             // Caching
             services.AddMemoryCache();
@@ -66,9 +76,7 @@ namespace Bit.Identity
 
             if (!globalSettings.SelfHosted)
             {
-                // Rate limiting
-                services.AddSingleton<IIpPolicyStore, MemoryCacheIpPolicyStore>();
-                services.AddSingleton<IRateLimitCounterStore, MemoryCacheRateLimitCounterStore>();
+                services.AddIpRateLimiting(globalSettings);
             }
 
             // Cookies

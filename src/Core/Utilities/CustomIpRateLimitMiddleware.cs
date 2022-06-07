@@ -12,39 +12,40 @@ namespace Bit.Core.Utilities
 {
     public class CustomIpRateLimitMiddleware : IpRateLimitMiddleware
     {
-        private readonly IpRateLimitOptions _options;
-        private readonly IMemoryCache _memoryCache;
         private readonly IBlockIpService _blockIpService;
         private readonly ILogger<CustomIpRateLimitMiddleware> _logger;
+        private readonly IMemoryCache _memoryCache;
+        private readonly IpRateLimitOptions _options;
 
         public CustomIpRateLimitMiddleware(
             IMemoryCache memoryCache,
             IBlockIpService blockIpService,
             RequestDelegate next,
-            IOptions<IpRateLimitOptions> options,
-            IRateLimitCounterStore counterStore,
+            IOptions<IpRateLimitOptions> ipRateLimitOptions,
+            IProcessingStrategy processingStrategy,
+            IRateLimitConfiguration rateLimitConfiguration,
             IIpPolicyStore policyStore,
-            ILogger<CustomIpRateLimitMiddleware> logger,
-            IIpAddressParser ipParser = null)
-            : base(next, options, counterStore, policyStore, logger, ipParser)
+            ILogger<CustomIpRateLimitMiddleware> logger)
+            : base(next, processingStrategy, ipRateLimitOptions, policyStore, rateLimitConfiguration, logger)
         {
             _memoryCache = memoryCache;
             _blockIpService = blockIpService;
-            _options = options.Value;
+            _options = ipRateLimitOptions.Value;
             _logger = logger;
         }
 
         public override Task ReturnQuotaExceededResponse(HttpContext httpContext, RateLimitRule rule, string retryAfter)
         {
-            var message = string.IsNullOrWhiteSpace(_options.QuotaExceededMessage) ?
-                $"Slow down! Too many requests. Try again in {rule.Period}." : _options.QuotaExceededMessage;
+            var message = string.IsNullOrWhiteSpace(_options.QuotaExceededMessage)
+                ? $"Slow down! Too many requests. Try again in {rule.Period}."
+                : _options.QuotaExceededMessage;
             httpContext.Response.Headers["Retry-After"] = retryAfter;
             httpContext.Response.StatusCode = _options.HttpStatusCode;
             var errorModel = new ErrorResponseModel { Message = message };
-            return httpContext.Response.WriteAsJsonAsync(errorModel, cancellationToken: httpContext.RequestAborted);
+            return httpContext.Response.WriteAsJsonAsync(errorModel, httpContext.RequestAborted);
         }
 
-        public override void LogBlockedRequest(HttpContext httpContext, ClientRequestIdentity identity,
+        protected override void LogBlockedRequest(HttpContext httpContext, ClientRequestIdentity identity,
             RateLimitCounter counter, RateLimitRule rule)
         {
             base.LogBlockedRequest(httpContext, identity, counter, rule);
@@ -70,21 +71,12 @@ namespace Bit.Core.Utilities
 
         private string GetRequestInfo(HttpContext httpContext)
         {
-            if (httpContext == null || httpContext.Request == null)
-            {
-                return null;
-            }
+            if (httpContext == null || httpContext.Request == null) return null;
 
             var s = string.Empty;
-            foreach (var header in httpContext.Request.Headers)
-            {
-                s += $"Header \"{header.Key}\": {header.Value} \n";
-            }
+            foreach (var header in httpContext.Request.Headers) s += $"Header \"{header.Key}\": {header.Value} \n";
 
-            foreach (var query in httpContext.Request.Query)
-            {
-                s += $"Query \"{query.Key}\": {query.Value} \n";
-            }
+            foreach (var query in httpContext.Request.Query) s += $"Query \"{query.Key}\": {query.Value} \n";
 
             return s;
         }
