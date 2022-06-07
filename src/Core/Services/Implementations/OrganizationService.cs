@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -1751,10 +1751,10 @@ namespace Bit.Core.Services
                 EventType.OrganizationUser_UpdatedGroups);
         }
 
-        public async Task UpdateUserResetPasswordEnrollmentAsync(Guid organizationId, Guid organizationUserId, string resetPasswordKey, Guid? callingUserId)
+        public async Task UpdateUserResetPasswordEnrollmentAsync(Guid organizationId, Guid userId, string resetPasswordKey, Guid? callingUserId)
         {
             // Org User must be the same as the calling user and the organization ID associated with the user must match passed org ID
-            var orgUser = await _organizationUserRepository.GetByOrganizationAsync(organizationId, organizationUserId);
+            var orgUser = await _organizationUserRepository.GetByOrganizationAsync(organizationId, userId);
             if (!callingUserId.HasValue || orgUser == null || orgUser.UserId != callingUserId.Value ||
                 orgUser.OrganizationId != organizationId)
             {
