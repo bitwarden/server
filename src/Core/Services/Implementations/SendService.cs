@@ -292,14 +292,9 @@ namespace Bit.Core.Services
             if (send.HideEmail.GetValueOrDefault())
             {
                 var sendOptionsPolicies = await _policyRepository.GetManyByTypeApplicableToUserIdAsync(userId.Value, PolicyType.SendOptions);
-                foreach (var policy in sendOptionsPolicies)
+                if (sendOptionsPolicies.Any(p => p.GetDataModel<SendOptionsPolicyData>()?.DisableHideEmail ?? false))
                 {
-                    var data = CoreHelpers.LoadClassFromJsonData<SendOptionsPolicyData>(policy.Data);
-                    if (data?.DisableHideEmail ?? false)
-                    {
-                        throw new BadRequestException("Due to an Enterprise Policy, you are not allowed to hide your email address from recipients when creating or editing a Send.");
-                    }
-
+                    throw new BadRequestException("Due to an Enterprise Policy, you are not allowed to hide your email address from recipients when creating or editing a Send.");
                 }
             }
         }
