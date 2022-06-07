@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Text.Json;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations.Policies;
 using Bit.Core.Utilities;
@@ -20,14 +19,24 @@ namespace Bit.Core.Entities
         {
             Id = CoreHelpers.GenerateComb();
         }
+
+        public T GetDataModel<T>() where T : IPolicyDataModel, new()
+        {
+            return CoreHelpers.LoadClassFromJsonData<T>(Data);
+        }
+
+        public void SetDataModel<T>(T dataModel) where T : IPolicyDataModel, new()
+        {
+            Data = CoreHelpers.ClassToJsonData(dataModel);
+        }
     }
 
-    public class Policy<T> : Policy where T : IPolicyDataModel
+    public class Policy<T> : Policy where T : IPolicyDataModel, new()
     {
         public T DataModel
         {
-            get => JsonSerializer.Deserialize<T>(Data);
-            set => Data = JsonSerializer.Serialize(value);
+            get => GetDataModel<T>();
+            set => SetDataModel(value);
         }
     }
 }

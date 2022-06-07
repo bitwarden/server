@@ -23,7 +23,7 @@ namespace Bit.Infrastructure.Dapper.Repositories
             : base(connectionString, readOnlyConnectionString)
         { }
 
-        public async Task<Policy<T>> GetByOrganizationIdTypeAsync<T>(Guid organizationId, PolicyType type) where T : IPolicyDataModel =>
+        public async Task<Policy<T>> GetByOrganizationIdTypeAsync<T>(Guid organizationId, PolicyType type) where T : IPolicyDataModel, new() =>
             (Policy<T>)await GetByOrganizationIdTypeAsync(organizationId, type);
         public async Task<Policy> GetByOrganizationIdTypeAsync(Guid organizationId, PolicyType type)
         {

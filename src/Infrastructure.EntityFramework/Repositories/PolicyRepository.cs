@@ -19,7 +19,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.Policies)
         { }
 
-        public async Task<Core.Entities.Policy<T>> GetByOrganizationIdTypeAsync<T>(Guid organizationId, PolicyType type) where T : IPolicyDataModel =>
+        public async Task<Core.Entities.Policy<T>> GetByOrganizationIdTypeAsync<T>(Guid organizationId, PolicyType type) where T : IPolicyDataModel, new() =>
             (Core.Entities.Policy<T>)await GetByOrganizationIdTypeAsync(organizationId, type);
         public async Task<Core.Entities.Policy> GetByOrganizationIdTypeAsync(Guid organizationId, PolicyType type)
         {
