@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Text.Json;
 using Bit.Core.Enums;
+using Bit.Core.Models.Data.Organizations.Policies;
 using Bit.Core.Utilities;
 
 namespace Bit.Core.Entities
@@ -17,6 +19,15 @@ namespace Bit.Core.Entities
         public void SetNewId()
         {
             Id = CoreHelpers.GenerateComb();
+        }
+    }
+
+    public class Policy<T> : Policy where T : IPolicyDataModel
+    {
+        public T DataModel
+        {
+            get => JsonSerializer.Deserialize<T>(Data);
+            set => Data = JsonSerializer.Serialize(value);
         }
     }
 }
