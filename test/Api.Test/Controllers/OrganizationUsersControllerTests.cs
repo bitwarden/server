@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading.Tasks;
 using Bit.Api.Controllers;
 using Bit.Api.Models.Request.Organizations;
