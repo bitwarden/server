@@ -52,20 +52,6 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             }
         }
 
-        public async Task<ICollection<Core.Entities.Organization>> GetManyByUserIdEmailAsync(Guid userId, string userEmail)
-        {
-            using (var scope = ServiceScopeFactory.CreateScope())
-            {
-                var dbContext = GetDatabaseContext(scope);
-                var organizations = await GetDbSet(dbContext)
-                    .Select(e => e.OrganizationUsers
-                        .Where(ou => ou.UserId == userId || ou.Email == userEmail)
-                        .Select(ou => ou.Organization))
-                    .ToListAsync();
-                return Mapper.Map<List<Core.Entities.Organization>>(organizations);
-            }
-        }
-
         public async Task<ICollection<Core.Entities.Organization>> SearchAsync(string name, string userEmail,
             bool? paid, int skip, int take)
         {
