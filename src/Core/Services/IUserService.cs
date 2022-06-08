@@ -70,6 +70,7 @@ namespace Bit.Core.Services
             int? version = null);
         Task<bool> CheckPasswordAsync(User user, string password);
         Task<bool> CanAccessPremium(ITwoFactorProvidersUser user);
+        Task<bool> HasPremiumFromInvite(User user);
         Task<bool> TwoFactorIsEnabledAsync(ITwoFactorProvidersUser user);
         Task<bool> TwoFactorProviderIsEnabledAsync(TwoFactorProviderType provider, ITwoFactorProvidersUser user);
         Task<string> GenerateSignInTokenAsync(User user, string purpose);

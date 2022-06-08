@@ -1240,6 +1240,20 @@ namespace Bit.Core.Services
                 orgAbilities[o.Id].UsersGetPremium && orgAbilities[o.Id].Enabled);
         }
 
+        public async Task<bool> HasPremiumFromInvite(User user)
+        {
+            // Accepted orgUsers must be read by userId
+            var organizationUserDetails = await _organizationUserRepository.GetManyDetailsByUserAsync(user.Id, OrganizationUserStatusType.Accepted);
+            if (organizationUserDetails.Any(ou => ou.UsersGetPremium && ou.Enabled))
+            {
+                return true;
+            }
+
+            // TODO
+            // Invited orgUsers must be read by email
+            return false;
+        }
+
         public async Task<bool> TwoFactorIsEnabledAsync(ITwoFactorProvidersUser user)
         {
             var providers = user.GetTwoFactorProviders();
