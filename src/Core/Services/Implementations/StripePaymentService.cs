@@ -1434,11 +1434,11 @@ namespace Bit.Core.Services
             try
             {
                 var customer = await _stripeAdapter.CustomerGetAsync(gatewayCustomerId);
-            
+
                 await _stripeAdapter.CustomerUpdateAsync(customer.Id,
-                    new Stripe.CustomerUpdateOptions {Email = emailAddress});
+                    new Stripe.CustomerUpdateOptions { Email = emailAddress });
             }
-            catch (Stripe.StripeException e) {}
+            catch (Stripe.StripeException e) { }
         }
 
         public async Task<bool> CreditAccountAsync(ISubscriber subscriber, decimal creditAmount)

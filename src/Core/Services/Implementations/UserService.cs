@@ -555,12 +555,12 @@ namespace Bit.Core.Services
             user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
             await _userRepository.ReplaceAsync(user);
 
-            if (user.Gateway == GatewayType.Stripe 
+            if (user.Gateway == GatewayType.Stripe
                 && !string.IsNullOrWhiteSpace(user.GatewayCustomerId))
             {
                 await _paymentService.UpdateCustomerEmailAddress(user.GatewayCustomerId, user.BillingEmailAddress());
             }
-            
+
             await _pushService.PushLogOutAsync(user.Id);
 
             return IdentityResult.Success;
