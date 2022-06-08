@@ -4,7 +4,7 @@ CREATE TYPE [dbo].[OrganizationUserType] AS TABLE(
     [UserId] UNIQUEIDENTIFIER,
     [Email] NVARCHAR(256),
     [Key] VARCHAR(MAX),
-    [Status] TINYINT,
+    [Status] SMALLINT,
     [Type] TINYINT,
     [AccessAll] BIT,
     [ExternalId] NVARCHAR(300),
