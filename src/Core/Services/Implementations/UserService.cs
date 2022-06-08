@@ -1230,28 +1230,26 @@ namespace Bit.Core.Services
             {
                 return true;
             }
-            var orgs = await _currentContext.OrganizationMembershipAsync(_organizationUserRepository, userId.Value);
-            if (!orgs.Any())
+            if (await this.HasPremiumFromOrganization(userId.Value))
+            {
+                return true;
+            }
+            return false;
+        }
+
+        public async Task<bool> HasPremiumFromOrganization(Guid userId)
+        {
+            // orgUsers in the Invited status are not associated with a userId yet, so this will get
+            // orgUsers in Accepted and Confirmed states only
+            var orgUsers = await _organizationUserRepository.GetManyByUserAsync(userId);
+
+            if (!orgUsers.Any())
             {
                 return false;
             }
             var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
-            return orgs.Any(o => orgAbilities.ContainsKey(o.Id) &&
-                orgAbilities[o.Id].UsersGetPremium && orgAbilities[o.Id].Enabled);
-        }
-
-        public async Task<bool> HasPremiumFromInvite(User user)
-        {
-            // Accepted orgUsers must be read by userId
-            var organizationUserDetails = await _organizationUserRepository.GetManyDetailsByUserAsync(user.Id, OrganizationUserStatusType.Accepted);
-            if (organizationUserDetails.Any(ou => ou.UsersGetPremium && ou.Enabled))
-            {
-                return true;
-            }
-
-            // TODO
-            // Invited orgUsers must be read by email
-            return false;
+            return orgUsers.Any(ou => orgAbilities.ContainsKey(ou.OrganizationId) &&
+                orgAbilities[ou.OrganizationId].UsersGetPremium && orgAbilities[ou.OrganizationId].Enabled);
         }
 
         public async Task<bool> TwoFactorIsEnabledAsync(ITwoFactorProvidersUser user)
