@@ -350,5 +350,35 @@ namespace Bit.Core.Test.Services
 
             Assert.False(sutProvider.Sut.CanEditDeviceVerificationSettings(user));
         }
+
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public async void HasPremiumFromOrganization_Is_False_If_Org_Disabled(SutProvider<UserService> sutProvider, User user, Organization organization)
+        {
+            organization.Enabled = false;
+            organization.UsersGetPremium = true;
+            sutProvider.GetDependency<IOrganizationRepository>().GetManyByUserIdEmailAsync(user.Id, user.Email).Returns(new List<Organization>() { organization });
+
+            Assert.False(await sutProvider.Sut.HasPremiumFromOrganization(user));
+        }
+
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public async void HasPremiumFromOrganization_Is_False_If_Plan_Doesnt_Give_Members_Premium(SutProvider<UserService> sutProvider, User user, Organization organization)
+        {
+            organization.Enabled = true;
+            organization.UsersGetPremium = false;
+            sutProvider.GetDependency<IOrganizationRepository>().GetManyByUserIdEmailAsync(user.Id, user.Email).Returns(new List<Organization>() { organization });
+
+            Assert.False(await sutProvider.Sut.HasPremiumFromOrganization(user));
+        }
+
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public async void HasPremiumFromOrganization_Is_True_If_Enabled_And_Plan_Gives_Members_Premium(SutProvider<UserService> sutProvider, User user, Organization organization)
+        {
+            organization.Enabled = true;
+            organization.UsersGetPremium = true;
+            sutProvider.GetDependency<IOrganizationRepository>().GetManyByUserIdEmailAsync(user.Id, user.Email).Returns(new List<Organization>() { organization });
+
+            Assert.True(await sutProvider.Sut.HasPremiumFromOrganization(user));
+        }
     }
 }
