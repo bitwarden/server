@@ -16,7 +16,7 @@ namespace Bit.Api.Models.Response
             IEnumerable<ProviderUserProviderDetails> providerUserDetails,
             IEnumerable<ProviderUserOrganizationDetails> providerUserOrganizationDetails,
             bool twoFactorEnabled,
-            bool premiumFromOrganization) : base("profile")
+            bool premiumFromInvite) : base("profile")
         {
             if (user == null)
             {
@@ -28,7 +28,7 @@ namespace Bit.Api.Models.Response
             Email = user.Email;
             EmailVerified = user.EmailVerified;
             Premium = user.Premium;
-            PremiumFromOrganization = premiumFromOrganization;
+            PremiumFromInvite = premiumFromInvite;
             MasterPasswordHint = string.IsNullOrWhiteSpace(user.MasterPasswordHint) ? null : user.MasterPasswordHint;
             Culture = user.Culture;
             TwoFactorEnabled = twoFactorEnabled;
@@ -48,7 +48,7 @@ namespace Bit.Api.Models.Response
         public string Email { get; set; }
         public bool EmailVerified { get; set; }
         public bool Premium { get; set; }
-        public bool PremiumFromOrganization { get; set; }
+        public bool PremiumFromInvite { get; set; }
         public string MasterPasswordHint { get; set; }
         public string Culture { get; set; }
         public bool TwoFactorEnabled { get; set; }
