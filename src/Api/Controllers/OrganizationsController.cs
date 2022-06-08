@@ -12,7 +12,7 @@ using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
-using Bit.Core.Models.Data;
+using Bit.Core.Models.Data.Organizations.Policies;
 using Bit.Core.OrganizationFeatures.OrganizationApiKeys.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
