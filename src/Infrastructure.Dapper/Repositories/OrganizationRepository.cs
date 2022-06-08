@@ -60,6 +60,19 @@ namespace Bit.Infrastructure.Dapper.Repositories
             }
         }
 
+        public async Task<ICollection<Organization>> GetManyByUserIdEmailAsync(Guid userId, string userEmail)
+        {
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<Organization>(
+                    "[dbo].[Organization_ReadByUserIdEmail]",
+                    new { UserId = userId, Email = userEmail },
+                    commandType: CommandType.StoredProcedure);
+
+                return results.ToList();
+            }
+        }
+
         public async Task<ICollection<Organization>> SearchAsync(string name, string userEmail, bool? paid,
             int skip, int take)
         {

@@ -1240,18 +1240,11 @@ namespace Bit.Core.Services
                 orgAbilities[o.Id].UsersGetPremium && orgAbilities[o.Id].Enabled);
         }
 
-        public async Task<bool> HasPremiumFromInvite(User user)
+        public async Task<bool> HasPremiumFromOrganization(User user)
         {
-            // Accepted orgUsers must be read by userId
-            var organizationUserDetails = await _organizationUserRepository.GetManyDetailsByUserAsync(user.Id, OrganizationUserStatusType.Accepted);
-            if (organizationUserDetails.Any(ou => ou.UsersGetPremium && ou.Enabled))
-            {
-                return true;
-            }
-
-            // TODO
-            // Invited orgUsers must be read by email
-            return false;
+            // Users inherit premium as soon as they're invited, to facilitate setting up 2FA
+            var organizations = await _organizationRepository.GetManyByUserIdEmailAsync(user.Id, user.Email);
+            return organizations.Any(ou => ou.UsersGetPremium && ou.Enabled);
         }
 
         public async Task<bool> TwoFactorIsEnabledAsync(ITwoFactorProvidersUser user)

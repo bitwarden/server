@@ -11,6 +11,7 @@ namespace Bit.Core.Repositories
         Task<Organization> GetByIdentifierAsync(string identifier);
         Task<ICollection<Organization>> GetManyByEnabledAsync();
         Task<ICollection<Organization>> GetManyByUserIdAsync(Guid userId);
+        Task<ICollection<Organization>> GetManyByUserIdEmailAsync(Guid userId, string userEmail);
         Task<ICollection<Organization>> SearchAsync(string name, string userEmail, bool? paid, int skip, int take);
         Task UpdateStorageAsync(Guid id);
         Task<ICollection<OrganizationAbility>> GetManyAbilitiesAsync();

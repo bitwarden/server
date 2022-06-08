@@ -16,7 +16,7 @@ namespace Bit.Api.Models.Response
             GlobalSettings globalSettings,
             User user,
             bool userTwoFactorEnabled,
-            bool userPremiumFromInvite,
+            bool userPremiumFromOrganization,
             IEnumerable<OrganizationUserOrganizationDetails> organizationUserDetails,
             IEnumerable<ProviderUserProviderDetails> providerUserDetails,
             IEnumerable<ProviderUserOrganizationDetails> providerUserOrganizationDetails,
@@ -30,7 +30,7 @@ namespace Bit.Api.Models.Response
             : base("sync")
         {
             Profile = new ProfileResponseModel(user, organizationUserDetails, providerUserDetails,
-                providerUserOrganizationDetails, userTwoFactorEnabled, userPremiumFromInvite);
+                providerUserOrganizationDetails, userTwoFactorEnabled, userPremiumFromOrganization);
             Folders = folders.Select(f => new FolderResponseModel(f));
             Ciphers = ciphers.Select(c => new CipherDetailsResponseModel(c, globalSettings, collectionCiphersDict));
             Collections = collections?.Select(
