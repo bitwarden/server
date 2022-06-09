@@ -19,9 +19,9 @@ The Bitwarden Server project contains the APIs, database, and other core infrast
 
 The server project is written in C# using .NET Core with ASP.NET Core. The database is written in T-SQL/SQL Server. The codebase can be developed, built, run, and deployed cross-platform on Windows, macOS, and Linux distributions.
 
-## Build/Run
+## Developer Documentation
 
-Build instructions for all Bitwarden applications, including the server, are located in our [Contributing Documentation](https://contributing.bitwarden.com/). This also includes contributing guidelines, recommended tooling, code style tips, and lots of other great information to get you started.
+Please refer to the [Server Setup Guide](https://contributing.bitwarden.com/server/guide/) in the [Contributing Documentation](https://contributing.bitwarden.com/) for build instructions, recommended tooling, code style tips, and lots of other great information to get you started.
 
 ## Deploy
 
