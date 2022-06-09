@@ -437,7 +437,7 @@ namespace Bit.Core.Settings
             }
             public string ApiUri
             {
-                get => string.IsNullOrWhiteSpace(_apiUri) ? "https://api.biwarden.com" : _apiUri;
+                get => string.IsNullOrWhiteSpace(_apiUri) ? "https://api.bitwarden.com" : _apiUri;
                 set => _apiUri = value;
             }
         }
