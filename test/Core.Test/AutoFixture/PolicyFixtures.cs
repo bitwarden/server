@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Reflection;
+using System.Text.Json;
 using AutoFixture;
 using AutoFixture.Kernel;
 using AutoFixture.Xunit2;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Models.Data.Organizations.Policies;
 using Bit.Core.Test.AutoFixture.EntityFrameworkRepositoryFixtures;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using Bit.Infrastructure.EntityFramework.Repositories;
@@ -25,6 +27,16 @@ namespace Bit.Core.Test.AutoFixture.PolicyFixtures
         public void Customize(IFixture fixture)
         {
             fixture.Customize<Policy>(composer => composer
+                .With(o => o.OrganizationId, Guid.NewGuid())
+                .With(o => o.Type, Type)
+                .With(o => o.Enabled, true));
+            fixture.Customize<Policy<ResetPasswordDataModel>>(composer => composer
+                .With(o => o.Data, JsonSerializer.Serialize(fixture.Create<ResetPasswordDataModel>()))
+                .With(o => o.OrganizationId, Guid.NewGuid())
+                .With(o => o.Type, Type)
+                .With(o => o.Enabled, true));
+            fixture.Customize<Policy<SendOptionsPolicyData>>(composer => composer
+                .With(o => o.Data, JsonSerializer.Serialize(fixture.Create<ResetPasswordDataModel>()))
                 .With(o => o.OrganizationId, Guid.NewGuid())
                 .With(o => o.Type, Type)
                 .With(o => o.Enabled, true));

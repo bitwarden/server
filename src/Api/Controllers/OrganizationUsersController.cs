@@ -10,6 +10,7 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
+using Bit.Core.Models.Data.Organizations.Policies;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -27,6 +28,7 @@ namespace Bit.Api.Controllers
         private readonly ICollectionRepository _collectionRepository;
         private readonly IGroupRepository _groupRepository;
         private readonly IUserService _userService;
+        private readonly IPolicyRepository _policyRepository;
         private readonly ICurrentContext _currentContext;
 
         public OrganizationUsersController(
@@ -36,6 +38,7 @@ namespace Bit.Api.Controllers
             ICollectionRepository collectionRepository,
             IGroupRepository groupRepository,
             IUserService userService,
+            IPolicyRepository policyRepository,
             ICurrentContext currentContext)
         {
             _organizationRepository = organizationRepository;
@@ -44,6 +47,7 @@ namespace Bit.Api.Controllers
             _collectionRepository = collectionRepository;
             _groupRepository = groupRepository;
             _userService = userService;
+            _policyRepository = policyRepository;
             _currentContext = currentContext;
         }
 
@@ -169,8 +173,8 @@ namespace Bit.Api.Controllers
             await _organizationService.ResendInviteAsync(orgGuidId, userId.Value, new Guid(id));
         }
 
-        [HttpPost("{id}/accept")]
-        public async Task Accept(string orgId, string id, [FromBody] OrganizationUserAcceptRequestModel model)
+        [HttpPost("{organizationUserId}/accept")]
+        public async Task Accept(Guid orgId, Guid organizationUserId, [FromBody] OrganizationUserAcceptRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)
@@ -178,7 +182,23 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
-            var result = await _organizationService.AcceptUserAsync(new Guid(id), user, model.Token, _userService);
+            var masterPasswordPolicy = await _policyRepository.GetByOrganizationIdTypeAsync<ResetPasswordDataModel>(orgId, PolicyType.MasterPassword);
+            var useMasterPasswordPolicy = masterPasswordPolicy != null &&
+                masterPasswordPolicy.Enabled &&
+                masterPasswordPolicy.DataModel.AutoEnrollEnabled;
+
+            if (useMasterPasswordPolicy &&
+                string.IsNullOrWhiteSpace(model.ResetPasswordKey))
+            {
+                throw new BadRequestException(string.Empty, "Master Password reset is required, but not provided.");
+            }
+
+            await _organizationService.AcceptUserAsync(organizationUserId, user, model.Token, _userService);
+
+            if (useMasterPasswordPolicy)
+            {
+                await _organizationService.UpdateUserResetPasswordEnrollmentAsync(orgId, user.Id, model.ResetPasswordKey, user.Id);
+            }
         }
 
         [HttpPost("{id}/confirm")]
@@ -277,7 +297,7 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
-            if (!await _userService.VerifySecretAsync(user, model.Secret))
+            if (model.ResetPasswordKey != null && !await _userService.VerifySecretAsync(user, model.Secret))
             {
                 await Task.Delay(2000);
                 throw new BadRequestException("MasterPasswordHash", "Invalid password.");
