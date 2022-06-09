@@ -61,5 +61,7 @@ namespace Bit.Core.Services
         Task DeleteSsoUserAsync(Guid userId, Guid? organizationId);
         Task<Organization> UpdateOrganizationKeysAsync(Guid orgId, string publicKey, string privateKey);
         Task<bool> HasConfirmedOwnersExceptAsync(Guid organizationId, IEnumerable<Guid> organizationUsersId, bool includeProvider = true);
+        Task DisableUserAsync(OrganizationUser organizationUser, Guid? disablingUserId);
+        Task EnableUserAsync(OrganizationUser organizationUser, Guid? enablingUserId);
     }
 }

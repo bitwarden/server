@@ -2186,5 +2186,67 @@ namespace Bit.Core.Services
                 throw new BadRequestException("You cannot delete an Organization that is using Key Connector.");
             }
         }
+        
+        public async Task DisableUserAsync(OrganizationUser organizationUser, Guid? disablingUserId)
+        {
+            if (organizationUser.Status == OrganizationUserStatusType.Disabled)
+            {
+                throw new BadRequestException("Already disabled.");
+            }
+
+            if (disablingUserId.HasValue && organizationUser.UserId == disablingUserId.Value)
+            {
+                throw new BadRequestException("You cannot disable yourself.");
+            }
+
+            if (organizationUser.Type == OrganizationUserType.Owner && disablingUserId.HasValue &&
+                !await _currentContext.OrganizationOwner(organizationUser.OrganizationId))
+            {
+                throw new BadRequestException("Only owners can disable other owners.");
+            }
+
+            if (!await HasConfirmedOwnersExceptAsync(organizationUser.OrganizationId, new[] { organizationUser.Id }))
+            {
+                throw new BadRequestException("Organization must have at least one confirmed owner.");
+            }
+
+            await _organizationUserRepository.Disable(organizationUser.Id);
+            await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Disabled);
+        }
+
+        public async Task EnableUserAsync(OrganizationUser organizationUser, Guid? enablingUserId)
+        {
+            if (organizationUser.Status != OrganizationUserStatusType.Disabled)
+            {
+                throw new BadRequestException("Already enabled.");
+            }
+
+            if (enablingUserId.HasValue && organizationUser.UserId == enablingUserId.Value)
+            {
+                throw new BadRequestException("You cannot enable yourself.");
+            }
+
+            if (organizationUser.Type == OrganizationUserType.Owner && enablingUserId.HasValue &&
+                !await _currentContext.OrganizationOwner(organizationUser.OrganizationId))
+            {
+                throw new BadRequestException("Only owners can enable other owners.");
+            }
+
+            // Determine status to revert back to
+            var status = OrganizationUserStatusType.Invited;
+            if (organizationUser.UserId.HasValue && string.IsNullOrWhiteSpace(organizationUser.Email))
+            {
+                // Has UserId & Email is null, then Accepted
+                status = OrganizationUserStatusType.Accepted;
+                if (!string.IsNullOrWhiteSpace(organizationUser.Key))
+                {
+                    // We have an org key for this user, user was confirmed
+                    status = OrganizationUserStatusType.Confirmed;
+                }
+            }
+            
+            await _organizationUserRepository.Enable(organizationUser.Id, status);
+            await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Enabled);
+        }
     }
 }
