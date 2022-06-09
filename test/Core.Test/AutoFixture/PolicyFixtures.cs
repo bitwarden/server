@@ -30,16 +30,6 @@ namespace Bit.Core.Test.AutoFixture.PolicyFixtures
                 .With(o => o.OrganizationId, Guid.NewGuid())
                 .With(o => o.Type, Type)
                 .With(o => o.Enabled, true));
-            fixture.Customize<Policy<ResetPasswordDataModel>>(composer => composer
-                .With(o => o.Data, JsonSerializer.Serialize(fixture.Create<ResetPasswordDataModel>()))
-                .With(o => o.OrganizationId, Guid.NewGuid())
-                .With(o => o.Type, Type)
-                .With(o => o.Enabled, true));
-            fixture.Customize<Policy<SendOptionsPolicyData>>(composer => composer
-                .With(o => o.Data, JsonSerializer.Serialize(fixture.Create<ResetPasswordDataModel>()))
-                .With(o => o.OrganizationId, Guid.NewGuid())
-                .With(o => o.Type, Type)
-                .With(o => o.Enabled, true));
         }
     }
 
