@@ -1,6 +1,8 @@
-﻿using Bit.Core.Enums;
+﻿using System;
+using Bit.Core.Enums;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Data;
+using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Utilities;
 
 namespace Bit.Api.Models.Response
@@ -45,6 +47,9 @@ namespace Bit.Api.Models.Response
                 StaticStore.GetSponsoredPlan(PlanSponsorshipType.FamiliesForEnterprise)
                 .UsersCanSponsor(organization);
             PlanProductType = StaticStore.GetPlan(organization.PlanType).Product;
+            FamilySponsorshipLastSyncDate = organization.FamilySponsorshipLastSyncDate;
+            FamilySponsorshipToDelete = organization.FamilySponsorshipToDelete;
+            FamilySponsorshipValidUntil = organization.FamilySponsorshipValidUntil;
 
             if (organization.SsoConfig != null)
             {
@@ -88,5 +93,8 @@ namespace Bit.Api.Models.Response
         public ProductType PlanProductType { get; set; }
         public bool KeyConnectorEnabled { get; set; }
         public string KeyConnectorUrl { get; set; }
+        public DateTime? FamilySponsorshipLastSyncDate { get; set; }
+        public DateTime? FamilySponsorshipValidUntil { get; set; }
+        public bool? FamilySponsorshipToDelete { get; set; }
     }
 }

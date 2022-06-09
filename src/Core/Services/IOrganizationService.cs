@@ -51,14 +51,13 @@ namespace Bit.Core.Services
         Task<List<Tuple<OrganizationUser, string>>> DeleteUsersAsync(Guid organizationId,
             IEnumerable<Guid> organizationUserIds, Guid? deletingUserId);
         Task UpdateUserGroupsAsync(OrganizationUser organizationUser, IEnumerable<Guid> groupIds, Guid? loggedInUserId);
-        Task UpdateUserResetPasswordEnrollmentAsync(Guid organizationId, Guid organizationUserId, string resetPasswordKey, Guid? callingUserId);
+        Task UpdateUserResetPasswordEnrollmentAsync(Guid organizationId, Guid userId, string resetPasswordKey, Guid? callingUserId);
         Task<OrganizationLicense> GenerateLicenseAsync(Guid organizationId, Guid installationId);
         Task<OrganizationLicense> GenerateLicenseAsync(Organization organization, Guid installationId,
             int? version = null);
         Task ImportAsync(Guid organizationId, Guid? importingUserId, IEnumerable<ImportedGroup> groups,
             IEnumerable<ImportedOrganizationUser> newUsers, IEnumerable<string> removeUserExternalIds,
             bool overwriteExisting);
-        Task RotateApiKeyAsync(Organization organization);
         Task DeleteSsoUserAsync(Guid userId, Guid? organizationId);
         Task<Organization> UpdateOrganizationKeysAsync(Guid orgId, string publicKey, string privateKey);
         Task<bool> HasConfirmedOwnersExceptAsync(Guid organizationId, IEnumerable<Guid> organizationUsersId, bool includeProvider = true);

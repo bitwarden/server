@@ -2813,7 +2813,7 @@
       "icons": {
         "type": "Project",
         "dependencies": {
-          "AngleSharp": "0.16.1",
+          "AngleSharp": "0.14.0",
           "Core": "1.48.1",
           "SharedWeb": "1.48.1"
         }
@@ -2829,12 +2829,12 @@
       "infrastructure.entityframework": {
         "type": "Project",
         "dependencies": {
-          "AutoMapper.Extensions.Microsoft.DependencyInjection": "11.0.0",
+          "AutoMapper.Extensions.Microsoft.DependencyInjection": "8.0.1",
           "Core": "1.48.1",
-          "Microsoft.EntityFrameworkCore.Relational": "6.0.4",
-          "Npgsql.EntityFrameworkCore.PostgreSQL": "6.0.4",
-          "Pomelo.EntityFrameworkCore.MySql": "6.0.1",
-          "linq2db.EntityFrameworkCore": "6.7.1"
+          "Microsoft.EntityFrameworkCore.Relational": "5.0.12",
+          "Npgsql.EntityFrameworkCore.PostgreSQL": "5.0.2",
+          "Pomelo.EntityFrameworkCore.MySql": "5.0.3",
+          "linq2db.EntityFrameworkCore": "5.2.1"
         }
       },
       "sharedweb": {

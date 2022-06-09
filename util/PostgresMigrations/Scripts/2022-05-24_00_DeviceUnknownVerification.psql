@@ -1,0 +1,8 @@
+START TRANSACTION;
+
+ALTER TABLE "User" ADD "UnknownDeviceVerificationEnabled" boolean NOT NULL DEFAULT 1;
+
+INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+VALUES ('20220524170740_DeviceUnknownVerification', '5.0.12');
+
+COMMIT;

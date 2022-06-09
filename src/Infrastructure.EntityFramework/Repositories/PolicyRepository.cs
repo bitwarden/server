@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
 using Bit.Core.Enums;
+using Bit.Core.Models.Data.Organizations.Policies;
 using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Infrastructure.EntityFramework.Repositories.Queries;
@@ -18,6 +19,8 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.Policies)
         { }
 
+        public async Task<Core.Entities.Policy<T>> GetByOrganizationIdTypeAsync<T>(Guid organizationId, PolicyType type) where T : IPolicyDataModel, new() =>
+            (Core.Entities.Policy<T>)await GetByOrganizationIdTypeAsync(organizationId, type);
         public async Task<Core.Entities.Policy> GetByOrganizationIdTypeAsync(Guid organizationId, PolicyType type)
         {
             using (var scope = ServiceScopeFactory.CreateScope())

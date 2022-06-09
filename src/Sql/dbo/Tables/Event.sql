@@ -3,6 +3,7 @@
     [Type]                   INT              NOT NULL,
     [UserId]                 UNIQUEIDENTIFIER NULL,
     [OrganizationId]         UNIQUEIDENTIFIER NULL,
+    [InstallationId]         UNIQUEIDENTIFIER NULL,
     [CipherId]               UNIQUEIDENTIFIER NULL,
     [CollectionId]           UNIQUEIDENTIFIER NULL,
     [PolicyId]               UNIQUEIDENTIFIER NULL,

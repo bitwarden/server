@@ -1,0 +1,14 @@
+START TRANSACTION;
+
+ALTER TABLE "OrganizationSponsorship" DROP CONSTRAINT "FK_OrganizationSponsorship_Organization_SponsoringOrganization~";
+
+ALTER TABLE "OrganizationSponsorship" ALTER COLUMN "SponsoringOrganizationId" DROP NOT NULL;
+
+ALTER TABLE "Event" ADD "InstallationId" uuid NULL;
+
+ALTER TABLE "OrganizationSponsorship" ADD CONSTRAINT "FK_OrganizationSponsorship_Organization_SponsoringOrganization~" FOREIGN KEY ("SponsoringOrganizationId") REFERENCES "Organization" ("Id") ON DELETE RESTRICT;
+
+INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+VALUES ('20220420171153_AddInstallationIdToEvents', '5.0.12');
+
+COMMIT;

@@ -16,6 +16,7 @@ namespace Bit.Core.Models.Data
             Type = e.Type;
             UserId = e.UserId;
             OrganizationId = e.OrganizationId;
+            InstallationId = e.InstallationId;
             ProviderId = e.ProviderId;
             CipherId = e.CipherId;
             CollectionId = e.CollectionId;
@@ -33,6 +34,7 @@ namespace Bit.Core.Models.Data
         public EventType Type { get; set; }
         public Guid? UserId { get; set; }
         public Guid? OrganizationId { get; set; }
+        public Guid? InstallationId { get; set; }
         public Guid? ProviderId { get; set; }
         public Guid? CipherId { get; set; }
         public Guid? CollectionId { get; set; }

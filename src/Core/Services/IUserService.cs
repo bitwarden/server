@@ -79,5 +79,6 @@ namespace Bit.Core.Services
         Task<bool> VerifyOTPAsync(User user, string token);
         Task<bool> VerifySecretAsync(User user, string secret);
         Task<bool> Needs2FABecauseNewDeviceAsync(User user, string deviceIdentifier, string grantType);
+        bool CanEditDeviceVerificationSettings(User user);
     }
 }

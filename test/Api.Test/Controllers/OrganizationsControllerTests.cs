@@ -7,6 +7,7 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
+using Bit.Core.OrganizationFeatures.OrganizationApiKeys.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -27,6 +28,9 @@ namespace Bit.Api.Test.Controllers
         private readonly ISsoConfigRepository _ssoConfigRepository;
         private readonly ISsoConfigService _ssoConfigService;
         private readonly IUserService _userService;
+        private readonly IGetOrganizationApiKeyCommand _getOrganizationApiKeyCommand;
+        private readonly IRotateOrganizationApiKeyCommand _rotateOrganizationApiKeyCommand;
+        private readonly IOrganizationApiKeyRepository _organizationApiKeyRepository;
 
         private readonly OrganizationsController _sut;
 
@@ -41,11 +45,15 @@ namespace Bit.Api.Test.Controllers
             _policyRepository = Substitute.For<IPolicyRepository>();
             _ssoConfigRepository = Substitute.For<ISsoConfigRepository>();
             _ssoConfigService = Substitute.For<ISsoConfigService>();
+            _getOrganizationApiKeyCommand = Substitute.For<IGetOrganizationApiKeyCommand>();
+            _rotateOrganizationApiKeyCommand = Substitute.For<IRotateOrganizationApiKeyCommand>();
+            _organizationApiKeyRepository = Substitute.For<IOrganizationApiKeyRepository>();
             _userService = Substitute.For<IUserService>();
 
             _sut = new OrganizationsController(_organizationRepository, _organizationUserRepository,
                 _policyRepository, _organizationService, _userService, _paymentService, _currentContext,
-                _ssoConfigRepository, _ssoConfigService, _globalSettings);
+                _ssoConfigRepository, _ssoConfigService, _getOrganizationApiKeyCommand, _rotateOrganizationApiKeyCommand,
+                _organizationApiKeyRepository, _globalSettings);
         }
 
         public void Dispose()
@@ -112,4 +120,3 @@ namespace Bit.Api.Test.Controllers
         }
     }
 }
-

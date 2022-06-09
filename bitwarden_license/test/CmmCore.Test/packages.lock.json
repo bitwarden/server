@@ -299,6 +299,15 @@
           "IdentityModel": "4.4.0"
         }
       },
+      "Kralizek.AutoFixture.Extensions.MockHttp": {
+        "type": "Transitive",
+        "resolved": "1.2.0",
+        "contentHash": "6zmks7/5mVczazv910N7V2EdiU6B+rY61lwdgVO0o2iZuTI6KI3T+Hgkrjv0eGOKYucq2OMC+gnAc5Ej2ajoTQ==",
+        "dependencies": {
+          "AutoFixture": "4.11.0",
+          "RichardSzalay.MockHttp": "6.0.0"
+        }
+      },
       "libsodium": {
         "type": "Transitive",
         "resolved": "1.0.18",
@@ -1064,6 +1073,11 @@
           "System.Configuration.ConfigurationManager": "4.7.0",
           "System.Diagnostics.DiagnosticSource": "4.7.1"
         }
+      },
+      "RichardSzalay.MockHttp": {
+        "type": "Transitive",
+        "resolved": "6.0.0",
+        "contentHash": "bStGNqIX/MGYtML7K3EzdsE/k5HGVAcg7XgN23TQXGXqxNC9fvYFR94fA0sGM5hAT36R+BBGet6ZDQxXL/IPxg=="
       },
       "runtime.debian.8-x64.runtime.native.System.Security.Cryptography.OpenSsl": {
         "type": "Transitive",
@@ -2853,28 +2867,30 @@
       "api": {
         "type": "Project",
         "dependencies": {
-          "Azure.Messaging.EventGrid": "4.10.0",
-          "CommCore": "1.48.1",
-          "Core": "1.48.1",
-          "SharedWeb": "1.48.1",
+          "Azure.Messaging.EventGrid": "4.7.0",
+          "CommCore": "2022.5.0",
+          "Core": "2022.5.0",
+          "Microsoft.AspNetCore.Mvc.NewtonsoftJson": "5.0.9",
+          "SharedWeb": "2022.5.0",
           "Swashbuckle.AspNetCore": "6.3.1"
         }
       },
       "commcore": {
         "type": "Project",
         "dependencies": {
-          "Core": "1.48.1"
+          "Core": "2022.5.0"
         }
       },
       "common": {
         "type": "Project",
         "dependencies": {
-          "Api": "1.48.1",
-          "AutoFixture.AutoNSubstitute": "4.17.0",
-          "AutoFixture.Xunit2": "4.17.0",
-          "Core": "1.48.1",
-          "Microsoft.NET.Test.Sdk": "17.1.0",
-          "NSubstitute": "4.3.0",
+          "Api": "2022.5.0",
+          "AutoFixture.AutoNSubstitute": "4.14.0",
+          "AutoFixture.Xunit2": "4.14.0",
+          "Core": "2022.5.0",
+          "Kralizek.AutoFixture.Extensions.MockHttp": "1.2.0",
+          "Microsoft.NET.Test.Sdk": "16.6.1",
+          "NSubstitute": "4.2.2",
           "xunit": "2.4.1"
         }
       },
@@ -2919,21 +2935,22 @@
       "core.test": {
         "type": "Project",
         "dependencies": {
-          "Api": "1.48.1",
-          "AutoFixture.AutoNSubstitute": "4.17.0",
-          "AutoFixture.Xunit2": "4.17.0",
-          "Common": "1.48.1",
-          "Core": "1.48.1",
-          "Microsoft.NET.Test.Sdk": "17.1.0",
-          "Moq": "4.17.2",
-          "NSubstitute": "4.3.0",
+          "Api": "2022.5.0",
+          "AutoFixture.AutoNSubstitute": "4.14.0",
+          "AutoFixture.Xunit2": "4.14.0",
+          "Common": "2022.5.0",
+          "Core": "2022.5.0",
+          "Kralizek.AutoFixture.Extensions.MockHttp": "1.2.0",
+          "Microsoft.NET.Test.Sdk": "16.6.1",
+          "Moq": "4.16.1",
+          "NSubstitute": "4.2.2",
           "xunit": "2.4.1"
         }
       },
       "infrastructure.dapper": {
         "type": "Project",
         "dependencies": {
-          "Core": "1.48.1",
+          "Core": "2022.5.0",
           "Dapper": "2.0.123",
           "System.Data.SqlClient": "4.8.3"
         }
@@ -2941,20 +2958,20 @@
       "infrastructure.entityframework": {
         "type": "Project",
         "dependencies": {
-          "AutoMapper.Extensions.Microsoft.DependencyInjection": "11.0.0",
-          "Core": "1.48.1",
-          "Microsoft.EntityFrameworkCore.Relational": "6.0.4",
-          "Npgsql.EntityFrameworkCore.PostgreSQL": "6.0.4",
-          "Pomelo.EntityFrameworkCore.MySql": "6.0.1",
-          "linq2db.EntityFrameworkCore": "6.7.1"
+          "AutoMapper.Extensions.Microsoft.DependencyInjection": "8.0.1",
+          "Core": "2022.5.0",
+          "Microsoft.EntityFrameworkCore.Relational": "5.0.12",
+          "Npgsql.EntityFrameworkCore.PostgreSQL": "5.0.2",
+          "Pomelo.EntityFrameworkCore.MySql": "5.0.3",
+          "linq2db.EntityFrameworkCore": "5.2.1"
         }
       },
       "sharedweb": {
         "type": "Project",
         "dependencies": {
-          "Core": "1.48.1",
-          "Infrastructure.Dapper": "1.48.1",
-          "Infrastructure.EntityFramework": "1.48.1"
+          "Core": "2022.5.0",
+          "Infrastructure.Dapper": "2022.5.0",
+          "Infrastructure.EntityFramework": "2022.5.0"
         }
       }
     }

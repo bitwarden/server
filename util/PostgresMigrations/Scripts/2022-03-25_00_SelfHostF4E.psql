@@ -1,0 +1,59 @@
+﻿START TRANSACTION;
+
+ALTER TABLE "OrganizationSponsorship" DROP CONSTRAINT "FK_OrganizationSponsorship_Installation_InstallationId";
+
+DROP INDEX "IX_OrganizationSponsorship_InstallationId";
+
+ALTER TABLE "OrganizationSponsorship" DROP COLUMN "InstallationId";
+
+ALTER TABLE "OrganizationSponsorship" DROP COLUMN "TimesRenewedWithoutValidation";
+
+CREATE TABLE "OrganizationApiKey" (
+    "Id" uuid NOT NULL,
+    "OrganizationId" uuid NOT NULL,
+    "Type" smallint NOT NULL,
+    "ApiKey" character varying(30) NULL,
+    "RevisionDate" timestamp without time zone NOT NULL,
+    CONSTRAINT "PK_OrganizationApiKey" PRIMARY KEY ("Id"),
+    CONSTRAINT "FK_OrganizationApiKey_Organization_OrganizationId" FOREIGN KEY ("OrganizationId") REFERENCES "Organization" ("Id") ON DELETE CASCADE
+);
+
+INSERT INTO "OrganizationApiKey"(
+    "Id",
+    "OrganizationId",
+    "ApiKey",
+    "Type",
+    "RevisionDate") 
+SELECT gen_random_uuid(),
+    "Id" AS "OrganizationId",
+    "ApiKey",
+    0 AS "Type",
+    "RevisionDate" 
+FROM "Organization";
+
+
+ALTER TABLE "Organization" DROP COLUMN "ApiKey";
+
+ALTER TABLE "OrganizationSponsorship" RENAME COLUMN "SponsorshipLapsedDate" TO "ValidUntil";
+
+ALTER TABLE "OrganizationSponsorship" RENAME COLUMN "CloudSponsor" TO "ToDelete";
+
+CREATE TABLE "OrganizationConnection" (
+    "Id" uuid NOT NULL,
+    "Type" smallint NOT NULL,
+    "OrganizationId" uuid NOT NULL,
+    "Enabled" boolean NOT NULL,
+    "Config" text NULL,
+    CONSTRAINT "PK_OrganizationConnection" PRIMARY KEY ("Id"),
+    CONSTRAINT "FK_OrganizationConnection_Organization_OrganizationId" FOREIGN KEY ("OrganizationId") REFERENCES "Organization" ("Id") ON DELETE CASCADE
+);
+
+CREATE INDEX "IX_OrganizationApiKey_OrganizationId" ON "OrganizationApiKey" ("OrganizationId");
+
+CREATE INDEX "IX_OrganizationConnection_OrganizationId" ON "OrganizationConnection" ("OrganizationId");
+
+INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+VALUES ('20220322183505_SelfHostF4E', '5.0.12');
+
+COMMIT;
+

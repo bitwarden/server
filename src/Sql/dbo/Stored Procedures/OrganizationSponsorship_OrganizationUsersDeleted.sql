@@ -7,10 +7,10 @@ BEGIN
     UPDATE
         OS
     SET
-        [SponsoringOrganizationUserId] = NULL
+        [ToDelete] = 1
     FROM
         [dbo].[OrganizationSponsorship] OS
     INNER JOIN
-        @SponsoringOrganizationUserIds I ON I.Id = OS.SponsoringOrganizationUserId
+        @SponsoringOrganizationUserIds I ON I.Id = OS.SponsoringOrganizationUserID
 END
 GO
