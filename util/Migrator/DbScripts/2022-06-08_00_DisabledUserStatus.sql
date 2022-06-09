@@ -470,5 +470,45 @@ WHERE
     AND PUPO.[UserId] IS NULL   -- Not a provider
 GO
 
+PRINT N'Altering stored procedure, dbo.OrganizationUser_Disable';
+GO
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationUser_Disable]
+    @Id UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    UPDATE
+        [dbo].[OrganizationUser]
+    SET
+        [Status] = -1 -- Disabled
+    WHERE
+        [Id] = @Id
+
+    EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationUserId] @Id
+END
+GO
+
+PRINT N'Altering stored procedure, dbo.OrganizationUser_Enable';
+GO
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationUser_Enable]
+    @Id UNIQUEIDENTIFIER,
+    @Status SMALLINT
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    UPDATE
+        [dbo].[OrganizationUser]
+    SET
+        [Status] = @Status
+    WHERE
+        [Id] = @Id
+        AND [Status] = -1 -- Disabled
+
+    EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationUserId] @Id
+END
+GO
+
 PRINT N'Finished migration for 2022-06-08_00_DisabledUserStatus';
 GO

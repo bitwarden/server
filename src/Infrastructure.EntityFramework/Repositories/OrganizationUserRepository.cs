@@ -427,5 +427,43 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
                 return await query.ToListAsync();
             }
         }
+
+        public async Task Disable(Guid id)
+        {
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var orgUser = await GetDbSet(dbContext).FindAsync(id);
+                if (orgUser != null)
+                {
+                    dbContext.Update(orgUser);
+                    orgUser.Status = OrganizationUserStatusType.Disabled;
+                    await dbContext.SaveChangesAsync();
+                    if (orgUser.UserId.HasValue)
+                    {
+                        await UserBumpAccountRevisionDate(orgUser.UserId.Value);
+                    }
+                }
+            }
+        }
+
+        public async Task Enable(Guid id, OrganizationUserStatusType status)
+        {
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var orgUser = await GetDbSet(dbContext).FindAsync(id);
+                if (orgUser != null)
+                {
+                    dbContext.Update(orgUser);
+                    orgUser.Status = status;
+                    await dbContext.SaveChangesAsync();
+                    if (orgUser.UserId.HasValue)
+                    {
+                        await UserBumpAccountRevisionDate(orgUser.UserId.Value);
+                    }
+                }
+            }
+        }
     }
 }
