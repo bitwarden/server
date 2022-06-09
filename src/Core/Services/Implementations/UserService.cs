@@ -1227,14 +1227,20 @@ namespace Bit.Core.Services
                 return false;
             }
 
-            return user.GetPremium() || await this.HasPremiumFromOrganization(userId.Value);
+            return user.GetPremium() || await this.HasPremiumFromOrganization(user);
         }
 
-        public async Task<bool> HasPremiumFromOrganization(Guid userId)
+        public async Task<bool> HasPremiumFromOrganization(ITwoFactorProvidersUser user)
         {
+            var userId = user.GetUserId();
+            if (!userId.HasValue)
+            {
+                return false;
+            }
+
             // orgUsers in the Invited status are not associated with a userId yet, so this will get
             // orgUsers in Accepted and Confirmed states only
-            var orgUsers = await _organizationUserRepository.GetManyByUserAsync(userId);
+            var orgUsers = await _organizationUserRepository.GetManyByUserAsync(userId.Value);
 
             if (!orgUsers.Any())
             {

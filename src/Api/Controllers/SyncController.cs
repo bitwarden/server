@@ -88,7 +88,7 @@ namespace Bit.Api.Controllers
             }
 
             var userTwoFactorEnabled = await _userService.TwoFactorIsEnabledAsync(user);
-            var userHasPremiumFromOrganization = await _userService.HasPremiumFromOrganization(user.Id);
+            var userHasPremiumFromOrganization = await _userService.HasPremiumFromOrganization(user);
             var response = new SyncResponseModel(_globalSettings, user, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationUserDetails,
                 providerUserDetails, providerUserOrganizationDetails, folders, collections, ciphers,
                 collectionCiphersGroupDict, excludeDomains, policies, sends);
