@@ -7,6 +7,7 @@ using Bit.Core.Entities;
 using Bit.Core.Models.Data.Organizations.Policies;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -48,14 +49,14 @@ namespace Bit.Api.Test.Controllers
         public async Task Accept_RequireMasterPasswordReset(Guid orgId, Guid orgUserId,
             OrganizationUserAcceptRequestModel model, User user, SutProvider<OrganizationUsersController> sutProvider)
         {
-            var policy = new Policy<ResetPasswordDataModel>
+            var policy = new Policy
             {
                 Enabled = true,
-                DataModel = new ResetPasswordDataModel { AutoEnrollEnabled = true, },
+                Data = CoreHelpers.ClassToJsonData(new ResetPasswordDataModel { AutoEnrollEnabled = true, }),
             };
             sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(user);
-            sutProvider.GetDependency<IPolicyRepository>().GetByOrganizationIdTypeAsync<ResetPasswordDataModel>(orgId,
-                Core.Enums.PolicyType.MasterPassword).Returns(policy);
+            sutProvider.GetDependency<IPolicyRepository>().GetByOrganizationIdTypeAsync(orgId,
+                Core.Enums.PolicyType.ResetPassword).Returns(policy);
 
             await sutProvider.Sut.Accept(orgId, orgUserId, model);
 

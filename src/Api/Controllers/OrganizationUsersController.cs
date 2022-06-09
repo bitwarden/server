@@ -182,10 +182,10 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
-            var masterPasswordPolicy = await _policyRepository.GetByOrganizationIdTypeAsync<ResetPasswordDataModel>(orgId, PolicyType.MasterPassword);
+            var masterPasswordPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(orgId, PolicyType.ResetPassword);
             var useMasterPasswordPolicy = masterPasswordPolicy != null &&
                 masterPasswordPolicy.Enabled &&
-                masterPasswordPolicy.DataModel.AutoEnrollEnabled;
+                masterPasswordPolicy.GetDataModel<ResetPasswordDataModel>().AutoEnrollEnabled;
 
             if (useMasterPasswordPolicy &&
                 string.IsNullOrWhiteSpace(model.ResetPasswordKey))
