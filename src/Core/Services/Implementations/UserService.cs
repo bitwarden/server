@@ -1226,15 +1226,8 @@ namespace Bit.Core.Services
             {
                 return false;
             }
-            if (user.GetPremium())
-            {
-                return true;
-            }
-            if (await this.HasPremiumFromOrganization(userId.Value))
-            {
-                return true;
-            }
-            return false;
+
+            return user.GetPremium() || await this.HasPremiumFromOrganization(userId.Value);
         }
 
         public async Task<bool> HasPremiumFromOrganization(Guid userId)
