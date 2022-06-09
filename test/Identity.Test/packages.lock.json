@@ -2860,10 +2860,9 @@
       "api": {
         "type": "Project",
         "dependencies": {
-          "Azure.Messaging.EventGrid": "4.7.0",
+          "Azure.Messaging.EventGrid": "4.10.0",
           "CommCore": "2022.5.0",
           "Core": "2022.5.0",
-          "Microsoft.AspNetCore.Mvc.NewtonsoftJson": "5.0.9",
           "SharedWeb": "2022.5.0",
           "Swashbuckle.AspNetCore": "6.3.1"
         }
@@ -2878,12 +2877,12 @@
         "type": "Project",
         "dependencies": {
           "Api": "2022.5.0",
-          "AutoFixture.AutoNSubstitute": "4.14.0",
-          "AutoFixture.Xunit2": "4.14.0",
+          "AutoFixture.AutoNSubstitute": "4.17.0",
+          "AutoFixture.Xunit2": "4.17.0",
           "Core": "2022.5.0",
           "Kralizek.AutoFixture.Extensions.MockHttp": "1.2.0",
-          "Microsoft.NET.Test.Sdk": "16.6.1",
-          "NSubstitute": "4.2.2",
+          "Microsoft.NET.Test.Sdk": "17.1.0",
+          "NSubstitute": "4.3.0",
           "xunit": "2.4.1"
         }
       },
@@ -2943,12 +2942,12 @@
       "infrastructure.entityframework": {
         "type": "Project",
         "dependencies": {
-          "AutoMapper.Extensions.Microsoft.DependencyInjection": "8.0.1",
+          "AutoMapper.Extensions.Microsoft.DependencyInjection": "11.0.0",
           "Core": "2022.5.0",
-          "Microsoft.EntityFrameworkCore.Relational": "5.0.12",
-          "Npgsql.EntityFrameworkCore.PostgreSQL": "5.0.2",
-          "Pomelo.EntityFrameworkCore.MySql": "5.0.3",
-          "linq2db.EntityFrameworkCore": "5.2.1"
+          "Microsoft.EntityFrameworkCore.Relational": "6.0.4",
+          "Npgsql.EntityFrameworkCore.PostgreSQL": "6.0.4",
+          "Pomelo.EntityFrameworkCore.MySql": "6.0.1",
+          "linq2db.EntityFrameworkCore": "6.7.1"
         }
       },
       "sharedweb": {

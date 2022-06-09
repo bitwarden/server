@@ -2856,10 +2856,9 @@
       "api": {
         "type": "Project",
         "dependencies": {
-          "Azure.Messaging.EventGrid": "4.7.0",
+          "Azure.Messaging.EventGrid": "4.10.0",
           "CommCore": "2022.5.0",
           "Core": "2022.5.0",
-          "Microsoft.AspNetCore.Mvc.NewtonsoftJson": "5.0.9",
           "SharedWeb": "2022.5.0",
           "Swashbuckle.AspNetCore": "6.3.1"
         }
@@ -2919,12 +2918,12 @@
       "infrastructure.entityframework": {
         "type": "Project",
         "dependencies": {
-          "AutoMapper.Extensions.Microsoft.DependencyInjection": "8.0.1",
+          "AutoMapper.Extensions.Microsoft.DependencyInjection": "11.0.0",
           "Core": "2022.5.0",
-          "Microsoft.EntityFrameworkCore.Relational": "5.0.12",
-          "Npgsql.EntityFrameworkCore.PostgreSQL": "5.0.2",
-          "Pomelo.EntityFrameworkCore.MySql": "5.0.3",
-          "linq2db.EntityFrameworkCore": "5.2.1"
+          "Microsoft.EntityFrameworkCore.Relational": "6.0.4",
+          "Npgsql.EntityFrameworkCore.PostgreSQL": "6.0.4",
+          "Pomelo.EntityFrameworkCore.MySql": "6.0.1",
+          "linq2db.EntityFrameworkCore": "6.7.1"
         }
       },
       "sharedweb": {
