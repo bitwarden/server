@@ -377,7 +377,7 @@ namespace Bit.Core.Test.Services
         }
 
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
-        public async void HasPremiumFromOrganization_Returns_True(SutProvider<UserService> sutProvider, Guid userId, OrganizationUser orgUser, Organization organization)
+        public async void HasPremiumFromOrganization_Returns_True_If_Org_Eligible(SutProvider<UserService> sutProvider, Guid userId, OrganizationUser orgUser, Organization organization)
         {
             orgUser.OrganizationId = organization.Id;
             organization.Enabled = true;
