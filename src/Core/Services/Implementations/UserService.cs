@@ -550,13 +550,13 @@ namespace Bit.Core.Services
                 SecurityStamp = user.SecurityStamp,
                 Email = user.Email
             };
-       
+
             var result = await UpdatePasswordHash(user, newMasterPassword);
             if (!result.Succeeded)
             {
                 return result;
             }
-            
+
             user.Key = key;
             user.Email = newEmail;
             user.EmailVerified = true;
@@ -566,7 +566,7 @@ namespace Bit.Core.Services
             if (user.Gateway == GatewayType.Stripe
                 && !string.IsNullOrWhiteSpace(user.GatewayCustomerId))
             {
-                var status = await _paymentService.UpdateCustomerEmailAddress(user.GatewayCustomerId, 
+                var status = await _paymentService.UpdateCustomerEmailAddress(user.GatewayCustomerId,
                     user.BillingEmailAddress());
 
                 if (!status)
@@ -577,7 +577,7 @@ namespace Bit.Core.Services
                     user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
                     user.MasterPassword = previousState.MasterPassword;
                     user.SecurityStamp = previousState.SecurityStamp;
-                    
+
                     await _userRepository.ReplaceAsync(user);
                     return IdentityResult.Failed(new IdentityError
                     {
@@ -802,7 +802,7 @@ namespace Bit.Core.Services
             {
                 throw new BadRequestException("User does not have a temporary password to update.");
             }
-            
+
             var result = await UpdatePasswordHash(user, newMasterPassword);
             if (!result.Succeeded)
             {
