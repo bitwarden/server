@@ -203,7 +203,7 @@ namespace Bit.Core.Test.Services
 
         [Theory, BitAutoData]
         public async Task SaveAsync_NewPolicy_Created(
-            [PolicyFixtures.Policy(PolicyType.MasterPassword)] Policy policy, SutProvider<PolicyService> sutProvider)
+            [PolicyFixtures.Policy(PolicyType.ResetPassword)] Policy policy, SutProvider<PolicyService> sutProvider)
         {
             policy.Id = default;
 
