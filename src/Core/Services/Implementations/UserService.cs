@@ -542,13 +542,16 @@ namespace Bit.Core.Services
             {
                 return IdentityResult.Failed(_identityErrorDescriber.DuplicateEmail(newEmail));
             }
-
+            
+            var previousSecurityStamp = user.SecurityStamp;
+            var previousMaterpassword = user.MasterPassword;
             var result = await UpdatePasswordHash(user, newMasterPassword);
             if (!result.Succeeded)
             {
                 return result;
             }
 
+            var previousEmail = user.Email;
             user.Key = key;
             user.Email = newEmail;
             user.EmailVerified = true;
@@ -558,7 +561,23 @@ namespace Bit.Core.Services
             if (user.Gateway == GatewayType.Stripe
                 && !string.IsNullOrWhiteSpace(user.GatewayCustomerId))
             {
-                await _paymentService.UpdateCustomerEmailAddress(user.GatewayCustomerId, user.BillingEmailAddress());
+                var status = await _paymentService.UpdateCustomerEmailAddress(user.GatewayCustomerId, 
+                    user.BillingEmailAddress());
+
+                if (!status)
+                {
+                    //if sync to strip fails, update email and securityStamp to previous
+                    user.Email = previousEmail;
+                    user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
+                    user.MasterPassword = previousMaterpassword;
+                    user.SecurityStamp = previousSecurityStamp;
+                    
+                    await _userRepository.ReplaceAsync(user);
+                    return IdentityResult.Failed(new IdentityError
+                    {
+                        Description = "email address could not be updated"
+                    });
+                }
             }
 
             await _pushService.PushLogOutAsync(user.Id);
@@ -777,7 +796,7 @@ namespace Bit.Core.Services
             {
                 throw new BadRequestException("User does not have a temporary password to update.");
             }
-
+            
             var result = await UpdatePasswordHash(user, newMasterPassword);
             if (!result.Succeeded)
             {

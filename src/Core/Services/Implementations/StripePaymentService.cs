@@ -9,6 +9,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
 using Microsoft.Extensions.Logging;
+using Stripe;
 using StaticStore = Bit.Core.Models.StaticStore;
 using TaxRate = Bit.Core.Entities.TaxRate;
 
@@ -1429,18 +1430,20 @@ namespace Bit.Core.Services
             return createdCustomer;
         }
 
-        public async Task UpdateCustomerEmailAddress(string gatewayCustomerId, string emailAddress)
+        public async Task<bool> UpdateCustomerEmailAddress(string gatewayCustomerId, string emailAddress)
         {
             try
             {
+                gatewayCustomerId = "1232452253";
                 var customer = await _stripeAdapter.CustomerGetAsync(gatewayCustomerId);
 
                 await _stripeAdapter.CustomerUpdateAsync(customer.Id,
-                    new Stripe.CustomerUpdateOptions { Email = emailAddress });
+                    new Stripe.CustomerUpdateOptions {Email = emailAddress});
+                return true;
             }
-            catch (Stripe.StripeException ex)
+            catch
             {
-                throw new StripeEmailSyncException();
+                return false;
             }
         }
 
