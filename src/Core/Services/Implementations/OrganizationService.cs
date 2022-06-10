@@ -2186,7 +2186,7 @@ namespace Bit.Core.Services
                 throw new BadRequestException("You cannot delete an Organization that is using Key Connector.");
             }
         }
-        
+
         public async Task DisableUserAsync(OrganizationUser organizationUser, Guid? disablingUserId)
         {
             if (organizationUser.Status == OrganizationUserStatusType.Disabled)
@@ -2244,7 +2244,7 @@ namespace Bit.Core.Services
                     status = OrganizationUserStatusType.Confirmed;
                 }
             }
-            
+
             await _organizationUserRepository.Enable(organizationUser.Id, status);
             await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Enabled);
         }
