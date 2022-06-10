@@ -542,16 +542,21 @@ namespace Bit.Core.Services
             {
                 return IdentityResult.Failed(_identityErrorDescriber.DuplicateEmail(newEmail));
             }
-            
-            var previousSecurityStamp = user.SecurityStamp;
-            var previousMaterpassword = user.MasterPassword;
+
+            var previousState = new
+            {
+                Key = user.Key,
+                MasterPassword = user.MasterPassword,
+                SecurityStamp = user.SecurityStamp,
+                Email = user.Email
+            };
+       
             var result = await UpdatePasswordHash(user, newMasterPassword);
             if (!result.Succeeded)
             {
                 return result;
             }
-
-            var previousEmail = user.Email;
+            
             user.Key = key;
             user.Email = newEmail;
             user.EmailVerified = true;
@@ -567,10 +572,11 @@ namespace Bit.Core.Services
                 if (!status)
                 {
                     //if sync to strip fails, update email and securityStamp to previous
-                    user.Email = previousEmail;
+                    user.Key = previousState.Key;
+                    user.Email = previousState.Email;
                     user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
-                    user.MasterPassword = previousMaterpassword;
-                    user.SecurityStamp = previousSecurityStamp;
+                    user.MasterPassword = previousState.MasterPassword;
+                    user.SecurityStamp = previousState.SecurityStamp;
                     
                     await _userRepository.ReplaceAsync(user);
                     return IdentityResult.Failed(new IdentityError

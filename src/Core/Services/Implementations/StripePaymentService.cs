@@ -1434,7 +1434,6 @@ namespace Bit.Core.Services
         {
             try
             {
-                gatewayCustomerId = "1232452253";
                 var customer = await _stripeAdapter.CustomerGetAsync(gatewayCustomerId);
 
                 await _stripeAdapter.CustomerUpdateAsync(customer.Id,
