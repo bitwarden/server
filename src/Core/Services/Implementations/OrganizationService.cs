@@ -2213,6 +2213,59 @@ namespace Bit.Core.Services
             await _organizationUserRepository.Disable(organizationUser.Id);
             await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Disabled);
         }
+        
+        public async Task<List<Tuple<OrganizationUser, string>>> DisableUsersAsync(Guid organizationId,
+            IEnumerable<Guid> organizationUserIds, Guid? disablingUserId)
+        {
+            var orgUsers = await _organizationUserRepository.GetManyAsync(organizationUserIds);
+            var filteredUsers = orgUsers.Where(u => u.OrganizationId == organizationId)
+                .ToList();
+
+            if (!filteredUsers.Any())
+            {
+                throw new BadRequestException("Users invalid.");
+            }
+
+            if (!await HasConfirmedOwnersExceptAsync(organizationId, organizationUserIds))
+            {
+                throw new BadRequestException("Organization must have at least one confirmed owner.");
+            }
+
+            var deletingUserIsOwner = false;
+            if (disablingUserId.HasValue)
+            {
+                deletingUserIsOwner = await _currentContext.OrganizationOwner(organizationId);
+            }
+
+            var result = new List<Tuple<OrganizationUser, string>>();
+
+            foreach (var organizationUser in filteredUsers)
+            {
+                try
+                {
+                    if (disablingUserId.HasValue && organizationUser.UserId == disablingUserId)
+                    {
+                        throw new BadRequestException("You cannot disable yourself.");
+                    }
+
+                    if (organizationUser.Type == OrganizationUserType.Owner && disablingUserId.HasValue && !deletingUserIsOwner)
+                    {
+                        throw new BadRequestException("Only owners can disable other owners.");
+                    }
+
+                    await _organizationUserRepository.Disable(organizationUser.Id);
+                    await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Disabled);
+
+                    result.Add(Tuple.Create(organizationUser, ""));
+                }
+                catch (BadRequestException e)
+                {
+                    result.Add(Tuple.Create(organizationUser, e.Message));
+                }
+            }
+
+            return result;
+        }
 
         public async Task EnableUserAsync(OrganizationUser organizationUser, Guid? enablingUserId)
         {
@@ -2232,6 +2285,69 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Only owners can enable other owners.");
             }
 
+            var status = GetOrganizationUserStatusTypePriorToDisabled(organizationUser);
+
+            await _organizationUserRepository.Enable(organizationUser.Id, status);
+            await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Enabled);
+        }
+
+        public async Task<List<Tuple<OrganizationUser, string>>> EnableUsersAsync(Guid organizationId,
+            IEnumerable<Guid> organizationUserIds, Guid? enablingUserId)
+        {
+            var orgUsers = await _organizationUserRepository.GetManyAsync(organizationUserIds);
+            var filteredUsers = orgUsers.Where(u => u.OrganizationId == organizationId)
+                .ToList();
+
+            if (!filteredUsers.Any())
+            {
+                throw new BadRequestException("Users invalid.");
+            }
+
+            var deletingUserIsOwner = false;
+            if (enablingUserId.HasValue)
+            {
+                deletingUserIsOwner = await _currentContext.OrganizationOwner(organizationId);
+            }
+
+            var result = new List<Tuple<OrganizationUser, string>>();
+
+            foreach (var organizationUser in filteredUsers)
+            {
+                try
+                {
+                    if (organizationUser.Status != OrganizationUserStatusType.Disabled)
+                    {
+                        throw new BadRequestException("Already enabled.");
+                    }
+
+                    if (enablingUserId.HasValue && organizationUser.UserId == enablingUserId)
+                    {
+                        throw new BadRequestException("You cannot enable yourself.");
+                    }
+
+                    if (organizationUser.Type == OrganizationUserType.Owner && enablingUserId.HasValue && !deletingUserIsOwner)
+                    {
+                        throw new BadRequestException("Only owners can enable other owners.");
+                    }
+                    
+                    var status = GetOrganizationUserStatusTypePriorToDisabled(organizationUser);
+
+                    await _organizationUserRepository.Enable(organizationUser.Id, status);
+                    await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Enabled);
+                    
+                    result.Add(Tuple.Create(organizationUser, ""));
+                }
+                catch (BadRequestException e)
+                {
+                    result.Add(Tuple.Create(organizationUser, e.Message));
+                }
+            }
+
+            return result;
+        }
+
+        private OrganizationUserStatusType GetOrganizationUserStatusTypePriorToDisabled(OrganizationUser organizationUser)
+        {
             // Determine status to revert back to
             var status = OrganizationUserStatusType.Invited;
             if (organizationUser.UserId.HasValue && string.IsNullOrWhiteSpace(organizationUser.Email))
@@ -2245,8 +2361,7 @@ namespace Bit.Core.Services
                 }
             }
 
-            await _organizationUserRepository.Enable(organizationUser.Id, status);
-            await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Enabled);
+            return status;
         }
     }
 }

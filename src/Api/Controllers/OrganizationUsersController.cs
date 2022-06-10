@@ -396,6 +396,22 @@ namespace Bit.Api.Controllers
             await _organizationService.DisableUserAsync(orgUser, userId);
         }
 
+        [HttpPatch("disable")]
+        [HttpPut("disable")]
+        public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkDisable(string orgId, [FromBody] OrganizationUserBulkRequestModel model)
+        {
+            var orgGuidId = new Guid(orgId);
+            if (!await _currentContext.ManageUsers(orgGuidId))
+            {
+                throw new NotFoundException();
+            }
+
+            var userId = _userService.GetProperUserId(User);
+            var result = await _organizationService.DisableUsersAsync(orgGuidId, model.Ids, userId.Value);
+            return new ListResponseModel<OrganizationUserBulkResponseModel>(result.Select(r =>
+                new OrganizationUserBulkResponseModel(r.Item1.Id, r.Item2)));
+        }
+
         [HttpPatch("{id}/enable")]
         [HttpPut("{id}/enable")]
         public async Task Enable(string orgId, string id)
@@ -414,6 +430,22 @@ namespace Bit.Api.Controllers
             }
 
             await _organizationService.EnableUserAsync(orgUser, userId);
+        }
+
+        [HttpPatch("enable")]
+        [HttpPut("enable")]
+        public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkEnable(string orgId, [FromBody] OrganizationUserBulkRequestModel model)
+        {
+            var orgGuidId = new Guid(orgId);
+            if (!await _currentContext.ManageUsers(orgGuidId))
+            {
+                throw new NotFoundException();
+            }
+
+            var userId = _userService.GetProperUserId(User);
+            var result = await _organizationService.EnableUsersAsync(orgGuidId, model.Ids, userId.Value);
+            return new ListResponseModel<OrganizationUserBulkResponseModel>(result.Select(r =>
+                new OrganizationUserBulkResponseModel(r.Item1.Id, r.Item2)));
         }
     }
 }
