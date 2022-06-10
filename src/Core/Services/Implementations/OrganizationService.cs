@@ -2213,7 +2213,7 @@ namespace Bit.Core.Services
             await _organizationUserRepository.Disable(organizationUser.Id);
             await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Disabled);
         }
-        
+
         public async Task<List<Tuple<OrganizationUser, string>>> DisableUsersAsync(Guid organizationId,
             IEnumerable<Guid> organizationUserIds, Guid? disablingUserId)
         {
@@ -2329,12 +2329,12 @@ namespace Bit.Core.Services
                     {
                         throw new BadRequestException("Only owners can enable other owners.");
                     }
-                    
+
                     var status = GetOrganizationUserStatusTypePriorToDisabled(organizationUser);
 
                     await _organizationUserRepository.Enable(organizationUser.Id, status);
                     await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Enabled);
-                    
+
                     result.Add(Tuple.Create(organizationUser, ""));
                 }
                 catch (BadRequestException e)
