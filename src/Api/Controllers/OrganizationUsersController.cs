@@ -375,5 +375,45 @@ namespace Bit.Api.Controllers
             return new ListResponseModel<OrganizationUserBulkResponseModel>(result.Select(r =>
                 new OrganizationUserBulkResponseModel(r.Item1.Id, r.Item2)));
         }
+
+        [HttpPatch("{id}/disable")]
+        [HttpPut("{id}/disable")]
+        public async Task Disable(string orgId, string id)
+        {
+            var orgGuidId = new Guid(orgId);
+            if (!await _currentContext.ManageUsers(orgGuidId))
+            {
+                throw new NotFoundException();
+            }
+
+            var userId = _userService.GetProperUserId(User);
+            var orgUser = await _organizationUserRepository.GetByIdAsync(new Guid(id));
+            if (orgUser == null)
+            {
+                throw new NotFoundException();
+            }
+
+            await _organizationService.DisableUserAsync(orgUser, userId);
+        }
+
+        [HttpPatch("{id}/enable")]
+        [HttpPut("{id}/enable")]
+        public async Task Enable(string orgId, string id)
+        {
+            var orgGuidId = new Guid(orgId);
+            if (!await _currentContext.ManageUsers(orgGuidId))
+            {
+                throw new NotFoundException();
+            }
+
+            var userId = _userService.GetProperUserId(User);
+            var orgUser = await _organizationUserRepository.GetByIdAsync(new Guid(id));
+            if (orgUser == null)
+            {
+                throw new NotFoundException();
+            }
+
+            await _organizationService.EnableUserAsync(orgUser, userId);
+        }
     }
 }
