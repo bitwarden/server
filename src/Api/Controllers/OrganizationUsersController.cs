@@ -381,7 +381,7 @@ namespace Bit.Api.Controllers
         [HttpPut("{id}/disable")]
         public async Task Disable(Guid orgId, Guid id)
         {
-            await EnableOrDisableUser(orgId, id, _organizationService.DisableUserAsync);
+            await EnableOrDisableUserAsync(orgId, id, _organizationService.DisableUserAsync);
         }
 
         [HttpPatch("disable")]
@@ -395,7 +395,7 @@ namespace Bit.Api.Controllers
         [HttpPut("{id}/enable")]
         public async Task Enable(Guid orgId, Guid id)
         {
-            await EnableOrDisableUser(orgId, id, _organizationService.EnableUserAsync);
+            await EnableOrDisableUserAsync(orgId, id, _organizationService.EnableUserAsync);
         }
 
         [HttpPatch("enable")]
@@ -405,7 +405,7 @@ namespace Bit.Api.Controllers
             return await EnableOrDisableUsersAsync(orgId, model, _organizationService.EnableUsersAsync);
         }
 
-        private async Task EnableOrDisableUser(
+        private async Task EnableOrDisableUserAsync(
             Guid orgId,
             Guid id,
             Func<OrganizationUser, Guid?, Task> enableOrDisableAction)
@@ -417,7 +417,7 @@ namespace Bit.Api.Controllers
 
             var userId = _userService.GetProperUserId(User);
             var orgUser = await _organizationUserRepository.GetByIdAsync(id);
-            if (orgUser == null)
+            if (orgUser == null || orgUser.OrganizationId != orgId)
             {
                 throw new NotFoundException();
             }

@@ -2211,6 +2211,7 @@ namespace Bit.Core.Services
             }
 
             await _organizationUserRepository.DisableAsync(organizationUser.Id);
+            organizationUser.Status = OrganizationUserStatusType.Disabled;
             await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Disabled);
         }
 
@@ -2254,6 +2255,7 @@ namespace Bit.Core.Services
                     }
 
                     await _organizationUserRepository.DisableAsync(organizationUser.Id);
+                    organizationUser.Status = OrganizationUserStatusType.Disabled;
                     await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Disabled);
 
                     result.Add(Tuple.Create(organizationUser, ""));
@@ -2288,6 +2290,7 @@ namespace Bit.Core.Services
             var status = GetOrganizationUserStatusTypePriorToDisabled(organizationUser);
 
             await _organizationUserRepository.EnableAsync(organizationUser.Id, status);
+            organizationUser.Status = status;
             await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Enabled);
         }
 
@@ -2333,6 +2336,7 @@ namespace Bit.Core.Services
                     var status = GetOrganizationUserStatusTypePriorToDisabled(organizationUser);
 
                     await _organizationUserRepository.EnableAsync(organizationUser.Id, status);
+                    organizationUser.Status = status;
                     await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Enabled);
 
                     result.Add(Tuple.Create(organizationUser, ""));
