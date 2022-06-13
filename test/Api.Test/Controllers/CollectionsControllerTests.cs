@@ -89,10 +89,6 @@ namespace Bit.Api.Test.Controllers
                 .Returns(Task.FromResult<CollectionDetails>(null));
 
             _ = await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.Put(orgId, collectionId, collectionRequest));
-
-            await sutProvider.GetDependency<ICollectionService>()
-                .Received(1)
-                .SaveAsync(Arg.Any<Collection>(), Arg.Any<IEnumerable<SelectionReadOnly>>(), null);
         }
     }
 }
