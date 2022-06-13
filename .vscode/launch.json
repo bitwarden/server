@@ -40,6 +40,7 @@
                 "Identity",
                 "Sso",
                 "Icons",
+                "Billing"
             ],
             "presentation": {
                 "hidden": false,
@@ -117,6 +118,28 @@
             "program": "${workspaceFolder}/src/Api/bin/Debug/net5.0/Api.dll",
             "args": [],
             "cwd": "${workspaceFolder}/src/Api",
+            "stopAtEntry": false,
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development"
+            },
+            "sourceFileMap": {
+                "/Views": "${workspaceFolder}/Views"
+            }
+        },
+        {
+            "name": "Billing",
+            "presentation": {
+                "hidden": false,
+                "group": "cloud",
+                "order": 10
+            },
+            "requireExactSource": true,
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "buildBilling",
+            "program": "${workspaceFolder}/src/Billing/bin/Debug/net5.0/Billing.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/src/Billing",
             "stopAtEntry": false,
             "env": {
                 "ASPNETCORE_ENVIRONMENT": "Development"

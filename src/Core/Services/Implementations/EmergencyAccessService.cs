@@ -327,6 +327,7 @@ namespace Bit.Core.Services
             grantor.Key = key;
             // Disable TwoFactor providers since they will otherwise block logins
             grantor.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>());
+            grantor.UnknownDeviceVerificationEnabled = false;
             await _userRepository.ReplaceAsync(grantor);
 
             // Remove grantor from all organizations unless Owner

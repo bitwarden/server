@@ -33,7 +33,8 @@
     @ForcePasswordReset BIT = 0,
     @UsesKeyConnector BIT = 0,
     @FailedLoginCount INT,
-    @LastFailedLoginDate DATETIME2(7)
+    @LastFailedLoginDate DATETIME2(7),
+    @UnknownDeviceVerificationEnabled BIT = 1
 AS
 BEGIN
     SET NOCOUNT ON
@@ -74,7 +75,8 @@ BEGIN
         [ForcePasswordReset] = @ForcePasswordReset,
         [UsesKeyConnector] = @UsesKeyConnector,
         [FailedLoginCount] = @FailedLoginCount,
-        [LastFailedLoginDate] = @LastFailedLoginDate
+        [LastFailedLoginDate] = @LastFailedLoginDate,
+        [UnknownDeviceVerificationEnabled] = @UnknownDeviceVerificationEnabled
     WHERE
         [Id] = @Id
 END

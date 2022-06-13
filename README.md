@@ -19,45 +19,9 @@ The Bitwarden Server project contains the APIs, database, and other core infrast
 
 The server project is written in C# using .NET Core with ASP.NET Core. The database is written in T-SQL/SQL Server. The codebase can be developed, built, run, and deployed cross-platform on Windows, macOS, and Linux distributions.
 
-## Build/Run
+## Developer Documentation
 
-Please read the [Setup guide](https://github.com/bitwarden/server/blob/master/SETUP.md) for a step-by-step guide to set up your own local development server.
-
-### Requirements
-
-- [.NET 5.0 SDK](https://dotnet.microsoft.com/download)
-- [SQL Server 2017](https://docs.microsoft.com/en-us/sql/index)
-
-*These dependencies are free to use.*
-
-### Recommended Development Tooling
-
-- [Visual Studio](https://www.visualstudio.com/vs/) (Windows and macOS)
-- [Visual Studio Code](https://code.visualstudio.com/) (other)
-
-*These tools are free to use.*
-
-### API
-
-```
-cd src/Api
-dotnet restore
-dotnet build
-dotnet run
-```
-
-visit http://localhost:4000/alive
-
-### Identity
-
-```
-cd src/Identity
-dotnet restore
-dotnet build
-dotnet run
-```
-
-visit http://localhost:33657/.well-known/openid-configuration
+Please refer to the [Server Setup Guide](https://contributing.bitwarden.com/server/guide/) in the [Contributing Documentation](https://contributing.bitwarden.com/) for build instructions, recommended tooling, code style tips, and lots of other great information to get you started.
 
 ## Deploy
 
@@ -104,7 +68,7 @@ Interested in contributing in a big way? Consider joining our team! We're hiring
 
 ## Contribute
 
-Code contributions are welcome! Visual Studio or VS Code is highly recommended if you are working on this project. Please commit any pull requests against the `master` branch. Please see [`CONTRIBUTING.md`](CONTRIBUTING.md) for more info (and feel free to contribute to that guide as well).
+Code contributions are welcome! Please commit any pull requests against the `master` branch. Learn more about how to contribute by reading the [Contributing Guidelines](https://contributing.bitwarden.com/contributing/). Check out the [Contributing Documentation](https://contributing.bitwarden.com/) for how to get started with your first contribution.
 
 Security audits and feedback are welcome. Please open an issue or email us privately if the report is sensitive in nature. You can read our security policy in the [`SECURITY.md`](SECURITY.md) file. We also run a program on [HackerOne](https://hackerone.com/bitwarden).
 
@@ -121,11 +85,3 @@ We recently migrated to using dotnet-format as code formatter. All previous bran
 5. Commit
 6. Run `git merge -Xours 23b0a1f9df25058ab29785ecad9a233113c10889`
 7. Push
-
-#### Git blame
-
-We also recommend that you configure git to ignore the prettier revision using:
-
-```bash
-git config blame.ignoreRevsFile .git-blame-ignore-revs
-```

@@ -265,6 +265,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<Guid?>("GroupId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("InstallationId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("IpAddress")
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
@@ -446,10 +449,6 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
-                    b.Property<string>("ApiKey")
-                        .HasMaxLength(30)
-                        .HasColumnType("character varying(30)");
-
                     b.Property<string>("BillingEmail")
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
@@ -592,20 +591,63 @@ namespace Bit.PostgresMigrations.Migrations
                     b.ToTable("Organization");
                 });
 
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.OrganizationApiKey", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ApiKey")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("RevisionDate")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<byte>("Type")
+                        .HasColumnType("smallint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.ToTable("OrganizationApiKey");
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.OrganizationConnection", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Config")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<byte>("Type")
+                        .HasColumnType("smallint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.ToTable("OrganizationConnection");
+                });
+
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.OrganizationSponsorship", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
-                    b.Property<bool>("CloudSponsor")
-                        .HasColumnType("boolean");
-
                     b.Property<string>("FriendlyName")
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
-
-                    b.Property<Guid?>("InstallationId")
-                        .HasColumnType("uuid");
 
                     b.Property<DateTime?>("LastSyncDate")
                         .HasColumnType("timestamp without time zone");
@@ -623,18 +665,16 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<Guid?>("SponsoringOrganizationId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid?>("SponsoringOrganizationUserId")
+                    b.Property<Guid>("SponsoringOrganizationUserId")
                         .HasColumnType("uuid");
 
-                    b.Property<DateTime?>("SponsorshipLapsedDate")
+                    b.Property<bool>("ToDelete")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("ValidUntil")
                         .HasColumnType("timestamp without time zone");
 
-                    b.Property<byte>("TimesRenewedWithoutValidation")
-                        .HasColumnType("smallint");
-
                     b.HasKey("Id");
-
-                    b.HasIndex("InstallationId");
 
                     b.HasIndex("SponsoredOrganizationId");
 
@@ -1160,6 +1200,9 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)");
 
+                    b.Property<bool>("UnknownDeviceVerificationEnabled")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("UsesKeyConnector")
                         .HasColumnType("boolean");
 
@@ -1328,12 +1371,30 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Navigation("OrganizationUser");
                 });
 
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.OrganizationApiKey", b =>
+                {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.Organization", "Organization")
+                        .WithMany("ApiKeys")
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Organization");
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.OrganizationConnection", b =>
+                {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.Organization", "Organization")
+                        .WithMany("Connections")
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Organization");
+                });
+
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.OrganizationSponsorship", b =>
                 {
-                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.Installation", "Installation")
-                        .WithMany()
-                        .HasForeignKey("InstallationId");
-
                     b.HasOne("Bit.Infrastructure.EntityFramework.Models.Organization", "SponsoredOrganization")
                         .WithMany()
                         .HasForeignKey("SponsoredOrganizationId");
@@ -1341,8 +1402,6 @@ namespace Bit.PostgresMigrations.Migrations
                     b.HasOne("Bit.Infrastructure.EntityFramework.Models.Organization", "SponsoringOrganization")
                         .WithMany()
                         .HasForeignKey("SponsoringOrganizationId");
-
-                    b.Navigation("Installation");
 
                     b.Navigation("SponsoredOrganization");
 
@@ -1492,7 +1551,11 @@ namespace Bit.PostgresMigrations.Migrations
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Organization", b =>
                 {
+                    b.Navigation("ApiKeys");
+
                     b.Navigation("Ciphers");
+
+                    b.Navigation("Connections");
 
                     b.Navigation("Groups");
 

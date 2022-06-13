@@ -19,8 +19,8 @@ namespace Bit.Core.Services
         Task SendNewDeviceLoginTwoFactorEmailAsync(string email, string token);
         Task SendNoMasterPasswordHintEmailAsync(string email);
         Task SendMasterPasswordHintEmailAsync(string email, string hint);
-        Task SendOrganizationInviteEmailAsync(string organizationName, bool orgCanSponsor, OrganizationUser orgUser, ExpiringToken token);
-        Task BulkSendOrganizationInviteEmailAsync(string organizationName, bool orgCanSponsor, IEnumerable<(OrganizationUser orgUser, ExpiringToken token)> invites);
+        Task SendOrganizationInviteEmailAsync(string organizationName, OrganizationUser orgUser, ExpiringToken token);
+        Task BulkSendOrganizationInviteEmailAsync(string organizationName, IEnumerable<(OrganizationUser orgUser, ExpiringToken token)> invites);
         Task SendOrganizationMaxSeatLimitReachedEmailAsync(Organization organization, int maxSeatCount, IEnumerable<string> ownerEmails);
         Task SendOrganizationAutoscaledEmailAsync(Organization organization, int initialSeatCount, IEnumerable<string> ownerEmails);
         Task SendOrganizationAcceptedEmailAsync(Organization organization, string userIdentifier, IEnumerable<string> adminEmails);
@@ -50,9 +50,10 @@ namespace Bit.Core.Services
         Task SendProviderConfirmedEmailAsync(string providerName, string email);
         Task SendProviderUserRemoved(string providerName, string email);
         Task SendUpdatedTempPasswordEmailAsync(string email, string userName);
-        Task SendFamiliesForEnterpriseOfferEmailAsync(string email, string sponsorEmail, bool existingAccount, string token);
+        Task SendFamiliesForEnterpriseOfferEmailAsync(string sponsorOrgName, string email, bool existingAccount, string token);
+        Task BulkSendFamiliesForEnterpriseOfferEmailAsync(string SponsorOrgName, IEnumerable<(string Email, bool ExistingAccount, string Token)> invites);
         Task SendFamiliesForEnterpriseRedeemedEmailsAsync(string familyUserEmail, string sponsorEmail);
-        Task SendFamiliesForEnterpriseSponsorshipRevertingEmailAsync(string email, string familyOrgName);
+        Task SendFamiliesForEnterpriseSponsorshipRevertingEmailAsync(string email, DateTime expirationDate);
         Task SendOTPEmailAsync(string email, string token);
         Task SendFailedLoginAttemptsEmailAsync(string email, DateTime utcNow, string ip);
         Task SendFailedTwoFactorAttemptsEmailAsync(string email, DateTime utcNow, string ip);

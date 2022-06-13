@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using AspNetCoreRateLimit;
 using Bit.Core;
 using Bit.Core.Context;
+using Bit.Core.Models.Business.Tokenables;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Identity.Utilities;
@@ -110,9 +111,16 @@ namespace Bit.Identity
                         {
                             // Pass domain_hint onto the sso idp
                             context.ProtocolMessage.DomainHint = context.Properties.Items["domain_hint"];
+                            context.ProtocolMessage.Parameters.Add("organizationId", context.Properties.Items["organizationId"]);
                             if (context.Properties.Items.ContainsKey("user_identifier"))
                             {
                                 context.ProtocolMessage.SessionState = context.Properties.Items["user_identifier"];
+                            }
+
+                            if (context.Properties.Parameters.Count > 0 && context.Properties.Parameters.ContainsKey(SsoTokenable.TokenIdentifier))
+                            {
+                                var token = context.Properties.Parameters[SsoTokenable.TokenIdentifier].ToString();
+                                context.ProtocolMessage.Parameters.Add(SsoTokenable.TokenIdentifier, token);
                             }
                             return Task.FromResult(0);
                         }
@@ -126,7 +134,7 @@ namespace Bit.Identity
             services.AddCustomIdentityServices(globalSettings);
 
             // Services
-            services.AddBaseServices();
+            services.AddBaseServices(globalSettings);
             services.AddDefaultServices(globalSettings);
             services.AddCoreLocalizationServices();
 

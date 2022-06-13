@@ -18,16 +18,18 @@ namespace Bit.Core.Services
         private readonly IHttpContextAccessor _httpContextAccessor;
 
         public NotificationsApiPushNotificationService(
+            IHttpClientFactory httpFactory,
             GlobalSettings globalSettings,
             IHttpContextAccessor httpContextAccessor,
             ILogger<NotificationsApiPushNotificationService> logger)
             : base(
-                 globalSettings.BaseServiceUri.InternalNotifications,
-                 globalSettings.BaseServiceUri.InternalIdentity,
-                 "internal",
-                 $"internal.{globalSettings.ProjectName}",
-                 globalSettings.InternalIdentityKey,
-                 logger)
+                httpFactory,
+                globalSettings.BaseServiceUri.InternalNotifications,
+                globalSettings.BaseServiceUri.InternalIdentity,
+                "internal",
+                $"internal.{globalSettings.ProjectName}",
+                globalSettings.InternalIdentityKey,
+                logger)
         {
             _globalSettings = globalSettings;
             _httpContextAccessor = httpContextAccessor;
@@ -69,6 +71,7 @@ namespace Bit.Core.Services
                     Id = cipher.Id,
                     UserId = cipher.UserId,
                     RevisionDate = cipher.RevisionDate,
+                    CollectionIds = collectionIds,
                 };
 
                 await SendMessageAsync(type, message, true);

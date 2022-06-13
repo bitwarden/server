@@ -26,6 +26,19 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             }
         }
 
+        public async Task DeleteExpiredSponsorshipsAsync(DateTime validUntilBeforeDate)
+        {
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var query = from s in dbContext.OrganizationSponsorships
+                            where s.ValidUntil < validUntilBeforeDate
+                            select s;
+                dbContext.RemoveRange(query);
+                await dbContext.SaveChangesAsync();
+            }
+        }
+
         public Task DisableCipherAutoStatsAsync()
         {
             return Task.CompletedTask;

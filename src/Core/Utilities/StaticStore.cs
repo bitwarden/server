@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using Bit.Core.Enums;
-using Bit.Core.Models.Data;
+using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Models.StaticStore;
 
 namespace Bit.Core.Utilities
@@ -47,7 +47,7 @@ namespace Bit.Core.Utilities
             GlobalDomains.Add(GlobalEquivalentDomainsType.Oracle, new List<string> { "mysql.com", "oracle.com" });
             GlobalDomains.Add(GlobalEquivalentDomainsType.Discover, new List<string> { "discover.com", "discovercard.com" });
             GlobalDomains.Add(GlobalEquivalentDomainsType.Dcu, new List<string> { "dcu.org", "dcu-online.org" });
-            GlobalDomains.Add(GlobalEquivalentDomainsType.Healthcare, new List<string> { "healthcare.gov", "cms.gov" });
+            GlobalDomains.Add(GlobalEquivalentDomainsType.Healthcare, new List<string> { "healthcare.gov", "cuidadodesalud.gov", "cms.gov" });
             GlobalDomains.Add(GlobalEquivalentDomainsType.Pepco, new List<string> { "pepco.com", "pepcoholdings.com" });
             GlobalDomains.Add(GlobalEquivalentDomainsType.Century21, new List<string> { "century21.com", "21online.com" });
             GlobalDomains.Add(GlobalEquivalentDomainsType.Comcast, new List<string> { "comcast.com", "comcast.net", "xfinity.com" });
@@ -98,7 +98,7 @@ namespace Bit.Core.Utilities
             GlobalDomains.Add(GlobalEquivalentDomainsType.Netcup, new List<string> { "netcup.de", "netcup.eu", "customercontrolpanel.de" });
             GlobalDomains.Add(GlobalEquivalentDomainsType.Yandex, new List<string> { "yandex.com", "ya.ru", "yandex.az", "yandex.by", "yandex.co.il", "yandex.com.am", "yandex.com.ge", "yandex.com.tr", "yandex.ee", "yandex.fi", "yandex.fr", "yandex.kg", "yandex.kz", "yandex.lt", "yandex.lv", "yandex.md", "yandex.pl", "yandex.ru", "yandex.tj", "yandex.tm", "yandex.ua", "yandex.uz" });
             GlobalDomains.Add(GlobalEquivalentDomainsType.Sony, new List<string> { "sonyentertainmentnetwork.com", "sony.com" });
-            GlobalDomains.Add(GlobalEquivalentDomainsType.Proton, new List<string> { "protonmail.com", "protonvpn.com" });
+            GlobalDomains.Add(GlobalEquivalentDomainsType.Proton, new List<string> { "proton.me", "protonmail.com", "protonvpn.com" });
             GlobalDomains.Add(GlobalEquivalentDomainsType.Ubisoft, new List<string> { "ubisoft.com", "ubi.com" });
             GlobalDomains.Add(GlobalEquivalentDomainsType.TransferWise, new List<string> { "transferwise.com", "wise.com" });
             GlobalDomains.Add(GlobalEquivalentDomainsType.TakeawayEU, new List<string> { "takeaway.com", "just-eat.dk", "just-eat.no", "just-eat.fr", "just-eat.ch", "lieferando.de", "lieferando.at", "thuisbezorgd.nl", "pyszne.pl" });

@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Text;
 using AutoFixture;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -12,6 +14,9 @@ using Bit.Infrastructure.Dapper;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using IdentityModel;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.WebUtilities;
+using NSubstitute;
 using Xunit;
 
 namespace Bit.Core.Test.Utilities
@@ -33,6 +38,43 @@ namespace Bit.Core.Test.Utilities
             Assert.NotEqual(Guid.Empty, comb);
             // TODO: Add more asserts to make sure important aspects of
             // the comb are working properly
+        }
+
+        public static IEnumerable<object[]> GenerateCombCases = new[]
+        {
+            new object[]
+            {
+                Guid.Parse("a58db474-43d8-42f1-b4ee-0c17647cd0c0"), // Input Guid
+                new DateTime(2022, 3, 12, 12, 12, 0, DateTimeKind.Utc), // Input Time
+                Guid.Parse("a58db474-43d8-42f1-b4ee-ae5600c90cc1"), // Expected Comb
+            },
+            new object[]
+            {
+                Guid.Parse("f776e6ee-511f-4352-bb28-88513002bdeb"),
+                new DateTime(2021, 5, 10, 10, 52, 0, DateTimeKind.Utc),
+                Guid.Parse("f776e6ee-511f-4352-bb28-ad2400b313c1"),
+            },
+            new object[]
+            {
+                Guid.Parse("51a25fc7-3cad-497d-8e2f-8d77011648a1"),
+                new DateTime(1999, 2, 26, 16, 53, 13, DateTimeKind.Utc),
+                Guid.Parse("51a25fc7-3cad-497d-8e2f-8d77011649cd"),
+            },
+            new object[]
+            {
+                Guid.Parse("bfb8f353-3b32-4a9e-bef6-24fe0b54bfb0"),
+                new DateTime(2024, 10, 20, 1, 32, 16, DateTimeKind.Utc),
+                Guid.Parse("bfb8f353-3b32-4a9e-bef6-b20f00195780"),
+            }
+        };
+
+        [Theory]
+        [MemberData(nameof(GenerateCombCases))]
+        public void GenerateComb_WithInputs_Success(Guid inputGuid, DateTime inputTime, Guid expectedComb)
+        {
+            var comb = CoreHelpers.GenerateComb(inputGuid, inputTime);
+
+            Assert.Equal(expectedComb, comb);
         }
 
         [Theory]
@@ -349,6 +391,47 @@ namespace Bit.Core.Test.Utilities
             foreach (var claim in claims)
             {
                 Assert.Contains(claim, actual);
+            }
+        }
+
+        public static IEnumerable<object[]> TokenIsValidData()
+        {
+            return new[]
+            {
+                new object[]
+                {
+                    "first_part 476669d4-9642-4af8-9b29-9366efad4ed3 test@email.com {0}", // unprotectedTokenTemplate
+                    "first_part", // firstPart
+                    "test@email.com", // email
+                    Guid.Parse("476669d4-9642-4af8-9b29-9366efad4ed3"), // id
+                    DateTime.UtcNow.AddHours(-1), // creationTime
+                    12, // expirationInHours
+                    true, // isValid
+                }
+            };
+        }
+
+        [Theory]
+        [MemberData(nameof(TokenIsValidData))]
+        public void TokenIsValid_Success(string unprotectedTokenTemplate, string firstPart, string userEmail, Guid id, DateTime creationTime, double expirationInHours, bool isValid)
+        {
+            var protector = new TestDataProtector(string.Format(unprotectedTokenTemplate, CoreHelpers.ToEpocMilliseconds(creationTime)));
+
+            Assert.Equal(isValid, CoreHelpers.TokenIsValid(firstPart, protector, "protected_token", userEmail, id, expirationInHours));
+        }
+
+        private class TestDataProtector : IDataProtector
+        {
+            private readonly string _token;
+            public TestDataProtector(string token)
+            {
+                _token = token;
+            }
+            public IDataProtector CreateProtector(string purpose) => throw new NotImplementedException();
+            public byte[] Protect(byte[] plaintext) => throw new NotImplementedException();
+            public byte[] Unprotect(byte[] protectedData)
+            {
+                return Encoding.UTF8.GetBytes(_token);
             }
         }
 

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Net.Http;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Microsoft.Extensions.Logging;
@@ -11,15 +12,18 @@ namespace Bit.Core.Test.Services
     {
         private readonly RelayPushRegistrationService _sut;
 
+        private readonly IHttpClientFactory _httpFactory;
         private readonly GlobalSettings _globalSettings;
         private readonly ILogger<RelayPushRegistrationService> _logger;
 
         public RelayPushRegistrationServiceTests()
         {
             _globalSettings = new GlobalSettings();
+            _httpFactory = Substitute.For<IHttpClientFactory>();
             _logger = Substitute.For<ILogger<RelayPushRegistrationService>>();
 
             _sut = new RelayPushRegistrationService(
+                _httpFactory,
                 _globalSettings,
                 _logger
             );

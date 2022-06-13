@@ -30,6 +30,7 @@ namespace Bit.Core.IdentityServer
                 new ApiResource("api.licensing", new string[] { JwtClaimTypes.Subject }),
                 new ApiResource("api.organization", new string[] { JwtClaimTypes.Subject }),
                 new ApiResource("api.provider", new string[] { JwtClaimTypes.Subject }),
+                new ApiResource("api.installation", new string[] { JwtClaimTypes.Subject }),
             };
         }
     }

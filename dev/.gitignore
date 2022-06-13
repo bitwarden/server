@@ -1,7 +1,12 @@
 .data
 secrets.json
-.env
 
+# Docker container configurations
+.env
+authsources.php
+directory.ldif
+
+# Development certificates
 identity_server_dev.crt
 identity_server_dev.key
 identity_server_dev.pfx

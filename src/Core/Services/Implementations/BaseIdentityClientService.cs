@@ -4,7 +4,6 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Bit.Core.Utilities;
@@ -14,15 +13,17 @@ namespace Bit.Core.Services
 {
     public abstract class BaseIdentityClientService : IDisposable
     {
+        private readonly IHttpClientFactory _httpFactory;
         private readonly string _identityScope;
         private readonly string _identityClientId;
         private readonly string _identityClientSecret;
-        private readonly ILogger<BaseIdentityClientService> _logger;
+        protected readonly ILogger<BaseIdentityClientService> _logger;
 
         private JsonDocument _decodedToken;
         private DateTime? _nextAuthAttempt = null;
 
         public BaseIdentityClientService(
+            IHttpClientFactory httpFactory,
             string baseClientServerUri,
             string baseIdentityServerUri,
             string identityScope,
@@ -30,21 +31,18 @@ namespace Bit.Core.Services
             string identityClientSecret,
             ILogger<BaseIdentityClientService> logger)
         {
+            _httpFactory = httpFactory;
             _identityScope = identityScope;
             _identityClientId = identityClientId;
             _identityClientSecret = identityClientSecret;
             _logger = logger;
 
-            Client = new HttpClient
-            {
-                BaseAddress = new Uri(baseClientServerUri)
-            };
+            Client = _httpFactory.CreateClient("client");
+            Client.BaseAddress = new Uri(baseClientServerUri);
             Client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
-            IdentityClient = new HttpClient
-            {
-                BaseAddress = new Uri(baseIdentityServerUri)
-            };
+            IdentityClient = _httpFactory.CreateClient("identity");
+            IdentityClient.BaseAddress = new Uri(baseIdentityServerUri);
             IdentityClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
         }
 
@@ -52,12 +50,18 @@ namespace Bit.Core.Services
         protected HttpClient IdentityClient { get; private set; }
         protected string AccessToken { get; private set; }
 
-        protected async Task SendAsync(HttpMethod method, string path, object requestModel = null)
+        protected Task SendAsync(HttpMethod method, string path) =>
+            SendAsync<object, object>(method, path, null);
+
+        protected Task SendAsync<TRequest>(HttpMethod method, string path, TRequest body) =>
+            SendAsync<TRequest, object>(method, path, body);
+
+        protected async Task<TResult> SendAsync<TRequest, TResult>(HttpMethod method, string path, TRequest requestModel)
         {
             var tokenStateResponse = await HandleTokenStateAsync();
             if (!tokenStateResponse)
             {
-                return;
+                return default;
             }
 
             var message = new TokenHttpRequestMessage(requestModel, AccessToken)
@@ -65,14 +69,15 @@ namespace Bit.Core.Services
                 Method = method,
                 RequestUri = new Uri(string.Concat(Client.BaseAddress, path))
             };
-
             try
             {
                 var response = await Client.SendAsync(message);
+                return await response.Content.ReadFromJsonAsync<TResult>();
             }
             catch (Exception e)
             {
                 _logger.LogError(12334, e, "Failed to send to {0}.", message.RequestUri.ToString());
+                return default;
             }
         }
 
@@ -119,9 +124,17 @@ namespace Bit.Core.Services
 
             if (!response.IsSuccessStatusCode)
             {
+                _logger.LogInformation("Unsuccessful token response with status code {StatusCode}", response.StatusCode);
+
                 if (response.StatusCode == HttpStatusCode.BadRequest)
                 {
                     _nextAuthAttempt = DateTime.UtcNow.AddDays(1);
+                }
+
+                if (_logger.IsEnabled(LogLevel.Debug))
+                {
+                    var responseBody = await response.Content.ReadAsStringAsync();
+                    _logger.LogDebug("Error response body:\n{ResponseBody}", responseBody);
                 }
 
                 return false;
@@ -192,7 +205,7 @@ namespace Bit.Core.Services
 
         public void Dispose()
         {
-            _decodedToken.Dispose();
+            _decodedToken?.Dispose();
         }
     }
 }

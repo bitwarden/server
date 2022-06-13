@@ -7,6 +7,7 @@ using Bit.Core.Entities;
 using Bit.Core.Entities.Provider;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
+using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 
@@ -241,7 +242,8 @@ namespace Bit.Core.Services
                 ProviderId = await GetProviderIdAsync(organization.Id),
                 Type = type,
                 ActingUserId = _currentContext?.UserId,
-                Date = date.GetValueOrDefault(DateTime.UtcNow)
+                Date = date.GetValueOrDefault(DateTime.UtcNow),
+                InstallationId = GetInstallationId(),
             };
             await _eventWriteService.CreateAsync(e);
         }
@@ -303,6 +305,16 @@ namespace Bit.Core.Services
             }
 
             return await _currentContext.ProviderIdForOrg(orgId.Value);
+        }
+
+        private Guid? GetInstallationId()
+        {
+            if (_currentContext == null)
+            {
+                return null;
+            }
+
+            return _currentContext.InstallationId;
         }
 
         private bool CanUseEvents(IDictionary<Guid, OrganizationAbility> orgAbilities, Guid orgId)

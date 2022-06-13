@@ -1,4 +1,6 @@
-﻿using Bit.Infrastructure.EntityFramework.Models;
+﻿using System.Text.Json;
+using System.Text.Json.Serialization;
+using Bit.Infrastructure.EntityFramework.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories
@@ -25,7 +27,9 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
         public DbSet<GroupUser> GroupUsers { get; set; }
         public DbSet<Installation> Installations { get; set; }
         public DbSet<Organization> Organizations { get; set; }
+        public DbSet<OrganizationApiKey> OrganizationApiKeys { get; set; }
         public DbSet<OrganizationSponsorship> OrganizationSponsorships { get; set; }
+        public DbSet<OrganizationConnection> OrganizationConnections { get; set; }
         public DbSet<OrganizationUser> OrganizationUsers { get; set; }
         public DbSet<Policy> Policies { get; set; }
         public DbSet<Provider> Providers { get; set; }
@@ -66,6 +70,8 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             var eTaxRate = builder.Entity<TaxRate>();
             var eTransaction = builder.Entity<Transaction>();
             var eUser = builder.Entity<User>();
+            var eOrganizationApiKey = builder.Entity<OrganizationApiKey>();
+            var eOrganizationConnection = builder.Entity<OrganizationConnection>();
 
             eCipher.Property(c => c.Id).ValueGeneratedNever();
             eCollection.Property(c => c.Id).ValueGeneratedNever();
@@ -84,6 +90,8 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             eSend.Property(c => c.Id).ValueGeneratedNever();
             eTransaction.Property(c => c.Id).ValueGeneratedNever();
             eUser.Property(c => c.Id).ValueGeneratedNever();
+            eOrganizationApiKey.Property(c => c.Id).ValueGeneratedNever();
+            eOrganizationConnection.Property(c => c.Id).ValueGeneratedNever();
 
             eCollectionCipher.HasKey(cc => new { cc.CollectionId, cc.CipherId });
             eCollectionUser.HasKey(cu => new { cu.CollectionId, cu.OrganizationUserId });
@@ -127,6 +135,8 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             eTaxRate.ToTable(nameof(TaxRate));
             eTransaction.ToTable(nameof(Transaction));
             eUser.ToTable(nameof(User));
+            eOrganizationApiKey.ToTable(nameof(OrganizationApiKey));
+            eOrganizationConnection.ToTable(nameof(OrganizationConnection));
         }
     }
 }

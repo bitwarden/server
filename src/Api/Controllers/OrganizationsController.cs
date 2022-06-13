@@ -6,12 +6,14 @@ using Bit.Api.Models.Request;
 using Bit.Api.Models.Request.Accounts;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
+using Bit.Api.Models.Response.Organizations;
 using Bit.Api.Utilities;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
-using Bit.Core.Models.Data;
+using Bit.Core.Models.Data.Organizations.Policies;
+using Bit.Core.OrganizationFeatures.OrganizationApiKeys.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -34,6 +36,9 @@ namespace Bit.Api.Controllers
         private readonly ICurrentContext _currentContext;
         private readonly ISsoConfigRepository _ssoConfigRepository;
         private readonly ISsoConfigService _ssoConfigService;
+        private readonly IGetOrganizationApiKeyCommand _getOrganizationApiKeyCommand;
+        private readonly IRotateOrganizationApiKeyCommand _rotateOrganizationApiKeyCommand;
+        private readonly IOrganizationApiKeyRepository _organizationApiKeyRepository;
         private readonly GlobalSettings _globalSettings;
 
         public OrganizationsController(
@@ -46,6 +51,9 @@ namespace Bit.Api.Controllers
             ICurrentContext currentContext,
             ISsoConfigRepository ssoConfigRepository,
             ISsoConfigService ssoConfigService,
+            IGetOrganizationApiKeyCommand getOrganizationApiKeyCommand,
+            IRotateOrganizationApiKeyCommand rotateOrganizationApiKeyCommand,
+            IOrganizationApiKeyRepository organizationApiKeyRepository,
             GlobalSettings globalSettings)
         {
             _organizationRepository = organizationRepository;
@@ -57,6 +65,9 @@ namespace Bit.Api.Controllers
             _currentContext = currentContext;
             _ssoConfigRepository = ssoConfigRepository;
             _ssoConfigService = ssoConfigService;
+            _getOrganizationApiKeyCommand = getOrganizationApiKeyCommand;
+            _rotateOrganizationApiKeyCommand = rotateOrganizationApiKeyCommand;
+            _organizationApiKeyRepository = organizationApiKeyRepository;
             _globalSettings = globalSettings;
         }
 
@@ -482,7 +493,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpPost("{id}/api-key")]
-        public async Task<ApiKeyResponseModel> ApiKey(string id, [FromBody] SecretVerificationRequestModel model)
+        public async Task<ApiKeyResponseModel> ApiKey(string id, [FromBody] OrganizationApiKeyRequestModel model)
         {
             var orgIdGuid = new Guid(id);
             if (!await _currentContext.OrganizationOwner(orgIdGuid))
@@ -495,6 +506,19 @@ namespace Bit.Api.Controllers
             {
                 throw new NotFoundException();
             }
+
+            if (model.Type == OrganizationApiKeyType.BillingSync)
+            {
+                // Non-enterprise orgs should not be able to create or view an apikey of billing sync key type
+                var plan = StaticStore.GetPlan(organization.PlanType);
+                if (plan.Product != ProductType.Enterprise)
+                {
+                    throw new NotFoundException();
+                }
+            }
+
+            var organizationApiKey = await _getOrganizationApiKeyCommand
+                .GetOrganizationApiKeyAsync(organization.Id, model.Type);
 
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)
@@ -509,13 +533,27 @@ namespace Bit.Api.Controllers
             }
             else
             {
-                var response = new ApiKeyResponseModel(organization);
+                var response = new ApiKeyResponseModel(organizationApiKey);
                 return response;
             }
         }
 
+        [HttpGet("{id}/api-key-information")]
+        public async Task<ListResponseModel<OrganizationApiKeyInformation>> ApiKeyInformation(Guid id)
+        {
+            if (!await _currentContext.OrganizationOwner(id))
+            {
+                throw new NotFoundException();
+            }
+
+            var apiKeys = await _organizationApiKeyRepository.GetManyByOrganizationIdTypeAsync(id);
+
+            return new ListResponseModel<OrganizationApiKeyInformation>(
+                apiKeys.Select(k => new OrganizationApiKeyInformation(k)));
+        }
+
         [HttpPost("{id}/rotate-api-key")]
-        public async Task<ApiKeyResponseModel> RotateApiKey(string id, [FromBody] SecretVerificationRequestModel model)
+        public async Task<ApiKeyResponseModel> RotateApiKey(string id, [FromBody] OrganizationApiKeyRequestModel model)
         {
             var orgIdGuid = new Guid(id);
             if (!await _currentContext.OrganizationOwner(orgIdGuid))
@@ -528,6 +566,9 @@ namespace Bit.Api.Controllers
             {
                 throw new NotFoundException();
             }
+
+            var organizationApiKey = await _getOrganizationApiKeyCommand
+                .GetOrganizationApiKeyAsync(organization.Id, model.Type);
 
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)
@@ -542,8 +583,8 @@ namespace Bit.Api.Controllers
             }
             else
             {
-                await _organizationService.RotateApiKeyAsync(organization);
-                var response = new ApiKeyResponseModel(organization);
+                await _rotateOrganizationApiKeyCommand.RotateApiKeyAsync(organizationApiKey);
+                var response = new ApiKeyResponseModel(organizationApiKey);
                 return response;
             }
         }

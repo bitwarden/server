@@ -12,9 +12,7 @@ using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.Hosting;
 using NSubstitute;
 using NSubstitute.ReceivedExtensions;
 using Xunit;
@@ -38,8 +36,8 @@ namespace Bit.Core.Test.Services
             user.EmailVerified = true;
             user.Email = userLicense.Email;
 
-            sutProvider.GetDependency<Settings.GlobalSettings>().SelfHosted = true;
-            sutProvider.GetDependency<Settings.GlobalSettings>().LicenseDirectory = tempDir.Directory;
+            sutProvider.GetDependency<Settings.IGlobalSettings>().SelfHosted = true;
+            sutProvider.GetDependency<Settings.IGlobalSettings>().LicenseDirectory = tempDir.Directory;
             sutProvider.GetDependency<ILicensingService>()
                 .VerifyLicense(userLicense)
                 .Returns(true);
@@ -163,8 +161,9 @@ namespace Bit.Core.Test.Services
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
         public async Task Needs2FABecauseNewDeviceAsync_ReturnsTrue(SutProvider<UserService> sutProvider, User user)
         {
-            user.Id = Guid.NewGuid();
             user.EmailVerified = true;
+            user.TwoFactorProviders = null;
+            user.UnknownDeviceVerificationEnabled = true;
             const string deviceIdToCheck = "7b01b586-b210-499f-8d52-0c3fdaa646fc";
             const string deviceIdInRepo = "ea29126c-91b7-4cc4-8ce6-00105b37f64a";
 
@@ -175,14 +174,17 @@ namespace Bit.Core.Test.Services
                             new Device { Identifier = deviceIdInRepo }
                        }));
 
+
+            sutProvider.GetDependency<Settings.IGlobalSettings>().TwoFactorAuth.EmailOnNewDeviceLogin.Returns(true);
+
             Assert.True(await sutProvider.Sut.Needs2FABecauseNewDeviceAsync(user, deviceIdToCheck, "password"));
         }
 
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
         public async Task Needs2FABecauseNewDeviceAsync_ReturnsFalse_When_GranType_Is_AuthorizationCode(SutProvider<UserService> sutProvider, User user)
         {
-            user.Id = Guid.NewGuid();
             user.EmailVerified = true;
+            user.TwoFactorProviders = null;
             const string deviceIdToCheck = "7b01b586-b210-499f-8d52-0c3fdaa646fc";
             const string deviceIdInRepo = "ea29126c-91b7-4cc4-8ce6-00105b37f64a";
 
@@ -199,8 +201,8 @@ namespace Bit.Core.Test.Services
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
         public async Task Needs2FABecauseNewDeviceAsync_ReturnsFalse_When_Email_Is_Not_Verified(SutProvider<UserService> sutProvider, User user)
         {
-            user.Id = Guid.NewGuid();
             user.EmailVerified = false;
+            user.TwoFactorProviders = null;
             const string deviceIdToCheck = "7b01b586-b210-499f-8d52-0c3fdaa646fc";
             const string deviceIdInRepo = "ea29126c-91b7-4cc4-8ce6-00105b37f64a";
 
@@ -217,8 +219,8 @@ namespace Bit.Core.Test.Services
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
         public async Task Needs2FABecauseNewDeviceAsync_ReturnsFalse_When_Is_The_First_Device(SutProvider<UserService> sutProvider, User user)
         {
-            user.Id = Guid.NewGuid();
             user.EmailVerified = true;
+            user.TwoFactorProviders = null;
             const string deviceIdToCheck = "7b01b586-b210-499f-8d52-0c3fdaa646fc";
 
             sutProvider.GetDependency<IDeviceRepository>()
@@ -231,8 +233,8 @@ namespace Bit.Core.Test.Services
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
         public async Task Needs2FABecauseNewDeviceAsync_ReturnsFalse_When_DeviceId_Is_Already_In_Repo(SutProvider<UserService> sutProvider, User user)
         {
-            user.Id = Guid.NewGuid();
             user.EmailVerified = true;
+            user.TwoFactorProviders = null;
             const string deviceIdToCheck = "7b01b586-b210-499f-8d52-0c3fdaa646fc";
 
             sutProvider.GetDependency<IDeviceRepository>()
@@ -246,10 +248,10 @@ namespace Bit.Core.Test.Services
         }
 
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
-        public async Task Needs2FABecauseNewDeviceAsync_ReturnsFalse_When_Environment_Is_Development(SutProvider<UserService> sutProvider, User user)
+        public async Task Needs2FABecauseNewDeviceAsync_ReturnsFalse_When_GlobalSettings_2FA_EmailOnNewDeviceLogin_Is_Disabled(SutProvider<UserService> sutProvider, User user)
         {
-            user.Id = Guid.NewGuid();
             user.EmailVerified = true;
+            user.TwoFactorProviders = null;
             const string deviceIdToCheck = "7b01b586-b210-499f-8d52-0c3fdaa646fc";
             const string deviceIdInRepo = "ea29126c-91b7-4cc4-8ce6-00105b37f64a";
 
@@ -260,11 +262,93 @@ namespace Bit.Core.Test.Services
                             new Device { Identifier = deviceIdInRepo }
                        }));
 
-            sutProvider.GetDependency<IWebHostEnvironment>()
-                       .EnvironmentName
-                       .Returns(Environments.Development);
+            sutProvider.GetDependency<Settings.IGlobalSettings>().TwoFactorAuth.EmailOnNewDeviceLogin.Returns(false);
 
             Assert.False(await sutProvider.Sut.Needs2FABecauseNewDeviceAsync(user, deviceIdToCheck, "password"));
+        }
+
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public async Task Needs2FABecauseNewDeviceAsync_ReturnsFalse_When_UnknownDeviceVerification_Is_Disabled(SutProvider<UserService> sutProvider, User user)
+        {
+            user.EmailVerified = true;
+            user.TwoFactorProviders = null;
+            user.UnknownDeviceVerificationEnabled = false;
+            const string deviceIdToCheck = "7b01b586-b210-499f-8d52-0c3fdaa646fc";
+            const string deviceIdInRepo = "ea29126c-91b7-4cc4-8ce6-00105b37f64a";
+
+            sutProvider.GetDependency<IDeviceRepository>()
+                       .GetManyByUserIdAsync(user.Id)
+                       .Returns(Task.FromResult<ICollection<Device>>(new List<Device>
+                       {
+                            new Device { Identifier = deviceIdInRepo }
+                       }));
+
+            sutProvider.GetDependency<Settings.IGlobalSettings>().TwoFactorAuth.EmailOnNewDeviceLogin.Returns(true);
+
+            Assert.False(await sutProvider.Sut.Needs2FABecauseNewDeviceAsync(user, deviceIdToCheck, "password"));
+        }
+
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public void CanEditDeviceVerificationSettings_ReturnsTrue(SutProvider<UserService> sutProvider, User user)
+        {
+            user.EmailVerified = true;
+            user.TwoFactorProviders = null;
+
+            sutProvider.GetDependency<Settings.IGlobalSettings>().TwoFactorAuth.EmailOnNewDeviceLogin.Returns(true);
+
+            Assert.True(sutProvider.Sut.CanEditDeviceVerificationSettings(user));
+        }
+
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public void CanEditDeviceVerificationSettings_ReturnsFalse_When_GlobalSettings_2FA_EmailOnNewDeviceLogin_Is_Disabled(SutProvider<UserService> sutProvider, User user)
+        {
+            user.EmailVerified = true;
+            user.TwoFactorProviders = null;
+
+            sutProvider.GetDependency<Settings.IGlobalSettings>().TwoFactorAuth.EmailOnNewDeviceLogin.Returns(false);
+
+            Assert.False(sutProvider.Sut.CanEditDeviceVerificationSettings(user));
+        }
+
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public void CanEditDeviceVerificationSettings_ReturnsFalse_When_Email_Is_Not_Verified(SutProvider<UserService> sutProvider, User user)
+        {
+            user.EmailVerified = false;
+            user.TwoFactorProviders = null;
+
+            sutProvider.GetDependency<Settings.IGlobalSettings>().TwoFactorAuth.EmailOnNewDeviceLogin.Returns(true);
+
+            Assert.False(sutProvider.Sut.CanEditDeviceVerificationSettings(user));
+        }
+
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public void CanEditDeviceVerificationSettings_ReturnsFalse_When_User_Uses_Key_Connector(SutProvider<UserService> sutProvider, User user)
+        {
+            user.EmailVerified = true;
+            user.TwoFactorProviders = null;
+            user.UsesKeyConnector = true;
+
+            sutProvider.GetDependency<Settings.IGlobalSettings>().TwoFactorAuth.EmailOnNewDeviceLogin.Returns(true);
+
+            Assert.False(sutProvider.Sut.CanEditDeviceVerificationSettings(user));
+        }
+
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public void CanEditDeviceVerificationSettings_ReturnsFalse_When_User_Has_A_2FA_Already_Set_Up(SutProvider<UserService> sutProvider, User user)
+        {
+            user.EmailVerified = true;
+            user.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
+            {
+                [TwoFactorProviderType.Email] = new TwoFactorProvider
+                {
+                    MetaData = new Dictionary<string, object> { ["Email"] = "asdfasf" },
+                    Enabled = true
+                }
+            });
+
+            sutProvider.GetDependency<Settings.IGlobalSettings>().TwoFactorAuth.EmailOnNewDeviceLogin.Returns(true);
+
+            Assert.False(sutProvider.Sut.CanEditDeviceVerificationSettings(user));
         }
     }
 }

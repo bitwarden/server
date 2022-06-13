@@ -380,6 +380,42 @@ namespace Bit.Api.Controllers
             }
         }
 
+        [HttpGet("get-device-verification-settings")]
+        public async Task<DeviceVerificationResponseModel> GetDeviceVerificationSettings()
+        {
+            var user = await _userService.GetUserByPrincipalAsync(User);
+            if (user == null)
+            {
+                throw new UnauthorizedAccessException();
+            }
+
+            if (User.Claims.HasSsoIdP())
+            {
+                return new DeviceVerificationResponseModel(false, false);
+            }
+
+            return new DeviceVerificationResponseModel(_userService.CanEditDeviceVerificationSettings(user), user.UnknownDeviceVerificationEnabled);
+        }
+
+        [HttpPut("device-verification-settings")]
+        public async Task<DeviceVerificationResponseModel> PutDeviceVerificationSettings([FromBody] DeviceVerificationRequestModel model)
+        {
+            var user = await _userService.GetUserByPrincipalAsync(User);
+            if (user == null)
+            {
+                throw new UnauthorizedAccessException();
+            }
+            if (!_userService.CanEditDeviceVerificationSettings(user)
+                || User.Claims.HasSsoIdP())
+            {
+                throw new InvalidOperationException("Can't update device verification settings");
+            }
+
+            model.ToUser(user);
+            await _userService.SaveUserAsync(user);
+            return new DeviceVerificationResponseModel(true, user.UnknownDeviceVerificationEnabled);
+        }
+
         private async Task<User> CheckAsync(SecretVerificationRequestModel model, bool premium)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);

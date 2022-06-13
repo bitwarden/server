@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Net.Http;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -13,6 +14,7 @@ namespace Bit.Core.Test.Services
     {
         private readonly MultiServicePushNotificationService _sut;
 
+        private readonly IHttpClientFactory _httpFactory;
         private readonly IDeviceRepository _deviceRepository;
         private readonly IInstallationDeviceRepository _installationDeviceRepository;
         private readonly GlobalSettings _globalSettings;
@@ -23,6 +25,7 @@ namespace Bit.Core.Test.Services
 
         public MultiServicePushNotificationServiceTests()
         {
+            _httpFactory = Substitute.For<IHttpClientFactory>();
             _deviceRepository = Substitute.For<IDeviceRepository>();
             _installationDeviceRepository = Substitute.For<IInstallationDeviceRepository>();
             _globalSettings = new GlobalSettings();
@@ -32,6 +35,7 @@ namespace Bit.Core.Test.Services
             _hubLogger = Substitute.For<ILogger<NotificationsApiPushNotificationService>>();
 
             _sut = new MultiServicePushNotificationService(
+                _httpFactory,
                 _deviceRepository,
                 _installationDeviceRepository,
                 _globalSettings,

@@ -8,9 +8,9 @@ using System.Threading.Tasks;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
+using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
-using Bit.Core.Utilities;
 using Dapper;
 
 namespace Bit.Infrastructure.Dapper.Repositories

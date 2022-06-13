@@ -17,9 +17,7 @@ using Bit.Core.Utilities;
 using Fido2NetLib;
 using Fido2NetLib.Objects;
 using Microsoft.AspNetCore.DataProtection;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using File = System.IO.File;
@@ -50,11 +48,10 @@ namespace Bit.Core.Services
         private readonly IReferenceEventService _referenceEventService;
         private readonly IFido2 _fido2;
         private readonly ICurrentContext _currentContext;
-        private readonly GlobalSettings _globalSettings;
+        private readonly IGlobalSettings _globalSettings;
         private readonly IOrganizationService _organizationService;
         private readonly IProviderUserRepository _providerUserRepository;
         private readonly IDeviceRepository _deviceRepository;
-        private readonly IWebHostEnvironment _environment;
 
         public UserService(
             IUserRepository userRepository,
@@ -81,11 +78,10 @@ namespace Bit.Core.Services
             IReferenceEventService referenceEventService,
             IFido2 fido2,
             ICurrentContext currentContext,
-            GlobalSettings globalSettings,
+            IGlobalSettings globalSettings,
             IOrganizationService organizationService,
             IProviderUserRepository providerUserRepository,
-            IDeviceRepository deviceRepository,
-            IWebHostEnvironment environment)
+            IDeviceRepository deviceRepository)
             : base(
                   store,
                   optionsAccessor,
@@ -121,7 +117,6 @@ namespace Bit.Core.Services
             _organizationService = organizationService;
             _providerUserRepository = providerUserRepository;
             _deviceRepository = deviceRepository;
-            _environment = environment;
         }
 
         public Guid? GetProperUserId(ClaimsPrincipal principal)
@@ -1422,10 +1417,18 @@ namespace Bit.Core.Services
 
         public async Task<bool> Needs2FABecauseNewDeviceAsync(User user, string deviceIdentifier, string grantType)
         {
-            return user.EmailVerified
+            return CanEditDeviceVerificationSettings(user)
+                   && user.UnknownDeviceVerificationEnabled
                    && grantType != "authorization_code"
-                   && !_environment.IsDevelopment()
                    && await IsNewDeviceAndNotTheFirstOneAsync(user, deviceIdentifier);
+        }
+
+        public bool CanEditDeviceVerificationSettings(User user)
+        {
+            return _globalSettings.TwoFactorAuth.EmailOnNewDeviceLogin
+                   && user.EmailVerified
+                   && !user.UsesKeyConnector
+                   && !(user.GetTwoFactorProviders()?.Any() ?? false);
         }
 
         private async Task<bool> IsNewDeviceAndNotTheFirstOneAsync(User user, string deviceIdentifier)
