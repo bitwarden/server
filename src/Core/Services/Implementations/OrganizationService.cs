@@ -2210,7 +2210,7 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Organization must have at least one confirmed owner.");
             }
 
-            await _organizationUserRepository.Disable(organizationUser.Id);
+            await _organizationUserRepository.DisableAsync(organizationUser.Id);
             await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Disabled);
         }
 
@@ -2253,7 +2253,7 @@ namespace Bit.Core.Services
                         throw new BadRequestException("Only owners can disable other owners.");
                     }
 
-                    await _organizationUserRepository.Disable(organizationUser.Id);
+                    await _organizationUserRepository.DisableAsync(organizationUser.Id);
                     await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Disabled);
 
                     result.Add(Tuple.Create(organizationUser, ""));
@@ -2287,7 +2287,7 @@ namespace Bit.Core.Services
 
             var status = GetOrganizationUserStatusTypePriorToDisabled(organizationUser);
 
-            await _organizationUserRepository.Enable(organizationUser.Id, status);
+            await _organizationUserRepository.EnableAsync(organizationUser.Id, status);
             await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Enabled);
         }
 
@@ -2332,7 +2332,7 @@ namespace Bit.Core.Services
 
                     var status = GetOrganizationUserStatusTypePriorToDisabled(organizationUser);
 
-                    await _organizationUserRepository.Enable(organizationUser.Id, status);
+                    await _organizationUserRepository.EnableAsync(organizationUser.Id, status);
                     await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Enabled);
 
                     result.Add(Tuple.Create(organizationUser, ""));
