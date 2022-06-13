@@ -18,7 +18,6 @@ using Xunit;
 
 namespace Bit.Api.Test.Controllers
 {
-
     [ControllerCustomize(typeof(CollectionsController))]
     [SutProviderCustomize]
     public class CollectionsControllerTests
@@ -71,8 +70,6 @@ namespace Bit.Api.Test.Controllers
                 });
 
             _ = await sutProvider.Sut.Put(orgId, collectionId, collectionRequest);
-
-
         }
 
         [Theory, BitAutoData]
