@@ -34,7 +34,7 @@
     @UsesKeyConnector BIT = 0,
     @FailedLoginCount INT,
     @LastFailedLoginDate DATETIME2(7),
-    @UnknownDeviceVerificationEnabled BIT NULL
+    @UnknownDeviceVerificationEnabled BIT = 1
 AS
 BEGIN
     SET NOCOUNT ON
