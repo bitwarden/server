@@ -70,6 +70,7 @@ namespace Bit.Core.Services
                     UserId = cipher.UserId,
                     OrganizationId = cipher.OrganizationId,
                     RevisionDate = cipher.RevisionDate,
+                    CollectionIds = collectionIds,
                 };
 
                 await SendPayloadToUserAsync(cipher.UserId.Value, type, message, true);
