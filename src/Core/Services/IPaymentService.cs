@@ -26,7 +26,6 @@ namespace Bit.Core.Services
         Task ReinstateSubscriptionAsync(ISubscriber subscriber);
         Task<bool> UpdatePaymentMethodAsync(ISubscriber subscriber, PaymentMethodType paymentMethodType,
             string paymentToken, bool allowInAppPurchases = false, TaxInfo taxInfo = null);
-        Task<bool> UpdateCustomerEmailAddress(string gatewayCustomerId, string emailAddress);
         Task<bool> CreditAccountAsync(ISubscriber subscriber, decimal creditAmount);
         Task<BillingInfo> GetBillingAsync(ISubscriber subscriber);
         Task<BillingInfo> GetBillingHistoryAsync(ISubscriber subscriber);
