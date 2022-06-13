@@ -184,7 +184,7 @@ namespace Bit.Scim.Controllers.v2
             if (replaceOp != null)
             {
                 var valueDict = replaceOp.Value as Dictionary<string, object>;
-                if(valueDict.ContainsKey("active"))
+                if (valueDict.ContainsKey("active"))
                 {
                     var active = (bool)valueDict["active"];
                     if (active)
