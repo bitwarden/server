@@ -379,45 +379,44 @@ namespace Bit.Api.Controllers
 
         [HttpPatch("{id}/disable")]
         [HttpPut("{id}/disable")]
-        public async Task Disable(string orgId, string id)
+        public async Task Disable(Guid orgId, Guid id)
         {
             await EnableOrDisableUser(orgId, id, _organizationService.DisableUserAsync);
         }
 
         [HttpPatch("disable")]
         [HttpPut("disable")]
-        public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkDisable(string orgId, [FromBody] OrganizationUserBulkRequestModel model)
+        public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkDisable(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
         {
             return await EnableOrDisableUsersAsync(orgId, model, _organizationService.DisableUsersAsync);
         }
 
         [HttpPatch("{id}/enable")]
         [HttpPut("{id}/enable")]
-        public async Task Enable(string orgId, string id)
+        public async Task Enable(Guid orgId, Guid id)
         {
             await EnableOrDisableUser(orgId, id, _organizationService.EnableUserAsync);
         }
 
         [HttpPatch("enable")]
         [HttpPut("enable")]
-        public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkEnable(string orgId, [FromBody] OrganizationUserBulkRequestModel model)
+        public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkEnable(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
         {
             return await EnableOrDisableUsersAsync(orgId, model, _organizationService.EnableUsersAsync);
         }
 
         private async Task EnableOrDisableUser(
-            string orgId,
-            string id,
+            Guid orgId,
+            Guid id,
             Func<OrganizationUser, Guid?, Task> enableOrDisableAction)
         {
-            var orgGuidId = new Guid(orgId);
-            if (!await _currentContext.ManageUsers(orgGuidId))
+            if (!await _currentContext.ManageUsers(orgId))
             {
                 throw new NotFoundException();
             }
 
             var userId = _userService.GetProperUserId(User);
-            var orgUser = await _organizationUserRepository.GetByIdAsync(new Guid(id));
+            var orgUser = await _organizationUserRepository.GetByIdAsync(id);
             if (orgUser == null)
             {
                 throw new NotFoundException();
@@ -427,18 +426,17 @@ namespace Bit.Api.Controllers
         }
 
         private async Task<ListResponseModel<OrganizationUserBulkResponseModel>> EnableOrDisableUsersAsync(
-            string orgId,
+            Guid orgId,
             OrganizationUserBulkRequestModel model,
             Func<Guid, IEnumerable<Guid>, Guid?, Task<List<Tuple<OrganizationUser, string>>>> enableOrDisableAction)
         {
-            var orgGuidId = new Guid(orgId);
-            if (!await _currentContext.ManageUsers(orgGuidId))
+            if (!await _currentContext.ManageUsers(orgId))
             {
                 throw new NotFoundException();
             }
 
             var userId = _userService.GetProperUserId(User);
-            var result = await enableOrDisableAction(orgGuidId, model.Ids, userId.Value);
+            var result = await enableOrDisableAction(orgId, model.Ids, userId.Value);
             return new ListResponseModel<OrganizationUserBulkResponseModel>(result.Select(r =>
                 new OrganizationUserBulkResponseModel(r.Item1.Id, r.Item2)));
         }
