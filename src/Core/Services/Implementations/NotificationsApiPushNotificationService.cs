@@ -71,6 +71,7 @@ namespace Bit.Core.Services
                     Id = cipher.Id,
                     UserId = cipher.UserId,
                     RevisionDate = cipher.RevisionDate,
+                    CollectionIds = collectionIds,
                 };
 
                 await SendMessageAsync(type, message, true);

@@ -84,6 +84,20 @@ services:
     profiles:
       - idp
 
+  open-ldap:
+    image: osixia/openldap:1.5.0
+    command: --copy-service
+    environment:
+      LDAP_ORGANISATION: "Bitwarden"
+      LDAP_DOMAIN: "bitwarden.com"
+    volumes:
+      - ./directory.ldif:/container/service/slapd/assets/config/bootstrap/ldif/output.ldif
+    ports:
+      - '389:389'
+      - '636:636'
+    profiles:
+      - ldap
+
 volumes:
   edgesql_dev_data:
   postgres_dev_data:

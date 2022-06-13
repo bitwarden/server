@@ -51,7 +51,7 @@ namespace Bit.Core.Services
         Task<List<Tuple<OrganizationUser, string>>> DeleteUsersAsync(Guid organizationId,
             IEnumerable<Guid> organizationUserIds, Guid? deletingUserId);
         Task UpdateUserGroupsAsync(OrganizationUser organizationUser, IEnumerable<Guid> groupIds, Guid? loggedInUserId);
-        Task UpdateUserResetPasswordEnrollmentAsync(Guid organizationId, Guid organizationUserId, string resetPasswordKey, Guid? callingUserId);
+        Task UpdateUserResetPasswordEnrollmentAsync(Guid organizationId, Guid userId, string resetPasswordKey, Guid? callingUserId);
         Task<OrganizationLicense> GenerateLicenseAsync(Guid organizationId, Guid installationId);
         Task<OrganizationLicense> GenerateLicenseAsync(Organization organization, Guid installationId,
             int? version = null);

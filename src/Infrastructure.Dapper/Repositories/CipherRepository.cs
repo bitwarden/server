@@ -50,6 +50,20 @@ namespace Bit.Infrastructure.Dapper.Repositories
             }
         }
 
+        public async Task<ICollection<CipherOrganizationDetails>> GetManyOrganizationDetailsByOrganizationIdAsync(
+            Guid organizationId)
+        {
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<CipherOrganizationDetails>(
+                    $"[{Schema}].[CipherOrganizationDetails_ReadByOrganizationId]",
+                    new { OrganizationId = organizationId },
+                    commandType: CommandType.StoredProcedure);
+
+                return results.ToList();
+            }
+        }
+
         public async Task<bool> GetCanEditByIdAsync(Guid userId, Guid cipherId)
         {
             using (var connection = new SqlConnection(ConnectionString))

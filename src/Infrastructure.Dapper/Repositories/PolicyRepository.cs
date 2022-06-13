@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Models.Data.Organizations.Policies;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Dapper;
@@ -21,6 +22,7 @@ namespace Bit.Infrastructure.Dapper.Repositories
         public PolicyRepository(string connectionString, string readOnlyConnectionString)
             : base(connectionString, readOnlyConnectionString)
         { }
+
         public async Task<Policy> GetByOrganizationIdTypeAsync(Guid organizationId, PolicyType type)
         {
             using (var connection = new SqlConnection(ConnectionString))
