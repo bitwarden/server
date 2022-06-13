@@ -428,7 +428,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             }
         }
 
-        public async Task Disable(Guid id)
+        public async Task DisableAsync(Guid id)
         {
             using (var scope = ServiceScopeFactory.CreateScope())
             {
@@ -447,7 +447,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             }
         }
 
-        public async Task Enable(Guid id, OrganizationUserStatusType status)
+        public async Task EnableAsync(Guid id, OrganizationUserStatusType status)
         {
             using (var scope = ServiceScopeFactory.CreateScope())
             {

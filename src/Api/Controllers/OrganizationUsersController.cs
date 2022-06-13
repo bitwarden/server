@@ -388,7 +388,7 @@ namespace Bit.Api.Controllers
         [HttpPut("disable")]
         public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkDisable(string orgId, [FromBody] OrganizationUserBulkRequestModel model)
         {
-            return await EnableOrDisableUsers(orgId, model, _organizationService.DisableUsersAsync);
+            return await EnableOrDisableUsersAsync(orgId, model, _organizationService.DisableUsersAsync);
         }
 
         [HttpPatch("{id}/enable")]
@@ -402,7 +402,7 @@ namespace Bit.Api.Controllers
         [HttpPut("enable")]
         public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkEnable(string orgId, [FromBody] OrganizationUserBulkRequestModel model)
         {
-            return await EnableOrDisableUsers(orgId, model, _organizationService.EnableUsersAsync);
+            return await EnableOrDisableUsersAsync(orgId, model, _organizationService.EnableUsersAsync);
         }
 
         private async Task EnableOrDisableUser(
@@ -426,7 +426,7 @@ namespace Bit.Api.Controllers
             await enableOrDisableAction(orgUser, userId);
         }
 
-        private async Task<ListResponseModel<OrganizationUserBulkResponseModel>> EnableOrDisableUsers(
+        private async Task<ListResponseModel<OrganizationUserBulkResponseModel>> EnableOrDisableUsersAsync(
             string orgId,
             OrganizationUserBulkRequestModel model,
             Func<Guid, IEnumerable<Guid>, Guid?, Task<List<Tuple<OrganizationUser, string>>>> enableOrDisableAction)

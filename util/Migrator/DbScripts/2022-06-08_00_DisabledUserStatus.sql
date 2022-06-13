@@ -15,6 +15,7 @@ IF EXISTS (
     SELECT  TOP 1 NULL
     FROM    [information_schema].[columns]
     WHERE   [table_name] = 'OrganizationUser'
+            AND [table_schema] = 'dbo'
             AND [column_name] = 'Status'
             AND [data_type] = 'TINYINT'
 )

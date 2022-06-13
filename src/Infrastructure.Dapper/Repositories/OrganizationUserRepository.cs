@@ -410,7 +410,7 @@ namespace Bit.Infrastructure.Dapper.Repositories
             }
         }
 
-        public async Task Disable(Guid id)
+        public async Task DisableAsync(Guid id)
         {
             using (var connection = new SqlConnection(ConnectionString))
             {
@@ -421,7 +421,7 @@ namespace Bit.Infrastructure.Dapper.Repositories
             }
         }
 
-        public async Task Enable(Guid id, OrganizationUserStatusType status)
+        public async Task EnableAsync(Guid id, OrganizationUserStatusType status)
         {
             using (var connection = new SqlConnection(ConnectionString))
             {
