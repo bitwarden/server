@@ -30,13 +30,4 @@ namespace Bit.Core.Entities
             Data = CoreHelpers.ClassToJsonData(dataModel);
         }
     }
-
-    public class Policy<T> : Policy where T : IPolicyDataModel, new()
-    {
-        public T DataModel
-        {
-            get => GetDataModel<T>();
-            set => SetDataModel(value);
-        }
-    }
 }

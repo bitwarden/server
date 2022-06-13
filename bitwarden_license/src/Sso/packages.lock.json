@@ -2762,7 +2762,7 @@
       "infrastructure.dapper": {
         "type": "Project",
         "dependencies": {
-          "Core": "2022.5.0",
+          "Core": "2022.5.1",
           "Dapper": "2.0.123",
           "System.Data.SqlClient": "4.8.3"
         }
@@ -2771,7 +2771,7 @@
         "type": "Project",
         "dependencies": {
           "AutoMapper.Extensions.Microsoft.DependencyInjection": "11.0.0",
-          "Core": "2022.5.0",
+          "Core": "2022.5.1",
           "Microsoft.EntityFrameworkCore.Relational": "6.0.4",
           "Npgsql.EntityFrameworkCore.PostgreSQL": "6.0.4",
           "Pomelo.EntityFrameworkCore.MySql": "6.0.1",
@@ -2781,9 +2781,9 @@
       "sharedweb": {
         "type": "Project",
         "dependencies": {
-          "Core": "2022.5.0",
-          "Infrastructure.Dapper": "2022.5.0",
-          "Infrastructure.EntityFramework": "2022.5.0"
+          "Core": "2022.5.1",
+          "Infrastructure.Dapper": "2022.5.1",
+          "Infrastructure.EntityFramework": "2022.5.1"
         }
       }
     }
