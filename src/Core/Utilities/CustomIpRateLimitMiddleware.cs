@@ -4,7 +4,7 @@ using AspNetCoreRateLimit;
 using Bit.Core.Models.Api;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -14,11 +14,11 @@ namespace Bit.Core.Utilities
     {
         private readonly IBlockIpService _blockIpService;
         private readonly ILogger<CustomIpRateLimitMiddleware> _logger;
-        private readonly IMemoryCache _memoryCache;
+        private readonly IDistributedCache _distributedCache;
         private readonly IpRateLimitOptions _options;
 
         public CustomIpRateLimitMiddleware(
-            IMemoryCache memoryCache,
+            IDistributedCache distributedCache,
             IBlockIpService blockIpService,
             RequestDelegate next,
             IOptions<IpRateLimitOptions> ipRateLimitOptions,
@@ -28,7 +28,7 @@ namespace Bit.Core.Utilities
             ILogger<CustomIpRateLimitMiddleware> logger)
             : base(next, processingStrategy, ipRateLimitOptions, policyStore, rateLimitConfiguration, logger)
         {
-            _memoryCache = memoryCache;
+            _distributedCache = distributedCache;
             _blockIpService = blockIpService;
             _options = ipRateLimitOptions.Value;
             _logger = logger;
@@ -51,7 +51,7 @@ namespace Bit.Core.Utilities
             base.LogBlockedRequest(httpContext, identity, counter, rule);
             var key = $"blockedIp_{identity.ClientIp}";
 
-            _memoryCache.TryGetValue(key, out int blockedCount);
+            _distributedCache.TryGetValue(key, out int blockedCount);
 
             blockedCount++;
             if (blockedCount > 10)
@@ -64,8 +64,8 @@ namespace Bit.Core.Utilities
             {
                 _logger.LogInformation(Constants.BypassFiltersEventId, null,
                     "Request blocked {0}. \nInfo: \n{1}", identity.ClientIp, GetRequestInfo(httpContext));
-                _memoryCache.Set(key, blockedCount,
-                    new MemoryCacheEntryOptions().SetSlidingExpiration(new TimeSpan(0, 5, 0)));
+                _distributedCache.Set(key, blockedCount,
+                    new DistributedCacheEntryOptions().SetSlidingExpiration(new TimeSpan(0, 5, 0)));
             }
         }
 
