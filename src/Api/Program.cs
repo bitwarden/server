@@ -1,5 +1,4 @@
-﻿using System.Threading.Tasks;
-using AspNetCoreRateLimit;
+﻿using AspNetCoreRateLimit;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
@@ -10,14 +9,9 @@ namespace Bit.Api
 {
     public class Program
     {
-        public static async Task Main(string[] args)
+        public static void Main(string[] args)
         {
-            await CreateHostBuilder(args).Build().RunAsync();
-        }
-
-        private static IHostBuilder CreateHostBuilder(string[] args)
-        {
-            return Host
+            Host
                 .CreateDefaultBuilder(args)
                 .ConfigureCustomAppConfiguration(args)
                 .ConfigureWebHostDefaults(webBuilder =>
@@ -29,7 +23,7 @@ namespace Bit.Api
                             var context = e.Properties["SourceContext"].ToString();
                             if (e.Exception != null &&
                                 (e.Exception.GetType() == typeof(SecurityTokenValidationException) ||
-                                 e.Exception.Message == "Bad security stamp."))
+                                    e.Exception.Message == "Bad security stamp."))
                             {
                                 return false;
                             }
@@ -48,7 +42,9 @@ namespace Bit.Api
 
                             return e.Level >= LogEventLevel.Error;
                         }));
-                });
+                })
+                .Build()
+                .Run();
         }
     }
 }
