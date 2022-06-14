@@ -1,0 +1,34 @@
+---
+version: "3.8"
+
+services:
+
+  lite:
+    depends_on:
+      - mssql
+    env_file:
+      - global-settings.env
+    environment:
+      BW_ENABLE_SSL: "true"
+    image: ${REGISTRY:-bitwarden}/lite:${CORE_TAG:-latest}
+    restart: always
+    ports:
+      - '80:8080'
+      - '443:8443'
+    volumes:
+      - bitwarden:/etc/bitwarden
+      
+  mssql:
+    env_file:
+      - global-settings.env
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: "Express"
+    image: mcr.microsoft.com/mssql/server:2017-CU18-ubuntu-16.04
+    restart: always
+    volumes:
+      - mssql:/var/opt/mssql
+
+volumes:
+  bitwarden:
+  mssql:
