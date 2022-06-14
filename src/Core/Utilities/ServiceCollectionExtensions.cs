@@ -55,6 +55,9 @@ namespace Bit.Core.Utilities
             services.AddStackExchangeRedisCache(options =>
             {
                 options.Configuration = globalSettings.Redis.ConnectionString;
+
+                // Use "ProjectName:" as an instance name to namespace keys and avoid conflicts between projects
+                options.InstanceName = $"{globalSettings.ProjectName}:";
             });
 
             // TODO: Explicitly register IDistributedCache to re-use existing IConnectionMultiplexer after net6 upgrade
