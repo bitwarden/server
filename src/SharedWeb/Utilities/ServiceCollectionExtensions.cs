@@ -4,8 +4,11 @@ using System.Reflection;
 using System.Security.Claims;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
+using AspNetCoreRateLimit;
+using AspNetCoreRateLimit.Redis;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.HostedServices;
 using Bit.Core.Identity;
 using Bit.Core.IdentityServer;
 using Bit.Core.Models.Business.Tokenables;
@@ -30,13 +33,16 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Localization;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Serilog.Context;
+using StackExchange.Redis;
 using NoopRepos = Bit.Core.Repositories.Noop;
+using Role = Bit.Core.Entities.Role;
 using TableStorageRepos = Bit.Core.Repositories.TableStorage;
 
 namespace Bit.SharedWeb.Utilities
@@ -591,6 +597,67 @@ namespace Bit.SharedWeb.Utilities
                 options.Origin = globalSettings.BaseServiceUri.Vault;
                 options.TimestampDriftTolerance = 300000;
             });
+        }
+
+        /// <summary>
+        ///     Adds either an in-memory or distributed IP rate limiter depending if a Redis connection string is available.
+        /// </summary>
+        /// <param name="services"></param>
+        /// <param name="globalSettings"></param>
+        public static void AddIpRateLimiting(this IServiceCollection services,
+            GlobalSettings globalSettings)
+        {
+            services.AddHostedService<IpRateLimitSeedStartupService>();
+            services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
+
+            if (string.IsNullOrEmpty(globalSettings.Redis.ConnectionString))
+            {
+                services.AddInMemoryRateLimiting();
+            }
+            else
+            {
+                services.AddRedisRateLimiting(); // Requires a registered IConnectionMultiplexer 
+            }
+        }
+
+        /// <summary>
+        ///     Adds an implementation of <see cref="IDistributedCache"/> to the service collection. Uses a memory
+        /// cache if self hosted or no Redis connection string is available in GlobalSettings.
+        /// </summary>
+        public static void AddDistributedCache(
+            this IServiceCollection services,
+            GlobalSettings globalSettings)
+        {
+            if (globalSettings.SelfHosted || string.IsNullOrEmpty(globalSettings.Redis.ConnectionString))
+            {
+                services.AddDistributedMemoryCache();
+                return;
+            }
+
+            // Register the IConnectionMultiplexer explicitly so it can be accessed via DI
+            // (e.g. for the IP rate limiting store)
+            services.AddSingleton<IConnectionMultiplexer>(
+                _ => ConnectionMultiplexer.Connect(globalSettings.Redis.ConnectionString));
+
+            services.AddStackExchangeRedisCache(options =>
+            {
+                options.Configuration = globalSettings.Redis.ConnectionString;
+
+                // Use "ProjectName:" as an instance name to namespace keys and avoid conflicts between projects
+                options.InstanceName = $"{globalSettings.ProjectName}:";
+            });
+
+            // TODO: Explicitly register IDistributedCache to re-use existing IConnectionMultiplexer after net6 upgrade
+            // The multiplexer factory is available in Microsoft.Extensions.Caching.StackExchangeRedis v6
+            // And will reduce the number of redundant connections to the Redis instance
+            // services.AddSingleton<IDistributedCache>(s =>
+            // {
+            //     return new RedisCache(new RedisCacheOptions
+            //     {
+            //         ConnectionMultiplexerFactory = () =>
+            //             Task.FromResult(s.GetRequiredService<IConnectionMultiplexer>())
+            //     });
+            // });
         }
     }
 }
