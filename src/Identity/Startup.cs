@@ -63,7 +63,7 @@ namespace Bit.Identity
             {
                 config.Filters.Add(new ModelStateValidationFilterAttribute());
             });
-            
+
             services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "Bitwarden Identity", Version = "v1" });
