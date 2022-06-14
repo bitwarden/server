@@ -49,6 +49,10 @@ namespace Bit.Sso
             // Context
             services.AddScoped<ICurrentContext, CurrentContext>();
 
+            // Caching
+            services.AddMemoryCache();
+            services.AddDistributedCache(globalSettings);
+
             // Mvc
             services.AddControllersWithViews();
 
