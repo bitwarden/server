@@ -20,7 +20,6 @@ using System.Collections.Generic;
 using Bit.SharedWeb.Utilities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using StackExchange.Redis;
 
 #if !OSS
 using Bit.CommCore.Utilities;
@@ -69,18 +68,13 @@ namespace Bit.Api
             // Repositories
             services.AddSqlServerRepositories(globalSettings);
 
-            // Redis Connection
-            if (!globalSettings.SelfHosted && !string.IsNullOrEmpty(globalSettings.Redis.ConnectionString))
-            {
-                services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(globalSettings.Redis.ConnectionString));
-            }
-
             // Context
             services.AddScoped<ICurrentContext, CurrentContext>();
             services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 
             // Caching
             services.AddMemoryCache();
+            services.AddDistributedCache(globalSettings);
 
             // BitPay
             services.AddSingleton<BitPayClient>();

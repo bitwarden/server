@@ -20,7 +20,6 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Logging;
-using StackExchange.Redis;
 
 namespace Bit.Identity
 {
@@ -55,18 +54,13 @@ namespace Bit.Identity
             // Repositories
             services.AddSqlServerRepositories(globalSettings);
 
-            // Redis Connection
-            if (!globalSettings.SelfHosted && !string.IsNullOrEmpty(globalSettings.Redis.ConnectionString))
-            {
-                services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(globalSettings.Redis.ConnectionString));
-            }
-
             // Context
             services.AddScoped<ICurrentContext, CurrentContext>();
             services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 
             // Caching
             services.AddMemoryCache();
+            services.AddDistributedCache(globalSettings);
 
             // Mvc
             services.AddMvc(config =>

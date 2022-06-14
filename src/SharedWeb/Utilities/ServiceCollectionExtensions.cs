@@ -568,16 +568,6 @@ namespace Bit.SharedWeb.Utilities
 
         public static IServiceCollection AddDistributedIdentityServices(this IServiceCollection services, GlobalSettings globalSettings)
         {
-            if (string.IsNullOrWhiteSpace(globalSettings.IdentityServer?.RedisConnectionString))
-            {
-                services.AddDistributedMemoryCache();
-            }
-            else
-            {
-                services.AddStackExchangeRedisCache(options =>
-                    options.Configuration = globalSettings.IdentityServer.RedisConnectionString);
-            }
-
             services.AddOidcStateDataFormatterCache();
             services.AddSession();
             services.ConfigureApplicationCookie(configure => configure.CookieManager = new DistributedCacheCookieManager());

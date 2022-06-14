@@ -2,7 +2,6 @@
 using AspNetCoreRateLimit;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Serilog.Events;
 
@@ -12,21 +11,7 @@ namespace Bit.Identity
     {
         public static async Task Main(string[] args)
         {
-            var webHost = CreateHostBuilder(args)
-                .Build();
-
-            using (var scope = webHost.Services.CreateScope())
-            {
-                var ipPolicyStore = scope.ServiceProvider.GetRequiredService<IIpPolicyStore>();
-
-                await ipPolicyStore.SeedAsync();
-
-                var clientPolicySTore = scope.ServiceProvider.GetRequiredService<IClientPolicyStore>();
-
-                await clientPolicySTore.SeedAsync();
-            }
-
-            await webHost.RunAsync();
+            await CreateHostBuilder(args).Build().RunAsync();
         }
 
         private static IHostBuilder CreateHostBuilder(string[] args)
