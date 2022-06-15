@@ -15,10 +15,14 @@ namespace Bit.Core.Services
         public async Task UpdateCustomerEmailAddress(string gatewayCustomerId, string emailAddress)
         {
             if (string.IsNullOrWhiteSpace(gatewayCustomerId))
+            {
                 throw new InvalidGatewayCustomerIdException();
+            }
 
             if (string.IsNullOrWhiteSpace(emailAddress))
+            {
                 throw new InvalidEmailException();
+            }
 
             var customer = await _stripeAdapter.CustomerGetAsync(gatewayCustomerId);
 
