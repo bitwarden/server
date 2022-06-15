@@ -569,10 +569,13 @@ namespace Bit.Core.Services
             if (user.Gateway == GatewayType.Stripe
                 && !string.IsNullOrWhiteSpace(user.GatewayCustomerId))
             {
-                var status = await _stripeSyncService.UpdateCustomerEmailAddress(user.GatewayCustomerId,
-                    user.BillingEmailAddress());
 
-                if (!status)
+                try
+                {
+                    await _stripeSyncService.UpdateCustomerEmailAddress(user.GatewayCustomerId,
+                        user.BillingEmailAddress());
+                }
+                catch (Exception ex)
                 {
                     //if sync to strip fails, update email and securityStamp to previous
                     user.Key = previousState.Key;
@@ -584,7 +587,7 @@ namespace Bit.Core.Services
                     await _userRepository.ReplaceAsync(user);
                     return IdentityResult.Failed(new IdentityError
                     {
-                        Description = "email address could not be updated"
+                        Description = ex.Message
                     });
                 }
             }

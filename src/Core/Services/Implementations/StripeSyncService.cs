@@ -11,20 +11,12 @@ namespace Bit.Core.Services
             _stripeAdapter = stripeAdapter;
         }
 
-        public async Task<bool> UpdateCustomerEmailAddress(string gatewayCustomerId, string emailAddress)
+        public async Task UpdateCustomerEmailAddress(string gatewayCustomerId, string emailAddress)
         {
-            try
-            {
-                var customer = await _stripeAdapter.CustomerGetAsync(gatewayCustomerId);
+            var customer = await _stripeAdapter.CustomerGetAsync(gatewayCustomerId);
 
-                await _stripeAdapter.CustomerUpdateAsync(customer.Id,
-                    new Stripe.CustomerUpdateOptions { Email = emailAddress });
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
+            await _stripeAdapter.CustomerUpdateAsync(customer.Id,
+                new Stripe.CustomerUpdateOptions { Email = emailAddress });
         }
     }
 }
