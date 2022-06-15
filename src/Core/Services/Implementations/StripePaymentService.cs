@@ -1428,7 +1428,7 @@ namespace Bit.Core.Services
 
             return createdCustomer;
         }
-        
+
         public async Task<bool> CreditAccountAsync(ISubscriber subscriber, decimal creditAmount)
         {
             Stripe.Customer customer = null;
