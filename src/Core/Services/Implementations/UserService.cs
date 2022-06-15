@@ -566,14 +566,13 @@ namespace Bit.Core.Services
             user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
             await _userRepository.ReplaceAsync(user);
 
-            if (user.Gateway == GatewayType.Stripe
-                && !string.IsNullOrWhiteSpace(user.GatewayCustomerId))
+            if (user.Gateway == GatewayType.Stripe)
             {
 
                 try
                 {
                     await _stripeSyncService.UpdateCustomerEmailAddress(user.GatewayCustomerId,
-                        user.BillingEmailAddress());
+                        "");
                 }
                 catch (Exception ex)
                 {
