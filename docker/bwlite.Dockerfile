@@ -159,7 +159,6 @@ FROM mcr.microsoft.com/dotnet/aspnet:5.0-alpine
 LABEL com.bitwarden.product="bitwarden"
 LABEL com.bitwarden.project="lite"
 ENV ASPNETCORE_ENVIRONMENT=Production
-ENV ASPNETCORE_URLS http://+:5000
 ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false
 EXPOSE 8080
 EXPOSE 8443
@@ -188,11 +187,18 @@ RUN mkdir -p /etc/bitwarden/web
 WORKDIR /app
 COPY --from=dotnet-build /app ./
 
-# Copy supervisord configuration
-WORKDIR /etc/supervisor.d
-COPY docker/bwlite-supervisord.ini ./
+# Copy Web files from node-build stage
+COPY --from=node-build /source/apps/web/build ./Web/build
 
-# Copy nginx configuration
+# Set up supervisord
+RUN mkdir -p /etc/supervisor
+RUN mkdir -p /var/log/bitwarden
+COPY docker/bwlite-supervisord.ini /etc/supervisor.d/bitwarden-lite.ini
+COPY docker/bwlite-supervisord.conf /etc/supervisor/supervisord.conf
+RUN rm -f /etc/supervisord.conf
+
+# Set up nginx
+RUN mkdir -p /var/log/nginx/logs
 COPY docker/nginx/confd/nginx-config.toml /etc/confd/conf.d/
 COPY docker/nginx/confd/nginx-config.conf.tmpl /etc/confd/templates/
 COPY docker/nginx/nginx.conf /etc/nginx
@@ -215,9 +221,23 @@ RUN chmod +x /usr/local/bin/confd
 COPY docker/bwlite-entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-# Create non-root user to run app
-RUN adduser -s /bin/false -D bitwarden && chown -R bitwarden:bitwarden /app /etc/bitwarden
+# TODO: Remove after testing
+RUN apk add --update-cache \
+    vim \
+    && rm -rf /var/cache/apk/*
 
+# Create non-root user to run app
+RUN adduser -s /bin/false -D bitwarden && chown -R bitwarden:bitwarden \
+    /app \
+    /etc/bitwarden \
+    /etc/supervisor \
+    /var/lib/nginx \
+    /var/log \
+    /run
+
+VOLUME ["/etc/bitwarden"]
+
+WORKDIR /app
 USER bitwarden:bitwarden
 HEALTHCHECK CMD curl --insecure -Lfs https://localhost:8443/alive || curl -Lfs http://localhost:8080/alive || exit 1
 ENTRYPOINT ["/entrypoint.sh"]
