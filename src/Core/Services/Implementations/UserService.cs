@@ -572,7 +572,7 @@ namespace Bit.Core.Services
                 try
                 {
                     await _stripeSyncService.UpdateCustomerEmailAddress(user.GatewayCustomerId,
-                        "");
+                        user.BillingEmailAddress());
                 }
                 catch (Exception ex)
                 {
