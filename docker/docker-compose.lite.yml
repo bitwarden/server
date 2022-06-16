@@ -10,24 +10,6 @@ services:
       - global-settings.env
     environment:
       BW_ENABLE_SSL: "true"
-      BW_SERVICE_NAME_ADMIN: "localhost"
-      BW_SERVICE_NAME_API: "localhost"
-      BW_SERVICE_NAME_ATTACHMENTS: "localhost"
-      BW_SERVICE_NAME_EVENTS: "localhost"
-      BW_SERVICE_NAME_ICONS: "localhost"
-      BW_SERVICE_NAME_IDENTITY: "localhost"
-      BW_SERVICE_NAME_NOTIFICATIONS: "localhost"
-      BW_SERVICE_NAME_SSO: "localhost"
-      BW_SERVICE_NAME_WEB: "localhost"
-      BW_SERVICE_PORT_ADMIN: "5000"
-      BW_SERVICE_PORT_API: "5001"
-      BW_SERVICE_PORT_ATTACHMENTS: "5002"
-      BW_SERVICE_PORT_EVENTS: "5003"
-      BW_SERVICE_PORT_ICONS: "5004"
-      BW_SERVICE_PORT_IDENTITY: "5005"
-      BW_SERVICE_PORT_NOTIFICATIONS: "5006"
-      BW_SERVICE_PORT_SSO: "5007"
-      BW_SERVICE_PORT_WEB: "5008"
     image: ${REGISTRY:-bitwarden}/lite:${CORE_TAG:-latest}
     restart: always
     ports:
@@ -35,6 +17,7 @@ services:
       - '443:8443'
     volumes:
       - bitwarden:/etc/bitwarden
+      - logs:/var/log/bitwarden
       
   mssql:
     env_file:
@@ -49,4 +32,5 @@ services:
 
 volumes:
   bitwarden:
+  logs:
   mssql:

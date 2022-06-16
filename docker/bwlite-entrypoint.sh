@@ -24,6 +24,7 @@ if [ ! -f /etc/bitwarden/identity/identity.pfx ]; then
 fi
 
 cp /etc/bitwarden/identity/identity.pfx /app/Identity/identity.pfx
+cp /etc/bitwarden/identity/identity.pfx /app/Sso/identity.pfx
 
 # Generate SSL certificates
 if [ -z "$(ls -A /etc/bitwarden/ssl)" ]; then
@@ -41,10 +42,10 @@ if [ -z "$(ls -A /etc/bitwarden/ssl)" ]; then
   -subj "/C=US/ST=California/L=Santa Barbara/O=Bitwarden Inc./OU=Bitwarden/CN=${DOMAIN:-localhost}"
 fi
 
-/usr/local/bin/confd -onetime -backend env
-
 # Launch a loop to rotate nginx logs on a daily basis
 /bin/sh -c "/logrotate.sh loop >/dev/null 2>&1 &"
+
+/usr/local/bin/confd -onetime -backend env
 
 # Set up Web app-id.json
 cp /etc/bitwarden/web/app-id.json /app/Web/app-id.json
