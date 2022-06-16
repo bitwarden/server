@@ -148,6 +148,7 @@ namespace Bit.SharedWeb.Utilities
                 };
             });
             services.AddSingleton<IPaymentService, StripePaymentService>();
+            services.AddSingleton<IStripeSyncService, StripeSyncService>();
             services.AddSingleton<IMailService, HandlebarsMailService>();
             services.AddSingleton<ILicensingService, LicensingService>();
             services.AddTokenizers();

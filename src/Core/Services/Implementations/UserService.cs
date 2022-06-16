@@ -52,6 +52,7 @@ namespace Bit.Core.Services
         private readonly IOrganizationService _organizationService;
         private readonly IProviderUserRepository _providerUserRepository;
         private readonly IDeviceRepository _deviceRepository;
+        private readonly IStripeSyncService _stripeSyncService;
 
         public UserService(
             IUserRepository userRepository,
@@ -81,7 +82,8 @@ namespace Bit.Core.Services
             IGlobalSettings globalSettings,
             IOrganizationService organizationService,
             IProviderUserRepository providerUserRepository,
-            IDeviceRepository deviceRepository)
+            IDeviceRepository deviceRepository,
+            IStripeSyncService stripeSyncService)
             : base(
                   store,
                   optionsAccessor,
@@ -117,6 +119,7 @@ namespace Bit.Core.Services
             _organizationService = organizationService;
             _providerUserRepository = providerUserRepository;
             _deviceRepository = deviceRepository;
+            _stripeSyncService = stripeSyncService;
         }
 
         public Guid? GetProperUserId(ClaimsPrincipal principal)
@@ -543,6 +546,14 @@ namespace Bit.Core.Services
                 return IdentityResult.Failed(_identityErrorDescriber.DuplicateEmail(newEmail));
             }
 
+            var previousState = new
+            {
+                Key = user.Key,
+                MasterPassword = user.MasterPassword,
+                SecurityStamp = user.SecurityStamp,
+                Email = user.Email
+            };
+
             var result = await UpdatePasswordHash(user, newMasterPassword);
             if (!result.Succeeded)
             {
@@ -554,6 +565,32 @@ namespace Bit.Core.Services
             user.EmailVerified = true;
             user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
             await _userRepository.ReplaceAsync(user);
+
+            if (user.Gateway == GatewayType.Stripe)
+            {
+
+                try
+                {
+                    await _stripeSyncService.UpdateCustomerEmailAddress(user.GatewayCustomerId,
+                        user.BillingEmailAddress());
+                }
+                catch (Exception ex)
+                {
+                    //if sync to strip fails, update email and securityStamp to previous
+                    user.Key = previousState.Key;
+                    user.Email = previousState.Email;
+                    user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
+                    user.MasterPassword = previousState.MasterPassword;
+                    user.SecurityStamp = previousState.SecurityStamp;
+
+                    await _userRepository.ReplaceAsync(user);
+                    return IdentityResult.Failed(new IdentityError
+                    {
+                        Description = ex.Message
+                    });
+                }
+            }
+
             await _pushService.PushLogOutAsync(user.Id);
 
             return IdentityResult.Success;
