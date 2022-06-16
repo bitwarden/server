@@ -1226,18 +1226,32 @@ namespace Bit.Core.Services
             {
                 return false;
             }
-            if (user.GetPremium())
-            {
-                return true;
-            }
-            var orgs = await _currentContext.OrganizationMembershipAsync(_organizationUserRepository, userId.Value);
-            if (!orgs.Any())
+
+            return user.GetPremium() || await this.HasPremiumFromOrganization(user);
+        }
+
+        public async Task<bool> HasPremiumFromOrganization(ITwoFactorProvidersUser user)
+        {
+            var userId = user.GetUserId();
+            if (!userId.HasValue)
             {
                 return false;
             }
+
+            // orgUsers in the Invited status are not associated with a userId yet, so this will get
+            // orgUsers in Accepted and Confirmed states only
+            var orgUsers = await _organizationUserRepository.GetManyByUserAsync(userId.Value);
+
+            if (!orgUsers.Any())
+            {
+                return false;
+            }
+
             var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
-            return orgs.Any(o => orgAbilities.ContainsKey(o.Id) &&
-                orgAbilities[o.Id].UsersGetPremium && orgAbilities[o.Id].Enabled);
+            return orgUsers.Any(ou =>
+                orgAbilities.TryGetValue(ou.OrganizationId, out var orgAbility) &&
+                orgAbility.UsersGetPremium &&
+                orgAbility.Enabled);
         }
 
         public async Task<bool> TwoFactorIsEnabledAsync(ITwoFactorProvidersUser user)
