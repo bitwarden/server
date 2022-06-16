@@ -1246,9 +1246,12 @@ namespace Bit.Core.Services
             {
                 return false;
             }
+
             var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
-            return orgUsers.Any(ou => orgAbilities.ContainsKey(ou.OrganizationId) &&
-                orgAbilities[ou.OrganizationId].UsersGetPremium && orgAbilities[ou.OrganizationId].Enabled);
+            return orgUsers.Any(ou =>
+                orgAbilities.TryGetValue(ou.OrganizationId, out var orgAbility) &&
+                orgAbility.UsersGetPremium &&
+                orgAbility.Enabled);
         }
 
         public async Task<bool> TwoFactorIsEnabledAsync(ITwoFactorProvidersUser user)
