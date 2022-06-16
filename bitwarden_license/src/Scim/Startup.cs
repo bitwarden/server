@@ -3,7 +3,9 @@ using System.Globalization;
 using Bit.Core.Context;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
+using Bit.Scim.Utilities;
 using Bit.SharedWeb.Utilities;
+using IdentityModel;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -47,6 +49,20 @@ namespace Bit.Scim
             // Context
             services.AddScoped<ICurrentContext, CurrentContext>();
 
+            // Authentication
+            services.AddAuthentication(ApiKeyAuthenticationOptions.DefaultScheme)
+                .AddScheme<ApiKeyAuthenticationOptions, ApiKeyAuthenticationHandler>(
+                    ApiKeyAuthenticationOptions.DefaultScheme, null);
+
+            services.AddAuthorization(config =>
+            {
+                config.AddPolicy("Scim", policy =>
+                {
+                    policy.RequireAuthenticatedUser();
+                    policy.RequireClaim(JwtClaimTypes.Scope, "api.scim");
+                });
+            });
+
             // Identity
             services.AddCustomIdentityServices(globalSettings);
 
@@ -62,9 +78,6 @@ namespace Bit.Scim
                 config.Filters.Add(new LoggingExceptionHandlerFilterAttribute());
             });
             services.Configure<RouteOptions>(options => options.LowercaseUrls = true);
-
-            // Authentication
-            services.AddAuthentication();
         }
 
         public void Configure(
@@ -83,10 +96,20 @@ namespace Bit.Scim
                 app.UseDeveloperExceptionPage();
             }
 
-            app.UseStaticFiles();
+            // Default Middleware
+            app.UseDefaultMiddleware(env, globalSettings);
+
+            // Add routing
             app.UseRouting();
+
+            // Add authentication and authorization to the request pipeline.
             app.UseAuthentication();
             app.UseAuthorization();
+
+            // Add current context
+            app.UseMiddleware<CurrentContextMiddleware>();
+
+            // Add MVC to the request pipeline.
             app.UseEndpoints(endpoints => endpoints.MapDefaultControllerRoute());
         }
     }

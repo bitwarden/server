@@ -7,12 +7,14 @@ using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Scim.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Bit.Scim.Controllers.v2
 {
+    [Authorize("Scim")]
     [Route("v2/{organizationId}/users")]
     public class UsersController : Controller
     {
