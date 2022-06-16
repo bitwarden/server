@@ -110,7 +110,7 @@ namespace Bit.Core.Utilities
         public static string CleanCertificateThumbprint(string thumbprint)
         {
             // Clean possible garbage characters from thumbprint copy/paste
-            // ref http://stackoverflow.com/questions/8448147/problems-with-x509store-certificates-find-findbythumbprint
+            // ref https://stackoverflow.com/questions/8448147/problems-with-x509store-certificates-find-findbythumbprint
             return Regex.Replace(thumbprint, @"[^\da-fA-F]", string.Empty).ToUpper();
         }
 
