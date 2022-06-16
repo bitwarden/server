@@ -39,7 +39,7 @@ namespace Bit.Core.Repositories
         Task<OrganizationUser> GetByOrganizationEmailAsync(Guid organizationId, string email);
         Task<IEnumerable<OrganizationUserPublicKey>> GetManyPublicKeysByOrganizationUserAsync(Guid organizationId, IEnumerable<Guid> Ids);
         Task<IEnumerable<OrganizationUserUserDetails>> GetManyByMinimumRoleAsync(Guid organizationId, OrganizationUserType minRole);
-        Task DisableAsync(Guid id);
-        Task EnableAsync(Guid id, OrganizationUserStatusType status);
+        Task DeactivateAsync(Guid id);
+        Task ActivateAsync(Guid id, OrganizationUserStatusType status);
     }
 }

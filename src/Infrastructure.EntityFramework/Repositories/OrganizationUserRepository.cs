@@ -428,7 +428,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             }
         }
 
-        public async Task DisableAsync(Guid id)
+        public async Task DeactivateAsync(Guid id)
         {
             using (var scope = ServiceScopeFactory.CreateScope())
             {
@@ -437,7 +437,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
                 if (orgUser != null)
                 {
                     dbContext.Update(orgUser);
-                    orgUser.Status = OrganizationUserStatusType.Disabled;
+                    orgUser.Status = OrganizationUserStatusType.Deactivated;
                     await dbContext.SaveChangesAsync();
                     if (orgUser.UserId.HasValue)
                     {
@@ -447,7 +447,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             }
         }
 
-        public async Task EnableAsync(Guid id, OrganizationUserStatusType status)
+        public async Task ActivateAsync(Guid id, OrganizationUserStatusType status)
         {
             using (var scope = ServiceScopeFactory.CreateScope())
             {

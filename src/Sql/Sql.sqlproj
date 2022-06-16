@@ -122,8 +122,8 @@
     <Build Include="dbo\Stored Procedures\Grant_DeleteByKey.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUser_DeleteById.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUser_DeleteByIds.sql" />
-    <Build Include="dbo\Stored Procedures\OrganizationUser_Disable.sql" />
-    <Build Include="dbo\Stored Procedures\OrganizationUser_Enable.sql" />
+    <Build Include="dbo\Stored Procedures\OrganizationUser_Deactivate.sql" />
+    <Build Include="dbo\Stored Procedures\OrganizationUser_Activate.sql" />
     <Build Include="dbo\Stored Procedures\Grant_Delete.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUser_ReadById.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUser_ReadByIds.sql" />

@@ -2187,22 +2187,22 @@ namespace Bit.Core.Services
             }
         }
 
-        public async Task DisableUserAsync(OrganizationUser organizationUser, Guid? disablingUserId)
+        public async Task DeactivateUserAsync(OrganizationUser organizationUser, Guid? disablingUserId)
         {
-            if (organizationUser.Status == OrganizationUserStatusType.Disabled)
+            if (organizationUser.Status == OrganizationUserStatusType.Deactivated)
             {
-                throw new BadRequestException("Already disabled.");
+                throw new BadRequestException("Already deactivated.");
             }
 
             if (disablingUserId.HasValue && organizationUser.UserId == disablingUserId.Value)
             {
-                throw new BadRequestException("You cannot disable yourself.");
+                throw new BadRequestException("You cannot deactivate yourself.");
             }
 
             if (organizationUser.Type == OrganizationUserType.Owner && disablingUserId.HasValue &&
                 !await _currentContext.OrganizationOwner(organizationUser.OrganizationId))
             {
-                throw new BadRequestException("Only owners can disable other owners.");
+                throw new BadRequestException("Only owners can deactivate other owners.");
             }
 
             if (!await HasConfirmedOwnersExceptAsync(organizationUser.OrganizationId, new[] { organizationUser.Id }))
@@ -2210,12 +2210,12 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Organization must have at least one confirmed owner.");
             }
 
-            await _organizationUserRepository.DisableAsync(organizationUser.Id);
-            organizationUser.Status = OrganizationUserStatusType.Disabled;
-            await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Disabled);
+            await _organizationUserRepository.DeactivateAsync(organizationUser.Id);
+            organizationUser.Status = OrganizationUserStatusType.Deactivated;
+            await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Deactivated);
         }
 
-        public async Task<List<Tuple<OrganizationUser, string>>> DisableUsersAsync(Guid organizationId,
+        public async Task<List<Tuple<OrganizationUser, string>>> DeactivateUsersAsync(Guid organizationId,
             IEnumerable<Guid> organizationUserIds, Guid? disablingUserId)
         {
             var orgUsers = await _organizationUserRepository.GetManyAsync(organizationUserIds);
@@ -2246,17 +2246,17 @@ namespace Bit.Core.Services
                 {
                     if (disablingUserId.HasValue && organizationUser.UserId == disablingUserId)
                     {
-                        throw new BadRequestException("You cannot disable yourself.");
+                        throw new BadRequestException("You cannot deactivate yourself.");
                     }
 
                     if (organizationUser.Type == OrganizationUserType.Owner && disablingUserId.HasValue && !deletingUserIsOwner)
                     {
-                        throw new BadRequestException("Only owners can disable other owners.");
+                        throw new BadRequestException("Only owners can deactivate other owners.");
                     }
 
-                    await _organizationUserRepository.DisableAsync(organizationUser.Id);
-                    organizationUser.Status = OrganizationUserStatusType.Disabled;
-                    await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Disabled);
+                    await _organizationUserRepository.DeactivateAsync(organizationUser.Id);
+                    organizationUser.Status = OrganizationUserStatusType.Deactivated;
+                    await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Deactivated);
 
                     result.Add(Tuple.Create(organizationUser, ""));
                 }
@@ -2269,32 +2269,32 @@ namespace Bit.Core.Services
             return result;
         }
 
-        public async Task EnableUserAsync(OrganizationUser organizationUser, Guid? enablingUserId)
+        public async Task ActivateUserAsync(OrganizationUser organizationUser, Guid? enablingUserId)
         {
-            if (organizationUser.Status != OrganizationUserStatusType.Disabled)
+            if (organizationUser.Status != OrganizationUserStatusType.Deactivated)
             {
-                throw new BadRequestException("Already enabled.");
+                throw new BadRequestException("Already active.");
             }
 
             if (enablingUserId.HasValue && organizationUser.UserId == enablingUserId.Value)
             {
-                throw new BadRequestException("You cannot enable yourself.");
+                throw new BadRequestException("You cannot activate yourself.");
             }
 
             if (organizationUser.Type == OrganizationUserType.Owner && enablingUserId.HasValue &&
                 !await _currentContext.OrganizationOwner(organizationUser.OrganizationId))
             {
-                throw new BadRequestException("Only owners can enable other owners.");
+                throw new BadRequestException("Only owners can activate other owners.");
             }
 
-            var status = GetOrganizationUserStatusTypePriorToDisabled(organizationUser);
+            var status = GetPriorActiveOrganizationUserStatusType(organizationUser);
 
-            await _organizationUserRepository.EnableAsync(organizationUser.Id, status);
+            await _organizationUserRepository.ActivateAsync(organizationUser.Id, status);
             organizationUser.Status = status;
-            await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Enabled);
+            await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Activated);
         }
 
-        public async Task<List<Tuple<OrganizationUser, string>>> EnableUsersAsync(Guid organizationId,
+        public async Task<List<Tuple<OrganizationUser, string>>> ActivateUsersAsync(Guid organizationId,
             IEnumerable<Guid> organizationUserIds, Guid? enablingUserId)
         {
             var orgUsers = await _organizationUserRepository.GetManyAsync(organizationUserIds);
@@ -2318,26 +2318,26 @@ namespace Bit.Core.Services
             {
                 try
                 {
-                    if (organizationUser.Status != OrganizationUserStatusType.Disabled)
+                    if (organizationUser.Status != OrganizationUserStatusType.Deactivated)
                     {
-                        throw new BadRequestException("Already enabled.");
+                        throw new BadRequestException("Already active.");
                     }
 
                     if (enablingUserId.HasValue && organizationUser.UserId == enablingUserId)
                     {
-                        throw new BadRequestException("You cannot enable yourself.");
+                        throw new BadRequestException("You cannot activate yourself.");
                     }
 
                     if (organizationUser.Type == OrganizationUserType.Owner && enablingUserId.HasValue && !deletingUserIsOwner)
                     {
-                        throw new BadRequestException("Only owners can enable other owners.");
+                        throw new BadRequestException("Only owners can activate other owners.");
                     }
 
-                    var status = GetOrganizationUserStatusTypePriorToDisabled(organizationUser);
+                    var status = GetPriorActiveOrganizationUserStatusType(organizationUser);
 
-                    await _organizationUserRepository.EnableAsync(organizationUser.Id, status);
+                    await _organizationUserRepository.ActivateAsync(organizationUser.Id, status);
                     organizationUser.Status = status;
-                    await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Enabled);
+                    await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Activated);
 
                     result.Add(Tuple.Create(organizationUser, ""));
                 }
@@ -2350,7 +2350,7 @@ namespace Bit.Core.Services
             return result;
         }
 
-        private OrganizationUserStatusType GetOrganizationUserStatusTypePriorToDisabled(OrganizationUser organizationUser)
+        static OrganizationUserStatusType GetPriorActiveOrganizationUserStatusType(OrganizationUser organizationUser)
         {
             // Determine status to revert back to
             var status = OrganizationUserStatusType.Invited;

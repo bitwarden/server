@@ -410,23 +410,23 @@ namespace Bit.Infrastructure.Dapper.Repositories
             }
         }
 
-        public async Task DisableAsync(Guid id)
+        public async Task DeactivateAsync(Guid id)
         {
             using (var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.ExecuteAsync(
-                    $"[{Schema}].[{Table}_Disable]",
+                    $"[{Schema}].[{Table}_Deactivate]",
                     new { Id = id },
                     commandType: CommandType.StoredProcedure);
             }
         }
 
-        public async Task EnableAsync(Guid id, OrganizationUserStatusType status)
+        public async Task ActivateAsync(Guid id, OrganizationUserStatusType status)
         {
             using (var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.ExecuteAsync(
-                    $"[{Schema}].[{Table}_Enable]",
+                    $"[{Schema}].[{Table}_Activate]",
                     new { Id = id, Status = status },
                     commandType: CommandType.StoredProcedure);
             }

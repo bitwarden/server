@@ -377,38 +377,38 @@ namespace Bit.Api.Controllers
                 new OrganizationUserBulkResponseModel(r.Item1.Id, r.Item2)));
         }
 
-        [HttpPatch("{id}/disable")]
-        [HttpPut("{id}/disable")]
-        public async Task Disable(Guid orgId, Guid id)
+        [HttpPatch("{id}/deactivate")]
+        [HttpPut("{id}/deactivate")]
+        public async Task Deactivate(Guid orgId, Guid id)
         {
-            await EnableOrDisableUserAsync(orgId, id, _organizationService.DisableUserAsync);
+            await ActivateOrDeactivateUserAsync(orgId, id, _organizationService.DeactivateUserAsync);
         }
 
-        [HttpPatch("disable")]
-        [HttpPut("disable")]
-        public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkDisable(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
+        [HttpPatch("deactivate")]
+        [HttpPut("deactivate")]
+        public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkDeactivate(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
         {
-            return await EnableOrDisableUsersAsync(orgId, model, _organizationService.DisableUsersAsync);
+            return await ActivateOrDeactivateUsersAsync(orgId, model, _organizationService.DeactivateUsersAsync);
         }
 
-        [HttpPatch("{id}/enable")]
-        [HttpPut("{id}/enable")]
-        public async Task Enable(Guid orgId, Guid id)
+        [HttpPatch("{id}/activate")]
+        [HttpPut("{id}/activate")]
+        public async Task Activate(Guid orgId, Guid id)
         {
-            await EnableOrDisableUserAsync(orgId, id, _organizationService.EnableUserAsync);
+            await ActivateOrDeactivateUserAsync(orgId, id, _organizationService.ActivateUserAsync);
         }
 
-        [HttpPatch("enable")]
-        [HttpPut("enable")]
-        public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkEnable(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
+        [HttpPatch("activate")]
+        [HttpPut("activate")]
+        public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkActivate(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
         {
-            return await EnableOrDisableUsersAsync(orgId, model, _organizationService.EnableUsersAsync);
+            return await ActivateOrDeactivateUsersAsync(orgId, model, _organizationService.ActivateUsersAsync);
         }
 
-        private async Task EnableOrDisableUserAsync(
+        private async Task ActivateOrDeactivateUserAsync(
             Guid orgId,
             Guid id,
-            Func<OrganizationUser, Guid?, Task> enableOrDisableAction)
+            Func<OrganizationUser, Guid?, Task> statusAction)
         {
             if (!await _currentContext.ManageUsers(orgId))
             {
@@ -422,13 +422,13 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            await enableOrDisableAction(orgUser, userId);
+            await statusAction(orgUser, userId);
         }
 
-        private async Task<ListResponseModel<OrganizationUserBulkResponseModel>> EnableOrDisableUsersAsync(
+        private async Task<ListResponseModel<OrganizationUserBulkResponseModel>> ActivateOrDeactivateUsersAsync(
             Guid orgId,
             OrganizationUserBulkRequestModel model,
-            Func<Guid, IEnumerable<Guid>, Guid?, Task<List<Tuple<OrganizationUser, string>>>> enableOrDisableAction)
+            Func<Guid, IEnumerable<Guid>, Guid?, Task<List<Tuple<OrganizationUser, string>>>> statusAction)
         {
             if (!await _currentContext.ManageUsers(orgId))
             {
@@ -436,7 +436,7 @@ namespace Bit.Api.Controllers
             }
 
             var userId = _userService.GetProperUserId(User);
-            var result = await enableOrDisableAction(orgId, model.Ids, userId.Value);
+            var result = await statusAction(orgId, model.Ids, userId.Value);
             return new ListResponseModel<OrganizationUserBulkResponseModel>(result.Select(r =>
                 new OrganizationUserBulkResponseModel(r.Item1.Id, r.Item2)));
         }

@@ -6,7 +6,7 @@
  *
  ***************************************************************/
 
-PRINT N'Starting migration for 2022-06-08_00_DisabledUserStatus';
+PRINT N'Starting migration for 2022-06-08_00_DeactivatedUserStatus';
 GO
 
 PRINT N'Checking dbo.OrganizationUser.Status is TINYINT...';
@@ -471,9 +471,9 @@ WHERE
     AND PUPO.[UserId] IS NULL   -- Not a provider
 GO
 
-PRINT N'Altering stored procedure, dbo.OrganizationUser_Disable';
+PRINT N'Altering stored procedure, dbo.OrganizationUser_Deactivate';
 GO
-CREATE OR ALTER PROCEDURE [dbo].[OrganizationUser_Disable]
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationUser_Deactivate]
     @Id UNIQUEIDENTIFIER
 AS
 BEGIN
@@ -482,7 +482,7 @@ BEGIN
     UPDATE
         [dbo].[OrganizationUser]
     SET
-        [Status] = -1 -- Disabled
+        [Status] = -1 -- Deactivated
     WHERE
         [Id] = @Id
 
@@ -490,9 +490,9 @@ BEGIN
 END
 GO
 
-PRINT N'Altering stored procedure, dbo.OrganizationUser_Enable';
+PRINT N'Altering stored procedure, dbo.OrganizationUser_Activate';
 GO
-CREATE OR ALTER PROCEDURE [dbo].[OrganizationUser_Enable]
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationUser_Activate]
     @Id UNIQUEIDENTIFIER,
     @Status SMALLINT
 AS
@@ -505,11 +505,11 @@ BEGIN
         [Status] = @Status
     WHERE
         [Id] = @Id
-        AND [Status] = -1 -- Disabled
+        AND [Status] = -1 -- Deactivated
 
     EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationUserId] @Id
 END
 GO
 
-PRINT N'Finished migration for 2022-06-08_00_DisabledUserStatus';
+PRINT N'Finished migration for 2022-06-08_00_DeactivatedUserStatus';
 GO

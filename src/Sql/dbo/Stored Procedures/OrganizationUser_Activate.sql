@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[OrganizationUser_Enable]
+CREATE PROCEDURE [dbo].[OrganizationUser_Activate]
     @Id UNIQUEIDENTIFIER,
     @Status SMALLINT
 AS
@@ -11,7 +11,7 @@ BEGIN
         [Status] = @Status
     WHERE
         [Id] = @Id
-        AND [Status] = -1 -- Disabled
+        AND [Status] = -1 -- Deactivated
 
     EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationUserId] @Id
 END

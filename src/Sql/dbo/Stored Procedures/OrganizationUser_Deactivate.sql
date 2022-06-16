@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[OrganizationUser_Disable]
+CREATE PROCEDURE [dbo].[OrganizationUser_Deactivate]
     @Id UNIQUEIDENTIFIER
 AS
 BEGIN
@@ -7,7 +7,7 @@ BEGIN
     UPDATE
         [dbo].[OrganizationUser]
     SET
-        [Status] = -1 -- Disabled
+        [Status] = -1 -- Deactivated
     WHERE
         [Id] = @Id
 
