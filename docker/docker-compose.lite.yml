@@ -10,7 +10,7 @@ services:
       - global-settings.env
     environment:
       BW_ENABLE_SSL: "true"
-    image: ${REGISTRY:-bitwarden}/lite:${CORE_TAG:-latest}
+    image: ${REGISTRY:-bitwarden}/lite:${TAG:-latest}
     restart: always
     ports:
       - '80:8080'
