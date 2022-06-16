@@ -2186,5 +2186,186 @@ namespace Bit.Core.Services
                 throw new BadRequestException("You cannot delete an Organization that is using Key Connector.");
             }
         }
+
+        public async Task DeactivateUserAsync(OrganizationUser organizationUser, Guid? disablingUserId)
+        {
+            if (organizationUser.Status == OrganizationUserStatusType.Deactivated)
+            {
+                throw new BadRequestException("Already deactivated.");
+            }
+
+            if (disablingUserId.HasValue && organizationUser.UserId == disablingUserId.Value)
+            {
+                throw new BadRequestException("You cannot deactivate yourself.");
+            }
+
+            if (organizationUser.Type == OrganizationUserType.Owner && disablingUserId.HasValue &&
+                !await _currentContext.OrganizationOwner(organizationUser.OrganizationId))
+            {
+                throw new BadRequestException("Only owners can deactivate other owners.");
+            }
+
+            if (!await HasConfirmedOwnersExceptAsync(organizationUser.OrganizationId, new[] { organizationUser.Id }))
+            {
+                throw new BadRequestException("Organization must have at least one confirmed owner.");
+            }
+
+            await _organizationUserRepository.DeactivateAsync(organizationUser.Id);
+            organizationUser.Status = OrganizationUserStatusType.Deactivated;
+            await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Deactivated);
+        }
+
+        public async Task<List<Tuple<OrganizationUser, string>>> DeactivateUsersAsync(Guid organizationId,
+            IEnumerable<Guid> organizationUserIds, Guid? disablingUserId)
+        {
+            var orgUsers = await _organizationUserRepository.GetManyAsync(organizationUserIds);
+            var filteredUsers = orgUsers.Where(u => u.OrganizationId == organizationId)
+                .ToList();
+
+            if (!filteredUsers.Any())
+            {
+                throw new BadRequestException("Users invalid.");
+            }
+
+            if (!await HasConfirmedOwnersExceptAsync(organizationId, organizationUserIds))
+            {
+                throw new BadRequestException("Organization must have at least one confirmed owner.");
+            }
+
+            var deletingUserIsOwner = false;
+            if (disablingUserId.HasValue)
+            {
+                deletingUserIsOwner = await _currentContext.OrganizationOwner(organizationId);
+            }
+
+            var result = new List<Tuple<OrganizationUser, string>>();
+
+            foreach (var organizationUser in filteredUsers)
+            {
+                try
+                {
+                    if (disablingUserId.HasValue && organizationUser.UserId == disablingUserId)
+                    {
+                        throw new BadRequestException("You cannot deactivate yourself.");
+                    }
+
+                    if (organizationUser.Type == OrganizationUserType.Owner && disablingUserId.HasValue && !deletingUserIsOwner)
+                    {
+                        throw new BadRequestException("Only owners can deactivate other owners.");
+                    }
+
+                    await _organizationUserRepository.DeactivateAsync(organizationUser.Id);
+                    organizationUser.Status = OrganizationUserStatusType.Deactivated;
+                    await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Deactivated);
+
+                    result.Add(Tuple.Create(organizationUser, ""));
+                }
+                catch (BadRequestException e)
+                {
+                    result.Add(Tuple.Create(organizationUser, e.Message));
+                }
+            }
+
+            return result;
+        }
+
+        public async Task ActivateUserAsync(OrganizationUser organizationUser, Guid? enablingUserId)
+        {
+            if (organizationUser.Status != OrganizationUserStatusType.Deactivated)
+            {
+                throw new BadRequestException("Already active.");
+            }
+
+            if (enablingUserId.HasValue && organizationUser.UserId == enablingUserId.Value)
+            {
+                throw new BadRequestException("You cannot activate yourself.");
+            }
+
+            if (organizationUser.Type == OrganizationUserType.Owner && enablingUserId.HasValue &&
+                !await _currentContext.OrganizationOwner(organizationUser.OrganizationId))
+            {
+                throw new BadRequestException("Only owners can activate other owners.");
+            }
+
+            var status = GetPriorActiveOrganizationUserStatusType(organizationUser);
+
+            await _organizationUserRepository.ActivateAsync(organizationUser.Id, status);
+            organizationUser.Status = status;
+            await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Activated);
+        }
+
+        public async Task<List<Tuple<OrganizationUser, string>>> ActivateUsersAsync(Guid organizationId,
+            IEnumerable<Guid> organizationUserIds, Guid? enablingUserId)
+        {
+            var orgUsers = await _organizationUserRepository.GetManyAsync(organizationUserIds);
+            var filteredUsers = orgUsers.Where(u => u.OrganizationId == organizationId)
+                .ToList();
+
+            if (!filteredUsers.Any())
+            {
+                throw new BadRequestException("Users invalid.");
+            }
+
+            var deletingUserIsOwner = false;
+            if (enablingUserId.HasValue)
+            {
+                deletingUserIsOwner = await _currentContext.OrganizationOwner(organizationId);
+            }
+
+            var result = new List<Tuple<OrganizationUser, string>>();
+
+            foreach (var organizationUser in filteredUsers)
+            {
+                try
+                {
+                    if (organizationUser.Status != OrganizationUserStatusType.Deactivated)
+                    {
+                        throw new BadRequestException("Already active.");
+                    }
+
+                    if (enablingUserId.HasValue && organizationUser.UserId == enablingUserId)
+                    {
+                        throw new BadRequestException("You cannot activate yourself.");
+                    }
+
+                    if (organizationUser.Type == OrganizationUserType.Owner && enablingUserId.HasValue && !deletingUserIsOwner)
+                    {
+                        throw new BadRequestException("Only owners can activate other owners.");
+                    }
+
+                    var status = GetPriorActiveOrganizationUserStatusType(organizationUser);
+
+                    await _organizationUserRepository.ActivateAsync(organizationUser.Id, status);
+                    organizationUser.Status = status;
+                    await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Activated);
+
+                    result.Add(Tuple.Create(organizationUser, ""));
+                }
+                catch (BadRequestException e)
+                {
+                    result.Add(Tuple.Create(organizationUser, e.Message));
+                }
+            }
+
+            return result;
+        }
+
+        static OrganizationUserStatusType GetPriorActiveOrganizationUserStatusType(OrganizationUser organizationUser)
+        {
+            // Determine status to revert back to
+            var status = OrganizationUserStatusType.Invited;
+            if (organizationUser.UserId.HasValue && string.IsNullOrWhiteSpace(organizationUser.Email))
+            {
+                // Has UserId & Email is null, then Accepted
+                status = OrganizationUserStatusType.Accepted;
+                if (!string.IsNullOrWhiteSpace(organizationUser.Key))
+                {
+                    // We have an org key for this user, user was confirmed
+                    status = OrganizationUserStatusType.Confirmed;
+                }
+            }
+
+            return status;
+        }
     }
 }
