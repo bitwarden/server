@@ -17,6 +17,7 @@ using Microsoft.IdentityModel.Logging;
 using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
 using System.Collections.Generic;
+using Bit.SharedWeb.Utilities;
 
 #if !OSS
 using Bit.CommCore.Utilities;
@@ -42,7 +43,7 @@ namespace Bit.Api
             services.AddOptions();
 
             // Settings
-            var globalSettings = services.AddGlobalSettingsServices(Configuration);
+            var globalSettings = services.AddGlobalSettingsServices(Configuration, Environment);
             if (!globalSettings.SelfHosted)
             {
                 services.Configure<IpRateLimitOptions>(Configuration.GetSection("IpRateLimitOptions"));
@@ -113,17 +114,22 @@ namespace Bit.Api
                     policy.RequireAuthenticatedUser();
                     policy.RequireClaim(JwtClaimTypes.Scope, "api.organization");
                 });
+                config.AddPolicy("Installation", policy =>
+                {
+                    policy.RequireAuthenticatedUser();
+                    policy.RequireClaim(JwtClaimTypes.Scope, "api.installation");
+                });
             });
 
             services.AddScoped<AuthenticatorTokenProvider>();
 
             // Services
-            services.AddBaseServices();
+            services.AddBaseServices(globalSettings);
             services.AddDefaultServices(globalSettings);
             services.AddCoreLocalizationServices();
 
 #if OSS
-                services.AddOosServices();
+            services.AddOosServices();
 #else
             services.AddCommCoreServices();
 #endif
@@ -136,15 +142,9 @@ namespace Bit.Api
             });
 
             services.AddSwagger(globalSettings);
-            Jobs.JobsHostedService.AddJobsServices(services);
+            Jobs.JobsHostedService.AddJobsServices(services, globalSettings.SelfHosted);
             services.AddHostedService<Jobs.JobsHostedService>();
 
-            if (globalSettings.SelfHosted)
-            {
-                // Jobs service
-                Jobs.JobsHostedService.AddJobsServices(services);
-                services.AddHostedService<Jobs.JobsHostedService>();
-            }
             if (CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ConnectionString) &&
                 CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ApplicationCacheTopicName))
             {

@@ -31,7 +31,10 @@
     @RevisionDate DATETIME2(7),
     @ApiKey VARCHAR(30),
     @ForcePasswordReset BIT = 0,
-    @UsesKeyConnector BIT = 0
+    @UsesKeyConnector BIT = 0,
+    @FailedLoginCount INT,
+    @LastFailedLoginDate DATETIME2(7),
+    @UnknownDeviceVerificationEnabled BIT = 1
 AS
 BEGIN
     SET NOCOUNT ON
@@ -70,7 +73,10 @@ BEGIN
         [RevisionDate] = @RevisionDate,
         [ApiKey] = @ApiKey,
         [ForcePasswordReset] = @ForcePasswordReset,
-        [UsesKeyConnector] = @UsesKeyConnector
+        [UsesKeyConnector] = @UsesKeyConnector,
+        [FailedLoginCount] = @FailedLoginCount,
+        [LastFailedLoginDate] = @LastFailedLoginDate,
+        [UnknownDeviceVerificationEnabled] = @UnknownDeviceVerificationEnabled
     WHERE
         [Id] = @Id
 END

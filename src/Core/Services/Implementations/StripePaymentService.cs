@@ -3,14 +3,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Bit.Billing.Models;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
-using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Microsoft.Extensions.Logging;
 using StaticStore = Bit.Core.Models.StaticStore;
-using TaxRate = Bit.Core.Models.Table.TaxRate;
+using TaxRate = Bit.Core.Entities.TaxRate;
 
 namespace Bit.Core.Services
 {
@@ -204,6 +204,7 @@ namespace Bit.Core.Services
 
             var sub = await _stripeAdapter.SubscriptionGetAsync(org.GatewaySubscriptionId);
             org.ExpirationDate = sub.CurrentPeriodEnd;
+            sponsorship.ValidUntil = sub.CurrentPeriodEnd;
 
         }
 
@@ -466,7 +467,7 @@ namespace Bit.Core.Services
                     && !string.IsNullOrWhiteSpace(taxInfo?.BillingAddressPostalCode))
             {
                 var taxRates = await _taxRateRepository.GetByLocationAsync(
-                    new Bit.Core.Models.Table.TaxRate()
+                    new TaxRate()
                     {
                         Country = taxInfo.BillingAddressCountry,
                         PostalCode = taxInfo.BillingAddressPostalCode
@@ -709,6 +710,8 @@ namespace Bit.Core.Services
         private async Task<string> FinalizeSubscriptionChangeAsync(IStorableSubscriber storableSubscriber,
             SubscriptionUpdate subscriptionUpdate, DateTime? prorationDate)
         {
+            // remember, when in doubt, throw
+
             var sub = await _stripeAdapter.SubscriptionGetAsync(storableSubscriber.GatewaySubscriptionId);
             if (sub == null)
             {
@@ -742,7 +745,7 @@ namespace Bit.Core.Services
                     && !string.IsNullOrWhiteSpace(customer?.Address?.PostalCode))
             {
                 var taxRates = await _taxRateRepository.GetByLocationAsync(
-                    new Bit.Core.Models.Table.TaxRate()
+                    new TaxRate()
                     {
                         Country = customer.Address.Country,
                         PostalCode = customer.Address.PostalCode
@@ -758,64 +761,70 @@ namespace Bit.Core.Services
                 }
             }
 
-            var subResponse = await _stripeAdapter.SubscriptionUpdateAsync(sub.Id, subUpdateOptions);
-
-            var invoice = await _stripeAdapter.InvoiceGetAsync(subResponse?.LatestInvoiceId, new Stripe.InvoiceGetOptions());
-            if (invoice == null)
-            {
-                throw new BadRequestException("Unable to locate draft invoice for subscription update.");
-            }
-
             string paymentIntentClientSecret = null;
-            if (invoice.AmountDue > 0 && updatedItemOptions.Any(i => i.Quantity > 0))
+            try
             {
-                try
+                var subResponse = await _stripeAdapter.SubscriptionUpdateAsync(sub.Id, subUpdateOptions);
+
+                var invoice = await _stripeAdapter.InvoiceGetAsync(subResponse?.LatestInvoiceId, new Stripe.InvoiceGetOptions());
+                if (invoice == null)
                 {
-                    if (chargeNow)
+                    throw new BadRequestException("Unable to locate draft invoice for subscription update.");
+                }
+
+                if (invoice.AmountDue > 0 && updatedItemOptions.Any(i => i.Quantity > 0))
+                {
+                    try
                     {
-                        paymentIntentClientSecret = await PayInvoiceAfterSubscriptionChangeAsync(
-                            storableSubscriber, invoice);
-                    }
-                    else
-                    {
-                        invoice = await _stripeAdapter.InvoiceFinalizeInvoiceAsync(subResponse.LatestInvoiceId, new Stripe.InvoiceFinalizeOptions
+                        if (chargeNow)
                         {
-                            AutoAdvance = false,
+                            paymentIntentClientSecret = await PayInvoiceAfterSubscriptionChangeAsync(
+                                storableSubscriber, invoice);
+                        }
+                        else
+                        {
+                            invoice = await _stripeAdapter.InvoiceFinalizeInvoiceAsync(subResponse.LatestInvoiceId, new Stripe.InvoiceFinalizeOptions
+                            {
+                                AutoAdvance = false,
+                            });
+                            await _stripeAdapter.InvoiceSendInvoiceAsync(invoice.Id, new Stripe.InvoiceSendOptions());
+                            paymentIntentClientSecret = null;
+                        }
+                    }
+                    catch
+                    {
+                        // Need to revert the subscription
+                        await _stripeAdapter.SubscriptionUpdateAsync(sub.Id, new Stripe.SubscriptionUpdateOptions
+                        {
+                            Items = subscriptionUpdate.RevertItemsOptions(sub),
+                            // This proration behavior prevents a false "credit" from
+                            //  being applied forward to the next month's invoice
+                            ProrationBehavior = "none",
+                            CollectionMethod = collectionMethod,
+                            DaysUntilDue = daysUntilDue,
                         });
-                        await _stripeAdapter.InvoiceSendInvoiceAsync(invoice.Id, new Stripe.InvoiceSendOptions());
-                        paymentIntentClientSecret = null;
+                        throw;
                     }
                 }
-                catch
+                else if (!invoice.Paid)
                 {
-                    // Need to revert the subscription
+                    // Pay invoice with no charge to customer this completes the invoice immediately without waiting the scheduled 1h
+                    invoice = await _stripeAdapter.InvoicePayAsync(subResponse.LatestInvoiceId);
+                    paymentIntentClientSecret = null;
+                }
+
+            }
+            finally
+            {
+                // Change back the subscription collection method and/or days until due
+                if (collectionMethod != "send_invoice" || daysUntilDue == null)
+                {
                     await _stripeAdapter.SubscriptionUpdateAsync(sub.Id, new Stripe.SubscriptionUpdateOptions
                     {
-                        Items = subscriptionUpdate.RevertItemsOptions(sub),
-                        // This proration behavior prevents a false "credit" from
-                        //  being applied forward to the next month's invoice
-                        ProrationBehavior = "none",
                         CollectionMethod = collectionMethod,
                         DaysUntilDue = daysUntilDue,
                     });
-                    throw;
                 }
-            }
-            else if (!invoice.Paid)
-            {
-                // Pay invoice with no charge to customer this completes the invoice immediately without waiting the scheduled 1h
-                invoice = await _stripeAdapter.InvoicePayAsync(subResponse.LatestInvoiceId);
-                paymentIntentClientSecret = null;
-            }
-
-            // Change back the subscription collection method and/or days until due
-            if (collectionMethod != "send_invoice" || daysUntilDue == null)
-            {
-                await _stripeAdapter.SubscriptionUpdateAsync(sub.Id, new Stripe.SubscriptionUpdateOptions
-                {
-                    CollectionMethod = collectionMethod,
-                    DaysUntilDue = daysUntilDue,
-                });
             }
 
             return paymentIntentClientSecret;
@@ -1448,87 +1457,38 @@ namespace Bit.Core.Services
 
         public async Task<BillingInfo> GetBillingAsync(ISubscriber subscriber)
         {
-            var billingInfo = new BillingInfo();
-
-            ICollection<Transaction> transactions = null;
-            if (subscriber is User)
+            var customer = await GetCustomerAsync(subscriber.GatewayCustomerId, GetCustomerPaymentOptions());
+            var billingInfo = new BillingInfo
             {
-                transactions = await _transactionRepository.GetManyByUserIdAsync(subscriber.Id);
-            }
-            else if (subscriber is Organization)
-            {
-                transactions = await _transactionRepository.GetManyByOrganizationIdAsync(subscriber.Id);
-            }
-            if (transactions != null)
-            {
-                billingInfo.Transactions = transactions?.OrderByDescending(i => i.CreationDate)
-                    .Select(t => new BillingInfo.BillingTransaction(t));
-            }
+                Balance = GetBillingBalance(customer),
+                PaymentSource = await GetBillingPaymentSourceAsync(customer),
+                Invoices = await GetBillingInvoicesAsync(customer),
+                Transactions = await GetBillingTransactionsAsync(subscriber)
+            };
 
-            if (!string.IsNullOrWhiteSpace(subscriber.GatewayCustomerId))
+            return billingInfo;
+        }
+
+        public async Task<BillingInfo> GetBillingBalanceAndSourceAsync(ISubscriber subscriber)
+        {
+            var customer = await GetCustomerAsync(subscriber.GatewayCustomerId, GetCustomerPaymentOptions());
+            var billingInfo = new BillingInfo
             {
-                Stripe.Customer customer = null;
-                try
-                {
-                    var customerOptions = new Stripe.CustomerGetOptions();
-                    customerOptions.AddExpand("default_source");
-                    customerOptions.AddExpand("invoice_settings.default_payment_method");
-                    customer = await _stripeAdapter.CustomerGetAsync(subscriber.GatewayCustomerId, customerOptions);
-                }
-                catch (Stripe.StripeException) { }
-                if (customer != null)
-                {
-                    billingInfo.Balance = customer.Balance / 100M;
+                Balance = GetBillingBalance(customer),
+                PaymentSource = await GetBillingPaymentSourceAsync(customer)
+            };
 
-                    if (customer.Metadata?.ContainsKey("appleReceipt") ?? false)
-                    {
-                        billingInfo.PaymentSource = new BillingInfo.BillingSource
-                        {
-                            Type = PaymentMethodType.AppleInApp
-                        };
-                    }
-                    else if (customer.Metadata?.ContainsKey("btCustomerId") ?? false)
-                    {
-                        try
-                        {
-                            var braintreeCustomer = await _btGateway.Customer.FindAsync(
-                                customer.Metadata["btCustomerId"]);
-                            if (braintreeCustomer?.DefaultPaymentMethod != null)
-                            {
-                                billingInfo.PaymentSource = new BillingInfo.BillingSource(
-                                    braintreeCustomer.DefaultPaymentMethod);
-                            }
-                        }
-                        catch (Braintree.Exceptions.NotFoundException) { }
-                    }
-                    else if (customer.InvoiceSettings?.DefaultPaymentMethod?.Type == "card")
-                    {
-                        billingInfo.PaymentSource = new BillingInfo.BillingSource(
-                            customer.InvoiceSettings.DefaultPaymentMethod);
-                    }
-                    else if (customer.DefaultSource != null &&
-                        (customer.DefaultSource is Stripe.Card || customer.DefaultSource is Stripe.BankAccount))
-                    {
-                        billingInfo.PaymentSource = new BillingInfo.BillingSource(customer.DefaultSource);
-                    }
-                    if (billingInfo.PaymentSource == null)
-                    {
-                        var paymentMethod = GetLatestCardPaymentMethod(customer.Id);
-                        if (paymentMethod != null)
-                        {
-                            billingInfo.PaymentSource = new BillingInfo.BillingSource(paymentMethod);
-                        }
-                    }
+            return billingInfo;
+        }
 
-                    var invoices = await _stripeAdapter.InvoiceListAsync(new Stripe.InvoiceListOptions
-                    {
-                        Customer = customer.Id,
-                        Limit = 50
-                    });
-                    billingInfo.Invoices = invoices.Data.Where(i => i.Status != "void" && i.Status != "draft")
-                        .OrderByDescending(i => i.Created).Select(i => new BillingInfo.BillingInvoice(i));
-                }
-            }
+        public async Task<BillingInfo> GetBillingHistoryAsync(ISubscriber subscriber)
+        {
+            var customer = await GetCustomerAsync(subscriber.GatewayCustomerId);
+            var billingInfo = new BillingInfo
+            {
+                Transactions = await GetBillingTransactionsAsync(subscriber),
+                Invoices = await GetBillingInvoicesAsync(customer)
+            };
 
             return billingInfo;
         }
@@ -1706,6 +1666,117 @@ namespace Bit.Core.Services
                     throw new GatewayException("Apple receipt already in use by another user.");
                 }
             }
+        }
+
+        private decimal GetBillingBalance(Stripe.Customer customer)
+        {
+            return customer != null ? customer.Balance / 100M : default;
+        }
+
+        private async Task<BillingInfo.BillingSource> GetBillingPaymentSourceAsync(Stripe.Customer customer)
+        {
+            if (customer == null)
+            {
+                return null;
+            }
+
+            if (customer.Metadata?.ContainsKey("appleReceipt") ?? false)
+            {
+                return new BillingInfo.BillingSource
+                {
+                    Type = PaymentMethodType.AppleInApp
+                };
+            }
+
+            if (customer.Metadata?.ContainsKey("btCustomerId") ?? false)
+            {
+                try
+                {
+                    var braintreeCustomer = await _btGateway.Customer.FindAsync(
+                        customer.Metadata["btCustomerId"]);
+                    if (braintreeCustomer?.DefaultPaymentMethod != null)
+                    {
+                        return new BillingInfo.BillingSource(
+                            braintreeCustomer.DefaultPaymentMethod);
+                    }
+                }
+                catch (Braintree.Exceptions.NotFoundException) { }
+            }
+
+            if (customer.InvoiceSettings?.DefaultPaymentMethod?.Type == "card")
+            {
+                return new BillingInfo.BillingSource(
+                    customer.InvoiceSettings.DefaultPaymentMethod);
+            }
+
+            if (customer.DefaultSource != null &&
+                (customer.DefaultSource is Stripe.Card || customer.DefaultSource is Stripe.BankAccount))
+            {
+                return new BillingInfo.BillingSource(customer.DefaultSource);
+            }
+
+            var paymentMethod = GetLatestCardPaymentMethod(customer.Id);
+            return paymentMethod != null ? new BillingInfo.BillingSource(paymentMethod) : null;
+        }
+
+        private Stripe.CustomerGetOptions GetCustomerPaymentOptions()
+        {
+            var customerOptions = new Stripe.CustomerGetOptions();
+            customerOptions.AddExpand("default_source");
+            customerOptions.AddExpand("invoice_settings.default_payment_method");
+            return customerOptions;
+        }
+
+        private async Task<Stripe.Customer> GetCustomerAsync(string gatewayCustomerId, Stripe.CustomerGetOptions options = null)
+        {
+            if (string.IsNullOrWhiteSpace(gatewayCustomerId))
+            {
+                return null;
+            }
+
+            Stripe.Customer customer = null;
+            try
+            {
+                customer = await _stripeAdapter.CustomerGetAsync(gatewayCustomerId, options);
+            }
+            catch (Stripe.StripeException) { }
+
+            return customer;
+        }
+
+        private async Task<IEnumerable<BillingInfo.BillingTransaction>> GetBillingTransactionsAsync(ISubscriber subscriber)
+        {
+            ICollection<Transaction> transactions = null;
+            if (subscriber is User)
+            {
+                transactions = await _transactionRepository.GetManyByUserIdAsync(subscriber.Id);
+            }
+            else if (subscriber is Organization)
+            {
+                transactions = await _transactionRepository.GetManyByOrganizationIdAsync(subscriber.Id);
+            }
+
+            return transactions?.OrderByDescending(i => i.CreationDate)
+                .Select(t => new BillingInfo.BillingTransaction(t));
+
+        }
+
+        private async Task<IEnumerable<BillingInfo.BillingInvoice>> GetBillingInvoicesAsync(Stripe.Customer customer)
+        {
+            if (customer == null)
+            {
+                return null;
+            }
+
+            var invoices = await _stripeAdapter.InvoiceListAsync(new Stripe.InvoiceListOptions
+            {
+                Customer = customer.Id,
+                Limit = 50
+            });
+
+            return invoices.Data.Where(i => i.Status != "void" && i.Status != "draft")
+                .OrderByDescending(i => i.Created).Select(i => new BillingInfo.BillingInvoice(i));
+
         }
     }
 }

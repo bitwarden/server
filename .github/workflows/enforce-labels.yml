@@ -1,0 +1,16 @@
+---
+name: Enforce PR labels
+
+on:
+  pull_request:
+    types: [labeled, unlabeled, opened, edited, synchronize]
+jobs:
+  enforce-label:
+    name: EnforceLabel
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Enforce Label
+        uses: yogevbd/enforce-label-action@8d1e1709b1011e6d90400a0e6cf7c0b77aa5efeb
+        with:
+          BANNED_LABELS: "hold"
+          BANNED_LABELS_DESCRIPTION: "PRs on hold cannot be merged"

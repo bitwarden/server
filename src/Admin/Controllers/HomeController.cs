@@ -1,22 +1,27 @@
 ﻿using System.Diagnostics;
 using System.Net.Http;
+using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using Bit.Admin.Models;
 using Bit.Core.Settings;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Newtonsoft.Json.Linq;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Admin.Controllers
 {
     public class HomeController : Controller
     {
         private readonly GlobalSettings _globalSettings;
-        private HttpClient _httpClient = new HttpClient();
+        private readonly HttpClient _httpClient = new HttpClient();
+        private readonly ILogger<HomeController> _logger;
 
-        public HomeController(GlobalSettings globalSettings)
+        public HomeController(GlobalSettings globalSettings, ILogger<HomeController> logger)
         {
             _globalSettings = globalSettings;
+            _logger = logger;
         }
 
         [Authorize]
@@ -37,20 +42,21 @@ namespace Bit.Admin.Controllers
             });
         }
 
-        public async Task<IActionResult> GetLatestDockerHubVersion(string repository)
+        public async Task<IActionResult> GetLatestDockerHubVersion(string repository, CancellationToken cancellationToken)
         {
+            var requestUri = $"https://hub.docker.com/v2/repositories/bitwarden/{repository}/tags/";
             try
             {
-                var response = await _httpClient.GetAsync(
-                $"https://hub.docker.com/v2/repositories/bitwarden/{repository}/tags/");
+                var response = await _httpClient.GetAsync(requestUri, cancellationToken);
                 if (response.IsSuccessStatusCode)
                 {
-                    var json = await response.Content.ReadAsStringAsync();
-                    var data = JObject.Parse(json);
-                    var results = data["results"] as JArray;
-                    foreach (var result in results)
+                    using var jsonDocument = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(cancellationToken), cancellationToken: cancellationToken);
+                    var root = jsonDocument.RootElement;
+
+                    var results = root.GetProperty("results");
+                    foreach (var result in results.EnumerateArray())
                     {
-                        var name = result["name"].ToString();
+                        var name = result.GetProperty("name").GetString();
                         if (!string.IsNullOrWhiteSpace(name) && name.Length > 0 && char.IsNumber(name[0]))
                         {
                             return new JsonResult(name);
@@ -58,25 +64,33 @@ namespace Bit.Admin.Controllers
                     }
                 }
             }
-            catch (HttpRequestException) { }
+            catch (HttpRequestException e)
+            {
+                _logger.LogError(e, $"Error encountered while sending GET request to {requestUri}");
+                return new JsonResult("Unable to fetch latest version") { StatusCode = StatusCodes.Status500InternalServerError };
+            }
 
             return new JsonResult("-");
         }
 
-        public async Task<IActionResult> GetInstalledWebVersion()
+        public async Task<IActionResult> GetInstalledWebVersion(CancellationToken cancellationToken)
         {
+            var requestUri = $"{_globalSettings.BaseServiceUri.InternalVault}/version.json";
             try
             {
-                var response = await _httpClient.GetAsync(
-                    $"{_globalSettings.BaseServiceUri.InternalVault}/version.json");
+                var response = await _httpClient.GetAsync(requestUri, cancellationToken);
                 if (response.IsSuccessStatusCode)
                 {
-                    var json = await response.Content.ReadAsStringAsync();
-                    var data = JObject.Parse(json);
-                    return new JsonResult(data["version"].ToString());
+                    using var jsonDocument = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(cancellationToken), cancellationToken: cancellationToken);
+                    var root = jsonDocument.RootElement;
+                    return new JsonResult(root.GetProperty("version").GetString());
                 }
             }
-            catch (HttpRequestException) { }
+            catch (HttpRequestException e)
+            {
+                _logger.LogError(e, $"Error encountered while sending GET request to {requestUri}");
+                return new JsonResult("Unable to fetch installed version") { StatusCode = StatusCodes.Status500InternalServerError };
+            }
 
             return new JsonResult("-");
         }

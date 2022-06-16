@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
+using Bit.Core.Entities;
 using Bit.Core.Models.Business;
-using Table = Bit.Core.Models.Table;
+using Bit.Core.Utilities;
 
 namespace Bit.Api.Models.Public.Request
 {
@@ -41,17 +43,19 @@ namespace Bit.Api.Models.Public.Request
             /// <example>external_id_123456</example>
             [Required]
             [StringLength(300)]
+            [JsonConverter(typeof(PermissiveStringConverter))]
             public string ExternalId { get; set; }
             /// <summary>
             /// The associated external ids for members in this group.
             /// </summary>
+            [JsonConverter(typeof(PermissiveStringEnumerableConverter))]
             public IEnumerable<string> MemberExternalIds { get; set; }
 
             public ImportedGroup ToImportedGroup(Guid organizationId)
             {
                 var importedGroup = new ImportedGroup
                 {
-                    Group = new Table.Group
+                    Group = new Group
                     {
                         OrganizationId = organizationId,
                         Name = Name,
@@ -79,6 +83,7 @@ namespace Bit.Api.Models.Public.Request
             /// <example>external_id_123456</example>
             [Required]
             [StringLength(300)]
+            [JsonConverter(typeof(PermissiveStringConverter))]
             public string ExternalId { get; set; }
             /// <summary>
             /// Determines if this member should be removed from the organization during import.

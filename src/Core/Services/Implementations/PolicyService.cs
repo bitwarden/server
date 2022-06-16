@@ -1,10 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 
 namespace Bit.Core.Services
@@ -84,7 +83,8 @@ namespace Bit.Core.Services
             {
                 policy.CreationDate = now;
             }
-            else if (policy.Enabled)
+
+            if (policy.Enabled)
             {
                 var currentPolicy = await _policyRepository.GetByIdAsync(policy.Id);
                 if (!currentPolicy?.Enabled ?? true)
@@ -95,7 +95,7 @@ namespace Bit.Core.Services
                         ou.Status != Enums.OrganizationUserStatusType.Invited &&
                         ou.Type != Enums.OrganizationUserType.Owner && ou.Type != Enums.OrganizationUserType.Admin &&
                         ou.UserId != savingUserId);
-                    switch (currentPolicy.Type)
+                    switch (policy.Type)
                     {
                         case Enums.PolicyType.TwoFactorAuthentication:
                             foreach (var orgUser in removableOrgUsers)

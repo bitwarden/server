@@ -2,10 +2,10 @@
 using System.Collections.Generic;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models;
 using Bit.Core.Models.Business;
-using Bit.Core.Models.Table;
 using Fido2NetLib;
 using Microsoft.AspNetCore.Identity;
 
@@ -22,7 +22,7 @@ namespace Bit.Core.Services
         Task<IdentityResult> RegisterUserAsync(User user, string masterPassword, string token, Guid? orgUserId);
         Task<IdentityResult> RegisterUserAsync(User user);
         Task SendMasterPasswordHintAsync(string email);
-        Task SendTwoFactorEmailAsync(User user);
+        Task SendTwoFactorEmailAsync(User user, bool isBecauseNewDeviceLogin = false);
         Task<bool> VerifyTwoFactorEmailAsync(User user, string token);
         Task<CredentialCreateOptions> StartWebAuthnRegistrationAsync(User user);
         Task<bool> DeleteWebAuthnKeyAsync(User user, int id);
@@ -43,7 +43,7 @@ namespace Bit.Core.Services
         Task<IdentityResult> UpdateKeyAsync(User user, string masterPassword, string key, string privateKey,
             IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders, IEnumerable<Send> sends);
         Task<IdentityResult> RefreshSecurityStampAsync(User user, string masterPasswordHash);
-        Task UpdateTwoFactorProviderAsync(User user, TwoFactorProviderType type, bool setEnabled = true);
+        Task UpdateTwoFactorProviderAsync(User user, TwoFactorProviderType type, bool setEnabled = true, bool logEvent = true);
         Task DisableTwoFactorProviderAsync(User user, TwoFactorProviderType type,
             IOrganizationService organizationService);
         Task<bool> RecoverTwoFactorAsync(string email, string masterPassword, string recoveryCode,
@@ -78,5 +78,7 @@ namespace Bit.Core.Services
         Task SendOTPAsync(User user);
         Task<bool> VerifyOTPAsync(User user, string token);
         Task<bool> VerifySecretAsync(User user, string secret);
+        Task<bool> Needs2FABecauseNewDeviceAsync(User user, string deviceIdentifier, string grantType);
+        bool CanEditDeviceVerificationSettings(User user);
     }
 }

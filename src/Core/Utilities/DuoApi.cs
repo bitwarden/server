@@ -15,9 +15,9 @@ using System.IO;
 using System.Net;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Web;
-using Newtonsoft.Json;
 
 namespace Bit.Core.Utilities.Duo
 {
@@ -35,6 +35,22 @@ namespace Bit.Core.Utilities.Duo
             _ikey = ikey;
             _skey = skey;
             _host = host;
+
+            if (!ValidHost(host))
+            {
+                throw new DuoException("Invalid Duo host configured.", new ArgumentException(nameof(host)));
+            }
+        }
+
+        public static bool ValidHost(string host)
+        {
+            if (Uri.TryCreate($"https://{host}", UriKind.Absolute, out var uri))
+            {
+                return (string.IsNullOrWhiteSpace(uri.PathAndQuery) || uri.PathAndQuery == "/") &&
+                    uri.Host.StartsWith("api-") &&
+                    (uri.Host.EndsWith(".duosecurity.com") || uri.Host.EndsWith(".duofederal.com"));
+            }
+            return false;
         }
 
         public static string CanonicalizeParams(Dictionary<string, string> parameters)
@@ -175,22 +191,21 @@ namespace Bit.Core.Utilities.Duo
             var res = ApiCall(method, path, parameters, timeout, out var statusCode);
             try
             {
-                var dict = JsonConvert.DeserializeObject<Dictionary<string, object>>(res);
-                if (dict["stat"] as string == "OK")
+                // TODO: We should deserialize this into our own DTO and not work on dictionaries.
+                var dict = JsonSerializer.Deserialize<Dictionary<string, object>>(res);
+                if (dict["stat"].ToString() == "OK")
                 {
-                    return dict["response"] as T;
+                    return JsonSerializer.Deserialize<T>(dict["response"].ToString());
                 }
-                else
+
+                var check = ToNullableInt(dict["code"].ToString());
+                var code = check.GetValueOrDefault(0);
+                var messageDetail = string.Empty;
+                if (dict.ContainsKey("message_detail"))
                 {
-                    var check = dict["code"] as int?;
-                    var code = check.GetValueOrDefault(0);
-                    var messageDetail = string.Empty;
-                    if (dict.ContainsKey("message_detail"))
-                    {
-                        messageDetail = dict["message_detail"] as string;
-                    }
-                    throw new ApiException(code, (int)statusCode, dict["message"] as string, messageDetail);
+                    messageDetail = dict["message_detail"].ToString();
                 }
+                throw new ApiException(code, (int)statusCode, dict["message"].ToString(), messageDetail);
             }
             catch (ApiException)
             {
@@ -200,6 +215,16 @@ namespace Bit.Core.Utilities.Duo
             {
                 throw new BadResponseException((int)statusCode, e);
             }
+        }
+
+        private int? ToNullableInt(string s)
+        {
+            int i;
+            if (int.TryParse(s, out i))
+            {
+                return i;
+            }
+            return null;
         }
 
         private string HmacSign(string data)
@@ -236,6 +261,10 @@ namespace Bit.Core.Utilities.Duo
     public class DuoException : Exception
     {
         public int HttpStatus { get; private set; }
+
+        public DuoException(string message, Exception inner)
+            : base(message, inner)
+        { }
 
         public DuoException(int httpStatus, string message, Exception inner)
             : base(message, inner)

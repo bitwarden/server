@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models;
-using Bit.Core.Models.Table;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
@@ -12,7 +13,6 @@ using Fido2NetLib;
 using Fido2NetLib.Objects;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
-using Newtonsoft.Json;
 
 namespace Bit.Core.Identity
 {
@@ -65,19 +65,19 @@ namespace Bit.Core.Identity
 
             var exts = new AuthenticationExtensionsClientInputs()
             {
-                UserVerificationIndex = true,
                 UserVerificationMethod = true,
                 AppID = CoreHelpers.U2fAppIdUrl(_globalSettings),
             };
 
             var options = _fido2.GetAssertionOptions(existingCredentials, UserVerificationRequirement.Discouraged, exts);
 
-            provider.MetaData["login"] = options;
+            // TODO: Remove this when newtonsoft legacy converters are gone
+            provider.MetaData["login"] = JsonSerializer.Serialize(options);
 
             var providers = user.GetTwoFactorProviders();
             providers[TwoFactorProviderType.WebAuthn] = provider;
             user.SetTwoFactorProviders(providers);
-            await userService.UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.WebAuthn);
+            await userService.UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.WebAuthn, logEvent: false);
 
             return options.ToJson();
         }
@@ -98,7 +98,8 @@ namespace Bit.Core.Identity
                 return false;
             }
 
-            var clientResponse = JsonConvert.DeserializeObject<AuthenticatorAssertionRawResponse>(token);
+            var clientResponse = JsonSerializer.Deserialize<AuthenticatorAssertionRawResponse>(token,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
             var jsonOptions = provider.MetaData["login"].ToString();
             var options = AssertionOptions.FromJson(jsonOptions);
@@ -122,7 +123,7 @@ namespace Bit.Core.Identity
             var providers = user.GetTwoFactorProviders();
             providers[TwoFactorProviderType.WebAuthn].MetaData[webAuthCred.Item1] = webAuthCred.Item2;
             user.SetTwoFactorProviders(providers);
-            await userService.UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.WebAuthn);
+            await userService.UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.WebAuthn, logEvent: false);
 
             return res.Status == "ok";
         }

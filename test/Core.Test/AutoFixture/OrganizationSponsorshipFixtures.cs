@@ -1,16 +1,43 @@
 ﻿using System;
 using AutoFixture;
 using AutoFixture.Kernel;
-using Bit.Core.Repositories.EntityFramework;
+using Bit.Core.Entities;
 using Bit.Core.Test.AutoFixture.EntityFrameworkRepositoryFixtures;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using Bit.Core.Test.AutoFixture.OrganizationUserFixtures;
+using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
-using TableModel = Bit.Core.Models.Table;
 
 namespace Bit.Core.Test.AutoFixture.OrganizationSponsorshipFixtures
 {
+    public class OrganizationSponsorshipCustomizeAttribute : BitCustomizeAttribute
+    {
+        public bool ToDelete = false;
+        public override ICustomization GetCustomization() => ToDelete ?
+            new ToDeleteOrganizationSponsorship() :
+            new ValidOrganizationSponsorship();
+    }
+
+    public class ValidOrganizationSponsorship : ICustomization
+    {
+        public void Customize(IFixture fixture)
+        {
+            fixture.Customize<OrganizationSponsorship>(composer => composer
+                .With(s => s.ToDelete, false)
+                .With(s => s.LastSyncDate, DateTime.UtcNow.AddDays(new Random().Next(-90, 0))));
+        }
+    }
+
+    public class ToDeleteOrganizationSponsorship : ICustomization
+    {
+        public void Customize(IFixture fixture)
+        {
+            fixture.Customize<OrganizationSponsorship>(composer => composer
+                .With(s => s.ToDelete, true));
+        }
+    }
+
     internal class OrganizationSponsorshipBuilder : ISpecimenBuilder
     {
         public object Create(object request, ISpecimenContext context)
@@ -21,13 +48,13 @@ namespace Bit.Core.Test.AutoFixture.OrganizationSponsorshipFixtures
             }
 
             var type = request as Type;
-            if (type == null || type != typeof(TableModel.OrganizationSponsorship))
+            if (type == null || type != typeof(OrganizationSponsorship))
             {
                 return new NoSpecimen();
             }
 
             var fixture = new Fixture();
-            var obj = fixture.WithAutoNSubstitutions().Create<TableModel.OrganizationSponsorship>();
+            var obj = fixture.WithAutoNSubstitutions().Create<OrganizationSponsorship>();
             return obj;
         }
     }

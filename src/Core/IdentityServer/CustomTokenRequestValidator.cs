@@ -5,9 +5,9 @@ using System.Security.Claims;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Bit.Core.Context;
+using Bit.Core.Entities;
 using Bit.Core.Identity;
 using Bit.Core.Models.Data;
-using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -41,10 +41,13 @@ namespace Bit.Core.IdentityServer
             ICurrentContext currentContext,
             GlobalSettings globalSettings,
             IPolicyRepository policyRepository,
-            ISsoConfigRepository ssoConfigRepository)
+            ISsoConfigRepository ssoConfigRepository,
+            IUserRepository userRepository,
+            ICaptchaValidationService captchaValidationService)
             : base(userManager, deviceRepository, deviceService, userService, eventService,
                   organizationDuoWebTokenProvider, organizationRepository, organizationUserRepository,
-                  applicationCacheService, mailService, logger, currentContext, globalSettings, policyRepository)
+                  applicationCacheService, mailService, logger, currentContext, globalSettings, policyRepository,
+                  userRepository, captchaValidationService)
         {
             _userManager = userManager;
             _ssoConfigRepository = ssoConfigRepository;
@@ -54,20 +57,26 @@ namespace Bit.Core.IdentityServer
         public async Task ValidateAsync(CustomTokenRequestValidationContext context)
         {
             string[] allowedGrantTypes = { "authorization_code", "client_credentials" };
-            if (!allowedGrantTypes.Contains(context.Result.ValidatedRequest.GrantType) ||
-                context.Result.ValidatedRequest.ClientId.StartsWith("organization"))
+            if (!allowedGrantTypes.Contains(context.Result.ValidatedRequest.GrantType)
+                || context.Result.ValidatedRequest.ClientId.StartsWith("organization")
+                || context.Result.ValidatedRequest.ClientId.StartsWith("installation"))
             {
                 return;
             }
-            await ValidateAsync(context, context.Result.ValidatedRequest);
+            await ValidateAsync(context, context.Result.ValidatedRequest,
+                new CustomValidatorRequestContext { KnownDevice = true });
         }
 
-        protected async override Task<(User, bool)> ValidateContextAsync(CustomTokenRequestValidationContext context)
+        protected async override Task<bool> ValidateContextAsync(CustomTokenRequestValidationContext context,
+            CustomValidatorRequestContext validatorContext)
         {
             var email = context.Result.ValidatedRequest.Subject?.GetDisplayName()
                 ?? context.Result.ValidatedRequest.ClientClaims?.FirstOrDefault(claim => claim.Type == JwtClaimTypes.Email)?.Value;
-            var user = string.IsNullOrWhiteSpace(email) ? null : await _userManager.FindByEmailAsync(email);
-            return (user, user != null);
+            if (!string.IsNullOrWhiteSpace(email))
+            {
+                validatorContext.User = await _userManager.FindByEmailAsync(email);
+            }
+            return validatorContext.User != null;
         }
 
         protected override async Task SetSuccessResult(CustomTokenRequestValidationContext context, User user,

@@ -1,53 +1,56 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Net.Http;
+using System.Net.Http.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Bit.Core.Context;
-using Bit.Core.Models.Table;
+using Bit.Core.Entities;
+using Bit.Core.Models.Business;
+using Bit.Core.Models.Business.Tokenables;
 using Bit.Core.Settings;
-using Bit.Core.Utilities;
-using Microsoft.AspNetCore.DataProtection;
+using Bit.Core.Tokens;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 
 namespace Bit.Core.Services
 {
     public class HCaptchaValidationService : ICaptchaValidationService
     {
-        private const double TokenLifetimeInHours = (double)5 / 60; // 5 minutes
-        private const string TokenName = "CaptchaBypassToken";
-        private const string TokenClearTextPrefix = "BWCaptchaBypass_";
         private readonly ILogger<HCaptchaValidationService> _logger;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly GlobalSettings _globalSettings;
-        private readonly IDataProtector _dataProtector;
+        private readonly IDataProtectorTokenFactory<HCaptchaTokenable> _tokenizer;
 
         public HCaptchaValidationService(
             ILogger<HCaptchaValidationService> logger,
             IHttpClientFactory httpClientFactory,
-            IDataProtectionProvider dataProtectorProvider,
+            IDataProtectorTokenFactory<HCaptchaTokenable> tokenizer,
             GlobalSettings globalSettings)
         {
             _logger = logger;
             _httpClientFactory = httpClientFactory;
             _globalSettings = globalSettings;
-            _dataProtector = dataProtectorProvider.CreateProtector("CaptchaServiceDataProtector");
+            _tokenizer = tokenizer;
         }
 
         public string SiteKeyResponseKeyName => "HCaptcha_SiteKey";
         public string SiteKey => _globalSettings.Captcha.HCaptchaSiteKey;
 
-        public string GenerateCaptchaBypassToken(User user) =>
-            $"{TokenClearTextPrefix}{_dataProtector.Protect(CaptchaBypassTokenContent(user))}";
+        public string GenerateCaptchaBypassToken(User user) => _tokenizer.Protect(new HCaptchaTokenable(user));
 
-        public bool ValidateCaptchaBypassToken(string bypassToken, User user) =>
-            TokenIsApiKey(bypassToken, user) || TokenIsCaptchaBypassToken(bypassToken, user);
-
-        public async Task<bool> ValidateCaptchaResponseAsync(string captchaResponse, string clientIpAddress)
+        public async Task<CaptchaResponse> ValidateCaptchaResponseAsync(string captchaResponse, string clientIpAddress,
+            User user = null)
         {
+            var response = new CaptchaResponse { Success = false };
             if (string.IsNullOrWhiteSpace(captchaResponse))
             {
-                return false;
+                return response;
+            }
+
+            if (user != null && ValidateCaptchaBypassToken(captchaResponse, user))
+            {
+                response.Success = true;
+                return response;
             }
 
             var httpClient = _httpClientFactory.CreateClient("HCaptchaValidationService");
@@ -73,36 +76,61 @@ namespace Bit.Core.Services
             catch (Exception e)
             {
                 _logger.LogError(11389, e, "Unable to verify with HCaptcha.");
-                return false;
+                return response;
             }
 
             if (!responseMessage.IsSuccessStatusCode)
             {
-                return false;
+                return response;
             }
 
-            var responseContent = await responseMessage.Content.ReadAsStringAsync();
-            dynamic jsonResponse = JsonConvert.DeserializeObject(responseContent);
-            return (bool)jsonResponse.success;
+            using var hcaptchaResponse = await responseMessage.Content.ReadFromJsonAsync<HCaptchaResponse>();
+            response.Success = hcaptchaResponse.Success;
+            var score = hcaptchaResponse.Score.GetValueOrDefault();
+            response.MaybeBot = score >= _globalSettings.Captcha.MaybeBotScoreThreshold;
+            response.IsBot = score >= _globalSettings.Captcha.IsBotScoreThreshold;
+            response.Score = score;
+            return response;
         }
 
-        public bool RequireCaptchaValidation(ICurrentContext currentContext) =>
-            currentContext.IsBot || _globalSettings.Captcha.ForceCaptchaRequired;
+        public bool RequireCaptchaValidation(ICurrentContext currentContext, User user = null)
+        {
+            if (user == null)
+            {
+                return currentContext.IsBot || _globalSettings.Captcha.ForceCaptchaRequired;
+            }
 
-        private static string CaptchaBypassTokenContent(User user) =>
-            string.Join(' ', new object[] {
-                TokenName,
-                user?.Id,
-                user?.Email,
-                CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow.AddHours(TokenLifetimeInHours))
-            });
+            var failedLoginCeiling = _globalSettings.Captcha.MaximumFailedLoginAttempts;
+            var failedLoginCount = user?.FailedLoginCount ?? 0;
+            var cloudEmailUnverified = !_globalSettings.SelfHosted && !user.EmailVerified;
+            return currentContext.IsBot ||
+                   _globalSettings.Captcha.ForceCaptchaRequired ||
+                   cloudEmailUnverified ||
+                   failedLoginCeiling > 0 && failedLoginCount >= failedLoginCeiling;
+        }
 
-        private static bool TokenIsApiKey(string bypassToken, User user) =>
+        private static bool TokenIsValidApiKey(string bypassToken, User user) =>
             !string.IsNullOrWhiteSpace(bypassToken) && user != null && user.ApiKey == bypassToken;
-        private bool TokenIsCaptchaBypassToken(string encryptedToken, User user) =>
-            encryptedToken.StartsWith(TokenClearTextPrefix) && user != null &&
-            CoreHelpers.TokenIsValid(TokenName, _dataProtector, encryptedToken[TokenClearTextPrefix.Length..],
-            user.Email, user.Id, TokenLifetimeInHours);
 
+        private bool TokenIsValidCaptchaBypassToken(string encryptedToken, User user)
+        {
+            return _tokenizer.TryUnprotect(encryptedToken, out var data) &&
+                data.Valid && data.TokenIsValid(user);
+        }
+
+        private bool ValidateCaptchaBypassToken(string bypassToken, User user) =>
+            TokenIsValidApiKey(bypassToken, user) || TokenIsValidCaptchaBypassToken(bypassToken, user);
+
+        public class HCaptchaResponse : IDisposable
+        {
+            [JsonPropertyName("success")]
+            public bool Success { get; set; }
+            [JsonPropertyName("score")]
+            public double? Score { get; set; }
+            [JsonPropertyName("score_reason")]
+            public List<string> ScoreReason { get; set; }
+
+            public void Dispose() { }
+        }
     }
 }

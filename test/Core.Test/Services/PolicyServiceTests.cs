@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
-using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
@@ -15,10 +15,12 @@ using PolicyFixtures = Bit.Core.Test.AutoFixture.PolicyFixtures;
 
 namespace Bit.Core.Test.Services
 {
+    [SutProviderCustomize]
     public class PolicyServiceTests
     {
-        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
-        public async Task SaveAsync_OrganizationDoesNotExist_ThrowsBadRequest([PolicyFixtures.Policy(PolicyType.DisableSend)] Core.Models.Table.Policy policy, SutProvider<PolicyService> sutProvider)
+        [Theory, BitAutoData]
+        public async Task SaveAsync_OrganizationDoesNotExist_ThrowsBadRequest(
+            [PolicyFixtures.Policy(PolicyType.DisableSend)] Policy policy, SutProvider<PolicyService> sutProvider)
         {
             SetupOrg(sutProvider, policy.OrganizationId, null);
 
@@ -39,8 +41,9 @@ namespace Bit.Core.Test.Services
                 .LogPolicyEventAsync(default, default, default);
         }
 
-        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
-        public async Task SaveAsync_OrganizationCannotUsePolicies_ThrowsBadRequest([PolicyFixtures.Policy(PolicyType.DisableSend)] Core.Models.Table.Policy policy, SutProvider<PolicyService> sutProvider)
+        [Theory, BitAutoData]
+        public async Task SaveAsync_OrganizationCannotUsePolicies_ThrowsBadRequest(
+            [PolicyFixtures.Policy(PolicyType.DisableSend)] Policy policy, SutProvider<PolicyService> sutProvider)
         {
             var orgId = Guid.NewGuid();
 
@@ -66,8 +69,9 @@ namespace Bit.Core.Test.Services
                 .LogPolicyEventAsync(default, default, default);
         }
 
-        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
-        public async Task SaveAsync_SingleOrg_RequireSsoEnabled_ThrowsBadRequest([PolicyFixtures.Policy(PolicyType.SingleOrg)] Core.Models.Table.Policy policy, SutProvider<PolicyService> sutProvider)
+        [Theory, BitAutoData]
+        public async Task SaveAsync_SingleOrg_RequireSsoEnabled_ThrowsBadRequest(
+            [PolicyFixtures.Policy(PolicyType.SingleOrg)] Policy policy, SutProvider<PolicyService> sutProvider)
         {
             policy.Enabled = false;
 
@@ -79,7 +83,7 @@ namespace Bit.Core.Test.Services
 
             sutProvider.GetDependency<IPolicyRepository>()
                 .GetByOrganizationIdTypeAsync(policy.OrganizationId, PolicyType.RequireSso)
-                .Returns(Task.FromResult(new Core.Models.Table.Policy { Enabled = true }));
+                .Returns(Task.FromResult(new Policy { Enabled = true }));
 
             var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
                 () => sutProvider.Sut.SaveAsync(policy,
@@ -98,8 +102,8 @@ namespace Bit.Core.Test.Services
                 .LogPolicyEventAsync(default, default, default);
         }
 
-        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
-        public async Task SaveAsync_SingleOrg_VaultTimeoutEnabled_ThrowsBadRequest([PolicyFixtures.Policy(Enums.PolicyType.SingleOrg)] Core.Models.Table.Policy policy, SutProvider<PolicyService> sutProvider)
+        [Theory, BitAutoData]
+        public async Task SaveAsync_SingleOrg_VaultTimeoutEnabled_ThrowsBadRequest([PolicyFixtures.Policy(Enums.PolicyType.SingleOrg)] Policy policy, SutProvider<PolicyService> sutProvider)
         {
             policy.Enabled = false;
 
@@ -127,8 +131,8 @@ namespace Bit.Core.Test.Services
         }
 
         [Theory]
-        [InlineCustomAutoData(new[] { typeof(SutProviderCustomization) }, Enums.PolicyType.SingleOrg)]
-        [InlineCustomAutoData(new[] { typeof(SutProviderCustomization) }, Enums.PolicyType.RequireSso)]
+        [BitAutoData(PolicyType.SingleOrg)]
+        [BitAutoData(PolicyType.RequireSso)]
         public async Task SaveAsync_PolicyRequiredByKeyConnector_DisablePolicy_ThrowsBadRequest(
             Enums.PolicyType policyType,
             Policy policy,
@@ -164,8 +168,9 @@ namespace Bit.Core.Test.Services
                 .UpsertAsync(default);
         }
 
-        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
-        public async Task SaveAsync_RequireSsoPolicy_NotEnabled_ThrowsBadRequestAsync([PolicyFixtures.Policy(Enums.PolicyType.RequireSso)] Core.Models.Table.Policy policy, SutProvider<PolicyService> sutProvider)
+        [Theory, BitAutoData]
+        public async Task SaveAsync_RequireSsoPolicy_NotEnabled_ThrowsBadRequestAsync(
+            [PolicyFixtures.Policy(Enums.PolicyType.RequireSso)] Policy policy, SutProvider<PolicyService> sutProvider)
         {
             policy.Enabled = true;
 
@@ -177,7 +182,7 @@ namespace Bit.Core.Test.Services
 
             sutProvider.GetDependency<IPolicyRepository>()
                 .GetByOrganizationIdTypeAsync(policy.OrganizationId, PolicyType.SingleOrg)
-                .Returns(Task.FromResult(new Core.Models.Table.Policy { Enabled = false }));
+                .Returns(Task.FromResult(new Policy { Enabled = false }));
 
             var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
                 () => sutProvider.Sut.SaveAsync(policy,
@@ -196,8 +201,9 @@ namespace Bit.Core.Test.Services
                 .LogPolicyEventAsync(default, default, default);
         }
 
-        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
-        public async Task SaveAsync_NewPolicy_Created([PolicyFixtures.Policy(PolicyType.MasterPassword)] Core.Models.Table.Policy policy, SutProvider<PolicyService> sutProvider)
+        [Theory, BitAutoData]
+        public async Task SaveAsync_NewPolicy_Created(
+            [PolicyFixtures.Policy(PolicyType.ResetPassword)] Policy policy, SutProvider<PolicyService> sutProvider)
         {
             policy.Id = default;
 
@@ -221,8 +227,9 @@ namespace Bit.Core.Test.Services
             Assert.True(policy.RevisionDate - utcNow < TimeSpan.FromSeconds(1));
         }
 
-        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
-        public async Task SaveAsync_VaultTimeoutPolicy_NotEnabled_ThrowsBadRequestAsync([PolicyFixtures.Policy(Enums.PolicyType.MaximumVaultTimeout)] Core.Models.Table.Policy policy, SutProvider<PolicyService> sutProvider)
+        [Theory, BitAutoData]
+        public async Task SaveAsync_VaultTimeoutPolicy_NotEnabled_ThrowsBadRequestAsync(
+            [PolicyFixtures.Policy(PolicyType.MaximumVaultTimeout)] Policy policy, SutProvider<PolicyService> sutProvider)
         {
             policy.Enabled = true;
 
@@ -234,7 +241,7 @@ namespace Bit.Core.Test.Services
 
             sutProvider.GetDependency<IPolicyRepository>()
                 .GetByOrganizationIdTypeAsync(policy.OrganizationId, Enums.PolicyType.SingleOrg)
-                .Returns(Task.FromResult(new Core.Models.Table.Policy { Enabled = false }));
+                .Returns(Task.FromResult(new Policy { Enabled = false }));
 
             var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
                 () => sutProvider.Sut.SaveAsync(policy,
@@ -253,8 +260,9 @@ namespace Bit.Core.Test.Services
                 .LogPolicyEventAsync(default, default, default);
         }
 
-        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
-        public async Task SaveAsync_ExistingPolicy_UpdateTwoFactor([PolicyFixtures.Policy(PolicyType.TwoFactorAuthentication)] Core.Models.Table.Policy policy, SutProvider<PolicyService> sutProvider)
+        [Theory, BitAutoData]
+        public async Task SaveAsync_ExistingPolicy_UpdateTwoFactor(
+            [PolicyFixtures.Policy(PolicyType.TwoFactorAuthentication)] Policy policy, SutProvider<PolicyService> sutProvider)
         {
             // If the policy that this is updating isn't enabled then do some work now that the current one is enabled
 
@@ -269,14 +277,14 @@ namespace Bit.Core.Test.Services
 
             sutProvider.GetDependency<IPolicyRepository>()
                 .GetByIdAsync(policy.Id)
-                .Returns(new Core.Models.Table.Policy
+                .Returns(new Policy
                 {
                     Id = policy.Id,
                     Type = PolicyType.TwoFactorAuthentication,
                     Enabled = false,
                 });
 
-            var orgUserDetail = new Core.Models.Data.OrganizationUserUserDetails
+            var orgUserDetail = new Core.Models.Data.Organizations.OrganizationUsers.OrganizationUserUserDetails
             {
                 Id = Guid.NewGuid(),
                 Status = OrganizationUserStatusType.Accepted,
@@ -289,7 +297,7 @@ namespace Bit.Core.Test.Services
 
             sutProvider.GetDependency<IOrganizationUserRepository>()
                 .GetManyDetailsByOrganizationAsync(policy.OrganizationId)
-                .Returns(new List<Core.Models.Data.OrganizationUserUserDetails>
+                .Returns(new List<Core.Models.Data.Organizations.OrganizationUsers.OrganizationUserUserDetails>
                 {
                     orgUserDetail,
                 });
@@ -322,8 +330,9 @@ namespace Bit.Core.Test.Services
             Assert.True(policy.RevisionDate - utcNow < TimeSpan.FromSeconds(1));
         }
 
-        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
-        public async Task SaveAsync_ExistingPolicy_UpdateSingleOrg([PolicyFixtures.Policy(PolicyType.TwoFactorAuthentication)] Core.Models.Table.Policy policy, SutProvider<PolicyService> sutProvider)
+        [Theory, BitAutoData]
+        public async Task SaveAsync_ExistingPolicy_UpdateSingleOrg(
+            [PolicyFixtures.Policy(PolicyType.TwoFactorAuthentication)] Policy policy, SutProvider<PolicyService> sutProvider)
         {
             // If the policy that this is updating isn't enabled then do some work now that the current one is enabled
 
@@ -338,14 +347,14 @@ namespace Bit.Core.Test.Services
 
             sutProvider.GetDependency<IPolicyRepository>()
                 .GetByIdAsync(policy.Id)
-                .Returns(new Core.Models.Table.Policy
+                .Returns(new Policy
                 {
                     Id = policy.Id,
                     Type = PolicyType.SingleOrg,
                     Enabled = false,
                 });
 
-            var orgUserDetail = new Core.Models.Data.OrganizationUserUserDetails
+            var orgUserDetail = new Core.Models.Data.Organizations.OrganizationUsers.OrganizationUserUserDetails
             {
                 Id = Guid.NewGuid(),
                 Status = OrganizationUserStatusType.Accepted,
@@ -358,7 +367,7 @@ namespace Bit.Core.Test.Services
 
             sutProvider.GetDependency<IOrganizationUserRepository>()
                 .GetManyDetailsByOrganizationAsync(policy.OrganizationId)
-                .Returns(new List<Core.Models.Data.OrganizationUserUserDetails>
+                .Returns(new List<Core.Models.Data.Organizations.OrganizationUsers.OrganizationUserUserDetails>
                 {
                     orgUserDetail,
                 });

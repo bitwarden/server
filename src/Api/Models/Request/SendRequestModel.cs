@@ -1,12 +1,12 @@
 ﻿using System;
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
-using Bit.Core.Models.Table;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
-using Newtonsoft.Json;
 
 namespace Bit.Api.Models.Request
 {
@@ -65,15 +65,13 @@ namespace Bit.Api.Models.Request
             switch (existingSend.Type)
             {
                 case SendType.File:
-                    var fileData = JsonConvert.DeserializeObject<SendFileData>(existingSend.Data);
+                    var fileData = JsonSerializer.Deserialize<SendFileData>(existingSend.Data);
                     fileData.Name = Name;
                     fileData.Notes = Notes;
-                    existingSend.Data = JsonConvert.SerializeObject(fileData,
-                        new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
+                    existingSend.Data = JsonSerializer.Serialize(fileData, JsonHelpers.IgnoreWritingNull);
                     break;
                 case SendType.Text:
-                    existingSend.Data = JsonConvert.SerializeObject(ToSendData(),
-                        new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
+                    existingSend.Data = JsonSerializer.Serialize(ToSendTextData(), JsonHelpers.IgnoreWritingNull);
                     break;
                 default:
                     throw new ArgumentException("Unsupported type: " + nameof(Type) + ".");
@@ -130,7 +128,7 @@ namespace Bit.Api.Models.Request
             return existingSend;
         }
 
-        private SendData ToSendData()
+        private SendTextData ToSendTextData()
         {
             return new SendTextData(Name, Notes, Text.Text, Text.Hidden);
         }

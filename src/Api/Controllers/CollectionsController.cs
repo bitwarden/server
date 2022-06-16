@@ -5,8 +5,8 @@ using System.Threading.Tasks;
 using Bit.Api.Models.Request;
 using Bit.Api.Models.Response;
 using Bit.Core.Context;
+using Bit.Core.Entities;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -36,31 +36,29 @@ namespace Bit.Api.Controllers
         }
 
         [HttpGet("{id}")]
-        public async Task<CollectionResponseModel> Get(string orgId, string id)
+        public async Task<CollectionResponseModel> Get(Guid orgId, Guid id)
         {
             if (!await CanViewCollectionAsync(orgId, id))
             {
                 throw new NotFoundException();
             }
 
-            var collection = await GetCollectionAsync(new Guid(id), new Guid(orgId));
+            var collection = await GetCollectionAsync(id, orgId);
             return new CollectionResponseModel(collection);
         }
 
         [HttpGet("{id}/details")]
-        public async Task<CollectionGroupDetailsResponseModel> GetDetails(string orgId, string id)
+        public async Task<CollectionGroupDetailsResponseModel> GetDetails(Guid orgId, Guid id)
         {
-            var orgIdGuid = new Guid(orgId);
-            if (!await ViewAtLeastOneCollectionAsync(orgIdGuid) && !await _currentContext.ManageUsers(orgIdGuid))
+            if (!await ViewAtLeastOneCollectionAsync(orgId) && !await _currentContext.ManageUsers(orgId))
             {
                 throw new NotFoundException();
             }
 
-            var idGuid = new Guid(id);
-            if (await _currentContext.ViewAllCollections(orgIdGuid))
+            if (await _currentContext.ViewAllCollections(orgId))
             {
-                var collectionDetails = await _collectionRepository.GetByIdWithGroupsAsync(idGuid);
-                if (collectionDetails?.Item1 == null || collectionDetails.Item1.OrganizationId != orgIdGuid)
+                var collectionDetails = await _collectionRepository.GetByIdWithGroupsAsync(id);
+                if (collectionDetails?.Item1 == null || collectionDetails.Item1.OrganizationId != orgId)
                 {
                     throw new NotFoundException();
                 }
@@ -68,9 +66,9 @@ namespace Bit.Api.Controllers
             }
             else
             {
-                var collectionDetails = await _collectionRepository.GetByIdWithGroupsAsync(idGuid,
+                var collectionDetails = await _collectionRepository.GetByIdWithGroupsAsync(id,
                     _currentContext.UserId.Value);
-                if (collectionDetails?.Item1 == null || collectionDetails.Item1.OrganizationId != orgIdGuid)
+                if (collectionDetails?.Item1 == null || collectionDetails.Item1.OrganizationId != orgId)
                 {
                     throw new NotFoundException();
                 }
@@ -79,16 +77,26 @@ namespace Bit.Api.Controllers
         }
 
         [HttpGet("")]
-        public async Task<ListResponseModel<CollectionResponseModel>> Get(string orgId)
+        public async Task<ListResponseModel<CollectionResponseModel>> Get(Guid orgId)
         {
-            var orgIdGuid = new Guid(orgId);
-            if (!await _currentContext.ViewAllCollections(orgIdGuid) && !await _currentContext.ManageUsers(orgIdGuid))
+            if (!await _currentContext.ViewAllCollections(orgId) && !await _currentContext.ManageUsers(orgId))
             {
                 throw new NotFoundException();
             }
 
-            var collections = await _collectionRepository.GetManyByOrganizationIdAsync(orgIdGuid);
-            var responses = collections.Select(c => new CollectionResponseModel(c));
+            IEnumerable<Collection> orgCollections;
+            if (await _currentContext.OrganizationAdmin(orgId))
+            {
+                // Admins, Owners and Providers can access all items even if not assigned to them
+                orgCollections = await _collectionRepository.GetManyByOrganizationIdAsync(orgId);
+            }
+            else
+            {
+                var collections = await _collectionRepository.GetManyByUserIdAsync(_currentContext.UserId.Value);
+                orgCollections = collections.Where(c => c.OrganizationId == orgId);
+            }
+
+            var responses = orgCollections.Select(c => new CollectionResponseModel(c));
             return new ListResponseModel<CollectionResponseModel>(responses);
         }
 
@@ -102,28 +110,27 @@ namespace Bit.Api.Controllers
         }
 
         [HttpGet("{id}/users")]
-        public async Task<IEnumerable<SelectionReadOnlyResponseModel>> GetUsers(string orgId, string id)
+        public async Task<IEnumerable<SelectionReadOnlyResponseModel>> GetUsers(Guid orgId, Guid id)
         {
-            var collection = await GetCollectionAsync(new Guid(id), new Guid(orgId));
+            var collection = await GetCollectionAsync(id, orgId);
             var collectionUsers = await _collectionRepository.GetManyUsersByIdAsync(collection.Id);
             var responses = collectionUsers.Select(cu => new SelectionReadOnlyResponseModel(cu));
             return responses;
         }
 
         [HttpPost("")]
-        public async Task<CollectionResponseModel> Post(string orgId, [FromBody] CollectionRequestModel model)
+        public async Task<CollectionResponseModel> Post(Guid orgId, [FromBody] CollectionRequestModel model)
         {
-            var orgIdGuid = new Guid(orgId);
-            var collection = model.ToCollection(orgIdGuid);
+            var collection = model.ToCollection(orgId);
 
-            if (!await CanCreateCollection(orgIdGuid, collection.Id) &&
-                !await CanEditCollectionAsync(orgIdGuid, collection.Id))
+            if (!await CanCreateCollection(orgId, collection.Id) &&
+                !await CanEditCollectionAsync(orgId, collection.Id))
             {
                 throw new NotFoundException();
             }
 
-            var assignUserToCollection = !(await _currentContext.EditAnyCollection(orgIdGuid)) &&
-                await _currentContext.EditAssignedCollections(orgIdGuid);
+            var assignUserToCollection = !(await _currentContext.EditAnyCollection(orgId)) &&
+                await _currentContext.EditAssignedCollections(orgId);
 
             await _collectionService.SaveAsync(collection, model.Groups?.Select(g => g.ToSelectionReadOnly()),
                 assignUserToCollection ? _currentContext.UserId : null);
@@ -132,36 +139,41 @@ namespace Bit.Api.Controllers
 
         [HttpPut("{id}")]
         [HttpPost("{id}")]
-        public async Task<CollectionResponseModel> Put(string orgId, string id, [FromBody] CollectionRequestModel model)
+        public async Task<CollectionResponseModel> Put(Guid orgId, Guid id, [FromBody] CollectionRequestModel model)
         {
             if (!await CanEditCollectionAsync(orgId, id))
             {
                 throw new NotFoundException();
             }
 
-            var collection = await GetCollectionAsync(new Guid(id), new Guid(orgId));
+            var collection = await GetCollectionAsync(id, orgId);
             await _collectionService.SaveAsync(model.ToCollection(collection),
                 model.Groups?.Select(g => g.ToSelectionReadOnly()));
             return new CollectionResponseModel(collection);
         }
 
         [HttpPut("{id}/users")]
-        public async Task PutUsers(string orgId, string id, [FromBody] IEnumerable<SelectionReadOnlyRequestModel> model)
+        public async Task PutUsers(Guid orgId, Guid id, [FromBody] IEnumerable<SelectionReadOnlyRequestModel> model)
         {
-            var collection = await GetCollectionAsync(new Guid(id), new Guid(orgId));
+            if (!await CanEditCollectionAsync(orgId, id))
+            {
+                throw new NotFoundException();
+            }
+
+            var collection = await GetCollectionAsync(id, orgId);
             await _collectionRepository.UpdateUsersAsync(collection.Id, model?.Select(g => g.ToSelectionReadOnly()));
         }
 
         [HttpDelete("{id}")]
         [HttpPost("{id}/delete")]
-        public async Task Delete(string orgId, string id)
+        public async Task Delete(Guid orgId, Guid id)
         {
             if (!await CanDeleteCollectionAsync(orgId, id))
             {
                 throw new NotFoundException();
             }
 
-            var collection = await GetCollectionAsync(new Guid(id), new Guid(orgId));
+            var collection = await GetCollectionAsync(id, orgId);
             await _collectionService.DeleteAsync(collection);
         }
 
@@ -204,8 +216,6 @@ namespace Bit.Api.Controllers
             return await _currentContext.CreateNewCollections(orgId);
         }
 
-        private async Task<bool> CanEditCollectionAsync(string orgId, string collectionId) =>
-            await CanEditCollectionAsync(new Guid(orgId), new Guid(collectionId));
         private async Task<bool> CanEditCollectionAsync(Guid orgId, Guid collectionId)
         {
             if (collectionId == default)
@@ -220,14 +230,13 @@ namespace Bit.Api.Controllers
 
             if (await _currentContext.EditAssignedCollections(orgId))
             {
-                return null != _collectionRepository.GetByIdAsync(collectionId, _currentContext.UserId.Value);
+                var collectionDetails = await _collectionRepository.GetByIdAsync(collectionId, _currentContext.UserId.Value);
+                return collectionDetails != null;
             }
 
             return false;
         }
 
-        private async Task<bool> CanDeleteCollectionAsync(string orgId, string collectionId) =>
-            await CanDeleteCollectionAsync(new Guid(orgId), new Guid(collectionId));
         private async Task<bool> CanDeleteCollectionAsync(Guid orgId, Guid collectionId)
         {
             if (collectionId == default)
@@ -242,14 +251,13 @@ namespace Bit.Api.Controllers
 
             if (await _currentContext.DeleteAssignedCollections(orgId))
             {
-                return null != _collectionRepository.GetByIdAsync(collectionId, _currentContext.UserId.Value);
+                var collectionDetails = await _collectionRepository.GetByIdAsync(collectionId, _currentContext.UserId.Value);
+                return collectionDetails != null;
             }
 
             return false;
         }
 
-        private async Task<bool> CanViewCollectionAsync(string orgId, string collectionId) =>
-            await CanViewCollectionAsync(new Guid(orgId), new Guid(collectionId));
         private async Task<bool> CanViewCollectionAsync(Guid orgId, Guid collectionId)
         {
             if (collectionId == default)
@@ -264,7 +272,8 @@ namespace Bit.Api.Controllers
 
             if (await _currentContext.ViewAssignedCollections(orgId))
             {
-                return null != _collectionRepository.GetByIdAsync(collectionId, _currentContext.UserId.Value);
+                var collectionDetails = await _collectionRepository.GetByIdAsync(collectionId, _currentContext.UserId.Value);
+                return collectionDetails != null;
             }
 
             return false;

@@ -5,17 +5,17 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Bit.Core.Context;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
-using Bit.Core.Models.Table;
+using Bit.Core.Models.Data.Organizations.Policies;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 using Stripe;
 
 namespace Bit.Core.Services
@@ -43,6 +43,7 @@ namespace Bit.Core.Services
         private readonly IReferenceEventService _referenceEventService;
         private readonly IGlobalSettings _globalSettings;
         private readonly ITaxRateRepository _taxRateRepository;
+        private readonly IOrganizationApiKeyRepository _organizationApiKeyRepository;
         private readonly ICurrentContext _currentContext;
         private readonly ILogger<OrganizationService> _logger;
 
@@ -69,6 +70,7 @@ namespace Bit.Core.Services
             IReferenceEventService referenceEventService,
             IGlobalSettings globalSettings,
             ITaxRateRepository taxRateRepository,
+            IOrganizationApiKeyRepository organizationApiKeyRepository,
             ICurrentContext currentContext,
             ILogger<OrganizationService> logger)
         {
@@ -93,6 +95,7 @@ namespace Bit.Core.Services
             _referenceEventService = referenceEventService;
             _globalSettings = globalSettings;
             _taxRateRepository = taxRateRepository;
+            _organizationApiKeyRepository = organizationApiKeyRepository;
             _currentContext = currentContext;
             _logger = logger;
         }
@@ -612,7 +615,6 @@ namespace Bit.Core.Services
                 ReferenceData = signup.Owner.ReferenceData,
                 Enabled = true,
                 LicenseKey = CoreHelpers.SecureRandomString(20),
-                ApiKey = CoreHelpers.SecureRandomString(30),
                 PublicKey = signup.PublicKey,
                 PrivateKey = signup.PrivateKey,
                 CreationDate = DateTime.UtcNow,
@@ -662,6 +664,12 @@ namespace Bit.Core.Services
             OrganizationLicense license, User owner, string ownerKey, string collectionName, string publicKey,
             string privateKey)
         {
+            if (license?.LicenseType != null && license.LicenseType != LicenseType.Organization)
+            {
+                throw new BadRequestException("Premium licenses cannot be applied to an organization. "
+                                              + "Upload this license from your personal account settings page.");
+            }
+
             if (license == null || !_licensingService.VerifyLicense(license))
             {
                 throw new BadRequestException("Invalid license.");
@@ -716,7 +724,6 @@ namespace Bit.Core.Services
                 Enabled = license.Enabled,
                 ExpirationDate = license.Expires,
                 LicenseKey = license.LicenseKey,
-                ApiKey = CoreHelpers.SecureRandomString(30),
                 PublicKey = publicKey,
                 PrivateKey = privateKey,
                 CreationDate = DateTime.UtcNow,
@@ -727,8 +734,8 @@ namespace Bit.Core.Services
 
             var dir = $"{_globalSettings.LicenseDirectory}/organization";
             Directory.CreateDirectory(dir);
-            System.IO.File.WriteAllText($"{dir}/{organization.Id}.json",
-                JsonConvert.SerializeObject(license, Formatting.Indented));
+            using var fs = System.IO.File.OpenWrite(Path.Combine(dir, $"{organization.Id}.json"));
+            await JsonSerializer.SerializeAsync(fs, license, JsonHelpers.Indented);
             return result;
         }
 
@@ -738,6 +745,13 @@ namespace Bit.Core.Services
             try
             {
                 await _organizationRepository.CreateAsync(organization);
+                await _organizationApiKeyRepository.CreateAsync(new OrganizationApiKey
+                {
+                    OrganizationId = organization.Id,
+                    ApiKey = CoreHelpers.SecureRandomString(30),
+                    Type = OrganizationApiKeyType.Default,
+                    RevisionDate = DateTime.UtcNow,
+                });
                 await _applicationCacheService.UpsertOrganizationAbilityAsync(organization);
 
                 if (!string.IsNullOrWhiteSpace(collectionName))
@@ -805,6 +819,12 @@ namespace Bit.Core.Services
             if (!_globalSettings.SelfHosted)
             {
                 throw new InvalidOperationException("Licenses require self hosting.");
+            }
+
+            if (license?.LicenseType != null && license.LicenseType != LicenseType.Organization)
+            {
+                throw new BadRequestException("Premium licenses cannot be applied to an organization. "
+                                              + "Upload this license from your personal account settings page.");
             }
 
             if (license == null || !_licensingService.VerifyLicense(license))
@@ -900,8 +920,8 @@ namespace Bit.Core.Services
 
             var dir = $"{_globalSettings.LicenseDirectory}/organization";
             Directory.CreateDirectory(dir);
-            System.IO.File.WriteAllText($"{dir}/{organization.Id}.json",
-                JsonConvert.SerializeObject(license, Formatting.Indented));
+            using var fs = System.IO.File.OpenWrite(Path.Combine(dir, $"{organization.Id}.json"));
+            await JsonSerializer.SerializeAsync(fs, license, JsonHelpers.Indented);
 
             organization.Name = license.Name;
             organization.BusinessName = license.BusinessName;
@@ -1146,10 +1166,7 @@ namespace Bit.Core.Services
 
                         if (invite.Permissions != null)
                         {
-                            orgUser.Permissions = System.Text.Json.JsonSerializer.Serialize(invite.Permissions, new JsonSerializerOptions
-                            {
-                                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                            });
+                            orgUser.Permissions = JsonSerializer.Serialize(invite.Permissions, JsonHelpers.CamelCase);
                         }
 
                         if (!orgUser.AccessAll && invite.Collections.Any())
@@ -1263,7 +1280,7 @@ namespace Bit.Core.Services
             string MakeToken(OrganizationUser orgUser) =>
                 _dataProtector.Protect($"OrganizationUserInvite {orgUser.Id} {orgUser.Email} {CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow)}");
 
-            await _mailService.BulkSendOrganizationInviteEmailAsync(organization.Name, CheckOrganizationCanSponsor(organization),
+            await _mailService.BulkSendOrganizationInviteEmailAsync(organization.Name,
                 orgUsers.Select(o => (o, new ExpiringToken(MakeToken(o), DateTime.UtcNow.AddDays(5)))));
         }
 
@@ -1274,14 +1291,7 @@ namespace Bit.Core.Services
             var token = _dataProtector.Protect(
                 $"OrganizationUserInvite {orgUser.Id} {orgUser.Email} {nowMillis}");
 
-            await _mailService.SendOrganizationInviteEmailAsync(organization.Name, CheckOrganizationCanSponsor(organization), orgUser, new ExpiringToken(token, now.AddDays(5)));
-        }
-
-
-        private bool CheckOrganizationCanSponsor(Organization organization)
-        {
-            return StaticStore.GetPlan(organization.PlanType).Product == ProductType.Enterprise
-                && !_globalSettings.SelfHosted;
+            await _mailService.SendOrganizationInviteEmailAsync(organization.Name, orgUser, new ExpiringToken(token, now.AddDays(5)));
         }
 
         public async Task<OrganizationUser> AcceptUserAsync(Guid organizationUserId, User user, string token,
@@ -1397,10 +1407,15 @@ namespace Bit.Core.Services
 
             await _organizationUserRepository.ReplaceAsync(orgUser);
 
-            await _mailService.SendOrganizationAcceptedEmailAsync(
-                (await _organizationRepository.GetByIdAsync(orgUser.OrganizationId)),
-                user.Email,
-                (await _organizationUserRepository.GetManyByMinimumRoleAsync(orgUser.OrganizationId, OrganizationUserType.Admin)).Select(a => a.Email).Distinct());
+            var admins = await _organizationUserRepository.GetManyByMinimumRoleAsync(orgUser.OrganizationId, OrganizationUserType.Admin);
+            var adminEmails = admins.Select(a => a.Email).Distinct().ToList();
+
+            if (adminEmails.Count > 0)
+            {
+                var organization = await _organizationRepository.GetByIdAsync(orgUser.OrganizationId);
+                await _mailService.SendOrganizationAcceptedEmailAsync(organization, user.Email, adminEmails);
+            }
+
             return orgUser;
         }
 
@@ -1737,10 +1752,10 @@ namespace Bit.Core.Services
                 EventType.OrganizationUser_UpdatedGroups);
         }
 
-        public async Task UpdateUserResetPasswordEnrollmentAsync(Guid organizationId, Guid organizationUserId, string resetPasswordKey, Guid? callingUserId)
+        public async Task UpdateUserResetPasswordEnrollmentAsync(Guid organizationId, Guid userId, string resetPasswordKey, Guid? callingUserId)
         {
             // Org User must be the same as the calling user and the organization ID associated with the user must match passed org ID
-            var orgUser = await _organizationUserRepository.GetByOrganizationAsync(organizationId, organizationUserId);
+            var orgUser = await _organizationUserRepository.GetByOrganizationAsync(organizationId, userId);
             if (!callingUserId.HasValue || orgUser == null || orgUser.UserId != callingUserId.Value ||
                 orgUser.OrganizationId != organizationId)
             {
@@ -1765,7 +1780,7 @@ namespace Bit.Core.Services
             // Block the user from withdrawal if auto enrollment is enabled
             if (resetPasswordKey == null && resetPasswordPolicy.Data != null)
             {
-                var data = JsonConvert.DeserializeObject<ResetPasswordDataModel>(resetPasswordPolicy.Data);
+                var data = JsonSerializer.Deserialize<ResetPasswordDataModel>(resetPasswordPolicy.Data, JsonHelpers.IgnoreCase);
 
                 if (data?.AutoEnrollEnabled ?? false)
                 {
@@ -2001,13 +2016,6 @@ namespace Bit.Core.Services
 
             await _referenceEventService.RaiseEventAsync(
                 new ReferenceEvent(ReferenceEventType.DirectorySynced, organization));
-        }
-
-        public async Task RotateApiKeyAsync(Organization organization)
-        {
-            organization.ApiKey = CoreHelpers.SecureRandomString(30);
-            organization.RevisionDate = DateTime.UtcNow;
-            await ReplaceAndUpdateCache(organization);
         }
 
         public async Task DeleteSsoUserAsync(Guid userId, Guid? organizationId)

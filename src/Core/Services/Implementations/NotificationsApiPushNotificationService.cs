@@ -3,13 +3,12 @@ using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Bit.Core.Context;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models;
-using Bit.Core.Models.Table;
 using Bit.Core.Settings;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 
 namespace Bit.Core.Services
 {
@@ -18,22 +17,19 @@ namespace Bit.Core.Services
         private readonly GlobalSettings _globalSettings;
         private readonly IHttpContextAccessor _httpContextAccessor;
 
-        private JsonSerializerSettings _jsonSettings = new JsonSerializerSettings
-        {
-            NullValueHandling = NullValueHandling.Ignore
-        };
-
         public NotificationsApiPushNotificationService(
+            IHttpClientFactory httpFactory,
             GlobalSettings globalSettings,
             IHttpContextAccessor httpContextAccessor,
             ILogger<NotificationsApiPushNotificationService> logger)
             : base(
-                 globalSettings.BaseServiceUri.InternalNotifications,
-                 globalSettings.BaseServiceUri.InternalIdentity,
-                 "internal",
-                 $"internal.{globalSettings.ProjectName}",
-                 globalSettings.InternalIdentityKey,
-                 logger)
+                httpFactory,
+                globalSettings.BaseServiceUri.InternalNotifications,
+                globalSettings.BaseServiceUri.InternalIdentity,
+                "internal",
+                $"internal.{globalSettings.ProjectName}",
+                globalSettings.InternalIdentityKey,
+                logger)
         {
             _globalSettings = globalSettings;
             _httpContextAccessor = httpContextAccessor;
@@ -75,6 +71,7 @@ namespace Bit.Core.Services
                     Id = cipher.Id,
                     UserId = cipher.UserId,
                     RevisionDate = cipher.RevisionDate,
+                    CollectionIds = collectionIds,
                 };
 
                 await SendMessageAsync(type, message, true);

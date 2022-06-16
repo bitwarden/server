@@ -4,6 +4,7 @@ using Bit.Core.Context;
 using Bit.Core.Identity;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
+using Bit.SharedWeb.Utilities;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
@@ -37,7 +38,7 @@ namespace Bit.Admin
             services.AddOptions();
 
             // Settings
-            var globalSettings = services.AddGlobalSettingsServices(Configuration);
+            var globalSettings = services.AddGlobalSettingsServices(Configuration, Environment);
             services.Configure<AdminSettings>(Configuration.GetSection("AdminSettings"));
 
             // Data Protection
@@ -68,7 +69,7 @@ namespace Bit.Admin
             }
 
             // Services
-            services.AddBaseServices();
+            services.AddBaseServices(globalSettings);
             services.AddDefaultServices(globalSettings);
 
 #if OSS

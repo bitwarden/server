@@ -4,9 +4,11 @@ using System.Data.SqlClient;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Bit.Billing.Constants;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
-using Bit.Core.Models.Table;
+using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -17,6 +19,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Stripe;
+using TaxRate = Bit.Core.Entities.TaxRate;
 
 namespace Bit.Billing.Controllers
 {
@@ -29,7 +32,8 @@ namespace Bit.Billing.Controllers
         private readonly BillingSettings _billingSettings;
         private readonly IWebHostEnvironment _hostingEnvironment;
         private readonly IOrganizationService _organizationService;
-        private readonly IOrganizationSponsorshipService _organizationSponsorshipService;
+        private readonly IValidateSponsorshipCommand _validateSponsorshipCommand;
+        private readonly IOrganizationSponsorshipRenewCommand _organizationSponsorshipRenewCommand;
         private readonly IOrganizationRepository _organizationRepository;
         private readonly ITransactionRepository _transactionRepository;
         private readonly IUserService _userService;
@@ -46,7 +50,8 @@ namespace Bit.Billing.Controllers
             IOptions<BillingSettings> billingSettings,
             IWebHostEnvironment hostingEnvironment,
             IOrganizationService organizationService,
-            IOrganizationSponsorshipService organizationSponsorshipService,
+            IValidateSponsorshipCommand validateSponsorshipCommand,
+            IOrganizationSponsorshipRenewCommand organizationSponsorshipRenewCommand,
             IOrganizationRepository organizationRepository,
             ITransactionRepository transactionRepository,
             IUserService userService,
@@ -60,7 +65,8 @@ namespace Bit.Billing.Controllers
             _billingSettings = billingSettings?.Value;
             _hostingEnvironment = hostingEnvironment;
             _organizationService = organizationService;
-            _organizationSponsorshipService = organizationSponsorshipService;
+            _validateSponsorshipCommand = validateSponsorshipCommand;
+            _organizationSponsorshipRenewCommand = organizationSponsorshipRenewCommand;
             _organizationRepository = organizationRepository;
             _transactionRepository = transactionRepository;
             _userService = userService;
@@ -108,8 +114,8 @@ namespace Bit.Billing.Controllers
                 return new BadRequestResult();
             }
 
-            var subDeleted = parsedEvent.Type.Equals("customer.subscription.deleted");
-            var subUpdated = parsedEvent.Type.Equals("customer.subscription.updated");
+            var subDeleted = parsedEvent.Type.Equals(HandledStripeWebhook.SubscriptionDeleted);
+            var subUpdated = parsedEvent.Type.Equals(HandledStripeWebhook.SubscriptionUpdated);
 
             if (subDeleted || subUpdated)
             {
@@ -141,6 +147,10 @@ namespace Bit.Billing.Controllers
                     {
                         await _organizationService.UpdateExpirationDateAsync(ids.Item1.Value,
                             subscription.CurrentPeriodEnd);
+                        if (IsSponsoredSubscription(subscription))
+                        {
+                            await _organizationSponsorshipRenewCommand.UpdateExpirationDateAsync(ids.Item1.Value, subscription.CurrentPeriodEnd);
+                        }
                     }
                     // user
                     else if (ids.Item2.HasValue)
@@ -150,7 +160,7 @@ namespace Bit.Billing.Controllers
                     }
                 }
             }
-            else if (parsedEvent.Type.Equals("invoice.upcoming"))
+            else if (parsedEvent.Type.Equals(HandledStripeWebhook.UpcomingInvoice))
             {
                 var invoice = await GetInvoiceAsync(parsedEvent);
                 var subscriptionService = new SubscriptionService();
@@ -168,10 +178,9 @@ namespace Bit.Billing.Controllers
                 if (ids.Item1.HasValue)
                 {
                     // sponsored org
-                    if (CheckSponsoredSubscription(subscription))
+                    if (IsSponsoredSubscription(subscription))
                     {
-                        await _organizationSponsorshipService
-                            .ValidateSponsorshipAsync(ids.Item1.Value);
+                        await _validateSponsorshipCommand.ValidateSponsorshipAsync(ids.Item1.Value);
                     }
 
                     var org = await _organizationRepository.GetByIdAsync(ids.Item1.Value);
@@ -197,7 +206,7 @@ namespace Bit.Billing.Controllers
                         invoice.NextPaymentAttempt.Value, items, true);
                 }
             }
-            else if (parsedEvent.Type.Equals("charge.succeeded"))
+            else if (parsedEvent.Type.Equals(HandledStripeWebhook.ChargeSucceeded))
             {
                 var charge = await GetChargeAsync(parsedEvent);
                 var chargeTransaction = await _transactionRepository.GetByGatewayIdAsync(
@@ -324,7 +333,7 @@ namespace Bit.Billing.Controllers
                 // Catch foreign key violations because user/org could have been deleted.
                 catch (SqlException e) when (e.Number == 547) { }
             }
-            else if (parsedEvent.Type.Equals("charge.refunded"))
+            else if (parsedEvent.Type.Equals(HandledStripeWebhook.ChargeRefunded))
             {
                 var charge = await GetChargeAsync(parsedEvent);
                 var chargeTransaction = await _transactionRepository.GetByGatewayIdAsync(
@@ -374,7 +383,7 @@ namespace Bit.Billing.Controllers
                     _logger.LogWarning("Charge refund amount doesn't seem correct. " + charge.Id);
                 }
             }
-            else if (parsedEvent.Type.Equals("invoice.payment_succeeded"))
+            else if (parsedEvent.Type.Equals(HandledStripeWebhook.PaymentSucceeded))
             {
                 var invoice = await GetInvoiceAsync(parsedEvent, true);
                 if (invoice.Paid && invoice.BillingReason == "subscription_create")
@@ -426,15 +435,11 @@ namespace Bit.Billing.Controllers
                     }
                 }
             }
-            else if (parsedEvent.Type.Equals("invoice.payment_failed"))
+            else if (parsedEvent.Type.Equals(HandledStripeWebhook.PaymentFailed))
             {
-                var invoice = await GetInvoiceAsync(parsedEvent, true);
-                if (!invoice.Paid && invoice.AttemptCount > 1 && UnpaidAutoChargeInvoiceForSubscriptionCycle(invoice))
-                {
-                    await AttemptToPayInvoiceAsync(invoice);
-                }
+                await HandlePaymentFailed(await GetInvoiceAsync(parsedEvent, true));
             }
-            else if (parsedEvent.Type.Equals("invoice.created"))
+            else if (parsedEvent.Type.Equals(HandledStripeWebhook.InvoiceCreated))
             {
                 var invoice = await GetInvoiceAsync(parsedEvent, true);
                 if (!invoice.Paid && UnpaidAutoChargeInvoiceForSubscriptionCycle(invoice))
@@ -773,7 +778,7 @@ namespace Bit.Billing.Controllers
             if (!string.IsNullOrWhiteSpace(invoice?.CustomerAddress?.Country) && !string.IsNullOrWhiteSpace(invoice?.CustomerAddress?.PostalCode))
             {
                 var localBitwardenTaxRates = await _taxRateRepository.GetByLocationAsync(
-                    new Bit.Core.Models.Table.TaxRate()
+                    new TaxRate()
                     {
                         Country = invoice.CustomerAddress.Country,
                         PostalCode = invoice.CustomerAddress.PostalCode
@@ -794,7 +799,44 @@ namespace Bit.Billing.Controllers
             return subscription;
         }
 
-        private static bool CheckSponsoredSubscription(Subscription subscription) =>
+        private static bool IsSponsoredSubscription(Subscription subscription) =>
             StaticStore.SponsoredPlans.Any(p => p.StripePlanId == subscription.Id);
+
+        private async Task HandlePaymentFailed(Invoice invoice)
+        {
+            if (!invoice.Paid && invoice.AttemptCount > 1 && UnpaidAutoChargeInvoiceForSubscriptionCycle(invoice))
+            {
+                // attempt count 4 = 11 days after initial failure
+                if (invoice.AttemptCount > 3)
+                {
+                    await CancelSubscription(invoice.SubscriptionId);
+                    await VoidOpenInvoices(invoice.SubscriptionId);
+                }
+                else
+                {
+                    await AttemptToPayInvoiceAsync(invoice);
+                }
+            }
+        }
+
+        private async Task CancelSubscription(string subscriptionId)
+        {
+            await new SubscriptionService().CancelAsync(subscriptionId, new SubscriptionCancelOptions());
+        }
+
+        private async Task VoidOpenInvoices(string subscriptionId)
+        {
+            var invoiceService = new InvoiceService();
+            var options = new InvoiceListOptions
+            {
+                Status = "open",
+                Subscription = subscriptionId
+            };
+            var invoices = invoiceService.List(options);
+            foreach (var invoice in invoices)
+            {
+                await invoiceService.VoidInvoiceAsync(invoice.Id);
+            }
+        }
     }
 }

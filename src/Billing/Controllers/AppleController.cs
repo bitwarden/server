@@ -1,13 +1,13 @@
 ﻿using System;
 using System.IO;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Bit.Core;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Newtonsoft.Json;
 
 namespace Bit.Billing.Controllers
 {
@@ -53,8 +53,8 @@ namespace Bit.Billing.Controllers
 
             try
             {
-                var json = JsonConvert.SerializeObject(JsonConvert.DeserializeObject(body), Formatting.Indented);
-                _logger.LogInformation(Constants.BypassFiltersEventId, "Apple IAP Notification:\n\n{0}", json);
+                var json = JsonSerializer.Serialize(JsonSerializer.Deserialize<JsonDocument>(body), JsonHelpers.Indented);
+                _logger.LogInformation(Bit.Core.Constants.BypassFiltersEventId, "Apple IAP Notification:\n\n{0}", json);
                 return new OkResult();
             }
             catch (Exception e)

@@ -4,13 +4,14 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Reflection;
+using System.Text.Json;
 using System.Threading.Tasks;
+using Bit.Core.Entities;
+using Bit.Core.Entities.Provider;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Mail;
 using Bit.Core.Models.Mail.FamiliesForEnterprise;
 using Bit.Core.Models.Mail.Provider;
-using Bit.Core.Models.Table;
-using Bit.Core.Models.Table.Provider;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using HandlebarsDotNet;
@@ -118,12 +119,27 @@ namespace Bit.Core.Services
             await _mailDeliveryService.SendEmailAsync(message);
         }
 
+        public async Task SendNewDeviceLoginTwoFactorEmailAsync(string email, string token)
+        {
+            var message = CreateDefaultMessage("New Device Login Verification Code", email);
+            var model = new EmailTokenViewModel
+            {
+                Token = token,
+                WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+                SiteName = _globalSettings.SiteName
+            };
+            await AddMessageContentAsync(message, "NewDeviceLoginTwoFactorEmail", model);
+            message.MetaData.Add("SendGridBypassListManagement", true);
+            message.Category = "TwoFactorEmail";
+            await _mailDeliveryService.SendEmailAsync(message);
+        }
+
         public async Task SendMasterPasswordHintEmailAsync(string email, string hint)
         {
             var message = CreateDefaultMessage("Your Master Password Hint", email);
             var model = new MasterPasswordHintViewModel
             {
-                Hint = CoreHelpers.SanitizeForEmail(hint),
+                Hint = CoreHelpers.SanitizeForEmail(hint, false),
                 WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
                 SiteName = _globalSettings.SiteName
             };
@@ -205,10 +221,10 @@ namespace Bit.Core.Services
             await _mailDeliveryService.SendEmailAsync(message);
         }
 
-        public Task SendOrganizationInviteEmailAsync(string organizationName, bool orgCanSponsor, OrganizationUser orgUser, ExpiringToken token) =>
-            BulkSendOrganizationInviteEmailAsync(organizationName, orgCanSponsor, new[] { (orgUser, token) });
+        public Task SendOrganizationInviteEmailAsync(string organizationName, OrganizationUser orgUser, ExpiringToken token) =>
+            BulkSendOrganizationInviteEmailAsync(organizationName, new[] { (orgUser, token) });
 
-        public async Task BulkSendOrganizationInviteEmailAsync(string organizationName, bool organizationCanSponsor, IEnumerable<(OrganizationUser orgUser, ExpiringToken token)> invites)
+        public async Task BulkSendOrganizationInviteEmailAsync(string organizationName, IEnumerable<(OrganizationUser orgUser, ExpiringToken token)> invites)
         {
             MailQueueMessage CreateMessage(string email, object model)
             {
@@ -228,7 +244,6 @@ namespace Bit.Core.Services
                     OrganizationNameUrlEncoded = WebUtility.UrlEncode(organizationName),
                     WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
                     SiteName = _globalSettings.SiteName,
-                    OrganizationCanSponsor = organizationCanSponsor,
                 }
             ));
 
@@ -589,7 +604,7 @@ namespace Bit.Core.Services
             var message = CreateDefaultMessage($"Accepted Emergency Access", email);
             var model = new EmergencyAccessAcceptedViewModel
             {
-                GranteeEmail = CoreHelpers.SanitizeForEmail(granteeEmail),
+                GranteeEmail = granteeEmail,
                 WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
                 SiteName = _globalSettings.SiteName
             };
@@ -758,39 +773,32 @@ namespace Bit.Core.Services
             await _mailDeliveryService.SendEmailAsync(message);
         }
 
-        public async Task SendFamiliesForEnterpriseOfferEmailAsync(string email, string sponsorEmail, bool existingAccount, string token)
+        public async Task SendFamiliesForEnterpriseOfferEmailAsync(string sponsorOrgName, string email, bool existingAccount, string token) =>
+            await BulkSendFamiliesForEnterpriseOfferEmailAsync(sponsorOrgName, new[] { (email, existingAccount, token) });
+
+        public async Task BulkSendFamiliesForEnterpriseOfferEmailAsync(string sponsorOrgName, IEnumerable<(string Email, bool ExistingAccount, string Token)> invites)
         {
-            var message = CreateDefaultMessage("Accept Your Free Families Subscription", email);
-
-            if (existingAccount)
+            MailQueueMessage CreateMessage((string Email, bool ExistingAccount, string Token) invite)
             {
-                var model = new FamiliesForEnterpriseOfferExistingAccountViewModel
+                var message = CreateDefaultMessage("Accept Your Free Families Subscription", invite.Email);
+                message.Category = "FamiliesForEnterpriseOffer";
+                var model = new FamiliesForEnterpriseOfferViewModel
                 {
-                    SponsorEmail = CoreHelpers.ObfuscateEmail(sponsorEmail),
-                    SponsoredEmail = WebUtility.UrlEncode(email),
+                    SponsorOrgName = sponsorOrgName,
+                    SponsoredEmail = WebUtility.UrlEncode(invite.Email),
+                    ExistingAccount = invite.ExistingAccount,
                     WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
                     SiteName = _globalSettings.SiteName,
-                    SponsorshipToken = token,
+                    SponsorshipToken = invite.Token,
                 };
+                var templateName = invite.ExistingAccount ?
+                    "FamiliesForEnterprise.FamiliesForEnterpriseOfferExistingAccount" :
+                    "FamiliesForEnterprise.FamiliesForEnterpriseOfferNewAccount";
 
-                await AddMessageContentAsync(message, "FamiliesForEnterprise.FamiliesForEnterpriseOfferExistingAccount", model);
+                return new MailQueueMessage(message, templateName, model);
             }
-            else
-            {
-                var model = new FamiliesForEnterpriseOfferNewAccountViewModel
-                {
-                    SponsorEmail = sponsorEmail,
-                    SponsoredEmail = WebUtility.UrlEncode(email),
-                    WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
-                    SiteName = _globalSettings.SiteName,
-                    SponsorshipToken = token,
-                };
-
-                await AddMessageContentAsync(message, "FamiliesForEnterprise.FamiliesForEnterpriseOfferNewAccount", model);
-            }
-
-            message.Category = "FamiliesForEnterpriseOffer";
-            await _mailDeliveryService.SendEmailAsync(message);
+            var messageModels = invites.Select(invite => CreateMessage(invite));
+            await EnqueueMailAsync(messageModels);
         }
 
         public async Task SendFamiliesForEnterpriseRedeemedEmailsAsync(string familyUserEmail, string sponsorEmail)
@@ -818,12 +826,12 @@ namespace Bit.Core.Services
             await _mailDeliveryService.SendEmailAsync(message);
         }
 
-        public async Task SendFamiliesForEnterpriseSponsorshipRevertingEmailAsync(string email, string familyOrgName)
+        public async Task SendFamiliesForEnterpriseSponsorshipRevertingEmailAsync(string email, DateTime expirationDate)
         {
-            var message = CreateDefaultMessage($"{familyOrgName} Organization Sponsorship Is No Longer Valid", email);
+            var message = CreateDefaultMessage("Your Families Sponsorship was Removed", email);
             var model = new FamiliesForEnterpriseSponsorshipRevertingViewModel
             {
-                OrganizationName = CoreHelpers.SanitizeForEmail(familyOrgName, false),
+                ExpirationDate = expirationDate,
             };
             await AddMessageContentAsync(message, "FamiliesForEnterprise.FamiliesForEnterpriseSponsorshipReverting", model);
             message.Category = "FamiliesForEnterpriseSponsorshipReverting";
@@ -842,6 +850,40 @@ namespace Bit.Core.Services
             await AddMessageContentAsync(message, "OTPEmail", model);
             message.MetaData.Add("SendGridBypassListManagement", true);
             message.Category = "OTP";
+            await _mailDeliveryService.SendEmailAsync(message);
+        }
+
+        public async Task SendFailedLoginAttemptsEmailAsync(string email, DateTime utcNow, string ip)
+        {
+            var message = CreateDefaultMessage("Failed login attempts detected", email);
+            var model = new FailedAuthAttemptsModel()
+            {
+                TheDate = utcNow.ToLongDateString(),
+                TheTime = utcNow.ToShortTimeString(),
+                TimeZone = "UTC",
+                IpAddress = ip,
+                AffectedEmail = email
+
+            };
+            await AddMessageContentAsync(message, "FailedLoginAttempts", model);
+            message.Category = "FailedLoginAttempts";
+            await _mailDeliveryService.SendEmailAsync(message);
+        }
+
+        public async Task SendFailedTwoFactorAttemptsEmailAsync(string email, DateTime utcNow, string ip)
+        {
+            var message = CreateDefaultMessage("Failed login attempts detected", email);
+            var model = new FailedAuthAttemptsModel()
+            {
+                TheDate = utcNow.ToLongDateString(),
+                TheTime = utcNow.ToShortTimeString(),
+                TimeZone = "UTC",
+                IpAddress = ip,
+                AffectedEmail = email
+
+            };
+            await AddMessageContentAsync(message, "FailedTwoFactorAttempts", model);
+            message.Category = "FailedTwoFactorAttempts";
             await _mailDeliveryService.SendEmailAsync(message);
         }
     }

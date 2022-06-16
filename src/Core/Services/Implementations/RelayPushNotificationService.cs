@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Bit.Core.Context;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models;
 using Bit.Core.Models.Api;
-using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Microsoft.AspNetCore.Http;
@@ -18,24 +18,24 @@ namespace Bit.Core.Services
     {
         private readonly IDeviceRepository _deviceRepository;
         private readonly IHttpContextAccessor _httpContextAccessor;
-        private readonly ILogger<RelayPushNotificationService> _logger;
 
         public RelayPushNotificationService(
+            IHttpClientFactory httpFactory,
             IDeviceRepository deviceRepository,
             GlobalSettings globalSettings,
             IHttpContextAccessor httpContextAccessor,
             ILogger<RelayPushNotificationService> logger)
             : base(
-                  globalSettings.PushRelayBaseUri,
-                  globalSettings.Installation.IdentityUri,
-                  "api.push",
-                  $"installation.{globalSettings.Installation.Id}",
-                  globalSettings.Installation.Key,
-                  logger)
+                httpFactory,
+                globalSettings.PushRelayBaseUri,
+                globalSettings.Installation.IdentityUri,
+                "api.push",
+                $"installation.{globalSettings.Installation.Id}",
+                globalSettings.Installation.Key,
+                logger)
         {
             _deviceRepository = deviceRepository;
             _httpContextAccessor = httpContextAccessor;
-            _logger = logger;
         }
 
         public async Task PushSyncCipherCreateAsync(Cipher cipher, IEnumerable<Guid> collectionIds)

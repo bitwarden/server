@@ -1,7 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
+using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Table;
+using Bit.Core.Models;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture;
@@ -15,6 +18,26 @@ namespace Bit.Core.Test.Services
 {
     public class EmergencyAccessServiceTests
     {
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public async Task SaveAsync_PremiumCannotUpdate(
+            SutProvider<EmergencyAccessService> sutProvider, User savingUser)
+        {
+            savingUser.Premium = false;
+            var emergencyAccess = new EmergencyAccess
+            {
+                Type = Enums.EmergencyAccessType.Takeover,
+                GrantorId = savingUser.Id,
+            };
+
+            sutProvider.GetDependency<IUserService>().GetUserByIdAsync(savingUser.Id).Returns(savingUser);
+
+            var exception = await Assert.ThrowsAsync<BadRequestException>(
+                () => sutProvider.Sut.SaveAsync(emergencyAccess, savingUser));
+
+            Assert.Contains("Not a premium user.", exception.Message);
+            await sutProvider.GetDependency<IEmergencyAccessRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default);
+        }
+
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
         public async Task InviteAsync_UserWithKeyConnectorCannotUseTakeover(
             SutProvider<EmergencyAccessService> sutProvider, User invitingUser, string email, int waitTime)
@@ -62,10 +85,12 @@ namespace Bit.Core.Test.Services
                 GrantorId = savingUser.Id,
             };
 
-            sutProvider.GetDependency<IUserService>().GetUserByIdAsync(savingUser.Id).Returns(savingUser);
+            var userService = sutProvider.GetDependency<IUserService>();
+            userService.GetUserByIdAsync(savingUser.Id).Returns(savingUser);
+            userService.CanAccessPremium(savingUser).Returns(true);
 
             var exception = await Assert.ThrowsAsync<BadRequestException>(
-                () => sutProvider.Sut.SaveAsync(emergencyAccess, savingUser.Id));
+                () => sutProvider.Sut.SaveAsync(emergencyAccess, savingUser));
 
             Assert.Contains("You cannot use Emergency Access Takeover because you are using Key Connector", exception.Message);
             await sutProvider.GetDependency<IEmergencyAccessRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default);
@@ -114,6 +139,38 @@ namespace Bit.Core.Test.Services
                 () => sutProvider.Sut.TakeoverAsync(new Guid(), requestingUser));
 
             Assert.Contains("You cannot takeover an account that is using Key Connector", exception.Message);
+        }
+
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public async Task PasswordAsync_Disables_2FA_Providers_And_Unknown_Device_Verification_On_The_Grantor(
+            SutProvider<EmergencyAccessService> sutProvider, User requestingUser, User grantor)
+        {
+            grantor.UsesKeyConnector = true;
+            grantor.UnknownDeviceVerificationEnabled = true;
+            grantor.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
+            {
+                [TwoFactorProviderType.Email] = new TwoFactorProvider
+                {
+                    MetaData = new Dictionary<string, object> { ["Email"] = "asdfasf" },
+                    Enabled = true
+                }
+            });
+            var emergencyAccess = new EmergencyAccess
+            {
+                GrantorId = grantor.Id,
+                GranteeId = requestingUser.Id,
+                Status = Enums.EmergencyAccessStatusType.RecoveryApproved,
+                Type = Enums.EmergencyAccessType.Takeover,
+            };
+
+            sutProvider.GetDependency<IEmergencyAccessRepository>().GetByIdAsync(Arg.Any<Guid>()).Returns(emergencyAccess);
+            sutProvider.GetDependency<IUserRepository>().GetByIdAsync(grantor.Id).Returns(grantor);
+
+            await sutProvider.Sut.PasswordAsync(Guid.NewGuid(), requestingUser, "blablahash", "blablakey");
+
+            Assert.False(grantor.UnknownDeviceVerificationEnabled);
+            Assert.Empty(grantor.GetTwoFactorProviders());
+            await sutProvider.GetDependency<IUserRepository>().Received().ReplaceAsync(grantor);
         }
     }
 }

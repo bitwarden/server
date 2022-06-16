@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Bit.Core.Models.Table;
+using Bit.Core.Entities;
 using Microsoft.AspNetCore.Identity;
 
 namespace Bit.Core.Identity

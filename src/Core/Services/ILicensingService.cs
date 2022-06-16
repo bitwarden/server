@@ -1,6 +1,7 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
+using Bit.Core.Entities;
 using Bit.Core.Models.Business;
-using Bit.Core.Models.Table;
 
 namespace Bit.Core.Services
 {
@@ -11,5 +12,8 @@ namespace Bit.Core.Services
         Task<bool> ValidateUserPremiumAsync(User user);
         bool VerifyLicense(ILicense license);
         byte[] SignLicense(ILicense license);
+        Task<OrganizationLicense> ReadOrganizationLicenseAsync(Organization organization);
+        Task<OrganizationLicense> ReadOrganizationLicenseAsync(Guid organizationId);
+
     }
 }

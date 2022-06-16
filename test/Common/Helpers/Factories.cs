@@ -1,7 +1,4 @@
-﻿using System.Collections.Generic;
-using Bit.Core.Repositories.EntityFramework;
-using Bit.Core.Settings;
-using Microsoft.EntityFrameworkCore;
+﻿using Bit.Core.Settings;
 using Microsoft.Extensions.Configuration;
 
 namespace Bit.Test.Common.Helpers.Factories

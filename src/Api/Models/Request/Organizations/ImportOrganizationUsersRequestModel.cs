@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using Bit.Core.Models.Business;
-using Table = Bit.Core.Models.Table;
 
 namespace Bit.Api.Models.Request.Organizations
 {
@@ -27,7 +26,7 @@ namespace Bit.Api.Models.Request.Organizations
             {
                 var importedGroup = new ImportedGroup
                 {
-                    Group = new Table.Group
+                    Group = new Core.Entities.Group
                     {
                         OrganizationId = organizationId,
                         Name = Name,

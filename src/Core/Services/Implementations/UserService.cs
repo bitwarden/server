@@ -3,13 +3,14 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Claims;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Bit.Core.Context;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models;
 using Bit.Core.Models.Business;
-using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
@@ -19,9 +20,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Newtonsoft.Json;
 using File = System.IO.File;
-using U2fLib = U2F.Core.Crypto.U2F;
 
 namespace Bit.Core.Services
 {
@@ -49,9 +48,10 @@ namespace Bit.Core.Services
         private readonly IReferenceEventService _referenceEventService;
         private readonly IFido2 _fido2;
         private readonly ICurrentContext _currentContext;
-        private readonly GlobalSettings _globalSettings;
+        private readonly IGlobalSettings _globalSettings;
         private readonly IOrganizationService _organizationService;
         private readonly IProviderUserRepository _providerUserRepository;
+        private readonly IDeviceRepository _deviceRepository;
 
         public UserService(
             IUserRepository userRepository,
@@ -78,9 +78,10 @@ namespace Bit.Core.Services
             IReferenceEventService referenceEventService,
             IFido2 fido2,
             ICurrentContext currentContext,
-            GlobalSettings globalSettings,
+            IGlobalSettings globalSettings,
             IOrganizationService organizationService,
-            IProviderUserRepository providerUserRepository)
+            IProviderUserRepository providerUserRepository,
+            IDeviceRepository deviceRepository)
             : base(
                   store,
                   optionsAccessor,
@@ -115,6 +116,7 @@ namespace Bit.Core.Services
             _globalSettings = globalSettings;
             _organizationService = organizationService;
             _providerUserRepository = providerUserRepository;
+            _deviceRepository = deviceRepository;
         }
 
         public Guid? GetProperUserId(ClaimsPrincipal principal)
@@ -347,7 +349,7 @@ namespace Bit.Core.Services
             await _mailService.SendMasterPasswordHintEmailAsync(email, user.MasterPasswordHint);
         }
 
-        public async Task SendTwoFactorEmailAsync(User user)
+        public async Task SendTwoFactorEmailAsync(User user, bool isBecauseNewDeviceLogin = false)
         {
             var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Email);
             if (provider == null || provider.MetaData == null || !provider.MetaData.ContainsKey("Email"))
@@ -358,7 +360,15 @@ namespace Bit.Core.Services
             var email = ((string)provider.MetaData["Email"]).ToLowerInvariant();
             var token = await base.GenerateUserTokenAsync(user, TokenOptions.DefaultEmailProvider,
                 "2faEmail:" + email);
-            await _mailService.SendTwoFactorEmailAsync(email, token);
+
+            if (isBecauseNewDeviceLogin)
+            {
+                await _mailService.SendNewDeviceLoginTwoFactorEmailAsync(email, token);
+            }
+            else
+            {
+                await _mailService.SendTwoFactorEmailAsync(email, token);
+            }
         }
 
         public async Task<bool> VerifyTwoFactorEmailAsync(User user, string token)
@@ -479,25 +489,6 @@ namespace Bit.Core.Services
             if (provider.MetaData.Count < 2)
             {
                 return false;
-            }
-
-            // Delete U2F token is this is a migrated WebAuthn token.
-            var entry = new TwoFactorProvider.WebAuthnData(provider.MetaData[keyName]);
-            if (entry?.Migrated ?? false)
-            {
-                var u2fProvider = user.GetTwoFactorProvider(TwoFactorProviderType.U2f);
-                if (u2fProvider?.MetaData?.ContainsKey(keyName) ?? false)
-                {
-                    u2fProvider.MetaData.Remove(keyName);
-                    if (u2fProvider.MetaData.Count > 0)
-                    {
-                        providers[TwoFactorProviderType.U2f] = u2fProvider;
-                    }
-                    else
-                    {
-                        providers.Remove(TwoFactorProviderType.U2f);
-                    }
-                }
             }
 
             provider.MetaData.Remove(keyName);
@@ -883,11 +874,14 @@ namespace Bit.Core.Services
             return IdentityResult.Failed(_identityErrorDescriber.PasswordMismatch());
         }
 
-        public async Task UpdateTwoFactorProviderAsync(User user, TwoFactorProviderType type, bool setEnabled = true)
+        public async Task UpdateTwoFactorProviderAsync(User user, TwoFactorProviderType type, bool setEnabled = true, bool logEvent = true)
         {
             SetTwoFactorProvider(user, type, setEnabled);
             await SaveUserAsync(user);
-            await _eventService.LogUserEventAsync(user.Id, EventType.User_Updated2fa);
+            if (logEvent)
+            {
+                await _eventService.LogUserEventAsync(user.Id, EventType.User_Updated2fa);
+            }
         }
 
         public async Task DisableTwoFactorProviderAsync(User user, TwoFactorProviderType type,
@@ -897,13 +891,6 @@ namespace Bit.Core.Services
             if (!providers?.ContainsKey(type) ?? true)
             {
                 return;
-            }
-
-            // Since the user can no longer directly manipulate U2F tokens, we should
-            // disable them when the user disables WebAuthn.
-            if (type == TwoFactorProviderType.WebAuthn)
-            {
-                providers.Remove(TwoFactorProviderType.U2f);
             }
 
             providers.Remove(type);
@@ -983,7 +970,8 @@ namespace Bit.Core.Services
 
                 var dir = $"{_globalSettings.LicenseDirectory}/user";
                 Directory.CreateDirectory(dir);
-                File.WriteAllText($"{dir}/{user.Id}.json", JsonConvert.SerializeObject(license, Formatting.Indented));
+                using var fs = File.OpenWrite(Path.Combine(dir, $"{user.Id}.json"));
+                await JsonSerializer.SerializeAsync(fs, license, JsonHelpers.Indented);
             }
             else
             {
@@ -1056,6 +1044,12 @@ namespace Bit.Core.Services
                 throw new InvalidOperationException("Licenses require self hosting.");
             }
 
+            if (license?.LicenseType != null && license.LicenseType != LicenseType.User)
+            {
+                throw new BadRequestException("Organization licenses cannot be applied to a user. "
+                    + "Upload this license from the Organization settings page.");
+            }
+
             if (license == null || !_licenseService.VerifyLicense(license))
             {
                 throw new BadRequestException("Invalid license.");
@@ -1068,7 +1062,8 @@ namespace Bit.Core.Services
 
             var dir = $"{_globalSettings.LicenseDirectory}/user";
             Directory.CreateDirectory(dir);
-            File.WriteAllText($"{dir}/{user.Id}.json", JsonConvert.SerializeObject(license, Formatting.Indented));
+            using var fs = File.OpenWrite(Path.Combine(dir, $"{user.Id}.json"));
+            await JsonSerializer.SerializeAsync(fs, license, JsonHelpers.Indented);
 
             user.Premium = license.Premium;
             user.RevisionDate = DateTime.UtcNow;
@@ -1418,6 +1413,38 @@ namespace Bit.Core.Services
             return user.UsesKeyConnector
                 ? await VerifyOTPAsync(user, secret)
                 : await CheckPasswordAsync(user, secret);
+        }
+
+        public async Task<bool> Needs2FABecauseNewDeviceAsync(User user, string deviceIdentifier, string grantType)
+        {
+            return CanEditDeviceVerificationSettings(user)
+                   && user.UnknownDeviceVerificationEnabled
+                   && grantType != "authorization_code"
+                   && await IsNewDeviceAndNotTheFirstOneAsync(user, deviceIdentifier);
+        }
+
+        public bool CanEditDeviceVerificationSettings(User user)
+        {
+            return _globalSettings.TwoFactorAuth.EmailOnNewDeviceLogin
+                   && user.EmailVerified
+                   && !user.UsesKeyConnector
+                   && !(user.GetTwoFactorProviders()?.Any() ?? false);
+        }
+
+        private async Task<bool> IsNewDeviceAndNotTheFirstOneAsync(User user, string deviceIdentifier)
+        {
+            if (user == null)
+            {
+                return default;
+            }
+
+            var devices = await _deviceRepository.GetManyByUserIdAsync(user.Id);
+            if (!devices.Any())
+            {
+                return false;
+            }
+
+            return !devices.Any(d => d.Identifier == deviceIdentifier);
         }
     }
 }

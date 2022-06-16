@@ -6,9 +6,9 @@ using Bit.Api.Models.Request.Accounts;
 using Bit.Api.Models.Response;
 using Bit.Api.Models.Response.TwoFactor;
 using Bit.Core.Context;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -289,7 +289,16 @@ namespace Bit.Api.Controllers
             {
                 if (await _userService.VerifySecretAsync(user, model.Secret))
                 {
-                    await _userService.SendTwoFactorEmailAsync(user);
+                    var isBecauseNewDeviceLogin = false;
+                    if (user.GetTwoFactorProvider(TwoFactorProviderType.Email) is null
+                        &&
+                        await _userService.Needs2FABecauseNewDeviceAsync(user, model.DeviceIdentifier, null))
+                    {
+                        model.ToUser(user);
+                        isBecauseNewDeviceLogin = true;
+                    }
+
+                    await _userService.SendTwoFactorEmailAsync(user, isBecauseNewDeviceLogin);
                     return;
                 }
             }
@@ -369,6 +378,42 @@ namespace Bit.Api.Controllers
                 await Task.Delay(2000);
                 throw new BadRequestException(string.Empty, "Invalid information. Try again.");
             }
+        }
+
+        [HttpGet("get-device-verification-settings")]
+        public async Task<DeviceVerificationResponseModel> GetDeviceVerificationSettings()
+        {
+            var user = await _userService.GetUserByPrincipalAsync(User);
+            if (user == null)
+            {
+                throw new UnauthorizedAccessException();
+            }
+
+            if (User.Claims.HasSsoIdP())
+            {
+                return new DeviceVerificationResponseModel(false, false);
+            }
+
+            return new DeviceVerificationResponseModel(_userService.CanEditDeviceVerificationSettings(user), user.UnknownDeviceVerificationEnabled);
+        }
+
+        [HttpPut("device-verification-settings")]
+        public async Task<DeviceVerificationResponseModel> PutDeviceVerificationSettings([FromBody] DeviceVerificationRequestModel model)
+        {
+            var user = await _userService.GetUserByPrincipalAsync(User);
+            if (user == null)
+            {
+                throw new UnauthorizedAccessException();
+            }
+            if (!_userService.CanEditDeviceVerificationSettings(user)
+                || User.Claims.HasSsoIdP())
+            {
+                throw new InvalidOperationException("Can't update device verification settings");
+            }
+
+            model.ToUser(user);
+            await _userService.SaveUserAsync(user);
+            return new DeviceVerificationResponseModel(true, user.UnknownDeviceVerificationEnabled);
         }
 
         private async Task<User> CheckAsync(SecretVerificationRequestModel model, bool premium)

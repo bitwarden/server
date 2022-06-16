@@ -5,6 +5,7 @@ using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using Bit.Core.Context;
+using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -27,6 +28,7 @@ namespace Bit.Core.IdentityServer
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly IProviderUserRepository _providerUserRepository;
         private readonly IProviderOrganizationRepository _providerOrganizationRepository;
+        private readonly IOrganizationApiKeyRepository _organizationApiKeyRepository;
 
         public ClientStore(
             IInstallationRepository installationRepository,
@@ -38,7 +40,8 @@ namespace Bit.Core.IdentityServer
             ICurrentContext currentContext,
             IOrganizationUserRepository organizationUserRepository,
             IProviderUserRepository providerUserRepository,
-            IProviderOrganizationRepository providerOrganizationRepository)
+            IProviderOrganizationRepository providerOrganizationRepository,
+            IOrganizationApiKeyRepository organizationApiKeyRepository)
         {
             _installationRepository = installationRepository;
             _organizationRepository = organizationRepository;
@@ -50,6 +53,7 @@ namespace Bit.Core.IdentityServer
             _organizationUserRepository = organizationUserRepository;
             _providerUserRepository = providerUserRepository;
             _providerOrganizationRepository = providerOrganizationRepository;
+            _organizationApiKeyRepository = organizationApiKeyRepository;
         }
 
         public async Task<Client> FindClientByIdAsync(string clientId)
@@ -67,7 +71,7 @@ namespace Bit.Core.IdentityServer
                             ClientId = $"installation.{installation.Id}",
                             RequireClientSecret = true,
                             ClientSecrets = { new Secret(installation.Key.Sha256()) },
-                            AllowedScopes = new string[] { "api.push", "api.licensing" },
+                            AllowedScopes = new string[] { "api.push", "api.licensing", "api.installation" },
                             AllowedGrantTypes = GrantTypes.ClientCredentials,
                             AccessTokenLifetime = 3600 * 24,
                             Enabled = installation.Enabled,
@@ -113,11 +117,14 @@ namespace Bit.Core.IdentityServer
                     var org = await _organizationRepository.GetByIdAsync(id);
                     if (org != null)
                     {
+                        var orgApiKey = (await _organizationApiKeyRepository
+                            .GetManyByOrganizationIdTypeAsync(org.Id, OrganizationApiKeyType.Default))
+                            .First();
                         return new Client
                         {
                             ClientId = $"organization.{org.Id}",
                             RequireClientSecret = true,
-                            ClientSecrets = { new Secret(org.ApiKey.Sha256()) },
+                            ClientSecrets = { new Secret(orgApiKey.ApiKey.Sha256()) },
                             AllowedScopes = new string[] { "api.organization" },
                             AllowedGrantTypes = GrantTypes.ClientCredentials,
                             AccessTokenLifetime = 3600 * 1,

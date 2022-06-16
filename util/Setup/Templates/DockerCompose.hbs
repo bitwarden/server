@@ -205,6 +205,7 @@ services:
       - ../ca-certificates:/etc/bitwarden/ca-certificates
       - ../logs/key-connector:/etc/bitwarden/logs
     env_file:
+      - ../env/uid.env
       - ../env/key-connector.override.env
     networks:
       - default
@@ -214,6 +215,8 @@ services:
 
 volumes:
   mssql_data:
+    labels:
+      com.bitwarden.product: bitwarden
 {{/if}}
 
 networks:

@@ -30,6 +30,7 @@ namespace Bit.Api.Models.Response
             Date = ev.Date;
             DeviceType = ev.DeviceType;
             IpAddress = ev.IpAddress;
+            InstallationId = ev.InstallationId;
         }
 
         public EventType Type { get; set; }
@@ -44,6 +45,7 @@ namespace Bit.Api.Models.Response
         public Guid? ProviderUserId { get; set; }
         public Guid? ProviderOrganizationId { get; set; }
         public Guid? ActingUserId { get; set; }
+        public Guid? InstallationId { get; set; }
         public DateTime Date { get; set; }
         public DeviceType? DeviceType { get; set; }
         public string IpAddress { get; set; }

@@ -13,6 +13,7 @@ namespace Bit.Core.IdentityServer
                 new ApiScope("api.push", "API Push Access"),
                 new ApiScope("api.licensing", "API Licensing Access"),
                 new ApiScope("api.organization", "API Organization Access"),
+                new ApiScope("api.installation", "API Installation Access"),
                 new ApiScope("internal", "Internal Access")
             };
         }

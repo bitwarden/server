@@ -2,12 +2,11 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
-using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
@@ -25,7 +24,6 @@ using Microsoft.IdentityModel.Tokens;
 using Sustainsys.Saml2.AspNetCore2;
 using Sustainsys.Saml2.Configuration;
 using Sustainsys.Saml2.Saml2P;
-using U2F.Core.Utils;
 
 namespace Bit.Core.Business.Sso
 {
@@ -313,8 +311,8 @@ namespace Bit.Core.Business.Sso
                     NameClaimType = JwtClaimTypes.Name,
                     RoleClaimType = JwtClaimTypes.Role,
                 },
-                CallbackPath = config.BuildCallbackPath(),
-                SignedOutCallbackPath = config.BuildSignedOutCallbackPath(),
+                CallbackPath = SsoConfigurationData.BuildCallbackPath(),
+                SignedOutCallbackPath = SsoConfigurationData.BuildSignedOutCallbackPath(),
                 MetadataAddress = config.MetadataAddress,
                 // Prevents URLs that go beyond 1024 characters which may break for some servers
                 AuthenticationMethod = config.RedirectBehavior,
@@ -358,7 +356,7 @@ namespace Bit.Core.Business.Sso
             }
 
             var spEntityId = new Sustainsys.Saml2.Metadata.EntityId(
-                config.BuildSaml2ModulePath(_globalSettings.BaseServiceUri.Sso));
+                SsoConfigurationData.BuildSaml2ModulePath(_globalSettings.BaseServiceUri.Sso));
             bool? allowCreate = null;
             if (config.SpNameIdFormat != Saml2NameIdFormat.Transient)
             {
@@ -367,7 +365,7 @@ namespace Bit.Core.Business.Sso
             var spOptions = new SPOptions
             {
                 EntityId = spEntityId,
-                ModulePath = config.BuildSaml2ModulePath(null, name),
+                ModulePath = SsoConfigurationData.BuildSaml2ModulePath(null, name),
                 NameIdPolicy = new Saml2NameIdPolicy(allowCreate, GetNameIdFormat(config.SpNameIdFormat)),
                 WantAssertionsSigned = config.SpWantAssertionsSigned,
                 AuthenticateRequestSigningBehavior = GetSigningBehavior(config.SpSigningBehavior),
@@ -402,19 +400,16 @@ namespace Bit.Core.Business.Sso
             {
                 idp.SingleLogoutServiceUrl = new Uri(config.IdpSingleLogoutServiceUrl);
             }
-            if (!string.IsNullOrWhiteSpace(config.IdpArtifactResolutionServiceUrl))
-            {
-                idp.ArtifactResolutionServiceUrls.TryAdd(0, new Uri(config.IdpArtifactResolutionServiceUrl));
-            }
             if (!string.IsNullOrWhiteSpace(config.IdpOutboundSigningAlgorithm))
             {
                 idp.OutboundSigningAlgorithm = config.IdpOutboundSigningAlgorithm;
             }
             if (!string.IsNullOrWhiteSpace(config.IdpX509PublicCert))
             {
-                var cert = config.IdpX509PublicCert.Base64StringToByteArray();
+                var cert = CoreHelpers.Base64UrlDecode(config.IdpX509PublicCert);
                 idp.SigningKeys.AddConfiguredKey(new X509Certificate2(cert));
             }
+            idp.ArtifactResolutionServiceUrls.Clear();
             // This must happen last since it calls Validate() internally.
             idp.LoadMetadata = false;
 
@@ -463,7 +458,6 @@ namespace Bit.Core.Business.Sso
             {
                 Saml2BindingType.HttpRedirect => Sustainsys.Saml2.WebSso.Saml2BindingType.HttpRedirect,
                 Saml2BindingType.HttpPost => Sustainsys.Saml2.WebSso.Saml2BindingType.HttpPost,
-                Saml2BindingType.Artifact => Sustainsys.Saml2.WebSso.Saml2BindingType.Artifact,
                 _ => Sustainsys.Saml2.WebSso.Saml2BindingType.HttpPost,
             };
         }

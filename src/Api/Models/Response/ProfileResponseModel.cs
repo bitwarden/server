@@ -2,9 +2,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using Bit.Api.Models.Response.Providers;
+using Bit.Core.Entities;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Data;
-using Bit.Core.Models.Table;
+using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 
 namespace Bit.Api.Models.Response
 {

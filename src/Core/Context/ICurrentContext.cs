@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Microsoft.AspNetCore.Http;
@@ -51,6 +51,8 @@ namespace Bit.Core.Context
         Task<bool> ManageSso(Guid orgId);
         Task<bool> ManageUsers(Guid orgId);
         Task<bool> ManageResetPassword(Guid orgId);
+        Task<bool> ManageBilling(Guid orgId);
+        Task<bool> ProviderUserForOrgAsync(Guid orgId);
         bool ProviderProviderAdmin(Guid providerId);
         bool ProviderUser(Guid providerId);
         bool ProviderManageUsers(Guid providerId);

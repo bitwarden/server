@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using Bit.Core.Models.Table;
+using Bit.Core.Entities;
 
 namespace Bit.Core.Test.Repositories.EntityFramework.EqualityComparers
 {
@@ -42,7 +42,6 @@ namespace Bit.Core.Test.Repositories.EntityFramework.EqualityComparers
                    x.ReferenceData.Equals(y.ReferenceData) &&
                    x.Enabled.Equals(y.Enabled) &&
                    x.LicenseKey.Equals(y.LicenseKey) &&
-                   x.ApiKey.Equals(y.ApiKey) &&
                    x.TwoFactorProviders.Equals(y.TwoFactorProviders) &&
                    x.ExpirationDate.ToString().Equals(y.ExpirationDate.ToString());
         }

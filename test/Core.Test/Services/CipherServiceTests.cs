@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Bit.Core.Entities;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Table;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture.CipherFixtures;
@@ -55,6 +55,13 @@ namespace Bit.Core.Test.Services
         public async Task ShareManyAsync_WrongRevisionDate_Throws(SutProvider<CipherService> sutProvider,
             IEnumerable<Cipher> ciphers, Guid organizationId, List<Guid> collectionIds)
         {
+            sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId)
+                .Returns(new Organization
+                {
+                    PlanType = Enums.PlanType.EnterpriseAnnually,
+                    MaxStorageGb = 100
+                });
+
             var cipherInfos = ciphers.Select(c => (c, (DateTime?)c.RevisionDate.AddDays(-1)));
 
             var exception = await Assert.ThrowsAsync<BadRequestException>(
@@ -108,6 +115,13 @@ namespace Bit.Core.Test.Services
         public async Task ShareManyAsync_CorrectRevisionDate_Passes(string revisionDateString,
             SutProvider<CipherService> sutProvider, IEnumerable<Cipher> ciphers, Organization organization, List<Guid> collectionIds)
         {
+            sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id)
+                .Returns(new Organization
+                {
+                    PlanType = Enums.PlanType.EnterpriseAnnually,
+                    MaxStorageGb = 100
+                });
+
             var cipherInfos = ciphers.Select(c => (c,
                 string.IsNullOrEmpty(revisionDateString) ? null : (DateTime?)c.RevisionDate));
             var sharingUserId = ciphers.First().UserId.Value;
@@ -156,6 +170,52 @@ namespace Bit.Core.Test.Services
                 Assert.Null(cipher.DeletedDate);
                 Assert.Equal(revisionDate, cipher.RevisionDate);
             }
+        }
+
+        [Theory]
+        [InlineUserCipherAutoData]
+        public async Task ShareManyAsync_FreeOrgWithAttachment_Throws(SutProvider<CipherService> sutProvider,
+            IEnumerable<Cipher> ciphers, Guid organizationId, List<Guid> collectionIds)
+        {
+            sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId).Returns(new Organization
+            {
+                PlanType = Enums.PlanType.Free
+            });
+            ciphers.FirstOrDefault().Attachments =
+                "{\"attachment1\":{\"Size\":\"250\",\"FileName\":\"superCoolFile\","
+                + "\"Key\":\"superCoolFile\",\"ContainerName\":\"testContainer\",\"Validated\":false}}";
+
+            var cipherInfos = ciphers.Select(c => (c,
+               (DateTime?)c.RevisionDate));
+            var sharingUserId = ciphers.First().UserId.Value;
+
+            var exception = await Assert.ThrowsAsync<BadRequestException>(
+                () => sutProvider.Sut.ShareManyAsync(cipherInfos, organizationId, collectionIds, sharingUserId));
+            Assert.Contains("This organization cannot use attachments", exception.Message);
+        }
+
+        [Theory]
+        [InlineUserCipherAutoData]
+        public async Task ShareManyAsync_PaidOrgWithAttachment_Passes(SutProvider<CipherService> sutProvider,
+            IEnumerable<Cipher> ciphers, Guid organizationId, List<Guid> collectionIds)
+        {
+            sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId)
+                .Returns(new Organization
+                {
+                    PlanType = Enums.PlanType.EnterpriseAnnually,
+                    MaxStorageGb = 100
+                });
+            ciphers.FirstOrDefault().Attachments =
+                "{\"attachment1\":{\"Size\":\"250\",\"FileName\":\"superCoolFile\","
+                + "\"Key\":\"superCoolFile\",\"ContainerName\":\"testContainer\",\"Validated\":false}}";
+
+            var cipherInfos = ciphers.Select(c => (c,
+               (DateTime?)c.RevisionDate));
+            var sharingUserId = ciphers.First().UserId.Value;
+
+            await sutProvider.Sut.ShareManyAsync(cipherInfos, organizationId, collectionIds, sharingUserId);
+            await sutProvider.GetDependency<ICipherRepository>().Received(1).UpdateCiphersAsync(sharingUserId,
+                Arg.Is<IEnumerable<Cipher>>(arg => arg.Except(ciphers).IsNullOrEmpty()));
         }
     }
 }

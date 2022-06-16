@@ -118,6 +118,11 @@ namespace Bit.Test.Common.AutoFixture
                 {
                     return _sutProvider.GetDependency(parameterInfo.ParameterType, parameterInfo.Name);
                 }
+                // Return default type if set
+                else if (_sutProvider.DependencyIsSet(parameterInfo.ParameterType, ""))
+                {
+                    return _sutProvider.GetDependency(parameterInfo.ParameterType, "");
+                }
 
 
                 // This is the equivalent of _fixture.Create<parameterInfo.ParameterType>, but no overload for

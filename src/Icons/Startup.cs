@@ -3,6 +3,7 @@ using System.Globalization;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Icons.Services;
+using Bit.SharedWeb.Utilities;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -15,13 +16,15 @@ namespace Bit.Icons
 {
     public class Startup
     {
-        public Startup(IConfiguration configuration)
+        public Startup(IWebHostEnvironment env, IConfiguration configuration)
         {
             CultureInfo.DefaultThreadCurrentCulture = new CultureInfo("en-US");
             Configuration = configuration;
+            Environment = env;
         }
 
         public IConfiguration Configuration { get; }
+        public IWebHostEnvironment Environment { get; }
 
         public void ConfigureServices(IServiceCollection services)
         {
@@ -29,7 +32,7 @@ namespace Bit.Icons
             services.AddOptions();
 
             // Settings
-            var globalSettings = services.AddGlobalSettingsServices(Configuration);
+            var globalSettings = services.AddGlobalSettingsServices(Configuration, Environment);
             var iconsSettings = new IconsSettings();
             ConfigurationBinder.Bind(Configuration.GetSection("IconsSettings"), iconsSettings);
             services.AddSingleton(s => iconsSettings);

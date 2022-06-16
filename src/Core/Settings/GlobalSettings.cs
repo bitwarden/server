@@ -37,18 +37,19 @@ namespace Bit.Core.Settings
         public virtual string HibpApiKey { get; set; }
         public virtual bool DisableUserRegistration { get; set; }
         public virtual bool DisableEmailNewDevice { get; set; }
+        public virtual bool EnableCloudCommunication { get; set; } = false;
         public virtual int OrganizationInviteExpirationHours { get; set; } = 120; // 5 days
         public virtual string EventGridKey { get; set; }
         public virtual CaptchaSettings Captcha { get; set; } = new CaptchaSettings();
-        public virtual InstallationSettings Installation { get; set; } = new InstallationSettings();
-        public virtual BaseServiceUriSettings BaseServiceUri { get; set; }
+        public virtual IInstallationSettings Installation { get; set; } = new InstallationSettings();
+        public virtual IBaseServiceUriSettings BaseServiceUri { get; set; }
         public virtual string DatabaseProvider { get; set; }
         public virtual SqlSettings SqlServer { get; set; } = new SqlSettings();
         public virtual SqlSettings PostgreSql { get; set; } = new SqlSettings();
         public virtual SqlSettings MySql { get; set; } = new SqlSettings();
         public virtual SqlSettings Sqlite { get; set; } = new SqlSettings();
         public virtual MailSettings Mail { get; set; } = new MailSettings();
-        public virtual ConnectionStringSettings Storage { get; set; } = new ConnectionStringSettings();
+        public virtual IConnectionStringSettings Storage { get; set; } = new ConnectionStringSettings();
         public virtual ConnectionStringSettings Events { get; set; } = new ConnectionStringSettings();
         public virtual NotificationsSettings Notifications { get; set; } = new NotificationsSettings();
         public virtual IFileStorageSettings Attachment { get; set; }
@@ -66,8 +67,9 @@ namespace Bit.Core.Settings
         public virtual AmazonSettings Amazon { get; set; } = new AmazonSettings();
         public virtual ServiceBusSettings ServiceBus { get; set; } = new ServiceBusSettings();
         public virtual AppleIapSettings AppleIap { get; set; } = new AppleIapSettings();
-        public virtual SsoSettings Sso { get; set; } = new SsoSettings();
+        public virtual ISsoSettings Sso { get; set; } = new SsoSettings();
         public virtual StripeSettings Stripe { get; set; } = new StripeSettings();
+        public virtual ITwoFactorAuthSettings TwoFactorAuth { get; set; } = new TwoFactorAuthSettings();
 
         public string BuildExternalUri(string explicitValue, string name)
         {
@@ -108,7 +110,7 @@ namespace Bit.Core.Settings
             return string.Concat("/etc/bitwarden", appendedPath);
         }
 
-        public class BaseServiceUriSettings
+        public class BaseServiceUriSettings : IBaseServiceUriSettings
         {
             private readonly GlobalSettings _globalSettings;
 
@@ -216,7 +218,7 @@ namespace Bit.Core.Settings
             }
         }
 
-        public class ConnectionStringSettings
+        public class ConnectionStringSettings : IConnectionStringSettings
         {
             private string _connectionString;
 
@@ -280,9 +282,8 @@ namespace Bit.Core.Settings
             public string ReplyToEmail { get; set; }
             public string AmazonConfigSetName { get; set; }
             public SmtpSettings Smtp { get; set; } = new SmtpSettings();
-            public string PostalDomain { get; set; }
-            public string PostalApiKey { get; set; }
-            public int? PostalPercentage { get; set; }
+            public string SendGridApiKey { get; set; }
+            public int? SendGridPercentage { get; set; }
 
             public class SmtpSettings
             {
@@ -422,9 +423,10 @@ namespace Bit.Core.Settings
             public string NotificationUrl { get; set; }
         }
 
-        public class InstallationSettings
+        public class InstallationSettings : IInstallationSettings
         {
             private string _identityUri;
+            private string _apiUri;
 
             public Guid Id { get; set; }
             public string Key { get; set; }
@@ -432,6 +434,11 @@ namespace Bit.Core.Settings
             {
                 get => string.IsNullOrWhiteSpace(_identityUri) ? "https://identity.bitwarden.com" : _identityUri;
                 set => _identityUri = value;
+            }
+            public string ApiUri
+            {
+                get => string.IsNullOrWhiteSpace(_apiUri) ? "https://api.bitwarden.com" : _apiUri;
+                set => _apiUri = value;
             }
         }
 
@@ -454,9 +461,10 @@ namespace Bit.Core.Settings
             public bool AppInReview { get; set; }
         }
 
-        public class SsoSettings
+        public class SsoSettings : ISsoSettings
         {
             public int CacheLifetimeInSeconds { get; set; } = 60;
+            public double SsoTokenLifetimeInSeconds { get; set; } = 5;
         }
 
         public class CaptchaSettings
@@ -464,12 +472,20 @@ namespace Bit.Core.Settings
             public bool ForceCaptchaRequired { get; set; } = false;
             public string HCaptchaSecretKey { get; set; }
             public string HCaptchaSiteKey { get; set; }
+            public int MaximumFailedLoginAttempts { get; set; }
+            public double MaybeBotScoreThreshold { get; set; } = double.MaxValue;
+            public double IsBotScoreThreshold { get; set; } = double.MaxValue;
         }
 
         public class StripeSettings
         {
             public string ApiKey { get; set; }
             public int MaxNetworkRetries { get; set; } = 2;
+        }
+
+        public class TwoFactorAuthSettings : ITwoFactorAuthSettings
+        {
+            public bool EmailOnNewDeviceLogin { get; set; } = true;
         }
     }
 }

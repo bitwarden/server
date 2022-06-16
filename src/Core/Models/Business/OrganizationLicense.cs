@@ -4,11 +4,11 @@ using System.Reflection;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using System.Text.Json.Serialization;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Models.Table;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Newtonsoft.Json;
 
 namespace Bit.Core.Models.Business
 {
@@ -21,6 +21,7 @@ namespace Bit.Core.Models.Business
             ILicensingService licenseService, int? version = null)
         {
             Version = version.GetValueOrDefault(CURRENT_LICENSE_FILE_VERSION); // TODO: Remember to change the constant
+            LicenseType = Enums.LicenseType.Organization;
             LicenseKey = org.LicenseKey;
             InstallationId = installationId;
             Id = org.Id;
@@ -121,6 +122,7 @@ namespace Bit.Core.Models.Business
         public DateTime? Refresh { get; set; }
         public DateTime? Expires { get; set; }
         public bool Trial { get; set; }
+        public LicenseType? LicenseType { get; set; }
         public string Hash { get; set; }
         public string Signature { get; set; }
         [JsonIgnore]
@@ -145,6 +147,7 @@ namespace Bit.Core.Models.Business
                     .Where(p =>
                         !p.Name.Equals(nameof(Signature)) &&
                         !p.Name.Equals(nameof(SignatureBytes)) &&
+                        !p.Name.Equals(nameof(LicenseType)) &&
                         // UsersGetPremium was added in Version 2
                         (Version >= 2 || !p.Name.Equals(nameof(UsersGetPremium))) &&
                         // UseEvents was added in Version 3
@@ -207,7 +210,7 @@ namespace Bit.Core.Models.Business
             }
         }
 
-        public bool VerifyData(Organization organization, GlobalSettings globalSettings)
+        public bool VerifyData(Organization organization, IGlobalSettings globalSettings)
         {
             if (Issued > DateTime.UtcNow || Expires < DateTime.UtcNow)
             {
