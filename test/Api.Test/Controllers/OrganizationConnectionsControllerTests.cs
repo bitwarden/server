@@ -172,7 +172,7 @@ namespace Bit.Api.Test.Controllers
             SutProvider<OrganizationConnectionsController> sutProvider)
         {
             existing1.Type = existing2.Type = type;
-            existing1.Config = JsonSerializer.Serialize(config);    
+            existing1.Config = JsonSerializer.Serialize(config);
             var typedModel = RequestModelFromEntity<ScimConfig>(existing1);
 
             sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(typedModel.OrganizationId).Returns(true);
