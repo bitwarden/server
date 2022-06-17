@@ -6,6 +6,7 @@ using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
 using Bit.Api.Models.Response.Organizations;
 using Bit.Core.Context;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
@@ -372,6 +373,70 @@ namespace Bit.Api.Controllers
 
             var userId = _userService.GetProperUserId(User);
             var result = await _organizationService.DeleteUsersAsync(orgGuidId, model.Ids, userId.Value);
+            return new ListResponseModel<OrganizationUserBulkResponseModel>(result.Select(r =>
+                new OrganizationUserBulkResponseModel(r.Item1.Id, r.Item2)));
+        }
+
+        [HttpPatch("{id}/deactivate")]
+        [HttpPut("{id}/deactivate")]
+        public async Task Deactivate(Guid orgId, Guid id)
+        {
+            await ActivateOrDeactivateUserAsync(orgId, id, _organizationService.DeactivateUserAsync);
+        }
+
+        [HttpPatch("deactivate")]
+        [HttpPut("deactivate")]
+        public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkDeactivate(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
+        {
+            return await ActivateOrDeactivateUsersAsync(orgId, model, _organizationService.DeactivateUsersAsync);
+        }
+
+        [HttpPatch("{id}/activate")]
+        [HttpPut("{id}/activate")]
+        public async Task Activate(Guid orgId, Guid id)
+        {
+            await ActivateOrDeactivateUserAsync(orgId, id, _organizationService.ActivateUserAsync);
+        }
+
+        [HttpPatch("activate")]
+        [HttpPut("activate")]
+        public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkActivate(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
+        {
+            return await ActivateOrDeactivateUsersAsync(orgId, model, _organizationService.ActivateUsersAsync);
+        }
+
+        private async Task ActivateOrDeactivateUserAsync(
+            Guid orgId,
+            Guid id,
+            Func<OrganizationUser, Guid?, Task> statusAction)
+        {
+            if (!await _currentContext.ManageUsers(orgId))
+            {
+                throw new NotFoundException();
+            }
+
+            var userId = _userService.GetProperUserId(User);
+            var orgUser = await _organizationUserRepository.GetByIdAsync(id);
+            if (orgUser == null || orgUser.OrganizationId != orgId)
+            {
+                throw new NotFoundException();
+            }
+
+            await statusAction(orgUser, userId);
+        }
+
+        private async Task<ListResponseModel<OrganizationUserBulkResponseModel>> ActivateOrDeactivateUsersAsync(
+            Guid orgId,
+            OrganizationUserBulkRequestModel model,
+            Func<Guid, IEnumerable<Guid>, Guid?, Task<List<Tuple<OrganizationUser, string>>>> statusAction)
+        {
+            if (!await _currentContext.ManageUsers(orgId))
+            {
+                throw new NotFoundException();
+            }
+
+            var userId = _userService.GetProperUserId(User);
+            var result = await statusAction(orgId, model.Ids, userId.Value);
             return new ListResponseModel<OrganizationUserBulkResponseModel>(result.Select(r =>
                 new OrganizationUserBulkResponseModel(r.Item1.Id, r.Item2)));
         }
