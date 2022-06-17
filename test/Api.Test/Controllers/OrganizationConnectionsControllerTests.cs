@@ -147,13 +147,33 @@ namespace Bit.Api.Test.Controllers
         }
 
         [Theory]
-        [BitMemberAutoData(nameof(ConnectionTypes))]
-        public async Task UpdateConnection_OnlyOneConnectionOfEachType(OrganizationConnectionType type,
+        [BitAutoData(OrganizationConnectionType.CloudBillingSync)]
+        public async Task UpdateConnection_BillingSync_OnlyOneConnectionOfEachType(OrganizationConnectionType type,
             OrganizationConnection existing1, OrganizationConnection existing2, BillingSyncConfig config,
             SutProvider<OrganizationConnectionsController> sutProvider)
         {
+            existing1.Type = existing2.Type = type;
             existing1.Config = JsonSerializer.Serialize(config);
-            var typedModel = RequestModelFromEntity(existing1);
+            var typedModel = RequestModelFromEntity<BillingSyncConfig>(existing1);
+
+            sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(typedModel.OrganizationId).Returns(true);
+
+            sutProvider.GetDependency<IOrganizationConnectionRepository>().GetByOrganizationIdTypeAsync(typedModel.OrganizationId, type).Returns(new[] { existing1, existing2 });
+
+            var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateConnection(existing1.Id, typedModel));
+
+            Assert.Contains($"The requested organization already has a connection of type {typedModel.Type}. Only one of each connection type may exist per organization.", exception.Message);
+        }
+
+        [Theory]
+        [BitAutoData(OrganizationConnectionType.Scim)]
+        public async Task UpdateConnection_Scim_OnlyOneConnectionOfEachType(OrganizationConnectionType type,
+            OrganizationConnection existing1, OrganizationConnection existing2, ScimConfig config,
+            SutProvider<OrganizationConnectionsController> sutProvider)
+        {
+            existing1.Type = existing2.Type = type;
+            existing1.Config = JsonSerializer.Serialize(config);    
+            var typedModel = RequestModelFromEntity<ScimConfig>(existing1);
 
             sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(typedModel.OrganizationId).Returns(true);
 
@@ -172,7 +192,8 @@ namespace Bit.Api.Test.Controllers
         {
             updated.Config = JsonSerializer.Serialize(config);
             updated.Id = existing.Id;
-            var model = RequestModelFromEntity(updated);
+            updated.Type = OrganizationConnectionType.CloudBillingSync;
+            var model = RequestModelFromEntity<BillingSyncConfig>(updated);
 
             sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(model.OrganizationId).Returns(true);
             sutProvider.GetDependency<IOrganizationConnectionRepository>().GetByOrganizationIdTypeAsync(model.OrganizationId, model.Type).Returns(new[] { existing });
@@ -245,7 +266,8 @@ namespace Bit.Api.Test.Controllers
             await sutProvider.GetDependency<IDeleteOrganizationConnectionCommand>().DeleteAsync(connection);
         }
 
-        private static OrganizationConnectionRequestModel<BillingSyncConfig> RequestModelFromEntity(OrganizationConnection entity)
+        private static OrganizationConnectionRequestModel<T> RequestModelFromEntity<T>(OrganizationConnection entity)
+            where T : new()
         {
             return new(new OrganizationConnectionRequestModel()
             {

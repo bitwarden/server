@@ -507,9 +507,9 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            if (model.Type == OrganizationApiKeyType.BillingSync)
+            if (model.Type == OrganizationApiKeyType.BillingSync || model.Type == OrganizationApiKeyType.Scim)
             {
-                // Non-enterprise orgs should not be able to create or view an apikey of billing sync key type
+                // Non-enterprise orgs should not be able to create or view an apikey of billing sync/scim key types
                 var plan = StaticStore.GetPlan(organization.PlanType);
                 if (plan.Product != ProductType.Enterprise)
                 {
