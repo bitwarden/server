@@ -85,7 +85,8 @@ namespace Bit.Core.Services
                 receipt.ContainsKey("UserId") ? new Guid(receipt["UserId"]) : (Guid?)null);
         }
 
-        private async Task<AppleReceiptStatus> GetReceiptStatusAsync(string receiptData, bool prod = true,
+        // Internal for testing
+        internal async Task<AppleReceiptStatus> GetReceiptStatusAsync(string receiptData, bool prod = true,
             int attempt = 0, AppleReceiptStatus lastReceiptStatus = null)
         {
             try
