@@ -2244,6 +2244,11 @@ namespace Bit.Core.Services
             {
                 try
                 {
+                    if (organizationUser.Status == OrganizationUserStatusType.Deactivated)
+                    {
+                        throw new BadRequestException("Already deactivated.");
+                    }
+
                     if (disablingUserId.HasValue && organizationUser.UserId == disablingUserId)
                     {
                         throw new BadRequestException("You cannot deactivate yourself.");
