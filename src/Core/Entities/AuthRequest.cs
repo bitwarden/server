@@ -1,7 +1,7 @@
 ﻿using System;
 using Bit.Core.Utilities;
 
-namespace Bit.Core.Models.Table
+namespace Bit.Core.Entities
 {
     public class AuthRequest : ITableObject<Guid>
     {

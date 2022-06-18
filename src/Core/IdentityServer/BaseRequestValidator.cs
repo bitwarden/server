@@ -112,6 +112,9 @@ namespace Bit.Core.IdentityServer
             {
                 // Just defaulting it
                 var twoFactorProviderType = TwoFactorProviderType.Authenticator;
+
+                // If 2FA is required but either this isn't a 2FA request or it is but it's the wrong type, return a response to the client
+                // indicating that 2FA is required.
                 if (!twoFactorRequest || !Enum.TryParse(twoFactorProvider, out twoFactorProviderType))
                 {
                     await BuildTwoFactorResultAsync(user, twoFactorOrganization, context, requires2FABecauseNewDevice);

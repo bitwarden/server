@@ -66,7 +66,7 @@ namespace Bit.Notifications
                 case PushType.AuthRequest:
                 case PushType.AuthRequestResponse:
                     var authRequestNotification =
-                        JsonConvert.DeserializeObject<PushNotificationData<AuthRequestPushNotification>>(
+                        JsonSerializer.Deserialize<PushNotificationData<AuthRequestPushNotification>>(
                                 notificationJson);
                     await hubContext.Clients.User(authRequestNotification.Payload.UserId.ToString())
                         .SendAsync("ReceiveMessage", authRequestNotification, cancellationToken);

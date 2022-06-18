@@ -1,8 +1,9 @@
 ﻿using System;
-using Bit.Core.Models.Table;
+using Bit.Core.Entities;
+using Bit.Core.Repositories;
 using Bit.Core.Settings;
 
-namespace Bit.Core.Repositories.SqlServer
+namespace Bit.Infrastructure.Dapper.Repositories
 {
     public class AuthRequestRepository : Repository<AuthRequest, Guid>, IAuthRequestRepository
     {
