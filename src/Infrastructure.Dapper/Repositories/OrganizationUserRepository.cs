@@ -409,5 +409,27 @@ namespace Bit.Infrastructure.Dapper.Repositories
                 return results.ToList();
             }
         }
+
+        public async Task DeactivateAsync(Guid id)
+        {
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.ExecuteAsync(
+                    $"[{Schema}].[{Table}_Deactivate]",
+                    new { Id = id },
+                    commandType: CommandType.StoredProcedure);
+            }
+        }
+
+        public async Task ActivateAsync(Guid id, OrganizationUserStatusType status)
+        {
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.ExecuteAsync(
+                    $"[{Schema}].[{Table}_Activate]",
+                    new { Id = id, Status = status },
+                    commandType: CommandType.StoredProcedure);
+            }
+        }
     }
 }

@@ -1,4 +1,5 @@
-﻿@model HomeModel
+﻿@using Bit.Admin.Controllers
+@model HomeModel
 @{
     ViewData["Title"] = "Dashboard";
 }
@@ -9,7 +10,7 @@
             let loadedWebLatest = false;
             let loadedWebInstalled = false;
 
-            fetch('@Url.Action("GetLatestDockerHubVersion", new { repository = "web" })').then((response) => {
+            fetch('@Url.Action("GetLatestVersion", new { project = @ProjectType.Web })').then((response) => {
                 return response.json();
             }).then((version) => {
                 document.getElementById('web-latest').innerText = version;
@@ -19,7 +20,7 @@
                 }
             });
 
-            fetch('@Url.Action("GetLatestDockerHubVersion", new { repository = "api" })').then((response) => {
+            fetch('@Url.Action("GetLatestVersion", new { project = @ProjectType.Core })').then((response) => {
                 return response.json();
             }).then((version) => {
                 document.getElementById('server-latest').innerText = version;

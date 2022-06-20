@@ -117,6 +117,9 @@ namespace Bit.Core.Test.Services
                 { ("familyOrgName", typeof(string)), "Test Org Name" },
                 { ("existingAccount", typeof(bool)), true },
                 { ("sponsorshipEndDate", typeof(DateTime)), DateTime.UtcNow.AddDays(1)},
+                { ("sponsorOrgName", typeof(string)), "Sponsor Test Org Name" },
+                { ("expirationDate", typeof(DateTime)), DateTime.Now.AddDays(3) },
+                { ("utcNow", typeof(DateTime)), DateTime.UtcNow },
             };
 
             var globalSettings = new GlobalSettings
