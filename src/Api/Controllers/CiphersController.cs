@@ -179,6 +179,7 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
+            var collectionIds = (await _collectionCipherRepository.GetManyByUserIdCipherIdAsync(userId, new Guid(id))).Select(c => c.CollectionId).ToList();
             var modelOrgId = string.IsNullOrWhiteSpace(model.OrganizationId) ?
                 (Guid?)null : new Guid(model.OrganizationId);
             if (cipher.OrganizationId != modelOrgId)
@@ -187,7 +188,7 @@ namespace Bit.Api.Controllers
                     "then try again.");
             }
 
-            await _cipherService.SaveDetailsAsync(model.ToCipherDetails(cipher), userId, model.LastKnownRevisionDate);
+            await _cipherService.SaveDetailsAsync(model.ToCipherDetails(cipher), userId, model.LastKnownRevisionDate, collectionIds);
 
             var response = new CipherResponseModel(cipher, _globalSettings);
             return response;
@@ -205,9 +206,10 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
+            var collectionIds = (await _collectionCipherRepository.GetManyByUserIdCipherIdAsync(userId, new Guid(id))).Select(c => c.CollectionId).ToList();
             // object cannot be a descendant of CipherDetails, so let's clone it.
             var cipherClone = model.ToCipher(cipher).Clone();
-            await _cipherService.SaveAsync(cipherClone, userId, model.LastKnownRevisionDate, null, true, false);
+            await _cipherService.SaveAsync(cipherClone, userId, model.LastKnownRevisionDate, collectionIds, true, false);
 
             var response = new CipherMiniResponseModel(cipherClone, _globalSettings, cipher.OrganizationUseTotp);
             return response;
