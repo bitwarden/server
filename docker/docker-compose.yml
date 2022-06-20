@@ -13,7 +13,7 @@ services:
     volumes:
       - attachments:/etc/bitwarden/core/attachments
       - aspnet-dataprotection:/etc/bitwarden/core/aspnet-dataprotection
-      - logs-admin:/etc/bitwarden/logs/Admin
+      - logs:/etc/bitwarden/logs
 
   api:
     env_file:
@@ -23,7 +23,7 @@ services:
     volumes:
       - attachments:/etc/bitwarden/core/attachments
       - aspnet-dataprotection:/etc/bitwarden/core/aspnet-dataprotection
-      - logs-api:/etc/bitwarden/logs/Api
+      - logs:/etc/bitwarden/logs
 
   attachments:
     env_file:
@@ -39,7 +39,7 @@ services:
     image: ${REGISTRY:-bitwarden}/events:${CORE_TAG:-latest}
     restart: always
     volumes:
-      - logs-events:/etc/bitwarden/logs/Events
+      - logs:/etc/bitwarden/logs
         
   icons:
     env_file:
@@ -47,7 +47,7 @@ services:
     image: ${REGISTRY:-bitwarden}/icons:${CORE_TAG:-latest}
     restart: always
     volumes:
-      - logs-icons:/etc/bitwarden/logs/Icons
+      - logs:/etc/bitwarden/logs
 
   identity:
     env_file:
@@ -58,7 +58,7 @@ services:
       - attachments:/etc/bitwarden/core/attachments
       - aspnet-dataprotection:/etc/bitwarden/core/aspnet-dataprotection
       - identity:/etc/bitwarden/identity
-      - logs-identity:/etc/bitwarden/logs/Identity
+      - logs:/etc/bitwarden/logs
       
   mssql:
     env_file:
@@ -96,7 +96,7 @@ services:
     image: ${REGISTRY:-bitwarden}/notifications:${CORE_TAG:-latest}
     restart: always
     volumes:
-      - logs-notifications:/etc/bitwarden/logs/Notifications
+      - logs:/etc/bitwarden/logs
 
   sso:
     env_file:
@@ -107,7 +107,7 @@ services:
       - attachments:/etc/bitwarden/core/attachments
       - aspnet-dataprotection:/etc/bitwarden/core/aspnet-dataprotection
       - identity:/etc/bitwarden/identity
-      - logs-sso:/etc/bitwarden/logs/SSO
+      - logs:/etc/bitwarden/logs
         
   web:
     env_file:
@@ -121,13 +121,7 @@ volumes:
   attachments:
   aspnet-dataprotection:
   identity:
-  logs-admin:
-  logs-api:
-  logs-events:
-  logs-icons:
-  logs-identity:
-  logs-notifications:
-  logs-sso:
+  logs:
   mssql_data:
   mssql_logs:
   ssl:
