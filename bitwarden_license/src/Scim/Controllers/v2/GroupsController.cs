@@ -125,7 +125,7 @@ namespace Bit.Scim.Controllers.v2
             var replaceOp = model.Operations?.FirstOrDefault(o => o.Op == "replace");
             if (replaceOp != null)
             {
-                if(replaceOp.Path == "members")
+                if (replaceOp.Path == "members")
                 {
                     var ids = GetValueIds(replaceOp.Value);
                     await _groupRepository.UpdateUsersAsync(group.Id, ids);
@@ -139,7 +139,7 @@ namespace Bit.Scim.Controllers.v2
             if (addMembersOp != null)
             {
                 var orgUserIds = (await _groupRepository.GetManyUserIdsByIdAsync(group.Id)).ToHashSet();
-                foreach (var v in GetValueIds(replaceOp.Value))
+                foreach (var v in GetValueIds(addMembersOp.Value))
                 {
                     orgUserIds.Add(v);
                 }
@@ -178,11 +178,11 @@ namespace Bit.Scim.Controllers.v2
         private List<Guid> GetValueIds(JsonElement objArray)
         {
             var ids = new List<Guid>();
-            foreach(var obj in objArray.EnumerateArray())
+            foreach (var obj in objArray.EnumerateArray())
             {
-                if(obj.TryGetProperty("value", out var valueProperty))
+                if (obj.TryGetProperty("value", out var valueProperty))
                 {
-                    if(valueProperty.TryGetGuid(out var guid))
+                    if (valueProperty.TryGetGuid(out var guid))
                     {
                         ids.Add(guid);
                     }
