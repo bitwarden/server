@@ -98,17 +98,13 @@ namespace Bit.Core.Services
             }
             else
             {
-                if (collectionIds != null)
-                {
-                    throw new ArgumentException("Cannot create cipher with collection ids at the same time.");
-                }
                 ValidateCipherLastKnownRevisionDateAsync(cipher, lastKnownRevisionDate);
                 cipher.RevisionDate = DateTime.UtcNow;
                 await _cipherRepository.ReplaceAsync(cipher);
                 await _eventService.LogCipherEventAsync(cipher, Enums.EventType.Cipher_Updated);
 
                 // push
-                await _pushService.PushSyncCipherUpdateAsync(cipher, null);
+                await _pushService.PushSyncCipherUpdateAsync(cipher, collectionIds);
             }
         }
 
@@ -156,17 +152,13 @@ namespace Bit.Core.Services
             }
             else
             {
-                if (collectionIds != null)
-                {
-                    throw new ArgumentException("Cannot create cipher with collection ids at the same time.");
-                }
                 ValidateCipherLastKnownRevisionDateAsync(cipher, lastKnownRevisionDate);
                 cipher.RevisionDate = DateTime.UtcNow;
                 await _cipherRepository.ReplaceAsync(cipher);
                 await _eventService.LogCipherEventAsync(cipher, Enums.EventType.Cipher_Updated);
 
                 // push
-                await _pushService.PushSyncCipherUpdateAsync(cipher, null);
+                await _pushService.PushSyncCipherUpdateAsync(cipher, collectionIds);
             }
         }
 
