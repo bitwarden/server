@@ -416,9 +416,20 @@ namespace Bit.Core.Services
         public async Task SendAdminResetPasswordEmailAsync(string email, string userName, string orgName)
         {
             var message = CreateDefaultMessage("Master Password Has Been Changed", email);
+
+            string name;
+            if (string.IsNullOrEmpty(userName))
+            {
+                name = email;
+            }
+            else
+            {
+                name = CoreHelpers.SanitizeForEmail(userName, false);
+            }
+
             var model = new AdminResetPasswordViewModel()
             {
-                UserName = CoreHelpers.SanitizeForEmail(userName),
+                UserName = name,
                 OrgName = CoreHelpers.SanitizeForEmail(orgName),
             };
             await AddMessageContentAsync(message, "AdminResetPassword", model);
@@ -764,9 +775,20 @@ namespace Bit.Core.Services
         public async Task SendUpdatedTempPasswordEmailAsync(string email, string userName)
         {
             var message = CreateDefaultMessage("Master Password Has Been Changed", email);
+
+            string name;
+            if (string.IsNullOrEmpty(userName))
+            {
+                name = email;
+            }
+            else
+            {
+                name = CoreHelpers.SanitizeForEmail(userName, false);
+            }
+
             var model = new UpdateTempPasswordViewModel()
             {
-                UserName = CoreHelpers.SanitizeForEmail(userName)
+                UserName = name
             };
             await AddMessageContentAsync(message, "UpdatedTempPassword", model);
             message.Category = "UpdatedTempPassword";
