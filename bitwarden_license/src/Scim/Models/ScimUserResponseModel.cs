@@ -22,11 +22,10 @@ namespace Bit.Scim.Models
             DisplayName = orgUser.Name;
             Emails = new List<EmailModel> { new EmailModel(orgUser.Email) };
             Name = new NameModel(orgUser.Name);
-            Active = true;
+            Active = orgUser.Status != Core.Enums.OrganizationUserStatusType.Deactivated;
         }
 
         public string Id { get; set; }
-        public string ExternalId { get; set; }
         public ScimMetaModel Meta { get; private set; }
     }
 }

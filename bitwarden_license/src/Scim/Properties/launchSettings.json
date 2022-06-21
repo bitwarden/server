@@ -16,7 +16,7 @@
         "ASPNETCORE_ENVIRONMENT": "Development"
       }
     },
-    "Billing": {
+    "Scim": {
       "commandName": "Project",
       "launchBrowser": false,
       "launchUrl": "http://localhost:44558",

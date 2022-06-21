@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -83,7 +83,7 @@ namespace Bit.Scim.Controllers.v2
             var groups = await _groupRepository.GetManyByOrganizationIdAsync(organizationId);
             if (!string.IsNullOrWhiteSpace(model.ExternalId) && groups.Any(g => g.ExternalId == model.ExternalId))
             {
-                return new StatusCodeResult((int)HttpStatusCode.Conflict);
+                return new ConflictResult();
             }
 
             var group = model.ToGroup(organizationId);
@@ -122,27 +122,26 @@ namespace Bit.Scim.Controllers.v2
                     Detail = "Group not found."
                 });
             }
-            var replaceOp = model.Operations?.FirstOrDefault(o => o.Op == "replace" && o.Value != null);
+            var replaceOp = model.Operations?.FirstOrDefault(o => o.Op == "replace");
             if (replaceOp != null)
             {
-                var valueDict = replaceOp.Value as Dictionary<string, object>;
-                if (valueDict.ContainsKey("displayName"))
+                if(replaceOp.Path == "members")
                 {
-                    group.Name = valueDict["displayName"].ToString();
+                    var ids = GetValueIds(replaceOp.Value);
+                    await _groupRepository.UpdateUsersAsync(group.Id, ids);
+                }
+                else if (replaceOp.Value.TryGetProperty("displayName", out var displayNameProperty))
+                {
+                    group.Name = displayNameProperty.GetString();
                 }
             }
-            var addMembersOp = model.Operations?.FirstOrDefault(
-                o => o.Op == "add" && o.Path == "members" && o.Value != null);
+            var addMembersOp = model.Operations?.FirstOrDefault(o => o.Op == "add" && o.Path == "members");
             if (addMembersOp != null)
             {
                 var orgUserIds = (await _groupRepository.GetManyUserIdsByIdAsync(group.Id)).ToHashSet();
-                var valueList = addMembersOp.Value as List<Dictionary<string, string>>;
-                foreach (var v in valueList.Where(v => v.ContainsKey("value")))
+                foreach (var v in GetValueIds(replaceOp.Value))
                 {
-                    if (Guid.TryParse(v["value"], out var orgUserId))
-                    {
-                        orgUserIds.Add(orgUserId);
-                    }
+                    orgUserIds.Add(v);
                 }
                 await _groupRepository.UpdateUsersAsync(group.Id, orgUserIds);
             }
@@ -150,13 +149,14 @@ namespace Bit.Scim.Controllers.v2
                 o => o.Op == "remove" && !string.IsNullOrWhiteSpace(o.Path) && o.Path.StartsWith("members[value eq "));
             if (removeMembersOp != null)
             {
-                if (Guid.TryParse(removeMembersOp.Path.Substring(19).Replace("\\\"]", string.Empty), out var orgUserId))
+                var removeId = removeMembersOp.Path.Substring(19).Replace("\\\"]", string.Empty);
+                if (Guid.TryParse(removeId, out var orgUserId))
                 {
                     await _groupService.DeleteUserAsync(group, orgUserId);
                 }
             }
             await _groupService.SaveAsync(group);
-            return new StatusCodeResult((int)HttpStatusCode.NoContent);
+            return new NoContentResult();
         }
 
         [HttpDelete("{id}")]
@@ -173,6 +173,22 @@ namespace Bit.Scim.Controllers.v2
             }
             await _groupService.DeleteAsync(group);
             return new NoContentResult();
+        }
+
+        private List<Guid> GetValueIds(JsonElement objArray)
+        {
+            var ids = new List<Guid>();
+            foreach(var obj in objArray.EnumerateArray())
+            {
+                if(obj.TryGetProperty("value", out var valueProperty))
+                {
+                    if(valueProperty.TryGetGuid(out var guid))
+                    {
+                        ids.Add(guid);
+                    }
+                }
+            }
+            return ids;
         }
     }
 }

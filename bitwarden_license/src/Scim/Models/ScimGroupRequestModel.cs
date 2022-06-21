@@ -1,5 +1,6 @@
 ﻿using System;
 using Bit.Core.Entities;
+using Bit.Core.Utilities;
 
 namespace Bit.Scim.Models
 {
@@ -11,10 +12,11 @@ namespace Bit.Scim.Models
 
         public Group ToGroup(Guid organizationId)
         {
+            var externalId = string.IsNullOrWhiteSpace(ExternalId) ? CoreHelpers.RandomString(15) : ExternalId;
             return new Group
             {
                 Name = DisplayName,
-                ExternalId = ExternalId,
+                ExternalId = externalId,
                 OrganizationId = organizationId
             };
         }

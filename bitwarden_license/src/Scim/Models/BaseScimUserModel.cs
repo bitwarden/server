@@ -21,6 +21,7 @@ namespace Bit.Scim.Models
         public string DisplayName { get; set; }
         public bool Active { get; set; }
         public List<string> Groups { get; set; }
+        public string ExternalId { get; set; }
 
         public class NameModel
         {

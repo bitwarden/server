@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Text.Json;
 
 namespace Bit.Scim.Models
 {
@@ -13,7 +14,7 @@ namespace Bit.Scim.Models
         {
             public string Op { get; set; }
             public string Path { get; set; }
-            public object Value { get; set; }
+            public JsonElement Value { get; set; }
         }
     }
 }
