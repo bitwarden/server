@@ -45,7 +45,8 @@ namespace Bit.Core.Test.Utilities
         [InlineData("hellothere@.worldcom")]                // domain beginning with dot
         [InlineData("hellothere@worldcom.")]                // domain ending in dot
         [InlineData("hellothere@world.com-")]               // domain ending in hyphen
-        [InlineData("héllö@world.com")]                     // unicode in local-part
+        [InlineData("hellö@world.com")]                     // unicode at end of local-part
+        [InlineData("héllo@world.com")]                     // unicode in middle of local-part
         public void IsValid_ReturnsFalseWhenInvalid(string email)
         {
             var sut = new StrictEmailAddressAttribute();
