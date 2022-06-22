@@ -41,7 +41,7 @@ namespace Bit.Core.Utilities
             * Must end in a letter (including unicode)
             See the unit tests for examples of what is allowed.
             **/
-            var emailFormat = @"[\x00-\x7F]+@.+\.\p{L}+$";
+            var emailFormat = @"^[\x00-\x7F]+@.+\.\p{L}+$";
             if (!Regex.IsMatch(emailAddress, emailFormat))
             {
                 return false;
