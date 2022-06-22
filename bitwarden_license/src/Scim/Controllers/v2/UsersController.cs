@@ -7,6 +7,7 @@ using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
+using Bit.Scim.Context;
 using Bit.Scim.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -23,6 +24,7 @@ namespace Bit.Scim.Controllers.v2
         private readonly IUserRepository _userRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly IOrganizationService _organizationService;
+        private readonly IScimContext _scimContext;
         private readonly ScimSettings _scimSettings;
         private readonly ILogger<UsersController> _logger;
 
@@ -31,14 +33,16 @@ namespace Bit.Scim.Controllers.v2
             IUserRepository userRepository,
             IOrganizationUserRepository organizationUserRepository,
             IOrganizationService organizationService,
-            IOptions<ScimSettings> billingSettings,
+            IScimContext scimContext,
+            IOptions<ScimSettings> scimSettings,
             ILogger<UsersController> logger)
         {
             _userService = userService;
             _userRepository = userRepository;
             _organizationUserRepository = organizationUserRepository;
             _organizationService = organizationService;
-            _scimSettings = billingSettings?.Value;
+            _scimContext = scimContext;
+            _scimSettings = scimSettings?.Value;
             _logger = logger;
         }
 
@@ -85,7 +89,7 @@ namespace Bit.Scim.Controllers.v2
 
             var userList = new List<ScimUserResponseModel> { };
             var orgUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(organizationId);
-            var totalResults = orgUsers.Count;
+            var totalResults = 0;
             if (!string.IsNullOrWhiteSpace(emailFilter))
             {
                 var orgUser = orgUsers.FirstOrDefault(ou => ou.Email.ToLowerInvariant() == emailFilter);
@@ -111,6 +115,7 @@ namespace Bit.Scim.Controllers.v2
                     .Take(count.Value)
                     .Select(ou => new ScimUserResponseModel(ou))
                     .ToList();
+                totalResults = orgUsers.Count;
             }
 
             var result = new ScimListResponseModel<ScimUserResponseModel>
@@ -127,6 +132,18 @@ namespace Bit.Scim.Controllers.v2
         public async Task<IActionResult> Post(Guid organizationId, [FromBody] ScimUserRequestModel model)
         {
             var email = model.PrimaryEmail?.ToLowerInvariant();
+            if (string.IsNullOrWhiteSpace(email) && _scimContext.ScimProvider.HasValue)
+            {
+                switch (_scimContext.ScimProvider.Value)
+                {
+                    case ScimProviderType.AzureAd:
+                        email = model.UserName?.ToLowerInvariant();
+                        break;
+                    default:
+                        break;
+                }
+            }
+
             if (string.IsNullOrWhiteSpace(email) || !model.Active)
             {
                 return new BadRequestResult();

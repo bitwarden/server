@@ -3,6 +3,7 @@ using System.Globalization;
 using Bit.Core.Context;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
+using Bit.Scim.Context;
 using Bit.Scim.Utilities;
 using Bit.SharedWeb.Utilities;
 using IdentityModel;
@@ -48,6 +49,7 @@ namespace Bit.Scim
 
             // Context
             services.AddScoped<ICurrentContext, CurrentContext>();
+            services.AddScoped<IScimContext, ScimContext>();
 
             // Authentication
             services.AddAuthentication(ApiKeyAuthenticationOptions.DefaultScheme)
@@ -108,6 +110,7 @@ namespace Bit.Scim
 
             // Add current context
             app.UseMiddleware<CurrentContextMiddleware>();
+            app.UseMiddleware<ScimContextMiddleware>();
 
             // Add MVC to the request pipeline.
             app.UseEndpoints(endpoints => endpoints.MapDefaultControllerRoute());

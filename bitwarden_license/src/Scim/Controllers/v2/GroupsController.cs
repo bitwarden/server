@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Scim.Context;
 using Bit.Scim.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -20,17 +21,20 @@ namespace Bit.Scim.Controllers.v2
         private readonly ScimSettings _scimSettings;
         private readonly IGroupRepository _groupRepository;
         private readonly IGroupService _groupService;
+        private readonly IScimContext _scimContext;
         private readonly ILogger<GroupsController> _logger;
 
         public GroupsController(
             IGroupRepository groupRepository,
             IGroupService groupService,
             IOptions<ScimSettings> scimSettings,
+            IScimContext scimContext,
             ILogger<GroupsController> logger)
         {
             _scimSettings = scimSettings?.Value;
             _groupRepository = groupRepository;
             _groupService = groupService;
+            _scimContext = scimContext;
             _logger = logger;
         }
 

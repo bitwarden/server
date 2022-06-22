@@ -8,7 +8,6 @@ using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using IdentityModel;
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -52,6 +51,10 @@ namespace Bit.Scim.Utilities
                 return AuthenticateResult.Fail("Invalid parameters");
             }
             var apiKey = authHeader.ToString();
+            if (apiKey.StartsWith("Bearer "))
+            {
+                apiKey = apiKey.Substring(7);
+            }
 
             var org = await _organizationRepository.GetByIdAsync(orgId);
             var orgApiKey = (await _organizationApiKeyRepository
