@@ -57,7 +57,7 @@ namespace Bit.Scim.Controllers.v2
         {
             var groups = await _groupRepository.GetManyByOrganizationIdAsync(organizationId);
             var groupList = groups.OrderBy(g => g.Name)
-                .Skip(startIndex.Value - 1) // Should this be offset by 1 or not?
+                .Skip(startIndex.Value - 1)
                 .Take(count.Value)
                 .Select(g => new ScimGroupResponseModel(g))
                 .ToList();
@@ -89,7 +89,6 @@ namespace Bit.Scim.Controllers.v2
             var group = model.ToGroup(organizationId);
             await _groupService.SaveAsync(group, null);
             var response = new ScimGroupResponseModel(group);
-            // TODO: Absolute URL generation using global settings service URLs for SCIM service
             return new CreatedResult(Url.Action(nameof(Get), new { group.OrganizationId, group.Id }), response);
         }
 
@@ -105,6 +104,7 @@ namespace Bit.Scim.Controllers.v2
                     Detail = "Group not found."
                 });
             }
+
             group.Name = model.DisplayName;
             await _groupService.SaveAsync(group);
             return new ObjectResult(new ScimGroupResponseModel(group));
@@ -122,12 +122,13 @@ namespace Bit.Scim.Controllers.v2
                     Detail = "Group not found."
                 });
             }
+
             var replaceOp = model.Operations?.FirstOrDefault(o => o.Op == "replace");
             if (replaceOp != null)
             {
                 if (replaceOp.Path == "members")
                 {
-                    var ids = GetValueIds(replaceOp.Value);
+                    var ids = GetOperationValueIds(replaceOp.Value);
                     await _groupRepository.UpdateUsersAsync(group.Id, ids);
                 }
                 else if (replaceOp.Value.TryGetProperty("displayName", out var displayNameProperty))
@@ -135,26 +136,29 @@ namespace Bit.Scim.Controllers.v2
                     group.Name = displayNameProperty.GetString();
                 }
             }
+
             var addMembersOp = model.Operations?.FirstOrDefault(o => o.Op == "add" && o.Path == "members");
             if (addMembersOp != null)
             {
                 var orgUserIds = (await _groupRepository.GetManyUserIdsByIdAsync(group.Id)).ToHashSet();
-                foreach (var v in GetValueIds(addMembersOp.Value))
+                foreach (var v in GetOperationValueIds(addMembersOp.Value))
                 {
                     orgUserIds.Add(v);
                 }
                 await _groupRepository.UpdateUsersAsync(group.Id, orgUserIds);
             }
+
             var removeMembersOp = model.Operations?.FirstOrDefault(
                 o => o.Op == "remove" && !string.IsNullOrWhiteSpace(o.Path) && o.Path.StartsWith("members[value eq "));
             if (removeMembersOp != null)
             {
-                var removeId = removeMembersOp.Path.Substring(19).Replace("\\\"]", string.Empty);
+                var removeId = removeMembersOp.Path.Substring(18).Replace("\"]", string.Empty);
                 if (Guid.TryParse(removeId, out var orgUserId))
                 {
                     await _groupService.DeleteUserAsync(group, orgUserId);
                 }
             }
+
             await _groupService.SaveAsync(group);
             return new NoContentResult();
         }
@@ -175,7 +179,7 @@ namespace Bit.Scim.Controllers.v2
             return new NoContentResult();
         }
 
-        private List<Guid> GetValueIds(JsonElement objArray)
+        private List<Guid> GetOperationValueIds(JsonElement objArray)
         {
             var ids = new List<Guid>();
             foreach (var obj in objArray.EnumerateArray())

@@ -6,6 +6,7 @@ using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Utilities;
 using Bit.Scim.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -106,7 +107,7 @@ namespace Bit.Scim.Controllers.v2
             else if (string.IsNullOrWhiteSpace(filter) && startIndex.HasValue && count.HasValue)
             {
                 userList = orgUsers.OrderBy(ou => ou.Email)
-                    .Skip(startIndex.Value - 1) // Should this be offset by 1 or not?
+                    .Skip(startIndex.Value - 1)
                     .Take(count.Value)
                     .Select(ou => new ScimUserResponseModel(ou))
                     .ToList();
@@ -138,7 +139,20 @@ namespace Bit.Scim.Controllers.v2
                 return new ConflictResult();
             }
 
-            var externalId = string.IsNullOrWhiteSpace(model.ExternalId) ? model.UserName : model.ExternalId;
+            string externalId = null;
+            if (!string.IsNullOrWhiteSpace(model.ExternalId))
+            {
+                externalId = model.ExternalId;
+            }
+            else if (!string.IsNullOrWhiteSpace(model.UserName))
+            {
+                externalId = model.UserName;
+            }
+            else
+            {
+                externalId = CoreHelpers.RandomString(15);
+            }
+
             var orgUserByExternalId = orgUsers.FirstOrDefault(ou => ou.ExternalId == externalId);
             if (orgUserByExternalId != null)
             {
@@ -149,7 +163,6 @@ namespace Bit.Scim.Controllers.v2
                 OrganizationUserType.User, false, externalId, new List<SelectionReadOnly>());
             var orgUser = await _organizationUserRepository.GetDetailsByIdAsync(invitedOrgUser.Id);
             var response = new ScimUserResponseModel(orgUser);
-            // TODO: Absolute URL generation using global settings service URLs for SCIM service
             return new CreatedResult(Url.Action(nameof(Get), new { orgUser.OrganizationId, orgUser.Id }), response);
         }
 
@@ -165,6 +178,7 @@ namespace Bit.Scim.Controllers.v2
                     Detail = "User not found."
                 });
             }
+
             if (model.Active && orgUser.Status == OrganizationUserStatusType.Deactivated)
             {
                 await _organizationService.ActivateUserAsync(orgUser, null);
@@ -173,6 +187,7 @@ namespace Bit.Scim.Controllers.v2
             {
                 await _organizationService.DeactivateUserAsync(orgUser, null);
             }
+
             // Have to get full details object for response model
             var orgUserDetails = await _organizationUserRepository.GetDetailsByIdAsync(id);
             return new ObjectResult(new ScimUserResponseModel(orgUserDetails));
@@ -190,6 +205,7 @@ namespace Bit.Scim.Controllers.v2
                     Detail = "User not found."
                 });
             }
+
             var replaceOp = model.Operations?.FirstOrDefault(o => o.Op == "replace");
             if (replaceOp != null)
             {
@@ -206,6 +222,7 @@ namespace Bit.Scim.Controllers.v2
                     }
                 }
             }
+
             return new NoContentResult();
         }
 
