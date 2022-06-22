@@ -21,6 +21,7 @@ namespace Bit.Api.Models.Public.Response
 
             Id = collection.Id;
             ExternalId = collection.ExternalId;
+            Name = collection.Name;
             Groups = groups?.Select(c => new AssociationWithPermissionsResponseModel(c));
         }
 
@@ -36,6 +37,10 @@ namespace Bit.Api.Models.Public.Response
         /// <example>539a36c5-e0d2-4cf9-979e-51ecf5cf6593</example>
         [Required]
         public Guid Id { get; set; }
+        /// <summary>
+        /// The collections name.
+        /// </summary>
+        public string Name { get; set; }
         /// <summary>
         /// The associated groups that this collection is assigned to.
         /// </summary>
