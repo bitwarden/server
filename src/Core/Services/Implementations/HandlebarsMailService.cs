@@ -40,6 +40,20 @@ namespace Bit.Core.Services
             _mailEnqueuingService = mailEnqueuingService;
         }
 
+        private static string GetUserIdentifier(string email, string userName)
+        {
+            string identifier;
+            if (string.IsNullOrEmpty(userName))
+            {
+                identifier = email;
+            }
+            else
+            {
+                identifier = CoreHelpers.SanitizeForEmail(userName, false);
+            }
+            return identifier;
+        }
+
         public async Task SendVerifyEmailEmailAsync(string email, Guid userId, string token)
         {
             var message = CreateDefaultMessage("Verify Your Email", email);
@@ -416,20 +430,9 @@ namespace Bit.Core.Services
         public async Task SendAdminResetPasswordEmailAsync(string email, string userName, string orgName)
         {
             var message = CreateDefaultMessage("Master Password Has Been Changed", email);
-
-            string name;
-            if (string.IsNullOrEmpty(userName))
-            {
-                name = email;
-            }
-            else
-            {
-                name = CoreHelpers.SanitizeForEmail(userName, false);
-            }
-
             var model = new AdminResetPasswordViewModel()
             {
-                UserName = name,
+                UserName = GetUserIdentifier(email, userName),
                 OrgName = CoreHelpers.SanitizeForEmail(orgName),
             };
             await AddMessageContentAsync(message, "AdminResetPassword", model);
@@ -775,20 +778,9 @@ namespace Bit.Core.Services
         public async Task SendUpdatedTempPasswordEmailAsync(string email, string userName)
         {
             var message = CreateDefaultMessage("Master Password Has Been Changed", email);
-
-            string name;
-            if (string.IsNullOrEmpty(userName))
-            {
-                name = email;
-            }
-            else
-            {
-                name = CoreHelpers.SanitizeForEmail(userName, false);
-            }
-
             var model = new UpdateTempPasswordViewModel()
             {
-                UserName = name
+                UserName = GetUserIdentifier(email, userName)
             };
             await AddMessageContentAsync(message, "UpdatedTempPassword", model);
             message.Category = "UpdatedTempPassword";
