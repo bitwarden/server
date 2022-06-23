@@ -1,5 +1,8 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Microsoft.AspNetCore.Http;
 
@@ -11,16 +14,33 @@ namespace Bit.Scim.Context
 
         public virtual HttpContext HttpContext { get; set; }
         public ScimProviderType? ScimProvider { get; set; }
+        public Guid? OrganizationId { get; set; }
+        public Organization Organization { get; set; }
 
-        public virtual Task BuildAsync(HttpContext httpContext, GlobalSettings globalSettings)
+        public async virtual Task BuildAsync(
+            HttpContext httpContext,
+            GlobalSettings globalSettings,
+            IOrganizationRepository organizationRepository)
         {
             if (_builtHttpContext)
             {
-                return Task.FromResult(0);
+                return;
             }
 
             _builtHttpContext = true;
             HttpContext = httpContext;
+
+            string orgIdString = null;
+            if (httpContext.Request.RouteValues.TryGetValue("organizationId", out var orgIdObject))
+            {
+                orgIdString = orgIdObject?.ToString();
+            }
+
+            if (!string.IsNullOrWhiteSpace(orgIdString) && Guid.TryParse(orgIdString, out var orgId))
+            {
+                OrganizationId = orgId;
+                Organization = await organizationRepository.GetByIdAsync(orgId);
+            }
 
             if (ScimProvider == null && httpContext.Request.Headers.ContainsKey("User-Agent"))
             {
@@ -34,8 +54,6 @@ namespace Bit.Scim.Context
             {
                 ScimProvider = ScimProviderType.AzureAd;
             }
-
-            return Task.FromResult(0);
         }
     }
 }

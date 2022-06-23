@@ -104,13 +104,15 @@ namespace Bit.Scim
             // Add routing
             app.UseRouting();
 
+            // Add Scim context
+            app.UseMiddleware<ScimContextMiddleware>();
+
             // Add authentication and authorization to the request pipeline.
             app.UseAuthentication();
             app.UseAuthorization();
 
             // Add current context
             app.UseMiddleware<CurrentContextMiddleware>();
-            app.UseMiddleware<ScimContextMiddleware>();
 
             // Add MVC to the request pipeline.
             app.UseEndpoints(endpoints => endpoints.MapDefaultControllerRoute());

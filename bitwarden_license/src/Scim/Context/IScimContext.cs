@@ -1,5 +1,8 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Microsoft.AspNetCore.Http;
 
@@ -9,6 +12,11 @@ namespace Bit.Scim.Context
     {
         HttpContext HttpContext { get; set; }
         ScimProviderType? ScimProvider { get; set; }
-        Task BuildAsync(HttpContext httpContext, GlobalSettings globalSettings);
+        Guid? OrganizationId { get; set; }
+        Organization Organization { get; set; }
+        Task BuildAsync(
+            HttpContext httpContext,
+            GlobalSettings globalSettings,
+            IOrganizationRepository organizationRepository);
     }
 }
