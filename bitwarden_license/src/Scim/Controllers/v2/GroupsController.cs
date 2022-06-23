@@ -127,6 +127,8 @@ namespace Bit.Scim.Controllers.v2
                 });
             }
 
+            var operationHandled = false;
+
             var replaceOp = model.Operations?.FirstOrDefault(o => o.Op == "replace");
             if (replaceOp != null)
             {
@@ -135,11 +137,14 @@ namespace Bit.Scim.Controllers.v2
                 {
                     var ids = GetOperationValueIds(replaceOp.Value);
                     await _groupRepository.UpdateUsersAsync(group.Id, ids);
+                    operationHandled = true;
                 }
                 // Replace group name
                 else if (replaceOp.Value.TryGetProperty("displayName", out var displayNameProperty))
                 {
                     group.Name = displayNameProperty.GetString();
+                    await _groupService.SaveAsync(group);
+                    operationHandled = true;
                 }
             }
 
@@ -154,6 +159,7 @@ namespace Bit.Scim.Controllers.v2
                     var orgUserIds = (await _groupRepository.GetManyUserIdsByIdAsync(group.Id)).ToHashSet();
                     orgUserIds.Add(addId.Value);
                     await _groupRepository.UpdateUsersAsync(group.Id, orgUserIds);
+                    operationHandled = true;
                 }
             }
 
@@ -167,6 +173,7 @@ namespace Bit.Scim.Controllers.v2
                     orgUserIds.Add(v);
                 }
                 await _groupRepository.UpdateUsersAsync(group.Id, orgUserIds);
+                operationHandled = true;
             }
 
             // Remove a single member
@@ -178,6 +185,7 @@ namespace Bit.Scim.Controllers.v2
                 if (removeId.HasValue)
                 {
                     await _groupService.DeleteUserAsync(group, removeId.Value);
+                    operationHandled = true;
                 }
             }
 
@@ -191,9 +199,15 @@ namespace Bit.Scim.Controllers.v2
                     orgUserIds.Remove(v);
                 }
                 await _groupRepository.UpdateUsersAsync(group.Id, orgUserIds);
+                operationHandled = true;
             }
 
-            await _groupService.SaveAsync(group);
+            if (!operationHandled)
+            {
+                _logger.LogWarning("Group patch operation not handled: {0} : ",
+                    string.Join(", ", model.Operations.Select(o => $"{o.Op}:{o.Path}")));
+            }
+
             return new NoContentResult();
         }
 

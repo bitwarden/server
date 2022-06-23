@@ -223,6 +223,8 @@ namespace Bit.Scim.Controllers.v2
                 });
             }
 
+            var operationHandled = false;
+
             var replaceOp = model.Operations?.FirstOrDefault(o => o.Op == "replace");
             if (replaceOp != null)
             {
@@ -232,12 +234,20 @@ namespace Bit.Scim.Controllers.v2
                     if (active && orgUser.Status == OrganizationUserStatusType.Deactivated)
                     {
                         await _organizationService.ActivateUserAsync(orgUser, null);
+                        operationHandled = true;
                     }
                     else if (!active && orgUser.Status != OrganizationUserStatusType.Deactivated)
                     {
                         await _organizationService.DeactivateUserAsync(orgUser, null);
+                        operationHandled = true;
                     }
                 }
+            }
+
+            if (!operationHandled)
+            {
+                _logger.LogWarning("User patch operation not handled: {0} : ",
+                    string.Join(", ", model.Operations.Select(o => $"{o.Op}:{o.Path}")));
             }
 
             return new NoContentResult();
