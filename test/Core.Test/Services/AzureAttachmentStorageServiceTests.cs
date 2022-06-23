@@ -1,6 +1,7 @@
 ﻿using System;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Xunit;
 
@@ -11,12 +12,14 @@ namespace Bit.Core.Test.Services
         private readonly AzureAttachmentStorageService _sut;
 
         private readonly GlobalSettings _globalSettings;
+        private readonly ILogger<AzureAttachmentStorageService> _logger;
 
         public AzureAttachmentStorageServiceTests()
         {
             _globalSettings = new GlobalSettings();
+            _logger = Substitute.For<ILogger<AzureAttachmentStorageService>>();
 
-            _sut = new AzureAttachmentStorageService(_globalSettings);
+            _sut = new AzureAttachmentStorageService(_globalSettings, _logger);
         }
 
         // Remove this test when we add actual tests. It only proves that
