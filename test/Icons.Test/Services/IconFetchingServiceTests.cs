@@ -10,11 +10,11 @@ namespace Bit.Icons.Test.Services
     public class IconFetchingServiceTests
     {
         [Theory]
+        [InlineData("bofa.com")]
         [InlineData("www.google.com")] // https site
         [InlineData("neverssl.com")] // http site
         [InlineData("ameritrade.com")]
         [InlineData("icloud.com")]
-        [InlineData("bofa.com")]
         public async Task GetIconAsync_Success(string domain)
         {
             var sut = new IconFetchingService(GetLogger());
