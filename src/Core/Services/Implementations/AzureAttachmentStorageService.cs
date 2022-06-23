@@ -9,6 +9,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Settings;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Services
 {
@@ -21,6 +22,8 @@ namespace Bit.Core.Services
         private static readonly TimeSpan blobLinkLiveTime = TimeSpan.FromMinutes(1);
         private readonly BlobServiceClient _blobServiceClient;
         private readonly Dictionary<string, BlobContainerClient> _attachmentContainers = new Dictionary<string, BlobContainerClient>();
+        private readonly ILogger<AzureAttachmentStorageService> _logger;
+
         private string BlobName(Guid cipherId, CipherAttachment.MetaData attachmentData, Guid? organizationId = null, bool temp = false) =>
             string.Concat(
                 temp ? "temp/" : "",
@@ -53,9 +56,11 @@ namespace Bit.Core.Services
         }
 
         public AzureAttachmentStorageService(
-            GlobalSettings globalSettings)
+            GlobalSettings globalSettings,
+            ILogger<AzureAttachmentStorageService> logger)
         {
             _blobServiceClient = new BlobServiceClient(globalSettings.Attachment.ConnectionString);
+            _logger = logger;
         }
 
         public async Task<string> GetAttachmentDownloadUrlAsync(Cipher cipher, CipherAttachment.MetaData attachmentData)
@@ -224,8 +229,9 @@ namespace Bit.Core.Services
 
                 return (true, length);
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Unhandled error in ValidateFileAsync");
                 return (false, null);
             }
         }
