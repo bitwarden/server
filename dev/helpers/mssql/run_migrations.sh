@@ -24,6 +24,9 @@ while getopts "sp" arg; do
       DATABASE=$MSSQL_DATABASE
       USER=$MSSQL_USER
       PASSWD=$MSSQL_PASS
+    r)
+      RERUN_SCRIPT_NAME=${OPTARG}
+      ;;
   esac
 done
 
@@ -52,12 +55,16 @@ END;"
 
 should_migrate () {
   local file=$(basename $1)
-  local query="SELECT * FROM [migrations] WHERE [Filename] = '$file'"
-  local result=$(/opt/mssql-tools/bin/sqlcmd -S $SERVER -d migrations_$DATABASE -U $USER -P $PASSWD -I -Q "$query")
-  if [[ "$result" =~ .*"$file".* ]]; then
-    return 1;
+  if [[ "$RERUN_SCRIPT_NAME" == "$file"]]; then
+    return 1
   else
-    return 0;
+    local query="SELECT * FROM [migrations] WHERE [Filename] = '$file'"
+    local result=$(/opt/mssql-tools/bin/sqlcmd -S $SERVER -d migrations_$DATABASE -U $USER -P $PASSWD -I -Q "$query")
+    if [[ "$result" =~ .*"$file".* ]]; then
+      return 1;
+    else
+      return 0;
+    fi
   fi
 }
 
