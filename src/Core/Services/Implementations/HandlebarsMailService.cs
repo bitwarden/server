@@ -40,20 +40,6 @@ namespace Bit.Core.Services
             _mailEnqueuingService = mailEnqueuingService;
         }
 
-        private static string GetUserIdentifier(string email, string userName)
-        {
-            string identifier;
-            if (string.IsNullOrEmpty(userName))
-            {
-                identifier = email;
-            }
-            else
-            {
-                identifier = CoreHelpers.SanitizeForEmail(userName, false);
-            }
-            return identifier;
-        }
-
         public async Task SendVerifyEmailEmailAsync(string email, Guid userId, string token)
         {
             var message = CreateDefaultMessage("Verify Your Email", email);
@@ -899,6 +885,11 @@ namespace Bit.Core.Services
             await AddMessageContentAsync(message, "FailedTwoFactorAttempts", model);
             message.Category = "FailedTwoFactorAttempts";
             await _mailDeliveryService.SendEmailAsync(message);
+        }
+
+        private static string GetUserIdentifier(string email, string userName)
+        {
+            return string.IsNullOrEmpty(userName) ? email : CoreHelpers.SanitizeForEmail(userName, false);
         }
     }
 }
