@@ -1,4 +1,6 @@
-## Type of change (mark with an `X`)
+## Type of change
+
+<!-- (mark with an `X`) -->
 
 ```
 - [ ] Bug fix
@@ -19,7 +21,9 @@
 
 * **file.ext:** Description of what was changed and why
 
-## Before you submit (mark with an `X`)
+## Before you submit
+
+<!-- (mark with an `X`) -->
 
 ```
 - [ ] I have checked for formatting errors (`dotnet tool run dotnet-format --check`) (required)

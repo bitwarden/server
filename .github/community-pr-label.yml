@@ -1,6 +1,0 @@
-# See .github/workflows/pr-labeler.yml for context
-# Apply the label regardless of what files have been changed
-community-pr:
-  - '**'
-  - '.*'
-  - '.*/**'
