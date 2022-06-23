@@ -215,7 +215,7 @@ namespace Bit.Api.Controllers
             }
 
             var result = await _userService.ChangePasswordAsync(user, model.MasterPasswordHash,
-                model.NewMasterPasswordHash, model.Key);
+                model.NewMasterPasswordHash, model.MasterPasswordHint, model.Key);
             if (result.Succeeded)
             {
                 return;

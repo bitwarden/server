@@ -32,7 +32,7 @@ namespace Bit.Core.Services
         Task InitiateEmailChangeAsync(User user, string newEmail);
         Task<IdentityResult> ChangeEmailAsync(User user, string masterPassword, string newEmail, string newMasterPassword,
             string token, string key);
-        Task<IdentityResult> ChangePasswordAsync(User user, string masterPassword, string newMasterPassword, string key);
+        Task<IdentityResult> ChangePasswordAsync(User user, string masterPassword, string newMasterPassword, string passwordHint, string key);
         Task<IdentityResult> SetPasswordAsync(User user, string newMasterPassword, string key, string orgIdentifier = null);
         Task<IdentityResult> SetKeyConnectorKeyAsync(User user, string key, string orgIdentifier);
         Task<IdentityResult> ConvertToKeyConnectorAsync(User user);
