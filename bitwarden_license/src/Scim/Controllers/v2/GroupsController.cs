@@ -130,17 +130,34 @@ namespace Bit.Scim.Controllers.v2
             var replaceOp = model.Operations?.FirstOrDefault(o => o.Op == "replace");
             if (replaceOp != null)
             {
+                // Replace a list of members
                 if (replaceOp.Path == "members")
                 {
                     var ids = GetOperationValueIds(replaceOp.Value);
                     await _groupRepository.UpdateUsersAsync(group.Id, ids);
                 }
+                // Replace group name
                 else if (replaceOp.Value.TryGetProperty("displayName", out var displayNameProperty))
                 {
                     group.Name = displayNameProperty.GetString();
                 }
             }
 
+            // Add a single member
+            var addMemberOp = model.Operations?.FirstOrDefault(
+                o => o.Op == "add" && !string.IsNullOrWhiteSpace(o.Path) && o.Path.StartsWith("members[value eq "));
+            if (addMemberOp != null)
+            {
+                var addId = GetOperationPathId(addMemberOp.Path);
+                if (addId.HasValue)
+                {
+                    var orgUserIds = (await _groupRepository.GetManyUserIdsByIdAsync(group.Id)).ToHashSet();
+                    orgUserIds.Add(addId.Value);
+                    await _groupRepository.UpdateUsersAsync(group.Id, orgUserIds);
+                }
+            }
+
+            // Add a list of members
             var addMembersOp = model.Operations?.FirstOrDefault(o => o.Op == "add" && o.Path == "members");
             if (addMembersOp != null)
             {
@@ -152,15 +169,28 @@ namespace Bit.Scim.Controllers.v2
                 await _groupRepository.UpdateUsersAsync(group.Id, orgUserIds);
             }
 
-            var removeMembersOp = model.Operations?.FirstOrDefault(
+            // Remove a single member
+            var removeMemberOp = model.Operations?.FirstOrDefault(
                 o => o.Op == "remove" && !string.IsNullOrWhiteSpace(o.Path) && o.Path.StartsWith("members[value eq "));
+            if (removeMemberOp != null)
+            {
+                var removeId = GetOperationPathId(removeMemberOp.Path);
+                if (removeId.HasValue)
+                {
+                    await _groupService.DeleteUserAsync(group, removeId.Value);
+                }
+            }
+
+            // Remove a list of members
+            var removeMembersOp = model.Operations?.FirstOrDefault(o => o.Op == "remove" && o.Path == "members");
             if (removeMembersOp != null)
             {
-                var removeId = removeMembersOp.Path.Substring(18).Replace("\"]", string.Empty);
-                if (Guid.TryParse(removeId, out var orgUserId))
+                var orgUserIds = (await _groupRepository.GetManyUserIdsByIdAsync(group.Id)).ToHashSet();
+                foreach (var v in GetOperationValueIds(removeMembersOp.Value))
                 {
-                    await _groupService.DeleteUserAsync(group, orgUserId);
+                    orgUserIds.Remove(v);
                 }
+                await _groupRepository.UpdateUsersAsync(group.Id, orgUserIds);
             }
 
             await _groupService.SaveAsync(group);
@@ -197,6 +227,16 @@ namespace Bit.Scim.Controllers.v2
                 }
             }
             return ids;
+        }
+
+        private Guid? GetOperationPathId(string path)
+        {
+            // Parse Guid from string like: members[value eq "{GUID}"}]
+            if (Guid.TryParse(path.Substring(18).Replace("\"]", string.Empty), out var id))
+            {
+                return id;
+            }
+            return null;
         }
     }
 }
