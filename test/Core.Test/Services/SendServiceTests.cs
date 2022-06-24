@@ -495,8 +495,6 @@ namespace Bit.Core.Test.Services
             send.UserId = user.Id;
             send.Type = SendType.File;
 
-            var testUrl = "https://test.com/";
-
             sutProvider.GetDependency<IUserRepository>()
                 .GetByIdAsync(user.Id)
                 .Returns(user);

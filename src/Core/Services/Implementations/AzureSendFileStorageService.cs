@@ -8,6 +8,7 @@ using Azure.Storage.Sas;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Settings;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Services
 {
@@ -16,6 +17,7 @@ namespace Bit.Core.Services
         public const string FilesContainerName = "sendfiles";
         private static readonly TimeSpan _downloadLinkLiveTime = TimeSpan.FromMinutes(1);
         private readonly BlobServiceClient _blobServiceClient;
+        private readonly ILogger<AzureSendFileStorageService> _logger;
         private BlobContainerClient _sendFilesContainerClient;
 
         public FileUploadType FileUploadType => FileUploadType.Azure;
@@ -24,9 +26,11 @@ namespace Bit.Core.Services
         public static string BlobName(Send send, string fileId) => $"{send.Id}/{fileId}";
 
         public AzureSendFileStorageService(
-            GlobalSettings globalSettings)
+            GlobalSettings globalSettings,
+            ILogger<AzureSendFileStorageService> logger)
         {
             _blobServiceClient = new BlobServiceClient(globalSettings.Send.ConnectionString);
+            _logger = logger;
         }
 
         public async Task UploadNewFileAsync(Stream stream, Send send, string fileId)
@@ -125,6 +129,7 @@ namespace Bit.Core.Services
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Unhandled error in ValidateFileAsync");
                 return (false, null);
             }
         }

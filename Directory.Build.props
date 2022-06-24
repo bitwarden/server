@@ -1,10 +1,51 @@
 <Project>
 
 	<PropertyGroup>
-		<TargetFramework>net5.0</TargetFramework>
+		<TargetFramework>net6.0</TargetFramework>
+    <!--Current Version: -->
 		<Version>2022.5.2</Version>
 		<RootNamespace>Bit.$(MSBuildProjectName)</RootNamespace>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
 	</PropertyGroup>
+
+  <!--
+    This section is for packages that we use multiple times throughout the solution
+    It gives us a single place to manage the version to ensure we are using the same version
+    across the solution.
+  -->
+  <PropertyGroup>
+    <!--
+      NuGet: https://www.nuget.org/packages/Microsoft.NET.Test.Sdk
+    -->
+    <MicrosoftNetTestSdkVersion>17.1.0</MicrosoftNetTestSdkVersion>
+    <!--
+      NuGet: https://www.nuget.org/packages/xunit
+    -->
+    <XUnitVersion>2.4.1</XUnitVersion>
+    <!--
+      NuGet: https://www.nuget.org/packages/xunit
+    -->
+    <XUnitRunnerVisualStudioVersion>2.4.3</XUnitRunnerVisualStudioVersion>
+    <!--
+      NuGet: https://www.nuget.org/packages/coverlet.collector/
+    -->
+    <CoverletCollectorVersion>3.1.2</CoverletCollectorVersion>
+    <!--
+      NuGet: https://www.nuget.org/packages/Swashbuckle.AspNetCore/
+    -->
+    <MicrosoftVisualStudioWebCodeGenerationDesignVersion>6.0.3</MicrosoftVisualStudioWebCodeGenerationDesignVersion>
+    <!--
+      NuGet: https://www.nuget.org/packages/NSubstitute/
+    -->
+    <NSubstitueVersion>4.3.0</NSubstitueVersion>
+    <!--
+      NuGet: https://www.nuget.org/packages/AutoFixture.Xunit2/
+    -->
+    <AutoFixtureXUnit2Version>4.17.0</AutoFixtureXUnit2Version>
+    <!--
+      NuGet: https://www.nuget.org/packages/AutoFixture.AutoNSubstitute/
+    -->
+    <AutoFixtureAutoNSubstituteVersion>4.17.0</AutoFixtureAutoNSubstituteVersion>
+  </PropertyGroup>
 
 </Project>
