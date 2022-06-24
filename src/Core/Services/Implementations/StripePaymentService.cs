@@ -161,8 +161,9 @@ namespace Bit.Core.Services
                     }
                 }
             }
-            catch (Exception e)
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Error creating customer, walking back operation.");
                 if (customer != null)
                 {
                     await _stripeAdapter.CustomerDeleteAsync(customer.Id);

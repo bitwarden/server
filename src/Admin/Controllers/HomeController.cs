@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 
 namespace Bit.Admin.Controllers
 {
@@ -42,26 +43,22 @@ namespace Bit.Admin.Controllers
             });
         }
 
-        public async Task<IActionResult> GetLatestDockerHubVersion(string repository, CancellationToken cancellationToken)
+
+        public async Task<IActionResult> GetLatestVersion(ProjectType project, CancellationToken cancellationToken)
         {
-            var requestUri = $"https://hub.docker.com/v2/repositories/bitwarden/{repository}/tags/";
+            var requestUri = $"https://selfhost.bitwarden.com/version.json";
             try
             {
                 var response = await _httpClient.GetAsync(requestUri, cancellationToken);
                 if (response.IsSuccessStatusCode)
                 {
-                    using var jsonDocument = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(cancellationToken), cancellationToken: cancellationToken);
-                    var root = jsonDocument.RootElement;
-
-                    var results = root.GetProperty("results");
-                    foreach (var result in results.EnumerateArray())
+                    var latestVersions = JsonConvert.DeserializeObject<LatestVersions>(await response.Content.ReadAsStringAsync());
+                    return project switch
                     {
-                        var name = result.GetProperty("name").GetString();
-                        if (!string.IsNullOrWhiteSpace(name) && name.Length > 0 && char.IsNumber(name[0]))
-                        {
-                            return new JsonResult(name);
-                        }
-                    }
+                        ProjectType.Core => new JsonResult(latestVersions.Versions.WebVersion),
+                        ProjectType.Web => new JsonResult(latestVersions.Versions.CoreVersion),
+                        _ => throw new System.NotImplementedException(),
+                    };
                 }
             }
             catch (HttpRequestException e)
@@ -94,5 +91,29 @@ namespace Bit.Admin.Controllers
 
             return new JsonResult("-");
         }
+
+        private class LatestVersions
+        {
+            [JsonProperty("versions")]
+            public Versions Versions { get; set; }
+        }
+
+        private class Versions
+        {
+            [JsonProperty("coreVersion")]
+            public string CoreVersion { get; set; }
+
+            [JsonProperty("webVersion")]
+            public string WebVersion { get; set; }
+
+            [JsonProperty("keyConnectorVersion")]
+            public string KeyConnectorVersion { get; set; }
+        }
+    }
+
+    public enum ProjectType
+    {
+        Core,
+        Web,
     }
 }

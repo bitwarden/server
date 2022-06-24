@@ -44,6 +44,10 @@ namespace Bit.Identity
             {
                 services.Configure<IpRateLimitOptions>(Configuration.GetSection("IpRateLimitOptions"));
                 services.Configure<IpRateLimitPolicies>(Configuration.GetSection("IpRateLimitPolicies"));
+                // Ref: https://github.com/stefanprodan/AspNetCoreRateLimit/issues/216
+                services.AddSingleton<IProcessingStrategy, AsyncKeyLockProcessingStrategy>();
+                // Ref: https://github.com/stefanprodan/AspNetCoreRateLimit/issues/66
+                services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
             }
 
             // Data Protection

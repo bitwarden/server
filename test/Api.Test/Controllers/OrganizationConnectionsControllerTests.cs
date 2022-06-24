@@ -141,6 +141,10 @@ namespace Bit.Api.Test.Controllers
         [BitAutoData]
         public async Task UpdateConnection_RequiresOwnerPermissions(SutProvider<OrganizationConnectionsController> sutProvider)
         {
+            sutProvider.GetDependency<IOrganizationConnectionRepository>()
+                .GetByIdAsync(Arg.Any<Guid>())
+                .Returns(new OrganizationConnection());
+
             var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateConnection(default, null));
 
             Assert.Contains("Only the owner of an organization can update a connection.", exception.Message);
@@ -177,6 +181,10 @@ namespace Bit.Api.Test.Controllers
 
             sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(typedModel.OrganizationId).Returns(true);
 
+            sutProvider.GetDependency<IOrganizationConnectionRepository>()
+                .GetByIdAsync(existing1.Id)
+                .Returns(existing1);
+
             sutProvider.GetDependency<IOrganizationConnectionRepository>().GetByOrganizationIdTypeAsync(typedModel.OrganizationId, type).Returns(new[] { existing1, existing2 });
 
             var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateConnection(existing1.Id, typedModel));
@@ -190,6 +198,10 @@ namespace Bit.Api.Test.Controllers
             OrganizationConnection updated,
             SutProvider<OrganizationConnectionsController> sutProvider)
         {
+            existing.SetConfig(new BillingSyncConfig
+            {
+                CloudOrganizationId = config.CloudOrganizationId,
+            });
             updated.Config = JsonSerializer.Serialize(config);
             updated.Id = existing.Id;
             updated.Type = OrganizationConnectionType.CloudBillingSync;
@@ -198,6 +210,9 @@ namespace Bit.Api.Test.Controllers
             sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(model.OrganizationId).Returns(true);
             sutProvider.GetDependency<IOrganizationConnectionRepository>().GetByOrganizationIdTypeAsync(model.OrganizationId, model.Type).Returns(new[] { existing });
             sutProvider.GetDependency<IUpdateOrganizationConnectionCommand>().UpdateAsync<BillingSyncConfig>(default).ReturnsForAnyArgs(updated);
+            sutProvider.GetDependency<IOrganizationConnectionRepository>()
+                .GetByIdAsync(existing.Id)
+                .Returns(existing);
 
             var expected = new OrganizationConnectionResponseModel(updated, typeof(BillingSyncConfig));
             var result = await sutProvider.Sut.UpdateConnection(existing.Id, model);
@@ -205,6 +220,13 @@ namespace Bit.Api.Test.Controllers
             AssertHelper.AssertPropertyEqual(expected, result);
             await sutProvider.GetDependency<IUpdateOrganizationConnectionCommand>().Received(1)
                 .UpdateAsync(Arg.Is(AssertHelper.AssertPropertyEqual(model.ToData(updated.Id))));
+        }
+
+        [Theory]
+        [BitAutoData]
+        public async Task UpdateConnection_DoesNotExist_ThrowsNotFound(SutProvider<OrganizationConnectionsController> sutProvider)
+        {
+            await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.UpdateConnection(Guid.NewGuid(), null));
         }
 
         [Theory]

@@ -68,7 +68,7 @@ namespace Bit.Core.Test.Services
         }
 
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
-        public async Task SaveAsync_NonExistingOrganizationId_ThrowsBadRequest(Group group, Organization organization, SutProvider<GroupService> sutProvider)
+        public async Task SaveAsync_NonExistingOrganizationId_ThrowsBadRequest(Group group, SutProvider<GroupService> sutProvider)
         {
             var exception = await Assert.ThrowsAsync<BadRequestException>(
                 () => sutProvider.Sut.SaveAsync(group));

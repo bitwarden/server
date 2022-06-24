@@ -91,6 +91,12 @@ namespace Bit.Api.Controllers
         [HttpPut("{organizationConnectionId}")]
         public async Task<OrganizationConnectionResponseModel> UpdateConnection(Guid organizationConnectionId, [FromBody] OrganizationConnectionRequestModel model)
         {
+            var existingOrganizationConnection = await _organizationConnectionRepository.GetByIdAsync(organizationConnectionId);
+            if (existingOrganizationConnection == null)
+            {
+                throw new NotFoundException();
+            }
+
             if (!await HasPermissionAsync(model?.OrganizationId))
             {
                 throw new BadRequestException("Only the owner of an organization can update a connection.");

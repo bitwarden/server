@@ -66,8 +66,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
 
         [CiSkippedTheory, EfOrganizationAutoData]
         public async void DeleteAsync_Works_DataMatches(Organization organization,
-            SqlRepo.OrganizationRepository sqlOrganizationRepo, OrganizationCompare equalityComparer,
-            List<EfRepo.OrganizationRepository> suts)
+            SqlRepo.OrganizationRepository sqlOrganizationRepo, List<EfRepo.OrganizationRepository> suts)
         {
             foreach (var sut in suts)
             {
@@ -118,8 +117,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
 
         [CiSkippedTheory, EfOrganizationAutoData]
         public async void GetManyByEnabledAsync_Works_DataMatches(Organization organization,
-            SqlRepo.OrganizationRepository sqlOrganizationRepo, OrganizationCompare equalityCompare,
-            List<EfRepo.OrganizationRepository> suts)
+            SqlRepo.OrganizationRepository sqlOrganizationRepo, List<EfRepo.OrganizationRepository> suts)
         {
             var returnedOrgs = new List<Organization>();
             foreach (var sut in suts)
@@ -139,9 +137,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
 
         // testing data matches here would require manipulating all organization abilities in the db
         [CiSkippedTheory, EfOrganizationAutoData]
-        public async void GetManyAbilitiesAsync_Works(Organization organization,
-            SqlRepo.OrganizationRepository sqlOrganizationRepo, OrganizationCompare equalityComparer,
-            List<EfRepo.OrganizationRepository> suts)
+        public async void GetManyAbilitiesAsync_Works(SqlRepo.OrganizationRepository sqlOrganizationRepo, List<EfRepo.OrganizationRepository> suts)
         {
             var list = new List<OrganizationAbility>();
             foreach (var sut in suts)

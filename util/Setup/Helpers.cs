@@ -181,7 +181,7 @@ namespace Bit.Setup
             Console.ResetColor();
         }
 
-        public static Func<object, string> ReadTemplate(string templateName)
+        public static HandlebarsDotNet.HandlebarsTemplate<object, object> ReadTemplate(string templateName)
         {
             var assembly = typeof(Helpers).GetTypeInfo().Assembly;
             var fullTemplateName = $"Bit.Setup.Templates.{templateName}.hbs";
