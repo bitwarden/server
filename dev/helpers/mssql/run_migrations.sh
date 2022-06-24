@@ -10,8 +10,9 @@ SERVER='mssql'
 DATABASE="vault_dev"
 USER="SA"
 PASSWD=$MSSQL_PASSWORD
+RERUN_SCRIPT_NAME=""
 
-while getopts "sp" arg; do
+while getopts "spr:" arg; do
   case $arg in
     s)
       echo "Running for self-host environment"
@@ -24,8 +25,9 @@ while getopts "sp" arg; do
       DATABASE=$MSSQL_DATABASE
       USER=$MSSQL_USER
       PASSWD=$MSSQL_PASS
+      ;;
     r)
-      RERUN_SCRIPT_NAME=${OPTARG}
+      RERUN_SCRIPT_NAME=$OPTARG
       ;;
   esac
 done
@@ -55,23 +57,19 @@ END;"
 
 should_migrate () {
   local file=$(basename $1)
-  if [[ "$RERUN_SCRIPT_NAME" == "$file"]]; then
-    return 1
+  local query="SELECT * FROM [migrations] WHERE [Filename] = '$file'"
+  local result=$(/opt/mssql-tools/bin/sqlcmd -S $SERVER -d migrations_$DATABASE -U $USER -P $PASSWD -I -Q "$query")
+
+  if [[ "$result" =~ .*"$file".* ]]; then
+    return 1;
   else
-    local query="SELECT * FROM [migrations] WHERE [Filename] = '$file'"
-    local result=$(/opt/mssql-tools/bin/sqlcmd -S $SERVER -d migrations_$DATABASE -U $USER -P $PASSWD -I -Q "$query")
-    if [[ "$result" =~ .*"$file".* ]]; then
-      return 1;
-    else
-      return 0;
-    fi
+    return 0;
   fi
 }
 
 record_migration () {
-  echo "recording $1"
+  echo "Recording $1"
   local file=$(basename $1)
-  echo $file
   local query="INSERT INTO [migrations] ([Filename], [CreationDate]) VALUES ('$file', GETUTCDATE())"
   /opt/mssql-tools/bin/sqlcmd -S $SERVER -d migrations_$DATABASE -U $USER -P $PASSWD -I -Q "$query"
 }
@@ -82,12 +80,32 @@ migrate () {
   /opt/mssql-tools/bin/sqlcmd -S $SERVER -d $DATABASE -U $USER -P $PASSWD -I -i $file
 }
 
-for f in `ls -v $MIGRATE_DIRECTORY/*.sql`; do
-  BASENAME=$(basename $f)
-  if should_migrate $f == 1 ; then
-    migrate $f
-    record_migration $f
-  else
-    echo "Skipping $f, $BASENAME"
+
+if [[ "$RERUN_SCRIPT_NAME" != "" ]]; then
+  full_migration_path=$MIGRATE_DIRECTORY/$RERUN_SCRIPT_NAME
+  if [[ -f $full_migration_path ]]; then
+    query="SELECT * FROM [migrations] WHERE [Filename] = '$RERUN_SCRIPT_NAME'"
+    result=$(/opt/mssql-tools/bin/sqlcmd -S $SERVER -d migrations_$DATABASE -U $USER -P $PASSWD -I -Q "$query")
+
+    if [[ "$result" =~ .*$RERUN_SCRIPT_NAME.* ]]; then
+      echo "Deleting $full_migration_path"
+      query="DELETE FROM [migrations] WHERE [Filename] = '$RERUN_SCRIPT_NAME'"
+      result=$(/opt/mssql-tools/bin/sqlcmd -S $SERVER -d migrations_$DATABASE -U $USER -P $PASSWD -I -Q "$query")
+    fi
+
+    migrate $full_migration_path
+    record_migration $full_migration_path
   fi
-done;
+else
+  for f in `ls -v $MIGRATE_DIRECTORY/*.sql`; do
+    BASENAME=$(basename $f)
+    if should_migrate $f == 1 ; then
+      migrate $f
+      record_migration $f
+    else
+      echo "Skipping $f, $BASENAME"
+    fi
+  done;
+fi
+
+echo "-----Migrations done-----"
