@@ -25,8 +25,8 @@ namespace Bit.Core.Services
         private readonly GlobalSettings _globalSettings;
         private readonly IMailDeliveryService _mailDeliveryService;
         private readonly IMailEnqueuingService _mailEnqueuingService;
-        private readonly Dictionary<string, Func<object, string>> _templateCache =
-            new Dictionary<string, Func<object, string>>();
+        private readonly Dictionary<string, HandlebarsTemplate<object, object>> _templateCache =
+            new Dictionary<string, HandlebarsTemplate<object, object>>();
 
         private bool _registeredHelpersAndPartials = false;
 

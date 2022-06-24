@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
+using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Primitives;
@@ -50,6 +51,19 @@ namespace Bit.IntegrationTestCommon.Factories
             string requestUri,
             Action<HttpContext> extraConfiguration = null)
             => SendAsync(server, HttpMethod.Get, requestUri, content: null, extraConfiguration);
+
+        public static HttpContext SetAuthEmail(this HttpContext context, string username)
+        {
+            context.Request.Headers.Add("Auth-Email", CoreHelpers.Base64UrlEncodeString(username));
+            return context;
+        }
+
+        public static HttpContext SetIp(this HttpContext context, string ip)
+        {
+            context.Connection.RemoteIpAddress = IPAddress.Parse(ip);
+            return context;
+        }
+
         public static async Task<string> ReadBodyAsStringAsync(this HttpContext context)
         {
             using var sr = new StreamReader(context.Response.Body);
