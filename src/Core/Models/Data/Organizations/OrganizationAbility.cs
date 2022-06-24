@@ -18,6 +18,7 @@ namespace Bit.Core.Models.Data.Organizations
             Enabled = organization.Enabled;
             UseSso = organization.UseSso;
             UseKeyConnector = organization.UseKeyConnector;
+            UseScim = organization.UseScim;
             UseResetPassword = organization.UseResetPassword;
         }
 
@@ -29,6 +30,7 @@ namespace Bit.Core.Models.Data.Organizations
         public bool Enabled { get; set; }
         public bool UseSso { get; set; }
         public bool UseKeyConnector { get; set; }
+        public bool UseScim { get; set; }
         public bool UseResetPassword { get; set; }
     }
 }

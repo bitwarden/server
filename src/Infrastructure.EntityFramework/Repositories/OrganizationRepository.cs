@@ -87,6 +87,8 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
                     Using2fa = e.Use2fa && e.TwoFactorProviders != null,
                     UseSso = e.UseSso,
                     UseKeyConnector = e.UseKeyConnector,
+                    UseResetPassword = e.UseResetPassword,
+                    UseScim = e.UseScim,
                 }).ToListAsync();
             }
         }

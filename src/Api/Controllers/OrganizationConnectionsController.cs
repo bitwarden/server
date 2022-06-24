@@ -61,7 +61,7 @@ namespace Bit.Api.Controllers
         {
             if (!await HasPermissionAsync(model?.OrganizationId))
             {
-                throw new BadRequestException("Only the owner of an organization can create a connection.");
+                throw new BadRequestException($"You do not have permission to create a connection of type {model.Type}.");
             }
 
             if (await HasConnectionTypeAsync(model, null, model.Type))
@@ -97,9 +97,9 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            if (!await HasPermissionAsync(model?.OrganizationId))
+            if (!await HasPermissionAsync(model?.OrganizationId, model.Type))
             {
-                throw new BadRequestException("Only the owner of an organization can update a connection.");
+                throw new BadRequestException("You do not have permission to update this connection.");
             }
 
             if (await HasConnectionTypeAsync(model, organizationConnectionId, model.Type))
@@ -121,9 +121,9 @@ namespace Bit.Api.Controllers
         [HttpGet("{organizationId}/{type}")]
         public async Task<OrganizationConnectionResponseModel> GetConnection(Guid organizationId, OrganizationConnectionType type)
         {
-            if (!await HasPermissionAsync(organizationId))
+            if (!await HasPermissionAsync(organizationId, type))
             {
-                throw new BadRequestException("Only the owner of an organization can retrieve a connection.");
+                throw new BadRequestException($"You do not have permission to retrieve a connection of type {type}.");
             }
 
             var connections = await GetConnectionsAsync(organizationId, type);
@@ -151,9 +151,9 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            if (!await HasPermissionAsync(connection.OrganizationId))
+            if (!await HasPermissionAsync(connection.OrganizationId, connection.Type))
             {
-                throw new BadRequestException("Only the owner of an organization can remove a connection.");
+                throw new BadRequestException($"You do not have permission to remove this connection of type {connection.Type}.");
             }
 
             await _deleteOrganizationConnectionCommand.DeleteAsync(connection);
@@ -170,8 +170,18 @@ namespace Bit.Api.Controllers
             return existingConnections.Any(c => c.Type == model.Type && (!connectionId.HasValue || c.Id != connectionId.Value));
         }
 
-        private async Task<bool> HasPermissionAsync(Guid? organizationId) =>
-            organizationId.HasValue && await _currentContext.OrganizationOwner(organizationId.Value);
+        private async Task<bool> HasPermissionAsync(Guid? organizationId, OrganizationConnectionType? type = null)
+        {
+            if (!organizationId.HasValue)
+            {
+                return false;
+            }
+            return type switch
+            {
+                OrganizationConnectionType.Scim => await _currentContext.ManageScim(organizationId.Value),
+                _ => await _currentContext.OrganizationOwner(organizationId.Value),
+            };
+        }
 
         private async Task<OrganizationConnectionResponseModel> CreateConnectionByTypeAsync<T>(
             OrganizationConnectionRequestModel model,

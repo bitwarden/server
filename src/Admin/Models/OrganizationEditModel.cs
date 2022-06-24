@@ -34,6 +34,7 @@ namespace Bit.Admin.Models
             UsePolicies = org.UsePolicies;
             UseSso = org.UseSso;
             UseKeyConnector = org.UseKeyConnector;
+            UseScim = org.UseScim;
             UseGroups = org.UseGroups;
             UseDirectory = org.UseDirectory;
             UseEvents = org.UseEvents;
@@ -96,6 +97,8 @@ namespace Bit.Admin.Models
         public bool UseApi { get; set; }
         [Display(Name = "Reset Password")]
         public bool UseResetPassword { get; set; }
+        [Display(Name = "SCIM")]
+        public bool UseScim { get; set; }
         [Display(Name = "Self Host")]
         public bool SelfHost { get; set; }
         [Display(Name = "Users Get Premium")]
@@ -128,6 +131,7 @@ namespace Bit.Admin.Models
             existingOrganization.UsePolicies = UsePolicies;
             existingOrganization.UseSso = UseSso;
             existingOrganization.UseKeyConnector = UseKeyConnector;
+            existingOrganization.UseScim = UseScim;
             existingOrganization.UseGroups = UseGroups;
             existingOrganization.UseDirectory = UseDirectory;
             existingOrganization.UseEvents = UseEvents;

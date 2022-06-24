@@ -37,6 +37,7 @@ namespace Bit.Api.Models.Response.Organizations
             UsePolicies = organization.UsePolicies;
             UseSso = organization.UseSso;
             UseKeyConnector = organization.UseKeyConnector;
+            UseScim = organization.UseScim;
             UseGroups = organization.UseGroups;
             UseDirectory = organization.UseDirectory;
             UseEvents = organization.UseEvents;
@@ -68,6 +69,7 @@ namespace Bit.Api.Models.Response.Organizations
         public bool UsePolicies { get; set; }
         public bool UseSso { get; set; }
         public bool UseKeyConnector { get; set; }
+        public bool UseScim { get; set; }
         public bool UseGroups { get; set; }
         public bool UseDirectory { get; set; }
         public bool UseEvents { get; set; }
