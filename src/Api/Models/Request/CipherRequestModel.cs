@@ -22,6 +22,7 @@ namespace Bit.Api.Models.Request
         public string FolderId { get; set; }
         public bool Favorite { get; set; }
         public CipherRepromptType Reprompt { get; set; }
+        public EncObject Data { get; set; }
         [Required]
         [EncryptedString]
         [EncryptedStringLength(1000)]
@@ -86,7 +87,8 @@ namespace Bit.Api.Models.Request
                     existingCipher.Data = JsonSerializer.Serialize(ToCipherSecureNoteData(), JsonHelpers.IgnoreWritingNull);
                     break;
                 default:
-                    throw new ArgumentException("Unsupported type: " + nameof(Type) + ".");
+                    existingCipher.Data = JsonSerializer.Serialize(Data, JsonHelpers.IgnoreWritingNull);
+                    break;
             }
 
             existingCipher.Reprompt = Reprompt;
@@ -227,7 +229,6 @@ namespace Bit.Api.Models.Request
                 Notes = Notes,
                 Fields = Fields?.Select(f => f.ToCipherFieldData()),
                 PasswordHistory = PasswordHistory?.Select(ph => ph.ToCipherPasswordHistoryData()),
-
                 Type = SecureNote.Type,
             };
         }
