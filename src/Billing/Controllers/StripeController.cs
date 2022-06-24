@@ -28,6 +28,7 @@ namespace Bit.Billing.Controllers
     {
         private const decimal PremiumPlanAppleIapPrice = 14.99M;
         private const string PremiumPlanId = "premium-annually";
+        private const string PremiumPlanIdAppStore = "premium-annually-app";
 
         private readonly BillingSettings _billingSettings;
         private readonly IWebHostEnvironment _hostingEnvironment;
@@ -437,7 +438,7 @@ namespace Bit.Billing.Controllers
             }
             else if (parsedEvent.Type.Equals(HandledStripeWebhook.PaymentFailed))
             {
-                await HandlePaymentFailed(await GetInvoiceAsync(parsedEvent, true), await GetSubscriptionAsync(parsedEvent));
+                await HandlePaymentFailed(await GetInvoiceAsync(parsedEvent, true));
             }
             else if (parsedEvent.Type.Equals(HandledStripeWebhook.InvoiceCreated))
             {
@@ -802,12 +803,14 @@ namespace Bit.Billing.Controllers
         private static bool IsSponsoredSubscription(Subscription subscription) =>
             StaticStore.SponsoredPlans.Any(p => p.StripePlanId == subscription.Id);
 
-        private async Task HandlePaymentFailed(Invoice invoice, Subscription subscription)
+        private async Task HandlePaymentFailed(Invoice invoice)
         {
             if (!invoice.Paid && invoice.AttemptCount > 1 && UnpaidAutoChargeInvoiceForSubscriptionCycle(invoice))
             {
+                var subscriptionService = new SubscriptionService();
+                var subscription = await subscriptionService.GetAsync(invoice.SubscriptionId);
                 // attempt count 4 = 11 days after initial failure
-                if (invoice.AttemptCount > 3 && subscription.Items.Any(i => i.Plan.Id == PremiumPlanId))
+                if (invoice.AttemptCount > 3 && subscription.Items.Any(i => i.Price.Id == PremiumPlanId || i.Price.Id == PremiumPlanIdAppStore))
                 {
                     await CancelSubscription(invoice.SubscriptionId);
                     await VoidOpenInvoices(invoice.SubscriptionId);
