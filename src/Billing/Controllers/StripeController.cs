@@ -437,7 +437,7 @@ namespace Bit.Billing.Controllers
             }
             else if (parsedEvent.Type.Equals(HandledStripeWebhook.PaymentFailed))
             {
-                await HandlePaymentFailed(await GetInvoiceAsync(parsedEvent, true));
+                await HandlePaymentFailed(await GetInvoiceAsync(parsedEvent, true), await GetSubscriptionAsync(parsedEvent));
             }
             else if (parsedEvent.Type.Equals(HandledStripeWebhook.InvoiceCreated))
             {
@@ -802,12 +802,12 @@ namespace Bit.Billing.Controllers
         private static bool IsSponsoredSubscription(Subscription subscription) =>
             StaticStore.SponsoredPlans.Any(p => p.StripePlanId == subscription.Id);
 
-        private async Task HandlePaymentFailed(Invoice invoice)
+        private async Task HandlePaymentFailed(Invoice invoice, Subscription subscription)
         {
             if (!invoice.Paid && invoice.AttemptCount > 1 && UnpaidAutoChargeInvoiceForSubscriptionCycle(invoice))
             {
                 // attempt count 4 = 11 days after initial failure
-                if (invoice.AttemptCount > 3)
+                if (invoice.AttemptCount > 3 && subscription.Items.Any(i => i.Plan.Id == PremiumPlanId))
                 {
                     await CancelSubscription(invoice.SubscriptionId);
                     await VoidOpenInvoices(invoice.SubscriptionId);
