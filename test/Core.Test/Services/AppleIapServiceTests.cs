@@ -22,11 +22,11 @@ namespace Bit.Core.Test.Services
             
             var errorLog = sutProvider.GetDependency<ILogger<AppleIapService>>()
                 .ReceivedCalls()
-                .SingleOrDefault(LogOneError);
+                .SingleOrDefault(LogOneWarning);
 
             Assert.True(errorLog != null, "Must contain one error log of warning level containing 'null'");
 
-            static bool LogOneError(ICall call)
+            static bool LogOneWarning(ICall call)
             {
                 if (call.GetMethodInfo().Name != "Log")
                 {

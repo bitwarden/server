@@ -39,7 +39,6 @@ namespace Bit.Api.Test.Models.Request.Accounts
                 SelfHosted = selfHosted
             };
 
-            // If the instance is self hosted a license file is required
             var sut = new PremiumRequestModel
             {
                 License = formFile,
