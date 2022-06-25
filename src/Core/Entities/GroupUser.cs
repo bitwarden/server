@@ -1,5 +1,7 @@
 ﻿using System;
 
+#nullable enable
+
 namespace Bit.Core.Entities
 {
     public class GroupUser

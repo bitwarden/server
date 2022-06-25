@@ -4,6 +4,8 @@ using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Utilities;
 
+#nullable enable
+
 namespace Bit.Core.Entities
 {
     public class Event : ITableObject<Guid>, IEvent
@@ -46,7 +48,7 @@ namespace Bit.Core.Entities
         public Guid? ProviderOrganizationId { get; set; }
         public DeviceType? DeviceType { get; set; }
         [MaxLength(50)]
-        public string IpAddress { get; set; }
+        public string? IpAddress { get; set; }
         public Guid? ActingUserId { get; set; }
 
         public void SetNewId()

@@ -4,20 +4,22 @@ using System.Text.Json;
 using Bit.Core.Models.Data;
 using Bit.Core.Utilities;
 
+#nullable enable
+
 namespace Bit.Core.Entities
 {
     public class Cipher : ITableObject<Guid>, ICloneable
     {
-        private Dictionary<string, CipherAttachment.MetaData> _attachmentData;
+        private Dictionary<string, CipherAttachment.MetaData>? _attachmentData;
 
         public Guid Id { get; set; }
         public Guid? UserId { get; set; }
         public Guid? OrganizationId { get; set; }
         public Enums.CipherType Type { get; set; }
-        public string Data { get; set; }
-        public string Favorites { get; set; }
-        public string Folders { get; set; }
-        public string Attachments { get; set; }
+        public string Data { get; set; } = null!;
+        public string? Favorites { get; set; }
+        public string? Folders { get; set; }
+        public string? Attachments { get; set; }
         public DateTime CreationDate { get; set; } = DateTime.UtcNow;
         public DateTime RevisionDate { get; set; } = DateTime.UtcNow;
         public DateTime? DeletedDate { get; set; }
@@ -28,7 +30,7 @@ namespace Bit.Core.Entities
             Id = CoreHelpers.GenerateComb();
         }
 
-        public Dictionary<string, CipherAttachment.MetaData> GetAttachments()
+        public Dictionary<string, CipherAttachment.MetaData>? GetAttachments()
         {
             if (string.IsNullOrWhiteSpace(Attachments))
             {
@@ -42,7 +44,7 @@ namespace Bit.Core.Entities
 
             try
             {
-                _attachmentData = JsonSerializer.Deserialize<Dictionary<string, CipherAttachment.MetaData>>(Attachments);
+                _attachmentData = JsonSerializer.Deserialize<Dictionary<string, CipherAttachment.MetaData>>(Attachments)!;
                 foreach (var kvp in _attachmentData)
                 {
                     kvp.Value.AttachmentId = kvp.Key;
@@ -87,8 +89,8 @@ namespace Bit.Core.Entities
             {
                 return;
             }
-
-            attachments.Remove(id);
+            // NRJ: We know it contains something so therefore it exists
+            attachments!.Remove(id);
             SetAttachments(attachments);
         }
 

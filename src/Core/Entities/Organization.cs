@@ -7,33 +7,35 @@ using Bit.Core.Enums;
 using Bit.Core.Models;
 using Bit.Core.Utilities;
 
+#nullable enable
+
 namespace Bit.Core.Entities
 {
     public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorableSubscriber, IRevisable, IReferenceable
     {
-        private Dictionary<TwoFactorProviderType, TwoFactorProvider> _twoFactorProviders;
+        private Dictionary<TwoFactorProviderType, TwoFactorProvider>? _twoFactorProviders;
 
         public Guid Id { get; set; }
         [MaxLength(50)]
-        public string Identifier { get; set; }
+        public string? Identifier { get; set; }
         [MaxLength(50)]
-        public string Name { get; set; }
+        public string Name { get; set; } = null!;
         [MaxLength(50)]
-        public string BusinessName { get; set; }
+        public string? BusinessName { get; set; }
         [MaxLength(50)]
-        public string BusinessAddress1 { get; set; }
+        public string? BusinessAddress1 { get; set; }
         [MaxLength(50)]
-        public string BusinessAddress2 { get; set; }
+        public string? BusinessAddress2 { get; set; }
         [MaxLength(50)]
-        public string BusinessAddress3 { get; set; }
+        public string? BusinessAddress3 { get; set; }
         [MaxLength(2)]
-        public string BusinessCountry { get; set; }
+        public string? BusinessCountry { get; set; }
         [MaxLength(30)]
-        public string BusinessTaxNumber { get; set; }
+        public string? BusinessTaxNumber { get; set; }
         [MaxLength(256)]
-        public string BillingEmail { get; set; }
+        public string BillingEmail { get; set; } = null!;
         [MaxLength(50)]
-        public string Plan { get; set; }
+        public string Plan { get; set; } = null!;
         public PlanType PlanType { get; set; }
         public int? Seats { get; set; }
         public short? MaxCollections { get; set; }
@@ -53,16 +55,16 @@ namespace Bit.Core.Entities
         public short? MaxStorageGb { get; set; }
         public GatewayType? Gateway { get; set; }
         [MaxLength(50)]
-        public string GatewayCustomerId { get; set; }
+        public string? GatewayCustomerId { get; set; }
         [MaxLength(50)]
-        public string GatewaySubscriptionId { get; set; }
-        public string ReferenceData { get; set; }
+        public string? GatewaySubscriptionId { get; set; }
+        public string? ReferenceData { get; set; }
         public bool Enabled { get; set; } = true;
         [MaxLength(100)]
-        public string LicenseKey { get; set; }
-        public string PublicKey { get; set; }
-        public string PrivateKey { get; set; }
-        public string TwoFactorProviders { get; set; }
+        public string? LicenseKey { get; set; }
+        public string? PublicKey { get; set; }
+        public string? PrivateKey { get; set; }
+        public string? TwoFactorProviders { get; set; }
         public DateTime? ExpirationDate { get; set; }
         public DateTime CreationDate { get; set; } = DateTime.UtcNow;
         public DateTime RevisionDate { get; set; } = DateTime.UtcNow;
@@ -77,12 +79,12 @@ namespace Bit.Core.Entities
             }
         }
 
-        public string BillingEmailAddress()
+        public string? BillingEmailAddress()
         {
             return BillingEmail?.ToLowerInvariant()?.Trim();
         }
 
-        public string BillingName()
+        public string? BillingName()
         {
             return BusinessName;
         }
@@ -128,7 +130,7 @@ namespace Bit.Core.Entities
             return maxStorageBytes - Storage.Value;
         }
 
-        public Dictionary<TwoFactorProviderType, TwoFactorProvider> GetTwoFactorProviders()
+        public Dictionary<TwoFactorProviderType, TwoFactorProvider>? GetTwoFactorProviders()
         {
             if (string.IsNullOrWhiteSpace(TwoFactorProviders))
             {
@@ -187,7 +189,7 @@ namespace Bit.Core.Entities
             return providers.Any(p => (p.Value?.Enabled ?? false) && Use2fa);
         }
 
-        public TwoFactorProvider GetTwoFactorProvider(TwoFactorProviderType provider)
+        public TwoFactorProvider? GetTwoFactorProvider(TwoFactorProviderType provider)
         {
             var providers = GetTwoFactorProviders();
             if (providers == null || !providers.ContainsKey(provider))

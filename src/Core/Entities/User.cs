@@ -7,37 +7,39 @@ using Bit.Core.Models;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Identity;
 
+#nullable enable
+
 namespace Bit.Core.Entities
 {
     public class User : ITableObject<Guid>, ISubscriber, IStorable, IStorableSubscriber, IRevisable, ITwoFactorProvidersUser, IReferenceable
     {
-        private Dictionary<TwoFactorProviderType, TwoFactorProvider> _twoFactorProviders;
+        private Dictionary<TwoFactorProviderType, TwoFactorProvider>? _twoFactorProviders;
 
         public Guid Id { get; set; }
         [MaxLength(50)]
-        public string Name { get; set; }
+        public string? Name { get; set; }
         [Required]
         [MaxLength(256)]
-        public string Email { get; set; }
+        public string Email { get; set; } = null!;
         public bool EmailVerified { get; set; }
         [MaxLength(300)]
-        public string MasterPassword { get; set; }
+        public string? MasterPassword { get; set; }
         [MaxLength(50)]
-        public string MasterPasswordHint { get; set; }
+        public string? MasterPasswordHint { get; set; }
         [MaxLength(10)]
         public string Culture { get; set; } = "en-US";
         [Required]
         [MaxLength(50)]
-        public string SecurityStamp { get; set; }
-        public string TwoFactorProviders { get; set; }
+        public string SecurityStamp { get; set; } = null!;
+        public string? TwoFactorProviders { get; set; }
         [MaxLength(32)]
-        public string TwoFactorRecoveryCode { get; set; }
-        public string EquivalentDomains { get; set; }
-        public string ExcludedGlobalEquivalentDomains { get; set; }
+        public string? TwoFactorRecoveryCode { get; set; }
+        public string? EquivalentDomains { get; set; }
+        public string? ExcludedGlobalEquivalentDomains { get; set; }
         public DateTime AccountRevisionDate { get; set; } = DateTime.UtcNow;
-        public string Key { get; set; }
-        public string PublicKey { get; set; }
-        public string PrivateKey { get; set; }
+        public string? Key { get; set; }
+        public string? PublicKey { get; set; }
+        public string? PrivateKey { get; set; }
         public bool Premium { get; set; }
         public DateTime? PremiumExpirationDate { get; set; }
         public DateTime? RenewalReminderDate { get; set; }
@@ -45,15 +47,15 @@ namespace Bit.Core.Entities
         public short? MaxStorageGb { get; set; }
         public GatewayType? Gateway { get; set; }
         [MaxLength(50)]
-        public string GatewayCustomerId { get; set; }
+        public string? GatewayCustomerId { get; set; }
         [MaxLength(50)]
-        public string GatewaySubscriptionId { get; set; }
-        public string ReferenceData { get; set; }
+        public string? GatewaySubscriptionId { get; set; }
+        public string? ReferenceData { get; set; }
         [MaxLength(100)]
-        public string LicenseKey { get; set; }
+        public string? LicenseKey { get; set; }
         [Required]
         [MaxLength(30)]
-        public string ApiKey { get; set; }
+        public string ApiKey { get; set; } = null!;
         public KdfType Kdf { get; set; } = KdfType.PBKDF2_SHA256;
         public int KdfIterations { get; set; } = 5000;
         public DateTime CreationDate { get; set; } = DateTime.UtcNow;
@@ -69,12 +71,12 @@ namespace Bit.Core.Entities
             Id = CoreHelpers.GenerateComb();
         }
 
-        public string BillingEmailAddress()
+        public string? BillingEmailAddress()
         {
             return Email?.ToLowerInvariant()?.Trim();
         }
 
-        public string BillingName()
+        public string? BillingName()
         {
             return Name;
         }
@@ -99,7 +101,7 @@ namespace Bit.Core.Entities
             return true;
         }
 
-        public Dictionary<TwoFactorProviderType, TwoFactorProvider> GetTwoFactorProviders()
+        public Dictionary<TwoFactorProviderType, TwoFactorProvider>? GetTwoFactorProviders()
         {
             if (string.IsNullOrWhiteSpace(TwoFactorProviders))
             {
@@ -145,7 +147,7 @@ namespace Bit.Core.Entities
             SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>());
         }
 
-        public TwoFactorProvider GetTwoFactorProvider(TwoFactorProviderType provider)
+        public TwoFactorProvider? GetTwoFactorProvider(TwoFactorProviderType provider)
         {
             var providers = GetTwoFactorProviders();
             if (providers == null || !providers.ContainsKey(provider))

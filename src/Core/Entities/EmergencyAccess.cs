@@ -3,6 +3,8 @@ using System.ComponentModel.DataAnnotations;
 using Bit.Core.Enums;
 using Bit.Core.Utilities;
 
+#nullable enable
+
 namespace Bit.Core.Entities
 {
     public class EmergencyAccess : ITableObject<Guid>
@@ -11,8 +13,8 @@ namespace Bit.Core.Entities
         public Guid GrantorId { get; set; }
         public Guid? GranteeId { get; set; }
         [MaxLength(256)]
-        public string Email { get; set; }
-        public string KeyEncrypted { get; set; }
+        public string? Email { get; set; }
+        public string? KeyEncrypted { get; set; }
         public EmergencyAccessType Type { get; set; }
         public EmergencyAccessStatusType Status { get; set; }
         public int WaitTimeDays { get; set; }
