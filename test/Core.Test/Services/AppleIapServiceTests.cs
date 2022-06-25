@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Bit.Core.Services;
@@ -17,9 +17,9 @@ namespace Bit.Core.Test.Services
         [Theory, BitAutoData]
         public async Task GetReceiptStatusAsync_MoreThanFourAttempts_Throws(SutProvider<AppleIapService> sutProvider)
         {
-            var result = await  sutProvider.Sut.GetReceiptStatusAsync("test", false, 5, null);
+            var result = await sutProvider.Sut.GetReceiptStatusAsync("test", false, 5, null);
             Assert.Null(result);
-            
+
             var errorLog = sutProvider.GetDependency<ILogger<AppleIapService>>()
                 .ReceivedCalls()
                 .SingleOrDefault(LogOneWarning);
@@ -32,7 +32,7 @@ namespace Bit.Core.Test.Services
                 {
                     return false;
                 }
-                
+
                 var args = call.GetArguments();
                 var logLevel = (LogLevel)args[0];
                 var exception = (Exception)args[3];

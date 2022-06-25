@@ -1,4 +1,4 @@
-using Bit.Core.Models.Business;
+﻿using Bit.Core.Models.Business;
 using Xunit;
 
 namespace Bit.Core.Test.Models.Business
