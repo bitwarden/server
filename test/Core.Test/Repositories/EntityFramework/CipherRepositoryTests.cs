@@ -72,9 +72,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
         }
 
         [CiSkippedTheory, EfUserCipherAutoData]
-        public async void CreateAsync_BumpsUserAccountRevisionDate(Cipher cipher, User user,
-            CipherCompare equalityComparer, List<EfRepo.CipherRepository> suts, List<EfRepo.UserRepository> efUserRepos,
-            SqlRepo.CipherRepository sqlCipherRepo, SqlRepo.UserRepository sqlUserRepo)
+        public async void CreateAsync_BumpsUserAccountRevisionDate(Cipher cipher, User user, List<EfRepo.CipherRepository> suts, List<EfRepo.UserRepository> efUserRepos)
         {
             var bumpedUsers = new List<User>();
             foreach (var sut in suts)
@@ -98,8 +96,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
 
         [CiSkippedTheory, EfOrganizationCipherAutoData]
         public async void CreateAsync_BumpsOrgUserAccountRevisionDates(Cipher cipher, List<User> users,
-            List<OrganizationUser> orgUsers, Collection collection, Organization org, CipherCompare equalityComparer,
-            List<EfRepo.CipherRepository> suts, List<EfRepo.UserRepository> efUserRepos, List<EfRepo.OrganizationRepository> efOrgRepos,
+            List<OrganizationUser> orgUsers, Collection collection, Organization org, List<EfRepo.CipherRepository> suts, List<EfRepo.UserRepository> efUserRepos, List<EfRepo.OrganizationRepository> efOrgRepos,
             List<EfRepo.OrganizationUserRepository> efOrgUserRepos, List<EfRepo.CollectionRepository> efCollectionRepos)
         {
             var savedCiphers = new List<Cipher>();

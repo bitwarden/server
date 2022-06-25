@@ -35,8 +35,7 @@ namespace Bit.Core.Test.Services
 
         [Theory, CollectionAutoData]
         public async Task SaveAsync_DefaultIdWithGroups_CreateCollectionWithGroupsInRepository(Collection collection,
-            IEnumerable<SelectionReadOnly> groups, Organization organization, OrganizationUser organizationUser,
-            SutProvider<CollectionService> sutProvider)
+            IEnumerable<SelectionReadOnly> groups, Organization organization, SutProvider<CollectionService> sutProvider)
         {
             collection.Id = default;
             organization.UseGroups = true;
@@ -70,7 +69,7 @@ namespace Bit.Core.Test.Services
 
         [Theory, CollectionAutoData]
         public async Task SaveAsync_OrganizationNotUseGroup_CreateCollectionWithoutGroupsInRepository(Collection collection, IEnumerable<SelectionReadOnly> groups,
-            Organization organization, OrganizationUser organizationUser, SutProvider<CollectionService> sutProvider)
+            Organization organization, SutProvider<CollectionService> sutProvider)
         {
             collection.Id = default;
             sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
@@ -120,7 +119,7 @@ namespace Bit.Core.Test.Services
         }
 
         [Theory, CollectionAutoData]
-        public async Task SaveAsync_ExceedsOrganizationMaxCollections_ThrowsBadRequest(Collection collection, Collection collection1, Collection collection2, Organization organization, SutProvider<CollectionService> sutProvider)
+        public async Task SaveAsync_ExceedsOrganizationMaxCollections_ThrowsBadRequest(Collection collection, Organization organization, SutProvider<CollectionService> sutProvider)
         {
             collection.Id = default;
             sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);

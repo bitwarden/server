@@ -233,8 +233,7 @@ namespace Bit.CommCore.Test.Services
         }
 
         [Theory, CustomAutoData(typeof(SutProviderCustomization))]
-        public async Task AcceptUserAsync_UserIsInvalid_Throws(ProviderUser providerUser, User user,
-            SutProvider<ProviderService> sutProvider)
+        public async Task AcceptUserAsync_UserIsInvalid_Throws(SutProvider<ProviderService> sutProvider)
         {
             var exception = await Assert.ThrowsAsync<BadRequestException>(
                 () => sutProvider.Sut.AcceptUserAsync(default, default, default));

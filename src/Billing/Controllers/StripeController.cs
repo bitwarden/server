@@ -28,6 +28,7 @@ namespace Bit.Billing.Controllers
     {
         private const decimal PremiumPlanAppleIapPrice = 14.99M;
         private const string PremiumPlanId = "premium-annually";
+        private const string PremiumPlanIdAppStore = "premium-annually-app";
 
         private readonly BillingSettings _billingSettings;
         private readonly IWebHostEnvironment _hostingEnvironment;
@@ -806,8 +807,10 @@ namespace Bit.Billing.Controllers
         {
             if (!invoice.Paid && invoice.AttemptCount > 1 && UnpaidAutoChargeInvoiceForSubscriptionCycle(invoice))
             {
+                var subscriptionService = new SubscriptionService();
+                var subscription = await subscriptionService.GetAsync(invoice.SubscriptionId);
                 // attempt count 4 = 11 days after initial failure
-                if (invoice.AttemptCount > 3)
+                if (invoice.AttemptCount > 3 && subscription.Items.Any(i => i.Price.Id == PremiumPlanId || i.Price.Id == PremiumPlanIdAppStore))
                 {
                     await CancelSubscription(invoice.SubscriptionId);
                     await VoidOpenInvoices(invoice.SubscriptionId);

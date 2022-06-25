@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Security.Claims;
@@ -599,7 +600,7 @@ namespace Bit.SharedWeb.Utilities
             {
                 options.ServerDomain = new Uri(globalSettings.BaseServiceUri.Vault).Host;
                 options.ServerName = "Bitwarden";
-                options.Origin = globalSettings.BaseServiceUri.Vault;
+                options.Origins = new HashSet<string> { globalSettings.BaseServiceUri.Vault, };
                 options.TimestampDriftTolerance = 300000;
             });
         }
