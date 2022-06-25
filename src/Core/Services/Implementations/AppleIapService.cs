@@ -93,8 +93,8 @@ namespace Bit.Core.Services
             {
                 if (attempt > 4)
                 {
-                    throw new Exception("Failed verifying Apple IAP after too many attempts. Last attempt status: " +
-                        lastReceiptStatus?.Status ?? "null");
+                    throw new Exception(
+                        $"Failed verifying Apple IAP after too many attempts. Last attempt status: {lastReceiptStatus?.Status.ToString() ?? "null"}");
                 }
 
                 var url = string.Format("https://{0}.itunes.apple.com/verifyReceipt", prod ? "buy" : "sandbox");
