@@ -79,6 +79,9 @@ dotnet_diagnostic.CS0618.severity = suggestion
 # Obsolete warnings, this should be removed or changed to warning once we address some of the obsolete items.
 dotnet_diagnostic.CS0612.severity = suggestion
 
+# Remove unnecessary using directives https://docs.microsoft.com/en-us/dotnet/fundamentals/code-analysis/style-rules/ide0005
+dotnet_diagnostic.IDE0005.severity = warning
+
 # CSharp code style settings:
 [*.cs]
 # Prefer "var" everywhere

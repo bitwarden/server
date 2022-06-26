@@ -1,6 +1,4 @@
-﻿using System.IO;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Text;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

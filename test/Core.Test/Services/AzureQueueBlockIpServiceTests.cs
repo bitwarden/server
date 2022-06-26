@@ -1,7 +1,5 @@
-﻿using System;
-using Bit.Core.Services;
+﻿using Bit.Core.Services;
 using Bit.Core.Settings;
-using NSubstitute;
 using Xunit;
 
 namespace Bit.Core.Test.Services

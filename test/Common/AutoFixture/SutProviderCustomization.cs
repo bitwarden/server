@@ -1,5 +1,4 @@
-﻿using System;
-using AutoFixture;
+﻿using AutoFixture;
 using AutoFixture.Kernel;
 
 namespace Bit.Test.Common.AutoFixture.Attributes

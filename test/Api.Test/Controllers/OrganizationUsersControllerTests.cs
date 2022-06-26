@@ -1,6 +1,4 @@
-﻿using System;
-using System.Threading.Tasks;
-using Bit.Api.Controllers;
+﻿using Bit.Api.Controllers;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Test.AutoFixture.Attributes;
 using Bit.Core.Entities;

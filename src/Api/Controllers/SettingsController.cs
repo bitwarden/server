@@ -1,6 +1,4 @@
-﻿using System;
-using System.Threading.Tasks;
-using Bit.Api.Models.Request;
+﻿using Bit.Api.Models.Request;
 using Bit.Api.Models.Response;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;

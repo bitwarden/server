@@ -1,17 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
+﻿using System.Text.Json;
 using Azure.Storage.Queues;
 using Bit.Core;
 using Bit.Core.Models.Data;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 
 namespace Bit.EventsProcessor
 {

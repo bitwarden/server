@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Bit.Core.Exceptions
+﻿namespace Bit.Core.Exceptions
 {
     public class NotFoundException : Exception { }
 }

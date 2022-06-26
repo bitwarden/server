@@ -1,7 +1,4 @@
-﻿using System.IO;
-using System.Text;
-using System.Threading.Tasks;
-using Bit.Api.Models.Request;
+﻿using System.Text;
 using Bit.Api.Utilities;
 using Bit.Core.Models.Business;
 using Microsoft.AspNetCore.Http;

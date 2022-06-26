@@ -1,7 +1,5 @@
-﻿using System.Threading.Tasks;
-using Bit.Core.Models.Api.Request.Accounts;
+﻿using Bit.Core.Models.Api.Request.Accounts;
 using Bit.IntegrationTestCommon.Factories;
-using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
 

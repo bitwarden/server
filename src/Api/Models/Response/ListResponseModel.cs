@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using Bit.Core.Models.Api;
+﻿using Bit.Core.Models.Api;
 
 namespace Bit.Api.Models.Response
 {

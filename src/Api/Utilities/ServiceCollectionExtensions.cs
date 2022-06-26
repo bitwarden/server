@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using Bit.Core.Settings;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Bit.Core.Settings;
 using Microsoft.OpenApi.Models;
 
 namespace Bit.Api.Utilities

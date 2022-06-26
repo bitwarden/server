@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using Microsoft.Azure.Documents;
+﻿using Microsoft.Azure.Documents;
 using Newtonsoft.Json.Linq;
 
 namespace Bit.Admin.Models

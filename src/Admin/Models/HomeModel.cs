@@ -1,5 +1,4 @@
-﻿using System;
-using Bit.Core.Settings;
+﻿using Bit.Core.Settings;
 
 namespace Bit.Admin.Models
 {

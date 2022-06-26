@@ -1,8 +1,6 @@
-﻿using System.Threading.Tasks;
-using Bit.Icons.Services;
+﻿using Bit.Icons.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
 namespace Bit.Icons.Test.Services

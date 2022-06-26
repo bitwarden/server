@@ -1,6 +1,4 @@
-﻿using System;
-using System.Threading.Tasks;
-using Bit.Core.Context;
+﻿using Bit.Core.Context;
 using Bit.Core.Settings;
 using Microsoft.AspNetCore.Authorization;
 

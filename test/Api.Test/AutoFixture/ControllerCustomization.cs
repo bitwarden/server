@@ -1,10 +1,6 @@
-﻿using System;
-using AutoFixture;
-using AutoFixture.Kernel;
-using Bit.Api.Controllers;
+﻿using AutoFixture;
 using Bit.Test.Common.AutoFixture;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Org.BouncyCastle.Security;
 
 namespace Bit.Api.Test.AutoFixture

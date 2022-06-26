@@ -1,5 +1,4 @@
-﻿using System.Threading.Tasks;
-using Bit.Admin.Models;
+﻿using Bit.Admin.Models;
 using Bit.Core.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;

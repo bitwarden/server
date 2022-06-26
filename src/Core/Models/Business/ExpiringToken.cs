@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Bit.Core.Models.Business
+﻿namespace Bit.Core.Models.Business
 {
     public class ExpiringToken
     {

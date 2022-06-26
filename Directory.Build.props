@@ -6,6 +6,7 @@
 		<Version>2022.5.2</Version>
 		<RootNamespace>Bit.$(MSBuildProjectName)</RootNamespace>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <ImplicitUsings>enable</ImplicitUsings>
 	</PropertyGroup>
 
   <!--

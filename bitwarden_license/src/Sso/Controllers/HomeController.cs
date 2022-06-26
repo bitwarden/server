@@ -1,6 +1,4 @@
-﻿using System;
-using System.Diagnostics;
-using System.Threading.Tasks;
+﻿using System.Diagnostics;
 using Bit.Sso.Models;
 using IdentityServer4.Services;
 using Microsoft.AspNetCore.Authorization;

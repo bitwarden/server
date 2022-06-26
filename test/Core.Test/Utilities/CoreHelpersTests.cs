@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
+﻿using System.Text;
 using AutoFixture;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -15,8 +11,6 @@ using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using IdentityModel;
 using Microsoft.AspNetCore.DataProtection;
-using Microsoft.AspNetCore.WebUtilities;
-using NSubstitute;
 using Xunit;
 
 namespace Bit.Core.Test.Utilities
