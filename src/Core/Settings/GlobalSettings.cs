@@ -67,7 +67,7 @@ namespace Bit.Core.Settings
         public virtual AmazonSettings Amazon { get; set; } = new AmazonSettings();
         public virtual ServiceBusSettings ServiceBus { get; set; } = new ServiceBusSettings();
         public virtual AppleIapSettings AppleIap { get; set; } = new AppleIapSettings();
-        public virtual SsoSettings Sso { get; set; } = new SsoSettings();
+        public virtual ISsoSettings Sso { get; set; } = new SsoSettings();
         public virtual StripeSettings Stripe { get; set; } = new StripeSettings();
         public virtual ITwoFactorAuthSettings TwoFactorAuth { get; set; } = new TwoFactorAuthSettings();
 
@@ -437,7 +437,7 @@ namespace Bit.Core.Settings
             }
             public string ApiUri
             {
-                get => string.IsNullOrWhiteSpace(_apiUri) ? "https://api.biwarden.com" : _apiUri;
+                get => string.IsNullOrWhiteSpace(_apiUri) ? "https://api.bitwarden.com" : _apiUri;
                 set => _apiUri = value;
             }
         }
@@ -461,9 +461,10 @@ namespace Bit.Core.Settings
             public bool AppInReview { get; set; }
         }
 
-        public class SsoSettings
+        public class SsoSettings : ISsoSettings
         {
             public int CacheLifetimeInSeconds { get; set; } = 60;
+            public double SsoTokenLifetimeInSeconds { get; set; } = 5;
         }
 
         public class CaptchaSettings

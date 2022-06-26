@@ -11,6 +11,6 @@ BEGIN
     FROM
         [dbo].[OrganizationSponsorship] OS
     WHERE
-        [SponsoringOrganizationUserId] = @OrganizationUserId
+        [SponsoringOrganizationUserID] = @OrganizationUserId
 END
 GO

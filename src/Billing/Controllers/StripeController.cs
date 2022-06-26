@@ -4,6 +4,7 @@ using System.Data.SqlClient;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Bit.Billing.Constants;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
@@ -27,6 +28,7 @@ namespace Bit.Billing.Controllers
     {
         private const decimal PremiumPlanAppleIapPrice = 14.99M;
         private const string PremiumPlanId = "premium-annually";
+        private const string PremiumPlanIdAppStore = "premium-annually-app";
 
         private readonly BillingSettings _billingSettings;
         private readonly IWebHostEnvironment _hostingEnvironment;
@@ -113,8 +115,8 @@ namespace Bit.Billing.Controllers
                 return new BadRequestResult();
             }
 
-            var subDeleted = parsedEvent.Type.Equals("customer.subscription.deleted");
-            var subUpdated = parsedEvent.Type.Equals("customer.subscription.updated");
+            var subDeleted = parsedEvent.Type.Equals(HandledStripeWebhook.SubscriptionDeleted);
+            var subUpdated = parsedEvent.Type.Equals(HandledStripeWebhook.SubscriptionUpdated);
 
             if (subDeleted || subUpdated)
             {
@@ -159,7 +161,7 @@ namespace Bit.Billing.Controllers
                     }
                 }
             }
-            else if (parsedEvent.Type.Equals("invoice.upcoming"))
+            else if (parsedEvent.Type.Equals(HandledStripeWebhook.UpcomingInvoice))
             {
                 var invoice = await GetInvoiceAsync(parsedEvent);
                 var subscriptionService = new SubscriptionService();
@@ -205,7 +207,7 @@ namespace Bit.Billing.Controllers
                         invoice.NextPaymentAttempt.Value, items, true);
                 }
             }
-            else if (parsedEvent.Type.Equals("charge.succeeded"))
+            else if (parsedEvent.Type.Equals(HandledStripeWebhook.ChargeSucceeded))
             {
                 var charge = await GetChargeAsync(parsedEvent);
                 var chargeTransaction = await _transactionRepository.GetByGatewayIdAsync(
@@ -332,7 +334,7 @@ namespace Bit.Billing.Controllers
                 // Catch foreign key violations because user/org could have been deleted.
                 catch (SqlException e) when (e.Number == 547) { }
             }
-            else if (parsedEvent.Type.Equals("charge.refunded"))
+            else if (parsedEvent.Type.Equals(HandledStripeWebhook.ChargeRefunded))
             {
                 var charge = await GetChargeAsync(parsedEvent);
                 var chargeTransaction = await _transactionRepository.GetByGatewayIdAsync(
@@ -382,7 +384,7 @@ namespace Bit.Billing.Controllers
                     _logger.LogWarning("Charge refund amount doesn't seem correct. " + charge.Id);
                 }
             }
-            else if (parsedEvent.Type.Equals("invoice.payment_succeeded"))
+            else if (parsedEvent.Type.Equals(HandledStripeWebhook.PaymentSucceeded))
             {
                 var invoice = await GetInvoiceAsync(parsedEvent, true);
                 if (invoice.Paid && invoice.BillingReason == "subscription_create")
@@ -434,15 +436,11 @@ namespace Bit.Billing.Controllers
                     }
                 }
             }
-            else if (parsedEvent.Type.Equals("invoice.payment_failed"))
+            else if (parsedEvent.Type.Equals(HandledStripeWebhook.PaymentFailed))
             {
-                var invoice = await GetInvoiceAsync(parsedEvent, true);
-                if (!invoice.Paid && invoice.AttemptCount > 1 && UnpaidAutoChargeInvoiceForSubscriptionCycle(invoice))
-                {
-                    await AttemptToPayInvoiceAsync(invoice);
-                }
+                await HandlePaymentFailed(await GetInvoiceAsync(parsedEvent, true));
             }
-            else if (parsedEvent.Type.Equals("invoice.created"))
+            else if (parsedEvent.Type.Equals(HandledStripeWebhook.InvoiceCreated))
             {
                 var invoice = await GetInvoiceAsync(parsedEvent, true);
                 if (!invoice.Paid && UnpaidAutoChargeInvoiceForSubscriptionCycle(invoice))
@@ -804,5 +802,44 @@ namespace Bit.Billing.Controllers
 
         private static bool IsSponsoredSubscription(Subscription subscription) =>
             StaticStore.SponsoredPlans.Any(p => p.StripePlanId == subscription.Id);
+
+        private async Task HandlePaymentFailed(Invoice invoice)
+        {
+            if (!invoice.Paid && invoice.AttemptCount > 1 && UnpaidAutoChargeInvoiceForSubscriptionCycle(invoice))
+            {
+                var subscriptionService = new SubscriptionService();
+                var subscription = await subscriptionService.GetAsync(invoice.SubscriptionId);
+                // attempt count 4 = 11 days after initial failure
+                if (invoice.AttemptCount > 3 && subscription.Items.Any(i => i.Price.Id == PremiumPlanId || i.Price.Id == PremiumPlanIdAppStore))
+                {
+                    await CancelSubscription(invoice.SubscriptionId);
+                    await VoidOpenInvoices(invoice.SubscriptionId);
+                }
+                else
+                {
+                    await AttemptToPayInvoiceAsync(invoice);
+                }
+            }
+        }
+
+        private async Task CancelSubscription(string subscriptionId)
+        {
+            await new SubscriptionService().CancelAsync(subscriptionId, new SubscriptionCancelOptions());
+        }
+
+        private async Task VoidOpenInvoices(string subscriptionId)
+        {
+            var invoiceService = new InvoiceService();
+            var options = new InvoiceListOptions
+            {
+                Status = "open",
+                Subscription = subscriptionId
+            };
+            var invoices = invoiceService.List(options);
+            foreach (var invoice in invoices)
+            {
+                await invoiceService.VoidInvoiceAsync(invoice.Id);
+            }
+        }
     }
 }

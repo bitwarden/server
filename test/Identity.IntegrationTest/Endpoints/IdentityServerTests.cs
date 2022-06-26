@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -71,7 +72,7 @@ namespace Bit.Identity.IntegrationTest.Endpoints
                 { "grant_type", "password" },
                 { "username", username },
                 { "password", "master_password_hash" },
-            }), context => context.Request.Headers.Add("Auth-Email", CoreHelpers.Base64UrlEncodeString(username)));
+            }), context => context.SetAuthEmail(username));
 
             using var body = await AssertDefaultTokenBodyAsync(context);
             var root = body.RootElement;
@@ -174,7 +175,7 @@ namespace Bit.Identity.IntegrationTest.Endpoints
                 { "grant_type", "password" },
                 { "username", username },
                 { "password", "master_password_hash" },
-            }), context => context.Request.Headers.Add("Auth-Email", CoreHelpers.Base64UrlEncodeString("bad_value")));
+            }), context => context.SetAuthEmail("bad_value"));
 
             Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
 
@@ -397,6 +398,57 @@ namespace Bit.Identity.IntegrationTest.Endpoints
             var errorBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
             var error = AssertHelper.AssertJsonProperty(errorBody.RootElement, "error", JsonValueKind.String).GetString();
             Assert.Equal("invalid_client", error);
+        }
+
+        [Fact]
+        public async Task TokenEndpoint_ToQuickInOneSecond_BlockRequest()
+        {
+            const int AmountInOneSecondAllowed = 5;
+
+            // The rule we are testing is 10 requests in 1 second
+            var username = "test+ratelimiting@email.com";
+            var deviceId = "8f14a393-edfe-40ba-8c67-a856cb89c509";
+
+            await _factory.RegisterAsync(new RegisterRequestModel
+            {
+                Email = username,
+                MasterPasswordHash = "master_password_hash",
+            });
+
+            var database = _factory.GetDatabaseContext();
+            var user = await database.Users
+                .FirstAsync(u => u.Email == username);
+
+            var tasks = new Task<HttpContext>[AmountInOneSecondAllowed + 1];
+
+            for (var i = 0; i < AmountInOneSecondAllowed + 1; i++)
+            {
+                // Queue all the amount of calls allowed plus 1
+                tasks[i] = MakeRequest();
+            }
+
+            var responses = await Task.WhenAll(tasks);
+
+            var allowedCalls = responses[..AmountInOneSecondAllowed];
+            var notAllowedCall = responses[^1];
+
+            Assert.True(allowedCalls.All(c => c.Response.StatusCode == StatusCodes.Status200OK));
+            Assert.True(notAllowedCall.Response.StatusCode == StatusCodes.Status429TooManyRequests);
+
+            Task<HttpContext> MakeRequest()
+            {
+                return _factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
+                {
+                    { "scope", "api offline_access" },
+                    { "client_id", "web" },
+                    { "deviceType", DeviceTypeAsString(DeviceType.FirefoxBrowser) },
+                    { "deviceIdentifier", deviceId },
+                    { "deviceName", "firefox" },
+                    { "grant_type", "password" },
+                    { "username", username },
+                    { "password", "master_password_hash" },
+                }), context => context.SetAuthEmail(username).SetIp("1.1.1.2"));
+            }
         }
 
         private static string DeviceTypeAsString(DeviceType deviceType)

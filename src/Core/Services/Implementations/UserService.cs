@@ -52,6 +52,7 @@ namespace Bit.Core.Services
         private readonly IOrganizationService _organizationService;
         private readonly IProviderUserRepository _providerUserRepository;
         private readonly IDeviceRepository _deviceRepository;
+        private readonly IStripeSyncService _stripeSyncService;
 
         public UserService(
             IUserRepository userRepository,
@@ -81,7 +82,8 @@ namespace Bit.Core.Services
             IGlobalSettings globalSettings,
             IOrganizationService organizationService,
             IProviderUserRepository providerUserRepository,
-            IDeviceRepository deviceRepository)
+            IDeviceRepository deviceRepository,
+            IStripeSyncService stripeSyncService)
             : base(
                   store,
                   optionsAccessor,
@@ -117,6 +119,7 @@ namespace Bit.Core.Services
             _organizationService = organizationService;
             _providerUserRepository = providerUserRepository;
             _deviceRepository = deviceRepository;
+            _stripeSyncService = stripeSyncService;
         }
 
         public Guid? GetProperUserId(ClaimsPrincipal principal)
@@ -543,6 +546,14 @@ namespace Bit.Core.Services
                 return IdentityResult.Failed(_identityErrorDescriber.DuplicateEmail(newEmail));
             }
 
+            var previousState = new
+            {
+                Key = user.Key,
+                MasterPassword = user.MasterPassword,
+                SecurityStamp = user.SecurityStamp,
+                Email = user.Email
+            };
+
             var result = await UpdatePasswordHash(user, newMasterPassword);
             if (!result.Succeeded)
             {
@@ -554,6 +565,32 @@ namespace Bit.Core.Services
             user.EmailVerified = true;
             user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
             await _userRepository.ReplaceAsync(user);
+
+            if (user.Gateway == GatewayType.Stripe)
+            {
+
+                try
+                {
+                    await _stripeSyncService.UpdateCustomerEmailAddress(user.GatewayCustomerId,
+                        user.BillingEmailAddress());
+                }
+                catch (Exception ex)
+                {
+                    //if sync to strip fails, update email and securityStamp to previous
+                    user.Key = previousState.Key;
+                    user.Email = previousState.Email;
+                    user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
+                    user.MasterPassword = previousState.MasterPassword;
+                    user.SecurityStamp = previousState.SecurityStamp;
+
+                    await _userRepository.ReplaceAsync(user);
+                    return IdentityResult.Failed(new IdentityError
+                    {
+                        Description = ex.Message
+                    });
+                }
+            }
+
             await _pushService.PushLogOutAsync(user.Id);
 
             return IdentityResult.Success;
@@ -757,7 +794,7 @@ namespace Bit.Core.Services
             user.ForcePasswordReset = true;
 
             await _userRepository.ReplaceAsync(user);
-            await _mailService.SendAdminResetPasswordEmailAsync(user.Email, user.Name ?? user.Email, org.Name);
+            await _mailService.SendAdminResetPasswordEmailAsync(user.Email, user.Name, org.Name);
             await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_AdminResetPassword);
             await _pushService.PushLogOutAsync(user.Id);
 
@@ -783,7 +820,7 @@ namespace Bit.Core.Services
             user.MasterPasswordHint = hint;
 
             await _userRepository.ReplaceAsync(user);
-            await _mailService.SendUpdatedTempPasswordEmailAsync(user.Email, user.Name ?? user.Email);
+            await _mailService.SendUpdatedTempPasswordEmailAsync(user.Email, user.Name);
             await _eventService.LogUserEventAsync(user.Id, EventType.User_UpdatedTempPassword);
             await _pushService.PushLogOutAsync(user.Id);
 
@@ -1226,18 +1263,32 @@ namespace Bit.Core.Services
             {
                 return false;
             }
-            if (user.GetPremium())
-            {
-                return true;
-            }
-            var orgs = await _currentContext.OrganizationMembershipAsync(_organizationUserRepository, userId.Value);
-            if (!orgs.Any())
+
+            return user.GetPremium() || await this.HasPremiumFromOrganization(user);
+        }
+
+        public async Task<bool> HasPremiumFromOrganization(ITwoFactorProvidersUser user)
+        {
+            var userId = user.GetUserId();
+            if (!userId.HasValue)
             {
                 return false;
             }
+
+            // orgUsers in the Invited status are not associated with a userId yet, so this will get
+            // orgUsers in Accepted and Confirmed states only
+            var orgUsers = await _organizationUserRepository.GetManyByUserAsync(userId.Value);
+
+            if (!orgUsers.Any())
+            {
+                return false;
+            }
+
             var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
-            return orgs.Any(o => orgAbilities.ContainsKey(o.Id) &&
-                orgAbilities[o.Id].UsersGetPremium && orgAbilities[o.Id].Enabled);
+            return orgUsers.Any(ou =>
+                orgAbilities.TryGetValue(ou.OrganizationId, out var orgAbility) &&
+                orgAbility.UsersGetPremium &&
+                orgAbility.Enabled);
         }
 
         public async Task<bool> TwoFactorIsEnabledAsync(ITwoFactorProvidersUser user)
@@ -1417,10 +1468,18 @@ namespace Bit.Core.Services
 
         public async Task<bool> Needs2FABecauseNewDeviceAsync(User user, string deviceIdentifier, string grantType)
         {
-            return _globalSettings.TwoFactorAuth.EmailOnNewDeviceLogin
-                   && user.EmailVerified
+            return CanEditDeviceVerificationSettings(user)
+                   && user.UnknownDeviceVerificationEnabled
                    && grantType != "authorization_code"
                    && await IsNewDeviceAndNotTheFirstOneAsync(user, deviceIdentifier);
+        }
+
+        public bool CanEditDeviceVerificationSettings(User user)
+        {
+            return _globalSettings.TwoFactorAuth.EmailOnNewDeviceLogin
+                   && user.EmailVerified
+                   && !user.UsesKeyConnector
+                   && !(user.GetTwoFactorProviders()?.Any() ?? false);
         }
 
         private async Task<bool> IsNewDeviceAndNotTheFirstOneAsync(User user, string deviceIdentifier)

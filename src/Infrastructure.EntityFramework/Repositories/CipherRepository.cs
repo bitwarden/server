@@ -259,6 +259,18 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             }
         }
 
+        public async Task<ICollection<CipherOrganizationDetails>> GetManyOrganizationDetailsByOrganizationIdAsync(
+            Guid organizationId)
+        {
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var query = new CipherOrganizationDetailsReadByIdQuery(organizationId);
+                var data = await query.Run(dbContext).ToListAsync();
+                return data;
+            }
+        }
+
         public async Task<bool> GetCanEditByIdAsync(Guid userId, Guid cipherId)
         {
             using (var scope = ServiceScopeFactory.CreateScope())

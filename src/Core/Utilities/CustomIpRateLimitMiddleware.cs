@@ -21,12 +21,12 @@ namespace Bit.Core.Utilities
             IMemoryCache memoryCache,
             IBlockIpService blockIpService,
             RequestDelegate next,
+            IProcessingStrategy processingStrategy,
+            IRateLimitConfiguration rateLimitConfiguration,
             IOptions<IpRateLimitOptions> options,
-            IRateLimitCounterStore counterStore,
             IIpPolicyStore policyStore,
-            ILogger<CustomIpRateLimitMiddleware> logger,
-            IIpAddressParser ipParser = null)
-            : base(next, options, counterStore, policyStore, logger, ipParser)
+            ILogger<CustomIpRateLimitMiddleware> logger)
+            : base(next, processingStrategy, options, policyStore, rateLimitConfiguration, logger)
         {
             _memoryCache = memoryCache;
             _blockIpService = blockIpService;
@@ -44,7 +44,7 @@ namespace Bit.Core.Utilities
             return httpContext.Response.WriteAsJsonAsync(errorModel, cancellationToken: httpContext.RequestAborted);
         }
 
-        public override void LogBlockedRequest(HttpContext httpContext, ClientRequestIdentity identity,
+        protected override void LogBlockedRequest(HttpContext httpContext, ClientRequestIdentity identity,
             RateLimitCounter counter, RateLimitRule rule)
         {
             base.LogBlockedRequest(httpContext, identity, counter, rule);

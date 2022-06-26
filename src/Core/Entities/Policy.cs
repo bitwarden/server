@@ -1,5 +1,6 @@
 ﻿using System;
 using Bit.Core.Enums;
+using Bit.Core.Models.Data.Organizations.Policies;
 using Bit.Core.Utilities;
 
 namespace Bit.Core.Entities
@@ -17,6 +18,16 @@ namespace Bit.Core.Entities
         public void SetNewId()
         {
             Id = CoreHelpers.GenerateComb();
+        }
+
+        public T GetDataModel<T>() where T : IPolicyDataModel, new()
+        {
+            return CoreHelpers.LoadClassFromJsonData<T>(Data);
+        }
+
+        public void SetDataModel<T>(T dataModel) where T : IPolicyDataModel, new()
+        {
+            Data = CoreHelpers.ClassToJsonData(dataModel);
         }
     }
 }

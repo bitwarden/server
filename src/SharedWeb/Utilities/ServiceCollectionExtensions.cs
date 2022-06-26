@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Security.Claims;
@@ -121,6 +122,11 @@ namespace Bit.SharedWeb.Utilities
                     HCaptchaTokenable.DataProtectorPurpose,
                     serviceProvider.GetDataProtectionProvider())
             );
+            services.AddSingleton<IDataProtectorTokenFactory<SsoTokenable>>(serviceProvider =>
+                new DataProtectorTokenFactory<SsoTokenable>(
+                    SsoTokenable.ClearTextPrefix,
+                    SsoTokenable.DataProtectorPurpose,
+                    serviceProvider.GetDataProtectionProvider()));
         }
 
         public static void AddDefaultServices(this IServiceCollection services, GlobalSettings globalSettings)
@@ -143,6 +149,7 @@ namespace Bit.SharedWeb.Utilities
                 };
             });
             services.AddSingleton<IPaymentService, StripePaymentService>();
+            services.AddSingleton<IStripeSyncService, StripeSyncService>();
             services.AddSingleton<IMailService, HandlebarsMailService>();
             services.AddSingleton<ILicensingService, LicensingService>();
             services.AddTokenizers();
@@ -593,7 +600,7 @@ namespace Bit.SharedWeb.Utilities
             {
                 options.ServerDomain = new Uri(globalSettings.BaseServiceUri.Vault).Host;
                 options.ServerName = "Bitwarden";
-                options.Origin = globalSettings.BaseServiceUri.Vault;
+                options.Origins = new HashSet<string> { globalSettings.BaseServiceUri.Vault, };
                 options.TimestampDriftTolerance = 300000;
             });
         }

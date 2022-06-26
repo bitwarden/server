@@ -170,15 +170,16 @@ namespace Bit.Api.Controllers
 
         [HttpPut("{id}")]
         [HttpPost("{id}")]
-        public async Task<CipherResponseModel> Put(string id, [FromBody] CipherRequestModel model)
+        public async Task<CipherResponseModel> Put(Guid id, [FromBody] CipherRequestModel model)
         {
             var userId = _userService.GetProperUserId(User).Value;
-            var cipher = await _cipherRepository.GetByIdAsync(new Guid(id), userId);
+            var cipher = await _cipherRepository.GetByIdAsync(id, userId);
             if (cipher == null)
             {
                 throw new NotFoundException();
             }
 
+            var collectionIds = (await _collectionCipherRepository.GetManyByUserIdCipherIdAsync(userId, id)).Select(c => c.CollectionId).ToList();
             var modelOrgId = string.IsNullOrWhiteSpace(model.OrganizationId) ?
                 (Guid?)null : new Guid(model.OrganizationId);
             if (cipher.OrganizationId != modelOrgId)
@@ -187,7 +188,7 @@ namespace Bit.Api.Controllers
                     "then try again.");
             }
 
-            await _cipherService.SaveDetailsAsync(model.ToCipherDetails(cipher), userId, model.LastKnownRevisionDate);
+            await _cipherService.SaveDetailsAsync(model.ToCipherDetails(cipher), userId, model.LastKnownRevisionDate, collectionIds);
 
             var response = new CipherResponseModel(cipher, _globalSettings);
             return response;
@@ -195,19 +196,20 @@ namespace Bit.Api.Controllers
 
         [HttpPut("{id}/admin")]
         [HttpPost("{id}/admin")]
-        public async Task<CipherMiniResponseModel> PutAdmin(string id, [FromBody] CipherRequestModel model)
+        public async Task<CipherMiniResponseModel> PutAdmin(Guid id, [FromBody] CipherRequestModel model)
         {
             var userId = _userService.GetProperUserId(User).Value;
-            var cipher = await _cipherRepository.GetOrganizationDetailsByIdAsync(new Guid(id));
+            var cipher = await _cipherRepository.GetOrganizationDetailsByIdAsync(id);
             if (cipher == null || !cipher.OrganizationId.HasValue ||
                 !await _currentContext.EditAnyCollection(cipher.OrganizationId.Value))
             {
                 throw new NotFoundException();
             }
 
+            var collectionIds = (await _collectionCipherRepository.GetManyByUserIdCipherIdAsync(userId, id)).Select(c => c.CollectionId).ToList();
             // object cannot be a descendant of CipherDetails, so let's clone it.
             var cipherClone = model.ToCipher(cipher).Clone();
-            await _cipherService.SaveAsync(cipherClone, userId, model.LastKnownRevisionDate, null, true, false);
+            await _cipherService.SaveAsync(cipherClone, userId, model.LastKnownRevisionDate, collectionIds, true, false);
 
             var response = new CipherMiniResponseModel(cipherClone, _globalSettings, cipher.OrganizationUseTotp);
             return response;
@@ -224,12 +226,11 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            IEnumerable<Cipher> orgCiphers;
-            if (await _currentContext.OrganizationOwner(orgIdGuid))
+            IEnumerable<CipherOrganizationDetails> orgCiphers;
+            if (await _currentContext.OrganizationAdmin(orgIdGuid))
             {
-                // User may be a Provider for the organization, in which case GetManyByUserIdAsync won't return any results
-                // But they have access to all organization ciphers, so we can safely get by orgId instead
-                orgCiphers = await _cipherRepository.GetManyByOrganizationIdAsync(orgIdGuid);
+                // Admins, Owners and Providers can access all items even if not assigned to them
+                orgCiphers = await _cipherRepository.GetManyOrganizationDetailsByOrganizationIdAsync(orgIdGuid);
             }
             else
             {
@@ -246,7 +247,8 @@ namespace Bit.Api.Controllers
 
 
             var responses = orgCiphers.Select(c => new CipherMiniDetailsResponseModel(c, _globalSettings,
-                collectionCiphersGroupDict));
+                collectionCiphersGroupDict, c.OrganizationUseTotp));
+
 
             var providerId = await _currentContext.ProviderIdForOrg(orgIdGuid);
             if (providerId.HasValue)
