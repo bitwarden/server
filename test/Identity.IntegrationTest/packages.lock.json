@@ -3071,7 +3071,7 @@
         "dependencies": {
           "Core": "2022.5.2",
           "SharedWeb": "2022.5.2",
-          "Swashbuckle.AspNetCore.SwaggerGen": "5.6.3"
+          "Swashbuckle.AspNetCore.SwaggerGen": "6.3.1"
         }
       },
       "infrastructure.dapper": {
