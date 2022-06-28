@@ -167,12 +167,12 @@ namespace Bit.Sso.Controllers
                 throw new Exception(_i18nService.T("NoDomainHintProvided"));
             }
 
-            var ssoToken = context.Parameters[SsoTokenable.TokenIdentifier];
+            // var ssoToken = context.Parameters[SsoTokenable.TokenIdentifier];
 
-            if (string.IsNullOrWhiteSpace(ssoToken))
-            {
-                return Unauthorized("A valid SSO token is required to continue with SSO login");
-            }
+            // if (string.IsNullOrWhiteSpace(ssoToken))
+            // {
+            //     return Unauthorized("A valid SSO token is required to continue with SSO login");
+            // }
 
             var domainHint = context.Parameters["domain_hint"];
             var organization = await _organizationRepository.GetByIdentifierAsync(domainHint);
@@ -182,12 +182,12 @@ namespace Bit.Sso.Controllers
                 return InvalidJson("OrganizationNotFoundByIdentifierError");
             }
 
-            var tokenable = _dataProtector.Unprotect(ssoToken);
+            // var tokenable = _dataProtector.Unprotect(ssoToken);
 
-            if (!tokenable.TokenIsValid(organization))
-            {
-                return Unauthorized("The SSO token associated with your request is expired. A valid SSO token is required to continue.");
-            }
+            // if (!tokenable.TokenIsValid(organization))
+            // {
+            //     return Unauthorized("The SSO token associated with your request is expired. A valid SSO token is required to continue.");
+            // }
 
             return RedirectToAction(nameof(ExternalChallenge), new
             {
