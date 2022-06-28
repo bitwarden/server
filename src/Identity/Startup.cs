@@ -123,7 +123,7 @@ namespace Bit.Identity
 
                             if (context.Properties.Parameters.Count > 0 && context.Properties.Parameters.ContainsKey(SsoTokenable.TokenIdentifier))
                             {
-                                var token = context.Properties.Parameters[SsoTokenable.TokenIdentifier].ToString();
+                                var token = context.Properties.Parameters[SsoTokenable.TokenIdentifier]?.ToString() ?? "";
                                 context.ProtocolMessage.Parameters.Add(SsoTokenable.TokenIdentifier, token);
                             }
                             return Task.FromResult(0);
