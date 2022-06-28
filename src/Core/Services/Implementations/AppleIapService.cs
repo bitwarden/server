@@ -85,15 +85,16 @@ namespace Bit.Core.Services
                 receipt.ContainsKey("UserId") ? new Guid(receipt["UserId"]) : (Guid?)null);
         }
 
-        private async Task<AppleReceiptStatus> GetReceiptStatusAsync(string receiptData, bool prod = true,
+        // Internal for testing
+        internal async Task<AppleReceiptStatus> GetReceiptStatusAsync(string receiptData, bool prod = true,
             int attempt = 0, AppleReceiptStatus lastReceiptStatus = null)
         {
             try
             {
                 if (attempt > 4)
                 {
-                    throw new Exception("Failed verifying Apple IAP after too many attempts. Last attempt status: " +
-                        lastReceiptStatus?.Status ?? "null");
+                    throw new Exception(
+                        $"Failed verifying Apple IAP after too many attempts. Last attempt status: {lastReceiptStatus?.Status.ToString() ?? "null"}");
                 }
 
                 var url = string.Format("https://{0}.itunes.apple.com/verifyReceipt", prod ? "buy" : "sandbox");
