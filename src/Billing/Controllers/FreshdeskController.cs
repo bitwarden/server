@@ -93,7 +93,7 @@ namespace Bit.Billing.Controllers
                     var orgs = await _organizationRepository.GetManyByUserIdAsync(user.Id);
                     foreach (var org in orgs)
                     {
-                        note += $"<li>Org, {org.Name}: " +
+                        note += $"<li>Org, {org.Name} ({org.Seats.GetValueOrDefault()}): " +
                             $"{_globalSettings.BaseServiceUri.Admin}/organizations/edit/{org.Id}</li>";
                         var planName = GetAttribute<DisplayAttribute>(org.PlanType).Name.Split(" ").FirstOrDefault();
                         if (!string.IsNullOrWhiteSpace(planName))
