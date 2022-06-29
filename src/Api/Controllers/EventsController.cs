@@ -1,7 +1,4 @@
-﻿using System;
-using System.Linq;
-using System.Threading.Tasks;
-using Bit.Api.Models.Response;
+﻿using Bit.Api.Models.Response;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;

@@ -1,14 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using Bit.Core.Entities;
+﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Test.AutoFixture;
-using Bit.Core.Test.AutoFixture.Attributes;
 using Bit.Core.Test.AutoFixture.GroupFixtures;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;

@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using Bit.Core.Entities;
+﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Stripe;
 

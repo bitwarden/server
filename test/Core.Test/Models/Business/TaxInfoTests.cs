@@ -1,5 +1,4 @@
 ﻿using Bit.Core.Models.Business;
-using NSubstitute;
 using Xunit;
 
 namespace Bit.Core.Test.Models.Business

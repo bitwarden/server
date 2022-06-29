@@ -1,14 +1,9 @@
 ﻿using System.Diagnostics;
-using System.Net.Http;
 using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
 using Bit.Admin.Models;
 using Bit.Core.Settings;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
 namespace Bit.Admin.Controllers

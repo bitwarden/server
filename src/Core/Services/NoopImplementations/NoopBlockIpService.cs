@@ -1,6 +1,4 @@
-﻿using System.Threading.Tasks;
-
-namespace Bit.Core.Services
+﻿namespace Bit.Core.Services
 {
     public class NoopBlockIpService : IBlockIpService
     {

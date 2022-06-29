@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text.Json;
-using System.Threading.Tasks;
+﻿using System.Text.Json;
 using Azure.Storage.Queues;
 using Bit.Core.Context;
 using Bit.Core.Entities;

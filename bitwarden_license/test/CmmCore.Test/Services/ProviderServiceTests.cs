@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Bit.CommCore.Services;
+﻿using Bit.CommCore.Services;
 using Bit.CommCore.Test.AutoFixture.ProviderUserFixtures;
 using Bit.Core.Context;
 using Bit.Core.Entities;

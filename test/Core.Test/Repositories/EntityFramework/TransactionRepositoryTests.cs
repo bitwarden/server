@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using Bit.Core.Entities;
+﻿using Bit.Core.Entities;
 using Bit.Core.Test.AutoFixture.Attributes;
 using Bit.Core.Test.AutoFixture.TransactionFixtures;
 using Bit.Core.Test.Repositories.EntityFramework.EqualityComparers;

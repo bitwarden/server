@@ -1,7 +1,4 @@
-﻿using System;
-using System.Linq;
-using System.Threading.Tasks;
-using AutoMapper;
+﻿using AutoMapper;
 using Bit.Core.Repositories;
 using Microsoft.Extensions.DependencyInjection;
 

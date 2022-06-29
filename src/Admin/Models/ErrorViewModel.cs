@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Bit.Admin.Models
+﻿namespace Bit.Admin.Models
 {
     public class ErrorViewModel
     {

@@ -1,7 +1,4 @@
-﻿using System;
-using System.IO;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Text;
 using AutoFixture;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data;
