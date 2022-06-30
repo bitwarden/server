@@ -1,6 +1,4 @@
 ﻿using System.Globalization;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Attachments
 {
