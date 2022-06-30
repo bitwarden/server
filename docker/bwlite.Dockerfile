@@ -26,7 +26,7 @@ RUN npm run dist:bit:selfhost
 ###############################################
 #                 Build stage                 #
 ###############################################
-FROM mcr.microsoft.com/dotnet/sdk:5.0-alpine AS dotnet-build
+FROM mcr.microsoft.com/dotnet/sdk:6.0-alpine AS dotnet-build
 
 # Add packages
 RUN apk add --update-cache \
@@ -155,7 +155,7 @@ RUN dotnet publish -c release -o /app/Web --no-restore
 ###############################################
 #                  App stage                  #
 ###############################################
-FROM mcr.microsoft.com/dotnet/aspnet:5.0-alpine
+FROM mcr.microsoft.com/dotnet/aspnet:6.0-alpine
 LABEL com.bitwarden.product="bitwarden"
 LABEL com.bitwarden.project="lite"
 ENV ASPNETCORE_ENVIRONMENT=Production

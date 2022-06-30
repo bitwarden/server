@@ -1,7 +1,7 @@
 ###############################################
 #                 Build stage                 #
 ###############################################
-FROM mcr.microsoft.com/dotnet/sdk:5.0-alpine AS build
+FROM mcr.microsoft.com/dotnet/sdk:6.0-alpine AS build
 
 # Copy csproj files as distinct layers
 WORKDIR /source
@@ -31,7 +31,7 @@ RUN dotnet publish -c release -o /app --no-restore
 ###############################################
 #                  App stage                  #
 ###############################################
-FROM mcr.microsoft.com/dotnet/aspnet:5.0-alpine
+FROM mcr.microsoft.com/dotnet/aspnet:6.0-alpine
 LABEL com.bitwarden.product="bitwarden"
 LABEL com.bitwarden.project="notifications"
 ENV ASPNETCORE_ENVIRONMENT=Production

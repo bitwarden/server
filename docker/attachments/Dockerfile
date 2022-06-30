@@ -1,7 +1,7 @@
 ###############################################
 #                 Build stage                 #
 ###############################################
-FROM mcr.microsoft.com/dotnet/sdk:5.0-alpine AS build
+FROM mcr.microsoft.com/dotnet/sdk:6.0-alpine AS build
 
 # Add packages
 RUN apk add --update-cache \
@@ -28,7 +28,7 @@ RUN dotnet publish -c release -o /app --no-restore
 ###############################################
 #                  App stage                  #
 ###############################################
-FROM mcr.microsoft.com/dotnet/aspnet:5.0-alpine
+FROM mcr.microsoft.com/dotnet/aspnet:6.0-alpine
 LABEL com.bitwarden.product="bitwarden"
 LABEL com.bitwarden.project="attachments"
 ENV ASPNETCORE_ENVIRONMENT=Production
