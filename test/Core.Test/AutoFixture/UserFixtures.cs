@@ -9,74 +9,73 @@ using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 
-namespace Bit.Core.Test.AutoFixture.UserFixtures
+namespace Bit.Core.Test.AutoFixture.UserFixtures;
+
+internal class UserBuilder : ISpecimenBuilder
 {
-    internal class UserBuilder : ISpecimenBuilder
+    public object Create(object request, ISpecimenContext context)
     {
-        public object Create(object request, ISpecimenContext context)
+        if (context == null)
         {
-            if (context == null)
-            {
-                throw new ArgumentNullException(nameof(context));
-            }
+            throw new ArgumentNullException(nameof(context));
+        }
 
-            var type = request as Type;
-            if (type == typeof(User))
+        var type = request as Type;
+        if (type == typeof(User))
+        {
+            var fixture = new Fixture();
+            var providers = fixture.Create<Dictionary<TwoFactorProviderType, TwoFactorProvider>>();
+            var user = fixture.WithAutoNSubstitutions().Create<User>();
+            user.SetTwoFactorProviders(providers);
+            return user;
+        }
+        else if (type == typeof(List<User>))
+        {
+            var fixture = new Fixture();
+            var users = fixture.WithAutoNSubstitutions().CreateMany<User>(2);
+            foreach (var user in users)
             {
-                var fixture = new Fixture();
                 var providers = fixture.Create<Dictionary<TwoFactorProviderType, TwoFactorProvider>>();
-                var user = fixture.WithAutoNSubstitutions().Create<User>();
                 user.SetTwoFactorProviders(providers);
-                return user;
             }
-            else if (type == typeof(List<User>))
-            {
-                var fixture = new Fixture();
-                var users = fixture.WithAutoNSubstitutions().CreateMany<User>(2);
-                foreach (var user in users)
-                {
-                    var providers = fixture.Create<Dictionary<TwoFactorProviderType, TwoFactorProvider>>();
-                    user.SetTwoFactorProviders(providers);
-                }
-                return users;
-            }
-
-            return new NoSpecimen();
+            return users;
         }
-    }
 
-    internal class UserFixture : ICustomization
-    {
-        public virtual void Customize(IFixture fixture)
-        {
-            fixture.Customizations.Add(new IgnoreVirtualMembersCustomization());
-            fixture.Customizations.Add(new GlobalSettingsBuilder());
-            fixture.Customizations.Add(new UserBuilder());
-            fixture.Customizations.Add(new OrganizationBuilder());
-        }
+        return new NoSpecimen();
     }
+}
 
-    internal class EfUser : UserFixture
+internal class UserFixture : ICustomization
+{
+    public virtual void Customize(IFixture fixture)
     {
-        public override void Customize(IFixture fixture)
-        {
-            base.Customize(fixture);
-            fixture.Customizations.Add(new EfRepositoryListBuilder<UserRepository>());
-            fixture.Customizations.Add(new EfRepositoryListBuilder<SsoUserRepository>());
-            fixture.Customizations.Add(new EfRepositoryListBuilder<OrganizationRepository>());
-        }
+        fixture.Customizations.Add(new IgnoreVirtualMembersCustomization());
+        fixture.Customizations.Add(new GlobalSettingsBuilder());
+        fixture.Customizations.Add(new UserBuilder());
+        fixture.Customizations.Add(new OrganizationBuilder());
     }
+}
 
-    internal class EfUserAutoDataAttribute : CustomAutoDataAttribute
+internal class EfUser : UserFixture
+{
+    public override void Customize(IFixture fixture)
     {
-        public EfUserAutoDataAttribute() : base(new SutProviderCustomization(), new EfUser())
-        { }
+        base.Customize(fixture);
+        fixture.Customizations.Add(new EfRepositoryListBuilder<UserRepository>());
+        fixture.Customizations.Add(new EfRepositoryListBuilder<SsoUserRepository>());
+        fixture.Customizations.Add(new EfRepositoryListBuilder<OrganizationRepository>());
     }
+}
 
-    internal class InlineEfUserAutoDataAttribute : InlineCustomAutoDataAttribute
-    {
-        public InlineEfUserAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
-            typeof(EfUser) }, values)
-        { }
-    }
+internal class EfUserAutoDataAttribute : CustomAutoDataAttribute
+{
+    public EfUserAutoDataAttribute() : base(new SutProviderCustomization(), new EfUser())
+    { }
+}
+
+internal class InlineEfUserAutoDataAttribute : InlineCustomAutoDataAttribute
+{
+    public InlineEfUserAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
+        typeof(EfUser) }, values)
+    { }
 }

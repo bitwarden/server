@@ -3,32 +3,31 @@ using Bit.Test.Common.AutoFixture;
 using Microsoft.AspNetCore.Mvc;
 using Org.BouncyCastle.Security;
 
-namespace Bit.Api.Test.AutoFixture
+namespace Bit.Api.Test.AutoFixture;
+
+/// <summary>
+/// Disables setting of Auto Properties on the Controller to avoid ASP.net initialization errors. Still sets constructor dependencies.
+/// </summary>
+/// <param name="fixture"></param>
+public class ControllerCustomization : ICustomization
 {
-    /// <summary>
-    /// Disables setting of Auto Properties on the Controller to avoid ASP.net initialization errors. Still sets constructor dependencies.
-    /// </summary>
-    /// <param name="fixture"></param>
-    public class ControllerCustomization : ICustomization
+    private readonly Type _controllerType;
+    public ControllerCustomization(Type controllerType)
     {
-        private readonly Type _controllerType;
-        public ControllerCustomization(Type controllerType)
+        if (!controllerType.IsAssignableTo(typeof(Controller)))
         {
-            if (!controllerType.IsAssignableTo(typeof(Controller)))
-            {
-                throw new InvalidParameterException($"{nameof(controllerType)} must derive from {typeof(Controller).Name}");
-            }
-
-            _controllerType = controllerType;
+            throw new InvalidParameterException($"{nameof(controllerType)} must derive from {typeof(Controller).Name}");
         }
 
-        public void Customize(IFixture fixture)
-        {
-            fixture.Customizations.Add(new BuilderWithoutAutoProperties(_controllerType));
-        }
+        _controllerType = controllerType;
     }
-    public class ControllerCustomization<T> : ICustomization where T : Controller
+
+    public void Customize(IFixture fixture)
     {
-        public void Customize(IFixture fixture) => new ControllerCustomization(typeof(T)).Customize(fixture);
+        fixture.Customizations.Add(new BuilderWithoutAutoProperties(_controllerType));
     }
+}
+public class ControllerCustomization<T> : ICustomization where T : Controller
+{
+    public void Customize(IFixture fixture) => new ControllerCustomization(typeof(T)).Customize(fixture);
 }

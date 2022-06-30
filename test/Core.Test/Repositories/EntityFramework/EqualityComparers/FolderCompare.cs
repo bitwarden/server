@@ -1,18 +1,17 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using Bit.Core.Entities;
 
-namespace Bit.Core.Test.Repositories.EntityFramework.EqualityComparers
-{
-    public class FolderCompare : IEqualityComparer<Folder>
-    {
-        public bool Equals(Folder x, Folder y)
-        {
-            return x.Name == y.Name;
-        }
+namespace Bit.Core.Test.Repositories.EntityFramework.EqualityComparers;
 
-        public int GetHashCode([DisallowNull] Folder obj)
-        {
-            return base.GetHashCode();
-        }
+public class FolderCompare : IEqualityComparer<Folder>
+{
+    public bool Equals(Folder x, Folder y)
+    {
+        return x.Name == y.Name;
+    }
+
+    public int GetHashCode([DisallowNull] Folder obj)
+    {
+        return base.GetHashCode();
     }
 }

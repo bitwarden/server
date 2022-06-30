@@ -6,51 +6,50 @@ using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 
-namespace Bit.Core.Test.AutoFixture.GroupUserFixtures
+namespace Bit.Core.Test.AutoFixture.GroupUserFixtures;
+
+internal class GroupUserBuilder : ISpecimenBuilder
 {
-    internal class GroupUserBuilder : ISpecimenBuilder
+    public object Create(object request, ISpecimenContext context)
     {
-        public object Create(object request, ISpecimenContext context)
+        if (context == null)
         {
-            if (context == null)
-            {
-                throw new ArgumentNullException(nameof(context));
-            }
-
-            var type = request as Type;
-            if (type == null || type != typeof(GroupUser))
-            {
-                return new NoSpecimen();
-            }
-
-            var fixture = new Fixture();
-            var obj = fixture.WithAutoNSubstitutions().Create<GroupUser>();
-            return obj;
+            throw new ArgumentNullException(nameof(context));
         }
-    }
 
-    internal class EfGroupUser : ICustomization
-    {
-        public void Customize(IFixture fixture)
+        var type = request as Type;
+        if (type == null || type != typeof(GroupUser))
         {
-            fixture.Customizations.Add(new IgnoreVirtualMembersCustomization());
-            fixture.Customizations.Add(new GlobalSettingsBuilder());
-            fixture.Customizations.Add(new GroupUserBuilder());
-            fixture.Customizations.Add(new EfRepositoryListBuilder<GroupRepository>());
+            return new NoSpecimen();
         }
-    }
 
-    internal class EfGroupUserAutoDataAttribute : CustomAutoDataAttribute
-    {
-        public EfGroupUserAutoDataAttribute() : base(new SutProviderCustomization(), new EfGroupUser())
-        { }
+        var fixture = new Fixture();
+        var obj = fixture.WithAutoNSubstitutions().Create<GroupUser>();
+        return obj;
     }
+}
 
-    internal class InlineEfGroupUserAutoDataAttribute : InlineCustomAutoDataAttribute
+internal class EfGroupUser : ICustomization
+{
+    public void Customize(IFixture fixture)
     {
-        public InlineEfGroupUserAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
-            typeof(EfGroupUser) }, values)
-        { }
+        fixture.Customizations.Add(new IgnoreVirtualMembersCustomization());
+        fixture.Customizations.Add(new GlobalSettingsBuilder());
+        fixture.Customizations.Add(new GroupUserBuilder());
+        fixture.Customizations.Add(new EfRepositoryListBuilder<GroupRepository>());
     }
+}
+
+internal class EfGroupUserAutoDataAttribute : CustomAutoDataAttribute
+{
+    public EfGroupUserAutoDataAttribute() : base(new SutProviderCustomization(), new EfGroupUser())
+    { }
+}
+
+internal class InlineEfGroupUserAutoDataAttribute : InlineCustomAutoDataAttribute
+{
+    public InlineEfGroupUserAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
+        typeof(EfGroupUser) }, values)
+    { }
 }
 

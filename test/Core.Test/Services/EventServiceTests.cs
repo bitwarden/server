@@ -9,32 +9,31 @@ using Bit.Test.Common.Helpers;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Core.Test.Services
+namespace Bit.Core.Test.Services;
+
+[SutProviderCustomize]
+public class EventServiceTests
 {
-    [SutProviderCustomize]
-    public class EventServiceTests
+    public static IEnumerable<object[]> InstallationIdTestCases => TestCaseHelper.GetCombinationsOfMultipleLists(
+        new object[] { Guid.NewGuid(), null },
+        Enum.GetValues<EventType>().Select(e => (object)e)
+    ).Select(p => p.ToArray());
+
+    [Theory]
+    [BitMemberAutoData(nameof(InstallationIdTestCases))]
+    public async Task LogOrganizationEvent_ProvidesInstallationId(Guid? installationId, EventType eventType,
+        Organization organization, SutProvider<EventService> sutProvider)
     {
-        public static IEnumerable<object[]> InstallationIdTestCases => TestCaseHelper.GetCombinationsOfMultipleLists(
-            new object[] { Guid.NewGuid(), null },
-            Enum.GetValues<EventType>().Select(e => (object)e)
-        ).Select(p => p.ToArray());
+        organization.Enabled = true;
+        organization.UseEvents = true;
 
-        [Theory]
-        [BitMemberAutoData(nameof(InstallationIdTestCases))]
-        public async Task LogOrganizationEvent_ProvidesInstallationId(Guid? installationId, EventType eventType,
-            Organization organization, SutProvider<EventService> sutProvider)
-        {
-            organization.Enabled = true;
-            organization.UseEvents = true;
+        sutProvider.GetDependency<ICurrentContext>().InstallationId.Returns(installationId);
 
-            sutProvider.GetDependency<ICurrentContext>().InstallationId.Returns(installationId);
+        await sutProvider.Sut.LogOrganizationEventAsync(organization, eventType);
 
-            await sutProvider.Sut.LogOrganizationEventAsync(organization, eventType);
-
-            await sutProvider.GetDependency<IEventWriteService>().Received(1).CreateAsync(Arg.Is<IEvent>(e =>
-                e.OrganizationId == organization.Id &&
-                e.Type == eventType &&
-                e.InstallationId == installationId));
-        }
+        await sutProvider.GetDependency<IEventWriteService>().Received(1).CreateAsync(Arg.Is<IEvent>(e =>
+            e.OrganizationId == organization.Id &&
+            e.Type == eventType &&
+            e.InstallationId == installationId));
     }
 }

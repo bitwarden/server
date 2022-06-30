@@ -1,8 +1,7 @@
-﻿namespace Bit.Core.Enums
+﻿namespace Bit.Core.Enums;
+
+public enum OrganizationApiKeyType : byte
 {
-    public enum OrganizationApiKeyType : byte
-    {
-        Default,
-        BillingSync,
-    }
+    Default,
+    BillingSync,
 }

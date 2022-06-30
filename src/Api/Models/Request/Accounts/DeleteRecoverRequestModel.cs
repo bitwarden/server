@@ -1,12 +1,11 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace Bit.Api.Models.Request.Accounts
+namespace Bit.Api.Models.Request.Accounts;
+
+public class DeleteRecoverRequestModel
 {
-    public class DeleteRecoverRequestModel
-    {
-        [Required]
-        [EmailAddress]
-        [StringLength(256)]
-        public string Email { get; set; }
-    }
+    [Required]
+    [EmailAddress]
+    [StringLength(256)]
+    public string Email { get; set; }
 }

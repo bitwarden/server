@@ -6,51 +6,50 @@ using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 
-namespace Bit.Core.Test.AutoFixture.InstallationFixtures
+namespace Bit.Core.Test.AutoFixture.InstallationFixtures;
+
+internal class InstallationBuilder : ISpecimenBuilder
 {
-    internal class InstallationBuilder : ISpecimenBuilder
+    public object Create(object request, ISpecimenContext context)
     {
-        public object Create(object request, ISpecimenContext context)
+        if (context == null)
         {
-            if (context == null)
-            {
-                throw new ArgumentNullException(nameof(context));
-            }
-
-            var type = request as Type;
-            if (type == null || type != typeof(Installation))
-            {
-                return new NoSpecimen();
-            }
-
-            var fixture = new Fixture();
-            var obj = fixture.WithAutoNSubstitutions().Create<Installation>();
-            return obj;
+            throw new ArgumentNullException(nameof(context));
         }
-    }
 
-    internal class EfInstallation : ICustomization
-    {
-        public void Customize(IFixture fixture)
+        var type = request as Type;
+        if (type == null || type != typeof(Installation))
         {
-            fixture.Customizations.Add(new IgnoreVirtualMembersCustomization());
-            fixture.Customizations.Add(new GlobalSettingsBuilder());
-            fixture.Customizations.Add(new InstallationBuilder());
-            fixture.Customizations.Add(new EfRepositoryListBuilder<InstallationRepository>());
+            return new NoSpecimen();
         }
-    }
 
-    internal class EfInstallationAutoDataAttribute : CustomAutoDataAttribute
-    {
-        public EfInstallationAutoDataAttribute() : base(new SutProviderCustomization(), new EfInstallation())
-        { }
+        var fixture = new Fixture();
+        var obj = fixture.WithAutoNSubstitutions().Create<Installation>();
+        return obj;
     }
+}
 
-    internal class InlineEfInstallationAutoDataAttribute : InlineCustomAutoDataAttribute
+internal class EfInstallation : ICustomization
+{
+    public void Customize(IFixture fixture)
     {
-        public InlineEfInstallationAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
-            typeof(EfInstallation) }, values)
-        { }
+        fixture.Customizations.Add(new IgnoreVirtualMembersCustomization());
+        fixture.Customizations.Add(new GlobalSettingsBuilder());
+        fixture.Customizations.Add(new InstallationBuilder());
+        fixture.Customizations.Add(new EfRepositoryListBuilder<InstallationRepository>());
     }
+}
+
+internal class EfInstallationAutoDataAttribute : CustomAutoDataAttribute
+{
+    public EfInstallationAutoDataAttribute() : base(new SutProviderCustomization(), new EfInstallation())
+    { }
+}
+
+internal class InlineEfInstallationAutoDataAttribute : InlineCustomAutoDataAttribute
+{
+    public InlineEfInstallationAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
+        typeof(EfInstallation) }, values)
+    { }
 }
 

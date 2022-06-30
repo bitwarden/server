@@ -2,13 +2,12 @@
 using Bit.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Bit.CommCore.Utilities
+namespace Bit.CommCore.Utilities;
+
+public static class ServiceCollectionExtensions
 {
-    public static class ServiceCollectionExtensions
+    public static void AddCommCoreServices(this IServiceCollection services)
     {
-        public static void AddCommCoreServices(this IServiceCollection services)
-        {
-            services.AddScoped<IProviderService, ProviderService>();
-        }
+        services.AddScoped<IProviderService, ProviderService>();
     }
 }

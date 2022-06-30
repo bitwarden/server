@@ -8,161 +8,160 @@ using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 
-namespace Bit.Billing.Controllers
+namespace Bit.Billing.Controllers;
+
+[Route("freshdesk")]
+public class FreshdeskController : Controller
 {
-    [Route("freshdesk")]
-    public class FreshdeskController : Controller
+    private readonly BillingSettings _billingSettings;
+    private readonly IUserRepository _userRepository;
+    private readonly IOrganizationRepository _organizationRepository;
+    private readonly IOrganizationUserRepository _organizationUserRepository;
+    private readonly ILogger<AppleController> _logger;
+    private readonly GlobalSettings _globalSettings;
+    private readonly HttpClient _httpClient = new HttpClient();
+    private readonly string _freshdeskAuthkey;
+
+    public FreshdeskController(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IOptions<BillingSettings> billingSettings,
+        ILogger<AppleController> logger,
+        GlobalSettings globalSettings)
     {
-        private readonly BillingSettings _billingSettings;
-        private readonly IUserRepository _userRepository;
-        private readonly IOrganizationRepository _organizationRepository;
-        private readonly IOrganizationUserRepository _organizationUserRepository;
-        private readonly ILogger<AppleController> _logger;
-        private readonly GlobalSettings _globalSettings;
-        private readonly HttpClient _httpClient = new HttpClient();
-        private readonly string _freshdeskAuthkey;
+        _billingSettings = billingSettings?.Value;
+        _userRepository = userRepository;
+        _organizationRepository = organizationRepository;
+        _organizationUserRepository = organizationUserRepository;
+        _logger = logger;
+        _globalSettings = globalSettings;
+        _freshdeskAuthkey = Convert.ToBase64String(
+            Encoding.UTF8.GetBytes($"{_billingSettings.FreshdeskApiKey}:X"));
+    }
 
-        public FreshdeskController(
-            IUserRepository userRepository,
-            IOrganizationRepository organizationRepository,
-            IOrganizationUserRepository organizationUserRepository,
-            IOptions<BillingSettings> billingSettings,
-            ILogger<AppleController> logger,
-            GlobalSettings globalSettings)
+    [HttpPost("webhook")]
+    public async Task<IActionResult> PostWebhook()
+    {
+        if (HttpContext?.Request?.Query == null)
         {
-            _billingSettings = billingSettings?.Value;
-            _userRepository = userRepository;
-            _organizationRepository = organizationRepository;
-            _organizationUserRepository = organizationUserRepository;
-            _logger = logger;
-            _globalSettings = globalSettings;
-            _freshdeskAuthkey = Convert.ToBase64String(
-                Encoding.UTF8.GetBytes($"{_billingSettings.FreshdeskApiKey}:X"));
+            return new BadRequestResult();
         }
 
-        [HttpPost("webhook")]
-        public async Task<IActionResult> PostWebhook()
+        var key = HttpContext.Request.Query.ContainsKey("key") ?
+            HttpContext.Request.Query["key"].ToString() : null;
+        if (!CoreHelpers.FixedTimeEquals(key, _billingSettings.FreshdeskWebhookKey))
         {
-            if (HttpContext?.Request?.Query == null)
+            return new BadRequestResult();
+        }
+
+        using var body = await JsonSerializer.DeserializeAsync<JsonDocument>(HttpContext.Request.Body);
+        var root = body.RootElement;
+        if (root.ValueKind != JsonValueKind.Object)
+        {
+            return new BadRequestResult();
+        }
+
+        try
+        {
+            var ticketId = root.GetProperty("ticket_id").GetString();
+            var ticketContactEmail = root.GetProperty("ticket_contact_email").GetString();
+            var ticketTags = root.GetProperty("ticket_tags").GetString();
+            if (string.IsNullOrWhiteSpace(ticketId) || string.IsNullOrWhiteSpace(ticketContactEmail))
             {
                 return new BadRequestResult();
             }
 
-            var key = HttpContext.Request.Query.ContainsKey("key") ?
-                HttpContext.Request.Query["key"].ToString() : null;
-            if (!CoreHelpers.FixedTimeEquals(key, _billingSettings.FreshdeskWebhookKey))
+            var updateBody = new Dictionary<string, object>();
+            var note = string.Empty;
+            var user = await _userRepository.GetByEmailAsync(ticketContactEmail);
+            if (user != null)
             {
-                return new BadRequestResult();
-            }
-
-            using var body = await JsonSerializer.DeserializeAsync<JsonDocument>(HttpContext.Request.Body);
-            var root = body.RootElement;
-            if (root.ValueKind != JsonValueKind.Object)
-            {
-                return new BadRequestResult();
-            }
-
-            try
-            {
-                var ticketId = root.GetProperty("ticket_id").GetString();
-                var ticketContactEmail = root.GetProperty("ticket_contact_email").GetString();
-                var ticketTags = root.GetProperty("ticket_tags").GetString();
-                if (string.IsNullOrWhiteSpace(ticketId) || string.IsNullOrWhiteSpace(ticketContactEmail))
+                note += $"<li>User, {user.Email}: {_globalSettings.BaseServiceUri.Admin}/users/edit/{user.Id}</li>";
+                var tags = new HashSet<string>();
+                if (user.Premium)
                 {
-                    return new BadRequestResult();
+                    tags.Add("Premium");
                 }
-
-                var updateBody = new Dictionary<string, object>();
-                var note = string.Empty;
-                var user = await _userRepository.GetByEmailAsync(ticketContactEmail);
-                if (user != null)
+                var orgs = await _organizationRepository.GetManyByUserIdAsync(user.Id);
+                foreach (var org in orgs)
                 {
-                    note += $"<li>User, {user.Email}: {_globalSettings.BaseServiceUri.Admin}/users/edit/{user.Id}</li>";
-                    var tags = new HashSet<string>();
-                    if (user.Premium)
+                    note += $"<li>Org, {org.Name} ({org.Seats.GetValueOrDefault()}): " +
+                        $"{_globalSettings.BaseServiceUri.Admin}/organizations/edit/{org.Id}</li>";
+                    var planName = GetAttribute<DisplayAttribute>(org.PlanType).Name.Split(" ").FirstOrDefault();
+                    if (!string.IsNullOrWhiteSpace(planName))
                     {
-                        tags.Add("Premium");
+                        tags.Add(string.Format("Org: {0}", planName));
                     }
-                    var orgs = await _organizationRepository.GetManyByUserIdAsync(user.Id);
-                    foreach (var org in orgs)
+                }
+                if (tags.Any())
+                {
+                    var tagsToUpdate = tags.ToList();
+                    if (!string.IsNullOrWhiteSpace(ticketTags))
                     {
-                        note += $"<li>Org, {org.Name} ({org.Seats.GetValueOrDefault()}): " +
-                            $"{_globalSettings.BaseServiceUri.Admin}/organizations/edit/{org.Id}</li>";
-                        var planName = GetAttribute<DisplayAttribute>(org.PlanType).Name.Split(" ").FirstOrDefault();
-                        if (!string.IsNullOrWhiteSpace(planName))
+                        var splitTicketTags = ticketTags.Split(',');
+                        for (var i = 0; i < splitTicketTags.Length; i++)
                         {
-                            tags.Add(string.Format("Org: {0}", planName));
+                            tagsToUpdate.Insert(i, splitTicketTags[i]);
                         }
                     }
-                    if (tags.Any())
-                    {
-                        var tagsToUpdate = tags.ToList();
-                        if (!string.IsNullOrWhiteSpace(ticketTags))
-                        {
-                            var splitTicketTags = ticketTags.Split(',');
-                            for (var i = 0; i < splitTicketTags.Length; i++)
-                            {
-                                tagsToUpdate.Insert(i, splitTicketTags[i]);
-                            }
-                        }
-                        updateBody.Add("tags", tagsToUpdate);
-                    }
-                    var updateRequest = new HttpRequestMessage(HttpMethod.Put,
-                        string.Format("https://bitwarden.freshdesk.com/api/v2/tickets/{0}", ticketId))
-                    {
-                        Content = JsonContent.Create(updateBody),
-                    };
-
-                    await CallFreshdeskApiAsync(updateRequest);
-
-
-                    var noteBody = new Dictionary<string, object>
-                    {
-                        { "body", $"<ul>{note}</ul>" },
-                        { "private", true }
-                    };
-                    var noteRequest = new HttpRequestMessage(HttpMethod.Post,
-                        string.Format("https://bitwarden.freshdesk.com/api/v2/tickets/{0}/notes", ticketId))
-                    {
-                        Content = JsonContent.Create(noteBody),
-                    };
-                    await CallFreshdeskApiAsync(noteRequest);
+                    updateBody.Add("tags", tagsToUpdate);
                 }
-
-                return new OkResult();
-            }
-            catch (Exception e)
-            {
-                _logger.LogError(e, "Error processing freshdesk webhook.");
-                return new BadRequestResult();
-            }
-        }
-
-        private async Task<HttpResponseMessage> CallFreshdeskApiAsync(HttpRequestMessage request, int retriedCount = 0)
-        {
-            try
-            {
-                request.Headers.Add("Authorization", _freshdeskAuthkey);
-                var response = await _httpClient.SendAsync(request);
-                if (response.StatusCode != System.Net.HttpStatusCode.TooManyRequests || retriedCount > 3)
+                var updateRequest = new HttpRequestMessage(HttpMethod.Put,
+                    string.Format("https://bitwarden.freshdesk.com/api/v2/tickets/{0}", ticketId))
                 {
-                    return response;
-                }
-            }
-            catch
-            {
-                if (retriedCount > 3)
-                {
-                    throw;
-                }
-            }
-            await Task.Delay(30000 * (retriedCount + 1));
-            return await CallFreshdeskApiAsync(request, retriedCount++);
-        }
+                    Content = JsonContent.Create(updateBody),
+                };
 
-        private TAttribute GetAttribute<TAttribute>(Enum enumValue) where TAttribute : Attribute
-        {
-            return enumValue.GetType().GetMember(enumValue.ToString()).First().GetCustomAttribute<TAttribute>();
+                await CallFreshdeskApiAsync(updateRequest);
+
+
+                var noteBody = new Dictionary<string, object>
+                {
+                    { "body", $"<ul>{note}</ul>" },
+                    { "private", true }
+                };
+                var noteRequest = new HttpRequestMessage(HttpMethod.Post,
+                    string.Format("https://bitwarden.freshdesk.com/api/v2/tickets/{0}/notes", ticketId))
+                {
+                    Content = JsonContent.Create(noteBody),
+                };
+                await CallFreshdeskApiAsync(noteRequest);
+            }
+
+            return new OkResult();
         }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Error processing freshdesk webhook.");
+            return new BadRequestResult();
+        }
+    }
+
+    private async Task<HttpResponseMessage> CallFreshdeskApiAsync(HttpRequestMessage request, int retriedCount = 0)
+    {
+        try
+        {
+            request.Headers.Add("Authorization", _freshdeskAuthkey);
+            var response = await _httpClient.SendAsync(request);
+            if (response.StatusCode != System.Net.HttpStatusCode.TooManyRequests || retriedCount > 3)
+            {
+                return response;
+            }
+        }
+        catch
+        {
+            if (retriedCount > 3)
+            {
+                throw;
+            }
+        }
+        await Task.Delay(30000 * (retriedCount + 1));
+        return await CallFreshdeskApiAsync(request, retriedCount++);
+    }
+
+    private TAttribute GetAttribute<TAttribute>(Enum enumValue) where TAttribute : Attribute
+    {
+        return enumValue.GetType().GetMember(enumValue.ToString()).First().GetCustomAttribute<TAttribute>();
     }
 }
