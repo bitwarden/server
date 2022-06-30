@@ -1,5 +1,4 @@
-﻿using System;
-using Quartz;
+﻿using Quartz;
 using Quartz.Spi;
 
 namespace Bit.Core.Jobs

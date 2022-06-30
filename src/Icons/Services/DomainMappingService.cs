@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-
-namespace Bit.Icons.Services
+﻿namespace Bit.Icons.Services
 {
     public class DomainMappingService : IDomainMappingService
     {

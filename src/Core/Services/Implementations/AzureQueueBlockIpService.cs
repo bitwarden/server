@@ -1,6 +1,4 @@
-﻿using System;
-using System.Threading.Tasks;
-using Azure.Storage.Queues;
+﻿using Azure.Storage.Queues;
 using Bit.Core.Settings;
 
 namespace Bit.Core.Services

@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Bit.Billing.Models;
+﻿using Bit.Billing.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -161,8 +157,9 @@ namespace Bit.Core.Services
                     }
                 }
             }
-            catch (Exception e)
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Error creating customer, walking back operation.");
                 if (customer != null)
                 {
                     await _stripeAdapter.CustomerDeleteAsync(customer.Id);

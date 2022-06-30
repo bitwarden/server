@@ -1,10 +1,7 @@
-﻿using System;
-using System.Diagnostics;
-using System.Linq;
+﻿using System.Diagnostics;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text.Json;
-using System.Threading.Tasks;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Http;
 using Xunit;

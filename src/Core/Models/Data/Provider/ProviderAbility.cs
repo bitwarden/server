@@ -1,5 +1,4 @@
-﻿using System;
-using Bit.Core.Entities.Provider;
+﻿using Bit.Core.Entities.Provider;
 
 namespace Bit.Core.Models.Data
 {

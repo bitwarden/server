@@ -1,5 +1,4 @@
-﻿using System;
-using Bit.Core.Utilities;
+﻿using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Notifications.Controllers

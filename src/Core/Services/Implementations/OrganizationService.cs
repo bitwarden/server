@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text.Json;
-using System.Threading.Tasks;
+﻿using System.Text.Json;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -851,7 +846,7 @@ namespace Bit.Core.Services
                 if (userCount > license.Seats.Value)
                 {
                     throw new BadRequestException($"Your organization currently has {userCount} seats filled. " +
-                        $"Your new license only has ({ license.Seats.Value}) seats. Remove some users.");
+                        $"Your new license only has ({license.Seats.Value}) seats. Remove some users.");
                 }
             }
 

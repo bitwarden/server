@@ -1,10 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using System.Text.Json;
-using System.Threading.Tasks;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -794,7 +789,7 @@ namespace Bit.Core.Services
             user.ForcePasswordReset = true;
 
             await _userRepository.ReplaceAsync(user);
-            await _mailService.SendAdminResetPasswordEmailAsync(user.Email, user.Name ?? user.Email, org.Name);
+            await _mailService.SendAdminResetPasswordEmailAsync(user.Email, user.Name, org.Name);
             await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_AdminResetPassword);
             await _pushService.PushLogOutAsync(user.Id);
 
@@ -820,7 +815,7 @@ namespace Bit.Core.Services
             user.MasterPasswordHint = hint;
 
             await _userRepository.ReplaceAsync(user);
-            await _mailService.SendUpdatedTempPasswordEmailAsync(user.Email, user.Name ?? user.Email);
+            await _mailService.SendUpdatedTempPasswordEmailAsync(user.Email, user.Name);
             await _eventService.LogUserEventAsync(user.Id, EventType.User_UpdatedTempPassword);
             await _pushService.PushLogOutAsync(user.Id);
 

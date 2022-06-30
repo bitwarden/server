@@ -1,5 +1,4 @@
-﻿using System;
-using AutoFixture;
+﻿using AutoFixture;
 using AutoFixture.Kernel;
 using Bit.Core.Entities;
 using Bit.Core.Test.AutoFixture.CipherFixtures;

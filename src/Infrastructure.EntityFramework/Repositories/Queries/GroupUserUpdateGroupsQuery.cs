@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using Bit.Infrastructure.EntityFramework.Models;
+﻿using Bit.Infrastructure.EntityFramework.Models;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories.Queries
 {

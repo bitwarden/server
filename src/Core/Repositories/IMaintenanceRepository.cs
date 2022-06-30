@@ -1,7 +1,4 @@
-﻿using System;
-using System.Threading.Tasks;
-
-namespace Bit.Core.Repositories
+﻿namespace Bit.Core.Repositories
 {
     public interface IMaintenanceRepository
     {

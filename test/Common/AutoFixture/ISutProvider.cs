@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Bit.Test.Common.AutoFixture
+﻿namespace Bit.Test.Common.AutoFixture
 {
     public interface ISutProvider
     {

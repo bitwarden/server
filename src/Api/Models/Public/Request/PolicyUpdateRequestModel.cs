@@ -1,5 +1,4 @@
-﻿using System;
-using System.Text.Json;
+﻿using System.Text.Json;
 using Bit.Core.Entities;
 
 namespace Bit.Api.Models.Public.Request

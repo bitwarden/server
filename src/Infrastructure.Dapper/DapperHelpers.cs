@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Data;
+﻿using System.Data;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data;
 using Dapper;
