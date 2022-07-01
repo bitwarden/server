@@ -526,7 +526,8 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
-            if (!await _userService.VerifySecretAsync(user, model.Secret))
+            if (model.Type != OrganizationApiKeyType.Scim
+                && !await _userService.VerifySecretAsync(user, model.Secret))
             {
                 await Task.Delay(2000);
                 throw new BadRequestException("MasterPasswordHash", "Invalid password.");
@@ -576,7 +577,8 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
-            if (!await _userService.VerifySecretAsync(user, model.Secret))
+            if (model.Type != OrganizationApiKeyType.Scim
+                && !await _userService.VerifySecretAsync(user, model.Secret))
             {
                 await Task.Delay(2000);
                 throw new BadRequestException("MasterPasswordHash", "Invalid password.");
