@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text.Json;
-using System.Threading.Tasks;
+﻿using System.Text.Json;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -734,7 +729,7 @@ namespace Bit.Core.Services
 
             var dir = $"{_globalSettings.LicenseDirectory}/organization";
             Directory.CreateDirectory(dir);
-            using var fs = System.IO.File.OpenWrite(Path.Combine(dir, $"{organization.Id}.json"));
+            await using var fs = new FileStream(Path.Combine(dir, $"{organization.Id}.json"), FileMode.Create);
             await JsonSerializer.SerializeAsync(fs, license, JsonHelpers.Indented);
             return result;
         }
@@ -920,7 +915,7 @@ namespace Bit.Core.Services
 
             var dir = $"{_globalSettings.LicenseDirectory}/organization";
             Directory.CreateDirectory(dir);
-            using var fs = System.IO.File.OpenWrite(Path.Combine(dir, $"{organization.Id}.json"));
+            await using var fs = new FileStream(Path.Combine(dir, $"{organization.Id}.json"), FileMode.Create);
             await JsonSerializer.SerializeAsync(fs, license, JsonHelpers.Indented);
 
             organization.Name = license.Name;

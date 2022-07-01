@@ -1,9 +1,5 @@
-﻿using System;
-using System.Linq;
-using System.Net;
-using System.Net.Http;
+﻿using System.Net;
 using System.Security.Cryptography;
-using System.Threading.Tasks;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;

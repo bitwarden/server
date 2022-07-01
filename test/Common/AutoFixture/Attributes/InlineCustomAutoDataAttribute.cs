@@ -1,5 +1,4 @@
-﻿using System;
-using AutoFixture;
+﻿using AutoFixture;
 using AutoFixture.Xunit2;
 using Xunit;
 using Xunit.Sdk;

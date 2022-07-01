@@ -1,6 +1,4 @@
-﻿using System;
-using System.Linq;
-using Bit.Core.Enums.Provider;
+﻿using Bit.Core.Enums.Provider;
 using Bit.Infrastructure.EntityFramework.Models;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories.Queries

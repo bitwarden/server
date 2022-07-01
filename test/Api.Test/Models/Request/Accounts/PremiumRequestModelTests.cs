@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
-using Bit.Api.Models.Request.Accounts;
+﻿using Bit.Api.Models.Request.Accounts;
 using Bit.Core.Settings;
 using Microsoft.AspNetCore.Http;
 using Xunit;

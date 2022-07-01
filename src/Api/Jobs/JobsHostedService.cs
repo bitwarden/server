@@ -1,11 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
-using Bit.Core.Jobs;
+﻿using Bit.Core.Jobs;
 using Bit.Core.Settings;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Quartz;
 
 namespace Bit.Api.Jobs

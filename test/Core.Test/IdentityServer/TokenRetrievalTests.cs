@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using Bit.Core.IdentityServer;
+﻿using Bit.Core.IdentityServer;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
 using NSubstitute;
