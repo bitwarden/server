@@ -6,5 +6,6 @@ namespace Bit.Core.Models.OrganizationConnectionConfigs
     {
         public bool Enabled { get; set; }
         public ScimProviderType ScimProvider { get; set; }
+        public string ServiceUrl { get; set; }
     }
 }

@@ -13,13 +13,11 @@ using Bit.Core.OrganizationFeatures.OrganizationConnections.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.Controllers
 {
-    [SelfHosted(SelfHostedOnly = true)]
     [Authorize("Application")]
     [Route("organizations/connections")]
     public class OrganizationConnectionsController : Controller
@@ -74,6 +72,10 @@ namespace Bit.Api.Controllers
                 case OrganizationConnectionType.CloudBillingSync:
                     return await CreateConnectionByTypeAsync<BillingSyncConfig>(model, async (typedModel) =>
                     {
+                        if (!_globalSettings.SelfHosted)
+                        {
+                            throw new BadRequestException($"Cannot create a {model.Type} connection outside of a self-hosted instance.");
+                        }
                         var license = await _licensingService.ReadOrganizationLicenseAsync(model.OrganizationId);
                         if (!_licensingService.VerifyLicense(license))
                         {
@@ -82,7 +84,7 @@ namespace Bit.Api.Controllers
                         typedModel.ParsedConfig.CloudOrganizationId = license.Id;
                     });
                 case OrganizationConnectionType.Scim:
-                    return await CreateConnectionByTypeAsync<ScimConfig>(model);
+                    return await CreateConnectionByTypeAsync<ScimConfig>(model, ValidateScimConnection);
                 default:
                     throw new BadRequestException($"Unknown Organization connection Type: {model.Type}");
             }
@@ -112,7 +114,7 @@ namespace Bit.Api.Controllers
                 case OrganizationConnectionType.CloudBillingSync:
                     return await UpdateOrganizationConnectionAsync<BillingSyncConfig>(organizationConnectionId, model);
                 case OrganizationConnectionType.Scim:
-                    return await UpdateOrganizationConnectionAsync<ScimConfig>(organizationConnectionId, model);
+                    return await UpdateOrganizationConnectionAsync<ScimConfig>(organizationConnectionId, model, ValidateScimConnection);
                 default:
                     throw new BadRequestException($"Unkown Organization connection Type: {model.Type}");
             }
@@ -132,8 +134,18 @@ namespace Bit.Api.Controllers
             switch (type)
             {
                 case OrganizationConnectionType.CloudBillingSync:
+                    if (!_globalSettings.SelfHosted)
+                    {
+                        throw new BadRequestException($"Cannot get a {type} connection outside of a self-hosted instance.");
+                    }
                     return new OrganizationConnectionResponseModel(connection, typeof(BillingSyncConfig));
                 case OrganizationConnectionType.Scim:
+                    var config = connection?.GetConfig<ScimConfig>();   
+                    if (config != null && string.IsNullOrWhiteSpace(config.ServiceUrl))
+                    {
+                        config.ServiceUrl = GetScimConfigBaseUrl(organizationId);
+                        connection.SetConfig(config);
+                    }
                     return new OrganizationConnectionResponseModel(connection, typeof(ScimConfig));
                 default:
                     throw new BadRequestException($"Unkown Organization connection Type: {type}");
@@ -157,6 +169,20 @@ namespace Bit.Api.Controllers
             }
 
             await _deleteOrganizationConnectionCommand.DeleteAsync(connection);
+        }
+
+        private string GetScimConfigBaseUrl(Guid organizationId)
+        {
+            return $"{_globalSettings.BaseServiceUri.Scim}/v2/{organizationId}";
+        }
+
+        private Task ValidateScimConnection(OrganizationConnectionRequestModel<ScimConfig> typedModel)
+        {
+            if (typedModel.ParsedConfig != null)
+            {
+                typedModel.ParsedConfig.ServiceUrl = GetScimConfigBaseUrl(typedModel.OrganizationId);
+            }
+            return Task.CompletedTask;
         }
 
         private async Task<ICollection<OrganizationConnection>> GetConnectionsAsync(Guid organizationId, OrganizationConnectionType type) =>
@@ -199,10 +225,15 @@ namespace Bit.Api.Controllers
 
         private async Task<OrganizationConnectionResponseModel> UpdateOrganizationConnectionAsync<T>(
             Guid organizationConnectionId,
-            OrganizationConnectionRequestModel model)
+            OrganizationConnectionRequestModel model,
+            Func<OrganizationConnectionRequestModel<T>, Task> validateAction = null)
             where T : new()
         {
             var typedModel = new OrganizationConnectionRequestModel<T>(model);
+            if (validateAction != null)
+            {
+                await validateAction(typedModel);
+            }
             var connection = await _updateOrganizationConnectionCommand.UpdateAsync(typedModel.ToData(organizationConnectionId));
             return new OrganizationConnectionResponseModel(connection, typeof(T));
         }
