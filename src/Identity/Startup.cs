@@ -10,6 +10,7 @@ using Bit.Identity.Utilities;
 using Bit.SharedWeb.Utilities;
 using IdentityServer4.Extensions;
 using Microsoft.IdentityModel.Logging;
+using Microsoft.OpenApi.Models;
 
 namespace Bit.Identity
 {
@@ -58,6 +59,11 @@ namespace Bit.Identity
             services.AddMvc(config =>
             {
                 config.Filters.Add(new ModelStateValidationFilterAttribute());
+            });
+
+            services.AddSwaggerGen(c =>
+            {
+                c.SwaggerDoc("v1", new OpenApiInfo { Title = "Bitwarden Identity", Version = "v1" });
             });
 
             if (!globalSettings.SelfHosted)
@@ -188,6 +194,7 @@ namespace Bit.Identity
 
             if (env.IsDevelopment())
             {
+                app.UseSwagger();
                 app.UseDeveloperExceptionPage();
                 app.UseCookiePolicy();
             }

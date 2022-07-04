@@ -202,7 +202,7 @@ namespace Bit.Api.Controllers
         }
 
 
-        public async Task<bool> CanCreateCollection(Guid orgId, Guid collectionId)
+        private async Task<bool> CanCreateCollection(Guid orgId, Guid collectionId)
         {
             if (collectionId != default)
             {
