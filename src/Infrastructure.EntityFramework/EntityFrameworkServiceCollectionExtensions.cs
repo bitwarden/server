@@ -28,6 +28,10 @@ namespace Bit.Infrastructure.EntityFramework
                 {
                     options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString));
                 }
+                else if (provider == SupportedDatabaseProviders.SqlServer)
+                {
+                    options.UseSqlServer(connectionString);
+                }
             });
             services.AddSingleton<ICipherRepository, CipherRepository>();
             services.AddSingleton<ICollectionCipherRepository, CollectionCipherRepository>();
