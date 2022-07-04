@@ -2674,6 +2674,7 @@
           "Azure.Messaging.EventGrid": "4.10.0",
           "CommCore": "2022.6.0",
           "Core": "2022.6.0",
+          "MediatR.Extensions.Microsoft.DependencyInjection": "10.0.1",
           "SharedWeb": "2022.6.0",
           "Swashbuckle.AspNetCore": "6.3.1"
         }
@@ -2700,7 +2701,7 @@
           "IdentityServer4": "4.1.2",
           "IdentityServer4.AccessTokenValidation": "3.0.1",
           "MailKit": "3.2.0",
-          "MediatR.Extensions.Microsoft.DependencyInjection": "10.0.1",
+          "MediatR": "10.0.1",
           "Microsoft.AspNetCore.Authentication.JwtBearer": "6.0.4",
           "Microsoft.Azure.Cosmos.Table": "1.0.8",
           "Microsoft.Azure.NotificationHubs": "4.1.0",
