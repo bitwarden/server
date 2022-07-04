@@ -140,10 +140,10 @@ namespace Bit.Api
             });
 
             // Commands
-            services.AddMediatR(typeof(Startup));
 #if !OSS
             services.AddMediatR(typeof(CommCore.Module));
 #endif
+            services.AddMediatR(typeof(Bit.Core.Constants));
 
             services.AddSwagger(globalSettings);
             Jobs.JobsHostedService.AddJobsServices(services, globalSettings.SelfHosted);
