@@ -1,6 +1,5 @@
 ﻿using Bit.Core.SecretsManagerFeatures.Ping;
 using MediatR;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.Controllers;
@@ -14,7 +13,7 @@ public class SecretsController
     {
         _mediator = mediator;
     }
-    
+
     [HttpGet("ping")]
     public async Task<string> Ping()
     {
