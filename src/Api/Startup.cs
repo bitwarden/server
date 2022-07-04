@@ -11,6 +11,7 @@ using System.Globalization;
 using Microsoft.IdentityModel.Logging;
 using Microsoft.OpenApi.Models;
 using Bit.SharedWeb.Utilities;
+using MediatR;
 
 #if !OSS
 using Bit.CommCore.Utilities;
@@ -137,6 +138,12 @@ namespace Bit.Api
                 config.Conventions.Add(new ApiExplorerGroupConvention());
                 config.Conventions.Add(new PublicApiControllersModelConvention());
             });
+
+            // Commands
+            services.AddMediatR(typeof(Startup));
+#if !OSS
+            services.AddMediatR(typeof(CommCore.Module));
+#endif
 
             services.AddSwagger(globalSettings);
             Jobs.JobsHostedService.AddJobsServices(services, globalSettings.SelfHosted);

@@ -257,6 +257,28 @@
           "MimeKit": "3.2.0"
         }
       },
+      "MediatR": {
+        "type": "Transitive",
+        "resolved": "10.0.1",
+        "contentHash": "vnjbk4giDJzJelh34Ygt0eorApCKrRFB7j0pauFPY1oxfO3cEZ7FugBrIOjCM76SDGTOmPFfbfmVnz1t3iFrGA==",
+        "dependencies": {
+          "MediatR.Contracts": "1.0.1"
+        }
+      },
+      "MediatR.Contracts": {
+        "type": "Transitive",
+        "resolved": "1.0.1",
+        "contentHash": "NsRvOxthhkYml4DcBMyJsmym8C4MchioH7wxKVPEg7plFj9Euh/i4IcmZ3Gvgx6+K8obeuhPeJdoBl56wnuo3A=="
+      },
+      "MediatR.Extensions.Microsoft.DependencyInjection": {
+        "type": "Transitive",
+        "resolved": "10.0.1",
+        "contentHash": "mYdfMvpkahCAj4tRfBoeMlUBZa2WthaONdQ4y5TtIyxcZYb5e7AE7c1eITTZVWcQhguxvD8AdExdaiAW6RhrVA==",
+        "dependencies": {
+          "MediatR": "10.0.1",
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "6.0.0"
+        }
+      },
       "MessagePack": {
         "type": "Transitive",
         "resolved": "2.1.152",
@@ -3131,6 +3153,7 @@
           "IdentityServer4": "4.1.2",
           "IdentityServer4.AccessTokenValidation": "3.0.1",
           "MailKit": "3.2.0",
+          "MediatR.Extensions.Microsoft.DependencyInjection": "10.0.1",
           "Microsoft.AspNetCore.Authentication.JwtBearer": "6.0.4",
           "Microsoft.Azure.Cosmos.Table": "1.0.8",
           "Microsoft.Azure.NotificationHubs": "4.1.0",
@@ -3156,7 +3179,7 @@
       "infrastructure.dapper": {
         "type": "Project",
         "dependencies": {
-          "Core": "2022.5.2",
+          "Core": "2022.6.0",
           "Dapper": "2.0.123",
           "System.Data.SqlClient": "4.8.3"
         }
@@ -3165,7 +3188,7 @@
         "type": "Project",
         "dependencies": {
           "AutoMapper.Extensions.Microsoft.DependencyInjection": "11.0.0",
-          "Core": "2022.5.2",
+          "Core": "2022.6.0",
           "Microsoft.EntityFrameworkCore.Relational": "6.0.4",
           "Npgsql.EntityFrameworkCore.PostgreSQL": "6.0.4",
           "Pomelo.EntityFrameworkCore.MySql": "6.0.1",
@@ -3175,9 +3198,9 @@
       "sharedweb": {
         "type": "Project",
         "dependencies": {
-          "Core": "2022.5.2",
-          "Infrastructure.Dapper": "2022.5.2",
-          "Infrastructure.EntityFramework": "2022.5.2"
+          "Core": "2022.6.0",
+          "Infrastructure.Dapper": "2022.6.0",
+          "Infrastructure.EntityFramework": "2022.6.0"
         }
       }
     }
