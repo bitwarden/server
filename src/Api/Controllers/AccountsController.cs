@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Bit.Api.Models.Request;
+﻿using Bit.Api.Models.Request;
 using Bit.Api.Models.Request.Accounts;
 using Bit.Api.Models.Response;
 using Bit.Api.Utilities;
@@ -441,7 +437,7 @@ namespace Bit.Api.Controllers
                 await _providerUserRepository.GetManyOrganizationDetailsByUserAsync(user.Id,
                     ProviderUserStatusType.Confirmed);
             var response = new ProfileResponseModel(user, organizationUserDetails, providerUserDetails,
-                providerUserOrganizationDetails, await _userService.TwoFactorIsEnabledAsync(user));
+                providerUserOrganizationDetails, await _userService.TwoFactorIsEnabledAsync(user), await _userService.HasPremiumFromOrganization(user));
             return response;
         }
 
@@ -466,7 +462,7 @@ namespace Bit.Api.Controllers
             }
 
             await _userService.SaveUserAsync(model.ToUser(user));
-            var response = new ProfileResponseModel(user, null, null, null, await _userService.TwoFactorIsEnabledAsync(user));
+            var response = new ProfileResponseModel(user, null, null, null, await _userService.TwoFactorIsEnabledAsync(user), await _userService.HasPremiumFromOrganization(user));
             return response;
         }
 
@@ -617,7 +613,7 @@ namespace Bit.Api.Controllers
                     BillingAddressCountry = model.Country,
                     BillingAddressPostalCode = model.PostalCode,
                 });
-            var profile = new ProfileResponseModel(user, null, null, null, await _userService.TwoFactorIsEnabledAsync(user));
+            var profile = new ProfileResponseModel(user, null, null, null, await _userService.TwoFactorIsEnabledAsync(user), await _userService.HasPremiumFromOrganization(user));
             return new PaymentResponseModel
             {
                 UserProfile = profile,

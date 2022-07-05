@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-
-namespace Bit.Api.Models.Request.Organizations
+﻿namespace Bit.Api.Models.Request.Organizations
 {
     public class ImportOrganizationCiphersRequestModel
     {

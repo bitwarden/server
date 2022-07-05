@@ -1,6 +1,4 @@
-﻿using System;
-using System.Threading.Tasks;
-using AspNetCoreRateLimit;
+﻿using AspNetCoreRateLimit;
 using Bit.Core.Models.Api;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Http;
@@ -21,12 +19,12 @@ namespace Bit.Core.Utilities
             IDistributedCache distributedCache,
             IBlockIpService blockIpService,
             RequestDelegate next,
-            IOptions<IpRateLimitOptions> ipRateLimitOptions,
             IProcessingStrategy processingStrategy,
             IRateLimitConfiguration rateLimitConfiguration,
+            IOptions<IpRateLimitOptions> options,
             IIpPolicyStore policyStore,
             ILogger<CustomIpRateLimitMiddleware> logger)
-            : base(next, processingStrategy, ipRateLimitOptions, policyStore, rateLimitConfiguration, logger)
+            : base(next, processingStrategy, options, policyStore, rateLimitConfiguration, logger)
         {
             _distributedCache = distributedCache;
             _blockIpService = blockIpService;

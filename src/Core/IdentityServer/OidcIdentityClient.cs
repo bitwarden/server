@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using Bit.Core.Settings;
+﻿using Bit.Core.Settings;
 using IdentityServer4;
 using IdentityServer4.Models;
 

@@ -1,5 +1,4 @@
-﻿using System;
-using Bit.Core.Models.Business;
+﻿using Bit.Core.Models.Business;
 
 namespace Bit.Admin.Models
 {

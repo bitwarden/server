@@ -713,8 +713,8 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<DateTime>("RevisionDate")
                         .HasColumnType("datetime(6)");
 
-                    b.Property<byte>("Status")
-                        .HasColumnType("tinyint unsigned");
+                    b.Property<short>("Status")
+                        .HasColumnType("smallint");
 
                     b.Property<byte>("Type")
                         .HasColumnType("tinyint unsigned");

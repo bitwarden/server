@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Linq;
+﻿using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Bit.Core.Utilities;
@@ -40,6 +39,17 @@ namespace Bit.Core.Test.Utilities
             Assert.Equal("True", obj.StringProp);
             Assert.Equal(2, obj.EnumerableStringProp.Count());
             Assert.Equal("False", obj.EnumerableStringProp.ElementAt(0));
+            Assert.Equal("1.2", obj.EnumerableStringProp.ElementAt(1));
+        }
+
+        [Fact]
+        public void Read_Float_Success_Culture()
+        {
+            var ci = new CultureInfo("sv-SE");
+            Thread.CurrentThread.CurrentCulture = ci;
+            Thread.CurrentThread.CurrentUICulture = ci;
+
+            var obj = JsonSerializer.Deserialize<TestObject>(boolJson);
             Assert.Equal("1.2", obj.EnumerableStringProp.ElementAt(1));
         }
 

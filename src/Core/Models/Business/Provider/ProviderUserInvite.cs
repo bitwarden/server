@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using Bit.Core.Enums.Provider;
+﻿using Bit.Core.Enums.Provider;
 
 namespace Bit.Core.Models.Business.Provider
 {

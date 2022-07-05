@@ -1,6 +1,4 @@
 ﻿using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
 using Bit.Core.Enums;
 using Bit.Core.Models;
 using Microsoft.AspNetCore.SignalR;

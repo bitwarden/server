@@ -1,7 +1,5 @@
 ﻿using AspNetCoreRateLimit;
 using Bit.Core.Utilities;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
 using Serilog.Events;
 

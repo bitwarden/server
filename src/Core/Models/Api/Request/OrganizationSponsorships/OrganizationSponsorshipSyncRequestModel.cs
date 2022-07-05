@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using Bit.Core.Models.Data.Organizations.OrganizationSponsorships;
+﻿using Bit.Core.Models.Data.Organizations.OrganizationSponsorships;
 
 namespace Bit.Core.Models.Api.Request.OrganizationSponsorships
 {

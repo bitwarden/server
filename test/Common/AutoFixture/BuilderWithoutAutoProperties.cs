@@ -1,6 +1,4 @@
-﻿using System;
-using AutoFixture;
-using AutoFixture.Dsl;
+﻿using AutoFixture;
 using AutoFixture.Kernel;
 
 namespace Bit.Test.Common.AutoFixture

@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Bit.Core.Models.Data.Organizations.OrganizationUsers
+﻿namespace Bit.Core.Models.Data.Organizations.OrganizationUsers
 {
     public class OrganizationUserPublicKey
     {

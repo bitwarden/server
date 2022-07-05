@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Bit.Api.Models.Request;
+﻿using Bit.Api.Models.Request;
 using Bit.Api.Models.Response;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -206,7 +202,7 @@ namespace Bit.Api.Controllers
         }
 
 
-        public async Task<bool> CanCreateCollection(Guid orgId, Guid collectionId)
+        private async Task<bool> CanCreateCollection(Guid orgId, Guid collectionId)
         {
             if (collectionId != default)
             {

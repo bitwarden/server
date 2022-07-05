@@ -1,5 +1,4 @@
-﻿using System;
-using Bit.Core.Context;
+﻿using Bit.Core.Context;
 using Bit.Core.Enums;
 
 namespace Bit.Core.Models.Data

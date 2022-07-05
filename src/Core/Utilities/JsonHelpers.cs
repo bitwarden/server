@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using NS = Newtonsoft.Json;
@@ -142,14 +141,15 @@ namespace Bit.Core.Utilities
     /// </summary>
     public class PermissiveStringConverter : JsonConverter<string>
     {
-        internal static PermissiveStringConverter Instance = new();
+        internal static readonly PermissiveStringConverter Instance = new();
+        private static readonly CultureInfo _cultureInfo = new("en-US");
 
         public override string Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
             return reader.TokenType switch
             {
                 JsonTokenType.String => reader.GetString(),
-                JsonTokenType.Number => reader.GetDecimal().ToString(),
+                JsonTokenType.Number => reader.GetDecimal().ToString(_cultureInfo),
                 JsonTokenType.True => bool.TrueString,
                 JsonTokenType.False => bool.FalseString,
                 _ => throw new JsonException($"Unsupported TokenType: {reader.TokenType}"),

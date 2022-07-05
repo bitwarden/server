@@ -1,5 +1,4 @@
-﻿using System;
-using Bit.Core.Settings;
+﻿using Bit.Core.Settings;
 using IdentityServer4.Configuration;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Http;

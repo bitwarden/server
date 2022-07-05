@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Bit.Api.Models.Request.Organizations;
+﻿using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response.Organizations;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -89,6 +85,12 @@ namespace Bit.Api.Controllers
         [HttpPut("{organizationConnectionId}")]
         public async Task<OrganizationConnectionResponseModel> UpdateConnection(Guid organizationConnectionId, [FromBody] OrganizationConnectionRequestModel model)
         {
+            var existingOrganizationConnection = await _organizationConnectionRepository.GetByIdAsync(organizationConnectionId);
+            if (existingOrganizationConnection == null)
+            {
+                throw new NotFoundException();
+            }
+
             if (!await HasPermissionAsync(model?.OrganizationId))
             {
                 throw new BadRequestException("Only the owner of an organization can update a connection.");
@@ -103,6 +105,8 @@ namespace Bit.Api.Controllers
             {
                 case OrganizationConnectionType.CloudBillingSync:
                     var typedModel = new OrganizationConnectionRequestModel<BillingSyncConfig>(model);
+                    // We don't allow overwriting or changing the CloudOrganizationId so save it from the existing connection
+                    typedModel.ParsedConfig.CloudOrganizationId = existingOrganizationConnection.GetConfig<BillingSyncConfig>().CloudOrganizationId;
                     var connection = await _updateOrganizationConnectionCommand.UpdateAsync(typedModel.ToData(organizationConnectionId));
                     return new OrganizationConnectionResponseModel(connection, typeof(BillingSyncConfig));
                 default:

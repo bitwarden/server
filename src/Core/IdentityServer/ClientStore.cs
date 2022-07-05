@@ -1,9 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Linq;
+﻿using System.Collections.ObjectModel;
 using System.Security.Claims;
-using System.Threading.Tasks;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
