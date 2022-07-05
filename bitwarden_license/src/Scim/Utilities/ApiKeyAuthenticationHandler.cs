@@ -52,15 +52,15 @@ namespace Bit.Scim.Utilities
                 apiKey = apiKey.Substring(7);
             }
 
-            if (!_scimContext.Organization.Enabled || !_scimContext.Organization.UseDirectory)
+            if (!_scimContext.Organization.Enabled || !_scimContext.Organization.UseScim ||
+                _scimContext.ScimConfiguration == null || !_scimContext.ScimConfiguration.Enabled)
             {
                 Logger.LogInformation($"Org {_scimContext.OrganizationId.Value} not able to use Scim.");
                 return AuthenticateResult.Fail("Invalid parameters");
             }
 
             var orgApiKey = (await _organizationApiKeyRepository
-                // TODO: Change to Scim type?
-                .GetManyByOrganizationIdTypeAsync(_scimContext.Organization.Id, OrganizationApiKeyType.Default))
+                .GetManyByOrganizationIdTypeAsync(_scimContext.Organization.Id, OrganizationApiKeyType.Scim))
                 .FirstOrDefault();
             if (orgApiKey?.ApiKey != apiKey)
             {

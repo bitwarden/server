@@ -16,9 +16,9 @@ namespace Bit.Scim.Utilities
         }
 
         public async Task Invoke(HttpContext httpContext, IScimContext scimContext, GlobalSettings globalSettings,
-            IOrganizationRepository organizationRepository)
+            IOrganizationRepository organizationRepository, IOrganizationConnectionRepository organizationConnectionRepository)
         {
-            await scimContext.BuildAsync(httpContext, globalSettings, organizationRepository);
+            await scimContext.BuildAsync(httpContext, globalSettings, organizationRepository, organizationConnectionRepository);
             await _next.Invoke(httpContext);
         }
     }
