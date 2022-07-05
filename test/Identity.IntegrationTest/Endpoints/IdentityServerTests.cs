@@ -418,13 +418,10 @@ namespace Bit.Identity.IntegrationTest.Endpoints
                 tasks[i] = MakeRequest();
             }
 
-            var responses = await Task.WhenAll(tasks);
-
-            var allowedCalls = responses[..AmountInOneSecondAllowed];
-            var notAllowedCall = responses[^1];
-
-            Assert.True(allowedCalls.All(c => c.Response.StatusCode == StatusCodes.Status200OK));
-            Assert.True(notAllowedCall.Response.StatusCode == StatusCodes.Status429TooManyRequests);
+            var responses = (await Task.WhenAll(tasks)).ToList();
+            
+            Assert.Equal(5, responses.Count(c => c.Response.StatusCode == StatusCodes.Status200OK));
+            Assert.Equal(1, responses.Count(c => c.Response.StatusCode == StatusCodes.Status429TooManyRequests));
 
             Task<HttpContext> MakeRequest()
             {
