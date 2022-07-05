@@ -141,8 +141,8 @@ namespace Bit.Core.Utilities
     /// </summary>
     public class PermissiveStringConverter : JsonConverter<string>
     {
-        internal static PermissiveStringConverter Instance = new();
-        internal static CultureInfo _cultureInfo = new("en-US");
+        internal static readonly PermissiveStringConverter Instance = new();
+        private static readonly CultureInfo _cultureInfo = new("en-US");
 
         public override string Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
