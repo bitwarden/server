@@ -419,7 +419,7 @@ namespace Bit.Identity.IntegrationTest.Endpoints
             }
 
             var responses = (await Task.WhenAll(tasks)).ToList();
-            
+
             Assert.Equal(5, responses.Count(c => c.Response.StatusCode == StatusCodes.Status200OK));
             Assert.Equal(1, responses.Count(c => c.Response.StatusCode == StatusCodes.Status429TooManyRequests));
 
