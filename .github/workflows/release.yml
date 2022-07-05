@@ -202,7 +202,6 @@ jobs:
             docker tag bitwarden/$SERVICE_NAME:latest bitwarden/$SERVICE_NAME:dryrun
           else
             docker tag bitwarden/$SERVICE_NAME:$_BRANCH_NAME bitwarden/$SERVICE_NAME:$_RELEASE_VERSION
-            docker tag bitwarden/$SERVICE_NAME:$_BRANCH_NAME bitwarden/$SERVICE_NAME:latest
           fi
 
       - name: Push version and latest image
@@ -213,7 +212,6 @@ jobs:
           SERVICE_NAME: ${{ steps.setup.outputs.service_name }}
         run: |
           docker push bitwarden/$SERVICE_NAME:$_RELEASE_VERSION
-          docker push bitwarden/$SERVICE_NAME:latest
 
       - name: Log out of Docker and disable Docker Notary
         run: |
@@ -238,7 +236,6 @@ jobs:
             docker tag bitwarden/$SERVICE_NAME:latest $REGISTRY/$SERVICE_NAME:dryrun
           else
             docker tag bitwarden/$SERVICE_NAME:$_BRANCH_NAME $REGISTRY/$SERVICE_NAME:$_RELEASE_VERSION
-            docker tag bitwarden/$SERVICE_NAME:$_BRANCH_NAME $REGISTRY/$SERVICE_NAME:latest
           fi
 
       - name: Push version and latest image
@@ -248,7 +245,6 @@ jobs:
           REGISTRY: bitwardenqa.azurecr.io
         run: |
           docker push $REGISTRY/$SERVICE_NAME:$_RELEASE_VERSION
-          docker push $REGISTRY/$SERVICE_NAME:latest
 
       - name: Log out of Docker
         run: docker logout
