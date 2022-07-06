@@ -72,9 +72,15 @@ namespace Bit.Core.Utilities
             if (httpContext == null || httpContext.Request == null) return null;
 
             var s = string.Empty;
-            foreach (var header in httpContext.Request.Headers) s += $"Header \"{header.Key}\": {header.Value} \n";
+            foreach (var header in httpContext.Request.Headers)
+            {
+                s += $"Header \"{header.Key}\": {header.Value} \n";
+            }
 
-            foreach (var query in httpContext.Request.Query) s += $"Query \"{query.Key}\": {query.Value} \n";
+            foreach (var query in httpContext.Request.Query)
+            {
+                s += $"Query \"{query.Key}\": {query.Value} \n";
+            }
 
             return s;
         }
