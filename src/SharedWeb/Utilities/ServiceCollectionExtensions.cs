@@ -32,6 +32,7 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Caching.StackExchangeRedis;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -638,25 +639,18 @@ namespace Bit.SharedWeb.Utilities
             services.AddSingleton<IConnectionMultiplexer>(
                 _ => ConnectionMultiplexer.Connect(globalSettings.Redis.ConnectionString));
 
-            services.AddStackExchangeRedisCache(options =>
+            // Explicitly register IDistributedCache to re-use existing IConnectionMultiplexer 
+            // to reduce the number of redundant connections to the Redis instance
+            services.AddSingleton<IDistributedCache>(s =>
             {
-                options.Configuration = globalSettings.Redis.ConnectionString;
-
-                // Use "ProjectName:" as an instance name to namespace keys and avoid conflicts between projects
-                options.InstanceName = $"{globalSettings.ProjectName}:";
+                return new RedisCache(new RedisCacheOptions
+                {
+                    // Use "ProjectName:" as an instance name to namespace keys and avoid conflicts between projects
+                    InstanceName = $"{globalSettings.ProjectName}:",
+                    ConnectionMultiplexerFactory = () =>
+                        Task.FromResult(s.GetRequiredService<IConnectionMultiplexer>())
+                });
             });
-
-            // TODO: Explicitly register IDistributedCache to re-use existing IConnectionMultiplexer after net6 upgrade
-            // The multiplexer factory is available in Microsoft.Extensions.Caching.StackExchangeRedis v6
-            // And will reduce the number of redundant connections to the Redis instance
-            // services.AddSingleton<IDistributedCache>(s =>
-            // {
-            //     return new RedisCache(new RedisCacheOptions
-            //     {
-            //         ConnectionMultiplexerFactory = () =>
-            //             Task.FromResult(s.GetRequiredService<IConnectionMultiplexer>())
-            //     });
-            // });
         }
     }
 }
