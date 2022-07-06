@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text.Json;
+﻿using System.Text.Json;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Api;
@@ -132,8 +129,8 @@ namespace Bit.Api.Models.Response
     public class CipherMiniDetailsResponseModel : CipherMiniResponseModel
     {
         public CipherMiniDetailsResponseModel(Cipher cipher, GlobalSettings globalSettings,
-            IDictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphers, string obj = "cipherMiniDetails")
-            : base(cipher, globalSettings, false, obj)
+            IDictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphers, bool orgUseTotp, string obj = "cipherMiniDetails")
+            : base(cipher, globalSettings, orgUseTotp, obj)
         {
             if (collectionCiphers?.ContainsKey(cipher.Id) ?? false)
             {

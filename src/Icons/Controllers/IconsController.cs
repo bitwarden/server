@@ -1,10 +1,7 @@
-﻿using System;
-using System.Threading.Tasks;
-using Bit.Icons.Models;
+﻿using Bit.Icons.Models;
 using Bit.Icons.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Logging;
 
 namespace Bit.Icons.Controllers
 {

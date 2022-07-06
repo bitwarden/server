@@ -1,7 +1,5 @@
 ﻿using AspNetCoreRateLimit;
 using Bit.Core.Utilities;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Hosting;
 using Serilog.Events;
 
 namespace Bit.Identity
@@ -10,7 +8,14 @@ namespace Bit.Identity
     {
         public static void Main(string[] args)
         {
-            Host
+            CreateHostBuilder(args)
+                .Build()
+                .Run();
+        }
+
+        public static IHostBuilder CreateHostBuilder(string[] args)
+        {
+            return Host
                 .CreateDefaultBuilder(args)
                 .ConfigureCustomAppConfiguration(args)
                 .ConfigureWebHostDefaults(webBuilder =>
@@ -34,9 +39,7 @@ namespace Bit.Identity
 
                             return e.Level >= LogEventLevel.Error;
                         }));
-                })
-                .Build()
-                .Run();
+                });
         }
     }
 }

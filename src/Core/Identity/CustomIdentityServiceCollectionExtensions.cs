@@ -1,6 +1,4 @@
-﻿using System;
-using Bit.Core.Identity;
-using Microsoft.AspNetCore.Http;
+﻿using Bit.Core.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 

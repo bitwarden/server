@@ -1,6 +1,4 @@
-﻿using System;
-using System.Security.Claims;
-using System.Threading.Tasks;
+﻿using System.Security.Claims;
 using Bit.Api.Controllers;
 using Bit.Api.Models.Request.Accounts;
 using Bit.Core.Entities;

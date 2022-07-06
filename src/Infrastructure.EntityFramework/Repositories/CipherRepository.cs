@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using AutoMapper;
+﻿using AutoMapper;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
@@ -255,6 +251,18 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
                 var dbContext = GetDatabaseContext(scope);
                 var userCipherDetails = new UserCipherDetailsQuery(userId);
                 var data = await userCipherDetails.Run(dbContext).FirstOrDefaultAsync(c => c.Id == id);
+                return data;
+            }
+        }
+
+        public async Task<ICollection<CipherOrganizationDetails>> GetManyOrganizationDetailsByOrganizationIdAsync(
+            Guid organizationId)
+        {
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var query = new CipherOrganizationDetailsReadByIdQuery(organizationId);
+                var data = await query.Run(dbContext).ToListAsync();
                 return data;
             }
         }

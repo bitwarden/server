@@ -1,12 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Text;
+﻿using System.Text;
 using System.Text.Json;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
+using Bit.Core.Models.Data.Organizations.Policies;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture.SendFixtures;
@@ -493,8 +491,6 @@ namespace Bit.Core.Test.Services
 
             send.UserId = user.Id;
             send.Type = SendType.File;
-
-            var testUrl = "https://test.com/";
 
             sutProvider.GetDependency<IUserRepository>()
                 .GetByIdAsync(user.Id)

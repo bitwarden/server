@@ -1,13 +1,9 @@
-﻿using System;
-using System.Threading.Tasks;
-using Bit.Api.Models.Request.Organizations;
+﻿using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response.Organizations;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Api.Request.OrganizationSponsorships;
-using Bit.Core.Models.Api.Request.OrganizationSponsorships;
-using Bit.Core.Models.Api.Response.OrganizationSponsorships;
 using Bit.Core.Models.Api.Response.OrganizationSponsorships;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
@@ -70,11 +66,13 @@ namespace Bit.Api.Controllers
         [SelfHosted(NotSelfHostedOnly = true)]
         public async Task CreateSponsorship(Guid sponsoringOrgId, [FromBody] OrganizationSponsorshipCreateRequestModel model)
         {
+            var sponsoringOrg = await _organizationRepository.GetByIdAsync(sponsoringOrgId);
+
             var sponsorship = await _createSponsorshipCommand.CreateSponsorshipAsync(
-                await _organizationRepository.GetByIdAsync(sponsoringOrgId),
+                sponsoringOrg,
                 await _organizationUserRepository.GetByOrganizationAsync(sponsoringOrgId, _currentContext.UserId ?? default),
                 model.PlanSponsorshipType, model.SponsoredEmail, model.FriendlyName);
-            await _sendSponsorshipOfferCommand.SendSponsorshipOfferAsync(sponsorship, (await CurrentUser).Email);
+            await _sendSponsorshipOfferCommand.SendSponsorshipOfferAsync(sponsorship, sponsoringOrg.Name);
         }
 
         [Authorize("Application")]

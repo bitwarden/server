@@ -1,15 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Bit.Api.Models.Request.Organizations;
+﻿using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
 using Bit.Api.Models.Response.Organizations;
 using Bit.Core.Context;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
+using Bit.Core.Models.Data.Organizations.Policies;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -27,6 +25,7 @@ namespace Bit.Api.Controllers
         private readonly ICollectionRepository _collectionRepository;
         private readonly IGroupRepository _groupRepository;
         private readonly IUserService _userService;
+        private readonly IPolicyRepository _policyRepository;
         private readonly ICurrentContext _currentContext;
 
         public OrganizationUsersController(
@@ -36,6 +35,7 @@ namespace Bit.Api.Controllers
             ICollectionRepository collectionRepository,
             IGroupRepository groupRepository,
             IUserService userService,
+            IPolicyRepository policyRepository,
             ICurrentContext currentContext)
         {
             _organizationRepository = organizationRepository;
@@ -44,6 +44,7 @@ namespace Bit.Api.Controllers
             _collectionRepository = collectionRepository;
             _groupRepository = groupRepository;
             _userService = userService;
+            _policyRepository = policyRepository;
             _currentContext = currentContext;
         }
 
@@ -169,8 +170,8 @@ namespace Bit.Api.Controllers
             await _organizationService.ResendInviteAsync(orgGuidId, userId.Value, new Guid(id));
         }
 
-        [HttpPost("{id}/accept")]
-        public async Task Accept(string orgId, string id, [FromBody] OrganizationUserAcceptRequestModel model)
+        [HttpPost("{organizationUserId}/accept")]
+        public async Task Accept(Guid orgId, Guid organizationUserId, [FromBody] OrganizationUserAcceptRequestModel model)
         {
             var user = await _userService.GetUserByPrincipalAsync(User);
             if (user == null)
@@ -178,7 +179,23 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
-            var result = await _organizationService.AcceptUserAsync(new Guid(id), user, model.Token, _userService);
+            var masterPasswordPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(orgId, PolicyType.ResetPassword);
+            var useMasterPasswordPolicy = masterPasswordPolicy != null &&
+                masterPasswordPolicy.Enabled &&
+                masterPasswordPolicy.GetDataModel<ResetPasswordDataModel>().AutoEnrollEnabled;
+
+            if (useMasterPasswordPolicy &&
+                string.IsNullOrWhiteSpace(model.ResetPasswordKey))
+            {
+                throw new BadRequestException(string.Empty, "Master Password reset is required, but not provided.");
+            }
+
+            await _organizationService.AcceptUserAsync(organizationUserId, user, model.Token, _userService);
+
+            if (useMasterPasswordPolicy)
+            {
+                await _organizationService.UpdateUserResetPasswordEnrollmentAsync(orgId, user.Id, model.ResetPasswordKey, user.Id);
+            }
         }
 
         [HttpPost("{id}/confirm")]
@@ -271,8 +288,23 @@ namespace Bit.Api.Controllers
         [HttpPut("{userId}/reset-password-enrollment")]
         public async Task PutResetPasswordEnrollment(string orgId, string userId, [FromBody] OrganizationUserResetPasswordEnrollmentRequestModel model)
         {
-            var callingUserId = _userService.GetProperUserId(User);
-            await _organizationService.UpdateUserResetPasswordEnrollmentAsync(new Guid(orgId), new Guid(userId), model.ResetPasswordKey, callingUserId);
+            var user = await _userService.GetUserByPrincipalAsync(User);
+            if (user == null)
+            {
+                throw new UnauthorizedAccessException();
+            }
+
+            if (model.ResetPasswordKey != null && !await _userService.VerifySecretAsync(user, model.Secret))
+            {
+                await Task.Delay(2000);
+                throw new BadRequestException("MasterPasswordHash", "Invalid password.");
+            }
+            else
+            {
+                var callingUserId = user.Id;
+                await _organizationService.UpdateUserResetPasswordEnrollmentAsync(
+                   new Guid(orgId), new Guid(userId), model.ResetPasswordKey, callingUserId);
+            }
         }
 
         [HttpPut("{id}/reset-password")]
@@ -337,6 +369,70 @@ namespace Bit.Api.Controllers
 
             var userId = _userService.GetProperUserId(User);
             var result = await _organizationService.DeleteUsersAsync(orgGuidId, model.Ids, userId.Value);
+            return new ListResponseModel<OrganizationUserBulkResponseModel>(result.Select(r =>
+                new OrganizationUserBulkResponseModel(r.Item1.Id, r.Item2)));
+        }
+
+        [HttpPatch("{id}/deactivate")]
+        [HttpPut("{id}/deactivate")]
+        public async Task Deactivate(Guid orgId, Guid id)
+        {
+            await ActivateOrDeactivateUserAsync(orgId, id, _organizationService.DeactivateUserAsync);
+        }
+
+        [HttpPatch("deactivate")]
+        [HttpPut("deactivate")]
+        public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkDeactivate(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
+        {
+            return await ActivateOrDeactivateUsersAsync(orgId, model, _organizationService.DeactivateUsersAsync);
+        }
+
+        [HttpPatch("{id}/activate")]
+        [HttpPut("{id}/activate")]
+        public async Task Activate(Guid orgId, Guid id)
+        {
+            await ActivateOrDeactivateUserAsync(orgId, id, _organizationService.ActivateUserAsync);
+        }
+
+        [HttpPatch("activate")]
+        [HttpPut("activate")]
+        public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkActivate(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
+        {
+            return await ActivateOrDeactivateUsersAsync(orgId, model, _organizationService.ActivateUsersAsync);
+        }
+
+        private async Task ActivateOrDeactivateUserAsync(
+            Guid orgId,
+            Guid id,
+            Func<OrganizationUser, Guid?, Task> statusAction)
+        {
+            if (!await _currentContext.ManageUsers(orgId))
+            {
+                throw new NotFoundException();
+            }
+
+            var userId = _userService.GetProperUserId(User);
+            var orgUser = await _organizationUserRepository.GetByIdAsync(id);
+            if (orgUser == null || orgUser.OrganizationId != orgId)
+            {
+                throw new NotFoundException();
+            }
+
+            await statusAction(orgUser, userId);
+        }
+
+        private async Task<ListResponseModel<OrganizationUserBulkResponseModel>> ActivateOrDeactivateUsersAsync(
+            Guid orgId,
+            OrganizationUserBulkRequestModel model,
+            Func<Guid, IEnumerable<Guid>, Guid?, Task<List<Tuple<OrganizationUser, string>>>> statusAction)
+        {
+            if (!await _currentContext.ManageUsers(orgId))
+            {
+                throw new NotFoundException();
+            }
+
+            var userId = _userService.GetProperUserId(User);
+            var result = await statusAction(orgId, model.Ids, userId.Value);
             return new ListResponseModel<OrganizationUserBulkResponseModel>(result.Select(r =>
                 new OrganizationUserBulkResponseModel(r.Item1.Id, r.Item2)));
         }

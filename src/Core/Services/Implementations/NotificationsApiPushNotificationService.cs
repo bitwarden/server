@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Net.Http;
-using System.Threading.Tasks;
-using Bit.Core.Context;
+﻿using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models;
@@ -71,6 +67,7 @@ namespace Bit.Core.Services
                     Id = cipher.Id,
                     UserId = cipher.UserId,
                     RevisionDate = cipher.RevisionDate,
+                    CollectionIds = collectionIds,
                 };
 
                 await SendMessageAsync(type, message, true);

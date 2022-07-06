@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using AutoMapper;
+﻿using AutoMapper;
 
 namespace Bit.Infrastructure.EntityFramework.Models
 {

@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using Bit.Core.Entities;
-using Bit.Core.Models.Data;
+﻿using Bit.Core.Entities;
 using Bit.Core.Test.AutoFixture.Attributes;
 using Bit.Core.Test.AutoFixture.OrganizationUserFixtures;
 using Bit.Core.Test.Repositories.EntityFramework.EqualityComparers;
@@ -106,8 +102,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
         }
 
         [CiSkippedTheory, EfOrganizationUserAutoData]
-        public async void DeleteAsync_Works_DataMatches(OrganizationUser orgUser, User user, Organization org,
-            OrganizationUserCompare equalityComparer, List<EfRepo.OrganizationUserRepository> suts,
+        public async void DeleteAsync_Works_DataMatches(OrganizationUser orgUser, User user, Organization org, List<EfRepo.OrganizationUserRepository> suts,
             List<EfRepo.UserRepository> efUserRepos, List<EfRepo.OrganizationRepository> efOrgRepos,
             SqlRepo.OrganizationUserRepository sqlOrgUserRepo, SqlRepo.UserRepository sqlUserRepo,
             SqlRepo.OrganizationRepository sqlOrgRepo)

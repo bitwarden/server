@@ -1,15 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text.Json;
-using System.Threading.Tasks;
+﻿using System.Text.Json;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
+using Bit.Core.Models.Data.Organizations.Policies;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
@@ -733,7 +729,7 @@ namespace Bit.Core.Services
 
             var dir = $"{_globalSettings.LicenseDirectory}/organization";
             Directory.CreateDirectory(dir);
-            using var fs = System.IO.File.OpenWrite(Path.Combine(dir, $"{organization.Id}.json"));
+            await using var fs = new FileStream(Path.Combine(dir, $"{organization.Id}.json"), FileMode.Create);
             await JsonSerializer.SerializeAsync(fs, license, JsonHelpers.Indented);
             return result;
         }
@@ -850,7 +846,7 @@ namespace Bit.Core.Services
                 if (userCount > license.Seats.Value)
                 {
                     throw new BadRequestException($"Your organization currently has {userCount} seats filled. " +
-                        $"Your new license only has ({ license.Seats.Value}) seats. Remove some users.");
+                        $"Your new license only has ({license.Seats.Value}) seats. Remove some users.");
                 }
             }
 
@@ -919,7 +915,7 @@ namespace Bit.Core.Services
 
             var dir = $"{_globalSettings.LicenseDirectory}/organization";
             Directory.CreateDirectory(dir);
-            using var fs = System.IO.File.OpenWrite(Path.Combine(dir, $"{organization.Id}.json"));
+            await using var fs = new FileStream(Path.Combine(dir, $"{organization.Id}.json"), FileMode.Create);
             await JsonSerializer.SerializeAsync(fs, license, JsonHelpers.Indented);
 
             organization.Name = license.Name;
@@ -1751,10 +1747,10 @@ namespace Bit.Core.Services
                 EventType.OrganizationUser_UpdatedGroups);
         }
 
-        public async Task UpdateUserResetPasswordEnrollmentAsync(Guid organizationId, Guid organizationUserId, string resetPasswordKey, Guid? callingUserId)
+        public async Task UpdateUserResetPasswordEnrollmentAsync(Guid organizationId, Guid userId, string resetPasswordKey, Guid? callingUserId)
         {
             // Org User must be the same as the calling user and the organization ID associated with the user must match passed org ID
-            var orgUser = await _organizationUserRepository.GetByOrganizationAsync(organizationId, organizationUserId);
+            var orgUser = await _organizationUserRepository.GetByOrganizationAsync(organizationId, userId);
             if (!callingUserId.HasValue || orgUser == null || orgUser.UserId != callingUserId.Value ||
                 orgUser.OrganizationId != organizationId)
             {
@@ -2184,6 +2180,192 @@ namespace Bit.Core.Services
             {
                 throw new BadRequestException("You cannot delete an Organization that is using Key Connector.");
             }
+        }
+
+        public async Task DeactivateUserAsync(OrganizationUser organizationUser, Guid? disablingUserId)
+        {
+            if (organizationUser.Status == OrganizationUserStatusType.Deactivated)
+            {
+                throw new BadRequestException("Already deactivated.");
+            }
+
+            if (disablingUserId.HasValue && organizationUser.UserId == disablingUserId.Value)
+            {
+                throw new BadRequestException("You cannot deactivate yourself.");
+            }
+
+            if (organizationUser.Type == OrganizationUserType.Owner && disablingUserId.HasValue &&
+                !await _currentContext.OrganizationOwner(organizationUser.OrganizationId))
+            {
+                throw new BadRequestException("Only owners can deactivate other owners.");
+            }
+
+            if (!await HasConfirmedOwnersExceptAsync(organizationUser.OrganizationId, new[] { organizationUser.Id }))
+            {
+                throw new BadRequestException("Organization must have at least one confirmed owner.");
+            }
+
+            await _organizationUserRepository.DeactivateAsync(organizationUser.Id);
+            organizationUser.Status = OrganizationUserStatusType.Deactivated;
+            await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Deactivated);
+        }
+
+        public async Task<List<Tuple<OrganizationUser, string>>> DeactivateUsersAsync(Guid organizationId,
+            IEnumerable<Guid> organizationUserIds, Guid? disablingUserId)
+        {
+            var orgUsers = await _organizationUserRepository.GetManyAsync(organizationUserIds);
+            var filteredUsers = orgUsers.Where(u => u.OrganizationId == organizationId)
+                .ToList();
+
+            if (!filteredUsers.Any())
+            {
+                throw new BadRequestException("Users invalid.");
+            }
+
+            if (!await HasConfirmedOwnersExceptAsync(organizationId, organizationUserIds))
+            {
+                throw new BadRequestException("Organization must have at least one confirmed owner.");
+            }
+
+            var deletingUserIsOwner = false;
+            if (disablingUserId.HasValue)
+            {
+                deletingUserIsOwner = await _currentContext.OrganizationOwner(organizationId);
+            }
+
+            var result = new List<Tuple<OrganizationUser, string>>();
+
+            foreach (var organizationUser in filteredUsers)
+            {
+                try
+                {
+                    if (organizationUser.Status == OrganizationUserStatusType.Deactivated)
+                    {
+                        throw new BadRequestException("Already deactivated.");
+                    }
+
+                    if (disablingUserId.HasValue && organizationUser.UserId == disablingUserId)
+                    {
+                        throw new BadRequestException("You cannot deactivate yourself.");
+                    }
+
+                    if (organizationUser.Type == OrganizationUserType.Owner && disablingUserId.HasValue && !deletingUserIsOwner)
+                    {
+                        throw new BadRequestException("Only owners can deactivate other owners.");
+                    }
+
+                    await _organizationUserRepository.DeactivateAsync(organizationUser.Id);
+                    organizationUser.Status = OrganizationUserStatusType.Deactivated;
+                    await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Deactivated);
+
+                    result.Add(Tuple.Create(organizationUser, ""));
+                }
+                catch (BadRequestException e)
+                {
+                    result.Add(Tuple.Create(organizationUser, e.Message));
+                }
+            }
+
+            return result;
+        }
+
+        public async Task ActivateUserAsync(OrganizationUser organizationUser, Guid? enablingUserId)
+        {
+            if (organizationUser.Status != OrganizationUserStatusType.Deactivated)
+            {
+                throw new BadRequestException("Already active.");
+            }
+
+            if (enablingUserId.HasValue && organizationUser.UserId == enablingUserId.Value)
+            {
+                throw new BadRequestException("You cannot activate yourself.");
+            }
+
+            if (organizationUser.Type == OrganizationUserType.Owner && enablingUserId.HasValue &&
+                !await _currentContext.OrganizationOwner(organizationUser.OrganizationId))
+            {
+                throw new BadRequestException("Only owners can activate other owners.");
+            }
+
+            var status = GetPriorActiveOrganizationUserStatusType(organizationUser);
+
+            await _organizationUserRepository.ActivateAsync(organizationUser.Id, status);
+            organizationUser.Status = status;
+            await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Activated);
+        }
+
+        public async Task<List<Tuple<OrganizationUser, string>>> ActivateUsersAsync(Guid organizationId,
+            IEnumerable<Guid> organizationUserIds, Guid? enablingUserId)
+        {
+            var orgUsers = await _organizationUserRepository.GetManyAsync(organizationUserIds);
+            var filteredUsers = orgUsers.Where(u => u.OrganizationId == organizationId)
+                .ToList();
+
+            if (!filteredUsers.Any())
+            {
+                throw new BadRequestException("Users invalid.");
+            }
+
+            var deletingUserIsOwner = false;
+            if (enablingUserId.HasValue)
+            {
+                deletingUserIsOwner = await _currentContext.OrganizationOwner(organizationId);
+            }
+
+            var result = new List<Tuple<OrganizationUser, string>>();
+
+            foreach (var organizationUser in filteredUsers)
+            {
+                try
+                {
+                    if (organizationUser.Status != OrganizationUserStatusType.Deactivated)
+                    {
+                        throw new BadRequestException("Already active.");
+                    }
+
+                    if (enablingUserId.HasValue && organizationUser.UserId == enablingUserId)
+                    {
+                        throw new BadRequestException("You cannot activate yourself.");
+                    }
+
+                    if (organizationUser.Type == OrganizationUserType.Owner && enablingUserId.HasValue && !deletingUserIsOwner)
+                    {
+                        throw new BadRequestException("Only owners can activate other owners.");
+                    }
+
+                    var status = GetPriorActiveOrganizationUserStatusType(organizationUser);
+
+                    await _organizationUserRepository.ActivateAsync(organizationUser.Id, status);
+                    organizationUser.Status = status;
+                    await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Activated);
+
+                    result.Add(Tuple.Create(organizationUser, ""));
+                }
+                catch (BadRequestException e)
+                {
+                    result.Add(Tuple.Create(organizationUser, e.Message));
+                }
+            }
+
+            return result;
+        }
+
+        static OrganizationUserStatusType GetPriorActiveOrganizationUserStatusType(OrganizationUser organizationUser)
+        {
+            // Determine status to revert back to
+            var status = OrganizationUserStatusType.Invited;
+            if (organizationUser.UserId.HasValue && string.IsNullOrWhiteSpace(organizationUser.Email))
+            {
+                // Has UserId & Email is null, then Accepted
+                status = OrganizationUserStatusType.Accepted;
+                if (!string.IsNullOrWhiteSpace(organizationUser.Key))
+                {
+                    // We have an org key for this user, user was confirmed
+                    status = OrganizationUserStatusType.Confirmed;
+                }
+            }
+
+            return status;
         }
     }
 }

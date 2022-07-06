@@ -1,5 +1,4 @@
-﻿using System.Linq;
-using Bit.Core.Models.Api;
+﻿using Bit.Core.Models.Api;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 

@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using Bit.Core.Business.Sso;
+﻿using Bit.Core.Business.Sso;
 using Bit.Core.IdentityServer;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
@@ -9,9 +7,6 @@ using Bit.Sso.Models;
 using IdentityServer4.Models;
 using IdentityServer4.ResponseHandling;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Sustainsys.Saml2.AspNetCore2;
 
 namespace Bit.Sso.Utilities

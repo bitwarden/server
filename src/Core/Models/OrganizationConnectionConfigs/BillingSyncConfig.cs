@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Bit.Core.Models.OrganizationConnectionConfigs
+﻿namespace Bit.Core.Models.OrganizationConnectionConfigs
 {
     public class BillingSyncConfig
     {

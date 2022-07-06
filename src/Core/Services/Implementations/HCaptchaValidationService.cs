@@ -1,9 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Net.Http;
-using System.Net.Http.Json;
+﻿using System.Net.Http.Json;
 using System.Text.Json.Serialization;
-using System.Threading.Tasks;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Models.Business;
@@ -89,6 +85,7 @@ namespace Bit.Core.Services
             var score = hcaptchaResponse.Score.GetValueOrDefault();
             response.MaybeBot = score >= _globalSettings.Captcha.MaybeBotScoreThreshold;
             response.IsBot = score >= _globalSettings.Captcha.IsBotScoreThreshold;
+            response.Score = score;
             return response;
         }
 

@@ -1,6 +1,4 @@
-﻿using System;
-using System.Security.Claims;
-using System.Threading.Tasks;
+﻿using System.Security.Claims;
 using AutoFixture.Xunit2;
 using Bit.Api.Controllers;
 using Bit.Core.Context;

@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Security.Claims;
-using System.Threading.Tasks;
+﻿using System.Security.Claims;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models;
@@ -70,6 +67,7 @@ namespace Bit.Core.Services
             int? version = null);
         Task<bool> CheckPasswordAsync(User user, string password);
         Task<bool> CanAccessPremium(ITwoFactorProvidersUser user);
+        Task<bool> HasPremiumFromOrganization(ITwoFactorProvidersUser user);
         Task<bool> TwoFactorIsEnabledAsync(ITwoFactorProvidersUser user);
         Task<bool> TwoFactorProviderIsEnabledAsync(TwoFactorProviderType provider, ITwoFactorProvidersUser user);
         Task<string> GenerateSignInTokenAsync(User user, string purpose);
@@ -79,5 +77,6 @@ namespace Bit.Core.Services
         Task<bool> VerifyOTPAsync(User user, string token);
         Task<bool> VerifySecretAsync(User user, string secret);
         Task<bool> Needs2FABecauseNewDeviceAsync(User user, string deviceIdentifier, string grantType);
+        bool CanEditDeviceVerificationSettings(User user);
     }
 }

@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text.Json;
-using System.Threading.Tasks;
+﻿using System.Text.Json;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -869,7 +865,7 @@ namespace Bit.Core.Test.Services
         [InlinePaidOrganizationAutoData(0, null, 100, true, "")]
         [InlinePaidOrganizationAutoData(1, 100, null, true, "")]
         [InlinePaidOrganizationAutoData(1, 100, 100, false, "Cannot invite new users. Seat limit has been reached")]
-        public async Task CanScale(int seatsToAdd, int? currentSeats, int? maxAutoscaleSeats,
+        public void CanScale(int seatsToAdd, int? currentSeats, int? maxAutoscaleSeats,
             bool expectedResult, string expectedFailureMessage, Organization organization,
             SutProvider<OrganizationService> sutProvider)
         {
@@ -891,7 +887,7 @@ namespace Bit.Core.Test.Services
         }
 
         [Theory, PaidOrganizationAutoData]
-        public async Task CanScale_FailsOnSelfHosted(Organization organization,
+        public void CanScale_FailsOnSelfHosted(Organization organization,
             SutProvider<OrganizationService> sutProvider)
         {
             sutProvider.GetDependency<IGlobalSettings>().SelfHosted.Returns(true);

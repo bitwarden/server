@@ -1,10 +1,6 @@
-﻿using System;
-using System.Threading.Tasks;
-using Bit.Core.Enums;
+﻿using Bit.Core.Enums;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.DependencyInjection;
 using Sustainsys.Saml2.AspNetCore2;
 
 namespace Bit.Sso.Utilities

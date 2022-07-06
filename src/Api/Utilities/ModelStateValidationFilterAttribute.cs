@@ -1,5 +1,4 @@
-﻿using System.Linq;
-using Bit.Api.Models.Public.Response;
+﻿using Bit.Api.Models.Public.Response;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using InternalApi = Bit.Core.Models.Api;

@@ -1,11 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Net;
-using System.Net.Http;
+﻿using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
-using System.Threading.Tasks;
 using Bit.Core.Utilities;
 using Microsoft.Extensions.Logging;
 
@@ -124,9 +120,17 @@ namespace Bit.Core.Services
 
             if (!response.IsSuccessStatusCode)
             {
+                _logger.LogInformation("Unsuccessful token response with status code {StatusCode}", response.StatusCode);
+
                 if (response.StatusCode == HttpStatusCode.BadRequest)
                 {
                     _nextAuthAttempt = DateTime.UtcNow.AddDays(1);
+                }
+
+                if (_logger.IsEnabled(LogLevel.Debug))
+                {
+                    var responseBody = await response.Content.ReadAsStringAsync();
+                    _logger.LogDebug("Error response body:\n{ResponseBody}", responseBody);
                 }
 
                 return false;

@@ -2,7 +2,7 @@ CREATE FUNCTION [dbo].[PolicyApplicableToUser]
 (
     @UserId UNIQUEIDENTIFIER,
     @PolicyType TINYINT,
-    @MinimumStatus TINYINT
+    @MinimumStatus SMALLINT
 )
 RETURNS TABLE
 AS RETURN

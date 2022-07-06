@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Bit.Admin.Models;
+﻿using Bit.Admin.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
@@ -34,6 +30,7 @@ namespace Bit.Admin.Controllers
         private readonly GlobalSettings _globalSettings;
         private readonly IReferenceEventService _referenceEventService;
         private readonly IUserService _userService;
+        private readonly ILogger<OrganizationsController> _logger;
 
         public OrganizationsController(
             IOrganizationRepository organizationRepository,
@@ -49,7 +46,8 @@ namespace Bit.Admin.Controllers
             IApplicationCacheService applicationCacheService,
             GlobalSettings globalSettings,
             IReferenceEventService referenceEventService,
-            IUserService userService)
+            IUserService userService,
+            ILogger<OrganizationsController> logger)
         {
             _organizationRepository = organizationRepository;
             _organizationUserRepository = organizationUserRepository;
@@ -65,6 +63,7 @@ namespace Bit.Admin.Controllers
             _globalSettings = globalSettings;
             _referenceEventService = referenceEventService;
             _userService = userService;
+            _logger = logger;
         }
 
         public async Task<IActionResult> Index(string name = null, string userEmail = null, bool? paid = null,
@@ -199,6 +198,7 @@ namespace Bit.Admin.Controllers
                 catch (Exception ex)
                 {
                     TempData["ConnectionError"] = ex.Message;
+                    _logger.LogWarning(ex, "Error while attempting to do billing sync for organization with id '{OrganizationId}'", id);
                 }
 
                 if (_globalSettings.SelfHosted)

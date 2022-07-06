@@ -1,5 +1,4 @@
-﻿using System;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 
@@ -27,6 +26,7 @@ namespace Bit.Api.Models.Public.Response
             Date = ev.Date;
             Device = ev.DeviceType;
             IpAddress = ev.IpAddress;
+            InstallationId = ev.InstallationId;
         }
 
         /// <summary>
@@ -70,6 +70,11 @@ namespace Bit.Api.Models.Public.Response
         /// </summary>
         /// <example>a2549f79-a71f-4eb9-9234-eb7247333f94</example>
         public Guid? ActingUserId { get; set; }
+        /// <summary>
+        /// The Unique identifier of the Installation that performed the event.
+        /// </summary>
+        /// <value></value>
+        public Guid? InstallationId { get; set; }
         /// <summary>
         /// The date/timestamp when the event occurred.
         /// </summary>

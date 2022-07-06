@@ -1,5 +1,4 @@
-﻿using System;
-using IdentityServer4.Models;
+﻿using IdentityServer4.Models;
 
 namespace Bit.Sso.Models
 {

@@ -1,14 +1,11 @@
-﻿using System;
-using System.IO;
-using System.Linq;
-using System.Text.Json;
-using System.Threading.Tasks;
+﻿using System.Text.Json;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
+using Bit.Core.Models.Data.Organizations.Policies;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
@@ -291,14 +288,9 @@ namespace Bit.Core.Services
             if (send.HideEmail.GetValueOrDefault())
             {
                 var sendOptionsPolicies = await _policyRepository.GetManyByTypeApplicableToUserIdAsync(userId.Value, PolicyType.SendOptions);
-                foreach (var policy in sendOptionsPolicies)
+                if (sendOptionsPolicies.Any(p => p.GetDataModel<SendOptionsPolicyData>()?.DisableHideEmail ?? false))
                 {
-                    var data = CoreHelpers.LoadClassFromJsonData<SendOptionsPolicyData>(policy.Data);
-                    if (data?.DisableHideEmail ?? false)
-                    {
-                        throw new BadRequestException("Due to an Enterprise Policy, you are not allowed to hide your email address from recipients when creating or editing a Send.");
-                    }
-
+                    throw new BadRequestException("Due to an Enterprise Policy, you are not allowed to hide your email address from recipients when creating or editing a Send.");
                 }
             }
         }

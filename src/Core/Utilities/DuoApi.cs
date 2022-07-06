@@ -8,10 +8,7 @@ Copyright (c) 2018 Duo Security
 All rights reserved
 */
 
-using System;
-using System.Collections.Generic;
 using System.Globalization;
-using System.IO;
 using System.Net;
 using System.Security.Cryptography;
 using System.Text;

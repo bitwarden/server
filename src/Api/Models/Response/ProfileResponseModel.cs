@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using Bit.Api.Models.Response.Providers;
+﻿using Bit.Api.Models.Response.Providers;
 using Bit.Core.Entities;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Data;
@@ -15,7 +12,8 @@ namespace Bit.Api.Models.Response
             IEnumerable<OrganizationUserOrganizationDetails> organizationsUserDetails,
             IEnumerable<ProviderUserProviderDetails> providerUserDetails,
             IEnumerable<ProviderUserOrganizationDetails> providerUserOrganizationDetails,
-            bool twoFactorEnabled) : base("profile")
+            bool twoFactorEnabled,
+            bool premiumFromOrganization) : base("profile")
         {
             if (user == null)
             {
@@ -27,6 +25,7 @@ namespace Bit.Api.Models.Response
             Email = user.Email;
             EmailVerified = user.EmailVerified;
             Premium = user.Premium;
+            PremiumFromOrganization = premiumFromOrganization;
             MasterPasswordHint = string.IsNullOrWhiteSpace(user.MasterPasswordHint) ? null : user.MasterPasswordHint;
             Culture = user.Culture;
             TwoFactorEnabled = twoFactorEnabled;
@@ -46,6 +45,7 @@ namespace Bit.Api.Models.Response
         public string Email { get; set; }
         public bool EmailVerified { get; set; }
         public bool Premium { get; set; }
+        public bool PremiumFromOrganization { get; set; }
         public string MasterPasswordHint { get; set; }
         public string Culture { get; set; }
         public bool TwoFactorEnabled { get; set; }

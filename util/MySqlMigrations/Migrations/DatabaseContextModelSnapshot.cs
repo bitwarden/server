@@ -713,8 +713,8 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<DateTime>("RevisionDate")
                         .HasColumnType("datetime(6)");
 
-                    b.Property<byte>("Status")
-                        .HasColumnType("tinyint unsigned");
+                    b.Property<short>("Status")
+                        .HasColumnType("smallint");
 
                     b.Property<byte>("Type")
                         .HasColumnType("tinyint unsigned");
@@ -1191,6 +1191,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<string>("TwoFactorRecoveryCode")
                         .HasMaxLength(32)
                         .HasColumnType("varchar(32)");
+
+                    b.Property<bool>("UnknownDeviceVerificationEnabled")
+                        .HasColumnType("tinyint(1)");
 
                     b.Property<bool>("UsesKeyConnector")
                         .HasColumnType("tinyint(1)");

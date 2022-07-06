@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Security.Claims;
-using System.Threading.Tasks;
+﻿using System.Security.Claims;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Identity;
@@ -82,7 +80,7 @@ namespace Bit.Core.IdentityServer
                 }
 
                 validatorContext.CaptchaResponse = await _captchaValidationService.ValidateCaptchaResponseAsync(
-                    captchaResponse, _currentContext.IpAddress, null);
+                    captchaResponse, _currentContext.IpAddress, user);
                 if (!validatorContext.CaptchaResponse.Success)
                 {
                     await BuildErrorResultAsync("Captcha is invalid. Please refresh and try again", false, context, null);

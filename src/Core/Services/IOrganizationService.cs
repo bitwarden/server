@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using Bit.Core.Entities;
+﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
@@ -51,7 +48,7 @@ namespace Bit.Core.Services
         Task<List<Tuple<OrganizationUser, string>>> DeleteUsersAsync(Guid organizationId,
             IEnumerable<Guid> organizationUserIds, Guid? deletingUserId);
         Task UpdateUserGroupsAsync(OrganizationUser organizationUser, IEnumerable<Guid> groupIds, Guid? loggedInUserId);
-        Task UpdateUserResetPasswordEnrollmentAsync(Guid organizationId, Guid organizationUserId, string resetPasswordKey, Guid? callingUserId);
+        Task UpdateUserResetPasswordEnrollmentAsync(Guid organizationId, Guid userId, string resetPasswordKey, Guid? callingUserId);
         Task<OrganizationLicense> GenerateLicenseAsync(Guid organizationId, Guid installationId);
         Task<OrganizationLicense> GenerateLicenseAsync(Organization organization, Guid installationId,
             int? version = null);
@@ -61,5 +58,11 @@ namespace Bit.Core.Services
         Task DeleteSsoUserAsync(Guid userId, Guid? organizationId);
         Task<Organization> UpdateOrganizationKeysAsync(Guid orgId, string publicKey, string privateKey);
         Task<bool> HasConfirmedOwnersExceptAsync(Guid organizationId, IEnumerable<Guid> organizationUsersId, bool includeProvider = true);
+        Task DeactivateUserAsync(OrganizationUser organizationUser, Guid? disablingUserId);
+        Task<List<Tuple<OrganizationUser, string>>> DeactivateUsersAsync(Guid organizationId,
+            IEnumerable<Guid> organizationUserIds, Guid? disablingUserId);
+        Task ActivateUserAsync(OrganizationUser organizationUser, Guid? enablingUserId);
+        Task<List<Tuple<OrganizationUser, string>>> ActivateUsersAsync(Guid organizationId,
+            IEnumerable<Guid> organizationUserIds, Guid? enablingUserId);
     }
 }

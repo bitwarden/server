@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using Bit.Core.Entities;
+﻿using Bit.Core.Entities;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
@@ -16,6 +13,7 @@ namespace Bit.Api.Models.Response
             GlobalSettings globalSettings,
             User user,
             bool userTwoFactorEnabled,
+            bool userHasPremiumFromOrganization,
             IEnumerable<OrganizationUserOrganizationDetails> organizationUserDetails,
             IEnumerable<ProviderUserProviderDetails> providerUserDetails,
             IEnumerable<ProviderUserOrganizationDetails> providerUserOrganizationDetails,
@@ -29,7 +27,7 @@ namespace Bit.Api.Models.Response
             : base("sync")
         {
             Profile = new ProfileResponseModel(user, organizationUserDetails, providerUserDetails,
-                providerUserOrganizationDetails, userTwoFactorEnabled);
+                providerUserOrganizationDetails, userTwoFactorEnabled, userHasPremiumFromOrganization);
             Folders = folders.Select(f => new FolderResponseModel(f));
             Ciphers = ciphers.Select(c => new CipherDetailsResponseModel(c, globalSettings, collectionCiphersDict));
             Collections = collections?.Select(
