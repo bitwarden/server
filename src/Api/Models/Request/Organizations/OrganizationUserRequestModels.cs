@@ -95,7 +95,7 @@ namespace Bit.Api.Models.Request.Organizations
         public IEnumerable<string> GroupIds { get; set; }
     }
 
-    public class OrganizationUserResetPasswordEnrollmentRequestModel : SecretVerificationRequestModel
+    public class OrganizationUserResetPasswordEnrollmentRequestModel
     {
         public string ResetPasswordKey { get; set; }
     }

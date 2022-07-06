@@ -297,17 +297,17 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
-            if (model.ResetPasswordKey != null && !await _userService.VerifySecretAsync(user, model.Secret))
-            {
-                await Task.Delay(2000);
-                throw new BadRequestException("MasterPasswordHash", "Invalid password.");
-            }
-            else
-            {
-                var callingUserId = user.Id;
+            // if (model.ResetPasswordKey != null && !await _userService.VerifySecretAsync(user, model.Secret))
+            // {
+            //     await Task.Delay(2000);
+            //     throw new BadRequestException("MasterPasswordHash", "Invalid password.");
+            // }
+            // else
+            // {
+            var callingUserId = user.Id;
                 await _organizationService.UpdateUserResetPasswordEnrollmentAsync(
                    new Guid(orgId), new Guid(userId), model.ResetPasswordKey, callingUserId);
-            }
+            // }
         }
 
         [HttpPut("{id}/reset-password")]
