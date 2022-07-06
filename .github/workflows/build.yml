@@ -30,6 +30,7 @@ jobs:
 
   lint:
     name: Lint
+    if: false
     runs-on: ubuntu-20.04
     steps:
       - name: Checkout repo
@@ -466,7 +467,7 @@ jobs:
     runs-on: ubuntu-20.04
     needs:
       - cloc
-      - lint
+        #- lint
       - testing
       - build-artifacts
       - build-docker
@@ -479,7 +480,7 @@ jobs:
           || github.ref == 'refs/heads/hotfix-rc'
         env:
           CLOC_STATUS: ${{ needs.cloc.result }}
-          LINT_STATUS: ${{ needs.lint.result }}
+          #LINT_STATUS: ${{ needs.lint.result }}
           TESTING_STATUS: ${{ needs.testing.result }}
           BUILD_ARTIFACTS_STATUS: ${{ needs.build-artifacts.result }}
           BUILD_DOCKER_STATUS: ${{ needs.build-docker.result }}
@@ -487,8 +488,8 @@ jobs:
         run: |
           if [ "$CLOC_STATUS" = "failure" ]; then
               exit 1
-          elif [ "$LINT_STATUS" = "failure" ]; then
-              exit 1
+          #elif [ "$LINT_STATUS" = "failure" ]; then
+          #    exit 1
           elif [ "$TESTING_STATUS" = "failure" ]; then
               exit 1
           elif [ "$BUILD_ARTIFACTS_STATUS" = "failure" ]; then
