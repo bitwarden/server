@@ -69,7 +69,10 @@ namespace Bit.Core.Utilities
 
         private string GetRequestInfo(HttpContext httpContext)
         {
-            if (httpContext == null || httpContext.Request == null) return null;
+            if (httpContext == null || httpContext.Request == null)
+            {
+                return null;
+            }
 
             var s = string.Empty;
             foreach (var header in httpContext.Request.Headers)
