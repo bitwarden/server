@@ -70,7 +70,7 @@ namespace Bit.Api.Controllers
             switch (model.Type)
             {
                 case OrganizationConnectionType.CloudBillingSync:
-                    return await CreateConnectionByTypeAsync<BillingSyncConfig>(model, async (typedModel) =>
+                    return await CreateOrUpdateOrganizationConnectionAsync<BillingSyncConfig>(null, model, async (typedModel) =>
                     {
                         if (!_globalSettings.SelfHosted)
                         {
@@ -84,7 +84,7 @@ namespace Bit.Api.Controllers
                         typedModel.ParsedConfig.CloudOrganizationId = license.Id;
                     });
                 case OrganizationConnectionType.Scim:
-                    return await CreateConnectionByTypeAsync<ScimConfig>(model, ValidateScimConnection);
+                    return await CreateOrUpdateOrganizationConnectionAsync<ScimConfig>(null, model, ClearScimConnectionServiceUrl, PopulateScimConnectionDetails);
                 default:
                     throw new BadRequestException($"Unknown Organization connection Type: {model.Type}");
             }
@@ -112,9 +112,9 @@ namespace Bit.Api.Controllers
             switch (model.Type)
             {
                 case OrganizationConnectionType.CloudBillingSync:
-                    return await UpdateOrganizationConnectionAsync<BillingSyncConfig>(organizationConnectionId, model);
+                    return await CreateOrUpdateOrganizationConnectionAsync<BillingSyncConfig>(organizationConnectionId, model);
                 case OrganizationConnectionType.Scim:
-                    return await UpdateOrganizationConnectionAsync<ScimConfig>(organizationConnectionId, model, ValidateScimConnection);
+                    return await CreateOrUpdateOrganizationConnectionAsync<ScimConfig>(organizationConnectionId, model, ClearScimConnectionServiceUrl, PopulateScimConnectionDetails);
                 default:
                     throw new BadRequestException($"Unkown Organization connection Type: {model.Type}");
             }
@@ -140,12 +140,7 @@ namespace Bit.Api.Controllers
                     }
                     return new OrganizationConnectionResponseModel(connection, typeof(BillingSyncConfig));
                 case OrganizationConnectionType.Scim:
-                    var config = connection?.GetConfig<ScimConfig>();   
-                    if (config != null && string.IsNullOrWhiteSpace(config.ServiceUrl))
-                    {
-                        config.ServiceUrl = GetScimConfigBaseUrl(organizationId);
-                        connection.SetConfig(config);
-                    }
+                    PopulateScimConnectionDetails(connection);
                     return new OrganizationConnectionResponseModel(connection, typeof(ScimConfig));
                 default:
                     throw new BadRequestException($"Unkown Organization connection Type: {type}");
@@ -176,11 +171,25 @@ namespace Bit.Api.Controllers
             return $"{_globalSettings.BaseServiceUri.Scim}/v2/{organizationId}";
         }
 
-        private Task ValidateScimConnection(OrganizationConnectionRequestModel<ScimConfig> typedModel)
+        private void PopulateScimConnectionDetails(OrganizationConnection connection)
         {
-            if (typedModel.ParsedConfig != null)
+            if (connection.Type == OrganizationConnectionType.Scim)
             {
-                typedModel.ParsedConfig.ServiceUrl = GetScimConfigBaseUrl(typedModel.OrganizationId);
+                var config = connection.GetConfig<ScimConfig>();
+                if (config == null)
+                {
+                    config = new ScimConfig();
+                }
+                config.ServiceUrl = GetScimConfigBaseUrl(connection.OrganizationId);
+                connection.SetConfig(config);
+            }
+        }
+
+        private Task ClearScimConnectionServiceUrl(OrganizationConnectionRequestModel<ScimConfig> model)
+        {
+            if (model != null && model.ParsedConfig != null)
+            {
+                model.ParsedConfig.ServiceUrl = null;
             }
             return Task.CompletedTask;
         }
@@ -209,9 +218,11 @@ namespace Bit.Api.Controllers
             };
         }
 
-        private async Task<OrganizationConnectionResponseModel> CreateConnectionByTypeAsync<T>(
+        private async Task<OrganizationConnectionResponseModel> CreateOrUpdateOrganizationConnectionAsync<T>(
+            Guid? organizationConnectionId,
             OrganizationConnectionRequestModel model,
-            Func<OrganizationConnectionRequestModel<T>, Task> validateAction = null)
+            Func<OrganizationConnectionRequestModel<T>, Task> validateAction = null,
+            Action<OrganizationConnection> postAction = null)
             where T : new()
         {
             var typedModel = new OrganizationConnectionRequestModel<T>(model);
@@ -219,22 +230,16 @@ namespace Bit.Api.Controllers
             {
                 await validateAction(typedModel);
             }
-            var connection = await _createOrganizationConnectionCommand.CreateAsync(typedModel.ToData());
-            return new OrganizationConnectionResponseModel(connection, typeof(T));
-        }
 
-        private async Task<OrganizationConnectionResponseModel> UpdateOrganizationConnectionAsync<T>(
-            Guid organizationConnectionId,
-            OrganizationConnectionRequestModel model,
-            Func<OrganizationConnectionRequestModel<T>, Task> validateAction = null)
-            where T : new()
-        {
-            var typedModel = new OrganizationConnectionRequestModel<T>(model);
-            if (validateAction != null)
+            var data = typedModel.ToData(organizationConnectionId);
+            var connection = organizationConnectionId.HasValue
+                ? await _updateOrganizationConnectionCommand.UpdateAsync(data)
+                : await _createOrganizationConnectionCommand.CreateAsync(data);
+
+            if (postAction != null)
             {
-                await validateAction(typedModel);
+                postAction(connection);
             }
-            var connection = await _updateOrganizationConnectionCommand.UpdateAsync(typedModel.ToData(organizationConnectionId));
             return new OrganizationConnectionResponseModel(connection, typeof(T));
         }
     }
