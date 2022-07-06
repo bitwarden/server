@@ -1,7 +1,5 @@
-﻿using System.Text;
-using System.Threading.Tasks;
+﻿using System.Text.Json;
 using Microsoft.Extensions.Caching.Distributed;
-using Newtonsoft.Json;
 
 namespace Bit.Core.Utilities
 {
@@ -15,7 +13,7 @@ namespace Bit.Core.Utilities
         public static void Set<T>(this IDistributedCache cache, string key, T value,
             DistributedCacheEntryOptions options)
         {
-            var bytes = Encoding.UTF8.GetBytes(JsonHelpers.LegacySerialize(value));
+            var bytes = JsonSerializer.SerializeToUtf8Bytes(value);
             cache.Set(key, bytes, options);
         }
 
@@ -27,7 +25,7 @@ namespace Bit.Core.Utilities
         public static Task SetAsync<T>(this IDistributedCache cache, string key, T value,
             DistributedCacheEntryOptions options)
         {
-            var bytes = Encoding.UTF8.GetBytes(JsonHelpers.LegacySerialize(value));
+            var bytes = JsonSerializer.SerializeToUtf8Bytes(value);
             return cache.SetAsync(key, bytes, options);
         }
 
@@ -38,7 +36,7 @@ namespace Bit.Core.Utilities
             if (val == null) return false;
             try
             {
-                value = JsonHelpers.LegacyDeserialize<T>(Encoding.UTF8.GetString(val));
+                value = JsonSerializer.Deserialize<T>(val);
             }
             catch
             {
