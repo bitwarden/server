@@ -391,7 +391,8 @@ namespace Bit.Api.Controllers
                 return new DeviceVerificationResponseModel(false, false);
             }
 
-            return new DeviceVerificationResponseModel(_userService.CanEditDeviceVerificationSettings(user), user.UnknownDeviceVerificationEnabled);
+            var canUserEditDeviceVerificationSettings = _userService.CanEditDeviceVerificationSettings(user);
+            return new DeviceVerificationResponseModel(canUserEditDeviceVerificationSettings, canUserEditDeviceVerificationSettings && user.UnknownDeviceVerificationEnabled);
         }
 
         [HttpPut("device-verification-settings")]
