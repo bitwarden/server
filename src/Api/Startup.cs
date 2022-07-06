@@ -11,7 +11,6 @@ using System.Globalization;
 using Microsoft.IdentityModel.Logging;
 using Microsoft.OpenApi.Models;
 using Bit.SharedWeb.Utilities;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
 #if !OSS
@@ -75,13 +74,6 @@ namespace Bit.Api
             if (!globalSettings.SelfHosted)
             {
                 services.AddIpRateLimiting(globalSettings);
-                // Rate limiting
-                services.AddSingleton<IIpPolicyStore, MemoryCacheIpPolicyStore>();
-                services.AddSingleton<IRateLimitCounterStore, MemoryCacheRateLimitCounterStore>();
-                // Ref: https://github.com/stefanprodan/AspNetCoreRateLimit/issues/216
-                services.AddSingleton<IProcessingStrategy, AsyncKeyLockProcessingStrategy>();
-                // Ref: https://github.com/stefanprodan/AspNetCoreRateLimit/issues/66
-                services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
             }
 
             // Identity

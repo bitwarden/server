@@ -28,7 +28,7 @@ namespace Bit.Core.Utilities
         {
             _distributedCache = distributedCache;
             _blockIpService = blockIpService;
-            _options = ipRateLimitOptions.Value;
+            _options = options.Value;
             _logger = logger;
         }
 

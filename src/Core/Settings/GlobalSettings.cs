@@ -42,7 +42,6 @@
         public virtual IInstallationSettings Installation { get; set; } = new InstallationSettings();
         public virtual IBaseServiceUriSettings BaseServiceUri { get; set; }
         public virtual string DatabaseProvider { get; set; }
-
         public virtual SqlSettings SqlServer { get; set; } = new SqlSettings();
         public virtual SqlSettings PostgreSql { get; set; } = new SqlSettings();
         public virtual SqlSettings MySql { get; set; } = new SqlSettings();
