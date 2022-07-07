@@ -23,7 +23,7 @@ namespace Bit.Core.Test.Models
             "\"managePolicies\": false,",
             "\"manageSso\": false,",
             "\"manageUsers\": false,",
-            "\"manageResetPassword\": false",
+            "\"manageResetPassword\": false,",
             "\"manageScim\": false",
             "}");
 
