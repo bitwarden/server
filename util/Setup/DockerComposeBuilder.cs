@@ -51,6 +51,7 @@ namespace Bit.Setup
                 }
                 MssqlDataDockerVolume = context.Config.DatabaseDockerVolume;
                 EnableKeyConnector = context.Config.EnableKeyConnector;
+                EnableScim = context.Config.EnableScim;
                 HttpPort = context.Config.HttpPort;
                 HttpsPort = context.Config.HttpsPort;
                 if (!string.IsNullOrWhiteSpace(context.CoreVersion))
@@ -70,6 +71,7 @@ namespace Bit.Setup
             public string ComposeVersion { get; set; } = "3";
             public bool MssqlDataDockerVolume { get; set; }
             public bool EnableKeyConnector { get; set; }
+            public bool EnableScim { get; set; }
             public string HttpPort { get; set; }
             public string HttpsPort { get; set; }
             public bool HasPort => !string.IsNullOrWhiteSpace(HttpPort) || !string.IsNullOrWhiteSpace(HttpsPort);
