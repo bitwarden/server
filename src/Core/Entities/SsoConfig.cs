@@ -1,5 +1,4 @@
-﻿using System;
-using Bit.Core.Models.Data;
+﻿using Bit.Core.Models.Data;
 
 namespace Bit.Core.Entities
 {

@@ -1,8 +1,6 @@
-﻿using System;
-using System.Data;
+﻿using System.Data;
 using System.Data.SqlClient;
 using System.Reflection;
-using System.Threading;
 using Bit.Core;
 using DbUp;
 using Microsoft.Extensions.Logging;

@@ -1,9 +1,6 @@
-﻿using System;
-using System.Threading.Tasks;
-using Bit.Core;
+﻿using Bit.Core;
 using Bit.Core.Jobs;
 using Bit.Core.Repositories;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Quartz;
 

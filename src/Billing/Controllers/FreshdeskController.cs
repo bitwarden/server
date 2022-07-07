@@ -1,18 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Net.Http;
-using System.Net.Http.Json;
+﻿using System.ComponentModel.DataAnnotations;
 using System.Reflection;
 using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Bit.Billing.Controllers
@@ -93,7 +86,7 @@ namespace Bit.Billing.Controllers
                     var orgs = await _organizationRepository.GetManyByUserIdAsync(user.Id);
                     foreach (var org in orgs)
                     {
-                        note += $"<li>Org, {org.Name}: " +
+                        note += $"<li>Org, {org.Name} ({org.Seats.GetValueOrDefault()}): " +
                             $"{_globalSettings.BaseServiceUri.Admin}/organizations/edit/{org.Id}</li>";
                         var planName = GetAttribute<DisplayAttribute>(org.PlanType).Name.Split(" ").FirstOrDefault();
                         if (!string.IsNullOrWhiteSpace(planName))

@@ -1,5 +1,4 @@
-﻿using System.Threading.Tasks;
-using Bit.Core.Models.Mail;
+﻿using Bit.Core.Models.Mail;
 
 namespace Bit.Core.Services
 {

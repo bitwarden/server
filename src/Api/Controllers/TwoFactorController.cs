@@ -1,7 +1,4 @@
-﻿using System;
-using System.Linq;
-using System.Threading.Tasks;
-using Bit.Api.Models.Request;
+﻿using Bit.Api.Models.Request;
 using Bit.Api.Models.Request.Accounts;
 using Bit.Api.Models.Response;
 using Bit.Api.Models.Response.TwoFactor;
@@ -394,7 +391,8 @@ namespace Bit.Api.Controllers
                 return new DeviceVerificationResponseModel(false, false);
             }
 
-            return new DeviceVerificationResponseModel(_userService.CanEditDeviceVerificationSettings(user), user.UnknownDeviceVerificationEnabled);
+            var canUserEditDeviceVerificationSettings = _userService.CanEditDeviceVerificationSettings(user);
+            return new DeviceVerificationResponseModel(canUserEditDeviceVerificationSettings, canUserEditDeviceVerificationSettings && user.UnknownDeviceVerificationEnabled);
         }
 
         [HttpPut("device-verification-settings")]

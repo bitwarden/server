@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Core.Models.Data
+﻿namespace Core.Models.Data
 {
     public class CipherDetails : CipherOrganizationDetails
     {

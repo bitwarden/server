@@ -1,5 +1,4 @@
-﻿using System;
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 using Bit.Core.Entities;
 
 namespace Bit.Core.Models.Business.Tokenables

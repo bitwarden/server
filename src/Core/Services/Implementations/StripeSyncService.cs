@@ -1,5 +1,4 @@
-﻿using System.Threading.Tasks;
-using Bit.Core.Exceptions;
+﻿using Bit.Core.Exceptions;
 
 namespace Bit.Core.Services
 {

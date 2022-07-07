@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using Bit.Core.Entities;
+﻿using Bit.Core.Entities;
 
 namespace Bit.Api.Models.Public.Request
 {

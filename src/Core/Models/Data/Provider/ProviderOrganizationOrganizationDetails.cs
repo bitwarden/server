@@ -1,7 +1,4 @@
-﻿using System;
-using Bit.Core.Enums.Provider;
-
-namespace Bit.Core.Models.Data
+﻿namespace Bit.Core.Models.Data
 {
     public class ProviderOrganizationOrganizationDetails
     {

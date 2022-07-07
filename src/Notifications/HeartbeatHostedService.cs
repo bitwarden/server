@@ -1,10 +1,5 @@
-﻿using System;
-using System.Threading;
-using System.Threading.Tasks;
-using Bit.Core.Settings;
+﻿using Bit.Core.Settings;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 
 namespace Bit.Notifications
 {

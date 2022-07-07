@@ -1,5 +1,4 @@
-﻿using System.Reflection;
-using Xunit;
+﻿using Xunit;
 
 namespace Bit.Icons.Test.Resources
 {

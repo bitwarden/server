@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Bit.Core.Tokens
+﻿namespace Bit.Core.Tokens
 {
     public interface IBillingSyncTokenable
     {

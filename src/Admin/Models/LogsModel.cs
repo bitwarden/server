@@ -1,5 +1,4 @@
-﻿using System;
-using Serilog.Events;
+﻿using Serilog.Events;
 
 namespace Bit.Admin.Models
 {
