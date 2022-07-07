@@ -1,5 +1,4 @@
-using System;
-using Bit.Infrastructure.EntityFramework.Repositories;
+﻿using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Test.Common.Helpers.Factories;
 using Microsoft.EntityFrameworkCore;
 

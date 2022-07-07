@@ -1,13 +1,10 @@
-﻿using System.Linq;
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using System.Text.Encodings.Web;
-using System.Threading.Tasks;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Scim.Context;
 using IdentityModel;
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Bit.Scim.Utilities

@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Bit.Scim.Models
+﻿namespace Bit.Scim.Models
 {
     public class ScimMetaModel
     {

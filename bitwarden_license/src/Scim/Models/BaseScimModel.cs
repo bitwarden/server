@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-
-namespace Bit.Scim.Models
+﻿namespace Bit.Scim.Models
 {
     public abstract class BaseScimModel
     {

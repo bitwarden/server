@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using Bit.Scim.Utilities;
+﻿using Bit.Scim.Utilities;
 
 namespace Bit.Scim.Models
 {

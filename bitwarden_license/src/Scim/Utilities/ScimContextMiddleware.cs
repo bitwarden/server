@@ -1,8 +1,6 @@
-﻿using System.Threading.Tasks;
-using Bit.Core.Repositories;
+﻿using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Scim.Context;
-using Microsoft.AspNetCore.Http;
 
 namespace Bit.Scim.Utilities
 {

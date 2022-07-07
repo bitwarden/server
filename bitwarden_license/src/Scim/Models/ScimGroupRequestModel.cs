@@ -1,5 +1,4 @@
-﻿using System;
-using Bit.Core.Entities;
+﻿using Bit.Core.Entities;
 using Bit.Core.Utilities;
 
 namespace Bit.Scim.Models

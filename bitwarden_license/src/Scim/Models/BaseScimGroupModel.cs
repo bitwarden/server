@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using Bit.Scim.Utilities;
+﻿using Bit.Scim.Utilities;
 
 namespace Bit.Scim.Models
 {

@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Bit.Scim.Utilities
+﻿namespace Bit.Scim.Utilities
 {
     public static class Constants
     {
