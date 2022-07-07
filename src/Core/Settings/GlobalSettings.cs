@@ -483,7 +483,7 @@
 
         public class TwoFactorAuthSettings : ITwoFactorAuthSettings
         {
-            public bool EmailOnNewDeviceLogin { get; set; } = true;
+            public bool EmailOnNewDeviceLogin { get; set; }
         }
     }
 }
