@@ -17,6 +17,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpGet("")]
+        [AllowAnonymous]
         public ListResponseModel<PlanResponseModel> Get()
         {
             var data = StaticStore.Plans;
