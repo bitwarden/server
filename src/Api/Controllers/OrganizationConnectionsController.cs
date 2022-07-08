@@ -66,21 +66,9 @@ namespace Bit.Api.Controllers
             switch (model.Type)
             {
                 case OrganizationConnectionType.CloudBillingSync:
-                    return await CreateOrUpdateOrganizationConnectionAsync<BillingSyncConfig>(null, model, async (typedModel) =>
-                    {
-                        if (!_globalSettings.SelfHosted)
-                        {
-                            throw new BadRequestException($"Cannot create a {model.Type} connection outside of a self-hosted instance.");
-                        }
-                        var license = await _licensingService.ReadOrganizationLicenseAsync(model.OrganizationId);
-                        if (!_licensingService.VerifyLicense(license))
-                        {
-                            throw new BadRequestException("Cannot verify license file.");
-                        }
-                        typedModel.ParsedConfig.CloudOrganizationId = license.Id;
-                    });
+                    return await CreateOrUpdateOrganizationConnectionAsync<BillingSyncConfig>(null, model, ValidateBillingSyncConfig);
                 case OrganizationConnectionType.Scim:
-                    return await CreateOrUpdateOrganizationConnectionAsync<ScimConfig>(null, model, ClearScimConnectionServiceUrl, PopulateScimConnectionDetails);
+                    return await CreateOrUpdateOrganizationConnectionAsync<ScimConfig>(null, model);
                 default:
                     throw new BadRequestException($"Unknown Organization connection Type: {model.Type}");
             }
@@ -110,7 +98,7 @@ namespace Bit.Api.Controllers
                 case OrganizationConnectionType.CloudBillingSync:
                     return await CreateOrUpdateOrganizationConnectionAsync<BillingSyncConfig>(organizationConnectionId, model);
                 case OrganizationConnectionType.Scim:
-                    return await CreateOrUpdateOrganizationConnectionAsync<ScimConfig>(organizationConnectionId, model, ClearScimConnectionServiceUrl, PopulateScimConnectionDetails);
+                    return await CreateOrUpdateOrganizationConnectionAsync<ScimConfig>(organizationConnectionId, model);
                 default:
                     throw new BadRequestException($"Unkown Organization connection Type: {model.Type}");
             }
@@ -136,7 +124,6 @@ namespace Bit.Api.Controllers
                     }
                     return new OrganizationConnectionResponseModel(connection, typeof(BillingSyncConfig));
                 case OrganizationConnectionType.Scim:
-                    PopulateScimConnectionDetails(connection);
                     return new OrganizationConnectionResponseModel(connection, typeof(ScimConfig));
                 default:
                     throw new BadRequestException($"Unkown Organization connection Type: {type}");
@@ -160,34 +147,6 @@ namespace Bit.Api.Controllers
             }
 
             await _deleteOrganizationConnectionCommand.DeleteAsync(connection);
-        }
-
-        private string GetScimConfigBaseUrl(Guid organizationId)
-        {
-            return $"{_globalSettings.BaseServiceUri.Scim}/v2/{organizationId}";
-        }
-
-        private void PopulateScimConnectionDetails(OrganizationConnection connection)
-        {
-            if (connection.Type == OrganizationConnectionType.Scim)
-            {
-                var config = connection.GetConfig<ScimConfig>();
-                if (config == null)
-                {
-                    config = new ScimConfig();
-                }
-                config.ServiceUrl = GetScimConfigBaseUrl(connection.OrganizationId);
-                connection.SetConfig(config);
-            }
-        }
-
-        private Task ClearScimConnectionServiceUrl(OrganizationConnectionRequestModel<ScimConfig> model)
-        {
-            if (model != null && model.ParsedConfig != null)
-            {
-                model.ParsedConfig.ServiceUrl = null;
-            }
-            return Task.CompletedTask;
         }
 
         private async Task<ICollection<OrganizationConnection>> GetConnectionsAsync(Guid organizationId, OrganizationConnectionType type) =>
@@ -214,11 +173,24 @@ namespace Bit.Api.Controllers
             };
         }
 
+        private async Task ValidateBillingSyncConfig(OrganizationConnectionRequestModel<BillingSyncConfig> typedModel)
+        {
+            if (!_globalSettings.SelfHosted)
+            {
+                throw new BadRequestException($"Cannot create a {typedModel.Type} connection outside of a self-hosted instance.");
+            }
+            var license = await _licensingService.ReadOrganizationLicenseAsync(typedModel.OrganizationId);
+            if (!_licensingService.VerifyLicense(license))
+            {
+                throw new BadRequestException("Cannot verify license file.");
+            }
+            typedModel.ParsedConfig.CloudOrganizationId = license.Id;
+        }
+
         private async Task<OrganizationConnectionResponseModel> CreateOrUpdateOrganizationConnectionAsync<T>(
             Guid? organizationConnectionId,
             OrganizationConnectionRequestModel model,
-            Func<OrganizationConnectionRequestModel<T>, Task> validateAction = null,
-            Action<OrganizationConnection> postAction = null)
+            Func<OrganizationConnectionRequestModel<T>, Task> validateAction = null)
             where T : new()
         {
             var typedModel = new OrganizationConnectionRequestModel<T>(model);
@@ -232,10 +204,6 @@ namespace Bit.Api.Controllers
                 ? await _updateOrganizationConnectionCommand.UpdateAsync(data)
                 : await _createOrganizationConnectionCommand.CreateAsync(data);
 
-            if (postAction != null)
-            {
-                postAction(connection);
-            }
             return new OrganizationConnectionResponseModel(connection, typeof(T));
         }
     }
