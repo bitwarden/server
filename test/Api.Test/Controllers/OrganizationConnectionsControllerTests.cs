@@ -50,11 +50,15 @@ namespace Bit.Api.Test.Controllers
 
         [Theory]
         [BitAutoData]
-        public async Task CreateConnection_RequiresOwnerPermissions(SutProvider<OrganizationConnectionsController> sutProvider)
+        public async Task CreateConnection_CloudBillingSync_RequiresOwnerPermissions(SutProvider<OrganizationConnectionsController> sutProvider)
         {
-            var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.CreateConnection(null));
+            var model = new OrganizationConnectionRequestModel
+            {
+                Type = OrganizationConnectionType.CloudBillingSync,
+            };
+            var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.CreateConnection(model));
 
-            Assert.Contains("Only the owner of an organization can create a connection.", exception.Message);
+            Assert.Contains($"You do not have permission to create a connection of type", exception.Message);
         }
 
         [Theory]
@@ -143,7 +147,7 @@ namespace Bit.Api.Test.Controllers
 
             var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateConnection(default, null));
 
-            Assert.Contains("Only the owner of an organization can update a connection.", exception.Message);
+            Assert.Contains("You do not have permission to update this connection.", exception.Message);
         }
 
         [Theory]
@@ -158,7 +162,10 @@ namespace Bit.Api.Test.Controllers
 
             sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(typedModel.OrganizationId).Returns(true);
 
-            sutProvider.GetDependency<IOrganizationConnectionRepository>().GetByOrganizationIdTypeAsync(typedModel.OrganizationId, type).Returns(new[] { existing1, existing2 });
+            var orgConnectionRepository = sutProvider.GetDependency<IOrganizationConnectionRepository>();
+            orgConnectionRepository.GetByIdAsync(existing1.Id).Returns(existing1);
+            orgConnectionRepository.GetByIdAsync(existing2.Id).Returns(existing2);
+            orgConnectionRepository.GetByOrganizationIdTypeAsync(typedModel.OrganizationId, type).Returns(new[] { existing1, existing2 });
 
             var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateConnection(existing1.Id, typedModel));
 
@@ -180,6 +187,8 @@ namespace Bit.Api.Test.Controllers
             sutProvider.GetDependency<IOrganizationConnectionRepository>()
                 .GetByIdAsync(existing1.Id)
                 .Returns(existing1);
+
+            sutProvider.GetDependency<ICurrentContext>().ManageScim(typedModel.OrganizationId).Returns(true);
 
             sutProvider.GetDependency<IOrganizationConnectionRepository>().GetByOrganizationIdTypeAsync(typedModel.OrganizationId, type).Returns(new[] { existing1, existing2 });
 
@@ -232,7 +241,7 @@ namespace Bit.Api.Test.Controllers
             var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
                 sutProvider.Sut.GetConnection(connectionId, OrganizationConnectionType.CloudBillingSync));
 
-            Assert.Contains("Only the owner of an organization can retrieve a connection.", exception.Message);
+            Assert.Contains("You do not have permission to retrieve a connection of type", exception.Message);
         }
 
         [Theory]
@@ -268,7 +277,7 @@ namespace Bit.Api.Test.Controllers
 
             var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.DeleteConnection(connection.Id));
 
-            Assert.Contains("Only the owner of an organization can remove a connection.", exception.Message);
+            Assert.Contains("You do not have permission to remove this connection of type", exception.Message);
         }
 
         [Theory]
