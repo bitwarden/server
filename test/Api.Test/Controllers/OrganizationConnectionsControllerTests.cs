@@ -119,7 +119,8 @@ namespace Bit.Api.Test.Controllers
             model.Config = JsonDocumentFromObject(config);
             var typedModel = new OrganizationConnectionRequestModel<BillingSyncConfig>(model);
             typedModel.ParsedConfig.CloudOrganizationId = cloudOrgId;
-
+            
+            sutProvider.GetDependency<IGlobalSettings>().SelfHosted.Returns(true);
             sutProvider.GetDependency<ICreateOrganizationConnectionCommand>().CreateAsync<BillingSyncConfig>(default)
                 .ReturnsForAnyArgs(typedModel.ToData(Guid.NewGuid()).ToEntity());
             sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(model.OrganizationId).Returns(true);
@@ -190,7 +191,9 @@ namespace Bit.Api.Test.Controllers
 
             sutProvider.GetDependency<ICurrentContext>().ManageScim(typedModel.OrganizationId).Returns(true);
 
-            sutProvider.GetDependency<IOrganizationConnectionRepository>().GetByOrganizationIdTypeAsync(typedModel.OrganizationId, type).Returns(new[] { existing1, existing2 });
+            sutProvider.GetDependency<IOrganizationConnectionRepository>()
+                .GetByOrganizationIdTypeAsync(typedModel.OrganizationId, type)
+                .Returns(new[] { existing1, existing2 });
 
             var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateConnection(existing1.Id, typedModel));
 
@@ -213,8 +216,12 @@ namespace Bit.Api.Test.Controllers
             var model = RequestModelFromEntity<BillingSyncConfig>(updated);
 
             sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(model.OrganizationId).Returns(true);
-            sutProvider.GetDependency<IOrganizationConnectionRepository>().GetByOrganizationIdTypeAsync(model.OrganizationId, model.Type).Returns(new[] { existing });
-            sutProvider.GetDependency<IUpdateOrganizationConnectionCommand>().UpdateAsync<BillingSyncConfig>(default).ReturnsForAnyArgs(updated);
+            sutProvider.GetDependency<IOrganizationConnectionRepository>()
+                .GetByOrganizationIdTypeAsync(model.OrganizationId, model.Type)
+                .Returns(new[] { existing });
+            sutProvider.GetDependency<IUpdateOrganizationConnectionCommand>()
+                .UpdateAsync<BillingSyncConfig>(default)
+                .ReturnsForAnyArgs(updated);
             sutProvider.GetDependency<IOrganizationConnectionRepository>()
                 .GetByIdAsync(existing.Id)
                 .Returns(existing);
@@ -250,8 +257,11 @@ namespace Bit.Api.Test.Controllers
             SutProvider<OrganizationConnectionsController> sutProvider)
         {
             connection.Config = JsonSerializer.Serialize(config);
-
-            sutProvider.GetDependency<IOrganizationConnectionRepository>().GetByOrganizationIdTypeAsync(connection.OrganizationId, connection.Type).Returns(new[] { connection });
+            
+            sutProvider.GetDependency<IGlobalSettings>().SelfHosted.Returns(true);
+            sutProvider.GetDependency<IOrganizationConnectionRepository>()
+                .GetByOrganizationIdTypeAsync(connection.OrganizationId, connection.Type)
+                .Returns(new[] { connection });
             sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(connection.OrganizationId).Returns(true);
 
             var expected = new OrganizationConnectionResponseModel(connection, typeof(BillingSyncConfig));

@@ -118,6 +118,10 @@ namespace Bit.Api.Controllers
             switch (type)
             {
                 case OrganizationConnectionType.CloudBillingSync:
+                    if (!_globalSettings.SelfHosted)
+                    {
+                        throw new BadRequestException($"Cannot get a {type} connection outside of a self-hosted instance.");
+                    }
                     return new OrganizationConnectionResponseModel(connection, typeof(BillingSyncConfig));
                 case OrganizationConnectionType.Scim:
                     return new OrganizationConnectionResponseModel(connection, typeof(ScimConfig));
@@ -171,6 +175,10 @@ namespace Bit.Api.Controllers
 
         private async Task ValidateBillingSyncConfig(OrganizationConnectionRequestModel<BillingSyncConfig> typedModel)
         {
+            if (!_globalSettings.SelfHosted)
+            {
+                throw new BadRequestException($"Cannot create a {typedModel.Type} connection outside of a self-hosted instance.");
+            }
             var license = await _licensingService.ReadOrganizationLicenseAsync(typedModel.OrganizationId);
             if (!_licensingService.VerifyLicense(license))
             {
