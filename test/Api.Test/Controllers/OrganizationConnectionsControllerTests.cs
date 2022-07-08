@@ -119,7 +119,7 @@ namespace Bit.Api.Test.Controllers
             model.Config = JsonDocumentFromObject(config);
             var typedModel = new OrganizationConnectionRequestModel<BillingSyncConfig>(model);
             typedModel.ParsedConfig.CloudOrganizationId = cloudOrgId;
-            
+
             sutProvider.GetDependency<IGlobalSettings>().SelfHosted.Returns(true);
             sutProvider.GetDependency<ICreateOrganizationConnectionCommand>().CreateAsync<BillingSyncConfig>(default)
                 .ReturnsForAnyArgs(typedModel.ToData(Guid.NewGuid()).ToEntity());
@@ -257,7 +257,7 @@ namespace Bit.Api.Test.Controllers
             SutProvider<OrganizationConnectionsController> sutProvider)
         {
             connection.Config = JsonSerializer.Serialize(config);
-            
+
             sutProvider.GetDependency<IGlobalSettings>().SelfHosted.Returns(true);
             sutProvider.GetDependency<IOrganizationConnectionRepository>()
                 .GetByOrganizationIdTypeAsync(connection.OrganizationId, connection.Type)
