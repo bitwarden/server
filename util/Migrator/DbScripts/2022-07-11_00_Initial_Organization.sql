@@ -1,4 +1,4 @@
-﻿IF OBJECT_ID('[dbo].[OrganizationPasswordManager]') IS NOT NULL
+IF OBJECT_ID('[dbo].[OrganizationPasswordManager]') IS NOT NULL
 
 BEGIN
     DROP TABLE [dbo].[OrganizationPasswordManager]
