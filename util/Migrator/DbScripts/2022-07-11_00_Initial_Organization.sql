@@ -483,7 +483,6 @@ BEGIN
 END
 GO
 
-
 IF EXISTS(SELECT * FROM sys.views WHERE [Name] = 'OrganizationView')
 BEGIN
     DROP VIEW [dbo].[OrganizationView];
@@ -533,7 +532,6 @@ SELECT
     O.RevisionDate,
     O.OwnersNotifiedOfAutoscaling,
     O.UseKeyConnector,
-
     ISNULL(O.MaxAutoscaleSeats, OPM.MaxAutoScaleSeats) As MaxAutoScaleSeats,
     ISNULL(O.UsersGetPremium, OPM.UsersGetPremium) As UsersGetPremium,
     ISNULL(O.Storage, OPM.Storage) As Storage,
