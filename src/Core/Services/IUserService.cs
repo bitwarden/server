@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Security.Claims;
-using System.Threading.Tasks;
+﻿using System.Security.Claims;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models;
@@ -32,7 +29,7 @@ namespace Bit.Core.Services
         Task InitiateEmailChangeAsync(User user, string newEmail);
         Task<IdentityResult> ChangeEmailAsync(User user, string masterPassword, string newEmail, string newMasterPassword,
             string token, string key);
-        Task<IdentityResult> ChangePasswordAsync(User user, string masterPassword, string newMasterPassword, string key);
+        Task<IdentityResult> ChangePasswordAsync(User user, string masterPassword, string newMasterPassword, string passwordHint, string key);
         Task<IdentityResult> SetPasswordAsync(User user, string newMasterPassword, string key, string orgIdentifier = null);
         Task<IdentityResult> SetKeyConnectorKeyAsync(User user, string key, string orgIdentifier);
         Task<IdentityResult> ConvertToKeyConnectorAsync(User user);
@@ -70,6 +67,7 @@ namespace Bit.Core.Services
             int? version = null);
         Task<bool> CheckPasswordAsync(User user, string password);
         Task<bool> CanAccessPremium(ITwoFactorProvidersUser user);
+        Task<bool> HasPremiumFromOrganization(ITwoFactorProvidersUser user);
         Task<bool> TwoFactorIsEnabledAsync(ITwoFactorProvidersUser user);
         Task<bool> TwoFactorProviderIsEnabledAsync(TwoFactorProviderType provider, ITwoFactorProvidersUser user);
         Task<string> GenerateSignInTokenAsync(User user, string purpose);

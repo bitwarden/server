@@ -1,6 +1,4 @@
-﻿using System;
-using System.Security.Claims;
-using System.Threading.Tasks;
+﻿using System.Security.Claims;
 using Bit.Api.Controllers;
 using Bit.Api.Models.Request.Accounts;
 using Bit.Core.Entities;
@@ -281,12 +279,12 @@ namespace Bit.Api.Test.Controllers
         {
             var user = GenerateExampleUser();
             ConfigureUserServiceToReturnValidPrincipalFor(user);
-            _userService.ChangePasswordAsync(user, default, default, default)
+            _userService.ChangePasswordAsync(user, default, default, default, default)
                         .Returns(Task.FromResult(IdentityResult.Success));
 
             await _sut.PostPassword(new PasswordRequestModel());
 
-            await _userService.Received(1).ChangePasswordAsync(user, default, default, default);
+            await _userService.Received(1).ChangePasswordAsync(user, default, default, default, default);
         }
 
         [Fact]
@@ -304,7 +302,7 @@ namespace Bit.Api.Test.Controllers
         {
             var user = GenerateExampleUser();
             ConfigureUserServiceToReturnValidPrincipalFor(user);
-            _userService.ChangePasswordAsync(user, default, default, default)
+            _userService.ChangePasswordAsync(user, default, default, default, default)
                         .Returns(Task.FromResult(IdentityResult.Failed()));
 
             await Assert.ThrowsAsync<BadRequestException>(

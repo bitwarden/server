@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections;
 using Microsoft.Azure.Cosmos.Table;
 
 namespace Bit.Core.Models.Data

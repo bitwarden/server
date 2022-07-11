@@ -1,5 +1,4 @@
-﻿using System;
-using System.Text.Json;
+﻿using System.Text.Json;
 using Bit.Api.Models;
 using Bit.Api.Models.Request;
 using Bit.Core.Enums;

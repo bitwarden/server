@@ -1,5 +1,4 @@
-﻿using System.Threading.Tasks;
-using Bit.Core.Enums;
+﻿using Bit.Core.Enums;
 using Microsoft.AspNetCore.Authentication;
 
 namespace Bit.Sso.Utilities

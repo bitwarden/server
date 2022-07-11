@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using AutoMapper;
+﻿using AutoMapper;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories.Queries;

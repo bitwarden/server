@@ -1,6 +1,4 @@
-﻿using System.Linq;
-using System.Threading.Tasks;
-using Bit.Api.Models.Response;
+﻿using Bit.Api.Models.Response;
 using Bit.Core.Repositories;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
@@ -19,6 +17,7 @@ namespace Bit.Api.Controllers
         }
 
         [HttpGet("")]
+        [AllowAnonymous]
         public ListResponseModel<PlanResponseModel> Get()
         {
             var data = StaticStore.Plans;

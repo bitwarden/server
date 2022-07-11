@@ -1,15 +1,11 @@
-﻿using System.Linq;
-using System.Threading.Tasks;
-using Bit.Core.Context;
+﻿using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Api;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Hosting;
 
 namespace Bit.Api.Controllers
 {

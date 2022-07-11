@@ -1,7 +1,5 @@
-﻿using System;
-using System.Globalization;
+﻿using System.Globalization;
 using System.IdentityModel.Tokens.Jwt;
-using System.Threading.Tasks;
 using AspNetCoreRateLimit;
 using Bit.Core;
 using Bit.Core.Context;
@@ -11,13 +9,8 @@ using Bit.Core.Utilities;
 using Bit.Identity.Utilities;
 using Bit.SharedWeb.Utilities;
 using IdentityServer4.Extensions;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Logging;
+using Microsoft.OpenApi.Models;
 
 namespace Bit.Identity
 {
@@ -44,6 +37,10 @@ namespace Bit.Identity
             {
                 services.Configure<IpRateLimitOptions>(Configuration.GetSection("IpRateLimitOptions"));
                 services.Configure<IpRateLimitPolicies>(Configuration.GetSection("IpRateLimitPolicies"));
+                // Ref: https://github.com/stefanprodan/AspNetCoreRateLimit/issues/216
+                services.AddSingleton<IProcessingStrategy, AsyncKeyLockProcessingStrategy>();
+                // Ref: https://github.com/stefanprodan/AspNetCoreRateLimit/issues/66
+                services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
             }
 
             // Data Protection
@@ -62,6 +59,11 @@ namespace Bit.Identity
             services.AddMvc(config =>
             {
                 config.Filters.Add(new ModelStateValidationFilterAttribute());
+            });
+
+            services.AddSwaggerGen(c =>
+            {
+                c.SwaggerDoc("v1", new OpenApiInfo { Title = "Bitwarden Identity", Version = "v1" });
             });
 
             if (!globalSettings.SelfHosted)
@@ -192,6 +194,7 @@ namespace Bit.Identity
 
             if (env.IsDevelopment())
             {
+                app.UseSwagger();
                 app.UseDeveloperExceptionPage();
                 app.UseCookiePolicy();
             }

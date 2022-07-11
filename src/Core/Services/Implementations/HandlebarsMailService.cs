@@ -1,11 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Net;
+﻿using System.Net;
 using System.Reflection;
-using System.Text.Json;
-using System.Threading.Tasks;
 using Bit.Core.Entities;
 using Bit.Core.Entities.Provider;
 using Bit.Core.Models.Business;
@@ -25,8 +19,8 @@ namespace Bit.Core.Services
         private readonly GlobalSettings _globalSettings;
         private readonly IMailDeliveryService _mailDeliveryService;
         private readonly IMailEnqueuingService _mailEnqueuingService;
-        private readonly Dictionary<string, Func<object, string>> _templateCache =
-            new Dictionary<string, Func<object, string>>();
+        private readonly Dictionary<string, HandlebarsTemplate<object, object>> _templateCache =
+            new Dictionary<string, HandlebarsTemplate<object, object>>();
 
         private bool _registeredHelpersAndPartials = false;
 
@@ -418,7 +412,7 @@ namespace Bit.Core.Services
             var message = CreateDefaultMessage("Master Password Has Been Changed", email);
             var model = new AdminResetPasswordViewModel()
             {
-                UserName = CoreHelpers.SanitizeForEmail(userName),
+                UserName = GetUserIdentifier(email, userName),
                 OrgName = CoreHelpers.SanitizeForEmail(orgName),
             };
             await AddMessageContentAsync(message, "AdminResetPassword", model);
@@ -766,7 +760,7 @@ namespace Bit.Core.Services
             var message = CreateDefaultMessage("Master Password Has Been Changed", email);
             var model = new UpdateTempPasswordViewModel()
             {
-                UserName = CoreHelpers.SanitizeForEmail(userName)
+                UserName = GetUserIdentifier(email, userName)
             };
             await AddMessageContentAsync(message, "UpdatedTempPassword", model);
             message.Category = "UpdatedTempPassword";
@@ -885,6 +879,11 @@ namespace Bit.Core.Services
             await AddMessageContentAsync(message, "FailedTwoFactorAttempts", model);
             message.Category = "FailedTwoFactorAttempts";
             await _mailDeliveryService.SendEmailAsync(message);
+        }
+
+        private static string GetUserIdentifier(string email, string userName)
+        {
+            return string.IsNullOrEmpty(userName) ? email : CoreHelpers.SanitizeForEmail(userName, false);
         }
     }
 }

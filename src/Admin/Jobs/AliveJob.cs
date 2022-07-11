@@ -1,9 +1,6 @@
-﻿using System.Net.Http;
-using System.Threading.Tasks;
-using Bit.Core;
+﻿using Bit.Core;
 using Bit.Core.Jobs;
 using Bit.Core.Settings;
-using Microsoft.Extensions.Logging;
 using Quartz;
 
 namespace Bit.Admin.Jobs

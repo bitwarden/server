@@ -1,5 +1,4 @@
-﻿using System;
-using Bit.Core.Utilities;
+﻿using Bit.Core.Utilities;
 
 namespace Bit.Core.Entities
 {

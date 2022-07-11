@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using Bit.Core.Entities;
+﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Stripe;
 
@@ -139,7 +137,6 @@ namespace Bit.Core.Models.Business
         {
             public BillingInvoice(Invoice inv)
             {
-                Amount = inv.AmountDue / 100M;
                 Date = inv.Created;
                 Url = inv.HostedInvoiceUrl;
                 PdfUrl = inv.InvoicePdf;

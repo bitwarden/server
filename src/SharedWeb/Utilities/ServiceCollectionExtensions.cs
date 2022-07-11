@@ -1,9 +1,6 @@
-﻿using System;
-using System.IO;
-using System.Reflection;
+﻿using System.Reflection;
 using System.Security.Claims;
 using System.Security.Cryptography.X509Certificates;
-using System.Threading.Tasks;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Identity;
@@ -148,6 +145,7 @@ namespace Bit.SharedWeb.Utilities
                 };
             });
             services.AddSingleton<IPaymentService, StripePaymentService>();
+            services.AddSingleton<IStripeSyncService, StripeSyncService>();
             services.AddSingleton<IMailService, HandlebarsMailService>();
             services.AddSingleton<ILicensingService, LicensingService>();
             services.AddTokenizers();
@@ -598,7 +596,7 @@ namespace Bit.SharedWeb.Utilities
             {
                 options.ServerDomain = new Uri(globalSettings.BaseServiceUri.Vault).Host;
                 options.ServerName = "Bitwarden";
-                options.Origin = globalSettings.BaseServiceUri.Vault;
+                options.Origins = new HashSet<string> { globalSettings.BaseServiceUri.Vault, };
                 options.TimestampDriftTolerance = 300000;
             });
         }

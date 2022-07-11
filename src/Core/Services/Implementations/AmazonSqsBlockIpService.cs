@@ -1,6 +1,4 @@
-﻿using System;
-using System.Threading.Tasks;
-using Amazon;
+﻿using Amazon;
 using Amazon.SQS;
 using Bit.Core.Settings;
 

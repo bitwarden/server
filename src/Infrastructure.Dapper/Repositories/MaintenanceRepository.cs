@@ -1,7 +1,5 @@
-﻿using System;
-using System.Data;
+﻿using System.Data;
 using System.Data.SqlClient;
-using System.Threading.Tasks;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Dapper;

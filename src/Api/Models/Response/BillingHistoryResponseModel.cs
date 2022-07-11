@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using Bit.Core.Models.Api;
+﻿using Bit.Core.Models.Api;
 using Bit.Core.Models.Business;
 
 namespace Bit.Api.Models.Response

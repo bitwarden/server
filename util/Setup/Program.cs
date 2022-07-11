@@ -1,8 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Data.SqlClient;
+﻿using System.Data.SqlClient;
 using System.Globalization;
-using System.Net.Http;
 using System.Net.Http.Json;
 using Bit.Migrator;
 

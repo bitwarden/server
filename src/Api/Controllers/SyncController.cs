@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Bit.Api.Models.Response;
+﻿using Bit.Api.Models.Response;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Enums.Provider;
@@ -88,7 +84,8 @@ namespace Bit.Api.Controllers
             }
 
             var userTwoFactorEnabled = await _userService.TwoFactorIsEnabledAsync(user);
-            var response = new SyncResponseModel(_globalSettings, user, userTwoFactorEnabled, organizationUserDetails,
+            var userHasPremiumFromOrganization = await _userService.HasPremiumFromOrganization(user);
+            var response = new SyncResponseModel(_globalSettings, user, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationUserDetails,
                 providerUserDetails, providerUserOrganizationDetails, folders, collections, ciphers,
                 collectionCiphersGroupDict, excludeDomains, policies, sends);
             return response;

@@ -1,10 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net.Http;
-using System.Net.Http.Json;
+﻿using System.Net.Http.Json;
 using System.Text.Json.Serialization;
-using System.Threading.Tasks;
 using Bit.Billing.Models;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
@@ -85,15 +80,16 @@ namespace Bit.Core.Services
                 receipt.ContainsKey("UserId") ? new Guid(receipt["UserId"]) : (Guid?)null);
         }
 
-        private async Task<AppleReceiptStatus> GetReceiptStatusAsync(string receiptData, bool prod = true,
+        // Internal for testing
+        internal async Task<AppleReceiptStatus> GetReceiptStatusAsync(string receiptData, bool prod = true,
             int attempt = 0, AppleReceiptStatus lastReceiptStatus = null)
         {
             try
             {
                 if (attempt > 4)
                 {
-                    throw new Exception("Failed verifying Apple IAP after too many attempts. Last attempt status: " +
-                        lastReceiptStatus?.Status ?? "null");
+                    throw new Exception(
+                        $"Failed verifying Apple IAP after too many attempts. Last attempt status: {lastReceiptStatus?.Status.ToString() ?? "null"}");
                 }
 
                 var url = string.Format("https://{0}.itunes.apple.com/verifyReceipt", prod ? "buy" : "sandbox");

@@ -1,5 +1,4 @@
-﻿using System.Linq;
-using Bit.Core.Entities;
+﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
 using User = Bit.Infrastructure.EntityFramework.Models.User;
 
