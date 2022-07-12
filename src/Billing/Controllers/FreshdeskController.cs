@@ -17,7 +17,7 @@ namespace Bit.Billing.Controllers
         private readonly IUserRepository _userRepository;
         private readonly IOrganizationRepository _organizationRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
-        private readonly ILogger<AppleController> _logger;
+        private readonly ILogger<FreshdeskController> _logger;
         private readonly GlobalSettings _globalSettings;
         private readonly HttpClient _httpClient = new HttpClient();
         private readonly string _freshdeskAuthkey;
@@ -27,7 +27,7 @@ namespace Bit.Billing.Controllers
             IOrganizationRepository organizationRepository,
             IOrganizationUserRepository organizationUserRepository,
             IOptions<BillingSettings> billingSettings,
-            ILogger<AppleController> logger,
+            ILogger<FreshdeskController> logger,
             GlobalSettings globalSettings)
         {
             _billingSettings = billingSettings?.Value;
