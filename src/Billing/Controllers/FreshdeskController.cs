@@ -100,7 +100,7 @@ namespace Bit.Billing.Controllers
                         {
                             customFields["cf_org"] += $" \n {orgNote}";
                         }
-                        
+
                         var planName = GetAttribute<DisplayAttribute>(org.PlanType).Name.Split(" ").FirstOrDefault();
                         if (!string.IsNullOrWhiteSpace(planName))
                         {
