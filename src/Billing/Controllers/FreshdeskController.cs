@@ -78,15 +78,16 @@ namespace Bit.Billing.Controllers
                 var user = await _userRepository.GetByEmailAsync(ticketContactEmail);
                 if (user != null)
                 {
-                    var userNote = $"{user.Email}: {_globalSettings.BaseServiceUri.Admin}/users/edit/{user.Id}";
-                    note += $"<li>User, {userNote}</li>";
-                    customFields.Add("cf_user", userNote);
+                    var userLink = $"{_globalSettings.BaseServiceUri.Admin}/users/edit/{user.Id}";
+                    note += $"<li>User, {user.Email}: {userLink}</li>";
+                    customFields.Add("cf_user", userLink);
                     var tags = new HashSet<string>();
                     if (user.Premium)
                     {
                         tags.Add("Premium");
                     }
                     var orgs = await _organizationRepository.GetManyByUserIdAsync(user.Id);
+
                     foreach (var org in orgs)
                     {
                         var orgNote = $"{org.Name} ({org.Seats.GetValueOrDefault()}): " +
@@ -98,7 +99,7 @@ namespace Bit.Billing.Controllers
                         }
                         else
                         {
-                            customFields["cf_org"] += $" \n {orgNote}";
+                            customFields["cf_org"] += $"\n{orgNote}";
                         }
 
                         var planName = GetAttribute<DisplayAttribute>(org.PlanType).Name.Split(" ").FirstOrDefault();
@@ -120,6 +121,7 @@ namespace Bit.Billing.Controllers
                         }
                         updateBody.Add("tags", tagsToUpdate);
                     }
+
                     if (customFields.Any())
                     {
                         updateBody.Add("custom_fields", customFields);
