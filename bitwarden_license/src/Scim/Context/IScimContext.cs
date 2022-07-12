@@ -8,7 +8,6 @@ namespace Bit.Scim.Context
 {
     public interface IScimContext
     {
-        HttpContext HttpContext { get; set; }
         ScimProviderType? RequestScimProvider { get; set; }
         ScimConfig ScimConfiguration { get; set; }
         Guid? OrganizationId { get; set; }

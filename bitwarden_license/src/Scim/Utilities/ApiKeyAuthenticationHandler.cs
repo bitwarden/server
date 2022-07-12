@@ -52,7 +52,7 @@ namespace Bit.Scim.Utilities
             if (!_scimContext.Organization.Enabled || !_scimContext.Organization.UseScim ||
                 _scimContext.ScimConfiguration == null || !_scimContext.ScimConfiguration.Enabled)
             {
-                Logger.LogInformation($"Org {_scimContext.OrganizationId.Value} not able to use Scim.");
+                Logger.LogInformation("Org {organizationId} not able to use Scim.", _scimContext.OrganizationId);
                 return AuthenticateResult.Fail("Invalid parameters");
             }
 
@@ -61,11 +61,11 @@ namespace Bit.Scim.Utilities
                 .FirstOrDefault();
             if (orgApiKey?.ApiKey != apiKey)
             {
-                Logger.LogWarning($"An API request was received with an invalid API key: {apiKey}");
+                Logger.LogWarning("An API request was received with an invalid API key: {apiKey}", apiKey);
                 return AuthenticateResult.Fail("Invalid parameters");
             }
 
-            Logger.LogInformation($"Org {_scimContext.OrganizationId.Value} authenticated");
+            Logger.LogInformation("Org {organizationId} authenticated", _scimContext.OrganizationId);
 
             var claims = new[]
             {

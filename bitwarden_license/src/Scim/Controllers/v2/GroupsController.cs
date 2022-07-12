@@ -69,7 +69,7 @@ namespace Bit.Scim.Controllers.v2
                 }
             }
 
-            var groupList = new List<ScimGroupResponseModel> { };
+            var groupList = new List<ScimGroupResponseModel>();
             var groups = await _groupRepository.GetManyByOrganizationIdAsync(organizationId);
             var totalResults = 0;
             if (!string.IsNullOrWhiteSpace(nameFilter))

@@ -241,7 +241,7 @@ namespace Bit.Scim.Controllers.v2
 
             if (!operationHandled)
             {
-                _logger.LogWarning("User patch operation not handled: {0} : ",
+                _logger.LogWarning("User patch operation not handled: {operation} : ",
                     string.Join(", ", model.Operations.Select(o => $"{o.Op}:{o.Path}")));
             }
 

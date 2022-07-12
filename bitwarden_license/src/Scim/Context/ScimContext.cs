@@ -10,7 +10,6 @@ namespace Bit.Scim.Context
     {
         private bool _builtHttpContext;
 
-        public virtual HttpContext HttpContext { get; set; }
         public ScimProviderType? RequestScimProvider { get; set; }
         public ScimConfig ScimConfiguration { get; set; }
         public Guid? OrganizationId { get; set; }
@@ -28,7 +27,6 @@ namespace Bit.Scim.Context
             }
 
             _builtHttpContext = true;
-            HttpContext = httpContext;
 
             string orgIdString = null;
             if (httpContext.Request.RouteValues.TryGetValue("organizationId", out var orgIdObject))
@@ -36,7 +34,7 @@ namespace Bit.Scim.Context
                 orgIdString = orgIdObject?.ToString();
             }
 
-            if (!string.IsNullOrWhiteSpace(orgIdString) && Guid.TryParse(orgIdString, out var orgId))
+            if (Guid.TryParse(orgIdString, out var orgId))
             {
                 OrganizationId = orgId;
                 Organization = await organizationRepository.GetByIdAsync(orgId);
@@ -48,10 +46,9 @@ namespace Bit.Scim.Context
                 }
             }
 
-            if (RequestScimProvider == null && httpContext.Request.Headers.ContainsKey("User-Agent"))
+            if (RequestScimProvider == null && httpContext.Request.Headers.TryGetValue("User-Agent", out var userAgent))
             {
-                var userAgent = httpContext.Request.Headers["User-Agent"].ToString();
-                if (userAgent.StartsWith("Okta"))
+                if (userAgent.ToString().StartsWith("Okta"))
                 {
                     RequestScimProvider = ScimProviderType.Okta;
                 }
