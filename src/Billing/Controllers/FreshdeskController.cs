@@ -74,10 +74,13 @@ namespace Bit.Billing.Controllers
 
                 var updateBody = new Dictionary<string, object>();
                 var note = string.Empty;
+                var customFields = new Dictionary<string, object>();
                 var user = await _userRepository.GetByEmailAsync(ticketContactEmail);
                 if (user != null)
                 {
-                    note += $"<li>User, {user.Email}: {_globalSettings.BaseServiceUri.Admin}/users/edit/{user.Id}</li>";
+                    var userNote = $"{user.Email}: {_globalSettings.BaseServiceUri.Admin}/users/edit/{user.Id}";
+                    note += $"<li>User, {userNote}</li>";
+                    customFields.Add("cf_user", userNote);
                     var tags = new HashSet<string>();
                     if (user.Premium)
                     {
@@ -86,8 +89,18 @@ namespace Bit.Billing.Controllers
                     var orgs = await _organizationRepository.GetManyByUserIdAsync(user.Id);
                     foreach (var org in orgs)
                     {
-                        note += $"<li>Org, {org.Name} ({org.Seats.GetValueOrDefault()}): " +
-                            $"{_globalSettings.BaseServiceUri.Admin}/organizations/edit/{org.Id}</li>";
+                        var orgNote = $"{org.Name} ({org.Seats.GetValueOrDefault()}): " +
+                            $"{_globalSettings.BaseServiceUri.Admin}/organizations/edit/{org.Id}";
+                        note += $"<li>Org, {orgNote}</li>";
+                        if (!customFields.Any(kvp => kvp.Key == "cf_org"))
+                        {
+                            customFields.Add("cf_org", orgNote);
+                        }
+                        else
+                        {
+                            customFields["cf_org"] += $" \n {orgNote}";
+                        }
+                        
                         var planName = GetAttribute<DisplayAttribute>(org.PlanType).Name.Split(" ").FirstOrDefault();
                         if (!string.IsNullOrWhiteSpace(planName))
                         {
@@ -107,14 +120,16 @@ namespace Bit.Billing.Controllers
                         }
                         updateBody.Add("tags", tagsToUpdate);
                     }
+                    if (customFields.Any())
+                    {
+                        updateBody.Add("custom_fields", customFields);
+                    }
                     var updateRequest = new HttpRequestMessage(HttpMethod.Put,
                         string.Format("https://bitwarden.freshdesk.com/api/v2/tickets/{0}", ticketId))
                     {
                         Content = JsonContent.Create(updateBody),
                     };
-
                     await CallFreshdeskApiAsync(updateRequest);
-
 
                     var noteBody = new Dictionary<string, object>
                     {
