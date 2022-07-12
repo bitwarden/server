@@ -4,10 +4,6 @@ BEGIN
 END
 GO
 
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
 CREATE TABLE [dbo].[OrganizationPasswordManager](
     [Id] [uniqueidentifier] NOT NULL,
     [OrganizationId] [uniqueidentifier] NOT NULL,
@@ -45,18 +41,10 @@ CREATE TABLE [dbo].[OrganizationSecretsManager](
 ) 
 GO
 
-
 IF OBJECT_ID('[dbo].[Organization_DeleteById]') IS NOT NULL
 BEGIN
     DROP PROCEDURE [dbo].[Organization_DeleteById]
-
 END
-GO
-
-
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
 GO
 
 CREATE PROCEDURE [dbo].[Organization_DeleteById]
@@ -144,13 +132,10 @@ BEGIN
 END
 GO
 
-
-
 ALTER TABLE Organization ALTER COLUMN [Plan] NVARCHAR(50) NULL;
 ALTER TABLE Organization ALTER COLUMN PlanType tinyint NULL;
 ALTER TABLE Organization ALTER COLUMN UseTotp bit NULL;
 ALTER TABLE Organization ALTER COLUMN  UsersGetPremium bit NULL;
-
 
 IF OBJECT_ID('[dbo].[OrganizationPasswordManager_Update]') IS NOT NULL
 BEGIN
@@ -203,11 +188,6 @@ BEGIN
 END
 GO
 
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
 CREATE PROCEDURE [dbo].[OrganizationSecretsManager_Update]
     @OrganizationId UNIQUEIDENTIFIER,
     @Plan [nvarchar](50),
@@ -246,11 +226,6 @@ BEGIN
 END
 GO
 
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
 CREATE PROCEDURE [dbo].[Organization_ReadAbilities]
 AS
 BEGIN
@@ -282,11 +257,6 @@ IF OBJECT_ID('[dbo].[OrganizationPasswordManager_UpdateStorage]') IS NOT NULL
 BEGIN
     DROP PROCEDURE [dbo].[OrganizationPasswordManager_UpdateStorage]
 END
-GO
-
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
 GO
 
 CREATE PROCEDURE [dbo].[OrganizationPasswordManager_UpdateStorage]
@@ -365,11 +335,6 @@ BEGIN
 END
 GO
 
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
 CREATE PROCEDURE [dbo].[OrganizationPasswordManager_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
     @OrganizationId UNIQUEIDENTIFIER,
@@ -422,11 +387,6 @@ BEGIN
 END
 GO
 
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
 CREATE PROCEDURE [dbo].[OrganizationSecretManager_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
     @OrganizationId UNIQUEIDENTIFIER,
@@ -477,11 +437,6 @@ IF EXISTS(SELECT * FROM sys.views WHERE [Name] = 'OrganizationView')
 BEGIN
     DROP VIEW [dbo].[OrganizationView];
 END
-GO
-
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
 GO
 
 CREATE VIEW [dbo].[OrganizationView]
