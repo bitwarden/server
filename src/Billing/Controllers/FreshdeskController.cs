@@ -19,7 +19,7 @@ namespace Bit.Billing.Controllers
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly ILogger<FreshdeskController> _logger;
         private readonly GlobalSettings _globalSettings;
-        private readonly HttpClient _httpClient = new HttpClient();
+        private readonly IHttpClientFactory _httpClientFactory;
         private readonly string _freshdeskAuthkey;
 
         public FreshdeskController(
@@ -28,7 +28,8 @@ namespace Bit.Billing.Controllers
             IOrganizationUserRepository organizationUserRepository,
             IOptions<BillingSettings> billingSettings,
             ILogger<FreshdeskController> logger,
-            GlobalSettings globalSettings)
+            GlobalSettings globalSettings,
+            IHttpClientFactory httpClientFactory)
         {
             _billingSettings = billingSettings?.Value;
             _userRepository = userRepository;
@@ -36,6 +37,7 @@ namespace Bit.Billing.Controllers
             _organizationUserRepository = organizationUserRepository;
             _logger = logger;
             _globalSettings = globalSettings;
+            _httpClientFactory = httpClientFactory;
             _freshdeskAuthkey = Convert.ToBase64String(
                 Encoding.UTF8.GetBytes($"{_billingSettings.FreshdeskApiKey}:X"));
         }
@@ -159,8 +161,9 @@ namespace Bit.Billing.Controllers
         {
             try
             {
+                var httpClient = _httpClientFactory.CreateClient("FreshdeskApi");
                 request.Headers.Add("Authorization", _freshdeskAuthkey);
-                var response = await _httpClient.SendAsync(request);
+                var response = await httpClient.SendAsync(request);
                 if (response.StatusCode != System.Net.HttpStatusCode.TooManyRequests || retriedCount > 3)
                 {
                     return response;
