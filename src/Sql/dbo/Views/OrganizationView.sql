@@ -1,6 +1,49 @@
 ﻿CREATE VIEW [dbo].[OrganizationView]
 AS
 SELECT
-    *
+    O.Id,
+    O.Identifier,
+    O.Name,
+    O.BusinessName,
+    O.BusinessAddress1,
+    O.BusinessAddress2,
+    O.BusinessAddress3,
+    O.BusinessCountry,
+    O.BusinessTaxNumber,
+    O.BillingEmail,
+    O.UsePolicies,
+    O.UseSso,
+    O.UseGroups,
+    O.UseDirectory,
+    O.UseEvents,
+    O.Use2fA,
+    O.UseApi,
+    O.UseResetPassword,
+    O.SelfHost,
+    O.Gateway,
+    O.GatewayCustomerId,
+    O.GatewaySubscriptionId,
+    O.ReferenceData,
+    O.Enabled,
+    O.LicenseKey,
+    O.ApiKey,
+    O.PublicKey,
+    O.PrivateKey,
+    O.TwoFactorProviders,
+    O.ExpirationDate,
+    O.CreationDate,
+    O.RevisionDate,
+    O.OwnersNotifiedOfAutoscaling,
+    O.UseKeyConnector,
+    ISNULL(O.MaxAutoscaleSeats, OPM.MaxAutoScaleSeats) As MaxAutoScaleSeats,
+    ISNULL(O.UsersGetPremium, OPM.UsersGetPremium) As UsersGetPremium,
+    ISNULL(O.Storage, OPM.Storage) As Storage,
+    ISNULL(O.MaxStorageGb, OPM.MaxStorageGb) As MaxStorageGb,
+    ISNULL(O.UseTotp, OPM.UseTotp) As UseTotp,
+    ISNULL(OPM.[Plan], O.[Plan]) As [Plan],
+    ISNULL(O.PlanType, OPM.PlanType) As PlanType,
+    ISNULL(O.Seats, OPM.Seats) As Seats,
+    ISNULL(O.MaxCollections, OPM.MaxCollections) As MaxCollections
 FROM
-    [dbo].[Organization]
+    [dbo].[Organization] O
+    LEFT JOIN OrganizationPasswordManager OPM on OPM.OrganizationId = O.Id

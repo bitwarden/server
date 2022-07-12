@@ -63,6 +63,18 @@ BEGIN
 
     DELETE
     FROM
+        [dbo].[OrganizationPasswordManager]
+    WHERE
+        [OrganizationId] = @Id
+
+    DELETE
+    FROM
+        [dbo].[OrganizationSecretsManager]
+    WHERE
+        [OrganizationId] = @Id
+
+   DELETE
+    FROM
         [dbo].[Organization]
     WHERE
         [Id] = @Id

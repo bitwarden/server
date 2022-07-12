@@ -1,5 +1,4 @@
 IF OBJECT_ID('[dbo].[OrganizationPasswordManager]') IS NOT NULL
-
 BEGIN
     DROP TABLE [dbo].[OrganizationPasswordManager]
 END
@@ -26,7 +25,6 @@ CREATE TABLE [dbo].[OrganizationPasswordManager](
 GO
 
 IF OBJECT_ID('[dbo].[OrganizationSecretsManager]') IS NOT NULL
-
 BEGIN
     DROP TABLE [dbo].[OrganizationSecretsManager]
 END
@@ -49,7 +47,6 @@ GO
 
 
 IF OBJECT_ID('[dbo].[Organization_DeleteById]') IS NOT NULL
-
 BEGIN
     DROP PROCEDURE [dbo].[Organization_DeleteById]
 
@@ -127,12 +124,6 @@ BEGIN
 
     DELETE
     FROM
-        [dbo].[Organization]
-    WHERE
-        [Id] = @Id
-
-    DELETE
-    FROM
         [dbo].[OrganizationPasswordManager]
     WHERE
         [OrganizationId] = @Id
@@ -142,6 +133,12 @@ BEGIN
         [dbo].[OrganizationSecretsManager]
     WHERE
         [OrganizationId] = @Id
+
+   DELETE
+    FROM
+        [dbo].[Organization]
+    WHERE
+        [Id] = @Id
 
     COMMIT TRANSACTION Organization_DeleteById
 END
@@ -156,7 +153,6 @@ ALTER TABLE Organization ALTER COLUMN  UsersGetPremium bit NULL;
 
 
 IF OBJECT_ID('[dbo].[OrganizationPasswordManager_Update]') IS NOT NULL
-
 BEGIN
     DROP PROCEDURE [dbo].[OrganizationPasswordManager_Update]
 END
@@ -202,7 +198,6 @@ GO
 
 
 IF OBJECT_ID('[dbo].[OrganizationSecretsManager_Update]') IS NOT NULL
-
 BEGIN
     DROP PROCEDURE [dbo].[OrganizationSecretsManager_Update]
 END
@@ -246,7 +241,6 @@ END
 GO
 
 IF OBJECT_ID('[dbo].[Organization_ReadAbilities]') IS NOT NULL
-
 BEGIN
     DROP PROCEDURE [dbo].[Organization_ReadAbilities]
 END
@@ -285,7 +279,6 @@ GO
 
 
 IF OBJECT_ID('[dbo].[OrganizationPasswordManager_UpdateStorage]') IS NOT NULL
-
 BEGIN
     DROP PROCEDURE [dbo].[OrganizationPasswordManager_UpdateStorage]
 END
@@ -366,8 +359,7 @@ END
 GO
  
 
- IF OBJECT_ID('[dbo].[OrganizationPasswordManager_Create]') IS NOT NULL
-
+IF OBJECT_ID('[dbo].[OrganizationPasswordManager_Create]') IS NOT NULL
 BEGIN
     DROP PROCEDURE [dbo].[OrganizationPasswordManager_Create]
 END
@@ -424,9 +416,7 @@ BEGIN
 END
 GO
 
-
 IF OBJECT_ID('[dbo].[OrganizationSecretManager_Create]') IS NOT NULL
-
 BEGIN
     DROP PROCEDURE [dbo].[OrganizationSecretManager_Create]
 END
@@ -496,7 +486,6 @@ GO
 
 CREATE VIEW [dbo].[OrganizationView]
 AS
-
 SELECT
     O.Id,
     O.Identifier,

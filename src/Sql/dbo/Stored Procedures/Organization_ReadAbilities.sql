@@ -4,20 +4,21 @@ BEGIN
     SET NOCOUNT ON
 
     SELECT
-        [Id],
-        [UseEvents],
-        [Use2fa],
+        O.[Id],
+        O.[UseEvents],
+        O.[Use2fa],
         CASE
-        WHEN [Use2fa] = 1 AND [TwoFactorProviders] IS NOT NULL AND [TwoFactorProviders] != '{}' THEN
-            1
-        ELSE
-            0
-        END AS [Using2fa],
-        [UsersGetPremium],
-        [UseSso],
-        [UseKeyConnector],
-        [UseResetPassword],
-        [Enabled]
+            WHEN [Use2fa] = 1 AND [TwoFactorProviders] IS NOT NULL AND [TwoFactorProviders] != '{}' THEN
+                1
+            ELSE
+                0
+            END AS [Using2fa],
+        ISNULL(O.[UsersGetPremium], OPM.UsersGetPremium) AS UsersGetPremium,
+        O.[UseSso],
+        O.[UseKeyConnector],
+        O.[UseResetPassword],
+        O.[Enabled]
     FROM
-        [dbo].[Organization]
+         [dbo].[Organization] O
+    LEFT JOIN OrganizationPasswordManager OPM on OPM.OrganizationId = O.Id
 END
