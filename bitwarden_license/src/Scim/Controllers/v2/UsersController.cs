@@ -127,9 +127,9 @@ namespace Bit.Scim.Controllers.v2
         public async Task<IActionResult> Post(Guid organizationId, [FromBody] ScimUserRequestModel model)
         {
             var email = model.PrimaryEmail?.ToLowerInvariant();
-            if (string.IsNullOrWhiteSpace(email) && _scimContext.RequestScimProvider.HasValue)
+            if (string.IsNullOrWhiteSpace(email))
             {
-                switch (_scimContext.RequestScimProvider.Value)
+                switch (_scimContext.RequestScimProvider)
                 {
                     case ScimProviderType.AzureAd:
                         email = model.UserName?.ToLowerInvariant();

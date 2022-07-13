@@ -10,7 +10,7 @@ namespace Bit.Scim.Context
     {
         private bool _builtHttpContext;
 
-        public ScimProviderType? RequestScimProvider { get; set; }
+        public ScimProviderType RequestScimProvider { get; set; } = ScimProviderType.Default;
         public ScimConfig ScimConfiguration { get; set; }
         public Guid? OrganizationId { get; set; }
         public Organization Organization { get; set; }
@@ -46,14 +46,16 @@ namespace Bit.Scim.Context
                 }
             }
 
-            if (RequestScimProvider == null && httpContext.Request.Headers.TryGetValue("User-Agent", out var userAgent))
+            if (RequestScimProvider == ScimProviderType.Default &&
+                httpContext.Request.Headers.TryGetValue("User-Agent", out var userAgent))
             {
                 if (userAgent.ToString().StartsWith("Okta"))
                 {
                     RequestScimProvider = ScimProviderType.Okta;
                 }
             }
-            if (RequestScimProvider == null && httpContext.Request.Headers.ContainsKey("Adscimversion"))
+            if (RequestScimProvider == ScimProviderType.Default &&
+                httpContext.Request.Headers.ContainsKey("Adscimversion"))
             {
                 RequestScimProvider = ScimProviderType.AzureAd;
             }
