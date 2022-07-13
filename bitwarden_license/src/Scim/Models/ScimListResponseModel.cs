@@ -5,7 +5,7 @@ namespace Bit.Scim.Models
     public class ScimListResponseModel<T> : BaseScimModel
     {
         public ScimListResponseModel()
-            : base(Constants.Scim2SchemaListResponse)
+            : base(ScimConstants.Scim2SchemaListResponse)
         { }
 
         public int TotalResults { get; set; }

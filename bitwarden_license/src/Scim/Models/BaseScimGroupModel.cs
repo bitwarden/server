@@ -8,7 +8,7 @@ namespace Bit.Scim.Models
         {
             if (initSchema)
             {
-                Schemas = new List<string> { Constants.Scim2SchemaGroup };
+                Schemas = new List<string> { ScimConstants.Scim2SchemaGroup };
             }
         }
 

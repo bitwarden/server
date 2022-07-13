@@ -5,7 +5,7 @@ namespace Bit.Scim.Models
     public class ScimErrorResponseModel : BaseScimModel
     {
         public ScimErrorResponseModel()
-            : base(Constants.Scim2SchemaError)
+            : base(ScimConstants.Scim2SchemaError)
         { }
 
         public string Detail { get; set; }
