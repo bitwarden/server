@@ -5,7 +5,7 @@ namespace Bit.Api.Utilities
 {
 
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method)]
-    public class DevelopmentOnlyAttribute : Attribute, IResourceFilter
+    public class SecretsManagerAttribute : Attribute, IResourceFilter
     {
         public void OnResourceExecuting(ResourceExecutingContext context)
         {
