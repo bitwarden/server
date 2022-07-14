@@ -1,7 +1,6 @@
 ﻿using AutoFixture;
-using Bit.Test.Common.AutoFixture.Attributes;
 
-namespace Bit.Api.Test.AutoFixture.Attributes
+namespace Bit.Test.Common.AutoFixture.Attributes
 {
     /// <summary>
     /// Disables setting of Auto Properties on the Controller to avoid ASP.net initialization errors from a mock environment. Still sets constructor dependencies.
