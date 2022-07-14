@@ -17,6 +17,7 @@ namespace Bit.Billing.Test.Controllers
     public class FreshdeskControllerTests
     {
         private const string ApiKey = "TESTFRESHDESKAPIKEY";
+        private const string WebhookKey = "TESTKEY";
 
         [Theory]
         [BitAutoData((string)null, null)]
@@ -35,7 +36,7 @@ namespace Bit.Billing.Test.Controllers
 
         [Theory]
         [BitAutoData]
-        public async Task PostWebhook_Success(BillingSettings billingSettings, User user, FreshdeskWebhookModel model,
+        public async Task PostWebhook_Success(User user, FreshdeskWebhookModel model,
             List<Organization> organizations, SutProvider<FreshdeskController> sutProvider)
         {
             model.TicketContactEmail = user.Email;
@@ -51,10 +52,10 @@ namespace Bit.Billing.Test.Controllers
 
             sutProvider.GetDependency<IHttpClientFactory>().CreateClient("FreshdeskApi").Returns(httpClient);
 
-            sutProvider.GetDependency<IOptions<BillingSettings>>().Value.FreshdeskWebhookKey.Returns(billingSettings.FreshdeskWebhookKey);
+            sutProvider.GetDependency<IOptions<BillingSettings>>().Value.FreshdeskWebhookKey.Returns(WebhookKey);
             sutProvider.GetDependency<IOptions<BillingSettings>>().Value.FreshdeskApiKey.Returns(ApiKey);
 
-            var response = await sutProvider.Sut.PostWebhook(billingSettings.FreshdeskWebhookKey, model);
+            var response = await sutProvider.Sut.PostWebhook(WebhookKey, model);
 
             var statusCodeResult = Assert.IsAssignableFrom<StatusCodeResult>(response);
             Assert.Equal(StatusCodes.Status200OK, statusCodeResult.StatusCode);
