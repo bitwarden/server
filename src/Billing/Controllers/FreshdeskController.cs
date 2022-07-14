@@ -2,6 +2,7 @@
 using System.Reflection;
 using System.Text;
 using System.Text.Json;
+using Bit.Billing.Models;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
@@ -20,7 +21,6 @@ namespace Bit.Billing.Controllers
         private readonly ILogger<FreshdeskController> _logger;
         private readonly GlobalSettings _globalSettings;
         private readonly IHttpClientFactory _httpClientFactory;
-        private readonly string _freshdeskAuthkey;
 
         public FreshdeskController(
             IUserRepository userRepository,
@@ -38,37 +38,22 @@ namespace Bit.Billing.Controllers
             _logger = logger;
             _globalSettings = globalSettings;
             _httpClientFactory = httpClientFactory;
-            _freshdeskAuthkey = Convert.ToBase64String(
-                Encoding.UTF8.GetBytes($"{_billingSettings.FreshdeskApiKey}:X"));
         }
 
         [HttpPost("webhook")]
-        public async Task<IActionResult> PostWebhook()
+        public async Task<IActionResult> PostWebhook([FromQuery, Required] string key,
+            [FromBody, Required] FreshdeskWebhookModel model)
         {
-            if (HttpContext?.Request?.Query == null)
-            {
-                return new BadRequestResult();
-            }
-
-            var key = HttpContext.Request.Query.ContainsKey("key") ?
-                HttpContext.Request.Query["key"].ToString() : null;
-            if (!CoreHelpers.FixedTimeEquals(key, _billingSettings.FreshdeskWebhookKey))
-            {
-                return new BadRequestResult();
-            }
-
-            using var body = await JsonSerializer.DeserializeAsync<JsonDocument>(HttpContext.Request.Body);
-            var root = body.RootElement;
-            if (root.ValueKind != JsonValueKind.Object)
+            if (string.IsNullOrWhiteSpace(key) || !CoreHelpers.FixedTimeEquals(key, _billingSettings.FreshdeskWebhookKey))
             {
                 return new BadRequestResult();
             }
 
             try
             {
-                var ticketId = root.GetProperty("ticket_id").GetString();
-                var ticketContactEmail = root.GetProperty("ticket_contact_email").GetString();
-                var ticketTags = root.GetProperty("ticket_tags").GetString();
+                var ticketId = model.TicketId;
+                var ticketContactEmail = model.TicketContactEmail;
+                var ticketTags = model.TicketTags;
                 if (string.IsNullOrWhiteSpace(ticketId) || string.IsNullOrWhiteSpace(ticketContactEmail))
                 {
                     return new BadRequestResult();
@@ -161,8 +146,9 @@ namespace Bit.Billing.Controllers
         {
             try
             {
+                var freshdeskAuthkey = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{_billingSettings.FreshdeskApiKey}:X"));
                 var httpClient = _httpClientFactory.CreateClient("FreshdeskApi");
-                request.Headers.Add("Authorization", _freshdeskAuthkey);
+                request.Headers.Add("Authorization", freshdeskAuthkey);
                 var response = await httpClient.SendAsync(request);
                 if (response.StatusCode != System.Net.HttpStatusCode.TooManyRequests || retriedCount > 3)
                 {

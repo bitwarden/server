@@ -1,119 +1,66 @@
-﻿using System.Text.Json;
-using Bit.Billing.Controllers;
+﻿using Bit.Billing.Controllers;
+using Bit.Billing.Models;
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
-using Bit.Core.Settings;
+using Bit.Test.Common.AutoFixture;
+using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NSubstitute;
 using Xunit;
 
 namespace Bit.Billing.Test.Controllers
 {
+    [ControllerCustomize(typeof(FreshdeskController))]
+    [SutProviderCustomize]
     public class FreshdeskControllerTests
     {
         private const string ApiKey = "TESTFRESHDESKAPIKEY";
-        private const string WebhookKey = "TEST_FRESHDESK_WEBHOOKKEY";
-        private const string TicketId = "TEST_FRESHDESK_TICKETID";
-        private const string Email = "TEST@EMAIL.COM";
 
-        private static (FreshdeskController, IUserRepository, IOrganizationRepository) CreateSut(
-            string freshdeskApiKey)
+        [Theory]
+        [BitAutoData((string)null, null)]
+        [BitAutoData((string)null)]
+        [BitAutoData((FreshdeskWebhookModel)null)]
+        public async Task PostWebhook_NullRequiredParameters_BadRequest(string freshdeskWebhookKey, FreshdeskWebhookModel model,
+            BillingSettings billingSettings, SutProvider<FreshdeskController> sutProvider)
         {
-            var userRepository = Substitute.For<IUserRepository>();
-            var organizationRepository = Substitute.For<IOrganizationRepository>();
-            var organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
+            sutProvider.GetDependency<IOptions<BillingSettings>>().Value.FreshdeskWebhookKey.Returns(billingSettings.FreshdeskWebhookKey);
 
-            var billingSettings = Options.Create(new BillingSettings
-            {
-                FreshdeskApiKey = freshdeskApiKey,
-                FreshdeskWebhookKey = WebhookKey
-            });
-            var globalSettings = new GlobalSettings();
-            globalSettings.BaseServiceUri.Admin = "https://test.com";
+            var response = await sutProvider.Sut.PostWebhook(freshdeskWebhookKey, model);
+
+            var statusCodeResult = Assert.IsAssignableFrom<StatusCodeResult>(response);
+            Assert.Equal(StatusCodes.Status400BadRequest, statusCodeResult.StatusCode);
+        }
+
+        [Theory]
+        [BitAutoData]
+        public async Task PostWebhook_Success(BillingSettings billingSettings, User user, FreshdeskWebhookModel model,
+            List<Organization> organizations, SutProvider<FreshdeskController> sutProvider)
+        {
+            model.TicketContactEmail = user.Email;
+
+            sutProvider.GetDependency<IUserRepository>().GetByEmailAsync(user.Email).Returns(user);
+            sutProvider.GetDependency<IOrganizationRepository>().GetManyByUserIdAsync(user.Id).Returns(organizations);
 
             var mockHttpMessageHandler = Substitute.ForPartsOf<MockHttpMessageHandler>();
             var mockResponse = new HttpResponseMessage(System.Net.HttpStatusCode.OK);
-
             mockHttpMessageHandler.Send(Arg.Any<HttpRequestMessage>(), Arg.Any<CancellationToken>())
                .Returns(mockResponse);
             var httpClient = new HttpClient(mockHttpMessageHandler);
 
-            var httpClientFactory = Substitute.For<IHttpClientFactory>();
-            httpClientFactory.CreateClient(Arg.Any<string>()).Returns(httpClient);
+            sutProvider.GetDependency<IHttpClientFactory>().CreateClient("FreshdeskApi").Returns(httpClient);
 
-            var sut = new FreshdeskController(
-                userRepository,
-                organizationRepository,
-                organizationUserRepository,
-                billingSettings,
-                Substitute.For<ILogger<FreshdeskController>>(),
-                globalSettings,
-                httpClientFactory
-            );
+            sutProvider.GetDependency<IOptions<BillingSettings>>().Value.FreshdeskWebhookKey.Returns(billingSettings.FreshdeskWebhookKey);
+            sutProvider.GetDependency<IOptions<BillingSettings>>().Value.FreshdeskApiKey.Returns(ApiKey);
 
-            var inputData = new
-            {
-                ticket_id = TicketId,
-                ticket_contact_email = Email,
-                ticket_tags = "Billing/Account Mgmt,Org: Enterprise"
-            };
-            var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(JsonSerializer.Serialize(inputData)));
+            var response = await sutProvider.Sut.PostWebhook(billingSettings.FreshdeskWebhookKey, model);
 
-            var httpContext = new DefaultHttpContext();
-            httpContext.Request.Body = stream;
-            httpContext.Request.ContentLength = stream.Length;
-            httpContext.Request.QueryString = new QueryString($"?key={WebhookKey}");
-
-            var controllerContext = new ControllerContext()
-            {
-                HttpContext = httpContext,
-            };
-
-            sut.ControllerContext = controllerContext;
-
-            return (sut, userRepository, organizationRepository);
-        }
-
-        [Fact]
-        public async Task PostWebhook_Success()
-        {
-            // Arrange
-            var (sut, userRepository, organizationRepository) = CreateSut(ApiKey);
-
-            var user = new User
-            {
-                Id = Guid.NewGuid(),
-                Email = Email,
-                Premium = true,
-            };
-
-            userRepository.GetByEmailAsync(user.Email)
-                .Returns(user);
-
-            organizationRepository.GetManyByUserIdAsync(user.Id)
-                .Returns(new List<Organization>
-                {
-                    new Organization
-                    {
-                        Id = Guid.NewGuid(),
-                        Name = "Test Org 1",
-                    },
-                    new Organization
-                    {
-                        Id = Guid.NewGuid(),
-                        Name = "Test Org 2",
-                    }
-                });
-
-            // Act
-            var response = await sut.PostWebhook();
-
-            // Assert
             var statusCodeResult = Assert.IsAssignableFrom<StatusCodeResult>(response);
             Assert.Equal(StatusCodes.Status200OK, statusCodeResult.StatusCode);
+
+            _ = mockHttpMessageHandler.Received(1).Send(Arg.Is<HttpRequestMessage>(m => m.Method == HttpMethod.Put && m.RequestUri.ToString().EndsWith(model.TicketId)), Arg.Any<CancellationToken>());
+            _ = mockHttpMessageHandler.Received(1).Send(Arg.Is<HttpRequestMessage>(m => m.Method == HttpMethod.Post && m.RequestUri.ToString().EndsWith($"{model.TicketId}/notes")), Arg.Any<CancellationToken>());
         }
 
         public class MockHttpMessageHandler : HttpMessageHandler
