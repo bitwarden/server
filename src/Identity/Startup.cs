@@ -9,14 +9,7 @@ using Bit.Core.Utilities;
 using Bit.Identity.Utilities;
 using Bit.SharedWeb.Utilities;
 using IdentityServer4.Extensions;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Logging;
 using Microsoft.OpenApi.Models;
 
@@ -43,7 +36,8 @@ namespace Bit.Identity
             var globalSettings = services.AddGlobalSettingsServices(Configuration, Environment);
             if (!globalSettings.SelfHosted)
             {
-                services.AddIpRateLimiting(globalSettings);
+                services.Configure<IpRateLimitOptions>(Configuration.GetSection("IpRateLimitOptions"));
+                services.Configure<IpRateLimitPolicies>(Configuration.GetSection("IpRateLimitPolicies"));
             }
 
             // Data Protection
