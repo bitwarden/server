@@ -1,44 +1,42 @@
-IF OBJECT_ID('[dbo].[OrganizationPasswordManager]') IS NOT NULL
-BEGIN
-    DROP TABLE [dbo].[OrganizationPasswordManager]
+IF OBJECT_ID('[dbo].[OrganizationPasswordManager]') IS NULL
+    BEGIN
+        CREATE TABLE [dbo].[OrganizationPasswordManager](
+        [Id] [uniqueidentifier] NOT NULL,
+        [OrganizationId] [uniqueidentifier] NOT NULL,
+        [Plan] [nvarchar](50) NOT NULL,
+        [PlanType] [tinyint] NOT NULL,
+        [Seats] [int] NULL,
+        [MaxCollections] [smallint] NULL,
+        [UseTotp] [bit] NULL,
+        [UsersGetPremium] [bit] NOT NULL,
+        [Storage] [bigint] NULL,
+        [MaxStorageGb] [smallint] NULL,
+        [MaxAutoscaleSeats] [int] NULL,
+        [RevisionDate] DATETIME NULL,
+        CONSTRAINT [PK_OrganizationPasswordManager] PRIMARY KEY CLUSTERED ([Id] ASC),
+        CONSTRAINT [FK_OrganizationPasswordManager_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id])
+    ) 
 END
 GO
 
-CREATE TABLE [dbo].[OrganizationPasswordManager](
-    [Id] [uniqueidentifier] NOT NULL,
-    [OrganizationId] [uniqueidentifier] NOT NULL,
-    [Plan] [nvarchar](50) NOT NULL,
-    [PlanType] [tinyint] NOT NULL,
-    [Seats] [int] NULL,
-    [MaxCollections] [smallint] NULL,
-    [UseTotp] [bit] NULL,
-    [UsersGetPremium] [bit] NOT NULL,
-    [Storage] [bigint] NULL,
-    [MaxStorageGb] [smallint] NULL,
-    [MaxAutoscaleSeats] [int] NULL,
-    [RevisionDate] DATETIME NULL
-) 
-GO
-
-IF OBJECT_ID('[dbo].[OrganizationSecretsManager]') IS NOT NULL
-BEGIN
-    DROP TABLE [dbo].[OrganizationSecretsManager]
+IF OBJECT_ID('[dbo].[OrganizationSecretsManager]') IS NULL
+    BEGIN
+        CREATE TABLE [dbo].[OrganizationSecretsManager](
+        [Id] [uniqueidentifier] NOT NULL,
+        [OrganizationId] [uniqueidentifier] NOT NULL,
+        [Plan] [nvarchar](50) NOT NULL,
+        [PlanType] [tinyint] NOT NULL,
+        [UserSeats] [int] NULL,
+        [ServiceAccountSeats] [int] NULL,
+        [UseEnvironments] [bit] NULL,
+        [MaxAutoscaleUserSeats] [int] NULL,
+        [MaxAutoscaleServiceAccounts] [int] NULL,
+        [MaxProjects] [int] NULL,
+        [RevisionDate] DATETIME NULL,
+        CONSTRAINT [PK_OrganizationSecretsManager] PRIMARY KEY CLUSTERED ([Id] ASC),
+        CONSTRAINT [FK_OrganizationSecretsManager_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id])
+    ) 
 END
-GO
-
-CREATE TABLE [dbo].[OrganizationSecretsManager](
-    [Id] [uniqueidentifier] NOT NULL,
-    [OrganizationId] [uniqueidentifier] NOT NULL,
-    [Plan] [nvarchar](50) NOT NULL,
-    [PlanType] [tinyint] NOT NULL,
-    [UserSeats] [int] NULL,
-    [ServiceAccountSeats] [int] NULL,
-    [UseEnvironments] [bit] NULL,
-    [MaxAutoscaleUserSeats] [int] NULL,
-    [MaxAutoscaleServiceAccounts] [int] NULL,
-    [MaxProjects] [int] NULL,
-    [RevisionDate] DATETIME NULL
-) 
 GO
 
 IF OBJECT_ID('[dbo].[Organization_DeleteById]') IS NOT NULL
@@ -132,10 +130,57 @@ BEGIN
 END
 GO
 
-ALTER TABLE Organization ALTER COLUMN [Plan] NVARCHAR(50) NULL;
-ALTER TABLE Organization ALTER COLUMN PlanType tinyint NULL;
-ALTER TABLE Organization ALTER COLUMN UseTotp bit NULL;
-ALTER TABLE Organization ALTER COLUMN  UsersGetPremium bit NULL;
+IF EXISTS (
+ SELECT *
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE COLUMN_NAME = 'Plan' AND
+        DATA_TYPE = 'NVARCHAR' AND
+        TABLE_NAME = 'Organization' AND 
+        IS_NULLABLE = 'NO')
+BEGIN
+    ALTER TABLE [dbo].[Organization]
+    ALTER COLUMN [Plan] NVARCHAR(50) NULL
+END
+GO
+
+IF EXISTS (
+    SELECT *
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE COLUMN_NAME = 'PlanType' AND
+        DATA_TYPE = 'tinyint' AND
+        TABLE_NAME = 'Organization' AND 
+        IS_NULLABLE = 'NO')
+BEGIN
+    ALTER TABLE [dbo].[Organization]
+    ALTER COLUMN PlanType tinyint NULL
+END
+GO
+
+IF EXISTS (
+    SELECT *
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE COLUMN_NAME = 'UseTotp' AND
+        DATA_TYPE = 'bit' AND
+        TABLE_NAME = 'Organization' AND
+        IS_NULLABLE = 'NO')
+BEGIN
+    ALTER TABLE [dbo].[Organization]
+    ALTER COLUMN UseTotp bit NULL
+END
+GO
+
+IF EXISTS (
+    SELECT *
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE COLUMN_NAME = 'UsersGetPremium' AND
+        DATA_TYPE = 'bit' AND
+        TABLE_NAME = 'Organization' AND 
+        IS_NULLABLE = 'NO')
+BEGIN
+    ALTER TABLE [dbo].[Organization]
+    ALTER COLUMN UsersGetPremium bit NULL
+END
+GO
 
 IF OBJECT_ID('[dbo].[OrganizationPasswordManager_Update]') IS NOT NULL
 BEGIN
@@ -180,7 +225,6 @@ BEGIN
          [OrganizationId] = @OrganizationId
 END
 GO
-
 
 IF OBJECT_ID('[dbo].[OrganizationSecretsManager_Update]') IS NOT NULL
 BEGIN
@@ -489,3 +533,4 @@ FROM
     [dbo].[Organization] O
     LEFT JOIN OrganizationPasswordManager OPM on OPM.OrganizationId = O.Id
 GO
+
