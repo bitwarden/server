@@ -1135,7 +1135,8 @@ namespace Bit.Core.Services
             var events = new List<(OrganizationUser, EventType, DateTime?)>();
             foreach (var (invite, externalId) in invites)
             {
-                foreach (var email in invite.Emails)
+                // Prevent duplicate invitations
+                foreach (var email in invite.Emails.Distinct())
                 {
                     try
                     {

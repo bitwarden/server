@@ -8,6 +8,7 @@ namespace Bit.Api.Models.Request.Accounts
         [StringLength(50)]
         public string Name { get; set; }
         [StringLength(50)]
+        [Obsolete("Changes will be made via the 'password' endpoint going forward.")]
         public string MasterPasswordHint { get; set; }
 
         public User ToUser(User existingUser)

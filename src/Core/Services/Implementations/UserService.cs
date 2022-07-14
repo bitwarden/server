@@ -596,7 +596,7 @@ namespace Bit.Core.Services
             throw new NotImplementedException();
         }
 
-        public async Task<IdentityResult> ChangePasswordAsync(User user, string masterPassword, string newMasterPassword,
+        public async Task<IdentityResult> ChangePasswordAsync(User user, string masterPassword, string newMasterPassword, string passwordHint,
             string key)
         {
             if (user == null)
@@ -614,6 +614,7 @@ namespace Bit.Core.Services
 
                 user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
                 user.Key = key;
+                user.MasterPasswordHint = passwordHint;
 
                 await _userRepository.ReplaceAsync(user);
                 await _eventService.LogUserEventAsync(user.Id, EventType.User_ChangedPassword);
