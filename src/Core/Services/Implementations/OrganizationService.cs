@@ -6,6 +6,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.Policies;
+using Bit.Core.Models.OrganizationConnectionConfigs;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
@@ -39,6 +40,7 @@ namespace Bit.Core.Services
         private readonly IGlobalSettings _globalSettings;
         private readonly ITaxRateRepository _taxRateRepository;
         private readonly IOrganizationApiKeyRepository _organizationApiKeyRepository;
+        private readonly IOrganizationConnectionRepository _organizationConnectionRepository;
         private readonly ICurrentContext _currentContext;
         private readonly ILogger<OrganizationService> _logger;
 
@@ -66,6 +68,7 @@ namespace Bit.Core.Services
             IGlobalSettings globalSettings,
             ITaxRateRepository taxRateRepository,
             IOrganizationApiKeyRepository organizationApiKeyRepository,
+            IOrganizationConnectionRepository organizationConnectionRepository,
             ICurrentContext currentContext,
             ILogger<OrganizationService> logger)
         {
@@ -91,6 +94,7 @@ namespace Bit.Core.Services
             _globalSettings = globalSettings;
             _taxRateRepository = taxRateRepository;
             _organizationApiKeyRepository = organizationApiKeyRepository;
+            _organizationConnectionRepository = organizationConnectionRepository;
             _currentContext = currentContext;
             _logger = logger;
         }
@@ -266,6 +270,17 @@ namespace Bit.Core.Services
                 }
             }
 
+            if (!newPlan.HasScim && organization.UseScim)
+            {
+                var scimConnections = await _organizationConnectionRepository.GetByOrganizationIdTypeAsync(organization.Id,
+                    OrganizationConnectionType.Scim);
+                if (scimConnections != null && scimConnections.Any(c => c.GetConfig<ScimConfig>()?.Enabled == true))
+                {
+                    throw new BadRequestException("Your new plan does not allow the SCIM feature. " +
+                        "Disable your SCIM configuration.");
+                }
+            }
+
             // TODO: Check storage?
 
             string paymentIntentClientSecret = null;
@@ -304,6 +319,7 @@ namespace Bit.Core.Services
             organization.UseApi = newPlan.HasApi;
             organization.UseSso = newPlan.HasSso;
             organization.UseKeyConnector = newPlan.HasKeyConnector;
+            organization.UseScim = newPlan.HasScim;
             organization.UseResetPassword = newPlan.HasResetPassword;
             organization.SelfHost = newPlan.HasSelfHost;
             organization.UsersGetPremium = newPlan.UsersGetPremium || upgrade.PremiumAccessAddon;
@@ -702,6 +718,7 @@ namespace Bit.Core.Services
                 UsePolicies = license.UsePolicies,
                 UseSso = license.UseSso,
                 UseKeyConnector = license.UseKeyConnector,
+                UseScim = license.UseScim,
                 UseGroups = license.UseGroups,
                 UseDirectory = license.UseDirectory,
                 UseEvents = license.UseEvents,
@@ -902,6 +919,17 @@ namespace Bit.Core.Services
                 }
             }
 
+            if (!license.UseScim && organization.UseScim)
+            {
+                var scimConnections = await _organizationConnectionRepository.GetByOrganizationIdTypeAsync(organization.Id,
+                    OrganizationConnectionType.Scim);
+                if (scimConnections != null && scimConnections.Any(c => c.GetConfig<ScimConfig>()?.Enabled == true))
+                {
+                    throw new BadRequestException("Your new plan does not allow the SCIM feature. " +
+                        "Disable your SCIM configuration.");
+                }
+            }
+
             if (!license.UseResetPassword && organization.UseResetPassword)
             {
                 var resetPasswordPolicy =
@@ -933,6 +961,7 @@ namespace Bit.Core.Services
             organization.UsePolicies = license.UsePolicies;
             organization.UseSso = license.UseSso;
             organization.UseKeyConnector = license.UseKeyConnector;
+            organization.UseScim = license.UseScim;
             organization.UseResetPassword = license.UseResetPassword;
             organization.SelfHost = license.SelfHost;
             organization.UsersGetPremium = license.UsersGetPremium;

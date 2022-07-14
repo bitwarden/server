@@ -211,6 +211,23 @@ services:
       - default
       - public
 {{/if}}
+{{#if EnableScim}}
+
+  scim:
+    image: bitwarden/scim:{{{CoreVersion}}}
+    container_name: bitwarden-scim
+    restart: always
+    volumes:
+      - ../ca-certificates:/etc/bitwarden/ca-certificates
+      - ../logs/api:/etc/bitwarden/logs
+    env_file:
+      - global.env
+      - ../env/uid.env
+      - ../env/global.override.env
+    networks:
+      - default
+      - public
+{{/if}}
 {{#if MssqlDataDockerVolume}}
 
 volumes:
