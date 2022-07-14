@@ -1,7 +1,6 @@
 ﻿using System.Reflection;
 using System.Security.Claims;
 using System.Security.Cryptography.X509Certificates;
-using System.Threading.Tasks;
 using AspNetCoreRateLimit;
 using AspNetCoreRateLimit.Redis;
 using Bit.Core.Entities;

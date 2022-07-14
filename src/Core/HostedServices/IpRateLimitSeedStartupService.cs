@@ -1,6 +1,4 @@
-﻿using System.Threading;
-using System.Threading.Tasks;
-using AspNetCoreRateLimit;
+﻿using AspNetCoreRateLimit;
 using Microsoft.Extensions.Hosting;
 
 namespace Bit.Core.HostedServices
