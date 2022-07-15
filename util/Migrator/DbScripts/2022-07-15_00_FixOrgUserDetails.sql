@@ -1,4 +1,11 @@
-﻿CREATE VIEW [dbo].[OrganizationUserOrganizationDetailsView]
+
+IF EXISTS(SELECT * FROM sys.views WHERE [Name] = 'OrganizationUserOrganizationDetailsView')
+    BEGIN
+        DROP VIEW [dbo].[OrganizationUserOrganizationDetailsView]
+    END
+GO
+
+CREATE VIEW [dbo].[OrganizationUserOrganizationDetailsView]
 AS
 SELECT
     OU.[UserId],
@@ -40,7 +47,7 @@ SELECT
     OS.[ValidUntil] FamilySponsorshipValidUntil
 FROM
     [dbo].[OrganizationUser] OU
-INNER JOIN
+LEFT JOIN
     [dbo].[Organization] O ON O.[Id] = OU.[OrganizationId]
 LEFT JOIN
     [dbo].[SsoUser] SU ON SU.[UserId] = OU.[UserId] AND SU.[OrganizationId] = OU.[OrganizationId]
@@ -52,3 +59,4 @@ LEFT JOIN
     [dbo].[SsoConfig] SS ON SS.[OrganizationId] = OU.[OrganizationId]
 LEFT JOIN
     [dbo].[OrganizationSponsorship] OS ON OS.[SponsoringOrganizationUserID] = OU.[Id]
+GO
