@@ -22,7 +22,7 @@ namespace Bit.Billing.Test.Controllers
         [Theory]
         [BitAutoData((string)null, null)]
         [BitAutoData((string)null)]
-        [BitAutoData((FreshdeskWebhookModel)null)]
+        [BitAutoData(WebhookKey, null)]
         public async Task PostWebhook_NullRequiredParameters_BadRequest(string freshdeskWebhookKey, FreshdeskWebhookModel model,
             BillingSettings billingSettings, SutProvider<FreshdeskController> sutProvider)
         {
