@@ -2,7 +2,6 @@
 using Bit.Api.Controllers;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response.Organizations;
-using Bit.Api.Test.AutoFixture.Attributes;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
