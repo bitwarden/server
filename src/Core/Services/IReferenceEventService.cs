@@ -1,5 +1,4 @@
-﻿using System.Threading.Tasks;
-using Bit.Core.Models.Business;
+﻿using Bit.Core.Models.Business;
 
 namespace Bit.Core.Services
 {

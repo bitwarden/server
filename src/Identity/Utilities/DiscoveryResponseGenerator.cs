@@ -1,12 +1,9 @@
-﻿using System.Collections.Generic;
-using System.Threading.Tasks;
-using Bit.Core.Settings;
+﻿using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using IdentityServer4.Configuration;
 using IdentityServer4.Services;
 using IdentityServer4.Stores;
 using IdentityServer4.Validation;
-using Microsoft.Extensions.Logging;
 
 namespace Bit.Identity.Utilities
 {

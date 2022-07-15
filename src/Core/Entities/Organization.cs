@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.Linq;
+﻿using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 using Bit.Core.Enums;
 using Bit.Core.Models;
@@ -42,6 +39,7 @@ namespace Bit.Core.Entities
         public bool UsePolicies { get; set; }
         public bool UseSso { get; set; }
         public bool UseKeyConnector { get; set; }
+        public bool UseScim { get; set; }
         public bool UseGroups { get; set; }
         public bool UseDirectory { get; set; }
         public bool UseEvents { get; set; }

@@ -1,7 +1,5 @@
-﻿using System.Threading.Tasks;
-using Bit.Core;
+﻿using Bit.Core;
 using Bit.Core.Jobs;
-using Microsoft.Extensions.Logging;
 using Quartz;
 
 namespace Bit.Api.Jobs

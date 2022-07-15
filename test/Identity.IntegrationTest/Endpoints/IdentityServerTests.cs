@@ -1,21 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Net.Http;
-using System.Text.Json;
-using System.Threading.Tasks;
+﻿using System.Text.Json;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Api.Request.Accounts;
 using Bit.Core.Repositories;
-using Bit.Core.Utilities;
 using Bit.IntegrationTestCommon.Factories;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
-using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace Bit.Identity.IntegrationTest.Endpoints
@@ -246,6 +237,8 @@ namespace Bit.Identity.IntegrationTest.Endpoints
         public async Task TokenEndpoint_GrantTypeClientCredentials_AsOrganization_Success(Organization organization, OrganizationApiKey organizationApiKey)
         {
             var orgRepo = _factory.Services.GetRequiredService<IOrganizationRepository>();
+            organization.Enabled = true;
+            organization.UseApi = true;
             organization = await orgRepo.CreateAsync(organization);
             organizationApiKey.OrganizationId = organization.Id;
             organizationApiKey.Type = OrganizationApiKeyType.Default;
@@ -427,13 +420,10 @@ namespace Bit.Identity.IntegrationTest.Endpoints
                 tasks[i] = MakeRequest();
             }
 
-            var responses = await Task.WhenAll(tasks);
+            var responses = (await Task.WhenAll(tasks)).ToList();
 
-            var allowedCalls = responses[..AmountInOneSecondAllowed];
-            var notAllowedCall = responses[^1];
-
-            Assert.True(allowedCalls.All(c => c.Response.StatusCode == StatusCodes.Status200OK));
-            Assert.True(notAllowedCall.Response.StatusCode == StatusCodes.Status429TooManyRequests);
+            Assert.Equal(5, responses.Count(c => c.Response.StatusCode == StatusCodes.Status200OK));
+            Assert.Equal(1, responses.Count(c => c.Response.StatusCode == StatusCodes.Status429TooManyRequests));
 
             Task<HttpContext> MakeRequest()
             {

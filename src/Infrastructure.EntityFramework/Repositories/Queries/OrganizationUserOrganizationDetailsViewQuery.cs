@@ -1,5 +1,4 @@
-﻿using System.Linq;
-using Bit.Core.Models.Data.Organizations.OrganizationUsers;
+﻿using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories.Queries
 {
@@ -32,6 +31,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories.Queries
                 UsePolicies = x.o.UsePolicies,
                 UseSso = x.o.UseSso,
                 UseKeyConnector = x.o.UseKeyConnector,
+                UseScim = x.o.UseScim,
                 UseGroups = x.o.UseGroups,
                 UseDirectory = x.o.UseDirectory,
                 UseEvents = x.o.UseEvents,

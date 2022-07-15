@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-
-namespace Bit.Core.Sso
+﻿namespace Bit.Core.Sso
 {
     public static class SamlSigningAlgorithms
     {

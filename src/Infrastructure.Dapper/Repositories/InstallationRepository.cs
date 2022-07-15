@@ -1,5 +1,4 @@
-﻿using System;
-using Bit.Core.Entities;
+﻿using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 

@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-
-namespace Bit.Api.Models.Public.Request
+﻿namespace Bit.Api.Models.Public.Request
 {
     public class UpdateGroupIdsRequestModel
     {

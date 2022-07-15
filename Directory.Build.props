@@ -1,12 +1,13 @@
 <Project>
 
-	<PropertyGroup>
-		<TargetFramework>net6.0</TargetFramework>
-    <!--Current Version: -->
-		<Version>2022.5.2</Version>
-		<RootNamespace>Bit.$(MSBuildProjectName)</RootNamespace>
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <!--2022.6.2-->
+    <Version>2022.6.2</Version>
+    <RootNamespace>Bit.$(MSBuildProjectName)</RootNamespace>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
-	</PropertyGroup>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
 
   <!--
     This section is for packages that we use multiple times throughout the solution

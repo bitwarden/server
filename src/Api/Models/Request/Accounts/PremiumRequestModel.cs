@@ -1,7 +1,5 @@
-﻿using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.Settings;
-using Microsoft.AspNetCore.Http;
 using Enums = Bit.Core.Enums;
 
 namespace Bit.Api.Models.Request.Accounts

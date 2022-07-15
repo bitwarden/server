@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Threading.Tasks;
-using Bit.Core.Models.Data;
+﻿using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 
 namespace Bit.Core.Services

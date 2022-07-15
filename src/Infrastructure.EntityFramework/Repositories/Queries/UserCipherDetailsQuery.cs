@@ -1,6 +1,4 @@
-﻿using System;
-using System.Linq;
-using Bit.Core.Enums;
+﻿using Bit.Core.Enums;
 using Core.Models.Data;
 using Newtonsoft.Json.Linq;
 

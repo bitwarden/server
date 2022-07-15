@@ -38,10 +38,10 @@ jobs:
 
       - name: Check Release Version
         id: version
-        uses: bitwarden/gh-actions/release-version-check@ea9fab01d76940267b4147cc1c4542431246b9f6
+        uses: bitwarden/gh-actions/release-version-check@4cf17a5ff15a995a2daf2b60ba371e5c9907c068
         with:
           release-type: ${{ github.event.inputs.release_type }}
-          project-type: csharp
+          project-type: dotnet
           file: Directory.Build.props
 
       - name: Get branch name
@@ -202,7 +202,6 @@ jobs:
             docker tag bitwarden/$SERVICE_NAME:latest bitwarden/$SERVICE_NAME:dryrun
           else
             docker tag bitwarden/$SERVICE_NAME:$_BRANCH_NAME bitwarden/$SERVICE_NAME:$_RELEASE_VERSION
-            docker tag bitwarden/$SERVICE_NAME:$_BRANCH_NAME bitwarden/$SERVICE_NAME:latest
           fi
 
       - name: Push version and latest image
@@ -213,7 +212,6 @@ jobs:
           SERVICE_NAME: ${{ steps.setup.outputs.service_name }}
         run: |
           docker push bitwarden/$SERVICE_NAME:$_RELEASE_VERSION
-          docker push bitwarden/$SERVICE_NAME:latest
 
       - name: Log out of Docker and disable Docker Notary
         run: |
@@ -238,7 +236,6 @@ jobs:
             docker tag bitwarden/$SERVICE_NAME:latest $REGISTRY/$SERVICE_NAME:dryrun
           else
             docker tag bitwarden/$SERVICE_NAME:$_BRANCH_NAME $REGISTRY/$SERVICE_NAME:$_RELEASE_VERSION
-            docker tag bitwarden/$SERVICE_NAME:$_BRANCH_NAME $REGISTRY/$SERVICE_NAME:latest
           fi
 
       - name: Push version and latest image
@@ -248,7 +245,6 @@ jobs:
           REGISTRY: bitwardenqa.azurecr.io
         run: |
           docker push $REGISTRY/$SERVICE_NAME:$_RELEASE_VERSION
-          docker push $REGISTRY/$SERVICE_NAME:latest
 
       - name: Log out of Docker
         run: docker logout

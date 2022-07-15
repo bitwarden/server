@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-
-namespace Bit.Admin.Models
+﻿namespace Bit.Admin.Models
 {
     public class CursorPagedModel<T>
     {

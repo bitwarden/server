@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Bit.Core.Test.AutoFixture.Attributes
+﻿namespace Bit.Core.Test.AutoFixture.Attributes
 {
     public sealed class CiSkippedTheory : Xunit.TheoryAttribute
     {

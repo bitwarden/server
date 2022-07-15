@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Bit.Api.Models.Request;
+﻿using Bit.Api.Models.Request;
 using Bit.Api.Models.Request.Accounts;
 using Bit.Api.Models.Response;
 using Bit.Api.Utilities;
@@ -215,7 +211,7 @@ namespace Bit.Api.Controllers
             }
 
             var result = await _userService.ChangePasswordAsync(user, model.MasterPasswordHash,
-                model.NewMasterPasswordHash, model.Key);
+                model.NewMasterPasswordHash, model.MasterPasswordHint, model.Key);
             if (result.Succeeded)
             {
                 return;

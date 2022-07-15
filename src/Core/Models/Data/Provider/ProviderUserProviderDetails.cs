@@ -1,5 +1,4 @@
-﻿using System;
-using Bit.Core.Enums.Provider;
+﻿using Bit.Core.Enums.Provider;
 
 namespace Bit.Core.Models.Data
 {

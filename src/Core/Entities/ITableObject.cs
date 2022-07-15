@@ -1,5 +1,3 @@
-﻿using System;
-
 #nullable enable
 
 namespace Bit.Core.Entities

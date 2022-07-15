@@ -1,6 +1,4 @@
-﻿using System;
-using System.Linq;
-using Bit.Core.Entities;
+﻿using Bit.Core.Entities;
 using Bit.Core.Models.Data;
 using Event = Bit.Infrastructure.EntityFramework.Models.Event;
 

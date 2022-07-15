@@ -1,6 +1,4 @@
-﻿using System.Text.Json;
-using System.Text.Json.Serialization;
-using Bit.Infrastructure.EntityFramework.Models;
+﻿using Bit.Infrastructure.EntityFramework.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories

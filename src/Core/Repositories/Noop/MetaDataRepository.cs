@@ -1,7 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Threading.Tasks;
-
-namespace Bit.Core.Repositories.Noop
+﻿namespace Bit.Core.Repositories.Noop
 {
     public class MetaDataRepository : IMetaDataRepository
     {

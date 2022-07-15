@@ -1,6 +1,4 @@
-﻿using System;
-using System.Threading.Tasks;
-using Bit.Billing.Models;
+﻿using Bit.Billing.Models;
 
 namespace Bit.Core.Services
 {

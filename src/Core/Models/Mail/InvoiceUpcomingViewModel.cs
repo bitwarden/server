@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-
-namespace Bit.Core.Models.Mail
+﻿namespace Bit.Core.Models.Mail
 {
     public class InvoiceUpcomingViewModel : BaseMailModel
     {

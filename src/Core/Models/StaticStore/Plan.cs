@@ -34,6 +34,7 @@ namespace Bit.Core.Models.StaticStore
         public bool HasApi { get; set; }
         public bool HasSso { get; set; }
         public bool HasKeyConnector { get; set; }
+        public bool HasScim { get; set; }
         public bool HasResetPassword { get; set; }
         public bool UsersGetPremium { get; set; }
 

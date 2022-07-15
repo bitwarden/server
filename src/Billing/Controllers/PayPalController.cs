@@ -1,7 +1,5 @@
 ﻿using System.Data.SqlClient;
-using System.IO;
 using System.Text;
-using System.Threading.Tasks;
 using Bit.Billing.Utilities;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -9,7 +7,6 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Bit.Billing.Controllers

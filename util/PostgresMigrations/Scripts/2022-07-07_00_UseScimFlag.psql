@@ -1,0 +1,8 @@
+START TRANSACTION;
+
+ALTER TABLE "Organization" ADD "UseScim" boolean NOT NULL DEFAULT FALSE;
+
+INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+VALUES ('20220707162231_UseScimFlag', '6.0.4');
+
+COMMIT;
