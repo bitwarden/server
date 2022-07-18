@@ -373,29 +373,29 @@ namespace Bit.Api.Controllers
                 new OrganizationUserBulkResponseModel(r.Item1.Id, r.Item2)));
         }
 
-        [HttpPatch("{id}/deactivate")]
-        [HttpPut("{id}/deactivate")]
+        [HttpPatch("{id}/revoke")]
+        [HttpPut("{id}/revoke")]
         public async Task RevokeAsync(Guid orgId, Guid id)
         {
             await RestoreOrRevokeUserAsync(orgId, id, _organizationService.RevokeUserAsync);
         }
 
-        [HttpPatch("deactivate")]
-        [HttpPut("deactivate")]
+        [HttpPatch("revoke")]
+        [HttpPut("revoke")]
         public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkRevokeAsync(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
         {
             return await RestoreOrRevokeUsersAsync(orgId, model, _organizationService.RevokeUsersAsync);
         }
 
-        [HttpPatch("{id}/activate")]
-        [HttpPut("{id}/activate")]
+        [HttpPatch("{id}/restore")]
+        [HttpPut("{id}/restore")]
         public async Task RestoreAsync(Guid orgId, Guid id)
         {
             await RestoreOrRevokeUserAsync(orgId, id, _organizationService.RestoreUserAsync);
         }
 
-        [HttpPatch("activate")]
-        [HttpPut("activate")]
+        [HttpPatch("restore")]
+        [HttpPut("restore")]
         public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkRestoreAsync(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
         {
             return await RestoreOrRevokeUsersAsync(orgId, model, _organizationService.RestoreUsersAsync);
