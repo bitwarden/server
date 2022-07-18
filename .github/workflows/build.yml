@@ -114,7 +114,7 @@ jobs:
           - service_name: Sso
             base_path: ./bitwarden_license/src
             node: true
-          - service_name: SCIM
+          - service_name: Scim
             base_path: ./bitwarden_license/src
             dotnet: true
     steps:
@@ -233,7 +233,7 @@ jobs:
             base_path: ./bitwarden_license/src
             docker_repos: [bitwarden, bitwardenqa.azurecr.io]
             dotnet: true
-          - service_name: SCIM
+          - service_name: Scim
             base_path: ./bitwarden_license/src
             docker_repos: [bitwardenqa.azurecr.io]
             dotnet: true
