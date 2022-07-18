@@ -54,8 +54,11 @@ namespace Bit.Infrastructure.EntityFramework.Repositories.Queries
                 PrivateKey = x.o.PrivateKey,
                 ProviderId = x.p.Id,
                 ProviderName = x.p.Name,
-                FamilySponsorshipFriendlyName = x.os.FriendlyName,
                 SsoConfig = x.ss.Data,
+                FamilySponsorshipFriendlyName = x.os.FriendlyName,
+                FamilySponsorshipLastSyncDate = x.os.LastSyncDate,
+                FamilySponsorshipToDelete = x.os.ToDelete,
+                FamilySponsorshipValidUntil = x.os.ValidUntil
             });
         }
     }
