@@ -223,6 +223,22 @@ BEGIN
         [RevisionDate] = GETUTCDATE()
     WHERE
         [OrganizationId] = @OrganizationId
+
+    UPDATE
+        [dbo].[Organization]
+    SET
+        [Plan] = @Plan,
+        [PlanType] = @PlanType,
+        [Seats] = @Seats,
+        [MaxCollections] = @MaxCollections,
+        [UseTotp] = @UseTotp,
+        [UsersGetPremium] = @UsersGetPremium,
+        [Storage] = @Storage,
+        [MaxStorageGb] = @MaxStorageGb,
+        [MaxAutoscaleSeats] = @MaxAutoscaleSeats,
+        [RevisionDate] = GETUTCDATE()
+    WHERE
+        [Id] = @OrganizationId
 END
 GO
 
@@ -368,6 +384,14 @@ BEGIN
         [Storage] = (ISNULL(@AttachmentStorage, 0) + ISNULL(@SendStorage, 0)),
         [RevisionDate] = GETUTCDATE()
     WHERE
+        [OrganizationId] = @Id
+
+    UPDATE
+        [dbo].[Organization]
+    SET
+        [Storage] = (ISNULL(@AttachmentStorage, 0) + ISNULL(@SendStorage, 0)),
+        [RevisionDate] = GETUTCDATE()
+    WHERE
         [Id] = @Id
 END
 GO
@@ -422,16 +446,29 @@ BEGIN
         @MaxAutoscaleSeats,
         GETUTCDATE()
     )
+
+    UPDATE [dbo].[Organization]
+    SET
+        [Plan] = @Plan,
+        [PlanType] = @PlanType,
+        [Seats] = @Seats,
+        [UseTotp] = @UseTotp,
+        [UsersGetPremium] = @UsersGetPremium,
+        [Storage] = @Storage,
+        [MaxStorageGb] = @MaxStorageGb,
+        [MaxAutoscaleSeats] = @MaxAutoscaleSeats,
+        [RevisionDate] = GETUTCDATE()
+    WHERE Id = @OrganizationId
 END
 GO
 
-IF OBJECT_ID('[dbo].[OrganizationSecretManager_Create]') IS NOT NULL
+IF OBJECT_ID('[dbo].[OrganizationSecretsManager_Create]') IS NOT NULL
 BEGIN
-    DROP PROCEDURE [dbo].[OrganizationSecretManager_Create]
+    DROP PROCEDURE [dbo].[OrganizationSecretsManager_Create]
 END
 GO
 
-CREATE PROCEDURE [dbo].[OrganizationSecretManager_Create]
+CREATE PROCEDURE [dbo].[OrganizationSecretsManager_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
     @OrganizationId UNIQUEIDENTIFIER,
     @Plan NVARCHAR(50),
@@ -439,14 +476,14 @@ CREATE PROCEDURE [dbo].[OrganizationSecretManager_Create]
     @UserSeats INT,
     @ServiceAccountSeats INT,
     @UseEnvironments BIT,
-    @NaxAutoscaleUserSeats INT,
+    @MaxAutoscaleUserSeats INT,
     @MaxAutoScaleServiceAccounts INT,
     @MaxProjects INT
 AS
 BEGIN
     SET NOCOUNT ON
 
-    INSERT INTO [dbo].[OrganizationSecretManager]
+    INSERT INTO [dbo].[OrganizationSecretsManager]
     (
         [Id],
         [OrganizationId],
@@ -455,7 +492,7 @@ BEGIN
         [UserSeats],
         [ServiceAccountSeats],
         [UseEnvironments],
-        [NaxAutoscaleUserSeats],
+        [MaxAutoscaleUserSeats],
         [MaxAutoScaleServiceAccounts],
         [MaxProjects],
         [RevisionDate]
@@ -469,7 +506,7 @@ BEGIN
         @UserSeats,
         @ServiceAccountSeats,
         @UseEnvironments,
-        @NaxAutoscaleUserSeats,
+        @MaxAutoscaleUserSeats,
         @MaxAutoScaleServiceAccounts,
         @MaxProjects,
         GETUTCDATE()
