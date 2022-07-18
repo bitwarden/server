@@ -83,7 +83,7 @@ jobs:
   build-artifacts:
     name: Build artifacts
     runs-on: ubuntu-20.04
-    needs: 
+    needs:
       - testing
       - lint
     strategy:
