@@ -13,9 +13,10 @@ BEGIN
             ELSE
                 0
             END AS [Using2fa],
-        ISNULL(O.[UsersGetPremium], OPM.UsersGetPremium) AS UsersGetPremium,
+        ISNULL(OPM.[UsersGetPremium], O.UsersGetPremium) AS UsersGetPremium,
         O.[UseSso],
         O.[UseKeyConnector],
+        O.[UseScim],
         O.[UseResetPassword],
         O.[Enabled]
     FROM

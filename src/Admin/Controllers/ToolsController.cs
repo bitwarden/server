@@ -1,6 +1,8 @@
-﻿using System.Text.Json;
+﻿using System.Text;
+using System.Text.Json;
 using Bit.Admin.Models;
 using Bit.Core.Entities;
+using Bit.Core.Models.BitStripe;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -23,6 +25,7 @@ namespace Bit.Admin.Controllers
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly IPaymentService _paymentService;
         private readonly ITaxRateRepository _taxRateRepository;
+        private readonly IStripeAdapter _stripeAdapter;
 
         public ToolsController(
             GlobalSettings globalSettings,
@@ -33,7 +36,8 @@ namespace Bit.Admin.Controllers
             IInstallationRepository installationRepository,
             IOrganizationUserRepository organizationUserRepository,
             ITaxRateRepository taxRateRepository,
-            IPaymentService paymentService)
+            IPaymentService paymentService,
+            IStripeAdapter stripeAdapter)
         {
             _globalSettings = globalSettings;
             _organizationRepository = organizationRepository;
@@ -44,6 +48,7 @@ namespace Bit.Admin.Controllers
             _organizationUserRepository = organizationUserRepository;
             _taxRateRepository = taxRateRepository;
             _paymentService = paymentService;
+            _stripeAdapter = stripeAdapter;
         }
 
         public IActionResult ChargeBraintree()
@@ -428,6 +433,125 @@ namespace Bit.Admin.Controllers
             }
 
             return RedirectToAction("TaxRate");
+        }
+
+        public async Task<IActionResult> StripeSubscriptions(StripeSubscriptionListOptions options)
+        {
+            options = options ?? new StripeSubscriptionListOptions();
+            options.Limit = 10;
+            options.Expand = new List<string>() { "data.customer", "data.latest_invoice" };
+            options.SelectAll = false;
+
+            var subscriptions = await _stripeAdapter.SubscriptionListAsync(options);
+
+            options.StartingAfter = subscriptions.LastOrDefault()?.Id;
+            options.EndingBefore = await StripeSubscriptionsGetHasPreviousPage(subscriptions, options) ?
+                subscriptions.FirstOrDefault()?.Id :
+                null;
+
+            var model = new StripeSubscriptionsModel()
+            {
+                Items = subscriptions.Select(s => new StripeSubscriptionRowModel(s)).ToList(),
+                Prices = (await _stripeAdapter.PriceListAsync(new Stripe.PriceListOptions() { Limit = 100 })).Data,
+                Filter = options
+            };
+            return View(model);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> StripeSubscriptions([FromForm] StripeSubscriptionsModel model)
+        {
+            if (!ModelState.IsValid)
+            {
+                model.Prices = (await _stripeAdapter.PriceListAsync(new Stripe.PriceListOptions() { Limit = 100 })).Data;
+                return View(model);
+            }
+
+            if (model.Action == StripeSubscriptionsAction.Export || model.Action == StripeSubscriptionsAction.BulkCancel)
+            {
+                var subscriptions = model.Filter.SelectAll ?
+                    await _stripeAdapter.SubscriptionListAsync(model.Filter) :
+                    model.Items.Where(x => x.Selected).Select(x => x.Subscription);
+
+                if (model.Action == StripeSubscriptionsAction.Export)
+                {
+                    return StripeSubscriptionsExport(subscriptions);
+                }
+
+                if (model.Action == StripeSubscriptionsAction.BulkCancel)
+                {
+                    await StripeSubscriptionsCancel(subscriptions);
+                }
+            }
+            else
+            {
+                if (model.Action == StripeSubscriptionsAction.PreviousPage)
+                {
+                    model.Filter.StartingAfter = null;
+                }
+                if (model.Action == StripeSubscriptionsAction.NextPage)
+                {
+                    model.Filter.EndingBefore = null;
+                }
+            }
+
+
+            return RedirectToAction("StripeSubscriptions", model.Filter);
+        }
+
+        // This requires a redundant API call to Stripe because of the way they handle pagination.
+        // The StartingBefore value has to be infered from the list we get, and isn't supplied by Stripe.
+        private async Task<bool> StripeSubscriptionsGetHasPreviousPage(List<Stripe.Subscription> subscriptions, StripeSubscriptionListOptions options)
+        {
+            var hasPreviousPage = false;
+            if (subscriptions.FirstOrDefault()?.Id != null)
+            {
+                var previousPageSearchOptions = new StripeSubscriptionListOptions()
+                {
+                    EndingBefore = subscriptions.FirstOrDefault().Id,
+                    Limit = 1,
+                    Status = options.Status,
+                    CurrentPeriodEndDate = options.CurrentPeriodEndDate,
+                    CurrentPeriodEndRange = options.CurrentPeriodEndRange,
+                    Price = options.Price
+                };
+                hasPreviousPage = (await _stripeAdapter.SubscriptionListAsync(previousPageSearchOptions)).Count > 0;
+            }
+            return hasPreviousPage;
+        }
+
+        private async Task StripeSubscriptionsCancel(IEnumerable<Stripe.Subscription> subscriptions)
+        {
+            foreach (var s in subscriptions)
+            {
+                await _stripeAdapter.SubscriptionCancelAsync(s.Id);
+                if (s.LatestInvoice?.Status == "open")
+                {
+                    await _stripeAdapter.InvoiceVoidInvoiceAsync(s.LatestInvoiceId);
+                }
+            }
+        }
+
+        private FileResult StripeSubscriptionsExport(IEnumerable<Stripe.Subscription> subscriptions)
+        {
+            var fieldsToExport = subscriptions.Select(s => new
+            {
+                StripeId = s.Id,
+                CustomerEmail = s.Customer?.Email,
+                SubscriptionStatus = s.Status,
+                InvoiceDueDate = s.CurrentPeriodEnd,
+                SubscriptionProducts = s.Items?.Data.Select(p => p.Plan.Id)
+            });
+
+            var options = new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                WriteIndented = true
+            };
+
+            var result = System.Text.Json.JsonSerializer.Serialize(fieldsToExport, options);
+            var bytes = Encoding.UTF8.GetBytes(result);
+            return File(bytes, "application/json", "StripeSubscriptionsSearch.json");
         }
     }
 }

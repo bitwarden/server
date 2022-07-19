@@ -237,6 +237,8 @@ namespace Bit.Identity.IntegrationTest.Endpoints
         public async Task TokenEndpoint_GrantTypeClientCredentials_AsOrganization_Success(Organization organization, OrganizationApiKey organizationApiKey)
         {
             var orgRepo = _factory.Services.GetRequiredService<IOrganizationRepository>();
+            organization.Enabled = true;
+            organization.UseApi = true;
             organization = await orgRepo.CreateAsync(organization);
             organizationApiKey.OrganizationId = organization.Id;
             organizationApiKey.Type = OrganizationApiKeyType.Default;

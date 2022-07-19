@@ -41,6 +41,7 @@
     [OwnersNotifiedOfAutoscaling]   DATETIME2(7)     NULL,
     [MaxAutoscaleSeats]             INT              NULL,
     [UseKeyConnector]               BIT              NOT NULL,
+    [UseScim]                       BIT              NOT NULL CONSTRAINT [DF_Organization_UseScim] DEFAULT (0),
     CONSTRAINT [PK_Organization] PRIMARY KEY CLUSTERED ([Id] ASC)
 );
 

@@ -117,12 +117,14 @@
             private string _admin;
             private string _notifications;
             private string _sso;
+            private string _scim;
             private string _internalApi;
             private string _internalIdentity;
             private string _internalAdmin;
             private string _internalNotifications;
             private string _internalSso;
             private string _internalVault;
+            private string _internalScim;
 
             public BaseServiceUriSettings(GlobalSettings globalSettings)
             {
@@ -157,6 +159,11 @@
                 get => _globalSettings.BuildExternalUri(_sso, "sso");
                 set => _sso = value;
             }
+            public string Scim
+            {
+                get => _globalSettings.BuildExternalUri(_scim, "scim");
+                set => _scim = value;
+            }
 
             public string InternalNotifications
             {
@@ -187,6 +194,11 @@
             {
                 get => _globalSettings.BuildInternalUri(_internalSso, "sso");
                 set => _internalSso = value;
+            }
+            public string InternalScim
+            {
+                get => _globalSettings.BuildInternalUri(_scim, "scim");
+                set => _internalScim = value;
             }
         }
 
@@ -483,7 +495,7 @@
 
         public class TwoFactorAuthSettings : ITwoFactorAuthSettings
         {
-            public bool EmailOnNewDeviceLogin { get; set; } = true;
+            public bool EmailOnNewDeviceLogin { get; set; } = false;
         }
     }
 }

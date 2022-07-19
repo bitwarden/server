@@ -47,6 +47,7 @@ namespace Bit.Core.Context
         Task<bool> ManagePolicies(Guid orgId);
         Task<bool> ManageSso(Guid orgId);
         Task<bool> ManageUsers(Guid orgId);
+        Task<bool> ManageScim(Guid orgId);
         Task<bool> ManageResetPassword(Guid orgId);
         Task<bool> ManageBilling(Guid orgId);
         Task<bool> ProviderUserForOrgAsync(Guid orgId);
