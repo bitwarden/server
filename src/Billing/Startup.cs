@@ -68,6 +68,9 @@ namespace Bit.Billing
             // Jobs service, uncomment when we have some jobs to run
             // Jobs.JobsHostedService.AddJobsServices(services);
             // services.AddHostedService<Jobs.JobsHostedService>();
+
+            // Set up HttpClients
+            services.AddHttpClient("FreshdeskApi");
         }
 
         public void Configure(

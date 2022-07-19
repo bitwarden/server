@@ -16,6 +16,7 @@ BEGIN
         [UsersGetPremium],
         [UseSso],
         [UseKeyConnector],
+        [UseScim],
         [UseResetPassword],
         [Enabled]
     FROM

@@ -414,6 +414,7 @@ namespace Bit.Core.Utilities
                     HasApi = true,
                     HasSso = true,
                     HasKeyConnector = true,
+                    HasScim = true,
                     HasResetPassword = true,
                     UsersGetPremium = true,
 
@@ -453,6 +454,7 @@ namespace Bit.Core.Utilities
                     HasSelfHost = true,
                     HasSso = true,
                     HasKeyConnector = true,
+                    HasScim = true,
                     HasResetPassword = true,
                     UsersGetPremium = true,
 

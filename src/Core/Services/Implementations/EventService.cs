@@ -210,7 +210,7 @@ namespace Bit.Core.Services
                     continue;
                 }
 
-                eventMessages.Add(new EventMessage
+                eventMessages.Add(new EventMessage(_currentContext)
                 {
                     OrganizationId = organizationUser.OrganizationId,
                     UserId = organizationUser.UserId,
@@ -259,7 +259,7 @@ namespace Bit.Core.Services
                 {
                     continue;
                 }
-                eventMessages.Add(new EventMessage
+                eventMessages.Add(new EventMessage(_currentContext)
                 {
                     ProviderId = providerUser.ProviderId,
                     UserId = providerUser.UserId,
