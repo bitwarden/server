@@ -411,7 +411,7 @@ namespace Bit.Infrastructure.Dapper.Repositories
             using (var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.ExecuteAsync(
-                    $"[{Schema}].[{Table}_Deactivate]",
+                    $"[{Schema}].[{Table}_Revoke]",
                     new { Id = id },
                     commandType: CommandType.StoredProcedure);
             }
@@ -422,7 +422,7 @@ namespace Bit.Infrastructure.Dapper.Repositories
             using (var connection = new SqlConnection(ConnectionString))
             {
                 var results = await connection.ExecuteAsync(
-                    $"[{Schema}].[{Table}_Activate]",
+                    $"[{Schema}].[{Table}_Restore]",
                     new { Id = id, Status = status },
                     commandType: CommandType.StoredProcedure);
             }

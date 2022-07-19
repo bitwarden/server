@@ -2,7 +2,7 @@
 
 namespace Bit.MySqlMigrations.Migrations
 {
-    public partial class DeactivatedUserStatus : Migration
+    public partial class RevokedUserStatus : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)
         {

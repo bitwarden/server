@@ -122,8 +122,8 @@
     <Build Include="dbo\Stored Procedures\Grant_DeleteByKey.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUser_DeleteById.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUser_DeleteByIds.sql" />
-    <Build Include="dbo\Stored Procedures\OrganizationUser_Deactivate.sql" />
-    <Build Include="dbo\Stored Procedures\OrganizationUser_Activate.sql" />
+    <Build Include="dbo\Stored Procedures\OrganizationUser_Revoke.sql" />
+    <Build Include="dbo\Stored Procedures\OrganizationUser_Restore.sql" />
     <Build Include="dbo\Stored Procedures\Grant_Delete.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUser_ReadById.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUser_ReadByIds.sql" />
@@ -393,5 +393,7 @@
     <Build Include="dbo\Views\OrganizationApiKeyView.sql" />
     <Build Include="dbo\Views\OrganizationConnectionView.sql" />
     <Build Include="dbo\Stored Procedures\CipherOrganizationDetails_ReadByOrganizationId.sql" />
+    <Build Include="dbo\Stored Procedures\OrganizationUser_Restore.sql" />
+    <Build Include="dbo\Stored Procedures\OrganizationUser_Revoke.sql" />
   </ItemGroup>
 </Project>

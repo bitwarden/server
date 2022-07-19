@@ -6,7 +6,7 @@
  *
  ***************************************************************/
 
-PRINT N'Starting migration for 2022-06-08_00_DeactivatedUserStatus';
+PRINT N'Starting migration for 2022-07-19_00_RevokedUserStatus';
 GO
 
 PRINT N'Checking dbo.OrganizationUser.Status is TINYINT...';
@@ -471,9 +471,16 @@ WHERE
     AND PUPO.[UserId] IS NULL   -- Not a provider
 GO
 
-PRINT N'Altering stored procedure, dbo.OrganizationUser_Deactivate';
+-- Clean up old sproc name
+IF OBJECT_ID('[dbo].[OrganizationUser_Deactivate]') IS NOT NULL
+    BEGIN
+            DROP PROCEDURE [dbo].[OrganizationUser_Deactivate]
+    END
 GO
-CREATE OR ALTER PROCEDURE [dbo].[OrganizationUser_Deactivate]
+    
+PRINT N'Altering stored procedure, dbo.OrganizationUser_Revoke';
+GO
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationUser_Revoke]
     @Id UNIQUEIDENTIFIER
 AS
 BEGIN
@@ -482,17 +489,24 @@ BEGIN
     UPDATE
         [dbo].[OrganizationUser]
     SET
-        [Status] = -1 -- Deactivated
+        [Status] = -1 -- Revoked
     WHERE
         [Id] = @Id
 
     EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationUserId] @Id
 END
 GO
-
-PRINT N'Altering stored procedure, dbo.OrganizationUser_Activate';
+    
+-- Clean up old sproc name
+IF OBJECT_ID('[dbo].[OrganizationUser_Activate]') IS NOT NULL
+    BEGIN
+                DROP PROCEDURE [dbo].[OrganizationUser_Activate]
+    END
 GO
-CREATE OR ALTER PROCEDURE [dbo].[OrganizationUser_Activate]
+
+PRINT N'Altering stored procedure, dbo.OrganizationUser_Restore';
+GO
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationUser_Restore]
     @Id UNIQUEIDENTIFIER,
     @Status SMALLINT
 AS
@@ -505,11 +519,11 @@ BEGIN
         [Status] = @Status
     WHERE
         [Id] = @Id
-        AND [Status] = -1 -- Deactivated
+        AND [Status] = -1 -- Revoked
 
     EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationUserId] @Id
 END
 GO
 
-PRINT N'Finished migration for 2022-06-08_00_DeactivatedUserStatus';
+PRINT N'Finished migration for 2022-07-19_00_RevokedUserStatus';
 GO
