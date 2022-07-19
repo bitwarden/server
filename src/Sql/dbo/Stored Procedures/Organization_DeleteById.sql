@@ -81,3 +81,55 @@ BEGIN
 
     COMMIT TRANSACTION Organization_DeleteById
 END
+GO
+
+IF EXISTS (
+ SELECT *
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE COLUMN_NAME = 'Plan' AND
+        DATA_TYPE = 'NVARCHAR' AND
+        TABLE_NAME = 'Organization' AND 
+        IS_NULLABLE = 'NO')
+BEGIN
+    ALTER TABLE [dbo].[Organization]
+    ALTER COLUMN [Plan] NVARCHAR(50) NULL
+END
+GO
+
+IF EXISTS (
+    SELECT *
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE COLUMN_NAME = 'PlanType' AND
+        DATA_TYPE = 'tinyint' AND
+        TABLE_NAME = 'Organization' AND 
+        IS_NULLABLE = 'NO')
+BEGIN
+    ALTER TABLE [dbo].[Organization]
+    ALTER COLUMN PlanType tinyint NULL
+END
+GO
+
+IF EXISTS (
+    SELECT *
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE COLUMN_NAME = 'UseTotp' AND
+        DATA_TYPE = 'bit' AND
+        TABLE_NAME = 'Organization' AND
+        IS_NULLABLE = 'NO')
+BEGIN
+    ALTER TABLE [dbo].[Organization]
+    ALTER COLUMN UseTotp bit NULL
+END
+GO
+
+IF EXISTS (
+    SELECT *
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE COLUMN_NAME = 'UsersGetPremium' AND
+        DATA_TYPE = 'bit' AND
+        TABLE_NAME = 'Organization' AND 
+        IS_NULLABLE = 'NO')
+BEGIN
+    ALTER TABLE [dbo].[Organization]
+    ALTER COLUMN UsersGetPremium bit NULL
+END

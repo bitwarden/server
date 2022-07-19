@@ -41,5 +41,17 @@ BEGIN
         @MaxAutoscaleSeats,
         GETUTCDATE()
     )
+
+    UPDATE [dbo].[Organization]
+    SET
+        [Plan] = @Plan,
+        [PlanType] = @PlanType,
+        [Seats] = @Seats,
+        [UseTotp] = @UseTotp,
+        [UsersGetPremium] = @UsersGetPremium,
+        [Storage] = @Storage,
+        [MaxStorageGb] = @MaxStorageGb,
+        [MaxAutoscaleSeats] = @MaxAutoscaleSeats,
+        [RevisionDate] = GETUTCDATE()
+    WHERE Id = @OrganizationId
 END
-GO

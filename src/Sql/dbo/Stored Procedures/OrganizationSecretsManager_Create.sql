@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[OrganizationSecretManager_Create]
+CREATE PROCEDURE [dbo].[OrganizationSecretsManager_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
     @OrganizationId UNIQUEIDENTIFIER,
     @Plan NVARCHAR(50),
@@ -6,14 +6,14 @@ CREATE PROCEDURE [dbo].[OrganizationSecretManager_Create]
     @UserSeats INT,
     @ServiceAccountSeats INT,
     @UseEnvironments BIT,
-    @NaxAutoscaleUserSeats INT,
+    @MaxAutoscaleUserSeats INT,
     @MaxAutoScaleServiceAccounts INT,
     @MaxProjects INT
 AS
 BEGIN
     SET NOCOUNT ON
 
-    INSERT INTO [dbo].[OrganizationSecretManager]
+    INSERT INTO [dbo].[OrganizationSecretsManager]
     (
         [Id],
         [OrganizationId],
@@ -22,7 +22,7 @@ BEGIN
         [UserSeats],
         [ServiceAccountSeats],
         [UseEnvironments],
-        [NaxAutoscaleUserSeats],
+        [MaxAutoscaleUserSeats],
         [MaxAutoScaleServiceAccounts],
         [MaxProjects],
         [RevisionDate]
@@ -36,7 +36,7 @@ BEGIN
         @UserSeats,
         @ServiceAccountSeats,
         @UseEnvironments,
-        @NaxAutoscaleUserSeats,
+        @MaxAutoscaleUserSeats,
         @MaxAutoScaleServiceAccounts,
         @MaxProjects,
         GETUTCDATE()

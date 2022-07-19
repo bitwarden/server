@@ -15,16 +15,16 @@ BEGIN
     UPDATE
         [dbo].[OrganizationSecretsManager]
     SET
-        OrganizationId = @OrganizationId,
+        [OrganizationId] = @OrganizationId,
         [Plan] = @Plan,
-        PlanType = @PlanType,
-        UserSeats = @UserSeats,
-        ServiceAccountSeats = @ServiceAccountSeats,
-        UseEnvironments = @UseEnvironments,
-        MaxAutoscaleUserSeats = @MaxAutoscaleUserSeats,
-        MaxAutoscaleServiceAccounts = @MaxAutoscaleServiceAccounts,
-        MaxProjects = @MaxProjects,
-        RevisionDate = GETUTCDATE()
+        [PlanType] = @PlanType,
+        [UserSeats] = @UserSeats,
+        [ServiceAccountSeats] = @ServiceAccountSeats,
+        [UseEnvironments] = @UseEnvironments,
+        [MaxAutoscaleUserSeats] = @MaxAutoscaleUserSeats,
+        [MaxAutoscaleServiceAccounts] = @MaxAutoscaleServiceAccounts,
+        [MaxProjects] = @MaxProjects,
+        [RevisionDate] = GETUTCDATE()
     WHERE
         [OrganizationId] = @OrganizationId
 END

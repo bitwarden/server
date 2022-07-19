@@ -9,5 +9,7 @@ CREATE TABLE [dbo].[OrganizationSecretsManager](
     [MaxAutoscaleUserSeats] [int] NULL,
     [MaxAutoscaleServiceAccounts] [int] NULL,
     [MaxProjects] [int] NULL,
-    [RevisionDate] DATETIME NULL
+    [RevisionDate] DATETIME NULL,
+    CONSTRAINT [PK_OrganizationSecretsManager] PRIMARY KEY CLUSTERED ([Id] ASC),
+    CONSTRAINT [FK_OrganizationSecretsManager_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id])
 ) 

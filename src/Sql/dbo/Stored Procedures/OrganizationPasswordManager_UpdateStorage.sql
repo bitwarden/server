@@ -63,5 +63,13 @@ BEGIN
         [Storage] = (ISNULL(@AttachmentStorage, 0) + ISNULL(@SendStorage, 0)),
         [RevisionDate] = GETUTCDATE()
     WHERE
+        [OrganizationId] = @Id
+
+    UPDATE
+        [dbo].[Organization]
+    SET
+        [Storage] = (ISNULL(@AttachmentStorage, 0) + ISNULL(@SendStorage, 0)),
+        [RevisionDate] = GETUTCDATE()
+    WHERE
         [Id] = @Id
 END

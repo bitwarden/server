@@ -10,5 +10,7 @@ CREATE TABLE [dbo].[OrganizationPasswordManager](
     [Storage] [bigint] NULL,
     [MaxStorageGb] [smallint] NULL,
     [MaxAutoscaleSeats] [int] NULL,
-    [RevisionDate] DATETIME NULL
-) 
+    [RevisionDate] DATETIME NULL,
+    CONSTRAINT [PK_OrganizationPasswordManager] PRIMARY KEY CLUSTERED ([Id] ASC),
+    CONSTRAINT [FK_OrganizationPasswordManager_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id])
+)
