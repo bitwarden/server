@@ -55,3 +55,4 @@ BEGIN
         [RevisionDate] = GETUTCDATE()
     WHERE Id = @OrganizationId
 END
+
