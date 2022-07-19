@@ -103,6 +103,9 @@ namespace Bit.Setup
         [Description("Enable Key Connector (https://bitwarden.com/help/article/deploy-key-connector)")]
         public bool EnableKeyConnector { get; set; } = false;
 
+        [Description("Enable SCIM")]
+        public bool EnableScim { get; set; } = false;
+
         [YamlIgnore]
         public string Domain
         {

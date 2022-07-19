@@ -1,6 +1,5 @@
 ﻿using Bit.Api.Controllers;
 using Bit.Api.Models.Request;
-using Bit.Api.Test.AutoFixture.Attributes;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;

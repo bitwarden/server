@@ -13,6 +13,7 @@ namespace Bit.Api.Models.Response
             UsePolicies = organization.UsePolicies;
             UseSso = organization.UseSso;
             UseKeyConnector = organization.UseKeyConnector;
+            UseScim = organization.UseScim;
             UseGroups = organization.UseGroups;
             UseDirectory = organization.UseDirectory;
             UseEvents = organization.UseEvents;
