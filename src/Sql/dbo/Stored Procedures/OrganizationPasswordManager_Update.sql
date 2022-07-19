@@ -17,15 +17,31 @@ BEGIN
         [dbo].[OrganizationPasswordManager]
     SET
         [Plan] = @Plan,
-        PlanType = @PlanType,
-        Seats = @Seats,
-        MaxCollections = @MaxCollections,
-        UseTotp = @UseTotp,
-        UsersGetPremium = @UsersGetPremium,
-        Storage = @Storage,
-        MaxStorageGb = @MaxStorageGb,
-        MaxAutoscaleSeats = @MaxAutoscaleSeats,
-        RevisionDate = GETUTCDATE()
+        [PlanType] = @PlanType,
+        [Seats] = @Seats,
+        [MaxCollections] = @MaxCollections,
+        [UseTotp] = @UseTotp,
+        [UsersGetPremium] = @UsersGetPremium,
+        [Storage] = @Storage,
+        [MaxStorageGb] = @MaxStorageGb,
+        [MaxAutoscaleSeats] = @MaxAutoscaleSeats,
+        [RevisionDate] = GETUTCDATE()
     WHERE
-         [OrganizationId] = @OrganizationId
+        [OrganizationId] = @OrganizationId
+
+    UPDATE
+        [dbo].[Organization]
+    SET
+        [Plan] = @Plan,
+        [PlanType] = @PlanType,
+        [Seats] = @Seats,
+        [MaxCollections] = @MaxCollections,
+        [UseTotp] = @UseTotp,
+        [UsersGetPremium] = @UsersGetPremium,
+        [Storage] = @Storage,
+        [MaxStorageGb] = @MaxStorageGb,
+        [MaxAutoscaleSeats] = @MaxAutoscaleSeats,
+        [RevisionDate] = GETUTCDATE()
+    WHERE
+        [Id] = @OrganizationId
 END
