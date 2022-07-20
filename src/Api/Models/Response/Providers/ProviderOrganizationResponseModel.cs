@@ -38,6 +38,9 @@ namespace Bit.Api.Models.Response.Providers
             Settings = providerOrganization.Settings;
             CreationDate = providerOrganization.CreationDate;
             RevisionDate = providerOrganization.RevisionDate;
+            UserCount = providerOrganization.UserCount;
+            Seats = providerOrganization.Seats;
+            Plan = providerOrganization.Plan;
         }
 
         public Guid Id { get; set; }
@@ -47,6 +50,9 @@ namespace Bit.Api.Models.Response.Providers
         public string Settings { get; set; }
         public DateTime CreationDate { get; set; }
         public DateTime RevisionDate { get; set; }
+        public int? UserCount { get; set; }
+        public int? Seats { get; set; }
+        public string Plan { get; set; }
     }
 
     public class ProviderOrganizationOrganizationDetailsResponseModel : ProviderOrganizationResponseModel
