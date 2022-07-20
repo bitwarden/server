@@ -163,11 +163,12 @@ namespace Bit.Scim.Controllers.v2
 
             var operationHandled = false;
 
-            var replaceOp = model.Operations?.FirstOrDefault(o => o.Op == "replace");
+            var replaceOp = model.Operations?.FirstOrDefault(o =>
+                o.Op?.ToLowerInvariant() == "replace");
             if (replaceOp != null)
             {
                 // Replace a list of members
-                if (replaceOp.Path == "members")
+                if (replaceOp.Path?.ToLowerInvariant() == "members")
                 {
                     var ids = GetOperationValueIds(replaceOp.Value);
                     await _groupRepository.UpdateUsersAsync(group.Id, ids);
@@ -184,7 +185,9 @@ namespace Bit.Scim.Controllers.v2
 
             // Add a single member
             var addMemberOp = model.Operations?.FirstOrDefault(
-                o => o.Op == "add" && !string.IsNullOrWhiteSpace(o.Path) && o.Path.StartsWith("members[value eq "));
+                o => o.Op?.ToLowerInvariant() == "add" &&
+                !string.IsNullOrWhiteSpace(o.Path) &&
+                o.Path.ToLowerInvariant().StartsWith("members[value eq "));
             if (addMemberOp != null)
             {
                 var addId = GetOperationPathId(addMemberOp.Path);
@@ -198,7 +201,9 @@ namespace Bit.Scim.Controllers.v2
             }
 
             // Add a list of members
-            var addMembersOp = model.Operations?.FirstOrDefault(o => o.Op == "add" && o.Path == "members");
+            var addMembersOp = model.Operations?.FirstOrDefault(o =>
+                o.Op?.ToLowerInvariant() == "add" &&
+                o.Path?.ToLowerInvariant() == "members");
             if (addMembersOp != null)
             {
                 var orgUserIds = (await _groupRepository.GetManyUserIdsByIdAsync(group.Id)).ToHashSet();
@@ -212,7 +217,9 @@ namespace Bit.Scim.Controllers.v2
 
             // Remove a single member
             var removeMemberOp = model.Operations?.FirstOrDefault(
-                o => o.Op == "remove" && !string.IsNullOrWhiteSpace(o.Path) && o.Path.StartsWith("members[value eq "));
+                o => o.Op?.ToLowerInvariant() == "remove" &&
+                !string.IsNullOrWhiteSpace(o.Path) &&
+                o.Path.ToLowerInvariant().StartsWith("members[value eq "));
             if (removeMemberOp != null)
             {
                 var removeId = GetOperationPathId(removeMemberOp.Path);
@@ -224,7 +231,9 @@ namespace Bit.Scim.Controllers.v2
             }
 
             // Remove a list of members
-            var removeMembersOp = model.Operations?.FirstOrDefault(o => o.Op == "remove" && o.Path == "members");
+            var removeMembersOp = model.Operations?.FirstOrDefault(o =>
+                o.Op?.ToLowerInvariant() == "remove" &&
+                o.Path?.ToLowerInvariant() == "members");
             if (removeMembersOp != null)
             {
                 var orgUserIds = (await _groupRepository.GetManyUserIdsByIdAsync(group.Id)).ToHashSet();

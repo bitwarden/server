@@ -49,6 +49,7 @@
         public virtual MailSettings Mail { get; set; } = new MailSettings();
         public virtual IConnectionStringSettings Storage { get; set; } = new ConnectionStringSettings();
         public virtual ConnectionStringSettings Events { get; set; } = new ConnectionStringSettings();
+        public virtual IConnectionStringSettings Redis { get; set; } = new ConnectionStringSettings();
         public virtual NotificationsSettings Notifications { get; set; } = new NotificationsSettings();
         public virtual IFileStorageSettings Attachment { get; set; }
         public virtual FileStorageSettings Send { get; set; }
