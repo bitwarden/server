@@ -31,6 +31,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
         public DbSet<OrganizationUser> OrganizationUsers { get; set; }
         public DbSet<Policy> Policies { get; set; }
         public DbSet<Provider> Providers { get; set; }
+        public DbSet<Secret> Secret { get; set; }
         public DbSet<ProviderUser> ProviderUsers { get; set; }
         public DbSet<ProviderOrganization> ProviderOrganizations { get; set; }
         public DbSet<Send> Sends { get; set; }
@@ -70,6 +71,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             var eUser = builder.Entity<User>();
             var eOrganizationApiKey = builder.Entity<OrganizationApiKey>();
             var eOrganizationConnection = builder.Entity<OrganizationConnection>();
+            var eSecret = builder.Entity<Secret>();
 
             eCipher.Property(c => c.Id).ValueGeneratedNever();
             eCollection.Property(c => c.Id).ValueGeneratedNever();
@@ -90,6 +92,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             eUser.Property(c => c.Id).ValueGeneratedNever();
             eOrganizationApiKey.Property(c => c.Id).ValueGeneratedNever();
             eOrganizationConnection.Property(c => c.Id).ValueGeneratedNever();
+            eSecret.Property(c => c.Id).ValueGeneratedNever();
 
             eCollectionCipher.HasKey(cc => new { cc.CollectionId, cc.CipherId });
             eCollectionUser.HasKey(cu => new { cu.CollectionId, cu.OrganizationUserId });
@@ -97,6 +100,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             eGrant.HasKey(x => x.Key);
             eGroupUser.HasKey(gu => new { gu.GroupId, gu.OrganizationUserId });
 
+            eSecret.HasIndex(s => s.DeletedDate).IsClustered(false);
 
             if (Database.IsNpgsql())
             {
@@ -135,6 +139,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             eUser.ToTable(nameof(User));
             eOrganizationApiKey.ToTable(nameof(OrganizationApiKey));
             eOrganizationConnection.ToTable(nameof(OrganizationConnection));
+            eSecret.ToTable(nameof(Secret));
         }
     }
 }

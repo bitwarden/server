@@ -24,6 +24,7 @@ namespace MySqlMigrations
             var globalSettings = GlobalSettingsFactory.GlobalSettings;
             var optionsBuilder = new DbContextOptionsBuilder<DatabaseContext>();
             var connectionString = globalSettings.PostgreSql?.ConnectionString;
+            AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
             if (string.IsNullOrWhiteSpace(connectionString))
             {
                 throw new Exception("No Postgres connection string found.");

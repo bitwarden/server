@@ -59,21 +59,20 @@ namespace Bit.SharedWeb.Utilities
                         provider = SupportedDatabaseProviders.MySql;
                         connectionString = globalSettings.MySql.ConnectionString;
                         break;
+                    case "sqlserver":
+                        connectionString = globalSettings.SqlServer.ConnectionString;
+                        break;
                     default:
                         break;
                 }
             }
 
-            var useEf = (provider != SupportedDatabaseProviders.SqlServer);
-
-            if (useEf)
-            {
-                services.AddEFRepositories(globalSettings.SelfHosted, connectionString, provider);
-            }
-            else
+            if (provider == SupportedDatabaseProviders.SqlServer)
             {
                 services.AddDapperRepositories(globalSettings.SelfHosted);
             }
+
+            services.AddEFRepositories(globalSettings.SelfHosted, connectionString, provider);
 
             if (globalSettings.SelfHosted)
             {

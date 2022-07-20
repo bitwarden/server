@@ -30,37 +30,48 @@ namespace Bit.Infrastructure.EntityFramework
                 {
                     options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString));
                 }
+                else if (provider == SupportedDatabaseProviders.SqlServer)
+                {
+                    options.UseSqlServer(connectionString);
+                }
             });
-            services.AddSingleton<ICipherRepository, CipherRepository>();
-            services.AddSingleton<ICollectionCipherRepository, CollectionCipherRepository>();
-            services.AddSingleton<ICollectionRepository, CollectionRepository>();
-            services.AddSingleton<IDeviceRepository, DeviceRepository>();
-            services.AddSingleton<IEmergencyAccessRepository, EmergencyAccessRepository>();
-            services.AddSingleton<IFolderRepository, FolderRepository>();
-            services.AddSingleton<IGrantRepository, GrantRepository>();
-            services.AddSingleton<IGroupRepository, GroupRepository>();
-            services.AddSingleton<IInstallationRepository, InstallationRepository>();
-            services.AddSingleton<IMaintenanceRepository, MaintenanceRepository>();
-            services.AddSingleton<IOrganizationRepository, OrganizationRepository>();
-            services.AddSingleton<IOrganizationApiKeyRepository, OrganizationApiKeyRepository>();
-            services.AddSingleton<IOrganizationConnectionRepository, OrganizationConnectionRepository>();
-            services.AddSingleton<IOrganizationSponsorshipRepository, OrganizationSponsorshipRepository>();
-            services.AddSingleton<IOrganizationUserRepository, OrganizationUserRepository>();
-            services.AddSingleton<IPolicyRepository, PolicyRepository>();
-            services.AddSingleton<ISendRepository, SendRepository>();
-            services.AddSingleton<ISsoConfigRepository, SsoConfigRepository>();
-            services.AddSingleton<ISsoUserRepository, SsoUserRepository>();
-            services.AddSingleton<ITaxRateRepository, TaxRateRepository>();
-            services.AddSingleton<ITransactionRepository, TransactionRepository>();
-            services.AddSingleton<IUserRepository, UserRepository>();
-            services.AddSingleton<IProviderRepository, ProviderRepository>();
-            services.AddSingleton<IProviderUserRepository, ProviderUserRepository>();
-            services.AddSingleton<IProviderOrganizationRepository, ProviderOrganizationRepository>();
 
-            if (selfHosted)
+            if (provider != SupportedDatabaseProviders.SqlServer)
             {
-                services.AddSingleton<IEventRepository, EventRepository>();
+                services.AddSingleton<ICipherRepository, CipherRepository>();
+                services.AddSingleton<ICollectionCipherRepository, CollectionCipherRepository>();
+                services.AddSingleton<ICollectionRepository, CollectionRepository>();
+                services.AddSingleton<IDeviceRepository, DeviceRepository>();
+                services.AddSingleton<IEmergencyAccessRepository, EmergencyAccessRepository>();
+                services.AddSingleton<IFolderRepository, FolderRepository>();
+                services.AddSingleton<IGrantRepository, GrantRepository>();
+                services.AddSingleton<IGroupRepository, GroupRepository>();
+                services.AddSingleton<IInstallationRepository, InstallationRepository>();
+                services.AddSingleton<IMaintenanceRepository, MaintenanceRepository>();
+                services.AddSingleton<IOrganizationRepository, OrganizationRepository>();
+                services.AddSingleton<IOrganizationApiKeyRepository, OrganizationApiKeyRepository>();
+                services.AddSingleton<IOrganizationConnectionRepository, OrganizationConnectionRepository>();
+                services.AddSingleton<IOrganizationSponsorshipRepository, OrganizationSponsorshipRepository>();
+                services.AddSingleton<IOrganizationUserRepository, OrganizationUserRepository>();
+                services.AddSingleton<IPolicyRepository, PolicyRepository>();
+                services.AddSingleton<ISendRepository, SendRepository>();
+                services.AddSingleton<ISsoConfigRepository, SsoConfigRepository>();
+                services.AddSingleton<ISsoUserRepository, SsoUserRepository>();
+                services.AddSingleton<ITaxRateRepository, TaxRateRepository>();
+                services.AddSingleton<ITransactionRepository, TransactionRepository>();
+                services.AddSingleton<IUserRepository, UserRepository>();
+                services.AddSingleton<IProviderRepository, ProviderRepository>();
+                services.AddSingleton<IProviderUserRepository, ProviderUserRepository>();
+                services.AddSingleton<IProviderOrganizationRepository, ProviderOrganizationRepository>();
+
+                if (selfHosted)
+                {
+                    services.AddSingleton<IEventRepository, EventRepository>();
+                }
             }
+
+            // Entity Framework repositories to be used regardless of database provider.
+            services.AddSingleton<ISecretRepository, SecretRepository>();
         }
     }
 }
