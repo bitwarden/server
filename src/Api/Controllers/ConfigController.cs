@@ -18,11 +18,11 @@ namespace Bit.Api.Controllers
         public ConfigResponseModel GetConfigs()
         {
             ConfigResponseModel response = new ConfigResponseModel();
-            var gitHash = Assembly.GetEntryAssembly().GetCustomAttributes<AssemblyMetadataAttribute>();
+            var customAttributes = Assembly.GetEntryAssembly().GetCustomAttributes<AssemblyMetadataAttribute>();
 
-            if (gitHash.Count() > 0)
+            if (customAttributes.Count() > 0)
             {
-                response.GitHash = gitHash.Where(i => i.Key == GIT_HASH_ASSEMBLY_KEY).First().Value;
+                response.GitHash = customAttributes.Where(i => i.Key == GIT_HASH_ASSEMBLY_KEY).First().Value;
             }
 
             return response;
