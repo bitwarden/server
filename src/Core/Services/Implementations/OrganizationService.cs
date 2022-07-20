@@ -2216,18 +2216,18 @@ namespace Bit.Core.Services
         {
             if (organizationUser.Status == OrganizationUserStatusType.Deactivated)
             {
-                throw new BadRequestException("Already deactivated.");
+                throw new BadRequestException("Already revoked.");
             }
 
             if (disablingUserId.HasValue && organizationUser.UserId == disablingUserId.Value)
             {
-                throw new BadRequestException("You cannot deactivate yourself.");
+                throw new BadRequestException("You cannot revoke yourself.");
             }
 
             if (organizationUser.Type == OrganizationUserType.Owner && disablingUserId.HasValue &&
                 !await _currentContext.OrganizationOwner(organizationUser.OrganizationId))
             {
-                throw new BadRequestException("Only owners can deactivate other owners.");
+                throw new BadRequestException("Only owners can revoke other owners.");
             }
 
             if (!await HasConfirmedOwnersExceptAsync(organizationUser.OrganizationId, new[] { organizationUser.Id }))
@@ -2271,17 +2271,17 @@ namespace Bit.Core.Services
                 {
                     if (organizationUser.Status == OrganizationUserStatusType.Deactivated)
                     {
-                        throw new BadRequestException("Already deactivated.");
+                        throw new BadRequestException("Already revoked.");
                     }
 
                     if (disablingUserId.HasValue && organizationUser.UserId == disablingUserId)
                     {
-                        throw new BadRequestException("You cannot deactivate yourself.");
+                        throw new BadRequestException("You cannot revoke yourself.");
                     }
 
                     if (organizationUser.Type == OrganizationUserType.Owner && disablingUserId.HasValue && !deletingUserIsOwner)
                     {
-                        throw new BadRequestException("Only owners can deactivate other owners.");
+                        throw new BadRequestException("Only owners can revoke other owners.");
                     }
 
                     await _organizationUserRepository.DeactivateAsync(organizationUser.Id);
@@ -2308,13 +2308,13 @@ namespace Bit.Core.Services
 
             if (enablingUserId.HasValue && organizationUser.UserId == enablingUserId.Value)
             {
-                throw new BadRequestException("You cannot activate yourself.");
+                throw new BadRequestException("You cannot restore yourself.");
             }
 
             if (organizationUser.Type == OrganizationUserType.Owner && enablingUserId.HasValue &&
                 !await _currentContext.OrganizationOwner(organizationUser.OrganizationId))
             {
-                throw new BadRequestException("Only owners can activate other owners.");
+                throw new BadRequestException("Only owners can restore other owners.");
             }
 
             var status = GetPriorActiveOrganizationUserStatusType(organizationUser);
@@ -2355,12 +2355,12 @@ namespace Bit.Core.Services
 
                     if (enablingUserId.HasValue && organizationUser.UserId == enablingUserId)
                     {
-                        throw new BadRequestException("You cannot activate yourself.");
+                        throw new BadRequestException("You cannot restore yourself.");
                     }
 
                     if (organizationUser.Type == OrganizationUserType.Owner && enablingUserId.HasValue && !deletingUserIsOwner)
                     {
-                        throw new BadRequestException("Only owners can activate other owners.");
+                        throw new BadRequestException("Only owners can restore other owners.");
                     }
 
                     var status = GetPriorActiveOrganizationUserStatusType(organizationUser);
