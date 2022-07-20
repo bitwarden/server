@@ -235,7 +235,7 @@ jobs:
             dotnet: true
           - service_name: Scim
             base_path: ./bitwarden_license/src
-            docker_repos: [bitwardenqa.azurecr.io]
+            docker_repos: [bitwarden, bitwardenqa.azurecr.io]
             dotnet: true
     steps:
       - name: Checkout repo
