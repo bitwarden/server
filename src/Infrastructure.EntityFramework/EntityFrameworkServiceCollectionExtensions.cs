@@ -9,7 +9,7 @@ namespace Bit.Infrastructure.EntityFramework
 {
     public static class EntityFrameworkServiceCollectionExtensions
     {
-        public static void SetupEf(this IServiceCollection services, string connectionString, SupportedDatabaseProviders provider)
+        public static void SetupEntityFramework(this IServiceCollection services, string connectionString, SupportedDatabaseProviders provider)
         {
             if (string.IsNullOrWhiteSpace(connectionString))
             {
@@ -44,7 +44,7 @@ namespace Bit.Infrastructure.EntityFramework
         {
 
 
-            // TODO Please don't use this. trying to force build.
+            // TODO Look into moving away from this.
             LinqToDBForEFTools.Initialize();
 
             services.AddSingleton<ICipherRepository, CipherRepository>();

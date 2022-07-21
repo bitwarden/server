@@ -914,12 +914,14 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<string>("Value")
                         .HasColumnType("longtext");
 
-                    b.HasKey("Id");
+                    b.HasKey("Id")
+                        .HasAnnotation("SqlServer:Clustered", true);
 
                     b.HasIndex("DeletedDate")
                         .HasAnnotation("SqlServer:Clustered", false);
 
-                    b.HasIndex("OrganizationId");
+                    b.HasIndex("OrganizationId")
+                        .HasAnnotation("SqlServer:Clustered", false);
 
                     b.ToTable("Secret", (string)null);
                 });

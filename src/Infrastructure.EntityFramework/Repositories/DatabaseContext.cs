@@ -99,8 +99,10 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             eCollectionGroup.HasKey(cg => new { cg.CollectionId, cg.GroupId });
             eGrant.HasKey(x => x.Key);
             eGroupUser.HasKey(gu => new { gu.GroupId, gu.OrganizationUserId });
+            eSecret.HasKey(s => s.Id).IsClustered();
 
             eSecret.HasIndex(s => s.DeletedDate).IsClustered(false);
+            eSecret.HasIndex(s => s.OrganizationId).IsClustered(false);
 
             if (Database.IsNpgsql())
             {

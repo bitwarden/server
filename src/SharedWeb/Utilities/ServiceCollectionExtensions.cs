@@ -44,7 +44,8 @@ namespace Bit.SharedWeb.Utilities
         {
             var selectedDatabaseProvider = globalSettings.DatabaseProvider;
             var provider = SupportedDatabaseProviders.SqlServer;
-            var connectionString = globalSettings.SqlServer.ConnectionString;
+            var connectionString = string.Empty;
+            
             if (!string.IsNullOrWhiteSpace(selectedDatabaseProvider))
             {
                 switch (selectedDatabaseProvider.ToLowerInvariant())
@@ -59,13 +60,20 @@ namespace Bit.SharedWeb.Utilities
                         provider = SupportedDatabaseProviders.MySql;
                         connectionString = globalSettings.MySql.ConnectionString;
                         break;
+                    case "sqlserver":
+                        connectionString = globalSettings.SqlServer.ConnectionString;
+                        break;
                     default:
                         break;
                 }
             }
+            else{
+                // Default to attempting to use SqlServer connection string if globalSettings.DatabaseProvider has no value.
+                connectionString = globalSettings.SqlServer.ConnectionString;
+            }
 
 
-            services.SetupEf(connectionString, provider);
+            services.SetupEntityFramework(connectionString, provider);
 
             if (provider != SupportedDatabaseProviders.SqlServer)
             {
