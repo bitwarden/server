@@ -621,6 +621,7 @@ namespace Bit.Core.Services
                 UseResetPassword = plan.HasResetPassword,
                 SelfHost = plan.HasSelfHost,
                 UsersGetPremium = plan.UsersGetPremium || signup.PremiumAccessAddon,
+                UseScim = plan.HasScim,
                 Plan = plan.Name,
                 Gateway = null,
                 ReferenceData = signup.Owner.ReferenceData,
