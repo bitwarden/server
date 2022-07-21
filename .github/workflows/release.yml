@@ -165,6 +165,7 @@ jobs:
           - service_name: Server
           - service_name: Setup
           - service_name: Sso
+          - service_name: Scim
     steps:
       - name: Print environment
         env:
@@ -278,7 +279,7 @@ jobs:
           artifacts: "docker-stub.zip,
                       docker-stub-sha256.txt,
                       swagger.json"
-      
+
       - name: Download latest Release docker-stub
         if: ${{ github.event.inputs.release_type == 'Dry Run' }}
         uses: bitwarden/gh-actions/download-artifacts@c1fa8e09871a860862d6bbe36184b06d2c7e35a8
