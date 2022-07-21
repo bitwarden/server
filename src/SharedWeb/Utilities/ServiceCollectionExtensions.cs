@@ -45,7 +45,7 @@ namespace Bit.SharedWeb.Utilities
             var selectedDatabaseProvider = globalSettings.DatabaseProvider;
             var provider = SupportedDatabaseProviders.SqlServer;
             var connectionString = string.Empty;
-            
+
             if (!string.IsNullOrWhiteSpace(selectedDatabaseProvider))
             {
                 switch (selectedDatabaseProvider.ToLowerInvariant())
@@ -67,7 +67,8 @@ namespace Bit.SharedWeb.Utilities
                         break;
                 }
             }
-            else{
+            else
+            {
                 // Default to attempting to use SqlServer connection string if globalSettings.DatabaseProvider has no value.
                 connectionString = globalSettings.SqlServer.ConnectionString;
             }
