@@ -1187,7 +1187,9 @@ namespace Bit.Core.Services
 
             if (!string.IsNullOrWhiteSpace(subscriber.GatewayCustomerId))
             {
-                customer = await _stripeAdapter.CustomerGetAsync(subscriber.GatewayCustomerId);
+                var options = new Stripe.CustomerGetOptions();
+                options.AddExpand("sources");
+                customer = await _stripeAdapter.CustomerGetAsync(subscriber.GatewayCustomerId, options);
                 if (customer.Metadata?.Any() ?? false)
                 {
                     stripeCustomerMetadata = customer.Metadata;
@@ -1386,6 +1388,7 @@ namespace Bit.Core.Services
                             }
                         }
                     }
+
                     var cardPaymentMethods = _stripeAdapter.PaymentMethodListAutoPaging(new Stripe.PaymentMethodListOptions
                     {
                         Customer = customer.Id,
