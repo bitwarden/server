@@ -44,7 +44,7 @@ namespace Bit.SharedWeb.Utilities
         {
             var selectedDatabaseProvider = globalSettings.DatabaseProvider;
             var provider = SupportedDatabaseProviders.SqlServer;
-            var connectionString = string.Empty;
+            var connectionString = globalSettings.SqlServer.ConnectionString;
             if (!string.IsNullOrWhiteSpace(selectedDatabaseProvider))
             {
                 switch (selectedDatabaseProvider.ToLowerInvariant())
@@ -58,9 +58,6 @@ namespace Bit.SharedWeb.Utilities
                     case "mariadb":
                         provider = SupportedDatabaseProviders.MySql;
                         connectionString = globalSettings.MySql.ConnectionString;
-                        break;
-                    case "sqlserver":
-                        connectionString = globalSettings.SqlServer.ConnectionString;
                         break;
                     default:
                         break;
