@@ -196,6 +196,8 @@ jobs:
         with:
           azure-creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
           azure-keyvault-name: "bitwarden-prod-kv"
+
+      - name: Check for DCT value
         run: |
           if [[ "${{ matrix.skip_dct }}" == "true" ]]; then
             echo "::set-output name=dct_enabled::0"
