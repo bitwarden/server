@@ -67,12 +67,18 @@ namespace Bit.SharedWeb.Utilities
                 }
             }
 
-            if (provider == SupportedDatabaseProviders.SqlServer)
+
+            services.SetupEf(connectionString, provider);
+
+            if (provider != SupportedDatabaseProviders.SqlServer)
+            {
+                services.AddPasswordManagerEFRepositories(globalSettings.SelfHosted);
+            }
+            else
             {
                 services.AddDapperRepositories(globalSettings.SelfHosted);
             }
-
-            services.AddEFRepositories(globalSettings.SelfHosted, connectionString, provider);
+            services.AddSecretsManagerEFRepositories();
 
             if (globalSettings.SelfHosted)
             {

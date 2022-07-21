@@ -9,14 +9,12 @@ namespace Bit.Infrastructure.EntityFramework
 {
     public static class EntityFrameworkServiceCollectionExtensions
     {
-        public static void AddEFRepositories(this IServiceCollection services, bool selfHosted, string connectionString,
-            SupportedDatabaseProviders provider)
+        public static void SetupEf(this IServiceCollection services, string connectionString, SupportedDatabaseProviders provider)
         {
             if (string.IsNullOrWhiteSpace(connectionString))
             {
                 throw new Exception($"Database provider type {provider} was selected but no connection string was found.");
             }
-            LinqToDBForEFTools.Initialize();
             services.AddAutoMapper(typeof(UserRepository));
             services.AddDbContext<DatabaseContext>(options =>
             {
@@ -35,43 +33,50 @@ namespace Bit.Infrastructure.EntityFramework
                     options.UseSqlServer(connectionString);
                 }
             });
+        }
 
-            if (provider != SupportedDatabaseProviders.SqlServer)
-            {
-                services.AddSingleton<ICipherRepository, CipherRepository>();
-                services.AddSingleton<ICollectionCipherRepository, CollectionCipherRepository>();
-                services.AddSingleton<ICollectionRepository, CollectionRepository>();
-                services.AddSingleton<IDeviceRepository, DeviceRepository>();
-                services.AddSingleton<IEmergencyAccessRepository, EmergencyAccessRepository>();
-                services.AddSingleton<IFolderRepository, FolderRepository>();
-                services.AddSingleton<IGrantRepository, GrantRepository>();
-                services.AddSingleton<IGroupRepository, GroupRepository>();
-                services.AddSingleton<IInstallationRepository, InstallationRepository>();
-                services.AddSingleton<IMaintenanceRepository, MaintenanceRepository>();
-                services.AddSingleton<IOrganizationRepository, OrganizationRepository>();
-                services.AddSingleton<IOrganizationApiKeyRepository, OrganizationApiKeyRepository>();
-                services.AddSingleton<IOrganizationConnectionRepository, OrganizationConnectionRepository>();
-                services.AddSingleton<IOrganizationSponsorshipRepository, OrganizationSponsorshipRepository>();
-                services.AddSingleton<IOrganizationUserRepository, OrganizationUserRepository>();
-                services.AddSingleton<IPolicyRepository, PolicyRepository>();
-                services.AddSingleton<ISendRepository, SendRepository>();
-                services.AddSingleton<ISsoConfigRepository, SsoConfigRepository>();
-                services.AddSingleton<ISsoUserRepository, SsoUserRepository>();
-                services.AddSingleton<ITaxRateRepository, TaxRateRepository>();
-                services.AddSingleton<ITransactionRepository, TransactionRepository>();
-                services.AddSingleton<IUserRepository, UserRepository>();
-                services.AddSingleton<IProviderRepository, ProviderRepository>();
-                services.AddSingleton<IProviderUserRepository, ProviderUserRepository>();
-                services.AddSingleton<IProviderOrganizationRepository, ProviderOrganizationRepository>();
-
-                if (selfHosted)
-                {
-                    services.AddSingleton<IEventRepository, EventRepository>();
-                }
-            }
-
-            // Entity Framework repositories to be used regardless of database provider.
+        public static void AddSecretsManagerEFRepositories(this IServiceCollection services)
+        {
             services.AddSingleton<ISecretRepository, SecretRepository>();
+        }
+
+        public static void AddPasswordManagerEFRepositories(this IServiceCollection services, bool selfHosted)
+        {
+
+
+            // TODO Please don't use this.
+            LinqToDBForEFTools.Initialize();
+
+            services.AddSingleton<ICipherRepository, CipherRepository>();
+            services.AddSingleton<ICollectionCipherRepository, CollectionCipherRepository>();
+            services.AddSingleton<ICollectionRepository, CollectionRepository>();
+            services.AddSingleton<IDeviceRepository, DeviceRepository>();
+            services.AddSingleton<IEmergencyAccessRepository, EmergencyAccessRepository>();
+            services.AddSingleton<IFolderRepository, FolderRepository>();
+            services.AddSingleton<IGrantRepository, GrantRepository>();
+            services.AddSingleton<IGroupRepository, GroupRepository>();
+            services.AddSingleton<IInstallationRepository, InstallationRepository>();
+            services.AddSingleton<IMaintenanceRepository, MaintenanceRepository>();
+            services.AddSingleton<IOrganizationRepository, OrganizationRepository>();
+            services.AddSingleton<IOrganizationApiKeyRepository, OrganizationApiKeyRepository>();
+            services.AddSingleton<IOrganizationConnectionRepository, OrganizationConnectionRepository>();
+            services.AddSingleton<IOrganizationSponsorshipRepository, OrganizationSponsorshipRepository>();
+            services.AddSingleton<IOrganizationUserRepository, OrganizationUserRepository>();
+            services.AddSingleton<IPolicyRepository, PolicyRepository>();
+            services.AddSingleton<ISendRepository, SendRepository>();
+            services.AddSingleton<ISsoConfigRepository, SsoConfigRepository>();
+            services.AddSingleton<ISsoUserRepository, SsoUserRepository>();
+            services.AddSingleton<ITaxRateRepository, TaxRateRepository>();
+            services.AddSingleton<ITransactionRepository, TransactionRepository>();
+            services.AddSingleton<IUserRepository, UserRepository>();
+            services.AddSingleton<IProviderRepository, ProviderRepository>();
+            services.AddSingleton<IProviderUserRepository, ProviderUserRepository>();
+            services.AddSingleton<IProviderOrganizationRepository, ProviderOrganizationRepository>();
+
+            if (selfHosted)
+            {
+                services.AddSingleton<IEventRepository, EventRepository>();
+            }
         }
     }
 }
