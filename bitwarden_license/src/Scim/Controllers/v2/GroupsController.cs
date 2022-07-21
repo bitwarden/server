@@ -319,10 +319,13 @@ namespace Bit.Scim.Controllers.v2
                     memberIds.Add(guidId);
                 }
             }
+
             if (!memberIds.Any() && skipIfEmpty)
             {
-                await _groupRepository.UpdateUsersAsync(group.Id, memberIds);
+                return;
             }
+
+            await _groupRepository.UpdateUsersAsync(group.Id, memberIds);
         }
     }
 }
