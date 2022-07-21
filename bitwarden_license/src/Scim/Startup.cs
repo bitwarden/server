@@ -31,6 +31,9 @@ namespace Bit.Scim
             // Settings
             var globalSettings = services.AddGlobalSettingsServices(Configuration, Environment);
             services.Configure<ScimSettings>(Configuration.GetSection("ScimSettings"));
+            
+            // Data Protection
+            services.AddCustomDataProtectionServices(Environment, globalSettings);
 
             // Stripe Billing
             StripeConfiguration.ApiKey = globalSettings.Stripe.ApiKey;
