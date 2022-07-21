@@ -220,7 +220,8 @@ namespace Bit.Scim.Controllers.v2
 
             var operationHandled = false;
 
-            var replaceOp = model.Operations?.FirstOrDefault(o => o.Op == "replace");
+            var replaceOp = model.Operations?.FirstOrDefault(o =>
+                o.Op?.ToLowerInvariant() == "replace");
             if (replaceOp != null)
             {
                 if (replaceOp.Value.TryGetProperty("active", out var activeProperty))
