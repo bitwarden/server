@@ -34,16 +34,19 @@
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.3.1" />
   </ItemGroup>
 
-  <Target Name="SetSourceRevisionId" BeforeTargets="InitializeSourceControlInformation">
+  <Target Name="SetSourceRevisionId" BeforeTargets="CoreGenerateAssemblyInfo">
     <Exec Command="git describe --long --always --dirty --exclude=* --abbrev=8" ConsoleToMSBuild="True" IgnoreExitCode="False">
       <Output PropertyName="SourceRevisionId" TaskParameter="ConsoleOutput" />
     </Exec>
   </Target>
 
-  <Target Name="SetGitHash" AfterTargets="InitializeSourceControlInformation">
+  <Target Name="WriteRevision" AfterTargets="SetSourceRevisionId">
     <ItemGroup>
-      <AssemblyMetadata Include="GitHash" Value="$(SourceRevisionId)" />
+      <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+        <_Parameter1>GitHash</_Parameter1>
+        <_Parameter2>$(SourceRevisionId)</_Parameter2>
+      </AssemblyAttribute>
     </ItemGroup>
   </Target>
-  
+
 </Project>
