@@ -44,7 +44,7 @@ namespace Bit.Infrastructure.EntityFramework
         {
 
 
-            // TODO Please don't use this.
+            // TODO Please don't use this. trying to force build.
             LinqToDBForEFTools.Initialize();
 
             services.AddSingleton<ICipherRepository, CipherRepository>();
