@@ -155,6 +155,7 @@ jobs:
           - service_name: Setup
           - service_name: Sso
           - service_name: Scim
+            skip_dct: true
     steps:
       - name: Print environment
         env:
@@ -185,6 +186,15 @@ jobs:
           azure-creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
           azure-keyvault-name: "bitwarden-prod-kv"
 
+      - name: Check for DCT value
+        id: check-matrix-dct
+        run: |
+          if [[ "${{ matrix.skip_dct }}" == "true" ]]; then
+            echo "::set-output name=dct_enabled::0"
+          else
+            echo "::set-output name=dct_enabled::1"
+          fi
+
       - name: Pull latest selfhost image
         env:
           SERVICE_NAME: ${{ steps.setup.outputs.service_name }}
@@ -208,7 +218,7 @@ jobs:
       - name: Push version and latest image
         if: ${{ github.event.inputs.release_type != 'Dry Run' }}
         env:
-          DOCKER_CONTENT_TRUST: 1
+          DOCKER_CONTENT_TRUST: ${{ steps.check-matrix-dct.outputs.dct_enabled }}
           DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ steps.setup-dct.outputs.dct-delegate-repo-passphrase }}
           SERVICE_NAME: ${{ steps.setup.outputs.service_name }}
         run: |
