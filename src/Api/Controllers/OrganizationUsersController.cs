@@ -373,6 +373,38 @@ namespace Bit.Api.Controllers
                 new OrganizationUserBulkResponseModel(r.Item1.Id, r.Item2)));
         }
 
+        [Obsolete("2022-07-22 Moved to /revoke endpoint")]
+        [HttpPatch("{id}/deactivate")]
+        [HttpPut("{id}/deactivate")]
+        public async Task DeactivateAsync(Guid orgId, Guid id)
+        {
+            await RevokeAsync(orgId, id);
+        }
+
+        [Obsolete("2022-07-22 Moved to /revoke endpoint")]
+        [HttpPatch("{id}/deactivate")]
+        [HttpPut("{id}/deactivate")]
+        public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkDeactivateAsync(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
+        {
+            return await BulkRevokeAsync(orgId, model);
+        }
+
+        [Obsolete("2022-07-22 Moved to /restore endpoint")]
+        [HttpPatch("{id}/activate")]
+        [HttpPut("{id}/activate")]
+        public async Task ActivateAsync(Guid orgId, Guid id)
+        {
+            await RestoreAsync(orgId, id);
+        }
+
+        [Obsolete("2022-07-22 Moved to /restore endpoint")]
+        [HttpPatch("{id}/activate")]
+        [HttpPut("{id}/activate")]
+        public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkActivateAsync(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
+        {
+            return await BulkRestoreAsync(orgId, model);
+        }
+        
         [HttpPatch("{id}/revoke")]
         [HttpPut("{id}/revoke")]
         public async Task RevokeAsync(Guid orgId, Guid id)
