@@ -9,8 +9,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.MySqlMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20220719191914_RevokedUserStatus")]
-    partial class RevokedUserStatus
+    [Migration("20220608191914_DeactivatedUserStatus")]
+    partial class DeactivatedUserStatus
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {

@@ -1,5 +1,6 @@
-CREATE PROCEDURE [dbo].[OrganizationUser_Revoke]
-    @Id UNIQUEIDENTIFIER
+CREATE PROCEDURE [dbo].[OrganizationUser_Activate]
+    @Id UNIQUEIDENTIFIER,
+    @Status SMALLINT
 AS
 BEGIN
     SET NOCOUNT ON
@@ -7,9 +8,10 @@ BEGIN
     UPDATE
         [dbo].[OrganizationUser]
     SET
-        [Status] = -1 -- Revoked
+        [Status] = @Status
     WHERE
         [Id] = @Id
+        AND [Status] = -1 -- Deactivated
 
     EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationUserId] @Id
 END
