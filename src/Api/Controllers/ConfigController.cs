@@ -8,23 +8,24 @@ namespace Bit.Api.Controllers
     [Route("config")]
     public class ConfigController : Controller
     {
-        private readonly IGlobalSettings _globalSettings;
         private const string GIT_HASH_ASSEMBLY_KEY = "GitHash";
+        private readonly IGlobalSettings _globalSettings;
+        private readonly IEnumerable<AssemblyMetadataAttribute> _assemblyMetadataAttributes;
 
         public ConfigController(IGlobalSettings globalSettings)
         {
             _globalSettings = globalSettings;
+            _assemblyMetadataAttributes = Assembly.GetEntryAssembly().GetCustomAttributes<AssemblyMetadataAttribute>();
         }
 
         [HttpGet("")]
         public ConfigResponseModel GetConfigs()
         {
             ConfigResponseModel response = new ConfigResponseModel();
-            var customAttributes = Assembly.GetEntryAssembly().GetCustomAttributes<AssemblyMetadataAttribute>();
 
-            if (customAttributes.Count() > 0)
+            if (_assemblyMetadataAttributes.Count() > 0)
             {
-                response.GitHash = customAttributes.Where(i => i.Key == GIT_HASH_ASSEMBLY_KEY).First().Value;
+                response.GitHash = _assemblyMetadataAttributes.Where(i => i.Key == GIT_HASH_ASSEMBLY_KEY).First().Value;
             }
 
             response.Environment.Api = _globalSettings.BaseServiceUri.Api;
