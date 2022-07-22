@@ -376,15 +376,15 @@ namespace Bit.Api.Controllers
         [Obsolete("2022-07-22 Moved to /revoke endpoint")]
         [HttpPatch("{id}/deactivate")]
         [HttpPut("{id}/deactivate")]
-        public async Task DeactivateAsync(Guid orgId, Guid id)
+        public async Task Deactivate(Guid orgId, Guid id)
         {
             await RevokeAsync(orgId, id);
         }
 
         [Obsolete("2022-07-22 Moved to /revoke endpoint")]
-        [HttpPatch("{id}/deactivate")]
-        [HttpPut("{id}/deactivate")]
-        public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkDeactivateAsync(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
+        [HttpPatch("deactivate")]
+        [HttpPut("deactivate")]
+        public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkDeactivate(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
         {
             return await BulkRevokeAsync(orgId, model);
         }
@@ -398,10 +398,9 @@ namespace Bit.Api.Controllers
         }
 
         [Obsolete("2022-07-22 Moved to /restore endpoint")]
-        [HttpPatch("{id}/activate")]
-        [HttpPut("{id}/activate")]
-        public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkActivateAsync(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
-        {
+        [HttpPatch("activate")]
+        [HttpPut("activate")]
+        public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkActivate(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)        {
             return await BulkRestoreAsync(orgId, model);
         }
         
