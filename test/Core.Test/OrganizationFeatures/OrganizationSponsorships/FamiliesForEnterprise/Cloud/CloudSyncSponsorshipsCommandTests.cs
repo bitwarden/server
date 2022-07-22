@@ -90,6 +90,7 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
             Organization sponsoringOrganization, OrganizationSponsorship existingSponsorship, OrganizationSponsorship newSponsorship)
         {
             // Arrange
+            sponsoringOrganization.Enabled = true;
             sponsoringOrganization.PlanType = PlanType.EnterpriseAnnually;
 
             existingSponsorship.ToDelete = false;

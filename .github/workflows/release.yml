@@ -76,11 +76,21 @@ jobs:
           echo "::set-output name=name_lower::$NAME_LOWER"
 
       - name: Download latest Release ${{ matrix.name }} asset
+        if: ${{ github.event.inputs.release_type != 'Dry Run' }}
         uses: bitwarden/gh-actions/download-artifacts@c1fa8e09871a860862d6bbe36184b06d2c7e35a8
         with:
           workflow: build.yml
           workflow_conclusion: success
           branch: ${{ needs.setup.outputs.branch-name }}
+          artifacts: ${{ matrix.name }}.zip
+
+      - name: Download latest Release ${{ matrix.name }} asset
+        if: ${{ github.event.inputs.release_type == 'Dry Run' }}
+        uses: bitwarden/gh-actions/download-artifacts@c1fa8e09871a860862d6bbe36184b06d2c7e35a8
+        with:
+          workflow: build.yml
+          workflow_conclusion: success
+          branch: master
           artifacts: ${{ matrix.name }}.zip
 
       - name: Login to Azure
@@ -117,6 +127,7 @@ jobs:
           slot-name: "staging"
 
       - name: Start staging slot
+        if: ${{ github.event.inputs.release_type != 'Dry Run' }}
         env:
           SERVICE: ${{ matrix.name }}
           WEBAPP_NAME: ${{ steps.retrieve-secrets.outputs.webapp-name }}
@@ -154,6 +165,8 @@ jobs:
           - service_name: Server
           - service_name: Setup
           - service_name: Sso
+          - service_name: Scim
+            skip_dct: true
     steps:
       - name: Print environment
         env:
@@ -184,6 +197,15 @@ jobs:
           azure-creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
           azure-keyvault-name: "bitwarden-prod-kv"
 
+      - name: Check for DCT value
+        id: check-matrix-dct
+        run: |
+          if [[ "${{ matrix.skip_dct }}" == "true" ]]; then
+            echo "::set-output name=dct_enabled::0"
+          else
+            echo "::set-output name=dct_enabled::1"
+          fi
+
       - name: Pull latest selfhost image
         env:
           SERVICE_NAME: ${{ steps.setup.outputs.service_name }}
@@ -202,18 +224,16 @@ jobs:
             docker tag bitwarden/$SERVICE_NAME:latest bitwarden/$SERVICE_NAME:dryrun
           else
             docker tag bitwarden/$SERVICE_NAME:$_BRANCH_NAME bitwarden/$SERVICE_NAME:$_RELEASE_VERSION
-            docker tag bitwarden/$SERVICE_NAME:$_BRANCH_NAME bitwarden/$SERVICE_NAME:latest
           fi
 
       - name: Push version and latest image
         if: ${{ github.event.inputs.release_type != 'Dry Run' }}
         env:
-          DOCKER_CONTENT_TRUST: 1
+          DOCKER_CONTENT_TRUST: ${{ steps.check-matrix-dct.outputs.dct_enabled }}
           DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ steps.setup-dct.outputs.dct-delegate-repo-passphrase }}
           SERVICE_NAME: ${{ steps.setup.outputs.service_name }}
         run: |
           docker push bitwarden/$SERVICE_NAME:$_RELEASE_VERSION
-          docker push bitwarden/$SERVICE_NAME:latest
 
       - name: Log out of Docker and disable Docker Notary
         run: |
@@ -238,7 +258,6 @@ jobs:
             docker tag bitwarden/$SERVICE_NAME:latest $REGISTRY/$SERVICE_NAME:dryrun
           else
             docker tag bitwarden/$SERVICE_NAME:$_BRANCH_NAME $REGISTRY/$SERVICE_NAME:$_RELEASE_VERSION
-            docker tag bitwarden/$SERVICE_NAME:$_BRANCH_NAME $REGISTRY/$SERVICE_NAME:latest
           fi
 
       - name: Push version and latest image
@@ -248,7 +267,6 @@ jobs:
           REGISTRY: bitwardenqa.azurecr.io
         run: |
           docker push $REGISTRY/$SERVICE_NAME:$_RELEASE_VERSION
-          docker push $REGISTRY/$SERVICE_NAME:latest
 
       - name: Log out of Docker
         run: docker logout
@@ -278,11 +296,23 @@ jobs:
           deployment-id: ${{ steps.deployment.outputs.deployment_id }}
 
       - name: Download latest Release docker-stub
+        if: ${{ github.event.inputs.release_type != 'Dry Run' }}
         uses: bitwarden/gh-actions/download-artifacts@c1fa8e09871a860862d6bbe36184b06d2c7e35a8
         with:
           workflow: build.yml
           workflow_conclusion: success
           branch: ${{ needs.setup.outputs.branch-name }}
+          artifacts: "docker-stub.zip,
+                      docker-stub-sha256.txt,
+                      swagger.json"
+
+      - name: Download latest Release docker-stub
+        if: ${{ github.event.inputs.release_type == 'Dry Run' }}
+        uses: bitwarden/gh-actions/download-artifacts@c1fa8e09871a860862d6bbe36184b06d2c7e35a8
+        with:
+          workflow: build.yml
+          workflow_conclusion: success
+          branch: master
           artifacts: "docker-stub.zip,
                       docker-stub-sha256.txt,
                       swagger.json"
