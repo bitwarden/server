@@ -8,6 +8,7 @@ SELECT
     O.[UsePolicies],
     O.[UseSso],
     O.[UseKeyConnector],
+    O.[UseScim],
     O.[UseGroups],
     O.[UseDirectory],
     O.[UseEvents],

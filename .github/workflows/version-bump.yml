@@ -19,12 +19,6 @@ jobs:
       - name: Create Version Branch
         run: |
           git switch -c version_bump_${{ github.event.inputs.version_number }}
-          git push -u origin version_bump_${{ github.event.inputs.version_number }}
-
-      - name: Checkout Version Branch
-        uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579
-        with:
-          ref: version_bump_${{ github.event.inputs.version_number }}
 
       - name: Bump Version - Props
         uses: bitwarden/gh-actions/version-bump@6a42772f8849107fd457cf47cd9c7e224be44e55
@@ -32,16 +26,32 @@ jobs:
           version: ${{ github.event.inputs.version_number }}
           file_path: "Directory.Build.props"
 
-      - name: Commit files
+      - name: Setup git
         run: |
           git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
+
+      - name: Check if version changed
+        id: version-changed
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "::set-output name=changes_to_commit::TRUE"
+          else
+            echo "::set-output name=changes_to_commit::FALSE"
+            echo "No changes to commit!";
+          fi
+
+      - name: Commit files
+        if: ${{ steps.version-changed.outputs.changes_to_commit == 'TRUE' }}
+        run: |
           git commit -m "Bumped version to ${{ github.event.inputs.version_number }}" -a
 
       - name: Push changes
+        if: ${{ steps.version-changed.outputs.changes_to_commit == 'TRUE' }}
         run: git push -u origin version_bump_${{ github.event.inputs.version_number }}
 
       - name: Create Version PR
+        if: ${{ steps.version-changed.outputs.changes_to_commit == 'TRUE' }}
         env:
           PR_BRANCH: "version_bump_${{ github.event.inputs.version_number }}"
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"

@@ -344,6 +344,12 @@ namespace Bit.Core.Context
                         && (o.Permissions?.ManageSso ?? false)) ?? false);
         }
 
+        public async Task<bool> ManageScim(Guid orgId)
+        {
+            return await OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
+                        && (o.Permissions?.ManageScim ?? false)) ?? false);
+        }
+
         public async Task<bool> ManageUsers(Guid orgId)
         {
             return await OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
@@ -469,7 +475,8 @@ namespace Bit.Core.Context
                 ManagePolicies = hasClaim("managepolicies"),
                 ManageSso = hasClaim("managesso"),
                 ManageUsers = hasClaim("manageusers"),
-                ManageResetPassword = hasClaim("manageresetpassword")
+                ManageResetPassword = hasClaim("manageresetpassword"),
+                ManageScim = hasClaim("managescim"),
             };
         }
 

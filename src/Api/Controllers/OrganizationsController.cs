@@ -493,7 +493,7 @@ namespace Bit.Api.Controllers
         public async Task<ApiKeyResponseModel> ApiKey(string id, [FromBody] OrganizationApiKeyRequestModel model)
         {
             var orgIdGuid = new Guid(id);
-            if (!await _currentContext.OrganizationOwner(orgIdGuid))
+            if (!await HasApiKeyAccessAsync(orgIdGuid, model.Type))
             {
                 throw new NotFoundException();
             }
@@ -504,9 +504,9 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            if (model.Type == OrganizationApiKeyType.BillingSync)
+            if (model.Type == OrganizationApiKeyType.BillingSync || model.Type == OrganizationApiKeyType.Scim)
             {
-                // Non-enterprise orgs should not be able to create or view an apikey of billing sync key type
+                // Non-enterprise orgs should not be able to create or view an apikey of billing sync/scim key types
                 var plan = StaticStore.GetPlan(organization.PlanType);
                 if (plan.Product != ProductType.Enterprise)
                 {
@@ -523,7 +523,8 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
-            if (!await _userService.VerifySecretAsync(user, model.Secret))
+            if (model.Type != OrganizationApiKeyType.Scim
+                && !await _userService.VerifySecretAsync(user, model.Secret))
             {
                 await Task.Delay(2000);
                 throw new BadRequestException("MasterPasswordHash", "Invalid password.");
@@ -535,15 +536,15 @@ namespace Bit.Api.Controllers
             }
         }
 
-        [HttpGet("{id}/api-key-information")]
-        public async Task<ListResponseModel<OrganizationApiKeyInformation>> ApiKeyInformation(Guid id)
+        [HttpGet("{id}/api-key-information/{type?}")]
+        public async Task<ListResponseModel<OrganizationApiKeyInformation>> ApiKeyInformation(Guid id, OrganizationApiKeyType? type)
         {
-            if (!await _currentContext.OrganizationOwner(id))
+            if (!await HasApiKeyAccessAsync(id, type))
             {
                 throw new NotFoundException();
             }
 
-            var apiKeys = await _organizationApiKeyRepository.GetManyByOrganizationIdTypeAsync(id);
+            var apiKeys = await _organizationApiKeyRepository.GetManyByOrganizationIdTypeAsync(id, type);
 
             return new ListResponseModel<OrganizationApiKeyInformation>(
                 apiKeys.Select(k => new OrganizationApiKeyInformation(k)));
@@ -553,7 +554,7 @@ namespace Bit.Api.Controllers
         public async Task<ApiKeyResponseModel> RotateApiKey(string id, [FromBody] OrganizationApiKeyRequestModel model)
         {
             var orgIdGuid = new Guid(id);
-            if (!await _currentContext.OrganizationOwner(orgIdGuid))
+            if (!await HasApiKeyAccessAsync(orgIdGuid, model.Type))
             {
                 throw new NotFoundException();
             }
@@ -573,7 +574,8 @@ namespace Bit.Api.Controllers
                 throw new UnauthorizedAccessException();
             }
 
-            if (!await _userService.VerifySecretAsync(user, model.Secret))
+            if (model.Type != OrganizationApiKeyType.Scim
+                && !await _userService.VerifySecretAsync(user, model.Secret))
             {
                 await Task.Delay(2000);
                 throw new BadRequestException("MasterPasswordHash", "Invalid password.");
@@ -584,6 +586,15 @@ namespace Bit.Api.Controllers
                 var response = new ApiKeyResponseModel(organizationApiKey);
                 return response;
             }
+        }
+
+        private async Task<bool> HasApiKeyAccessAsync(Guid orgId, OrganizationApiKeyType? type)
+        {
+            return type switch
+            {
+                OrganizationApiKeyType.Scim => await _currentContext.ManageScim(orgId),
+                _ => await _currentContext.OrganizationOwner(orgId),
+            };
         }
 
         [HttpGet("{id}/tax")]

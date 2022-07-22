@@ -1,4 +1,6 @@
-﻿namespace Bit.Core.Services
+﻿using Bit.Core.Models.BitStripe;
+
+namespace Bit.Core.Services
 {
     public class StripeAdapter : IStripeAdapter
     {
@@ -12,6 +14,7 @@
         private readonly Stripe.RefundService _refundService;
         private readonly Stripe.CardService _cardService;
         private readonly Stripe.BankAccountService _bankAccountService;
+        private readonly Stripe.PriceService _priceService;
 
         public StripeAdapter()
         {
@@ -25,6 +28,7 @@
             _refundService = new Stripe.RefundService();
             _cardService = new Stripe.CardService();
             _bankAccountService = new Stripe.BankAccountService();
+            _priceService = new Stripe.PriceService();
         }
 
         public Task<Stripe.Customer> CustomerCreateAsync(Stripe.CustomerCreateOptions options)
@@ -63,7 +67,7 @@
             return _subscriptionService.UpdateAsync(id, options);
         }
 
-        public Task<Stripe.Subscription> SubscriptionCancelAsync(string Id, Stripe.SubscriptionCancelOptions options)
+        public Task<Stripe.Subscription> SubscriptionCancelAsync(string Id, Stripe.SubscriptionCancelOptions options = null)
         {
             return _subscriptionService.CancelAsync(Id, options);
         }
@@ -172,6 +176,27 @@
         public Task<Stripe.BankAccount> BankAccountDeleteAsync(string customerId, string bankAccount, Stripe.BankAccountDeleteOptions options = null)
         {
             return _bankAccountService.DeleteAsync(customerId, bankAccount, options);
+        }
+
+        public async Task<List<Stripe.Subscription>> SubscriptionListAsync(StripeSubscriptionListOptions options)
+        {
+            if (!options.SelectAll)
+            {
+                return (await _subscriptionService.ListAsync(options.ToStripeApiOptions())).Data;
+            }
+
+            options.Limit = 100;
+            var items = new List<Stripe.Subscription>();
+            await foreach (var i in _subscriptionService.ListAutoPagingAsync(options.ToStripeApiOptions()))
+            {
+                items.Add(i);
+            }
+            return items;
+        }
+
+        public async Task<Stripe.StripeList<Stripe.Price>> PriceListAsync(Stripe.PriceListOptions options = null)
+        {
+            return await _priceService.ListAsync(options);
         }
     }
 }
