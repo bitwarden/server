@@ -14,23 +14,6 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
 
         }
 
-        public override async Task ReplaceAsync(Core.Entities.Secret obj)
-        {
-            using (var scope = ServiceScopeFactory.CreateScope())
-            {
-                var dbContext = GetDatabaseContext(scope);
-                var entity = await GetDbSet(dbContext).FindAsync(obj.Id);
-                if (entity != null)
-                {
-                    var mappedEntity = Mapper.Map<Core.Entities.Secret>(obj);
-                    // Set creation date to original date for the replace operation.
-                    mappedEntity.CreationDate = entity.CreationDate;
-                    dbContext.Entry(entity).CurrentValues.SetValues(mappedEntity);
-                    await dbContext.SaveChangesAsync();
-                }
-            }
-        }
-
         public async Task<IEnumerable<Core.Entities.Secret>> GetManyByOrganizationIdAsync(Guid organizationId)
         {
             using (var scope = ServiceScopeFactory.CreateScope())

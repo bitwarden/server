@@ -42,6 +42,8 @@ namespace Bit.Core.Test.AutoFixture.EntityFrameworkRepositoryFixtures
 
     public class EfRepositoryListBuilder<T> : ISpecimenBuilder where T : BaseEntityFrameworkRepository
     {
+        public bool UseSqlServer { get; set; } = false;
+
         public object Create(object request, ISpecimenContext context)
         {
             if (context == null)
@@ -58,8 +60,13 @@ namespace Bit.Core.Test.AutoFixture.EntityFrameworkRepositoryFixtures
             var list = new List<T>();
             foreach (var option in DatabaseOptionsFactory.Options)
             {
+                if (!UseSqlServer && (option.Key == TestingDatabaseProviderOrder.SqlServer))
+                {
+                    continue;
+                }
+
                 var fixture = new Fixture();
-                fixture.Customize<IServiceScopeFactory>(x => x.FromFactory(new ServiceScopeFactoryBuilder(option)));
+                fixture.Customize<IServiceScopeFactory>(x => x.FromFactory(new ServiceScopeFactoryBuilder(option.Value)));
                 fixture.Customize<IMapper>(x => x.FromFactory(() =>
                     new MapperConfiguration(cfg =>
                     {

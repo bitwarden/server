@@ -15,7 +15,7 @@ namespace Bit.Core.Test.AutoFixture.CollectionFixtures
             fixture.Customizations.Add(new GlobalSettingsBuilder());
             fixture.Customizations.Add(new OrganizationBuilder());
             fixture.Customizations.Add(new EfRepositoryListBuilder<OrganizationRepository>());
-            fixture.Customizations.Add(new EfRepositoryListBuilder<SecretRepository>());
+            fixture.Customizations.Add(new EfRepositoryListBuilder<SecretRepository>() { UseSqlServer = true });
         }
     }
 
