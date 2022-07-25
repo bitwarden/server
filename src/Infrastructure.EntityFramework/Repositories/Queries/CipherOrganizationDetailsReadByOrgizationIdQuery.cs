@@ -1,6 +1,4 @@
-﻿using System;
-using System.Linq;
-using Core.Models.Data;
+﻿using Core.Models.Data;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories.Queries
 {

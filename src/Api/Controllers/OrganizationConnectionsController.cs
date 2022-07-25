@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Bit.Api.Models.Request.Organizations;
+﻿using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response.Organizations;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -13,13 +9,11 @@ using Bit.Core.OrganizationFeatures.OrganizationConnections.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.Controllers
 {
-    [SelfHosted(SelfHostedOnly = true)]
     [Authorize("Application")]
     [Route("organizations/connections")]
     public class OrganizationConnectionsController : Controller
@@ -61,10 +55,10 @@ namespace Bit.Api.Controllers
         {
             if (!await HasPermissionAsync(model?.OrganizationId))
             {
-                throw new BadRequestException("Only the owner of an organization can create a connection.");
+                throw new BadRequestException($"You do not have permission to create a connection of type {model.Type}.");
             }
 
-            if (await HasConnectionTypeAsync(model))
+            if (await HasConnectionTypeAsync(model, null, model.Type))
             {
                 throw new BadRequestException($"The requested organization already has a connection of type {model.Type}. Only one of each connection type may exist per organization.");
             }
@@ -72,15 +66,9 @@ namespace Bit.Api.Controllers
             switch (model.Type)
             {
                 case OrganizationConnectionType.CloudBillingSync:
-                    var typedModel = new OrganizationConnectionRequestModel<BillingSyncConfig>(model);
-                    var license = await _licensingService.ReadOrganizationLicenseAsync(model.OrganizationId);
-                    if (!_licensingService.VerifyLicense(license))
-                    {
-                        throw new BadRequestException("Cannot verify license file.");
-                    }
-                    typedModel.ParsedConfig.CloudOrganizationId = license.Id;
-                    var connection = await _createOrganizationConnectionCommand.CreateAsync(typedModel.ToData());
-                    return new OrganizationConnectionResponseModel(connection, typeof(BillingSyncConfig));
+                    return await CreateOrUpdateOrganizationConnectionAsync<BillingSyncConfig>(null, model, ValidateBillingSyncConfig);
+                case OrganizationConnectionType.Scim:
+                    return await CreateOrUpdateOrganizationConnectionAsync<ScimConfig>(null, model);
                 default:
                     throw new BadRequestException($"Unknown Organization connection Type: {model.Type}");
             }
@@ -89,12 +77,18 @@ namespace Bit.Api.Controllers
         [HttpPut("{organizationConnectionId}")]
         public async Task<OrganizationConnectionResponseModel> UpdateConnection(Guid organizationConnectionId, [FromBody] OrganizationConnectionRequestModel model)
         {
-            if (!await HasPermissionAsync(model?.OrganizationId))
+            var existingOrganizationConnection = await _organizationConnectionRepository.GetByIdAsync(organizationConnectionId);
+            if (existingOrganizationConnection == null)
             {
-                throw new BadRequestException("Only the owner of an organization can update a connection.");
+                throw new NotFoundException();
             }
 
-            if (await HasConnectionTypeAsync(model, organizationConnectionId))
+            if (!await HasPermissionAsync(model?.OrganizationId, model?.Type))
+            {
+                throw new BadRequestException("You do not have permission to update this connection.");
+            }
+
+            if (await HasConnectionTypeAsync(model, organizationConnectionId, model.Type))
             {
                 throw new BadRequestException($"The requested organization already has a connection of type {model.Type}. Only one of each connection type may exist per organization.");
             }
@@ -102,9 +96,9 @@ namespace Bit.Api.Controllers
             switch (model.Type)
             {
                 case OrganizationConnectionType.CloudBillingSync:
-                    var typedModel = new OrganizationConnectionRequestModel<BillingSyncConfig>(model);
-                    var connection = await _updateOrganizationConnectionCommand.UpdateAsync(typedModel.ToData(organizationConnectionId));
-                    return new OrganizationConnectionResponseModel(connection, typeof(BillingSyncConfig));
+                    return await CreateOrUpdateOrganizationConnectionAsync<BillingSyncConfig>(organizationConnectionId, model);
+                case OrganizationConnectionType.Scim:
+                    return await CreateOrUpdateOrganizationConnectionAsync<ScimConfig>(organizationConnectionId, model);
                 default:
                     throw new BadRequestException($"Unkown Organization connection Type: {model.Type}");
             }
@@ -113,22 +107,27 @@ namespace Bit.Api.Controllers
         [HttpGet("{organizationId}/{type}")]
         public async Task<OrganizationConnectionResponseModel> GetConnection(Guid organizationId, OrganizationConnectionType type)
         {
-            if (!await HasPermissionAsync(organizationId))
+            if (!await HasPermissionAsync(organizationId, type))
             {
-                throw new BadRequestException("Only the owner of an organization can retrieve a connection.");
+                throw new BadRequestException($"You do not have permission to retrieve a connection of type {type}.");
             }
 
-            var connections = await GetConnectionsAsync(organizationId);
+            var connections = await GetConnectionsAsync(organizationId, type);
             var connection = connections.FirstOrDefault(c => c.Type == type);
 
             switch (type)
             {
                 case OrganizationConnectionType.CloudBillingSync:
+                    if (!_globalSettings.SelfHosted)
+                    {
+                        throw new BadRequestException($"Cannot get a {type} connection outside of a self-hosted instance.");
+                    }
                     return new OrganizationConnectionResponseModel(connection, typeof(BillingSyncConfig));
+                case OrganizationConnectionType.Scim:
+                    return new OrganizationConnectionResponseModel(connection, typeof(ScimConfig));
                 default:
                     throw new BadRequestException($"Unkown Organization connection Type: {type}");
             }
-
         }
 
         [HttpDelete("{organizationConnectionId}")]
@@ -142,25 +141,70 @@ namespace Bit.Api.Controllers
                 throw new NotFoundException();
             }
 
-            if (!await HasPermissionAsync(connection.OrganizationId))
+            if (!await HasPermissionAsync(connection.OrganizationId, connection.Type))
             {
-                throw new BadRequestException("Only the owner of an organization can remove a connection.");
+                throw new BadRequestException($"You do not have permission to remove this connection of type {connection.Type}.");
             }
 
             await _deleteOrganizationConnectionCommand.DeleteAsync(connection);
         }
 
-        private async Task<ICollection<OrganizationConnection>> GetConnectionsAsync(Guid organizationId) =>
-            await _organizationConnectionRepository.GetByOrganizationIdTypeAsync(organizationId, OrganizationConnectionType.CloudBillingSync);
+        private async Task<ICollection<OrganizationConnection>> GetConnectionsAsync(Guid organizationId, OrganizationConnectionType type) =>
+            await _organizationConnectionRepository.GetByOrganizationIdTypeAsync(organizationId, type);
 
-        private async Task<bool> HasConnectionTypeAsync(OrganizationConnectionRequestModel model, Guid? connectionId = null)
+        private async Task<bool> HasConnectionTypeAsync(OrganizationConnectionRequestModel model, Guid? connectionId,
+            OrganizationConnectionType type)
         {
-            var existingConnections = await GetConnectionsAsync(model.OrganizationId);
+            var existingConnections = await GetConnectionsAsync(model.OrganizationId, type);
 
             return existingConnections.Any(c => c.Type == model.Type && (!connectionId.HasValue || c.Id != connectionId.Value));
         }
 
-        private async Task<bool> HasPermissionAsync(Guid? organizationId) =>
-            organizationId.HasValue && await _currentContext.OrganizationOwner(organizationId.Value);
+        private async Task<bool> HasPermissionAsync(Guid? organizationId, OrganizationConnectionType? type = null)
+        {
+            if (!organizationId.HasValue)
+            {
+                return false;
+            }
+            return type switch
+            {
+                OrganizationConnectionType.Scim => await _currentContext.ManageScim(organizationId.Value),
+                _ => await _currentContext.OrganizationOwner(organizationId.Value),
+            };
+        }
+
+        private async Task ValidateBillingSyncConfig(OrganizationConnectionRequestModel<BillingSyncConfig> typedModel)
+        {
+            if (!_globalSettings.SelfHosted)
+            {
+                throw new BadRequestException($"Cannot create a {typedModel.Type} connection outside of a self-hosted instance.");
+            }
+            var license = await _licensingService.ReadOrganizationLicenseAsync(typedModel.OrganizationId);
+            if (!_licensingService.VerifyLicense(license))
+            {
+                throw new BadRequestException("Cannot verify license file.");
+            }
+            typedModel.ParsedConfig.CloudOrganizationId = license.Id;
+        }
+
+        private async Task<OrganizationConnectionResponseModel> CreateOrUpdateOrganizationConnectionAsync<T>(
+            Guid? organizationConnectionId,
+            OrganizationConnectionRequestModel model,
+            Func<OrganizationConnectionRequestModel<T>, Task> validateAction = null)
+            where T : new()
+        {
+            var typedModel = new OrganizationConnectionRequestModel<T>(model);
+            if (validateAction != null)
+            {
+                await validateAction(typedModel);
+            }
+
+            var data = typedModel.ToData(organizationConnectionId);
+            var connection = organizationConnectionId.HasValue
+                ? await _updateOrganizationConnectionCommand.UpdateAsync(data)
+                : await _createOrganizationConnectionCommand.CreateAsync(data);
+
+            return new OrganizationConnectionResponseModel(connection, typeof(T));
+        }
     }
 }

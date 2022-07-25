@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Reflection;
+﻿using System.Reflection;
 using System.Text.Json;
 using AutoFixture;
 using AutoFixture.Kernel;

@@ -1,11 +1,6 @@
-﻿using System;
-using System.IO;
-using System.IO.Compression;
-using System.Linq;
+﻿using System.IO.Compression;
 using System.Text;
-using System.Threading.Tasks;
 using System.Xml;
-using Microsoft.AspNetCore.Http;
 using Sustainsys.Saml2;
 using Sustainsys.Saml2.AspNetCore2;
 

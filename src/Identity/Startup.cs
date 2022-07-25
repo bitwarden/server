@@ -1,7 +1,5 @@
-﻿using System;
-using System.Globalization;
+﻿using System.Globalization;
 using System.IdentityModel.Tokens.Jwt;
-using System.Threading.Tasks;
 using AspNetCoreRateLimit;
 using Bit.Core;
 using Bit.Core.Context;
@@ -11,13 +9,9 @@ using Bit.Core.Utilities;
 using Bit.Identity.Utilities;
 using Bit.SharedWeb.Utilities;
 using IdentityServer4.Extensions;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.IdentityModel.Logging;
+using Microsoft.OpenApi.Models;
 
 namespace Bit.Identity
 {
@@ -54,9 +48,11 @@ namespace Bit.Identity
 
             // Context
             services.AddScoped<ICurrentContext, CurrentContext>();
+            services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 
             // Caching
             services.AddMemoryCache();
+            services.AddDistributedCache(globalSettings);
 
             // Mvc
             services.AddMvc(config =>
@@ -64,11 +60,14 @@ namespace Bit.Identity
                 config.Filters.Add(new ModelStateValidationFilterAttribute());
             });
 
+            services.AddSwaggerGen(c =>
+            {
+                c.SwaggerDoc("v1", new OpenApiInfo { Title = "Bitwarden Identity", Version = "v1" });
+            });
+
             if (!globalSettings.SelfHosted)
             {
-                // Rate limiting
-                services.AddSingleton<IIpPolicyStore, MemoryCacheIpPolicyStore>();
-                services.AddSingleton<IRateLimitCounterStore, MemoryCacheRateLimitCounterStore>();
+                services.AddIpRateLimiting(globalSettings);
             }
 
             // Cookies
@@ -192,6 +191,7 @@ namespace Bit.Identity
 
             if (env.IsDevelopment())
             {
+                app.UseSwagger();
                 app.UseDeveloperExceptionPage();
                 app.UseCookiePolicy();
             }

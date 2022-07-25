@@ -1,10 +1,6 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using Bit.Core.Entities;
-using Bit.Core.Test.AutoFixture;
+﻿using Bit.Core.Entities;
 using Bit.Core.Test.AutoFixture.Attributes;
 using Bit.Core.Test.AutoFixture.SsoUserFixtures;
-using Bit.Core.Test.Helpers.Factories;
 using Bit.Core.Test.Repositories.EntityFramework.EqualityComparers;
 using Xunit;
 using EfRepo = Bit.Infrastructure.EntityFramework.Repositories;
@@ -102,8 +98,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
         }
 
         [CiSkippedTheory, EfSsoUserAutoData]
-        public async void DeleteAsync_Works_DataMatches(SsoUser ssoUser, Organization org, User user,
-            SsoUserCompare equalityComparer, List<EfRepo.SsoUserRepository> suts,
+        public async void DeleteAsync_Works_DataMatches(SsoUser ssoUser, Organization org, User user, List<EfRepo.SsoUserRepository> suts,
             List<EfRepo.UserRepository> efUserRepos, List<EfRepo.OrganizationRepository> efOrgRepos,
             SqlRepo.SsoUserRepository sqlSsoUserRepo, SqlRepo.UserRepository sqlUserRepo,
             SqlRepo.OrganizationRepository sqlOrganizationRepo)
@@ -146,7 +141,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
 
         [CiSkippedTheory, EfSsoUserAutoData]
         public async void DeleteAsync_UserIdOrganizationId_Works_DataMatches(SsoUser ssoUser,
-            User user, Organization org, SsoUserCompare equalityComparer, List<EfRepo.SsoUserRepository> suts,
+            User user, Organization org, List<EfRepo.SsoUserRepository> suts,
             List<EfRepo.UserRepository> efUserRepos, List<EfRepo.OrganizationRepository> efOrgRepos,
             SqlRepo.SsoUserRepository sqlSsoUserRepo, SqlRepo.UserRepository sqlUserRepo, SqlRepo.OrganizationRepository sqlOrgRepo
                 )

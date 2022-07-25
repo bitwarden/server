@@ -104,7 +104,7 @@ server {
   location = /captcha-connector.html {
     proxy_pass http://web:5000/captcha-connector.html;
   }
-  
+
   location = /captcha-mobile-connector.html {
     proxy_pass http://web:5000/captcha-mobile-connector.html;
   }
@@ -166,6 +166,12 @@ server {
 {{#if EnableKeyConnector}}
   location /key-connector/ {
     proxy_pass http://key-connector:5000/;
+  }
+{{/if}}
+{{#if EnableScim}}
+
+  location /scim/ {
+    proxy_pass http://scim:5000/;
   }
 {{/if}}
 }

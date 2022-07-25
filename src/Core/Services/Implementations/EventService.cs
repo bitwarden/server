@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Bit.Core.Context;
+﻿using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Entities.Provider;
 using Bit.Core.Enums;
@@ -214,7 +210,7 @@ namespace Bit.Core.Services
                     continue;
                 }
 
-                eventMessages.Add(new EventMessage
+                eventMessages.Add(new EventMessage(_currentContext)
                 {
                     OrganizationId = organizationUser.OrganizationId,
                     UserId = organizationUser.UserId,
@@ -263,7 +259,7 @@ namespace Bit.Core.Services
                 {
                     continue;
                 }
-                eventMessages.Add(new EventMessage
+                eventMessages.Add(new EventMessage(_currentContext)
                 {
                     ProviderId = providerUser.ProviderId,
                     UserId = providerUser.UserId,

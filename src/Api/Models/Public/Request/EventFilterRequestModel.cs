@@ -1,5 +1,4 @@
-﻿using System;
-using Bit.Core.Exceptions;
+﻿using Bit.Core.Exceptions;
 
 namespace Bit.Api.Models.Public.Request
 {

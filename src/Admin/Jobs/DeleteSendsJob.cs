@@ -1,13 +1,7 @@
-﻿using System;
-using System.Linq;
-using System.Threading.Tasks;
-using Bit.Core;
-using Bit.Core.Context;
+﻿using Bit.Core;
 using Bit.Core.Jobs;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Quartz;
 
 namespace Bit.Admin.Jobs

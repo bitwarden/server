@@ -1,5 +1,4 @@
-﻿using System;
-using Microsoft.Azure.Cosmos.Table;
+﻿using Microsoft.Azure.Cosmos.Table;
 
 namespace Bit.Core.Models.Data
 {

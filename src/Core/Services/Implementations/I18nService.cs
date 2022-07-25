@@ -1,5 +1,4 @@
-﻿using System;
-using System.Reflection;
+﻿using System.Reflection;
 using Bit.Core.Resources;
 using Microsoft.Extensions.Localization;
 

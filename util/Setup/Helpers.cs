@@ -1,7 +1,4 @@
-﻿using System;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
+﻿using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
@@ -181,7 +178,7 @@ namespace Bit.Setup
             Console.ResetColor();
         }
 
-        public static Func<object, string> ReadTemplate(string templateName)
+        public static HandlebarsDotNet.HandlebarsTemplate<object, object> ReadTemplate(string templateName)
         {
             var assembly = typeof(Helpers).GetTypeInfo().Assembly;
             var fullTemplateName = $"Bit.Setup.Templates.{templateName}.hbs";

@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
+﻿using System.Diagnostics.CodeAnalysis;
 using Bit.Core.Models.Data;
 
 namespace Bit.Core.Test.Repositories.EntityFramework.EqualityComparers

@@ -1,7 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using System.Net;
-using System.Threading.Tasks;
+﻿using System.Net;
 using Bit.Core.Models.Data;
 using Bit.Core.Settings;
 using Microsoft.Azure.Cosmos.Table;

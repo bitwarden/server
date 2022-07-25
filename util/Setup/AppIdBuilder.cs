@@ -1,7 +1,4 @@
-﻿using System;
-using System.IO;
-
-namespace Bit.Setup
+﻿namespace Bit.Setup
 {
     public class AppIdBuilder
     {

@@ -1,12 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Text.Json;
-using System.Threading.Tasks;
+﻿using System.Text.Json;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models;
 using Bit.Core.Models.Business;
+using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
@@ -349,6 +346,44 @@ namespace Bit.Core.Test.Services
             sutProvider.GetDependency<Settings.IGlobalSettings>().TwoFactorAuth.EmailOnNewDeviceLogin.Returns(true);
 
             Assert.False(sutProvider.Sut.CanEditDeviceVerificationSettings(user));
+        }
+
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public async void HasPremiumFromOrganization_Returns_False_If_No_Orgs(SutProvider<UserService> sutProvider, User user)
+        {
+            sutProvider.GetDependency<IOrganizationUserRepository>().GetManyByUserAsync(user.Id).Returns(new List<OrganizationUser>());
+            Assert.False(await sutProvider.Sut.HasPremiumFromOrganization(user));
+
+        }
+
+        [Theory]
+        [InlineCustomAutoData(new[] { typeof(SutProviderCustomization) }, false, true)]
+        [InlineCustomAutoData(new[] { typeof(SutProviderCustomization) }, true, false)]
+        public async void HasPremiumFromOrganization_Returns_False_If_Org_Not_Eligible(bool orgEnabled, bool orgUsersGetPremium, SutProvider<UserService> sutProvider, User user, OrganizationUser orgUser, Organization organization)
+        {
+            orgUser.OrganizationId = organization.Id;
+            organization.Enabled = orgEnabled;
+            organization.UsersGetPremium = orgUsersGetPremium;
+            var orgAbilities = new Dictionary<Guid, OrganizationAbility>() { { organization.Id, new OrganizationAbility(organization) } };
+
+            sutProvider.GetDependency<IOrganizationUserRepository>().GetManyByUserAsync(user.Id).Returns(new List<OrganizationUser>() { orgUser });
+            sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilitiesAsync().Returns(orgAbilities);
+
+            Assert.False(await sutProvider.Sut.HasPremiumFromOrganization(user));
+        }
+
+        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        public async void HasPremiumFromOrganization_Returns_True_If_Org_Eligible(SutProvider<UserService> sutProvider, User user, OrganizationUser orgUser, Organization organization)
+        {
+            orgUser.OrganizationId = organization.Id;
+            organization.Enabled = true;
+            organization.UsersGetPremium = true;
+            var orgAbilities = new Dictionary<Guid, OrganizationAbility>() { { organization.Id, new OrganizationAbility(organization) } };
+
+            sutProvider.GetDependency<IOrganizationUserRepository>().GetManyByUserAsync(user.Id).Returns(new List<OrganizationUser>() { orgUser });
+            sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilitiesAsync().Returns(orgAbilities);
+
+            Assert.True(await sutProvider.Sut.HasPremiumFromOrganization(user));
         }
     }
 }

@@ -1,12 +1,7 @@
-﻿using System;
-using Bit.Api.Models.Public.Response;
+﻿using Bit.Api.Models.Public.Response;
 using Bit.Core.Exceptions;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using Stripe;
 using InternalApi = Bit.Core.Models.Api;

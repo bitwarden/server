@@ -23,7 +23,8 @@ namespace Bit.Core.Test.Models
             "\"managePolicies\": false,",
             "\"manageSso\": false,",
             "\"manageUsers\": false,",
-            "\"manageResetPassword\": false",
+            "\"manageResetPassword\": false,",
+            "\"manageScim\": false",
             "}");
 
         [Fact]
@@ -44,6 +45,7 @@ namespace Bit.Core.Test.Models
                 ManageSso = false,
                 ManageUsers = false,
                 ManageResetPassword = false,
+                ManageScim = false,
             };
 
             // minify expected json

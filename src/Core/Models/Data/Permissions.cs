@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace Bit.Core.Models.Data
 {
@@ -23,6 +21,7 @@ namespace Bit.Core.Models.Data
         public bool ManageSso { get; set; }
         public bool ManageUsers { get; set; }
         public bool ManageResetPassword { get; set; }
+        public bool ManageScim { get; set; }
 
         [JsonIgnore]
         public List<(bool Permission, string ClaimName)> ClaimsMap => new()
@@ -40,6 +39,7 @@ namespace Bit.Core.Models.Data
             (ManageSso, "managesso"),
             (ManageUsers, "manageusers"),
             (ManageResetPassword, "manageresetpassword"),
+            (ManageScim, "managescim"),
         };
     }
 }

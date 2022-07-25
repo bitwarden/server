@@ -1,6 +1,4 @@
-﻿using System;
-using System.Linq;
-using AutoFixture;
+﻿using AutoFixture;
 
 namespace Bit.Test.Common.AutoFixture.Attributes
 {

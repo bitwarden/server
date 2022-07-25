@@ -1,6 +1,4 @@
-﻿using System;
-using System.Linq;
-using Bit.Test.Common.Helpers;
+﻿using Bit.Test.Common.Helpers;
 using Xunit;
 
 namespace Bit.Test.Common.Test

@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Bit.Core.Context;
+﻿using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
@@ -21,15 +17,18 @@ namespace Bit.Events.Controllers
         private readonly ICurrentContext _currentContext;
         private readonly IEventService _eventService;
         private readonly ICipherRepository _cipherRepository;
+        private readonly IOrganizationRepository _organizationRepository;
 
         public CollectController(
             ICurrentContext currentContext,
             IEventService eventService,
-            ICipherRepository cipherRepository)
+            ICipherRepository cipherRepository,
+            IOrganizationRepository organizationRepository)
         {
             _currentContext = currentContext;
             _eventService = eventService;
             _cipherRepository = cipherRepository;
+            _organizationRepository = organizationRepository;
         }
 
         [HttpPost]
@@ -81,6 +80,14 @@ namespace Bit.Events.Controllers
                             ciphersCache.Add(eventModel.CipherId.Value, cipher);
                         }
                         cipherEvents.Add(new Tuple<Cipher, EventType, DateTime?>(cipher, eventModel.Type, eventModel.Date));
+                        break;
+                    case EventType.Organization_ClientExportedVault:
+                        if (!eventModel.OrganizationId.HasValue)
+                        {
+                            continue;
+                        }
+                        var organization = await _organizationRepository.GetByIdAsync(eventModel.OrganizationId.Value);
+                        await _eventService.LogOrganizationEventAsync(organization, eventModel.Type, eventModel.Date);
                         break;
                     default:
                         continue;

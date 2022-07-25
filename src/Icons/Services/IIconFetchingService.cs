@@ -1,5 +1,4 @@
-﻿using System.Threading.Tasks;
-using Bit.Icons.Models;
+﻿using Bit.Icons.Models;
 
 namespace Bit.Icons.Services
 {

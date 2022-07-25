@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Text;
+﻿using System.Text;
 using System.Text.Json;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -494,8 +491,6 @@ namespace Bit.Core.Test.Services
 
             send.UserId = user.Id;
             send.Type = SendType.File;
-
-            var testUrl = "https://test.com/";
 
             sutProvider.GetDependency<IUserRepository>()
                 .GetByIdAsync(user.Id)

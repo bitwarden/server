@@ -1,5 +1,4 @@
-﻿using System;
-using Bit.Core.Enums.Provider;
+﻿using Bit.Core.Enums.Provider;
 using Bit.Core.Utilities;
 
 namespace Bit.Core.Entities.Provider
