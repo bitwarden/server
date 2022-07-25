@@ -75,22 +75,7 @@ namespace Bit.Api.Controllers
         [HttpGet("")]
         public async Task<ListResponseModel<CollectionResponseModel>> Get(Guid orgId)
         {
-            if (!await _currentContext.ViewAllCollections(orgId) && !await _currentContext.ManageUsers(orgId))
-            {
-                throw new NotFoundException();
-            }
-
-            IEnumerable<Collection> orgCollections;
-            if (await _currentContext.OrganizationAdmin(orgId))
-            {
-                // Admins, Owners and Providers can access all items even if not assigned to them
-                orgCollections = await _collectionRepository.GetManyByOrganizationIdAsync(orgId);
-            }
-            else
-            {
-                var collections = await _collectionRepository.GetManyByUserIdAsync(_currentContext.UserId.Value);
-                orgCollections = collections.Where(c => c.OrganizationId == orgId);
-            }
+            IEnumerable<Collection> orgCollections = await _collectionService.GetOrganizationCollections(orgId);
 
             var responses = orgCollections.Select(c => new CollectionResponseModel(c));
             return new ListResponseModel<CollectionResponseModel>(responses);
