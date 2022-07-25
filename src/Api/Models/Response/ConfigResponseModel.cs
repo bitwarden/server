@@ -7,7 +7,7 @@ namespace Bit.Api.Models.Response
     {
         public ConfigResponseModel(string obj = "config") : base(obj)
         {
-            Version = CoreHelpers.GetVersion();
+            Version = AssemblyHelpers.GetVersion();
             Environment = new EnvironmentConfigResponseModel();
         }
 
