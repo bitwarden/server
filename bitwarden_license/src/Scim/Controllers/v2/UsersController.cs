@@ -191,13 +191,13 @@ namespace Bit.Scim.Controllers.v2
                 });
             }
 
-            if (model.Active && orgUser.Status == OrganizationUserStatusType.Deactivated)
+            if (model.Active && orgUser.Status == OrganizationUserStatusType.Revoked)
             {
-                await _organizationService.ActivateUserAsync(orgUser, null);
+                await _organizationService.RestoreUserAsync(orgUser, null);
             }
-            else if (!model.Active && orgUser.Status != OrganizationUserStatusType.Deactivated)
+            else if (!model.Active && orgUser.Status != OrganizationUserStatusType.Revoked)
             {
-                await _organizationService.DeactivateUserAsync(orgUser, null);
+                await _organizationService.RevokeUserAsync(orgUser, null);
             }
 
             // Have to get full details object for response model
@@ -227,14 +227,14 @@ namespace Bit.Scim.Controllers.v2
                 if (replaceOp.Value.TryGetProperty("active", out var activeProperty))
                 {
                     var active = activeProperty.GetBoolean();
-                    if (active && orgUser.Status == OrganizationUserStatusType.Deactivated)
+                    if (active && orgUser.Status == OrganizationUserStatusType.Revoked)
                     {
-                        await _organizationService.ActivateUserAsync(orgUser, null);
+                        await _organizationService.RestoreUserAsync(orgUser, null);
                         operationHandled = true;
                     }
-                    else if (!active && orgUser.Status != OrganizationUserStatusType.Deactivated)
+                    else if (!active && orgUser.Status != OrganizationUserStatusType.Revoked)
                     {
-                        await _organizationService.DeactivateUserAsync(orgUser, null);
+                        await _organizationService.RevokeUserAsync(orgUser, null);
                         operationHandled = true;
                     }
                 }
