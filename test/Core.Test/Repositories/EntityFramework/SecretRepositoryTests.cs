@@ -2,6 +2,7 @@
 using Bit.Core.Test.AutoFixture.Attributes;
 using Bit.Core.Test.AutoFixture.CollectionFixtures;
 using Bit.Core.Test.Helpers.Factories;
+using Bit.Core.Test.Repositories.EntityFramework.EqualityComparers;
 using Xunit;
 using EfRepo = Bit.Infrastructure.EntityFramework.Repositories;
 using SqlRepo = Bit.Infrastructure.Dapper.Repositories;
@@ -14,11 +15,13 @@ namespace Bit.Core.Test.Repositories.EntityFramework
         public async void CreateAsync_Works(
             Secret secret,
             Organization organization,
+            SecretCompare equalityComparer,
             List<EfRepo.SecretRepository> suts,
             List<EfRepo.OrganizationRepository> efOrganizationRepos,
             SqlRepo.OrganizationRepository sqlOrgaizationRepo
             )
         {
+            var createdSecrets = new List<Secret>();
             foreach (var sut in suts)
             {
                 var i = suts.IndexOf(sut);
@@ -33,14 +36,14 @@ namespace Bit.Core.Test.Repositories.EntityFramework
                     sut.ClearChangeTracking();
                     secret.OrganizationId = org.Id;
                 }
-                var result = await sut.CreateAsync(secret);
+                await sut.CreateAsync(secret);
                 sut.ClearChangeTracking();
-                if (i == (int)TestingDatabaseProviderOrder.SqlServer)
-                {
-                    result.Note = "changing";
-                }
-                Assert.Equal(result, secret);
+                var result = await sut.GetByIdAsync(secret.Id);
+
+                createdSecrets.Add(result);
             }
+            var distinctItems = createdSecrets.Distinct(equalityComparer);
+            Assert.True(!distinctItems.Skip(1).Any());
         }
 
         [CiSkippedTheory, EfSecretAutoData]
@@ -66,7 +69,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework
                     sut.ClearChangeTracking();
                     secret.OrganizationId = org.Id;
                 }
-                var creation = await sut.CreateAsync(secret);
+                await sut.CreateAsync(secret);
                 sut.ClearChangeTracking();
 
                 var result = await sut.GetByIdAsync(secret.Id);
