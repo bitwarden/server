@@ -20,7 +20,7 @@ namespace Bit.Scim.Models
             DisplayName = orgUser.Name;
             Emails = new List<EmailModel> { new EmailModel(orgUser.Email) };
             Name = new NameModel(orgUser.Name);
-            Active = orgUser.Status != Core.Enums.OrganizationUserStatusType.Deactivated;
+            Active = orgUser.Status != Core.Enums.OrganizationUserStatusType.Revoked;
         }
 
         public string Id { get; set; }
