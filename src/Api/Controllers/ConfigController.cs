@@ -1,6 +1,7 @@
-﻿using System.Reflection;
-using Bit.Api.Models.Response;
+﻿using Bit.Api.Models.Response;
 using Bit.Core.Settings;
+using Bit.Core.Utilities;
+
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.Controllers
@@ -8,14 +9,11 @@ namespace Bit.Api.Controllers
     [Route("config")]
     public class ConfigController : Controller
     {
-        private const string GIT_HASH_ASSEMBLY_KEY = "GitHash";
         private readonly IGlobalSettings _globalSettings;
-        private readonly IEnumerable<AssemblyMetadataAttribute> _assemblyMetadataAttributes;
 
         public ConfigController(IGlobalSettings globalSettings)
         {
             _globalSettings = globalSettings;
-            _assemblyMetadataAttributes = Assembly.GetEntryAssembly().GetCustomAttributes<AssemblyMetadataAttribute>();
         }
 
         [HttpGet("")]
@@ -23,9 +21,11 @@ namespace Bit.Api.Controllers
         {
             ConfigResponseModel response = new ConfigResponseModel();
 
-            if (_assemblyMetadataAttributes.Count() > 0)
+            var gitHash = AssemblyHelpers.GetGitHash();
+
+            if (!string.IsNullOrWhiteSpace(gitHash))
             {
-                response.GitHash = _assemblyMetadataAttributes.Where(i => i.Key == GIT_HASH_ASSEMBLY_KEY).First().Value;
+                response.GitHash = gitHash;
             }
 
             response.Environment.Api = _globalSettings.BaseServiceUri.Api;
