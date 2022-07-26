@@ -71,7 +71,6 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             var eUser = builder.Entity<User>();
             var eOrganizationApiKey = builder.Entity<OrganizationApiKey>();
             var eOrganizationConnection = builder.Entity<OrganizationConnection>();
-            var eSecret = builder.Entity<Secret>();
 
             eCipher.Property(c => c.Id).ValueGeneratedNever();
             eCollection.Property(c => c.Id).ValueGeneratedNever();
@@ -92,17 +91,12 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             eUser.Property(c => c.Id).ValueGeneratedNever();
             eOrganizationApiKey.Property(c => c.Id).ValueGeneratedNever();
             eOrganizationConnection.Property(c => c.Id).ValueGeneratedNever();
-            eSecret.Property(c => c.Id).ValueGeneratedNever();
 
             eCollectionCipher.HasKey(cc => new { cc.CollectionId, cc.CipherId });
             eCollectionUser.HasKey(cu => new { cu.CollectionId, cu.OrganizationUserId });
             eCollectionGroup.HasKey(cg => new { cg.CollectionId, cg.GroupId });
             eGrant.HasKey(x => x.Key);
             eGroupUser.HasKey(gu => new { gu.GroupId, gu.OrganizationUserId });
-            eSecret.HasKey(s => s.Id).IsClustered();
-
-            eSecret.HasIndex(s => s.DeletedDate).IsClustered(false);
-            eSecret.HasIndex(s => s.OrganizationId).IsClustered(false);
 
             if (Database.IsNpgsql())
             {
@@ -141,7 +135,9 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             eUser.ToTable(nameof(User));
             eOrganizationApiKey.ToTable(nameof(OrganizationApiKey));
             eOrganizationConnection.ToTable(nameof(OrganizationConnection));
-            eSecret.ToTable(nameof(Secret));
+
+            // Apply all configurations specified in types implementing IEntityTypeConfiguration in the assembly.
+            builder.ApplyConfigurationsFromAssembly(typeof(SecretEntityTypeConfiguration).Assembly);
         }
     }
 }
