@@ -44,7 +44,7 @@ namespace Bit.Infrastructure.EntityFramework
         {
 
 
-            // TODO Look into moving away from this.
+            // TODO: We should move away from using LINQ syntax for EF (TDL-48).
             LinqToDBForEFTools.Initialize();
 
             services.AddSingleton<ICipherRepository, CipherRepository>();

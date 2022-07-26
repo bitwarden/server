@@ -6,8 +6,8 @@ namespace Bit.Core.Repositories
     {
         Task<IEnumerable<Secret>> GetManyByOrganizationIdAsync(Guid organizationId);
         Task<Secret> GetByIdAsync(Guid id);
-        Task<Secret> CreateAsync(Secret obj);
-        Task ReplaceAsync(Secret obj);
+        Task<Secret> CreateAsync(Secret secret);
+        Task ReplaceAsync(Secret secret);
         Task SoftDeleteManyByIdAsync(IEnumerable<Guid> ids);
     }
 }

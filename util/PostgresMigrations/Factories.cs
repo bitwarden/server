@@ -24,6 +24,7 @@ namespace MySqlMigrations
             var globalSettings = GlobalSettingsFactory.GlobalSettings;
             var optionsBuilder = new DbContextOptionsBuilder<DatabaseContext>();
             var connectionString = globalSettings.PostgreSql?.ConnectionString;
+            // Handle NpgSql Legacy Support for `timestamp without timezone` issue
             AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
             if (string.IsNullOrWhiteSpace(connectionString))
             {
