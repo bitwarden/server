@@ -75,6 +75,22 @@ jobs:
           echo "NAME_LOWER: $NAME_LOWER"
           echo "::set-output name=name_lower::$NAME_LOWER"
 
+      - name: Create GitHub deployment for ${{ matrix.name }}
+        uses: chrnorm/deployment-action@1b599fe41a0ef1f95191e7f2eec4743f2d7dfc48
+        id: deployment
+        with:
+          token: '${{ secrets.GITHUB_TOKEN }}'
+          environment: 'Server ${{ matrix.name }} - Production'
+          task: 'deploy'
+          description: 'Deploy from ${{ needs.setup.outputs.branch-name }} branch'
+
+      - name: Update ${{ matrix.name }} deployment status to In Progress
+        uses: chrnorm/deployment-status@07b3930847f65e71c9c6802ff5a402f6dfb46b86
+        with:
+          token: '${{ secrets.GITHUB_TOKEN }}'
+          state: 'in_progress'
+          deployment-id: ${{ steps.deployment.outputs.deployment_id }}
+
       - name: Download latest Release ${{ matrix.name }} asset
         if: ${{ github.event.inputs.release_type != 'Dry Run' }}
         uses: bitwarden/gh-actions/download-artifacts@c1fa8e09871a860862d6bbe36184b06d2c7e35a8
@@ -138,6 +154,22 @@ jobs:
             RESOURCE_GROUP=bitwarden
           fi
           az webapp start -n $WEBAPP_NAME -g $RESOURCE_GROUP -s staging
+
+      - name: Update ${{ matrix.name }} deployment status to Success
+        if: success()
+        uses: chrnorm/deployment-status@07b3930847f65e71c9c6802ff5a402f6dfb46b86
+        with:
+          token: '${{ secrets.GITHUB_TOKEN }}'
+          state: 'success'
+          deployment-id: ${{ steps.deployment.outputs.deployment_id }}
+
+      - name: Update ${{ matrix.name }} deployment status to Failure
+        if: failure()
+        uses: chrnorm/deployment-status@07b3930847f65e71c9c6802ff5a402f6dfb46b86
+        with:
+          token: '${{ secrets.GITHUB_TOKEN }}'
+          state: 'failure'
+          deployment-id: ${{ steps.deployment.outputs.deployment_id }}
 
 
   release-docker:
