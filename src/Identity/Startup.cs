@@ -121,7 +121,7 @@ namespace Bit.Identity
                                 context.ProtocolMessage.SessionState = context.Properties.Items["user_identifier"];
                             }
 
-                            if (context.Properties.Parameters.Count > 0 && 
+                            if (context.Properties.Parameters.Count > 0 &&
                                 context.Properties.Parameters.TryGetValue(SsoTokenable.TokenIdentifier, out var tokenValue))
                             {
                                 var token = tokenValue?.ToString() ?? "";
