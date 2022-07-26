@@ -1,10 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Data;
+﻿using System.Data;
 using System.Data.SqlClient;
-using System.Linq;
 using System.Text.Json;
-using System.Threading.Tasks;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
@@ -410,7 +406,7 @@ namespace Bit.Infrastructure.Dapper.Repositories
             }
         }
 
-        public async Task DeactivateAsync(Guid id)
+        public async Task RevokeAsync(Guid id)
         {
             using (var connection = new SqlConnection(ConnectionString))
             {
@@ -421,7 +417,7 @@ namespace Bit.Infrastructure.Dapper.Repositories
             }
         }
 
-        public async Task ActivateAsync(Guid id, OrganizationUserStatusType status)
+        public async Task RestoreAsync(Guid id, OrganizationUserStatusType status)
         {
             using (var connection = new SqlConnection(ConnectionString))
             {

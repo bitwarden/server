@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using AutoMapper;
+﻿using AutoMapper;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
@@ -428,7 +424,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             }
         }
 
-        public async Task DeactivateAsync(Guid id)
+        public async Task RevokeAsync(Guid id)
         {
             using (var scope = ServiceScopeFactory.CreateScope())
             {
@@ -437,7 +433,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
                 if (orgUser != null)
                 {
                     dbContext.Update(orgUser);
-                    orgUser.Status = OrganizationUserStatusType.Deactivated;
+                    orgUser.Status = OrganizationUserStatusType.Revoked;
                     await dbContext.SaveChangesAsync();
                     if (orgUser.UserId.HasValue)
                     {
@@ -447,7 +443,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             }
         }
 
-        public async Task ActivateAsync(Guid id, OrganizationUserStatusType status)
+        public async Task RestoreAsync(Guid id, OrganizationUserStatusType status)
         {
             using (var scope = ServiceScopeFactory.CreateScope())
             {

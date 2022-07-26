@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Bit.Billing.Models;
+﻿using Bit.Billing.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -1191,7 +1187,9 @@ namespace Bit.Core.Services
 
             if (!string.IsNullOrWhiteSpace(subscriber.GatewayCustomerId))
             {
-                customer = await _stripeAdapter.CustomerGetAsync(subscriber.GatewayCustomerId);
+                var options = new Stripe.CustomerGetOptions();
+                options.AddExpand("sources");
+                customer = await _stripeAdapter.CustomerGetAsync(subscriber.GatewayCustomerId, options);
                 if (customer.Metadata?.Any() ?? false)
                 {
                     stripeCustomerMetadata = customer.Metadata;
@@ -1376,15 +1374,18 @@ namespace Bit.Core.Services
                         }
                     }
 
-                    foreach (var source in customer.Sources.Where(s => s.Id != defaultSourceId))
+                    if (customer.Sources != null)
                     {
-                        if (source is Stripe.BankAccount)
+                        foreach (var source in customer.Sources.Where(s => s.Id != defaultSourceId))
                         {
-                            await _stripeAdapter.BankAccountDeleteAsync(customer.Id, source.Id);
-                        }
-                        else if (source is Stripe.Card)
-                        {
-                            await _stripeAdapter.CardDeleteAsync(customer.Id, source.Id);
+                            if (source is Stripe.BankAccount)
+                            {
+                                await _stripeAdapter.BankAccountDeleteAsync(customer.Id, source.Id);
+                            }
+                            else if (source is Stripe.Card)
+                            {
+                                await _stripeAdapter.CardDeleteAsync(customer.Id, source.Id);
+                            }
                         }
                     }
 

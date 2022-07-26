@@ -1,17 +1,10 @@
-﻿using System;
-using Bit.Core;
+﻿using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
 using Bit.Sso.Utilities;
 using IdentityServer4.Extensions;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Logging;
 using Stripe;
 
@@ -48,6 +41,10 @@ namespace Bit.Sso
 
             // Context
             services.AddScoped<ICurrentContext, CurrentContext>();
+
+            // Caching
+            services.AddMemoryCache();
+            services.AddDistributedCache(globalSettings);
 
             // Mvc
             services.AddControllersWithViews();

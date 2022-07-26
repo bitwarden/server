@@ -1,9 +1,4 @@
-﻿using System.IO;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
-
-namespace Bit.Server
+﻿namespace Bit.Server
 {
     public class Program
     {

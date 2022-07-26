@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Bit.Core.Settings
+﻿namespace Bit.Core.Settings
 {
     public class GlobalSettings : IGlobalSettings
     {
@@ -51,6 +49,7 @@ namespace Bit.Core.Settings
         public virtual MailSettings Mail { get; set; } = new MailSettings();
         public virtual IConnectionStringSettings Storage { get; set; } = new ConnectionStringSettings();
         public virtual ConnectionStringSettings Events { get; set; } = new ConnectionStringSettings();
+        public virtual IConnectionStringSettings Redis { get; set; } = new ConnectionStringSettings();
         public virtual NotificationsSettings Notifications { get; set; } = new NotificationsSettings();
         public virtual IFileStorageSettings Attachment { get; set; }
         public virtual FileStorageSettings Send { get; set; }
@@ -119,12 +118,14 @@ namespace Bit.Core.Settings
             private string _admin;
             private string _notifications;
             private string _sso;
+            private string _scim;
             private string _internalApi;
             private string _internalIdentity;
             private string _internalAdmin;
             private string _internalNotifications;
             private string _internalSso;
             private string _internalVault;
+            private string _internalScim;
 
             public BaseServiceUriSettings(GlobalSettings globalSettings)
             {
@@ -159,6 +160,11 @@ namespace Bit.Core.Settings
                 get => _globalSettings.BuildExternalUri(_sso, "sso");
                 set => _sso = value;
             }
+            public string Scim
+            {
+                get => _globalSettings.BuildExternalUri(_scim, "scim");
+                set => _scim = value;
+            }
 
             public string InternalNotifications
             {
@@ -189,6 +195,11 @@ namespace Bit.Core.Settings
             {
                 get => _globalSettings.BuildInternalUri(_internalSso, "sso");
                 set => _internalSso = value;
+            }
+            public string InternalScim
+            {
+                get => _globalSettings.BuildInternalUri(_scim, "scim");
+                set => _internalScim = value;
             }
         }
 
@@ -485,7 +496,7 @@ namespace Bit.Core.Settings
 
         public class TwoFactorAuthSettings : ITwoFactorAuthSettings
         {
-            public bool EmailOnNewDeviceLogin { get; set; } = true;
+            public bool EmailOnNewDeviceLogin { get; set; } = false;
         }
     }
 }

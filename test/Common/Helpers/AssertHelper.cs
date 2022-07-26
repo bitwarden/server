@@ -1,10 +1,7 @@
-﻿using System;
-using System.Diagnostics;
-using System.Linq;
+﻿using System.Diagnostics;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text.Json;
-using System.Threading.Tasks;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Http;
 using Xunit;
@@ -66,6 +63,28 @@ namespace Bit.Test.Common.Helpers
 
         public static Expression<Predicate<T>> AssertPropertyEqual<T>(T expected, params string[] excludedPropertyStrings) =>
             (T actual) => AssertPropertyEqualPredicate(expected, excludedPropertyStrings)(actual);
+
+        private static Predicate<IEnumerable<T>> AssertPropertyEqualPredicate<T>(IEnumerable<T> expected, params string[] excludedPropertyStrings) => (actual) =>
+        {
+            // IEnumerable.Zip doesn't account for different lengths, we need to check this ourselves
+            if (actual.Count() != expected.Count())
+            {
+                throw new Exception(string.Concat($"Actual IEnumerable does not have the expected length.\n",
+                $"Expected: {expected.Count()}\n",
+                $"Actual: {actual.Count()}"));
+            }
+
+            var elements = expected.Zip(actual);
+            foreach (var (expectedEl, actualEl) in elements)
+            {
+                AssertPropertyEqual(expectedEl, actualEl, excludedPropertyStrings);
+            }
+
+            return true;
+        };
+
+        public static Expression<Predicate<IEnumerable<T>>> AssertPropertyEqual<T>(IEnumerable<T> expected, params string[] excludedPropertyStrings) =>
+            (actual) => AssertPropertyEqualPredicate(expected, excludedPropertyStrings)(actual);
 
         private static Predicate<T> AssertEqualExpectedPredicate<T>(T expected) => (actual) =>
         {

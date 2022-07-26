@@ -1,13 +1,8 @@
-﻿using System;
-using AutoFixture;
-using AutoFixture.Kernel;
-using Bit.Api.Controllers;
-using Bit.Test.Common.AutoFixture;
+﻿using AutoFixture;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Org.BouncyCastle.Security;
 
-namespace Bit.Api.Test.AutoFixture
+namespace Bit.Test.Common.AutoFixture
 {
     /// <summary>
     /// Disables setting of Auto Properties on the Controller to avoid ASP.net initialization errors. Still sets constructor dependencies.

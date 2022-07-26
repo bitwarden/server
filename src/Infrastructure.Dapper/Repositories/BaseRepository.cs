@@ -1,5 +1,4 @@
-﻿using System;
-using Dapper;
+﻿using Dapper;
 
 namespace Bit.Infrastructure.Dapper.Repositories
 {

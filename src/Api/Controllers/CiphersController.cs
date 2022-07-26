@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text.Json;
-using System.Threading.Tasks;
+﻿using System.Text.Json;
 using Azure.Messaging.EventGrid;
 using Bit.Api.Models.Request;
 using Bit.Api.Models.Request.Accounts;
@@ -21,7 +17,6 @@ using Bit.Core.Utilities;
 using Core.Models.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 
 namespace Bit.Api.Controllers
 {
@@ -221,40 +216,12 @@ namespace Bit.Api.Controllers
         {
             var userId = _userService.GetProperUserId(User).Value;
             var orgIdGuid = new Guid(organizationId);
-            if (!await _currentContext.ViewAllCollections(orgIdGuid) && !await _currentContext.AccessReports(orgIdGuid))
-            {
-                throw new NotFoundException();
-            }
 
-            IEnumerable<CipherOrganizationDetails> orgCiphers;
-            if (await _currentContext.OrganizationAdmin(orgIdGuid))
-            {
-                // Admins, Owners and Providers can access all items even if not assigned to them
-                orgCiphers = await _cipherRepository.GetManyOrganizationDetailsByOrganizationIdAsync(orgIdGuid);
-            }
-            else
-            {
-                var ciphers = await _cipherRepository.GetManyByUserIdAsync(userId, true);
-                orgCiphers = ciphers.Where(c => c.OrganizationId == orgIdGuid);
-            }
-
-            var orgCipherIds = orgCiphers.Select(c => c.Id);
-
-            var collectionCiphers = await _collectionCipherRepository.GetManyByOrganizationIdAsync(orgIdGuid);
-            var collectionCiphersGroupDict = collectionCiphers
-                .Where(c => orgCipherIds.Contains(c.CipherId))
-                .GroupBy(c => c.CipherId).ToDictionary(s => s.Key);
-
+            (IEnumerable<CipherOrganizationDetails> orgCiphers, Dictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphersGroupDict) = await _cipherService.GetOrganizationCiphers(userId, orgIdGuid);
 
             var responses = orgCiphers.Select(c => new CipherMiniDetailsResponseModel(c, _globalSettings,
                 collectionCiphersGroupDict, c.OrganizationUseTotp));
 
-
-            var providerId = await _currentContext.ProviderIdForOrg(orgIdGuid);
-            if (providerId.HasValue)
-            {
-                await _providerService.LogProviderAccessToOrganizationAsync(orgIdGuid);
-            }
             return new ListResponseModel<CipherMiniDetailsResponseModel>(responses);
         }
 

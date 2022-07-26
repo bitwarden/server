@@ -1,6 +1,4 @@
-﻿using System.Linq;
-
-namespace Bit.Infrastructure.EntityFramework.Repositories.Queries
+﻿namespace Bit.Infrastructure.EntityFramework.Repositories.Queries
 {
     public interface IQuery<TOut>
     {

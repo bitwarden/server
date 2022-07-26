@@ -1,6 +1,4 @@
-﻿using System.Threading;
-
-namespace Bit.Notifications
+﻿namespace Bit.Notifications
 {
     public class ConnectionCounter
     {

@@ -1,10 +1,8 @@
-﻿using System;
-using System.Threading.Tasks;
-using AspNetCoreRateLimit;
+﻿using AspNetCoreRateLimit;
 using Bit.Core.Models.Api;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -12,13 +10,13 @@ namespace Bit.Core.Utilities
 {
     public class CustomIpRateLimitMiddleware : IpRateLimitMiddleware
     {
-        private readonly IpRateLimitOptions _options;
-        private readonly IMemoryCache _memoryCache;
         private readonly IBlockIpService _blockIpService;
         private readonly ILogger<CustomIpRateLimitMiddleware> _logger;
+        private readonly IDistributedCache _distributedCache;
+        private readonly IpRateLimitOptions _options;
 
         public CustomIpRateLimitMiddleware(
-            IMemoryCache memoryCache,
+            IDistributedCache distributedCache,
             IBlockIpService blockIpService,
             RequestDelegate next,
             IProcessingStrategy processingStrategy,
@@ -28,7 +26,7 @@ namespace Bit.Core.Utilities
             ILogger<CustomIpRateLimitMiddleware> logger)
             : base(next, processingStrategy, options, policyStore, rateLimitConfiguration, logger)
         {
-            _memoryCache = memoryCache;
+            _distributedCache = distributedCache;
             _blockIpService = blockIpService;
             _options = options.Value;
             _logger = logger;
@@ -36,12 +34,13 @@ namespace Bit.Core.Utilities
 
         public override Task ReturnQuotaExceededResponse(HttpContext httpContext, RateLimitRule rule, string retryAfter)
         {
-            var message = string.IsNullOrWhiteSpace(_options.QuotaExceededMessage) ?
-                $"Slow down! Too many requests. Try again in {rule.Period}." : _options.QuotaExceededMessage;
+            var message = string.IsNullOrWhiteSpace(_options.QuotaExceededMessage)
+                ? $"Slow down! Too many requests. Try again in {rule.Period}."
+                : _options.QuotaExceededMessage;
             httpContext.Response.Headers["Retry-After"] = retryAfter;
             httpContext.Response.StatusCode = _options.HttpStatusCode;
             var errorModel = new ErrorResponseModel { Message = message };
-            return httpContext.Response.WriteAsJsonAsync(errorModel, cancellationToken: httpContext.RequestAborted);
+            return httpContext.Response.WriteAsJsonAsync(errorModel, httpContext.RequestAborted);
         }
 
         protected override void LogBlockedRequest(HttpContext httpContext, ClientRequestIdentity identity,
@@ -50,7 +49,7 @@ namespace Bit.Core.Utilities
             base.LogBlockedRequest(httpContext, identity, counter, rule);
             var key = $"blockedIp_{identity.ClientIp}";
 
-            _memoryCache.TryGetValue(key, out int blockedCount);
+            _distributedCache.TryGetValue(key, out int blockedCount);
 
             blockedCount++;
             if (blockedCount > 10)
@@ -63,8 +62,8 @@ namespace Bit.Core.Utilities
             {
                 _logger.LogInformation(Constants.BypassFiltersEventId, null,
                     "Request blocked {0}. \nInfo: \n{1}", identity.ClientIp, GetRequestInfo(httpContext));
-                _memoryCache.Set(key, blockedCount,
-                    new MemoryCacheEntryOptions().SetSlidingExpiration(new TimeSpan(0, 5, 0)));
+                _distributedCache.Set(key, blockedCount,
+                    new DistributedCacheEntryOptions().SetSlidingExpiration(new TimeSpan(0, 5, 0)));
             }
         }
 

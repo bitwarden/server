@@ -1,7 +1,4 @@
-﻿using System;
-using System.IO;
-
-namespace Bit.Core.Test
+﻿namespace Bit.Core.Test
 {
     public class TempDirectory : IDisposable
     {

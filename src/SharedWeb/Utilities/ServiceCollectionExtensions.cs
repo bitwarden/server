@@ -1,12 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Reflection;
+﻿using System.Reflection;
 using System.Security.Claims;
 using System.Security.Cryptography.X509Certificates;
-using System.Threading.Tasks;
+using AspNetCoreRateLimit;
+using AspNetCoreRateLimit.Redis;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.HostedServices;
 using Bit.Core.Identity;
 using Bit.Core.IdentityServer;
 using Bit.Core.Models.Business.Tokenables;
@@ -31,13 +30,17 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Localization;
+using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Caching.StackExchangeRedis;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Serilog.Context;
+using StackExchange.Redis;
 using NoopRepos = Bit.Core.Repositories.Noop;
+using Role = Bit.Core.Entities.Role;
 using TableStorageRepos = Bit.Core.Repositories.TableStorage;
 
 namespace Bit.SharedWeb.Utilities
@@ -570,16 +573,6 @@ namespace Bit.SharedWeb.Utilities
 
         public static IServiceCollection AddDistributedIdentityServices(this IServiceCollection services, GlobalSettings globalSettings)
         {
-            if (string.IsNullOrWhiteSpace(globalSettings.IdentityServer?.RedisConnectionString))
-            {
-                services.AddDistributedMemoryCache();
-            }
-            else
-            {
-                services.AddDistributedRedisCache(options =>
-                    options.Configuration = globalSettings.IdentityServer.RedisConnectionString);
-            }
-
             services.AddOidcStateDataFormatterCache();
             services.AddSession();
             services.ConfigureApplicationCookie(configure => configure.CookieManager = new DistributedCacheCookieManager());
@@ -602,6 +595,60 @@ namespace Bit.SharedWeb.Utilities
                 options.ServerName = "Bitwarden";
                 options.Origins = new HashSet<string> { globalSettings.BaseServiceUri.Vault, };
                 options.TimestampDriftTolerance = 300000;
+            });
+        }
+
+        /// <summary>
+        ///     Adds either an in-memory or distributed IP rate limiter depending if a Redis connection string is available.
+        /// </summary>
+        /// <param name="services"></param>
+        /// <param name="globalSettings"></param>
+        public static void AddIpRateLimiting(this IServiceCollection services,
+            GlobalSettings globalSettings)
+        {
+            services.AddHostedService<IpRateLimitSeedStartupService>();
+            services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
+
+            if (string.IsNullOrEmpty(globalSettings.Redis.ConnectionString))
+            {
+                services.AddInMemoryRateLimiting();
+            }
+            else
+            {
+                services.AddRedisRateLimiting(); // Requires a registered IConnectionMultiplexer 
+            }
+        }
+
+        /// <summary>
+        ///     Adds an implementation of <see cref="IDistributedCache"/> to the service collection. Uses a memory
+        /// cache if self hosted or no Redis connection string is available in GlobalSettings.
+        /// </summary>
+        public static void AddDistributedCache(
+            this IServiceCollection services,
+            GlobalSettings globalSettings)
+        {
+            if (globalSettings.SelfHosted || string.IsNullOrEmpty(globalSettings.Redis.ConnectionString))
+            {
+                services.AddDistributedMemoryCache();
+                return;
+            }
+
+            // Register the IConnectionMultiplexer explicitly so it can be accessed via DI
+            // (e.g. for the IP rate limiting store)
+            services.AddSingleton<IConnectionMultiplexer>(
+                _ => ConnectionMultiplexer.Connect(globalSettings.Redis.ConnectionString));
+
+            // Explicitly register IDistributedCache to re-use existing IConnectionMultiplexer 
+            // to reduce the number of redundant connections to the Redis instance
+            services.AddSingleton<IDistributedCache>(s =>
+            {
+                return new RedisCache(new RedisCacheOptions
+                {
+                    // Use "ProjectName:" as an instance name to namespace keys and avoid conflicts between projects
+                    InstanceName = $"{globalSettings.ProjectName}:",
+                    ConnectionMultiplexerFactory = () =>
+                        Task.FromResult(s.GetRequiredService<IConnectionMultiplexer>())
+                });
             });
         }
     }

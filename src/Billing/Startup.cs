@@ -1,17 +1,9 @@
-﻿using System;
-using System.Globalization;
+﻿using System.Globalization;
 using Bit.Core.Context;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Routing;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Hosting;
 using Stripe;
 
 namespace Bit.Billing
@@ -76,6 +68,9 @@ namespace Bit.Billing
             // Jobs service, uncomment when we have some jobs to run
             // Jobs.JobsHostedService.AddJobsServices(services);
             // services.AddHostedService<Jobs.JobsHostedService>();
+
+            // Set up HttpClients
+            services.AddHttpClient("FreshdeskApi");
         }
 
         public void Configure(

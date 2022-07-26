@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-
-namespace Bit.Test.Common.Helpers
+﻿namespace Bit.Test.Common.Helpers
 {
     public static class TestCaseHelper
     {

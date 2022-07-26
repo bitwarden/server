@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Bit.Api.Models.Request.Organizations;
+﻿using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
 using Bit.Api.Models.Response.Organizations;
 using Bit.Core.Context;
@@ -377,35 +373,67 @@ namespace Bit.Api.Controllers
                 new OrganizationUserBulkResponseModel(r.Item1.Id, r.Item2)));
         }
 
+        [Obsolete("2022-07-22 Moved to {id}/revoke endpoint")]
         [HttpPatch("{id}/deactivate")]
         [HttpPut("{id}/deactivate")]
         public async Task Deactivate(Guid orgId, Guid id)
         {
-            await ActivateOrDeactivateUserAsync(orgId, id, _organizationService.DeactivateUserAsync);
+            await RevokeAsync(orgId, id);
         }
 
+        [Obsolete("2022-07-22 Moved to /revoke endpoint")]
         [HttpPatch("deactivate")]
         [HttpPut("deactivate")]
         public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkDeactivate(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
         {
-            return await ActivateOrDeactivateUsersAsync(orgId, model, _organizationService.DeactivateUsersAsync);
+            return await BulkRevokeAsync(orgId, model);
         }
 
+        [Obsolete("2022-07-22 Moved to {id}/restore endpoint")]
         [HttpPatch("{id}/activate")]
         [HttpPut("{id}/activate")]
         public async Task Activate(Guid orgId, Guid id)
         {
-            await ActivateOrDeactivateUserAsync(orgId, id, _organizationService.ActivateUserAsync);
+            await RestoreAsync(orgId, id);
         }
 
+        [Obsolete("2022-07-22 Moved to /restore endpoint")]
         [HttpPatch("activate")]
         [HttpPut("activate")]
         public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkActivate(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
         {
-            return await ActivateOrDeactivateUsersAsync(orgId, model, _organizationService.ActivateUsersAsync);
+            return await BulkRestoreAsync(orgId, model);
         }
 
-        private async Task ActivateOrDeactivateUserAsync(
+        [HttpPatch("{id}/revoke")]
+        [HttpPut("{id}/revoke")]
+        public async Task RevokeAsync(Guid orgId, Guid id)
+        {
+            await RestoreOrRevokeUserAsync(orgId, id, _organizationService.RevokeUserAsync);
+        }
+
+        [HttpPatch("revoke")]
+        [HttpPut("revoke")]
+        public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkRevokeAsync(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
+        {
+            return await RestoreOrRevokeUsersAsync(orgId, model, _organizationService.RevokeUsersAsync);
+        }
+
+        [HttpPatch("{id}/restore")]
+        [HttpPut("{id}/restore")]
+        public async Task RestoreAsync(Guid orgId, Guid id)
+        {
+            await RestoreOrRevokeUserAsync(orgId, id, _organizationService.RestoreUserAsync);
+        }
+
+        [HttpPatch("restore")]
+        [HttpPut("restore")]
+        public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkRestoreAsync(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
+        {
+            return await RestoreOrRevokeUsersAsync(orgId, model, _organizationService.RestoreUsersAsync);
+        }
+
+        private async Task RestoreOrRevokeUserAsync(
             Guid orgId,
             Guid id,
             Func<OrganizationUser, Guid?, Task> statusAction)
@@ -425,7 +453,7 @@ namespace Bit.Api.Controllers
             await statusAction(orgUser, userId);
         }
 
-        private async Task<ListResponseModel<OrganizationUserBulkResponseModel>> ActivateOrDeactivateUsersAsync(
+        private async Task<ListResponseModel<OrganizationUserBulkResponseModel>> RestoreOrRevokeUsersAsync(
             Guid orgId,
             OrganizationUserBulkRequestModel model,
             Func<Guid, IEnumerable<Guid>, Guid?, Task<List<Tuple<OrganizationUser, string>>>> statusAction)

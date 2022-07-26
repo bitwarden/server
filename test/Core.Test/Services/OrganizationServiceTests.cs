@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text.Json;
-using System.Threading.Tasks;
+﻿using System.Text.Json;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -197,6 +193,28 @@ namespace Bit.Core.Test.Services
             sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
             await Assert.ThrowsAsync<NotFoundException>(
                 () => sutProvider.Sut.InviteUsersAsync(organization.Id, invitor.UserId, new (OrganizationUserInvite, string)[] { (invite, null) }));
+        }
+
+        [Theory]
+        [OrganizationInviteAutoData]
+        public async Task InviteUser_DuplicateEmails_PassesWithoutDuplicates(Organization organization, OrganizationUser invitor,
+                    [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
+            OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
+        {
+            invite.Emails = invite.Emails.Append(invite.Emails.First());
+
+            sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+            sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(organization.Id).Returns(true);
+            sutProvider.GetDependency<ICurrentContext>().ManageUsers(organization.Id).Returns(true);
+            var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+            organizationUserRepository.GetManyByOrganizationAsync(organization.Id, OrganizationUserType.Owner)
+                .Returns(new[] { owner });
+
+            await sutProvider.Sut.InviteUsersAsync(organization.Id, invitor.UserId, new (OrganizationUserInvite, string)[] { (invite, null) });
+
+            await sutProvider.GetDependency<IMailService>().Received(1)
+                .BulkSendOrganizationInviteEmailAsync(organization.Name,
+                    Arg.Is<IEnumerable<(OrganizationUser, ExpiringToken)>>(v => v.Count() == invite.Emails.Distinct().Count()));
         }
 
         [Theory]

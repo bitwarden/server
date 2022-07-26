@@ -1,12 +1,7 @@
-﻿using System;
-using System.Data.SqlClient;
-using System.Threading;
-using System.Threading.Tasks;
+﻿using System.Data.SqlClient;
 using Bit.Core.Jobs;
 using Bit.Core.Settings;
 using Bit.Migrator;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 
 namespace Bit.Admin.HostedServices
 {

@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Bit.Core.Models.Data.Organizations.OrganizationUsers
+﻿namespace Bit.Core.Models.Data.Organizations.OrganizationUsers
 {
     public class OrganizationUserOrganizationDetails
     {
@@ -10,6 +8,7 @@ namespace Bit.Core.Models.Data.Organizations.OrganizationUsers
         public bool UsePolicies { get; set; }
         public bool UseSso { get; set; }
         public bool UseKeyConnector { get; set; }
+        public bool UseScim { get; set; }
         public bool UseGroups { get; set; }
         public bool UseDirectory { get; set; }
         public bool UseEvents { get; set; }

@@ -1,6 +1,4 @@
-﻿using System;
-using AutoMapper;
-using Bit.Core.Enums;
+﻿using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using LinqToDB.EntityFrameworkCore;
@@ -25,6 +23,8 @@ namespace Bit.Infrastructure.EntityFramework
                 if (provider == SupportedDatabaseProviders.Postgres)
                 {
                     options.UseNpgsql(connectionString);
+                    // Handle NpgSql Legacy Support for `timestamp without timezone` issue
+                    AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
                 }
                 else if (provider == SupportedDatabaseProviders.MySql)
                 {
