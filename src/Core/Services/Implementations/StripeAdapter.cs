@@ -15,6 +15,7 @@ namespace Bit.Core.Services
         private readonly Stripe.CardService _cardService;
         private readonly Stripe.BankAccountService _bankAccountService;
         private readonly Stripe.PriceService _priceService;
+        private readonly Stripe.TestHelpers.TestClockService _testClockService;
 
         public StripeAdapter()
         {
@@ -29,6 +30,7 @@ namespace Bit.Core.Services
             _cardService = new Stripe.CardService();
             _bankAccountService = new Stripe.BankAccountService();
             _priceService = new Stripe.PriceService();
+            _testClockService = new Stripe.TestHelpers.TestClockService();
         }
 
         public Task<Stripe.Customer> CustomerCreateAsync(Stripe.CustomerCreateOptions options)
@@ -197,6 +199,20 @@ namespace Bit.Core.Services
         public async Task<Stripe.StripeList<Stripe.Price>> PriceListAsync(Stripe.PriceListOptions options = null)
         {
             return await _priceService.ListAsync(options);
+        }
+
+        public async Task<List<Stripe.TestHelpers.TestClock>> TestClockListAsync()
+        {
+            var items = new List<Stripe.TestHelpers.TestClock>();
+            var options = new Stripe.TestHelpers.TestClockListOptions()
+            {
+                Limit = 100
+            };
+            await foreach (var i in _testClockService.ListAutoPagingAsync(options))
+            {
+                items.Add(i);
+            }
+            return items;
         }
     }
 }

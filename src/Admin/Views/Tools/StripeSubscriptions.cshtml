@@ -112,6 +112,14 @@
                     {<option asp-selected='@Model.Filter.Price == @price.Id' value="@price.Id">@price.Id</option>}
                 </select>
             </div>
+            <div class="col-6">
+                <label asp-for="Filter.TestClock">Test Clock</label>
+                <select asp-for="Filter.TestClock" name="filter.TestClock" class="form-control mr-2">
+                    <option asp-selected="Model.Filter.TestClock == null" value="@null">All</option>
+                    @foreach (var clock in Model.TestClocks)
+                    {<option asp-selected='@Model.Filter.TestClock == @clock.Id' value="@clock.Id">@clock.Name</option>}
+                </select>
+            </div>
         </div>
         <div class="row col-12 d-flex justify-content-end my-3">
                 <button type="submit" class="btn btn-primary" title="Search" name="action" asp-for="Action" value="@StripeSubscriptionsAction.Search"><i class="fa fa-search"></i> Search</button>
