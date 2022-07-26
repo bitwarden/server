@@ -485,11 +485,11 @@ namespace Bit.Admin.Controllers
             }
             else
             {
-                if (model.Action == StripeSubscriptionsAction.PreviousPage)
+                if (model.Action == StripeSubscriptionsAction.PreviousPage || model.Action == StripeSubscriptionsAction.Search)
                 {
                     model.Filter.StartingAfter = null;
                 }
-                if (model.Action == StripeSubscriptionsAction.NextPage)
+                if (model.Action == StripeSubscriptionsAction.NextPage || model.Action == StripeSubscriptionsAction.Search)
                 {
                     model.Filter.EndingBefore = null;
                 }
