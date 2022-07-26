@@ -512,7 +512,7 @@ namespace Bit.SharedWeb.Utilities
                 {
                     httpContext.Response.OnStarting((state) =>
                     {
-                        httpContext.Response.Headers.Append("Server-Version", CoreHelpers.GetVersion());
+                        httpContext.Response.Headers.Append("Server-Version", AssemblyHelpers.GetVersion());
                         return Task.FromResult(0);
                     }, null);
                     await next.Invoke();

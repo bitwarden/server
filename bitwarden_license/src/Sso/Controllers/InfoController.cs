@@ -15,7 +15,7 @@ namespace Bit.Sso.Controllers
         [HttpGet("~/version")]
         public JsonResult GetVersion()
         {
-            return Json(CoreHelpers.GetVersion());
+            return Json(AssemblyHelpers.GetVersion());
         }
     }
 }

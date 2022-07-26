@@ -459,6 +459,7 @@ namespace Bit.Core.Utilities
             return val.ToString();
         }
 
+        [Obsolete("CoreHelpers.GetVersion is deprecated, please use AssemblyHelpers.GetVersion instead.")]
         public static string GetVersion()
         {
             if (string.IsNullOrWhiteSpace(_version))
