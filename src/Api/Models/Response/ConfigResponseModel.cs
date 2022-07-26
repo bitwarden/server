@@ -22,7 +22,8 @@ namespace Bit.Api.Models.Response
         {
             Version = AssemblyHelpers.GetVersion();
             GitHash = AssemblyHelpers.GetGitHash();
-            Environment = new EnvironmentConfigResponseModel {
+            Environment = new EnvironmentConfigResponseModel
+            {
                 Vault = globalSettings.BaseServiceUri.Vault,
                 Api = globalSettings.BaseServiceUri.Api,
                 Identity = globalSettings.BaseServiceUri.Identity,
