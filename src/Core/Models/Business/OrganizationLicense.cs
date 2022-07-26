@@ -131,7 +131,7 @@ namespace Bit.Core.Models.Business
         /// <summary>
         /// Represents the current version of the license format. Should be updated whenever new fields are added.
         /// </summary>
-        private const int CURRENT_LICENSE_FILE_VERSION = 10;
+        private const int CURRENT_LICENSE_FILE_VERSION = 9;
         private bool ValidLicenseVersion
         {
             get => Version is >= 1 and <= 10;
