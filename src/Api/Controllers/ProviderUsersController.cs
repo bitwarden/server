@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Bit.Api.Models.Request.Providers;
+﻿using Bit.Api.Models.Request.Providers;
 using Bit.Api.Models.Response;
 using Bit.Api.Models.Response.Providers;
 using Bit.Core.Context;

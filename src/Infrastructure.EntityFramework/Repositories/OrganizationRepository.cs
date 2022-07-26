@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using AutoMapper;
+﻿using AutoMapper;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.Models;
@@ -87,6 +83,8 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
                     Using2fa = e.Use2fa && e.TwoFactorProviders != null,
                     UseSso = e.UseSso,
                     UseKeyConnector = e.UseKeyConnector,
+                    UseResetPassword = e.UseResetPassword,
+                    UseScim = e.UseScim,
                 }).ToListAsync();
             }
         }

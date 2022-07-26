@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text.Json;
-using System.Threading.Tasks;
+﻿using System.Text.Json;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -11,6 +6,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.Policies;
+using Bit.Core.Models.OrganizationConnectionConfigs;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
@@ -44,6 +40,7 @@ namespace Bit.Core.Services
         private readonly IGlobalSettings _globalSettings;
         private readonly ITaxRateRepository _taxRateRepository;
         private readonly IOrganizationApiKeyRepository _organizationApiKeyRepository;
+        private readonly IOrganizationConnectionRepository _organizationConnectionRepository;
         private readonly ICurrentContext _currentContext;
         private readonly ILogger<OrganizationService> _logger;
 
@@ -71,6 +68,7 @@ namespace Bit.Core.Services
             IGlobalSettings globalSettings,
             ITaxRateRepository taxRateRepository,
             IOrganizationApiKeyRepository organizationApiKeyRepository,
+            IOrganizationConnectionRepository organizationConnectionRepository,
             ICurrentContext currentContext,
             ILogger<OrganizationService> logger)
         {
@@ -96,6 +94,7 @@ namespace Bit.Core.Services
             _globalSettings = globalSettings;
             _taxRateRepository = taxRateRepository;
             _organizationApiKeyRepository = organizationApiKeyRepository;
+            _organizationConnectionRepository = organizationConnectionRepository;
             _currentContext = currentContext;
             _logger = logger;
         }
@@ -271,6 +270,17 @@ namespace Bit.Core.Services
                 }
             }
 
+            if (!newPlan.HasScim && organization.UseScim)
+            {
+                var scimConnections = await _organizationConnectionRepository.GetByOrganizationIdTypeAsync(organization.Id,
+                    OrganizationConnectionType.Scim);
+                if (scimConnections != null && scimConnections.Any(c => c.GetConfig<ScimConfig>()?.Enabled == true))
+                {
+                    throw new BadRequestException("Your new plan does not allow the SCIM feature. " +
+                        "Disable your SCIM configuration.");
+                }
+            }
+
             // TODO: Check storage?
 
             string paymentIntentClientSecret = null;
@@ -309,6 +319,7 @@ namespace Bit.Core.Services
             organization.UseApi = newPlan.HasApi;
             organization.UseSso = newPlan.HasSso;
             organization.UseKeyConnector = newPlan.HasKeyConnector;
+            organization.UseScim = newPlan.HasScim;
             organization.UseResetPassword = newPlan.HasResetPassword;
             organization.SelfHost = newPlan.HasSelfHost;
             organization.UsersGetPremium = newPlan.UsersGetPremium || upgrade.PremiumAccessAddon;
@@ -610,6 +621,7 @@ namespace Bit.Core.Services
                 UseResetPassword = plan.HasResetPassword,
                 SelfHost = plan.HasSelfHost,
                 UsersGetPremium = plan.UsersGetPremium || signup.PremiumAccessAddon,
+                UseScim = plan.HasScim,
                 Plan = plan.Name,
                 Gateway = null,
                 ReferenceData = signup.Owner.ReferenceData,
@@ -707,6 +719,7 @@ namespace Bit.Core.Services
                 UsePolicies = license.UsePolicies,
                 UseSso = license.UseSso,
                 UseKeyConnector = license.UseKeyConnector,
+                UseScim = license.UseScim,
                 UseGroups = license.UseGroups,
                 UseDirectory = license.UseDirectory,
                 UseEvents = license.UseEvents,
@@ -734,7 +747,7 @@ namespace Bit.Core.Services
 
             var dir = $"{_globalSettings.LicenseDirectory}/organization";
             Directory.CreateDirectory(dir);
-            using var fs = System.IO.File.OpenWrite(Path.Combine(dir, $"{organization.Id}.json"));
+            await using var fs = new FileStream(Path.Combine(dir, $"{organization.Id}.json"), FileMode.Create);
             await JsonSerializer.SerializeAsync(fs, license, JsonHelpers.Indented);
             return result;
         }
@@ -851,7 +864,7 @@ namespace Bit.Core.Services
                 if (userCount > license.Seats.Value)
                 {
                     throw new BadRequestException($"Your organization currently has {userCount} seats filled. " +
-                        $"Your new license only has ({ license.Seats.Value}) seats. Remove some users.");
+                        $"Your new license only has ({license.Seats.Value}) seats. Remove some users.");
                 }
             }
 
@@ -907,6 +920,17 @@ namespace Bit.Core.Services
                 }
             }
 
+            if (!license.UseScim && organization.UseScim)
+            {
+                var scimConnections = await _organizationConnectionRepository.GetByOrganizationIdTypeAsync(organization.Id,
+                    OrganizationConnectionType.Scim);
+                if (scimConnections != null && scimConnections.Any(c => c.GetConfig<ScimConfig>()?.Enabled == true))
+                {
+                    throw new BadRequestException("Your new plan does not allow the SCIM feature. " +
+                        "Disable your SCIM configuration.");
+                }
+            }
+
             if (!license.UseResetPassword && organization.UseResetPassword)
             {
                 var resetPasswordPolicy =
@@ -920,7 +944,7 @@ namespace Bit.Core.Services
 
             var dir = $"{_globalSettings.LicenseDirectory}/organization";
             Directory.CreateDirectory(dir);
-            using var fs = System.IO.File.OpenWrite(Path.Combine(dir, $"{organization.Id}.json"));
+            await using var fs = new FileStream(Path.Combine(dir, $"{organization.Id}.json"), FileMode.Create);
             await JsonSerializer.SerializeAsync(fs, license, JsonHelpers.Indented);
 
             organization.Name = license.Name;
@@ -938,6 +962,7 @@ namespace Bit.Core.Services
             organization.UsePolicies = license.UsePolicies;
             organization.UseSso = license.UseSso;
             organization.UseKeyConnector = license.UseKeyConnector;
+            organization.UseScim = license.UseScim;
             organization.UseResetPassword = license.UseResetPassword;
             organization.SelfHost = license.SelfHost;
             organization.UsersGetPremium = license.UsersGetPremium;
@@ -1140,7 +1165,8 @@ namespace Bit.Core.Services
             var events = new List<(OrganizationUser, EventType, DateTime?)>();
             foreach (var (invite, externalId) in invites)
             {
-                foreach (var email in invite.Emails)
+                // Prevent duplicate invitations
+                foreach (var email in invite.Emails.Distinct())
                 {
                     try
                     {
@@ -2185,6 +2211,192 @@ namespace Bit.Core.Services
             {
                 throw new BadRequestException("You cannot delete an Organization that is using Key Connector.");
             }
+        }
+
+        public async Task RevokeUserAsync(OrganizationUser organizationUser, Guid? revokingUserId)
+        {
+            if (organizationUser.Status == OrganizationUserStatusType.Revoked)
+            {
+                throw new BadRequestException("Already revoked.");
+            }
+
+            if (revokingUserId.HasValue && organizationUser.UserId == revokingUserId.Value)
+            {
+                throw new BadRequestException("You cannot revoke yourself.");
+            }
+
+            if (organizationUser.Type == OrganizationUserType.Owner && revokingUserId.HasValue &&
+                !await _currentContext.OrganizationOwner(organizationUser.OrganizationId))
+            {
+                throw new BadRequestException("Only owners can revoke other owners.");
+            }
+
+            if (!await HasConfirmedOwnersExceptAsync(organizationUser.OrganizationId, new[] { organizationUser.Id }))
+            {
+                throw new BadRequestException("Organization must have at least one confirmed owner.");
+            }
+
+            await _organizationUserRepository.RevokeAsync(organizationUser.Id);
+            organizationUser.Status = OrganizationUserStatusType.Revoked;
+            await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Revoked);
+        }
+
+        public async Task<List<Tuple<OrganizationUser, string>>> RevokeUsersAsync(Guid organizationId,
+            IEnumerable<Guid> organizationUserIds, Guid? revokingUserId)
+        {
+            var orgUsers = await _organizationUserRepository.GetManyAsync(organizationUserIds);
+            var filteredUsers = orgUsers.Where(u => u.OrganizationId == organizationId)
+                .ToList();
+
+            if (!filteredUsers.Any())
+            {
+                throw new BadRequestException("Users invalid.");
+            }
+
+            if (!await HasConfirmedOwnersExceptAsync(organizationId, organizationUserIds))
+            {
+                throw new BadRequestException("Organization must have at least one confirmed owner.");
+            }
+
+            var deletingUserIsOwner = false;
+            if (revokingUserId.HasValue)
+            {
+                deletingUserIsOwner = await _currentContext.OrganizationOwner(organizationId);
+            }
+
+            var result = new List<Tuple<OrganizationUser, string>>();
+
+            foreach (var organizationUser in filteredUsers)
+            {
+                try
+                {
+                    if (organizationUser.Status == OrganizationUserStatusType.Revoked)
+                    {
+                        throw new BadRequestException("Already revoked.");
+                    }
+
+                    if (revokingUserId.HasValue && organizationUser.UserId == revokingUserId)
+                    {
+                        throw new BadRequestException("You cannot revoke yourself.");
+                    }
+
+                    if (organizationUser.Type == OrganizationUserType.Owner && revokingUserId.HasValue && !deletingUserIsOwner)
+                    {
+                        throw new BadRequestException("Only owners can revoke other owners.");
+                    }
+
+                    await _organizationUserRepository.RevokeAsync(organizationUser.Id);
+                    organizationUser.Status = OrganizationUserStatusType.Revoked;
+                    await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Revoked);
+
+                    result.Add(Tuple.Create(organizationUser, ""));
+                }
+                catch (BadRequestException e)
+                {
+                    result.Add(Tuple.Create(organizationUser, e.Message));
+                }
+            }
+
+            return result;
+        }
+
+        public async Task RestoreUserAsync(OrganizationUser organizationUser, Guid? restoringUserId)
+        {
+            if (organizationUser.Status != OrganizationUserStatusType.Revoked)
+            {
+                throw new BadRequestException("Already active.");
+            }
+
+            if (restoringUserId.HasValue && organizationUser.UserId == restoringUserId.Value)
+            {
+                throw new BadRequestException("You cannot restore yourself.");
+            }
+
+            if (organizationUser.Type == OrganizationUserType.Owner && restoringUserId.HasValue &&
+                !await _currentContext.OrganizationOwner(organizationUser.OrganizationId))
+            {
+                throw new BadRequestException("Only owners can restore other owners.");
+            }
+
+            var status = GetPriorActiveOrganizationUserStatusType(organizationUser);
+
+            await _organizationUserRepository.RestoreAsync(organizationUser.Id, status);
+            organizationUser.Status = status;
+            await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Restored);
+        }
+
+        public async Task<List<Tuple<OrganizationUser, string>>> RestoreUsersAsync(Guid organizationId,
+            IEnumerable<Guid> organizationUserIds, Guid? restoringUserId)
+        {
+            var orgUsers = await _organizationUserRepository.GetManyAsync(organizationUserIds);
+            var filteredUsers = orgUsers.Where(u => u.OrganizationId == organizationId)
+                .ToList();
+
+            if (!filteredUsers.Any())
+            {
+                throw new BadRequestException("Users invalid.");
+            }
+
+            var deletingUserIsOwner = false;
+            if (restoringUserId.HasValue)
+            {
+                deletingUserIsOwner = await _currentContext.OrganizationOwner(organizationId);
+            }
+
+            var result = new List<Tuple<OrganizationUser, string>>();
+
+            foreach (var organizationUser in filteredUsers)
+            {
+                try
+                {
+                    if (organizationUser.Status != OrganizationUserStatusType.Revoked)
+                    {
+                        throw new BadRequestException("Already active.");
+                    }
+
+                    if (restoringUserId.HasValue && organizationUser.UserId == restoringUserId)
+                    {
+                        throw new BadRequestException("You cannot restore yourself.");
+                    }
+
+                    if (organizationUser.Type == OrganizationUserType.Owner && restoringUserId.HasValue && !deletingUserIsOwner)
+                    {
+                        throw new BadRequestException("Only owners can restore other owners.");
+                    }
+
+                    var status = GetPriorActiveOrganizationUserStatusType(organizationUser);
+
+                    await _organizationUserRepository.RestoreAsync(organizationUser.Id, status);
+                    organizationUser.Status = status;
+                    await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Restored);
+
+                    result.Add(Tuple.Create(organizationUser, ""));
+                }
+                catch (BadRequestException e)
+                {
+                    result.Add(Tuple.Create(organizationUser, e.Message));
+                }
+            }
+
+            return result;
+        }
+
+        static OrganizationUserStatusType GetPriorActiveOrganizationUserStatusType(OrganizationUser organizationUser)
+        {
+            // Determine status to revert back to
+            var status = OrganizationUserStatusType.Invited;
+            if (organizationUser.UserId.HasValue && string.IsNullOrWhiteSpace(organizationUser.Email))
+            {
+                // Has UserId & Email is null, then Accepted
+                status = OrganizationUserStatusType.Accepted;
+                if (!string.IsNullOrWhiteSpace(organizationUser.Key))
+                {
+                    // We have an org key for this user, user was confirmed
+                    status = OrganizationUserStatusType.Confirmed;
+                }
+            }
+
+            return status;
         }
     }
 }

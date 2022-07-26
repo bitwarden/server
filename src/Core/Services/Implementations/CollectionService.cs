@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
+﻿using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -19,6 +17,7 @@ namespace Bit.Core.Services
         private readonly IUserRepository _userRepository;
         private readonly IMailService _mailService;
         private readonly IReferenceEventService _referenceEventService;
+        private readonly ICurrentContext _currentContext;
 
         public CollectionService(
             IEventService eventService,
@@ -27,7 +26,8 @@ namespace Bit.Core.Services
             ICollectionRepository collectionRepository,
             IUserRepository userRepository,
             IMailService mailService,
-            IReferenceEventService referenceEventService)
+            IReferenceEventService referenceEventService,
+            ICurrentContext currentContext)
         {
             _eventService = eventService;
             _organizationRepository = organizationRepository;
@@ -36,6 +36,7 @@ namespace Bit.Core.Services
             _userRepository = userRepository;
             _mailService = mailService;
             _referenceEventService = referenceEventService;
+            _currentContext = currentContext;
         }
 
         public async Task SaveAsync(Collection collection, IEnumerable<SelectionReadOnly> groups = null,
@@ -113,6 +114,28 @@ namespace Bit.Core.Services
             }
             await _collectionRepository.DeleteUserAsync(collection.Id, organizationUserId);
             await _eventService.LogOrganizationUserEventAsync(orgUser, Enums.EventType.OrganizationUser_Updated);
+        }
+
+        public async Task<IEnumerable<Collection>> GetOrganizationCollections(Guid organizationId)
+        {
+            if (!await _currentContext.ViewAllCollections(organizationId) && !await _currentContext.ManageUsers(organizationId))
+            {
+                throw new NotFoundException();
+            }
+
+            IEnumerable<Collection> orgCollections;
+            if (await _currentContext.OrganizationAdmin(organizationId))
+            {
+                // Admins, Owners and Providers can access all items even if not assigned to them
+                orgCollections = await _collectionRepository.GetManyByOrganizationIdAsync(organizationId);
+            }
+            else
+            {
+                var collections = await _collectionRepository.GetManyByUserIdAsync(_currentContext.UserId.Value);
+                orgCollections = collections.Where(c => c.OrganizationId == organizationId);
+            }
+
+            return orgCollections;
         }
     }
 }

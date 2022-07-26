@@ -3,5 +3,6 @@
     public enum OrganizationConnectionType : byte
     {
         CloudBillingSync = 1,
+        Scim = 2,
     }
 }

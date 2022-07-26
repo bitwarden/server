@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using AutoMapper;
+﻿using AutoMapper;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
@@ -425,6 +421,44 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
                         Email = e.Email ?? e.User.Email
                     });
                 return await query.ToListAsync();
+            }
+        }
+
+        public async Task RevokeAsync(Guid id)
+        {
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var orgUser = await GetDbSet(dbContext).FindAsync(id);
+                if (orgUser != null)
+                {
+                    dbContext.Update(orgUser);
+                    orgUser.Status = OrganizationUserStatusType.Revoked;
+                    await dbContext.SaveChangesAsync();
+                    if (orgUser.UserId.HasValue)
+                    {
+                        await UserBumpAccountRevisionDate(orgUser.UserId.Value);
+                    }
+                }
+            }
+        }
+
+        public async Task RestoreAsync(Guid id, OrganizationUserStatusType status)
+        {
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var orgUser = await GetDbSet(dbContext).FindAsync(id);
+                if (orgUser != null)
+                {
+                    dbContext.Update(orgUser);
+                    orgUser.Status = status;
+                    await dbContext.SaveChangesAsync();
+                    if (orgUser.UserId.HasValue)
+                    {
+                        await UserBumpAccountRevisionDate(orgUser.UserId.Value);
+                    }
+                }
             }
         }
     }

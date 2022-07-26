@@ -1,14 +1,9 @@
-﻿using System;
-using Bit.Core.IdentityServer;
+﻿using Bit.Core.IdentityServer;
 using Bit.Core.Settings;
-using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
 using IdentityServer4.ResponseHandling;
 using IdentityServer4.Services;
 using IdentityServer4.Stores;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 
 namespace Bit.Identity.Utilities
 {

@@ -1,5 +1,4 @@
-﻿using System;
-using System.Security.Authentication;
+﻿using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using Bit.Core.Settings;
 using Microsoft.AspNetCore.Builder;

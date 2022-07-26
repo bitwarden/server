@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using Bit.Core.Entities;
+﻿using Bit.Core.Entities;
 using Core.Models.Data;
 
 namespace Bit.Core.Models.Data

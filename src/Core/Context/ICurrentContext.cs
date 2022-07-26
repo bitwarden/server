@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Security.Claims;
-using System.Threading.Tasks;
+﻿using System.Security.Claims;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
@@ -50,6 +47,7 @@ namespace Bit.Core.Context
         Task<bool> ManagePolicies(Guid orgId);
         Task<bool> ManageSso(Guid orgId);
         Task<bool> ManageUsers(Guid orgId);
+        Task<bool> ManageScim(Guid orgId);
         Task<bool> ManageResetPassword(Guid orgId);
         Task<bool> ManageBilling(Guid orgId);
         Task<bool> ProviderUserForOrgAsync(Guid orgId);

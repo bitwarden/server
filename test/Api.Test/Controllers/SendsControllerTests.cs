@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text.Json;
-using System.Threading.Tasks;
+﻿using System.Text.Json;
 using AutoFixture.Xunit2;
 using Bit.Api.Controllers;
 using Bit.Api.Models.Request;

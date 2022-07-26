@@ -1,6 +1,4 @@
-﻿using System;
-using System.Linq;
-using System.Reflection;
+﻿using System.Reflection;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
@@ -36,6 +34,7 @@ namespace Bit.Core.Models.Business
             UsePolicies = org.UsePolicies;
             UseSso = org.UseSso;
             UseKeyConnector = org.UseKeyConnector;
+            UseScim = org.UseScim;
             UseGroups = org.UseGroups;
             UseEvents = org.UseEvents;
             UseDirectory = org.UseDirectory;
@@ -107,6 +106,7 @@ namespace Bit.Core.Models.Business
         public bool UsePolicies { get; set; }
         public bool UseSso { get; set; }
         public bool UseKeyConnector { get; set; }
+        public bool UseScim { get; set; }
         public bool UseGroups { get; set; }
         public bool UseEvents { get; set; }
         public bool UseDirectory { get; set; }
@@ -131,10 +131,10 @@ namespace Bit.Core.Models.Business
         /// <summary>
         /// Represents the current version of the license format. Should be updated whenever new fields are added.
         /// </summary>
-        private const int CURRENT_LICENSE_FILE_VERSION = 8;
+        private const int CURRENT_LICENSE_FILE_VERSION = 10;
         private bool ValidLicenseVersion
         {
-            get => Version is >= 1 and <= 9;
+            get => Version is >= 1 and <= 10;
         }
 
         public byte[] GetDataBytes(bool forHash = false)
@@ -164,6 +164,8 @@ namespace Bit.Core.Models.Business
                         (Version >= 8 || !p.Name.Equals(nameof(UseResetPassword))) &&
                         // UseKeyConnector was added in Version 9
                         (Version >= 9 || !p.Name.Equals(nameof(UseKeyConnector))) &&
+                        // UseScim was added in Version 10
+                        (Version >= 10 || !p.Name.Equals(nameof(UseScim))) &&
                         (
                             !forHash ||
                             (
@@ -270,6 +272,11 @@ namespace Bit.Core.Models.Business
                 if (valid && Version >= 9)
                 {
                     valid = organization.UseKeyConnector == UseKeyConnector;
+                }
+
+                if (valid && Version >= 10)
+                {
+                    valid = organization.UseScim == UseScim;
                 }
 
                 return valid;

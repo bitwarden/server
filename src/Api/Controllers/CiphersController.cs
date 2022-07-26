@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text.Json;
-using System.Threading.Tasks;
+﻿using System.Text.Json;
 using Azure.Messaging.EventGrid;
 using Bit.Api.Models.Request;
 using Bit.Api.Models.Request.Accounts;
@@ -21,7 +17,6 @@ using Bit.Core.Utilities;
 using Core.Models.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 
 namespace Bit.Api.Controllers
 {
@@ -170,15 +165,16 @@ namespace Bit.Api.Controllers
 
         [HttpPut("{id}")]
         [HttpPost("{id}")]
-        public async Task<CipherResponseModel> Put(string id, [FromBody] CipherRequestModel model)
+        public async Task<CipherResponseModel> Put(Guid id, [FromBody] CipherRequestModel model)
         {
             var userId = _userService.GetProperUserId(User).Value;
-            var cipher = await _cipherRepository.GetByIdAsync(new Guid(id), userId);
+            var cipher = await _cipherRepository.GetByIdAsync(id, userId);
             if (cipher == null)
             {
                 throw new NotFoundException();
             }
 
+            var collectionIds = (await _collectionCipherRepository.GetManyByUserIdCipherIdAsync(userId, id)).Select(c => c.CollectionId).ToList();
             var modelOrgId = string.IsNullOrWhiteSpace(model.OrganizationId) ?
                 (Guid?)null : new Guid(model.OrganizationId);
             if (cipher.OrganizationId != modelOrgId)
@@ -187,7 +183,7 @@ namespace Bit.Api.Controllers
                     "then try again.");
             }
 
-            await _cipherService.SaveDetailsAsync(model.ToCipherDetails(cipher), userId, model.LastKnownRevisionDate);
+            await _cipherService.SaveDetailsAsync(model.ToCipherDetails(cipher), userId, model.LastKnownRevisionDate, collectionIds);
 
             var response = new CipherResponseModel(cipher, _globalSettings);
             return response;
@@ -195,19 +191,20 @@ namespace Bit.Api.Controllers
 
         [HttpPut("{id}/admin")]
         [HttpPost("{id}/admin")]
-        public async Task<CipherMiniResponseModel> PutAdmin(string id, [FromBody] CipherRequestModel model)
+        public async Task<CipherMiniResponseModel> PutAdmin(Guid id, [FromBody] CipherRequestModel model)
         {
             var userId = _userService.GetProperUserId(User).Value;
-            var cipher = await _cipherRepository.GetOrganizationDetailsByIdAsync(new Guid(id));
+            var cipher = await _cipherRepository.GetOrganizationDetailsByIdAsync(id);
             if (cipher == null || !cipher.OrganizationId.HasValue ||
                 !await _currentContext.EditAnyCollection(cipher.OrganizationId.Value))
             {
                 throw new NotFoundException();
             }
 
+            var collectionIds = (await _collectionCipherRepository.GetManyByUserIdCipherIdAsync(userId, id)).Select(c => c.CollectionId).ToList();
             // object cannot be a descendant of CipherDetails, so let's clone it.
             var cipherClone = model.ToCipher(cipher).Clone();
-            await _cipherService.SaveAsync(cipherClone, userId, model.LastKnownRevisionDate, null, true, false);
+            await _cipherService.SaveAsync(cipherClone, userId, model.LastKnownRevisionDate, collectionIds, true, false);
 
             var response = new CipherMiniResponseModel(cipherClone, _globalSettings, cipher.OrganizationUseTotp);
             return response;
@@ -219,40 +216,12 @@ namespace Bit.Api.Controllers
         {
             var userId = _userService.GetProperUserId(User).Value;
             var orgIdGuid = new Guid(organizationId);
-            if (!await _currentContext.ViewAllCollections(orgIdGuid) && !await _currentContext.AccessReports(orgIdGuid))
-            {
-                throw new NotFoundException();
-            }
 
-            IEnumerable<CipherOrganizationDetails> orgCiphers;
-            if (await _currentContext.OrganizationAdmin(orgIdGuid))
-            {
-                // Admins, Owners and Providers can access all items even if not assigned to them
-                orgCiphers = await _cipherRepository.GetManyOrganizationDetailsByOrganizationIdAsync(orgIdGuid);
-            }
-            else
-            {
-                var ciphers = await _cipherRepository.GetManyByUserIdAsync(userId, true);
-                orgCiphers = ciphers.Where(c => c.OrganizationId == orgIdGuid);
-            }
-
-            var orgCipherIds = orgCiphers.Select(c => c.Id);
-
-            var collectionCiphers = await _collectionCipherRepository.GetManyByOrganizationIdAsync(orgIdGuid);
-            var collectionCiphersGroupDict = collectionCiphers
-                .Where(c => orgCipherIds.Contains(c.CipherId))
-                .GroupBy(c => c.CipherId).ToDictionary(s => s.Key);
-
+            (IEnumerable<CipherOrganizationDetails> orgCiphers, Dictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphersGroupDict) = await _cipherService.GetOrganizationCiphers(userId, orgIdGuid);
 
             var responses = orgCiphers.Select(c => new CipherMiniDetailsResponseModel(c, _globalSettings,
                 collectionCiphersGroupDict, c.OrganizationUseTotp));
 
-
-            var providerId = await _currentContext.ProviderIdForOrg(orgIdGuid);
-            if (providerId.HasValue)
-            {
-                await _providerService.LogProviderAccessToOrganizationAsync(orgIdGuid);
-            }
             return new ListResponseModel<CipherMiniDetailsResponseModel>(responses);
         }
 

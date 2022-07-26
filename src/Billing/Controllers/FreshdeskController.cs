@@ -1,18 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Net.Http;
-using System.Net.Http.Json;
+﻿using System.ComponentModel.DataAnnotations;
 using System.Reflection;
 using System.Text;
-using System.Text.Json;
-using System.Threading.Tasks;
+using Bit.Billing.Models;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Bit.Billing.Controllers
@@ -24,18 +17,18 @@ namespace Bit.Billing.Controllers
         private readonly IUserRepository _userRepository;
         private readonly IOrganizationRepository _organizationRepository;
         private readonly IOrganizationUserRepository _organizationUserRepository;
-        private readonly ILogger<AppleController> _logger;
+        private readonly ILogger<FreshdeskController> _logger;
         private readonly GlobalSettings _globalSettings;
-        private readonly HttpClient _httpClient = new HttpClient();
-        private readonly string _freshdeskAuthkey;
+        private readonly IHttpClientFactory _httpClientFactory;
 
         public FreshdeskController(
             IUserRepository userRepository,
             IOrganizationRepository organizationRepository,
             IOrganizationUserRepository organizationUserRepository,
             IOptions<BillingSettings> billingSettings,
-            ILogger<AppleController> logger,
-            GlobalSettings globalSettings)
+            ILogger<FreshdeskController> logger,
+            GlobalSettings globalSettings,
+            IHttpClientFactory httpClientFactory)
         {
             _billingSettings = billingSettings?.Value;
             _userRepository = userRepository;
@@ -43,37 +36,23 @@ namespace Bit.Billing.Controllers
             _organizationUserRepository = organizationUserRepository;
             _logger = logger;
             _globalSettings = globalSettings;
-            _freshdeskAuthkey = Convert.ToBase64String(
-                Encoding.UTF8.GetBytes($"{_billingSettings.FreshdeskApiKey}:X"));
+            _httpClientFactory = httpClientFactory;
         }
 
         [HttpPost("webhook")]
-        public async Task<IActionResult> PostWebhook()
+        public async Task<IActionResult> PostWebhook([FromQuery, Required] string key,
+            [FromBody, Required] FreshdeskWebhookModel model)
         {
-            if (HttpContext?.Request?.Query == null)
-            {
-                return new BadRequestResult();
-            }
-
-            var key = HttpContext.Request.Query.ContainsKey("key") ?
-                HttpContext.Request.Query["key"].ToString() : null;
-            if (!CoreHelpers.FixedTimeEquals(key, _billingSettings.FreshdeskWebhookKey))
-            {
-                return new BadRequestResult();
-            }
-
-            using var body = await JsonSerializer.DeserializeAsync<JsonDocument>(HttpContext.Request.Body);
-            var root = body.RootElement;
-            if (root.ValueKind != JsonValueKind.Object)
+            if (string.IsNullOrWhiteSpace(key) || !CoreHelpers.FixedTimeEquals(key, _billingSettings.FreshdeskWebhookKey))
             {
                 return new BadRequestResult();
             }
 
             try
             {
-                var ticketId = root.GetProperty("ticket_id").GetString();
-                var ticketContactEmail = root.GetProperty("ticket_contact_email").GetString();
-                var ticketTags = root.GetProperty("ticket_tags").GetString();
+                var ticketId = model.TicketId;
+                var ticketContactEmail = model.TicketContactEmail;
+                var ticketTags = model.TicketTags;
                 if (string.IsNullOrWhiteSpace(ticketId) || string.IsNullOrWhiteSpace(ticketContactEmail))
                 {
                     return new BadRequestResult();
@@ -81,20 +60,34 @@ namespace Bit.Billing.Controllers
 
                 var updateBody = new Dictionary<string, object>();
                 var note = string.Empty;
+                var customFields = new Dictionary<string, object>();
                 var user = await _userRepository.GetByEmailAsync(ticketContactEmail);
                 if (user != null)
                 {
-                    note += $"<li>User, {user.Email}: {_globalSettings.BaseServiceUri.Admin}/users/edit/{user.Id}</li>";
+                    var userLink = $"{_globalSettings.BaseServiceUri.Admin}/users/edit/{user.Id}";
+                    note += $"<li>User, {user.Email}: {userLink}</li>";
+                    customFields.Add("cf_user", userLink);
                     var tags = new HashSet<string>();
                     if (user.Premium)
                     {
                         tags.Add("Premium");
                     }
                     var orgs = await _organizationRepository.GetManyByUserIdAsync(user.Id);
+
                     foreach (var org in orgs)
                     {
-                        note += $"<li>Org, {org.Name}: " +
-                            $"{_globalSettings.BaseServiceUri.Admin}/organizations/edit/{org.Id}</li>";
+                        var orgNote = $"{org.Name} ({org.Seats.GetValueOrDefault()}): " +
+                            $"{_globalSettings.BaseServiceUri.Admin}/organizations/edit/{org.Id}";
+                        note += $"<li>Org, {orgNote}</li>";
+                        if (!customFields.Any(kvp => kvp.Key == "cf_org"))
+                        {
+                            customFields.Add("cf_org", orgNote);
+                        }
+                        else
+                        {
+                            customFields["cf_org"] += $"\n{orgNote}";
+                        }
+
                         var planName = GetAttribute<DisplayAttribute>(org.PlanType).Name.Split(" ").FirstOrDefault();
                         if (!string.IsNullOrWhiteSpace(planName))
                         {
@@ -114,14 +107,17 @@ namespace Bit.Billing.Controllers
                         }
                         updateBody.Add("tags", tagsToUpdate);
                     }
+
+                    if (customFields.Any())
+                    {
+                        updateBody.Add("custom_fields", customFields);
+                    }
                     var updateRequest = new HttpRequestMessage(HttpMethod.Put,
                         string.Format("https://bitwarden.freshdesk.com/api/v2/tickets/{0}", ticketId))
                     {
                         Content = JsonContent.Create(updateBody),
                     };
-
                     await CallFreshdeskApiAsync(updateRequest);
-
 
                     var noteBody = new Dictionary<string, object>
                     {
@@ -149,8 +145,10 @@ namespace Bit.Billing.Controllers
         {
             try
             {
-                request.Headers.Add("Authorization", _freshdeskAuthkey);
-                var response = await _httpClient.SendAsync(request);
+                var freshdeskAuthkey = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{_billingSettings.FreshdeskApiKey}:X"));
+                var httpClient = _httpClientFactory.CreateClient("FreshdeskApi");
+                request.Headers.Add("Authorization", freshdeskAuthkey);
+                var response = await httpClient.SendAsync(request);
                 if (response.StatusCode != System.Net.HttpStatusCode.TooManyRequests || retriedCount > 3)
                 {
                     return response;

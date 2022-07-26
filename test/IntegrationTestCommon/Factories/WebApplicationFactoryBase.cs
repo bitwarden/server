@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using AspNetCoreRateLimit;
+﻿using AspNetCoreRateLimit;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Infrastructure.EntityFramework.Repositories;
@@ -43,6 +41,9 @@ namespace Bit.IntegrationTestCommon.Factories
                     // DbContextOptions to use an in memory database
                     { "globalSettings:databaseProvider", "postgres" },
                     { "globalSettings:postgreSql:connectionString", "Host=localhost;Username=test;Password=test;Database=test" },
+                    
+                    // Clear the redis connection string for distributed caching, forcing an in-memory implementation
+                    { "globalSettings:redis:connectionString", ""}
                 });
             });
 

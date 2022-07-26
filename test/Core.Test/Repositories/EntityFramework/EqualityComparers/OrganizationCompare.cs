@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
+﻿using System.Diagnostics.CodeAnalysis;
 using Bit.Core.Entities;
 
 namespace Bit.Core.Test.Repositories.EntityFramework.EqualityComparers
@@ -26,6 +25,7 @@ namespace Bit.Core.Test.Repositories.EntityFramework.EqualityComparers
                    x.UsePolicies.Equals(y.UsePolicies) &&
                    x.UseSso.Equals(y.UseSso) &&
                    x.UseKeyConnector.Equals(y.UseKeyConnector) &&
+                   x.UseScim.Equals(y.UseScim) &&
                    x.UseGroups.Equals(y.UseGroups) &&
                    x.UseDirectory.Equals(y.UseDirectory) &&
                    x.UseEvents.Equals(y.UseEvents) &&

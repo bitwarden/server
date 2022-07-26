@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.Linq;
+﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.Entities.Provider;
 using Bit.Core.Enums.Provider;
 using Bit.Core.Utilities;

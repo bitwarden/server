@@ -32,6 +32,7 @@
                 document.getElementById('@(nameof(Model.UseApi))').checked = true;
                 document.getElementById('@(nameof(Model.SelfHost))').checked = false;
                 document.getElementById('@(nameof(Model.UseResetPassword))').checked = false;
+                document.getElementById('@(nameof(Model.UseScim))').checked = false;
                 // Licensing
                 document.getElementById('@(nameof(Model.LicenseKey))').value = '@Model.RandomLicenseKey';
                 document.getElementById('@(nameof(Model.ExpirationDate))').value = '@Model.FourteenDayExpirationDate';
@@ -65,6 +66,7 @@
                 document.getElementById('@(nameof(Model.UseApi))').checked = true;
                 document.getElementById('@(nameof(Model.SelfHost))').checked = true;
                 document.getElementById('@(nameof(Model.UseResetPassword))').checked = true;
+                document.getElementById('@(nameof(Model.UseScim))').checked = true;
                 // Licensing
                 document.getElementById('@(nameof(Model.LicenseKey))').value = '@Model.RandomLicenseKey';
                 document.getElementById('@(nameof(Model.ExpirationDate))').value = '@Model.FourteenDayExpirationDate';
@@ -218,6 +220,10 @@
     <div class="form-check">
         <input type="checkbox" class="form-check-input" asp-for="UseKeyConnector">
         <label class="form-check-label" asp-for="UseKeyConnector"></label>
+    </div>
+    <div class="form-check">
+        <input type="checkbox" class="form-check-input" asp-for="UseScim">
+        <label class="form-check-label" asp-for="UseScim"></label>
     </div>
     <div class="form-check">
         <input type="checkbox" class="form-check-input" asp-for="UseDirectory">

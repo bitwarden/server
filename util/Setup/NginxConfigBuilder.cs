@@ -1,7 +1,4 @@
-﻿using System.Collections.Generic;
-using System.IO;
-
-namespace Bit.Setup
+﻿namespace Bit.Setup
 {
     public class NginxConfigBuilder
     {
@@ -71,6 +68,7 @@ namespace Bit.Setup
                 Captcha = context.Config.Captcha;
                 Ssl = context.Config.Ssl;
                 EnableKeyConnector = context.Config.EnableKeyConnector;
+                EnableScim = context.Config.EnableScim;
                 Domain = context.Config.Domain;
                 Url = context.Config.Url;
                 RealIps = context.Config.RealIps;
@@ -119,6 +117,7 @@ namespace Bit.Setup
             public bool Captcha { get; set; }
             public bool Ssl { get; set; }
             public bool EnableKeyConnector { get; set; }
+            public bool EnableScim { get; set; }
             public string Domain { get; set; }
             public string Url { get; set; }
             public string CertificatePath { get; set; }
