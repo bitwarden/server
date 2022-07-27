@@ -50,7 +50,7 @@ namespace Bit.Api.Models.Response.Providers
         public string Settings { get; set; }
         public DateTime CreationDate { get; set; }
         public DateTime RevisionDate { get; set; }
-        public int? UserCount { get; set; }
+        public int UserCount { get; set; }
         public int? Seats { get; set; }
         public string Plan { get; set; }
     }
