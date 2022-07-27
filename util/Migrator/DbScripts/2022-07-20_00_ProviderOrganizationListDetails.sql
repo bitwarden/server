@@ -11,7 +11,7 @@ SELECT
     PO.[CreationDate],
     PO.[RevisionDate],
     (SELECT COUNT(1) FROM [dbo].[OrganizationUser] OU WHERE OU.OrganizationId = PO.OrganizationId AND OU.Status = 2) UserCount,
-    O.Seats Seats,
+    O.[Seats],
     O.[Plan]
 FROM
     [dbo].[ProviderOrganization] PO
