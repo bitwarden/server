@@ -459,19 +459,6 @@ namespace Bit.Core.Utilities
             return val.ToString();
         }
 
-        [Obsolete("CoreHelpers.GetVersion is deprecated, please use AssemblyHelpers.GetVersion instead.")]
-        public static string GetVersion()
-        {
-            if (string.IsNullOrWhiteSpace(_version))
-            {
-                _version = Assembly.GetEntryAssembly()
-                    .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
-                    .InformationalVersion;
-            }
-
-            return _version;
-        }
-
         public static string SanitizeForEmail(string value, bool htmlEncode = true)
         {
             var cleanedValue = value.Replace("@", "[at]");
