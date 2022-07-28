@@ -423,14 +423,14 @@ namespace Bit.Api.Controllers
         [HttpPut("{id}/restore")]
         public async Task RestoreAsync(Guid orgId, Guid id)
         {
-            await RestoreOrRevokeUserAsync(orgId, id, _organizationService.RestoreUserAsync);
+            await RestoreOrRevokeUserAsync(orgId, id, (orgUser, userId) => _organizationService.RestoreUserAsync(orgUser, userId, _userService));
         }
 
         [HttpPatch("restore")]
         [HttpPut("restore")]
         public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkRestoreAsync(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
         {
-            return await RestoreOrRevokeUsersAsync(orgId, model, _organizationService.RestoreUsersAsync);
+            return await RestoreOrRevokeUsersAsync(orgId, model, (orgId, orgUserIds, restoringUserId ) => _organizationService.RestoreUsersAsync(orgId, orgUserIds, restoringUserId, _userService));
         }
 
         private async Task RestoreOrRevokeUserAsync(
