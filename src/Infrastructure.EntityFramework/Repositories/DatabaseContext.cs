@@ -43,6 +43,13 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
+            // Scans and loads all configurations implementing the `IEntityTypeConfiguration` from the
+            //  `Infrastructure.EntityFramework` Module. Note to get the assembly we can use a random class
+            //   from this module.
+            builder.ApplyConfigurationsFromAssembly(typeof(DatabaseContext).Assembly);
+
+            // Going forward use `IEntityTypeConfiguration` in the Configurations folder for managing 
+            // Entity Framework code first database configurations.
             var eCipher = builder.Entity<Cipher>();
             var eCollection = builder.Entity<Collection>();
             var eCollectionCipher = builder.Entity<CollectionCipher>();
@@ -135,9 +142,6 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             eUser.ToTable(nameof(User));
             eOrganizationApiKey.ToTable(nameof(OrganizationApiKey));
             eOrganizationConnection.ToTable(nameof(OrganizationConnection));
-
-            // Apply all configurations specified in types implementing IEntityTypeConfiguration in the assembly.
-            builder.ApplyConfigurationsFromAssembly(typeof(SecretEntityTypeConfiguration).Assembly);
         }
     }
 }

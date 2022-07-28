@@ -7,7 +7,7 @@ public class SecretEntityTypeConfiguration : IEntityTypeConfiguration<Secret>
     public void Configure(EntityTypeBuilder<Secret> builder)
     {
         builder
-            .Property(b => b.Id)
+            .Property(s => s.Id)
             .ValueGeneratedNever();
 
         builder

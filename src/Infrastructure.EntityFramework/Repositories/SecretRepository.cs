@@ -14,15 +14,42 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
 
         }
 
-        public async Task<IEnumerable<Core.Entities.Secret>> GetManyByOrganizationIdAsync(Guid organizationId)
+        public async Task<Core.Entities.Secret> GetByIdAsync(Guid id, bool includeDeleted = false)
         {
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
-                var secrets = await dbContext.Secret
-                    .Where(c => c.OrganizationId == organizationId)
-                    .ToListAsync();
-                return Mapper.Map<List<Core.Entities.Secret>>(secrets);
+                Core.Entities.Secret secret;
+                if (includeDeleted)
+                {
+                    secret = await GetDbSet(dbContext).FindAsync(id);
+                }
+                else
+                {
+                    secret = await dbContext.Secret
+                                        .Where(c => c.Id == id && c.DeletedDate == null)
+                                        .FirstOrDefaultAsync();
+                }
+                return Mapper.Map<Core.Entities.Secret>(secret);
+            }
+        }
+
+        public async Task<IEnumerable<Core.Entities.Secret>> GetManyByOrganizationIdAsync(Guid organizationId, bool includeDeleted = false)
+        {
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+
+                IQueryable<Secret> query = dbContext.Secret;
+                if (includeDeleted)
+                {
+                    query = query.Where(c => c.OrganizationId == organizationId);
+                }
+                else
+                {
+                    query = query.Where(c => c.OrganizationId == organizationId && c.DeletedDate == null);
+                }
+                return Mapper.Map<List<Core.Entities.Secret>>(await query.ToListAsync());
             }
         }
 
