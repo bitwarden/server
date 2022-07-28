@@ -124,7 +124,7 @@ namespace Bit.Core.Services
             }
 
             IEnumerable<Collection> orgCollections;
-            if (await _currentContext.OrganizationAdmin(organizationId) || await _currentContext.OrganizationCustom(organizationId))
+            if (await _currentContext.OrganizationAdmin(organizationId) || await _currentContext.ViewAllCollections(organizationId))
             {
                 // Admins, Owners, Providers and Custom (with collection management permissions) can access all items even if not assigned to them
                 orgCollections = await _collectionRepository.GetManyByOrganizationIdAsync(organizationId);
