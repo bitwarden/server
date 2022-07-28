@@ -391,14 +391,14 @@ namespace Bit.Api.Controllers
         [HttpPut("{id}/activate")]
         public async Task Activate(Guid orgId, Guid id)
         {
-            await ActivateOrDeactivateUserAsync(orgId, id, _organizationService.ActivateUserAsync);
+            await ActivateOrDeactivateUserAsync(orgId, id, (orgUser, userId) => _organizationService.ActivateUserAsync(orgUser, userId, _userService));
         }
 
         [HttpPatch("activate")]
         [HttpPut("activate")]
         public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkActivate(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
         {
-            return await ActivateOrDeactivateUsersAsync(orgId, model, _organizationService.ActivateUsersAsync);
+            return await ActivateOrDeactivateUsersAsync(orgId, model, (orgId, orgUserIds, restoringUserId) => _organizationService.ActivateUsersAsync(orgId, orgUserIds, restoringUserId, _userService));
         }
 
         private async Task ActivateOrDeactivateUserAsync(
