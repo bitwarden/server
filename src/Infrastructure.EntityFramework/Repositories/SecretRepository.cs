@@ -14,42 +14,27 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
 
         }
 
-        public async Task<Core.Entities.Secret> GetByIdAsync(Guid id, bool includeDeleted = false)
+        public override async Task<Core.Entities.Secret> GetByIdAsync(Guid id)
         {
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
-                Core.Entities.Secret secret;
-                if (includeDeleted)
-                {
-                    secret = await GetDbSet(dbContext).FindAsync(id);
-                }
-                else
-                {
-                    secret = await dbContext.Secret
+                var secret = await dbContext.Secret
                                         .Where(c => c.Id == id && c.DeletedDate == null)
                                         .FirstOrDefaultAsync();
-                }
                 return Mapper.Map<Core.Entities.Secret>(secret);
             }
         }
 
-        public async Task<IEnumerable<Core.Entities.Secret>> GetManyByOrganizationIdAsync(Guid organizationId, bool includeDeleted = false)
+        public async Task<IEnumerable<Core.Entities.Secret>> GetManyByOrganizationIdAsync(Guid organizationId)
         {
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
-
-                IQueryable<Secret> query = dbContext.Secret;
-                if (includeDeleted)
-                {
-                    query = query.Where(c => c.OrganizationId == organizationId);
-                }
-                else
-                {
-                    query = query.Where(c => c.OrganizationId == organizationId && c.DeletedDate == null);
-                }
-                return Mapper.Map<List<Core.Entities.Secret>>(await query.ToListAsync());
+                var secrets = await dbContext.Secret
+                                        .Where(c => c.OrganizationId == organizationId && c.DeletedDate == null)
+                                        .ToListAsync();
+                return Mapper.Map<List<Core.Entities.Secret>>(secrets);
             }
         }
 
