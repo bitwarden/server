@@ -193,7 +193,7 @@ namespace Bit.Scim.Controllers.v2
 
             if (model.Active && orgUser.Status == OrganizationUserStatusType.Deactivated)
             {
-                await _organizationService.ActivateUserAsync(orgUser, null);
+                await _organizationService.ActivateUserAsync(orgUser, null, _userService);
             }
             else if (!model.Active && orgUser.Status != OrganizationUserStatusType.Deactivated)
             {
@@ -229,7 +229,7 @@ namespace Bit.Scim.Controllers.v2
                     var active = activeProperty.GetBoolean();
                     if (active && orgUser.Status == OrganizationUserStatusType.Deactivated)
                     {
-                        await _organizationService.ActivateUserAsync(orgUser, null);
+                        await _organizationService.ActivateUserAsync(orgUser, null, _userService);
                         operationHandled = true;
                     }
                     else if (!active && orgUser.Status != OrganizationUserStatusType.Deactivated)

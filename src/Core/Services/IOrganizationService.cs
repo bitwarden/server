@@ -61,8 +61,8 @@ namespace Bit.Core.Services
         Task DeactivateUserAsync(OrganizationUser organizationUser, Guid? disablingUserId);
         Task<List<Tuple<OrganizationUser, string>>> DeactivateUsersAsync(Guid organizationId,
             IEnumerable<Guid> organizationUserIds, Guid? disablingUserId);
-        Task ActivateUserAsync(OrganizationUser organizationUser, Guid? enablingUserId);
+        Task ActivateUserAsync(OrganizationUser organizationUser, Guid? enablingUserId, IUserService userService);
         Task<List<Tuple<OrganizationUser, string>>> ActivateUsersAsync(Guid organizationId,
-            IEnumerable<Guid> organizationUserIds, Guid? enablingUserId);
+            IEnumerable<Guid> organizationUserIds, Guid? enablingUserId, IUserService userService);
     }
 }

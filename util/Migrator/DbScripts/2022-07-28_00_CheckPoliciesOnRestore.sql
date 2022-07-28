@@ -1,3 +1,53 @@
+-- 2022-06-08_00_DeactivatedUserStatus changed UserStatus from TINYINT to SMALLINT but these sprocs were missed
+
+-- Policy_ReadByTypeApplicableToUser
+IF OBJECT_ID('[dbo].[Policy_ReadByTypeApplicableToUser]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[Policy_ReadByTypeApplicableToUser]
+END
+GO
+
+CREATE PROCEDURE [dbo].[Policy_ReadByTypeApplicableToUser]
+    @UserId UNIQUEIDENTIFIER,
+    @PolicyType TINYINT,
+    @MinimumStatus SMALLINT
+AS
+BEGIN
+    SET NOCOUNT ON
+
+SELECT *
+FROM [dbo].[PolicyApplicableToUser](@UserId, @PolicyType, @MinimumStatus)
+END
+GO
+
+-- Policy_CountByTypeApplicableToUser
+IF OBJECT_ID('[dbo].[Policy_CountByTypeApplicableToUser]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[Policy_CountByTypeApplicableToUser]
+END
+GO
+
+CREATE PROCEDURE [dbo].[Policy_CountByTypeApplicableToUser]
+    @UserId UNIQUEIDENTIFIER,
+    @PolicyType TINYINT,
+    @MinimumStatus SMALLINT
+AS
+BEGIN
+    SET NOCOUNT ON
+
+SELECT COUNT(1)
+FROM [dbo].[PolicyApplicableToUser](@UserId, @PolicyType, @MinimumStatus)
+END
+GO
+
+-- We need to update this function because we now have OrganizationUserStatusTypes that are less than zero,
+-- and Deactivated/Revoked users may or may not be associated with a UserId
+IF OBJECT_ID('[dbo].[PolicyApplicableToUser]') IS NOT NULL
+BEGIN
+    DROP FUNCTION [dbo].[PolicyApplicableToUser]
+END
+GO
+
 CREATE FUNCTION [dbo].[PolicyApplicableToUser]
 (
     @UserId UNIQUEIDENTIFIER,
@@ -43,3 +93,4 @@ WHERE
         OR COALESCE(JSON_VALUE(OU.[Permissions], '$.managePolicies'), 'false') = 'false'
     )
     AND PUPO.[UserId] IS NULL   -- Not a provider
+GO
