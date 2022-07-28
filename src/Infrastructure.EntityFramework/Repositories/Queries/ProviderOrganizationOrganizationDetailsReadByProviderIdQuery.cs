@@ -15,6 +15,8 @@ namespace Bit.Infrastructure.EntityFramework.Repositories.Queries
             var query = from po in dbContext.ProviderOrganizations
                         join o in dbContext.Organizations
                             on po.OrganizationId equals o.Id
+                        join ou in dbContext.OrganizationUsers
+                            on po.OrganizationId equals ou.OrganizationId
                         where po.ProviderId == _providerId
                         select new { po, o };
             return query.Select(x => new ProviderOrganizationOrganizationDetails()
@@ -27,6 +29,9 @@ namespace Bit.Infrastructure.EntityFramework.Repositories.Queries
                 Settings = x.po.Settings,
                 CreationDate = x.po.CreationDate,
                 RevisionDate = x.po.RevisionDate,
+                UserCount = x.o.OrganizationUsers.Count(ou => ou.Status == Core.Enums.OrganizationUserStatusType.Confirmed),
+                Seats = x.o.Seats,
+                Plan = x.o.Plan
             });
         }
     }
