@@ -2365,7 +2365,7 @@ namespace Bit.Core.Services
                     {
                         throw new BadRequestException("Only owners can restore other owners.");
                     }
-                    
+
                     await CheckPoliciesBeforeRestoreAsync(organizationUser, userService);
 
                     var status = GetPriorActiveOrganizationUserStatusType(organizationUser);
@@ -2393,9 +2393,9 @@ namespace Bit.Core.Services
             {
                 return;
             }
-            
+
             var userId = orgUser.UserId.Value;
-            
+
             // Enforce Single Organization Policy of organization user is being restored to
             var allOrgUsers = await _organizationUserRepository.GetManyByUserAsync(userId);
             var hasOtherOrgs = allOrgUsers.Any(ou => ou.OrganizationId != orgUser.OrganizationId);
