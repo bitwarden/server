@@ -19,5 +19,13 @@ namespace Bit.Scim.Models
                 OrganizationId = organizationId
             };
         }
+
+        public List<GroupMembersModel> Members { get; set; }
+
+        public class GroupMembersModel
+        {
+            public string Value { get; set; }
+            public string Display { get; set; }
+        }
     }
 }

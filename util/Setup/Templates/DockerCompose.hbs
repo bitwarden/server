@@ -218,8 +218,9 @@ services:
     container_name: bitwarden-scim
     restart: always
     volumes:
+      - ../core:/etc/bitwarden/core
       - ../ca-certificates:/etc/bitwarden/ca-certificates
-      - ../logs/api:/etc/bitwarden/logs
+      - ../logs/scim:/etc/bitwarden/logs
     env_file:
       - global.env
       - ../env/uid.env

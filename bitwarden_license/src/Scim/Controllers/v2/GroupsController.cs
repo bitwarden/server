@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Scim.Context;
@@ -126,6 +127,7 @@ namespace Bit.Scim.Controllers.v2
 
             var group = model.ToGroup(organizationId);
             await _groupService.SaveAsync(group, null);
+            await UpdateGroupMembersAsync(group, model, true);
             var response = new ScimGroupResponseModel(group);
             return new CreatedResult(Url.Action(nameof(Get), new { group.OrganizationId, group.Id }), response);
         }
@@ -145,6 +147,7 @@ namespace Bit.Scim.Controllers.v2
 
             group.Name = model.DisplayName;
             await _groupService.SaveAsync(group);
+            await UpdateGroupMembersAsync(group, model, false);
             return new ObjectResult(new ScimGroupResponseModel(group));
         }
 
@@ -294,6 +297,35 @@ namespace Bit.Scim.Controllers.v2
                 return id;
             }
             return null;
+        }
+
+        private async Task UpdateGroupMembersAsync(Group group, ScimGroupRequestModel model, bool skipIfEmpty)
+        {
+            if (_scimContext.RequestScimProvider != Core.Enums.ScimProviderType.Okta)
+            {
+                return;
+            }
+
+            if (model.Members == null)
+            {
+                return;
+            }
+
+            var memberIds = new List<Guid>();
+            foreach (var id in model.Members.Select(i => i.Value))
+            {
+                if (Guid.TryParse(id, out var guidId))
+                {
+                    memberIds.Add(guidId);
+                }
+            }
+
+            if (!memberIds.Any() && skipIfEmpty)
+            {
+                return;
+            }
+
+            await _groupRepository.UpdateUsersAsync(group.Id, memberIds);
         }
     }
 }

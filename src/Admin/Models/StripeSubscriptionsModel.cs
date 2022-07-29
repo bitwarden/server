@@ -30,6 +30,7 @@ namespace Bit.Admin.Models
         public StripeSubscriptionsAction Action { get; set; } = StripeSubscriptionsAction.Search;
         public string Message { get; set; }
         public List<Stripe.Price> Prices { get; set; }
+        public List<Stripe.TestHelpers.TestClock> TestClocks { get; set; }
         public StripeSubscriptionListOptions Filter { get; set; } = new StripeSubscriptionListOptions();
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {

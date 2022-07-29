@@ -75,6 +75,22 @@ jobs:
           echo "NAME_LOWER: $NAME_LOWER"
           echo "::set-output name=name_lower::$NAME_LOWER"
 
+      - name: Create GitHub deployment for ${{ matrix.name }}
+        uses: chrnorm/deployment-action@1b599fe41a0ef1f95191e7f2eec4743f2d7dfc48
+        id: deployment
+        with:
+          token: '${{ secrets.GITHUB_TOKEN }}'
+          environment: 'Server ${{ matrix.name }} - Production'
+          task: 'deploy'
+          description: 'Deploy from ${{ needs.setup.outputs.branch-name }} branch'
+
+      - name: Update ${{ matrix.name }} deployment status to In Progress
+        uses: chrnorm/deployment-status@07b3930847f65e71c9c6802ff5a402f6dfb46b86
+        with:
+          token: '${{ secrets.GITHUB_TOKEN }}'
+          state: 'in_progress'
+          deployment-id: ${{ steps.deployment.outputs.deployment_id }}
+
       - name: Download latest Release ${{ matrix.name }} asset
         if: ${{ github.event.inputs.release_type != 'Dry Run' }}
         uses: bitwarden/gh-actions/download-artifacts@c1fa8e09871a860862d6bbe36184b06d2c7e35a8
@@ -139,6 +155,22 @@ jobs:
           fi
           az webapp start -n $WEBAPP_NAME -g $RESOURCE_GROUP -s staging
 
+      - name: Update ${{ matrix.name }} deployment status to Success
+        if: success()
+        uses: chrnorm/deployment-status@07b3930847f65e71c9c6802ff5a402f6dfb46b86
+        with:
+          token: '${{ secrets.GITHUB_TOKEN }}'
+          state: 'success'
+          deployment-id: ${{ steps.deployment.outputs.deployment_id }}
+
+      - name: Update ${{ matrix.name }} deployment status to Failure
+        if: failure()
+        uses: chrnorm/deployment-status@07b3930847f65e71c9c6802ff5a402f6dfb46b86
+        with:
+          token: '${{ secrets.GITHUB_TOKEN }}'
+          state: 'failure'
+          deployment-id: ${{ steps.deployment.outputs.deployment_id }}
+
 
   release-docker:
     name: Build Docker images
@@ -166,6 +198,7 @@ jobs:
           - service_name: Setup
           - service_name: Sso
           - service_name: Scim
+            skip_dct: true
     steps:
       - name: Print environment
         env:
@@ -196,6 +229,15 @@ jobs:
           azure-creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
           azure-keyvault-name: "bitwarden-prod-kv"
 
+      - name: Check for DCT value
+        id: check-matrix-dct
+        run: |
+          if [[ "${{ matrix.skip_dct }}" == "true" ]]; then
+            echo "::set-output name=dct_enabled::0"
+          else
+            echo "::set-output name=dct_enabled::1"
+          fi
+
       - name: Pull latest selfhost image
         env:
           SERVICE_NAME: ${{ steps.setup.outputs.service_name }}
@@ -219,7 +261,7 @@ jobs:
       - name: Push version and latest image
         if: ${{ github.event.inputs.release_type != 'Dry Run' }}
         env:
-          DOCKER_CONTENT_TRUST: 1
+          DOCKER_CONTENT_TRUST: ${{ steps.check-matrix-dct.outputs.dct_enabled }}
           DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ steps.setup-dct.outputs.dct-delegate-repo-passphrase }}
           SERVICE_NAME: ${{ steps.setup.outputs.service_name }}
         run: |

@@ -621,6 +621,7 @@ namespace Bit.Core.Services
                 UseResetPassword = plan.HasResetPassword,
                 SelfHost = plan.HasSelfHost,
                 UsersGetPremium = plan.UsersGetPremium || signup.PremiumAccessAddon,
+                UseScim = plan.HasScim,
                 Plan = plan.Name,
                 Gateway = null,
                 ReferenceData = signup.Owner.ReferenceData,
@@ -2212,19 +2213,19 @@ namespace Bit.Core.Services
             }
         }
 
-        public async Task DeactivateUserAsync(OrganizationUser organizationUser, Guid? disablingUserId)
+        public async Task RevokeUserAsync(OrganizationUser organizationUser, Guid? revokingUserId)
         {
-            if (organizationUser.Status == OrganizationUserStatusType.Deactivated)
+            if (organizationUser.Status == OrganizationUserStatusType.Revoked)
             {
                 throw new BadRequestException("Already revoked.");
             }
 
-            if (disablingUserId.HasValue && organizationUser.UserId == disablingUserId.Value)
+            if (revokingUserId.HasValue && organizationUser.UserId == revokingUserId.Value)
             {
                 throw new BadRequestException("You cannot revoke yourself.");
             }
 
-            if (organizationUser.Type == OrganizationUserType.Owner && disablingUserId.HasValue &&
+            if (organizationUser.Type == OrganizationUserType.Owner && revokingUserId.HasValue &&
                 !await _currentContext.OrganizationOwner(organizationUser.OrganizationId))
             {
                 throw new BadRequestException("Only owners can revoke other owners.");
@@ -2235,13 +2236,13 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Organization must have at least one confirmed owner.");
             }
 
-            await _organizationUserRepository.DeactivateAsync(organizationUser.Id);
-            organizationUser.Status = OrganizationUserStatusType.Deactivated;
-            await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Deactivated);
+            await _organizationUserRepository.RevokeAsync(organizationUser.Id);
+            organizationUser.Status = OrganizationUserStatusType.Revoked;
+            await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Revoked);
         }
 
-        public async Task<List<Tuple<OrganizationUser, string>>> DeactivateUsersAsync(Guid organizationId,
-            IEnumerable<Guid> organizationUserIds, Guid? disablingUserId)
+        public async Task<List<Tuple<OrganizationUser, string>>> RevokeUsersAsync(Guid organizationId,
+            IEnumerable<Guid> organizationUserIds, Guid? revokingUserId)
         {
             var orgUsers = await _organizationUserRepository.GetManyAsync(organizationUserIds);
             var filteredUsers = orgUsers.Where(u => u.OrganizationId == organizationId)
@@ -2258,7 +2259,7 @@ namespace Bit.Core.Services
             }
 
             var deletingUserIsOwner = false;
-            if (disablingUserId.HasValue)
+            if (revokingUserId.HasValue)
             {
                 deletingUserIsOwner = await _currentContext.OrganizationOwner(organizationId);
             }
@@ -2269,24 +2270,24 @@ namespace Bit.Core.Services
             {
                 try
                 {
-                    if (organizationUser.Status == OrganizationUserStatusType.Deactivated)
+                    if (organizationUser.Status == OrganizationUserStatusType.Revoked)
                     {
                         throw new BadRequestException("Already revoked.");
                     }
 
-                    if (disablingUserId.HasValue && organizationUser.UserId == disablingUserId)
+                    if (revokingUserId.HasValue && organizationUser.UserId == revokingUserId)
                     {
                         throw new BadRequestException("You cannot revoke yourself.");
                     }
 
-                    if (organizationUser.Type == OrganizationUserType.Owner && disablingUserId.HasValue && !deletingUserIsOwner)
+                    if (organizationUser.Type == OrganizationUserType.Owner && revokingUserId.HasValue && !deletingUserIsOwner)
                     {
                         throw new BadRequestException("Only owners can revoke other owners.");
                     }
 
-                    await _organizationUserRepository.DeactivateAsync(organizationUser.Id);
-                    organizationUser.Status = OrganizationUserStatusType.Deactivated;
-                    await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Deactivated);
+                    await _organizationUserRepository.RevokeAsync(organizationUser.Id);
+                    organizationUser.Status = OrganizationUserStatusType.Revoked;
+                    await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Revoked);
 
                     result.Add(Tuple.Create(organizationUser, ""));
                 }
@@ -2299,19 +2300,19 @@ namespace Bit.Core.Services
             return result;
         }
 
-        public async Task ActivateUserAsync(OrganizationUser organizationUser, Guid? enablingUserId)
+        public async Task RestoreUserAsync(OrganizationUser organizationUser, Guid? restoringUserId)
         {
-            if (organizationUser.Status != OrganizationUserStatusType.Deactivated)
+            if (organizationUser.Status != OrganizationUserStatusType.Revoked)
             {
                 throw new BadRequestException("Already active.");
             }
 
-            if (enablingUserId.HasValue && organizationUser.UserId == enablingUserId.Value)
+            if (restoringUserId.HasValue && organizationUser.UserId == restoringUserId.Value)
             {
                 throw new BadRequestException("You cannot restore yourself.");
             }
 
-            if (organizationUser.Type == OrganizationUserType.Owner && enablingUserId.HasValue &&
+            if (organizationUser.Type == OrganizationUserType.Owner && restoringUserId.HasValue &&
                 !await _currentContext.OrganizationOwner(organizationUser.OrganizationId))
             {
                 throw new BadRequestException("Only owners can restore other owners.");
@@ -2319,13 +2320,13 @@ namespace Bit.Core.Services
 
             var status = GetPriorActiveOrganizationUserStatusType(organizationUser);
 
-            await _organizationUserRepository.ActivateAsync(organizationUser.Id, status);
+            await _organizationUserRepository.RestoreAsync(organizationUser.Id, status);
             organizationUser.Status = status;
-            await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Activated);
+            await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Restored);
         }
 
-        public async Task<List<Tuple<OrganizationUser, string>>> ActivateUsersAsync(Guid organizationId,
-            IEnumerable<Guid> organizationUserIds, Guid? enablingUserId)
+        public async Task<List<Tuple<OrganizationUser, string>>> RestoreUsersAsync(Guid organizationId,
+            IEnumerable<Guid> organizationUserIds, Guid? restoringUserId)
         {
             var orgUsers = await _organizationUserRepository.GetManyAsync(organizationUserIds);
             var filteredUsers = orgUsers.Where(u => u.OrganizationId == organizationId)
@@ -2337,7 +2338,7 @@ namespace Bit.Core.Services
             }
 
             var deletingUserIsOwner = false;
-            if (enablingUserId.HasValue)
+            if (restoringUserId.HasValue)
             {
                 deletingUserIsOwner = await _currentContext.OrganizationOwner(organizationId);
             }
@@ -2348,26 +2349,26 @@ namespace Bit.Core.Services
             {
                 try
                 {
-                    if (organizationUser.Status != OrganizationUserStatusType.Deactivated)
+                    if (organizationUser.Status != OrganizationUserStatusType.Revoked)
                     {
                         throw new BadRequestException("Already active.");
                     }
 
-                    if (enablingUserId.HasValue && organizationUser.UserId == enablingUserId)
+                    if (restoringUserId.HasValue && organizationUser.UserId == restoringUserId)
                     {
                         throw new BadRequestException("You cannot restore yourself.");
                     }
 
-                    if (organizationUser.Type == OrganizationUserType.Owner && enablingUserId.HasValue && !deletingUserIsOwner)
+                    if (organizationUser.Type == OrganizationUserType.Owner && restoringUserId.HasValue && !deletingUserIsOwner)
                     {
                         throw new BadRequestException("Only owners can restore other owners.");
                     }
 
                     var status = GetPriorActiveOrganizationUserStatusType(organizationUser);
 
-                    await _organizationUserRepository.ActivateAsync(organizationUser.Id, status);
+                    await _organizationUserRepository.RestoreAsync(organizationUser.Id, status);
                     organizationUser.Status = status;
-                    await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Activated);
+                    await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Restored);
 
                     result.Add(Tuple.Create(organizationUser, ""));
                 }
