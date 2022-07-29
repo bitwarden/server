@@ -1,14 +1,15 @@
 CREATE PROCEDURE [dbo].[OrganizationPasswordManager_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
     @OrganizationId UNIQUEIDENTIFIER,
-    @Plan NVARCHAR(50),
-    @PlanType TINYINT,
-    @Seats INT,
-    @UseTotp BIT,
-    @UsersGetPremium BIT,
-    @Storage BIGINT,
-    @MaxStorageGb SMALLINT,
-    @MaxAutoscaleSeats INT
+    @Plan NVARCHAR(50) = NULL,
+    @PlanType TINYINT = NULL,
+    @Seats INT = NULL,
+    @MaxCollections SMALLINT = NULL,
+    @UseTotp BIT = NULL,
+    @UsersGetPremium BIT = NULL,
+    @Storage BIGINT = NULL,
+    @MaxStorageGb SMALLINT = NULL,
+    @MaxAutoscaleSeats INT = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -20,6 +21,7 @@ BEGIN
         [Plan],
         [PlanType],
         [Seats],
+        [MaxCollections],
         [UseTotp],
         [UsersGetPremium],
         [Storage],
@@ -34,6 +36,7 @@ BEGIN
         @Plan,
         @PlanType,
         @Seats,
+        @MaxCollections,
         @UseTotp,
         @UsersGetPremium,
         @Storage,
@@ -47,6 +50,7 @@ BEGIN
         [Plan] = @Plan,
         [PlanType] = @PlanType,
         [Seats] = @Seats,
+        [MaxCollections] = @MaxCollections,
         [UseTotp] = @UseTotp,
         [UsersGetPremium] = @UsersGetPremium,
         [Storage] = @Storage,

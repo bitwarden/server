@@ -1,14 +1,14 @@
 CREATE PROCEDURE [dbo].[OrganizationPasswordManager_Update]
     @OrganizationId UNIQUEIDENTIFIER,
-    @Plan [nvarchar](50),
-    @PlanType [tinyint],
-    @Seats [int],
-    @MaxCollections [smallint],
-    @UseTotp [bit],
-    @UsersGetPremium [bit],
-    @Storage [bigint],
-    @MaxStorageGb [smallint],
-    @MaxAutoscaleSeats [int]
+    @Plan [nvarchar](50) = NULL,
+    @PlanType [tinyint] = NULL,
+    @Seats [int] = NULL,
+    @MaxCollections [smallint] = NULL,
+    @UseTotp [bit] = NULL,
+    @UsersGetPremium [bit] = NULL,
+    @Storage [bigint] = NULL,
+    @MaxStorageGb [smallint] = NULL,
+    @MaxAutoscaleSeats [int] = NULL
 AS
 BEGIN
     SET NOCOUNT ON

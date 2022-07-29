@@ -1,21 +1,21 @@
 IF OBJECT_ID('[dbo].[OrganizationPasswordManager]') IS NULL
     BEGIN
-        CREATE TABLE [dbo].[OrganizationPasswordManager](
+       CREATE TABLE [dbo].[OrganizationPasswordManager](
         [Id] [uniqueidentifier] NOT NULL,
         [OrganizationId] [uniqueidentifier] NOT NULL,
-        [Plan] [nvarchar](50) NOT NULL,
-        [PlanType] [tinyint] NOT NULL,
+        [Plan] [nvarchar](50) NULL,
+        [PlanType] [tinyint] NULL,
         [Seats] [int] NULL,
         [MaxCollections] [smallint] NULL,
         [UseTotp] [bit] NULL,
-        [UsersGetPremium] [bit] NOT NULL,
+        [UsersGetPremium] [bit] NULL,
         [Storage] [bigint] NULL,
         [MaxStorageGb] [smallint] NULL,
         [MaxAutoscaleSeats] [int] NULL,
         [RevisionDate] DATETIME NULL,
         CONSTRAINT [PK_OrganizationPasswordManager] PRIMARY KEY CLUSTERED ([Id] ASC),
         CONSTRAINT [FK_OrganizationPasswordManager_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id])
-    ) 
+    )
 END
 GO
 
@@ -187,23 +187,17 @@ BEGIN
     DROP PROCEDURE [dbo].[OrganizationPasswordManager_Update]
 END
 GO
-
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
 CREATE PROCEDURE [dbo].[OrganizationPasswordManager_Update]
     @OrganizationId UNIQUEIDENTIFIER,
-    @Plan [nvarchar](50),
-    @PlanType [tinyint],
-    @Seats [int],
-    @MaxCollections [smallint],
-    @UseTotp [bit],
-    @UsersGetPremium [bit],
-    @Storage [bigint],
-    @MaxStorageGb [smallint],
-    @MaxAutoscaleSeats [int]
+    @Plan [nvarchar](50) = NULL,
+    @PlanType [tinyint] = NULL,
+    @Seats [int] = NULL,
+    @MaxCollections [smallint] = NULL,
+    @UseTotp [bit] = NULL,
+    @UsersGetPremium [bit] = NULL,
+    @Storage [bigint] = NULL,
+    @MaxStorageGb [smallint] = NULL,
+    @MaxAutoscaleSeats [int] = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -406,14 +400,15 @@ GO
 CREATE PROCEDURE [dbo].[OrganizationPasswordManager_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
     @OrganizationId UNIQUEIDENTIFIER,
-    @Plan NVARCHAR(50),
-    @PlanType TINYINT,
-    @Seats INT,
-    @UseTotp BIT,
-    @UsersGetPremium BIT,
-    @Storage BIGINT,
-    @MaxStorageGb SMALLINT,
-    @MaxAutoscaleSeats INT
+    @Plan NVARCHAR(50) = NULL,
+    @PlanType TINYINT = NULL,
+    @Seats INT = NULL,
+    @MaxCollections SMALLINT = NULL,
+    @UseTotp BIT = NULL,
+    @UsersGetPremium BIT = NULL,
+    @Storage BIGINT = NULL,
+    @MaxStorageGb SMALLINT = NULL,
+    @MaxAutoscaleSeats INT = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -425,6 +420,7 @@ BEGIN
         [Plan],
         [PlanType],
         [Seats],
+        [MaxCollections],
         [UseTotp],
         [UsersGetPremium],
         [Storage],
@@ -439,6 +435,7 @@ BEGIN
         @Plan,
         @PlanType,
         @Seats,
+        @MaxCollections,
         @UseTotp,
         @UsersGetPremium,
         @Storage,
@@ -452,6 +449,7 @@ BEGIN
         [Plan] = @Plan,
         [PlanType] = @PlanType,
         [Seats] = @Seats,
+        [MaxCollections] = @MaxCollections,
         [UseTotp] = @UseTotp,
         [UsersGetPremium] = @UsersGetPremium,
         [Storage] = @Storage,
@@ -570,4 +568,342 @@ FROM
     [dbo].[Organization] O
     LEFT JOIN OrganizationPasswordManager OPM on OPM.OrganizationId = O.Id
 GO
+
+IF OBJECT_ID('[dbo].[Organization_Create]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[Organization_Create]
+END
+GO
+
+CREATE PROCEDURE [dbo].[Organization_Create]
+    @Id UNIQUEIDENTIFIER OUTPUT,
+    @Identifier NVARCHAR(50),
+    @Name NVARCHAR(50),
+    @BusinessName NVARCHAR(50),
+    @BusinessAddress1 NVARCHAR(50),
+    @BusinessAddress2 NVARCHAR(50),
+    @BusinessAddress3 NVARCHAR(50),
+    @BusinessCountry VARCHAR(2),
+    @BusinessTaxNumber NVARCHAR(30),
+    @BillingEmail NVARCHAR(256),
+    @Plan NVARCHAR(50) = NULL,
+    @PlanType TINYINT = NULL,
+    @Seats INT = 0,
+    @MaxCollections SMALLINT,
+    @UsePolicies BIT,
+    @UseSso BIT,
+    @UseGroups BIT,
+    @UseDirectory BIT,
+    @UseEvents BIT,
+    @UseTotp BIT = 0,
+    @Use2fa BIT,
+    @UseApi BIT,
+    @UseResetPassword BIT,
+    @SelfHost BIT,
+    @UsersGetPremium BIT = 0,
+    @Storage BIGINT = 0,
+    @MaxStorageGb SMALLINT = 0,
+    @Gateway TINYINT,
+    @GatewayCustomerId VARCHAR(50),
+    @GatewaySubscriptionId VARCHAR(50),
+    @ReferenceData VARCHAR(MAX),
+    @Enabled BIT,
+    @LicenseKey VARCHAR(100),
+    @PublicKey VARCHAR(MAX),
+    @PrivateKey VARCHAR(MAX),
+    @TwoFactorProviders NVARCHAR(MAX),
+    @ExpirationDate DATETIME2(7),
+    @CreationDate DATETIME2(7),
+    @RevisionDate DATETIME2(7),
+    @OwnersNotifiedOfAutoscaling DATETIME2(7),
+    @MaxAutoscaleSeats INT = 0,
+    @UseKeyConnector BIT = 0,
+    @UseScim BIT = 0
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    INSERT INTO [dbo].[Organization]
+    (
+        [Id],
+        [Identifier],
+        [Name],
+        [BusinessName],
+        [BusinessAddress1],
+        [BusinessAddress2],
+        [BusinessAddress3],
+        [BusinessCountry],
+        [BusinessTaxNumber],
+        [BillingEmail],
+        [Plan],
+        [PlanType],
+        [Seats],
+        [MaxCollections],
+        [UsePolicies],
+        [UseSso],
+        [UseGroups],
+        [UseDirectory],
+        [UseEvents],
+        [UseTotp],
+        [Use2fa],
+        [UseApi],
+        [UseResetPassword],
+        [SelfHost],
+        [UsersGetPremium],
+        [Storage],
+        [MaxStorageGb],
+        [Gateway],
+        [GatewayCustomerId],
+        [GatewaySubscriptionId],
+        [ReferenceData],
+        [Enabled],
+        [LicenseKey],
+        [PublicKey],
+        [PrivateKey],
+        [TwoFactorProviders],
+        [ExpirationDate],
+        [CreationDate],
+        [RevisionDate],
+        [OwnersNotifiedOfAutoscaling],
+        [MaxAutoscaleSeats],
+        [UseKeyConnector],
+        [UseScim]
+    )
+    VALUES
+    (
+        @Id,
+        @Identifier,
+        @Name,
+        @BusinessName,
+        @BusinessAddress1,
+        @BusinessAddress2,
+        @BusinessAddress3,
+        @BusinessCountry,
+        @BusinessTaxNumber,
+        @BillingEmail,
+        @Plan,
+        @PlanType,
+        @Seats,
+        @MaxCollections,
+        @UsePolicies,
+        @UseSso,
+        @UseGroups,
+        @UseDirectory,
+        @UseEvents,
+        @UseTotp,
+        @Use2fa,
+        @UseApi,
+        @UseResetPassword,
+        @SelfHost,
+        @UsersGetPremium,
+        @Storage,
+        @MaxStorageGb,
+        @Gateway,
+        @GatewayCustomerId,
+        @GatewaySubscriptionId,
+        @ReferenceData,
+        @Enabled,
+        @LicenseKey,
+        @PublicKey,
+        @PrivateKey,
+        @TwoFactorProviders,
+        @ExpirationDate,
+        @CreationDate,
+        @RevisionDate,
+        @OwnersNotifiedOfAutoscaling,
+        @MaxAutoscaleSeats,
+        @UseKeyConnector,
+        @UseScim
+    )
+
+    IF @Plan != null
+    BEGIN
+        INSERT INTO [dbo].[OrganizationPasswordManager]
+        (
+            [OrganizationId],
+            [Plan],
+            [PlanType],
+            [Seats],
+            [MaxCollections],
+            [UseTotp],
+            [UsersGetPremium],
+            [Storage],
+            [MaxStorageGb],
+            [MaxAutoscaleSeats],
+            [RevisionDate]
+        )
+        VALUES
+        (
+            @Id,
+            @Plan,
+            @PlanType,
+            @Seats,
+            @MaxCollections,
+            @UseTotp,
+            @UsersGetPremium,
+            @Storage,
+            @MaxStorageGb,
+            @MaxAutoscaleSeats,
+            GETUTCDATE()
+        )
+    END
+END
+GO 
+
+IF OBJECT_ID('[dbo].[Organization_Update]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[Organization_Update]
+END
+GO
+
+CREATE PROCEDURE [dbo].[Organization_Update]
+    @Id UNIQUEIDENTIFIER,
+    @Identifier NVARCHAR(50),
+    @Name NVARCHAR(50),
+    @BusinessName NVARCHAR(50),
+    @BusinessAddress1 NVARCHAR(50),
+    @BusinessAddress2 NVARCHAR(50),
+    @BusinessAddress3 NVARCHAR(50),
+    @BusinessCountry VARCHAR(2),
+    @BusinessTaxNumber NVARCHAR(30),
+    @BillingEmail NVARCHAR(256),
+    @Plan NVARCHAR(50) = NULL,
+    @PlanType TINYINT = NULL,
+    @Seats INT = 0,
+    @MaxCollections SMALLINT,
+    @UsePolicies BIT,
+    @UseSso BIT,
+    @UseGroups BIT,
+    @UseDirectory BIT,
+    @UseEvents BIT,
+    @UseTotp BIT = 0,
+    @Use2fa BIT,
+    @UseApi BIT,
+    @UseResetPassword BIT,
+    @SelfHost BIT,
+    @UsersGetPremium BIT = 0,
+    @Storage BIGINT = 0,
+    @MaxStorageGb SMALLINT = 0,
+    @Gateway TINYINT,
+    @GatewayCustomerId VARCHAR(50),
+    @GatewaySubscriptionId VARCHAR(50),
+    @ReferenceData VARCHAR(MAX),
+    @Enabled BIT,
+    @LicenseKey VARCHAR(100),
+    @PublicKey VARCHAR(MAX),
+    @PrivateKey VARCHAR(MAX),
+    @TwoFactorProviders NVARCHAR(MAX),
+    @ExpirationDate DATETIME2(7),
+    @CreationDate DATETIME2(7),
+    @RevisionDate DATETIME2(7),
+    @OwnersNotifiedOfAutoscaling DATETIME2(7),
+    @MaxAutoscaleSeats INT = 0,
+    @UseKeyConnector BIT = 0,
+    @UseScim BIT = 0
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    UPDATE
+        [dbo].[Organization]
+    SET
+        [Identifier] = @Identifier,
+        [Name] = @Name,
+        [BusinessName] = @BusinessName,
+        [BusinessAddress1] = @BusinessAddress1,
+        [BusinessAddress2] = @BusinessAddress2,
+        [BusinessAddress3] = @BusinessAddress3,
+        [BusinessCountry] = @BusinessCountry,
+        [BusinessTaxNumber] = @BusinessTaxNumber,
+        [BillingEmail] = @BillingEmail,
+        [Plan] = @Plan,
+        [PlanType] = @PlanType,
+        [Seats] = @Seats,
+        [MaxCollections] = @MaxCollections,
+        [UsePolicies] = @UsePolicies,
+        [UseSso] = @UseSso,
+        [UseGroups] = @UseGroups,
+        [UseDirectory] = @UseDirectory,
+        [UseEvents] = @UseEvents,
+        [UseTotp] = @UseTotp,
+        [Use2fa] = @Use2fa,
+        [UseApi] = @UseApi,
+        [UseResetPassword] = @UseResetPassword,
+        [SelfHost] = @SelfHost,
+        [UsersGetPremium] = @UsersGetPremium,
+        [Storage] = @Storage,
+        [MaxStorageGb] = @MaxStorageGb,
+        [Gateway] = @Gateway,
+        [GatewayCustomerId] = @GatewayCustomerId,
+        [GatewaySubscriptionId] = @GatewaySubscriptionId,
+        [ReferenceData] = @ReferenceData,
+        [Enabled] = @Enabled,
+        [LicenseKey] = @LicenseKey,
+        [PublicKey] = @PublicKey,
+        [PrivateKey] = @PrivateKey,
+        [TwoFactorProviders] = @TwoFactorProviders,
+        [ExpirationDate] = @ExpirationDate,
+        [CreationDate] = @CreationDate,
+        [RevisionDate] = @RevisionDate,
+        [OwnersNotifiedOfAutoscaling] = @OwnersNotifiedOfAutoscaling,
+        [MaxAutoscaleSeats] = @MaxAutoscaleSeats,
+        [UseKeyConnector] = @UseKeyConnector,
+        [UseScim] = @UseScim
+    WHERE
+        [Id] = @Id
+
+    IF @Plan is not null
+    BEGIN
+        IF EXISTS(SELECT * FROM OrganizationPasswordManager O WHERE O.OrganizationId = @Id) 
+            BEGIN
+                UPDATE
+                    [dbo].[OrganizationPasswordManager]
+                SET
+                    [Plan] = @Plan,
+                    [PlanType] = @PlanType,
+                    [Seats] = @Seats,
+                    [MaxCollections] = @MaxCollections,
+                    [UseTotp] = @UseTotp,
+                    [UsersGetPremium] = @UsersGetPremium,
+                    [Storage] = @Storage,
+                    [MaxStorageGb] = @MaxStorageGb,
+                    [MaxAutoscaleSeats] = @MaxAutoscaleSeats,
+                    [RevisionDate] = GETUTCDATE()
+                WHERE
+                    [OrganizationId] = @Id
+            END
+        ELSE 
+            BEGIN 
+                INSERT INTO [dbo].[OrganizationPasswordManager]
+                    (
+                        [OrganizationId],
+                        [Plan],
+                        [PlanType],
+                        [Seats],
+                        [MaxCollections],
+                        [UseTotp],
+                        [UsersGetPremium],
+                        [Storage],
+                        [MaxStorageGb],
+                        [MaxAutoscaleSeats],
+                        [RevisionDate]
+                    )
+                    VALUES
+                    (
+                        @Id,
+                        @Plan,
+                        @PlanType,
+                        @Seats,
+                        @MaxCollections,
+                        @UseTotp,
+                        @UsersGetPremium,
+                        @Storage,
+                        @MaxStorageGb,
+                        @MaxAutoscaleSeats,
+                        GETUTCDATE()
+                    )
+            END 
+    END
+END
+GO 
 

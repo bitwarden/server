@@ -1,0 +1,18 @@
+INSERT INTO OrganizationPasswordManager
+SELECT TOP(1)
+    O.[Id] as OrganizationId,
+    O.[Plan],
+    O.[Seats],
+    O.[MaxCollections],
+    O.[UseTotp],
+    O.[UsersGetPremium],
+    O.[Storage],
+    O.[MaxStorageGb],
+    O.[MaxAutoscaleSeats],
+    O.[RevisionDate]
+FROM
+    [dbo].[Organization] O
+LEFT JOIN
+    [dbo].[OrganizationPasswordManager] OPM ON OPM.[OrganizationId] = O.[Id]
+WHERE
+    [OPM].[Id] != null
