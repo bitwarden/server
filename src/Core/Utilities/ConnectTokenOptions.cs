@@ -1,4 +1,4 @@
-namespace Bit.Core.Utilities
+﻿namespace Bit.Core.Utilities
 {
     public class ConnectTokenOptions
     {

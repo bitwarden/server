@@ -680,7 +680,7 @@ namespace Bit.SharedWeb.Utilities
                 });
 
             services.AddHttpClient(HttpClientNames.CloudIdentityRelayPush)
-                .ConfigureHttpClient((sp, client) => 
+                .ConfigureHttpClient((sp, client) =>
                 {
                     var gs = sp.GetRequiredService<GlobalSettings>();
                     client.BaseAddress = new Uri(gs.Installation.IdentityUri);

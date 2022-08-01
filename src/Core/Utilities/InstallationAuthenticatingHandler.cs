@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -16,7 +16,7 @@ namespace Bit.Core.Utilities
         private readonly ILogger<InstallationAuthenticatingHandler> _logger;
         private readonly IOptionsMonitor<ConnectTokenOptions> _options;
         private readonly string _optionsName;
-        
+
         private ConnectTokenOptions _tokenOptions;
         private string? _accessToken;
         private DateTime? _nextAuthAttempt;
@@ -78,7 +78,7 @@ namespace Bit.Core.Utilities
                 _logger.LogError(invalidOperationException, "Bad stuff.");
                 return false;
             }
-            
+
 
             static (string? accessToken, DateTime nextAuthAttempt) ReadTokenBody(JsonDocument jsonDocument)
             {
