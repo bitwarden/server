@@ -2723,6 +2723,7 @@
       "sharedweb": {
         "type": "Project",
         "dependencies": {
+          "CommCore": "2022.6.0",
           "Core": "2022.6.0",
           "Infrastructure.Dapper": "2022.6.0",
           "Infrastructure.EntityFramework": "2022.6.0"

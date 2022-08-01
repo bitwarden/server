@@ -1,6 +1,9 @@
 ﻿using System.Reflection;
 using System.Security.Claims;
 using System.Security.Cryptography.X509Certificates;
+#if !OSS
+using Bit.CommCore.SecretsManagerFeatures;
+#endif
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Identity;
@@ -9,6 +12,7 @@ using Bit.Core.Models.Business.Tokenables;
 using Bit.Core.OrganizationFeatures;
 using Bit.Core.Repositories;
 using Bit.Core.Resources;
+using Bit.Core.SecretsManagerFeatures;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
@@ -102,6 +106,12 @@ namespace Bit.SharedWeb.Utilities
             services.AddSingleton<IAppleIapService, AppleIapService>();
             services.AddScoped<ISsoConfigService, SsoConfigService>();
             services.AddScoped<ISendService, SendService>();
+
+#if !OSS
+            services.AddSMFeatures();
+#else
+            services.AddSMFeaturesNoop();
+#endif
         }
 
         public static void AddTokenizers(this IServiceCollection services)

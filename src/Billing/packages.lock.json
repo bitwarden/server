@@ -3128,6 +3128,12 @@
           "NETStandard.Library": "1.6.1"
         }
       },
+      "commcore": {
+        "type": "Project",
+        "dependencies": {
+          "Core": "2022.6.0"
+        }
+      },
       "core": {
         "type": "Project",
         "dependencies": {
@@ -3189,6 +3195,7 @@
       "sharedweb": {
         "type": "Project",
         "dependencies": {
+          "CommCore": "2022.6.0",
           "Core": "2022.6.0",
           "Infrastructure.Dapper": "2022.6.0",
           "Infrastructure.EntityFramework": "2022.6.0"

@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <ItemGroup>
+      <ProjectReference Include="..\..\bitwarden_license\src\CommCore\CommCore.csproj" />
       <ProjectReference Include="..\Infrastructure.Dapper\Infrastructure.Dapper.csproj" />
       <ProjectReference Include="..\Core\Core.csproj" />
       <ProjectReference Include="..\Infrastructure.EntityFramework\Infrastructure.EntityFramework.csproj" />
