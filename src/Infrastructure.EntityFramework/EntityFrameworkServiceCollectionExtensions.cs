@@ -35,11 +35,6 @@ namespace Bit.Infrastructure.EntityFramework
             });
         }
 
-        public static void AddSecretsManagerEFRepositories(this IServiceCollection services)
-        {
-            services.AddSingleton<ISecretRepository, SecretRepository>();
-        }
-
         public static void AddPasswordManagerEFRepositories(this IServiceCollection services, bool selfHosted)
         {
 

@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\src\Core\Core.csproj" />
+    <ProjectReference Include="..\Commercial.Infrastructure.EntityFramework\Commercial.Infrastructure.EntityFramework.csproj" />
   </ItemGroup>
 
 </Project>

@@ -1,10 +1,11 @@
 ﻿using AutoMapper;
 using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.Models;
+using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Bit.Infrastructure.EntityFramework.Repositories
+namespace Bit.Commercial.Infrastructure.EntityFramework.Repositories
 {
     public class SecretRepository : Repository<Core.Entities.Secret, Secret, Guid>, ISecretRepository
     {

@@ -2941,7 +2941,17 @@
       "commcore": {
         "type": "Project",
         "dependencies": {
+          "Commercial.Infrastructure.EntityFramework": "2022.6.2",
           "Core": "2022.6.2"
+        }
+      },
+      "commercial.infrastructure.entityframework": {
+        "type": "Project",
+        "dependencies": {
+          "AutoMapper.Extensions.Microsoft.DependencyInjection": "11.0.0",
+          "Core": "2022.6.2",
+          "Infrastructure.EntityFramework": "2022.6.2",
+          "Microsoft.EntityFrameworkCore": "6.0.4"
         }
       },
       "common": {

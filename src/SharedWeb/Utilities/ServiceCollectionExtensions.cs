@@ -91,7 +91,6 @@ namespace Bit.SharedWeb.Utilities
             {
                 services.AddDapperRepositories(globalSettings.SelfHosted);
             }
-            services.AddSecretsManagerEFRepositories();
 
             if (globalSettings.SelfHosted)
             {
