@@ -25,12 +25,11 @@ LEFT JOIN
 WHERE
     (
         (
-            OU.[UserId] IS NOT NULL     -- OrgUsers who have accepted their invite and are linked to a UserId
+            OU.[Status] != 0     -- OrgUsers who have accepted their invite and are linked to a UserId
             AND OU.[UserId] = @UserId 
         )
         OR (
-            OU.[Email] IS NOT NULL      -- OrgUsers who have not accepted their invite are not linked to a UserId yet, 
-                                        -- so we have to look up their email. This includes invited but revoked orgUsers
+            OU.[Status] = 0     -- 'Invited' OrgUsers are not linked to a UserId yet, so we have to look up their email
             AND OU.[Email] IN (SELECT U.Email FROM [dbo].[UserView] U WHERE U.Id = @UserId)
         )
     )
