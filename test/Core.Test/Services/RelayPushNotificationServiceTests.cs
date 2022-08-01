@@ -1,8 +1,6 @@
 ﻿using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Settings;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Xunit;
 
@@ -14,24 +12,18 @@ namespace Bit.Core.Test.Services
 
         private readonly IHttpClientFactory _httpFactory;
         private readonly IDeviceRepository _deviceRepository;
-        private readonly GlobalSettings _globalSettings;
         private readonly IHttpContextAccessor _httpContextAccessor;
-        private readonly ILogger<RelayPushNotificationService> _logger;
 
         public RelayPushNotificationServiceTests()
         {
             _httpFactory = Substitute.For<IHttpClientFactory>();
             _deviceRepository = Substitute.For<IDeviceRepository>();
-            _globalSettings = new GlobalSettings();
             _httpContextAccessor = Substitute.For<IHttpContextAccessor>();
-            _logger = Substitute.For<ILogger<RelayPushNotificationService>>();
 
             _sut = new RelayPushNotificationService(
                 _httpFactory,
                 _deviceRepository,
-                _globalSettings,
-                _httpContextAccessor,
-                _logger
+                _httpContextAccessor
             );
         }
 

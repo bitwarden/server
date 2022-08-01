@@ -17,8 +17,6 @@ namespace Bit.Core.Test.Services
         private readonly IInstallationDeviceRepository _installationDeviceRepository;
         private readonly GlobalSettings _globalSettings;
         private readonly IHttpContextAccessor _httpContextAccessor;
-        private readonly ILogger<MultiServicePushNotificationService> _logger;
-        private readonly ILogger<RelayPushNotificationService> _relayLogger;
         private readonly ILogger<NotificationsApiPushNotificationService> _hubLogger;
 
         public MultiServicePushNotificationServiceTests()
@@ -28,8 +26,6 @@ namespace Bit.Core.Test.Services
             _installationDeviceRepository = Substitute.For<IInstallationDeviceRepository>();
             _globalSettings = new GlobalSettings();
             _httpContextAccessor = Substitute.For<IHttpContextAccessor>();
-            _logger = Substitute.For<ILogger<MultiServicePushNotificationService>>();
-            _relayLogger = Substitute.For<ILogger<RelayPushNotificationService>>();
             _hubLogger = Substitute.For<ILogger<NotificationsApiPushNotificationService>>();
 
             _sut = new MultiServicePushNotificationService(
@@ -38,8 +34,6 @@ namespace Bit.Core.Test.Services
                 _installationDeviceRepository,
                 _globalSettings,
                 _httpContextAccessor,
-                _logger,
-                _relayLogger,
                 _hubLogger
             );
         }

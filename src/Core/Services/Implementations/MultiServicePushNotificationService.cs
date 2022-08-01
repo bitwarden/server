@@ -11,7 +11,6 @@ namespace Bit.Core.Services
     public class MultiServicePushNotificationService : IPushNotificationService
     {
         private readonly List<IPushNotificationService> _services = new List<IPushNotificationService>();
-        private readonly ILogger<MultiServicePushNotificationService> _logger;
 
         public MultiServicePushNotificationService(
             IHttpClientFactory httpFactory,
@@ -19,8 +18,6 @@ namespace Bit.Core.Services
             IInstallationDeviceRepository installationDeviceRepository,
             GlobalSettings globalSettings,
             IHttpContextAccessor httpContextAccessor,
-            ILogger<MultiServicePushNotificationService> logger,
-            ILogger<RelayPushNotificationService> relayLogger,
             ILogger<NotificationsApiPushNotificationService> hubLogger)
         {
             if (globalSettings.SelfHosted)
@@ -29,8 +26,8 @@ namespace Bit.Core.Services
                     globalSettings.Installation?.Id != null &&
                     CoreHelpers.SettingHasValue(globalSettings.Installation?.Key))
                 {
-                    _services.Add(new RelayPushNotificationService(httpFactory, deviceRepository, globalSettings,
-                        httpContextAccessor, relayLogger));
+                    _services.Add(new RelayPushNotificationService(httpFactory, deviceRepository,
+                        httpContextAccessor));
                 }
                 if (CoreHelpers.SettingHasValue(globalSettings.InternalIdentityKey) &&
                     CoreHelpers.SettingHasValue(globalSettings.BaseServiceUri.InternalNotifications))
@@ -51,8 +48,6 @@ namespace Bit.Core.Services
                     _services.Add(new AzureQueuePushNotificationService(globalSettings, httpContextAccessor));
                 }
             }
-
-            _logger = logger;
         }
 
         public Task PushSyncCipherCreateAsync(Cipher cipher, IEnumerable<Guid> collectionIds)

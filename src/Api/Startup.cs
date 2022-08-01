@@ -12,6 +12,7 @@ using Microsoft.IdentityModel.Logging;
 using Microsoft.OpenApi.Models;
 using Bit.SharedWeb.Utilities;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Bit.Core.IdentityServer;
 
 #if !OSS
 using Bit.CommCore.Utilities;
@@ -84,34 +85,34 @@ namespace Bit.Api
                 {
                     policy.RequireAuthenticatedUser();
                     policy.RequireClaim(JwtClaimTypes.AuthenticationMethod, "Application", "external");
-                    policy.RequireClaim(JwtClaimTypes.Scope, "api");
+                    policy.RequireClaim(JwtClaimTypes.Scope, ApiScopes.Api);
                 });
                 config.AddPolicy("Web", policy =>
                 {
                     policy.RequireAuthenticatedUser();
                     policy.RequireClaim(JwtClaimTypes.AuthenticationMethod, "Application", "external");
-                    policy.RequireClaim(JwtClaimTypes.Scope, "api");
+                    policy.RequireClaim(JwtClaimTypes.Scope, ApiScopes.Api);
                     policy.RequireClaim(JwtClaimTypes.ClientId, "web");
                 });
                 config.AddPolicy("Push", policy =>
                 {
                     policy.RequireAuthenticatedUser();
-                    policy.RequireClaim(JwtClaimTypes.Scope, "api.push");
+                    policy.RequireClaim(JwtClaimTypes.Scope, ApiScopes.ApiPush);
                 });
                 config.AddPolicy("Licensing", policy =>
                 {
                     policy.RequireAuthenticatedUser();
-                    policy.RequireClaim(JwtClaimTypes.Scope, "api.licensing");
+                    policy.RequireClaim(JwtClaimTypes.Scope, ApiScopes.ApiLicensing);
                 });
                 config.AddPolicy("Organization", policy =>
                 {
                     policy.RequireAuthenticatedUser();
-                    policy.RequireClaim(JwtClaimTypes.Scope, "api.organization");
+                    policy.RequireClaim(JwtClaimTypes.Scope, ApiScopes.ApiOrganization);
                 });
                 config.AddPolicy("Installation", policy =>
                 {
                     policy.RequireAuthenticatedUser();
-                    policy.RequireClaim(JwtClaimTypes.Scope, "api.installation");
+                    policy.RequireClaim(JwtClaimTypes.Scope, ApiScopes.ApiInstallation);
                 });
             });
 
@@ -134,6 +135,11 @@ namespace Bit.Api
                 config.Conventions.Add(new ApiExplorerGroupConvention());
                 config.Conventions.Add(new PublicApiControllersModelConvention());
             });
+
+            if (globalSettings.SelfHosted)
+            {
+                services.AddPushSyncClients(globalSettings);
+            }
 
             services.AddSwagger(globalSettings);
             Jobs.JobsHostedService.AddJobsServices(services, globalSettings.SelfHosted);

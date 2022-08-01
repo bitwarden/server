@@ -36,6 +36,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Serilog.Context;
 using StackExchange.Redis;
@@ -138,6 +139,7 @@ namespace Bit.SharedWeb.Utilities
             services.AddWebAuthn(globalSettings);
             // Required for HTTP calls
             services.AddHttpClient();
+
 
             services.AddSingleton<IStripeAdapter, StripeAdapter>();
             services.AddSingleton<Braintree.IBraintreeGateway>((serviceProvider) =>
@@ -650,6 +652,41 @@ namespace Bit.SharedWeb.Utilities
                         Task.FromResult(s.GetRequiredService<IConnectionMultiplexer>())
                 });
             });
+        }
+
+        public static IServiceCollection AddPushSyncClients(this IServiceCollection services, GlobalSettings globalSettings)
+        {
+            // Reuse the name of the HttpClient for the name of the options
+            services.Configure<ConnectTokenOptions>(HttpClientNames.CloudApiRelayPush, options =>
+            {
+                options.ClientId = $"installation.{globalSettings.Installation.Id}";
+                options.ClientSecret = globalSettings.Installation.Key;
+                options.Scope = ApiScopes.ApiPush;
+            });
+
+            services.AddHttpClient(HttpClientNames.CloudApiRelayPush)
+                .ConfigureHttpClient((sp, client) =>
+                {
+                    var gs = sp.GetRequiredService<GlobalSettings>();
+                    client.BaseAddress = new Uri(gs.PushRelayBaseUri);
+                })
+                .AddHttpMessageHandler(sp =>
+                {
+                    return new InstallationAuthenticatingHandler(
+                        sp.GetRequiredService<IHttpClientFactory>().CreateClient(HttpClientNames.CloudIdentityRelayPush),
+                        sp.GetRequiredService<ILogger<InstallationAuthenticatingHandler>>(),
+                        sp.GetRequiredService<IOptionsMonitor<ConnectTokenOptions>>(),
+                        HttpClientNames.CloudApiRelayPush);
+                });
+
+            services.AddHttpClient(HttpClientNames.CloudIdentityRelayPush)
+                .ConfigureHttpClient((sp, client) => 
+                {
+                    var gs = sp.GetRequiredService<GlobalSettings>();
+                    client.BaseAddress = new Uri(gs.Installation.IdentityUri);
+                });
+
+            return services;
         }
     }
 }

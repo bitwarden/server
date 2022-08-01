@@ -2,18 +2,26 @@
 
 namespace Bit.Core.IdentityServer
 {
-    public class ApiScopes
+    public static class ApiScopes
     {
+        public const string Api = "api";
+        public const string ApiPush = "api.push";
+        public const string ApiLicensing = "api.licensing";
+        public const string ApiOrganization = "api.organization";
+        public const string ApiInstallation = "api.installation";
+        public const string Internal = "internal";
+
+
         public static IEnumerable<ApiScope> GetApiScopes()
         {
             return new List<ApiScope>
             {
-                new ApiScope("api", "API Access"),
-                new ApiScope("api.push", "API Push Access"),
-                new ApiScope("api.licensing", "API Licensing Access"),
-                new ApiScope("api.organization", "API Organization Access"),
-                new ApiScope("api.installation", "API Installation Access"),
-                new ApiScope("internal", "Internal Access")
+                new ApiScope(Api, "API Access"),
+                new ApiScope(ApiPush, "API Push Access"),
+                new ApiScope(ApiLicensing, "API Licensing Access"),
+                new ApiScope(ApiOrganization, "API Organization Access"),
+                new ApiScope(ApiInstallation, "API Installation Access"),
+                new ApiScope(Internal, "Internal Access"),
             };
         }
     }

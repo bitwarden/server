@@ -1,37 +1,29 @@
-﻿using Bit.Core.Context;
+﻿using System.Net.Http.Json;
+using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models;
 using Bit.Core.Models.Api;
 using Bit.Core.Repositories;
-using Bit.Core.Settings;
+using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Services
 {
-    public class RelayPushNotificationService : BaseIdentityClientService, IPushNotificationService
+    public class RelayPushNotificationService : IPushNotificationService
     {
         private readonly IDeviceRepository _deviceRepository;
         private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly HttpClient _httpClient;
 
         public RelayPushNotificationService(
-            IHttpClientFactory httpFactory,
+            IHttpClientFactory httpClientFactory,
             IDeviceRepository deviceRepository,
-            GlobalSettings globalSettings,
-            IHttpContextAccessor httpContextAccessor,
-            ILogger<RelayPushNotificationService> logger)
-            : base(
-                httpFactory,
-                globalSettings.PushRelayBaseUri,
-                globalSettings.Installation.IdentityUri,
-                "api.push",
-                $"installation.{globalSettings.Installation.Id}",
-                globalSettings.Installation.Key,
-                logger)
+            IHttpContextAccessor httpContextAccessor)
         {
             _deviceRepository = deviceRepository;
             _httpContextAccessor = httpContextAccessor;
+            _httpClient = httpClientFactory.CreateClient(HttpClientNames.CloudApiRelayPush);
         }
 
         public async Task PushSyncCipherCreateAsync(Cipher cipher, IEnumerable<Guid> collectionIds)
@@ -177,7 +169,7 @@ namespace Bit.Core.Services
             };
 
             await AddCurrentContextAsync(request, excludeCurrentContext);
-            await SendAsync(HttpMethod.Post, "push/send", request);
+            await SendAsync(request);
         }
 
         private async Task SendPayloadToOrganizationAsync(Guid orgId, PushType type, object payload, bool excludeCurrentContext)
@@ -190,7 +182,7 @@ namespace Bit.Core.Services
             };
 
             await AddCurrentContextAsync(request, excludeCurrentContext);
-            await SendAsync(HttpMethod.Post, "push/send", request);
+            await SendAsync(request);
         }
 
         private async Task AddCurrentContextAsync(PushSendRequestModel request, bool addIdentifier)
@@ -221,6 +213,11 @@ namespace Bit.Core.Services
             string deviceId = null)
         {
             throw new NotImplementedException();
+        }
+
+        private async Task SendAsync(PushSendRequestModel request)
+        {
+            await _httpClient.PostAsJsonAsync("push/send", request);
         }
     }
 }
