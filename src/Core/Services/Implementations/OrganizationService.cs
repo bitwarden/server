@@ -2300,7 +2300,7 @@ namespace Bit.Core.Services
             return result;
         }
 
-        public async Task RestoreUserAsync(OrganizationUser organizationUser, Guid? restoringUserId)
+        public async Task RestoreUserAsync(OrganizationUser organizationUser, Guid? restoringUserId, IUserService userService)
         {
             if (organizationUser.Status != OrganizationUserStatusType.Revoked)
             {
@@ -2318,6 +2318,8 @@ namespace Bit.Core.Services
                 throw new BadRequestException("Only owners can restore other owners.");
             }
 
+            await CheckPoliciesBeforeRestoreAsync(organizationUser, userService);
+
             var status = GetPriorActiveOrganizationUserStatusType(organizationUser);
 
             await _organizationUserRepository.RestoreAsync(organizationUser.Id, status);
@@ -2326,7 +2328,7 @@ namespace Bit.Core.Services
         }
 
         public async Task<List<Tuple<OrganizationUser, string>>> RestoreUsersAsync(Guid organizationId,
-            IEnumerable<Guid> organizationUserIds, Guid? restoringUserId)
+            IEnumerable<Guid> organizationUserIds, Guid? restoringUserId, IUserService userService)
         {
             var orgUsers = await _organizationUserRepository.GetManyAsync(organizationUserIds);
             var filteredUsers = orgUsers.Where(u => u.OrganizationId == organizationId)
@@ -2364,6 +2366,8 @@ namespace Bit.Core.Services
                         throw new BadRequestException("Only owners can restore other owners.");
                     }
 
+                    await CheckPoliciesBeforeRestoreAsync(organizationUser, userService);
+
                     var status = GetPriorActiveOrganizationUserStatusType(organizationUser);
 
                     await _organizationUserRepository.RestoreAsync(organizationUser.Id, status);
@@ -2379,6 +2383,53 @@ namespace Bit.Core.Services
             }
 
             return result;
+        }
+
+        private async Task CheckPoliciesBeforeRestoreAsync(OrganizationUser orgUser, IUserService userService)
+        {
+            // An invited OrganizationUser isn't linked with a user account yet, so these checks are irrelevant
+            // The user will be subject to the same checks when they try to accept the invite
+            if (GetPriorActiveOrganizationUserStatusType(orgUser) == OrganizationUserStatusType.Invited)
+            {
+                return;
+            }
+
+            var userId = orgUser.UserId.Value;
+
+            // Enforce Single Organization Policy of organization user is being restored to
+            var allOrgUsers = await _organizationUserRepository.GetManyByUserAsync(userId);
+            var hasOtherOrgs = allOrgUsers.Any(ou => ou.OrganizationId != orgUser.OrganizationId);
+            var singleOrgPoliciesApplyingToRevokedUsers = await _policyRepository.GetManyByTypeApplicableToUserIdAsync(userId,
+                PolicyType.SingleOrg, OrganizationUserStatusType.Revoked);
+            var singleOrgPolicyApplies = singleOrgPoliciesApplyingToRevokedUsers.Any(p => p.OrganizationId == orgUser.OrganizationId);
+
+            if (hasOtherOrgs && singleOrgPolicyApplies)
+            {
+                throw new BadRequestException("You cannot restore this user until " +
+                    "they leave or remove all other organizations.");
+            }
+
+            // Enforce Single Organization Policy of other organizations user is a member of
+            var singleOrgPolicyCount = await _policyRepository.GetCountByTypeApplicableToUserIdAsync(userId,
+                PolicyType.SingleOrg);
+            if (singleOrgPolicyCount > 0)
+            {
+                throw new BadRequestException("You cannot restore this user because they are a member of " +
+                    "another organization which forbids it");
+            }
+
+            // Enforce Two Factor Authentication Policy of organization user is trying to join
+            var user = await _userRepository.GetByIdAsync(userId);
+            if (!await userService.TwoFactorIsEnabledAsync(user))
+            {
+                var invitedTwoFactorPolicies = await _policyRepository.GetManyByTypeApplicableToUserIdAsync(userId,
+                    PolicyType.TwoFactorAuthentication, OrganizationUserStatusType.Invited);
+                if (invitedTwoFactorPolicies.Any(p => p.OrganizationId == orgUser.OrganizationId))
+                {
+                    throw new BadRequestException("You cannot restore this user until they enable " +
+                        "two-step login on their user account.");
+                }
+            }
         }
 
         static OrganizationUserStatusType GetPriorActiveOrganizationUserStatusType(OrganizationUser organizationUser)
