@@ -14,7 +14,7 @@ using Bit.SharedWeb.Utilities;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
 #if !OSS
-using Bit.CommCore.Utilities;
+using Bit.Commercial.Core.Utilities;
 using Bit.Commercial.Infrastructure.EntityFramework;
 #endif
 

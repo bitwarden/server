@@ -24,7 +24,7 @@
   <Choose>
     <When Condition="!$(DefineConstants.Contains('OSS'))">
       <ItemGroup>
-        <ProjectReference Include="..\..\bitwarden_license\src\CommCore\CommCore.csproj" />
+        <ProjectReference Include="..\..\bitwarden_license\src\Commercial.Core\Commercial.Core.csproj" />
       </ItemGroup>
     </When>
   </Choose>

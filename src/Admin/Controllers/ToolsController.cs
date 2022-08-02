@@ -453,6 +453,7 @@ namespace Bit.Admin.Controllers
             {
                 Items = subscriptions.Select(s => new StripeSubscriptionRowModel(s)).ToList(),
                 Prices = (await _stripeAdapter.PriceListAsync(new Stripe.PriceListOptions() { Limit = 100 })).Data,
+                TestClocks = await _stripeAdapter.TestClockListAsync(),
                 Filter = options
             };
             return View(model);
@@ -464,6 +465,7 @@ namespace Bit.Admin.Controllers
             if (!ModelState.IsValid)
             {
                 model.Prices = (await _stripeAdapter.PriceListAsync(new Stripe.PriceListOptions() { Limit = 100 })).Data;
+                model.TestClocks = await _stripeAdapter.TestClockListAsync();
                 return View(model);
             }
 
@@ -485,11 +487,11 @@ namespace Bit.Admin.Controllers
             }
             else
             {
-                if (model.Action == StripeSubscriptionsAction.PreviousPage)
+                if (model.Action == StripeSubscriptionsAction.PreviousPage || model.Action == StripeSubscriptionsAction.Search)
                 {
                     model.Filter.StartingAfter = null;
                 }
-                if (model.Action == StripeSubscriptionsAction.NextPage)
+                if (model.Action == StripeSubscriptionsAction.NextPage || model.Action == StripeSubscriptionsAction.Search)
                 {
                     model.Filter.EndingBefore = null;
                 }

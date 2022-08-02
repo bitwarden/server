@@ -27,6 +27,13 @@
         public Stripe.SubscriptionListOptions ToStripeApiOptions()
         {
             var stripeApiOptions = (Stripe.SubscriptionListOptions)this;
+
+            if (SelectAll)
+            {
+                stripeApiOptions.EndingBefore = null;
+                stripeApiOptions.StartingAfter = null;
+            }
+
             if (CurrentPeriodEndDate.HasValue)
             {
                 stripeApiOptions.CurrentPeriodEnd = new Stripe.DateRangeOptions()
@@ -35,6 +42,7 @@
                     GreaterThan = CurrentPeriodEndRange == "gt" ? CurrentPeriodEndDate : null
                 };
             }
+
             return stripeApiOptions;
         }
     }
