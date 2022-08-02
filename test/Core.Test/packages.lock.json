@@ -2885,13 +2885,13 @@
         "type": "Project",
         "dependencies": {
           "Azure.Messaging.EventGrid": "4.10.0",
-          "CommCore": "2022.6.2",
+          "Commercial.Core": "2022.6.2",
           "Core": "2022.6.2",
           "SharedWeb": "2022.6.2",
           "Swashbuckle.AspNetCore": "6.3.1"
         }
       },
-      "commcore": {
+      "commercial.core": {
         "type": "Project",
         "dependencies": {
           "Core": "2022.6.2"

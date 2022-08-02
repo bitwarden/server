@@ -61,12 +61,12 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sso", "bitwarden_license\sr
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Icons.Test", "test\Icons.Test\Icons.Test.csproj", "{C7BA2255-C1B1-4789-8BB9-C27540DA6FB8}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CommCore", "bitwarden_license\src\CommCore\CommCore.csproj", "{EDC0D688-D58C-4CE1-AA07-3606AC6874B8}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Commercial.Core", "bitwarden_license\src\Commercial.Core\Commercial.Core.csproj", "{EDC0D688-D58C-4CE1-AA07-3606AC6874B8}"
 	ProjectSection(ProjectDependencies) = postProject
 		{3973D21B-A692-4B60-9B70-3631C057423A} = {3973D21B-A692-4B60-9B70-3631C057423A}
 	EndProjectSection
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CommCore.Test", "bitwarden_license\test\CmmCore.Test\CommCore.Test.csproj", "{0E99A21B-684B-4C59-9831-90F775CAB6F7}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Commercial.Core.Test", "bitwarden_license\test\CmmCore.Test\Commercial.Core.Test.csproj", "{0E99A21B-684B-4C59-9831-90F775CAB6F7}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test - Bitwarden License", "test - Bitwarden License", "{287CFF34-BBDB-4BC4-AF88-1E19A5A4679B}"
 EndProject
