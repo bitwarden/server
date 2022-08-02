@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using Bit.Core.Settings;
 
 namespace Bit.Api.Utilities;
 
@@ -6,7 +7,7 @@ namespace Bit.Api.Utilities;
 internal static class HealthCheckServices
 {
     public static IServiceCollection ConfigureHealthCheckServices(this IServiceCollection services,
-        IConfiguration configuration, IHostEnvironment environment)
+        GlobalSettings globalSettings, IHostEnvironment environment)
     {
         services.AddHealthChecks();
 
