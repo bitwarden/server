@@ -92,4 +92,4 @@ WHERE
    OR COALESCE(JSON_VALUE(OU.[Permissions], '$.managePolicies'), 'false') = 'false'
     )
   AND PUPO.[UserId] IS NULL   -- Not a provider
-    GO
+GO
