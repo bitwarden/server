@@ -89,7 +89,7 @@ WHERE
   AND OU.[Type] >= 2              -- Not an owner (0) or admin (1)
   AND (                           -- Can't manage policies
     OU.[Permissions] IS NULL
-   OR COALESCE(JSON_VALUE(OU.[Permissions], '$.managePolicies'), 'false') = 'false'
+    OR COALESCE(JSON_VALUE(OU.[Permissions], '$.managePolicies'), 'false') = 'false'
     )
   AND PUPO.[UserId] IS NULL   -- Not a provider
 GO
