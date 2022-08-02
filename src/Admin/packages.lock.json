@@ -3145,7 +3145,7 @@
           "NETStandard.Library": "1.6.1"
         }
       },
-      "commcore": {
+      "commercial.core": {
         "type": "Project",
         "dependencies": {
           "Core": "2022.6.2"

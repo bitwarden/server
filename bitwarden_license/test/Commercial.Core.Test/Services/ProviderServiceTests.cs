@@ -1,5 +1,5 @@
-﻿using Bit.CommCore.Services;
-using Bit.CommCore.Test.AutoFixture.ProviderUserFixtures;
+﻿using Bit.Commercial.Core.Services;
+using Bit.Commercial.Core.Test.AutoFixture;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Entities.Provider;
@@ -19,7 +19,7 @@ using NSubstitute.ReturnsExtensions;
 using Xunit;
 using ProviderUser = Bit.Core.Entities.Provider.ProviderUser;
 
-namespace Bit.CommCore.Test.Services
+namespace Bit.Commercial.Core.Test.Services
 {
     public class ProviderServiceTests
     {
