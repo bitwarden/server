@@ -61,8 +61,8 @@ namespace Bit.Core.Services
         Task RevokeUserAsync(OrganizationUser organizationUser, Guid? revokingUserId);
         Task<List<Tuple<OrganizationUser, string>>> RevokeUsersAsync(Guid organizationId,
             IEnumerable<Guid> organizationUserIds, Guid? revokingUserId);
-        Task RestoreUserAsync(OrganizationUser organizationUser, Guid? restoringUserId);
+        Task RestoreUserAsync(OrganizationUser organizationUser, Guid? restoringUserId, IUserService userService);
         Task<List<Tuple<OrganizationUser, string>>> RestoreUsersAsync(Guid organizationId,
-            IEnumerable<Guid> organizationUserIds, Guid? restoringUserId);
+            IEnumerable<Guid> organizationUserIds, Guid? restoringUserId, IUserService userService);
     }
 }
