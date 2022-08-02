@@ -66,7 +66,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Commercial.Core", "bitwarde
 		{3973D21B-A692-4B60-9B70-3631C057423A} = {3973D21B-A692-4B60-9B70-3631C057423A}
 	EndProjectSection
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Commercial.Core.Test", "bitwarden_license\test\CmmCore.Test\Commercial.Core.Test.csproj", "{0E99A21B-684B-4C59-9831-90F775CAB6F7}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Commercial.Core.Test", "bitwarden_license\test\Commercial.Core.Test\Commercial.Core.Test.csproj", "{0E99A21B-684B-4C59-9831-90F775CAB6F7}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test - Bitwarden License", "test - Bitwarden License", "{287CFF34-BBDB-4BC4-AF88-1E19A5A4679B}"
 EndProject
