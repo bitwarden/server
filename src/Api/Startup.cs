@@ -15,6 +15,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 #if !OSS
 using Bit.CommCore.Utilities;
+using Bit.Commercial.Infrastructure.EntityFramework;
 #endif
 
 namespace Bit.Api
@@ -126,6 +127,7 @@ namespace Bit.Api
             services.AddOosServices();
 #else
             services.AddCommCoreServices();
+            services.AddCommercialEFRepositories();
 #endif
 
             // MVC

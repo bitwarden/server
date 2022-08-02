@@ -2700,7 +2700,6 @@
       "commcore": {
         "type": "Project",
         "dependencies": {
-          "Commercial.Infrastructure.EntityFramework": "2022.6.2",
           "Core": "2022.6.2"
         }
       },
