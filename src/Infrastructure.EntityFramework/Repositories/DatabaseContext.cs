@@ -31,6 +31,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
         public DbSet<OrganizationUser> OrganizationUsers { get; set; }
         public DbSet<Policy> Policies { get; set; }
         public DbSet<Provider> Providers { get; set; }
+        public DbSet<Secret> Secret { get; set; }
         public DbSet<ProviderUser> ProviderUsers { get; set; }
         public DbSet<ProviderOrganization> ProviderOrganizations { get; set; }
         public DbSet<Send> Sends { get; set; }
@@ -42,6 +43,13 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
+            // Scans and loads all configurations implementing the `IEntityTypeConfiguration` from the
+            //  `Infrastructure.EntityFramework` Module. Note to get the assembly we can use a random class
+            //   from this module.
+            builder.ApplyConfigurationsFromAssembly(typeof(DatabaseContext).Assembly);
+
+            // Going forward use `IEntityTypeConfiguration` in the Configurations folder for managing 
+            // Entity Framework code first database configurations.
             var eCipher = builder.Entity<Cipher>();
             var eCollection = builder.Entity<Collection>();
             var eCollectionCipher = builder.Entity<CollectionCipher>();
@@ -96,7 +104,6 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             eCollectionGroup.HasKey(cg => new { cg.CollectionId, cg.GroupId });
             eGrant.HasKey(x => x.Key);
             eGroupUser.HasKey(gu => new { gu.GroupId, gu.OrganizationUserId });
-
 
             if (Database.IsNpgsql())
             {
