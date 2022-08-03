@@ -193,7 +193,7 @@ namespace Bit.Scim.Controllers.v2
 
             if (model.Active && orgUser.Status == OrganizationUserStatusType.Revoked)
             {
-                await _organizationService.RestoreUserAsync(orgUser, null);
+                await _organizationService.RestoreUserAsync(orgUser, null, _userService);
             }
             else if (!model.Active && orgUser.Status != OrganizationUserStatusType.Revoked)
             {
@@ -229,7 +229,7 @@ namespace Bit.Scim.Controllers.v2
                     var active = activeProperty.GetBoolean();
                     if (active && orgUser.Status == OrganizationUserStatusType.Revoked)
                     {
-                        await _organizationService.RestoreUserAsync(orgUser, null);
+                        await _organizationService.RestoreUserAsync(orgUser, null, _userService);
                         operationHandled = true;
                     }
                     else if (!active && orgUser.Status != OrganizationUserStatusType.Revoked)

@@ -1,8 +1,8 @@
-﻿using Bit.CommCore.Services;
+﻿using Bit.Commercial.Core.Services;
 using Bit.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Bit.CommCore.Utilities
+namespace Bit.Commercial.Core.Utilities
 {
     public static class ServiceCollectionExtensions
     {
