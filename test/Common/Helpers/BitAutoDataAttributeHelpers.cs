@@ -17,9 +17,22 @@ namespace Bit.Test.Common.Helpers
             fixedTestParameters = fixedTestParameters ?? Array.Empty<object>();
 
             fixture = ApplyCustomizations(ApplyCustomizations(fixture, classCustomizations), methodCustomizations);
-            var missingParameters = methodParameters.Skip(fixedTestParameters.Length).Select(p => CustomizeAndCreate(p, fixture));
 
-            return new object[1][] { fixedTestParameters.Concat(missingParameters).ToArray() };
+            if (fixedTestParameters.Select((parameter, index) => (parameter, index)).All(pi => pi.parameter == null || pi.parameter.GetType() == methodParameters[pi.index].ParameterType))
+            {
+                var missingParameters = methodParameters.Skip(fixedTestParameters.Length).Select(p => CustomizeAndCreate(p, fixture));
+
+                return new object[1][] { fixedTestParameters.Concat(missingParameters).ToArray() };
+            }
+
+            var parameters = new List<object>();
+            foreach (var p in methodParameters)
+            {
+                var fixedTestParameter = fixedTestParameters.Except(parameters).FirstOrDefault(ftp => ftp.GetType() == p.ParameterType);
+                parameters.Add(fixedTestParameter ?? CustomizeAndCreate(p, fixture));
+            }
+
+            return new object[1][] { parameters.ToArray() };
         }
 
         public static object CustomizeAndCreate(ParameterInfo p, IFixture fixture)
