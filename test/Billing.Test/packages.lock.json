@@ -1888,8 +1888,8 @@
       },
       "Stripe.net": {
         "type": "Transitive",
-        "resolved": "39.107.0",
-        "contentHash": "cp/t6YzMTTPHopf7D7XFe7sPe5jE3QrVaPuA//xQWTbvTwBryOofTosyREq7OLqkvQ9olEHMNbHAkKIjM7vhsg==",
+        "resolved": "40.0.0",
+        "contentHash": "SD1bGiF+sVQG3p2LXNTZ5rEG2aCnXIHokcxYS9yyW3dR01J0ryf+iNFOwid148yePZ0gCBcRxj3wiW1mTmP7UQ==",
         "dependencies": {
           "Newtonsoft.Json": "12.0.3",
           "System.Configuration.ConfigurationManager": "6.0.0"
@@ -3517,7 +3517,7 @@
           "Serilog.Extensions.Logging.File": "2.0.0",
           "Serilog.Sinks.AzureCosmosDB": "2.0.0",
           "Serilog.Sinks.SyslogMessages": "2.0.6",
-          "Stripe.net": "39.107.0",
+          "Stripe.net": "40.0.0",
           "YubicoDotNetClient": "1.2.0"
         }
       },
