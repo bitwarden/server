@@ -19,6 +19,8 @@ namespace Bit.Core.Services
         Task PushSyncSendCreateAsync(Send send);
         Task PushSyncSendUpdateAsync(Send send);
         Task PushSyncSendDeleteAsync(Send send);
+        Task PushAuthRequestAsync(AuthRequest authRequest);
+        Task PushAuthRequestResponseAsync(AuthRequest authRequest);
         Task SendPayloadToUserAsync(string userId, PushType type, object payload, string identifier, string deviceId = null);
         Task SendPayloadToOrganizationAsync(string orgId, PushType type, object payload, string identifier,
             string deviceId = null);
