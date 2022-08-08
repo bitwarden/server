@@ -407,5 +407,11 @@
     <Build Include="dbo\Views\SsoUserView.sql" />
     <Build Include="dbo\Views\TransactionView.sql" />
     <Build Include="dbo\Views\UserView.sql" />
+    <Build Include="dbo\Tables\AuthRequest.sql" />
+    <Build Include="dbo\Stored Procedures\AuthRequest_Create.sql" />
+    <Build Include="dbo\Stored Procedures\AuthRequest_DeleteById.sql" />
+    <Build Include="dbo\Stored Procedures\AuthRequest_ReadById.sql" />
+    <Build Include="dbo\Stored Procedures\AuthRequest_Update.sql" />
+    <Build Include="dbo\Views\AuthRequestView.sql" />
   </ItemGroup>
 </Project>
