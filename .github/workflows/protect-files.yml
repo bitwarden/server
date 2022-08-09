@@ -1,6 +1,6 @@
 # Runs if there are changes to the paths: list.
 # Starts a matrix job to check for modified files, then sets output based on the results.
-# The input decides if the label job is ran, adding a "HOLD" label to the PR.
+# The input decides if the label job is ran, adding a label to the PR.
 ---
 
 name: Protect Files
@@ -35,7 +35,7 @@ jobs:
       - name: Check for file changes
         id: check-changes
         run: |
-          MODIFIED_FILES=$(git diff --name-only --diff-filter=M origin/${GITHUB_BASE_REF})
+          MODIFIED_FILES=$(git diff --name-only --diff-filter=M ${GITHUB_BASE_REF})
 
           for file in $MODIFIED_FILES; do
             if [[ $file == *"${{ matrix.path }}"*]]; then
@@ -55,4 +55,4 @@ jobs:
       - name: Label PR
         uses: andymckay/labeler@e6c4322d0397f3240f0e7e30a33b5c5df2d39e90
         with:
-          add-labels: "hold"
+          add-labels: "DB migrations changed"
