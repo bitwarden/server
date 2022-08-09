@@ -1,16 +1,24 @@
+# Runs if there are changes to the paths: list.
+# Starts a matrix job to check for modified files, then sets output based on the results.
+# The input decides if the label job is ran, adding a "HOLD" label to the PR.
 ---
 
 name: Protect Files
 
 on:
   pull_request:
-    types: [opened, edited, synchronize]
-    paths: ["util/Migrator/DbScripts"]
+    types: 
+      - opened
+      - synchronize
+    paths: 
+      - "util/Migrator/DbScripts"
 
 jobs:
   changed-files:
     name: Check for file changes
     runs-on: ubuntu-20.04
+    outputs:
+      changes: steps.check-changes.outputs.changes_detected
 
     strategy:
       fail-fast: true
@@ -18,22 +26,34 @@ jobs:
         include:
           - name: Database Scripts
             path: util/Migrator/DbScripts
+
     steps:
       - name: Checkout PR
-        uses: actions/checkout@a12a3943b4bdde767164f792f33f40b04645d846
+        uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b
         with:
           fetch-depth: 0
 
       - name: Check for file changes
+        id: check-changes
         run: |
-          if [ -z "$(git diff --name-only HEAD)" ]; then
-            echo "No files changed"
-            exit 0
-          fi
-          echo "Files changed"
-          exit 1
+          MODIFIED_FILES=$(git diff --name-only --diff-filter=M ${GITHUB_BASE_REF})
 
+          for file in $MODIFIED_FILES; do
+            if [[ $file == *"${{ matrix.path }}"*]]; then
+              echo "::set-output name=changes_detected::'true'"
+              break
+            else echo "::set-output name=changes_detected::'false'"
+            fi
+          done
 
-
-
-
+  label-pr:
+    name: Add label to pull request
+    runs-on: ubuntu-20.04
+    needs: 
+      - changed-files
+    if: contains(needs.changed-files.outputs.changes, "true") || job.changed-files.status == "failure"
+    steps:
+      - name: Label PR
+        uses: andymckay/labeler@e6c4322d0397f3240f0e7e30a33b5c5df2d39e90
+        with:
+          add-labels: "hold"
