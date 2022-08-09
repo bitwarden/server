@@ -26,6 +26,7 @@ jobs:
         include:
           - name: Database Scripts
             path: util/Migrator/DbScripts
+            label: "DB migrations changed"
     steps:
       - name: Checkout PR
         uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b
@@ -55,4 +56,4 @@ jobs:
       - name: Label PR
         uses: andymckay/labeler@e6c4322d0397f3240f0e7e30a33b5c5df2d39e90
         with:
-          add-labels: "DB migrations changed"
+          add-labels: ${{ matrix.label }}
