@@ -5,6 +5,7 @@ using Bit.Core.Repositories;
 using Bit.Scim.Context;
 using IdentityModel;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Options;
 
 namespace Bit.Scim.Utilities
@@ -32,6 +33,12 @@ namespace Bit.Scim.Utilities
 
         protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
         {
+            var endpoint = Context.GetEndpoint();
+            if (endpoint?.Metadata?.GetMetadata<IAllowAnonymous>() != null)
+            {
+                return AuthenticateResult.NoResult();
+            }
+
             if (!_scimContext.OrganizationId.HasValue || _scimContext.Organization == null)
             {
                 Logger.LogWarning("No organization.");
