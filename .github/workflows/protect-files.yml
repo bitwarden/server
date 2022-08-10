@@ -51,7 +51,7 @@ jobs:
     runs-on: ubuntu-20.04
     needs: 
       - changed-files
-    if: contains(needs.changed-files.outputs.changes, "true") || job.changed-files.status == "failure"
+    if: needs.changed-files.outputs.changes == "true" || job.changed-files.status == "failure"
     steps:
       - name: Label PR
         uses: andymckay/labeler@e6c4322d0397f3240f0e7e30a33b5c5df2d39e90
