@@ -93,3 +93,5 @@ WHERE
     )
   AND PUPO.[UserId] IS NULL   -- Not a provider
 GO
+
+Test by modifiying a file
