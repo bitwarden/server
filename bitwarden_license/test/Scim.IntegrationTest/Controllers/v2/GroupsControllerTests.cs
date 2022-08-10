@@ -3,7 +3,6 @@ using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.IntegrationTestCommon.Factories;
 using Bit.Scim.Models;
 using Bit.Scim.Utilities;
-using Bit.Test.Common.Helpers;
 using Microsoft.AspNetCore.Http;
 using Xunit;
 
@@ -15,12 +14,14 @@ namespace Bit.Scim.IntegrationTest.Controllers.v2
 
         private readonly Guid _testUserId1 = Guid.NewGuid();
         private readonly Guid _testUserId2 = Guid.NewGuid();
+        private readonly Guid _testUserId3 = Guid.NewGuid();
         private readonly Guid _testGroupId1 = Guid.NewGuid();
         private readonly Guid _testGroupId2 = Guid.NewGuid();
         private readonly Guid _testGroupId3 = Guid.NewGuid();
         private readonly Guid _testOrganizationId1 = Guid.NewGuid();
         private readonly Guid _testOrganizationUserId1 = Guid.NewGuid();
         private readonly Guid _testOrganizationUserId2 = Guid.NewGuid();
+        private readonly Guid _testOrganizationUserId3 = Guid.NewGuid();
 
         public GroupsControllerTests(ScimApplicationFactory factory)
         {
@@ -29,58 +30,6 @@ namespace Bit.Scim.IntegrationTest.Controllers.v2
             var databaseContext = factory.GetDatabaseContext();
             ReinitializeDbForTests(databaseContext);
         }
-
-        //[Fact]
-        //public async Task TEST()
-        //{
-        //    var organizationId = Guid.NewGuid();
-        //    var id = Guid.NewGuid();
-
-        //    var client = _factory.WithWebHostBuilder(builder =>
-        //    {
-        //        builder.ConfigureServices(services =>
-        //        {
-        //            var serviceProvider = services.BuildServiceProvider();
-
-        //            using (var scope = serviceProvider.CreateScope())
-        //            {
-        //                var scopedServices = scope.ServiceProvider;
-        //                var databaseContext = scopedServices.GetRequiredService<DatabaseContext>();
-
-        //                try
-        //                {
-        //                    InitializeDbForTests(databaseContext);
-        //                }
-        //                catch (Exception ex)
-        //                {
-        //                    //logger.LogError(ex, "An error occurred seeding " +
-        //                    //    "the database with test messages. Error: {Message}",
-        //                    //    ex.Message);
-        //                }
-        //            }
-
-        //            services.AddAuthorization(config =>
-        //            {
-        //                config.AddPolicy("Scim", policy =>
-        //                {
-        //                    policy.RequireAssertion((a) => true);
-        //                });
-        //            });
-        //        });
-        //    });
-        //    //.CreateClient();
-        //    //.CreateClient(new WebApplicationFactoryClientOptions
-        //    //{
-        //    //    AllowAutoRedirect = false
-        //    //});
-
-        //    //var response = await client.GetAsync($"/v2/{organizationId}/groups/{id}");
-        //    var response = await client.Server.GetAsync($"/v2/{organizationId}/groups/{id}");
-
-        //    var asasdas = response.StatusCode;
-
-        //    Assert.Equal(StatusCodes.Status200OK, (int)response.StatusCode);
-        //}
 
         [Fact]
         public async Task Get_Success()
@@ -109,7 +58,7 @@ namespace Bit.Scim.IntegrationTest.Controllers.v2
             var context = await _factory.GetAsync(organizationId, id);
 
             Assert.Equal(StatusCodes.Status404NotFound, context.Response.StatusCode);
-            
+
             var responseModel = JsonSerializer.Deserialize<ScimErrorResponseModel>(context.Response.Body, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
             Assert.Equal(404, responseModel.Status);
             Assert.Equal("Group not found.", responseModel.Detail);
@@ -375,6 +324,72 @@ namespace Bit.Scim.IntegrationTest.Controllers.v2
         }
 
         [Fact]
+        public async Task Patch_AddListMembers_Success()
+        {
+            var organizationId = _testOrganizationId1;
+            var id = _testGroupId2;
+            var model = new ScimPatchModel
+            {
+                Operations = new List<ScimPatchModel.OperationModel>()
+                {
+                    new ScimPatchModel.OperationModel { Op = "add", Path = "members", Value = JsonDocument.Parse($"[{{\"value\":\"{_testOrganizationUserId2}\"}},{{\"value\":\"{_testOrganizationUserId3}\"}}]").RootElement },
+                },
+                Schemas = new List<string>()
+            };
+
+            var context = await _factory.PatchAsync(organizationId, id, model);
+
+            Assert.Equal(StatusCodes.Status204NoContent, context.Response.StatusCode);
+
+            var databaseContext = _factory.GetDatabaseContext();
+            Assert.Equal(3, databaseContext.GroupUsers.Count());
+        }
+
+        [Fact]
+        public async Task Patch_RemoveSingleMember_Success()
+        {
+            var organizationId = _testOrganizationId1;
+            var id = _testGroupId1;
+            var model = new ScimPatchModel
+            {
+                Operations = new List<ScimPatchModel.OperationModel>()
+                {
+                    new ScimPatchModel.OperationModel { Op = "remove", Path = $"members[value eq {_testOrganizationUserId1}", Value = JsonDocument.Parse("{}").RootElement },
+                },
+                Schemas = new List<string>()
+            };
+
+            var context = await _factory.PatchAsync(organizationId, id, model);
+
+            Assert.Equal(StatusCodes.Status204NoContent, context.Response.StatusCode);
+
+            var databaseContext = _factory.GetDatabaseContext();
+            Assert.Empty(databaseContext.GroupUsers);
+        }
+
+        [Fact]
+        public async Task Patch_RemoveListMembers_Success()
+        {
+            var organizationId = _testOrganizationId1;
+            var id = _testGroupId1;
+            var model = new ScimPatchModel
+            {
+                Operations = new List<ScimPatchModel.OperationModel>()
+                {
+                    new ScimPatchModel.OperationModel { Op = "remove", Path = "members", Value = JsonDocument.Parse($"[{{\"value\":\"{_testOrganizationUserId1}\"}}]").RootElement },
+                },
+                Schemas = new List<string>()
+            };
+
+            var context = await _factory.PatchAsync(organizationId, id, model);
+
+            Assert.Equal(StatusCodes.Status204NoContent, context.Response.StatusCode);
+
+            var databaseContext = _factory.GetDatabaseContext();
+            Assert.Empty(databaseContext.GroupUsers);
+        }
+
+        [Fact]
         public async Task Patch_NotFound()
         {
             var organizationId = _testOrganizationId1;
@@ -458,8 +473,9 @@ namespace Bit.Scim.IntegrationTest.Controllers.v2
         {
             return new List<Infrastructure.EntityFramework.Models.User>()
             {
-                new Infrastructure.EntityFramework.Models.User { Id = _testGroupId1, Name = "Test User 1", ApiKey = "", Email = "", SecurityStamp = "" },
-                new Infrastructure.EntityFramework.Models.User { Id = _testGroupId2, Name = "Test User 2", ApiKey = "", Email = "", SecurityStamp = ""}
+                new Infrastructure.EntityFramework.Models.User { Id = _testUserId1, Name = "Test User 1", ApiKey = "", Email = "", SecurityStamp = "" },
+                new Infrastructure.EntityFramework.Models.User { Id = _testUserId2, Name = "Test User 2", ApiKey = "", Email = "", SecurityStamp = "" },
+                new Infrastructure.EntityFramework.Models.User { Id = _testUserId3, Name = "Test User 3", ApiKey = "", Email = "", SecurityStamp = "" }
             };
         }
 
@@ -486,7 +502,8 @@ namespace Bit.Scim.IntegrationTest.Controllers.v2
             return new List<Infrastructure.EntityFramework.Models.OrganizationUser>()
             {
                 new Infrastructure.EntityFramework.Models.OrganizationUser { Id = _testOrganizationUserId1, OrganizationId = _testOrganizationId1, UserId = _testUserId1, Status = Core.Enums.OrganizationUserStatusType.Confirmed },
-                new Infrastructure.EntityFramework.Models.OrganizationUser { Id = _testOrganizationUserId2, OrganizationId = _testOrganizationId1, UserId = _testUserId2, Status = Core.Enums.OrganizationUserStatusType.Confirmed }
+                new Infrastructure.EntityFramework.Models.OrganizationUser { Id = _testOrganizationUserId2, OrganizationId = _testOrganizationId1, UserId = _testUserId2, Status = Core.Enums.OrganizationUserStatusType.Confirmed },
+                new Infrastructure.EntityFramework.Models.OrganizationUser { Id = _testOrganizationUserId3, OrganizationId = _testOrganizationId1, UserId = _testUserId3, Status = Core.Enums.OrganizationUserStatusType.Confirmed }
             };
         }
 
