@@ -11,7 +11,7 @@ on:
       - opened
       - synchronize
     paths: 
-      - "util/Migrator/DbScripts/**"
+      - "util/Migrator/DbScripts/**.sql"
 
 jobs:
   changed-files:
