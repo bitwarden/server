@@ -42,6 +42,20 @@ namespace Bit.IntegrationTestCommon.Factories
             HttpContent content,
             Action<HttpContext> extraConfiguration = null)
             => SendAsync(server, HttpMethod.Post, requestUri, content, extraConfiguration);
+        public static Task<HttpContext> PutAsync(this TestServer server,
+            string requestUri,
+            HttpContent content,
+            Action<HttpContext> extraConfiguration = null)
+            => SendAsync(server, HttpMethod.Put, requestUri, content, extraConfiguration);
+        public static Task<HttpContext> PatchAsync(this TestServer server,
+            string requestUri,
+            HttpContent content,
+            Action<HttpContext> extraConfiguration = null)
+            => SendAsync(server, HttpMethod.Patch, requestUri, content, extraConfiguration);
+        public static Task<HttpContext> DeleteAsync(this TestServer server,
+            string requestUri,
+            Action<HttpContext> extraConfiguration = null)
+            => SendAsync(server, HttpMethod.Delete, requestUri, content: null, extraConfiguration);
         public static Task<HttpContext> GetAsync(this TestServer server,
             string requestUri,
             Action<HttpContext> extraConfiguration = null)
