@@ -1,0 +1,22 @@
+{
+    "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+    "extends": [
+      "config:base",
+      "schedule:monthly",
+      ":maintainLockFilesMonthly",
+      ":preserveSemverRanges",
+      ":rebaseStalePrs",
+      ":disableDependencyDashboard"
+    ],
+    "enabledManagers": [
+      "nuget"
+    ],
+    "packageRules": [
+      {
+        "matchManagers": ["nuget"],
+        "groupName": "Nuget updates",
+        "groupSlug": "nuget",
+        "separateMajorMinor": false
+      }
+    ]
+  }
