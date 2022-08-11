@@ -11,6 +11,8 @@ using System.Globalization;
 using Microsoft.IdentityModel.Logging;
 using Microsoft.OpenApi.Models;
 using Bit.SharedWeb.Utilities;
+using HealthChecks.UI.Client;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
 #if !OSS
@@ -121,6 +123,9 @@ namespace Bit.Api
             services.AddBaseServices(globalSettings);
             services.AddDefaultServices(globalSettings);
             services.AddCoreLocalizationServices();
+            
+            //health check
+            services.ConfigureHealthCheckServices(globalSettings, Environment);
 
 #if OSS
             services.AddOosServices();
@@ -193,7 +198,17 @@ namespace Bit.Api
             app.UseMiddleware<CurrentContextMiddleware>();
 
             // Add endpoints to the request pipeline.
-            app.UseEndpoints(endpoints => endpoints.MapDefaultControllerRoute());
+            app.UseEndpoints(endpoints =>
+            {
+                endpoints.MapDefaultControllerRoute();
+
+                endpoints.MapHealthChecks("/health/simple");
+                endpoints.MapHealthChecks("/health/extended",
+                    new HealthCheckOptions
+                    {
+                        Predicate = _ => true, ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
+                    });
+            });
 
             // Add Swagger
             if (Environment.IsDevelopment() || globalSettings.SelfHosted)
