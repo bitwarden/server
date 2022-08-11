@@ -16,10 +16,12 @@ namespace Bit.Api.Models.Response.Organizations
                 Data = config.GetData();
             }
 
+            Identifier = organization.Identifier;
             Urls = new SsoUrls(organization.Id.ToString(), globalSettings);
         }
 
         public bool Enabled { get; set; }
+        public string Identifier { get; set; }
         public SsoConfigurationData Data { get; set; }
         public SsoUrls Urls { get; set; }
     }
