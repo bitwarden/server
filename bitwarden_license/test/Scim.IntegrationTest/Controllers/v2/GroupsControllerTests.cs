@@ -14,6 +14,7 @@ namespace Bit.Scim.IntegrationTest.Controllers.v2
         public GroupsControllerTests(ScimApplicationFactory factory)
         {
             _factory = factory;
+            _factory.DatabaseName = "test_database_groups";
 
             var databaseContext = factory.GetDatabaseContext();
             _factory.ReinitializeDbForTests(databaseContext);
@@ -22,15 +23,15 @@ namespace Bit.Scim.IntegrationTest.Controllers.v2
         [Fact]
         public async Task Get_Success()
         {
-            var organizationId = _factory.TestOrganizationId1;
-            var id = _factory.TestGroupId1;
+            var organizationId = ScimApplicationFactory.TestOrganizationId1;
+            var id = ScimApplicationFactory.TestGroupId1;
 
             var context = await _factory.GroupsGetAsync(organizationId, id);
 
             Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
 
             var responseModel = JsonSerializer.Deserialize<ScimGroupResponseModel>(context.Response.Body, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
-            Assert.Equal(_factory.TestGroupId1.ToString(), responseModel.Id);
+            Assert.Equal(ScimApplicationFactory.TestGroupId1, responseModel.Id);
             Assert.Equal("Test Group 1", responseModel.DisplayName);
             Assert.Equal("A", responseModel.ExternalId);
             Assert.Equal(new List<string> { ScimConstants.Scim2SchemaGroup }, responseModel.Schemas);
@@ -39,9 +40,9 @@ namespace Bit.Scim.IntegrationTest.Controllers.v2
         [Fact]
         public async Task Get_NotFound()
         {
-            var organizationId = _factory.TestOrganizationId1;
+            var organizationId = ScimApplicationFactory.TestOrganizationId1;
             var id = Guid.NewGuid();
-            var context = await _factory.GroupsGetAsync(organizationId, id);
+            var context = await _factory.GroupsGetAsync(organizationId, id.ToString());
 
             Assert.Equal(StatusCodes.Status404NotFound, context.Response.StatusCode);
 
@@ -54,7 +55,7 @@ namespace Bit.Scim.IntegrationTest.Controllers.v2
         [Fact]
         public async Task GetList_Success()
         {
-            var organizationId = _factory.TestOrganizationId1;
+            var organizationId = ScimApplicationFactory.TestOrganizationId1;
             var context = await _factory.GroupsGetListAsync(organizationId, null, 2, 1);
 
             Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
@@ -71,7 +72,7 @@ namespace Bit.Scim.IntegrationTest.Controllers.v2
         [Fact]
         public async Task GetList_SearchDisplayName_Success()
         {
-            var organizationId = _factory.TestOrganizationId1;
+            var organizationId = ScimApplicationFactory.TestOrganizationId1;
             var context = await _factory.GroupsGetListAsync(organizationId, "displayName eq Test Group 2", 10, 1);
 
             Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
@@ -83,7 +84,7 @@ namespace Bit.Scim.IntegrationTest.Controllers.v2
             Assert.Equal(1, responseModel.StartIndex);
 
             var group = responseModel.Resources.Single();
-            Assert.Equal(_factory.TestGroupId2.ToString(), group.Id);
+            Assert.Equal(ScimApplicationFactory.TestGroupId2, group.Id);
             Assert.Equal("Test Group 2", group.DisplayName);
             Assert.Equal("B", group.ExternalId);
             Assert.Equal(new List<string> { ScimConstants.Scim2SchemaListResponse }, responseModel.Schemas);
@@ -92,7 +93,7 @@ namespace Bit.Scim.IntegrationTest.Controllers.v2
         [Fact]
         public async Task GetList_SearchExternalId_Success()
         {
-            var organizationId = _factory.TestOrganizationId1;
+            var organizationId = ScimApplicationFactory.TestOrganizationId1;
             var context = await _factory.GroupsGetListAsync(organizationId, "externalId eq C", 10, 1);
 
             Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
@@ -104,7 +105,7 @@ namespace Bit.Scim.IntegrationTest.Controllers.v2
             Assert.Equal(1, responseModel.StartIndex);
 
             var group = responseModel.Resources.Single();
-            Assert.Equal(_factory.TestGroupId3.ToString(), group.Id);
+            Assert.Equal(ScimApplicationFactory.TestGroupId3.ToString(), group.Id);
             Assert.Equal("Test Group 3", group.DisplayName);
             Assert.Equal("C", group.ExternalId);
             Assert.Equal(new List<string> { ScimConstants.Scim2SchemaListResponse }, responseModel.Schemas);
@@ -113,7 +114,7 @@ namespace Bit.Scim.IntegrationTest.Controllers.v2
         [Fact]
         public async Task Post_Success()
         {
-            var organizationId = _factory.TestOrganizationId1;
+            var organizationId = ScimApplicationFactory.TestOrganizationId1;
             var model = new ScimGroupRequestModel
             {
                 DisplayName = "New Group",
@@ -137,7 +138,7 @@ namespace Bit.Scim.IntegrationTest.Controllers.v2
         [InlineData(" ")]
         public async Task Post_InvalidDisplayName_BadRequest(string displayName)
         {
-            var organizationId = _factory.TestOrganizationId1;
+            var organizationId = ScimApplicationFactory.TestOrganizationId1;
             var model = new ScimGroupRequestModel
             {
                 DisplayName = displayName,
@@ -154,7 +155,7 @@ namespace Bit.Scim.IntegrationTest.Controllers.v2
         [Fact]
         public async Task Post_ExistingExternalId_Conflict()
         {
-            var organizationId = _factory.TestOrganizationId1;
+            var organizationId = ScimApplicationFactory.TestOrganizationId1;
             var model = new ScimGroupRequestModel
             {
                 DisplayName = "New Group",
@@ -176,8 +177,8 @@ namespace Bit.Scim.IntegrationTest.Controllers.v2
         public async Task Put_ChangeName_Success()
         {
             var newGroupName = "Test Group 1 New Name";
-            var organizationId = _factory.TestOrganizationId1;
-            var id = _factory.TestGroupId1;
+            var organizationId = ScimApplicationFactory.TestOrganizationId1;
+            var id = ScimApplicationFactory.TestGroupId1;
             var model = new ScimGroupRequestModel
             {
                 DisplayName = newGroupName,
@@ -193,7 +194,7 @@ namespace Bit.Scim.IntegrationTest.Controllers.v2
             var databaseContext = _factory.GetDatabaseContext();
             Assert.Equal(3, databaseContext.Groups.Count());
 
-            var firstGroup = databaseContext.Groups.FirstOrDefault(g => g.Id == id);
+            var firstGroup = databaseContext.Groups.FirstOrDefault(g => g.Id.ToString() == id);
             Assert.Equal(newGroupName, firstGroup.Name);
         }
 
@@ -201,7 +202,7 @@ namespace Bit.Scim.IntegrationTest.Controllers.v2
         public async Task Put_NotFound()
         {
             var newGroupName = "Test Group 1 New Name";
-            var organizationId = _factory.TestOrganizationId1;
+            var organizationId = ScimApplicationFactory.TestOrganizationId1;
             var id = Guid.NewGuid();
             var model = new ScimGroupRequestModel
             {
@@ -211,7 +212,7 @@ namespace Bit.Scim.IntegrationTest.Controllers.v2
                 Schemas = new List<string>()
             };
 
-            var context = await _factory.GroupsPutAsync(organizationId, id, model);
+            var context = await _factory.GroupsPutAsync(organizationId, id.ToString(), model);
 
             Assert.Equal(StatusCodes.Status404NotFound, context.Response.StatusCode);
 
@@ -228,8 +229,8 @@ namespace Bit.Scim.IntegrationTest.Controllers.v2
         [Fact]
         public async Task Patch_ReplaceDisplayName_Success()
         {
-            var organizationId = _factory.TestOrganizationId1;
-            var id = _factory.TestGroupId1;
+            var organizationId = ScimApplicationFactory.TestOrganizationId1;
+            var id = ScimApplicationFactory.TestGroupId1;
             var model = new ScimPatchModel
             {
                 Operations = new List<ScimPatchModel.OperationModel>()
@@ -246,20 +247,20 @@ namespace Bit.Scim.IntegrationTest.Controllers.v2
             var databaseContext = _factory.GetDatabaseContext();
             Assert.Equal(3, databaseContext.Groups.Count());
 
-            var group = databaseContext.Groups.FirstOrDefault(g => g.Id == id);
+            var group = databaseContext.Groups.FirstOrDefault(g => g.Id.ToString() == id);
             Assert.Equal("Patch Display Name", group.Name);
         }
 
         [Fact]
         public async Task Patch_ReplaceMembers_Success()
         {
-            var organizationId = _factory.TestOrganizationId1;
-            var id = _factory.TestGroupId1;
+            var organizationId = ScimApplicationFactory.TestOrganizationId1;
+            var id = ScimApplicationFactory.TestGroupId1;
             var model = new ScimPatchModel
             {
                 Operations = new List<ScimPatchModel.OperationModel>()
                 {
-                    new ScimPatchModel.OperationModel { Op = "replace", Path = "members", Value = JsonDocument.Parse($"[{{\"value\":\"{_factory.TestOrganizationUserId2}\"}}]").RootElement  },
+                    new ScimPatchModel.OperationModel { Op = "replace", Path = "members", Value = JsonDocument.Parse($"[{{\"value\":\"{ScimApplicationFactory.TestOrganizationUserId2}\"}}]").RootElement  },
                 },
                 Schemas = new List<string>()
             };
@@ -272,19 +273,19 @@ namespace Bit.Scim.IntegrationTest.Controllers.v2
             Assert.Single(databaseContext.GroupUsers);
 
             var groupUser = databaseContext.GroupUsers.FirstOrDefault();
-            Assert.Equal(_factory.TestOrganizationUserId2, groupUser.OrganizationUserId);
+            Assert.Equal(ScimApplicationFactory.TestOrganizationUserId2, groupUser.OrganizationUserId.ToString());
         }
 
         [Fact]
         public async Task Patch_AddSingleMember_Success()
         {
-            var organizationId = _factory.TestOrganizationId1;
-            var id = _factory.TestGroupId1;
+            var organizationId = ScimApplicationFactory.TestOrganizationId1;
+            var id = ScimApplicationFactory.TestGroupId1;
             var model = new ScimPatchModel
             {
                 Operations = new List<ScimPatchModel.OperationModel>()
                 {
-                    new ScimPatchModel.OperationModel { Op = "add", Path = $"members[value eq {_factory.TestOrganizationUserId2}", Value = JsonDocument.Parse("{}").RootElement },
+                    new ScimPatchModel.OperationModel { Op = "add", Path = $"members[value eq {ScimApplicationFactory.TestOrganizationUserId2}", Value = JsonDocument.Parse("{}").RootElement },
                 },
                 Schemas = new List<string>()
             };
@@ -300,13 +301,13 @@ namespace Bit.Scim.IntegrationTest.Controllers.v2
         [Fact]
         public async Task Patch_AddListMembers_Success()
         {
-            var organizationId = _factory.TestOrganizationId1;
-            var id = _factory.TestGroupId2;
+            var organizationId = ScimApplicationFactory.TestOrganizationId1;
+            var id = ScimApplicationFactory.TestGroupId2;
             var model = new ScimPatchModel
             {
                 Operations = new List<ScimPatchModel.OperationModel>()
                 {
-                    new ScimPatchModel.OperationModel { Op = "add", Path = "members", Value = JsonDocument.Parse($"[{{\"value\":\"{_factory.TestOrganizationUserId2}\"}},{{\"value\":\"{_factory.TestOrganizationUserId3}\"}}]").RootElement },
+                    new ScimPatchModel.OperationModel { Op = "add", Path = "members", Value = JsonDocument.Parse($"[{{\"value\":\"{ScimApplicationFactory.TestOrganizationUserId2}\"}},{{\"value\":\"{ScimApplicationFactory.TestOrganizationUserId3}\"}}]").RootElement },
                 },
                 Schemas = new List<string>()
             };
@@ -322,13 +323,13 @@ namespace Bit.Scim.IntegrationTest.Controllers.v2
         [Fact]
         public async Task Patch_RemoveSingleMember_Success()
         {
-            var organizationId = _factory.TestOrganizationId1;
-            var id = _factory.TestGroupId1;
+            var organizationId = ScimApplicationFactory.TestOrganizationId1;
+            var id = ScimApplicationFactory.TestGroupId1;
             var model = new ScimPatchModel
             {
                 Operations = new List<ScimPatchModel.OperationModel>()
                 {
-                    new ScimPatchModel.OperationModel { Op = "remove", Path = $"members[value eq {_factory.TestOrganizationUserId1}", Value = JsonDocument.Parse("{}").RootElement },
+                    new ScimPatchModel.OperationModel { Op = "remove", Path = $"members[value eq {ScimApplicationFactory.TestOrganizationUserId1}", Value = JsonDocument.Parse("{}").RootElement },
                 },
                 Schemas = new List<string>()
             };
@@ -344,13 +345,13 @@ namespace Bit.Scim.IntegrationTest.Controllers.v2
         [Fact]
         public async Task Patch_RemoveListMembers_Success()
         {
-            var organizationId = _factory.TestOrganizationId1;
-            var id = _factory.TestGroupId1;
+            var organizationId = ScimApplicationFactory.TestOrganizationId1;
+            var id = ScimApplicationFactory.TestGroupId1;
             var model = new ScimPatchModel
             {
                 Operations = new List<ScimPatchModel.OperationModel>()
                 {
-                    new ScimPatchModel.OperationModel { Op = "remove", Path = "members", Value = JsonDocument.Parse($"[{{\"value\":\"{_factory.TestOrganizationUserId1}\"}}]").RootElement },
+                    new ScimPatchModel.OperationModel { Op = "remove", Path = "members", Value = JsonDocument.Parse($"[{{\"value\":\"{ScimApplicationFactory.TestOrganizationUserId1}\"}}]").RootElement },
                 },
                 Schemas = new List<string>()
             };
@@ -366,7 +367,7 @@ namespace Bit.Scim.IntegrationTest.Controllers.v2
         [Fact]
         public async Task Patch_NotFound()
         {
-            var organizationId = _factory.TestOrganizationId1;
+            var organizationId = ScimApplicationFactory.TestOrganizationId1;
             var id = Guid.NewGuid();
             var model = new Models.ScimPatchModel
             {
@@ -374,7 +375,7 @@ namespace Bit.Scim.IntegrationTest.Controllers.v2
                 Schemas = new List<string>()
             };
 
-            var context = await _factory.GroupsPatchAsync(organizationId, id, model);
+            var context = await _factory.GroupsPatchAsync(organizationId, id.ToString(), model);
 
             Assert.Equal(StatusCodes.Status404NotFound, context.Response.StatusCode);
 
@@ -391,8 +392,8 @@ namespace Bit.Scim.IntegrationTest.Controllers.v2
         [Fact]
         public async Task Delete_Success()
         {
-            var organizationId = _factory.TestOrganizationId1;
-            var id = _factory.TestGroupId3;
+            var organizationId = ScimApplicationFactory.TestOrganizationId1;
+            var id = ScimApplicationFactory.TestGroupId3;
 
             var context = await _factory.GroupsDeleteAsync(organizationId, id);
 
@@ -400,16 +401,16 @@ namespace Bit.Scim.IntegrationTest.Controllers.v2
 
             var databaseContext = _factory.GetDatabaseContext();
             Assert.Equal(2, databaseContext.Groups.Count());
-            Assert.True(databaseContext.Groups.FirstOrDefault(g => g.Id == id) == null);
+            Assert.True(databaseContext.Groups.FirstOrDefault(g => g.Id.ToString() == id) == null);
         }
 
         [Fact]
         public async Task Delete_NotFound()
         {
-            var organizationId = _factory.TestOrganizationId1;
+            var organizationId = ScimApplicationFactory.TestOrganizationId1;
             var id = Guid.NewGuid();
 
-            var context = await _factory.GroupsDeleteAsync(organizationId, id);
+            var context = await _factory.GroupsDeleteAsync(organizationId, id.ToString());
 
             Assert.Equal(StatusCodes.Status404NotFound, context.Response.StatusCode);
 

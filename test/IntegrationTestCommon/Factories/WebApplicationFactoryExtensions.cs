@@ -54,8 +54,9 @@ namespace Bit.IntegrationTestCommon.Factories
             => SendAsync(server, HttpMethod.Patch, requestUri, content, extraConfiguration);
         public static Task<HttpContext> DeleteAsync(this TestServer server,
             string requestUri,
+            HttpContent content,
             Action<HttpContext> extraConfiguration = null)
-            => SendAsync(server, HttpMethod.Delete, requestUri, content: null, extraConfiguration);
+            => SendAsync(server, HttpMethod.Delete, requestUri, content: content, extraConfiguration);
         public static Task<HttpContext> GetAsync(this TestServer server,
             string requestUri,
             Action<HttpContext> extraConfiguration = null)
