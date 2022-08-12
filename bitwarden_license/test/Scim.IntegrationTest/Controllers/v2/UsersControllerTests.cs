@@ -186,7 +186,7 @@ namespace Bit.Scim.IntegrationTest.Controllers.v2
 
             var context = await _factory.UsersPutAsync(organizationId, id, model);
 
-            var responseModel = JsonSerializer.Deserialize<ScimUserResponseModel> (context.Response.Body, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+            var responseModel = JsonSerializer.Deserialize<ScimUserResponseModel>(context.Response.Body, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
             Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
             Assert.False(responseModel.Active);
 

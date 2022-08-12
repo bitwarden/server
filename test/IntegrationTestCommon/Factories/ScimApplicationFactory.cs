@@ -245,5 +245,5 @@ namespace Bit.IntegrationTestCommon.Factories
         }
     }
 
-    
+
 }
