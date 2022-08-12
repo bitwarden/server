@@ -4,7 +4,6 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Microsoft.Net.Http.Headers;
 
 #nullable enable
 
@@ -12,6 +11,8 @@ namespace Bit.Core.Utilities
 {
     public class InstallationAuthenticatingHandler : DelegatingHandler
     {
+        public static readonly HttpRequestOptionsKey<bool> OptOutKey = new("Bitwarden-OptOut");
+
         private readonly HttpClient _identityClient;
         private readonly ILogger<InstallationAuthenticatingHandler> _logger;
         private readonly IOptionsMonitor<ConnectTokenOptions> _options;
@@ -42,7 +43,7 @@ namespace Bit.Core.Utilities
 
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
-            if (!request.Headers.Contains(HeaderNames.Authorization))
+            if (!request.Options.TryGetValue(OptOutKey, out var shouldOptOut) || !shouldOptOut)
             {
                 // Attempt to add an authorization header since they don't have one
                 if (!await EnsureTokenAsync(cancellationToken))
@@ -62,7 +63,7 @@ namespace Bit.Core.Utilities
             {
                 if (_accessToken == null || DateTime.UtcNow > _nextAuthAttempt)
                 {
-                    var response = await GetTokenBodyAsync();
+                    var response = await CallConnectTokenAsync();
                     if (response.StatusCode != HttpStatusCode.OK)
                     {
                         return false;
@@ -98,16 +99,17 @@ namespace Bit.Core.Utilities
                 var expiresIn = TimeSpan.FromSeconds(expiresInProperty.GetInt32())
                     .Subtract(TimeSpan.FromMinutes(10));
 
+
                 return (accessTokenProperty.GetString(), now + expiresIn);
             }
         }
 
-        private async Task<HttpResponseMessage> GetTokenBodyAsync()
+        private async Task<HttpResponseMessage> CallConnectTokenAsync()
         {
             return await _identityClient.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
             {
                 { "grant_type", "client_credentials" },
-                { "client_id", $"{_tokenOptions.ClientId}" },
+                { "client_id", _tokenOptions.ClientId },
                 { "client_secret", _tokenOptions.ClientSecret },
                 { "scope", _tokenOptions.Scope },
             }));
