@@ -2,7 +2,6 @@
 using Bit.IntegrationTestCommon.Factories;
 using Bit.Scim.Models;
 using Bit.Scim.Utilities;
-using Microsoft.AspNetCore.Http;
 using Xunit;
 
 namespace Bit.Scim.IntegrationTest.Controllers.v2
