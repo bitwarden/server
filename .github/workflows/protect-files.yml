@@ -30,7 +30,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-          path: master
+          fetch-depth: 0
 
       - name: Check for file changes
         id: check-changes
