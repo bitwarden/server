@@ -165,87 +165,84 @@ namespace Bit.Scim.Controllers.v2
             }
 
             var operationHandled = false;
-
-            var replaceOp = model.Operations?.FirstOrDefault(o =>
-                o.Op?.ToLowerInvariant() == "replace");
-            if (replaceOp != null)
+            foreach (var operation in model.Operations)
             {
-                // Replace a list of members
-                if (replaceOp.Path?.ToLowerInvariant() == "members")
+                // Replace operations
+                if (operation.Op?.ToLowerInvariant() == "replace")
                 {
-                    var ids = GetOperationValueIds(replaceOp.Value);
-                    await _groupRepository.UpdateUsersAsync(group.Id, ids);
-                    operationHandled = true;
+                    // Replace a list of members
+                    if (operation.Path?.ToLowerInvariant() == "members")
+                    {
+                        var ids = GetOperationValueIds(operation.Value);
+                        await _groupRepository.UpdateUsersAsync(group.Id, ids);
+                        operationHandled = true;
+                    }
+                    // Replace group name from path
+                    else if (operation.Path?.ToLowerInvariant() == "displayname")
+                    {
+                        group.Name = operation.Value.GetString();
+                        await _groupService.SaveAsync(group);
+                        operationHandled = true;
+                    }
+                    // Replace group name from value object
+                    else if (string.IsNullOrWhiteSpace(operation.Path) &&
+                        operation.Value.TryGetProperty("displayName", out var displayNameProperty))
+                    {
+                        group.Name = displayNameProperty.GetString();
+                        await _groupService.SaveAsync(group);
+                        operationHandled = true;
+                    }
                 }
-                // Replace group name
-                else if (replaceOp.Value.TryGetProperty("displayName", out var displayNameProperty))
+                // Add a single member
+                else if (operation.Op?.ToLowerInvariant() == "add" &&
+                    !string.IsNullOrWhiteSpace(operation.Path) &&
+                    operation.Path.ToLowerInvariant().StartsWith("members[value eq "))
                 {
-                    group.Name = displayNameProperty.GetString();
-                    await _groupService.SaveAsync(group);
-                    operationHandled = true;
+                    var addId = GetOperationPathId(operation.Path);
+                    if (addId.HasValue)
+                    {
+                        var orgUserIds = (await _groupRepository.GetManyUserIdsByIdAsync(group.Id)).ToHashSet();
+                        orgUserIds.Add(addId.Value);
+                        await _groupRepository.UpdateUsersAsync(group.Id, orgUserIds);
+                        operationHandled = true;
+                    }
                 }
-            }
-
-            // Add a single member
-            var addMemberOp = model.Operations?.FirstOrDefault(
-                o => o.Op?.ToLowerInvariant() == "add" &&
-                !string.IsNullOrWhiteSpace(o.Path) &&
-                o.Path.ToLowerInvariant().StartsWith("members[value eq "));
-            if (addMemberOp != null)
-            {
-                var addId = GetOperationPathId(addMemberOp.Path);
-                if (addId.HasValue)
+                // Add a list of members
+                else if (operation.Op?.ToLowerInvariant() == "add" &&
+                    operation.Path?.ToLowerInvariant() == "members")
                 {
                     var orgUserIds = (await _groupRepository.GetManyUserIdsByIdAsync(group.Id)).ToHashSet();
-                    orgUserIds.Add(addId.Value);
+                    foreach (var v in GetOperationValueIds(operation.Value))
+                    {
+                        orgUserIds.Add(v);
+                    }
                     await _groupRepository.UpdateUsersAsync(group.Id, orgUserIds);
                     operationHandled = true;
                 }
-            }
-
-            // Add a list of members
-            var addMembersOp = model.Operations?.FirstOrDefault(o =>
-                o.Op?.ToLowerInvariant() == "add" &&
-                o.Path?.ToLowerInvariant() == "members");
-            if (addMembersOp != null)
-            {
-                var orgUserIds = (await _groupRepository.GetManyUserIdsByIdAsync(group.Id)).ToHashSet();
-                foreach (var v in GetOperationValueIds(addMembersOp.Value))
+                // Remove a single member
+                else if (operation.Op?.ToLowerInvariant() == "remove" &&
+                    !string.IsNullOrWhiteSpace(operation.Path) &&
+                    operation.Path.ToLowerInvariant().StartsWith("members[value eq "))
                 {
-                    orgUserIds.Add(v);
+                    var removeId = GetOperationPathId(operation.Path);
+                    if (removeId.HasValue)
+                    {
+                        await _groupService.DeleteUserAsync(group, removeId.Value);
+                        operationHandled = true;
+                    }
                 }
-                await _groupRepository.UpdateUsersAsync(group.Id, orgUserIds);
-                operationHandled = true;
-            }
-
-            // Remove a single member
-            var removeMemberOp = model.Operations?.FirstOrDefault(
-                o => o.Op?.ToLowerInvariant() == "remove" &&
-                !string.IsNullOrWhiteSpace(o.Path) &&
-                o.Path.ToLowerInvariant().StartsWith("members[value eq "));
-            if (removeMemberOp != null)
-            {
-                var removeId = GetOperationPathId(removeMemberOp.Path);
-                if (removeId.HasValue)
+                // Remove a list of members
+                else if (operation.Op?.ToLowerInvariant() == "remove" &&
+                    operation.Path?.ToLowerInvariant() == "members")
                 {
-                    await _groupService.DeleteUserAsync(group, removeId.Value);
+                    var orgUserIds = (await _groupRepository.GetManyUserIdsByIdAsync(group.Id)).ToHashSet();
+                    foreach (var v in GetOperationValueIds(operation.Value))
+                    {
+                        orgUserIds.Remove(v);
+                    }
+                    await _groupRepository.UpdateUsersAsync(group.Id, orgUserIds);
                     operationHandled = true;
                 }
-            }
-
-            // Remove a list of members
-            var removeMembersOp = model.Operations?.FirstOrDefault(o =>
-                o.Op?.ToLowerInvariant() == "remove" &&
-                o.Path?.ToLowerInvariant() == "members");
-            if (removeMembersOp != null)
-            {
-                var orgUserIds = (await _groupRepository.GetManyUserIdsByIdAsync(group.Id)).ToHashSet();
-                foreach (var v in GetOperationValueIds(removeMembersOp.Value))
-                {
-                    orgUserIds.Remove(v);
-                }
-                await _groupRepository.UpdateUsersAsync(group.Id, orgUserIds);
-                operationHandled = true;
             }
 
             if (!operationHandled)
