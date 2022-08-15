@@ -74,9 +74,9 @@ namespace Bit.Core.Utilities
 
                 return true;
             }
-            catch (InvalidOperationException invalidOperationException)
+            catch (FormatException formatException)
             {
-                _logger.LogError(invalidOperationException, "Bad stuff.");
+                _logger.LogError(formatException, "Token body could not be parsed.");
                 return false;
             }
 
@@ -87,12 +87,12 @@ namespace Bit.Core.Utilities
                 var root = jsonDocument.RootElement;
                 if (!root.TryGetProperty("access_token", out var accessTokenProperty))
                 {
-                    throw new InvalidOperationException("The response body did not contain an 'access_token' property");
+                    throw new FormatException("The response body did not contain an 'access_token' property");
                 }
 
                 if (!root.TryGetProperty("expires_in", out var expiresInProperty))
                 {
-                    throw new InvalidOperationException("The response body did not contain an 'expires_in' property");
+                    throw new FormatException("The response body did not contain an 'expires_in' property");
                 }
 
 
