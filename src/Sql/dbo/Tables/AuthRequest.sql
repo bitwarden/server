@@ -12,7 +12,6 @@
     [Key]                       VARCHAR(MAX)     NULL,
     [MasterPasswordHash]        VARCHAR(MAX)     NULL,
     [CreationDate]              DATETIME2 (7)    NOT NULL,
-    [ExpirationDate]            DATETIME2 (7)    NOT NULL,
     [ResponseDate]              DATETIME2 (7)    NULL,
     [AuthenticationDate]        DATETIME2 (7)    NULL,
     [FailedLoginAttempts]       TINYINT          NOT NULL,
