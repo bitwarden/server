@@ -19,12 +19,21 @@ namespace Bit.Core.Entities
         public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
         public DateTime? ResponseDate { get; set; }
         public DateTime? AuthenticationDate { get; set; }
-        public DateTime ExpirationDate { get; internal set; } = DateTime.UtcNow.AddMinutes(15);
         public int FailedLoginAttempts { get; set; } = 0;
 
         public void SetNewId()
         {
             Id = CoreHelpers.GenerateComb();
+        }
+
+        public bool isSpent()
+        {
+            return ResponseDate.HasValue || AuthenticationDate.HasValue || getExpirationDate() < DateTime.UtcNow;
+        }
+
+        public DateTime getExpirationDate()
+        {
+            return CreationDate.AddMinutes(15);
         }
     }
 }

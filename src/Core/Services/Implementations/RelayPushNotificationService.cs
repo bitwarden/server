@@ -167,9 +167,34 @@ public class RelayPushNotificationService : BaseIdentityClientService, IPushNoti
         }
     }
 
+<<<<<<< HEAD
     private async Task SendPayloadToUserAsync(Guid userId, PushType type, object payload, bool excludeCurrentContext)
     {
         var request = new PushSendRequestModel
+=======
+        public async Task PushAuthRequestAsync(AuthRequest authRequest)
+        {
+            await PushAuthRequestAsync(authRequest, PushType.AuthRequest);
+        }
+
+        public async Task PushAuthRequestResponseAsync(AuthRequest authRequest)
+        {
+            await PushAuthRequestAsync(authRequest, PushType.AuthRequestResponse);
+        }
+
+        private async Task PushAuthRequestAsync(AuthRequest authRequest, PushType type)
+        {
+            var message = new AuthRequestPushNotification
+            {
+                Id = authRequest.Id,
+                UserId = authRequest.UserId
+            };
+
+            await SendPayloadToUserAsync(authRequest.UserId, type, message, true);
+        }
+
+        private async Task SendPayloadToUserAsync(Guid userId, PushType type, object payload, bool excludeCurrentContext)
+>>>>>>> fb8fea40b ([SG-167] Base Passwordless API (#2185))
         {
             UserId = userId.ToString(),
             Type = type,
