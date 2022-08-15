@@ -7,10 +7,10 @@ name: Protect Files
 
 on:
   pull_request:
-    types: 
+    types:
       - opened
       - synchronize
-    paths: 
+    paths:
       - "util/Migrator/DbScripts/**.sql"
 
 jobs:
@@ -28,7 +28,8 @@ jobs:
             path: util/Migrator/DbScripts
             label: "DB migrations changed"
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout repo
+        uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b
         with:
           fetch-depth: 2
 
@@ -49,7 +50,7 @@ jobs:
   label-pr:
     name: Add label to pull request
     runs-on: ubuntu-20.04
-    needs: 
+    needs:
       - changed-files
     if: contains(needs.changed-files.outputs.changes, true)
     steps:
