@@ -31,12 +31,12 @@ jobs:
       - name: Checkout PR
         uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
 
       - name: Check for file changes
         id: check-changes
         run: |
-          MODIFIED_FILES=$(git diff --name-only --diff-filter=M origin/${GITHUB_BASE_REF})
+          MODIFIED_FILES=$(git diff --name-only --diff-filter=M ${GITHUB_HEAD_REF} origin/${GITHUB_BASE_REF})
 
           for file in $MODIFIED_FILES; do
             if [[ $file == *"${{ matrix.path }}"*]]; then
