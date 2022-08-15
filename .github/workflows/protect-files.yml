@@ -35,7 +35,7 @@ jobs:
       - name: Check for file changes
         id: check-changes
         run: |
-          MODIFIED_FILES=$(git diff --name-only --diff-filter=M HEAD~1
+          MODIFIED_FILES=$(git diff --name-only --diff-filter=M HEAD~1)
 
           for file in $MODIFIED_FILES; do
             if [[ $file == *"${{ matrix.path }}"*]]; then
