@@ -227,7 +227,8 @@ namespace Bit.Scim.Controllers.v2
                     // Active from path
                     if (operation.Path?.ToLowerInvariant() == "active")
                     {
-                        var handled = await HandleActiveOperationAsync(orgUser, operation.Value.GetBoolean());
+                        var active = operation.Value.ToString()?.ToLowerInvariant();
+                        var handled = await HandleActiveOperationAsync(orgUser, active == "true");
                         if (!operationHandled)
                         {
                             operationHandled = handled;
