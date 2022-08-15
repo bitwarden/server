@@ -18,7 +18,7 @@ jobs:
     name: Check for file changes
     runs-on: ubuntu-20.04
     outputs:
-      changes: steps.check-changes.outputs.changes_detected
+      changes: ${{steps.check-changes.outputs.changes_detected}}
 
     strategy:
       fail-fast: true
@@ -40,9 +40,9 @@ jobs:
 
           for file in $MODIFIED_FILES; do
             if [[ $file == *"${{ matrix.path }}"*]]; then
-              echo "::set-output name=changes_detected::'true'"
+              echo "::set-output name=changes_detected::true"
               break
-            else echo "::set-output name=changes_detected::'false'"
+            else echo "::set-output name=changes_detected::false"
             fi
           done
 
@@ -51,7 +51,7 @@ jobs:
     runs-on: ubuntu-20.04
     needs: 
       - changed-files
-    if: needs.changed-files.outputs.changes == "true" || job.changed-files.status == "failure"
+    if: contains(needs.changed-files.outputs.changes, true)
     steps:
       - name: Label PR
         uses: andymckay/labeler@e6c4322d0397f3240f0e7e30a33b5c5df2d39e90
