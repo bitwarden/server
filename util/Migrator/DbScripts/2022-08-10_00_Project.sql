@@ -37,7 +37,7 @@ BEGIN
         RevisionDate,
         DeletedDate
     FROM
-        [dbo].[Project] P
+        [dbo].[Project]
     WHERE
         [OrganizationId] = @OrganizationId
 END
@@ -64,11 +64,11 @@ BEGIN
         RevisionDate,
         DeletedDate
     FROM
-        [dbo].[Project] P
+        [dbo].[Project]
     WHERE
         [Id] = @Id
 END
-
+GO
 
 IF OBJECT_ID('[dbo].[Project_Create]') IS NOT NULL
 BEGIN
@@ -127,7 +127,7 @@ BEGIN
     UPDATE 
         [dbo].[Project]
     SET 
-        [OrganizationId] = OrganizationId,
+        [OrganizationId] = @OrganizationId,
         [Name] = @Name,
         [CreationDate] = @CreationDate,
         [RevisionDate] = @RevisionDate,

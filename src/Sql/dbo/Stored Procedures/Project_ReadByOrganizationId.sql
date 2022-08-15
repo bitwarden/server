@@ -12,7 +12,7 @@ BEGIN
         RevisionDate,
         DeletedDate
     FROM
-        [dbo].[Project] P
+        [dbo].[Project]
     WHERE
         [OrganizationId] = @OrganizationId
 END
