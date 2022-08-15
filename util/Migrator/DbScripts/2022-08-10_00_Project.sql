@@ -14,9 +14,6 @@ END
 
 GO
 
--- Edit
--- SOFTDeleteMany(array)
-
 IF OBJECT_ID('[dbo].[Project_ReadByOrganizationId]') IS NOT NULL
 BEGIN
     DROP PROCEDURE [dbo].[Project_ReadByOrganizationId]
