@@ -20,7 +20,6 @@ CREATE TABLE [dbo].[AuthRequest] (
     [Key]                       VARCHAR(MAX)     NULL,
     [MasterPasswordHash]        VARCHAR(MAX)     NULL,
     [CreationDate]              DATETIME2 (7)    NOT NULL,
-    [ExpirationDate]            DATETIME2 (7)    NOT NULL,
     [ResponseDate]              DATETIME2 (7)    NULL,
     [AuthenticationDate]        DATETIME2 (7)    NULL,
     [FailedLoginAttempts]       TINYINT          NOT NULL,
@@ -67,7 +66,6 @@ CREATE PROCEDURE [dbo].[AuthRequest_Create]
     @Key VARCHAR(MAX),
     @MasterPasswordHash VARCHAR(MAX),
     @CreationDate DATETIME2(7),
-    @ExpirationDate DATETIME2(7),
     @ResponseDate DATETIME2(7),
     @AuthenticationDate DATETIME2(7),
     @FailedLoginAttempts TINYINT
@@ -90,7 +88,6 @@ BEGIN
         [Key],
         [MasterPasswordHash],
         [CreationDate],
-        [ExpirationDate],
         [ResponseDate],
         [AuthenticationDate],
         [FailedLoginAttempts]
@@ -110,7 +107,6 @@ BEGIN
         @Key,
         @MasterPasswordHash,
         @CreationDate,
-        @ExpirationDate,
         @ResponseDate,
         @AuthenticationDate,
         @FailedLoginAttempts
