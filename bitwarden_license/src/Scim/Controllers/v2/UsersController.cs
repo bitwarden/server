@@ -135,6 +135,11 @@ namespace Bit.Scim.Controllers.v2
                         email = model.UserName?.ToLowerInvariant();
                         break;
                     default:
+                        email = model.WorkEmail?.ToLowerInvariant();
+                        if (string.IsNullOrWhiteSpace(email))
+                        {
+                            email = model.Emails?.FirstOrDefault()?.Value?.ToLowerInvariant();
+                        }
                         break;
                 }
             }
