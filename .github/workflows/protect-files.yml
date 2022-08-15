@@ -30,12 +30,12 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-          fetch-depth: 0
+          fetch-depth: 2
 
       - name: Check for file changes
         id: check-changes
         run: |
-          MODIFIED_FILES=$(git diff --name-only --diff-filter=M ${GITHUB_REF} origin/${GITHUB_BASE_REF})
+          MODIFIED_FILES=$(git diff --name-only --diff-filter=M HEAD~1
 
           for file in $MODIFIED_FILES; do
             if [[ $file == *"${{ matrix.path }}"*]]; then
