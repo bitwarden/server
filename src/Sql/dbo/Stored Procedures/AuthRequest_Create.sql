@@ -12,7 +12,6 @@
     @Key VARCHAR(MAX),
     @MasterPasswordHash VARCHAR(MAX),
     @CreationDate DATETIME2(7),
-    @ExpirationDate DATETIME2(7),
     @ResponseDate DATETIME2(7),
     @AuthenticationDate DATETIME2(7),
     @FailedLoginAttempts TINYINT
@@ -35,7 +34,6 @@ BEGIN
         [Key],
         [MasterPasswordHash],
         [CreationDate],
-        [ExpirationDate],
         [ResponseDate],
         [AuthenticationDate],
         [FailedLoginAttempts]
@@ -55,7 +53,6 @@ BEGIN
         @Key,
         @MasterPasswordHash,
         @CreationDate,
-        @ExpirationDate,
         @ResponseDate,
         @AuthenticationDate,
         @FailedLoginAttempts
