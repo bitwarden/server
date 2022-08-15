@@ -13,7 +13,7 @@ using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.DataProtection;
 
-namespace Bit.CommCore.Services
+namespace Bit.Commercial.Core.Services
 {
     public class ProviderService : IProviderService
     {
