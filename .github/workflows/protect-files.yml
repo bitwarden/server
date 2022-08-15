@@ -37,8 +37,9 @@ jobs:
         run: |
           MODIFIED_FILES=$(git diff --name-only --diff-filter=M HEAD~1)
 
-          for file in $MODIFIED_FILES do
-            if [[ $file == *"${{ matrix.path }}"*]]; then
+          for file in $MODIFIED_FILES
+          do
+            if [[ $file == *"${{ matrix.path }}"* ]]; then
               echo "::set-output name=changes_detected::true"
               break
             else echo "::set-output name=changes_detected::false"
