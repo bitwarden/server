@@ -284,7 +284,7 @@ namespace Bit.Scim.IntegrationTest.Controllers.v2
             {
                 Operations = new List<ScimPatchModel.OperationModel>()
                 {
-                    new ScimPatchModel.OperationModel { Op = "add", Path = $"members[value eq {ScimApplicationFactory.TestOrganizationUserId2}", Value = JsonDocument.Parse("{}").RootElement },
+                    new ScimPatchModel.OperationModel { Op = "add", Path = $"members[value eq \"{ScimApplicationFactory.TestOrganizationUserId2}\"]", Value = JsonDocument.Parse("{}").RootElement },
                 },
                 Schemas = new List<string>()
             };
@@ -328,7 +328,7 @@ namespace Bit.Scim.IntegrationTest.Controllers.v2
             {
                 Operations = new List<ScimPatchModel.OperationModel>()
                 {
-                    new ScimPatchModel.OperationModel { Op = "remove", Path = $"members[value eq {ScimApplicationFactory.TestOrganizationUserId1}", Value = JsonDocument.Parse("{}").RootElement },
+                    new ScimPatchModel.OperationModel { Op = "remove", Path = $"members[value eq \"{ScimApplicationFactory.TestOrganizationUserId1}\"]", Value = JsonDocument.Parse("{}").RootElement },
                 },
                 Schemas = new List<string>()
             };
