@@ -97,3 +97,4 @@ GO
 Test by modifiying a file
 another modification
 Another
+Another test
