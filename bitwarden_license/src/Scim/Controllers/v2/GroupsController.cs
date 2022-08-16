@@ -292,7 +292,7 @@ namespace Bit.Scim.Controllers.v2
         private Guid? GetOperationPathId(string path)
         {
             // Parse Guid from string like: members[value eq "{GUID}"}]
-            if (Guid.TryParse(path.Substring(17).Replace("\"]", string.Empty), out var id))
+            if (Guid.TryParse(path.Substring(18).Replace("\"]", string.Empty), out var id))
             {
                 return id;
             }
