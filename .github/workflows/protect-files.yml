@@ -47,14 +47,8 @@ jobs:
             fi
           done
 
-  label-pr:
-    name: Add label to pull request
-    runs-on: ubuntu-20.04
-    needs:
-      - changed-files
-    if: contains(needs.changed-files.outputs.changes, true)
-    steps:
-      - name: Label PR
+      - name: Add label to pull request
+        if: contains(steps.check-changes.outputs.changes_detected, true)
         uses: andymckay/labeler@e6c4322d0397f3240f0e7e30a33b5c5df2d39e90
         with:
           add-labels: ${{ matrix.label }}
