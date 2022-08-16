@@ -234,7 +234,11 @@ namespace Bit.Scim.IntegrationTest.Controllers.v2
             {
                 Operations = new List<ScimPatchModel.OperationModel>()
                 {
-                    new ScimPatchModel.OperationModel { Op = "replace", Value = JsonDocument.Parse("{\"displayName\":\"Patch Display Name\"}").RootElement  },
+                    new ScimPatchModel.OperationModel
+                    {
+                        Op = "replace",
+                        Value = JsonDocument.Parse("{\"displayName\":\"Patch Display Name\"}").RootElement
+                    }
                 },
                 Schemas = new List<string>()
             };
@@ -259,7 +263,12 @@ namespace Bit.Scim.IntegrationTest.Controllers.v2
             {
                 Operations = new List<ScimPatchModel.OperationModel>()
                 {
-                    new ScimPatchModel.OperationModel { Op = "replace", Path = "members", Value = JsonDocument.Parse($"[{{\"value\":\"{ScimApplicationFactory.TestOrganizationUserId2}\"}}]").RootElement  },
+                    new ScimPatchModel.OperationModel
+                    {
+                        Op = "replace",
+                        Path = "members",
+                        Value = JsonDocument.Parse($"[{{\"value\":\"{ScimApplicationFactory.TestOrganizationUserId2}\"}}]").RootElement
+                    }
                 },
                 Schemas = new List<string>()
             };
@@ -284,7 +293,12 @@ namespace Bit.Scim.IntegrationTest.Controllers.v2
             {
                 Operations = new List<ScimPatchModel.OperationModel>()
                 {
-                    new ScimPatchModel.OperationModel { Op = "add", Path = $"members[value eq \"{ScimApplicationFactory.TestOrganizationUserId2}\"]", Value = JsonDocument.Parse("{}").RootElement },
+                    new ScimPatchModel.OperationModel
+                    {
+                        Op = "add",
+                        Path = $"members[value eq \"{ScimApplicationFactory.TestOrganizationUserId2}\"]",
+                        Value = JsonDocument.Parse("{}").RootElement
+                    }
                 },
                 Schemas = new List<string>()
             };
@@ -306,7 +320,12 @@ namespace Bit.Scim.IntegrationTest.Controllers.v2
             {
                 Operations = new List<ScimPatchModel.OperationModel>()
                 {
-                    new ScimPatchModel.OperationModel { Op = "add", Path = "members", Value = JsonDocument.Parse($"[{{\"value\":\"{ScimApplicationFactory.TestOrganizationUserId2}\"}},{{\"value\":\"{ScimApplicationFactory.TestOrganizationUserId3}\"}}]").RootElement },
+                    new ScimPatchModel.OperationModel
+                    {
+                        Op = "add",
+                        Path = "members",
+                        Value = JsonDocument.Parse($"[{{\"value\":\"{ScimApplicationFactory.TestOrganizationUserId2}\"}},{{\"value\":\"{ScimApplicationFactory.TestOrganizationUserId3}\"}}]").RootElement
+                    }
                 },
                 Schemas = new List<string>()
             };
@@ -320,7 +339,7 @@ namespace Bit.Scim.IntegrationTest.Controllers.v2
         }
 
         [Fact]
-        public async Task Patch_RemoveSingleMember_Success()
+        public async Task Patch_RemoveSingleMember_ReplaceDisplayName_Success()
         {
             var organizationId = ScimApplicationFactory.TestOrganizationId1;
             var id = ScimApplicationFactory.TestGroupId1;
@@ -328,7 +347,17 @@ namespace Bit.Scim.IntegrationTest.Controllers.v2
             {
                 Operations = new List<ScimPatchModel.OperationModel>()
                 {
-                    new ScimPatchModel.OperationModel { Op = "remove", Path = $"members[value eq \"{ScimApplicationFactory.TestOrganizationUserId1}\"]", Value = JsonDocument.Parse("{}").RootElement },
+                    new ScimPatchModel.OperationModel
+                    {
+                        Op = "remove",
+                        Path = $"members[value eq \"{ScimApplicationFactory.TestOrganizationUserId1}\"]",
+                        Value = JsonDocument.Parse("{}").RootElement
+                    },
+                    new ScimPatchModel.OperationModel
+                    {
+                        Op = "replace",
+                        Value = JsonDocument.Parse("{\"displayName\":\"Patch Display Name\"}").RootElement
+                    }
                 },
                 Schemas = new List<string>()
             };
@@ -339,6 +368,10 @@ namespace Bit.Scim.IntegrationTest.Controllers.v2
 
             var databaseContext = _factory.GetDatabaseContext();
             Assert.Empty(databaseContext.GroupUsers);
+            Assert.Equal(3, databaseContext.Groups.Count());
+
+            var group = databaseContext.Groups.FirstOrDefault(g => g.Id.ToString() == id);
+            Assert.Equal("Patch Display Name", group.Name);
         }
 
         [Fact]
@@ -350,7 +383,12 @@ namespace Bit.Scim.IntegrationTest.Controllers.v2
             {
                 Operations = new List<ScimPatchModel.OperationModel>()
                 {
-                    new ScimPatchModel.OperationModel { Op = "remove", Path = "members", Value = JsonDocument.Parse($"[{{\"value\":\"{ScimApplicationFactory.TestOrganizationUserId1}\"}}]").RootElement },
+                    new ScimPatchModel.OperationModel
+                    {
+                        Op = "remove",
+                        Path = "members",
+                        Value = JsonDocument.Parse($"[{{\"value\":\"{ScimApplicationFactory.TestOrganizationUserId1}\"}}]").RootElement
+                    }
                 },
                 Schemas = new List<string>()
             };
