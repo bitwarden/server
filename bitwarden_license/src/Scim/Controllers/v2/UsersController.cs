@@ -224,23 +224,30 @@ namespace Bit.Scim.Controllers.v2
             }
 
             var operationHandled = false;
-
-            var replaceOp = model.Operations?.FirstOrDefault(o =>
-                o.Op?.ToLowerInvariant() == "replace");
-            if (replaceOp != null)
+            foreach (var operation in model.Operations)
             {
-                if (replaceOp.Value.TryGetProperty("active", out var activeProperty))
+                // Replace operations
+                if (operation.Op?.ToLowerInvariant() == "replace")
                 {
-                    var active = activeProperty.GetBoolean();
-                    if (active && orgUser.Status == OrganizationUserStatusType.Revoked)
+                    // Active from path
+                    if (operation.Path?.ToLowerInvariant() == "active")
                     {
-                        await _organizationService.RestoreUserAsync(orgUser, null, _userService);
-                        operationHandled = true;
+                        var active = operation.Value.ToString()?.ToLowerInvariant();
+                        var handled = await HandleActiveOperationAsync(orgUser, active == "true");
+                        if (!operationHandled)
+                        {
+                            operationHandled = handled;
+                        }
                     }
-                    else if (!active && orgUser.Status != OrganizationUserStatusType.Revoked)
+                    // Active from value object
+                    else if (string.IsNullOrWhiteSpace(operation.Path) &&
+                        operation.Value.TryGetProperty("active", out var activeProperty))
                     {
-                        await _organizationService.RevokeUserAsync(orgUser, null);
-                        operationHandled = true;
+                        var handled = await HandleActiveOperationAsync(orgUser, activeProperty.GetBoolean());
+                        if (!operationHandled)
+                        {
+                            operationHandled = handled;
+                        }
                     }
                 }
             }
@@ -268,6 +275,21 @@ namespace Bit.Scim.Controllers.v2
             }
             await _organizationService.DeleteUserAsync(organizationId, id, null);
             return new NoContentResult();
+        }
+
+        private async Task<bool> HandleActiveOperationAsync(Core.Entities.OrganizationUser orgUser, bool active)
+        {
+            if (active && orgUser.Status == OrganizationUserStatusType.Revoked)
+            {
+                await _organizationService.RestoreUserAsync(orgUser, null, _userService);
+                return true;
+            }
+            else if (!active && orgUser.Status != OrganizationUserStatusType.Revoked)
+            {
+                await _organizationService.RevokeUserAsync(orgUser, null);
+                return true;
+            }
+            return false;
         }
     }
 }
