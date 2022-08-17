@@ -9,6 +9,7 @@ namespace Bit.Commercial.Infrastructure.EntityFramework
         public static void AddCommercialEFRepositories(this IServiceCollection services)
         {
             services.AddSingleton<ISecretRepository, SecretRepository>();
+            services.AddSingleton<IProjectRepository, ProjectRepository>();
         }
     }
 }
