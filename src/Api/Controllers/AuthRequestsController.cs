@@ -37,6 +37,15 @@ namespace Bit.Api.Controllers
             _pushNotificationService = pushNotificationService;
         }
 
+        [HttpGet("")]
+        public async Task<ListResponseModel<AuthRequestResponseModel>> Get()
+        {
+            var userId = _userService.GetProperUserId(User).Value;
+            var authRequests = await _authRequestRepository.GetManyByUserIdAsync(userId);
+            var responses = authRequests.Select(a => new AuthRequestResponseModel(a)).ToList();
+            return new ListResponseModel<AuthRequestResponseModel>(responses);
+        }
+
         [HttpGet("{id}")]
         public async Task<AuthRequestResponseModel> Get(string id)
         {

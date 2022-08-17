@@ -1,6 +1,9 @@
-﻿using Bit.Core.Entities;
+﻿using System.Data;
+using System.Data.SqlClient;
+using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
+using Dapper;
 
 namespace Bit.Infrastructure.Dapper.Repositories
 {
@@ -13,5 +16,18 @@ namespace Bit.Infrastructure.Dapper.Repositories
         public AuthRequestRepository(string connectionString, string readOnlyConnectionString)
             : base(connectionString, readOnlyConnectionString)
         { }
+
+        public async Task<ICollection<AuthRequest>> GetManyByUserIdAsync(Guid userId)
+        {
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<AuthRequest>(
+                    "[{Schema}].[AuthRequest_ReadByUserId]",
+                    new { UserId = userId },
+                    commandType: CommandType.StoredProcedure);
+
+                return results.ToList();
+            }
+        }
     }
 }

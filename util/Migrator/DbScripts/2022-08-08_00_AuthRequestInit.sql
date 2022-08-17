@@ -186,3 +186,25 @@ BEGIN
         [Id] = @Id
 END
 GO
+
+IF OBJECT_ID('[dbo].[AuthRequest_ReadByUserId]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[AuthRequest_ReadByUserId]
+END
+GO
+
+CREATE PROCEDURE [dbo].[AuthRequest_ReadByUserId]
+    @UserId UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    
+    SELECT
+        *
+    FROM
+        [dbo].[AuthRequestView]
+    WHERE
+        [UserId] = @UserId
+END
+GO
