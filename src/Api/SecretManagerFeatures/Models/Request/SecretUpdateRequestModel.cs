@@ -14,6 +14,7 @@ namespace Bit.Api.SecretManagerFeatures.Models.Request
         [EncryptedString]
         public string Value { get; set; }
 
+        [Required]
         [EncryptedString]
         public string Note { get; set; }
 
