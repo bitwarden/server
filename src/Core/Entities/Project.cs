@@ -7,7 +7,13 @@ namespace Bit.Core.Entities
     {
         public Guid Id { get; set; }
 
-        public string? Name {get; set;}
+        public Guid OrganizationId { get; set; }
+
+        public string? Name { get; set; }
+
+        public DateTime? CreationDate { get; set; }
+
+        public DateTime? DeletedDate { get; set; }
 
         public void SetNewId()
         {
@@ -16,6 +22,5 @@ namespace Bit.Core.Entities
                 Id = CoreHelpers.GenerateComb();
             }
         }
-
     }
 }
