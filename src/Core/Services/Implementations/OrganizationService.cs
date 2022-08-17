@@ -549,7 +549,8 @@ namespace Bit.Core.Services
 
             var bankService = new BankAccountService();
             var customerService = new CustomerService();
-            var customer = await customerService.GetAsync(organization.GatewayCustomerId);
+            var customer = await customerService.GetAsync(organization.GatewayCustomerId,
+                new CustomerGetOptions { Expand = new List<string> { "sources" } });
             if (customer == null)
             {
                 throw new GatewayException("Cannot find customer.");
