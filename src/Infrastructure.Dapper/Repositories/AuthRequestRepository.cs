@@ -27,5 +27,18 @@ namespace Bit.Infrastructure.Dapper.Repositories
                     commandType: CommandType.StoredProcedure);
             }
         }
+
+        public async Task<ICollection<AuthRequest>> GetManyByUserIdAsync(Guid userId)
+        {
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<AuthRequest>(
+                    "[{Schema}].[AuthRequest_ReadByUserId]",
+                    new { UserId = userId },
+                    commandType: CommandType.StoredProcedure);
+
+                return results.ToList();
+            }
+        }
     }
 }
