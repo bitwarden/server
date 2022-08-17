@@ -26,8 +26,12 @@ namespace Bit.Api.Controllers
         [HttpGet("organizations/{organizationId}/secrets")]
         public async Task<ListResponseModel<SecretIdentifierResponseModel>> GetSecretsByOrganizationAsync([FromRoute] Guid organizationId)
         {
-            var results = await _secretRepository.GetManyByOrganizationIdAsync(organizationId);
-            var responses = results.Select(secret => new SecretIdentifierResponseModel(secret));
+            var secrets = await _secretRepository.GetManyByOrganizationIdAsync(organizationId);
+            if (secrets == null || !secrets.Any())
+            {
+                throw new NotFoundException();
+            }
+            var responses = secrets.Select(secret => new SecretIdentifierResponseModel(secret));
             return new ListResponseModel<SecretIdentifierResponseModel>(responses);
         }
 
