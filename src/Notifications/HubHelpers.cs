@@ -61,6 +61,14 @@ namespace Bit.Notifications
                     await hubContext.Clients.User(sendNotification.Payload.UserId.ToString())
                         .SendAsync("ReceiveMessage", sendNotification, cancellationToken);
                     break;
+                case PushType.AuthRequest:
+                case PushType.AuthRequestResponse:
+                    var authRequestNotification =
+                        JsonSerializer.Deserialize<PushNotificationData<AuthRequestPushNotification>>(
+                                notificationJson);
+                    await hubContext.Clients.User(authRequestNotification.Payload.UserId.ToString())
+                        .SendAsync("ReceiveMessage", authRequestNotification, cancellationToken);
+                    break;
                 default:
                     break;
             }
