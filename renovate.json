@@ -5,14 +5,11 @@
     "schedule:daily",
     ":maintainLockFilesMonthly",
     ":preserveSemverRanges",
-    ":rebaseStalePrs"
+    ":rebaseStalePrs",
+    ":disableDependencyDashboard"
   ],
   "enabledManagers": [
     "nuget"
-  ],
-  "ignoreDeps": [ // Ignore until migration to .NET 6
-    "Fido2.AspNet",
-    "Swashbuckle.AspNetCore.Cli"
   ],
   "packageRules": [
     {
@@ -20,24 +17,6 @@
       "groupName": "Nuget updates",
       "groupSlug": "nuget",
       "separateMajorMinor": false
-    },
-    // Remove this group after migration to .NET 6
-    {
-      "matchPackageNames": [
-        "Microsoft.AspNetCore.Authentication.JwtBearer",
-        "linq2db.EntityFrameworkCore",
-        "Microsoft.EntityFrameworkCore.Relational",
-        "Microsoft.EntityFrameworkCore.Design",
-        "Npgsql.EntityFrameworkCore.PostgreSQL",
-        "Pomelo.EntityFrameworkCore.MySql",
-        "Swashbuckle.AspNetCore.Cli",
-        "Microsoft.AspNetCore.Mvc.NewtonsoftJson",
-        "Microsoft.VisualStudio.Web.CodeGeneration.Design",
-        "Microsoft.AspNetCore.SignalR.StackExchangeRedis",
-        "Microsoft.Extensions.Configuration.EnvironmentVariables",
-        "Microsoft.Extensions.Configuration.UserSecrets"
-      ],
-      "allowedVersions": "<6.0.0"
     }
   ]
 }
