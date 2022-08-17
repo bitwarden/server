@@ -1,22 +1,43 @@
 {
-    "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-    "extends": [
-      "config:base",
-      "schedule:monthly",
-      ":maintainLockFilesMonthly",
-      ":preserveSemverRanges",
-      ":rebaseStalePrs",
-      ":disableDependencyDashboard"
-    ],
-    "enabledManagers": [
-      "nuget"
-    ],
-    "packageRules": [
-      {
-        "matchManagers": ["nuget"],
-        "groupName": "Nuget updates",
-        "groupSlug": "nuget",
-        "separateMajorMinor": false
-      }
-    ]
-  }
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:base",
+    "schedule:daily",
+    ":maintainLockFilesMonthly",
+    ":preserveSemverRanges",
+    ":rebaseStalePrs"
+  ],
+  "enabledManagers": [
+    "nuget"
+  ],
+  "ignoreDeps": [ // Ignore until migration to .NET 6
+    "Fido2.AspNet",
+    "Swashbuckle.AspNetCore.Cli"
+  ],
+  "packageRules": [
+    {
+      "matchManagers": ["nuget"],
+      "groupName": "Nuget updates",
+      "groupSlug": "nuget",
+      "separateMajorMinor": false
+    },
+    // Remove this group after migration to .NET 6
+    {
+      "matchPackageNames": [
+        "Microsoft.AspNetCore.Authentication.JwtBearer",
+        "linq2db.EntityFrameworkCore",
+        "Microsoft.EntityFrameworkCore.Relational",
+        "Microsoft.EntityFrameworkCore.Design",
+        "Npgsql.EntityFrameworkCore.PostgreSQL",
+        "Pomelo.EntityFrameworkCore.MySql",
+        "Swashbuckle.AspNetCore.Cli",
+        "Microsoft.AspNetCore.Mvc.NewtonsoftJson",
+        "Microsoft.VisualStudio.Web.CodeGeneration.Design",
+        "Microsoft.AspNetCore.SignalR.StackExchangeRedis",
+        "Microsoft.Extensions.Configuration.EnvironmentVariables",
+        "Microsoft.Extensions.Configuration.UserSecrets"
+      ],
+      "allowedVersions": "<6.0.0"
+    }
+  ]
+}
