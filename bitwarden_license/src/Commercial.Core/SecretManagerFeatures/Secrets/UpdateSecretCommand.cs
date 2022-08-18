@@ -18,7 +18,7 @@ namespace Bit.Commercial.Core.SecretManagerFeatures.Secrets
         {
             if (secret.Id == default(Guid))
             {
-                throw new Exception("Cannot update secret, secret does not exist.");
+                throw new BadRequestException("Cannot update secret, secret does not exist.");
             }
 
             var existingSecret = await _secretRepository.GetByIdAsync(secret.Id);

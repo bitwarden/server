@@ -19,7 +19,7 @@ namespace Bit.Commercial.Core.Test.SecretManagerFeatures.Secrets
         {
             data.Id = new Guid();
 
-            var exception = await Assert.ThrowsAsync<Exception>(() => sutProvider.Sut.UpdateAsync(data));
+            var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateAsync(data));
 
             Assert.Contains("Cannot update secret, secret does not exist.", exception.Message);
             await sutProvider.GetDependency<ISecretRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default);
@@ -123,10 +123,8 @@ namespace Bit.Commercial.Core.Test.SecretManagerFeatures.Secrets
             var result = await sutProvider.Sut.UpdateAsync(secretUpdate);
 
             Assert.NotEqual(existingSecret.RevisionDate, result.RevisionDate);
-            Assert.True(result.RevisionDate < updatedRevisionDate);
-            Assert.True(DateTime.UtcNow.AddMinutes(-1) < result.RevisionDate);
+            AssertHelper.AssertRecent(result.RevisionDate);
         }
-
     }
 }
 
