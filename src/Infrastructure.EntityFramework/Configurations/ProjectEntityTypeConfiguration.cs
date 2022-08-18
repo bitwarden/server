@@ -18,6 +18,10 @@ public class ProjectEntityTypeConfiguration : IEntityTypeConfiguration<Project>
             .HasIndex(s => s.DeletedDate)
             .IsClustered(false);
 
+        builder
+            .HasIndex(s => s.OrganizationId)
+            .IsClustered(false);
+
         builder.ToTable(nameof(Project));
     }
 }

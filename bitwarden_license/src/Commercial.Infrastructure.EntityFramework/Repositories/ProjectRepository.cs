@@ -20,10 +20,10 @@ namespace Bit.Commercial.Infrastructure.EntityFramework.Repositories
             using (var scope = ServiceScopeFactory.CreateScope())
             {
                 var dbContext = GetDatabaseContext(scope);
-                var secret = await dbContext.Project
+                var project = await dbContext.Project
                                         .Where(c => c.Id == id && c.DeletedDate == null)
                                         .FirstOrDefaultAsync();
-                return Mapper.Map<Core.Entities.Project>(secret);
+                return Mapper.Map<Core.Entities.Project>(project);
             }
         }
 
@@ -46,11 +46,11 @@ namespace Bit.Commercial.Infrastructure.EntityFramework.Repositories
                 var dbContext = GetDatabaseContext(scope);
                 var utcNow = DateTime.UtcNow;
                 var project = dbContext.Project.Where(c => ids.Contains(c.Id));
-                await project.ForEachAsync(secret =>
+                await project.ForEachAsync(project =>
                 {
-                    dbContext.Attach(secret);
-                    secret.DeletedDate = utcNow;
-                    secret.RevisionDate = utcNow;
+                    dbContext.Attach(project);
+                    project.DeletedDate = utcNow;
+                    project.RevisionDate = utcNow;
                 });
                 await dbContext.SaveChangesAsync();
             }
