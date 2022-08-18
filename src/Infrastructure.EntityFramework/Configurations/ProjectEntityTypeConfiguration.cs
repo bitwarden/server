@@ -1,4 +1,4 @@
-using Bit.Infrastructure.EntityFramework.Models;
+﻿using Bit.Infrastructure.EntityFramework.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -17,7 +17,7 @@ public class ProjectEntityTypeConfiguration : IEntityTypeConfiguration<Project>
         builder
             .HasIndex(s => s.DeletedDate)
             .IsClustered(false);
-            
+
         builder.ToTable(nameof(Project));
     }
 }
