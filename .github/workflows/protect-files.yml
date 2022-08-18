@@ -10,7 +10,6 @@ on:
     types:
       - opened
       - synchronize
-      - labeled
       - unlabeled
     paths:
       - "util/Migrator/DbScripts/**.sql"
