@@ -32,6 +32,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
         public DbSet<Policy> Policies { get; set; }
         public DbSet<Provider> Providers { get; set; }
         public DbSet<Secret> Secret { get; set; }
+        public DbSet<Project> Project { get; set; }
         public DbSet<ProviderUser> ProviderUsers { get; set; }
         public DbSet<ProviderOrganization> ProviderOrganizations { get; set; }
         public DbSet<Send> Sends { get; set; }
