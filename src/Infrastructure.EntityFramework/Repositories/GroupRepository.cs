@@ -84,6 +84,24 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
             }
         }
 
+        public async Task<ICollection<Tuple<Core.Entities.Group, ICollection<SelectionReadOnly>>>>
+            GetManyWithCollectionsByOrganizationIdAsync(Guid organizationId)
+        {
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var data = await (
+                    from g in dbContext.Groups
+                    join cg in dbContext.CollectionGroups
+                        on g.Id equals cg.GroupId into ps
+                    from p in ps.DefaultIfEmpty()
+                    where g.OrganizationId == organizationId
+                    select new { g, p.CollectionId, p.ReadOnly, p.HidePasswords }).ToListAsync();
+
+                return Mapper.Map<List<Tuple<Core.Entities.Group, ICollection<SelectionReadOnly>>>>(data);
+            }
+        }
+
         public async Task<ICollection<Core.Entities.GroupUser>> GetManyGroupUsersByOrganizationIdAsync(Guid organizationId)
         {
             using (var scope = ServiceScopeFactory.CreateScope())
