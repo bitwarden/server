@@ -52,13 +52,13 @@ namespace Bit.Api.Controllers
             return new ListResponseModel<CollectionResponseModel>(collections);
         }
 
-        private async Task<ListResponseModel<CipherMiniDetailsResponseModel>> GetOrganizationCiphersResponse(IEnumerable<CipherOrganizationDetails> orgCiphers,
+        private Task<ListResponseModel<CipherMiniDetailsResponseModel>> GetOrganizationCiphersResponse(IEnumerable<CipherOrganizationDetails> orgCiphers,
             Dictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphersGroupDict)
         {
             var responses = orgCiphers.Select(c => new CipherMiniDetailsResponseModel(c, _globalSettings,
                 collectionCiphersGroupDict, c.OrganizationUseTotp));
 
-            return new ListResponseModel<CipherMiniDetailsResponseModel>(responses);
+            return Task.FromResult(new ListResponseModel<CipherMiniDetailsResponseModel>(responses));
         }
     }
 }
