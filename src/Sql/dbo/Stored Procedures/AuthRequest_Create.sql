@@ -13,8 +13,7 @@
     @MasterPasswordHash VARCHAR(MAX),
     @CreationDate DATETIME2(7),
     @ResponseDate DATETIME2(7),
-    @AuthenticationDate DATETIME2(7),
-    @FailedLoginAttempts TINYINT
+    @AuthenticationDate DATETIME2(7)
 AS
 BEGIN
     SET NOCOUNT ON
@@ -35,8 +34,7 @@ BEGIN
         [MasterPasswordHash],
         [CreationDate],
         [ResponseDate],
-        [AuthenticationDate],
-        [FailedLoginAttempts]
+        [AuthenticationDate]
     )
     VALUES
     (
@@ -54,7 +52,6 @@ BEGIN
         @MasterPasswordHash,
         @CreationDate,
         @ResponseDate,
-        @AuthenticationDate,
-        @FailedLoginAttempts
+        @AuthenticationDate
     )
 END

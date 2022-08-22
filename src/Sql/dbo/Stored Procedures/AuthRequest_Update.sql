@@ -4,8 +4,7 @@
     @Key VARCHAR(MAX),
     @MasterPasswordHash VARCHAR(MAX),
     @ResponseDate DATETIME2(7),
-    @AuthenticationDate DATETIME2(7),
-    @FailedLoginAttempts TINYINT
+    @AuthenticationDate DATETIME2(7)
 AS
 BEGIN
     SET NOCOUNT ON
@@ -17,8 +16,7 @@ BEGIN
         [Key] = @Key,
         [MasterPasswordHash] = @MasterPasswordHash,
         [ResponseDate] = @ResponseDate,
-        [AuthenticationDate] = @AuthenticationDate,
-        [FailedLoginAttempts] = @FailedLoginAttempts
+        [AuthenticationDate] = @AuthenticationDate
     WHERE
         [Id] = @Id
 END

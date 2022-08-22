@@ -19,7 +19,6 @@ namespace Bit.Core.Entities
         public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
         public DateTime? ResponseDate { get; set; }
         public DateTime? AuthenticationDate { get; set; }
-        public int FailedLoginAttempts { get; set; } = 0;
 
         public void SetNewId()
         {

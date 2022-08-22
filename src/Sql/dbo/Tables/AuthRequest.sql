@@ -14,7 +14,6 @@
     [CreationDate]              DATETIME2 (7)    NOT NULL,
     [ResponseDate]              DATETIME2 (7)    NULL,
     [AuthenticationDate]        DATETIME2 (7)    NULL,
-    [FailedLoginAttempts]       TINYINT          NOT NULL,
     CONSTRAINT [PK_AuthRequest] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_AuthRequest_User] FOREIGN KEY ([UserId]) REFERENCES [dbo].[User] ([Id]),
     CONSTRAINT [FK_AuthRequest_ResponseDevice] FOREIGN KEY ([ResponseDeviceId]) REFERENCES [dbo].[Device] ([Id])
