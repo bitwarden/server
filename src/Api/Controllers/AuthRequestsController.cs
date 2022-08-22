@@ -5,6 +5,7 @@ using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Settings;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -20,6 +21,7 @@ namespace Bit.Api.Controllers
         private readonly IAuthRequestRepository _authRequestRepository;
         private readonly ICurrentContext _currentContext;
         private readonly IPushNotificationService _pushNotificationService;
+        private readonly IGlobalSettings _globalSettings;
 
         public AuthRequestsController(
             IUserRepository userRepository,
@@ -27,7 +29,8 @@ namespace Bit.Api.Controllers
             IUserService userService,
             IAuthRequestRepository authRequestRepository,
             ICurrentContext currentContext,
-            IPushNotificationService pushNotificationService)
+            IPushNotificationService pushNotificationService,
+            IGlobalSettings globalSettings)
         {
             _userRepository = userRepository;
             _deviceRepository = deviceRepository;
@@ -35,6 +38,7 @@ namespace Bit.Api.Controllers
             _authRequestRepository = authRequestRepository;
             _currentContext = currentContext;
             _pushNotificationService = pushNotificationService;
+            _globalSettings = globalSettings;
         }
 
         [HttpGet("{id}")]
@@ -81,6 +85,15 @@ namespace Bit.Api.Controllers
             {
                 throw new BadRequestException("Device type not provided.");
             }
+            if (_globalSettings.PasswordlessAuth.KnownDevicesOnly)
+            {
+                var d = await _deviceRepository.GetByIdentifierAsync(_currentContext.DeviceIdentifier);
+                if (d == null || d.UserId != user.Id)
+                {
+                    throw new NotFoundException();
+                }
+            }
+
             var authRequest = new AuthRequest
             {
                 RequestDeviceIdentifier = model.DeviceIdentifier,
