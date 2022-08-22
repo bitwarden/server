@@ -31,7 +31,7 @@ namespace Bit.Api.Controllers
             {
                 throw new NotFoundException();
             }
-            var responses = secrets.Select(secret => new SecretIdentifierResponseModel(secret));
+            var responses = secrets.OrderBy(secret => secret.RevisionDate).Select(secret => new SecretIdentifierResponseModel(secret));
             return new ListResponseModel<SecretIdentifierResponseModel>(responses);
         }
 
