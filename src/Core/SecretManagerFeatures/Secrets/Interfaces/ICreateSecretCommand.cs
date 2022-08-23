@@ -1,6 +1,6 @@
 ﻿using Bit.Core.Entities;
 
-namespace Bit.Commercial.Core.SecretManagerFeatures.Secrets.Interfaces
+namespace Bit.Core.SecretManagerFeatures.Secrets.Interfaces
 {
     public interface ICreateSecretCommand
     {
