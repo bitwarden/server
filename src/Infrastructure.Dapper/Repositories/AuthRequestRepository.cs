@@ -22,9 +22,9 @@ namespace Bit.Infrastructure.Dapper.Repositories
             using (var connection = new SqlConnection(ConnectionString))
             {
                 return await connection.ExecuteAsync(
-                    $"DELETE FROM [{Schema}].[AuthRequest] WHERE ExpirationDate < GETUTCDATE();",
+                    $"[{Schema}].[AuthRequest_DeleteIfExpired]",
                     null,
-                    commandType: CommandType.Text);
+                    commandType: CommandType.StoredProcedure);
             }
         }
     }

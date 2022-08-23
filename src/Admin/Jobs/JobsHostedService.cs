@@ -24,11 +24,6 @@ namespace Bit.Admin.Jobs
                 timeZone = TimeZoneInfo.Local;
             }
 
-            var everyMinuteTrigger = TriggerBuilder.Create()
-                .WithIdentity("everyMinuteTrigger")
-                .StartNow()
-                .WithCronSchedule("0 0/1 * * * ?")
-                .Build();
             var everyTopOfTheHourTrigger = TriggerBuilder.Create()
                 .WithIdentity("EveryTopOfTheHourTrigger")
                 .StartNow()
@@ -64,6 +59,11 @@ namespace Bit.Admin.Jobs
                 .StartNow()
                 .WithCronSchedule("0 0 0 * * ?")
                 .Build();
+            var everyFifteenMinutesTrigger = TriggerBuilder.Create()
+                .WithIdentity("everyFifteenMinutesTrigger")
+                .StartNow()
+                .WithCronSchedule("0 */15 * ? * *")
+                .Build();
 
             var jobs = new List<Tuple<Type, ITrigger>>
             {
@@ -73,7 +73,7 @@ namespace Bit.Admin.Jobs
                 new Tuple<Type, ITrigger>(typeof(DatabaseRebuildlIndexesJob), everySundayAtMidnightTrigger),
                 new Tuple<Type, ITrigger>(typeof(DeleteCiphersJob), everyDayAtMidnightUtc),
                 new Tuple<Type, ITrigger>(typeof(DatabaseExpiredSponsorshipsJob), everyMondayAtMidnightTrigger),
-                new Tuple<Type, ITrigger>(typeof(DeleteAuthRequestsJob), everyMinuteTrigger),
+                new Tuple<Type, ITrigger>(typeof(DeleteAuthRequestsJob), everyFifteenMinutesTrigger),
             };
 
             if (!_globalSettings.SelfHosted)
