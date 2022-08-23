@@ -13,6 +13,5 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Identity\Identity.csproj" />
     <ProjectReference Include="..\Common\Common.csproj" />
-    <ProjectReference Include="..\..\bitwarden_license\src\Scim\Scim.csproj" />
   </ItemGroup>
 </Project>

@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using Bit.IntegrationTestCommon.Factories;
+using Bit.Scim.IntegrationTest.Factories;
 using Bit.Scim.Models;
 using Bit.Scim.Utilities;
 using Xunit;
