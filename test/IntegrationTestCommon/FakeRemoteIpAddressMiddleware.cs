@@ -18,7 +18,7 @@ public class FakeRemoteIpAddressMiddleware
 
     public async Task Invoke(HttpContext httpContext)
     {
-        httpContext.Connection.RemoteIpAddress = _fakeIpAddress;
+        httpContext.Connection.RemoteIpAddress ??= _fakeIpAddress;
         await _next(httpContext);
     }
 }
