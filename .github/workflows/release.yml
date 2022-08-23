@@ -301,17 +301,17 @@ jobs:
 
       ########## ACR PROD ##########
       - name: Login to Azure - PROD Subscription
-        if: ${{ matrix.prod_acr == "true" }}
+        if: ${{ matrix.prod_acr == 'true' }}
         uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a
         with:
           creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
 
       - name: Login to Azure ACR
-        if: ${{ matrix.prod_acr == "true" }}
+        if: ${{ matrix.prod_acr == 'true' }}
         run: az acr login -n bitwardenprod
 
       - name: Tag version and latest
-        if: ${{ matrix.prod_acr == "true" }}
+        if: ${{ matrix.prod_acr == 'true' }}
         env:
           SERVICE_NAME: ${{ steps.setup.outputs.service_name }}
           REGISTRY: bitwardenprod.azurecr.io
@@ -323,7 +323,7 @@ jobs:
           fi
 
       - name: Push version and latest image
-        if: ${{ github.event.inputs.release_type != 'Dry Run' }} && ${{ matrix.prod_acr == "true" }}
+        if: ${{ github.event.inputs.release_type != 'Dry Run' }} && ${{ matrix.prod_acr == 'true' }}
         env:
           SERVICE_NAME: ${{ steps.setup.outputs.service_name }}
           REGISTRY: bitwardenprod.azurecr.io
@@ -331,7 +331,7 @@ jobs:
           docker push $REGISTRY/$SERVICE_NAME:$_RELEASE_VERSION
 
       - name: Log out of Docker
-        if: ${{ matrix.prod_acr == "true" }}
+        if: ${{ matrix.prod_acr == 'true' }}
         run: docker logout
 
 
