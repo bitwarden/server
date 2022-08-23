@@ -23,8 +23,6 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Scim\Scim.csproj" />
     <ProjectReference Include="..\..\..\test\Common\Common.csproj" />
-    <ProjectReference Include="..\..\..\test\IntegrationTestCommon\IntegrationTestCommon.csproj">
-      <GlobalPropertiesToRemove></GlobalPropertiesToRemove>
-    </ProjectReference>
+    <ProjectReference Include="..\..\..\test\IntegrationTestCommon\IntegrationTestCommon.csproj" />
   </ItemGroup>
 </Project>
