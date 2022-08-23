@@ -323,7 +323,7 @@ jobs:
           fi
 
       - name: Push version and latest image
-        if: ${{ github.event.inputs.release_type != 'Dry Run' }} && ${{ matrix.prod_acr == 'true' }}
+        if: ${{ github.event.inputs.release_type != 'Dry Run' && matrix.prod_acr == 'true' }}
         env:
           SERVICE_NAME: ${{ steps.setup.outputs.service_name }}
           REGISTRY: bitwardenprod.azurecr.io
