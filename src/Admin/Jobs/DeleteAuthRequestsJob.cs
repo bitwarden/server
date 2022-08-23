@@ -19,10 +19,10 @@ namespace Bit.Admin.Jobs
 
         protected async override Task ExecuteJobAsync(IJobExecutionContext context)
         {
-            _logger.LogInformation(Constants.BypassFiltersEventId, "Execute job task: DeleteDeletedAsync: Start");
+            _logger.LogInformation(Constants.BypassFiltersEventId, "Execute job task: DeleteAuthRequestsJob: Start");
             var count = await _authRepo.DeleteExpiredAsync();
             _logger.LogInformation(Constants.BypassFiltersEventId, $"{count} records deleted from AuthRequests.");
-            _logger.LogInformation(Constants.BypassFiltersEventId, "Execute job task: DeleteDeletedAsync: End");
+            _logger.LogInformation(Constants.BypassFiltersEventId, "Execute job task: DeleteAuthRequestsJob: End");
         }
     }
 }
