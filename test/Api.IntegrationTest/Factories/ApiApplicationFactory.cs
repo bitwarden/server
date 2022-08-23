@@ -13,7 +13,7 @@ namespace Bit.Api.IntegrationTest.Factories
 
         public ApiApplicationFactory()
         {
-            _identityApplicationFactory = new IdentityApplicationFactory();;
+            _identityApplicationFactory = new IdentityApplicationFactory();
         }
 
         protected override IHostBuilder CreateHostBuilder()
