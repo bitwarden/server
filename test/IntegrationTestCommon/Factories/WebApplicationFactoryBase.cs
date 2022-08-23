@@ -1,4 +1,5 @@
-﻿using AspNetCoreRateLimit;
+﻿using System.Reflection;
+using AspNetCoreRateLimit;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Infrastructure.EntityFramework.Repositories;
@@ -35,6 +36,9 @@ namespace Bit.IntegrationTestCommon.Factories
         {
             builder.ConfigureAppConfiguration(c =>
             {
+                c.AddJsonFile("appsettings.json");
+                c.AddJsonFile("appsettings.Development.json");
+                c.AddUserSecrets(typeof(Api.Startup).Assembly, optional: true);
                 c.AddInMemoryCollection(new Dictionary<string, string>
                 {
                     // Manually insert a EF provider so that ConfigureServices will add EF repositories but we will override
@@ -91,6 +95,9 @@ namespace Bit.IntegrationTestCommon.Factories
                         FactoryConstants.WhitelistedIp,
                     };
                 });
+
+                // Fix IP Rate Limiting
+                services.AddSingleton<IStartupFilter, CustomStartupFilter>();
             });
         }
 
