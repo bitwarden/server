@@ -23,15 +23,15 @@ jobs:
       release_version: ${{ steps.version.outputs.version }}
       branch-name: ${{ steps.branch.outputs.branch-name }}
     steps:
-      - name: Branch check
-        if: ${{ github.event.inputs.release_type != 'Dry Run' }}
-        run: |
-          if [[ "$GITHUB_REF" != "refs/heads/rc" ]] && [[ "$GITHUB_REF" != "refs/heads/hotfix-rc" ]]; then
-            echo "==================================="
-            echo "[!] Can only release from the 'rc' or 'hotfix-rc' branches"
-            echo "==================================="
-            exit 1
-          fi
+      # - name: Branch check
+      #   if: ${{ github.event.inputs.release_type != 'Dry Run' }}
+      #   run: |
+      #     if [[ "$GITHUB_REF" != "refs/heads/rc" ]] && [[ "$GITHUB_REF" != "refs/heads/hotfix-rc" ]]; then
+      #       echo "==================================="
+      #       echo "[!] Can only release from the 'rc' or 'hotfix-rc' branches"
+      #       echo "==================================="
+      #       exit 1
+      #     fi
 
       - name: Checkout repo
         uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579
@@ -75,95 +75,95 @@ jobs:
           echo "NAME_LOWER: $NAME_LOWER"
           echo "::set-output name=name_lower::$NAME_LOWER"
 
-      - name: Create GitHub deployment for ${{ matrix.name }}
-        uses: chrnorm/deployment-action@1b599fe41a0ef1f95191e7f2eec4743f2d7dfc48
-        id: deployment
-        with:
-          token: '${{ secrets.GITHUB_TOKEN }}'
-          initial-status: 'in_progress'
-          environment: 'Server ${{ matrix.name }} - Production'
-          task: 'deploy'
-          description: 'Deploy from ${{ needs.setup.outputs.branch-name }} branch'
+      # - name: Create GitHub deployment for ${{ matrix.name }}
+      #   uses: chrnorm/deployment-action@1b599fe41a0ef1f95191e7f2eec4743f2d7dfc48
+      #   id: deployment
+      #   with:
+      #     token: '${{ secrets.GITHUB_TOKEN }}'
+      #     initial-status: 'in_progress'
+      #     environment: 'Server ${{ matrix.name }} - Production'
+      #     task: 'deploy'
+      #     description: 'Deploy from ${{ needs.setup.outputs.branch-name }} branch'
 
-      - name: Download latest Release ${{ matrix.name }} asset
-        if: ${{ github.event.inputs.release_type != 'Dry Run' }}
-        uses: bitwarden/gh-actions/download-artifacts@c1fa8e09871a860862d6bbe36184b06d2c7e35a8
-        with:
-          workflow: build.yml
-          workflow_conclusion: success
-          branch: ${{ needs.setup.outputs.branch-name }}
-          artifacts: ${{ matrix.name }}.zip
+      # - name: Download latest Release ${{ matrix.name }} asset
+      #   if: ${{ github.event.inputs.release_type != 'Dry Run' }}
+      #   uses: bitwarden/gh-actions/download-artifacts@c1fa8e09871a860862d6bbe36184b06d2c7e35a8
+      #   with:
+      #     workflow: build.yml
+      #     workflow_conclusion: success
+      #     branch: ${{ needs.setup.outputs.branch-name }}
+      #     artifacts: ${{ matrix.name }}.zip
 
-      - name: Download latest Release ${{ matrix.name }} asset
-        if: ${{ github.event.inputs.release_type == 'Dry Run' }}
-        uses: bitwarden/gh-actions/download-artifacts@c1fa8e09871a860862d6bbe36184b06d2c7e35a8
-        with:
-          workflow: build.yml
-          workflow_conclusion: success
-          branch: master
-          artifacts: ${{ matrix.name }}.zip
+      # - name: Download latest Release ${{ matrix.name }} asset
+      #   if: ${{ github.event.inputs.release_type == 'Dry Run' }}
+      #   uses: bitwarden/gh-actions/download-artifacts@c1fa8e09871a860862d6bbe36184b06d2c7e35a8
+      #   with:
+      #     workflow: build.yml
+      #     workflow_conclusion: success
+      #     branch: master
+      #     artifacts: ${{ matrix.name }}.zip
 
-      - name: Login to Azure
-        uses: Azure/login@1f63701bf3e6892515f1b7ce2d2bf1708b46beaf
-        with:
-          creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
+      # - name: Login to Azure
+      #   uses: Azure/login@1f63701bf3e6892515f1b7ce2d2bf1708b46beaf
+      #   with:
+      #     creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
 
-      - name: Retrieve secrets
-        id: retrieve-secrets
-        env:
-          VAULT_NAME: "bitwarden-prod-kv"
-        run: |
-          webapp_name=$(
-            az keyvault secret show --vault-name $VAULT_NAME \
-              --name appservices-${{ steps.setup.outputs.name_lower }}-webapp-name \
-              --query value --output tsv
-          )
-          publish_profile=$(
-            az keyvault secret show --vault-name $VAULT_NAME \
-              --name appservices-${{ steps.setup.outputs.name_lower }}-webapp-publish-profile \
-              --query value --output tsv
-          )
-          echo "::add-mask::$webapp_name"
-          echo "::set-output name=webapp-name::$webapp_name"
-          echo "::add-mask::$publish_profile"
-          echo "::set-output name=publish-profile::$publish_profile"
+      # - name: Retrieve secrets
+      #   id: retrieve-secrets
+      #   env:
+      #     VAULT_NAME: "bitwarden-prod-kv"
+      #   run: |
+      #     webapp_name=$(
+      #       az keyvault secret show --vault-name $VAULT_NAME \
+      #         --name appservices-${{ steps.setup.outputs.name_lower }}-webapp-name \
+      #         --query value --output tsv
+      #     )
+      #     publish_profile=$(
+      #       az keyvault secret show --vault-name $VAULT_NAME \
+      #         --name appservices-${{ steps.setup.outputs.name_lower }}-webapp-publish-profile \
+      #         --query value --output tsv
+      #     )
+      #     echo "::add-mask::$webapp_name"
+      #     echo "::set-output name=webapp-name::$webapp_name"
+      #     echo "::add-mask::$publish_profile"
+      #     echo "::set-output name=publish-profile::$publish_profile"
 
-      - name: Deploy App
-        uses: azure/webapps-deploy@0b651ed7546ecfc75024011f76944cb9b381ef1e
-        with:
-          app-name: ${{ steps.retrieve-secrets.outputs.webapp-name }}
-          publish-profile: ${{ steps.retrieve-secrets.outputs.publish-profile }}
-          package: ./${{ matrix.name }}.zip
-          slot-name: "staging"
+      # - name: Deploy App
+      #   uses: azure/webapps-deploy@0b651ed7546ecfc75024011f76944cb9b381ef1e
+      #   with:
+      #     app-name: ${{ steps.retrieve-secrets.outputs.webapp-name }}
+      #     publish-profile: ${{ steps.retrieve-secrets.outputs.publish-profile }}
+      #     package: ./${{ matrix.name }}.zip
+      #     slot-name: "staging"
 
-      - name: Start staging slot
-        if: ${{ github.event.inputs.release_type != 'Dry Run' }}
-        env:
-          SERVICE: ${{ matrix.name }}
-          WEBAPP_NAME: ${{ steps.retrieve-secrets.outputs.webapp-name }}
-        run: |
-          if [[ "$SERVICE" = "Api" ]] || [[ "$SERVICE" = "Identity" ]]; then
-            RESOURCE_GROUP=bitwardenappservices
-          else
-            RESOURCE_GROUP=bitwarden
-          fi
-          az webapp start -n $WEBAPP_NAME -g $RESOURCE_GROUP -s staging
+      # - name: Start staging slot
+      #   if: ${{ github.event.inputs.release_type != 'Dry Run' }}
+      #   env:
+      #     SERVICE: ${{ matrix.name }}
+      #     WEBAPP_NAME: ${{ steps.retrieve-secrets.outputs.webapp-name }}
+      #   run: |
+      #     if [[ "$SERVICE" = "Api" ]] || [[ "$SERVICE" = "Identity" ]]; then
+      #       RESOURCE_GROUP=bitwardenappservices
+      #     else
+      #       RESOURCE_GROUP=bitwarden
+      #     fi
+      #     az webapp start -n $WEBAPP_NAME -g $RESOURCE_GROUP -s staging
 
-      - name: Update ${{ matrix.name }} deployment status to Success
-        if: ${{ success() }}
-        uses: chrnorm/deployment-status@07b3930847f65e71c9c6802ff5a402f6dfb46b86
-        with:
-          token: '${{ secrets.GITHUB_TOKEN }}'
-          state: 'success'
-          deployment-id: ${{ steps.deployment.outputs.deployment_id }}
+      # - name: Update ${{ matrix.name }} deployment status to Success
+      #   if: ${{ success() }}
+      #   uses: chrnorm/deployment-status@07b3930847f65e71c9c6802ff5a402f6dfb46b86
+      #   with:
+      #     token: '${{ secrets.GITHUB_TOKEN }}'
+      #     state: 'success'
+      #     deployment-id: ${{ steps.deployment.outputs.deployment_id }}
 
-      - name: Update ${{ matrix.name }} deployment status to Failure
-        if: ${{ failure() }}
-        uses: chrnorm/deployment-status@07b3930847f65e71c9c6802ff5a402f6dfb46b86
-        with:
-          token: '${{ secrets.GITHUB_TOKEN }}'
-          state: 'failure'
-          deployment-id: ${{ steps.deployment.outputs.deployment_id }}
+      # - name: Update ${{ matrix.name }} deployment status to Failure
+      #   if: ${{ failure() }}
+      #   uses: chrnorm/deployment-status@07b3930847f65e71c9c6802ff5a402f6dfb46b86
+      #   with:
+      #     token: '${{ secrets.GITHUB_TOKEN }}'
+      #     state: 'failure'
+      #     deployment-id: ${{ steps.deployment.outputs.deployment_id }}
 
 
   release-docker:
@@ -334,45 +334,46 @@ jobs:
         if: ${{ matrix.prod_acr == "true" }}
         run: docker logout
 
-  release:
-    name: Create GitHub Release
-    runs-on: ubuntu-20.04
-    needs:
-      - setup
-      - deploy
-    steps:
-      - name: Download latest Release docker-stub
-        if: ${{ github.event.inputs.release_type != 'Dry Run' }}
-        uses: bitwarden/gh-actions/download-artifacts@c1fa8e09871a860862d6bbe36184b06d2c7e35a8
-        with:
-          workflow: build.yml
-          workflow_conclusion: success
-          branch: ${{ needs.setup.outputs.branch-name }}
-          artifacts: "docker-stub.zip,
-                      docker-stub-sha256.txt,
-                      swagger.json"
 
-      - name: Download latest Release docker-stub
-        if: ${{ github.event.inputs.release_type == 'Dry Run' }}
-        uses: bitwarden/gh-actions/download-artifacts@c1fa8e09871a860862d6bbe36184b06d2c7e35a8
-        with:
-          workflow: build.yml
-          workflow_conclusion: success
-          branch: master
-          artifacts: "docker-stub.zip,
-                      docker-stub-sha256.txt,
-                      swagger.json"
+  # release:
+  #   name: Create GitHub Release
+  #   runs-on: ubuntu-20.04
+  #   needs:
+  #     - setup
+  #     - deploy
+  #   steps:
+  #     - name: Download latest Release docker-stub
+  #       if: ${{ github.event.inputs.release_type != 'Dry Run' }}
+  #       uses: bitwarden/gh-actions/download-artifacts@c1fa8e09871a860862d6bbe36184b06d2c7e35a8
+  #       with:
+  #         workflow: build.yml
+  #         workflow_conclusion: success
+  #         branch: ${{ needs.setup.outputs.branch-name }}
+  #         artifacts: "docker-stub.zip,
+  #                     docker-stub-sha256.txt,
+  #                     swagger.json"
 
-      - name: Create release
-        if: ${{ github.event.inputs.release_type != 'Dry Run' }}
-        uses: ncipollo/release-action@40bb172bd05f266cf9ba4ff965cb61e9ee5f6d01
-        with:
-          artifacts: 'docker-stub.zip,
-                      docker-stub-sha256.txt,
-                      swagger.json'
-          commit: ${{ github.sha }}
-          tag: "v${{ needs.setup.outputs.release_version }}"
-          name: "Version ${{ needs.setup.outputs.release_version }}"
-          body: "<insert release notes here>"
-          token: ${{ secrets.GITHUB_TOKEN }}
-          draft: true
+  #     - name: Download latest Release docker-stub
+  #       if: ${{ github.event.inputs.release_type == 'Dry Run' }}
+  #       uses: bitwarden/gh-actions/download-artifacts@c1fa8e09871a860862d6bbe36184b06d2c7e35a8
+  #       with:
+  #         workflow: build.yml
+  #         workflow_conclusion: success
+  #         branch: master
+  #         artifacts: "docker-stub.zip,
+  #                     docker-stub-sha256.txt,
+  #                     swagger.json"
+
+  #     - name: Create release
+  #       if: ${{ github.event.inputs.release_type != 'Dry Run' }}
+  #       uses: ncipollo/release-action@40bb172bd05f266cf9ba4ff965cb61e9ee5f6d01
+  #       with:
+  #         artifacts: 'docker-stub.zip,
+  #                     docker-stub-sha256.txt,
+  #                     swagger.json'
+  #         commit: ${{ github.sha }}
+  #         tag: "v${{ needs.setup.outputs.release_version }}"
+  #         name: "Version ${{ needs.setup.outputs.release_version }}"
+  #         body: "<insert release notes here>"
+  #         token: ${{ secrets.GITHUB_TOKEN }}
+  #         draft: true
