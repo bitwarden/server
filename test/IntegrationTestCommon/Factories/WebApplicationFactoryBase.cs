@@ -35,8 +35,10 @@ namespace Bit.IntegrationTestCommon.Factories
         {
             builder.ConfigureAppConfiguration(c =>
             {
-                c.AddJsonFile("appsettings.json");
-                c.AddJsonFile("appsettings.Development.json");
+                c.SetBasePath(AppContext.BaseDirectory)
+                    .AddJsonFile("appsettings.json")
+                    .AddJsonFile("appsettings.Development.json");
+
                 c.AddUserSecrets(typeof(Api.Startup).Assembly, optional: true);
                 c.AddInMemoryCollection(new Dictionary<string, string>
                 {
@@ -44,7 +46,7 @@ namespace Bit.IntegrationTestCommon.Factories
                     // DbContextOptions to use an in memory database
                     { "globalSettings:databaseProvider", "postgres" },
                     { "globalSettings:postgreSql:connectionString", "Host=localhost;Username=test;Password=test;Database=test" },
-                    
+
                     // Clear the redis connection string for distributed caching, forcing an in-memory implementation
                     { "globalSettings:redis:connectionString", ""}
                 });
@@ -85,7 +87,7 @@ namespace Bit.IntegrationTestCommon.Factories
                 services.AddSingleton<IEventRepository, EventRepository>();
 
                 // Our Rate limiter works so well that it begins to fail tests unless we carve out
-                // one whitelisted ip. We should still test the rate limiter though and they should change the Ip 
+                // one whitelisted ip. We should still test the rate limiter though and they should change the Ip
                 // to something that is NOT whitelisted
                 services.Configure<IpRateLimitOptions>(options =>
                 {
