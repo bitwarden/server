@@ -50,8 +50,8 @@ namespace Bit.Admin.Controllers
                     var latestVersions = JsonConvert.DeserializeObject<LatestVersions>(await response.Content.ReadAsStringAsync());
                     return project switch
                     {
-                        ProjectType.Core => new JsonResult(latestVersions.Versions.WebVersion),
-                        ProjectType.Web => new JsonResult(latestVersions.Versions.CoreVersion),
+                        ProjectType.Core => new JsonResult(latestVersions.Versions.CoreVersion),
+                        ProjectType.Web => new JsonResult(latestVersions.Versions.WebVersion),
                         _ => throw new System.NotImplementedException(),
                     };
                 }
