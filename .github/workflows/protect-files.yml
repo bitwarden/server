@@ -7,10 +7,11 @@ name: Protect Files
 
 on:
   pull_request:
-    types: 
+    types:
       - opened
       - synchronize
-    paths: 
+      - unlabeled
+    paths:
       - "util/Migrator/DbScripts/**.sql"
 
 jobs:
@@ -18,7 +19,7 @@ jobs:
     name: Check for file changes
     runs-on: ubuntu-20.04
     outputs:
-      changes: steps.check-changes.outputs.changes_detected
+      changes: ${{steps.check-changes.outputs.changes_detected}}
 
     strategy:
       fail-fast: true
@@ -26,34 +27,29 @@ jobs:
         include:
           - name: Database Scripts
             path: util/Migrator/DbScripts
-            label: "DB migrations changed"
+            label: "DB-migrations-changed"
     steps:
-      - name: Checkout PR
+      - name: Checkout repo
         uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b
         with:
-          fetch-depth: 0
+          fetch-depth: 2
 
       - name: Check for file changes
         id: check-changes
         run: |
-          MODIFIED_FILES=$(git diff --name-only --diff-filter=M ${GITHUB_BASE_REF})
+          MODIFIED_FILES=$(git diff --name-only --diff-filter=M HEAD~1)
 
-          for file in $MODIFIED_FILES; do
-            if [[ $file == *"${{ matrix.path }}"*]]; then
-              echo "::set-output name=changes_detected::'true'"
+          for file in $MODIFIED_FILES
+          do
+            if [[ $file == *"${{ matrix.path }}"* ]]; then
+              echo "::set-output name=changes_detected::true"
               break
-            else echo "::set-output name=changes_detected::'false'"
+            else echo "::set-output name=changes_detected::false"
             fi
           done
 
-  label-pr:
-    name: Add label to pull request
-    runs-on: ubuntu-20.04
-    needs: 
-      - changed-files
-    if: needs.changed-files.outputs.changes == "true" || job.changed-files.status == "failure"
-    steps:
-      - name: Label PR
+      - name: Add label to pull request
+        if: contains(steps.check-changes.outputs.changes_detected, true)
         uses: andymckay/labeler@e6c4322d0397f3240f0e7e30a33b5c5df2d39e90
         with:
           add-labels: ${{ matrix.label }}
