@@ -1,4 +1,4 @@
-﻿namespace Bit.Notifications
+namespace Bit.Notifications
 {
     public interface INotificationHub
     {

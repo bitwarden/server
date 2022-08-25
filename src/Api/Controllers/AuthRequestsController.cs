@@ -105,7 +105,7 @@ namespace Bit.Api.Controllers
                 Type = model.Type.Value,
                 RequestFingerprint = model.FingerprintPhrase
             };
-            await _authRequestRepository.CreateAsync(authRequest);
+            authRequest = await _authRequestRepository.CreateAsync(authRequest);
             await _pushNotificationService.PushAuthRequestAsync(authRequest);
             return new AuthRequestResponseModel(authRequest);
         }
