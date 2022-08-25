@@ -77,7 +77,7 @@ namespace Bit.Notifications
                         JsonSerializer.Deserialize<PushNotificationData<AuthRequestPushNotification>>(
                                 notificationJson);
                     await anonymousHubContext.Clients.Group(authRequestResponseNotification.Payload.Id.ToString())
-                        .SendAsync("ReceiveMessage", authRequestResponseNotification, cancellationToken);
+                        .SendAsync("AuthRequestResponseRecieved", authRequestResponseNotification, cancellationToken);
                     break;
                 default:
                     break;
