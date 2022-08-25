@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 namespace Bit.Notifications
 {
     [Authorize("Application")]
-    public class NotificationsHub : Microsoft.AspNetCore.SignalR.Hub
+    public class NotificationsHub : Microsoft.AspNetCore.SignalR.Hub, INotificationHub
     {
         private readonly ConnectionCounter _connectionCounter;
         private readonly GlobalSettings _globalSettings;

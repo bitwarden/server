@@ -3,6 +3,7 @@ using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
 using IdentityModel;
+using Microsoft.AspNetCore.Http.Connections;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.IdentityModel.Logging;
 
@@ -110,7 +111,12 @@ namespace Bit.Notifications
             {
                 endpoints.MapHub<NotificationsHub>("/hub", options =>
                 {
-                    options.ApplicationMaxBufferSize = 2048; // client => server messages are not even used
+                    options.ApplicationMaxBufferSize = 2048;
+                    options.TransportMaxBufferSize = 4096;
+                });
+                endpoints.MapHub<AnonymousNotificationsHub>("/anonymousHub", options =>
+                {
+                    options.ApplicationMaxBufferSize = 2048;
                     options.TransportMaxBufferSize = 4096;
                 });
                 endpoints.MapDefaultControllerRoute();
