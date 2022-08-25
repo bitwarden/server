@@ -20,7 +20,7 @@ namespace Bit.Scim.Handlers.Users
             var orgUser = await _organizationUserRepository.GetDetailsByIdAsync(request.Id);
             if (orgUser == null || orgUser.OrganizationId != request.OrganizationId)
             {
-                throw new NotFoundException();
+                throw new NotFoundException("User not found.");
             }
 
             return new ScimUserResponseModel(orgUser);
