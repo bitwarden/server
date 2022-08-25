@@ -1,6 +1,7 @@
-﻿using System.Net;
-using Bit.Core.Enums;
+﻿using Bit.Core.Enums;
+using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
+using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
@@ -10,7 +11,7 @@ using MediatR;
 
 namespace Bit.Scim.Handlers.Users
 {
-    public class PostUserHandler : IRequestHandler<PostUserCommand, RequestResult>
+    public class PostUserHandler : IRequestHandler<PostUserCommand, OrganizationUserUserDetails>
     {
         private readonly IOrganizationUserRepository _organizationUserRepository;
         private readonly IOrganizationService _organizationService;
@@ -26,7 +27,7 @@ namespace Bit.Scim.Handlers.Users
             _scimContext = scimContext;
         }
 
-        public async Task<RequestResult> Handle(PostUserCommand request, CancellationToken cancellationToken)
+        public async Task<OrganizationUserUserDetails> Handle(PostUserCommand request, CancellationToken cancellationToken)
         {
             var email = request.Model.PrimaryEmail?.ToLowerInvariant();
             if (string.IsNullOrWhiteSpace(email))
@@ -48,14 +49,14 @@ namespace Bit.Scim.Handlers.Users
 
             if (string.IsNullOrWhiteSpace(email) || !request.Model.Active)
             {
-                return new RequestResult(false, HttpStatusCode.BadRequest);
+                throw new BadRequestException();
             }
 
             var orgUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(request.OrganizationId);
             var orgUserByEmail = orgUsers.FirstOrDefault(ou => ou.Email?.ToLowerInvariant() == email);
             if (orgUserByEmail != null)
             {
-                return new RequestResult(false, HttpStatusCode.Conflict);
+                throw new ConflictException();
             }
 
             string externalId = null;
@@ -75,14 +76,14 @@ namespace Bit.Scim.Handlers.Users
             var orgUserByExternalId = orgUsers.FirstOrDefault(ou => ou.ExternalId == externalId);
             if (orgUserByExternalId != null)
             {
-                return new RequestResult(false, HttpStatusCode.Conflict);
+                throw new ConflictException();
             }
 
             var invitedOrgUser = await _organizationService.InviteUserAsync(request.OrganizationId, null, email,
                 OrganizationUserType.User, false, externalId, new List<SelectionReadOnly>());
             var orgUser = await _organizationUserRepository.GetDetailsByIdAsync(invitedOrgUser.Id);
 
-            return new RequestResult(true, HttpStatusCode.Created, orgUser);
+            return orgUser;
         }
     }
 }

@@ -1,12 +1,11 @@
-﻿using System.Net;
-using Bit.Core.Repositories;
+﻿using Bit.Core.Repositories;
 using Bit.Scim.Models;
 using Bit.Scim.Queries.Groups;
 using MediatR;
 
 namespace Bit.Scim.Handlers.Groups
 {
-    public class GetGroupsListHandler : IRequestHandler<GetGroupsListQuery, RequestResult>
+    public class GetGroupsListHandler : IRequestHandler<GetGroupsListQuery, ScimListResponseModel<ScimGroupResponseModel>>
     {
         private readonly IGroupRepository _groupRepository;
 
@@ -15,7 +14,7 @@ namespace Bit.Scim.Handlers.Groups
             _groupRepository = groupRepository;
         }
 
-        public async Task<RequestResult> Handle(GetGroupsListQuery request, CancellationToken cancellationToken)
+        public async Task<ScimListResponseModel<ScimGroupResponseModel>> Handle(GetGroupsListQuery request, CancellationToken cancellationToken)
         {
             string nameFilter = null;
             string externalIdFilter = null;
@@ -70,7 +69,7 @@ namespace Bit.Scim.Handlers.Groups
                 StartIndex = request.StartIndex.GetValueOrDefault(1),
             };
 
-            return new RequestResult(true, HttpStatusCode.OK, result);
+            return result;
         }
     }
 }

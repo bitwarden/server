@@ -1,14 +1,13 @@
-﻿using System.Net;
-using System.Text.Json;
+﻿using System.Text.Json;
+using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Scim.Commands.Groups;
-using Bit.Scim.Models;
 using MediatR;
 
 namespace Bit.Scim.Handlers.Groups
 {
-    public class PatchGroupHandler : IRequestHandler<PatchGroupCommand, RequestResult>
+    public class PatchGroupHandler : IRequestHandler<PatchGroupCommand>
     {
         private readonly IGroupRepository _groupRepository;
         private readonly IGroupService _groupService;
@@ -24,16 +23,12 @@ namespace Bit.Scim.Handlers.Groups
             _logger = logger;
         }
 
-        public async Task<RequestResult> Handle(PatchGroupCommand request, CancellationToken cancellationToken)
+        public async Task<Unit> Handle(PatchGroupCommand request, CancellationToken cancellationToken)
         {
             var group = await _groupRepository.GetByIdAsync(request.Id);
             if (group == null || group.OrganizationId != request.OrganizationId)
             {
-                return new RequestResult(false, HttpStatusCode.NotFound, new ScimErrorResponseModel
-                {
-                    Status = 404,
-                    Detail = "Group not found."
-                });
+                throw new NotFoundException("Group not found.");
             }
 
             var operationHandled = false;
@@ -123,7 +118,7 @@ namespace Bit.Scim.Handlers.Groups
                     string.Join(", ", request.Model.Operations.Select(o => $"{o.Op}:{o.Path}")));
             }
 
-            return new RequestResult();
+            return Unit.Value;
         }
 
         private List<Guid> GetOperationValueIds(JsonElement objArray)

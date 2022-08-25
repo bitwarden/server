@@ -1,5 +1,5 @@
-﻿using System.Net;
-using Bit.Core.Enums;
+﻿using Bit.Core.Enums;
+using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Scim.Commands.Users;
@@ -8,7 +8,7 @@ using MediatR;
 
 namespace Bit.Scim.Handlers.Users
 {
-    public class PutUserHandler : IRequestHandler<PutUserCommand, RequestResult>
+    public class PutUserHandler : IRequestHandler<PutUserCommand, ScimUserResponseModel>
     {
         private readonly IUserService _userService;
         private readonly IOrganizationUserRepository _organizationUserRepository;
@@ -24,16 +24,12 @@ namespace Bit.Scim.Handlers.Users
             _organizationService = organizationService;
         }
 
-        public async Task<RequestResult> Handle(PutUserCommand request, CancellationToken cancellationToken)
+        public async Task<ScimUserResponseModel> Handle(PutUserCommand request, CancellationToken cancellationToken)
         {
             var orgUser = await _organizationUserRepository.GetByIdAsync(request.Id);
             if (orgUser == null || orgUser.OrganizationId != request.OrganizationId)
             {
-                return new RequestResult(false, HttpStatusCode.NotFound, new ScimErrorResponseModel
-                {
-                    Status = 404,
-                    Detail = "User not found."
-                });
+                throw new NotFoundException("User not found.");
             }
 
             if (request.Model.Active && orgUser.Status == OrganizationUserStatusType.Revoked)
@@ -47,7 +43,7 @@ namespace Bit.Scim.Handlers.Users
 
             // Have to get full details object for response model
             var orgUserDetails = await _organizationUserRepository.GetDetailsByIdAsync(request.Id);
-            return new RequestResult(true, HttpStatusCode.OK, new ScimUserResponseModel(orgUserDetails));
+            return new ScimUserResponseModel(orgUserDetails);
         }
     }
 }

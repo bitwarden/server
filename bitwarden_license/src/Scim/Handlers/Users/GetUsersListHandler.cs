@@ -1,12 +1,11 @@
-﻿using System.Net;
-using Bit.Core.Repositories;
+﻿using Bit.Core.Repositories;
 using Bit.Scim.Models;
 using Bit.Scim.Queries.Users;
 using MediatR;
 
 namespace Bit.Scim.Handlers.Users
 {
-    public class GetUsersListHandler : IRequestHandler<GetUsersListQuery, RequestResult>
+    public class GetUsersListHandler : IRequestHandler<GetUsersListQuery, ScimListResponseModel<ScimUserResponseModel>>
     {
         private readonly IOrganizationUserRepository _organizationUserRepository;
 
@@ -15,7 +14,7 @@ namespace Bit.Scim.Handlers.Users
             _organizationUserRepository = organizationUserRepository;
         }
 
-        public async Task<RequestResult> Handle(GetUsersListQuery request, CancellationToken cancellationToken)
+        public async Task<ScimListResponseModel<ScimUserResponseModel>> Handle(GetUsersListQuery request, CancellationToken cancellationToken)
         {
             string emailFilter = null;
             string usernameFilter = null;
@@ -75,7 +74,7 @@ namespace Bit.Scim.Handlers.Users
                 StartIndex = request.StartIndex.GetValueOrDefault(1),
             };
 
-            return new RequestResult(true, HttpStatusCode.OK, result);
+            return result;
         }
     }
 }

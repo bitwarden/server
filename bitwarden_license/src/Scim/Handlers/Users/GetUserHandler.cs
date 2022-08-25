@@ -1,4 +1,4 @@
-﻿using System.Net;
+﻿using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Scim.Models;
 using Bit.Scim.Queries.Users;
@@ -6,7 +6,7 @@ using MediatR;
 
 namespace Bit.Scim.Handlers.Users
 {
-    public class GetUserHandler : IRequestHandler<GetUserQuery, RequestResult>
+    public class GetUserHandler : IRequestHandler<GetUserQuery, ScimUserResponseModel>
     {
         private readonly IOrganizationUserRepository _organizationUserRepository;
 
@@ -15,19 +15,15 @@ namespace Bit.Scim.Handlers.Users
             _organizationUserRepository = organizationUserRepository;
         }
 
-        public async Task<RequestResult> Handle(GetUserQuery request, CancellationToken cancellationToken)
+        public async Task<ScimUserResponseModel> Handle(GetUserQuery request, CancellationToken cancellationToken)
         {
             var orgUser = await _organizationUserRepository.GetDetailsByIdAsync(request.Id);
             if (orgUser == null || orgUser.OrganizationId != request.OrganizationId)
             {
-                return new RequestResult(false, HttpStatusCode.NotFound, new ScimErrorResponseModel
-                {
-                    Status = 404,
-                    Detail = "User not found."
-                });
+                throw new NotFoundException();
             }
 
-            return new RequestResult(true, HttpStatusCode.OK, new ScimUserResponseModel(orgUser));
+            return new ScimUserResponseModel(orgUser);
         }
     }
 }

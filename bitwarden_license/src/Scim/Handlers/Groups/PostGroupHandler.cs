@@ -1,6 +1,5 @@
-﻿using System;
-using System.Net;
-using Bit.Core.Entities;
+﻿using Bit.Core.Entities;
+using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Scim.Commands.Groups;
@@ -10,7 +9,7 @@ using MediatR;
 
 namespace Bit.Scim.Handlers.Groups
 {
-    public class PostGroupHandler : IRequestHandler<PostGroupCommand, RequestResult>
+    public class PostGroupHandler : IRequestHandler<PostGroupCommand, Group>
     {
         private readonly IGroupRepository _groupRepository;
         private readonly IGroupService _groupService;
@@ -26,24 +25,24 @@ namespace Bit.Scim.Handlers.Groups
             _scimContext = scimContext;
         }
 
-        public async Task<RequestResult> Handle(PostGroupCommand request, CancellationToken cancellationToken)
+        public async Task<Group> Handle(PostGroupCommand request, CancellationToken cancellationToken)
         {
             if (string.IsNullOrWhiteSpace(request.Model.DisplayName))
             {
-                return new RequestResult(false, HttpStatusCode.BadRequest);
+                throw new BadRequestException();
             }
 
             var groups = await _groupRepository.GetManyByOrganizationIdAsync(request.OrganizationId);
             if (!string.IsNullOrWhiteSpace(request.Model.ExternalId) && groups.Any(g => g.ExternalId == request.Model.ExternalId))
             {
-                return new RequestResult(false, HttpStatusCode.Conflict);
+                throw new ConflictException();
             }
 
             var group = request.Model.ToGroup(request.OrganizationId);
             await _groupService.SaveAsync(group, null);
             await UpdateGroupMembersAsync(group, request.Model, true);
 
-            return new RequestResult(true, HttpStatusCode.Created, group);
+            return group;
         }
 
         private async Task UpdateGroupMembersAsync(Group group, ScimGroupRequestModel model, bool skipIfEmpty)
@@ -76,4 +75,3 @@ namespace Bit.Scim.Handlers.Groups
         }
     }
 }
-

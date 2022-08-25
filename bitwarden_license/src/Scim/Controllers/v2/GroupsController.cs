@@ -1,13 +1,10 @@
-﻿using System.Text.Json;
-using Bit.Core.Entities;
+﻿using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Scim.Commands.Groups;
-using Bit.Scim.Commands.Users;
 using Bit.Scim.Context;
 using Bit.Scim.Models;
 using Bit.Scim.Queries.Groups;
-using Bit.Scim.Queries.Users;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -45,8 +42,19 @@ namespace Bit.Scim.Controllers.v2
         [HttpGet("{id}")]
         public async Task<IActionResult> Get(Guid organizationId, Guid id)
         {
-            var result = await _mediator.Send(new GetGroupQuery(organizationId, id));
-            return StatusCode((int)result.StatusCode, result.Data);
+            try
+            {
+                var scimGroupResponseModel = await _mediator.Send(new GetGroupQuery(organizationId, id));
+                return Ok(scimGroupResponseModel);
+            }
+            catch (NotFoundException ex)
+            {
+                return NotFound(new ScimErrorResponseModel
+                {
+                    Status = 404,
+                    Detail = ex.Message
+                });
+            }
         }
 
         [HttpGet("")]
@@ -56,53 +64,81 @@ namespace Bit.Scim.Controllers.v2
             [FromQuery] int? count,
             [FromQuery] int? startIndex)
         {
-            var result = await _mediator.Send(new GetGroupsListQuery(organizationId, filter, count, startIndex));
-            return StatusCode((int)result.StatusCode, result.Data);
+            var scimListResponseModel = await _mediator.Send(new GetGroupsListQuery(organizationId, filter, count, startIndex));
+            return Ok(scimListResponseModel);
         }
 
         [HttpPost("")]
         public async Task<IActionResult> Post(Guid organizationId, [FromBody] ScimGroupRequestModel model)
         {
-            var result = await _mediator.Send(new PostGroupCommand(organizationId, model));
-            if (!result.Success)
+            try
             {
-                return StatusCode((int)result.StatusCode);
+                var group = await _mediator.Send(new PostGroupCommand(organizationId, model));
+                var scimGroupResponseModel = new ScimGroupResponseModel(group);
+                return new CreatedResult(Url.Action(nameof(Get), new { group.OrganizationId, group.Id }), scimGroupResponseModel);
             }
-
-            var group = result.Data;
-            var response = new ScimGroupResponseModel(group);
-            return new CreatedResult(Url.Action(nameof(Get), new { group.OrganizationId, group.Id }), response);
+            catch (BadRequestException)
+            {
+                return BadRequest();
+            }
+            catch (ConflictException)
+            {
+                return Conflict();
+            }
         }
 
         [HttpPut("{id}")]
         public async Task<IActionResult> Put(Guid organizationId, Guid id, [FromBody] ScimGroupRequestModel model)
         {
-            var result = await _mediator.Send(new PutGroupCommand(organizationId, id, model));
-            return StatusCode((int)result.StatusCode, result.Data);
+            try
+            {
+                var scimGroupResponseModel = await _mediator.Send(new PutGroupCommand(organizationId, id, model));
+                return Ok(scimGroupResponseModel);
+            }
+            catch (NotFoundException ex)
+            {
+                return NotFound(new ScimErrorResponseModel
+                {
+                    Status = 404,
+                    Detail = ex.Message
+                });
+            }
         }
 
         [HttpPatch("{id}")]
         public async Task<IActionResult> Patch(Guid organizationId, Guid id, [FromBody] ScimPatchModel model)
         {
-            var result = await _mediator.Send(new PatchGroupCommand(organizationId, id, model));
-            if (!result.Success)
+            try
             {
-                return StatusCode((int)result.StatusCode, result.Data);
+                await _mediator.Send(new PatchGroupCommand(organizationId, id, model));
+                return new NoContentResult();
             }
-
-            return new NoContentResult();
+            catch (NotFoundException ex)
+            {
+                return NotFound(new ScimErrorResponseModel
+                {
+                    Status = 404,
+                    Detail = ex.Message
+                });
+            }
         }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid organizationId, Guid id)
         {
-            var result = await _mediator.Send(new DeleteGroupCommand(organizationId, id));
-            if (!result.Success)
+            try
             {
-                return StatusCode((int)result.StatusCode, result.Data);
+                await _mediator.Send(new DeleteGroupCommand(organizationId, id));
+                return new NoContentResult();
             }
-
-            return new NoContentResult();
+            catch (NotFoundException ex)
+            {
+                return NotFound(new ScimErrorResponseModel
+                {
+                    Status = 404,
+                    Detail = ex.Message
+                });
+            }
         }
     }
 }

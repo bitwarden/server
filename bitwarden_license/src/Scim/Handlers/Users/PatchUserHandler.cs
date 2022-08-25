@@ -1,14 +1,13 @@
-﻿using System.Net;
-using Bit.Core.Enums;
+﻿using Bit.Core.Enums;
+using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Scim.Commands.Users;
-using Bit.Scim.Models;
 using MediatR;
 
 namespace Bit.Scim.Handlers.Users
 {
-    public class PatchUserHandler : IRequestHandler<PatchUserCommand, RequestResult>
+    public class PatchUserHandler : IRequestHandler<PatchUserCommand>
     {
         private readonly IUserService _userService;
         private readonly IOrganizationUserRepository _organizationUserRepository;
@@ -27,16 +26,12 @@ namespace Bit.Scim.Handlers.Users
             _logger = logger;
         }
 
-        public async Task<RequestResult> Handle(PatchUserCommand request, CancellationToken cancellationToken)
+        public async Task<Unit> Handle(PatchUserCommand request, CancellationToken cancellationToken)
         {
             var orgUser = await _organizationUserRepository.GetByIdAsync(request.Id);
             if (orgUser == null || orgUser.OrganizationId != request.OrganizationId)
             {
-                return new RequestResult(false, HttpStatusCode.NotFound, new ScimErrorResponseModel
-                {
-                    Status = 404,
-                    Detail = "User not found."
-                });
+                throw new NotFoundException("User not found.");
             }
 
             var operationHandled = false;
@@ -74,7 +69,7 @@ namespace Bit.Scim.Handlers.Users
                     string.Join(", ", request.Model.Operations.Select(o => $"{o.Op}:{o.Path}")));
             }
 
-            return new RequestResult();
+            return Unit.Value;
         }
 
         private async Task<bool> HandleActiveOperationAsync(Core.Entities.OrganizationUser orgUser, bool active)

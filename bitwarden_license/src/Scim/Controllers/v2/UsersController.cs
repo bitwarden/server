@@ -1,4 +1,5 @@
-﻿using Bit.Core.Repositories;
+﻿using Bit.Core.Exceptions;
+using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Scim.Commands.Users;
 using Bit.Scim.Context;
@@ -47,8 +48,19 @@ namespace Bit.Scim.Controllers.v2
         [HttpGet("{id}")]
         public async Task<IActionResult> Get(Guid organizationId, Guid id)
         {
-            var result = await _mediator.Send(new GetUserQuery(organizationId, id));
-            return StatusCode((int)result.StatusCode, result.Data);
+            try
+            {
+                var scimUserResponseModel = await _mediator.Send(new GetUserQuery(organizationId, id));
+                return Ok(scimUserResponseModel);
+            }
+            catch (NotFoundException ex)
+            {
+                return NotFound(new ScimErrorResponseModel
+                {
+                    Status = 404,
+                    Detail = ex.Message
+                });
+            }
         }
 
         [HttpGet("")]
@@ -58,53 +70,82 @@ namespace Bit.Scim.Controllers.v2
             [FromQuery] int? count,
             [FromQuery] int? startIndex)
         {
-            var result = await _mediator.Send(new GetUsersListQuery(organizationId, filter, count, startIndex));
-            return StatusCode((int)result.StatusCode, result.Data);
+            var scimListResponseModel = await _mediator.Send(new GetUsersListQuery(organizationId, filter, count, startIndex));
+            return Ok(scimListResponseModel);
         }
 
         [HttpPost("")]
         public async Task<IActionResult> Post(Guid organizationId, [FromBody] ScimUserRequestModel model)
         {
-            var result = await _mediator.Send(new PostUserCommand(organizationId, model));
-            if (!result.Success)
+            try
             {
-                return StatusCode((int)result.StatusCode);
-            }
+                var orgUser = await _mediator.Send(new PostUserCommand(organizationId, model));
+                var scimUserResponseModel = new ScimUserResponseModel(orgUser);
+                return new CreatedResult(Url.Action(nameof(Get), new { orgUser.OrganizationId, orgUser.Id }), scimUserResponseModel);
 
-            var orgUser = result.Data;
-            var response = new ScimUserResponseModel(orgUser);
-            return new CreatedResult(Url.Action(nameof(Get), new { orgUser.OrganizationId, orgUser.Id }), response);
+            }
+            catch (BadRequestException)
+            {
+                return BadRequest();
+            }
+            catch (ConflictException)
+            {
+                return Conflict();
+            }
         }
 
         [HttpPut("{id}")]
         public async Task<IActionResult> Put(Guid organizationId, Guid id, [FromBody] ScimUserRequestModel model)
         {
-            var result = await _mediator.Send(new PutUserCommand(organizationId, id, model));
-            return StatusCode((int)result.StatusCode, result.Data);
+            try
+            {
+                var scimUserResponseModel = await _mediator.Send(new PutUserCommand(organizationId, id, model));
+                return Ok(scimUserResponseModel);
+            }
+            catch (NotFoundException ex)
+            {
+                return NotFound(new ScimErrorResponseModel
+                {
+                    Status = 404,
+                    Detail = ex.Message
+                });
+            }
         }
 
         [HttpPatch("{id}")]
         public async Task<IActionResult> Patch(Guid organizationId, Guid id, [FromBody] ScimPatchModel model)
         {
-            var result = await _mediator.Send(new PatchUserCommand(organizationId, id, model));
-            if (!result.Success)
+            try
             {
-                return StatusCode((int)result.StatusCode, result.Data);
+                await _mediator.Send(new PatchUserCommand(organizationId, id, model));
+                return new NoContentResult();
             }
-
-            return new NoContentResult();
+            catch (NotFoundException ex)
+            {
+                return NotFound(new ScimErrorResponseModel
+                {
+                    Status = 404,
+                    Detail = ex.Message
+                });
+            }
         }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid organizationId, Guid id, [FromBody] ScimUserRequestModel model)
         {
-            var result = await _mediator.Send(new DeleteUserCommand(organizationId, id, model));
-            if (!result.Success)
+            try
             {
-                return StatusCode((int)result.StatusCode, result.Data);
+                await _mediator.Send(new DeleteUserCommand(organizationId, id, model));
+                return new NoContentResult();
             }
-
-            return new NoContentResult();
+            catch (NotFoundException)
+            {
+                return NotFound(new ScimErrorResponseModel
+                {
+                    Status = 404,
+                    Detail = "User not found."
+                });
+            }
         }
     }
 }
