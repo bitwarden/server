@@ -6,6 +6,7 @@ using Bit.Scim.Context;
 using Bit.Scim.Utilities;
 using Bit.SharedWeb.Utilities;
 using IdentityModel;
+using MediatR;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Stripe;
 
@@ -75,6 +76,8 @@ namespace Bit.Scim
                 config.Filters.Add(new LoggingExceptionHandlerFilterAttribute());
             });
             services.Configure<RouteOptions>(options => options.LowercaseUrls = true);
+
+            services.AddMediatR(AppDomain.CurrentDomain.GetAssemblies());
         }
 
         public void Configure(

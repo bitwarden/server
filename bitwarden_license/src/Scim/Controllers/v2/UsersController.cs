@@ -1,10 +1,10 @@
-﻿using Bit.Core.Enums;
-using Bit.Core.Models.Data;
-using Bit.Core.Repositories;
+﻿using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Utilities;
+using Bit.Scim.Commands.Users;
 using Bit.Scim.Context;
 using Bit.Scim.Models;
+using Bit.Scim.Queries.Users;
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
@@ -22,6 +22,7 @@ namespace Bit.Scim.Controllers.v2
         private readonly IScimContext _scimContext;
         private readonly ScimSettings _scimSettings;
         private readonly ILogger<UsersController> _logger;
+        private readonly IMediator _mediator;
 
         public UsersController(
             IUserService userService,
@@ -30,7 +31,8 @@ namespace Bit.Scim.Controllers.v2
             IOrganizationService organizationService,
             IScimContext scimContext,
             IOptions<ScimSettings> scimSettings,
-            ILogger<UsersController> logger)
+            ILogger<UsersController> logger,
+            IMediator mediator)
         {
             _userService = userService;
             _userRepository = userRepository;
@@ -39,21 +41,14 @@ namespace Bit.Scim.Controllers.v2
             _scimContext = scimContext;
             _scimSettings = scimSettings?.Value;
             _logger = logger;
+            _mediator = mediator;
         }
 
         [HttpGet("{id}")]
         public async Task<IActionResult> Get(Guid organizationId, Guid id)
         {
-            var orgUser = await _organizationUserRepository.GetDetailsByIdAsync(id);
-            if (orgUser == null || orgUser.OrganizationId != organizationId)
-            {
-                return new NotFoundObjectResult(new ScimErrorResponseModel
-                {
-                    Status = 404,
-                    Detail = "User not found."
-                });
-            }
-            return new ObjectResult(new ScimUserResponseModel(orgUser));
+            var result = await _mediator.Send(new GetUserQuery(organizationId, id));
+            return StatusCode((int)result.StatusCode, result.Data);
         }
 
         [HttpGet("")]
@@ -63,122 +58,20 @@ namespace Bit.Scim.Controllers.v2
             [FromQuery] int? count,
             [FromQuery] int? startIndex)
         {
-            string emailFilter = null;
-            string usernameFilter = null;
-            string externalIdFilter = null;
-            if (!string.IsNullOrWhiteSpace(filter))
-            {
-                if (filter.StartsWith("userName eq "))
-                {
-                    usernameFilter = filter.Substring(12).Trim('"').ToLowerInvariant();
-                    if (usernameFilter.Contains("@"))
-                    {
-                        emailFilter = usernameFilter;
-                    }
-                }
-                else if (filter.StartsWith("externalId eq "))
-                {
-                    externalIdFilter = filter.Substring(14).Trim('"');
-                }
-            }
-
-            var userList = new List<ScimUserResponseModel> { };
-            var orgUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(organizationId);
-            var totalResults = 0;
-            if (!string.IsNullOrWhiteSpace(emailFilter))
-            {
-                var orgUser = orgUsers.FirstOrDefault(ou => ou.Email.ToLowerInvariant() == emailFilter);
-                if (orgUser != null)
-                {
-                    userList.Add(new ScimUserResponseModel(orgUser));
-                }
-                totalResults = userList.Count;
-            }
-            else if (!string.IsNullOrWhiteSpace(externalIdFilter))
-            {
-                var orgUser = orgUsers.FirstOrDefault(ou => ou.ExternalId == externalIdFilter);
-                if (orgUser != null)
-                {
-                    userList.Add(new ScimUserResponseModel(orgUser));
-                }
-                totalResults = userList.Count;
-            }
-            else if (string.IsNullOrWhiteSpace(filter) && startIndex.HasValue && count.HasValue)
-            {
-                userList = orgUsers.OrderBy(ou => ou.Email)
-                    .Skip(startIndex.Value - 1)
-                    .Take(count.Value)
-                    .Select(ou => new ScimUserResponseModel(ou))
-                    .ToList();
-                totalResults = orgUsers.Count;
-            }
-
-            var result = new ScimListResponseModel<ScimUserResponseModel>
-            {
-                Resources = userList,
-                ItemsPerPage = count.GetValueOrDefault(userList.Count),
-                TotalResults = totalResults,
-                StartIndex = startIndex.GetValueOrDefault(1),
-            };
-            return new ObjectResult(result);
+            var result = await _mediator.Send(new GetUsersListQuery(organizationId, filter, count, startIndex));
+            return StatusCode((int)result.StatusCode, result.Data);
         }
 
         [HttpPost("")]
         public async Task<IActionResult> Post(Guid organizationId, [FromBody] ScimUserRequestModel model)
         {
-            var email = model.PrimaryEmail?.ToLowerInvariant();
-            if (string.IsNullOrWhiteSpace(email))
+            var result = await _mediator.Send(new PostUserCommand(organizationId, model));
+            if (!result.Success)
             {
-                switch (_scimContext.RequestScimProvider)
-                {
-                    case ScimProviderType.AzureAd:
-                        email = model.UserName?.ToLowerInvariant();
-                        break;
-                    default:
-                        email = model.WorkEmail?.ToLowerInvariant();
-                        if (string.IsNullOrWhiteSpace(email))
-                        {
-                            email = model.Emails?.FirstOrDefault()?.Value?.ToLowerInvariant();
-                        }
-                        break;
-                }
+                return StatusCode((int)result.StatusCode);
             }
 
-            if (string.IsNullOrWhiteSpace(email) || !model.Active)
-            {
-                return new BadRequestResult();
-            }
-
-            var orgUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(organizationId);
-            var orgUserByEmail = orgUsers.FirstOrDefault(ou => ou.Email?.ToLowerInvariant() == email);
-            if (orgUserByEmail != null)
-            {
-                return new ConflictResult();
-            }
-
-            string externalId = null;
-            if (!string.IsNullOrWhiteSpace(model.ExternalId))
-            {
-                externalId = model.ExternalId;
-            }
-            else if (!string.IsNullOrWhiteSpace(model.UserName))
-            {
-                externalId = model.UserName;
-            }
-            else
-            {
-                externalId = CoreHelpers.RandomString(15);
-            }
-
-            var orgUserByExternalId = orgUsers.FirstOrDefault(ou => ou.ExternalId == externalId);
-            if (orgUserByExternalId != null)
-            {
-                return new ConflictResult();
-            }
-
-            var invitedOrgUser = await _organizationService.InviteUserAsync(organizationId, null, email,
-                OrganizationUserType.User, false, externalId, new List<SelectionReadOnly>());
-            var orgUser = await _organizationUserRepository.GetDetailsByIdAsync(invitedOrgUser.Id);
+            var orgUser = result.Data;
             var response = new ScimUserResponseModel(orgUser);
             return new CreatedResult(Url.Action(nameof(Get), new { orgUser.OrganizationId, orgUser.Id }), response);
         }
@@ -186,76 +79,17 @@ namespace Bit.Scim.Controllers.v2
         [HttpPut("{id}")]
         public async Task<IActionResult> Put(Guid organizationId, Guid id, [FromBody] ScimUserRequestModel model)
         {
-            var orgUser = await _organizationUserRepository.GetByIdAsync(id);
-            if (orgUser == null || orgUser.OrganizationId != organizationId)
-            {
-                return new NotFoundObjectResult(new ScimErrorResponseModel
-                {
-                    Status = 404,
-                    Detail = "User not found."
-                });
-            }
-
-            if (model.Active && orgUser.Status == OrganizationUserStatusType.Revoked)
-            {
-                await _organizationService.RestoreUserAsync(orgUser, null, _userService);
-            }
-            else if (!model.Active && orgUser.Status != OrganizationUserStatusType.Revoked)
-            {
-                await _organizationService.RevokeUserAsync(orgUser, null);
-            }
-
-            // Have to get full details object for response model
-            var orgUserDetails = await _organizationUserRepository.GetDetailsByIdAsync(id);
-            return new ObjectResult(new ScimUserResponseModel(orgUserDetails));
+            var result = await _mediator.Send(new PutUserCommand(organizationId, id, model));
+            return StatusCode((int)result.StatusCode, result.Data);
         }
 
         [HttpPatch("{id}")]
         public async Task<IActionResult> Patch(Guid organizationId, Guid id, [FromBody] ScimPatchModel model)
         {
-            var orgUser = await _organizationUserRepository.GetByIdAsync(id);
-            if (orgUser == null || orgUser.OrganizationId != organizationId)
+            var result = await _mediator.Send(new PatchUserCommand(organizationId, id, model));
+            if (!result.Success)
             {
-                return new NotFoundObjectResult(new ScimErrorResponseModel
-                {
-                    Status = 404,
-                    Detail = "User not found."
-                });
-            }
-
-            var operationHandled = false;
-            foreach (var operation in model.Operations)
-            {
-                // Replace operations
-                if (operation.Op?.ToLowerInvariant() == "replace")
-                {
-                    // Active from path
-                    if (operation.Path?.ToLowerInvariant() == "active")
-                    {
-                        var active = operation.Value.ToString()?.ToLowerInvariant();
-                        var handled = await HandleActiveOperationAsync(orgUser, active == "true");
-                        if (!operationHandled)
-                        {
-                            operationHandled = handled;
-                        }
-                    }
-                    // Active from value object
-                    else if (string.IsNullOrWhiteSpace(operation.Path) &&
-                        operation.Value.TryGetProperty("active", out var activeProperty))
-                    {
-                        var handled = await HandleActiveOperationAsync(orgUser, activeProperty.GetBoolean());
-                        if (!operationHandled)
-                        {
-                            operationHandled = handled;
-                        }
-                    }
-                }
-            }
-
-            if (!operationHandled)
-            {
-                _logger.LogWarning("User patch operation not handled: {operation} : ",
-                    string.Join(", ", model.Operations.Select(o => $"{o.Op}:{o.Path}")));
+                return StatusCode((int)result.StatusCode, result.Data);
             }
 
             return new NoContentResult();
@@ -264,32 +98,13 @@ namespace Bit.Scim.Controllers.v2
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid organizationId, Guid id, [FromBody] ScimUserRequestModel model)
         {
-            var orgUser = await _organizationUserRepository.GetByIdAsync(id);
-            if (orgUser == null || orgUser.OrganizationId != organizationId)
+            var result = await _mediator.Send(new DeleteUserCommand(organizationId, id, model));
+            if (!result.Success)
             {
-                return new NotFoundObjectResult(new ScimErrorResponseModel
-                {
-                    Status = 404,
-                    Detail = "User not found."
-                });
+                return StatusCode((int)result.StatusCode, result.Data);
             }
-            await _organizationService.DeleteUserAsync(organizationId, id, null);
-            return new NoContentResult();
-        }
 
-        private async Task<bool> HandleActiveOperationAsync(Core.Entities.OrganizationUser orgUser, bool active)
-        {
-            if (active && orgUser.Status == OrganizationUserStatusType.Revoked)
-            {
-                await _organizationService.RestoreUserAsync(orgUser, null, _userService);
-                return true;
-            }
-            else if (!active && orgUser.Status != OrganizationUserStatusType.Revoked)
-            {
-                await _organizationService.RevokeUserAsync(orgUser, null);
-                return true;
-            }
-            return false;
+            return new NoContentResult();
         }
     }
 }
