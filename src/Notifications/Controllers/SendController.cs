@@ -25,7 +25,7 @@ namespace Bit.Notifications
                 var notificationJson = await reader.ReadToEndAsync();
                 if (!string.IsNullOrWhiteSpace(notificationJson))
                 {
-                    await HubHelpers.SendNotificationToHubAsync(notificationJson, _hubContext);
+                    await HubHelpers.SendNotificationToHubAsync(notificationJson, _hubContext, null);
                 }
             }
         }
