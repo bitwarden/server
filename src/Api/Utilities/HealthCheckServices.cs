@@ -7,17 +7,16 @@ namespace Bit.Api.Utilities;
 [ExcludeFromCodeCoverage]
 internal static class HealthCheckServices
 {
-    public static IServiceCollection ConfigureHealthCheckServices(this IServiceCollection services,
+    public static void ConfigureHealthCheckServices(this IServiceCollection services,
         GlobalSettings globalSettings, IHostEnvironment environment)
     {
-        var connectionString = GetConnectionString(globalSettings);
+        var heathCheckInitializer = services.AddHealthChecks();
 
-        services.AddHealthChecks();
-        
-        // if(globalSettings.DatabaseProvider)
-                
-
-        return services;
+        if (!string.IsNullOrEmpty(GetConnectionString(globalSettings)))
+        {
+            //add custom db health check
+            heathCheckInitializer.AddDatabaseCheck(globalSettings);
+        }
     }
 
     private static string GetConnectionString(GlobalSettings globalSettings)
@@ -33,5 +32,17 @@ internal static class HealthCheckServices
         };
     }
 
-    // private static IHealthChecksBuilder AddDatabaseCheck(this IHealthChecksBuilder healthChecksBuilder, )
+    private static IHealthChecksBuilder AddDatabaseCheck(this IHealthChecksBuilder healthChecksBuilder, 
+        GlobalSettings globalSettings)
+    {
+        var connectionString = GetConnectionString(globalSettings);
+        var selectedDatabaseProvider = globalSettings.DatabaseProvider.ToLowerInvariant();
+
+        return selectedDatabaseProvider switch
+        {
+            "postgres" or "postgresql" => healthChecksBuilder.AddNpgSql(connectionString),
+            "mysql" or "mariadb" => healthChecksBuilder.AddMySql(connectionString),
+            "sqlserver" => healthChecksBuilder.AddSqlServer(connectionString)
+        };
+    }
 }
