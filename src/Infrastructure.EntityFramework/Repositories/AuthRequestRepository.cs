@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.Models;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories
@@ -10,7 +11,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
         public AuthRequestRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
             : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.AuthRequests)
         { }
-        public async Task<int> DeleteExpiredAsync()
+        public async Task<int> DeleteExpiredAsync() 
         {
             using (var scope = ServiceScopeFactory.CreateScope())
             {
