@@ -59,6 +59,11 @@ namespace Bit.Admin.Jobs
                 .StartNow()
                 .WithCronSchedule("0 0 0 * * ?")
                 .Build();
+            var everyFifteenMinutesTrigger = TriggerBuilder.Create()
+                .WithIdentity("everyFifteenMinutesTrigger")
+                .StartNow()
+                .WithCronSchedule("0 */15 * ? * *")
+                .Build();
 
             var jobs = new List<Tuple<Type, ITrigger>>
             {
@@ -67,7 +72,8 @@ namespace Bit.Admin.Jobs
                 new Tuple<Type, ITrigger>(typeof(DatabaseUpdateStatisticsJob), everySaturdayAtMidnightTrigger),
                 new Tuple<Type, ITrigger>(typeof(DatabaseRebuildlIndexesJob), everySundayAtMidnightTrigger),
                 new Tuple<Type, ITrigger>(typeof(DeleteCiphersJob), everyDayAtMidnightUtc),
-                new Tuple<Type, ITrigger>(typeof(DatabaseExpiredSponsorshipsJob), everyMondayAtMidnightTrigger)
+                new Tuple<Type, ITrigger>(typeof(DatabaseExpiredSponsorshipsJob), everyMondayAtMidnightTrigger),
+                new Tuple<Type, ITrigger>(typeof(DeleteAuthRequestsJob), everyFifteenMinutesTrigger),
             };
 
             if (!_globalSettings.SelfHosted)
@@ -85,12 +91,13 @@ namespace Bit.Admin.Jobs
             {
                 services.AddTransient<AliveJob>();
             }
+            services.AddTransient<DeleteSendsJob>();
+            services.AddTransient<DatabaseExpiredGrantsJob>();
             services.AddTransient<DatabaseUpdateStatisticsJob>();
             services.AddTransient<DatabaseRebuildlIndexesJob>();
-            services.AddTransient<DatabaseExpiredGrantsJob>();
-            services.AddTransient<DatabaseExpiredSponsorshipsJob>();
-            services.AddTransient<DeleteSendsJob>();
             services.AddTransient<DeleteCiphersJob>();
+            services.AddTransient<DatabaseExpiredSponsorshipsJob>();
+            services.AddTransient<DeleteAuthRequestsJob>();
         }
     }
 }
