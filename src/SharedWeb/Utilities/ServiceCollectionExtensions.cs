@@ -2,7 +2,6 @@
 using System.Security.Claims;
 using System.Security.Cryptography.X509Certificates;
 using AspNetCoreRateLimit;
-using AspNetCoreRateLimit.Redis;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.HostedServices;
@@ -619,7 +618,7 @@ namespace Bit.SharedWeb.Utilities
                 // and they add unnecessary Redis network delays checking for policies that don't exist
                 services.AddSingleton<IIpPolicyStore, MemoryCacheIpPolicyStore>();
                 services.AddSingleton<IClientPolicyStore, MemoryCacheClientPolicyStore>();
-                
+
                 services.AddSingleton<IProcessingStrategy, CustomRedisProcessingStrategy>(); // Requires a registered IConnectionMultiplexer 
             }
         }

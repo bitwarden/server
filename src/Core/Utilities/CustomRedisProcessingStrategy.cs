@@ -31,7 +31,7 @@ public class CustomRedisProcessingStrategy : ProcessingStrategy
     /// Length of the sliding window to track Redis timeout exceptions.
     /// </summary>
     private static readonly TimeSpan _redisTimeoutWindow = TimeSpan.FromSeconds(30);
-    
+
     public CustomRedisProcessingStrategy(
         IConnectionMultiplexer connectionMultiplexer,
         IRateLimitConfiguration config,
@@ -84,7 +84,8 @@ public class CustomRedisProcessingStrategy : ProcessingStrategy
             // If this is the first timeout we've had, start a new counter and sliding window 
             timeoutCounter ??= new TimeoutCounter()
             {
-                Count = 0, ExpiresAt = DateTime.UtcNow.Add(_redisTimeoutWindow)
+                Count = 0,
+                ExpiresAt = DateTime.UtcNow.Add(_redisTimeoutWindow)
             };
             timeoutCounter.Count++;
 
