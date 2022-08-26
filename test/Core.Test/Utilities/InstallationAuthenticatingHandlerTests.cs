@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Bit.Core.Utilities;
@@ -216,7 +216,7 @@ namespace Bit.Core.Test.Utilities
                 timesCalled++;
                 return Task.FromResult(new HttpResponseMessage
                 {
-                    Content = JsonContent.Create(new 
+                    Content = JsonContent.Create(new
                     {
                         access_token = "test_access_token",
                         expires_in = TimeSpan.FromMinutes(9).TotalSeconds,
