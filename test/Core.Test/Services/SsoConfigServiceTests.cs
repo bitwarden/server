@@ -11,9 +11,10 @@ using Xunit;
 
 namespace Bit.Core.Test.Services
 {
+    [SutProviderCustomize]
     public class SsoConfigServiceTests
     {
-        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        [Theory, BitAutoData]
         public async Task SaveAsync_ExistingItem_UpdatesRevisionDateOnly(SutProvider<SsoConfigService> sutProvider,
             Organization organization)
         {
@@ -41,7 +42,7 @@ namespace Bit.Core.Test.Services
             Assert.True(ssoConfig.RevisionDate - utcNow < TimeSpan.FromSeconds(1));
         }
 
-        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        [Theory, BitAutoData]
         public async Task SaveAsync_NewItem_UpdatesCreationAndRevisionDate(SutProvider<SsoConfigService> sutProvider,
             Organization organization)
         {
@@ -69,7 +70,7 @@ namespace Bit.Core.Test.Services
             Assert.True(ssoConfig.RevisionDate - utcNow < TimeSpan.FromSeconds(1));
         }
 
-        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        [Theory, BitAutoData]
         public async Task SaveAsync_PreventDisablingKeyConnector(SutProvider<SsoConfigService> sutProvider,
             Organization organization)
         {
@@ -113,7 +114,7 @@ namespace Bit.Core.Test.Services
                 .UpsertAsync(default);
         }
 
-        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        [Theory, BitAutoData]
         public async Task SaveAsync_AllowDisablingKeyConnectorWhenNoUserIsUsingIt(
             SutProvider<SsoConfigService> sutProvider, Organization organization)
         {
@@ -151,7 +152,7 @@ namespace Bit.Core.Test.Services
             await sutProvider.Sut.SaveAsync(newSsoConfig, organization);
         }
 
-        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        [Theory, BitAutoData]
         public async Task SaveAsync_KeyConnector_SingleOrgNotEnabled_Throws(SutProvider<SsoConfigService> sutProvider,
             Organization organization)
         {
@@ -179,7 +180,7 @@ namespace Bit.Core.Test.Services
                 .UpsertAsync(default);
         }
 
-        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        [Theory, BitAutoData]
         public async Task SaveAsync_KeyConnector_SsoPolicyNotEnabled_Throws(SutProvider<SsoConfigService> sutProvider,
             Organization organization)
         {
@@ -213,7 +214,7 @@ namespace Bit.Core.Test.Services
                 .UpsertAsync(default);
         }
 
-        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        [Theory, BitAutoData]
         public async Task SaveAsync_KeyConnector_SsoConfigNotEnabled_Throws(SutProvider<SsoConfigService> sutProvider,
             Organization organization)
         {
@@ -247,7 +248,7 @@ namespace Bit.Core.Test.Services
                 .UpsertAsync(default);
         }
 
-        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        [Theory, BitAutoData]
         public async Task SaveAsync_KeyConnector_KeyConnectorAbilityNotEnabled_Throws(SutProvider<SsoConfigService> sutProvider,
             Organization organization)
         {
@@ -282,7 +283,7 @@ namespace Bit.Core.Test.Services
                 .UpsertAsync(default);
         }
 
-        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        [Theory, BitAutoData]
         public async Task SaveAsync_KeyConnector_Success(SutProvider<SsoConfigService> sutProvider,
             Organization organization)
         {

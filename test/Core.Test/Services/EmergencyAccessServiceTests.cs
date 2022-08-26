@@ -11,9 +11,10 @@ using Xunit;
 
 namespace Bit.Core.Test.Services
 {
+    [SutProviderCustomize]
     public class EmergencyAccessServiceTests
     {
-        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        [Theory, BitAutoData]
         public async Task SaveAsync_PremiumCannotUpdate(
             SutProvider<EmergencyAccessService> sutProvider, User savingUser)
         {
@@ -33,7 +34,7 @@ namespace Bit.Core.Test.Services
             await sutProvider.GetDependency<IEmergencyAccessRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default);
         }
 
-        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        [Theory, BitAutoData]
         public async Task InviteAsync_UserWithKeyConnectorCannotUseTakeover(
             SutProvider<EmergencyAccessService> sutProvider, User invitingUser, string email, int waitTime)
         {
@@ -47,7 +48,7 @@ namespace Bit.Core.Test.Services
             await sutProvider.GetDependency<IEmergencyAccessRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default);
         }
 
-        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        [Theory, BitAutoData]
         public async Task ConfirmUserAsync_UserWithKeyConnectorCannotUseTakeover(
             SutProvider<EmergencyAccessService> sutProvider, User confirmingUser, string key)
         {
@@ -69,7 +70,7 @@ namespace Bit.Core.Test.Services
             await sutProvider.GetDependency<IEmergencyAccessRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default);
         }
 
-        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        [Theory, BitAutoData]
         public async Task SaveAsync_UserWithKeyConnectorCannotUseTakeover(
             SutProvider<EmergencyAccessService> sutProvider, User savingUser)
         {
@@ -91,7 +92,7 @@ namespace Bit.Core.Test.Services
             await sutProvider.GetDependency<IEmergencyAccessRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default);
         }
 
-        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        [Theory, BitAutoData]
         public async Task InitiateAsync_UserWithKeyConnectorCannotUseTakeover(
             SutProvider<EmergencyAccessService> sutProvider, User initiatingUser, User grantor)
         {
@@ -114,7 +115,7 @@ namespace Bit.Core.Test.Services
             await sutProvider.GetDependency<IEmergencyAccessRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default);
         }
 
-        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        [Theory, BitAutoData]
         public async Task TakeoverAsync_UserWithKeyConnectorCannotUseTakeover(
             SutProvider<EmergencyAccessService> sutProvider, User requestingUser, User grantor)
         {
@@ -136,7 +137,7 @@ namespace Bit.Core.Test.Services
             Assert.Contains("You cannot takeover an account that is using Key Connector", exception.Message);
         }
 
-        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        [Theory, BitAutoData]
         public async Task PasswordAsync_Disables_2FA_Providers_And_Unknown_Device_Verification_On_The_Grantor(
             SutProvider<EmergencyAccessService> sutProvider, User requestingUser, User grantor)
         {

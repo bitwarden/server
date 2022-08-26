@@ -14,6 +14,7 @@ using PaymentMethodType = Bit.Core.Enums.PaymentMethodType;
 
 namespace Bit.Core.Test.Services
 {
+    [SutProviderCustomize]
     public class StripePaymentServiceTests
     {
         [Theory]
@@ -32,7 +33,7 @@ namespace Bit.Core.Test.Services
             Assert.Equal("Payment method is not supported at this time.", exception.Message);
         }
 
-        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        [Theory, BitAutoData]
         public async void PurchaseOrganizationAsync_Stripe(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
         {
             var plan = StaticStore.Plans.First(p => p.Type == PlanType.EnterpriseAnnually);
@@ -81,7 +82,7 @@ namespace Bit.Core.Test.Services
             ));
         }
 
-        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        [Theory, BitAutoData]
         public async void PurchaseOrganizationAsync_Stripe_PM(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
         {
             var plan = StaticStore.Plans.First(p => p.Type == PlanType.EnterpriseAnnually);
@@ -131,7 +132,7 @@ namespace Bit.Core.Test.Services
             ));
         }
 
-        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        [Theory, BitAutoData]
         public async void PurchaseOrganizationAsync_Stripe_TaxRate(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
         {
             var plan = StaticStore.Plans.First(p => p.Type == PlanType.EnterpriseAnnually);
@@ -160,7 +161,7 @@ namespace Bit.Core.Test.Services
             ));
         }
 
-        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        [Theory, BitAutoData]
         public async void PurchaseOrganizationAsync_Stripe_Declined(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
         {
             var plan = StaticStore.Plans.First(p => p.Type == PlanType.EnterpriseAnnually);
@@ -193,7 +194,7 @@ namespace Bit.Core.Test.Services
             await stripeAdapter.Received(1).CustomerDeleteAsync("C-1");
         }
 
-        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        [Theory, BitAutoData]
         public async void PurchaseOrganizationAsync_Stripe_RequiresAction(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
         {
             var plan = StaticStore.Plans.First(p => p.Type == PlanType.EnterpriseAnnually);
@@ -224,7 +225,7 @@ namespace Bit.Core.Test.Services
             Assert.False(organization.Enabled);
         }
 
-        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        [Theory, BitAutoData]
         public async void PurchaseOrganizationAsync_Paypal(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
         {
             var plan = StaticStore.Plans.First(p => p.Type == PlanType.EnterpriseAnnually);
@@ -283,7 +284,7 @@ namespace Bit.Core.Test.Services
             ));
         }
 
-        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        [Theory, BitAutoData]
         public async void PurchaseOrganizationAsync_Paypal_FailedCreate(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
         {
             var plan = StaticStore.Plans.First(p => p.Type == PlanType.EnterpriseAnnually);
@@ -300,7 +301,7 @@ namespace Bit.Core.Test.Services
             Assert.Equal("Failed to create PayPal customer record.", exception.Message);
         }
 
-        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        [Theory, BitAutoData]
         public async void PurchaseOrganizationAsync_PayPal_Declined(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
         {
             var plan = StaticStore.Plans.First(p => p.Type == PlanType.EnterpriseAnnually);
@@ -344,7 +345,7 @@ namespace Bit.Core.Test.Services
             await braintreeGateway.Customer.Received(1).DeleteAsync("Braintree-Id");
         }
 
-        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        [Theory, BitAutoData]
         public async void UpgradeFreeOrganizationAsync_Success(SutProvider<StripePaymentService> sutProvider,
             Organization organization, TaxInfo taxInfo)
         {

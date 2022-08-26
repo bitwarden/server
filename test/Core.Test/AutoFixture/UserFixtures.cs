@@ -45,6 +45,11 @@ namespace Bit.Core.Test.AutoFixture.UserFixtures
         }
     }
 
+    internal class UserCustomizeAttribute : BitCustomizeAttribute
+    {
+        public override ICustomization GetCustomization() => new UserFixture();
+    }
+
     internal class UserFixture : ICustomization
     {
         public virtual void Customize(IFixture fixture)

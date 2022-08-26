@@ -285,7 +285,7 @@ namespace Bit.Core.Test.Utilities
             Assert.Equal("Contents of embeddedResource.txt\n", fileContents.Replace("\r\n", "\n"));
         }
 
-        [Theory, CustomAutoData(typeof(UserFixture))]
+        [Theory, BitAutoData, UserCustomize]
         public void BuildIdentityClaims_BaseClaims_Success(User user, bool isPremium)
         {
             var expected = new Dictionary<string, string>
@@ -307,7 +307,7 @@ namespace Bit.Core.Test.Utilities
             Assert.Equal(expected.Count, actual.Count);
         }
 
-        [Theory, CustomAutoData(typeof(UserFixture))]
+        [Theory, BitAutoData, UserCustomize]
         public void BuildIdentityClaims_NonCustomOrganizationUserType_Success(User user)
         {
             var fixture = new Fixture().WithAutoNSubstitutions();
@@ -323,7 +323,7 @@ namespace Bit.Core.Test.Utilities
             }
         }
 
-        [Theory, CustomAutoData(typeof(UserFixture))]
+        [Theory, BitAutoData, UserCustomize]
         public void BuildIdentityClaims_CustomOrganizationUserClaims_Success(User user, CurrentContentOrganization org)
         {
             var fixture = new Fixture().WithAutoNSubstitutions();
@@ -345,7 +345,7 @@ namespace Bit.Core.Test.Utilities
             }
         }
 
-        [Theory, CustomAutoData(typeof(UserFixture))]
+        [Theory, BitAutoData, UserCustomize]
         public void BuildIdentityClaims_ProviderClaims_Success(User user)
         {
             var fixture = new Fixture().WithAutoNSubstitutions();
