@@ -141,7 +141,8 @@ namespace Bit.Core.Test.AutoFixture.OrganizationFixtures
 
     internal class OrganizationCustomizeAttribute : BitCustomizeAttribute
     {
-        public override ICustomization GetCustomization() => new OrganizationCustomization();
+        public bool UseGroups { get; set; }
+        public override ICustomization GetCustomization() => new OrganizationCustomization() { UseGroups = UseGroups };
     }
 
     internal class PaidOrganizationAutoDataAttribute : CustomAutoDataAttribute
