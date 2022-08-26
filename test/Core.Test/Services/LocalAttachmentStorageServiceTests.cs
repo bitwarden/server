@@ -13,6 +13,7 @@ using Xunit;
 
 namespace Bit.Core.Test.Services
 {
+    [SutProviderCustomize]
     public class LocalAttachmentStorageServiceTests
     {
 
@@ -155,10 +156,14 @@ namespace Bit.Core.Test.Services
             }
         }
 
-        [Theory]
-        [InlineUserCipherAutoData]
-        [InlineOrganizationCipherAutoData]
-        public async Task CleanupAsync_Succes(Cipher cipher)
+        [Theory, BitAutoData]
+        [UserCipherCustomize]
+        public async Task UserCipher_CleanupAsync_Success(Cipher cipher) => await CleanupAsync_Success(cipher);
+        [Theory, BitAutoData]
+        [OrganizationCipherCustomize]
+        public async Task OrganizationCipher_CleanupAsync_Success(Cipher cipher) => await CleanupAsync_Success(cipher);
+
+        private async Task CleanupAsync_Success(Cipher cipher)
         {
             using (var tempDirectory = new TempDirectory())
             {
@@ -176,10 +181,14 @@ namespace Bit.Core.Test.Services
             }
         }
 
-        [Theory]
-        [InlineUserCipherAutoData]
-        [InlineOrganizationCipherAutoData]
-        public async Task DeleteAttachmentsForCipherAsync_Succes(Cipher cipher)
+        [Theory, BitAutoData]
+        [UserCipherCustomize]
+        public async Task UserCipher_DeleteAttachmentsForCipherAsync_Succes(Cipher cipher) => await DeleteAttachmentsForCipherAsync_Succes(cipher);
+        [Theory, BitAutoData]
+        [OrganizationCipherCustomize]
+        public async Task OrganizationCipher_DeleteAttachmentsForCipherAsync_Succes(Cipher cipher) => await DeleteAttachmentsForCipherAsync_Succes(cipher);
+
+        private async Task DeleteAttachmentsForCipherAsync_Succes(Cipher cipher)
         {
             using (var tempDirectory = new TempDirectory())
             {

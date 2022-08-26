@@ -139,20 +139,6 @@ namespace Bit.Core.Test.AutoFixture.CipherFixtures
         public override ICustomization GetCustomization() => new OrganizationCipher();
     }
 
-    internal class InlineUserCipherAutoDataAttribute : InlineCustomAutoDataAttribute
-    {
-        public InlineUserCipherAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
-            typeof(UserCipher) }, values)
-        { }
-    }
-
-    internal class InlineOrganizationCipherAutoDataAttribute : InlineCustomAutoDataAttribute
-    {
-        public InlineOrganizationCipherAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
-            typeof(OrganizationCipher) }, values)
-        { }
-    }
-
     internal class EfUserCipherAutoDataAttribute : CustomAutoDataAttribute
     {
         public EfUserCipherAutoDataAttribute() : base(new SutProviderCustomization(), new EfCipher())
