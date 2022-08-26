@@ -18,13 +18,13 @@ namespace Bit.Core.Test.Services
     public class StripePaymentServiceTests
     {
         [Theory]
-        [InlineCustomAutoData(new[] { typeof(SutProviderCustomization) }, PaymentMethodType.BitPay)]
-        [InlineCustomAutoData(new[] { typeof(SutProviderCustomization) }, PaymentMethodType.BitPay)]
-        [InlineCustomAutoData(new[] { typeof(SutProviderCustomization) }, PaymentMethodType.Credit)]
-        [InlineCustomAutoData(new[] { typeof(SutProviderCustomization) }, PaymentMethodType.WireTransfer)]
-        [InlineCustomAutoData(new[] { typeof(SutProviderCustomization) }, PaymentMethodType.AppleInApp)]
-        [InlineCustomAutoData(new[] { typeof(SutProviderCustomization) }, PaymentMethodType.GoogleInApp)]
-        [InlineCustomAutoData(new[] { typeof(SutProviderCustomization) }, PaymentMethodType.Check)]
+        [BitAutoData(PaymentMethodType.BitPay)]
+        [BitAutoData(PaymentMethodType.BitPay)]
+        [BitAutoData(PaymentMethodType.Credit)]
+        [BitAutoData(PaymentMethodType.WireTransfer)]
+        [BitAutoData(PaymentMethodType.AppleInApp)]
+        [BitAutoData(PaymentMethodType.GoogleInApp)]
+        [BitAutoData(PaymentMethodType.Check)]
         public async void PurchaseOrganizationAsync_Invalid(PaymentMethodType paymentMethodType, SutProvider<StripePaymentService> sutProvider)
         {
             var exception = await Assert.ThrowsAsync<GatewayException>(

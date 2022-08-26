@@ -358,8 +358,8 @@ namespace Bit.Core.Test.Services
         }
 
         [Theory]
-        [InlineCustomAutoData(new[] { typeof(SutProviderCustomization) }, false, true)]
-        [InlineCustomAutoData(new[] { typeof(SutProviderCustomization) }, true, false)]
+        [BitAutoData(false, true)]
+        [BitAutoData(true, false)]
         public async void HasPremiumFromOrganization_Returns_False_If_Org_Not_Eligible(bool orgEnabled, bool orgUsersGetPremium, SutProvider<UserService> sutProvider, User user, OrganizationUser orgUser, Organization organization)
         {
             orgUser.OrganizationId = organization.Id;

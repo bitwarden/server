@@ -12,11 +12,5 @@ namespace Bit.Test.Common.AutoFixture.Attributes
             new CustomAutoDataAttribute(iCustomizationTypes)
         })
         { }
-
-        public InlineCustomAutoDataAttribute(ICustomization[] customizations, params object[] values) : base(new DataAttribute[] {
-            new InlineDataAttribute(values),
-            new CustomAutoDataAttribute(customizations)
-        })
-        { }
     }
 }
