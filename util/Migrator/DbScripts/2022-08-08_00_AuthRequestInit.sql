@@ -186,3 +186,17 @@ BEGIN
         [Id] = @Id
 END
 GO
+
+IF OBJECT_ID('[dbo].[AuthRequest_DeleteIfExpired]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[AuthRequest_DeleteIfExpired]
+END
+GO
+
+CREATE PROCEDURE [dbo].[AuthRequest_DeleteIfExpired]
+AS
+BEGIN
+    SET NOCOUNT OFF
+    DELETE FROM [dbo].[AuthRequest] WHERE [CreationDate] < DATEADD(minute, -15, GETUTCDATE());
+END
+GO
