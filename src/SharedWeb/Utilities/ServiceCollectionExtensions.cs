@@ -615,7 +615,12 @@ namespace Bit.SharedWeb.Utilities
             }
             else
             {
-                services.AddRedisRateLimiting(); // Requires a registered IConnectionMultiplexer 
+                // Use memory stores for Ip and Client Policy stores as we don't currently use them
+                // and they add unnecessary Redis network delays checking for policies that don't exist
+                services.AddSingleton<IIpPolicyStore, MemoryCacheIpPolicyStore>();
+                services.AddSingleton<IClientPolicyStore, MemoryCacheClientPolicyStore>();
+                
+                services.AddSingleton<IProcessingStrategy, CustomRedisProcessingStrategy>(); // Requires a registered IConnectionMultiplexer 
             }
         }
 
@@ -636,7 +641,10 @@ namespace Bit.SharedWeb.Utilities
             // Register the IConnectionMultiplexer explicitly so it can be accessed via DI
             // (e.g. for the IP rate limiting store)
             services.AddSingleton<IConnectionMultiplexer>(
-                _ => ConnectionMultiplexer.Connect(globalSettings.Redis.ConnectionString));
+                _ => ConnectionMultiplexer.Connect(globalSettings.Redis.ConnectionString, options =>
+                {
+                    options.AbortOnConnectFail = false;
+                }));
 
             // Explicitly register IDistributedCache to re-use existing IConnectionMultiplexer 
             // to reduce the number of redundant connections to the Redis instance
