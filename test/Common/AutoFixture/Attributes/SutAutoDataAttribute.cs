@@ -6,11 +6,4 @@ namespace Bit.Test.Common.AutoFixture.Attributes
     {
         public override ICustomization GetCustomization() => new SutProviderCustomization();
     }
-
-    public class SutAutoDataAttribute : CustomAutoDataAttribute
-    {
-        public SutAutoDataAttribute(params Type[] iCustomizationTypes) : base(
-            iCustomizationTypes.Append(typeof(SutProviderCustomization)).ToArray())
-        { }
-    }
 }

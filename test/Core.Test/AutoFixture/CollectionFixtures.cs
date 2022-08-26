@@ -45,22 +45,8 @@ namespace Bit.Core.Test.AutoFixture.CollectionFixtures
         }
     }
 
-    internal class EfCollectionAutoDataAttribute : CustomAutoDataAttribute
+    internal class EfCollectionCustomize : BitCustomizeAttribute
     {
-        public EfCollectionAutoDataAttribute() : base(new SutProviderCustomization(), new EfCollection())
-        { }
-    }
-
-    internal class InlineEfCollectionAutoDataAttribute : InlineCustomAutoDataAttribute
-    {
-        public InlineEfCollectionAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
-            typeof(EfCollection) }, values)
-        { }
-    }
-
-    internal class CollectionAutoDataAttribute : CustomAutoDataAttribute
-    {
-        public CollectionAutoDataAttribute() : base(new SutProviderCustomization(), new OrganizationCustomization())
-        { }
+        public override ICustomization GetCustomization() => new EfCollection();
     }
 }
