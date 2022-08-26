@@ -129,30 +129,27 @@ namespace Bit.Core.Test.AutoFixture.CipherFixtures
         }
     }
 
-    internal class UserCipherAutoDataAttribute : CustomAutoDataAttribute
+    internal class UserCipherCustomizeAttribute : BitCustomizeAttribute
     {
-        public UserCipherAutoDataAttribute(string userId = null) : base(new SutProviderCustomization(),
-            new UserCipher { UserId = userId == null ? (Guid?)null : new Guid(userId) })
-        { }
+        private Guid? _userId;
+
+        public UserCipherCustomizeAttribute(string userId = null) : base()
+        {
+            _userId = userId == null ? (Guid?)null : Guid.Parse(userId);
+        }
+
+        public override ICustomization GetCustomization() => new UserCipher() { UserId = _userId };
     }
+
+    internal class OrganizationCipherCustomizeAttribute : BitCustomizeAttribute
+    {
+        public override ICustomization GetCustomization() => new OrganizationCipher();
+    }
+
     internal class InlineUserCipherAutoDataAttribute : InlineCustomAutoDataAttribute
     {
         public InlineUserCipherAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
             typeof(UserCipher) }, values)
-        { }
-    }
-
-    internal class InlineKnownUserCipherAutoDataAttribute : InlineCustomAutoDataAttribute
-    {
-        public InlineKnownUserCipherAutoDataAttribute(string userId, params object[] values) : base(new ICustomization[]
-            { new SutProviderCustomization(), new UserCipher { UserId = new Guid(userId) } }, values)
-        { }
-    }
-
-    internal class OrganizationCipherAutoDataAttribute : CustomAutoDataAttribute
-    {
-        public OrganizationCipherAutoDataAttribute(string organizationId = null) : base(new SutProviderCustomization(),
-            new OrganizationCipher { OrganizationId = organizationId == null ? (Guid?)null : new Guid(organizationId) })
         { }
     }
 
@@ -175,13 +172,6 @@ namespace Bit.Core.Test.AutoFixture.CipherFixtures
         {
             OrganizationOwned = true,
         })
-        { }
-    }
-
-    internal class InlineEfCipherAutoDataAttribute : InlineCustomAutoDataAttribute
-    {
-        public InlineEfCipherAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
-            typeof(EfCipher) }, values)
         { }
     }
 }
