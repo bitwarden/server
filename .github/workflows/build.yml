@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - name: Checkout repo
-        uses: actions/checkout@a12a3943b4bdde767164f792f33f40b04645d846
+        uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b
 
       - name: Install cloc
         run: |
@@ -67,6 +67,10 @@ jobs:
         run: dotnet restore --locked-mode
         shell: pwsh
 
+      - name: Build OSS solution
+        run: msbuild bitwarden-server.sln /p:Configuration=Debug /p:DefineConstants="OSS" /verbosity:minimal
+        shell: pwsh
+
       - name: Build solution
         run: msbuild bitwarden-server.sln /p:Configuration=Debug /verbosity:minimal
         shell: pwsh
@@ -76,14 +80,14 @@ jobs:
         shell: pwsh
 
       - name: Test Bitwarden solution
-        run: dotnet test ./bitwarden_license/test/CmmCore.Test --configuration Debug --no-build
+        run: dotnet test ./bitwarden_license/test/Commercial.Core.Test --configuration Debug --no-build
         shell: pwsh
 
 
   build-artifacts:
     name: Build artifacts
     runs-on: ubuntu-20.04
-    needs: 
+    needs:
       - testing
       - lint
     strategy:
@@ -114,6 +118,9 @@ jobs:
           - service_name: Sso
             base_path: ./bitwarden_license/src
             node: true
+          - service_name: Scim
+            base_path: ./bitwarden_license/src
+            dotnet: true
     steps:
       - name: Checkout repo
         uses: actions/checkout@a12a3943b4bdde767164f792f33f40b04645d846
@@ -230,6 +237,11 @@ jobs:
             base_path: ./bitwarden_license/src
             docker_repos: [bitwarden, bitwardenqa.azurecr.io]
             dotnet: true
+          - service_name: Scim
+            base_path: ./bitwarden_license/src
+            docker_repos: [bitwarden, bitwardenqa.azurecr.io]
+            dotnet: true
+            skip_dct: true
     steps:
       - name: Checkout repo
         uses: actions/checkout@a12a3943b4bdde767164f792f33f40b04645d846
@@ -334,6 +346,7 @@ jobs:
           && (github.ref == 'refs/heads/master' ||
             github.ref == 'refs/heads/rc' ||
             github.ref == 'refs/heads/hotfix-rc')
+          && (!matrix.skip_dct)
         env:
           DCT_DELEGATION_KEY_ID: "c9bde8ec820701516491e5e03d3a6354e7bd66d05fa3df2b0062f68b116dc59c"
           DCT_DELEGATE_KEY: ${{ steps.retrieve-secrets.outputs.dct-delegate-2-key }}

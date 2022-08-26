@@ -9,6 +9,7 @@ using Bit.Core.Utilities;
 using Bit.Identity.Utilities;
 using Bit.SharedWeb.Utilities;
 using IdentityServer4.Extensions;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.IdentityModel.Logging;
 using Microsoft.OpenApi.Models;
 
@@ -37,10 +38,6 @@ namespace Bit.Identity
             {
                 services.Configure<IpRateLimitOptions>(Configuration.GetSection("IpRateLimitOptions"));
                 services.Configure<IpRateLimitPolicies>(Configuration.GetSection("IpRateLimitPolicies"));
-                // Ref: https://github.com/stefanprodan/AspNetCoreRateLimit/issues/216
-                services.AddSingleton<IProcessingStrategy, AsyncKeyLockProcessingStrategy>();
-                // Ref: https://github.com/stefanprodan/AspNetCoreRateLimit/issues/66
-                services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
             }
 
             // Data Protection
@@ -51,9 +48,11 @@ namespace Bit.Identity
 
             // Context
             services.AddScoped<ICurrentContext, CurrentContext>();
+            services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 
             // Caching
             services.AddMemoryCache();
+            services.AddDistributedCache(globalSettings);
 
             // Mvc
             services.AddMvc(config =>
@@ -68,9 +67,7 @@ namespace Bit.Identity
 
             if (!globalSettings.SelfHosted)
             {
-                // Rate limiting
-                services.AddSingleton<IIpPolicyStore, MemoryCacheIpPolicyStore>();
-                services.AddSingleton<IRateLimitCounterStore, MemoryCacheRateLimitCounterStore>();
+                services.AddIpRateLimiting(globalSettings);
             }
 
             // Cookies
@@ -119,9 +116,10 @@ namespace Bit.Identity
                                 context.ProtocolMessage.SessionState = context.Properties.Items["user_identifier"];
                             }
 
-                            if (context.Properties.Parameters.Count > 0 && context.Properties.Parameters.ContainsKey(SsoTokenable.TokenIdentifier))
+                            if (context.Properties.Parameters.Count > 0 &&
+                                context.Properties.Parameters.TryGetValue(SsoTokenable.TokenIdentifier, out var tokenValue))
                             {
-                                var token = context.Properties.Parameters[SsoTokenable.TokenIdentifier].ToString();
+                                var token = tokenValue?.ToString() ?? "";
                                 context.ProtocolMessage.Parameters.Add(SsoTokenable.TokenIdentifier, token);
                             }
                             return Task.FromResult(0);

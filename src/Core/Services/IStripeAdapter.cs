@@ -35,5 +35,6 @@ namespace Bit.Core.Services
         Task<Stripe.BankAccount> BankAccountCreateAsync(string customerId, Stripe.BankAccountCreateOptions options = null);
         Task<Stripe.BankAccount> BankAccountDeleteAsync(string customerId, string bankAccount, Stripe.BankAccountDeleteOptions options = null);
         Task<Stripe.StripeList<Stripe.Price>> PriceListAsync(Stripe.PriceListOptions options = null);
+        Task<List<Stripe.TestHelpers.TestClock>> TestClockListAsync();
     }
 }

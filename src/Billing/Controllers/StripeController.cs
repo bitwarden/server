@@ -92,7 +92,8 @@ namespace Bit.Billing.Controllers
             {
                 var json = await sr.ReadToEndAsync();
                 parsedEvent = EventUtility.ConstructEvent(json, Request.Headers["Stripe-Signature"],
-                    _billingSettings.StripeWebhookSecret);
+                    _billingSettings.StripeWebhookSecret,
+                    throwOnApiVersionMismatch: _billingSettings.StripeEventParseThrowMismatch);
             }
 
             if (string.IsNullOrWhiteSpace(parsedEvent?.Id))
