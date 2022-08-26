@@ -1,6 +1,4 @@
-﻿IF OBJECT_ID('[dbo].[Project]') IS NULL
-BEGIN
-CREATE TABLE [dbo].[Project] (
+﻿CREATE TABLE [dbo].[Project] (
     [Id]                UNIQUEIDENTIFIER NOT NULL,
     [OrganizationId]    UNIQUEIDENTIFIER NOT NULL,
     [Name]              NVARCHAR(MAX) NULL, 
@@ -10,6 +8,3 @@ CREATE TABLE [dbo].[Project] (
     CONSTRAINT [PK_Project] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_Project_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id]),
 );
-END
-
-GO
