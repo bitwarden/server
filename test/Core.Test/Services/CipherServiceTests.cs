@@ -51,7 +51,6 @@ namespace Bit.Core.Test.Services
         }
 
         [Theory, BitAutoData]
-        [UserCipherCustomize("99ab4f6c-44f8-4ff5-be7a-75c37c33c69e")]
         public async Task ShareManyAsync_WrongRevisionDate_Throws(SutProvider<CipherService> sutProvider,
             IEnumerable<Cipher> ciphers, Guid organizationId, List<Guid> collectionIds)
         {
@@ -110,7 +109,6 @@ namespace Bit.Core.Test.Services
         }
 
         [Theory]
-        [UserCipherCustomize("99ab4f6c-44f8-4ff5-be7a-75c37c33c69e")]
         [BitAutoData("")]
         [BitAutoData("Correct Time")]
         public async Task ShareManyAsync_CorrectRevisionDate_Passes(string revisionDateString,
@@ -133,8 +131,7 @@ namespace Bit.Core.Test.Services
         }
 
         [Theory]
-        [UserCipherCustomize("c64d8a15-606e-41d6-9c7e-174d4d8f3b2e")]
-        [BitAutoData("c64d8a15-606e-41d6-9c7e-174d4d8f3b2e")]
+        [BitAutoData]
         public async Task RestoreAsync_UpdatesUserCipher(Guid restoringUserId, Cipher cipher, SutProvider<CipherService> sutProvider)
         {
             sutProvider.GetDependency<ICipherRepository>().GetCanEditByIdAsync(restoringUserId, cipher.Id).Returns(true);
@@ -151,7 +148,7 @@ namespace Bit.Core.Test.Services
 
         [Theory]
         [OrganizationCipherCustomize]
-        [BitAutoData("c64d8a15-606e-41d6-9c7e-174d4d8f3b2e")]
+        [BitAutoData]
         public async Task RestoreAsync_UpdatesOrganizationCipher(Guid restoringUserId, Cipher cipher, SutProvider<CipherService> sutProvider)
         {
             sutProvider.GetDependency<ICipherRepository>().GetCanEditByIdAsync(restoringUserId, cipher.Id).Returns(true);
@@ -167,11 +164,11 @@ namespace Bit.Core.Test.Services
         }
 
         [Theory]
-        [UserCipherCustomize("c64d8a15-606e-41d6-9c7e-174d4d8f3b2e")]
-        [BitAutoData("c64d8a15-606e-41d6-9c7e-174d4d8f3b2e")]
-        public async Task RestoreManyAsync_UpdatesCiphers(Guid restoringUserId, IEnumerable<CipherDetails> ciphers,
+        [BitAutoData]
+        public async Task RestoreManyAsync_UpdatesCiphers(IEnumerable<CipherDetails> ciphers,
             SutProvider<CipherService> sutProvider)
         {
+            var restoringUserId = ciphers.First().UserId.Value;
             var previousRevisionDate = DateTime.UtcNow;
             foreach (var cipher in ciphers)
             {

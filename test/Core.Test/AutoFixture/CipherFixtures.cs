@@ -131,14 +131,7 @@ namespace Bit.Core.Test.AutoFixture.CipherFixtures
 
     internal class UserCipherCustomizeAttribute : BitCustomizeAttribute
     {
-        private Guid? _userId;
-
-        public UserCipherCustomizeAttribute(string userId = null) : base()
-        {
-            _userId = userId == null ? (Guid?)null : Guid.Parse(userId);
-        }
-
-        public override ICustomization GetCustomization() => new UserCipher() { UserId = _userId };
+        public override ICustomization GetCustomization() => new UserCipher();
     }
 
     internal class OrganizationCipherCustomizeAttribute : BitCustomizeAttribute
