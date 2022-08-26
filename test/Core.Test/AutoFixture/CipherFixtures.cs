@@ -139,18 +139,13 @@ namespace Bit.Core.Test.AutoFixture.CipherFixtures
         public override ICustomization GetCustomization() => new OrganizationCipher();
     }
 
-    internal class EfUserCipherAutoDataAttribute : CustomAutoDataAttribute
+    internal class EfUserCipherCustomizeAttribute : BitCustomizeAttribute
     {
-        public EfUserCipherAutoDataAttribute() : base(new SutProviderCustomization(), new EfCipher())
-        { }
+        public override ICustomization GetCustomization() => new EfCipher();
     }
 
-    internal class EfOrganizationCipherAutoDataAttribute : CustomAutoDataAttribute
+    internal class EfOrganizationCipherCustomizeAttribute : BitCustomizeAttribute
     {
-        public EfOrganizationCipherAutoDataAttribute() : base(new SutProviderCustomization(), new EfCipher()
-        {
-            OrganizationOwned = true,
-        })
-        { }
+        public override ICustomization GetCustomization() => new EfCipher();
     }
 }
