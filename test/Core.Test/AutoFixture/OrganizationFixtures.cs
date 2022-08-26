@@ -66,7 +66,7 @@ namespace Bit.Core.Test.AutoFixture.OrganizationFixtures
         public PlanType CheckedPlanType { get; set; }
         public void Customize(IFixture fixture)
         {
-            var validUpgradePlans = StaticStore.Plans.Where(p => p.Type != PlanType.Free && !p.Disabled).Select(p => p.Type).ToList();
+            var validUpgradePlans = StaticStore.Plans.Where(p => p.Type != PlanType.Free && p.LegacyYear == null).OrderBy(p => p.UpgradeSortOrder).Select(p => p.Type).ToList();
             var lowestActivePaidPlan = validUpgradePlans.First();
             CheckedPlanType = CheckedPlanType.Equals(PlanType.Free) ? lowestActivePaidPlan : CheckedPlanType;
             validUpgradePlans.Remove(lowestActivePaidPlan);
@@ -111,7 +111,7 @@ namespace Bit.Core.Test.AutoFixture.OrganizationFixtures
         public string PermissionsBlob { get; set; }
         public void Customize(IFixture fixture)
         {
-            var organizationId = new Guid();
+            var organizationId = Guid.NewGuid();
             PermissionsBlob = PermissionsBlob ?? JsonSerializer.Serialize(new Permissions(), new JsonSerializerOptions
             {
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -145,74 +145,39 @@ namespace Bit.Core.Test.AutoFixture.OrganizationFixtures
         public override ICustomization GetCustomization() => new OrganizationCustomization() { UseGroups = UseGroups };
     }
 
-    internal class PaidOrganizationAutoDataAttribute : CustomAutoDataAttribute
+    internal class PaidOrganizationCustomizeAttribute : BitCustomizeAttribute
     {
-        public PaidOrganizationAutoDataAttribute(PlanType planType) : base(new SutProviderCustomization(),
-            new PaidOrganization { CheckedPlanType = planType })
-        { }
-        public PaidOrganizationAutoDataAttribute(int planType = 0) : this((PlanType)planType) { }
+        public PlanType CheckedPlanType { get; set; } = PlanType.FamiliesAnnually;
+        public override ICustomization GetCustomization() => new PaidOrganization() { CheckedPlanType = CheckedPlanType };
     }
 
-    internal class InlinePaidOrganizationAutoDataAttribute : InlineCustomAutoDataAttribute
+    internal class FreeOrganizationCustomizeAttribute : BitCustomizeAttribute
     {
-        public InlinePaidOrganizationAutoDataAttribute(PlanType planType, object[] values) : base(
-            new ICustomization[] { new SutProviderCustomization(), new PaidOrganization { CheckedPlanType = planType } }, values)
-        { }
-
-        public InlinePaidOrganizationAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
-            typeof(PaidOrganization) }, values)
-        { }
+        public override ICustomization GetCustomization() => new FreeOrganization();
     }
 
-    internal class InlineFreeOrganizationAutoDataAttribute : InlineCustomAutoDataAttribute
+    internal class FreeOrganizationUpgradeCustomize : BitCustomizeAttribute
     {
-        public InlineFreeOrganizationAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
-            typeof(FreeOrganization) }, values)
-        { }
+        public override ICustomization GetCustomization() => new FreeOrganizationUpgrade();
     }
 
-    internal class FreeOrganizationUpgradeAutoDataAttribute : CustomAutoDataAttribute
+    internal class OrganizationInviteCustomizeAttribute : BitCustomizeAttribute
     {
-        public FreeOrganizationUpgradeAutoDataAttribute() : base(new SutProviderCustomization(), new FreeOrganizationUpgrade())
-        { }
-    }
+        public OrganizationUserType InviteeUserType { get; set; } = OrganizationUserType.Owner;
+        public OrganizationUserType InvitorUserType { get; set; } = OrganizationUserType.Owner;
+        public string PermissionsBlob { get; set; }
 
-    internal class InlineFreeOrganizationUpgradeAutoDataAttribute : InlineCustomAutoDataAttribute
-    {
-        public InlineFreeOrganizationUpgradeAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
-            typeof(FreeOrganizationUpgrade) }, values)
-        { }
-    }
-
-    internal class OrganizationInviteAutoDataAttribute : CustomAutoDataAttribute
-    {
-        public OrganizationInviteAutoDataAttribute(int inviteeUserType = 0, int invitorUserType = 0, string permissionsBlob = null) : base(new SutProviderCustomization(),
-            new OrganizationInvite
-            {
-                InviteeUserType = (OrganizationUserType)inviteeUserType,
-                InvitorUserType = (OrganizationUserType)invitorUserType,
-                PermissionsBlob = permissionsBlob,
-            })
-        { }
-    }
-
-    internal class InlineOrganizationInviteAutoDataAttribute : InlineCustomAutoDataAttribute
-    {
-        public InlineOrganizationInviteAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
-            typeof(OrganizationInvite) }, values)
-        { }
+        public override ICustomization GetCustomization() => new OrganizationInvite
+        {
+            InviteeUserType = InviteeUserType,
+            InvitorUserType = InvitorUserType,
+            PermissionsBlob = PermissionsBlob,
+        };
     }
 
     internal class EfOrganizationAutoDataAttribute : CustomAutoDataAttribute
     {
         public EfOrganizationAutoDataAttribute() : base(new SutProviderCustomization(), new EfOrganization())
-        { }
-    }
-
-    internal class InlineEfOrganizationAutoDataAttribute : InlineCustomAutoDataAttribute
-    {
-        public InlineEfOrganizationAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
-            typeof(EfOrganization) }, values)
         { }
     }
 }

@@ -22,10 +22,11 @@ using Policy = Bit.Core.Entities.Policy;
 
 namespace Bit.Core.Test.Services
 {
+    [SutProviderCustomize]
     public class OrganizationServiceTests
     {
         // [Fact]
-        [Theory, PaidOrganizationAutoData]
+        [Theory, PaidOrganizationCustomize, BitAutoData]
         public async Task OrgImportCreateNewUsers(SutProvider<OrganizationService> sutProvider, Guid userId,
             Organization org, List<OrganizationUserUserDetails> existingUsers, List<ImportedOrganizationUser> newUsers)
         {
@@ -75,7 +76,7 @@ namespace Bit.Core.Test.Services
                 referenceEvent.Users == expectedNewUsersCount));
         }
 
-        [Theory, PaidOrganizationAutoData]
+        [Theory, PaidOrganizationCustomize, BitAutoData]
         public async Task OrgImportCreateNewUsersAndMarryExistingUser(SutProvider<OrganizationService> sutProvider,
             Guid userId, Organization org, List<OrganizationUserUserDetails> existingUsers,
             List<ImportedOrganizationUser> newUsers)
@@ -133,7 +134,7 @@ namespace Bit.Core.Test.Services
                 referenceEvent.Users == expectedNewUsersCount));
         }
 
-        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        [Theory, BitAutoData]
         public async Task UpgradePlan_OrganizationIsNull_Throws(Guid organizationId, OrganizationUpgrade upgrade,
                 SutProvider<OrganizationService> sutProvider)
         {
@@ -142,7 +143,7 @@ namespace Bit.Core.Test.Services
                 () => sutProvider.Sut.UpgradePlanAsync(organizationId, upgrade));
         }
 
-        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        [Theory, BitAutoData]
         public async Task UpgradePlan_GatewayCustomIdIsNull_Throws(Organization organization, OrganizationUpgrade upgrade,
                 SutProvider<OrganizationService> sutProvider)
         {
@@ -153,7 +154,7 @@ namespace Bit.Core.Test.Services
             Assert.Contains("no payment method", exception.Message);
         }
 
-        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        [Theory, BitAutoData]
         public async Task UpgradePlan_AlreadyInPlan_Throws(Organization organization, OrganizationUpgrade upgrade,
                 SutProvider<OrganizationService> sutProvider)
         {
@@ -164,7 +165,7 @@ namespace Bit.Core.Test.Services
             Assert.Contains("already on this plan", exception.Message);
         }
 
-        [Theory, PaidOrganizationAutoData]
+        [Theory, PaidOrganizationCustomize(CheckedPlanType = PlanType.Free), BitAutoData]
         public async Task UpgradePlan_UpgradeFromPaidPlan_Throws(Organization organization, OrganizationUpgrade upgrade,
                 SutProvider<OrganizationService> sutProvider)
         {
@@ -175,7 +176,7 @@ namespace Bit.Core.Test.Services
         }
 
         [Theory]
-        [FreeOrganizationUpgradeAutoData]
+        [FreeOrganizationUpgradeCustomize, BitAutoData]
         public async Task UpgradePlan_Passes(Organization organization, OrganizationUpgrade upgrade,
                 SutProvider<OrganizationService> sutProvider)
         {
@@ -185,7 +186,7 @@ namespace Bit.Core.Test.Services
         }
 
         [Theory]
-        [OrganizationInviteAutoData]
+        [OrganizationInviteCustomize, BitAutoData]
         public async Task InviteUser_NoEmails_Throws(Organization organization, OrganizationUser invitor,
             OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         {
@@ -196,7 +197,7 @@ namespace Bit.Core.Test.Services
         }
 
         [Theory]
-        [OrganizationInviteAutoData]
+        [OrganizationInviteCustomize, BitAutoData]
         public async Task InviteUser_DuplicateEmails_PassesWithoutDuplicates(Organization organization, OrganizationUser invitor,
                     [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
             OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
@@ -218,10 +219,10 @@ namespace Bit.Core.Test.Services
         }
 
         [Theory]
-        [OrganizationInviteAutoData(
-            inviteeUserType: (int)OrganizationUserType.Admin,
-            invitorUserType: (int)OrganizationUserType.Owner
-        )]
+        [OrganizationInviteCustomize(
+            InviteeUserType = OrganizationUserType.Admin,
+            InvitorUserType = OrganizationUserType.Owner
+        ), BitAutoData]
         public async Task InviteUser_NoOwner_Throws(Organization organization, OrganizationUser invitor,
             OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         {
@@ -234,10 +235,10 @@ namespace Bit.Core.Test.Services
         }
 
         [Theory]
-        [OrganizationInviteAutoData(
-            inviteeUserType: (int)OrganizationUserType.Owner,
-            invitorUserType: (int)OrganizationUserType.Admin
-        )]
+        [OrganizationInviteCustomize(
+            InviteeUserType = OrganizationUserType.Owner,
+            InvitorUserType = OrganizationUserType.Admin
+        ), BitAutoData]
         public async Task InviteUser_NonOwnerConfiguringOwner_Throws(Organization organization, OrganizationUserInvite invite,
             OrganizationUser invitor, SutProvider<OrganizationService> sutProvider)
         {
@@ -253,10 +254,10 @@ namespace Bit.Core.Test.Services
         }
 
         [Theory]
-        [OrganizationInviteAutoData(
-            inviteeUserType: (int)OrganizationUserType.Custom,
-            invitorUserType: (int)OrganizationUserType.User
-        )]
+        [OrganizationInviteCustomize(
+            InviteeUserType = OrganizationUserType.Custom,
+            InvitorUserType = OrganizationUserType.User
+        ), BitAutoData]
         public async Task InviteUser_NonAdminConfiguringAdmin_Throws(Organization organization, OrganizationUserInvite invite,
             OrganizationUser invitor, SutProvider<OrganizationService> sutProvider)
         {
@@ -272,10 +273,10 @@ namespace Bit.Core.Test.Services
         }
 
         [Theory]
-        [OrganizationInviteAutoData(
-            inviteeUserType: (int)OrganizationUserType.Manager,
-            invitorUserType: (int)OrganizationUserType.Custom
-        )]
+        [OrganizationInviteCustomize(
+            InviteeUserType = OrganizationUserType.Manager,
+            InvitorUserType = OrganizationUserType.Custom
+        ), BitAutoData]
         public async Task InviteUser_CustomUserWithoutManageUsersConfiguringUser_Throws(Organization organization, OrganizationUserInvite invite,
             OrganizationUser invitor, SutProvider<OrganizationService> sutProvider)
         {
@@ -298,10 +299,10 @@ namespace Bit.Core.Test.Services
         }
 
         [Theory]
-        [OrganizationInviteAutoData(
-            inviteeUserType: (int)OrganizationUserType.Admin,
-            invitorUserType: (int)OrganizationUserType.Custom
-        )]
+        [OrganizationInviteCustomize(
+            InviteeUserType = OrganizationUserType.Admin,
+            InvitorUserType = OrganizationUserType.Custom
+        ), BitAutoData]
         public async Task InviteUser_CustomUserConfiguringAdmin_Throws(Organization organization, OrganizationUserInvite invite,
             OrganizationUser invitor, SutProvider<OrganizationService> sutProvider)
         {
@@ -324,10 +325,10 @@ namespace Bit.Core.Test.Services
         }
 
         [Theory]
-        [OrganizationInviteAutoData(
-            inviteeUserType: (int)OrganizationUserType.User,
-            invitorUserType: (int)OrganizationUserType.Owner
-        )]
+        [OrganizationInviteCustomize(
+            InviteeUserType = OrganizationUserType.User,
+            InvitorUserType = OrganizationUserType.Owner
+        ), BitAutoData]
         public async Task InviteUser_NoPermissionsObject_Passes(Organization organization, OrganizationUserInvite invite,
             OrganizationUser invitor, SutProvider<OrganizationService> sutProvider)
         {
@@ -347,10 +348,10 @@ namespace Bit.Core.Test.Services
         }
 
         [Theory]
-        [OrganizationInviteAutoData(
-            inviteeUserType: (int)OrganizationUserType.User,
-            invitorUserType: (int)OrganizationUserType.Custom
-        )]
+        [OrganizationInviteCustomize(
+            InviteeUserType = OrganizationUserType.User,
+            InvitorUserType = OrganizationUserType.Custom
+        ), BitAutoData]
         public async Task InviteUser_Passes(Organization organization, IEnumerable<(OrganizationUserInvite invite, string externalId)> invites,
             OrganizationUser invitor,
             [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
@@ -383,7 +384,7 @@ namespace Bit.Core.Test.Services
                     Arg.Is<IEnumerable<(OrganizationUser, ExpiringToken)>>(v => v.Count() == invites.SelectMany(i => i.invite.Emails).Count()));
         }
 
-        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        [Theory, BitAutoData]
         public async Task SaveUser_NoUserId_Throws(OrganizationUser user, Guid? savingUserId,
             IEnumerable<SelectionReadOnly> collections, SutProvider<OrganizationService> sutProvider)
         {
@@ -393,7 +394,7 @@ namespace Bit.Core.Test.Services
             Assert.Contains("invite the user first", exception.Message.ToLowerInvariant());
         }
 
-        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        [Theory, BitAutoData]
         public async Task SaveUser_NoChangeToData_Throws(OrganizationUser user, Guid? savingUserId,
             IEnumerable<SelectionReadOnly> collections, SutProvider<OrganizationService> sutProvider)
         {
@@ -404,7 +405,7 @@ namespace Bit.Core.Test.Services
             Assert.Contains("make changes before saving", exception.Message.ToLowerInvariant());
         }
 
-        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        [Theory, BitAutoData]
         public async Task SaveUser_Passes(
             OrganizationUser oldUserData,
             OrganizationUser newUserData,
@@ -426,7 +427,7 @@ namespace Bit.Core.Test.Services
             await sutProvider.Sut.SaveUserAsync(newUserData, savingUser.UserId, collections);
         }
 
-        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        [Theory, BitAutoData]
         public async Task DeleteUser_InvalidUser(OrganizationUser organizationUser, OrganizationUser deletingUser,
             SutProvider<OrganizationService> sutProvider)
         {
@@ -439,7 +440,7 @@ namespace Bit.Core.Test.Services
             Assert.Contains("User not valid.", exception.Message);
         }
 
-        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        [Theory, BitAutoData]
         public async Task DeleteUser_RemoveYourself(OrganizationUser deletingUser, SutProvider<OrganizationService> sutProvider)
         {
             var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
@@ -451,7 +452,7 @@ namespace Bit.Core.Test.Services
             Assert.Contains("You cannot remove yourself.", exception.Message);
         }
 
-        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        [Theory, BitAutoData]
         public async Task DeleteUser_NonOwnerRemoveOwner(
             [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser organizationUser,
             [OrganizationUser(type: OrganizationUserType.Admin)] OrganizationUser deletingUser,
@@ -469,7 +470,7 @@ namespace Bit.Core.Test.Services
             Assert.Contains("Only owners can delete other owners.", exception.Message);
         }
 
-        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        [Theory, BitAutoData]
         public async Task DeleteUser_LastOwner(
             [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser organizationUser,
             OrganizationUser deletingUser,
@@ -487,7 +488,7 @@ namespace Bit.Core.Test.Services
             Assert.Contains("Organization must have at least one confirmed owner.", exception.Message);
         }
 
-        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        [Theory, BitAutoData]
         public async Task DeleteUser_Success(
             OrganizationUser organizationUser,
             [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser deletingUser,
@@ -506,7 +507,7 @@ namespace Bit.Core.Test.Services
             await sutProvider.Sut.DeleteUserAsync(deletingUser.OrganizationId, organizationUser.Id, deletingUser.UserId);
         }
 
-        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        [Theory, BitAutoData]
         public async Task DeleteUsers_FilterInvalid(OrganizationUser organizationUser, OrganizationUser deletingUser,
             SutProvider<OrganizationService> sutProvider)
         {
@@ -520,7 +521,7 @@ namespace Bit.Core.Test.Services
             Assert.Contains("Users invalid.", exception.Message);
         }
 
-        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        [Theory, BitAutoData]
         public async Task DeleteUsers_RemoveYourself(
             [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser orgUser,
             OrganizationUser deletingUser,
@@ -536,7 +537,7 @@ namespace Bit.Core.Test.Services
             Assert.Contains("You cannot remove yourself.", result[0].Item2);
         }
 
-        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        [Theory, BitAutoData]
         public async Task DeleteUsers_NonOwnerRemoveOwner(
             [OrganizationUser(type: OrganizationUserType.Admin)] OrganizationUser deletingUser,
             [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser orgUser1,
@@ -555,7 +556,7 @@ namespace Bit.Core.Test.Services
             Assert.Contains("Only owners can delete other owners.", result[0].Item2);
         }
 
-        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        [Theory, BitAutoData]
         public async Task DeleteUsers_LastOwner(
             [OrganizationUser(status: OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser orgUser,
             SutProvider<OrganizationService> sutProvider)
@@ -572,7 +573,7 @@ namespace Bit.Core.Test.Services
             Assert.Contains("Organization must have at least one confirmed owner.", exception.Message);
         }
 
-        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        [Theory, BitAutoData]
         public async Task DeleteUsers_Success(
             [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser deletingUser,
             [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser orgUser1, OrganizationUser orgUser2,
@@ -593,7 +594,7 @@ namespace Bit.Core.Test.Services
             await sutProvider.Sut.DeleteUsersAsync(deletingUser.OrganizationId, organizationUserIds, deletingUser.UserId);
         }
 
-        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        [Theory, BitAutoData]
         public async Task ConfirmUser_InvalidStatus(OrganizationUser confirmingUser,
             [OrganizationUser(OrganizationUserStatusType.Invited)] OrganizationUser orgUser, string key,
             SutProvider<OrganizationService> sutProvider)
@@ -608,7 +609,7 @@ namespace Bit.Core.Test.Services
             Assert.Contains("User not valid.", exception.Message);
         }
 
-        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        [Theory, BitAutoData]
         public async Task ConfirmUser_WrongOrganization(OrganizationUser confirmingUser,
             [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser orgUser, string key,
             SutProvider<OrganizationService> sutProvider)
@@ -624,8 +625,8 @@ namespace Bit.Core.Test.Services
         }
 
         [Theory]
-        [InlineCustomAutoData(new[] { typeof(SutProviderCustomization) }, OrganizationUserType.Admin)]
-        [InlineCustomAutoData(new[] { typeof(SutProviderCustomization) }, OrganizationUserType.Owner)]
+        [BitAutoData(OrganizationUserType.Admin)]
+        [BitAutoData(OrganizationUserType.Owner)]
         public async Task ConfirmUserToFree_AlreadyFreeAdminOrOwner_Throws(OrganizationUserType userType, Organization org, OrganizationUser confirmingUser,
             [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser orgUser, User user,
             string key, SutProvider<OrganizationService> sutProvider)
@@ -650,28 +651,28 @@ namespace Bit.Core.Test.Services
         }
 
         [Theory]
-        [InlineCustomAutoData(new[] { typeof(SutProviderCustomization) }, PlanType.Custom, OrganizationUserType.Admin)]
-        [InlineCustomAutoData(new[] { typeof(SutProviderCustomization) }, PlanType.Custom, OrganizationUserType.Owner)]
-        [InlineCustomAutoData(new[] { typeof(SutProviderCustomization) }, PlanType.EnterpriseAnnually, OrganizationUserType.Admin)]
-        [InlineCustomAutoData(new[] { typeof(SutProviderCustomization) }, PlanType.EnterpriseAnnually, OrganizationUserType.Owner)]
-        [InlineCustomAutoData(new[] { typeof(SutProviderCustomization) }, PlanType.EnterpriseAnnually2019, OrganizationUserType.Admin)]
-        [InlineCustomAutoData(new[] { typeof(SutProviderCustomization) }, PlanType.EnterpriseAnnually2019, OrganizationUserType.Owner)]
-        [InlineCustomAutoData(new[] { typeof(SutProviderCustomization) }, PlanType.EnterpriseMonthly, OrganizationUserType.Admin)]
-        [InlineCustomAutoData(new[] { typeof(SutProviderCustomization) }, PlanType.EnterpriseMonthly, OrganizationUserType.Owner)]
-        [InlineCustomAutoData(new[] { typeof(SutProviderCustomization) }, PlanType.EnterpriseMonthly2019, OrganizationUserType.Admin)]
-        [InlineCustomAutoData(new[] { typeof(SutProviderCustomization) }, PlanType.EnterpriseMonthly2019, OrganizationUserType.Owner)]
-        [InlineCustomAutoData(new[] { typeof(SutProviderCustomization) }, PlanType.FamiliesAnnually, OrganizationUserType.Admin)]
-        [InlineCustomAutoData(new[] { typeof(SutProviderCustomization) }, PlanType.FamiliesAnnually, OrganizationUserType.Owner)]
-        [InlineCustomAutoData(new[] { typeof(SutProviderCustomization) }, PlanType.FamiliesAnnually2019, OrganizationUserType.Admin)]
-        [InlineCustomAutoData(new[] { typeof(SutProviderCustomization) }, PlanType.FamiliesAnnually2019, OrganizationUserType.Owner)]
-        [InlineCustomAutoData(new[] { typeof(SutProviderCustomization) }, PlanType.TeamsAnnually, OrganizationUserType.Admin)]
-        [InlineCustomAutoData(new[] { typeof(SutProviderCustomization) }, PlanType.TeamsAnnually, OrganizationUserType.Owner)]
-        [InlineCustomAutoData(new[] { typeof(SutProviderCustomization) }, PlanType.TeamsAnnually2019, OrganizationUserType.Admin)]
-        [InlineCustomAutoData(new[] { typeof(SutProviderCustomization) }, PlanType.TeamsAnnually2019, OrganizationUserType.Owner)]
-        [InlineCustomAutoData(new[] { typeof(SutProviderCustomization) }, PlanType.TeamsMonthly, OrganizationUserType.Admin)]
-        [InlineCustomAutoData(new[] { typeof(SutProviderCustomization) }, PlanType.TeamsMonthly, OrganizationUserType.Owner)]
-        [InlineCustomAutoData(new[] { typeof(SutProviderCustomization) }, PlanType.TeamsMonthly2019, OrganizationUserType.Admin)]
-        [InlineCustomAutoData(new[] { typeof(SutProviderCustomization) }, PlanType.TeamsMonthly2019, OrganizationUserType.Owner)]
+        [BitAutoData(PlanType.Custom, OrganizationUserType.Admin)]
+        [BitAutoData(PlanType.Custom, OrganizationUserType.Owner)]
+        [BitAutoData(PlanType.EnterpriseAnnually, OrganizationUserType.Admin)]
+        [BitAutoData(PlanType.EnterpriseAnnually, OrganizationUserType.Owner)]
+        [BitAutoData(PlanType.EnterpriseAnnually2019, OrganizationUserType.Admin)]
+        [BitAutoData(PlanType.EnterpriseAnnually2019, OrganizationUserType.Owner)]
+        [BitAutoData(PlanType.EnterpriseMonthly, OrganizationUserType.Admin)]
+        [BitAutoData(PlanType.EnterpriseMonthly, OrganizationUserType.Owner)]
+        [BitAutoData(PlanType.EnterpriseMonthly2019, OrganizationUserType.Admin)]
+        [BitAutoData(PlanType.EnterpriseMonthly2019, OrganizationUserType.Owner)]
+        [BitAutoData(PlanType.FamiliesAnnually, OrganizationUserType.Admin)]
+        [BitAutoData(PlanType.FamiliesAnnually, OrganizationUserType.Owner)]
+        [BitAutoData(PlanType.FamiliesAnnually2019, OrganizationUserType.Admin)]
+        [BitAutoData(PlanType.FamiliesAnnually2019, OrganizationUserType.Owner)]
+        [BitAutoData(PlanType.TeamsAnnually, OrganizationUserType.Admin)]
+        [BitAutoData(PlanType.TeamsAnnually, OrganizationUserType.Owner)]
+        [BitAutoData(PlanType.TeamsAnnually2019, OrganizationUserType.Admin)]
+        [BitAutoData(PlanType.TeamsAnnually2019, OrganizationUserType.Owner)]
+        [BitAutoData(PlanType.TeamsMonthly, OrganizationUserType.Admin)]
+        [BitAutoData(PlanType.TeamsMonthly, OrganizationUserType.Owner)]
+        [BitAutoData(PlanType.TeamsMonthly2019, OrganizationUserType.Admin)]
+        [BitAutoData(PlanType.TeamsMonthly2019, OrganizationUserType.Owner)]
         public async Task ConfirmUserToNonFree_AlreadyFreeAdminOrOwner_DoesNotThrow(PlanType planType, OrganizationUserType orgUserType, Organization org, OrganizationUser confirmingUser,
             [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser orgUser, User user,
             string key, SutProvider<OrganizationService> sutProvider)
@@ -698,7 +699,7 @@ namespace Bit.Core.Test.Services
         }
 
 
-        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        [Theory, BitAutoData]
         public async Task ConfirmUser_SingleOrgPolicy(Organization org, OrganizationUser confirmingUser,
             [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser orgUser, User user,
             OrganizationUser orgUserAnotherOrg, [Policy(PolicyType.SingleOrg)] Policy singleOrgPolicy,
@@ -725,7 +726,7 @@ namespace Bit.Core.Test.Services
             Assert.Contains("User is a member of another organization.", exception.Message);
         }
 
-        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        [Theory, BitAutoData]
         public async Task ConfirmUser_TwoFactorPolicy(Organization org, OrganizationUser confirmingUser,
             [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser orgUser, User user,
             OrganizationUser orgUserAnotherOrg, [Policy(PolicyType.TwoFactorAuthentication)] Policy twoFactorPolicy,
@@ -751,7 +752,7 @@ namespace Bit.Core.Test.Services
             Assert.Contains("User does not have two-step login enabled.", exception.Message);
         }
 
-        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        [Theory, BitAutoData]
         public async Task ConfirmUser_Success(Organization org, OrganizationUser confirmingUser,
             [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser orgUser, User user,
             [Policy(PolicyType.TwoFactorAuthentication)] Policy twoFactorPolicy,
@@ -775,7 +776,7 @@ namespace Bit.Core.Test.Services
             await sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id, userService);
         }
 
-        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        [Theory, BitAutoData]
         public async Task ConfirmUsers_Success(Organization org,
             OrganizationUser confirmingUser,
             [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser orgUser1,
@@ -815,7 +816,7 @@ namespace Bit.Core.Test.Services
             Assert.Contains("User is a member of another organization.", result[2].Item2);
         }
 
-        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        [Theory, BitAutoData]
         public async Task UpdateOrganizationKeysAsync_WithoutManageResetPassword_Throws(Guid orgId, string publicKey,
             string privateKey, SutProvider<OrganizationService> sutProvider)
         {
@@ -826,7 +827,7 @@ namespace Bit.Core.Test.Services
                 () => sutProvider.Sut.UpdateOrganizationKeysAsync(orgId, publicKey, privateKey));
         }
 
-        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        [Theory, BitAutoData]
         public async Task UpdateOrganizationKeysAsync_KeysAlreadySet_Throws(Organization org, string publicKey,
             string privateKey, SutProvider<OrganizationService> sutProvider)
         {
@@ -841,7 +842,7 @@ namespace Bit.Core.Test.Services
             Assert.Contains("Organization Keys already exist", exception.Message);
         }
 
-        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        [Theory, BitAutoData]
         public async Task UpdateOrganizationKeysAsync_KeysAlreadySet_Success(Organization org, string publicKey,
             string privateKey, SutProvider<OrganizationService> sutProvider)
         {
@@ -858,10 +859,20 @@ namespace Bit.Core.Test.Services
         }
 
         [Theory]
-        [InlinePaidOrganizationAutoData(PlanType.EnterpriseAnnually, new object[] { "Cannot set max seat autoscaling below seat count", 1, 0, 2 })]
-        [InlinePaidOrganizationAutoData(PlanType.EnterpriseAnnually, new object[] { "Cannot set max seat autoscaling below seat count", 4, -1, 6 })]
-        [InlineFreeOrganizationAutoData("Your plan does not allow seat autoscaling", 10, 0, null)]
-        public async Task UpdateSubscription_BadInputThrows(string expectedMessage,
+        [PaidOrganizationCustomize(CheckedPlanType = PlanType.EnterpriseAnnually)]
+        [BitAutoData("Cannot set max seat autoscaling below seat count", 1, 0, 2)]
+        [BitAutoData("Cannot set max seat autoscaling below seat count", 4, -1, 6)]
+        public async Task Enterprise_UpdateSubscription_BadInputThrows(string expectedMessage,
+            int? maxAutoscaleSeats, int seatAdjustment, int? currentSeats, Organization organization, SutProvider<OrganizationService> sutProvider)
+            => await UpdateSubscription_BadInputThrows(expectedMessage, maxAutoscaleSeats, seatAdjustment, currentSeats, organization, sutProvider);
+        [Theory]
+        [FreeOrganizationCustomize]
+        [BitAutoData("Your plan does not allow seat autoscaling", 10, 0, null)]
+        public async Task Free_UpdateSubscription_BadInputThrows(string expectedMessage,
+            int? maxAutoscaleSeats, int seatAdjustment, int? currentSeats, Organization organization, SutProvider<OrganizationService> sutProvider)
+            => await UpdateSubscription_BadInputThrows(expectedMessage, maxAutoscaleSeats, seatAdjustment, currentSeats, organization, sutProvider);
+
+        private async Task UpdateSubscription_BadInputThrows(string expectedMessage,
             int? maxAutoscaleSeats, int seatAdjustment, int? currentSeats, Organization organization, SutProvider<OrganizationService> sutProvider)
         {
             organization.Seats = currentSeats;
@@ -873,7 +884,7 @@ namespace Bit.Core.Test.Services
             Assert.Contains(expectedMessage, exception.Message);
         }
 
-        [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+        [Theory, BitAutoData]
         public async Task UpdateSubscription_NoOrganization_Throws(Guid organizationId, SutProvider<OrganizationService> sutProvider)
         {
             sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId).Returns((Organization)null);
@@ -881,12 +892,12 @@ namespace Bit.Core.Test.Services
             await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.UpdateSubscription(organizationId, 0, null));
         }
 
-        [Theory]
-        [InlinePaidOrganizationAutoData(0, 100, null, true, "")]
-        [InlinePaidOrganizationAutoData(0, 100, 100, true, "")]
-        [InlinePaidOrganizationAutoData(0, null, 100, true, "")]
-        [InlinePaidOrganizationAutoData(1, 100, null, true, "")]
-        [InlinePaidOrganizationAutoData(1, 100, 100, false, "Cannot invite new users. Seat limit has been reached")]
+        [Theory, PaidOrganizationCustomize]
+        [BitAutoData(0, 100, null, true, "")]
+        [BitAutoData(0, 100, 100, true, "")]
+        [BitAutoData(0, null, 100, true, "")]
+        [BitAutoData(1, 100, null, true, "")]
+        [BitAutoData(1, 100, 100, false, "Cannot invite new users. Seat limit has been reached")]
         public void CanScale(int seatsToAdd, int? currentSeats, int? maxAutoscaleSeats,
             bool expectedResult, string expectedFailureMessage, Organization organization,
             SutProvider<OrganizationService> sutProvider)
@@ -908,7 +919,7 @@ namespace Bit.Core.Test.Services
             Assert.Equal(expectedResult, result);
         }
 
-        [Theory, PaidOrganizationAutoData]
+        [Theory, PaidOrganizationCustomize, BitAutoData]
         public void CanScale_FailsOnSelfHosted(Organization organization,
             SutProvider<OrganizationService> sutProvider)
         {
@@ -919,7 +930,7 @@ namespace Bit.Core.Test.Services
             Assert.Contains("Cannot autoscale on self-hosted instance", failureMessage);
         }
 
-        [Theory, PaidOrganizationAutoData]
+        [Theory, PaidOrganizationCustomize, BitAutoData]
         public async Task Delete_Success(Organization organization, SutProvider<OrganizationService> sutProvider)
         {
             var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
@@ -931,7 +942,7 @@ namespace Bit.Core.Test.Services
             await applicationCacheService.Received().DeleteOrganizationAbilityAsync(organization.Id);
         }
 
-        [Theory, PaidOrganizationAutoData]
+        [Theory, PaidOrganizationCustomize, BitAutoData]
         public async Task Delete_Fails_KeyConnector(Organization organization, SutProvider<OrganizationService> sutProvider,
             SsoConfig ssoConfig)
         {
