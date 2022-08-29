@@ -5,19 +5,18 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
 using Xunit;
 
-namespace Bit.Core.Test.OrganizationFeatures.OrganizationApiKeys
+namespace Bit.Core.Test.OrganizationFeatures.OrganizationApiKeys;
+
+[SutProviderCustomize]
+public class RotateOrganizationApiKeyCommandTests
 {
-    [SutProviderCustomize]
-    public class RotateOrganizationApiKeyCommandTests
+    [Theory, BitAutoData]
+    public async Task RotateApiKeyAsync_RotatesKey(SutProvider<RotateOrganizationApiKeyCommand> sutProvider,
+        OrganizationApiKey organizationApiKey)
     {
-        [Theory, BitAutoData]
-        public async Task RotateApiKeyAsync_RotatesKey(SutProvider<RotateOrganizationApiKeyCommand> sutProvider,
-            OrganizationApiKey organizationApiKey)
-        {
-            var existingKey = organizationApiKey.ApiKey;
-            organizationApiKey = await sutProvider.Sut.RotateApiKeyAsync(organizationApiKey);
-            Assert.NotEqual(existingKey, organizationApiKey.ApiKey);
-            AssertHelper.AssertRecent(organizationApiKey.RevisionDate);
-        }
+        var existingKey = organizationApiKey.ApiKey;
+        organizationApiKey = await sutProvider.Sut.RotateApiKeyAsync(organizationApiKey);
+        Assert.NotEqual(existingKey, organizationApiKey.ApiKey);
+        AssertHelper.AssertRecent(organizationApiKey.RevisionDate);
     }
 }

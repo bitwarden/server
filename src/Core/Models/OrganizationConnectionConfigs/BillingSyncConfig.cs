@@ -1,8 +1,7 @@
-﻿namespace Bit.Core.Models.OrganizationConnectionConfigs
+﻿namespace Bit.Core.Models.OrganizationConnectionConfigs;
+
+public class BillingSyncConfig
 {
-    public class BillingSyncConfig
-    {
-        public string BillingSyncKey { get; set; }
-        public Guid CloudOrganizationId { get; set; }
-    }
+    public string BillingSyncKey { get; set; }
+    public Guid CloudOrganizationId { get; set; }
 }

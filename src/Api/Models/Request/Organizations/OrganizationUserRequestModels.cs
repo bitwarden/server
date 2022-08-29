@@ -7,99 +7,98 @@ using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Utilities;
 
-namespace Bit.Api.Models.Request.Organizations
+namespace Bit.Api.Models.Request.Organizations;
+
+public class OrganizationUserInviteRequestModel
 {
-    public class OrganizationUserInviteRequestModel
-    {
-        [Required]
-        [StrictEmailAddressList]
-        public IEnumerable<string> Emails { get; set; }
-        [Required]
-        public OrganizationUserType? Type { get; set; }
-        public bool AccessAll { get; set; }
-        public Permissions Permissions { get; set; }
-        public IEnumerable<SelectionReadOnlyRequestModel> Collections { get; set; }
+    [Required]
+    [StrictEmailAddressList]
+    public IEnumerable<string> Emails { get; set; }
+    [Required]
+    public OrganizationUserType? Type { get; set; }
+    public bool AccessAll { get; set; }
+    public Permissions Permissions { get; set; }
+    public IEnumerable<SelectionReadOnlyRequestModel> Collections { get; set; }
 
-        public OrganizationUserInviteData ToData()
+    public OrganizationUserInviteData ToData()
+    {
+        return new OrganizationUserInviteData
         {
-            return new OrganizationUserInviteData
-            {
-                Emails = Emails,
-                Type = Type,
-                AccessAll = AccessAll,
-                Collections = Collections?.Select(c => c.ToSelectionReadOnly()),
-                Permissions = Permissions,
-            };
-        }
+            Emails = Emails,
+            Type = Type,
+            AccessAll = AccessAll,
+            Collections = Collections?.Select(c => c.ToSelectionReadOnly()),
+            Permissions = Permissions,
+        };
     }
+}
 
-    public class OrganizationUserAcceptRequestModel
+public class OrganizationUserAcceptRequestModel
+{
+    [Required]
+    public string Token { get; set; }
+    // Used to auto-enroll in master password reset
+    public string ResetPasswordKey { get; set; }
+}
+
+public class OrganizationUserConfirmRequestModel
+{
+    [Required]
+    public string Key { get; set; }
+}
+
+public class OrganizationUserBulkConfirmRequestModelEntry
+{
+    [Required]
+    public Guid Id { get; set; }
+    [Required]
+    public string Key { get; set; }
+}
+
+public class OrganizationUserBulkConfirmRequestModel
+{
+    [Required]
+    public IEnumerable<OrganizationUserBulkConfirmRequestModelEntry> Keys { get; set; }
+
+    public Dictionary<Guid, string> ToDictionary()
     {
-        [Required]
-        public string Token { get; set; }
-        // Used to auto-enroll in master password reset
-        public string ResetPasswordKey { get; set; }
+        return Keys.ToDictionary(e => e.Id, e => e.Key);
     }
+}
 
-    public class OrganizationUserConfirmRequestModel
+public class OrganizationUserUpdateRequestModel
+{
+    [Required]
+    public OrganizationUserType? Type { get; set; }
+    public bool AccessAll { get; set; }
+    public Permissions Permissions { get; set; }
+    public IEnumerable<SelectionReadOnlyRequestModel> Collections { get; set; }
+
+    public OrganizationUser ToOrganizationUser(OrganizationUser existingUser)
     {
-        [Required]
-        public string Key { get; set; }
-    }
-
-    public class OrganizationUserBulkConfirmRequestModelEntry
-    {
-        [Required]
-        public Guid Id { get; set; }
-        [Required]
-        public string Key { get; set; }
-    }
-
-    public class OrganizationUserBulkConfirmRequestModel
-    {
-        [Required]
-        public IEnumerable<OrganizationUserBulkConfirmRequestModelEntry> Keys { get; set; }
-
-        public Dictionary<Guid, string> ToDictionary()
+        existingUser.Type = Type.Value;
+        existingUser.Permissions = JsonSerializer.Serialize(Permissions, new JsonSerializerOptions
         {
-            return Keys.ToDictionary(e => e.Id, e => e.Key);
-        }
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        });
+        existingUser.AccessAll = AccessAll;
+        return existingUser;
     }
+}
 
-    public class OrganizationUserUpdateRequestModel
-    {
-        [Required]
-        public OrganizationUserType? Type { get; set; }
-        public bool AccessAll { get; set; }
-        public Permissions Permissions { get; set; }
-        public IEnumerable<SelectionReadOnlyRequestModel> Collections { get; set; }
+public class OrganizationUserUpdateGroupsRequestModel
+{
+    [Required]
+    public IEnumerable<string> GroupIds { get; set; }
+}
 
-        public OrganizationUser ToOrganizationUser(OrganizationUser existingUser)
-        {
-            existingUser.Type = Type.Value;
-            existingUser.Permissions = JsonSerializer.Serialize(Permissions, new JsonSerializerOptions
-            {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            });
-            existingUser.AccessAll = AccessAll;
-            return existingUser;
-        }
-    }
+public class OrganizationUserResetPasswordEnrollmentRequestModel : SecretVerificationRequestModel
+{
+    public string ResetPasswordKey { get; set; }
+}
 
-    public class OrganizationUserUpdateGroupsRequestModel
-    {
-        [Required]
-        public IEnumerable<string> GroupIds { get; set; }
-    }
-
-    public class OrganizationUserResetPasswordEnrollmentRequestModel : SecretVerificationRequestModel
-    {
-        public string ResetPasswordKey { get; set; }
-    }
-
-    public class OrganizationUserBulkRequestModel
-    {
-        [Required]
-        public IEnumerable<Guid> Ids { get; set; }
-    }
+public class OrganizationUserBulkRequestModel
+{
+    [Required]
+    public IEnumerable<Guid> Ids { get; set; }
 }
