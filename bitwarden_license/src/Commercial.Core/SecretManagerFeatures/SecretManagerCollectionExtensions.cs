@@ -1,5 +1,5 @@
 ﻿using Bit.Commercial.Core.SecretManagerFeatures.Secrets;
-using Bit.Commercial.Core.SecretManagerFeatures.Secrets.Interfaces;
+using Bit.Core.SecretManagerFeatures.Secrets.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Commercial.Core.SecretManagerFeatures

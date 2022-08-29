@@ -1,6 +1,6 @@
-﻿using Bit.Commercial.Core.SecretManagerFeatures.Secrets.Interfaces;
-using Bit.Core.Entities;
+﻿using Bit.Core.Entities;
 using Bit.Core.Repositories;
+using Bit.Core.SecretManagerFeatures.Secrets.Interfaces;
 
 namespace Bit.Commercial.Core.SecretManagerFeatures.Secrets
 {

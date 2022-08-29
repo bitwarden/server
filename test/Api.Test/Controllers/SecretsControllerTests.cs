@@ -1,9 +1,9 @@
 ﻿using Bit.Api.Controllers;
 using Bit.Api.SecretManagerFeatures.Models.Request;
-using Bit.Commercial.Core.SecretManagerFeatures.Secrets.Interfaces;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
+using Bit.Core.SecretManagerFeatures.Secrets.Interfaces;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
