@@ -72,7 +72,7 @@ public class CustomRedisProcessingStrategy : ProcessingStrategy
 
         try
         {
-            return await IncrementAsync(counterId, rule.PeriodTimespan.Value, _config.RateIncrementer);
+            return await IncrementAsync(counterId, rule.PeriodTimespan ?? rule.Period.ToTimeSpan(), _config.RateIncrementer);
         }
         catch (RedisTimeoutException)
         {
@@ -119,7 +119,7 @@ public class CustomRedisProcessingStrategy : ProcessingStrategy
         return new RateLimitCounter { Count = 0, Timestamp = DateTime.UtcNow };
     }
 
-    private class TimeoutCounter
+    internal class TimeoutCounter
     {
         public DateTime ExpiresAt { get; init; }
 
