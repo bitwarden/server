@@ -1,27 +1,28 @@
 ﻿using Bit.Core.Utilities;
 using Xunit;
 
-namespace Bit.Core.Test.Resources;
-
-public class VerifyResources
+namespace Bit.Core.Test.Resources
 {
-    [Theory]
-    [MemberData(nameof(GetResources))]
-    public void Resource_FoundAndReadable(string resourceName)
+    public class VerifyResources
     {
-        var assembly = typeof(CoreHelpers).Assembly;
-
-        using (var resource = assembly.GetManifestResourceStream(resourceName))
+        [Theory]
+        [MemberData(nameof(GetResources))]
+        public void Resource_FoundAndReadable(string resourceName)
         {
-            Assert.NotNull(resource);
-            Assert.True(resource.CanRead);
-        }
-    }
+            var assembly = typeof(CoreHelpers).Assembly;
 
-    public static IEnumerable<object[]> GetResources()
-    {
-        yield return new[] { "Bit.Core.licensing.cer" };
-        yield return new[] { "Bit.Core.MailTemplates.Handlebars.AddedCredit.html.hbs" };
-        yield return new[] { "Bit.Core.MailTemplates.Handlebars.Layouts.Basic.html.hbs" };
+            using (var resource = assembly.GetManifestResourceStream(resourceName))
+            {
+                Assert.NotNull(resource);
+                Assert.True(resource.CanRead);
+            }
+        }
+
+        public static IEnumerable<object[]> GetResources()
+        {
+            yield return new[] { "Bit.Core.licensing.cer" };
+            yield return new[] { "Bit.Core.MailTemplates.Handlebars.AddedCredit.html.hbs" };
+            yield return new[] { "Bit.Core.MailTemplates.Handlebars.Layouts.Basic.html.hbs" };
+        }
     }
 }

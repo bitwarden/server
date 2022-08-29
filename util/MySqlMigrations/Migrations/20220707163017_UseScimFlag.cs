@@ -2,24 +2,25 @@
 
 #nullable disable
 
-namespace Bit.MySqlMigrations.Migrations;
-
-public partial class UseScimFlag : Migration
+namespace Bit.MySqlMigrations.Migrations
 {
-    protected override void Up(MigrationBuilder migrationBuilder)
+    public partial class UseScimFlag : Migration
     {
-        migrationBuilder.AddColumn<bool>(
-            name: "UseScim",
-            table: "Organization",
-            type: "tinyint(1)",
-            nullable: false,
-            defaultValue: false);
-    }
+        protected override void Up(MigrationBuilder migrationBuilder)
+        {
+            migrationBuilder.AddColumn<bool>(
+                name: "UseScim",
+                table: "Organization",
+                type: "tinyint(1)",
+                nullable: false,
+                defaultValue: false);
+        }
 
-    protected override void Down(MigrationBuilder migrationBuilder)
-    {
-        migrationBuilder.DropColumn(
-            name: "UseScim",
-            table: "Organization");
+        protected override void Down(MigrationBuilder migrationBuilder)
+        {
+            migrationBuilder.DropColumn(
+                name: "UseScim",
+                table: "Organization");
+        }
     }
 }

@@ -15,172 +15,174 @@ using NSubstitute;
 using RichardSzalay.MockHttp;
 using Xunit;
 
-namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.SelfHosted;
-
-public class SelfHostedSyncSponsorshipsCommandTests : FamiliesForEnterpriseTestsBase
+namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.SelfHosted
 {
 
-    public static SutProvider<SelfHostedSyncSponsorshipsCommand> GetSutProvider(bool enableCloudCommunication = true, string identityResponse = null, string apiResponse = null)
+    public class SelfHostedSyncSponsorshipsCommandTests : FamiliesForEnterpriseTestsBase
     {
-        var fixture = new Fixture().WithAutoNSubstitutionsAutoPopulatedProperties();
-        fixture.AddMockHttp();
 
-        var settings = fixture.Create<IGlobalSettings>();
-        settings.SelfHosted = true;
-        settings.EnableCloudCommunication = enableCloudCommunication;
-
-        var apiUri = fixture.Create<Uri>();
-        var identityUri = fixture.Create<Uri>();
-        settings.Installation.ApiUri.Returns(apiUri.ToString());
-        settings.Installation.IdentityUri.Returns(identityUri.ToString());
-
-        var apiHandler = new MockHttpMessageHandler();
-        var identityHandler = new MockHttpMessageHandler();
-        var syncUri = string.Concat(apiUri, "organization/sponsorship/sync");
-        var tokenUri = string.Concat(identityUri, "connect/token");
-
-        apiHandler.When(HttpMethod.Post, syncUri)
-            .Respond("application/json", apiResponse);
-        identityHandler.When(HttpMethod.Post, tokenUri)
-            .Respond("application/json", identityResponse ?? "{\"access_token\":\"string\",\"expires_in\":3600,\"token_type\":\"Bearer\",\"scope\":\"string\"}");
-
-
-        var apiHttp = apiHandler.ToHttpClient();
-        var identityHttp = identityHandler.ToHttpClient();
-
-        var mockHttpClientFactory = Substitute.For<IHttpClientFactory>();
-        mockHttpClientFactory.CreateClient(Arg.Is("client")).Returns(apiHttp);
-        mockHttpClientFactory.CreateClient(Arg.Is("identity")).Returns(identityHttp);
-
-        return new SutProvider<SelfHostedSyncSponsorshipsCommand>(fixture)
-            .SetDependency(settings)
-            .SetDependency(mockHttpClientFactory)
-            .Create();
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task SyncOrganization_BillingSyncKeyDisabled_ThrowsBadRequest(
-        Guid cloudOrganizationId, OrganizationConnection billingSyncConnection)
-    {
-        var sutProvider = GetSutProvider();
-        billingSyncConnection.Enabled = false;
-        billingSyncConnection.SetConfig(new BillingSyncConfig
+        public static SutProvider<SelfHostedSyncSponsorshipsCommand> GetSutProvider(bool enableCloudCommunication = true, string identityResponse = null, string apiResponse = null)
         {
-            BillingSyncKey = "okslkcslkjf"
-        });
+            var fixture = new Fixture().WithAutoNSubstitutionsAutoPopulatedProperties();
+            fixture.AddMockHttp();
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.SyncOrganization(billingSyncConnection.OrganizationId, cloudOrganizationId, billingSyncConnection));
+            var settings = fixture.Create<IGlobalSettings>();
+            settings.SelfHosted = true;
+            settings.EnableCloudCommunication = enableCloudCommunication;
 
-        Assert.Contains($"Billing Sync Key disabled", exception.Message);
+            var apiUri = fixture.Create<Uri>();
+            var identityUri = fixture.Create<Uri>();
+            settings.Installation.ApiUri.Returns(apiUri.ToString());
+            settings.Installation.IdentityUri.Returns(identityUri.ToString());
 
-        await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
-            .DidNotReceiveWithAnyArgs()
-            .DeleteManyAsync(default);
-        await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
-            .DidNotReceiveWithAnyArgs()
-            .UpsertManyAsync(default);
-    }
+            var apiHandler = new MockHttpMessageHandler();
+            var identityHandler = new MockHttpMessageHandler();
+            var syncUri = string.Concat(apiUri, "organization/sponsorship/sync");
+            var tokenUri = string.Concat(identityUri, "connect/token");
 
-    [Theory]
-    [BitAutoData]
-    public async Task SyncOrganization_BillingSyncKeyEmpty_ThrowsBadRequest(
-        Guid cloudOrganizationId, OrganizationConnection billingSyncConnection)
-    {
-        var sutProvider = GetSutProvider();
-        billingSyncConnection.Config = "";
+            apiHandler.When(HttpMethod.Post, syncUri)
+                .Respond("application/json", apiResponse);
+            identityHandler.When(HttpMethod.Post, tokenUri)
+                .Respond("application/json", identityResponse ?? "{\"access_token\":\"string\",\"expires_in\":3600,\"token_type\":\"Bearer\",\"scope\":\"string\"}");
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.SyncOrganization(billingSyncConnection.OrganizationId, cloudOrganizationId, billingSyncConnection));
 
-        Assert.Contains($"No Billing Sync Key known", exception.Message);
+            var apiHttp = apiHandler.ToHttpClient();
+            var identityHttp = identityHandler.ToHttpClient();
 
-        await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
-            .DidNotReceiveWithAnyArgs()
-            .DeleteManyAsync(default);
-        await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
-            .DidNotReceiveWithAnyArgs()
-            .UpsertManyAsync(default);
-    }
+            var mockHttpClientFactory = Substitute.For<IHttpClientFactory>();
+            mockHttpClientFactory.CreateClient(Arg.Is("client")).Returns(apiHttp);
+            mockHttpClientFactory.CreateClient(Arg.Is("identity")).Returns(identityHttp);
 
-    [Theory]
-    [BitAutoData]
-    public async Task SyncOrganization_CloudCommunicationDisabled_EarlyReturn(
-        Guid cloudOrganizationId, OrganizationConnection billingSyncConnection)
-    {
-        var sutProvider = GetSutProvider(false);
+            return new SutProvider<SelfHostedSyncSponsorshipsCommand>(fixture)
+                .SetDependency(settings)
+                .SetDependency(mockHttpClientFactory)
+                .Create();
+        }
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.SyncOrganization(billingSyncConnection.OrganizationId, cloudOrganizationId, billingSyncConnection));
-
-        Assert.Contains($"Cloud communication is disabled", exception.Message);
-
-        await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
-            .DidNotReceiveWithAnyArgs()
-            .DeleteManyAsync(default);
-        await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
-            .DidNotReceiveWithAnyArgs()
-            .UpsertManyAsync(default);
-    }
-
-    [Theory]
-    [OrganizationSponsorshipCustomize]
-    [BitAutoData]
-    public async Task SyncOrganization_SyncsSponsorships(
-        Guid cloudOrganizationId, OrganizationConnection billingSyncConnection, IEnumerable<OrganizationSponsorship> sponsorships)
-    {
-        var syncJsonResponse = JsonSerializer.Serialize(new OrganizationSponsorshipSyncResponseModel(
-            new OrganizationSponsorshipSyncData
+        [Theory]
+        [BitAutoData]
+        public async Task SyncOrganization_BillingSyncKeyDisabled_ThrowsBadRequest(
+            Guid cloudOrganizationId, OrganizationConnection billingSyncConnection)
+        {
+            var sutProvider = GetSutProvider();
+            billingSyncConnection.Enabled = false;
+            billingSyncConnection.SetConfig(new BillingSyncConfig
             {
-                SponsorshipsBatch = sponsorships.Select(o => new OrganizationSponsorshipData(o))
-            }));
+                BillingSyncKey = "okslkcslkjf"
+            });
 
-        var sutProvider = GetSutProvider(apiResponse: syncJsonResponse);
-        billingSyncConnection.SetConfig(new BillingSyncConfig
+            var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+                sutProvider.Sut.SyncOrganization(billingSyncConnection.OrganizationId, cloudOrganizationId, billingSyncConnection));
+
+            Assert.Contains($"Billing Sync Key disabled", exception.Message);
+
+            await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
+                .DidNotReceiveWithAnyArgs()
+                .DeleteManyAsync(default);
+            await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
+                .DidNotReceiveWithAnyArgs()
+                .UpsertManyAsync(default);
+        }
+
+        [Theory]
+        [BitAutoData]
+        public async Task SyncOrganization_BillingSyncKeyEmpty_ThrowsBadRequest(
+            Guid cloudOrganizationId, OrganizationConnection billingSyncConnection)
         {
-            BillingSyncKey = "okslkcslkjf"
-        });
-        sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
-            .GetManyBySponsoringOrganizationAsync(Arg.Any<Guid>()).Returns(sponsorships.ToList());
+            var sutProvider = GetSutProvider();
+            billingSyncConnection.Config = "";
 
-        await sutProvider.Sut.SyncOrganization(billingSyncConnection.OrganizationId, cloudOrganizationId, billingSyncConnection);
+            var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+                sutProvider.Sut.SyncOrganization(billingSyncConnection.OrganizationId, cloudOrganizationId, billingSyncConnection));
 
-        await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
-            .DidNotReceiveWithAnyArgs()
-            .DeleteManyAsync(default);
-        await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
-            .Received(1)
-            .UpsertManyAsync(Arg.Any<IEnumerable<OrganizationSponsorship>>());
-    }
+            Assert.Contains($"No Billing Sync Key known", exception.Message);
 
-    [Theory]
-    [OrganizationSponsorshipCustomize(ToDelete = true)]
-    [BitAutoData]
-    public async Task SyncOrganization_DeletesSponsorships(
-        Guid cloudOrganizationId, OrganizationConnection billingSyncConnection, IEnumerable<OrganizationSponsorship> sponsorships)
-    {
-        var syncJsonResponse = JsonSerializer.Serialize(new OrganizationSponsorshipSyncResponseModel(
-            new OrganizationSponsorshipSyncData
+            await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
+                .DidNotReceiveWithAnyArgs()
+                .DeleteManyAsync(default);
+            await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
+                .DidNotReceiveWithAnyArgs()
+                .UpsertManyAsync(default);
+        }
+
+        [Theory]
+        [BitAutoData]
+        public async Task SyncOrganization_CloudCommunicationDisabled_EarlyReturn(
+            Guid cloudOrganizationId, OrganizationConnection billingSyncConnection)
+        {
+            var sutProvider = GetSutProvider(false);
+
+            var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+                sutProvider.Sut.SyncOrganization(billingSyncConnection.OrganizationId, cloudOrganizationId, billingSyncConnection));
+
+            Assert.Contains($"Cloud communication is disabled", exception.Message);
+
+            await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
+                .DidNotReceiveWithAnyArgs()
+                .DeleteManyAsync(default);
+            await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
+                .DidNotReceiveWithAnyArgs()
+                .UpsertManyAsync(default);
+        }
+
+        [Theory]
+        [OrganizationSponsorshipCustomize]
+        [BitAutoData]
+        public async Task SyncOrganization_SyncsSponsorships(
+            Guid cloudOrganizationId, OrganizationConnection billingSyncConnection, IEnumerable<OrganizationSponsorship> sponsorships)
+        {
+            var syncJsonResponse = JsonSerializer.Serialize(new OrganizationSponsorshipSyncResponseModel(
+                new OrganizationSponsorshipSyncData
+                {
+                    SponsorshipsBatch = sponsorships.Select(o => new OrganizationSponsorshipData(o))
+                }));
+
+            var sutProvider = GetSutProvider(apiResponse: syncJsonResponse);
+            billingSyncConnection.SetConfig(new BillingSyncConfig
             {
-                SponsorshipsBatch = sponsorships.Select(o => new OrganizationSponsorshipData(o) { CloudSponsorshipRemoved = true })
-            }));
+                BillingSyncKey = "okslkcslkjf"
+            });
+            sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
+                .GetManyBySponsoringOrganizationAsync(Arg.Any<Guid>()).Returns(sponsorships.ToList());
 
-        var sutProvider = GetSutProvider(apiResponse: syncJsonResponse);
-        billingSyncConnection.SetConfig(new BillingSyncConfig
+            await sutProvider.Sut.SyncOrganization(billingSyncConnection.OrganizationId, cloudOrganizationId, billingSyncConnection);
+
+            await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
+                .DidNotReceiveWithAnyArgs()
+                .DeleteManyAsync(default);
+            await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
+                .Received(1)
+                .UpsertManyAsync(Arg.Any<IEnumerable<OrganizationSponsorship>>());
+        }
+
+        [Theory]
+        [OrganizationSponsorshipCustomize(ToDelete = true)]
+        [BitAutoData]
+        public async Task SyncOrganization_DeletesSponsorships(
+            Guid cloudOrganizationId, OrganizationConnection billingSyncConnection, IEnumerable<OrganizationSponsorship> sponsorships)
         {
-            BillingSyncKey = "okslkcslkjf"
-        });
-        sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
-            .GetManyBySponsoringOrganizationAsync(Arg.Any<Guid>()).Returns(sponsorships.ToList());
+            var syncJsonResponse = JsonSerializer.Serialize(new OrganizationSponsorshipSyncResponseModel(
+                new OrganizationSponsorshipSyncData
+                {
+                    SponsorshipsBatch = sponsorships.Select(o => new OrganizationSponsorshipData(o) { CloudSponsorshipRemoved = true })
+                }));
 
-        await sutProvider.Sut.SyncOrganization(billingSyncConnection.OrganizationId, cloudOrganizationId, billingSyncConnection);
+            var sutProvider = GetSutProvider(apiResponse: syncJsonResponse);
+            billingSyncConnection.SetConfig(new BillingSyncConfig
+            {
+                BillingSyncKey = "okslkcslkjf"
+            });
+            sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
+                .GetManyBySponsoringOrganizationAsync(Arg.Any<Guid>()).Returns(sponsorships.ToList());
 
-        await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
-            .Received(1)
-            .DeleteManyAsync(Arg.Any<IEnumerable<Guid>>());
-        await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
-            .DidNotReceiveWithAnyArgs()
-            .UpsertManyAsync(default);
+            await sutProvider.Sut.SyncOrganization(billingSyncConnection.OrganizationId, cloudOrganizationId, billingSyncConnection);
+
+            await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
+                .Received(1)
+                .DeleteManyAsync(Arg.Any<IEnumerable<Guid>>());
+            await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
+                .DidNotReceiveWithAnyArgs()
+                .UpsertManyAsync(default);
+        }
     }
 }

@@ -1,8 +1,9 @@
 ﻿using Bit.Core.Models.Mail;
 
-namespace Bit.Core.Services;
-
-public interface IMailDeliveryService
+namespace Bit.Core.Services
 {
-    Task SendEmailAsync(MailMessage message);
+    public interface IMailDeliveryService
+    {
+        Task SendEmailAsync(MailMessage message);
+    }
 }

@@ -1,37 +1,38 @@
 ﻿using Xunit;
 
-namespace Bit.Test.Common.AutoFixture.Attributes;
-
-/// <summary>
-/// Used for requiring certain environment variables exist at the time. Mostly used for more edge unit tests that shouldn't
-/// be run during CI builds or should only be ran in CI builds when pieces of information are available.
-/// </summary>
-public class RequiredEnvironmentTheoryAttribute : TheoryAttribute
+namespace Bit.Test.Common.AutoFixture.Attributes
 {
-    private readonly string[] _environmentVariableNames;
-
-    public RequiredEnvironmentTheoryAttribute(params string[] environmentVariableNames)
+    /// <summary>
+    /// Used for requiring certain environment variables exist at the time. Mostly used for more edge unit tests that shouldn't
+    /// be run during CI builds or should only be ran in CI builds when pieces of information are available.
+    /// </summary>
+    public class RequiredEnvironmentTheoryAttribute : TheoryAttribute
     {
-        _environmentVariableNames = environmentVariableNames;
+        private readonly string[] _environmentVariableNames;
 
-        if (!HasRequiredEnvironmentVariables())
+        public RequiredEnvironmentTheoryAttribute(params string[] environmentVariableNames)
         {
-            Skip = $"Missing one or more required environment variables. ({string.Join(", ", _environmentVariableNames)})";
-        }
-    }
+            _environmentVariableNames = environmentVariableNames;
 
-    private bool HasRequiredEnvironmentVariables()
-    {
-        foreach (var env in _environmentVariableNames)
-        {
-            var value = Environment.GetEnvironmentVariable(env);
-
-            if (value == null)
+            if (!HasRequiredEnvironmentVariables())
             {
-                return false;
+                Skip = $"Missing one or more required environment variables. ({string.Join(", ", _environmentVariableNames)})";
             }
         }
 
-        return true;
+        private bool HasRequiredEnvironmentVariables()
+        {
+            foreach (var env in _environmentVariableNames)
+            {
+                var value = Environment.GetEnvironmentVariable(env);
+
+                if (value == null)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
     }
 }

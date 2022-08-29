@@ -1,11 +1,12 @@
 ﻿using Bit.Core.Models.Api;
 
-namespace Bit.Api.Models.Response;
-
-public class SendFileDownloadDataResponseModel : ResponseModel
+namespace Bit.Api.Models.Response
 {
-    public string Id { get; set; }
-    public string Url { get; set; }
+    public class SendFileDownloadDataResponseModel : ResponseModel
+    {
+        public string Id { get; set; }
+        public string Url { get; set; }
 
-    public SendFileDownloadDataResponseModel() : base("send-fileDownload") { }
+        public SendFileDownloadDataResponseModel() : base("send-fileDownload") { }
+    }
 }

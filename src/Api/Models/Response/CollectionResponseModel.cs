@@ -2,50 +2,51 @@
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Data;
 
-namespace Bit.Api.Models.Response;
-
-public class CollectionResponseModel : ResponseModel
+namespace Bit.Api.Models.Response
 {
-    public CollectionResponseModel(Collection collection, string obj = "collection")
-        : base(obj)
+    public class CollectionResponseModel : ResponseModel
     {
-        if (collection == null)
+        public CollectionResponseModel(Collection collection, string obj = "collection")
+            : base(obj)
         {
-            throw new ArgumentNullException(nameof(collection));
+            if (collection == null)
+            {
+                throw new ArgumentNullException(nameof(collection));
+            }
+
+            Id = collection.Id.ToString();
+            OrganizationId = collection.OrganizationId.ToString();
+            Name = collection.Name;
+            ExternalId = collection.ExternalId;
         }
 
-        Id = collection.Id.ToString();
-        OrganizationId = collection.OrganizationId.ToString();
-        Name = collection.Name;
-        ExternalId = collection.ExternalId;
+        public string Id { get; set; }
+        public string OrganizationId { get; set; }
+        public string Name { get; set; }
+        public string ExternalId { get; set; }
     }
 
-    public string Id { get; set; }
-    public string OrganizationId { get; set; }
-    public string Name { get; set; }
-    public string ExternalId { get; set; }
-}
-
-public class CollectionDetailsResponseModel : CollectionResponseModel
-{
-    public CollectionDetailsResponseModel(CollectionDetails collectionDetails)
-        : base(collectionDetails, "collectionDetails")
+    public class CollectionDetailsResponseModel : CollectionResponseModel
     {
-        ReadOnly = collectionDetails.ReadOnly;
-        HidePasswords = collectionDetails.HidePasswords;
+        public CollectionDetailsResponseModel(CollectionDetails collectionDetails)
+            : base(collectionDetails, "collectionDetails")
+        {
+            ReadOnly = collectionDetails.ReadOnly;
+            HidePasswords = collectionDetails.HidePasswords;
+        }
+
+        public bool ReadOnly { get; set; }
+        public bool HidePasswords { get; set; }
     }
 
-    public bool ReadOnly { get; set; }
-    public bool HidePasswords { get; set; }
-}
-
-public class CollectionGroupDetailsResponseModel : CollectionResponseModel
-{
-    public CollectionGroupDetailsResponseModel(Collection collection, IEnumerable<SelectionReadOnly> groups)
-        : base(collection, "collectionGroupDetails")
+    public class CollectionGroupDetailsResponseModel : CollectionResponseModel
     {
-        Groups = groups.Select(g => new SelectionReadOnlyResponseModel(g));
-    }
+        public CollectionGroupDetailsResponseModel(Collection collection, IEnumerable<SelectionReadOnly> groups)
+            : base(collection, "collectionGroupDetails")
+        {
+            Groups = groups.Select(g => new SelectionReadOnlyResponseModel(g));
+        }
 
-    public IEnumerable<SelectionReadOnlyResponseModel> Groups { get; set; }
+        public IEnumerable<SelectionReadOnlyResponseModel> Groups { get; set; }
+    }
 }

@@ -3,26 +3,27 @@ using Bit.Core.Jobs;
 using Bit.Core.Settings;
 using Quartz;
 
-namespace Bit.Admin.Jobs;
-
-public class AliveJob : BaseJob
+namespace Bit.Admin.Jobs
 {
-    private readonly GlobalSettings _globalSettings;
-    private HttpClient _httpClient = new HttpClient();
-
-    public AliveJob(
-        GlobalSettings globalSettings,
-        ILogger<AliveJob> logger)
-        : base(logger)
+    public class AliveJob : BaseJob
     {
-        _globalSettings = globalSettings;
-    }
+        private readonly GlobalSettings _globalSettings;
+        private HttpClient _httpClient = new HttpClient();
 
-    protected async override Task ExecuteJobAsync(IJobExecutionContext context)
-    {
-        _logger.LogInformation(Constants.BypassFiltersEventId, "Execute job task: Keep alive");
-        var response = await _httpClient.GetAsync(_globalSettings.BaseServiceUri.Admin);
-        _logger.LogInformation(Constants.BypassFiltersEventId, "Finished job task: Keep alive, " +
-            response.StatusCode);
+        public AliveJob(
+            GlobalSettings globalSettings,
+            ILogger<AliveJob> logger)
+            : base(logger)
+        {
+            _globalSettings = globalSettings;
+        }
+
+        protected async override Task ExecuteJobAsync(IJobExecutionContext context)
+        {
+            _logger.LogInformation(Constants.BypassFiltersEventId, "Execute job task: Keep alive");
+            var response = await _httpClient.GetAsync(_globalSettings.BaseServiceUri.Admin);
+            _logger.LogInformation(Constants.BypassFiltersEventId, "Finished job task: Keep alive, " +
+                response.StatusCode);
+        }
     }
 }

@@ -3,35 +3,36 @@ using AutoFixture.Kernel;
 using Bit.Core.Context;
 using Bit.Test.Common.AutoFixture;
 
-namespace Bit.Core.Test.AutoFixture.CurrentContextFixtures;
-
-internal class CurrentContext : ICustomization
+namespace Bit.Core.Test.AutoFixture.CurrentContextFixtures
 {
-    public void Customize(IFixture fixture)
+    internal class CurrentContext : ICustomization
     {
-        fixture.Customizations.Add(new CurrentContextBuilder());
+        public void Customize(IFixture fixture)
+        {
+            fixture.Customizations.Add(new CurrentContextBuilder());
+        }
     }
-}
 
-internal class CurrentContextBuilder : ISpecimenBuilder
-{
-    public object Create(object request, ISpecimenContext context)
+    internal class CurrentContextBuilder : ISpecimenBuilder
     {
-        if (context == null)
+        public object Create(object request, ISpecimenContext context)
         {
-            throw new ArgumentNullException(nameof(context));
-        }
-        if (!(request is Type typeRequest))
-        {
-            return new NoSpecimen();
-        }
-        if (typeof(ICurrentContext) != typeRequest)
-        {
-            return new NoSpecimen();
-        }
+            if (context == null)
+            {
+                throw new ArgumentNullException(nameof(context));
+            }
+            if (!(request is Type typeRequest))
+            {
+                return new NoSpecimen();
+            }
+            if (typeof(ICurrentContext) != typeRequest)
+            {
+                return new NoSpecimen();
+            }
 
-        var obj = new Fixture().WithAutoNSubstitutions().Create<ICurrentContext>();
-        obj.Organizations = context.Create<List<CurrentContentOrganization>>();
-        return obj;
+            var obj = new Fixture().WithAutoNSubstitutions().Create<ICurrentContext>();
+            obj.Organizations = context.Create<List<CurrentContentOrganization>>();
+            return obj;
+        }
     }
 }

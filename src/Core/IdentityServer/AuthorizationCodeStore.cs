@@ -6,38 +6,39 @@ using IdentityServer4.Stores;
 using IdentityServer4.Stores.Serialization;
 using Microsoft.Extensions.Logging;
 
-namespace Bit.Core.IdentityServer;
-
-// ref: https://raw.githubusercontent.com/IdentityServer/IdentityServer4/3.1.3/src/IdentityServer4/src/Stores/Default/DefaultAuthorizationCodeStore.cs
-public class AuthorizationCodeStore : DefaultGrantStore<AuthorizationCode>, IAuthorizationCodeStore
+namespace Bit.Core.IdentityServer
 {
-    public AuthorizationCodeStore(
-        IPersistedGrantStore store,
-        IPersistentGrantSerializer serializer,
-        IHandleGenerationService handleGenerationService,
-        ILogger<DefaultAuthorizationCodeStore> logger)
-        : base(IdentityServerConstants.PersistedGrantTypes.AuthorizationCode, store, serializer,
-              handleGenerationService, logger)
-    { }
-
-    public Task<string> StoreAuthorizationCodeAsync(AuthorizationCode code)
+    // ref: https://raw.githubusercontent.com/IdentityServer/IdentityServer4/3.1.3/src/IdentityServer4/src/Stores/Default/DefaultAuthorizationCodeStore.cs
+    public class AuthorizationCodeStore : DefaultGrantStore<AuthorizationCode>, IAuthorizationCodeStore
     {
-        return CreateItemAsync(code, code.ClientId, code.Subject.GetSubjectId(), code.SessionId,
-            code.Description, code.CreationTime, code.Lifetime);
-    }
+        public AuthorizationCodeStore(
+            IPersistedGrantStore store,
+            IPersistentGrantSerializer serializer,
+            IHandleGenerationService handleGenerationService,
+            ILogger<DefaultAuthorizationCodeStore> logger)
+            : base(IdentityServerConstants.PersistedGrantTypes.AuthorizationCode, store, serializer,
+                  handleGenerationService, logger)
+        { }
 
-    public Task<AuthorizationCode> GetAuthorizationCodeAsync(string code)
-    {
-        return GetItemAsync(code);
-    }
+        public Task<string> StoreAuthorizationCodeAsync(AuthorizationCode code)
+        {
+            return CreateItemAsync(code, code.ClientId, code.Subject.GetSubjectId(), code.SessionId,
+                code.Description, code.CreationTime, code.Lifetime);
+        }
 
-    public Task RemoveAuthorizationCodeAsync(string code)
-    {
-        // return RemoveItemAsync(code);
+        public Task<AuthorizationCode> GetAuthorizationCodeAsync(string code)
+        {
+            return GetItemAsync(code);
+        }
 
-        // We don't want to delete authorization codes during validation.
-        // We'll rely on the authorization code lifecycle for short term validation and the
-        // DatabaseExpiredGrantsJob to clean up old authorization codes.
-        return Task.FromResult(0);
+        public Task RemoveAuthorizationCodeAsync(string code)
+        {
+            // return RemoveItemAsync(code);
+
+            // We don't want to delete authorization codes during validation.
+            // We'll rely on the authorization code lifecycle for short term validation and the
+            // DatabaseExpiredGrantsJob to clean up old authorization codes.
+            return Task.FromResult(0);
+        }
     }
 }

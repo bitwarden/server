@@ -1,7 +1,8 @@
-﻿namespace Bit.Core.Tokens;
-
-public interface IBillingSyncTokenable
+﻿namespace Bit.Core.Tokens
 {
-    public Guid OrganizationId { get; set; }
-    public string BillingSyncKey { get; set; }
+    public interface IBillingSyncTokenable
+    {
+        public Guid OrganizationId { get; set; }
+        public string BillingSyncKey { get; set; }
+    }
 }

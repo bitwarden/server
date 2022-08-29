@@ -3,62 +3,63 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.StackExchangeRedis;
 
-namespace Bit.Core.IdentityServer;
-
-public class RedisCacheTicketStore : ITicketStore
+namespace Bit.Core.IdentityServer
 {
-    private const string _keyPrefix = "auth-";
-    private readonly IDistributedCache _cache;
-
-    public RedisCacheTicketStore(RedisCacheOptions options)
+    public class RedisCacheTicketStore : ITicketStore
     {
-        _cache = new RedisCache(options);
-    }
+        private const string _keyPrefix = "auth-";
+        private readonly IDistributedCache _cache;
 
-    public async Task<string> StoreAsync(AuthenticationTicket ticket)
-    {
-        var key = $"{_keyPrefix}{Guid.NewGuid()}";
-        await RenewAsync(key, ticket);
+        public RedisCacheTicketStore(RedisCacheOptions options)
+        {
+            _cache = new RedisCache(options);
+        }
 
-        return key;
-    }
+        public async Task<string> StoreAsync(AuthenticationTicket ticket)
+        {
+            var key = $"{_keyPrefix}{Guid.NewGuid()}";
+            await RenewAsync(key, ticket);
 
-    public Task RenewAsync(string key, AuthenticationTicket ticket)
-    {
-        var options = new DistributedCacheEntryOptions();
-        var expiresUtc = ticket.Properties.ExpiresUtc ??
-            DateTimeOffset.UtcNow.AddMinutes(15);
-        options.SetAbsoluteExpiration(expiresUtc);
+            return key;
+        }
 
-        var val = SerializeToBytes(ticket);
-        _cache.Set(key, val, options);
+        public Task RenewAsync(string key, AuthenticationTicket ticket)
+        {
+            var options = new DistributedCacheEntryOptions();
+            var expiresUtc = ticket.Properties.ExpiresUtc ??
+                DateTimeOffset.UtcNow.AddMinutes(15);
+            options.SetAbsoluteExpiration(expiresUtc);
 
-        return Task.FromResult(0);
-    }
+            var val = SerializeToBytes(ticket);
+            _cache.Set(key, val, options);
 
-    public Task<AuthenticationTicket> RetrieveAsync(string key)
-    {
-        AuthenticationTicket ticket;
-        var bytes = _cache.Get(key);
-        ticket = DeserializeFromBytes(bytes);
+            return Task.FromResult(0);
+        }
 
-        return Task.FromResult(ticket);
-    }
+        public Task<AuthenticationTicket> RetrieveAsync(string key)
+        {
+            AuthenticationTicket ticket;
+            var bytes = _cache.Get(key);
+            ticket = DeserializeFromBytes(bytes);
 
-    public Task RemoveAsync(string key)
-    {
-        _cache.Remove(key);
+            return Task.FromResult(ticket);
+        }
 
-        return Task.FromResult(0);
-    }
+        public Task RemoveAsync(string key)
+        {
+            _cache.Remove(key);
 
-    private static byte[] SerializeToBytes(AuthenticationTicket source)
-    {
-        return TicketSerializer.Default.Serialize(source);
-    }
+            return Task.FromResult(0);
+        }
 
-    private static AuthenticationTicket DeserializeFromBytes(byte[] source)
-    {
-        return source == null ? null : TicketSerializer.Default.Deserialize(source);
+        private static byte[] SerializeToBytes(AuthenticationTicket source)
+        {
+            return TicketSerializer.Default.Serialize(source);
+        }
+
+        private static AuthenticationTicket DeserializeFromBytes(byte[] source)
+        {
+            return source == null ? null : TicketSerializer.Default.Deserialize(source);
+        }
     }
 }

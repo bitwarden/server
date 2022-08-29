@@ -3,15 +3,16 @@ using Bit.Core.Entities;
 using Bit.Core.Test.AutoFixture.CipherFixtures;
 using Xunit;
 
-namespace Bit.Core.Test.Models;
-
-public class CipherTests
+namespace Bit.Core.Test.Models
 {
-    [Theory]
-    [InlineUserCipherAutoData]
-    [InlineOrganizationCipherAutoData]
-    public void Clone_CreatesExactCopy(Cipher cipher)
+    public class CipherTests
     {
-        Assert.Equal(JsonSerializer.Serialize(cipher), JsonSerializer.Serialize(cipher.Clone()));
+        [Theory]
+        [InlineUserCipherAutoData]
+        [InlineOrganizationCipherAutoData]
+        public void Clone_CreatesExactCopy(Cipher cipher)
+        {
+            Assert.Equal(JsonSerializer.Serialize(cipher), JsonSerializer.Serialize(cipher.Clone()));
+        }
     }
 }

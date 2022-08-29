@@ -1,19 +1,20 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using Bit.Core.Entities;
 
-namespace Bit.Infrastructure.EFIntegration.Test.Repositories.EqualityComparers;
-
-public class SsoConfigCompare : IEqualityComparer<SsoConfig>
+namespace Bit.Infrastructure.EFIntegration.Test.Repositories.EqualityComparers
 {
-    public bool Equals(SsoConfig x, SsoConfig y)
+    public class SsoConfigCompare : IEqualityComparer<SsoConfig>
     {
-        return x.Enabled == y.Enabled &&
-               x.OrganizationId == y.OrganizationId &&
-               x.Data == y.Data;
-    }
+        public bool Equals(SsoConfig x, SsoConfig y)
+        {
+            return x.Enabled == y.Enabled &&
+                   x.OrganizationId == y.OrganizationId &&
+                   x.Data == y.Data;
+        }
 
-    public int GetHashCode([DisallowNull] SsoConfig obj)
-    {
-        return base.GetHashCode();
+        public int GetHashCode([DisallowNull] SsoConfig obj)
+        {
+            return base.GetHashCode();
+        }
     }
 }

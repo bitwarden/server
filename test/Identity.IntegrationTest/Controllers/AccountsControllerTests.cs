@@ -3,32 +3,33 @@ using Bit.IntegrationTestCommon.Factories;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
 
-namespace Bit.Identity.IntegrationTest.Controllers;
-
-public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
+namespace Bit.Identity.IntegrationTest.Controllers
 {
-    private readonly IdentityApplicationFactory _factory;
-
-    public AccountsControllerTests(IdentityApplicationFactory factory)
+    public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
     {
-        _factory = factory;
-    }
+        private readonly IdentityApplicationFactory _factory;
 
-    [Fact]
-    public async Task PostRegister_Success()
-    {
-        var context = await _factory.RegisterAsync(new RegisterRequestModel
+        public AccountsControllerTests(IdentityApplicationFactory factory)
         {
-            Email = "test+register@email.com",
-            MasterPasswordHash = "master_password_hash"
-        });
+            _factory = factory;
+        }
 
-        Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
+        [Fact]
+        public async Task PostRegister_Success()
+        {
+            var context = await _factory.RegisterAsync(new RegisterRequestModel
+            {
+                Email = "test+register@email.com",
+                MasterPasswordHash = "master_password_hash"
+            });
 
-        var database = _factory.GetDatabaseContext();
-        var user = await database.Users
-            .SingleAsync(u => u.Email == "test+register@email.com");
+            Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
 
-        Assert.NotNull(user);
+            var database = _factory.GetDatabaseContext();
+            var user = await database.Users
+                .SingleAsync(u => u.Email == "test+register@email.com");
+
+            Assert.NotNull(user);
+        }
     }
 }

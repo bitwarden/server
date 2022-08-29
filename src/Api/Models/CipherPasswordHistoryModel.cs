@@ -2,27 +2,28 @@
 using Bit.Core.Models.Data;
 using Bit.Core.Utilities;
 
-namespace Bit.Api.Models;
-
-public class CipherPasswordHistoryModel
+namespace Bit.Api.Models
 {
-    public CipherPasswordHistoryModel() { }
-
-    public CipherPasswordHistoryModel(CipherPasswordHistoryData data)
+    public class CipherPasswordHistoryModel
     {
-        Password = data.Password;
-        LastUsedDate = data.LastUsedDate;
-    }
+        public CipherPasswordHistoryModel() { }
 
-    [EncryptedString]
-    [EncryptedStringLength(5000)]
-    [Required]
-    public string Password { get; set; }
-    [Required]
-    public DateTime? LastUsedDate { get; set; }
+        public CipherPasswordHistoryModel(CipherPasswordHistoryData data)
+        {
+            Password = data.Password;
+            LastUsedDate = data.LastUsedDate;
+        }
 
-    public CipherPasswordHistoryData ToCipherPasswordHistoryData()
-    {
-        return new CipherPasswordHistoryData { Password = Password, LastUsedDate = LastUsedDate.Value, };
+        [EncryptedString]
+        [EncryptedStringLength(5000)]
+        [Required]
+        public string Password { get; set; }
+        [Required]
+        public DateTime? LastUsedDate { get; set; }
+
+        public CipherPasswordHistoryData ToCipherPasswordHistoryData()
+        {
+            return new CipherPasswordHistoryData { Password = Password, LastUsedDate = LastUsedDate.Value, };
+        }
     }
 }

@@ -2,37 +2,38 @@
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Identity;
 
-namespace Bit.Core.Identity;
-
-public class ReadOnlyDatabaseIdentityUserStore : ReadOnlyIdentityUserStore
+namespace Bit.Core.Identity
 {
-    private readonly IUserService _userService;
-    private readonly IUserRepository _userRepository;
-
-    public ReadOnlyDatabaseIdentityUserStore(
-        IUserService userService,
-        IUserRepository userRepository)
+    public class ReadOnlyDatabaseIdentityUserStore : ReadOnlyIdentityUserStore
     {
-        _userService = userService;
-        _userRepository = userRepository;
-    }
+        private readonly IUserService _userService;
+        private readonly IUserRepository _userRepository;
 
-    public override async Task<IdentityUser> FindByEmailAsync(string normalizedEmail,
-        CancellationToken cancellationToken = default(CancellationToken))
-    {
-        var user = await _userRepository.GetByEmailAsync(normalizedEmail);
-        return user?.ToIdentityUser(await _userService.TwoFactorIsEnabledAsync(user));
-    }
-
-    public override async Task<IdentityUser> FindByIdAsync(string userId,
-        CancellationToken cancellationToken = default(CancellationToken))
-    {
-        if (!Guid.TryParse(userId, out var userIdGuid))
+        public ReadOnlyDatabaseIdentityUserStore(
+            IUserService userService,
+            IUserRepository userRepository)
         {
-            return null;
+            _userService = userService;
+            _userRepository = userRepository;
         }
 
-        var user = await _userRepository.GetByIdAsync(userIdGuid);
-        return user?.ToIdentityUser(await _userService.TwoFactorIsEnabledAsync(user));
+        public override async Task<IdentityUser> FindByEmailAsync(string normalizedEmail,
+            CancellationToken cancellationToken = default(CancellationToken))
+        {
+            var user = await _userRepository.GetByEmailAsync(normalizedEmail);
+            return user?.ToIdentityUser(await _userService.TwoFactorIsEnabledAsync(user));
+        }
+
+        public override async Task<IdentityUser> FindByIdAsync(string userId,
+            CancellationToken cancellationToken = default(CancellationToken))
+        {
+            if (!Guid.TryParse(userId, out var userIdGuid))
+            {
+                return null;
+            }
+
+            var user = await _userRepository.GetByIdAsync(userIdGuid);
+            return user?.ToIdentityUser(await _userService.TwoFactorIsEnabledAsync(user));
+        }
     }
 }

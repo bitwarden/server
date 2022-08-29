@@ -1,6 +1,7 @@
-﻿namespace Bit.Core.Models.Mail;
-
-public class FailedAuthAttemptsModel : NewDeviceLoggedInModel
+﻿namespace Bit.Core.Models.Mail
 {
-    public string AffectedEmail { get; set; }
+    public class FailedAuthAttemptsModel : NewDeviceLoggedInModel
+    {
+        public string AffectedEmail { get; set; }
+    }
 }

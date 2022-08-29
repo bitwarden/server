@@ -4,33 +4,34 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.Extensions.Configuration;
 
-namespace MySqlMigrations;
-
-public static class GlobalSettingsFactory
+namespace MySqlMigrations
 {
-    public static GlobalSettings GlobalSettings { get; } = new GlobalSettings();
-    static GlobalSettingsFactory()
+    public static class GlobalSettingsFactory
     {
-        var configBuilder = new ConfigurationBuilder().AddUserSecrets<Bit.Api.Startup>();
-        var Configuration = configBuilder.Build();
-        ConfigurationBinder.Bind(Configuration.GetSection("GlobalSettings"), GlobalSettings);
-    }
-}
-
-public class DatabaseContextFactory : IDesignTimeDbContextFactory<DatabaseContext>
-{
-    public DatabaseContext CreateDbContext(string[] args)
-    {
-        var globalSettings = GlobalSettingsFactory.GlobalSettings;
-        var optionsBuilder = new DbContextOptionsBuilder<DatabaseContext>();
-        var connectionString = globalSettings.PostgreSql?.ConnectionString;
-        if (string.IsNullOrWhiteSpace(connectionString))
+        public static GlobalSettings GlobalSettings { get; } = new GlobalSettings();
+        static GlobalSettingsFactory()
         {
-            throw new Exception("No Postgres connection string found.");
+            var configBuilder = new ConfigurationBuilder().AddUserSecrets<Bit.Api.Startup>();
+            var Configuration = configBuilder.Build();
+            ConfigurationBinder.Bind(Configuration.GetSection("GlobalSettings"), GlobalSettings);
         }
-        optionsBuilder.UseNpgsql(
-            connectionString,
-            b => b.MigrationsAssembly("PostgresMigrations"));
-        return new DatabaseContext(optionsBuilder.Options);
+    }
+
+    public class DatabaseContextFactory : IDesignTimeDbContextFactory<DatabaseContext>
+    {
+        public DatabaseContext CreateDbContext(string[] args)
+        {
+            var globalSettings = GlobalSettingsFactory.GlobalSettings;
+            var optionsBuilder = new DbContextOptionsBuilder<DatabaseContext>();
+            var connectionString = globalSettings.PostgreSql?.ConnectionString;
+            if (string.IsNullOrWhiteSpace(connectionString))
+            {
+                throw new Exception("No Postgres connection string found.");
+            }
+            optionsBuilder.UseNpgsql(
+                connectionString,
+                b => b.MigrationsAssembly("PostgresMigrations"));
+            return new DatabaseContext(optionsBuilder.Options);
+        }
     }
 }

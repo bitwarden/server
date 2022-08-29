@@ -1,23 +1,24 @@
 ﻿using Microsoft.EntityFrameworkCore.Migrations;
 
-namespace Bit.MySqlMigrations.Migrations;
-
-public partial class KeyConnector : Migration
+namespace Bit.MySqlMigrations.Migrations
 {
-    protected override void Up(MigrationBuilder migrationBuilder)
+    public partial class KeyConnector : Migration
     {
-        migrationBuilder.AddColumn<bool>(
-            name: "UsesKeyConnector",
-            table: "User",
-            type: "tinyint(1)",
-            nullable: false,
-            defaultValue: false);
-    }
+        protected override void Up(MigrationBuilder migrationBuilder)
+        {
+            migrationBuilder.AddColumn<bool>(
+                name: "UsesKeyConnector",
+                table: "User",
+                type: "tinyint(1)",
+                nullable: false,
+                defaultValue: false);
+        }
 
-    protected override void Down(MigrationBuilder migrationBuilder)
-    {
-        migrationBuilder.DropColumn(
-            name: "UsesKeyConnector",
-            table: "User");
+        protected override void Down(MigrationBuilder migrationBuilder)
+        {
+            migrationBuilder.DropColumn(
+                name: "UsesKeyConnector",
+                table: "User");
+        }
     }
 }

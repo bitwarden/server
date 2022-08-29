@@ -2,24 +2,25 @@
 using Bit.Core.Jobs;
 using Quartz;
 
-namespace Bit.Notifications.Jobs;
-
-public class LogConnectionCounterJob : BaseJob
+namespace Bit.Notifications.Jobs
 {
-    private readonly ConnectionCounter _connectionCounter;
-
-    public LogConnectionCounterJob(
-        ILogger<LogConnectionCounterJob> logger,
-        ConnectionCounter connectionCounter)
-        : base(logger)
+    public class LogConnectionCounterJob : BaseJob
     {
-        _connectionCounter = connectionCounter;
-    }
+        private readonly ConnectionCounter _connectionCounter;
 
-    protected override Task ExecuteJobAsync(IJobExecutionContext context)
-    {
-        _logger.LogInformation(Constants.BypassFiltersEventId,
-            "Connection count for server {0}: {1}", Environment.MachineName, _connectionCounter.GetCount());
-        return Task.FromResult(0);
+        public LogConnectionCounterJob(
+            ILogger<LogConnectionCounterJob> logger,
+            ConnectionCounter connectionCounter)
+            : base(logger)
+        {
+            _connectionCounter = connectionCounter;
+        }
+
+        protected override Task ExecuteJobAsync(IJobExecutionContext context)
+        {
+            _logger.LogInformation(Constants.BypassFiltersEventId,
+                "Connection count for server {0}: {1}", Environment.MachineName, _connectionCounter.GetCount());
+            return Task.FromResult(0);
+        }
     }
 }

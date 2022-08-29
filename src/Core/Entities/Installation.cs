@@ -1,20 +1,21 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.Utilities;
 
-namespace Bit.Core.Entities;
-
-public class Installation : ITableObject<Guid>
+namespace Bit.Core.Entities
 {
-    public Guid Id { get; set; }
-    [MaxLength(256)]
-    public string Email { get; set; }
-    [MaxLength(150)]
-    public string Key { get; set; }
-    public bool Enabled { get; set; }
-    public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
-
-    public void SetNewId()
+    public class Installation : ITableObject<Guid>
     {
-        Id = CoreHelpers.GenerateComb();
+        public Guid Id { get; set; }
+        [MaxLength(256)]
+        public string Email { get; set; }
+        [MaxLength(150)]
+        public string Key { get; set; }
+        public bool Enabled { get; set; }
+        public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
+
+        public void SetNewId()
+        {
+            Id = CoreHelpers.GenerateComb();
+        }
     }
 }

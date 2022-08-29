@@ -1,12 +1,13 @@
-﻿namespace Bit.Core.Tokens;
-
-public class BadTokenException : Exception
+﻿namespace Bit.Core.Tokens
 {
-    public BadTokenException()
+    public class BadTokenException : Exception
     {
-    }
+        public BadTokenException()
+        {
+        }
 
-    public BadTokenException(string message) : base(message)
-    {
+        public BadTokenException(string message) : base(message)
+        {
+        }
     }
 }

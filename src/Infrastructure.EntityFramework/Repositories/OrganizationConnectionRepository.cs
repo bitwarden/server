@@ -5,37 +5,38 @@ using Bit.Core.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Bit.Infrastructure.EntityFramework.Repositories;
-
-public class OrganizationConnectionRepository : Repository<OrganizationConnection, Models.OrganizationConnection, Guid>, IOrganizationConnectionRepository
+namespace Bit.Infrastructure.EntityFramework.Repositories
 {
-    public OrganizationConnectionRepository(IServiceScopeFactory serviceScopeFactory,
-        IMapper mapper)
-        : base(serviceScopeFactory, mapper, context => context.OrganizationConnections)
+    public class OrganizationConnectionRepository : Repository<OrganizationConnection, Models.OrganizationConnection, Guid>, IOrganizationConnectionRepository
     {
-    }
-
-    public async Task<ICollection<OrganizationConnection>> GetByOrganizationIdTypeAsync(Guid organizationId, OrganizationConnectionType type)
-    {
-        using (var scope = ServiceScopeFactory.CreateScope())
+        public OrganizationConnectionRepository(IServiceScopeFactory serviceScopeFactory,
+            IMapper mapper)
+            : base(serviceScopeFactory, mapper, context => context.OrganizationConnections)
         {
-            var dbContext = GetDatabaseContext(scope);
-            var connections = await dbContext.OrganizationConnections
-                .Where(oc => oc.OrganizationId == organizationId && oc.Type == type)
-                .ToListAsync();
-            return Mapper.Map<List<OrganizationConnection>>(connections);
         }
-    }
 
-    public async Task<ICollection<OrganizationConnection>> GetEnabledByOrganizationIdTypeAsync(Guid organizationId, OrganizationConnectionType type)
-    {
-        using (var scope = ServiceScopeFactory.CreateScope())
+        public async Task<ICollection<OrganizationConnection>> GetByOrganizationIdTypeAsync(Guid organizationId, OrganizationConnectionType type)
         {
-            var dbContext = GetDatabaseContext(scope);
-            var connections = await dbContext.OrganizationConnections
-                .Where(oc => oc.OrganizationId == organizationId && oc.Type == type && oc.Enabled)
-                .ToListAsync();
-            return Mapper.Map<List<OrganizationConnection>>(connections);
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var connections = await dbContext.OrganizationConnections
+                    .Where(oc => oc.OrganizationId == organizationId && oc.Type == type)
+                    .ToListAsync();
+                return Mapper.Map<List<OrganizationConnection>>(connections);
+            }
+        }
+
+        public async Task<ICollection<OrganizationConnection>> GetEnabledByOrganizationIdTypeAsync(Guid organizationId, OrganizationConnectionType type)
+        {
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var connections = await dbContext.OrganizationConnections
+                    .Where(oc => oc.OrganizationId == organizationId && oc.Type == type && oc.Enabled)
+                    .ToListAsync();
+                return Mapper.Map<List<OrganizationConnection>>(connections);
+            }
         }
     }
 }

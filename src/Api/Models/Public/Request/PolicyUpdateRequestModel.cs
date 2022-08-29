@@ -1,22 +1,23 @@
 ﻿using System.Text.Json;
 using Bit.Core.Entities;
 
-namespace Bit.Api.Models.Public.Request;
-
-public class PolicyUpdateRequestModel : PolicyBaseModel
+namespace Bit.Api.Models.Public.Request
 {
-    public Policy ToPolicy(Guid orgId)
+    public class PolicyUpdateRequestModel : PolicyBaseModel
     {
-        return ToPolicy(new Policy
+        public Policy ToPolicy(Guid orgId)
         {
-            OrganizationId = orgId
-        });
-    }
+            return ToPolicy(new Policy
+            {
+                OrganizationId = orgId
+            });
+        }
 
-    public virtual Policy ToPolicy(Policy existingPolicy)
-    {
-        existingPolicy.Enabled = Enabled.GetValueOrDefault();
-        existingPolicy.Data = Data != null ? JsonSerializer.Serialize(Data) : null;
-        return existingPolicy;
+        public virtual Policy ToPolicy(Policy existingPolicy)
+        {
+            existingPolicy.Enabled = Enabled.GetValueOrDefault();
+            existingPolicy.Data = Data != null ? JsonSerializer.Serialize(Data) : null;
+            return existingPolicy;
+        }
     }
 }

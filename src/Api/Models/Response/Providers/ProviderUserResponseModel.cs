@@ -4,88 +4,89 @@ using Bit.Core.Models.Api;
 using Bit.Core.Models.Data;
 using Bit.Core.Utilities;
 
-namespace Bit.Api.Models.Response.Providers;
-
-public class ProviderUserResponseModel : ResponseModel
+namespace Bit.Api.Models.Response.Providers
 {
-    public ProviderUserResponseModel(ProviderUser providerUser, string obj = "providerUser")
-        : base(obj)
+    public class ProviderUserResponseModel : ResponseModel
     {
-        if (providerUser == null)
+        public ProviderUserResponseModel(ProviderUser providerUser, string obj = "providerUser")
+            : base(obj)
         {
-            throw new ArgumentNullException(nameof(providerUser));
+            if (providerUser == null)
+            {
+                throw new ArgumentNullException(nameof(providerUser));
+            }
+
+            Id = providerUser.Id.ToString();
+            UserId = providerUser.UserId?.ToString();
+            Type = providerUser.Type;
+            Status = providerUser.Status;
+            Permissions = CoreHelpers.LoadClassFromJsonData<Permissions>(providerUser.Permissions);
         }
 
-        Id = providerUser.Id.ToString();
-        UserId = providerUser.UserId?.ToString();
-        Type = providerUser.Type;
-        Status = providerUser.Status;
-        Permissions = CoreHelpers.LoadClassFromJsonData<Permissions>(providerUser.Permissions);
-    }
-
-    public ProviderUserResponseModel(ProviderUserUserDetails providerUser, string obj = "providerUser")
-        : base(obj)
-    {
-        if (providerUser == null)
+        public ProviderUserResponseModel(ProviderUserUserDetails providerUser, string obj = "providerUser")
+            : base(obj)
         {
-            throw new ArgumentNullException(nameof(providerUser));
+            if (providerUser == null)
+            {
+                throw new ArgumentNullException(nameof(providerUser));
+            }
+
+            Id = providerUser.Id.ToString();
+            UserId = providerUser.UserId?.ToString();
+            Type = providerUser.Type;
+            Status = providerUser.Status;
+            Permissions = CoreHelpers.LoadClassFromJsonData<Permissions>(providerUser.Permissions);
         }
 
-        Id = providerUser.Id.ToString();
-        UserId = providerUser.UserId?.ToString();
-        Type = providerUser.Type;
-        Status = providerUser.Status;
-        Permissions = CoreHelpers.LoadClassFromJsonData<Permissions>(providerUser.Permissions);
+        public string Id { get; set; }
+        public string UserId { get; set; }
+        public ProviderUserType Type { get; set; }
+        public ProviderUserStatusType Status { get; set; }
+        public Permissions Permissions { get; set; }
     }
 
-    public string Id { get; set; }
-    public string UserId { get; set; }
-    public ProviderUserType Type { get; set; }
-    public ProviderUserStatusType Status { get; set; }
-    public Permissions Permissions { get; set; }
-}
-
-public class ProviderUserUserDetailsResponseModel : ProviderUserResponseModel
-{
-    public ProviderUserUserDetailsResponseModel(ProviderUserUserDetails providerUser,
-        string obj = "providerUserUserDetails") : base(providerUser, obj)
+    public class ProviderUserUserDetailsResponseModel : ProviderUserResponseModel
     {
-        if (providerUser == null)
+        public ProviderUserUserDetailsResponseModel(ProviderUserUserDetails providerUser,
+            string obj = "providerUserUserDetails") : base(providerUser, obj)
         {
-            throw new ArgumentNullException(nameof(providerUser));
+            if (providerUser == null)
+            {
+                throw new ArgumentNullException(nameof(providerUser));
+            }
+
+            Name = providerUser.Name;
+            Email = providerUser.Email;
         }
 
-        Name = providerUser.Name;
-        Email = providerUser.Email;
+        public string Name { get; set; }
+        public string Email { get; set; }
     }
 
-    public string Name { get; set; }
-    public string Email { get; set; }
-}
-
-public class ProviderUserPublicKeyResponseModel : ResponseModel
-{
-    public ProviderUserPublicKeyResponseModel(Guid id, Guid userId, string key,
-        string obj = "providerUserPublicKeyResponseModel") : base(obj)
+    public class ProviderUserPublicKeyResponseModel : ResponseModel
     {
-        Id = id;
-        UserId = userId;
-        Key = key;
+        public ProviderUserPublicKeyResponseModel(Guid id, Guid userId, string key,
+            string obj = "providerUserPublicKeyResponseModel") : base(obj)
+        {
+            Id = id;
+            UserId = userId;
+            Key = key;
+        }
+
+        public Guid Id { get; set; }
+        public Guid UserId { get; set; }
+        public string Key { get; set; }
     }
 
-    public Guid Id { get; set; }
-    public Guid UserId { get; set; }
-    public string Key { get; set; }
-}
-
-public class ProviderUserBulkResponseModel : ResponseModel
-{
-    public ProviderUserBulkResponseModel(Guid id, string error,
-        string obj = "providerBulkConfirmResponseModel") : base(obj)
+    public class ProviderUserBulkResponseModel : ResponseModel
     {
-        Id = id;
-        Error = error;
+        public ProviderUserBulkResponseModel(Guid id, string error,
+            string obj = "providerBulkConfirmResponseModel") : base(obj)
+        {
+            Id = id;
+            Error = error;
+        }
+        public Guid Id { get; set; }
+        public string Error { get; set; }
     }
-    public Guid Id { get; set; }
-    public string Error { get; set; }
 }

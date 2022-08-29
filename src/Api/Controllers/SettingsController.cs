@@ -4,46 +4,47 @@ using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Bit.Api.Controllers;
-
-[Route("settings")]
-[Authorize("Application")]
-public class SettingsController : Controller
+namespace Bit.Api.Controllers
 {
-    private readonly IUserService _userService;
-
-    public SettingsController(
-        IUserService userService)
+    [Route("settings")]
+    [Authorize("Application")]
+    public class SettingsController : Controller
     {
-        _userService = userService;
-    }
+        private readonly IUserService _userService;
 
-    [HttpGet("domains")]
-    public async Task<DomainsResponseModel> GetDomains(bool excluded = true)
-    {
-        var user = await _userService.GetUserByPrincipalAsync(User);
-        if (user == null)
+        public SettingsController(
+            IUserService userService)
         {
-            throw new UnauthorizedAccessException();
+            _userService = userService;
         }
 
-        var response = new DomainsResponseModel(user, excluded);
-        return response;
-    }
-
-    [HttpPut("domains")]
-    [HttpPost("domains")]
-    public async Task<DomainsResponseModel> PutDomains([FromBody] UpdateDomainsRequestModel model)
-    {
-        var user = await _userService.GetUserByPrincipalAsync(User);
-        if (user == null)
+        [HttpGet("domains")]
+        public async Task<DomainsResponseModel> GetDomains(bool excluded = true)
         {
-            throw new UnauthorizedAccessException();
+            var user = await _userService.GetUserByPrincipalAsync(User);
+            if (user == null)
+            {
+                throw new UnauthorizedAccessException();
+            }
+
+            var response = new DomainsResponseModel(user, excluded);
+            return response;
         }
 
-        await _userService.SaveUserAsync(model.ToUser(user), true);
+        [HttpPut("domains")]
+        [HttpPost("domains")]
+        public async Task<DomainsResponseModel> PutDomains([FromBody] UpdateDomainsRequestModel model)
+        {
+            var user = await _userService.GetUserByPrincipalAsync(User);
+            if (user == null)
+            {
+                throw new UnauthorizedAccessException();
+            }
 
-        var response = new DomainsResponseModel(user);
-        return response;
+            await _userService.SaveUserAsync(model.ToUser(user), true);
+
+            var response = new DomainsResponseModel(user);
+            return response;
+        }
     }
 }

@@ -1,9 +1,10 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace Bit.Api.Models.Request;
-
-public class SendAccessRequestModel
+namespace Bit.Api.Models.Request
 {
-    [StringLength(300)]
-    public string Password { get; set; }
+    public class SendAccessRequestModel
+    {
+        [StringLength(300)]
+        public string Password { get; set; }
+    }
 }

@@ -1,8 +1,9 @@
 ﻿using Bit.Core.Entities;
 
-namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
-
-public interface IValidateBillingSyncKeyCommand
+namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces
 {
-    Task<bool> ValidateBillingSyncKeyAsync(Organization organization, string billingSyncKey);
+    public interface IValidateBillingSyncKeyCommand
+    {
+        Task<bool> ValidateBillingSyncKeyAsync(Organization organization, string billingSyncKey);
+    }
 }

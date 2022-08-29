@@ -1,8 +1,9 @@
 ﻿using Bit.Core.Entities;
 
-namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
-
-public interface IRemoveSponsorshipCommand
+namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces
 {
-    Task RemoveSponsorshipAsync(OrganizationSponsorship sponsorship);
+    public interface IRemoveSponsorshipCommand
+    {
+        Task RemoveSponsorshipAsync(OrganizationSponsorship sponsorship);
+    }
 }

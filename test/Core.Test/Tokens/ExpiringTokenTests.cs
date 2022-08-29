@@ -3,68 +3,69 @@ using AutoFixture.Xunit2;
 using Bit.Core.Utilities;
 using Xunit;
 
-namespace Bit.Core.Test.Tokens;
-
-public class ExpiringTokenTests
+namespace Bit.Core.Test.Tokens
 {
-    [Theory, AutoData]
-    public void ExpirationSerializesToEpochMilliseconds(DateTime expirationDate)
+    public class ExpiringTokenTests
     {
-        var sut = new TestExpiringTokenable
+        [Theory, AutoData]
+        public void ExpirationSerializesToEpochMilliseconds(DateTime expirationDate)
         {
-            ExpirationDate = expirationDate
-        };
+            var sut = new TestExpiringTokenable
+            {
+                ExpirationDate = expirationDate
+            };
 
-        var result = JsonSerializer.Serialize(sut);
-        var expectedDate = CoreHelpers.ToEpocMilliseconds(expirationDate);
+            var result = JsonSerializer.Serialize(sut);
+            var expectedDate = CoreHelpers.ToEpocMilliseconds(expirationDate);
 
-        Assert.Contains($"\"ExpirationDate\":{expectedDate}", result);
-    }
+            Assert.Contains($"\"ExpirationDate\":{expectedDate}", result);
+        }
 
-    [Theory, AutoData]
-    public void ExpirationSerializationRoundTrip(DateTime expirationDate)
-    {
-        var sut = new TestExpiringTokenable
+        [Theory, AutoData]
+        public void ExpirationSerializationRoundTrip(DateTime expirationDate)
         {
-            ExpirationDate = expirationDate
-        };
+            var sut = new TestExpiringTokenable
+            {
+                ExpirationDate = expirationDate
+            };
 
-        var intermediate = JsonSerializer.Serialize(sut);
-        var result = JsonSerializer.Deserialize<TestExpiringTokenable>(intermediate);
+            var intermediate = JsonSerializer.Serialize(sut);
+            var result = JsonSerializer.Deserialize<TestExpiringTokenable>(intermediate);
 
-        Assert.Equal(sut.ExpirationDate, result.ExpirationDate, TimeSpan.FromMilliseconds(100));
-    }
+            Assert.Equal(sut.ExpirationDate, result.ExpirationDate, TimeSpan.FromMilliseconds(100));
+        }
 
-    [Fact]
-    public void InvalidIfPastExpiryDate()
-    {
-        var sut = new TestExpiringTokenable
+        [Fact]
+        public void InvalidIfPastExpiryDate()
         {
-            ExpirationDate = DateTime.UtcNow.AddHours(-1)
-        };
+            var sut = new TestExpiringTokenable
+            {
+                ExpirationDate = DateTime.UtcNow.AddHours(-1)
+            };
 
-        Assert.False(sut.Valid);
-    }
+            Assert.False(sut.Valid);
+        }
 
-    [Fact]
-    public void ValidIfWithinExpirationAndTokenReportsValid()
-    {
-        var sut = new TestExpiringTokenable
+        [Fact]
+        public void ValidIfWithinExpirationAndTokenReportsValid()
         {
-            ExpirationDate = DateTime.UtcNow.AddHours(1)
-        };
+            var sut = new TestExpiringTokenable
+            {
+                ExpirationDate = DateTime.UtcNow.AddHours(1)
+            };
 
-        Assert.True(sut.Valid);
-    }
+            Assert.True(sut.Valid);
+        }
 
-    [Fact]
-    public void HonorsTokenIsValidAbstractMember()
-    {
-        var sut = new TestExpiringTokenable(forceInvalid: true)
+        [Fact]
+        public void HonorsTokenIsValidAbstractMember()
         {
-            ExpirationDate = DateTime.UtcNow.AddHours(1)
-        };
+            var sut = new TestExpiringTokenable(forceInvalid: true)
+            {
+                ExpirationDate = DateTime.UtcNow.AddHours(1)
+            };
 
-        Assert.False(sut.Valid);
+            Assert.False(sut.Valid);
+        }
     }
 }

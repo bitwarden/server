@@ -4,30 +4,31 @@ using Bit.Core.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Bit.Api.Controllers;
-
-[Route("users")]
-[Authorize("Application")]
-public class UsersController : Controller
+namespace Bit.Api.Controllers
 {
-    private readonly IUserRepository _userRepository;
-
-    public UsersController(
-        IUserRepository userRepository)
+    [Route("users")]
+    [Authorize("Application")]
+    public class UsersController : Controller
     {
-        _userRepository = userRepository;
-    }
+        private readonly IUserRepository _userRepository;
 
-    [HttpGet("{id}/public-key")]
-    public async Task<UserKeyResponseModel> Get(string id)
-    {
-        var guidId = new Guid(id);
-        var key = await _userRepository.GetPublicKeyAsync(guidId);
-        if (key == null)
+        public UsersController(
+            IUserRepository userRepository)
         {
-            throw new NotFoundException();
+            _userRepository = userRepository;
         }
 
-        return new UserKeyResponseModel(guidId, key);
+        [HttpGet("{id}/public-key")]
+        public async Task<UserKeyResponseModel> Get(string id)
+        {
+            var guidId = new Guid(id);
+            var key = await _userRepository.GetPublicKeyAsync(guidId);
+            if (key == null)
+            {
+                throw new NotFoundException();
+            }
+
+            return new UserKeyResponseModel(guidId, key);
+        }
     }
 }

@@ -3,26 +3,27 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using InternalApi = Bit.Core.Models.Api;
 
-namespace Bit.Api.Utilities;
-
-public class ModelStateValidationFilterAttribute : SharedWeb.Utilities.ModelStateValidationFilterAttribute
+namespace Bit.Api.Utilities
 {
-    private readonly bool _publicApi;
-
-    public ModelStateValidationFilterAttribute(bool publicApi)
+    public class ModelStateValidationFilterAttribute : SharedWeb.Utilities.ModelStateValidationFilterAttribute
     {
-        _publicApi = publicApi;
-    }
+        private readonly bool _publicApi;
 
-    protected override void OnModelStateInvalid(ActionExecutingContext context)
-    {
-        if (_publicApi)
+        public ModelStateValidationFilterAttribute(bool publicApi)
         {
-            context.Result = new BadRequestObjectResult(new ErrorResponseModel(context.ModelState));
+            _publicApi = publicApi;
         }
-        else
+
+        protected override void OnModelStateInvalid(ActionExecutingContext context)
         {
-            context.Result = new BadRequestObjectResult(new InternalApi.ErrorResponseModel(context.ModelState));
+            if (_publicApi)
+            {
+                context.Result = new BadRequestObjectResult(new ErrorResponseModel(context.ModelState));
+            }
+            else
+            {
+                context.Result = new BadRequestObjectResult(new InternalApi.ErrorResponseModel(context.ModelState));
+            }
         }
     }
 }

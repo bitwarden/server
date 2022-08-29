@@ -10,216 +10,218 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud;
-
-[SutProviderCustomize]
-public class CloudSyncSponsorshipsCommandTests : FamiliesForEnterpriseTestsBase
+namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud
 {
 
-    [Theory]
-    [BitAutoData]
-    public async Task SyncOrganization_SponsoringOrgNotFound_ThrowsBadRequest(
-        IEnumerable<OrganizationSponsorshipData> sponsorshipsData,
-        SutProvider<CloudSyncSponsorshipsCommand> sutProvider)
+    [SutProviderCustomize]
+    public class CloudSyncSponsorshipsCommandTests : FamiliesForEnterpriseTestsBase
     {
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.SyncOrganization(null, sponsorshipsData));
 
-        Assert.Contains("Failed to sync sponsorship - missing organization.", exception.Message);
+        [Theory]
+        [BitAutoData]
+        public async Task SyncOrganization_SponsoringOrgNotFound_ThrowsBadRequest(
+            IEnumerable<OrganizationSponsorshipData> sponsorshipsData,
+            SutProvider<CloudSyncSponsorshipsCommand> sutProvider)
+        {
+            var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+                sutProvider.Sut.SyncOrganization(null, sponsorshipsData));
 
-        await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
-            .DidNotReceiveWithAnyArgs()
-            .UpsertManyAsync(default);
-        await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
-            .DidNotReceiveWithAnyArgs()
-            .DeleteManyAsync(default);
-    }
+            Assert.Contains("Failed to sync sponsorship - missing organization.", exception.Message);
 
-    [Theory]
-    [BitAutoData]
-    public async Task SyncOrganization_NoSponsorships_EarlyReturn(
-        Organization organization,
-        SutProvider<CloudSyncSponsorshipsCommand> sutProvider)
-    {
-        var result = await sutProvider.Sut.SyncOrganization(organization, Enumerable.Empty<OrganizationSponsorshipData>());
+            await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
+                .DidNotReceiveWithAnyArgs()
+                .UpsertManyAsync(default);
+            await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
+                .DidNotReceiveWithAnyArgs()
+                .DeleteManyAsync(default);
+        }
 
-        Assert.Empty(result.Item1.SponsorshipsBatch);
-        Assert.Empty(result.Item2);
+        [Theory]
+        [BitAutoData]
+        public async Task SyncOrganization_NoSponsorships_EarlyReturn(
+            Organization organization,
+            SutProvider<CloudSyncSponsorshipsCommand> sutProvider)
+        {
+            var result = await sutProvider.Sut.SyncOrganization(organization, Enumerable.Empty<OrganizationSponsorshipData>());
 
-        await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
-            .DidNotReceiveWithAnyArgs()
-            .UpsertManyAsync(default);
-        await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
-            .DidNotReceiveWithAnyArgs()
-            .DeleteManyAsync(default);
-    }
+            Assert.Empty(result.Item1.SponsorshipsBatch);
+            Assert.Empty(result.Item2);
 
-    [Theory]
-    [BitMemberAutoData(nameof(NonEnterprisePlanTypes))]
-    public async Task SyncOrganization_BadSponsoringOrgPlan_NoSync(
-        PlanType planType,
-        Organization organization, IEnumerable<OrganizationSponsorshipData> sponsorshipsData,
-        SutProvider<CloudSyncSponsorshipsCommand> sutProvider)
-    {
-        organization.PlanType = planType;
+            await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
+                .DidNotReceiveWithAnyArgs()
+                .UpsertManyAsync(default);
+            await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
+                .DidNotReceiveWithAnyArgs()
+                .DeleteManyAsync(default);
+        }
 
-        await sutProvider.Sut.SyncOrganization(organization, sponsorshipsData);
+        [Theory]
+        [BitMemberAutoData(nameof(NonEnterprisePlanTypes))]
+        public async Task SyncOrganization_BadSponsoringOrgPlan_NoSync(
+            PlanType planType,
+            Organization organization, IEnumerable<OrganizationSponsorshipData> sponsorshipsData,
+            SutProvider<CloudSyncSponsorshipsCommand> sutProvider)
+        {
+            organization.PlanType = planType;
 
-        await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
-            .DidNotReceiveWithAnyArgs()
-            .UpsertManyAsync(default);
-        await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
-            .DidNotReceiveWithAnyArgs()
-            .DeleteManyAsync(default);
-    }
+            await sutProvider.Sut.SyncOrganization(organization, sponsorshipsData);
 
-    [Theory]
-    [BitAutoData]
-    public async Task SyncOrganization_Success_RecordsEvent(Organization organization,
-        SutProvider<CloudSyncSponsorshipsCommand> sutProvider)
-    {
-        await sutProvider.Sut.SyncOrganization(organization, Array.Empty<OrganizationSponsorshipData>());
+            await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
+                .DidNotReceiveWithAnyArgs()
+                .UpsertManyAsync(default);
+            await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
+                .DidNotReceiveWithAnyArgs()
+                .DeleteManyAsync(default);
+        }
 
-        await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationEventAsync(organization, EventType.Organization_SponsorshipsSynced, Arg.Any<DateTime?>());
-    }
+        [Theory]
+        [BitAutoData]
+        public async Task SyncOrganization_Success_RecordsEvent(Organization organization,
+            SutProvider<CloudSyncSponsorshipsCommand> sutProvider)
+        {
+            await sutProvider.Sut.SyncOrganization(organization, Array.Empty<OrganizationSponsorshipData>());
 
-    [Theory]
-    [BitAutoData]
-    public async Task SyncOrganization_OneExisting_OneNew_Success(SutProvider<CloudSyncSponsorshipsCommand> sutProvider,
-        Organization sponsoringOrganization, OrganizationSponsorship existingSponsorship, OrganizationSponsorship newSponsorship)
-    {
-        // Arrange
-        sponsoringOrganization.Enabled = true;
-        sponsoringOrganization.PlanType = PlanType.EnterpriseAnnually;
+            await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationEventAsync(organization, EventType.Organization_SponsorshipsSynced, Arg.Any<DateTime?>());
+        }
 
-        existingSponsorship.ToDelete = false;
-        newSponsorship.ToDelete = false;
+        [Theory]
+        [BitAutoData]
+        public async Task SyncOrganization_OneExisting_OneNew_Success(SutProvider<CloudSyncSponsorshipsCommand> sutProvider,
+            Organization sponsoringOrganization, OrganizationSponsorship existingSponsorship, OrganizationSponsorship newSponsorship)
+        {
+            // Arrange
+            sponsoringOrganization.Enabled = true;
+            sponsoringOrganization.PlanType = PlanType.EnterpriseAnnually;
 
-        sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
-            .GetManyBySponsoringOrganizationAsync(sponsoringOrganization.Id)
-            .Returns(new List<OrganizationSponsorship>
+            existingSponsorship.ToDelete = false;
+            newSponsorship.ToDelete = false;
+
+            sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
+                .GetManyBySponsoringOrganizationAsync(sponsoringOrganization.Id)
+                .Returns(new List<OrganizationSponsorship>
+                {
+                    existingSponsorship,
+                });
+
+            // Act
+            var (syncData, toEmailSponsorships) = await sutProvider.Sut.SyncOrganization(sponsoringOrganization, new[]
             {
-                existingSponsorship,
+                new OrganizationSponsorshipData(existingSponsorship),
+                new OrganizationSponsorshipData(newSponsorship),
             });
 
-        // Act
-        var (syncData, toEmailSponsorships) = await sutProvider.Sut.SyncOrganization(sponsoringOrganization, new[]
+            // Assert
+            // Should have updated the cloud copy for each item given
+            await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
+                .Received(1)
+                .UpsertManyAsync(Arg.Is<IEnumerable<OrganizationSponsorship>>(sponsorships => sponsorships.Count() == 2));
+
+            // Neither were marked as delete, should not have deleted
+            await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
+                .DidNotReceiveWithAnyArgs()
+                .DeleteManyAsync(default);
+
+            // Only one sponsorship was new so it should only send one
+            Assert.Single(toEmailSponsorships);
+        }
+
+        [Theory]
+        [BitAutoData]
+        public async Task SyncOrganization_TwoToDelete_OneCanDelete_Success(SutProvider<CloudSyncSponsorshipsCommand> sutProvider,
+            Organization sponsoringOrganization, OrganizationSponsorship canDeleteSponsorship, OrganizationSponsorship cannotDeleteSponsorship)
         {
-            new OrganizationSponsorshipData(existingSponsorship),
-            new OrganizationSponsorshipData(newSponsorship),
-        });
+            // Arrange
+            sponsoringOrganization.PlanType = PlanType.EnterpriseAnnually;
 
-        // Assert
-        // Should have updated the cloud copy for each item given
-        await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
-            .Received(1)
-            .UpsertManyAsync(Arg.Is<IEnumerable<OrganizationSponsorship>>(sponsorships => sponsorships.Count() == 2));
+            canDeleteSponsorship.ToDelete = true;
+            canDeleteSponsorship.SponsoredOrganizationId = null;
 
-        // Neither were marked as delete, should not have deleted
-        await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
-            .DidNotReceiveWithAnyArgs()
-            .DeleteManyAsync(default);
+            cannotDeleteSponsorship.ToDelete = true;
+            cannotDeleteSponsorship.SponsoredOrganizationId = Guid.NewGuid();
 
-        // Only one sponsorship was new so it should only send one
-        Assert.Single(toEmailSponsorships);
-    }
+            sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
+                .GetManyBySponsoringOrganizationAsync(sponsoringOrganization.Id)
+                .Returns(new List<OrganizationSponsorship>
+                {
+                    canDeleteSponsorship,
+                    cannotDeleteSponsorship,
+                });
 
-    [Theory]
-    [BitAutoData]
-    public async Task SyncOrganization_TwoToDelete_OneCanDelete_Success(SutProvider<CloudSyncSponsorshipsCommand> sutProvider,
-        Organization sponsoringOrganization, OrganizationSponsorship canDeleteSponsorship, OrganizationSponsorship cannotDeleteSponsorship)
-    {
-        // Arrange
-        sponsoringOrganization.PlanType = PlanType.EnterpriseAnnually;
-
-        canDeleteSponsorship.ToDelete = true;
-        canDeleteSponsorship.SponsoredOrganizationId = null;
-
-        cannotDeleteSponsorship.ToDelete = true;
-        cannotDeleteSponsorship.SponsoredOrganizationId = Guid.NewGuid();
-
-        sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
-            .GetManyBySponsoringOrganizationAsync(sponsoringOrganization.Id)
-            .Returns(new List<OrganizationSponsorship>
+            // Act
+            var (syncData, toEmailSponsorships) = await sutProvider.Sut.SyncOrganization(sponsoringOrganization, new[]
             {
-                canDeleteSponsorship,
-                cannotDeleteSponsorship,
+                new OrganizationSponsorshipData(canDeleteSponsorship),
+                new OrganizationSponsorshipData(cannotDeleteSponsorship),
             });
 
-        // Act
-        var (syncData, toEmailSponsorships) = await sutProvider.Sut.SyncOrganization(sponsoringOrganization, new[]
+            // Assert
+
+            await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
+                .Received(1)
+                .UpsertManyAsync(Arg.Is<IEnumerable<OrganizationSponsorship>>(sponsorships => sponsorships.Count() == 2));
+
+            // Deletes the sponsorship that had delete requested and is not sponsoring an org
+            await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
+                .Received(1)
+                .DeleteManyAsync(Arg.Is<IEnumerable<Guid>>(toDeleteIds =>
+                    toDeleteIds.Count() == 1 && toDeleteIds.ElementAt(0) == canDeleteSponsorship.Id));
+        }
+
+        [Theory]
+        [BitAutoData]
+        public async Task SyncOrganization_BadData_DoesNotSave(SutProvider<CloudSyncSponsorshipsCommand> sutProvider,
+            Organization sponsoringOrganization, OrganizationSponsorship badOrganizationSponsorship)
         {
-            new OrganizationSponsorshipData(canDeleteSponsorship),
-            new OrganizationSponsorshipData(cannotDeleteSponsorship),
-        });
+            sponsoringOrganization.PlanType = PlanType.EnterpriseAnnually;
 
-        // Assert
+            badOrganizationSponsorship.ToDelete = true;
+            badOrganizationSponsorship.LastSyncDate = null;
 
-        await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
-            .Received(1)
-            .UpsertManyAsync(Arg.Is<IEnumerable<OrganizationSponsorship>>(sponsorships => sponsorships.Count() == 2));
+            sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
+                .GetManyBySponsoringOrganizationAsync(sponsoringOrganization.Id)
+                .Returns(new List<OrganizationSponsorship>());
 
-        // Deletes the sponsorship that had delete requested and is not sponsoring an org
-        await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
-            .Received(1)
-            .DeleteManyAsync(Arg.Is<IEnumerable<Guid>>(toDeleteIds =>
-                toDeleteIds.Count() == 1 && toDeleteIds.ElementAt(0) == canDeleteSponsorship.Id));
-    }
+            var (syncData, toEmailSponsorships) = await sutProvider.Sut.SyncOrganization(sponsoringOrganization, new[]
+            {
+                new OrganizationSponsorshipData(badOrganizationSponsorship),
+            });
 
-    [Theory]
-    [BitAutoData]
-    public async Task SyncOrganization_BadData_DoesNotSave(SutProvider<CloudSyncSponsorshipsCommand> sutProvider,
-        Organization sponsoringOrganization, OrganizationSponsorship badOrganizationSponsorship)
-    {
-        sponsoringOrganization.PlanType = PlanType.EnterpriseAnnually;
+            await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
+                .DidNotReceiveWithAnyArgs()
+                .UpsertManyAsync(default);
 
-        badOrganizationSponsorship.ToDelete = true;
-        badOrganizationSponsorship.LastSyncDate = null;
+            await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
+                .DidNotReceiveWithAnyArgs()
+                .DeleteManyAsync(default);
+        }
 
-        sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
-            .GetManyBySponsoringOrganizationAsync(sponsoringOrganization.Id)
-            .Returns(new List<OrganizationSponsorship>());
-
-        var (syncData, toEmailSponsorships) = await sutProvider.Sut.SyncOrganization(sponsoringOrganization, new[]
+        [Theory]
+        [BitAutoData]
+        public async Task SyncOrganization_OrgDisabledForFourMonths_DoesNotSave(SutProvider<CloudSyncSponsorshipsCommand> sutProvider,
+            Organization sponsoringOrganization, OrganizationSponsorship organizationSponsorship)
         {
-            new OrganizationSponsorshipData(badOrganizationSponsorship),
-        });
+            sponsoringOrganization.PlanType = PlanType.EnterpriseAnnually;
+            sponsoringOrganization.Enabled = false;
+            sponsoringOrganization.ExpirationDate = DateTime.UtcNow.AddDays(-120);
 
-        await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
-            .DidNotReceiveWithAnyArgs()
-            .UpsertManyAsync(default);
+            organizationSponsorship.ToDelete = false;
 
-        await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
-            .DidNotReceiveWithAnyArgs()
-            .DeleteManyAsync(default);
-    }
+            sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
+                .GetManyBySponsoringOrganizationAsync(sponsoringOrganization.Id)
+                .Returns(new List<OrganizationSponsorship>());
 
-    [Theory]
-    [BitAutoData]
-    public async Task SyncOrganization_OrgDisabledForFourMonths_DoesNotSave(SutProvider<CloudSyncSponsorshipsCommand> sutProvider,
-        Organization sponsoringOrganization, OrganizationSponsorship organizationSponsorship)
-    {
-        sponsoringOrganization.PlanType = PlanType.EnterpriseAnnually;
-        sponsoringOrganization.Enabled = false;
-        sponsoringOrganization.ExpirationDate = DateTime.UtcNow.AddDays(-120);
+            var (syncData, toEmailSponsorships) = await sutProvider.Sut.SyncOrganization(sponsoringOrganization, new[]
+            {
+                new OrganizationSponsorshipData(organizationSponsorship),
+            });
 
-        organizationSponsorship.ToDelete = false;
+            await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
+                .DidNotReceiveWithAnyArgs()
+                .UpsertManyAsync(default);
 
-        sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
-            .GetManyBySponsoringOrganizationAsync(sponsoringOrganization.Id)
-            .Returns(new List<OrganizationSponsorship>());
-
-        var (syncData, toEmailSponsorships) = await sutProvider.Sut.SyncOrganization(sponsoringOrganization, new[]
-        {
-            new OrganizationSponsorshipData(organizationSponsorship),
-        });
-
-        await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
-            .DidNotReceiveWithAnyArgs()
-            .UpsertManyAsync(default);
-
-        await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
-            .DidNotReceiveWithAnyArgs()
-            .DeleteManyAsync(default);
+            await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
+                .DidNotReceiveWithAnyArgs()
+                .DeleteManyAsync(default);
+        }
     }
 }

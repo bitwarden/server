@@ -1,16 +1,17 @@
 ﻿using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 
-namespace Bit.Core.Models.Api.Response.Accounts;
-
-public class PreloginResponseModel
+namespace Bit.Core.Models.Api.Response.Accounts
 {
-    public PreloginResponseModel(UserKdfInformation kdfInformation)
+    public class PreloginResponseModel
     {
-        Kdf = kdfInformation.Kdf;
-        KdfIterations = kdfInformation.KdfIterations;
-    }
+        public PreloginResponseModel(UserKdfInformation kdfInformation)
+        {
+            Kdf = kdfInformation.Kdf;
+            KdfIterations = kdfInformation.KdfIterations;
+        }
 
-    public KdfType Kdf { get; set; }
-    public int KdfIterations { get; set; }
+        public KdfType Kdf { get; set; }
+        public int KdfIterations { get; set; }
+    }
 }

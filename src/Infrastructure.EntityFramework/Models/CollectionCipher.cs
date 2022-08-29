@@ -1,17 +1,18 @@
 ﻿using AutoMapper;
 
-namespace Bit.Infrastructure.EntityFramework.Models;
-
-public class CollectionCipher : Core.Entities.CollectionCipher
+namespace Bit.Infrastructure.EntityFramework.Models
 {
-    public virtual Cipher Cipher { get; set; }
-    public virtual Collection Collection { get; set; }
-}
-
-public class CollectionCipherMapperProfile : Profile
-{
-    public CollectionCipherMapperProfile()
+    public class CollectionCipher : Core.Entities.CollectionCipher
     {
-        CreateMap<Core.Entities.CollectionCipher, CollectionCipher>().ReverseMap();
+        public virtual Cipher Cipher { get; set; }
+        public virtual Collection Collection { get; set; }
+    }
+
+    public class CollectionCipherMapperProfile : Profile
+    {
+        public CollectionCipherMapperProfile()
+        {
+            CreateMap<Core.Entities.CollectionCipher, CollectionCipher>().ReverseMap();
+        }
     }
 }

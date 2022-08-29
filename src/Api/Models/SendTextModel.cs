@@ -1,20 +1,21 @@
 ﻿using Bit.Core.Models.Data;
 using Bit.Core.Utilities;
 
-namespace Bit.Api.Models;
-
-public class SendTextModel
+namespace Bit.Api.Models
 {
-    public SendTextModel() { }
-
-    public SendTextModel(SendTextData data)
+    public class SendTextModel
     {
-        Text = data.Text;
-        Hidden = data.Hidden;
-    }
+        public SendTextModel() { }
 
-    [EncryptedString]
-    [EncryptedStringLength(1000)]
-    public string Text { get; set; }
-    public bool Hidden { get; set; }
+        public SendTextModel(SendTextData data)
+        {
+            Text = data.Text;
+            Hidden = data.Hidden;
+        }
+
+        [EncryptedString]
+        [EncryptedStringLength(1000)]
+        public string Text { get; set; }
+        public bool Hidden { get; set; }
+    }
 }

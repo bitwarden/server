@@ -6,91 +6,92 @@ using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Dapper;
 
-namespace Bit.Infrastructure.Dapper.Repositories;
-
-public class EmergencyAccessRepository : Repository<EmergencyAccess, Guid>, IEmergencyAccessRepository
+namespace Bit.Infrastructure.Dapper.Repositories
 {
-    public EmergencyAccessRepository(GlobalSettings globalSettings)
-        : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
-    { }
-
-    public EmergencyAccessRepository(string connectionString, string readOnlyConnectionString)
-        : base(connectionString, readOnlyConnectionString)
-    { }
-
-    public async Task<int> GetCountByGrantorIdEmailAsync(Guid grantorId, string email, bool onlyRegisteredUsers)
+    public class EmergencyAccessRepository : Repository<EmergencyAccess, Guid>, IEmergencyAccessRepository
     {
-        using (var connection = new SqlConnection(ConnectionString))
-        {
-            var results = await connection.ExecuteScalarAsync<int>(
-                "[dbo].[EmergencyAccess_ReadCountByGrantorIdEmail]",
-                new { GrantorId = grantorId, Email = email, OnlyUsers = onlyRegisteredUsers },
-                commandType: CommandType.StoredProcedure);
+        public EmergencyAccessRepository(GlobalSettings globalSettings)
+            : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
+        { }
 
-            return results;
+        public EmergencyAccessRepository(string connectionString, string readOnlyConnectionString)
+            : base(connectionString, readOnlyConnectionString)
+        { }
+
+        public async Task<int> GetCountByGrantorIdEmailAsync(Guid grantorId, string email, bool onlyRegisteredUsers)
+        {
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.ExecuteScalarAsync<int>(
+                    "[dbo].[EmergencyAccess_ReadCountByGrantorIdEmail]",
+                    new { GrantorId = grantorId, Email = email, OnlyUsers = onlyRegisteredUsers },
+                    commandType: CommandType.StoredProcedure);
+
+                return results;
+            }
         }
-    }
 
-    public async Task<ICollection<EmergencyAccessDetails>> GetManyDetailsByGrantorIdAsync(Guid grantorId)
-    {
-        using (var connection = new SqlConnection(ConnectionString))
+        public async Task<ICollection<EmergencyAccessDetails>> GetManyDetailsByGrantorIdAsync(Guid grantorId)
         {
-            var results = await connection.QueryAsync<EmergencyAccessDetails>(
-                "[dbo].[EmergencyAccessDetails_ReadByGrantorId]",
-                new { GrantorId = grantorId },
-                commandType: CommandType.StoredProcedure);
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<EmergencyAccessDetails>(
+                    "[dbo].[EmergencyAccessDetails_ReadByGrantorId]",
+                    new { GrantorId = grantorId },
+                    commandType: CommandType.StoredProcedure);
 
-            return results.ToList();
+                return results.ToList();
+            }
         }
-    }
 
-    public async Task<ICollection<EmergencyAccessDetails>> GetManyDetailsByGranteeIdAsync(Guid granteeId)
-    {
-        using (var connection = new SqlConnection(ConnectionString))
+        public async Task<ICollection<EmergencyAccessDetails>> GetManyDetailsByGranteeIdAsync(Guid granteeId)
         {
-            var results = await connection.QueryAsync<EmergencyAccessDetails>(
-                "[dbo].[EmergencyAccessDetails_ReadByGranteeId]",
-                new { GranteeId = granteeId },
-                commandType: CommandType.StoredProcedure);
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<EmergencyAccessDetails>(
+                    "[dbo].[EmergencyAccessDetails_ReadByGranteeId]",
+                    new { GranteeId = granteeId },
+                    commandType: CommandType.StoredProcedure);
 
-            return results.ToList();
+                return results.ToList();
+            }
         }
-    }
 
-    public async Task<EmergencyAccessDetails> GetDetailsByIdGrantorIdAsync(Guid id, Guid grantorId)
-    {
-        using (var connection = new SqlConnection(ConnectionString))
+        public async Task<EmergencyAccessDetails> GetDetailsByIdGrantorIdAsync(Guid id, Guid grantorId)
         {
-            var results = await connection.QueryAsync<EmergencyAccessDetails>(
-                "[dbo].[EmergencyAccessDetails_ReadByIdGrantorId]",
-                new { Id = id, GrantorId = grantorId },
-                commandType: CommandType.StoredProcedure);
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<EmergencyAccessDetails>(
+                    "[dbo].[EmergencyAccessDetails_ReadByIdGrantorId]",
+                    new { Id = id, GrantorId = grantorId },
+                    commandType: CommandType.StoredProcedure);
 
-            return results.FirstOrDefault();
+                return results.FirstOrDefault();
+            }
         }
-    }
 
-    public async Task<ICollection<EmergencyAccessNotify>> GetManyToNotifyAsync()
-    {
-        using (var connection = new SqlConnection(ConnectionString))
+        public async Task<ICollection<EmergencyAccessNotify>> GetManyToNotifyAsync()
         {
-            var results = await connection.QueryAsync<EmergencyAccessNotify>(
-                "[dbo].[EmergencyAccess_ReadToNotify]",
-                commandType: CommandType.StoredProcedure);
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<EmergencyAccessNotify>(
+                    "[dbo].[EmergencyAccess_ReadToNotify]",
+                    commandType: CommandType.StoredProcedure);
 
-            return results.ToList();
+                return results.ToList();
+            }
         }
-    }
 
-    public async Task<ICollection<EmergencyAccessDetails>> GetExpiredRecoveriesAsync()
-    {
-        using (var connection = new SqlConnection(ConnectionString))
+        public async Task<ICollection<EmergencyAccessDetails>> GetExpiredRecoveriesAsync()
         {
-            var results = await connection.QueryAsync<EmergencyAccessDetails>(
-                "[dbo].[EmergencyAccessDetails_ReadExpiredRecoveries]",
-                commandType: CommandType.StoredProcedure);
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<EmergencyAccessDetails>(
+                    "[dbo].[EmergencyAccessDetails_ReadExpiredRecoveries]",
+                    commandType: CommandType.StoredProcedure);
 
-            return results.ToList();
+                return results.ToList();
+            }
         }
     }
 }

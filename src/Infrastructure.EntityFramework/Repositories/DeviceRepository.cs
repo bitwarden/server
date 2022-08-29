@@ -4,67 +4,68 @@ using Bit.Infrastructure.EntityFramework.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Bit.Infrastructure.EntityFramework.Repositories;
-
-public class DeviceRepository : Repository<Core.Entities.Device, Device, Guid>, IDeviceRepository
+namespace Bit.Infrastructure.EntityFramework.Repositories
 {
-    public DeviceRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
-        : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.Devices)
-    { }
-
-    public async Task ClearPushTokenAsync(Guid id)
+    public class DeviceRepository : Repository<Core.Entities.Device, Device, Guid>, IDeviceRepository
     {
-        using (var scope = ServiceScopeFactory.CreateScope())
-        {
-            var dbContext = GetDatabaseContext(scope);
-            var query = dbContext.Devices.Where(d => d.Id == id);
-            dbContext.AttachRange(query);
-            await query.ForEachAsync(x => x.PushToken = null);
-            await dbContext.SaveChangesAsync();
-        }
-    }
+        public DeviceRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
+            : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.Devices)
+        { }
 
-    public async Task<Core.Entities.Device> GetByIdAsync(Guid id, Guid userId)
-    {
-        var device = await base.GetByIdAsync(id);
-        if (device == null || device.UserId != userId)
+        public async Task ClearPushTokenAsync(Guid id)
         {
-            return null;
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var query = dbContext.Devices.Where(d => d.Id == id);
+                dbContext.AttachRange(query);
+                await query.ForEachAsync(x => x.PushToken = null);
+                await dbContext.SaveChangesAsync();
+            }
         }
 
-        return Mapper.Map<Core.Entities.Device>(device);
-    }
-
-    public async Task<Core.Entities.Device> GetByIdentifierAsync(string identifier)
-    {
-        using (var scope = ServiceScopeFactory.CreateScope())
+        public async Task<Core.Entities.Device> GetByIdAsync(Guid id, Guid userId)
         {
-            var dbContext = GetDatabaseContext(scope);
-            var query = dbContext.Devices.Where(d => d.Identifier == identifier);
-            var device = await query.FirstOrDefaultAsync();
+            var device = await base.GetByIdAsync(id);
+            if (device == null || device.UserId != userId)
+            {
+                return null;
+            }
+
             return Mapper.Map<Core.Entities.Device>(device);
         }
-    }
 
-    public async Task<Core.Entities.Device> GetByIdentifierAsync(string identifier, Guid userId)
-    {
-        using (var scope = ServiceScopeFactory.CreateScope())
+        public async Task<Core.Entities.Device> GetByIdentifierAsync(string identifier)
         {
-            var dbContext = GetDatabaseContext(scope);
-            var query = dbContext.Devices.Where(d => d.Identifier == identifier && d.UserId == userId);
-            var device = await query.FirstOrDefaultAsync();
-            return Mapper.Map<Core.Entities.Device>(device);
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var query = dbContext.Devices.Where(d => d.Identifier == identifier);
+                var device = await query.FirstOrDefaultAsync();
+                return Mapper.Map<Core.Entities.Device>(device);
+            }
         }
-    }
 
-    public async Task<ICollection<Core.Entities.Device>> GetManyByUserIdAsync(Guid userId)
-    {
-        using (var scope = ServiceScopeFactory.CreateScope())
+        public async Task<Core.Entities.Device> GetByIdentifierAsync(string identifier, Guid userId)
         {
-            var dbContext = GetDatabaseContext(scope);
-            var query = dbContext.Devices.Where(d => d.UserId == userId);
-            var devices = await query.ToListAsync();
-            return Mapper.Map<List<Core.Entities.Device>>(devices);
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var query = dbContext.Devices.Where(d => d.Identifier == identifier && d.UserId == userId);
+                var device = await query.FirstOrDefaultAsync();
+                return Mapper.Map<Core.Entities.Device>(device);
+            }
+        }
+
+        public async Task<ICollection<Core.Entities.Device>> GetManyByUserIdAsync(Guid userId)
+        {
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var query = dbContext.Devices.Where(d => d.UserId == userId);
+                var devices = await query.ToListAsync();
+                return Mapper.Map<List<Core.Entities.Device>>(devices);
+            }
         }
     }
 }

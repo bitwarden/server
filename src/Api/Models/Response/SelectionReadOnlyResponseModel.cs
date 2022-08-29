@@ -1,22 +1,23 @@
 ﻿using Bit.Core.Models.Data;
 
-namespace Bit.Api.Models.Response;
-
-public class SelectionReadOnlyResponseModel
+namespace Bit.Api.Models.Response
 {
-    public SelectionReadOnlyResponseModel(SelectionReadOnly selection)
+    public class SelectionReadOnlyResponseModel
     {
-        if (selection == null)
+        public SelectionReadOnlyResponseModel(SelectionReadOnly selection)
         {
-            throw new ArgumentNullException(nameof(selection));
+            if (selection == null)
+            {
+                throw new ArgumentNullException(nameof(selection));
+            }
+
+            Id = selection.Id.ToString();
+            ReadOnly = selection.ReadOnly;
+            HidePasswords = selection.HidePasswords;
         }
 
-        Id = selection.Id.ToString();
-        ReadOnly = selection.ReadOnly;
-        HidePasswords = selection.HidePasswords;
+        public string Id { get; set; }
+        public bool ReadOnly { get; set; }
+        public bool HidePasswords { get; set; }
     }
-
-    public string Id { get; set; }
-    public bool ReadOnly { get; set; }
-    public bool HidePasswords { get; set; }
 }

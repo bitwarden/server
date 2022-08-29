@@ -2,19 +2,20 @@
 using Bit.Core.Utilities;
 using IdentityServer4.Services;
 
-namespace Bit.Core.IdentityServer;
-
-public class CustomCorsPolicyService : ICorsPolicyService
+namespace Bit.Core.IdentityServer
 {
-    private readonly GlobalSettings _globalSettings;
-
-    public CustomCorsPolicyService(GlobalSettings globalSettings)
+    public class CustomCorsPolicyService : ICorsPolicyService
     {
-        _globalSettings = globalSettings;
-    }
+        private readonly GlobalSettings _globalSettings;
 
-    public Task<bool> IsOriginAllowedAsync(string origin)
-    {
-        return Task.FromResult(CoreHelpers.IsCorsOriginAllowed(origin, _globalSettings));
+        public CustomCorsPolicyService(GlobalSettings globalSettings)
+        {
+            _globalSettings = globalSettings;
+        }
+
+        public Task<bool> IsOriginAllowedAsync(string origin)
+        {
+            return Task.FromResult(CoreHelpers.IsCorsOriginAllowed(origin, _globalSettings));
+        }
     }
 }

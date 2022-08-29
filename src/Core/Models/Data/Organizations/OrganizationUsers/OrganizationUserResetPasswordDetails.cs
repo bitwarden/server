@@ -1,34 +1,35 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
 
-namespace Bit.Core.Models.Data.Organizations.OrganizationUsers;
-
-public class OrganizationUserResetPasswordDetails
+namespace Bit.Core.Models.Data.Organizations.OrganizationUsers
 {
-    public OrganizationUserResetPasswordDetails(OrganizationUser orgUser, User user, Organization org)
+    public class OrganizationUserResetPasswordDetails
     {
-        if (orgUser == null)
+        public OrganizationUserResetPasswordDetails(OrganizationUser orgUser, User user, Organization org)
         {
-            throw new ArgumentNullException(nameof(orgUser));
-        }
+            if (orgUser == null)
+            {
+                throw new ArgumentNullException(nameof(orgUser));
+            }
 
-        if (user == null)
-        {
-            throw new ArgumentNullException(nameof(user));
-        }
+            if (user == null)
+            {
+                throw new ArgumentNullException(nameof(user));
+            }
 
-        if (org == null)
-        {
-            throw new ArgumentNullException(nameof(org));
-        }
+            if (org == null)
+            {
+                throw new ArgumentNullException(nameof(org));
+            }
 
-        Kdf = user.Kdf;
-        KdfIterations = user.KdfIterations;
-        ResetPasswordKey = orgUser.ResetPasswordKey;
-        EncryptedPrivateKey = org.PrivateKey;
+            Kdf = user.Kdf;
+            KdfIterations = user.KdfIterations;
+            ResetPasswordKey = orgUser.ResetPasswordKey;
+            EncryptedPrivateKey = org.PrivateKey;
+        }
+        public KdfType Kdf { get; set; }
+        public int KdfIterations { get; set; }
+        public string ResetPasswordKey { get; set; }
+        public string EncryptedPrivateKey { get; set; }
     }
-    public KdfType Kdf { get; set; }
-    public int KdfIterations { get; set; }
-    public string ResetPasswordKey { get; set; }
-    public string EncryptedPrivateKey { get; set; }
 }

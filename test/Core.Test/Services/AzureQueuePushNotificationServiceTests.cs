@@ -4,31 +4,32 @@ using Microsoft.AspNetCore.Http;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Core.Test.Services;
-
-public class AzureQueuePushNotificationServiceTests
+namespace Bit.Core.Test.Services
 {
-    private readonly AzureQueuePushNotificationService _sut;
-
-    private readonly GlobalSettings _globalSettings;
-    private readonly IHttpContextAccessor _httpContextAccessor;
-
-    public AzureQueuePushNotificationServiceTests()
+    public class AzureQueuePushNotificationServiceTests
     {
-        _globalSettings = new GlobalSettings();
-        _httpContextAccessor = Substitute.For<IHttpContextAccessor>();
+        private readonly AzureQueuePushNotificationService _sut;
 
-        _sut = new AzureQueuePushNotificationService(
-            _globalSettings,
-            _httpContextAccessor
-        );
-    }
+        private readonly GlobalSettings _globalSettings;
+        private readonly IHttpContextAccessor _httpContextAccessor;
 
-    // Remove this test when we add actual tests. It only proves that
-    // we've properly constructed the system under test.
-    [Fact(Skip = "Needs additional work")]
-    public void ServiceExists()
-    {
-        Assert.NotNull(_sut);
+        public AzureQueuePushNotificationServiceTests()
+        {
+            _globalSettings = new GlobalSettings();
+            _httpContextAccessor = Substitute.For<IHttpContextAccessor>();
+
+            _sut = new AzureQueuePushNotificationService(
+                _globalSettings,
+                _httpContextAccessor
+            );
+        }
+
+        // Remove this test when we add actual tests. It only proves that
+        // we've properly constructed the system under test.
+        [Fact(Skip = "Needs additional work")]
+        public void ServiceExists()
+        {
+            Assert.NotNull(_sut);
+        }
     }
 }

@@ -7,145 +7,146 @@ using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Bit.Api.Controllers;
-
-[Route("organizations/{orgId}/groups")]
-[Authorize("Application")]
-public class GroupsController : Controller
+namespace Bit.Api.Controllers
 {
-    private readonly IGroupRepository _groupRepository;
-    private readonly IGroupService _groupService;
-    private readonly ICurrentContext _currentContext;
-
-    public GroupsController(
-        IGroupRepository groupRepository,
-        IGroupService groupService,
-        ICurrentContext currentContext)
+    [Route("organizations/{orgId}/groups")]
+    [Authorize("Application")]
+    public class GroupsController : Controller
     {
-        _groupRepository = groupRepository;
-        _groupService = groupService;
-        _currentContext = currentContext;
-    }
+        private readonly IGroupRepository _groupRepository;
+        private readonly IGroupService _groupService;
+        private readonly ICurrentContext _currentContext;
 
-    [HttpGet("{id}")]
-    public async Task<GroupResponseModel> Get(string orgId, string id)
-    {
-        var group = await _groupRepository.GetByIdAsync(new Guid(id));
-        if (group == null || !await _currentContext.ManageGroups(group.OrganizationId))
+        public GroupsController(
+            IGroupRepository groupRepository,
+            IGroupService groupService,
+            ICurrentContext currentContext)
         {
-            throw new NotFoundException();
+            _groupRepository = groupRepository;
+            _groupService = groupService;
+            _currentContext = currentContext;
         }
 
-        return new GroupResponseModel(group);
-    }
-
-    [HttpGet("{id}/details")]
-    public async Task<GroupDetailsResponseModel> GetDetails(string orgId, string id)
-    {
-        var groupDetails = await _groupRepository.GetByIdWithCollectionsAsync(new Guid(id));
-        if (groupDetails?.Item1 == null || !await _currentContext.ManageGroups(groupDetails.Item1.OrganizationId))
+        [HttpGet("{id}")]
+        public async Task<GroupResponseModel> Get(string orgId, string id)
         {
-            throw new NotFoundException();
+            var group = await _groupRepository.GetByIdAsync(new Guid(id));
+            if (group == null || !await _currentContext.ManageGroups(group.OrganizationId))
+            {
+                throw new NotFoundException();
+            }
+
+            return new GroupResponseModel(group);
         }
 
-        return new GroupDetailsResponseModel(groupDetails.Item1, groupDetails.Item2);
-    }
-
-    [HttpGet("")]
-    public async Task<ListResponseModel<GroupResponseModel>> Get(string orgId)
-    {
-        var orgIdGuid = new Guid(orgId);
-        var canAccess = await _currentContext.ManageGroups(orgIdGuid) ||
-            await _currentContext.ViewAssignedCollections(orgIdGuid) ||
-            await _currentContext.ViewAllCollections(orgIdGuid) ||
-            await _currentContext.ManageUsers(orgIdGuid);
-
-        if (!canAccess)
+        [HttpGet("{id}/details")]
+        public async Task<GroupDetailsResponseModel> GetDetails(string orgId, string id)
         {
-            throw new NotFoundException();
+            var groupDetails = await _groupRepository.GetByIdWithCollectionsAsync(new Guid(id));
+            if (groupDetails?.Item1 == null || !await _currentContext.ManageGroups(groupDetails.Item1.OrganizationId))
+            {
+                throw new NotFoundException();
+            }
+
+            return new GroupDetailsResponseModel(groupDetails.Item1, groupDetails.Item2);
         }
 
-        var groups = await _groupRepository.GetManyByOrganizationIdAsync(orgIdGuid);
-        var responses = groups.Select(g => new GroupResponseModel(g));
-        return new ListResponseModel<GroupResponseModel>(responses);
-    }
-
-    [HttpGet("{id}/users")]
-    public async Task<IEnumerable<Guid>> GetUsers(string orgId, string id)
-    {
-        var idGuid = new Guid(id);
-        var group = await _groupRepository.GetByIdAsync(idGuid);
-        if (group == null || !await _currentContext.ManageGroups(group.OrganizationId))
+        [HttpGet("")]
+        public async Task<ListResponseModel<GroupResponseModel>> Get(string orgId)
         {
-            throw new NotFoundException();
+            var orgIdGuid = new Guid(orgId);
+            var canAccess = await _currentContext.ManageGroups(orgIdGuid) ||
+                await _currentContext.ViewAssignedCollections(orgIdGuid) ||
+                await _currentContext.ViewAllCollections(orgIdGuid) ||
+                await _currentContext.ManageUsers(orgIdGuid);
+
+            if (!canAccess)
+            {
+                throw new NotFoundException();
+            }
+
+            var groups = await _groupRepository.GetManyByOrganizationIdAsync(orgIdGuid);
+            var responses = groups.Select(g => new GroupResponseModel(g));
+            return new ListResponseModel<GroupResponseModel>(responses);
         }
 
-        var groupIds = await _groupRepository.GetManyUserIdsByIdAsync(idGuid);
-        return groupIds;
-    }
-
-    [HttpPost("")]
-    public async Task<GroupResponseModel> Post(string orgId, [FromBody] GroupRequestModel model)
-    {
-        var orgIdGuid = new Guid(orgId);
-        if (!await _currentContext.ManageGroups(orgIdGuid))
+        [HttpGet("{id}/users")]
+        public async Task<IEnumerable<Guid>> GetUsers(string orgId, string id)
         {
-            throw new NotFoundException();
+            var idGuid = new Guid(id);
+            var group = await _groupRepository.GetByIdAsync(idGuid);
+            if (group == null || !await _currentContext.ManageGroups(group.OrganizationId))
+            {
+                throw new NotFoundException();
+            }
+
+            var groupIds = await _groupRepository.GetManyUserIdsByIdAsync(idGuid);
+            return groupIds;
         }
 
-        var group = model.ToGroup(orgIdGuid);
-        await _groupService.SaveAsync(group, model.Collections?.Select(c => c.ToSelectionReadOnly()));
-        return new GroupResponseModel(group);
-    }
-
-    [HttpPut("{id}")]
-    [HttpPost("{id}")]
-    public async Task<GroupResponseModel> Put(string orgId, string id, [FromBody] GroupRequestModel model)
-    {
-        var group = await _groupRepository.GetByIdAsync(new Guid(id));
-        if (group == null || !await _currentContext.ManageGroups(group.OrganizationId))
+        [HttpPost("")]
+        public async Task<GroupResponseModel> Post(string orgId, [FromBody] GroupRequestModel model)
         {
-            throw new NotFoundException();
+            var orgIdGuid = new Guid(orgId);
+            if (!await _currentContext.ManageGroups(orgIdGuid))
+            {
+                throw new NotFoundException();
+            }
+
+            var group = model.ToGroup(orgIdGuid);
+            await _groupService.SaveAsync(group, model.Collections?.Select(c => c.ToSelectionReadOnly()));
+            return new GroupResponseModel(group);
         }
 
-        await _groupService.SaveAsync(model.ToGroup(group), model.Collections?.Select(c => c.ToSelectionReadOnly()));
-        return new GroupResponseModel(group);
-    }
-
-    [HttpPut("{id}/users")]
-    public async Task PutUsers(string orgId, string id, [FromBody] IEnumerable<Guid> model)
-    {
-        var group = await _groupRepository.GetByIdAsync(new Guid(id));
-        if (group == null || !await _currentContext.ManageGroups(group.OrganizationId))
+        [HttpPut("{id}")]
+        [HttpPost("{id}")]
+        public async Task<GroupResponseModel> Put(string orgId, string id, [FromBody] GroupRequestModel model)
         {
-            throw new NotFoundException();
-        }
-        await _groupRepository.UpdateUsersAsync(group.Id, model);
-    }
+            var group = await _groupRepository.GetByIdAsync(new Guid(id));
+            if (group == null || !await _currentContext.ManageGroups(group.OrganizationId))
+            {
+                throw new NotFoundException();
+            }
 
-    [HttpDelete("{id}")]
-    [HttpPost("{id}/delete")]
-    public async Task Delete(string orgId, string id)
-    {
-        var group = await _groupRepository.GetByIdAsync(new Guid(id));
-        if (group == null || !await _currentContext.ManageGroups(group.OrganizationId))
-        {
-            throw new NotFoundException();
+            await _groupService.SaveAsync(model.ToGroup(group), model.Collections?.Select(c => c.ToSelectionReadOnly()));
+            return new GroupResponseModel(group);
         }
 
-        await _groupService.DeleteAsync(group);
-    }
-
-    [HttpDelete("{id}/user/{orgUserId}")]
-    [HttpPost("{id}/delete-user/{orgUserId}")]
-    public async Task Delete(string orgId, string id, string orgUserId)
-    {
-        var group = await _groupRepository.GetByIdAsync(new Guid(id));
-        if (group == null || !await _currentContext.ManageGroups(group.OrganizationId))
+        [HttpPut("{id}/users")]
+        public async Task PutUsers(string orgId, string id, [FromBody] IEnumerable<Guid> model)
         {
-            throw new NotFoundException();
+            var group = await _groupRepository.GetByIdAsync(new Guid(id));
+            if (group == null || !await _currentContext.ManageGroups(group.OrganizationId))
+            {
+                throw new NotFoundException();
+            }
+            await _groupRepository.UpdateUsersAsync(group.Id, model);
         }
 
-        await _groupService.DeleteUserAsync(group, new Guid(orgUserId));
+        [HttpDelete("{id}")]
+        [HttpPost("{id}/delete")]
+        public async Task Delete(string orgId, string id)
+        {
+            var group = await _groupRepository.GetByIdAsync(new Guid(id));
+            if (group == null || !await _currentContext.ManageGroups(group.OrganizationId))
+            {
+                throw new NotFoundException();
+            }
+
+            await _groupService.DeleteAsync(group);
+        }
+
+        [HttpDelete("{id}/user/{orgUserId}")]
+        [HttpPost("{id}/delete-user/{orgUserId}")]
+        public async Task Delete(string orgId, string id, string orgUserId)
+        {
+            var group = await _groupRepository.GetByIdAsync(new Guid(id));
+            if (group == null || !await _currentContext.ManageGroups(group.OrganizationId))
+            {
+                throw new NotFoundException();
+            }
+
+            await _groupService.DeleteUserAsync(group, new Guid(orgUserId));
+        }
     }
 }

@@ -1,7 +1,8 @@
-﻿namespace Bit.Core.Models.Mail;
-
-public class OrganizationSeatsMaxReachedViewModel : BaseMailModel
+﻿namespace Bit.Core.Models.Mail
 {
-    public Guid OrganizationId { get; set; }
-    public int MaxSeatCount { get; set; }
+    public class OrganizationSeatsMaxReachedViewModel : BaseMailModel
+    {
+        public Guid OrganizationId { get; set; }
+        public int MaxSeatCount { get; set; }
+    }
 }

@@ -3,30 +3,31 @@ using Bit.Core.Exceptions;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 
-namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud;
-
-public class CloudRevokeSponsorshipCommand : CancelSponsorshipCommand, IRevokeSponsorshipCommand
+namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud
 {
-    public CloudRevokeSponsorshipCommand(
-        IOrganizationSponsorshipRepository organizationSponsorshipRepository,
-        IOrganizationRepository organizationRepository) : base(organizationSponsorshipRepository, organizationRepository)
+    public class CloudRevokeSponsorshipCommand : CancelSponsorshipCommand, IRevokeSponsorshipCommand
     {
-    }
-
-    public async Task RevokeSponsorshipAsync(OrganizationSponsorship sponsorship)
-    {
-        if (sponsorship == null)
+        public CloudRevokeSponsorshipCommand(
+            IOrganizationSponsorshipRepository organizationSponsorshipRepository,
+            IOrganizationRepository organizationRepository) : base(organizationSponsorshipRepository, organizationRepository)
         {
-            throw new BadRequestException("You are not currently sponsoring an organization.");
         }
 
-        if (sponsorship.SponsoredOrganizationId == null)
+        public async Task RevokeSponsorshipAsync(OrganizationSponsorship sponsorship)
         {
-            await base.DeleteSponsorshipAsync(sponsorship);
-        }
-        else
-        {
-            await MarkToDeleteSponsorshipAsync(sponsorship);
+            if (sponsorship == null)
+            {
+                throw new BadRequestException("You are not currently sponsoring an organization.");
+            }
+
+            if (sponsorship.SponsoredOrganizationId == null)
+            {
+                await base.DeleteSponsorshipAsync(sponsorship);
+            }
+            else
+            {
+                await MarkToDeleteSponsorshipAsync(sponsorship);
+            }
         }
     }
 }

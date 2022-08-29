@@ -1,12 +1,13 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace Bit.Admin.Models;
-
-public class CreateProviderModel
+namespace Bit.Admin.Models
 {
-    public CreateProviderModel() { }
+    public class CreateProviderModel
+    {
+        public CreateProviderModel() { }
 
-    [Display(Name = "Owner Email")]
-    [Required]
-    public string OwnerEmail { get; set; }
+        [Display(Name = "Owner Email")]
+        [Required]
+        public string OwnerEmail { get; set; }
+    }
 }

@@ -2,22 +2,23 @@
 using Bit.Core.Services;
 using Quartz;
 
-namespace Bit.Api.Jobs;
-
-public class EmergencyAccessNotificationJob : BaseJob
+namespace Bit.Api.Jobs
 {
-    private readonly IServiceScopeFactory _serviceScopeFactory;
-
-    public EmergencyAccessNotificationJob(IServiceScopeFactory serviceScopeFactory, ILogger<EmergencyAccessNotificationJob> logger)
-        : base(logger)
+    public class EmergencyAccessNotificationJob : BaseJob
     {
-        _serviceScopeFactory = serviceScopeFactory;
-    }
+        private readonly IServiceScopeFactory _serviceScopeFactory;
 
-    protected override async Task ExecuteJobAsync(IJobExecutionContext context)
-    {
-        using var scope = _serviceScopeFactory.CreateScope();
-        var emergencyAccessService = scope.ServiceProvider.GetService(typeof(IEmergencyAccessService)) as IEmergencyAccessService;
-        await emergencyAccessService.SendNotificationsAsync();
+        public EmergencyAccessNotificationJob(IServiceScopeFactory serviceScopeFactory, ILogger<EmergencyAccessNotificationJob> logger)
+            : base(logger)
+        {
+            _serviceScopeFactory = serviceScopeFactory;
+        }
+
+        protected override async Task ExecuteJobAsync(IJobExecutionContext context)
+        {
+            using var scope = _serviceScopeFactory.CreateScope();
+            var emergencyAccessService = scope.ServiceProvider.GetService(typeof(IEmergencyAccessService)) as IEmergencyAccessService;
+            await emergencyAccessService.SendNotificationsAsync();
+        }
     }
 }

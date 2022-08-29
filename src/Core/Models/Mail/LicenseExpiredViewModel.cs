@@ -1,7 +1,8 @@
-﻿namespace Bit.Core.Models.Mail;
-
-public class LicenseExpiredViewModel : BaseMailModel
+﻿namespace Bit.Core.Models.Mail
 {
-    public string OrganizationName { get; set; }
-    public bool IsOrganization => !string.IsNullOrWhiteSpace(OrganizationName);
+    public class LicenseExpiredViewModel : BaseMailModel
+    {
+        public string OrganizationName { get; set; }
+        public bool IsOrganization => !string.IsNullOrWhiteSpace(OrganizationName);
+    }
 }

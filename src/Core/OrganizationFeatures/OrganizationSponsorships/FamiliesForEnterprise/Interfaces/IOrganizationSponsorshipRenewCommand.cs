@@ -1,6 +1,7 @@
-﻿namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
-
-public interface IOrganizationSponsorshipRenewCommand
+﻿namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces
 {
-    Task UpdateExpirationDateAsync(Guid organizationId, DateTime expireDate);
+    public interface IOrganizationSponsorshipRenewCommand
+    {
+        Task UpdateExpirationDateAsync(Guid organizationId, DateTime expireDate);
+    }
 }

@@ -1,19 +1,20 @@
 ﻿using Xunit;
 
-namespace Bit.Icons.Test.Resources;
-
-public class VerifyResources
+namespace Bit.Icons.Test.Resources
 {
-    [Theory]
-    [InlineData("Bit.Icons.Resources.public_suffix_list.dat")]
-    public void Resources_FoundAndReadable(string resourceName)
+    public class VerifyResources
     {
-        var assembly = typeof(Program).Assembly;
-
-        using (var resource = assembly.GetManifestResourceStream(resourceName))
+        [Theory]
+        [InlineData("Bit.Icons.Resources.public_suffix_list.dat")]
+        public void Resources_FoundAndReadable(string resourceName)
         {
-            Assert.NotNull(resource);
-            Assert.True(resource.CanRead);
+            var assembly = typeof(Program).Assembly;
+
+            using (var resource = assembly.GetManifestResourceStream(resourceName))
+            {
+                Assert.NotNull(resource);
+                Assert.True(resource.CanRead);
+            }
         }
     }
 }

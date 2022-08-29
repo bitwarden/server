@@ -1,15 +1,16 @@
 ﻿using AutoMapper;
 
-namespace Bit.Infrastructure.EntityFramework.Models;
-
-public class Role : Core.Entities.Role
+namespace Bit.Infrastructure.EntityFramework.Models
 {
-}
-
-public class RoleMapperProfile : Profile
-{
-    public RoleMapperProfile()
+    public class Role : Core.Entities.Role
     {
-        CreateMap<Core.Entities.Role, Role>().ReverseMap();
+    }
+
+    public class RoleMapperProfile : Profile
+    {
+        public RoleMapperProfile()
+        {
+            CreateMap<Core.Entities.Role, Role>().ReverseMap();
+        }
     }
 }

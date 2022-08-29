@@ -1,29 +1,30 @@
 ﻿using Bit.Core.Models.Data.Organizations.OrganizationSponsorships;
 
-namespace Bit.Core.Models.Api.Response.OrganizationSponsorships;
-
-public class OrganizationSponsorshipSyncResponseModel
+namespace Bit.Core.Models.Api.Response.OrganizationSponsorships
 {
-    public IEnumerable<OrganizationSponsorshipResponseModel> SponsorshipsBatch { get; set; }
-
-    public OrganizationSponsorshipSyncResponseModel() { }
-
-    public OrganizationSponsorshipSyncResponseModel(OrganizationSponsorshipSyncData syncData)
+    public class OrganizationSponsorshipSyncResponseModel
     {
-        if (syncData == null)
+        public IEnumerable<OrganizationSponsorshipResponseModel> SponsorshipsBatch { get; set; }
+
+        public OrganizationSponsorshipSyncResponseModel() { }
+
+        public OrganizationSponsorshipSyncResponseModel(OrganizationSponsorshipSyncData syncData)
         {
-            return;
+            if (syncData == null)
+            {
+                return;
+            }
+            SponsorshipsBatch = syncData.SponsorshipsBatch.Select(o => new OrganizationSponsorshipResponseModel(o));
+
         }
-        SponsorshipsBatch = syncData.SponsorshipsBatch.Select(o => new OrganizationSponsorshipResponseModel(o));
 
-    }
-
-    public OrganizationSponsorshipSyncData ToOrganizationSponsorshipSync()
-    {
-        return new OrganizationSponsorshipSyncData()
+        public OrganizationSponsorshipSyncData ToOrganizationSponsorshipSync()
         {
-            SponsorshipsBatch = SponsorshipsBatch.Select(o => o.ToOrganizationSponsorship())
-        };
-    }
+            return new OrganizationSponsorshipSyncData()
+            {
+                SponsorshipsBatch = SponsorshipsBatch.Select(o => o.ToOrganizationSponsorship())
+            };
+        }
 
+    }
 }

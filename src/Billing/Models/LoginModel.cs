@@ -1,10 +1,11 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace Bit.Billing.Models;
-
-public class LoginModel
+namespace Bit.Billing.Models
 {
-    [Required]
-    [EmailAddress]
-    public string Email { get; set; }
+    public class LoginModel
+    {
+        [Required]
+        [EmailAddress]
+        public string Email { get; set; }
+    }
 }

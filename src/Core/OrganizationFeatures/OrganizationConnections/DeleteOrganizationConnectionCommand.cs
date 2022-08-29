@@ -2,19 +2,20 @@
 using Bit.Core.OrganizationFeatures.OrganizationConnections.Interfaces;
 using Bit.Core.Repositories;
 
-namespace Bit.Core.OrganizationFeatures.OrganizationConnections;
-
-public class DeleteOrganizationConnectionCommand : IDeleteOrganizationConnectionCommand
+namespace Bit.Core.OrganizationFeatures.OrganizationConnections
 {
-    private readonly IOrganizationConnectionRepository _organizationConnectionRepository;
-
-    public DeleteOrganizationConnectionCommand(IOrganizationConnectionRepository organizationConnectionRepository)
+    public class DeleteOrganizationConnectionCommand : IDeleteOrganizationConnectionCommand
     {
-        _organizationConnectionRepository = organizationConnectionRepository;
-    }
+        private readonly IOrganizationConnectionRepository _organizationConnectionRepository;
 
-    public async Task DeleteAsync(OrganizationConnection connection)
-    {
-        await _organizationConnectionRepository.DeleteAsync(connection);
+        public DeleteOrganizationConnectionCommand(IOrganizationConnectionRepository organizationConnectionRepository)
+        {
+            _organizationConnectionRepository = organizationConnectionRepository;
+        }
+
+        public async Task DeleteAsync(OrganizationConnection connection)
+        {
+            await _organizationConnectionRepository.DeleteAsync(connection);
+        }
     }
 }

@@ -6,19 +6,20 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Core.Test.OrganizationFeatures.OrganizationConnections;
-
-[SutProviderCustomize]
-public class DeleteOrganizationConnectionCommandTests
+namespace Bit.Core.Test.OrganizationFeatures.OrganizationConnections
 {
-    [Theory]
-    [BitAutoData]
-    public async Task DeleteAsync_CallsDelete(OrganizationConnection connection,
-        SutProvider<DeleteOrganizationConnectionCommand> sutProvider)
+    [SutProviderCustomize]
+    public class DeleteOrganizationConnectionCommandTests
     {
-        await sutProvider.Sut.DeleteAsync(connection);
+        [Theory]
+        [BitAutoData]
+        public async Task DeleteAsync_CallsDelete(OrganizationConnection connection,
+            SutProvider<DeleteOrganizationConnectionCommand> sutProvider)
+        {
+            await sutProvider.Sut.DeleteAsync(connection);
 
-        await sutProvider.GetDependency<IOrganizationConnectionRepository>().Received(1)
-            .DeleteAsync(connection);
+            await sutProvider.GetDependency<IOrganizationConnectionRepository>().Received(1)
+                .DeleteAsync(connection);
+        }
     }
 }

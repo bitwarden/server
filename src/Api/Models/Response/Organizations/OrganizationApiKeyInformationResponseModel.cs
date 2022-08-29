@@ -2,16 +2,17 @@
 using Bit.Core.Enums;
 using Bit.Core.Models.Api;
 
-namespace Bit.Api.Models.Response.Organizations;
-
-public class OrganizationApiKeyInformation : ResponseModel
+namespace Bit.Api.Models.Response.Organizations
 {
-    public OrganizationApiKeyInformation(OrganizationApiKey key) : base("keyInformation")
+    public class OrganizationApiKeyInformation : ResponseModel
     {
-        KeyType = key.Type;
-        RevisionDate = key.RevisionDate;
-    }
+        public OrganizationApiKeyInformation(OrganizationApiKey key) : base("keyInformation")
+        {
+            KeyType = key.Type;
+            RevisionDate = key.RevisionDate;
+        }
 
-    public OrganizationApiKeyType KeyType { get; set; }
-    public DateTime RevisionDate { get; set; }
+        public OrganizationApiKeyType KeyType { get; set; }
+        public DateTime RevisionDate { get; set; }
+    }
 }

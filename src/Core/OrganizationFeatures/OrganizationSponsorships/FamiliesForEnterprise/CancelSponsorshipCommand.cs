@@ -2,38 +2,39 @@
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 
-namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise;
-
-public abstract class CancelSponsorshipCommand
+namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise
 {
-    protected readonly IOrganizationSponsorshipRepository _organizationSponsorshipRepository;
-    protected readonly IOrganizationRepository _organizationRepository;
-
-    public CancelSponsorshipCommand(IOrganizationSponsorshipRepository organizationSponsorshipRepository,
-        IOrganizationRepository organizationRepository)
+    public abstract class CancelSponsorshipCommand
     {
-        _organizationSponsorshipRepository = organizationSponsorshipRepository;
-        _organizationRepository = organizationRepository;
-    }
+        protected readonly IOrganizationSponsorshipRepository _organizationSponsorshipRepository;
+        protected readonly IOrganizationRepository _organizationRepository;
 
-    protected virtual async Task DeleteSponsorshipAsync(OrganizationSponsorship sponsorship = null)
-    {
-        if (sponsorship == null)
+        public CancelSponsorshipCommand(IOrganizationSponsorshipRepository organizationSponsorshipRepository,
+            IOrganizationRepository organizationRepository)
         {
-            return;
+            _organizationSponsorshipRepository = organizationSponsorshipRepository;
+            _organizationRepository = organizationRepository;
         }
 
-        await _organizationSponsorshipRepository.DeleteAsync(sponsorship);
-    }
-
-    protected async Task MarkToDeleteSponsorshipAsync(OrganizationSponsorship sponsorship)
-    {
-        if (sponsorship == null)
+        protected virtual async Task DeleteSponsorshipAsync(OrganizationSponsorship sponsorship = null)
         {
-            throw new BadRequestException("The sponsorship you are trying to cancel does not exist");
+            if (sponsorship == null)
+            {
+                return;
+            }
+
+            await _organizationSponsorshipRepository.DeleteAsync(sponsorship);
         }
 
-        sponsorship.ToDelete = true;
-        await _organizationSponsorshipRepository.UpsertAsync(sponsorship);
+        protected async Task MarkToDeleteSponsorshipAsync(OrganizationSponsorship sponsorship)
+        {
+            if (sponsorship == null)
+            {
+                throw new BadRequestException("The sponsorship you are trying to cancel does not exist");
+            }
+
+            sponsorship.ToDelete = true;
+            await _organizationSponsorshipRepository.UpsertAsync(sponsorship);
+        }
     }
 }

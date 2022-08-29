@@ -1,6 +1,7 @@
-﻿namespace Bit.Core.Models.Mail.Provider;
-
-public class ProviderUserConfirmedViewModel : BaseMailModel
+﻿namespace Bit.Core.Models.Mail.Provider
 {
-    public string ProviderName { get; set; }
+    public class ProviderUserConfirmedViewModel : BaseMailModel
+    {
+        public string ProviderName { get; set; }
+    }
 }

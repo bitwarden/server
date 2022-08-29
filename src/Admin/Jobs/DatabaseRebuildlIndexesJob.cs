@@ -3,24 +3,25 @@ using Bit.Core.Jobs;
 using Bit.Core.Repositories;
 using Quartz;
 
-namespace Bit.Admin.Jobs;
-
-public class DatabaseRebuildlIndexesJob : BaseJob
+namespace Bit.Admin.Jobs
 {
-    private readonly IMaintenanceRepository _maintenanceRepository;
-
-    public DatabaseRebuildlIndexesJob(
-        IMaintenanceRepository maintenanceRepository,
-        ILogger<DatabaseRebuildlIndexesJob> logger)
-        : base(logger)
+    public class DatabaseRebuildlIndexesJob : BaseJob
     {
-        _maintenanceRepository = maintenanceRepository;
-    }
+        private readonly IMaintenanceRepository _maintenanceRepository;
 
-    protected async override Task ExecuteJobAsync(IJobExecutionContext context)
-    {
-        _logger.LogInformation(Constants.BypassFiltersEventId, "Execute job task: RebuildIndexesAsync");
-        await _maintenanceRepository.RebuildIndexesAsync();
-        _logger.LogInformation(Constants.BypassFiltersEventId, "Finished job task: RebuildIndexesAsync");
+        public DatabaseRebuildlIndexesJob(
+            IMaintenanceRepository maintenanceRepository,
+            ILogger<DatabaseRebuildlIndexesJob> logger)
+            : base(logger)
+        {
+            _maintenanceRepository = maintenanceRepository;
+        }
+
+        protected async override Task ExecuteJobAsync(IJobExecutionContext context)
+        {
+            _logger.LogInformation(Constants.BypassFiltersEventId, "Execute job task: RebuildIndexesAsync");
+            await _maintenanceRepository.RebuildIndexesAsync();
+            _logger.LogInformation(Constants.BypassFiltersEventId, "Finished job task: RebuildIndexesAsync");
+        }
     }
 }

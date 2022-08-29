@@ -1,7 +1,8 @@
-﻿namespace Bit.Core.Entities;
-
-public class CollectionCipher
+﻿namespace Bit.Core.Entities
 {
-    public Guid CollectionId { get; set; }
-    public Guid CipherId { get; set; }
+    public class CollectionCipher
+    {
+        public Guid CollectionId { get; set; }
+        public Guid CipherId { get; set; }
+    }
 }

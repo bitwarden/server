@@ -1,8 +1,9 @@
-﻿namespace Bit.Core.Enums;
-
-public enum CipherStateAction
+﻿namespace Bit.Core.Enums
 {
-    Restore,
-    SoftDelete,
-    HardDelete,
+    public enum CipherStateAction
+    {
+        Restore,
+        SoftDelete,
+        HardDelete,
+    }
 }

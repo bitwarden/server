@@ -1,28 +1,29 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Models.Api;
 
-namespace Bit.Api.Models.Response;
-
-public class TaxRateResponseModel : ResponseModel
+namespace Bit.Api.Models.Response
 {
-    public TaxRateResponseModel(TaxRate taxRate)
-        : base("profile")
+    public class TaxRateResponseModel : ResponseModel
     {
-        if (taxRate == null)
+        public TaxRateResponseModel(TaxRate taxRate)
+            : base("profile")
         {
-            throw new ArgumentNullException(nameof(taxRate));
+            if (taxRate == null)
+            {
+                throw new ArgumentNullException(nameof(taxRate));
+            }
+
+            Id = taxRate.Id;
+            Country = taxRate.Country;
+            State = taxRate.State;
+            PostalCode = taxRate.PostalCode;
+            Rate = taxRate.Rate;
         }
 
-        Id = taxRate.Id;
-        Country = taxRate.Country;
-        State = taxRate.State;
-        PostalCode = taxRate.PostalCode;
-        Rate = taxRate.Rate;
+        public string Id { get; set; }
+        public string Country { get; set; }
+        public string State { get; set; }
+        public string PostalCode { get; set; }
+        public decimal Rate { get; set; }
     }
-
-    public string Id { get; set; }
-    public string Country { get; set; }
-    public string State { get; set; }
-    public string PostalCode { get; set; }
-    public decimal Rate { get; set; }
 }

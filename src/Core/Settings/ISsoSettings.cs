@@ -1,7 +1,8 @@
-﻿namespace Bit.Core.Settings;
-
-public interface ISsoSettings
+﻿namespace Bit.Core.Settings
 {
-    int CacheLifetimeInSeconds { get; set; }
-    double SsoTokenLifetimeInSeconds { get; set; }
+    public interface ISsoSettings
+    {
+        int CacheLifetimeInSeconds { get; set; }
+        double SsoTokenLifetimeInSeconds { get; set; }
+    }
 }

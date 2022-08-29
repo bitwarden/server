@@ -6,44 +6,45 @@ using Xunit;
 using EfRepo = Bit.Infrastructure.EntityFramework.Repositories;
 using SqlRepo = Bit.Infrastructure.Dapper.Repositories;
 
-namespace Bit.Infrastructure.EFIntegration.Test.Repositories;
-
-public class CollectionRepositoryTests
+namespace Bit.Infrastructure.EFIntegration.Test.Repositories
 {
-    [CiSkippedTheory, EfCollectionAutoData]
-    public async void CreateAsync_Works_DataMatches(
-        Collection collection,
-        Organization organization,
-        CollectionCompare equalityComparer,
-        List<EfRepo.CollectionRepository> suts,
-        List<EfRepo.OrganizationRepository> efOrganizationRepos,
-        SqlRepo.CollectionRepository sqlCollectionRepo,
-        SqlRepo.OrganizationRepository sqlOrganizationRepo
-        )
+    public class CollectionRepositoryTests
     {
-        var savedCollections = new List<Collection>();
-        foreach (var sut in suts)
+        [CiSkippedTheory, EfCollectionAutoData]
+        public async void CreateAsync_Works_DataMatches(
+            Collection collection,
+            Organization organization,
+            CollectionCompare equalityComparer,
+            List<EfRepo.CollectionRepository> suts,
+            List<EfRepo.OrganizationRepository> efOrganizationRepos,
+            SqlRepo.CollectionRepository sqlCollectionRepo,
+            SqlRepo.OrganizationRepository sqlOrganizationRepo
+            )
         {
-            var i = suts.IndexOf(sut);
-            var efOrganization = await efOrganizationRepos[i].CreateAsync(organization);
-            sut.ClearChangeTracking();
+            var savedCollections = new List<Collection>();
+            foreach (var sut in suts)
+            {
+                var i = suts.IndexOf(sut);
+                var efOrganization = await efOrganizationRepos[i].CreateAsync(organization);
+                sut.ClearChangeTracking();
 
-            collection.OrganizationId = efOrganization.Id;
-            var postEfCollection = await sut.CreateAsync(collection);
-            sut.ClearChangeTracking();
+                collection.OrganizationId = efOrganization.Id;
+                var postEfCollection = await sut.CreateAsync(collection);
+                sut.ClearChangeTracking();
 
-            var savedCollection = await sut.GetByIdAsync(postEfCollection.Id);
-            savedCollections.Add(savedCollection);
+                var savedCollection = await sut.GetByIdAsync(postEfCollection.Id);
+                savedCollections.Add(savedCollection);
+            }
+
+            var sqlOrganization = await sqlOrganizationRepo.CreateAsync(organization);
+            collection.OrganizationId = sqlOrganization.Id;
+
+            var sqlCollection = await sqlCollectionRepo.CreateAsync(collection);
+            var savedSqlCollection = await sqlCollectionRepo.GetByIdAsync(sqlCollection.Id);
+            savedCollections.Add(savedSqlCollection);
+
+            var distinctItems = savedCollections.Distinct(equalityComparer);
+            Assert.True(!distinctItems.Skip(1).Any());
         }
-
-        var sqlOrganization = await sqlOrganizationRepo.CreateAsync(organization);
-        collection.OrganizationId = sqlOrganization.Id;
-
-        var sqlCollection = await sqlCollectionRepo.CreateAsync(collection);
-        var savedSqlCollection = await sqlCollectionRepo.GetByIdAsync(sqlCollection.Id);
-        savedCollections.Add(savedSqlCollection);
-
-        var distinctItems = savedCollections.Distinct(equalityComparer);
-        Assert.True(!distinctItems.Skip(1).Any());
     }
 }

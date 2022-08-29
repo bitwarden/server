@@ -6,114 +6,115 @@ using IdentityModel;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.IdentityModel.Logging;
 
-namespace Bit.Notifications;
-
-public class Startup
+namespace Bit.Notifications
 {
-    public Startup(IWebHostEnvironment env, IConfiguration configuration)
+    public class Startup
     {
-        CultureInfo.DefaultThreadCurrentCulture = new CultureInfo("en-US");
-        Configuration = configuration;
-        Environment = env;
-    }
-
-    public IConfiguration Configuration { get; }
-    public IWebHostEnvironment Environment { get; set; }
-
-    public void ConfigureServices(IServiceCollection services)
-    {
-        // Options
-        services.AddOptions();
-
-        // Settings
-        var globalSettings = services.AddGlobalSettingsServices(Configuration, Environment);
-
-        // Identity
-        services.AddIdentityAuthenticationServices(globalSettings, Environment, config =>
+        public Startup(IWebHostEnvironment env, IConfiguration configuration)
         {
-            config.AddPolicy("Application", policy =>
-            {
-                policy.RequireAuthenticatedUser();
-                policy.RequireClaim(JwtClaimTypes.AuthenticationMethod, "Application", "external");
-                policy.RequireClaim(JwtClaimTypes.Scope, "api");
-            });
-            config.AddPolicy("Internal", policy =>
-            {
-                policy.RequireAuthenticatedUser();
-                policy.RequireClaim(JwtClaimTypes.Scope, "internal");
-            });
-        });
-
-        // SignalR
-        var signalRServerBuilder = services.AddSignalR().AddMessagePackProtocol(options =>
-        {
-            options.SerializerOptions = MessagePack.MessagePackSerializerOptions.Standard
-                .WithResolver(MessagePack.Resolvers.ContractlessStandardResolver.Instance);
-        });
-        if (CoreHelpers.SettingHasValue(globalSettings.Notifications?.RedisConnectionString))
-        {
-            signalRServerBuilder.AddStackExchangeRedis(globalSettings.Notifications.RedisConnectionString,
-                options =>
-                {
-                    options.Configuration.ChannelPrefix = "Notifications";
-                });
+            CultureInfo.DefaultThreadCurrentCulture = new CultureInfo("en-US");
+            Configuration = configuration;
+            Environment = env;
         }
-        services.AddSingleton<IUserIdProvider, SubjectUserIdProvider>();
-        services.AddSingleton<ConnectionCounter>();
 
-        // Mvc
-        services.AddMvc();
+        public IConfiguration Configuration { get; }
+        public IWebHostEnvironment Environment { get; set; }
 
-        services.AddHostedService<HeartbeatHostedService>();
-        if (!globalSettings.SelfHosted)
+        public void ConfigureServices(IServiceCollection services)
         {
-            // Hosted Services
-            Jobs.JobsHostedService.AddJobsServices(services);
-            services.AddHostedService<Jobs.JobsHostedService>();
-            if (CoreHelpers.SettingHasValue(globalSettings.Notifications?.ConnectionString))
+            // Options
+            services.AddOptions();
+
+            // Settings
+            var globalSettings = services.AddGlobalSettingsServices(Configuration, Environment);
+
+            // Identity
+            services.AddIdentityAuthenticationServices(globalSettings, Environment, config =>
             {
-                services.AddHostedService<AzureQueueHostedService>();
+                config.AddPolicy("Application", policy =>
+                {
+                    policy.RequireAuthenticatedUser();
+                    policy.RequireClaim(JwtClaimTypes.AuthenticationMethod, "Application", "external");
+                    policy.RequireClaim(JwtClaimTypes.Scope, "api");
+                });
+                config.AddPolicy("Internal", policy =>
+                {
+                    policy.RequireAuthenticatedUser();
+                    policy.RequireClaim(JwtClaimTypes.Scope, "internal");
+                });
+            });
+
+            // SignalR
+            var signalRServerBuilder = services.AddSignalR().AddMessagePackProtocol(options =>
+            {
+                options.SerializerOptions = MessagePack.MessagePackSerializerOptions.Standard
+                    .WithResolver(MessagePack.Resolvers.ContractlessStandardResolver.Instance);
+            });
+            if (CoreHelpers.SettingHasValue(globalSettings.Notifications?.RedisConnectionString))
+            {
+                signalRServerBuilder.AddStackExchangeRedis(globalSettings.Notifications.RedisConnectionString,
+                    options =>
+                    {
+                        options.Configuration.ChannelPrefix = "Notifications";
+                    });
+            }
+            services.AddSingleton<IUserIdProvider, SubjectUserIdProvider>();
+            services.AddSingleton<ConnectionCounter>();
+
+            // Mvc
+            services.AddMvc();
+
+            services.AddHostedService<HeartbeatHostedService>();
+            if (!globalSettings.SelfHosted)
+            {
+                // Hosted Services
+                Jobs.JobsHostedService.AddJobsServices(services);
+                services.AddHostedService<Jobs.JobsHostedService>();
+                if (CoreHelpers.SettingHasValue(globalSettings.Notifications?.ConnectionString))
+                {
+                    services.AddHostedService<AzureQueueHostedService>();
+                }
             }
         }
-    }
 
-    public void Configure(
-        IApplicationBuilder app,
-        IWebHostEnvironment env,
-        IHostApplicationLifetime appLifetime,
-        GlobalSettings globalSettings)
-    {
-        IdentityModelEventSource.ShowPII = true;
-        app.UseSerilog(env, appLifetime, globalSettings);
-
-        // Add general security headers
-        app.UseMiddleware<SecurityHeadersMiddleware>();
-
-        if (env.IsDevelopment())
+        public void Configure(
+            IApplicationBuilder app,
+            IWebHostEnvironment env,
+            IHostApplicationLifetime appLifetime,
+            GlobalSettings globalSettings)
         {
-            app.UseDeveloperExceptionPage();
-        }
+            IdentityModelEventSource.ShowPII = true;
+            app.UseSerilog(env, appLifetime, globalSettings);
 
-        // Add routing
-        app.UseRouting();
+            // Add general security headers
+            app.UseMiddleware<SecurityHeadersMiddleware>();
 
-        // Add Cors
-        app.UseCors(policy => policy.SetIsOriginAllowed(o => CoreHelpers.IsCorsOriginAllowed(o, globalSettings))
-            .AllowAnyMethod().AllowAnyHeader().AllowCredentials());
-
-        // Add authentication to the request pipeline.
-        app.UseAuthentication();
-        app.UseAuthorization();
-
-        // Add endpoints to the request pipeline.
-        app.UseEndpoints(endpoints =>
-        {
-            endpoints.MapHub<NotificationsHub>("/hub", options =>
+            if (env.IsDevelopment())
             {
-                options.ApplicationMaxBufferSize = 2048; // client => server messages are not even used
-                options.TransportMaxBufferSize = 4096;
+                app.UseDeveloperExceptionPage();
+            }
+
+            // Add routing
+            app.UseRouting();
+
+            // Add Cors
+            app.UseCors(policy => policy.SetIsOriginAllowed(o => CoreHelpers.IsCorsOriginAllowed(o, globalSettings))
+                .AllowAnyMethod().AllowAnyHeader().AllowCredentials());
+
+            // Add authentication to the request pipeline.
+            app.UseAuthentication();
+            app.UseAuthorization();
+
+            // Add endpoints to the request pipeline.
+            app.UseEndpoints(endpoints =>
+            {
+                endpoints.MapHub<NotificationsHub>("/hub", options =>
+                {
+                    options.ApplicationMaxBufferSize = 2048; // client => server messages are not even used
+                    options.TransportMaxBufferSize = 4096;
+                });
+                endpoints.MapDefaultControllerRoute();
             });
-            endpoints.MapDefaultControllerRoute();
-        });
+        }
     }
 }

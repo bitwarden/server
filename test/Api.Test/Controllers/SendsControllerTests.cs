@@ -15,65 +15,66 @@ using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Api.Test.Controllers;
-
-public class SendsControllerTests : IDisposable
+namespace Bit.Api.Test.Controllers
 {
-
-    private readonly SendsController _sut;
-    private readonly GlobalSettings _globalSettings;
-    private readonly IUserService _userService;
-    private readonly ISendRepository _sendRepository;
-    private readonly ISendService _sendService;
-    private readonly ISendFileStorageService _sendFileStorageService;
-    private readonly ILogger<SendsController> _logger;
-    private readonly ICurrentContext _currentContext;
-
-    public SendsControllerTests()
+    public class SendsControllerTests : IDisposable
     {
-        _userService = Substitute.For<IUserService>();
-        _sendRepository = Substitute.For<ISendRepository>();
-        _sendService = Substitute.For<ISendService>();
-        _sendFileStorageService = Substitute.For<ISendFileStorageService>();
-        _globalSettings = new GlobalSettings();
-        _logger = Substitute.For<ILogger<SendsController>>();
-        _currentContext = Substitute.For<ICurrentContext>();
 
-        _sut = new SendsController(
-            _sendRepository,
-            _userService,
-            _sendService,
-            _sendFileStorageService,
-            _logger,
-            _globalSettings,
-            _currentContext
-        );
-    }
+        private readonly SendsController _sut;
+        private readonly GlobalSettings _globalSettings;
+        private readonly IUserService _userService;
+        private readonly ISendRepository _sendRepository;
+        private readonly ISendService _sendService;
+        private readonly ISendFileStorageService _sendFileStorageService;
+        private readonly ILogger<SendsController> _logger;
+        private readonly ICurrentContext _currentContext;
 
-    public void Dispose()
-    {
-        _sut?.Dispose();
-    }
+        public SendsControllerTests()
+        {
+            _userService = Substitute.For<IUserService>();
+            _sendRepository = Substitute.For<ISendRepository>();
+            _sendService = Substitute.For<ISendService>();
+            _sendFileStorageService = Substitute.For<ISendFileStorageService>();
+            _globalSettings = new GlobalSettings();
+            _logger = Substitute.For<ILogger<SendsController>>();
+            _currentContext = Substitute.For<ICurrentContext>();
 
-    [Theory, AutoData]
-    public async Task SendsController_WhenSendHidesEmail_CreatorIdentifierShouldBeNull(
-        Guid id, Send send, User user)
-    {
-        var accessId = CoreHelpers.Base64UrlEncode(id.ToByteArray());
+            _sut = new SendsController(
+                _sendRepository,
+                _userService,
+                _sendService,
+                _sendFileStorageService,
+                _logger,
+                _globalSettings,
+                _currentContext
+            );
+        }
 
-        send.Id = default;
-        send.Type = SendType.Text;
-        send.Data = JsonSerializer.Serialize(new Dictionary<string, string>());
-        send.HideEmail = true;
+        public void Dispose()
+        {
+            _sut?.Dispose();
+        }
 
-        _sendService.AccessAsync(id, null).Returns((send, false, false));
-        _userService.GetUserByIdAsync(Arg.Any<Guid>()).Returns(user);
+        [Theory, AutoData]
+        public async Task SendsController_WhenSendHidesEmail_CreatorIdentifierShouldBeNull(
+            Guid id, Send send, User user)
+        {
+            var accessId = CoreHelpers.Base64UrlEncode(id.ToByteArray());
 
-        var request = new SendAccessRequestModel();
-        var actionResult = await _sut.Access(accessId, request);
-        var response = (actionResult as ObjectResult)?.Value as SendAccessResponseModel;
+            send.Id = default;
+            send.Type = SendType.Text;
+            send.Data = JsonSerializer.Serialize(new Dictionary<string, string>());
+            send.HideEmail = true;
 
-        Assert.NotNull(response);
-        Assert.Null(response.CreatorIdentifier);
+            _sendService.AccessAsync(id, null).Returns((send, false, false));
+            _userService.GetUserByIdAsync(Arg.Any<Guid>()).Returns(user);
+
+            var request = new SendAccessRequestModel();
+            var actionResult = await _sut.Access(accessId, request);
+            var response = (actionResult as ObjectResult)?.Value as SendAccessResponseModel;
+
+            Assert.NotNull(response);
+            Assert.Null(response.CreatorIdentifier);
+        }
     }
 }

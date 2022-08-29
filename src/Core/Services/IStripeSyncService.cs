@@ -1,6 +1,7 @@
-﻿namespace Bit.Core.Services;
-
-public interface IStripeSyncService
+﻿namespace Bit.Core.Services
 {
-    Task UpdateCustomerEmailAddress(string gatewayCustomerId, string emailAddress);
+    public interface IStripeSyncService
+    {
+        Task UpdateCustomerEmailAddress(string gatewayCustomerId, string emailAddress);
+    }
 }

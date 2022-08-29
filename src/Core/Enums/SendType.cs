@@ -1,7 +1,8 @@
-﻿namespace Bit.Core.Enums;
-
-public enum SendType : byte
+﻿namespace Bit.Core.Enums
 {
-    Text = 0,
-    File = 1
+    public enum SendType : byte
+    {
+        Text = 0,
+        File = 1
+    }
 }

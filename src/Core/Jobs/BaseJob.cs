@@ -1,28 +1,29 @@
 ﻿using Microsoft.Extensions.Logging;
 using Quartz;
 
-namespace Bit.Core.Jobs;
-
-public abstract class BaseJob : IJob
+namespace Bit.Core.Jobs
 {
-    protected readonly ILogger _logger;
-
-    public BaseJob(ILogger logger)
+    public abstract class BaseJob : IJob
     {
-        _logger = logger;
-    }
+        protected readonly ILogger _logger;
 
-    public async Task Execute(IJobExecutionContext context)
-    {
-        try
+        public BaseJob(ILogger logger)
         {
-            await ExecuteJobAsync(context);
+            _logger = logger;
         }
-        catch (Exception e)
-        {
-            _logger.LogError(2, e, "Error performing {0}.", GetType().Name);
-        }
-    }
 
-    protected abstract Task ExecuteJobAsync(IJobExecutionContext context);
+        public async Task Execute(IJobExecutionContext context)
+        {
+            try
+            {
+                await ExecuteJobAsync(context);
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(2, e, "Error performing {0}.", GetType().Name);
+            }
+        }
+
+        protected abstract Task ExecuteJobAsync(IJobExecutionContext context);
+    }
 }

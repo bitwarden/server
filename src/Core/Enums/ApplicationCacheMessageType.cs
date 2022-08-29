@@ -1,7 +1,8 @@
-﻿namespace Bit.Core.Enums;
-
-public enum ApplicationCacheMessageType : byte
+﻿namespace Bit.Core.Enums
 {
-    UpsertOrganizationAbility = 0,
-    DeleteOrganizationAbility = 1
+    public enum ApplicationCacheMessageType : byte
+    {
+        UpsertOrganizationAbility = 0,
+        DeleteOrganizationAbility = 1
+    }
 }

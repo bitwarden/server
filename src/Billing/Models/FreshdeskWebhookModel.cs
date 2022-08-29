@@ -1,15 +1,16 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace Bit.Billing.Models;
-
-public class FreshdeskWebhookModel
+namespace Bit.Billing.Models
 {
-    [JsonPropertyName("ticket_id")]
-    public string TicketId { get; set; }
+    public class FreshdeskWebhookModel
+    {
+        [JsonPropertyName("ticket_id")]
+        public string TicketId { get; set; }
 
-    [JsonPropertyName("ticket_contact_email")]
-    public string TicketContactEmail { get; set; }
+        [JsonPropertyName("ticket_contact_email")]
+        public string TicketContactEmail { get; set; }
 
-    [JsonPropertyName("ticket_tags")]
-    public string TicketTags { get; set; }
+        [JsonPropertyName("ticket_tags")]
+        public string TicketTags { get; set; }
+    }
 }

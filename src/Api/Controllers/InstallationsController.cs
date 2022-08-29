@@ -6,39 +6,40 @@ using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Bit.Api.Controllers;
-
-[Route("installations")]
-[SelfHosted(NotSelfHostedOnly = true)]
-public class InstallationsController : Controller
+namespace Bit.Api.Controllers
 {
-    private readonly IInstallationRepository _installationRepository;
-
-    public InstallationsController(
-        IInstallationRepository installationRepository)
+    [Route("installations")]
+    [SelfHosted(NotSelfHostedOnly = true)]
+    public class InstallationsController : Controller
     {
-        _installationRepository = installationRepository;
-    }
+        private readonly IInstallationRepository _installationRepository;
 
-    [HttpGet("{id}")]
-    [AllowAnonymous]
-    public async Task<InstallationResponseModel> Get(Guid id)
-    {
-        var installation = await _installationRepository.GetByIdAsync(id);
-        if (installation == null)
+        public InstallationsController(
+            IInstallationRepository installationRepository)
         {
-            throw new NotFoundException();
+            _installationRepository = installationRepository;
         }
 
-        return new InstallationResponseModel(installation, false);
-    }
+        [HttpGet("{id}")]
+        [AllowAnonymous]
+        public async Task<InstallationResponseModel> Get(Guid id)
+        {
+            var installation = await _installationRepository.GetByIdAsync(id);
+            if (installation == null)
+            {
+                throw new NotFoundException();
+            }
 
-    [HttpPost("")]
-    [AllowAnonymous]
-    public async Task<InstallationResponseModel> Post([FromBody] InstallationRequestModel model)
-    {
-        var installation = model.ToInstallation();
-        await _installationRepository.CreateAsync(installation);
-        return new InstallationResponseModel(installation, true);
+            return new InstallationResponseModel(installation, false);
+        }
+
+        [HttpPost("")]
+        [AllowAnonymous]
+        public async Task<InstallationResponseModel> Post([FromBody] InstallationRequestModel model)
+        {
+            var installation = model.ToInstallation();
+            await _installationRepository.CreateAsync(installation);
+            return new InstallationResponseModel(installation, true);
+        }
     }
 }

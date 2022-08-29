@@ -5,84 +5,85 @@ using Bit.Core.Tokens;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Xunit;
 
-namespace Bit.Core.Test.Models.Business.Tokenables;
-
-public class SsoTokenableTests
+namespace Bit.Core.Test.Models.Business.Tokenables
 {
-    [Fact]
-    public void CanHandleNullOrganization()
+    public class SsoTokenableTests
     {
-        var token = new SsoTokenable(null, default);
-
-        Assert.Equal(default, token.OrganizationId);
-        Assert.Equal(default, token.DomainHint);
-    }
-
-    [Fact]
-    public void TokenWithNullOrganizationIsInvalid()
-    {
-        var token = new SsoTokenable(null, 500)
+        [Fact]
+        public void CanHandleNullOrganization()
         {
-            ExpirationDate = DateTime.UtcNow + TimeSpan.FromDays(1)
-        };
+            var token = new SsoTokenable(null, default);
 
-        Assert.False(token.Valid);
-    }
+            Assert.Equal(default, token.OrganizationId);
+            Assert.Equal(default, token.DomainHint);
+        }
 
-    [Theory, BitAutoData]
-    public void TokenValidityCheckNullOrganizationIsInvalid(Organization organization)
-    {
-        var token = new SsoTokenable(organization, 500)
+        [Fact]
+        public void TokenWithNullOrganizationIsInvalid()
         {
-            ExpirationDate = DateTime.UtcNow + TimeSpan.FromDays(1)
-        };
+            var token = new SsoTokenable(null, 500)
+            {
+                ExpirationDate = DateTime.UtcNow + TimeSpan.FromDays(1)
+            };
 
-        Assert.False(token.TokenIsValid(null));
-    }
+            Assert.False(token.Valid);
+        }
 
-    [Theory, AutoData]
-    public void SetsDataFromOrganization(Organization organization)
-    {
-        var token = new SsoTokenable(organization, default);
-
-        Assert.Equal(organization.Id, token.OrganizationId);
-        Assert.Equal(organization.Identifier, token.DomainHint);
-    }
-
-    [Fact]
-    public void SetsExpirationFromConstructor()
-    {
-        var expectedDateTime = DateTime.UtcNow.AddSeconds(500);
-        var token = new SsoTokenable(null, 500);
-
-        Assert.Equal(expectedDateTime, token.ExpirationDate, TimeSpan.FromMilliseconds(10));
-    }
-
-    [Theory, AutoData]
-    public void SerializationSetsCorrectDateTime(Organization organization)
-    {
-        var expectedDateTime = DateTime.UtcNow.AddHours(-5);
-        var token = new SsoTokenable(organization, default)
+        [Theory, BitAutoData]
+        public void TokenValidityCheckNullOrganizationIsInvalid(Organization organization)
         {
-            ExpirationDate = expectedDateTime
-        };
+            var token = new SsoTokenable(organization, 500)
+            {
+                ExpirationDate = DateTime.UtcNow + TimeSpan.FromDays(1)
+            };
 
-        var result = Tokenable.FromToken<HCaptchaTokenable>(token.ToToken());
+            Assert.False(token.TokenIsValid(null));
+        }
 
-        Assert.Equal(expectedDateTime, result.ExpirationDate, TimeSpan.FromMilliseconds(10));
-    }
-
-    [Theory, AutoData]
-    public void TokenIsValidFailsWhenExpired(Organization organization)
-    {
-        var expectedDateTime = DateTime.UtcNow.AddHours(-5);
-        var token = new SsoTokenable(organization, default)
+        [Theory, AutoData]
+        public void SetsDataFromOrganization(Organization organization)
         {
-            ExpirationDate = expectedDateTime
-        };
+            var token = new SsoTokenable(organization, default);
 
-        var result = token.TokenIsValid(organization);
+            Assert.Equal(organization.Id, token.OrganizationId);
+            Assert.Equal(organization.Identifier, token.DomainHint);
+        }
 
-        Assert.False(result);
+        [Fact]
+        public void SetsExpirationFromConstructor()
+        {
+            var expectedDateTime = DateTime.UtcNow.AddSeconds(500);
+            var token = new SsoTokenable(null, 500);
+
+            Assert.Equal(expectedDateTime, token.ExpirationDate, TimeSpan.FromMilliseconds(10));
+        }
+
+        [Theory, AutoData]
+        public void SerializationSetsCorrectDateTime(Organization organization)
+        {
+            var expectedDateTime = DateTime.UtcNow.AddHours(-5);
+            var token = new SsoTokenable(organization, default)
+            {
+                ExpirationDate = expectedDateTime
+            };
+
+            var result = Tokenable.FromToken<HCaptchaTokenable>(token.ToToken());
+
+            Assert.Equal(expectedDateTime, result.ExpirationDate, TimeSpan.FromMilliseconds(10));
+        }
+
+        [Theory, AutoData]
+        public void TokenIsValidFailsWhenExpired(Organization organization)
+        {
+            var expectedDateTime = DateTime.UtcNow.AddHours(-5);
+            var token = new SsoTokenable(organization, default)
+            {
+                ExpirationDate = expectedDateTime
+            };
+
+            var result = token.TokenIsValid(organization);
+
+            Assert.False(result);
+        }
     }
 }

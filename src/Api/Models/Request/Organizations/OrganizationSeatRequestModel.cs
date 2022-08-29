@@ -1,17 +1,18 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace Bit.Api.Models.Request.Organizations;
-
-public class OrganizationSeatRequestModel : IValidatableObject
+namespace Bit.Api.Models.Request.Organizations
 {
-    [Required]
-    public int? SeatAdjustment { get; set; }
-
-    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    public class OrganizationSeatRequestModel : IValidatableObject
     {
-        if (SeatAdjustment == 0)
+        [Required]
+        public int? SeatAdjustment { get; set; }
+
+        public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {
-            yield return new ValidationResult("Seat adjustment cannot be 0.", new string[] { nameof(SeatAdjustment) });
+            if (SeatAdjustment == 0)
+            {
+                yield return new ValidationResult("Seat adjustment cannot be 0.", new string[] { nameof(SeatAdjustment) });
+            }
         }
     }
 }

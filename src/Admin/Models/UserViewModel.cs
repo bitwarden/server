@@ -1,17 +1,18 @@
 ﻿using Bit.Core.Entities;
 
-namespace Bit.Admin.Models;
-
-public class UserViewModel
+namespace Bit.Admin.Models
 {
-    public UserViewModel() { }
-
-    public UserViewModel(User user, IEnumerable<Cipher> ciphers)
+    public class UserViewModel
     {
-        User = user;
-        CipherCount = ciphers.Count();
-    }
+        public UserViewModel() { }
 
-    public User User { get; set; }
-    public int CipherCount { get; set; }
+        public UserViewModel(User user, IEnumerable<Cipher> ciphers)
+        {
+            User = user;
+            CipherCount = ciphers.Count();
+        }
+
+        public User User { get; set; }
+        public int CipherCount { get; set; }
+    }
 }

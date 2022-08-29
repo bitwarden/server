@@ -1,19 +1,20 @@
 ﻿using Bit.Core.Entities.Provider;
 
-namespace Bit.Core.Models.Data;
-
-public class ProviderAbility
+namespace Bit.Core.Models.Data
 {
-    public ProviderAbility() { }
-
-    public ProviderAbility(Provider provider)
+    public class ProviderAbility
     {
-        Id = provider.Id;
-        UseEvents = provider.UseEvents;
-        Enabled = provider.Enabled;
-    }
+        public ProviderAbility() { }
 
-    public Guid Id { get; set; }
-    public bool UseEvents { get; set; }
-    public bool Enabled { get; set; }
+        public ProviderAbility(Provider provider)
+        {
+            Id = provider.Id;
+            UseEvents = provider.UseEvents;
+            Enabled = provider.Enabled;
+        }
+
+        public Guid Id { get; set; }
+        public bool UseEvents { get; set; }
+        public bool Enabled { get; set; }
+    }
 }

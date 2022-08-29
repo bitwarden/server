@@ -1,15 +1,16 @@
 ﻿using AutoFixture;
 
-namespace Bit.Test.Common.AutoFixture;
-
-public class GlobalSettings : ICustomization
+namespace Bit.Test.Common.AutoFixture
 {
-    public void Customize(IFixture fixture)
+    public class GlobalSettings : ICustomization
     {
-        fixture.Customize<Bit.Core.Settings.GlobalSettings>(composer => composer
-            .Without(s => s.BaseServiceUri)
-            .Without(s => s.Attachment)
-            .Without(s => s.Send)
-            .Without(s => s.DataProtection));
+        public void Customize(IFixture fixture)
+        {
+            fixture.Customize<Bit.Core.Settings.GlobalSettings>(composer => composer
+                .Without(s => s.BaseServiceUri)
+                .Without(s => s.Attachment)
+                .Without(s => s.Send)
+                .Without(s => s.DataProtection));
+        }
     }
 }

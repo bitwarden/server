@@ -1,12 +1,13 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 
-namespace Bit.Sso.Models;
-
-public class SsoPreValidateResponseModel : JsonResult
+namespace Bit.Sso.Models
 {
-    public SsoPreValidateResponseModel(string token) : base(new
+    public class SsoPreValidateResponseModel : JsonResult
     {
-        token
-    })
-    { }
+        public SsoPreValidateResponseModel(string token) : base(new
+        {
+            token
+        })
+        { }
+    }
 }

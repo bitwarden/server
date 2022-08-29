@@ -1,7 +1,8 @@
-﻿namespace Bit.Core.Entities;
-
-public class GroupUser
+﻿namespace Bit.Core.Entities
 {
-    public Guid GroupId { get; set; }
-    public Guid OrganizationUserId { get; set; }
+    public class GroupUser
+    {
+        public Guid GroupId { get; set; }
+        public Guid OrganizationUserId { get; set; }
+    }
 }

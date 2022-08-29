@@ -2,41 +2,42 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 
-namespace Bit.Core.Utilities;
-
-public static class HostBuilderExtensions
+namespace Bit.Core.Utilities
 {
-    public static IHostBuilder ConfigureCustomAppConfiguration(this IHostBuilder hostBuilder, string[] args)
+    public static class HostBuilderExtensions
     {
-        // Reload app configuration with SelfHosted overrides.
-        return hostBuilder.ConfigureAppConfiguration((hostingContext, config) =>
+        public static IHostBuilder ConfigureCustomAppConfiguration(this IHostBuilder hostBuilder, string[] args)
         {
-            if (Environment.GetEnvironmentVariable("globalSettings__selfHosted")?.ToLower() != "true")
+            // Reload app configuration with SelfHosted overrides.
+            return hostBuilder.ConfigureAppConfiguration((hostingContext, config) =>
             {
-                return;
-            }
-
-            var env = hostingContext.HostingEnvironment;
-
-            config.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
-                .AddJsonFile($"appsettings.{env.EnvironmentName}.json", optional: true, reloadOnChange: true)
-                .AddJsonFile("appsettings.SelfHosted.json", optional: true, reloadOnChange: true);
-
-            if (env.IsDevelopment())
-            {
-                var appAssembly = Assembly.Load(new AssemblyName(env.ApplicationName));
-                if (appAssembly != null)
+                if (Environment.GetEnvironmentVariable("globalSettings__selfHosted")?.ToLower() != "true")
                 {
-                    config.AddUserSecrets(appAssembly, optional: true);
+                    return;
                 }
-            }
 
-            config.AddEnvironmentVariables();
+                var env = hostingContext.HostingEnvironment;
 
-            if (args != null)
-            {
-                config.AddCommandLine(args);
-            }
-        });
+                config.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+                    .AddJsonFile($"appsettings.{env.EnvironmentName}.json", optional: true, reloadOnChange: true)
+                    .AddJsonFile("appsettings.SelfHosted.json", optional: true, reloadOnChange: true);
+
+                if (env.IsDevelopment())
+                {
+                    var appAssembly = Assembly.Load(new AssemblyName(env.ApplicationName));
+                    if (appAssembly != null)
+                    {
+                        config.AddUserSecrets(appAssembly, optional: true);
+                    }
+                }
+
+                config.AddEnvironmentVariables();
+
+                if (args != null)
+                {
+                    config.AddCommandLine(args);
+                }
+            });
+        }
     }
 }

@@ -2,35 +2,36 @@
 using Bit.Core.Models.Data;
 using Bit.Core.Utilities;
 
-namespace Bit.Api.Models;
-
-public class CipherFieldModel
+namespace Bit.Api.Models
 {
-    public CipherFieldModel() { }
-
-    public CipherFieldModel(CipherFieldData data)
+    public class CipherFieldModel
     {
-        Type = data.Type;
-        Name = data.Name;
-        Value = data.Value;
-        LinkedId = data.LinkedId ?? null;
-    }
+        public CipherFieldModel() { }
 
-    public FieldType Type { get; set; }
-    [EncryptedStringLength(1000)]
-    public string Name { get; set; }
-    [EncryptedStringLength(5000)]
-    public string Value { get; set; }
-    public int? LinkedId { get; set; }
-
-    public CipherFieldData ToCipherFieldData()
-    {
-        return new CipherFieldData
+        public CipherFieldModel(CipherFieldData data)
         {
-            Type = Type,
-            Name = Name,
-            Value = Value,
-            LinkedId = LinkedId ?? null,
-        };
+            Type = data.Type;
+            Name = data.Name;
+            Value = data.Value;
+            LinkedId = data.LinkedId ?? null;
+        }
+
+        public FieldType Type { get; set; }
+        [EncryptedStringLength(1000)]
+        public string Name { get; set; }
+        [EncryptedStringLength(5000)]
+        public string Value { get; set; }
+        public int? LinkedId { get; set; }
+
+        public CipherFieldData ToCipherFieldData()
+        {
+            return new CipherFieldData
+            {
+                Type = Type,
+                Name = Name,
+                Value = Value,
+                LinkedId = LinkedId ?? null,
+            };
+        }
     }
 }

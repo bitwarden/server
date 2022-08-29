@@ -1,9 +1,10 @@
-﻿namespace Bit.Core.Entities;
-
-public class CollectionUser
+﻿namespace Bit.Core.Entities
 {
-    public Guid CollectionId { get; set; }
-    public Guid OrganizationUserId { get; set; }
-    public bool ReadOnly { get; set; }
-    public bool HidePasswords { get; set; }
+    public class CollectionUser
+    {
+        public Guid CollectionId { get; set; }
+        public Guid OrganizationUserId { get; set; }
+        public bool ReadOnly { get; set; }
+        public bool HidePasswords { get; set; }
+    }
 }

@@ -5,44 +5,45 @@ using Bit.Core.Models.Business;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 
-namespace Bit.Core.Services;
-
-public class AzureQueueReferenceEventService : IReferenceEventService
+namespace Bit.Core.Services
 {
-    private const string _queueName = "reference-events";
-
-    private readonly QueueClient _queueClient;
-    private readonly GlobalSettings _globalSettings;
-
-    public AzureQueueReferenceEventService(
-        GlobalSettings globalSettings)
+    public class AzureQueueReferenceEventService : IReferenceEventService
     {
-        _queueClient = new QueueClient(globalSettings.Events.ConnectionString, _queueName);
-        _globalSettings = globalSettings;
-    }
+        private const string _queueName = "reference-events";
 
-    public async Task RaiseEventAsync(ReferenceEvent referenceEvent)
-    {
-        await SendMessageAsync(referenceEvent);
-    }
+        private readonly QueueClient _queueClient;
+        private readonly GlobalSettings _globalSettings;
 
-    private async Task SendMessageAsync(ReferenceEvent referenceEvent)
-    {
-        if (_globalSettings.SelfHosted)
+        public AzureQueueReferenceEventService(
+            GlobalSettings globalSettings)
         {
-            // Ignore for self-hosted
-            return;
+            _queueClient = new QueueClient(globalSettings.Events.ConnectionString, _queueName);
+            _globalSettings = globalSettings;
         }
-        try
+
+        public async Task RaiseEventAsync(ReferenceEvent referenceEvent)
         {
-            var message = JsonSerializer.Serialize(referenceEvent, JsonHelpers.IgnoreWritingNullAndCamelCase);
-            // Messages need to be base64 encoded
-            var encodedMessage = Convert.ToBase64String(Encoding.UTF8.GetBytes(message));
-            await _queueClient.SendMessageAsync(encodedMessage);
+            await SendMessageAsync(referenceEvent);
         }
-        catch
+
+        private async Task SendMessageAsync(ReferenceEvent referenceEvent)
         {
-            // Ignore failure
+            if (_globalSettings.SelfHosted)
+            {
+                // Ignore for self-hosted
+                return;
+            }
+            try
+            {
+                var message = JsonSerializer.Serialize(referenceEvent, JsonHelpers.IgnoreWritingNullAndCamelCase);
+                // Messages need to be base64 encoded
+                var encodedMessage = Convert.ToBase64String(Encoding.UTF8.GetBytes(message));
+                await _queueClient.SendMessageAsync(encodedMessage);
+            }
+            catch
+            {
+                // Ignore failure
+            }
         }
     }
 }

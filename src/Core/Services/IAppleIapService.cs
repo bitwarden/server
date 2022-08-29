@@ -1,10 +1,11 @@
 ﻿using Bit.Billing.Models;
 
-namespace Bit.Core.Services;
-
-public interface IAppleIapService
+namespace Bit.Core.Services
 {
-    Task<AppleReceiptStatus> GetVerifiedReceiptStatusAsync(string receiptData);
-    Task SaveReceiptAsync(AppleReceiptStatus receiptStatus, Guid userId);
-    Task<Tuple<string, Guid?>> GetReceiptAsync(string originalTransactionId);
+    public interface IAppleIapService
+    {
+        Task<AppleReceiptStatus> GetVerifiedReceiptStatusAsync(string receiptData);
+        Task SaveReceiptAsync(AppleReceiptStatus receiptStatus, Guid userId);
+        Task<Tuple<string, Guid?>> GetReceiptAsync(string originalTransactionId);
+    }
 }

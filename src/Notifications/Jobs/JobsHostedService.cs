@@ -2,35 +2,36 @@
 using Bit.Core.Settings;
 using Quartz;
 
-namespace Bit.Notifications.Jobs;
-
-public class JobsHostedService : BaseJobsHostedService
+namespace Bit.Notifications.Jobs
 {
-    public JobsHostedService(
-        GlobalSettings globalSettings,
-        IServiceProvider serviceProvider,
-        ILogger<JobsHostedService> logger,
-        ILogger<JobListener> listenerLogger)
-        : base(globalSettings, serviceProvider, logger, listenerLogger) { }
-
-    public override async Task StartAsync(CancellationToken cancellationToken)
+    public class JobsHostedService : BaseJobsHostedService
     {
-        var everyFiveMinutesTrigger = TriggerBuilder.Create()
-            .WithIdentity("EveryFiveMinutesTrigger")
-            .StartNow()
-            .WithCronSchedule("0 */30 * * * ?")
-            .Build();
+        public JobsHostedService(
+            GlobalSettings globalSettings,
+            IServiceProvider serviceProvider,
+            ILogger<JobsHostedService> logger,
+            ILogger<JobListener> listenerLogger)
+            : base(globalSettings, serviceProvider, logger, listenerLogger) { }
 
-        Jobs = new List<Tuple<Type, ITrigger>>
+        public override async Task StartAsync(CancellationToken cancellationToken)
         {
-            new Tuple<Type, ITrigger>(typeof(LogConnectionCounterJob), everyFiveMinutesTrigger)
-        };
+            var everyFiveMinutesTrigger = TriggerBuilder.Create()
+                .WithIdentity("EveryFiveMinutesTrigger")
+                .StartNow()
+                .WithCronSchedule("0 */30 * * * ?")
+                .Build();
 
-        await base.StartAsync(cancellationToken);
-    }
+            Jobs = new List<Tuple<Type, ITrigger>>
+            {
+                new Tuple<Type, ITrigger>(typeof(LogConnectionCounterJob), everyFiveMinutesTrigger)
+            };
 
-    public static void AddJobsServices(IServiceCollection services)
-    {
-        services.AddTransient<LogConnectionCounterJob>();
+            await base.StartAsync(cancellationToken);
+        }
+
+        public static void AddJobsServices(IServiceCollection services)
+        {
+            services.AddTransient<LogConnectionCounterJob>();
+        }
     }
 }

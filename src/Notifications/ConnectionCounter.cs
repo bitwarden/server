@@ -1,26 +1,27 @@
-﻿namespace Bit.Notifications;
-
-public class ConnectionCounter
+﻿namespace Bit.Notifications
 {
-    private int _count = 0;
-
-    public void Increment()
+    public class ConnectionCounter
     {
-        Interlocked.Increment(ref _count);
-    }
+        private int _count = 0;
 
-    public void Decrement()
-    {
-        Interlocked.Decrement(ref _count);
-    }
+        public void Increment()
+        {
+            Interlocked.Increment(ref _count);
+        }
 
-    public void Reset()
-    {
-        _count = 0;
-    }
+        public void Decrement()
+        {
+            Interlocked.Decrement(ref _count);
+        }
 
-    public int GetCount()
-    {
-        return _count;
+        public void Reset()
+        {
+            _count = 0;
+        }
+
+        public int GetCount()
+        {
+            return _count;
+        }
     }
 }

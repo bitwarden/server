@@ -1,19 +1,20 @@
 ﻿using IdentityServer4.Models;
 
-namespace Bit.Core.IdentityServer;
-
-public class ApiScopes
+namespace Bit.Core.IdentityServer
 {
-    public static IEnumerable<ApiScope> GetApiScopes()
+    public class ApiScopes
     {
-        return new List<ApiScope>
+        public static IEnumerable<ApiScope> GetApiScopes()
         {
-            new ApiScope("api", "API Access"),
-            new ApiScope("api.push", "API Push Access"),
-            new ApiScope("api.licensing", "API Licensing Access"),
-            new ApiScope("api.organization", "API Organization Access"),
-            new ApiScope("api.installation", "API Installation Access"),
-            new ApiScope("internal", "Internal Access")
-        };
+            return new List<ApiScope>
+            {
+                new ApiScope("api", "API Access"),
+                new ApiScope("api.push", "API Push Access"),
+                new ApiScope("api.licensing", "API Licensing Access"),
+                new ApiScope("api.organization", "API Organization Access"),
+                new ApiScope("api.installation", "API Installation Access"),
+                new ApiScope("internal", "Internal Access")
+            };
+        }
     }
 }

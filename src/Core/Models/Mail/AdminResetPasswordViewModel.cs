@@ -1,7 +1,8 @@
-﻿namespace Bit.Core.Models.Mail;
-
-public class AdminResetPasswordViewModel : BaseMailModel
+﻿namespace Bit.Core.Models.Mail
 {
-    public string UserName { get; set; }
-    public string OrgName { get; set; }
+    public class AdminResetPasswordViewModel : BaseMailModel
+    {
+        public string UserName { get; set; }
+        public string OrgName { get; set; }
+    }
 }

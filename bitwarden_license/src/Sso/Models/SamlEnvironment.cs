@@ -1,8 +1,9 @@
 ﻿using System.Security.Cryptography.X509Certificates;
 
-namespace Bit.Sso.Models;
-
-public class SamlEnvironment
+namespace Bit.Sso.Models
 {
-    public X509Certificate2 SpSigningCertificate { get; set; }
+    public class SamlEnvironment
+    {
+        public X509Certificate2 SpSigningCertificate { get; set; }
+    }
 }

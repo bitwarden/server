@@ -1,15 +1,16 @@
 ﻿using Bit.Core.Settings;
 using Microsoft.Extensions.Configuration;
 
-namespace Bit.Core.Test.Helpers.Factories;
-
-public static class GlobalSettingsFactory
+namespace Bit.Core.Test.Helpers.Factories
 {
-    public static GlobalSettings GlobalSettings { get; } = new();
-    static GlobalSettingsFactory()
+    public static class GlobalSettingsFactory
     {
-        var configBuilder = new ConfigurationBuilder().AddUserSecrets("bitwarden-Api");
-        var Configuration = configBuilder.Build();
-        ConfigurationBinder.Bind(Configuration.GetSection("GlobalSettings"), GlobalSettings);
+        public static GlobalSettings GlobalSettings { get; } = new();
+        static GlobalSettingsFactory()
+        {
+            var configBuilder = new ConfigurationBuilder().AddUserSecrets("bitwarden-Api");
+            var Configuration = configBuilder.Build();
+            ConfigurationBinder.Bind(Configuration.GetSection("GlobalSettings"), GlobalSettings);
+        }
     }
 }

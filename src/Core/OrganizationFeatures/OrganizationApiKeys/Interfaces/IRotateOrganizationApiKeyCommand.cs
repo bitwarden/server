@@ -1,8 +1,9 @@
 ﻿using Bit.Core.Entities;
 
-namespace Bit.Core.OrganizationFeatures.OrganizationApiKeys.Interfaces;
-
-public interface IRotateOrganizationApiKeyCommand
+namespace Bit.Core.OrganizationFeatures.OrganizationApiKeys.Interfaces
 {
-    Task<OrganizationApiKey> RotateApiKeyAsync(OrganizationApiKey organizationApiKey);
+    public interface IRotateOrganizationApiKeyCommand
+    {
+        Task<OrganizationApiKey> RotateApiKeyAsync(OrganizationApiKey organizationApiKey);
+    }
 }

@@ -1,9 +1,10 @@
 ﻿using Bit.Core.Settings;
 
-namespace Bit.Admin.Models;
-
-public class HomeModel
+namespace Bit.Admin.Models
 {
-    public string CurrentVersion { get; set; }
-    public GlobalSettings GlobalSettings { get; set; }
+    public class HomeModel
+    {
+        public string CurrentVersion { get; set; }
+        public GlobalSettings GlobalSettings { get; set; }
+    }
 }

@@ -4,42 +4,43 @@ using AutoFixture.Xunit2;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 
-namespace Bit.Core.Test.AutoFixture.OrganizationUserFixtures;
-
-public class OrganizationUserCustomization : ICustomization
+namespace Bit.Core.Test.AutoFixture.OrganizationUserFixtures
 {
-    public OrganizationUserStatusType Status { get; set; }
-    public OrganizationUserType Type { get; set; }
-
-    public OrganizationUserCustomization(OrganizationUserStatusType status, OrganizationUserType type)
+    public class OrganizationUserCustomization : ICustomization
     {
-        Status = status;
-        Type = type;
+        public OrganizationUserStatusType Status { get; set; }
+        public OrganizationUserType Type { get; set; }
+
+        public OrganizationUserCustomization(OrganizationUserStatusType status, OrganizationUserType type)
+        {
+            Status = status;
+            Type = type;
+        }
+
+        public void Customize(IFixture fixture)
+        {
+            fixture.Customize<OrganizationUser>(composer => composer
+                .With(o => o.Type, Type)
+                .With(o => o.Status, Status));
+        }
     }
 
-    public void Customize(IFixture fixture)
+    public class OrganizationUserAttribute : CustomizeAttribute
     {
-        fixture.Customize<OrganizationUser>(composer => composer
-            .With(o => o.Type, Type)
-            .With(o => o.Status, Status));
-    }
-}
+        private readonly OrganizationUserStatusType _status;
+        private readonly OrganizationUserType _type;
 
-public class OrganizationUserAttribute : CustomizeAttribute
-{
-    private readonly OrganizationUserStatusType _status;
-    private readonly OrganizationUserType _type;
+        public OrganizationUserAttribute(
+            OrganizationUserStatusType status = OrganizationUserStatusType.Confirmed,
+            OrganizationUserType type = OrganizationUserType.User)
+        {
+            _status = status;
+            _type = type;
+        }
 
-    public OrganizationUserAttribute(
-        OrganizationUserStatusType status = OrganizationUserStatusType.Confirmed,
-        OrganizationUserType type = OrganizationUserType.User)
-    {
-        _status = status;
-        _type = type;
-    }
-
-    public override ICustomization GetCustomization(ParameterInfo parameter)
-    {
-        return new OrganizationUserCustomization(_status, _type);
+        public override ICustomization GetCustomization(ParameterInfo parameter)
+        {
+            return new OrganizationUserCustomization(_status, _type);
+        }
     }
 }

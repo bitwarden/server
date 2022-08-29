@@ -2,71 +2,72 @@
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Data;
 
-namespace Bit.Api.Models.Response.Providers;
-
-public class ProviderOrganizationResponseModel : ResponseModel
+namespace Bit.Api.Models.Response.Providers
 {
-    public ProviderOrganizationResponseModel(ProviderOrganization providerOrganization,
-        string obj = "providerOrganization") : base(obj)
+    public class ProviderOrganizationResponseModel : ResponseModel
     {
-        if (providerOrganization == null)
+        public ProviderOrganizationResponseModel(ProviderOrganization providerOrganization,
+            string obj = "providerOrganization") : base(obj)
         {
-            throw new ArgumentNullException(nameof(providerOrganization));
+            if (providerOrganization == null)
+            {
+                throw new ArgumentNullException(nameof(providerOrganization));
+            }
+
+            Id = providerOrganization.Id;
+            ProviderId = providerOrganization.ProviderId;
+            OrganizationId = providerOrganization.OrganizationId;
+            Key = providerOrganization.Key;
+            Settings = providerOrganization.Settings;
+            CreationDate = providerOrganization.CreationDate;
+            RevisionDate = providerOrganization.RevisionDate;
         }
 
-        Id = providerOrganization.Id;
-        ProviderId = providerOrganization.ProviderId;
-        OrganizationId = providerOrganization.OrganizationId;
-        Key = providerOrganization.Key;
-        Settings = providerOrganization.Settings;
-        CreationDate = providerOrganization.CreationDate;
-        RevisionDate = providerOrganization.RevisionDate;
-    }
-
-    public ProviderOrganizationResponseModel(ProviderOrganizationOrganizationDetails providerOrganization,
-        string obj = "providerOrganization") : base(obj)
-    {
-        if (providerOrganization == null)
+        public ProviderOrganizationResponseModel(ProviderOrganizationOrganizationDetails providerOrganization,
+            string obj = "providerOrganization") : base(obj)
         {
-            throw new ArgumentNullException(nameof(providerOrganization));
+            if (providerOrganization == null)
+            {
+                throw new ArgumentNullException(nameof(providerOrganization));
+            }
+
+            Id = providerOrganization.Id;
+            ProviderId = providerOrganization.ProviderId;
+            OrganizationId = providerOrganization.OrganizationId;
+            Key = providerOrganization.Key;
+            Settings = providerOrganization.Settings;
+            CreationDate = providerOrganization.CreationDate;
+            RevisionDate = providerOrganization.RevisionDate;
+            UserCount = providerOrganization.UserCount;
+            Seats = providerOrganization.Seats;
+            Plan = providerOrganization.Plan;
         }
 
-        Id = providerOrganization.Id;
-        ProviderId = providerOrganization.ProviderId;
-        OrganizationId = providerOrganization.OrganizationId;
-        Key = providerOrganization.Key;
-        Settings = providerOrganization.Settings;
-        CreationDate = providerOrganization.CreationDate;
-        RevisionDate = providerOrganization.RevisionDate;
-        UserCount = providerOrganization.UserCount;
-        Seats = providerOrganization.Seats;
-        Plan = providerOrganization.Plan;
+        public Guid Id { get; set; }
+        public Guid ProviderId { get; set; }
+        public Guid OrganizationId { get; set; }
+        public string Key { get; set; }
+        public string Settings { get; set; }
+        public DateTime CreationDate { get; set; }
+        public DateTime RevisionDate { get; set; }
+        public int UserCount { get; set; }
+        public int? Seats { get; set; }
+        public string Plan { get; set; }
     }
 
-    public Guid Id { get; set; }
-    public Guid ProviderId { get; set; }
-    public Guid OrganizationId { get; set; }
-    public string Key { get; set; }
-    public string Settings { get; set; }
-    public DateTime CreationDate { get; set; }
-    public DateTime RevisionDate { get; set; }
-    public int UserCount { get; set; }
-    public int? Seats { get; set; }
-    public string Plan { get; set; }
-}
-
-public class ProviderOrganizationOrganizationDetailsResponseModel : ProviderOrganizationResponseModel
-{
-    public ProviderOrganizationOrganizationDetailsResponseModel(ProviderOrganizationOrganizationDetails providerOrganization,
-        string obj = "providerOrganizationOrganizationDetail") : base(providerOrganization, obj)
+    public class ProviderOrganizationOrganizationDetailsResponseModel : ProviderOrganizationResponseModel
     {
-        if (providerOrganization == null)
+        public ProviderOrganizationOrganizationDetailsResponseModel(ProviderOrganizationOrganizationDetails providerOrganization,
+            string obj = "providerOrganizationOrganizationDetail") : base(providerOrganization, obj)
         {
-            throw new ArgumentNullException(nameof(providerOrganization));
+            if (providerOrganization == null)
+            {
+                throw new ArgumentNullException(nameof(providerOrganization));
+            }
+
+            OrganizationName = providerOrganization.OrganizationName;
         }
 
-        OrganizationName = providerOrganization.OrganizationName;
+        public string OrganizationName { get; set; }
     }
-
-    public string OrganizationName { get; set; }
 }

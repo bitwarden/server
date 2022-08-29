@@ -2,30 +2,31 @@
 using Bit.Core.Entities;
 using Bit.Core.Utilities;
 
-namespace Bit.Api.Models.Request;
-
-public class CollectionRequestModel
+namespace Bit.Api.Models.Request
 {
-    [Required]
-    [EncryptedString]
-    [EncryptedStringLength(1000)]
-    public string Name { get; set; }
-    [StringLength(300)]
-    public string ExternalId { get; set; }
-    public IEnumerable<SelectionReadOnlyRequestModel> Groups { get; set; }
-
-    public Collection ToCollection(Guid orgId)
+    public class CollectionRequestModel
     {
-        return ToCollection(new Collection
+        [Required]
+        [EncryptedString]
+        [EncryptedStringLength(1000)]
+        public string Name { get; set; }
+        [StringLength(300)]
+        public string ExternalId { get; set; }
+        public IEnumerable<SelectionReadOnlyRequestModel> Groups { get; set; }
+
+        public Collection ToCollection(Guid orgId)
         {
-            OrganizationId = orgId
-        });
-    }
+            return ToCollection(new Collection
+            {
+                OrganizationId = orgId
+            });
+        }
 
-    public Collection ToCollection(Collection existingCollection)
-    {
-        existingCollection.Name = Name;
-        existingCollection.ExternalId = ExternalId;
-        return existingCollection;
+        public Collection ToCollection(Collection existingCollection)
+        {
+            existingCollection.Name = Name;
+            existingCollection.ExternalId = ExternalId;
+            return existingCollection;
+        }
     }
 }

@@ -1,16 +1,17 @@
 ﻿using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 
-namespace Bit.Api.Models;
-
-public class CipherSecureNoteModel
+namespace Bit.Api.Models
 {
-    public CipherSecureNoteModel() { }
-
-    public CipherSecureNoteModel(CipherSecureNoteData data)
+    public class CipherSecureNoteModel
     {
-        Type = data.Type;
-    }
+        public CipherSecureNoteModel() { }
 
-    public SecureNoteType Type { get; set; }
+        public CipherSecureNoteModel(CipherSecureNoteData data)
+        {
+            Type = data.Type;
+        }
+
+        public SecureNoteType Type { get; set; }
+    }
 }

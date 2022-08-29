@@ -6,58 +6,59 @@ using Core.Models.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Bit.Api.Controllers;
-
-[Route("organizations/{organizationId}")]
-[Authorize("Application")]
-public class OrganizationExportController : Controller
+namespace Bit.Api.Controllers
 {
-    private readonly IUserService _userService;
-    private readonly ICollectionService _collectionService;
-    private readonly ICipherService _cipherService;
-    private readonly GlobalSettings _globalSettings;
-
-    public OrganizationExportController(
-        ICipherService cipherService,
-        ICollectionService collectionService,
-        IUserService userService,
-        GlobalSettings globalSettings)
+    [Route("organizations/{organizationId}")]
+    [Authorize("Application")]
+    public class OrganizationExportController : Controller
     {
-        _cipherService = cipherService;
-        _collectionService = collectionService;
-        _userService = userService;
-        _globalSettings = globalSettings;
-    }
+        private readonly IUserService _userService;
+        private readonly ICollectionService _collectionService;
+        private readonly ICipherService _cipherService;
+        private readonly GlobalSettings _globalSettings;
 
-    [HttpGet("export")]
-    public async Task<OrganizationExportResponseModel> Export(Guid organizationId)
-    {
-        var userId = _userService.GetProperUserId(User).Value;
-
-        IEnumerable<Collection> orgCollections = await _collectionService.GetOrganizationCollections(organizationId);
-        (IEnumerable<CipherOrganizationDetails> orgCiphers, Dictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphersGroupDict) = await _cipherService.GetOrganizationCiphers(userId, organizationId);
-
-        var result = new OrganizationExportResponseModel
+        public OrganizationExportController(
+            ICipherService cipherService,
+            ICollectionService collectionService,
+            IUserService userService,
+            GlobalSettings globalSettings)
         {
-            Collections = GetOrganizationCollectionsResponse(orgCollections),
-            Ciphers = GetOrganizationCiphersResponse(orgCiphers, collectionCiphersGroupDict)
-        };
+            _cipherService = cipherService;
+            _collectionService = collectionService;
+            _userService = userService;
+            _globalSettings = globalSettings;
+        }
 
-        return result;
-    }
+        [HttpGet("export")]
+        public async Task<OrganizationExportResponseModel> Export(Guid organizationId)
+        {
+            var userId = _userService.GetProperUserId(User).Value;
 
-    private ListResponseModel<CollectionResponseModel> GetOrganizationCollectionsResponse(IEnumerable<Collection> orgCollections)
-    {
-        var collections = orgCollections.Select(c => new CollectionResponseModel(c));
-        return new ListResponseModel<CollectionResponseModel>(collections);
-    }
+            IEnumerable<Collection> orgCollections = await _collectionService.GetOrganizationCollections(organizationId);
+            (IEnumerable<CipherOrganizationDetails> orgCiphers, Dictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphersGroupDict) = await _cipherService.GetOrganizationCiphers(userId, organizationId);
 
-    private ListResponseModel<CipherMiniDetailsResponseModel> GetOrganizationCiphersResponse(IEnumerable<CipherOrganizationDetails> orgCiphers,
-        Dictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphersGroupDict)
-    {
-        var responses = orgCiphers.Select(c => new CipherMiniDetailsResponseModel(c, _globalSettings,
-            collectionCiphersGroupDict, c.OrganizationUseTotp));
+            var result = new OrganizationExportResponseModel
+            {
+                Collections = GetOrganizationCollectionsResponse(orgCollections),
+                Ciphers = GetOrganizationCiphersResponse(orgCiphers, collectionCiphersGroupDict)
+            };
 
-        return new ListResponseModel<CipherMiniDetailsResponseModel>(responses);
+            return result;
+        }
+
+        private ListResponseModel<CollectionResponseModel> GetOrganizationCollectionsResponse(IEnumerable<Collection> orgCollections)
+        {
+            var collections = orgCollections.Select(c => new CollectionResponseModel(c));
+            return new ListResponseModel<CollectionResponseModel>(collections);
+        }
+
+        private ListResponseModel<CipherMiniDetailsResponseModel> GetOrganizationCiphersResponse(IEnumerable<CipherOrganizationDetails> orgCiphers,
+            Dictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphersGroupDict)
+        {
+            var responses = orgCiphers.Select(c => new CipherMiniDetailsResponseModel(c, _globalSettings,
+                collectionCiphersGroupDict, c.OrganizationUseTotp));
+
+            return new ListResponseModel<CipherMiniDetailsResponseModel>(responses);
+        }
     }
 }

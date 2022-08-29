@@ -1,20 +1,21 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Models.Api;
 
-namespace Bit.Api.Models.Response.TwoFactor;
-
-public class TwoFactorRecoverResponseModel : ResponseModel
+namespace Bit.Api.Models.Response.TwoFactor
 {
-    public TwoFactorRecoverResponseModel(User user)
-        : base("twoFactorRecover")
+    public class TwoFactorRecoverResponseModel : ResponseModel
     {
-        if (user == null)
+        public TwoFactorRecoverResponseModel(User user)
+            : base("twoFactorRecover")
         {
-            throw new ArgumentNullException(nameof(user));
+            if (user == null)
+            {
+                throw new ArgumentNullException(nameof(user));
+            }
+
+            Code = user.TwoFactorRecoveryCode;
         }
 
-        Code = user.TwoFactorRecoveryCode;
+        public string Code { get; set; }
     }
-
-    public string Code { get; set; }
 }

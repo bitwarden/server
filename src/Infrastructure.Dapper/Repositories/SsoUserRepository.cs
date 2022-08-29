@@ -5,39 +5,40 @@ using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Dapper;
 
-namespace Bit.Infrastructure.Dapper.Repositories;
-
-public class SsoUserRepository : Repository<SsoUser, long>, ISsoUserRepository
+namespace Bit.Infrastructure.Dapper.Repositories
 {
-    public SsoUserRepository(GlobalSettings globalSettings)
-        : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
-    { }
-
-    public SsoUserRepository(string connectionString, string readOnlyConnectionString)
-        : base(connectionString, readOnlyConnectionString)
-    { }
-
-    public async Task DeleteAsync(Guid userId, Guid? organizationId)
+    public class SsoUserRepository : Repository<SsoUser, long>, ISsoUserRepository
     {
-        using (var connection = new SqlConnection(ConnectionString))
+        public SsoUserRepository(GlobalSettings globalSettings)
+            : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
+        { }
+
+        public SsoUserRepository(string connectionString, string readOnlyConnectionString)
+            : base(connectionString, readOnlyConnectionString)
+        { }
+
+        public async Task DeleteAsync(Guid userId, Guid? organizationId)
         {
-            var results = await connection.ExecuteAsync(
-                $"[{Schema}].[SsoUser_Delete]",
-                new { UserId = userId, OrganizationId = organizationId },
-                commandType: CommandType.StoredProcedure);
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.ExecuteAsync(
+                    $"[{Schema}].[SsoUser_Delete]",
+                    new { UserId = userId, OrganizationId = organizationId },
+                    commandType: CommandType.StoredProcedure);
+            }
         }
-    }
 
-    public async Task<SsoUser> GetByUserIdOrganizationIdAsync(Guid organizationId, Guid userId)
-    {
-        using (var connection = new SqlConnection(ConnectionString))
+        public async Task<SsoUser> GetByUserIdOrganizationIdAsync(Guid organizationId, Guid userId)
         {
-            var results = await connection.QueryAsync<SsoUser>(
-                $"[{Schema}].[SsoUser_ReadByUserIdOrganizationId]",
-                new { UserId = userId, OrganizationId = organizationId },
-                commandType: CommandType.StoredProcedure);
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<SsoUser>(
+                    $"[{Schema}].[SsoUser_ReadByUserIdOrganizationId]",
+                    new { UserId = userId, OrganizationId = organizationId },
+                    commandType: CommandType.StoredProcedure);
 
-            return results.SingleOrDefault();
+                return results.SingleOrDefault();
+            }
         }
     }
 }

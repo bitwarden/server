@@ -1,18 +1,19 @@
 ﻿using System.Text.Json;
 
-namespace Bit.Scim.Models;
-
-public class ScimPatchModel : BaseScimModel
+namespace Bit.Scim.Models
 {
-    public ScimPatchModel()
-        : base() { }
-
-    public List<OperationModel> Operations { get; set; }
-
-    public class OperationModel
+    public class ScimPatchModel : BaseScimModel
     {
-        public string Op { get; set; }
-        public string Path { get; set; }
-        public JsonElement Value { get; set; }
+        public ScimPatchModel()
+            : base() { }
+
+        public List<OperationModel> Operations { get; set; }
+
+        public class OperationModel
+        {
+            public string Op { get; set; }
+            public string Path { get; set; }
+            public JsonElement Value { get; set; }
+        }
     }
 }

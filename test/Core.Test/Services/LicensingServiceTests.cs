@@ -9,52 +9,53 @@ using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Xunit;
 
-namespace Bit.Core.Test.Services;
-
-[SutProviderCustomize]
-public class LicensingServiceTests
+namespace Bit.Core.Test.Services
 {
-    private static string licenseFilePath(Guid orgId) =>
-        Path.Combine(OrganizationLicenseDirectory.Value, $"{orgId}.json");
-    private static string LicenseDirectory => Path.GetDirectoryName(OrganizationLicenseDirectory.Value);
-    private static Lazy<string> OrganizationLicenseDirectory => new(() =>
+    [SutProviderCustomize]
+    public class LicensingServiceTests
     {
-        var directory = Path.Combine(Path.GetTempPath(), "organization");
-        if (!Directory.Exists(directory))
+        private static string licenseFilePath(Guid orgId) =>
+            Path.Combine(OrganizationLicenseDirectory.Value, $"{orgId}.json");
+        private static string LicenseDirectory => Path.GetDirectoryName(OrganizationLicenseDirectory.Value);
+        private static Lazy<string> OrganizationLicenseDirectory => new(() =>
         {
-            Directory.CreateDirectory(directory);
+            var directory = Path.Combine(Path.GetTempPath(), "organization");
+            if (!Directory.Exists(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
+            return directory;
+        });
+
+        public static SutProvider<LicensingService> GetSutProvider()
+        {
+            var fixture = new Fixture().WithAutoNSubstitutions();
+
+            var settings = fixture.Create<IGlobalSettings>();
+            settings.LicenseDirectory = LicenseDirectory;
+            settings.SelfHosted = true;
+
+            return new SutProvider<LicensingService>(fixture)
+                .SetDependency(settings)
+                .Create();
         }
-        return directory;
-    });
 
-    public static SutProvider<LicensingService> GetSutProvider()
-    {
-        var fixture = new Fixture().WithAutoNSubstitutions();
-
-        var settings = fixture.Create<IGlobalSettings>();
-        settings.LicenseDirectory = LicenseDirectory;
-        settings.SelfHosted = true;
-
-        return new SutProvider<LicensingService>(fixture)
-            .SetDependency(settings)
-            .Create();
-    }
-
-    [Theory, BitAutoData, OrganizationLicenseCustomize]
-    public async Task ReadOrganizationLicense(Organization organization, OrganizationLicense license)
-    {
-        var sutProvider = GetSutProvider();
-
-        File.WriteAllText(licenseFilePath(organization.Id), JsonSerializer.Serialize(license));
-
-        var actual = await sutProvider.Sut.ReadOrganizationLicenseAsync(organization);
-        try
+        [Theory, BitAutoData, OrganizationLicenseCustomize]
+        public async Task ReadOrganizationLicense(Organization organization, OrganizationLicense license)
         {
-            Assert.Equal(JsonSerializer.Serialize(license), JsonSerializer.Serialize(actual));
-        }
-        finally
-        {
-            Directory.Delete(OrganizationLicenseDirectory.Value, true);
+            var sutProvider = GetSutProvider();
+
+            File.WriteAllText(licenseFilePath(organization.Id), JsonSerializer.Serialize(license));
+
+            var actual = await sutProvider.Sut.ReadOrganizationLicenseAsync(organization);
+            try
+            {
+                Assert.Equal(JsonSerializer.Serialize(license), JsonSerializer.Serialize(actual));
+            }
+            finally
+            {
+                Directory.Delete(OrganizationLicenseDirectory.Value, true);
+            }
         }
     }
 }

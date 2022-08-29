@@ -1,19 +1,20 @@
 ﻿using Bit.Core.Entities;
 
-namespace Bit.Api.Models.Public.Request;
-
-public class MemberUpdateRequestModel : MemberBaseModel
+namespace Bit.Api.Models.Public.Request
 {
-    /// <summary>
-    /// The associated collections that this member can access.
-    /// </summary>
-    public IEnumerable<AssociationWithPermissionsRequestModel> Collections { get; set; }
-
-    public virtual OrganizationUser ToOrganizationUser(OrganizationUser existingUser)
+    public class MemberUpdateRequestModel : MemberBaseModel
     {
-        existingUser.Type = Type.Value;
-        existingUser.AccessAll = AccessAll.Value;
-        existingUser.ExternalId = ExternalId;
-        return existingUser;
+        /// <summary>
+        /// The associated collections that this member can access.
+        /// </summary>
+        public IEnumerable<AssociationWithPermissionsRequestModel> Collections { get; set; }
+
+        public virtual OrganizationUser ToOrganizationUser(OrganizationUser existingUser)
+        {
+            existingUser.Type = Type.Value;
+            existingUser.AccessAll = AccessAll.Value;
+            existingUser.ExternalId = ExternalId;
+            return existingUser;
+        }
     }
 }

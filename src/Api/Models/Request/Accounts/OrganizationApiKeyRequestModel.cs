@@ -1,8 +1,9 @@
 ﻿using Bit.Core.Enums;
 
-namespace Bit.Api.Models.Request.Accounts;
-
-public class OrganizationApiKeyRequestModel : SecretVerificationRequestModel
+namespace Bit.Api.Models.Request.Accounts
 {
-    public OrganizationApiKeyType Type { get; set; }
+    public class OrganizationApiKeyRequestModel : SecretVerificationRequestModel
+    {
+        public OrganizationApiKeyType Type { get; set; }
+    }
 }

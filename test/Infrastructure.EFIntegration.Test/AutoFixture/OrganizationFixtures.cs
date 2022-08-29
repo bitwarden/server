@@ -7,51 +7,52 @@ using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 
-namespace Bit.Infrastructure.EFIntegration.Test.AutoFixture;
-
-internal class OrganizationBuilder : ISpecimenBuilder
+namespace Bit.Infrastructure.EFIntegration.Test.AutoFixture
 {
-    public object Create(object request, ISpecimenContext context)
+    internal class OrganizationBuilder : ISpecimenBuilder
     {
-        if (context == null)
+        public object Create(object request, ISpecimenContext context)
         {
-            throw new ArgumentNullException(nameof(context));
-        }
+            if (context == null)
+            {
+                throw new ArgumentNullException(nameof(context));
+            }
 
-        var type = request as Type;
-        if (type == null || type != typeof(Organization))
-        {
-            return new NoSpecimen();
-        }
+            var type = request as Type;
+            if (type == null || type != typeof(Organization))
+            {
+                return new NoSpecimen();
+            }
 
-        var fixture = new Fixture();
-        var providers = fixture.Create<Dictionary<TwoFactorProviderType, TwoFactorProvider>>();
-        var organization = new Fixture().WithAutoNSubstitutions().Create<Organization>();
-        organization.SetTwoFactorProviders(providers);
-        return organization;
+            var fixture = new Fixture();
+            var providers = fixture.Create<Dictionary<TwoFactorProviderType, TwoFactorProvider>>();
+            var organization = new Fixture().WithAutoNSubstitutions().Create<Organization>();
+            organization.SetTwoFactorProviders(providers);
+            return organization;
+        }
     }
-}
 
-internal class EfOrganization : ICustomization
-{
-    public void Customize(IFixture fixture)
+    internal class EfOrganization : ICustomization
     {
-        fixture.Customizations.Add(new IgnoreVirtualMembersCustomization());
-        fixture.Customizations.Add(new GlobalSettingsBuilder());
-        fixture.Customizations.Add(new OrganizationBuilder());
-        fixture.Customizations.Add(new EfRepositoryListBuilder<OrganizationRepository>());
+        public void Customize(IFixture fixture)
+        {
+            fixture.Customizations.Add(new IgnoreVirtualMembersCustomization());
+            fixture.Customizations.Add(new GlobalSettingsBuilder());
+            fixture.Customizations.Add(new OrganizationBuilder());
+            fixture.Customizations.Add(new EfRepositoryListBuilder<OrganizationRepository>());
+        }
     }
-}
 
-internal class EfOrganizationAutoDataAttribute : CustomAutoDataAttribute
-{
-    public EfOrganizationAutoDataAttribute() : base(new SutProviderCustomization(), new EfOrganization())
-    { }
-}
+    internal class EfOrganizationAutoDataAttribute : CustomAutoDataAttribute
+    {
+        public EfOrganizationAutoDataAttribute() : base(new SutProviderCustomization(), new EfOrganization())
+        { }
+    }
 
-internal class InlineEfOrganizationAutoDataAttribute : InlineCustomAutoDataAttribute
-{
-    public InlineEfOrganizationAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
-        typeof(EfOrganization) }, values)
-    { }
+    internal class InlineEfOrganizationAutoDataAttribute : InlineCustomAutoDataAttribute
+    {
+        public InlineEfOrganizationAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
+            typeof(EfOrganization) }, values)
+        { }
+    }
 }

@@ -1,6 +1,7 @@
-﻿namespace Bit.Core.Services;
-
-public interface IBlockIpService
+﻿namespace Bit.Core.Services
 {
-    Task BlockIpAsync(string ipAddress, bool permanentBlock);
+    public interface IBlockIpService
+    {
+        Task BlockIpAsync(string ipAddress, bool permanentBlock);
+    }
 }

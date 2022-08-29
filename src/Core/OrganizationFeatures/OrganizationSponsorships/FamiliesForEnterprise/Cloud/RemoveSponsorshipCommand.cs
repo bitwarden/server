@@ -3,23 +3,24 @@ using Bit.Core.Exceptions;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 
-namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud;
-
-public class RemoveSponsorshipCommand : CancelSponsorshipCommand, IRemoveSponsorshipCommand
+namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud
 {
-    public RemoveSponsorshipCommand(
-        IOrganizationSponsorshipRepository organizationSponsorshipRepository,
-        IOrganizationRepository organizationRepository) : base(organizationSponsorshipRepository, organizationRepository)
+    public class RemoveSponsorshipCommand : CancelSponsorshipCommand, IRemoveSponsorshipCommand
     {
-    }
-
-    public async Task RemoveSponsorshipAsync(OrganizationSponsorship sponsorship)
-    {
-        if (sponsorship == null || sponsorship.SponsoredOrganizationId == null)
+        public RemoveSponsorshipCommand(
+            IOrganizationSponsorshipRepository organizationSponsorshipRepository,
+            IOrganizationRepository organizationRepository) : base(organizationSponsorshipRepository, organizationRepository)
         {
-            throw new BadRequestException("The requested organization is not currently being sponsored.");
         }
 
-        await MarkToDeleteSponsorshipAsync(sponsorship);
+        public async Task RemoveSponsorshipAsync(OrganizationSponsorship sponsorship)
+        {
+            if (sponsorship == null || sponsorship.SponsoredOrganizationId == null)
+            {
+                throw new BadRequestException("The requested organization is not currently being sponsored.");
+            }
+
+            await MarkToDeleteSponsorshipAsync(sponsorship);
+        }
     }
 }

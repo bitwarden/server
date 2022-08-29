@@ -1,26 +1,27 @@
 ﻿using IdentityServer4.Models;
 
-namespace Bit.Sso.Models;
-
-public class ErrorViewModel
+namespace Bit.Sso.Models
 {
-    private string _requestId;
-
-    public ErrorMessage Error { get; set; }
-    public Exception Exception { get; set; }
-
-    public string Message => Error?.Error;
-    public string Description => Error?.ErrorDescription ?? Exception?.Message;
-    public string RedirectUri => Error?.RedirectUri;
-    public string RequestId
+    public class ErrorViewModel
     {
-        get
+        private string _requestId;
+
+        public ErrorMessage Error { get; set; }
+        public Exception Exception { get; set; }
+
+        public string Message => Error?.Error;
+        public string Description => Error?.ErrorDescription ?? Exception?.Message;
+        public string RedirectUri => Error?.RedirectUri;
+        public string RequestId
         {
-            return Error?.RequestId ?? _requestId;
-        }
-        set
-        {
-            _requestId = value;
+            get
+            {
+                return Error?.RequestId ?? _requestId;
+            }
+            set
+            {
+                _requestId = value;
+            }
         }
     }
 }

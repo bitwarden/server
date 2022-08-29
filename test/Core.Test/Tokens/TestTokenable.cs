@@ -1,25 +1,26 @@
 ﻿using System.Text.Json.Serialization;
 using Bit.Core.Tokens;
 
-namespace Bit.Core.Test.Tokens;
-
-public class TestTokenable : Tokenable
+namespace Bit.Core.Test.Tokens
 {
-    public bool ForceInvalid { get; set; } = false;
-
-    [JsonIgnore]
-    public override bool Valid => !ForceInvalid;
-}
-
-public class TestExpiringTokenable : ExpiringTokenable
-{
-    private bool _forceInvalid;
-
-    public TestExpiringTokenable() : this(false) { }
-
-    public TestExpiringTokenable(bool forceInvalid)
+    public class TestTokenable : Tokenable
     {
-        _forceInvalid = forceInvalid;
+        public bool ForceInvalid { get; set; } = false;
+
+        [JsonIgnore]
+        public override bool Valid => !ForceInvalid;
     }
-    protected override bool TokenIsValid() => !_forceInvalid;
+
+    public class TestExpiringTokenable : ExpiringTokenable
+    {
+        private bool _forceInvalid;
+
+        public TestExpiringTokenable() : this(false) { }
+
+        public TestExpiringTokenable(bool forceInvalid)
+        {
+            _forceInvalid = forceInvalid;
+        }
+        protected override bool TokenIsValid() => !_forceInvalid;
+    }
 }

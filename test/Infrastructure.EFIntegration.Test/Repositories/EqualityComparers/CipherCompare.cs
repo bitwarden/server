@@ -1,20 +1,21 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using Bit.Core.Entities;
 
-namespace Bit.Infrastructure.EFIntegration.Test.Repositories.EqualityComparers;
-
-public class CipherCompare : IEqualityComparer<Cipher>
+namespace Bit.Infrastructure.EFIntegration.Test.Repositories.EqualityComparers
 {
-    public bool Equals(Cipher x, Cipher y)
+    public class CipherCompare : IEqualityComparer<Cipher>
     {
-        return x.Type == y.Type &&
-            x.Data == y.Data &&
-            x.Favorites == y.Favorites &&
-            x.Attachments == y.Attachments;
-    }
+        public bool Equals(Cipher x, Cipher y)
+        {
+            return x.Type == y.Type &&
+                x.Data == y.Data &&
+                x.Favorites == y.Favorites &&
+                x.Attachments == y.Attachments;
+        }
 
-    public int GetHashCode([DisallowNull] Cipher obj)
-    {
-        return base.GetHashCode();
+        public int GetHashCode([DisallowNull] Cipher obj)
+        {
+            return base.GetHashCode();
+        }
     }
 }

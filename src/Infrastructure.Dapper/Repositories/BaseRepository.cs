@@ -1,29 +1,30 @@
 ﻿using Dapper;
 
-namespace Bit.Infrastructure.Dapper.Repositories;
-
-public abstract class BaseRepository
+namespace Bit.Infrastructure.Dapper.Repositories
 {
-    static BaseRepository()
+    public abstract class BaseRepository
     {
-        SqlMapper.AddTypeHandler(new DateTimeHandler());
-    }
-
-    public BaseRepository(string connectionString, string readOnlyConnectionString)
-    {
-        if (string.IsNullOrWhiteSpace(connectionString))
+        static BaseRepository()
         {
-            throw new ArgumentNullException(nameof(connectionString));
-        }
-        if (string.IsNullOrWhiteSpace(readOnlyConnectionString))
-        {
-            throw new ArgumentNullException(nameof(readOnlyConnectionString));
+            SqlMapper.AddTypeHandler(new DateTimeHandler());
         }
 
-        ConnectionString = connectionString;
-        ReadOnlyConnectionString = readOnlyConnectionString;
-    }
+        public BaseRepository(string connectionString, string readOnlyConnectionString)
+        {
+            if (string.IsNullOrWhiteSpace(connectionString))
+            {
+                throw new ArgumentNullException(nameof(connectionString));
+            }
+            if (string.IsNullOrWhiteSpace(readOnlyConnectionString))
+            {
+                throw new ArgumentNullException(nameof(readOnlyConnectionString));
+            }
 
-    protected string ConnectionString { get; private set; }
-    protected string ReadOnlyConnectionString { get; private set; }
+            ConnectionString = connectionString;
+            ReadOnlyConnectionString = readOnlyConnectionString;
+        }
+
+        protected string ConnectionString { get; private set; }
+        protected string ReadOnlyConnectionString { get; private set; }
+    }
 }

@@ -9,86 +9,87 @@ using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Bit.Api.Controllers;
-
-[Route("providers/{providerId:guid}/organizations")]
-[Authorize("Application")]
-public class ProviderOrganizationsController : Controller
+namespace Bit.Api.Controllers
 {
-
-    private readonly IProviderOrganizationRepository _providerOrganizationRepository;
-    private readonly IProviderService _providerService;
-    private readonly IUserService _userService;
-    private readonly ICurrentContext _currentContext;
-
-    public ProviderOrganizationsController(
-        IProviderOrganizationRepository providerOrganizationRepository,
-        IProviderService providerService,
-        IUserService userService,
-        ICurrentContext currentContext)
+    [Route("providers/{providerId:guid}/organizations")]
+    [Authorize("Application")]
+    public class ProviderOrganizationsController : Controller
     {
-        _providerOrganizationRepository = providerOrganizationRepository;
-        _providerService = providerService;
-        _userService = userService;
-        _currentContext = currentContext;
-    }
 
-    [HttpGet("")]
-    public async Task<ListResponseModel<ProviderOrganizationOrganizationDetailsResponseModel>> Get(Guid providerId)
-    {
-        if (!_currentContext.AccessProviderOrganizations(providerId))
+        private readonly IProviderOrganizationRepository _providerOrganizationRepository;
+        private readonly IProviderService _providerService;
+        private readonly IUserService _userService;
+        private readonly ICurrentContext _currentContext;
+
+        public ProviderOrganizationsController(
+            IProviderOrganizationRepository providerOrganizationRepository,
+            IProviderService providerService,
+            IUserService userService,
+            ICurrentContext currentContext)
         {
-            throw new NotFoundException();
+            _providerOrganizationRepository = providerOrganizationRepository;
+            _providerService = providerService;
+            _userService = userService;
+            _currentContext = currentContext;
         }
 
-        var providerOrganizations = await _providerOrganizationRepository.GetManyDetailsByProviderAsync(providerId);
-        var responses = providerOrganizations.Select(o => new ProviderOrganizationOrganizationDetailsResponseModel(o));
-        return new ListResponseModel<ProviderOrganizationOrganizationDetailsResponseModel>(responses);
-    }
-
-    [HttpPost("add")]
-    public async Task Add(Guid providerId, [FromBody] ProviderOrganizationAddRequestModel model)
-    {
-        if (!_currentContext.ManageProviderOrganizations(providerId))
+        [HttpGet("")]
+        public async Task<ListResponseModel<ProviderOrganizationOrganizationDetailsResponseModel>> Get(Guid providerId)
         {
-            throw new NotFoundException();
+            if (!_currentContext.AccessProviderOrganizations(providerId))
+            {
+                throw new NotFoundException();
+            }
+
+            var providerOrganizations = await _providerOrganizationRepository.GetManyDetailsByProviderAsync(providerId);
+            var responses = providerOrganizations.Select(o => new ProviderOrganizationOrganizationDetailsResponseModel(o));
+            return new ListResponseModel<ProviderOrganizationOrganizationDetailsResponseModel>(responses);
         }
 
-        var userId = _userService.GetProperUserId(User).Value;
-
-        await _providerService.AddOrganization(providerId, model.OrganizationId, userId, model.Key);
-    }
-
-    [HttpPost("")]
-    [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task<ProviderOrganizationResponseModel> Post(Guid providerId, [FromBody] ProviderOrganizationCreateRequestModel model)
-    {
-        var user = await _userService.GetUserByPrincipalAsync(User);
-        if (user == null)
+        [HttpPost("add")]
+        public async Task Add(Guid providerId, [FromBody] ProviderOrganizationAddRequestModel model)
         {
-            throw new UnauthorizedAccessException();
+            if (!_currentContext.ManageProviderOrganizations(providerId))
+            {
+                throw new NotFoundException();
+            }
+
+            var userId = _userService.GetProperUserId(User).Value;
+
+            await _providerService.AddOrganization(providerId, model.OrganizationId, userId, model.Key);
         }
 
-        if (!_currentContext.ManageProviderOrganizations(providerId))
+        [HttpPost("")]
+        [SelfHosted(NotSelfHostedOnly = true)]
+        public async Task<ProviderOrganizationResponseModel> Post(Guid providerId, [FromBody] ProviderOrganizationCreateRequestModel model)
         {
-            throw new NotFoundException();
+            var user = await _userService.GetUserByPrincipalAsync(User);
+            if (user == null)
+            {
+                throw new UnauthorizedAccessException();
+            }
+
+            if (!_currentContext.ManageProviderOrganizations(providerId))
+            {
+                throw new NotFoundException();
+            }
+
+            var organizationSignup = model.OrganizationCreateRequest.ToOrganizationSignup(user);
+            var result = await _providerService.CreateOrganizationAsync(providerId, organizationSignup, model.ClientOwnerEmail, user);
+            return new ProviderOrganizationResponseModel(result);
         }
 
-        var organizationSignup = model.OrganizationCreateRequest.ToOrganizationSignup(user);
-        var result = await _providerService.CreateOrganizationAsync(providerId, organizationSignup, model.ClientOwnerEmail, user);
-        return new ProviderOrganizationResponseModel(result);
-    }
-
-    [HttpDelete("{id:guid}")]
-    [HttpPost("{id:guid}/delete")]
-    public async Task Delete(Guid providerId, Guid id)
-    {
-        if (!_currentContext.ManageProviderOrganizations(providerId))
+        [HttpDelete("{id:guid}")]
+        [HttpPost("{id:guid}/delete")]
+        public async Task Delete(Guid providerId, Guid id)
         {
-            throw new NotFoundException();
-        }
+            if (!_currentContext.ManageProviderOrganizations(providerId))
+            {
+                throw new NotFoundException();
+            }
 
-        var userId = _userService.GetProperUserId(User);
-        await _providerService.RemoveOrganizationAsync(providerId, id, userId.Value);
+            var userId = _userService.GetProperUserId(User);
+            await _providerService.RemoveOrganizationAsync(providerId, id, userId.Value);
+        }
     }
 }

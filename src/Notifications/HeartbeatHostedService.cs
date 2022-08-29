@@ -1,56 +1,57 @@
 ﻿using Bit.Core.Settings;
 using Microsoft.AspNetCore.SignalR;
 
-namespace Bit.Notifications;
-
-public class HeartbeatHostedService : IHostedService, IDisposable
+namespace Bit.Notifications
 {
-    private readonly ILogger _logger;
-    private readonly IHubContext<NotificationsHub> _hubContext;
-    private readonly GlobalSettings _globalSettings;
-
-    private Task _executingTask;
-    private CancellationTokenSource _cts;
-
-    public HeartbeatHostedService(
-        ILogger<AzureQueueHostedService> logger,
-        IHubContext<NotificationsHub> hubContext,
-        GlobalSettings globalSettings)
+    public class HeartbeatHostedService : IHostedService, IDisposable
     {
-        _logger = logger;
-        _hubContext = hubContext;
-        _globalSettings = globalSettings;
-    }
+        private readonly ILogger _logger;
+        private readonly IHubContext<NotificationsHub> _hubContext;
+        private readonly GlobalSettings _globalSettings;
 
-    public Task StartAsync(CancellationToken cancellationToken)
-    {
-        _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        _executingTask = ExecuteAsync(_cts.Token);
-        return _executingTask.IsCompleted ? _executingTask : Task.CompletedTask;
-    }
+        private Task _executingTask;
+        private CancellationTokenSource _cts;
 
-    public async Task StopAsync(CancellationToken cancellationToken)
-    {
-        if (_executingTask == null)
+        public HeartbeatHostedService(
+            ILogger<AzureQueueHostedService> logger,
+            IHubContext<NotificationsHub> hubContext,
+            GlobalSettings globalSettings)
         {
-            return;
+            _logger = logger;
+            _hubContext = hubContext;
+            _globalSettings = globalSettings;
         }
-        _logger.LogWarning("Stopping service.");
-        _cts.Cancel();
-        await Task.WhenAny(_executingTask, Task.Delay(-1, cancellationToken));
-        cancellationToken.ThrowIfCancellationRequested();
-    }
 
-    public void Dispose()
-    { }
-
-    private async Task ExecuteAsync(CancellationToken cancellationToken)
-    {
-        while (!cancellationToken.IsCancellationRequested)
+        public Task StartAsync(CancellationToken cancellationToken)
         {
-            await _hubContext.Clients.All.SendAsync("Heartbeat");
-            await Task.Delay(120000);
+            _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            _executingTask = ExecuteAsync(_cts.Token);
+            return _executingTask.IsCompleted ? _executingTask : Task.CompletedTask;
         }
-        _logger.LogWarning("Done with heartbeat.");
+
+        public async Task StopAsync(CancellationToken cancellationToken)
+        {
+            if (_executingTask == null)
+            {
+                return;
+            }
+            _logger.LogWarning("Stopping service.");
+            _cts.Cancel();
+            await Task.WhenAny(_executingTask, Task.Delay(-1, cancellationToken));
+            cancellationToken.ThrowIfCancellationRequested();
+        }
+
+        public void Dispose()
+        { }
+
+        private async Task ExecuteAsync(CancellationToken cancellationToken)
+        {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                await _hubContext.Clients.All.SendAsync("Heartbeat");
+                await Task.Delay(120000);
+            }
+            _logger.LogWarning("Done with heartbeat.");
+        }
     }
 }

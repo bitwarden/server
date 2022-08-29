@@ -1,23 +1,24 @@
-﻿namespace Bit.Icons.Services;
-
-public class DomainMappingService : IDomainMappingService
+﻿namespace Bit.Icons.Services
 {
-    private readonly Dictionary<string, string> _map = new Dictionary<string, string>
+    public class DomainMappingService : IDomainMappingService
     {
-        ["login.yahoo.com"] = "yahoo.com",
-        ["accounts.google.com"] = "google.com",
-        ["photo.walgreens.com"] = "walgreens.com",
-        ["passport.yandex.com"] = "yandex.com",
-        // TODO: Add others here
-    };
-
-    public string MapDomain(string hostname)
-    {
-        if (_map.ContainsKey(hostname))
+        private readonly Dictionary<string, string> _map = new Dictionary<string, string>
         {
-            return _map[hostname];
-        }
+            ["login.yahoo.com"] = "yahoo.com",
+            ["accounts.google.com"] = "google.com",
+            ["photo.walgreens.com"] = "walgreens.com",
+            ["passport.yandex.com"] = "yandex.com",
+            // TODO: Add others here
+        };
 
-        return hostname;
+        public string MapDomain(string hostname)
+        {
+            if (_map.ContainsKey(hostname))
+            {
+                return _map[hostname];
+            }
+
+            return hostname;
+        }
     }
 }

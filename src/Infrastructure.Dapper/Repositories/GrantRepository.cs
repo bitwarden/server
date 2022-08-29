@@ -5,75 +5,76 @@ using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Dapper;
 
-namespace Bit.Infrastructure.Dapper.Repositories;
-
-public class GrantRepository : BaseRepository, IGrantRepository
+namespace Bit.Infrastructure.Dapper.Repositories
 {
-    public GrantRepository(GlobalSettings globalSettings)
-        : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
-    { }
-
-    public GrantRepository(string connectionString, string readOnlyConnectionString)
-        : base(connectionString, readOnlyConnectionString)
-    { }
-
-    public async Task<Grant> GetByKeyAsync(string key)
+    public class GrantRepository : BaseRepository, IGrantRepository
     {
-        using (var connection = new SqlConnection(ConnectionString))
-        {
-            var results = await connection.QueryAsync<Grant>(
-                "[dbo].[Grant_ReadByKey]",
-                new { Key = key },
-                commandType: CommandType.StoredProcedure);
+        public GrantRepository(GlobalSettings globalSettings)
+            : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
+        { }
 
-            return results.SingleOrDefault();
+        public GrantRepository(string connectionString, string readOnlyConnectionString)
+            : base(connectionString, readOnlyConnectionString)
+        { }
+
+        public async Task<Grant> GetByKeyAsync(string key)
+        {
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<Grant>(
+                    "[dbo].[Grant_ReadByKey]",
+                    new { Key = key },
+                    commandType: CommandType.StoredProcedure);
+
+                return results.SingleOrDefault();
+            }
         }
-    }
 
-    public async Task<ICollection<Grant>> GetManyAsync(string subjectId, string sessionId,
-        string clientId, string type)
-    {
-        using (var connection = new SqlConnection(ConnectionString))
+        public async Task<ICollection<Grant>> GetManyAsync(string subjectId, string sessionId,
+            string clientId, string type)
         {
-            var results = await connection.QueryAsync<Grant>(
-                "[dbo].[Grant_Read]",
-                new { SubjectId = subjectId, SessionId = sessionId, ClientId = clientId, Type = type },
-                commandType: CommandType.StoredProcedure);
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<Grant>(
+                    "[dbo].[Grant_Read]",
+                    new { SubjectId = subjectId, SessionId = sessionId, ClientId = clientId, Type = type },
+                    commandType: CommandType.StoredProcedure);
 
-            return results.ToList();
+                return results.ToList();
+            }
         }
-    }
 
-    public async Task SaveAsync(Grant obj)
-    {
-        using (var connection = new SqlConnection(ConnectionString))
+        public async Task SaveAsync(Grant obj)
         {
-            var results = await connection.ExecuteAsync(
-                "[dbo].[Grant_Save]",
-                obj,
-                commandType: CommandType.StoredProcedure);
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.ExecuteAsync(
+                    "[dbo].[Grant_Save]",
+                    obj,
+                    commandType: CommandType.StoredProcedure);
+            }
         }
-    }
 
-    public async Task DeleteByKeyAsync(string key)
-    {
-        using (var connection = new SqlConnection(ConnectionString))
+        public async Task DeleteByKeyAsync(string key)
         {
-            await connection.ExecuteAsync(
-                "[dbo].[Grant_DeleteByKey]",
-                new { Key = key },
-                commandType: CommandType.StoredProcedure);
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                await connection.ExecuteAsync(
+                    "[dbo].[Grant_DeleteByKey]",
+                    new { Key = key },
+                    commandType: CommandType.StoredProcedure);
+            }
         }
-    }
 
-    public async Task DeleteManyAsync(string subjectId, string sessionId, string clientId, string type)
-    {
-        using (var connection = new SqlConnection(ConnectionString))
+        public async Task DeleteManyAsync(string subjectId, string sessionId, string clientId, string type)
         {
-            await connection.ExecuteAsync(
-                "[dbo].[Grant_Delete]",
-                new { SubjectId = subjectId, SessionId = sessionId, ClientId = clientId, Type = type },
-                commandType: CommandType.StoredProcedure);
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                await connection.ExecuteAsync(
+                    "[dbo].[Grant_Delete]",
+                    new { SubjectId = subjectId, SessionId = sessionId, ClientId = clientId, Type = type },
+                    commandType: CommandType.StoredProcedure);
+            }
         }
     }
 }

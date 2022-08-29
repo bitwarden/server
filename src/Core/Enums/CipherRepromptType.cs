@@ -1,7 +1,8 @@
-﻿namespace Bit.Core.Enums;
-
-public enum CipherRepromptType : byte
+﻿namespace Bit.Core.Enums
 {
-    None = 0,
-    Password = 1,
+    public enum CipherRepromptType : byte
+    {
+        None = 0,
+        Password = 1,
+    }
 }
