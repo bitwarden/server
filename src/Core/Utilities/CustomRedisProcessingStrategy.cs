@@ -23,6 +23,8 @@ public class CustomRedisProcessingStrategy : ProcessingStrategy
     private readonly IMemoryCache _memoryCache;
     private readonly GlobalSettings.DistributedIpRateLimitingSettings _distributedSettings;
 
+    private const string _redisTimeoutCacheKey = "IpRateLimitRedisTimeout";
+
     public CustomRedisProcessingStrategy(
         IConnectionMultiplexer connectionMultiplexer,
         IRateLimitConfiguration config,
@@ -55,7 +57,7 @@ public class CustomRedisProcessingStrategy : ProcessingStrategy
         }
 
         // Check if any Redis timeouts have occured recently
-        if (_memoryCache.TryGetValue<TimeoutCounter>("redisTimeout", out var timeoutCounter))
+        if (_memoryCache.TryGetValue<TimeoutCounter>(_redisTimeoutCacheKey, out var timeoutCounter))
         {
             // We've exceeded threshold, backoff Redis and skip rate limiting for now
             if (timeoutCounter.Count >= _distributedSettings.MaxRedisTimeoutsThreshold)
@@ -82,7 +84,7 @@ public class CustomRedisProcessingStrategy : ProcessingStrategy
             };
             timeoutCounter.Count++;
 
-            _memoryCache.Set("redisTimeout", timeoutCounter,
+            _memoryCache.Set(_redisTimeoutCacheKey, timeoutCounter,
                 new MemoryCacheEntryOptions { AbsoluteExpiration = timeoutCounter.ExpiresAt });
 
             // Just because Redis timed out does not mean we should kill the request
