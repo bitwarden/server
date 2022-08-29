@@ -1,8 +1,7 @@
 ﻿using Bit.Core.Entities;
 
-namespace Bit.Core.Repositories
+namespace Bit.Core.Repositories;
+
+public interface IInstallationRepository : IRepository<Installation, Guid>
 {
-    public interface IInstallationRepository : IRepository<Installation, Guid>
-    {
-    }
 }
