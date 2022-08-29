@@ -16,7 +16,7 @@ using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
 #if !OSS
-using Bit.CommCore.Utilities;
+using Bit.Commercial.Core.Utilities;
 #endif
 
 namespace Bit.Api

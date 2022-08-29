@@ -1345,6 +1345,7 @@ namespace Bit.Core.Services
                             City = taxInfo.BillingAddressCity,
                             State = taxInfo.BillingAddressState,
                         },
+                        Expand = new List<string> { "sources" },
                     });
 
                     subscriber.Gateway = GatewayType.Stripe;
@@ -1539,7 +1540,8 @@ namespace Bit.Core.Services
                 return null;
             }
 
-            var customer = await _stripeAdapter.CustomerGetAsync(subscriber.GatewayCustomerId);
+            var customer = await _stripeAdapter.CustomerGetAsync(subscriber.GatewayCustomerId,
+                new Stripe.CustomerGetOptions { Expand = new List<string> { "tax_ids" } });
 
             if (customer == null)
             {
@@ -1583,6 +1585,7 @@ namespace Bit.Core.Services
                         PostalCode = taxInfo.BillingAddressPostalCode,
                         Country = taxInfo.BillingAddressCountry,
                     },
+                    Expand = new List<string> { "tax_ids" }
                 });
 
                 if (!subscriber.IsUser() && customer != null)

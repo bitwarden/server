@@ -6,7 +6,6 @@ using Bit.Core.Enums;
 using Bit.Core.Enums.Provider;
 using Bit.Core.Test.AutoFixture.UserFixtures;
 using Bit.Core.Utilities;
-using Bit.Infrastructure.Dapper;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using IdentityModel;
@@ -96,6 +95,7 @@ namespace Bit.Core.Test.Utilities
             Assert.Equal(batches.Last().Count(), remainder == 0 ? batchSize : remainder);
         }
 
+        /*
         [Fact]
         public void ToGuidIdArrayTVP_Success()
         {
@@ -115,6 +115,7 @@ namespace Bit.Core.Test.Utilities
             Assert.Equal(item0, dt.Rows[0][0]);
             Assert.Equal(item1, dt.Rows[1][0]);
         }
+        */
 
         // TODO: Test the other ToArrayTVP Methods
 
