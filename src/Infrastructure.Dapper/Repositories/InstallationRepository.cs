@@ -2,16 +2,15 @@
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 
-namespace Bit.Infrastructure.Dapper.Repositories
-{
-    public class InstallationRepository : Repository<Installation, Guid>, IInstallationRepository
-    {
-        public InstallationRepository(GlobalSettings globalSettings)
-            : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
-        { }
+namespace Bit.Infrastructure.Dapper.Repositories;
 
-        public InstallationRepository(string connectionString, string readOnlyConnectionString)
-            : base(connectionString, readOnlyConnectionString)
-        { }
-    }
+public class InstallationRepository : Repository<Installation, Guid>, IInstallationRepository
+{
+    public InstallationRepository(GlobalSettings globalSettings)
+        : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
+    { }
+
+    public InstallationRepository(string connectionString, string readOnlyConnectionString)
+        : base(connectionString, readOnlyConnectionString)
+    { }
 }

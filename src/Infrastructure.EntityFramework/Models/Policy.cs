@@ -1,17 +1,16 @@
 ﻿using AutoMapper;
 
-namespace Bit.Infrastructure.EntityFramework.Models
-{
-    public class Policy : Core.Entities.Policy
-    {
-        public virtual Organization Organization { get; set; }
-    }
+namespace Bit.Infrastructure.EntityFramework.Models;
 
-    public class PolicyMapperProfile : Profile
+public class Policy : Core.Entities.Policy
+{
+    public virtual Organization Organization { get; set; }
+}
+
+public class PolicyMapperProfile : Profile
+{
+    public PolicyMapperProfile()
     {
-        public PolicyMapperProfile()
-        {
-            CreateMap<Core.Entities.Policy, Policy>().ReverseMap();
-        }
+        CreateMap<Core.Entities.Policy, Policy>().ReverseMap();
     }
 }
