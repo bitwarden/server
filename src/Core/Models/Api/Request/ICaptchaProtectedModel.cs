@@ -1,7 +1,6 @@
-﻿namespace Bit.Core.Models.Api
+﻿namespace Bit.Core.Models.Api;
+
+public interface ICaptchaProtectedModel
 {
-    public interface ICaptchaProtectedModel
-    {
-        string CaptchaResponse { get; set; }
-    }
+    string CaptchaResponse { get; set; }
 }

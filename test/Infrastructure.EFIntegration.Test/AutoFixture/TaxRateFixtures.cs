@@ -6,52 +6,51 @@ using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 
-namespace Bit.Infrastructure.EFIntegration.Test.AutoFixture
+namespace Bit.Infrastructure.EFIntegration.Test.AutoFixture;
+
+internal class TaxRateBuilder : ISpecimenBuilder
 {
-    internal class TaxRateBuilder : ISpecimenBuilder
+    public object Create(object request, ISpecimenContext context)
     {
-        public object Create(object request, ISpecimenContext context)
+        if (context == null)
         {
-            if (context == null)
-            {
-                throw new ArgumentNullException(nameof(context));
-            }
-
-            var type = request as Type;
-            if (type == null || type != typeof(TaxRate))
-            {
-                return new NoSpecimen();
-            }
-
-            var fixture = new Fixture();
-            fixture.Customizations.Insert(0, new MaxLengthStringRelay());
-            var obj = fixture.WithAutoNSubstitutions().Create<TaxRate>();
-            return obj;
+            throw new ArgumentNullException(nameof(context));
         }
-    }
 
-    internal class EfTaxRate : ICustomization
-    {
-        public void Customize(IFixture fixture)
+        var type = request as Type;
+        if (type == null || type != typeof(TaxRate))
         {
-            fixture.Customizations.Add(new IgnoreVirtualMembersCustomization());
-            fixture.Customizations.Add(new GlobalSettingsBuilder());
-            fixture.Customizations.Add(new TaxRateBuilder());
-            fixture.Customizations.Add(new EfRepositoryListBuilder<TaxRateRepository>());
+            return new NoSpecimen();
         }
-    }
 
-    internal class EfTaxRateAutoDataAttribute : CustomAutoDataAttribute
-    {
-        public EfTaxRateAutoDataAttribute() : base(new SutProviderCustomization(), new EfTaxRate())
-        { }
+        var fixture = new Fixture();
+        fixture.Customizations.Insert(0, new MaxLengthStringRelay());
+        var obj = fixture.WithAutoNSubstitutions().Create<TaxRate>();
+        return obj;
     }
+}
 
-    internal class InlineEfTaxRateAutoDataAttribute : InlineCustomAutoDataAttribute
+internal class EfTaxRate : ICustomization
+{
+    public void Customize(IFixture fixture)
     {
-        public InlineEfTaxRateAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
-            typeof(EfTaxRate) }, values)
-        { }
+        fixture.Customizations.Add(new IgnoreVirtualMembersCustomization());
+        fixture.Customizations.Add(new GlobalSettingsBuilder());
+        fixture.Customizations.Add(new TaxRateBuilder());
+        fixture.Customizations.Add(new EfRepositoryListBuilder<TaxRateRepository>());
     }
+}
+
+internal class EfTaxRateAutoDataAttribute : CustomAutoDataAttribute
+{
+    public EfTaxRateAutoDataAttribute() : base(new SutProviderCustomization(), new EfTaxRate())
+    { }
+}
+
+internal class InlineEfTaxRateAutoDataAttribute : InlineCustomAutoDataAttribute
+{
+    public InlineEfTaxRateAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
+        typeof(EfTaxRate) }, values)
+    { }
 }
 

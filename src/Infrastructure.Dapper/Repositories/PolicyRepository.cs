@@ -6,83 +6,82 @@ using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Dapper;
 
-namespace Bit.Infrastructure.Dapper.Repositories
+namespace Bit.Infrastructure.Dapper.Repositories;
+
+public class PolicyRepository : Repository<Policy, Guid>, IPolicyRepository
 {
-    public class PolicyRepository : Repository<Policy, Guid>, IPolicyRepository
+    public PolicyRepository(GlobalSettings globalSettings)
+        : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
+    { }
+
+    public PolicyRepository(string connectionString, string readOnlyConnectionString)
+        : base(connectionString, readOnlyConnectionString)
+    { }
+
+    public async Task<Policy> GetByOrganizationIdTypeAsync(Guid organizationId, PolicyType type)
     {
-        public PolicyRepository(GlobalSettings globalSettings)
-            : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
-        { }
-
-        public PolicyRepository(string connectionString, string readOnlyConnectionString)
-            : base(connectionString, readOnlyConnectionString)
-        { }
-
-        public async Task<Policy> GetByOrganizationIdTypeAsync(Guid organizationId, PolicyType type)
+        using (var connection = new SqlConnection(ConnectionString))
         {
-            using (var connection = new SqlConnection(ConnectionString))
-            {
-                var results = await connection.QueryAsync<Policy>(
-                    $"[{Schema}].[{Table}_ReadByOrganizationIdType]",
-                    new { OrganizationId = organizationId, Type = (byte)type },
-                    commandType: CommandType.StoredProcedure);
+            var results = await connection.QueryAsync<Policy>(
+                $"[{Schema}].[{Table}_ReadByOrganizationIdType]",
+                new { OrganizationId = organizationId, Type = (byte)type },
+                commandType: CommandType.StoredProcedure);
 
-                return results.SingleOrDefault();
-            }
+            return results.SingleOrDefault();
         }
+    }
 
-        public async Task<ICollection<Policy>> GetManyByOrganizationIdAsync(Guid organizationId)
+    public async Task<ICollection<Policy>> GetManyByOrganizationIdAsync(Guid organizationId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
         {
-            using (var connection = new SqlConnection(ConnectionString))
-            {
-                var results = await connection.QueryAsync<Policy>(
-                    $"[{Schema}].[{Table}_ReadByOrganizationId]",
-                    new { OrganizationId = organizationId },
-                    commandType: CommandType.StoredProcedure);
+            var results = await connection.QueryAsync<Policy>(
+                $"[{Schema}].[{Table}_ReadByOrganizationId]",
+                new { OrganizationId = organizationId },
+                commandType: CommandType.StoredProcedure);
 
-                return results.ToList();
-            }
+            return results.ToList();
         }
+    }
 
-        public async Task<ICollection<Policy>> GetManyByUserIdAsync(Guid userId)
+    public async Task<ICollection<Policy>> GetManyByUserIdAsync(Guid userId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
         {
-            using (var connection = new SqlConnection(ConnectionString))
-            {
-                var results = await connection.QueryAsync<Policy>(
-                    $"[{Schema}].[{Table}_ReadByUserId]",
-                    new { UserId = userId },
-                    commandType: CommandType.StoredProcedure);
+            var results = await connection.QueryAsync<Policy>(
+                $"[{Schema}].[{Table}_ReadByUserId]",
+                new { UserId = userId },
+                commandType: CommandType.StoredProcedure);
 
-                return results.ToList();
-            }
+            return results.ToList();
         }
+    }
 
-        public async Task<ICollection<Policy>> GetManyByTypeApplicableToUserIdAsync(Guid userId, PolicyType policyType,
-            OrganizationUserStatusType minStatus)
+    public async Task<ICollection<Policy>> GetManyByTypeApplicableToUserIdAsync(Guid userId, PolicyType policyType,
+        OrganizationUserStatusType minStatus)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
         {
-            using (var connection = new SqlConnection(ConnectionString))
-            {
-                var results = await connection.QueryAsync<Policy>(
-                    $"[{Schema}].[{Table}_ReadByTypeApplicableToUser]",
-                    new { UserId = userId, PolicyType = policyType, MinimumStatus = minStatus },
-                    commandType: CommandType.StoredProcedure);
+            var results = await connection.QueryAsync<Policy>(
+                $"[{Schema}].[{Table}_ReadByTypeApplicableToUser]",
+                new { UserId = userId, PolicyType = policyType, MinimumStatus = minStatus },
+                commandType: CommandType.StoredProcedure);
 
-                return results.ToList();
-            }
+            return results.ToList();
         }
+    }
 
-        public async Task<int> GetCountByTypeApplicableToUserIdAsync(Guid userId, PolicyType policyType,
-            OrganizationUserStatusType minStatus)
+    public async Task<int> GetCountByTypeApplicableToUserIdAsync(Guid userId, PolicyType policyType,
+        OrganizationUserStatusType minStatus)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
         {
-            using (var connection = new SqlConnection(ConnectionString))
-            {
-                var result = await connection.ExecuteScalarAsync<int>(
-                    $"[{Schema}].[{Table}_CountByTypeApplicableToUser]",
-                    new { UserId = userId, PolicyType = policyType, MinimumStatus = minStatus },
-                    commandType: CommandType.StoredProcedure);
+            var result = await connection.ExecuteScalarAsync<int>(
+                $"[{Schema}].[{Table}_CountByTypeApplicableToUser]",
+                new { UserId = userId, PolicyType = policyType, MinimumStatus = minStatus },
+                commandType: CommandType.StoredProcedure);
 
-                return result;
-            }
+            return result;
         }
     }
 }

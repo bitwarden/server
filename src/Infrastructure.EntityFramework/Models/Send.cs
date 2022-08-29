@@ -1,18 +1,17 @@
 ﻿using AutoMapper;
 
-namespace Bit.Infrastructure.EntityFramework.Models
-{
-    public class Send : Core.Entities.Send
-    {
-        public virtual Organization Organization { get; set; }
-        public virtual User User { get; set; }
-    }
+namespace Bit.Infrastructure.EntityFramework.Models;
 
-    public class SendMapperProfile : Profile
+public class Send : Core.Entities.Send
+{
+    public virtual Organization Organization { get; set; }
+    public virtual User User { get; set; }
+}
+
+public class SendMapperProfile : Profile
+{
+    public SendMapperProfile()
     {
-        public SendMapperProfile()
-        {
-            CreateMap<Core.Entities.Send, Send>().ReverseMap();
-        }
+        CreateMap<Core.Entities.Send, Send>().ReverseMap();
     }
 }

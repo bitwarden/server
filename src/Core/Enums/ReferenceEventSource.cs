@@ -1,12 +1,11 @@
 ﻿using System.Runtime.Serialization;
 
-namespace Bit.Core.Enums
+namespace Bit.Core.Enums;
+
+public enum ReferenceEventSource
 {
-    public enum ReferenceEventSource
-    {
-        [EnumMember(Value = "organization")]
-        Organization,
-        [EnumMember(Value = "user")]
-        User,
-    }
+    [EnumMember(Value = "organization")]
+    Organization,
+    [EnumMember(Value = "user")]
+    User,
 }

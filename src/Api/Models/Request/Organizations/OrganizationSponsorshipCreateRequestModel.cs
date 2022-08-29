@@ -2,19 +2,18 @@
 using Bit.Core.Enums;
 using Bit.Core.Utilities;
 
-namespace Bit.Api.Models.Request.Organizations
+namespace Bit.Api.Models.Request.Organizations;
+
+public class OrganizationSponsorshipCreateRequestModel
 {
-    public class OrganizationSponsorshipCreateRequestModel
-    {
-        [Required]
-        public PlanSponsorshipType PlanSponsorshipType { get; set; }
+    [Required]
+    public PlanSponsorshipType PlanSponsorshipType { get; set; }
 
-        [Required]
-        [StringLength(256)]
-        [StrictEmailAddress]
-        public string SponsoredEmail { get; set; }
+    [Required]
+    [StringLength(256)]
+    [StrictEmailAddress]
+    public string SponsoredEmail { get; set; }
 
-        [StringLength(256)]
-        public string FriendlyName { get; set; }
-    }
+    [StringLength(256)]
+    public string FriendlyName { get; set; }
 }
