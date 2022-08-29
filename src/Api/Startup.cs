@@ -11,7 +11,6 @@ using System.Globalization;
 using Microsoft.IdentityModel.Logging;
 using Microsoft.OpenApi.Models;
 using Bit.SharedWeb.Utilities;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
 #if !OSS
@@ -79,7 +78,42 @@ namespace Bit.Api
 
             // Identity
             services.AddCustomIdentityServices(globalSettings);
-            AddIdentity(services, globalSettings);
+            services.AddIdentityAuthenticationServices(globalSettings, Environment, config =>
+            {
+                config.AddPolicy("Application", policy =>
+                {
+                    policy.RequireAuthenticatedUser();
+                    policy.RequireClaim(JwtClaimTypes.AuthenticationMethod, "Application", "external");
+                    policy.RequireClaim(JwtClaimTypes.Scope, "api");
+                });
+                config.AddPolicy("Web", policy =>
+                {
+                    policy.RequireAuthenticatedUser();
+                    policy.RequireClaim(JwtClaimTypes.AuthenticationMethod, "Application", "external");
+                    policy.RequireClaim(JwtClaimTypes.Scope, "api");
+                    policy.RequireClaim(JwtClaimTypes.ClientId, "web");
+                });
+                config.AddPolicy("Push", policy =>
+                {
+                    policy.RequireAuthenticatedUser();
+                    policy.RequireClaim(JwtClaimTypes.Scope, "api.push");
+                });
+                config.AddPolicy("Licensing", policy =>
+                {
+                    policy.RequireAuthenticatedUser();
+                    policy.RequireClaim(JwtClaimTypes.Scope, "api.licensing");
+                });
+                config.AddPolicy("Organization", policy =>
+                {
+                    policy.RequireAuthenticatedUser();
+                    policy.RequireClaim(JwtClaimTypes.Scope, "api.organization");
+                });
+                config.AddPolicy("Installation", policy =>
+                {
+                    policy.RequireAuthenticatedUser();
+                    policy.RequireClaim(JwtClaimTypes.Scope, "api.installation");
+                });
+            });
 
             services.AddScoped<AuthenticatorTokenProvider>();
 
@@ -110,48 +144,6 @@ namespace Bit.Api
             {
                 services.AddHostedService<Core.HostedServices.ApplicationCacheHostedService>();
             }
-        }
-
-        protected virtual void AddIdentity(IServiceCollection services, GlobalSettings globalSettings)
-        {
-            services.AddIdentityAuthenticationServices(globalSettings, Environment, BuildAuthorizationOptions);
-        }
-
-        protected static void BuildAuthorizationOptions(AuthorizationOptions config)
-        {
-            config.AddPolicy("Application", policy =>
-            {
-                policy.RequireAuthenticatedUser();
-                policy.RequireClaim(JwtClaimTypes.AuthenticationMethod, "Application", "external");
-                policy.RequireClaim(JwtClaimTypes.Scope, "api");
-            });
-            config.AddPolicy("Web", policy =>
-            {
-                policy.RequireAuthenticatedUser();
-                policy.RequireClaim(JwtClaimTypes.AuthenticationMethod, "Application", "external");
-                policy.RequireClaim(JwtClaimTypes.Scope, "api");
-                policy.RequireClaim(JwtClaimTypes.ClientId, "web");
-            });
-            config.AddPolicy("Push", policy =>
-            {
-                policy.RequireAuthenticatedUser();
-                policy.RequireClaim(JwtClaimTypes.Scope, "api.push");
-            });
-            config.AddPolicy("Licensing", policy =>
-            {
-                policy.RequireAuthenticatedUser();
-                policy.RequireClaim(JwtClaimTypes.Scope, "api.licensing");
-            });
-            config.AddPolicy("Organization", policy =>
-            {
-                policy.RequireAuthenticatedUser();
-                policy.RequireClaim(JwtClaimTypes.Scope, "api.organization");
-            });
-            config.AddPolicy("Installation", policy =>
-            {
-                policy.RequireAuthenticatedUser();
-                policy.RequireClaim(JwtClaimTypes.Scope, "api.installation");
-            });
         }
 
         public void Configure(

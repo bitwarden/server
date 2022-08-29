@@ -1,13 +1,11 @@
-﻿using System.Security.Claims;
-using Bit.Core.IdentityServer;
-using Bit.Core.Models.Api.Request.Accounts;
+﻿using Bit.Core.Models.Api.Request.Accounts;
 using Bit.IntegrationTestCommon.Factories;
 using IdentityServer4.AccessTokenValidation;
 using Microsoft.AspNetCore.TestHost;
 
 namespace Bit.Api.IntegrationTest.Factories
 {
-    public class ApiApplicationFactory : WebApplicationFactoryBase<StartupIntegrationTest>
+    public class ApiApplicationFactory : WebApplicationFactoryBase<Startup>
     {
         private readonly IdentityApplicationFactory _identityApplicationFactory;
 
@@ -16,33 +14,16 @@ namespace Bit.Api.IntegrationTest.Factories
             _identityApplicationFactory = new IdentityApplicationFactory();
         }
 
-        protected override IHostBuilder CreateHostBuilder()
-        {
-            var builder = Host.CreateDefaultBuilder()
-                .ConfigureWebHostDefaults(x =>
-                {
-                    x.UseStartup<StartupIntegrationTest>();
-                });
-            return builder;
-        }
-
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
             base.ConfigureWebHost(builder);
 
             builder.ConfigureTestServices(services =>
             {
-                services
-                    .AddAuthentication(IdentityServerAuthenticationDefaults.AuthenticationScheme)
-                    .AddIdentityServerAuthentication(options =>
-                    {
-                        options.Authority = "http://localhost";
-                        options.RequireHttpsMetadata = false;
-                        options.TokenRetriever = TokenRetrieval.FromAuthorizationHeaderOrQueryString();
-                        options.NameClaimType = ClaimTypes.Email;
-                        options.SupportedTokens = SupportedTokens.Jwt;
-                        options.JwtBackChannelHandler = _identityApplicationFactory.Server.CreateHandler();
-                    });
+                services.PostConfigure<IdentityServerAuthenticationOptions>(IdentityServerAuthenticationDefaults.AuthenticationScheme, options =>
+                {
+                    options.JwtBackChannelHandler = _identityApplicationFactory.Server.CreateHandler();
+                });
             });
         }
 
