@@ -500,7 +500,7 @@ public class GlobalSettings : IGlobalSettings
     {
         public bool EmailOnNewDeviceLogin { get; set; } = false;
     }
-    
+
     public class DistributedIpRateLimitingSettings
     {
         public bool Enabled { get; set; } = true;
