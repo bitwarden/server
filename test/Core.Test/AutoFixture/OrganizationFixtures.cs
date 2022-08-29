@@ -6,9 +6,7 @@ using Bit.Core.Enums;
 using Bit.Core.Models;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
-using Bit.Core.Test.AutoFixture.EntityFrameworkRepositoryFixtures;
 using Bit.Core.Utilities;
-using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 
@@ -128,17 +126,6 @@ namespace Bit.Core.Test.AutoFixture.OrganizationFixtures
         }
     }
 
-    internal class EfOrganization : ICustomization
-    {
-        public void Customize(IFixture fixture)
-        {
-            fixture.Customizations.Add(new IgnoreVirtualMembersCustomization());
-            fixture.Customizations.Add(new GlobalSettingsBuilder());
-            fixture.Customizations.Add(new OrganizationBuilder());
-            fixture.Customizations.Add(new EfRepositoryListBuilder<OrganizationRepository>());
-        }
-    }
-
     internal class OrganizationCustomizeAttribute : BitCustomizeAttribute
     {
         public bool UseGroups { get; set; }
@@ -173,11 +160,5 @@ namespace Bit.Core.Test.AutoFixture.OrganizationFixtures
             InvitorUserType = InvitorUserType,
             PermissionsBlob = PermissionsBlob,
         };
-    }
-
-    internal class EfOrganizationAutoDataAttribute : CustomAutoDataAttribute
-    {
-        public EfOrganizationAutoDataAttribute() : base(new SutProviderCustomization(), new EfOrganization())
-        { }
     }
 }
