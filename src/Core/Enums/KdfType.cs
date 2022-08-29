@@ -1,7 +1,6 @@
-﻿namespace Bit.Core.Enums
+﻿namespace Bit.Core.Enums;
+
+public enum KdfType : byte
 {
-    public enum KdfType : byte
-    {
-        PBKDF2_SHA256 = 0
-    }
+    PBKDF2_SHA256 = 0
 }

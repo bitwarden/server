@@ -9,108 +9,107 @@ using IdentityModel;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Stripe;
 
-namespace Bit.Scim
+namespace Bit.Scim;
+
+public class Startup
 {
-    public class Startup
+    public Startup(IWebHostEnvironment env, IConfiguration configuration)
     {
-        public Startup(IWebHostEnvironment env, IConfiguration configuration)
+        CultureInfo.DefaultThreadCurrentCulture = new CultureInfo("en-US");
+        Configuration = configuration;
+        Environment = env;
+    }
+
+    public IConfiguration Configuration { get; }
+    public IWebHostEnvironment Environment { get; set; }
+
+    public void ConfigureServices(IServiceCollection services)
+    {
+        // Options
+        services.AddOptions();
+
+        // Settings
+        var globalSettings = services.AddGlobalSettingsServices(Configuration, Environment);
+        services.Configure<ScimSettings>(Configuration.GetSection("ScimSettings"));
+
+        // Data Protection
+        services.AddCustomDataProtectionServices(Environment, globalSettings);
+
+        // Stripe Billing
+        StripeConfiguration.ApiKey = globalSettings.Stripe.ApiKey;
+        StripeConfiguration.MaxNetworkRetries = globalSettings.Stripe.MaxNetworkRetries;
+
+        // Repositories
+        services.AddSqlServerRepositories(globalSettings);
+
+        // Context
+        services.AddScoped<ICurrentContext, CurrentContext>();
+        services.AddScoped<IScimContext, ScimContext>();
+
+        // Authentication
+        services.AddAuthentication(ApiKeyAuthenticationOptions.DefaultScheme)
+            .AddScheme<ApiKeyAuthenticationOptions, ApiKeyAuthenticationHandler>(
+                ApiKeyAuthenticationOptions.DefaultScheme, null);
+
+        services.AddAuthorization(config =>
         {
-            CultureInfo.DefaultThreadCurrentCulture = new CultureInfo("en-US");
-            Configuration = configuration;
-            Environment = env;
-        }
-
-        public IConfiguration Configuration { get; }
-        public IWebHostEnvironment Environment { get; set; }
-
-        public void ConfigureServices(IServiceCollection services)
-        {
-            // Options
-            services.AddOptions();
-
-            // Settings
-            var globalSettings = services.AddGlobalSettingsServices(Configuration, Environment);
-            services.Configure<ScimSettings>(Configuration.GetSection("ScimSettings"));
-
-            // Data Protection
-            services.AddCustomDataProtectionServices(Environment, globalSettings);
-
-            // Stripe Billing
-            StripeConfiguration.ApiKey = globalSettings.Stripe.ApiKey;
-            StripeConfiguration.MaxNetworkRetries = globalSettings.Stripe.MaxNetworkRetries;
-
-            // Repositories
-            services.AddSqlServerRepositories(globalSettings);
-
-            // Context
-            services.AddScoped<ICurrentContext, CurrentContext>();
-            services.AddScoped<IScimContext, ScimContext>();
-
-            // Authentication
-            services.AddAuthentication(ApiKeyAuthenticationOptions.DefaultScheme)
-                .AddScheme<ApiKeyAuthenticationOptions, ApiKeyAuthenticationHandler>(
-                    ApiKeyAuthenticationOptions.DefaultScheme, null);
-
-            services.AddAuthorization(config =>
+            config.AddPolicy("Scim", policy =>
             {
-                config.AddPolicy("Scim", policy =>
-                {
-                    policy.RequireAuthenticatedUser();
-                    policy.RequireClaim(JwtClaimTypes.Scope, "api.scim");
-                });
+                policy.RequireAuthenticatedUser();
+                policy.RequireClaim(JwtClaimTypes.Scope, "api.scim");
             });
+        });
 
-            // Identity
-            services.AddCustomIdentityServices(globalSettings);
+        // Identity
+        services.AddCustomIdentityServices(globalSettings);
 
-            // Services
-            services.AddBaseServices(globalSettings);
-            services.AddDefaultServices(globalSettings);
+        // Services
+        services.AddBaseServices(globalSettings);
+        services.AddDefaultServices(globalSettings);
 
-            services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
+        services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 
-            // Mvc
-            services.AddMvc(config =>
-            {
-                config.Filters.Add(new LoggingExceptionHandlerFilterAttribute());
-            });
-            services.Configure<RouteOptions>(options => options.LowercaseUrls = true);
-        }
-
-        public void Configure(
-            IApplicationBuilder app,
-            IWebHostEnvironment env,
-            IHostApplicationLifetime appLifetime,
-            GlobalSettings globalSettings)
+        // Mvc
+        services.AddMvc(config =>
         {
-            app.UseSerilog(env, appLifetime, globalSettings);
+            config.Filters.Add(new LoggingExceptionHandlerFilterAttribute());
+        });
+        services.Configure<RouteOptions>(options => options.LowercaseUrls = true);
+    }
 
-            // Add general security headers
-            app.UseMiddleware<SecurityHeadersMiddleware>();
+    public void Configure(
+        IApplicationBuilder app,
+        IWebHostEnvironment env,
+        IHostApplicationLifetime appLifetime,
+        GlobalSettings globalSettings)
+    {
+        app.UseSerilog(env, appLifetime, globalSettings);
 
-            if (env.IsDevelopment())
-            {
-                app.UseDeveloperExceptionPage();
-            }
+        // Add general security headers
+        app.UseMiddleware<SecurityHeadersMiddleware>();
 
-            // Default Middleware
-            app.UseDefaultMiddleware(env, globalSettings);
-
-            // Add routing
-            app.UseRouting();
-
-            // Add Scim context
-            app.UseMiddleware<ScimContextMiddleware>();
-
-            // Add authentication and authorization to the request pipeline.
-            app.UseAuthentication();
-            app.UseAuthorization();
-
-            // Add current context
-            app.UseMiddleware<CurrentContextMiddleware>();
-
-            // Add MVC to the request pipeline.
-            app.UseEndpoints(endpoints => endpoints.MapDefaultControllerRoute());
+        if (env.IsDevelopment())
+        {
+            app.UseDeveloperExceptionPage();
         }
+
+        // Default Middleware
+        app.UseDefaultMiddleware(env, globalSettings);
+
+        // Add routing
+        app.UseRouting();
+
+        // Add Scim context
+        app.UseMiddleware<ScimContextMiddleware>();
+
+        // Add authentication and authorization to the request pipeline.
+        app.UseAuthentication();
+        app.UseAuthorization();
+
+        // Add current context
+        app.UseMiddleware<CurrentContextMiddleware>();
+
+        // Add MVC to the request pipeline.
+        app.UseEndpoints(endpoints => endpoints.MapDefaultControllerRoute());
     }
 }

@@ -1,4 +1,3 @@
-﻿namespace Bit.Core.Exceptions
-{
-    public class NotFoundException : Exception { }
-}
+﻿namespace Bit.Core.Exceptions;
+
+public class NotFoundException : Exception { }

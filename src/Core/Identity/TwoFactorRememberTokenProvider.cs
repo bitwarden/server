@@ -4,18 +4,17 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace Bit.Core.Identity
-{
-    public class TwoFactorRememberTokenProvider : DataProtectorTokenProvider<User>
-    {
-        public TwoFactorRememberTokenProvider(
-            IDataProtectionProvider dataProtectionProvider,
-            IOptions<TwoFactorRememberTokenProviderOptions> options,
-            ILogger<DataProtectorTokenProvider<User>> logger)
-            : base(dataProtectionProvider, options, logger)
-        { }
-    }
+namespace Bit.Core.Identity;
 
-    public class TwoFactorRememberTokenProviderOptions : DataProtectionTokenProviderOptions
+public class TwoFactorRememberTokenProvider : DataProtectorTokenProvider<User>
+{
+    public TwoFactorRememberTokenProvider(
+        IDataProtectionProvider dataProtectionProvider,
+        IOptions<TwoFactorRememberTokenProviderOptions> options,
+        ILogger<DataProtectorTokenProvider<User>> logger)
+        : base(dataProtectionProvider, options, logger)
     { }
 }
+
+public class TwoFactorRememberTokenProviderOptions : DataProtectionTokenProviderOptions
+{ }
