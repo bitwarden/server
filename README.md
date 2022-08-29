@@ -91,7 +91,7 @@ We have switched to using file scoped namespace. All previous branches will need
 1. Check out your local Branch
 1. Run `git merge 7c4521e0b428d523f2153cda3fb51d51bca9f194`
 2. Resolve any merge conflicts, commit.
-3. Run `dotnet tool run dotnet-format`
+3. Run `dotnet format`
 4. Commit
 5. Run `git merge -Xours 34fb4cca2aa78deb84d4cbc359992a7c6bba7ea5`
 6. Push
