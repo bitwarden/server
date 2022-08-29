@@ -1,16 +1,17 @@
 ﻿using AutoMapper;
 
-namespace Bit.Infrastructure.EntityFramework.Models;
-
-public class Device : Core.Entities.Device
+namespace Bit.Infrastructure.EntityFramework.Models
 {
-    public virtual User User { get; set; }
-}
-
-public class DeviceMapperProfile : Profile
-{
-    public DeviceMapperProfile()
+    public class Device : Core.Entities.Device
     {
-        CreateMap<Core.Entities.Device, Device>().ReverseMap();
+        public virtual User User { get; set; }
+    }
+
+    public class DeviceMapperProfile : Profile
+    {
+        public DeviceMapperProfile()
+        {
+            CreateMap<Core.Entities.Device, Device>().ReverseMap();
+        }
     }
 }

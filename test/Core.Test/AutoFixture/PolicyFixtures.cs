@@ -4,37 +4,38 @@ using AutoFixture.Xunit2;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 
-namespace Bit.Core.Test.AutoFixture.PolicyFixtures;
-
-internal class PolicyCustomization : ICustomization
+namespace Bit.Core.Test.AutoFixture.PolicyFixtures
 {
-    public PolicyType Type { get; set; }
-
-    public PolicyCustomization(PolicyType type)
+    internal class PolicyCustomization : ICustomization
     {
-        Type = type;
+        public PolicyType Type { get; set; }
+
+        public PolicyCustomization(PolicyType type)
+        {
+            Type = type;
+        }
+
+        public void Customize(IFixture fixture)
+        {
+            fixture.Customize<Policy>(composer => composer
+                .With(o => o.OrganizationId, Guid.NewGuid())
+                .With(o => o.Type, Type)
+                .With(o => o.Enabled, true));
+        }
     }
 
-    public void Customize(IFixture fixture)
+    public class PolicyAttribute : CustomizeAttribute
     {
-        fixture.Customize<Policy>(composer => composer
-            .With(o => o.OrganizationId, Guid.NewGuid())
-            .With(o => o.Type, Type)
-            .With(o => o.Enabled, true));
-    }
-}
+        private readonly PolicyType _type;
 
-public class PolicyAttribute : CustomizeAttribute
-{
-    private readonly PolicyType _type;
+        public PolicyAttribute(PolicyType type)
+        {
+            _type = type;
+        }
 
-    public PolicyAttribute(PolicyType type)
-    {
-        _type = type;
-    }
-
-    public override ICustomization GetCustomization(ParameterInfo parameter)
-    {
-        return new PolicyCustomization(_type);
+        public override ICustomization GetCustomization(ParameterInfo parameter)
+        {
+            return new PolicyCustomization(_type);
+        }
     }
 }

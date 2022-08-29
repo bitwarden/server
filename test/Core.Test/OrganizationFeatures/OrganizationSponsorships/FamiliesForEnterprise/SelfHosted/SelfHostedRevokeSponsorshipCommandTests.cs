@@ -6,47 +6,48 @@ using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Xunit;
 
-namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.SelfHosted;
-
-[SutProviderCustomize]
-[OrganizationSponsorshipCustomize]
-public class SelfHostedRevokeSponsorshipCommandTests : CancelSponsorshipCommandTestsBase
+namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.SelfHosted
 {
-    [Theory]
-    [BitAutoData]
-    public async Task RevokeSponsorship_NoExistingSponsorship_ThrowsBadRequest(
-        SutProvider<SelfHostedRevokeSponsorshipCommand> sutProvider)
+    [SutProviderCustomize]
+    [OrganizationSponsorshipCustomize]
+    public class SelfHostedRevokeSponsorshipCommandTests : CancelSponsorshipCommandTestsBase
     {
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.RevokeSponsorshipAsync(null));
+        [Theory]
+        [BitAutoData]
+        public async Task RevokeSponsorship_NoExistingSponsorship_ThrowsBadRequest(
+            SutProvider<SelfHostedRevokeSponsorshipCommand> sutProvider)
+        {
+            var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+                sutProvider.Sut.RevokeSponsorshipAsync(null));
 
-        Assert.Contains("You are not currently sponsoring an organization.", exception.Message);
-        await AssertDidNotDeleteSponsorshipAsync(sutProvider);
-        await AssertDidNotUpdateSponsorshipAsync(sutProvider);
-    }
+            Assert.Contains("You are not currently sponsoring an organization.", exception.Message);
+            await AssertDidNotDeleteSponsorshipAsync(sutProvider);
+            await AssertDidNotUpdateSponsorshipAsync(sutProvider);
+        }
 
-    [Theory]
-    [BitAutoData]
-    public async Task RevokeSponsorship_SponsorshipNotSynced_DeletesSponsorship(OrganizationSponsorship sponsorship,
-        SutProvider<SelfHostedRevokeSponsorshipCommand> sutProvider)
-    {
-        sponsorship.LastSyncDate = null;
+        [Theory]
+        [BitAutoData]
+        public async Task RevokeSponsorship_SponsorshipNotSynced_DeletesSponsorship(OrganizationSponsorship sponsorship,
+            SutProvider<SelfHostedRevokeSponsorshipCommand> sutProvider)
+        {
+            sponsorship.LastSyncDate = null;
 
-        await sutProvider.Sut.RevokeSponsorshipAsync(sponsorship);
-        await AssertDeletedSponsorshipAsync(sponsorship, sutProvider);
-    }
+            await sutProvider.Sut.RevokeSponsorshipAsync(sponsorship);
+            await AssertDeletedSponsorshipAsync(sponsorship, sutProvider);
+        }
 
-    [Theory]
-    [BitAutoData]
-    public async Task RevokeSponsorship_SponsorshipSynced_MarksForDeletion(OrganizationSponsorship sponsorship,
-        SutProvider<SelfHostedRevokeSponsorshipCommand> sutProvider)
-    {
-        sponsorship.LastSyncDate = DateTime.UtcNow;
+        [Theory]
+        [BitAutoData]
+        public async Task RevokeSponsorship_SponsorshipSynced_MarksForDeletion(OrganizationSponsorship sponsorship,
+            SutProvider<SelfHostedRevokeSponsorshipCommand> sutProvider)
+        {
+            sponsorship.LastSyncDate = DateTime.UtcNow;
 
-        await sutProvider.Sut.RevokeSponsorshipAsync(sponsorship);
+            await sutProvider.Sut.RevokeSponsorshipAsync(sponsorship);
 
-        Assert.True(sponsorship.ToDelete);
-        await AssertUpdatedSponsorshipAsync(sponsorship, sutProvider);
-        await AssertDidNotDeleteSponsorshipAsync(sutProvider);
+            Assert.True(sponsorship.ToDelete);
+            await AssertUpdatedSponsorshipAsync(sponsorship, sutProvider);
+            await AssertDidNotDeleteSponsorshipAsync(sutProvider);
+        }
     }
 }

@@ -4,42 +4,43 @@ using Bit.Core.OrganizationFeatures.OrganizationApiKeys.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Utilities;
 
-namespace Bit.Core.OrganizationFeatures.OrganizationApiKeys;
-
-public class GetOrganizationApiKeyCommand : IGetOrganizationApiKeyCommand
+namespace Bit.Core.OrganizationFeatures.OrganizationApiKeys
 {
-    private readonly IOrganizationApiKeyRepository _organizationApiKeyRepository;
-
-    public GetOrganizationApiKeyCommand(IOrganizationApiKeyRepository organizationApiKeyRepository)
+    public class GetOrganizationApiKeyCommand : IGetOrganizationApiKeyCommand
     {
-        _organizationApiKeyRepository = organizationApiKeyRepository;
-    }
+        private readonly IOrganizationApiKeyRepository _organizationApiKeyRepository;
 
-    public async Task<OrganizationApiKey> GetOrganizationApiKeyAsync(Guid organizationId, OrganizationApiKeyType organizationApiKeyType)
-    {
-        if (!Enum.IsDefined(organizationApiKeyType))
+        public GetOrganizationApiKeyCommand(IOrganizationApiKeyRepository organizationApiKeyRepository)
         {
-            throw new ArgumentOutOfRangeException(nameof(organizationApiKeyType), $"Invalid value for enum {nameof(OrganizationApiKeyType)}");
+            _organizationApiKeyRepository = organizationApiKeyRepository;
         }
 
-        var apiKeys = await _organizationApiKeyRepository
-            .GetManyByOrganizationIdTypeAsync(organizationId, organizationApiKeyType);
-
-        if (apiKeys == null || !apiKeys.Any())
+        public async Task<OrganizationApiKey> GetOrganizationApiKeyAsync(Guid organizationId, OrganizationApiKeyType organizationApiKeyType)
         {
-            var apiKey = new OrganizationApiKey
+            if (!Enum.IsDefined(organizationApiKeyType))
             {
-                OrganizationId = organizationId,
-                Type = organizationApiKeyType,
-                ApiKey = CoreHelpers.SecureRandomString(30),
-                RevisionDate = DateTime.UtcNow,
-            };
+                throw new ArgumentOutOfRangeException(nameof(organizationApiKeyType), $"Invalid value for enum {nameof(OrganizationApiKeyType)}");
+            }
 
-            await _organizationApiKeyRepository.CreateAsync(apiKey);
-            return apiKey;
+            var apiKeys = await _organizationApiKeyRepository
+                .GetManyByOrganizationIdTypeAsync(organizationId, organizationApiKeyType);
+
+            if (apiKeys == null || !apiKeys.Any())
+            {
+                var apiKey = new OrganizationApiKey
+                {
+                    OrganizationId = organizationId,
+                    Type = organizationApiKeyType,
+                    ApiKey = CoreHelpers.SecureRandomString(30),
+                    RevisionDate = DateTime.UtcNow,
+                };
+
+                await _organizationApiKeyRepository.CreateAsync(apiKey);
+                return apiKey;
+            }
+
+            // NOTE: Currently we only allow one type of api key per organization
+            return apiKeys.Single();
         }
-
-        // NOTE: Currently we only allow one type of api key per organization
-        return apiKeys.Single();
     }
 }

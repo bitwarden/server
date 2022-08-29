@@ -2,30 +2,31 @@
 using AutoFixture;
 using AutoFixture.Kernel;
 
-namespace Bit.Test.Common.AutoFixture.JsonDocumentFixtures;
-
-public class JsonDocumentCustomization : ICustomization, ISpecimenBuilder
+namespace Bit.Test.Common.AutoFixture.JsonDocumentFixtures
 {
-
-    public string Json { get; set; }
-
-    public void Customize(IFixture fixture)
+    public class JsonDocumentCustomization : ICustomization, ISpecimenBuilder
     {
-        fixture.Customizations.Add(this);
-    }
 
-    public object Create(object request, ISpecimenContext context)
-    {
-        if (context == null)
+        public string Json { get; set; }
+
+        public void Customize(IFixture fixture)
         {
-            throw new ArgumentNullException(nameof(context));
-        }
-        var type = request as Type;
-        if (type == null || (type != typeof(JsonDocument)))
-        {
-            return new NoSpecimen();
+            fixture.Customizations.Add(this);
         }
 
-        return JsonDocument.Parse(Json ?? "{}");
+        public object Create(object request, ISpecimenContext context)
+        {
+            if (context == null)
+            {
+                throw new ArgumentNullException(nameof(context));
+            }
+            var type = request as Type;
+            if (type == null || (type != typeof(JsonDocument)))
+            {
+                return new NoSpecimen();
+            }
+
+            return JsonDocument.Parse(Json ?? "{}");
+        }
     }
 }

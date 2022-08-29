@@ -1,9 +1,10 @@
 ﻿using System.Data;
 using Bit.Core.Entities;
 
-namespace Bit.Core.Models.Data;
-
-public class GroupWithCollections : Group
+namespace Bit.Core.Models.Data
 {
-    public DataTable Collections { get; set; }
+    public class GroupWithCollections : Group
+    {
+        public DataTable Collections { get; set; }
+    }
 }

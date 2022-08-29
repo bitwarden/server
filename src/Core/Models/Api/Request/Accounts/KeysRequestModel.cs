@@ -1,26 +1,27 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.Entities;
 
-namespace Bit.Core.Models.Api.Request.Accounts;
-
-public class KeysRequestModel
+namespace Bit.Core.Models.Api.Request.Accounts
 {
-    public string PublicKey { get; set; }
-    [Required]
-    public string EncryptedPrivateKey { get; set; }
-
-    public User ToUser(User existingUser)
+    public class KeysRequestModel
     {
-        if (string.IsNullOrWhiteSpace(existingUser.PublicKey) && !string.IsNullOrWhiteSpace(PublicKey))
-        {
-            existingUser.PublicKey = PublicKey;
-        }
+        public string PublicKey { get; set; }
+        [Required]
+        public string EncryptedPrivateKey { get; set; }
 
-        if (string.IsNullOrWhiteSpace(existingUser.PrivateKey))
+        public User ToUser(User existingUser)
         {
-            existingUser.PrivateKey = EncryptedPrivateKey;
-        }
+            if (string.IsNullOrWhiteSpace(existingUser.PublicKey) && !string.IsNullOrWhiteSpace(PublicKey))
+            {
+                existingUser.PublicKey = PublicKey;
+            }
 
-        return existingUser;
+            if (string.IsNullOrWhiteSpace(existingUser.PrivateKey))
+            {
+                existingUser.PrivateKey = EncryptedPrivateKey;
+            }
+
+            return existingUser;
+        }
     }
 }

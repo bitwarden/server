@@ -1,16 +1,17 @@
 ﻿using Bit.Core.Models.Data;
 
-namespace Bit.Api.Models.Public.Response;
-
-public class AssociationWithPermissionsResponseModel : AssociationWithPermissionsBaseModel
+namespace Bit.Api.Models.Public.Response
 {
-    public AssociationWithPermissionsResponseModel(SelectionReadOnly selection)
+    public class AssociationWithPermissionsResponseModel : AssociationWithPermissionsBaseModel
     {
-        if (selection == null)
+        public AssociationWithPermissionsResponseModel(SelectionReadOnly selection)
         {
-            throw new ArgumentNullException(nameof(selection));
+            if (selection == null)
+            {
+                throw new ArgumentNullException(nameof(selection));
+            }
+            Id = selection.Id;
+            ReadOnly = selection.ReadOnly;
         }
-        Id = selection.Id;
-        ReadOnly = selection.ReadOnly;
     }
 }

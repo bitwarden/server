@@ -1,83 +1,84 @@
 ﻿using Bit.Core.Entities;
 using Stripe;
 
-namespace Bit.Core.Models.Business;
-
-public class OrganizationSubscriptionOptionsBase : Stripe.SubscriptionCreateOptions
+namespace Bit.Core.Models.Business
 {
-    public OrganizationSubscriptionOptionsBase(Organization org, StaticStore.Plan plan, TaxInfo taxInfo, int additionalSeats, int additionalStorageGb, bool premiumAccessAddon)
+    public class OrganizationSubscriptionOptionsBase : Stripe.SubscriptionCreateOptions
     {
-        Items = new List<SubscriptionItemOptions>();
-        Metadata = new Dictionary<string, string>
+        public OrganizationSubscriptionOptionsBase(Organization org, StaticStore.Plan plan, TaxInfo taxInfo, int additionalSeats, int additionalStorageGb, bool premiumAccessAddon)
         {
-            [org.GatewayIdField()] = org.Id.ToString()
-        };
-
-        if (plan.StripePlanId != null)
-        {
-            Items.Add(new SubscriptionItemOptions
+            Items = new List<SubscriptionItemOptions>();
+            Metadata = new Dictionary<string, string>
             {
-                Plan = plan.StripePlanId,
-                Quantity = 1
-            });
-        }
+                [org.GatewayIdField()] = org.Id.ToString()
+            };
 
-        if (additionalSeats > 0 && plan.StripeSeatPlanId != null)
-        {
-            Items.Add(new SubscriptionItemOptions
+            if (plan.StripePlanId != null)
             {
-                Plan = plan.StripeSeatPlanId,
-                Quantity = additionalSeats
-            });
-        }
+                Items.Add(new SubscriptionItemOptions
+                {
+                    Plan = plan.StripePlanId,
+                    Quantity = 1
+                });
+            }
 
-        if (additionalStorageGb > 0)
-        {
-            Items.Add(new SubscriptionItemOptions
+            if (additionalSeats > 0 && plan.StripeSeatPlanId != null)
             {
-                Plan = plan.StripeStoragePlanId,
-                Quantity = additionalStorageGb
-            });
-        }
+                Items.Add(new SubscriptionItemOptions
+                {
+                    Plan = plan.StripeSeatPlanId,
+                    Quantity = additionalSeats
+                });
+            }
 
-        if (premiumAccessAddon && plan.StripePremiumAccessPlanId != null)
-        {
-            Items.Add(new SubscriptionItemOptions
+            if (additionalStorageGb > 0)
             {
-                Plan = plan.StripePremiumAccessPlanId,
-                Quantity = 1
-            });
-        }
+                Items.Add(new SubscriptionItemOptions
+                {
+                    Plan = plan.StripeStoragePlanId,
+                    Quantity = additionalStorageGb
+                });
+            }
 
-        if (!string.IsNullOrWhiteSpace(taxInfo?.StripeTaxRateId))
-        {
-            DefaultTaxRates = new List<string> { taxInfo.StripeTaxRateId };
+            if (premiumAccessAddon && plan.StripePremiumAccessPlanId != null)
+            {
+                Items.Add(new SubscriptionItemOptions
+                {
+                    Plan = plan.StripePremiumAccessPlanId,
+                    Quantity = 1
+                });
+            }
+
+            if (!string.IsNullOrWhiteSpace(taxInfo?.StripeTaxRateId))
+            {
+                DefaultTaxRates = new List<string> { taxInfo.StripeTaxRateId };
+            }
         }
     }
-}
 
-public class OrganizationPurchaseSubscriptionOptions : OrganizationSubscriptionOptionsBase
-{
-    public OrganizationPurchaseSubscriptionOptions(
-        Organization org, StaticStore.Plan plan,
-        TaxInfo taxInfo, int additionalSeats = 0,
-        int additionalStorageGb = 0, bool premiumAccessAddon = false) :
-        base(org, plan, taxInfo, additionalSeats, additionalStorageGb, premiumAccessAddon)
+    public class OrganizationPurchaseSubscriptionOptions : OrganizationSubscriptionOptionsBase
     {
-        OffSession = true;
-        TrialPeriodDays = plan.TrialPeriodDays;
+        public OrganizationPurchaseSubscriptionOptions(
+            Organization org, StaticStore.Plan plan,
+            TaxInfo taxInfo, int additionalSeats = 0,
+            int additionalStorageGb = 0, bool premiumAccessAddon = false) :
+            base(org, plan, taxInfo, additionalSeats, additionalStorageGb, premiumAccessAddon)
+        {
+            OffSession = true;
+            TrialPeriodDays = plan.TrialPeriodDays;
+        }
     }
-}
 
-public class OrganizationUpgradeSubscriptionOptions : OrganizationSubscriptionOptionsBase
-{
-    public OrganizationUpgradeSubscriptionOptions(
-        string customerId, Organization org,
-        StaticStore.Plan plan, TaxInfo taxInfo,
-        int additionalSeats = 0, int additionalStorageGb = 0,
-        bool premiumAccessAddon = false) :
-        base(org, plan, taxInfo, additionalSeats, additionalStorageGb, premiumAccessAddon)
+    public class OrganizationUpgradeSubscriptionOptions : OrganizationSubscriptionOptionsBase
     {
-        Customer = customerId;
+        public OrganizationUpgradeSubscriptionOptions(
+            string customerId, Organization org,
+            StaticStore.Plan plan, TaxInfo taxInfo,
+            int additionalSeats = 0, int additionalStorageGb = 0,
+            bool premiumAccessAddon = false) :
+            base(org, plan, taxInfo, additionalSeats, additionalStorageGb, premiumAccessAddon)
+        {
+            Customer = customerId;
+        }
     }
 }

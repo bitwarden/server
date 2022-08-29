@@ -11,78 +11,79 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Api.Test.Controllers;
-
-[ControllerCustomize(typeof(CollectionsController))]
-[SutProviderCustomize]
-public class CollectionsControllerTests
+namespace Bit.Api.Test.Controllers
 {
-    [Theory, BitAutoData]
-    public async Task Post_Success(Guid orgId, SutProvider<CollectionsController> sutProvider)
+    [ControllerCustomize(typeof(CollectionsController))]
+    [SutProviderCustomize]
+    public class CollectionsControllerTests
     {
-        sutProvider.GetDependency<ICurrentContext>()
-            .CreateNewCollections(orgId)
-            .Returns(true);
-
-        sutProvider.GetDependency<ICurrentContext>()
-            .EditAnyCollection(orgId)
-            .Returns(false);
-
-        var collectionRequest = new CollectionRequestModel
+        [Theory, BitAutoData]
+        public async Task Post_Success(Guid orgId, SutProvider<CollectionsController> sutProvider)
         {
-            Name = "encrypted_string",
-            ExternalId = "my_external_id"
-        };
+            sutProvider.GetDependency<ICurrentContext>()
+                .CreateNewCollections(orgId)
+                .Returns(true);
 
-        _ = await sutProvider.Sut.Post(orgId, collectionRequest);
+            sutProvider.GetDependency<ICurrentContext>()
+                .EditAnyCollection(orgId)
+                .Returns(false);
 
-        await sutProvider.GetDependency<ICollectionService>()
-            .Received(1)
-            .SaveAsync(Arg.Any<Collection>(), Arg.Any<IEnumerable<SelectionReadOnly>>(), null);
-    }
-
-    [Theory, BitAutoData]
-    public async Task Put_Success(Guid orgId, Guid collectionId, Guid userId, CollectionRequestModel collectionRequest,
-        SutProvider<CollectionsController> sutProvider)
-    {
-        sutProvider.GetDependency<ICurrentContext>()
-            .ViewAssignedCollections(orgId)
-            .Returns(true);
-
-        sutProvider.GetDependency<ICurrentContext>()
-            .EditAssignedCollections(orgId)
-            .Returns(true);
-
-        sutProvider.GetDependency<ICurrentContext>()
-            .UserId
-            .Returns(userId);
-
-        sutProvider.GetDependency<ICollectionRepository>()
-            .GetByIdAsync(collectionId, userId)
-            .Returns(new CollectionDetails
+            var collectionRequest = new CollectionRequestModel
             {
-                OrganizationId = orgId,
-            });
+                Name = "encrypted_string",
+                ExternalId = "my_external_id"
+            };
 
-        _ = await sutProvider.Sut.Put(orgId, collectionId, collectionRequest);
-    }
+            _ = await sutProvider.Sut.Post(orgId, collectionRequest);
 
-    [Theory, BitAutoData]
-    public async Task Put_CanNotEditAssignedCollection_ThrowsNotFound(Guid orgId, Guid collectionId, Guid userId, CollectionRequestModel collectionRequest,
-        SutProvider<CollectionsController> sutProvider)
-    {
-        sutProvider.GetDependency<ICurrentContext>()
-            .EditAssignedCollections(orgId)
-            .Returns(true);
+            await sutProvider.GetDependency<ICollectionService>()
+                .Received(1)
+                .SaveAsync(Arg.Any<Collection>(), Arg.Any<IEnumerable<SelectionReadOnly>>(), null);
+        }
 
-        sutProvider.GetDependency<ICurrentContext>()
-            .UserId
-            .Returns(userId);
+        [Theory, BitAutoData]
+        public async Task Put_Success(Guid orgId, Guid collectionId, Guid userId, CollectionRequestModel collectionRequest,
+            SutProvider<CollectionsController> sutProvider)
+        {
+            sutProvider.GetDependency<ICurrentContext>()
+                .ViewAssignedCollections(orgId)
+                .Returns(true);
 
-        sutProvider.GetDependency<ICollectionRepository>()
-            .GetByIdAsync(collectionId, userId)
-            .Returns(Task.FromResult<CollectionDetails>(null));
+            sutProvider.GetDependency<ICurrentContext>()
+                .EditAssignedCollections(orgId)
+                .Returns(true);
 
-        _ = await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.Put(orgId, collectionId, collectionRequest));
+            sutProvider.GetDependency<ICurrentContext>()
+                .UserId
+                .Returns(userId);
+
+            sutProvider.GetDependency<ICollectionRepository>()
+                .GetByIdAsync(collectionId, userId)
+                .Returns(new CollectionDetails
+                {
+                    OrganizationId = orgId,
+                });
+
+            _ = await sutProvider.Sut.Put(orgId, collectionId, collectionRequest);
+        }
+
+        [Theory, BitAutoData]
+        public async Task Put_CanNotEditAssignedCollection_ThrowsNotFound(Guid orgId, Guid collectionId, Guid userId, CollectionRequestModel collectionRequest,
+            SutProvider<CollectionsController> sutProvider)
+        {
+            sutProvider.GetDependency<ICurrentContext>()
+                .EditAssignedCollections(orgId)
+                .Returns(true);
+
+            sutProvider.GetDependency<ICurrentContext>()
+                .UserId
+                .Returns(userId);
+
+            sutProvider.GetDependency<ICollectionRepository>()
+                .GetByIdAsync(collectionId, userId)
+                .Returns(Task.FromResult<CollectionDetails>(null));
+
+            _ = await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.Put(orgId, collectionId, collectionRequest));
+        }
     }
 }

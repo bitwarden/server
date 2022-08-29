@@ -4,80 +4,81 @@ using Amazon.SQS.Model;
 using Bit.Core.Settings;
 using Microsoft.Extensions.Options;
 
-namespace Bit.Admin.HostedServices;
-
-public class AmazonSqsBlockIpHostedService : BlockIpHostedService
+namespace Bit.Admin.HostedServices
 {
-    private AmazonSQSClient _client;
-
-    public AmazonSqsBlockIpHostedService(
-        ILogger<AmazonSqsBlockIpHostedService> logger,
-        IOptions<AdminSettings> adminSettings,
-        GlobalSettings globalSettings)
-        : base(logger, adminSettings, globalSettings)
-    { }
-
-    public override void Dispose()
+    public class AmazonSqsBlockIpHostedService : BlockIpHostedService
     {
-        _client?.Dispose();
-    }
+        private AmazonSQSClient _client;
 
-    protected override async Task ExecuteAsync(CancellationToken cancellationToken)
-    {
-        _client = new AmazonSQSClient(_globalSettings.Amazon.AccessKeyId,
-            _globalSettings.Amazon.AccessKeySecret, RegionEndpoint.GetBySystemName(_globalSettings.Amazon.Region));
-        var blockIpQueue = await _client.GetQueueUrlAsync("block-ip", cancellationToken);
-        var blockIpQueueUrl = blockIpQueue.QueueUrl;
-        var unblockIpQueue = await _client.GetQueueUrlAsync("unblock-ip", cancellationToken);
-        var unblockIpQueueUrl = unblockIpQueue.QueueUrl;
+        public AmazonSqsBlockIpHostedService(
+            ILogger<AmazonSqsBlockIpHostedService> logger,
+            IOptions<AdminSettings> adminSettings,
+            GlobalSettings globalSettings)
+            : base(logger, adminSettings, globalSettings)
+        { }
 
-        while (!cancellationToken.IsCancellationRequested)
+        public override void Dispose()
         {
-            var blockMessageResponse = await _client.ReceiveMessageAsync(new ReceiveMessageRequest
-            {
-                QueueUrl = blockIpQueueUrl,
-                MaxNumberOfMessages = 10,
-                WaitTimeSeconds = 15
-            }, cancellationToken);
-            if (blockMessageResponse.Messages.Any())
-            {
-                foreach (var message in blockMessageResponse.Messages)
-                {
-                    try
-                    {
-                        await BlockIpAsync(message.Body, cancellationToken);
-                    }
-                    catch (Exception e)
-                    {
-                        _logger.LogError(e, "Failed to block IP.");
-                    }
-                    await _client.DeleteMessageAsync(blockIpQueueUrl, message.ReceiptHandle, cancellationToken);
-                }
-            }
+            _client?.Dispose();
+        }
 
-            var unblockMessageResponse = await _client.ReceiveMessageAsync(new ReceiveMessageRequest
-            {
-                QueueUrl = unblockIpQueueUrl,
-                MaxNumberOfMessages = 10,
-                WaitTimeSeconds = 15
-            }, cancellationToken);
-            if (unblockMessageResponse.Messages.Any())
-            {
-                foreach (var message in unblockMessageResponse.Messages)
-                {
-                    try
-                    {
-                        await UnblockIpAsync(message.Body, cancellationToken);
-                    }
-                    catch (Exception e)
-                    {
-                        _logger.LogError(e, "Failed to unblock IP.");
-                    }
-                    await _client.DeleteMessageAsync(unblockIpQueueUrl, message.ReceiptHandle, cancellationToken);
-                }
-            }
+        protected override async Task ExecuteAsync(CancellationToken cancellationToken)
+        {
+            _client = new AmazonSQSClient(_globalSettings.Amazon.AccessKeyId,
+                _globalSettings.Amazon.AccessKeySecret, RegionEndpoint.GetBySystemName(_globalSettings.Amazon.Region));
+            var blockIpQueue = await _client.GetQueueUrlAsync("block-ip", cancellationToken);
+            var blockIpQueueUrl = blockIpQueue.QueueUrl;
+            var unblockIpQueue = await _client.GetQueueUrlAsync("unblock-ip", cancellationToken);
+            var unblockIpQueueUrl = unblockIpQueue.QueueUrl;
 
-            await Task.Delay(TimeSpan.FromSeconds(15));
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                var blockMessageResponse = await _client.ReceiveMessageAsync(new ReceiveMessageRequest
+                {
+                    QueueUrl = blockIpQueueUrl,
+                    MaxNumberOfMessages = 10,
+                    WaitTimeSeconds = 15
+                }, cancellationToken);
+                if (blockMessageResponse.Messages.Any())
+                {
+                    foreach (var message in blockMessageResponse.Messages)
+                    {
+                        try
+                        {
+                            await BlockIpAsync(message.Body, cancellationToken);
+                        }
+                        catch (Exception e)
+                        {
+                            _logger.LogError(e, "Failed to block IP.");
+                        }
+                        await _client.DeleteMessageAsync(blockIpQueueUrl, message.ReceiptHandle, cancellationToken);
+                    }
+                }
+
+                var unblockMessageResponse = await _client.ReceiveMessageAsync(new ReceiveMessageRequest
+                {
+                    QueueUrl = unblockIpQueueUrl,
+                    MaxNumberOfMessages = 10,
+                    WaitTimeSeconds = 15
+                }, cancellationToken);
+                if (unblockMessageResponse.Messages.Any())
+                {
+                    foreach (var message in unblockMessageResponse.Messages)
+                    {
+                        try
+                        {
+                            await UnblockIpAsync(message.Body, cancellationToken);
+                        }
+                        catch (Exception e)
+                        {
+                            _logger.LogError(e, "Failed to unblock IP.");
+                        }
+                        await _client.DeleteMessageAsync(unblockIpQueueUrl, message.ReceiptHandle, cancellationToken);
+                    }
+                }
+
+                await Task.Delay(TimeSpan.FromSeconds(15));
+            }
         }
     }
 }

@@ -1,34 +1,35 @@
 ﻿using Microsoft.Azure.Cosmos.Table;
 
-namespace Bit.Core.Models.Data;
-
-public class InstallationDeviceEntity : TableEntity
+namespace Bit.Core.Models.Data
 {
-    public InstallationDeviceEntity() { }
-
-    public InstallationDeviceEntity(Guid installationId, Guid deviceId)
+    public class InstallationDeviceEntity : TableEntity
     {
-        PartitionKey = installationId.ToString();
-        RowKey = deviceId.ToString();
-    }
+        public InstallationDeviceEntity() { }
 
-    public InstallationDeviceEntity(string prefixedDeviceId)
-    {
-        var parts = prefixedDeviceId.Split("_");
-        if (parts.Length < 2)
+        public InstallationDeviceEntity(Guid installationId, Guid deviceId)
         {
-            throw new ArgumentException("Not enough parts.");
+            PartitionKey = installationId.ToString();
+            RowKey = deviceId.ToString();
         }
-        if (!Guid.TryParse(parts[0], out var installationId) || !Guid.TryParse(parts[1], out var deviceId))
-        {
-            throw new ArgumentException("Could not parse parts.");
-        }
-        PartitionKey = parts[0];
-        RowKey = parts[1];
-    }
 
-    public static bool IsInstallationDeviceId(string deviceId)
-    {
-        return deviceId != null && deviceId.Length == 73 && deviceId[36] == '_';
+        public InstallationDeviceEntity(string prefixedDeviceId)
+        {
+            var parts = prefixedDeviceId.Split("_");
+            if (parts.Length < 2)
+            {
+                throw new ArgumentException("Not enough parts.");
+            }
+            if (!Guid.TryParse(parts[0], out var installationId) || !Guid.TryParse(parts[1], out var deviceId))
+            {
+                throw new ArgumentException("Could not parse parts.");
+            }
+            PartitionKey = parts[0];
+            RowKey = parts[1];
+        }
+
+        public static bool IsInstallationDeviceId(string deviceId)
+        {
+            return deviceId != null && deviceId.Length == 73 && deviceId[36] == '_';
+        }
     }
 }

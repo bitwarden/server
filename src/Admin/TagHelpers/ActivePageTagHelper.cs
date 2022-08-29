@@ -3,71 +3,72 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.AspNetCore.Razor.TagHelpers;
 
-namespace Bit.Admin.TagHelpers;
-
-[HtmlTargetElement("li", Attributes = ActiveControllerName)]
-[HtmlTargetElement("li", Attributes = ActiveActionName)]
-public class ActivePageTagHelper : TagHelper
+namespace Bit.Admin.TagHelpers
 {
-    private const string ActiveControllerName = "active-controller";
-    private const string ActiveActionName = "active-action";
-
-    private readonly IHtmlGenerator _generator;
-
-    public ActivePageTagHelper(IHtmlGenerator generator)
+    [HtmlTargetElement("li", Attributes = ActiveControllerName)]
+    [HtmlTargetElement("li", Attributes = ActiveActionName)]
+    public class ActivePageTagHelper : TagHelper
     {
-        _generator = generator;
-    }
+        private const string ActiveControllerName = "active-controller";
+        private const string ActiveActionName = "active-action";
 
-    [HtmlAttributeNotBound]
-    [ViewContext]
-    public ViewContext ViewContext { get; set; }
-    [HtmlAttributeName(ActiveControllerName)]
-    public string ActiveController { get; set; }
-    [HtmlAttributeName(ActiveActionName)]
-    public string ActiveAction { get; set; }
+        private readonly IHtmlGenerator _generator;
 
-    public override void Process(TagHelperContext context, TagHelperOutput output)
-    {
-        if (context == null)
+        public ActivePageTagHelper(IHtmlGenerator generator)
         {
-            throw new ArgumentNullException(nameof(context));
+            _generator = generator;
         }
 
-        if (output == null)
-        {
-            throw new ArgumentNullException(nameof(output));
-        }
+        [HtmlAttributeNotBound]
+        [ViewContext]
+        public ViewContext ViewContext { get; set; }
+        [HtmlAttributeName(ActiveControllerName)]
+        public string ActiveController { get; set; }
+        [HtmlAttributeName(ActiveActionName)]
+        public string ActiveAction { get; set; }
 
-        if (ActiveAction == null && ActiveController == null)
+        public override void Process(TagHelperContext context, TagHelperOutput output)
         {
-            return;
-        }
-
-        var descriptor = ViewContext.ActionDescriptor as ControllerActionDescriptor;
-        if (descriptor == null)
-        {
-            return;
-        }
-
-        var controllerMatch = ActiveMatch(ActiveController, descriptor.ControllerName);
-        var actionMatch = ActiveMatch(ActiveAction, descriptor.ActionName);
-        if (controllerMatch && actionMatch)
-        {
-            var classValue = "active";
-            if (output.Attributes["class"] != null)
+            if (context == null)
             {
-                classValue += " " + output.Attributes["class"].Value;
-                output.Attributes.Remove(output.Attributes["class"]);
+                throw new ArgumentNullException(nameof(context));
             }
 
-            output.Attributes.Add("class", classValue);
-        }
-    }
+            if (output == null)
+            {
+                throw new ArgumentNullException(nameof(output));
+            }
 
-    private bool ActiveMatch(string route, string descriptor)
-    {
-        return route == null || route == "*" ||
-            route.Split(',').Any(c => c.Trim().ToLower() == descriptor.ToLower());
+            if (ActiveAction == null && ActiveController == null)
+            {
+                return;
+            }
+
+            var descriptor = ViewContext.ActionDescriptor as ControllerActionDescriptor;
+            if (descriptor == null)
+            {
+                return;
+            }
+
+            var controllerMatch = ActiveMatch(ActiveController, descriptor.ControllerName);
+            var actionMatch = ActiveMatch(ActiveAction, descriptor.ActionName);
+            if (controllerMatch && actionMatch)
+            {
+                var classValue = "active";
+                if (output.Attributes["class"] != null)
+                {
+                    classValue += " " + output.Attributes["class"].Value;
+                    output.Attributes.Remove(output.Attributes["class"]);
+                }
+
+                output.Attributes.Add("class", classValue);
+            }
+        }
+
+        private bool ActiveMatch(string route, string descriptor)
+        {
+            return route == null || route == "*" ||
+                route.Split(',').Any(c => c.Trim().ToLower() == descriptor.ToLower());
+        }
     }
 }

@@ -1,36 +1,37 @@
 ﻿using Microsoft.AspNetCore.DataProtection;
 
-namespace Bit.Core.Tokens;
-
-public class Token
+namespace Bit.Core.Tokens
 {
-    private readonly string _token;
-
-    public Token(string token)
+    public class Token
     {
-        _token = token;
-    }
+        private readonly string _token;
 
-    public Token WithPrefix(string prefix)
-    {
-        return new Token($"{prefix}{_token}");
-    }
-
-    public Token RemovePrefix(string expectedPrefix)
-    {
-        if (!_token.StartsWith(expectedPrefix))
+        public Token(string token)
         {
-            throw new BadTokenException($"Expected prefix, {expectedPrefix}, was not present.");
+            _token = token;
         }
 
-        return new Token(_token[expectedPrefix.Length..]);
+        public Token WithPrefix(string prefix)
+        {
+            return new Token($"{prefix}{_token}");
+        }
+
+        public Token RemovePrefix(string expectedPrefix)
+        {
+            if (!_token.StartsWith(expectedPrefix))
+            {
+                throw new BadTokenException($"Expected prefix, {expectedPrefix}, was not present.");
+            }
+
+            return new Token(_token[expectedPrefix.Length..]);
+        }
+
+        public Token ProtectWith(IDataProtector dataProtector) =>
+            new(dataProtector.Protect(ToString()));
+
+        public Token UnprotectWith(IDataProtector dataProtector) =>
+            new(dataProtector.Unprotect(ToString()));
+
+        public override string ToString() => _token;
     }
-
-    public Token ProtectWith(IDataProtector dataProtector) =>
-        new(dataProtector.Protect(ToString()));
-
-    public Token UnprotectWith(IDataProtector dataProtector) =>
-        new(dataProtector.Unprotect(ToString()));
-
-    public override string ToString() => _token;
 }

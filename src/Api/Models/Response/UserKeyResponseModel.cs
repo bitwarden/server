@@ -1,16 +1,17 @@
 ﻿using Bit.Core.Models.Api;
 
-namespace Bit.Api.Models.Response;
-
-public class UserKeyResponseModel : ResponseModel
+namespace Bit.Api.Models.Response
 {
-    public UserKeyResponseModel(Guid id, string key)
-        : base("userKey")
+    public class UserKeyResponseModel : ResponseModel
     {
-        UserId = id.ToString();
-        PublicKey = key;
-    }
+        public UserKeyResponseModel(Guid id, string key)
+            : base("userKey")
+        {
+            UserId = id.ToString();
+            PublicKey = key;
+        }
 
-    public string UserId { get; set; }
-    public string PublicKey { get; set; }
+        public string UserId { get; set; }
+        public string PublicKey { get; set; }
+    }
 }

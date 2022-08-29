@@ -1,24 +1,25 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Models.Api;
 
-namespace Bit.Api.Models.Response;
-
-public class FolderResponseModel : ResponseModel
+namespace Bit.Api.Models.Response
 {
-    public FolderResponseModel(Folder folder)
-        : base("folder")
+    public class FolderResponseModel : ResponseModel
     {
-        if (folder == null)
+        public FolderResponseModel(Folder folder)
+            : base("folder")
         {
-            throw new ArgumentNullException(nameof(folder));
+            if (folder == null)
+            {
+                throw new ArgumentNullException(nameof(folder));
+            }
+
+            Id = folder.Id.ToString();
+            Name = folder.Name;
+            RevisionDate = folder.RevisionDate;
         }
 
-        Id = folder.Id.ToString();
-        Name = folder.Name;
-        RevisionDate = folder.RevisionDate;
+        public string Id { get; set; }
+        public string Name { get; set; }
+        public DateTime RevisionDate { get; set; }
     }
-
-    public string Id { get; set; }
-    public string Name { get; set; }
-    public DateTime RevisionDate { get; set; }
 }

@@ -1,6 +1,7 @@
-﻿namespace Bit.Core.Models.Mail.FamiliesForEnterprise;
-
-public class FamiliesForEnterpriseSponsorshipRevertingViewModel : BaseMailModel
+﻿namespace Bit.Core.Models.Mail.FamiliesForEnterprise
 {
-    public DateTime ExpirationDate { get; set; }
+    public class FamiliesForEnterpriseSponsorshipRevertingViewModel : BaseMailModel
+    {
+        public DateTime ExpirationDate { get; set; }
+    }
 }

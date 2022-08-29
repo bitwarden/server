@@ -2,30 +2,31 @@
 using Bit.Core.Enums;
 using Bit.Core.Models.Api;
 
-namespace Bit.Api.Models.Response.TwoFactor;
-
-public class TwoFactorEmailResponseModel : ResponseModel
+namespace Bit.Api.Models.Response.TwoFactor
 {
-    public TwoFactorEmailResponseModel(User user)
-        : base("twoFactorEmail")
+    public class TwoFactorEmailResponseModel : ResponseModel
     {
-        if (user == null)
+        public TwoFactorEmailResponseModel(User user)
+            : base("twoFactorEmail")
         {
-            throw new ArgumentNullException(nameof(user));
+            if (user == null)
+            {
+                throw new ArgumentNullException(nameof(user));
+            }
+
+            var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Email);
+            if (provider?.MetaData?.ContainsKey("Email") ?? false)
+            {
+                Email = (string)provider.MetaData["Email"];
+                Enabled = provider.Enabled;
+            }
+            else
+            {
+                Enabled = false;
+            }
         }
 
-        var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Email);
-        if (provider?.MetaData?.ContainsKey("Email") ?? false)
-        {
-            Email = (string)provider.MetaData["Email"];
-            Enabled = provider.Enabled;
-        }
-        else
-        {
-            Enabled = false;
-        }
+        public bool Enabled { get; set; }
+        public string Email { get; set; }
     }
-
-    public bool Enabled { get; set; }
-    public string Email { get; set; }
 }

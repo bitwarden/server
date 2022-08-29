@@ -1,16 +1,17 @@
-﻿namespace Bit.Core.Models.Data;
-
-public class SendTextData : SendData
+﻿namespace Bit.Core.Models.Data
 {
-    public SendTextData() { }
-
-    public SendTextData(string name, string notes, string text, bool hidden)
-        : base(name, notes)
+    public class SendTextData : SendData
     {
-        Text = text;
-        Hidden = hidden;
-    }
+        public SendTextData() { }
 
-    public string Text { get; set; }
-    public bool Hidden { get; set; }
+        public SendTextData(string name, string notes, string text, bool hidden)
+            : base(name, notes)
+        {
+            Text = text;
+            Hidden = hidden;
+        }
+
+        public string Text { get; set; }
+        public bool Hidden { get; set; }
+    }
 }

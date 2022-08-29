@@ -1,7 +1,8 @@
-﻿namespace Bit.Core.Enums.Provider;
-
-public enum ProviderUserType : byte
+﻿namespace Bit.Core.Enums.Provider
 {
-    ProviderAdmin = 0,
-    ServiceUser = 1,
+    public enum ProviderUserType : byte
+    {
+        ProviderAdmin = 0,
+        ServiceUser = 1,
+    }
 }

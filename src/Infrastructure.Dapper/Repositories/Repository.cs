@@ -4,91 +4,92 @@ using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Dapper;
 
-namespace Bit.Infrastructure.Dapper.Repositories;
-
-public abstract class Repository<T, TId> : BaseRepository, IRepository<T, TId>
-    where TId : IEquatable<TId>
-    where T : class, ITableObject<TId>
+namespace Bit.Infrastructure.Dapper.Repositories
 {
-    public Repository(string connectionString, string readOnlyConnectionString,
-        string schema = null, string table = null)
-        : base(connectionString, readOnlyConnectionString)
+    public abstract class Repository<T, TId> : BaseRepository, IRepository<T, TId>
+        where TId : IEquatable<TId>
+        where T : class, ITableObject<TId>
     {
-        if (!string.IsNullOrWhiteSpace(table))
+        public Repository(string connectionString, string readOnlyConnectionString,
+            string schema = null, string table = null)
+            : base(connectionString, readOnlyConnectionString)
         {
-            Table = table;
+            if (!string.IsNullOrWhiteSpace(table))
+            {
+                Table = table;
+            }
+
+            if (!string.IsNullOrWhiteSpace(schema))
+            {
+                Schema = schema;
+            }
         }
 
-        if (!string.IsNullOrWhiteSpace(schema))
+        protected string Schema { get; private set; } = "dbo";
+        protected string Table { get; private set; } = typeof(T).Name;
+
+        public virtual async Task<T> GetByIdAsync(TId id)
         {
-            Schema = schema;
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<T>(
+                    $"[{Schema}].[{Table}_ReadById]",
+                    new { Id = id },
+                    commandType: CommandType.StoredProcedure);
+
+                return results.SingleOrDefault();
+            }
         }
-    }
 
-    protected string Schema { get; private set; } = "dbo";
-    protected string Table { get; private set; } = typeof(T).Name;
-
-    public virtual async Task<T> GetByIdAsync(TId id)
-    {
-        using (var connection = new SqlConnection(ConnectionString))
+        public virtual async Task<T> CreateAsync(T obj)
         {
-            var results = await connection.QueryAsync<T>(
-                $"[{Schema}].[{Table}_ReadById]",
-                new { Id = id },
-                commandType: CommandType.StoredProcedure);
-
-            return results.SingleOrDefault();
+            obj.SetNewId();
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                var parameters = new DynamicParameters();
+                parameters.AddDynamicParams(obj);
+                parameters.Add("Id", obj.Id, direction: ParameterDirection.InputOutput);
+                var results = await connection.ExecuteAsync(
+                    $"[{Schema}].[{Table}_Create]",
+                    parameters,
+                    commandType: CommandType.StoredProcedure);
+                obj.Id = parameters.Get<TId>(nameof(obj.Id));
+            }
+            return obj;
         }
-    }
 
-    public virtual async Task<T> CreateAsync(T obj)
-    {
-        obj.SetNewId();
-        using (var connection = new SqlConnection(ConnectionString))
+        public virtual async Task ReplaceAsync(T obj)
         {
-            var parameters = new DynamicParameters();
-            parameters.AddDynamicParams(obj);
-            parameters.Add("Id", obj.Id, direction: ParameterDirection.InputOutput);
-            var results = await connection.ExecuteAsync(
-                $"[{Schema}].[{Table}_Create]",
-                parameters,
-                commandType: CommandType.StoredProcedure);
-            obj.Id = parameters.Get<TId>(nameof(obj.Id));
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.ExecuteAsync(
+                    $"[{Schema}].[{Table}_Update]",
+                    obj,
+                    commandType: CommandType.StoredProcedure);
+            }
         }
-        return obj;
-    }
 
-    public virtual async Task ReplaceAsync(T obj)
-    {
-        using (var connection = new SqlConnection(ConnectionString))
+        public virtual async Task UpsertAsync(T obj)
         {
-            var results = await connection.ExecuteAsync(
-                $"[{Schema}].[{Table}_Update]",
-                obj,
-                commandType: CommandType.StoredProcedure);
+            if (obj.Id.Equals(default(TId)))
+            {
+                await CreateAsync(obj);
+            }
+            else
+            {
+                await ReplaceAsync(obj);
+            }
         }
-    }
 
-    public virtual async Task UpsertAsync(T obj)
-    {
-        if (obj.Id.Equals(default(TId)))
+        public virtual async Task DeleteAsync(T obj)
         {
-            await CreateAsync(obj);
-        }
-        else
-        {
-            await ReplaceAsync(obj);
-        }
-    }
-
-    public virtual async Task DeleteAsync(T obj)
-    {
-        using (var connection = new SqlConnection(ConnectionString))
-        {
-            await connection.ExecuteAsync(
-                $"[{Schema}].[{Table}_DeleteById]",
-                new { Id = obj.Id },
-                commandType: CommandType.StoredProcedure);
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                await connection.ExecuteAsync(
+                    $"[{Schema}].[{Table}_DeleteById]",
+                    new { Id = obj.Id },
+                    commandType: CommandType.StoredProcedure);
+            }
         }
     }
 }

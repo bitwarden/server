@@ -1,6 +1,7 @@
-﻿namespace Bit.Core.Models.Mail;
-
-public class OrganizationUserRemovedForPolicyTwoStepViewModel : BaseMailModel
+﻿namespace Bit.Core.Models.Mail
 {
-    public string OrganizationName { get; set; }
+    public class OrganizationUserRemovedForPolicyTwoStepViewModel : BaseMailModel
+    {
+        public string OrganizationName { get; set; }
+    }
 }

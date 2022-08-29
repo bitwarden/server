@@ -1,17 +1,18 @@
 ﻿using AutoMapper;
 
-namespace Bit.Infrastructure.EntityFramework.Models;
-
-public class Transaction : Core.Entities.Transaction
+namespace Bit.Infrastructure.EntityFramework.Models
 {
-    public virtual Organization Organization { get; set; }
-    public virtual User User { get; set; }
-}
-
-public class TransactionMapperProfile : Profile
-{
-    public TransactionMapperProfile()
+    public class Transaction : Core.Entities.Transaction
     {
-        CreateMap<Core.Entities.Transaction, Transaction>().ReverseMap();
+        public virtual Organization Organization { get; set; }
+        public virtual User User { get; set; }
+    }
+
+    public class TransactionMapperProfile : Profile
+    {
+        public TransactionMapperProfile()
+        {
+            CreateMap<Core.Entities.Transaction, Transaction>().ReverseMap();
+        }
     }
 }

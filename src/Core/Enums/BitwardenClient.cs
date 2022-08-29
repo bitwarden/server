@@ -1,12 +1,13 @@
-﻿namespace Bit.Core.Enums;
-
-public static class BitwardenClient
+﻿namespace Bit.Core.Enums
 {
-    public const string
-        Web = "web",
-        Browser = "browser",
-        Desktop = "desktop",
-        Mobile = "mobile",
-        Cli = "cli",
-        DirectoryConnector = "connector";
+    public static class BitwardenClient
+    {
+        public const string
+            Web = "web",
+            Browser = "browser",
+            Desktop = "desktop",
+            Mobile = "mobile",
+            Cli = "cli",
+            DirectoryConnector = "connector";
+    }
 }

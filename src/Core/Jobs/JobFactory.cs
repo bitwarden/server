@@ -1,25 +1,26 @@
 ﻿using Quartz;
 using Quartz.Spi;
 
-namespace Bit.Core.Jobs;
-
-public class JobFactory : IJobFactory
+namespace Bit.Core.Jobs
 {
-    private readonly IServiceProvider _container;
-
-    public JobFactory(IServiceProvider container)
+    public class JobFactory : IJobFactory
     {
-        _container = container;
-    }
+        private readonly IServiceProvider _container;
 
-    public IJob NewJob(TriggerFiredBundle bundle, IScheduler scheduler)
-    {
-        return _container.GetService(bundle.JobDetail.JobType) as IJob;
-    }
+        public JobFactory(IServiceProvider container)
+        {
+            _container = container;
+        }
 
-    public void ReturnJob(IJob job)
-    {
-        var disposable = job as IDisposable;
-        disposable?.Dispose();
+        public IJob NewJob(TriggerFiredBundle bundle, IScheduler scheduler)
+        {
+            return _container.GetService(bundle.JobDetail.JobType) as IJob;
+        }
+
+        public void ReturnJob(IJob job)
+        {
+            var disposable = job as IDisposable;
+            disposable?.Dispose();
+        }
     }
 }

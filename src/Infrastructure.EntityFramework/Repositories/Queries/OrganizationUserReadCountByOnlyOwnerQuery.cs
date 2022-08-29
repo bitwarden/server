@@ -1,36 +1,37 @@
 ﻿using Bit.Core.Enums;
 using Bit.Infrastructure.EntityFramework.Models;
 
-namespace Bit.Infrastructure.EntityFramework.Repositories.Queries;
-
-public class OrganizationUserReadCountByOnlyOwnerQuery : IQuery<OrganizationUser>
+namespace Bit.Infrastructure.EntityFramework.Repositories.Queries
 {
-    private readonly Guid _userId;
-
-    public OrganizationUserReadCountByOnlyOwnerQuery(Guid userId)
+    public class OrganizationUserReadCountByOnlyOwnerQuery : IQuery<OrganizationUser>
     {
-        _userId = userId;
-    }
+        private readonly Guid _userId;
 
-    public IQueryable<OrganizationUser> Run(DatabaseContext dbContext)
-    {
-        var owners = from ou in dbContext.OrganizationUsers
-                     where ou.Type == OrganizationUserType.Owner &&
-                         ou.Status == OrganizationUserStatusType.Confirmed
-                     group ou by ou.OrganizationId into g
-                     select new
-                     {
-                         OrgUser = g.Select(x => new { x.UserId, x.Id }).FirstOrDefault(),
-                         ConfirmedOwnerCount = g.Count(),
-                     };
+        public OrganizationUserReadCountByOnlyOwnerQuery(Guid userId)
+        {
+            _userId = userId;
+        }
 
-        var query = from owner in owners
-                    join ou in dbContext.OrganizationUsers
-                        on owner.OrgUser.Id equals ou.Id
-                    where owner.OrgUser.UserId == _userId &&
-                        owner.ConfirmedOwnerCount == 1
-                    select ou;
+        public IQueryable<OrganizationUser> Run(DatabaseContext dbContext)
+        {
+            var owners = from ou in dbContext.OrganizationUsers
+                         where ou.Type == OrganizationUserType.Owner &&
+                             ou.Status == OrganizationUserStatusType.Confirmed
+                         group ou by ou.OrganizationId into g
+                         select new
+                         {
+                             OrgUser = g.Select(x => new { x.UserId, x.Id }).FirstOrDefault(),
+                             ConfirmedOwnerCount = g.Count(),
+                         };
 
-        return query;
+            var query = from owner in owners
+                        join ou in dbContext.OrganizationUsers
+                            on owner.OrgUser.Id equals ou.Id
+                        where owner.OrgUser.UserId == _userId &&
+                            owner.ConfirmedOwnerCount == 1
+                        select ou;
+
+            return query;
+        }
     }
 }

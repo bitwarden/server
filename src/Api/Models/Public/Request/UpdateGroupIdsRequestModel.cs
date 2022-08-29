@@ -1,9 +1,10 @@
-﻿namespace Bit.Api.Models.Public.Request;
-
-public class UpdateGroupIdsRequestModel
+﻿namespace Bit.Api.Models.Public.Request
 {
-    /// <summary>
-    /// The associated group ids that this object can access.
-    /// </summary>
-    public IEnumerable<Guid> GroupIds { get; set; }
+    public class UpdateGroupIdsRequestModel
+    {
+        /// <summary>
+        /// The associated group ids that this object can access.
+        /// </summary>
+        public IEnumerable<Guid> GroupIds { get; set; }
+    }
 }

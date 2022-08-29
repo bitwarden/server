@@ -1,15 +1,16 @@
 ﻿using Bit.Core.Models.Data;
 
-namespace Bit.Api.Models.Public.Request;
-
-public class AssociationWithPermissionsRequestModel : AssociationWithPermissionsBaseModel
+namespace Bit.Api.Models.Public.Request
 {
-    public SelectionReadOnly ToSelectionReadOnly()
+    public class AssociationWithPermissionsRequestModel : AssociationWithPermissionsBaseModel
     {
-        return new SelectionReadOnly
+        public SelectionReadOnly ToSelectionReadOnly()
         {
-            Id = Id.Value,
-            ReadOnly = ReadOnly.Value
-        };
+            return new SelectionReadOnly
+            {
+                Id = Id.Value,
+                ReadOnly = ReadOnly.Value
+            };
+        }
     }
 }

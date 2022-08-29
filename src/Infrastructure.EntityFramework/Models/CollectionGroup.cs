@@ -1,17 +1,18 @@
 ﻿using AutoMapper;
 
-namespace Bit.Infrastructure.EntityFramework.Models;
-
-public class CollectionGroup : Core.Entities.CollectionGroup
+namespace Bit.Infrastructure.EntityFramework.Models
 {
-    public virtual Collection Collection { get; set; }
-    public virtual Group Group { get; set; }
-}
-
-public class CollectionGroupMapperProfile : Profile
-{
-    public CollectionGroupMapperProfile()
+    public class CollectionGroup : Core.Entities.CollectionGroup
     {
-        CreateMap<Core.Entities.CollectionGroup, CollectionGroup>().ReverseMap();
+        public virtual Collection Collection { get; set; }
+        public virtual Group Group { get; set; }
+    }
+
+    public class CollectionGroupMapperProfile : Profile
+    {
+        public CollectionGroupMapperProfile()
+        {
+            CreateMap<Core.Entities.CollectionGroup, CollectionGroup>().ReverseMap();
+        }
     }
 }

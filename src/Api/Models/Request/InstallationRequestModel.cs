@@ -2,22 +2,23 @@
 using Bit.Core.Entities;
 using Bit.Core.Utilities;
 
-namespace Bit.Api.Models.Request;
-
-public class InstallationRequestModel
+namespace Bit.Api.Models.Request
 {
-    [Required]
-    [EmailAddress]
-    [StringLength(256)]
-    public string Email { get; set; }
-
-    public Installation ToInstallation()
+    public class InstallationRequestModel
     {
-        return new Installation
+        [Required]
+        [EmailAddress]
+        [StringLength(256)]
+        public string Email { get; set; }
+
+        public Installation ToInstallation()
         {
-            Key = CoreHelpers.SecureRandomString(20),
-            Email = Email,
-            Enabled = true
-        };
+            return new Installation
+            {
+                Key = CoreHelpers.SecureRandomString(20),
+                Email = Email,
+                Enabled = true
+            };
+        }
     }
 }

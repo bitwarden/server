@@ -1,12 +1,13 @@
-﻿namespace Bit.Api.Models.Response;
-
-public class OrganizationExportResponseModel
+﻿namespace Bit.Api.Models.Response
 {
-    public OrganizationExportResponseModel()
+    public class OrganizationExportResponseModel
     {
+        public OrganizationExportResponseModel()
+        {
+        }
+
+        public ListResponseModel<CollectionResponseModel> Collections { get; set; }
+
+        public ListResponseModel<CipherMiniDetailsResponseModel> Ciphers { get; set; }
     }
-
-    public ListResponseModel<CollectionResponseModel> Collections { get; set; }
-
-    public ListResponseModel<CipherMiniDetailsResponseModel> Ciphers { get; set; }
 }

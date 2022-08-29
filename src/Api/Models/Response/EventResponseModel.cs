@@ -2,50 +2,51 @@
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Data;
 
-namespace Bit.Api.Models.Response;
-
-public class EventResponseModel : ResponseModel
+namespace Bit.Api.Models.Response
 {
-    public EventResponseModel(IEvent ev)
-        : base("event")
+    public class EventResponseModel : ResponseModel
     {
-        if (ev == null)
+        public EventResponseModel(IEvent ev)
+            : base("event")
         {
-            throw new ArgumentNullException(nameof(ev));
+            if (ev == null)
+            {
+                throw new ArgumentNullException(nameof(ev));
+            }
+
+            Type = ev.Type;
+            UserId = ev.UserId;
+            OrganizationId = ev.OrganizationId;
+            ProviderId = ev.ProviderId;
+            CipherId = ev.CipherId;
+            CollectionId = ev.CollectionId;
+            GroupId = ev.GroupId;
+            PolicyId = ev.PolicyId;
+            OrganizationUserId = ev.OrganizationUserId;
+            ProviderUserId = ev.ProviderUserId;
+            ProviderOrganizationId = ev.ProviderOrganizationId;
+            ActingUserId = ev.ActingUserId;
+            Date = ev.Date;
+            DeviceType = ev.DeviceType;
+            IpAddress = ev.IpAddress;
+            InstallationId = ev.InstallationId;
         }
 
-        Type = ev.Type;
-        UserId = ev.UserId;
-        OrganizationId = ev.OrganizationId;
-        ProviderId = ev.ProviderId;
-        CipherId = ev.CipherId;
-        CollectionId = ev.CollectionId;
-        GroupId = ev.GroupId;
-        PolicyId = ev.PolicyId;
-        OrganizationUserId = ev.OrganizationUserId;
-        ProviderUserId = ev.ProviderUserId;
-        ProviderOrganizationId = ev.ProviderOrganizationId;
-        ActingUserId = ev.ActingUserId;
-        Date = ev.Date;
-        DeviceType = ev.DeviceType;
-        IpAddress = ev.IpAddress;
-        InstallationId = ev.InstallationId;
+        public EventType Type { get; set; }
+        public Guid? UserId { get; set; }
+        public Guid? OrganizationId { get; set; }
+        public Guid? ProviderId { get; set; }
+        public Guid? CipherId { get; set; }
+        public Guid? CollectionId { get; set; }
+        public Guid? GroupId { get; set; }
+        public Guid? PolicyId { get; set; }
+        public Guid? OrganizationUserId { get; set; }
+        public Guid? ProviderUserId { get; set; }
+        public Guid? ProviderOrganizationId { get; set; }
+        public Guid? ActingUserId { get; set; }
+        public Guid? InstallationId { get; set; }
+        public DateTime Date { get; set; }
+        public DeviceType? DeviceType { get; set; }
+        public string IpAddress { get; set; }
     }
-
-    public EventType Type { get; set; }
-    public Guid? UserId { get; set; }
-    public Guid? OrganizationId { get; set; }
-    public Guid? ProviderId { get; set; }
-    public Guid? CipherId { get; set; }
-    public Guid? CollectionId { get; set; }
-    public Guid? GroupId { get; set; }
-    public Guid? PolicyId { get; set; }
-    public Guid? OrganizationUserId { get; set; }
-    public Guid? ProviderUserId { get; set; }
-    public Guid? ProviderOrganizationId { get; set; }
-    public Guid? ActingUserId { get; set; }
-    public Guid? InstallationId { get; set; }
-    public DateTime Date { get; set; }
-    public DeviceType? DeviceType { get; set; }
-    public string IpAddress { get; set; }
 }

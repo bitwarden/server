@@ -1,7 +1,8 @@
-﻿namespace Bit.Core.Enums;
-
-public enum SsoType : byte
+﻿namespace Bit.Core.Enums
 {
-    OpenIdConnect = 1,
-    Saml2 = 2,
+    public enum SsoType : byte
+    {
+        OpenIdConnect = 1,
+        Saml2 = 2,
+    }
 }

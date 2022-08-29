@@ -4,47 +4,48 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations.OrganizationConnections;
 using Bit.Core.Utilities;
 
-namespace Bit.Api.Models.Request.Organizations;
-
-public class OrganizationConnectionRequestModel
+namespace Bit.Api.Models.Request.Organizations
 {
-    public OrganizationConnectionType Type { get; set; }
-    public Guid OrganizationId { get; set; }
-    public bool Enabled { get; set; }
-    public JsonDocument Config { get; set; }
-
-    public OrganizationConnectionRequestModel() { }
-}
-
-
-public class OrganizationConnectionRequestModel<T> : OrganizationConnectionRequestModel where T : new()
-{
-    public T ParsedConfig { get; private set; }
-
-    public OrganizationConnectionRequestModel(OrganizationConnectionRequestModel model)
+    public class OrganizationConnectionRequestModel
     {
-        Type = model.Type;
-        OrganizationId = model.OrganizationId;
-        Enabled = model.Enabled;
-        Config = model.Config;
+        public OrganizationConnectionType Type { get; set; }
+        public Guid OrganizationId { get; set; }
+        public bool Enabled { get; set; }
+        public JsonDocument Config { get; set; }
 
-        try
-        {
-            ParsedConfig = model.Config.ToObject<T>(JsonHelpers.IgnoreCase);
-        }
-        catch (JsonException)
-        {
-            throw new BadRequestException("Organization Connection configuration malformed");
-        }
+        public OrganizationConnectionRequestModel() { }
     }
 
-    public OrganizationConnectionData<T> ToData(Guid? id = null) =>
-        new()
+
+    public class OrganizationConnectionRequestModel<T> : OrganizationConnectionRequestModel where T : new()
+    {
+        public T ParsedConfig { get; private set; }
+
+        public OrganizationConnectionRequestModel(OrganizationConnectionRequestModel model)
         {
-            Id = id,
-            Type = Type,
-            OrganizationId = OrganizationId,
-            Enabled = Enabled,
-            Config = ParsedConfig,
-        };
+            Type = model.Type;
+            OrganizationId = model.OrganizationId;
+            Enabled = model.Enabled;
+            Config = model.Config;
+
+            try
+            {
+                ParsedConfig = model.Config.ToObject<T>(JsonHelpers.IgnoreCase);
+            }
+            catch (JsonException)
+            {
+                throw new BadRequestException("Organization Connection configuration malformed");
+            }
+        }
+
+        public OrganizationConnectionData<T> ToData(Guid? id = null) =>
+            new()
+            {
+                Id = id,
+                Type = Type,
+                OrganizationId = OrganizationId,
+                Enabled = Enabled,
+                Config = ParsedConfig,
+            };
+    }
 }

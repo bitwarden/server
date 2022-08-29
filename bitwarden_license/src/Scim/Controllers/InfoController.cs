@@ -2,21 +2,22 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Bit.Scim.Controllers;
-
-[AllowAnonymous]
-public class InfoController : Controller
+namespace Bit.Scim.Controllers
 {
-    [HttpGet("~/alive")]
-    [HttpGet("~/now")]
-    public DateTime GetAlive()
+    [AllowAnonymous]
+    public class InfoController : Controller
     {
-        return DateTime.UtcNow;
-    }
+        [HttpGet("~/alive")]
+        [HttpGet("~/now")]
+        public DateTime GetAlive()
+        {
+            return DateTime.UtcNow;
+        }
 
-    [HttpGet("~/version")]
-    public JsonResult GetVersion()
-    {
-        return Json(CoreHelpers.GetVersion());
+        [HttpGet("~/version")]
+        public JsonResult GetVersion()
+        {
+            return Json(CoreHelpers.GetVersion());
+        }
     }
 }

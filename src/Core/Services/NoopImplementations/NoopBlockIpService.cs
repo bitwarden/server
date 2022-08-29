@@ -1,10 +1,11 @@
-﻿namespace Bit.Core.Services;
-
-public class NoopBlockIpService : IBlockIpService
+﻿namespace Bit.Core.Services
 {
-    public Task BlockIpAsync(string ipAddress, bool permanentBlock)
+    public class NoopBlockIpService : IBlockIpService
     {
-        // Do nothing
-        return Task.FromResult(0);
+        public Task BlockIpAsync(string ipAddress, bool permanentBlock)
+        {
+            // Do nothing
+            return Task.FromResult(0);
+        }
     }
 }

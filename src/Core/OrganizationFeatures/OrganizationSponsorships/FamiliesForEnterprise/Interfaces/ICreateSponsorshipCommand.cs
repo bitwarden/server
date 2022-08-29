@@ -1,10 +1,11 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
 
-namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
-
-public interface ICreateSponsorshipCommand
+namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces
 {
-    Task<OrganizationSponsorship> CreateSponsorshipAsync(Organization sponsoringOrg, OrganizationUser sponsoringOrgUser,
-        PlanSponsorshipType sponsorshipType, string sponsoredEmail, string friendlyName);
+    public interface ICreateSponsorshipCommand
+    {
+        Task<OrganizationSponsorship> CreateSponsorshipAsync(Organization sponsoringOrg, OrganizationUser sponsoringOrgUser,
+            PlanSponsorshipType sponsorshipType, string sponsoredEmail, string friendlyName);
+    }
 }

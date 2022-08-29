@@ -1,6 +1,7 @@
-﻿namespace Bit.Sso.Models;
-
-public class RedirectViewModel
+﻿namespace Bit.Sso.Models
 {
-    public string RedirectUrl { get; set; }
+    public class RedirectViewModel
+    {
+        public string RedirectUrl { get; set; }
+    }
 }

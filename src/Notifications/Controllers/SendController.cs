@@ -4,28 +4,29 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 
-namespace Bit.Notifications;
-
-[Authorize("Internal")]
-public class SendController : Controller
+namespace Bit.Notifications
 {
-    private readonly IHubContext<NotificationsHub> _hubContext;
-
-    public SendController(IHubContext<NotificationsHub> hubContext)
+    [Authorize("Internal")]
+    public class SendController : Controller
     {
-        _hubContext = hubContext;
-    }
+        private readonly IHubContext<NotificationsHub> _hubContext;
 
-    [HttpPost("~/send")]
-    [SelfHosted(SelfHostedOnly = true)]
-    public async Task PostSend()
-    {
-        using (var reader = new StreamReader(Request.Body, Encoding.UTF8))
+        public SendController(IHubContext<NotificationsHub> hubContext)
         {
-            var notificationJson = await reader.ReadToEndAsync();
-            if (!string.IsNullOrWhiteSpace(notificationJson))
+            _hubContext = hubContext;
+        }
+
+        [HttpPost("~/send")]
+        [SelfHosted(SelfHostedOnly = true)]
+        public async Task PostSend()
+        {
+            using (var reader = new StreamReader(Request.Body, Encoding.UTF8))
             {
-                await HubHelpers.SendNotificationToHubAsync(notificationJson, _hubContext);
+                var notificationJson = await reader.ReadToEndAsync();
+                if (!string.IsNullOrWhiteSpace(notificationJson))
+                {
+                    await HubHelpers.SendNotificationToHubAsync(notificationJson, _hubContext);
+                }
             }
         }
     }

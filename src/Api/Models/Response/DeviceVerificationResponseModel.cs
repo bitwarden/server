@@ -1,16 +1,17 @@
 ﻿using Bit.Core.Models.Api;
 
-namespace Bit.Api.Models.Response;
-
-public class DeviceVerificationResponseModel : ResponseModel
+namespace Bit.Api.Models.Response
 {
-    public DeviceVerificationResponseModel(bool isDeviceVerificationSectionEnabled, bool unknownDeviceVerificationEnabled)
-        : base("deviceVerificationSettings")
+    public class DeviceVerificationResponseModel : ResponseModel
     {
-        IsDeviceVerificationSectionEnabled = isDeviceVerificationSectionEnabled;
-        UnknownDeviceVerificationEnabled = unknownDeviceVerificationEnabled;
-    }
+        public DeviceVerificationResponseModel(bool isDeviceVerificationSectionEnabled, bool unknownDeviceVerificationEnabled)
+            : base("deviceVerificationSettings")
+        {
+            IsDeviceVerificationSectionEnabled = isDeviceVerificationSectionEnabled;
+            UnknownDeviceVerificationEnabled = unknownDeviceVerificationEnabled;
+        }
 
-    public bool IsDeviceVerificationSectionEnabled { get; }
-    public bool UnknownDeviceVerificationEnabled { get; }
+        public bool IsDeviceVerificationSectionEnabled { get; }
+        public bool UnknownDeviceVerificationEnabled { get; }
+    }
 }

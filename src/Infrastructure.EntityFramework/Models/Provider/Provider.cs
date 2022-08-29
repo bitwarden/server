@@ -1,15 +1,16 @@
 ﻿using AutoMapper;
 
-namespace Bit.Infrastructure.EntityFramework.Models;
-
-public class Provider : Core.Entities.Provider.Provider
+namespace Bit.Infrastructure.EntityFramework.Models
 {
-}
-
-public class ProviderMapperProfile : Profile
-{
-    public ProviderMapperProfile()
+    public class Provider : Core.Entities.Provider.Provider
     {
-        CreateMap<Core.Entities.Provider.Provider, Provider>().ReverseMap();
+    }
+
+    public class ProviderMapperProfile : Profile
+    {
+        public ProviderMapperProfile()
+        {
+            CreateMap<Core.Entities.Provider.Provider, Provider>().ReverseMap();
+        }
     }
 }

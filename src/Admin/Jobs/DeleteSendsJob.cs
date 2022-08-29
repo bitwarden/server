@@ -4,37 +4,38 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Quartz;
 
-namespace Bit.Admin.Jobs;
-
-public class DeleteSendsJob : BaseJob
+namespace Bit.Admin.Jobs
 {
-    private readonly ISendRepository _sendRepository;
-    private readonly IServiceProvider _serviceProvider;
-
-    public DeleteSendsJob(
-        ISendRepository sendRepository,
-        IServiceProvider serviceProvider,
-        ILogger<DatabaseExpiredGrantsJob> logger)
-        : base(logger)
+    public class DeleteSendsJob : BaseJob
     {
-        _sendRepository = sendRepository;
-        _serviceProvider = serviceProvider;
-    }
+        private readonly ISendRepository _sendRepository;
+        private readonly IServiceProvider _serviceProvider;
 
-    protected async override Task ExecuteJobAsync(IJobExecutionContext context)
-    {
-        var sends = await _sendRepository.GetManyByDeletionDateAsync(DateTime.UtcNow);
-        _logger.LogInformation(Constants.BypassFiltersEventId, "Deleting {0} sends.", sends.Count);
-        if (!sends.Any())
+        public DeleteSendsJob(
+            ISendRepository sendRepository,
+            IServiceProvider serviceProvider,
+            ILogger<DatabaseExpiredGrantsJob> logger)
+            : base(logger)
         {
-            return;
+            _sendRepository = sendRepository;
+            _serviceProvider = serviceProvider;
         }
-        using (var scope = _serviceProvider.CreateScope())
+
+        protected async override Task ExecuteJobAsync(IJobExecutionContext context)
         {
-            var sendService = scope.ServiceProvider.GetRequiredService<ISendService>();
-            foreach (var send in sends)
+            var sends = await _sendRepository.GetManyByDeletionDateAsync(DateTime.UtcNow);
+            _logger.LogInformation(Constants.BypassFiltersEventId, "Deleting {0} sends.", sends.Count);
+            if (!sends.Any())
             {
-                await sendService.DeleteSendAsync(send);
+                return;
+            }
+            using (var scope = _serviceProvider.CreateScope())
+            {
+                var sendService = scope.ServiceProvider.GetRequiredService<ISendService>();
+                foreach (var send in sends)
+                {
+                    await sendService.DeleteSendAsync(send);
+                }
             }
         }
     }

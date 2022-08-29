@@ -6,51 +6,52 @@ using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 
-namespace Bit.Infrastructure.EFIntegration.Test.AutoFixture;
-
-internal class EventBuilder : ISpecimenBuilder
+namespace Bit.Infrastructure.EFIntegration.Test.AutoFixture
 {
-    public object Create(object request, ISpecimenContext context)
+    internal class EventBuilder : ISpecimenBuilder
     {
-        if (context == null)
+        public object Create(object request, ISpecimenContext context)
         {
-            throw new ArgumentNullException(nameof(context));
-        }
+            if (context == null)
+            {
+                throw new ArgumentNullException(nameof(context));
+            }
 
-        var type = request as Type;
-        if (type == null || type != typeof(Event))
-        {
-            return new NoSpecimen();
-        }
+            var type = request as Type;
+            if (type == null || type != typeof(Event))
+            {
+                return new NoSpecimen();
+            }
 
-        var fixture = new Fixture();
-        fixture.Customizations.Insert(0, new MaxLengthStringRelay());
-        var obj = fixture.WithAutoNSubstitutions().Create<Event>();
-        return obj;
+            var fixture = new Fixture();
+            fixture.Customizations.Insert(0, new MaxLengthStringRelay());
+            var obj = fixture.WithAutoNSubstitutions().Create<Event>();
+            return obj;
+        }
     }
-}
 
-internal class EfEvent : ICustomization
-{
-    public void Customize(IFixture fixture)
+    internal class EfEvent : ICustomization
     {
-        fixture.Customizations.Add(new IgnoreVirtualMembersCustomization());
-        fixture.Customizations.Add(new GlobalSettingsBuilder());
-        fixture.Customizations.Add(new EventBuilder());
-        fixture.Customizations.Add(new EfRepositoryListBuilder<EventRepository>());
+        public void Customize(IFixture fixture)
+        {
+            fixture.Customizations.Add(new IgnoreVirtualMembersCustomization());
+            fixture.Customizations.Add(new GlobalSettingsBuilder());
+            fixture.Customizations.Add(new EventBuilder());
+            fixture.Customizations.Add(new EfRepositoryListBuilder<EventRepository>());
+        }
     }
-}
 
-internal class EfEventAutoDataAttribute : CustomAutoDataAttribute
-{
-    public EfEventAutoDataAttribute() : base(new SutProviderCustomization(), new EfEvent())
-    { }
-}
+    internal class EfEventAutoDataAttribute : CustomAutoDataAttribute
+    {
+        public EfEventAutoDataAttribute() : base(new SutProviderCustomization(), new EfEvent())
+        { }
+    }
 
-internal class InlineEfEventAutoDataAttribute : InlineCustomAutoDataAttribute
-{
-    public InlineEfEventAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
-        typeof(EfEvent) }, values)
-    { }
+    internal class InlineEfEventAutoDataAttribute : InlineCustomAutoDataAttribute
+    {
+        public InlineEfEventAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
+            typeof(EfEvent) }, values)
+        { }
+    }
 }
 

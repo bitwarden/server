@@ -3,82 +3,83 @@ using Bit.Core.Models.Data;
 using Bit.Core.Settings;
 using Microsoft.Azure.Cosmos.Table;
 
-namespace Bit.Core.Repositories.TableStorage;
-
-public class InstallationDeviceRepository : IInstallationDeviceRepository
+namespace Bit.Core.Repositories.TableStorage
 {
-    private readonly CloudTable _table;
-
-    public InstallationDeviceRepository(GlobalSettings globalSettings)
-        : this(globalSettings.Events.ConnectionString)
-    { }
-
-    public InstallationDeviceRepository(string storageConnectionString)
+    public class InstallationDeviceRepository : IInstallationDeviceRepository
     {
-        var storageAccount = CloudStorageAccount.Parse(storageConnectionString);
-        var tableClient = storageAccount.CreateCloudTableClient();
-        _table = tableClient.GetTableReference("installationdevice");
-    }
+        private readonly CloudTable _table;
 
-    public async Task UpsertAsync(InstallationDeviceEntity entity)
-    {
-        await _table.ExecuteAsync(TableOperation.InsertOrReplace(entity));
-    }
+        public InstallationDeviceRepository(GlobalSettings globalSettings)
+            : this(globalSettings.Events.ConnectionString)
+        { }
 
-    public async Task UpsertManyAsync(IList<InstallationDeviceEntity> entities)
-    {
-        if (!entities?.Any() ?? true)
+        public InstallationDeviceRepository(string storageConnectionString)
         {
-            return;
+            var storageAccount = CloudStorageAccount.Parse(storageConnectionString);
+            var tableClient = storageAccount.CreateCloudTableClient();
+            _table = tableClient.GetTableReference("installationdevice");
         }
 
-        if (entities.Count == 1)
+        public async Task UpsertAsync(InstallationDeviceEntity entity)
         {
-            await UpsertAsync(entities.First());
-            return;
+            await _table.ExecuteAsync(TableOperation.InsertOrReplace(entity));
         }
 
-        var entityGroups = entities.GroupBy(ent => ent.PartitionKey);
-        foreach (var group in entityGroups)
+        public async Task UpsertManyAsync(IList<InstallationDeviceEntity> entities)
         {
-            var groupEntities = group.ToList();
-            if (groupEntities.Count == 1)
+            if (!entities?.Any() ?? true)
             {
-                await UpsertAsync(groupEntities.First());
-                continue;
+                return;
             }
 
-            // A batch insert can only contain 100 entities at a time
-            var iterations = groupEntities.Count / 100;
-            for (var i = 0; i <= iterations; i++)
+            if (entities.Count == 1)
             {
-                var batch = new TableBatchOperation();
-                var batchEntities = groupEntities.Skip(i * 100).Take(100);
-                if (!batchEntities.Any())
+                await UpsertAsync(entities.First());
+                return;
+            }
+
+            var entityGroups = entities.GroupBy(ent => ent.PartitionKey);
+            foreach (var group in entityGroups)
+            {
+                var groupEntities = group.ToList();
+                if (groupEntities.Count == 1)
                 {
-                    break;
+                    await UpsertAsync(groupEntities.First());
+                    continue;
                 }
 
-                foreach (var entity in batchEntities)
+                // A batch insert can only contain 100 entities at a time
+                var iterations = groupEntities.Count / 100;
+                for (var i = 0; i <= iterations; i++)
                 {
-                    batch.InsertOrReplace(entity);
-                }
+                    var batch = new TableBatchOperation();
+                    var batchEntities = groupEntities.Skip(i * 100).Take(100);
+                    if (!batchEntities.Any())
+                    {
+                        break;
+                    }
 
-                await _table.ExecuteBatchAsync(batch);
+                    foreach (var entity in batchEntities)
+                    {
+                        batch.InsertOrReplace(entity);
+                    }
+
+                    await _table.ExecuteBatchAsync(batch);
+                }
             }
         }
-    }
 
-    public async Task DeleteAsync(InstallationDeviceEntity entity)
-    {
-        try
+        public async Task DeleteAsync(InstallationDeviceEntity entity)
         {
-            entity.ETag = "*";
-            await _table.ExecuteAsync(TableOperation.Delete(entity));
-        }
-        catch (StorageException e) when (e.RequestInformation.HttpStatusCode != (int)HttpStatusCode.NotFound)
-        {
-            throw;
+            try
+            {
+                entity.ETag = "*";
+                await _table.ExecuteAsync(TableOperation.Delete(entity));
+            }
+            catch (StorageException e) when (e.RequestInformation.HttpStatusCode != (int)HttpStatusCode.NotFound)
+            {
+                throw;
+            }
         }
     }
 }

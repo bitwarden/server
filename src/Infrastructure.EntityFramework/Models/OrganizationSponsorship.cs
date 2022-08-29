@@ -1,17 +1,18 @@
 ﻿using AutoMapper;
 
-namespace Bit.Infrastructure.EntityFramework.Models;
-
-public class OrganizationSponsorship : Core.Entities.OrganizationSponsorship
+namespace Bit.Infrastructure.EntityFramework.Models
 {
-    public virtual Organization SponsoringOrganization { get; set; }
-    public virtual Organization SponsoredOrganization { get; set; }
-}
-
-public class OrganizationSponsorshipMapperProfile : Profile
-{
-    public OrganizationSponsorshipMapperProfile()
+    public class OrganizationSponsorship : Core.Entities.OrganizationSponsorship
     {
-        CreateMap<Core.Entities.OrganizationSponsorship, OrganizationSponsorship>().ReverseMap();
+        public virtual Organization SponsoringOrganization { get; set; }
+        public virtual Organization SponsoredOrganization { get; set; }
+    }
+
+    public class OrganizationSponsorshipMapperProfile : Profile
+    {
+        public OrganizationSponsorshipMapperProfile()
+        {
+            CreateMap<Core.Entities.OrganizationSponsorship, OrganizationSponsorship>().ReverseMap();
+        }
     }
 }

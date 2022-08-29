@@ -1,15 +1,16 @@
 ﻿using AutoMapper;
 
-namespace Bit.Infrastructure.EntityFramework.Models;
-
-public class Event : Core.Entities.Event
+namespace Bit.Infrastructure.EntityFramework.Models
 {
-}
-
-public class EventMapperProfile : Profile
-{
-    public EventMapperProfile()
+    public class Event : Core.Entities.Event
     {
-        CreateMap<Core.Entities.Event, Event>().ReverseMap();
+    }
+
+    public class EventMapperProfile : Profile
+    {
+        public EventMapperProfile()
+        {
+            CreateMap<Core.Entities.Event, Event>().ReverseMap();
+        }
     }
 }

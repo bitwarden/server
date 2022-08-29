@@ -5,75 +5,76 @@ using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 
-namespace Bit.Infrastructure.EFIntegration.Test.AutoFixture;
-
-internal class PolicyBuilder : ISpecimenBuilder
+namespace Bit.Infrastructure.EFIntegration.Test.AutoFixture
 {
-    public object Create(object request, ISpecimenContext context)
+    internal class PolicyBuilder : ISpecimenBuilder
     {
-        if (context == null)
+        public object Create(object request, ISpecimenContext context)
         {
-            throw new ArgumentNullException(nameof(context));
-        }
+            if (context == null)
+            {
+                throw new ArgumentNullException(nameof(context));
+            }
 
-        var type = request as Type;
-        if (type == null || type != typeof(Policy))
+            var type = request as Type;
+            if (type == null || type != typeof(Policy))
+            {
+                return new NoSpecimen();
+            }
+
+            var fixture = new Fixture();
+            var obj = fixture.WithAutoNSubstitutions().Create<Policy>();
+            return obj;
+        }
+    }
+
+    internal class EfPolicy : ICustomization
+    {
+        public void Customize(IFixture fixture)
         {
-            return new NoSpecimen();
+            fixture.Customizations.Add(new IgnoreVirtualMembersCustomization());
+            fixture.Customizations.Add(new GlobalSettingsBuilder());
+            fixture.Customizations.Add(new PolicyBuilder());
+            fixture.Customizations.Add(new OrganizationBuilder());
+            fixture.Customizations.Add(new EfRepositoryListBuilder<PolicyRepository>());
+            fixture.Customizations.Add(new EfRepositoryListBuilder<OrganizationRepository>());
         }
-
-        var fixture = new Fixture();
-        var obj = fixture.WithAutoNSubstitutions().Create<Policy>();
-        return obj;
     }
-}
 
-internal class EfPolicy : ICustomization
-{
-    public void Customize(IFixture fixture)
+    internal class EfPolicyApplicableToUser : ICustomization
     {
-        fixture.Customizations.Add(new IgnoreVirtualMembersCustomization());
-        fixture.Customizations.Add(new GlobalSettingsBuilder());
-        fixture.Customizations.Add(new PolicyBuilder());
-        fixture.Customizations.Add(new OrganizationBuilder());
-        fixture.Customizations.Add(new EfRepositoryListBuilder<PolicyRepository>());
-        fixture.Customizations.Add(new EfRepositoryListBuilder<OrganizationRepository>());
+        public void Customize(IFixture fixture)
+        {
+            fixture.Customizations.Add(new IgnoreVirtualMembersCustomization());
+            fixture.Customizations.Add(new GlobalSettingsBuilder());
+            fixture.Customizations.Add(new PolicyBuilder());
+            fixture.Customizations.Add(new OrganizationBuilder());
+            fixture.Customizations.Add(new EfRepositoryListBuilder<PolicyRepository>());
+            fixture.Customizations.Add(new EfRepositoryListBuilder<UserRepository>());
+            fixture.Customizations.Add(new EfRepositoryListBuilder<OrganizationRepository>());
+            fixture.Customizations.Add(new EfRepositoryListBuilder<OrganizationUserRepository>());
+            fixture.Customizations.Add(new EfRepositoryListBuilder<ProviderRepository>());
+            fixture.Customizations.Add(new EfRepositoryListBuilder<ProviderUserRepository>());
+            fixture.Customizations.Add(new EfRepositoryListBuilder<ProviderOrganizationRepository>());
+        }
     }
-}
 
-internal class EfPolicyApplicableToUser : ICustomization
-{
-    public void Customize(IFixture fixture)
+    internal class EfPolicyAutoDataAttribute : CustomAutoDataAttribute
     {
-        fixture.Customizations.Add(new IgnoreVirtualMembersCustomization());
-        fixture.Customizations.Add(new GlobalSettingsBuilder());
-        fixture.Customizations.Add(new PolicyBuilder());
-        fixture.Customizations.Add(new OrganizationBuilder());
-        fixture.Customizations.Add(new EfRepositoryListBuilder<PolicyRepository>());
-        fixture.Customizations.Add(new EfRepositoryListBuilder<UserRepository>());
-        fixture.Customizations.Add(new EfRepositoryListBuilder<OrganizationRepository>());
-        fixture.Customizations.Add(new EfRepositoryListBuilder<OrganizationUserRepository>());
-        fixture.Customizations.Add(new EfRepositoryListBuilder<ProviderRepository>());
-        fixture.Customizations.Add(new EfRepositoryListBuilder<ProviderUserRepository>());
-        fixture.Customizations.Add(new EfRepositoryListBuilder<ProviderOrganizationRepository>());
+        public EfPolicyAutoDataAttribute() : base(new SutProviderCustomization(), new EfPolicy())
+        { }
     }
-}
 
-internal class EfPolicyAutoDataAttribute : CustomAutoDataAttribute
-{
-    public EfPolicyAutoDataAttribute() : base(new SutProviderCustomization(), new EfPolicy())
-    { }
-}
+    internal class EfPolicyApplicableToUserInlineAutoDataAttribute : InlineCustomAutoDataAttribute
+    {
+        public EfPolicyApplicableToUserInlineAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization), typeof(EfPolicyApplicableToUser) }, values)
+        { }
+    }
 
-internal class EfPolicyApplicableToUserInlineAutoDataAttribute : InlineCustomAutoDataAttribute
-{
-    public EfPolicyApplicableToUserInlineAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization), typeof(EfPolicyApplicableToUser) }, values)
-    { }
-}
-
-internal class InlineEfPolicyAutoDataAttribute : InlineCustomAutoDataAttribute
-{
-    public InlineEfPolicyAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
-        typeof(EfPolicy) }, values)
-    { }
+    internal class InlineEfPolicyAutoDataAttribute : InlineCustomAutoDataAttribute
+    {
+        public InlineEfPolicyAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
+            typeof(EfPolicy) }, values)
+        { }
+    }
 }

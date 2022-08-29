@@ -1,12 +1,13 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.Enums;
 
-namespace Bit.Api.Models.Request.Organizations;
-
-public class OrganizationSponsorshipRedeemRequestModel
+namespace Bit.Api.Models.Request.Organizations
 {
-    [Required]
-    public PlanSponsorshipType PlanSponsorshipType { get; set; }
-    [Required]
-    public Guid SponsoredOrganizationId { get; set; }
+    public class OrganizationSponsorshipRedeemRequestModel
+    {
+        [Required]
+        public PlanSponsorshipType PlanSponsorshipType { get; set; }
+        [Required]
+        public Guid SponsoredOrganizationId { get; set; }
+    }
 }

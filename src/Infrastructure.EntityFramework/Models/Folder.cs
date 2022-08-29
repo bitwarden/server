@@ -1,16 +1,17 @@
 ﻿using AutoMapper;
 
-namespace Bit.Infrastructure.EntityFramework.Models;
-
-public class Folder : Core.Entities.Folder
+namespace Bit.Infrastructure.EntityFramework.Models
 {
-    public virtual User User { get; set; }
-}
-
-public class FolderMapperProfile : Profile
-{
-    public FolderMapperProfile()
+    public class Folder : Core.Entities.Folder
     {
-        CreateMap<Core.Entities.Folder, Folder>().ReverseMap();
+        public virtual User User { get; set; }
+    }
+
+    public class FolderMapperProfile : Profile
+    {
+        public FolderMapperProfile()
+        {
+            CreateMap<Core.Entities.Folder, Folder>().ReverseMap();
+        }
     }
 }

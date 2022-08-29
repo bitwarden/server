@@ -6,76 +6,77 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
 
-namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise;
-
-public class CreateSponsorshipCommand : ICreateSponsorshipCommand
+namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise
 {
-    private readonly IOrganizationSponsorshipRepository _organizationSponsorshipRepository;
-    private readonly IUserService _userService;
-
-    public CreateSponsorshipCommand(IOrganizationSponsorshipRepository organizationSponsorshipRepository,
-    IUserService userService)
+    public class CreateSponsorshipCommand : ICreateSponsorshipCommand
     {
-        _organizationSponsorshipRepository = organizationSponsorshipRepository;
-        _userService = userService;
-    }
+        private readonly IOrganizationSponsorshipRepository _organizationSponsorshipRepository;
+        private readonly IUserService _userService;
 
-    public async Task<OrganizationSponsorship> CreateSponsorshipAsync(Organization sponsoringOrg, OrganizationUser sponsoringOrgUser,
-        PlanSponsorshipType sponsorshipType, string sponsoredEmail, string friendlyName)
-    {
-        var sponsoringUser = await _userService.GetUserByIdAsync(sponsoringOrgUser.UserId.Value);
-        if (sponsoringUser == null || string.Equals(sponsoringUser.Email, sponsoredEmail, System.StringComparison.InvariantCultureIgnoreCase))
+        public CreateSponsorshipCommand(IOrganizationSponsorshipRepository organizationSponsorshipRepository,
+        IUserService userService)
         {
-            throw new BadRequestException("Cannot offer a Families Organization Sponsorship to yourself. Choose a different email.");
+            _organizationSponsorshipRepository = organizationSponsorshipRepository;
+            _userService = userService;
         }
 
-        var requiredSponsoringProductType = StaticStore.GetSponsoredPlan(sponsorshipType)?.SponsoringProductType;
-        if (requiredSponsoringProductType == null ||
-            sponsoringOrg == null ||
-            StaticStore.GetPlan(sponsoringOrg.PlanType).Product != requiredSponsoringProductType.Value)
+        public async Task<OrganizationSponsorship> CreateSponsorshipAsync(Organization sponsoringOrg, OrganizationUser sponsoringOrgUser,
+            PlanSponsorshipType sponsorshipType, string sponsoredEmail, string friendlyName)
         {
-            throw new BadRequestException("Specified Organization cannot sponsor other organizations.");
-        }
-
-        if (sponsoringOrgUser == null || sponsoringOrgUser.Status != OrganizationUserStatusType.Confirmed)
-        {
-            throw new BadRequestException("Only confirmed users can sponsor other organizations.");
-        }
-
-        var existingOrgSponsorship = await _organizationSponsorshipRepository
-            .GetBySponsoringOrganizationUserIdAsync(sponsoringOrgUser.Id);
-        if (existingOrgSponsorship?.SponsoredOrganizationId != null)
-        {
-            throw new BadRequestException("Can only sponsor one organization per Organization User.");
-        }
-
-        var sponsorship = new OrganizationSponsorship
-        {
-            SponsoringOrganizationId = sponsoringOrg.Id,
-            SponsoringOrganizationUserId = sponsoringOrgUser.Id,
-            FriendlyName = friendlyName,
-            OfferedToEmail = sponsoredEmail,
-            PlanSponsorshipType = sponsorshipType,
-        };
-
-        if (existingOrgSponsorship != null)
-        {
-            // Replace existing invalid offer with our new sponsorship offer
-            sponsorship.Id = existingOrgSponsorship.Id;
-        }
-
-        try
-        {
-            await _organizationSponsorshipRepository.UpsertAsync(sponsorship);
-            return sponsorship;
-        }
-        catch
-        {
-            if (sponsorship.Id != default)
+            var sponsoringUser = await _userService.GetUserByIdAsync(sponsoringOrgUser.UserId.Value);
+            if (sponsoringUser == null || string.Equals(sponsoringUser.Email, sponsoredEmail, System.StringComparison.InvariantCultureIgnoreCase))
             {
-                await _organizationSponsorshipRepository.DeleteAsync(sponsorship);
+                throw new BadRequestException("Cannot offer a Families Organization Sponsorship to yourself. Choose a different email.");
             }
-            throw;
+
+            var requiredSponsoringProductType = StaticStore.GetSponsoredPlan(sponsorshipType)?.SponsoringProductType;
+            if (requiredSponsoringProductType == null ||
+                sponsoringOrg == null ||
+                StaticStore.GetPlan(sponsoringOrg.PlanType).Product != requiredSponsoringProductType.Value)
+            {
+                throw new BadRequestException("Specified Organization cannot sponsor other organizations.");
+            }
+
+            if (sponsoringOrgUser == null || sponsoringOrgUser.Status != OrganizationUserStatusType.Confirmed)
+            {
+                throw new BadRequestException("Only confirmed users can sponsor other organizations.");
+            }
+
+            var existingOrgSponsorship = await _organizationSponsorshipRepository
+                .GetBySponsoringOrganizationUserIdAsync(sponsoringOrgUser.Id);
+            if (existingOrgSponsorship?.SponsoredOrganizationId != null)
+            {
+                throw new BadRequestException("Can only sponsor one organization per Organization User.");
+            }
+
+            var sponsorship = new OrganizationSponsorship
+            {
+                SponsoringOrganizationId = sponsoringOrg.Id,
+                SponsoringOrganizationUserId = sponsoringOrgUser.Id,
+                FriendlyName = friendlyName,
+                OfferedToEmail = sponsoredEmail,
+                PlanSponsorshipType = sponsorshipType,
+            };
+
+            if (existingOrgSponsorship != null)
+            {
+                // Replace existing invalid offer with our new sponsorship offer
+                sponsorship.Id = existingOrgSponsorship.Id;
+            }
+
+            try
+            {
+                await _organizationSponsorshipRepository.UpsertAsync(sponsorship);
+                return sponsorship;
+            }
+            catch
+            {
+                if (sponsorship.Id != default)
+                {
+                    await _organizationSponsorshipRepository.DeleteAsync(sponsorship);
+                }
+                throw;
+            }
         }
     }
 }

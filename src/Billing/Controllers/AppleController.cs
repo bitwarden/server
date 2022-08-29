@@ -4,58 +4,59 @@ using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 
-namespace Bit.Billing.Controllers;
-
-[Route("apple")]
-public class AppleController : Controller
+namespace Bit.Billing.Controllers
 {
-    private readonly BillingSettings _billingSettings;
-    private readonly ILogger<AppleController> _logger;
-
-    public AppleController(
-        IOptions<BillingSettings> billingSettings,
-        ILogger<AppleController> logger)
+    [Route("apple")]
+    public class AppleController : Controller
     {
-        _billingSettings = billingSettings?.Value;
-        _logger = logger;
-    }
+        private readonly BillingSettings _billingSettings;
+        private readonly ILogger<AppleController> _logger;
 
-    [HttpPost("iap")]
-    public async Task<IActionResult> PostIap()
-    {
-        if (HttpContext?.Request?.Query == null)
+        public AppleController(
+            IOptions<BillingSettings> billingSettings,
+            ILogger<AppleController> logger)
         {
-            return new BadRequestResult();
+            _billingSettings = billingSettings?.Value;
+            _logger = logger;
         }
 
-        var key = HttpContext.Request.Query.ContainsKey("key") ?
-            HttpContext.Request.Query["key"].ToString() : null;
-        if (!CoreHelpers.FixedTimeEquals(key, _billingSettings.AppleWebhookKey))
+        [HttpPost("iap")]
+        public async Task<IActionResult> PostIap()
         {
-            return new BadRequestResult();
-        }
+            if (HttpContext?.Request?.Query == null)
+            {
+                return new BadRequestResult();
+            }
 
-        string body = null;
-        using (var reader = new StreamReader(HttpContext.Request.Body, Encoding.UTF8))
-        {
-            body = await reader.ReadToEndAsync();
-        }
+            var key = HttpContext.Request.Query.ContainsKey("key") ?
+                HttpContext.Request.Query["key"].ToString() : null;
+            if (!CoreHelpers.FixedTimeEquals(key, _billingSettings.AppleWebhookKey))
+            {
+                return new BadRequestResult();
+            }
 
-        if (string.IsNullOrWhiteSpace(body))
-        {
-            return new BadRequestResult();
-        }
+            string body = null;
+            using (var reader = new StreamReader(HttpContext.Request.Body, Encoding.UTF8))
+            {
+                body = await reader.ReadToEndAsync();
+            }
 
-        try
-        {
-            var json = JsonSerializer.Serialize(JsonSerializer.Deserialize<JsonDocument>(body), JsonHelpers.Indented);
-            _logger.LogInformation(Bit.Core.Constants.BypassFiltersEventId, "Apple IAP Notification:\n\n{0}", json);
-            return new OkResult();
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "Error processing IAP status notification.");
-            return new BadRequestResult();
+            if (string.IsNullOrWhiteSpace(body))
+            {
+                return new BadRequestResult();
+            }
+
+            try
+            {
+                var json = JsonSerializer.Serialize(JsonSerializer.Deserialize<JsonDocument>(body), JsonHelpers.Indented);
+                _logger.LogInformation(Bit.Core.Constants.BypassFiltersEventId, "Apple IAP Notification:\n\n{0}", json);
+                return new OkResult();
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Error processing IAP status notification.");
+                return new BadRequestResult();
+            }
         }
     }
 }

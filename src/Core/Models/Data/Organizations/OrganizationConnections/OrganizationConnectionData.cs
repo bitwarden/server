@@ -1,31 +1,32 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
 
-namespace Bit.Core.Models.Data.Organizations.OrganizationConnections;
-
-public class OrganizationConnectionData<T> where T : new()
+namespace Bit.Core.Models.Data.Organizations.OrganizationConnections
 {
-    public Guid? Id { get; set; }
-    public OrganizationConnectionType Type { get; set; }
-    public Guid OrganizationId { get; set; }
-    public bool Enabled { get; set; }
-    public T Config { get; set; }
-
-    public OrganizationConnection ToEntity()
+    public class OrganizationConnectionData<T> where T : new()
     {
-        var result = new OrganizationConnection()
-        {
-            Type = Type,
-            OrganizationId = OrganizationId,
-            Enabled = Enabled,
-        };
-        result.SetConfig(Config);
+        public Guid? Id { get; set; }
+        public OrganizationConnectionType Type { get; set; }
+        public Guid OrganizationId { get; set; }
+        public bool Enabled { get; set; }
+        public T Config { get; set; }
 
-        if (Id.HasValue)
+        public OrganizationConnection ToEntity()
         {
-            result.Id = Id.Value;
+            var result = new OrganizationConnection()
+            {
+                Type = Type,
+                OrganizationId = OrganizationId,
+                Enabled = Enabled,
+            };
+            result.SetConfig(Config);
+
+            if (Id.HasValue)
+            {
+                result.Id = Id.Value;
+            }
+
+            return result;
         }
-
-        return result;
     }
 }

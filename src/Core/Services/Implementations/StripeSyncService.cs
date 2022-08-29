@@ -1,31 +1,32 @@
 ﻿using Bit.Core.Exceptions;
 
-namespace Bit.Core.Services;
-
-public class StripeSyncService : IStripeSyncService
+namespace Bit.Core.Services
 {
-    private readonly IStripeAdapter _stripeAdapter;
-
-    public StripeSyncService(IStripeAdapter stripeAdapter)
+    public class StripeSyncService : IStripeSyncService
     {
-        _stripeAdapter = stripeAdapter;
-    }
+        private readonly IStripeAdapter _stripeAdapter;
 
-    public async Task UpdateCustomerEmailAddress(string gatewayCustomerId, string emailAddress)
-    {
-        if (string.IsNullOrWhiteSpace(gatewayCustomerId))
+        public StripeSyncService(IStripeAdapter stripeAdapter)
         {
-            throw new InvalidGatewayCustomerIdException();
+            _stripeAdapter = stripeAdapter;
         }
 
-        if (string.IsNullOrWhiteSpace(emailAddress))
+        public async Task UpdateCustomerEmailAddress(string gatewayCustomerId, string emailAddress)
         {
-            throw new InvalidEmailException();
+            if (string.IsNullOrWhiteSpace(gatewayCustomerId))
+            {
+                throw new InvalidGatewayCustomerIdException();
+            }
+
+            if (string.IsNullOrWhiteSpace(emailAddress))
+            {
+                throw new InvalidEmailException();
+            }
+
+            var customer = await _stripeAdapter.CustomerGetAsync(gatewayCustomerId);
+
+            await _stripeAdapter.CustomerUpdateAsync(customer.Id,
+                new Stripe.CustomerUpdateOptions { Email = emailAddress });
         }
-
-        var customer = await _stripeAdapter.CustomerGetAsync(gatewayCustomerId);
-
-        await _stripeAdapter.CustomerUpdateAsync(customer.Id,
-            new Stripe.CustomerUpdateOptions { Email = emailAddress });
     }
 }

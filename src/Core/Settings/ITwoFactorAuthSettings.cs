@@ -1,6 +1,7 @@
-﻿namespace Bit.Core.Settings;
-
-public interface ITwoFactorAuthSettings
+﻿namespace Bit.Core.Settings
 {
-    bool EmailOnNewDeviceLogin { get; set; }
+    public interface ITwoFactorAuthSettings
+    {
+        bool EmailOnNewDeviceLogin { get; set; }
+    }
 }

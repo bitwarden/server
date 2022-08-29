@@ -1,11 +1,12 @@
 ﻿using Bit.Core.Models.Mail;
 
-namespace Bit.Core.Services;
-
-public class NoopMailDeliveryService : IMailDeliveryService
+namespace Bit.Core.Services
 {
-    public Task SendEmailAsync(MailMessage message)
+    public class NoopMailDeliveryService : IMailDeliveryService
     {
-        return Task.FromResult(0);
+        public Task SendEmailAsync(MailMessage message)
+        {
+            return Task.FromResult(0);
+        }
     }
 }

@@ -1,17 +1,18 @@
 ﻿using Bit.Scim.Utilities;
 
-namespace Bit.Scim.Models;
-
-public abstract class BaseScimGroupModel : BaseScimModel
+namespace Bit.Scim.Models
 {
-    public BaseScimGroupModel(bool initSchema = false)
+    public abstract class BaseScimGroupModel : BaseScimModel
     {
-        if (initSchema)
+        public BaseScimGroupModel(bool initSchema = false)
         {
-            Schemas = new List<string> { ScimConstants.Scim2SchemaGroup };
+            if (initSchema)
+            {
+                Schemas = new List<string> { ScimConstants.Scim2SchemaGroup };
+            }
         }
-    }
 
-    public string DisplayName { get; set; }
-    public string ExternalId { get; set; }
+        public string DisplayName { get; set; }
+        public string ExternalId { get; set; }
+    }
 }

@@ -4,34 +4,35 @@ using Bit.Core.Settings;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Core.Test.Services;
-
-public class InMemoryServiceBusApplicationCacheServiceTests
+namespace Bit.Core.Test.Services
 {
-    private readonly InMemoryServiceBusApplicationCacheService _sut;
-
-    private readonly IOrganizationRepository _organizationRepository;
-    private readonly IProviderRepository _providerRepository;
-    private readonly GlobalSettings _globalSettings;
-
-    public InMemoryServiceBusApplicationCacheServiceTests()
+    public class InMemoryServiceBusApplicationCacheServiceTests
     {
-        _organizationRepository = Substitute.For<IOrganizationRepository>();
-        _providerRepository = Substitute.For<IProviderRepository>();
-        _globalSettings = new GlobalSettings();
+        private readonly InMemoryServiceBusApplicationCacheService _sut;
 
-        _sut = new InMemoryServiceBusApplicationCacheService(
-            _organizationRepository,
-            _providerRepository,
-            _globalSettings
-        );
-    }
+        private readonly IOrganizationRepository _organizationRepository;
+        private readonly IProviderRepository _providerRepository;
+        private readonly GlobalSettings _globalSettings;
 
-    // Remove this test when we add actual tests. It only proves that
-    // we've properly constructed the system under test.
-    [Fact(Skip = "Needs additional work")]
-    public void ServiceExists()
-    {
-        Assert.NotNull(_sut);
+        public InMemoryServiceBusApplicationCacheServiceTests()
+        {
+            _organizationRepository = Substitute.For<IOrganizationRepository>();
+            _providerRepository = Substitute.For<IProviderRepository>();
+            _globalSettings = new GlobalSettings();
+
+            _sut = new InMemoryServiceBusApplicationCacheService(
+                _organizationRepository,
+                _providerRepository,
+                _globalSettings
+            );
+        }
+
+        // Remove this test when we add actual tests. It only proves that
+        // we've properly constructed the system under test.
+        [Fact(Skip = "Needs additional work")]
+        public void ServiceExists()
+        {
+            Assert.NotNull(_sut);
+        }
     }
 }

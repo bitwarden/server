@@ -3,42 +3,43 @@ using AutoFixture;
 using AutoFixture.Xunit2;
 using Bit.Core.Enums.Provider;
 
-namespace Bit.Commercial.Core.Test.AutoFixture;
-
-internal class ProviderUser : ICustomization
+namespace Bit.Commercial.Core.Test.AutoFixture
 {
-    public ProviderUserStatusType Status { get; set; }
-    public ProviderUserType Type { get; set; }
-
-    public ProviderUser(ProviderUserStatusType status, ProviderUserType type)
+    internal class ProviderUser : ICustomization
     {
-        Status = status;
-        Type = type;
+        public ProviderUserStatusType Status { get; set; }
+        public ProviderUserType Type { get; set; }
+
+        public ProviderUser(ProviderUserStatusType status, ProviderUserType type)
+        {
+            Status = status;
+            Type = type;
+        }
+
+        public void Customize(IFixture fixture)
+        {
+            fixture.Customize<Bit.Core.Entities.Provider.ProviderUser>(composer => composer
+                .With(o => o.Type, Type)
+                .With(o => o.Status, Status));
+        }
     }
 
-    public void Customize(IFixture fixture)
+    public class ProviderUserAttribute : CustomizeAttribute
     {
-        fixture.Customize<Bit.Core.Entities.Provider.ProviderUser>(composer => composer
-            .With(o => o.Type, Type)
-            .With(o => o.Status, Status));
-    }
-}
+        private readonly ProviderUserStatusType _status;
+        private readonly ProviderUserType _type;
 
-public class ProviderUserAttribute : CustomizeAttribute
-{
-    private readonly ProviderUserStatusType _status;
-    private readonly ProviderUserType _type;
+        public ProviderUserAttribute(
+            ProviderUserStatusType status = ProviderUserStatusType.Confirmed,
+            ProviderUserType type = ProviderUserType.ProviderAdmin)
+        {
+            _status = status;
+            _type = type;
+        }
 
-    public ProviderUserAttribute(
-        ProviderUserStatusType status = ProviderUserStatusType.Confirmed,
-        ProviderUserType type = ProviderUserType.ProviderAdmin)
-    {
-        _status = status;
-        _type = type;
-    }
-
-    public override ICustomization GetCustomization(ParameterInfo parameter)
-    {
-        return new ProviderUser(_status, _type);
+        public override ICustomization GetCustomization(ParameterInfo parameter)
+        {
+            return new ProviderUser(_status, _type);
+        }
     }
 }

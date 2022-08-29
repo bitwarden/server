@@ -1,16 +1,17 @@
 ﻿using Bit.Core.Models.Api;
 using Bit.Core.Models.Business;
 
-namespace Bit.Api.Models.Response;
-
-public class BillingHistoryResponseModel : ResponseModel
+namespace Bit.Api.Models.Response
 {
-    public BillingHistoryResponseModel(BillingInfo billing)
-        : base("billingHistory")
+    public class BillingHistoryResponseModel : ResponseModel
     {
-        Transactions = billing.Transactions?.Select(t => new BillingTransaction(t));
-        Invoices = billing.Invoices?.Select(i => new BillingInvoice(i));
+        public BillingHistoryResponseModel(BillingInfo billing)
+            : base("billingHistory")
+        {
+            Transactions = billing.Transactions?.Select(t => new BillingTransaction(t));
+            Invoices = billing.Invoices?.Select(i => new BillingInvoice(i));
+        }
+        public IEnumerable<BillingInvoice> Invoices { get; set; }
+        public IEnumerable<BillingTransaction> Transactions { get; set; }
     }
-    public IEnumerable<BillingInvoice> Invoices { get; set; }
-    public IEnumerable<BillingTransaction> Transactions { get; set; }
 }

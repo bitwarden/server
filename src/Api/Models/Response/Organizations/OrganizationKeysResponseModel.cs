@@ -1,21 +1,22 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Models.Api;
 
-namespace Bit.Api.Models.Response.Organizations;
-
-public class OrganizationKeysResponseModel : ResponseModel
+namespace Bit.Api.Models.Response.Organizations
 {
-    public OrganizationKeysResponseModel(Organization org) : base("organizationKeys")
+    public class OrganizationKeysResponseModel : ResponseModel
     {
-        if (org == null)
+        public OrganizationKeysResponseModel(Organization org) : base("organizationKeys")
         {
-            throw new ArgumentNullException(nameof(org));
+            if (org == null)
+            {
+                throw new ArgumentNullException(nameof(org));
+            }
+
+            PublicKey = org.PublicKey;
+            PrivateKey = org.PrivateKey;
         }
 
-        PublicKey = org.PublicKey;
-        PrivateKey = org.PrivateKey;
+        public string PublicKey { get; set; }
+        public string PrivateKey { get; set; }
     }
-
-    public string PublicKey { get; set; }
-    public string PrivateKey { get; set; }
 }

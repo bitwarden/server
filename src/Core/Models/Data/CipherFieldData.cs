@@ -1,13 +1,14 @@
 ﻿using Bit.Core.Enums;
 
-namespace Bit.Core.Models.Data;
-
-public class CipherFieldData
+namespace Bit.Core.Models.Data
 {
-    public CipherFieldData() { }
+    public class CipherFieldData
+    {
+        public CipherFieldData() { }
 
-    public FieldType Type { get; set; }
-    public string Name { get; set; }
-    public string Value { get; set; }
-    public int? LinkedId { get; set; }
+        public FieldType Type { get; set; }
+        public string Name { get; set; }
+        public string Value { get; set; }
+        public int? LinkedId { get; set; }
+    }
 }

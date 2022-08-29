@@ -1,6 +1,7 @@
-﻿namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
-
-public interface IValidateSponsorshipCommand
+﻿namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces
 {
-    Task<bool> ValidateSponsorshipAsync(Guid sponsoredOrganizationId);
+    public interface IValidateSponsorshipCommand
+    {
+        Task<bool> ValidateSponsorshipAsync(Guid sponsoredOrganizationId);
+    }
 }

@@ -3,25 +3,26 @@ using AutoFixture;
 using Bit.Test.Common.Helpers;
 using Xunit.Sdk;
 
-namespace Bit.Test.Common.AutoFixture.Attributes;
-
-[DataDiscoverer("AutoFixture.Xunit2.NoPreDiscoveryDataDiscoverer", "AutoFixture.Xunit2")]
-public class BitAutoDataAttribute : DataAttribute
+namespace Bit.Test.Common.AutoFixture.Attributes
 {
-    private readonly Func<IFixture> _createFixture;
-    private readonly object[] _fixedTestParameters;
-
-    public BitAutoDataAttribute(params object[] fixedTestParameters) :
-        this(() => new Fixture(), fixedTestParameters)
-    { }
-
-    public BitAutoDataAttribute(Func<IFixture> createFixture, params object[] fixedTestParameters) :
-        base()
+    [DataDiscoverer("AutoFixture.Xunit2.NoPreDiscoveryDataDiscoverer", "AutoFixture.Xunit2")]
+    public class BitAutoDataAttribute : DataAttribute
     {
-        _createFixture = createFixture;
-        _fixedTestParameters = fixedTestParameters;
-    }
+        private readonly Func<IFixture> _createFixture;
+        private readonly object[] _fixedTestParameters;
 
-    public override IEnumerable<object[]> GetData(MethodInfo testMethod)
-        => BitAutoDataAttributeHelpers.GetData(testMethod, _createFixture(), _fixedTestParameters);
+        public BitAutoDataAttribute(params object[] fixedTestParameters) :
+            this(() => new Fixture(), fixedTestParameters)
+        { }
+
+        public BitAutoDataAttribute(Func<IFixture> createFixture, params object[] fixedTestParameters) :
+            base()
+        {
+            _createFixture = createFixture;
+            _fixedTestParameters = fixedTestParameters;
+        }
+
+        public override IEnumerable<object[]> GetData(MethodInfo testMethod)
+            => BitAutoDataAttributeHelpers.GetData(testMethod, _createFixture(), _fixedTestParameters);
+    }
 }

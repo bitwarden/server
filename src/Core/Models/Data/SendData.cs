@@ -1,15 +1,16 @@
-﻿namespace Bit.Core.Models.Data;
-
-public abstract class SendData
+﻿namespace Bit.Core.Models.Data
 {
-    public SendData() { }
-
-    public SendData(string name, string notes)
+    public abstract class SendData
     {
-        Name = name;
-        Notes = notes;
-    }
+        public SendData() { }
 
-    public string Name { get; set; }
-    public string Notes { get; set; }
+        public SendData(string name, string notes)
+        {
+            Name = name;
+            Notes = notes;
+        }
+
+        public string Name { get; set; }
+        public string Notes { get; set; }
+    }
 }

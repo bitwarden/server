@@ -1,7 +1,8 @@
-﻿namespace Bit.Core.Entities;
-
-public interface IRevisable
+﻿namespace Bit.Core.Entities
 {
-    DateTime CreationDate { get; }
-    DateTime RevisionDate { get; }
+    public interface IRevisable
+    {
+        DateTime CreationDate { get; }
+        DateTime RevisionDate { get; }
+    }
 }

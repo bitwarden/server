@@ -1,20 +1,21 @@
 ﻿using AutoFixture;
 
-namespace Bit.Test.Common.AutoFixture.Attributes;
-
-/// <summary>
-/// <para>
-///     Base class for customizing parameters in methods decorated with the
-///     Bit.Test.Common.AutoFixture.Attributes.MemberAutoDataAttribute.
-/// </para>
-/// ⚠ Warning ⚠ Will not insert customizations into AutoFixture's AutoDataAttribute build chain
-/// </summary>
-[AttributeUsage(AttributeTargets.Class | AttributeTargets.Method | AttributeTargets.Parameter, AllowMultiple = true)]
-public abstract class BitCustomizeAttribute : Attribute
+namespace Bit.Test.Common.AutoFixture.Attributes
 {
     /// <summary>
-    /// /// Gets a customization for the method's parameters.
+    /// <para>
+    ///     Base class for customizing parameters in methods decorated with the
+    ///     Bit.Test.Common.AutoFixture.Attributes.MemberAutoDataAttribute.
+    /// </para>
+    /// ⚠ Warning ⚠ Will not insert customizations into AutoFixture's AutoDataAttribute build chain
     /// </summary>
-    /// <returns>A customization for the method's paramters.</returns>
-    public abstract ICustomization GetCustomization();
+    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method | AttributeTargets.Parameter, AllowMultiple = true)]
+    public abstract class BitCustomizeAttribute : Attribute
+    {
+        /// <summary>
+        /// /// Gets a customization for the method's parameters.
+        /// </summary>
+        /// <returns>A customization for the method's paramters.</returns>
+        public abstract ICustomization GetCustomization();
+    }
 }

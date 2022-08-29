@@ -1,13 +1,14 @@
-﻿namespace Bit.Core.Models.Business;
-
-public class ExpiringToken
+﻿namespace Bit.Core.Models.Business
 {
-    public readonly string Token;
-    public readonly DateTime ExpirationDate;
-
-    public ExpiringToken(string token, DateTime expirationDate)
+    public class ExpiringToken
     {
-        Token = token;
-        ExpirationDate = expirationDate;
+        public readonly string Token;
+        public readonly DateTime ExpirationDate;
+
+        public ExpiringToken(string token, DateTime expirationDate)
+        {
+            Token = token;
+            ExpirationDate = expirationDate;
+        }
     }
 }

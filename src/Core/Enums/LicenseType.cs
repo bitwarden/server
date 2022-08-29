@@ -1,7 +1,8 @@
-﻿namespace Bit.Core.Enums;
-
-public enum LicenseType : byte
+﻿namespace Bit.Core.Enums
 {
-    User = 0,
-    Organization = 1,
+    public enum LicenseType : byte
+    {
+        User = 0,
+        Organization = 1,
+    }
 }

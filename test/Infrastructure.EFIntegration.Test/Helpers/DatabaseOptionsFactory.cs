@@ -2,24 +2,25 @@
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;
 
-namespace Bit.Infrastructure.EFIntegration.Test.Helpers;
-
-public static class DatabaseOptionsFactory
+namespace Bit.Infrastructure.EFIntegration.Test.Helpers
 {
-    public static List<DbContextOptions<DatabaseContext>> Options { get; } = new();
-
-    static DatabaseOptionsFactory()
+    public static class DatabaseOptionsFactory
     {
-        var globalSettings = GlobalSettingsFactory.GlobalSettings;
-        if (!string.IsNullOrWhiteSpace(GlobalSettingsFactory.GlobalSettings.PostgreSql?.ConnectionString))
+        public static List<DbContextOptions<DatabaseContext>> Options { get; } = new();
+
+        static DatabaseOptionsFactory()
         {
-            AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
-            Options.Add(new DbContextOptionsBuilder<DatabaseContext>().UseNpgsql(globalSettings.PostgreSql.ConnectionString).Options);
-        }
-        if (!string.IsNullOrWhiteSpace(GlobalSettingsFactory.GlobalSettings.MySql?.ConnectionString))
-        {
-            var mySqlConnectionString = globalSettings.MySql.ConnectionString;
-            Options.Add(new DbContextOptionsBuilder<DatabaseContext>().UseMySql(mySqlConnectionString, ServerVersion.AutoDetect(mySqlConnectionString)).Options);
+            var globalSettings = GlobalSettingsFactory.GlobalSettings;
+            if (!string.IsNullOrWhiteSpace(GlobalSettingsFactory.GlobalSettings.PostgreSql?.ConnectionString))
+            {
+                AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+                Options.Add(new DbContextOptionsBuilder<DatabaseContext>().UseNpgsql(globalSettings.PostgreSql.ConnectionString).Options);
+            }
+            if (!string.IsNullOrWhiteSpace(GlobalSettingsFactory.GlobalSettings.MySql?.ConnectionString))
+            {
+                var mySqlConnectionString = globalSettings.MySql.ConnectionString;
+                Options.Add(new DbContextOptionsBuilder<DatabaseContext>().UseMySql(mySqlConnectionString, ServerVersion.AutoDetect(mySqlConnectionString)).Options);
+            }
         }
     }
 }

@@ -1,12 +1,13 @@
 ﻿using IdentityModel;
 using Microsoft.AspNetCore.SignalR;
 
-namespace Bit.Notifications;
-
-public class SubjectUserIdProvider : IUserIdProvider
+namespace Bit.Notifications
 {
-    public string GetUserId(HubConnectionContext connection)
+    public class SubjectUserIdProvider : IUserIdProvider
     {
-        return connection.User?.FindFirst(JwtClaimTypes.Subject)?.Value;
+        public string GetUserId(HubConnectionContext connection)
+        {
+            return connection.User?.FindFirst(JwtClaimTypes.Subject)?.Value;
+        }
     }
 }

@@ -1,7 +1,8 @@
-﻿namespace Bit.Core.Enums;
-
-public enum Saml2BindingType : byte
+﻿namespace Bit.Core.Enums
 {
-    HttpRedirect = 1,
-    HttpPost = 2,
+    public enum Saml2BindingType : byte
+    {
+        HttpRedirect = 1,
+        HttpPost = 2,
+    }
 }

@@ -1,7 +1,8 @@
-﻿namespace Bit.Core.Enums.Provider;
-
-public enum ProviderStatusType : byte
+﻿namespace Bit.Core.Enums.Provider
 {
-    Pending = 0,
-    Created = 1,
+    public enum ProviderStatusType : byte
+    {
+        Pending = 0,
+        Created = 1,
+    }
 }

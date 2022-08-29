@@ -1,15 +1,16 @@
 ﻿using AutoMapper;
 
-namespace Bit.Infrastructure.EntityFramework.Models;
-
-public class Installation : Core.Entities.Installation
+namespace Bit.Infrastructure.EntityFramework.Models
 {
-}
-
-public class InstallationMapperProfile : Profile
-{
-    public InstallationMapperProfile()
+    public class Installation : Core.Entities.Installation
     {
-        CreateMap<Core.Entities.Installation, Installation>().ReverseMap();
+    }
+
+    public class InstallationMapperProfile : Profile
+    {
+        public InstallationMapperProfile()
+        {
+            CreateMap<Core.Entities.Installation, Installation>().ReverseMap();
+        }
     }
 }

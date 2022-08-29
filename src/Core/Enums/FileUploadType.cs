@@ -1,7 +1,8 @@
-﻿namespace Bit.Core.Enums;
-
-public enum FileUploadType
+﻿namespace Bit.Core.Enums
 {
-    Direct = 0,
-    Azure = 1,
+    public enum FileUploadType
+    {
+        Direct = 0,
+        Azure = 1,
+    }
 }

@@ -1,20 +1,21 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace Bit.Core.Models.Api;
-
-public class PushUpdateRequestModel
+namespace Bit.Core.Models.Api
 {
-    public PushUpdateRequestModel()
-    { }
-
-    public PushUpdateRequestModel(IEnumerable<string> deviceIds, string organizationId)
+    public class PushUpdateRequestModel
     {
-        DeviceIds = deviceIds;
-        OrganizationId = organizationId;
-    }
+        public PushUpdateRequestModel()
+        { }
 
-    [Required]
-    public IEnumerable<string> DeviceIds { get; set; }
-    [Required]
-    public string OrganizationId { get; set; }
+        public PushUpdateRequestModel(IEnumerable<string> deviceIds, string organizationId)
+        {
+            DeviceIds = deviceIds;
+            OrganizationId = organizationId;
+        }
+
+        [Required]
+        public IEnumerable<string> DeviceIds { get; set; }
+        [Required]
+        public string OrganizationId { get; set; }
+    }
 }

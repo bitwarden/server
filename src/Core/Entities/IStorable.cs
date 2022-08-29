@@ -1,9 +1,10 @@
-﻿namespace Bit.Core.Entities;
-
-public interface IStorable
+﻿namespace Bit.Core.Entities
 {
-    long? Storage { get; set; }
-    short? MaxStorageGb { get; set; }
-    long StorageBytesRemaining();
-    long StorageBytesRemaining(short maxStorageGb);
+    public interface IStorable
+    {
+        long? Storage { get; set; }
+        short? MaxStorageGb { get; set; }
+        long StorageBytesRemaining();
+        long StorageBytesRemaining(short maxStorageGb);
+    }
 }

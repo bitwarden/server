@@ -1,42 +1,43 @@
 ﻿using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.AspNetCore.Razor.TagHelpers;
 
-namespace Bit.Admin.TagHelpers;
-
-[HtmlTargetElement("option", Attributes = SelectedName)]
-public class OptionSelectedTagHelper : TagHelper
+namespace Bit.Admin.TagHelpers
 {
-    private const string SelectedName = "asp-selected";
-
-    private readonly IHtmlGenerator _generator;
-
-    public OptionSelectedTagHelper(IHtmlGenerator generator)
+    [HtmlTargetElement("option", Attributes = SelectedName)]
+    public class OptionSelectedTagHelper : TagHelper
     {
-        _generator = generator;
-    }
+        private const string SelectedName = "asp-selected";
 
-    [HtmlAttributeName(SelectedName)]
-    public bool Selected { get; set; }
+        private readonly IHtmlGenerator _generator;
 
-    public override void Process(TagHelperContext context, TagHelperOutput output)
-    {
-        if (context == null)
+        public OptionSelectedTagHelper(IHtmlGenerator generator)
         {
-            throw new ArgumentNullException(nameof(context));
+            _generator = generator;
         }
 
-        if (output == null)
-        {
-            throw new ArgumentNullException(nameof(output));
-        }
+        [HtmlAttributeName(SelectedName)]
+        public bool Selected { get; set; }
 
-        if (Selected)
+        public override void Process(TagHelperContext context, TagHelperOutput output)
         {
-            output.Attributes.Add("selected", "selected");
-        }
-        else
-        {
-            output.Attributes.RemoveAll("selected");
+            if (context == null)
+            {
+                throw new ArgumentNullException(nameof(context));
+            }
+
+            if (output == null)
+            {
+                throw new ArgumentNullException(nameof(output));
+            }
+
+            if (Selected)
+            {
+                output.Attributes.Add("selected", "selected");
+            }
+            else
+            {
+                output.Attributes.RemoveAll("selected");
+            }
         }
     }
 }

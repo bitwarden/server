@@ -1,16 +1,17 @@
 ﻿using Bit.Core.Models.Api;
 
-namespace Bit.Api.Models.Response;
-
-public class ListResponseModel<T> : ResponseModel where T : ResponseModel
+namespace Bit.Api.Models.Response
 {
-    public ListResponseModel(IEnumerable<T> data, string continuationToken = null)
-        : base("list")
+    public class ListResponseModel<T> : ResponseModel where T : ResponseModel
     {
-        Data = data;
-        ContinuationToken = continuationToken;
-    }
+        public ListResponseModel(IEnumerable<T> data, string continuationToken = null)
+            : base("list")
+        {
+            Data = data;
+            ContinuationToken = continuationToken;
+        }
 
-    public IEnumerable<T> Data { get; set; }
-    public string ContinuationToken { get; set; }
+        public IEnumerable<T> Data { get; set; }
+        public string ContinuationToken { get; set; }
+    }
 }

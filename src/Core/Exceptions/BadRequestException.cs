@@ -1,30 +1,31 @@
 ﻿using Microsoft.AspNetCore.Mvc.ModelBinding;
 
-namespace Bit.Core.Exceptions;
-
-public class BadRequestException : Exception
+namespace Bit.Core.Exceptions
 {
-    public BadRequestException(string message)
-        : base(message)
-    { }
-
-    public BadRequestException(string key, string errorMessage)
-        : base("The model state is invalid.")
+    public class BadRequestException : Exception
     {
-        ModelState = new ModelStateDictionary();
-        ModelState.AddModelError(key, errorMessage);
-    }
+        public BadRequestException(string message)
+            : base(message)
+        { }
 
-    public BadRequestException(ModelStateDictionary modelState)
-        : base("The model state is invalid.")
-    {
-        if (modelState.IsValid || modelState.ErrorCount == 0)
+        public BadRequestException(string key, string errorMessage)
+            : base("The model state is invalid.")
         {
-            return;
+            ModelState = new ModelStateDictionary();
+            ModelState.AddModelError(key, errorMessage);
         }
 
-        ModelState = modelState;
-    }
+        public BadRequestException(ModelStateDictionary modelState)
+            : base("The model state is invalid.")
+        {
+            if (modelState.IsValid || modelState.ErrorCount == 0)
+            {
+                return;
+            }
 
-    public ModelStateDictionary ModelState { get; set; }
+            ModelState = modelState;
+        }
+
+        public ModelStateDictionary ModelState { get; set; }
+    }
 }

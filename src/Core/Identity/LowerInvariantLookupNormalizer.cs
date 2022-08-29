@@ -1,21 +1,22 @@
 ﻿using Microsoft.AspNetCore.Identity;
 
-namespace Bit.Core.Identity;
-
-public class LowerInvariantLookupNormalizer : ILookupNormalizer
+namespace Bit.Core.Identity
 {
-    public string NormalizeEmail(string email)
+    public class LowerInvariantLookupNormalizer : ILookupNormalizer
     {
-        return Normalize(email);
-    }
+        public string NormalizeEmail(string email)
+        {
+            return Normalize(email);
+        }
 
-    public string NormalizeName(string name)
-    {
-        return Normalize(name);
-    }
+        public string NormalizeName(string name)
+        {
+            return Normalize(name);
+        }
 
-    private string Normalize(string key)
-    {
-        return key?.Normalize().ToLowerInvariant();
+        private string Normalize(string key)
+        {
+            return key?.Normalize().ToLowerInvariant();
+        }
     }
 }

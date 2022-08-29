@@ -1,14 +1,15 @@
 ﻿using Bit.Core.Models.Api;
 
-namespace Bit.Api.Models.Response.Organizations;
-
-public class OrganizationSponsorshipSyncStatusResponseModel : ResponseModel
+namespace Bit.Api.Models.Response.Organizations
 {
-    public OrganizationSponsorshipSyncStatusResponseModel(DateTime? lastSyncDate)
-        : base("syncStatus")
+    public class OrganizationSponsorshipSyncStatusResponseModel : ResponseModel
     {
-        LastSyncDate = lastSyncDate;
-    }
+        public OrganizationSponsorshipSyncStatusResponseModel(DateTime? lastSyncDate)
+            : base("syncStatus")
+        {
+            LastSyncDate = lastSyncDate;
+        }
 
-    public DateTime? LastSyncDate { get; set; }
+        public DateTime? LastSyncDate { get; set; }
+    }
 }

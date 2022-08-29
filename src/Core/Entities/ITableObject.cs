@@ -1,7 +1,8 @@
-﻿namespace Bit.Core.Entities;
-
-public interface ITableObject<T> where T : IEquatable<T>
+﻿namespace Bit.Core.Entities
 {
-    T Id { get; set; }
-    void SetNewId();
+    public interface ITableObject<T> where T : IEquatable<T>
+    {
+        T Id { get; set; }
+        void SetNewId();
+    }
 }

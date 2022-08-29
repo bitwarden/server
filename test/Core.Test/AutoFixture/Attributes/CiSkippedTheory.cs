@@ -1,13 +1,14 @@
-﻿namespace Bit.Core.Test.AutoFixture.Attributes;
-
-public sealed class CiSkippedTheory : Xunit.TheoryAttribute
+﻿namespace Bit.Core.Test.AutoFixture.Attributes
 {
-    private static bool IsGithubActions() => Environment.GetEnvironmentVariable("CI") != null;
-    public CiSkippedTheory()
+    public sealed class CiSkippedTheory : Xunit.TheoryAttribute
     {
-        if (IsGithubActions())
+        private static bool IsGithubActions() => Environment.GetEnvironmentVariable("CI") != null;
+        public CiSkippedTheory()
         {
-            Skip = "Ignore during CI builds";
+            if (IsGithubActions())
+            {
+                Skip = "Ignore during CI builds";
+            }
         }
     }
 }

@@ -1,5 +1,6 @@
-﻿namespace Bit.Core.Resources;
-
-public class SharedResources
+﻿namespace Bit.Core.Resources
 {
+    public class SharedResources
+    {
+    }
 }

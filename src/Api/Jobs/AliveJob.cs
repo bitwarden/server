@@ -2,16 +2,17 @@
 using Bit.Core.Jobs;
 using Quartz;
 
-namespace Bit.Api.Jobs;
-
-public class AliveJob : BaseJob
+namespace Bit.Api.Jobs
 {
-    public AliveJob(ILogger<AliveJob> logger)
-        : base(logger) { }
-
-    protected override Task ExecuteJobAsync(IJobExecutionContext context)
+    public class AliveJob : BaseJob
     {
-        _logger.LogInformation(Constants.BypassFiltersEventId, null, "It's alive!");
-        return Task.FromResult(0);
+        public AliveJob(ILogger<AliveJob> logger)
+            : base(logger) { }
+
+        protected override Task ExecuteJobAsync(IJobExecutionContext context)
+        {
+            _logger.LogInformation(Constants.BypassFiltersEventId, null, "It's alive!");
+            return Task.FromResult(0);
+        }
     }
 }

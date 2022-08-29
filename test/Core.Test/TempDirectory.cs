@@ -1,38 +1,39 @@
-﻿namespace Bit.Core.Test;
-
-public class TempDirectory : IDisposable
+﻿namespace Bit.Core.Test
 {
-    public string Directory { get; private set; }
-
-    public TempDirectory()
+    public class TempDirectory : IDisposable
     {
-        Directory = Path.Combine(Path.GetTempPath(), $"bitwarden_{Guid.NewGuid().ToString().Replace("-", "")}");
-    }
+        public string Directory { get; private set; }
 
-    public override string ToString() => Directory;
-
-    #region IDisposable implementation
-    ~TempDirectory()
-    {
-        Dispose(false);
-    }
-
-    public void Dispose()
-    {
-        Dispose(true);
-        GC.SuppressFinalize(this);
-    }
-
-    public void Dispose(bool disposing)
-    {
-        if (disposing)
+        public TempDirectory()
         {
-            try
-            {
-                System.IO.Directory.Delete(Directory, true);
-            }
-            catch { }
+            Directory = Path.Combine(Path.GetTempPath(), $"bitwarden_{Guid.NewGuid().ToString().Replace("-", "")}");
         }
+
+        public override string ToString() => Directory;
+
+        #region IDisposable implementation
+        ~TempDirectory()
+        {
+            Dispose(false);
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        public void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                try
+                {
+                    System.IO.Directory.Delete(Directory, true);
+                }
+                catch { }
+            }
+        }
+        # endregion
     }
-    # endregion
 }

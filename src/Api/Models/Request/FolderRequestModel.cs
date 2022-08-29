@@ -2,31 +2,32 @@
 using Bit.Core.Entities;
 using Bit.Core.Utilities;
 
-namespace Bit.Api.Models.Request;
-
-public class FolderRequestModel
+namespace Bit.Api.Models.Request
 {
-    [Required]
-    [EncryptedString]
-    [EncryptedStringLength(1000)]
-    public string Name { get; set; }
-
-    public Folder ToFolder(Guid userId)
+    public class FolderRequestModel
     {
-        return ToFolder(new Folder
+        [Required]
+        [EncryptedString]
+        [EncryptedStringLength(1000)]
+        public string Name { get; set; }
+
+        public Folder ToFolder(Guid userId)
         {
-            UserId = userId
-        });
+            return ToFolder(new Folder
+            {
+                UserId = userId
+            });
+        }
+
+        public Folder ToFolder(Folder existingFolder)
+        {
+            existingFolder.Name = Name;
+            return existingFolder;
+        }
     }
 
-    public Folder ToFolder(Folder existingFolder)
+    public class FolderWithIdRequestModel : FolderRequestModel
     {
-        existingFolder.Name = Name;
-        return existingFolder;
+        public Guid Id { get; set; }
     }
-}
-
-public class FolderWithIdRequestModel : FolderRequestModel
-{
-    public Guid Id { get; set; }
 }

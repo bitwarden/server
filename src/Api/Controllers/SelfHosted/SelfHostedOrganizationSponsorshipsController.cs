@@ -7,60 +7,61 @@ using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Bit.Api.Controllers.SelfHosted;
-
-[Route("organization/sponsorship/self-hosted")]
-[Authorize("Application")]
-[SelfHosted(SelfHostedOnly = true)]
-public class SelfHostedOrganizationSponsorshipsController : Controller
+namespace Bit.Api.Controllers.SelfHosted
 {
-    private readonly IOrganizationRepository _organizationRepository;
-    private readonly IOrganizationUserRepository _organizationUserRepository;
-    private readonly IOrganizationSponsorshipRepository _organizationSponsorshipRepository;
-    private readonly ICreateSponsorshipCommand _offerSponsorshipCommand;
-    private readonly IRevokeSponsorshipCommand _revokeSponsorshipCommand;
-    private readonly ICurrentContext _currentContext;
-
-    public SelfHostedOrganizationSponsorshipsController(
-        ICreateSponsorshipCommand offerSponsorshipCommand,
-        IRevokeSponsorshipCommand revokeSponsorshipCommand,
-        IOrganizationRepository organizationRepository,
-        IOrganizationSponsorshipRepository organizationSponsorshipRepository,
-        IOrganizationUserRepository organizationUserRepository,
-        ICurrentContext currentContext
-    )
+    [Route("organization/sponsorship/self-hosted")]
+    [Authorize("Application")]
+    [SelfHosted(SelfHostedOnly = true)]
+    public class SelfHostedOrganizationSponsorshipsController : Controller
     {
-        _offerSponsorshipCommand = offerSponsorshipCommand;
-        _revokeSponsorshipCommand = revokeSponsorshipCommand;
-        _organizationRepository = organizationRepository;
-        _organizationSponsorshipRepository = organizationSponsorshipRepository;
-        _organizationUserRepository = organizationUserRepository;
-        _currentContext = currentContext;
-    }
+        private readonly IOrganizationRepository _organizationRepository;
+        private readonly IOrganizationUserRepository _organizationUserRepository;
+        private readonly IOrganizationSponsorshipRepository _organizationSponsorshipRepository;
+        private readonly ICreateSponsorshipCommand _offerSponsorshipCommand;
+        private readonly IRevokeSponsorshipCommand _revokeSponsorshipCommand;
+        private readonly ICurrentContext _currentContext;
 
-    [HttpPost("{sponsoringOrgId}/families-for-enterprise")]
-    public async Task CreateSponsorship(Guid sponsoringOrgId, [FromBody] OrganizationSponsorshipCreateRequestModel model)
-    {
-        await _offerSponsorshipCommand.CreateSponsorshipAsync(
-            await _organizationRepository.GetByIdAsync(sponsoringOrgId),
-            await _organizationUserRepository.GetByOrganizationAsync(sponsoringOrgId, _currentContext.UserId ?? default),
-            model.PlanSponsorshipType, model.SponsoredEmail, model.FriendlyName);
-    }
-
-    [HttpDelete("{sponsoringOrgId}")]
-    [HttpPost("{sponsoringOrgId}/delete")]
-    public async Task RevokeSponsorship(Guid sponsoringOrgId)
-    {
-        var orgUser = await _organizationUserRepository.GetByOrganizationAsync(sponsoringOrgId, _currentContext.UserId ?? default);
-
-        if (orgUser == null)
+        public SelfHostedOrganizationSponsorshipsController(
+            ICreateSponsorshipCommand offerSponsorshipCommand,
+            IRevokeSponsorshipCommand revokeSponsorshipCommand,
+            IOrganizationRepository organizationRepository,
+            IOrganizationSponsorshipRepository organizationSponsorshipRepository,
+            IOrganizationUserRepository organizationUserRepository,
+            ICurrentContext currentContext
+        )
         {
-            throw new BadRequestException("Unknown Organization User");
+            _offerSponsorshipCommand = offerSponsorshipCommand;
+            _revokeSponsorshipCommand = revokeSponsorshipCommand;
+            _organizationRepository = organizationRepository;
+            _organizationSponsorshipRepository = organizationSponsorshipRepository;
+            _organizationUserRepository = organizationUserRepository;
+            _currentContext = currentContext;
         }
 
-        var existingOrgSponsorship = await _organizationSponsorshipRepository
-            .GetBySponsoringOrganizationUserIdAsync(orgUser.Id);
+        [HttpPost("{sponsoringOrgId}/families-for-enterprise")]
+        public async Task CreateSponsorship(Guid sponsoringOrgId, [FromBody] OrganizationSponsorshipCreateRequestModel model)
+        {
+            await _offerSponsorshipCommand.CreateSponsorshipAsync(
+                await _organizationRepository.GetByIdAsync(sponsoringOrgId),
+                await _organizationUserRepository.GetByOrganizationAsync(sponsoringOrgId, _currentContext.UserId ?? default),
+                model.PlanSponsorshipType, model.SponsoredEmail, model.FriendlyName);
+        }
 
-        await _revokeSponsorshipCommand.RevokeSponsorshipAsync(existingOrgSponsorship);
+        [HttpDelete("{sponsoringOrgId}")]
+        [HttpPost("{sponsoringOrgId}/delete")]
+        public async Task RevokeSponsorship(Guid sponsoringOrgId)
+        {
+            var orgUser = await _organizationUserRepository.GetByOrganizationAsync(sponsoringOrgId, _currentContext.UserId ?? default);
+
+            if (orgUser == null)
+            {
+                throw new BadRequestException("Unknown Organization User");
+            }
+
+            var existingOrgSponsorship = await _organizationSponsorshipRepository
+                .GetBySponsoringOrganizationUserIdAsync(orgUser.Id);
+
+            await _revokeSponsorshipCommand.RevokeSponsorshipAsync(existingOrgSponsorship);
+        }
     }
 }

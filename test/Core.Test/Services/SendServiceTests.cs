@@ -14,748 +14,749 @@ using Microsoft.AspNetCore.Identity;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Core.Test.Services;
-
-public class SendServiceTests
+namespace Bit.Core.Test.Services
 {
-    private void SaveSendAsync_Setup(SendType sendType, bool disableSendPolicyAppliesToUser,
-        SutProvider<SendService> sutProvider, Send send)
+    public class SendServiceTests
     {
-        send.Id = default;
-        send.Type = sendType;
-
-        sutProvider.GetDependency<IPolicyRepository>().GetCountByTypeApplicableToUserIdAsync(
-            Arg.Any<Guid>(), PolicyType.DisableSend).Returns(disableSendPolicyAppliesToUser ? 1 : 0);
-    }
-
-    // Disable Send policy check
-
-    [Theory]
-    [InlineUserSendAutoData(SendType.File)]
-    [InlineUserSendAutoData(SendType.Text)]
-    public async void SaveSendAsync_DisableSend_Applies_throws(SendType sendType,
-        SutProvider<SendService> sutProvider, Send send)
-    {
-        SaveSendAsync_Setup(sendType, disableSendPolicyAppliesToUser: true, sutProvider, send);
-
-        await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SaveSendAsync(send));
-    }
-
-    [Theory]
-    [InlineUserSendAutoData(SendType.File)]
-    [InlineUserSendAutoData(SendType.Text)]
-    public async void SaveSendAsync_DisableSend_DoesntApply_success(SendType sendType,
-        SutProvider<SendService> sutProvider, Send send)
-    {
-        SaveSendAsync_Setup(sendType, disableSendPolicyAppliesToUser: false, sutProvider, send);
-
-        await sutProvider.Sut.SaveSendAsync(send);
-
-        await sutProvider.GetDependency<ISendRepository>().Received(1).CreateAsync(send);
-    }
-
-    // Send Options Policy - Disable Hide Email check
-
-    private void SaveSendAsync_HideEmail_Setup(bool disableHideEmailAppliesToUser,
-        SutProvider<SendService> sutProvider, Send send, Policy policy)
-    {
-        send.HideEmail = true;
-
-        var sendOptions = new SendOptionsPolicyData
+        private void SaveSendAsync_Setup(SendType sendType, bool disableSendPolicyAppliesToUser,
+            SutProvider<SendService> sutProvider, Send send)
         {
-            DisableHideEmail = disableHideEmailAppliesToUser
-        };
-        policy.Data = JsonSerializer.Serialize(sendOptions, new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        });
+            send.Id = default;
+            send.Type = sendType;
 
-        sutProvider.GetDependency<IPolicyRepository>().GetManyByTypeApplicableToUserIdAsync(
-            Arg.Any<Guid>(), PolicyType.SendOptions).Returns(new List<Policy>
+            sutProvider.GetDependency<IPolicyRepository>().GetCountByTypeApplicableToUserIdAsync(
+                Arg.Any<Guid>(), PolicyType.DisableSend).Returns(disableSendPolicyAppliesToUser ? 1 : 0);
+        }
+
+        // Disable Send policy check
+
+        [Theory]
+        [InlineUserSendAutoData(SendType.File)]
+        [InlineUserSendAutoData(SendType.Text)]
+        public async void SaveSendAsync_DisableSend_Applies_throws(SendType sendType,
+            SutProvider<SendService> sutProvider, Send send)
+        {
+            SaveSendAsync_Setup(sendType, disableSendPolicyAppliesToUser: true, sutProvider, send);
+
+            await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SaveSendAsync(send));
+        }
+
+        [Theory]
+        [InlineUserSendAutoData(SendType.File)]
+        [InlineUserSendAutoData(SendType.Text)]
+        public async void SaveSendAsync_DisableSend_DoesntApply_success(SendType sendType,
+            SutProvider<SendService> sutProvider, Send send)
+        {
+            SaveSendAsync_Setup(sendType, disableSendPolicyAppliesToUser: false, sutProvider, send);
+
+            await sutProvider.Sut.SaveSendAsync(send);
+
+            await sutProvider.GetDependency<ISendRepository>().Received(1).CreateAsync(send);
+        }
+
+        // Send Options Policy - Disable Hide Email check
+
+        private void SaveSendAsync_HideEmail_Setup(bool disableHideEmailAppliesToUser,
+            SutProvider<SendService> sutProvider, Send send, Policy policy)
+        {
+            send.HideEmail = true;
+
+            var sendOptions = new SendOptionsPolicyData
             {
-                policy,
+                DisableHideEmail = disableHideEmailAppliesToUser
+            };
+            policy.Data = JsonSerializer.Serialize(sendOptions, new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             });
-    }
 
-    [Theory]
-    [InlineUserSendAutoData(SendType.File)]
-    [InlineUserSendAutoData(SendType.Text)]
-    public async void SaveSendAsync_DisableHideEmail_Applies_throws(SendType sendType,
-        SutProvider<SendService> sutProvider, Send send, Policy policy)
-    {
-        SaveSendAsync_Setup(sendType, false, sutProvider, send);
-        SaveSendAsync_HideEmail_Setup(true, sutProvider, send, policy);
+            sutProvider.GetDependency<IPolicyRepository>().GetManyByTypeApplicableToUserIdAsync(
+                Arg.Any<Guid>(), PolicyType.SendOptions).Returns(new List<Policy>
+                {
+                    policy,
+                });
+        }
 
-        await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SaveSendAsync(send));
-    }
-
-    [Theory]
-    [InlineUserSendAutoData(SendType.File)]
-    [InlineUserSendAutoData(SendType.Text)]
-    public async void SaveSendAsync_DisableHideEmail_DoesntApply_success(SendType sendType,
-        SutProvider<SendService> sutProvider, Send send, Policy policy)
-    {
-        SaveSendAsync_Setup(sendType, false, sutProvider, send);
-        SaveSendAsync_HideEmail_Setup(false, sutProvider, send, policy);
-
-        await sutProvider.Sut.SaveSendAsync(send);
-
-        await sutProvider.GetDependency<ISendRepository>().Received(1).CreateAsync(send);
-    }
-
-    [Theory]
-    [InlineUserSendAutoData]
-    [InlineUserSendAutoData]
-    public async void SaveSendAsync_ExistingSend_Updates(SutProvider<SendService> sutProvider,
-        Send send)
-    {
-        send.Id = Guid.NewGuid();
-
-        var now = DateTime.UtcNow;
-        await sutProvider.Sut.SaveSendAsync(send);
-
-        Assert.True(send.RevisionDate - now < TimeSpan.FromSeconds(1));
-
-        await sutProvider.GetDependency<ISendRepository>()
-            .Received(1)
-            .UpsertAsync(send);
-
-        await sutProvider.GetDependency<IPushNotificationService>()
-            .Received(1)
-            .PushSyncSendUpdateAsync(send);
-    }
-
-    [Theory]
-    [InlineUserSendAutoData]
-    public async void SaveFileSendAsync_TextType_ThrowsBadRequest(SutProvider<SendService> sutProvider,
-        Send send)
-    {
-        send.Type = SendType.Text;
-
-        var badRequest = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.SaveFileSendAsync(send, null, 0)
-        );
-
-        Assert.Contains("not of type \"file\"", badRequest.Message, StringComparison.InvariantCultureIgnoreCase);
-    }
-
-    [Theory]
-    [InlineUserSendAutoData]
-    public async void SaveFileSendAsync_EmptyFile_ThrowsBadRequest(SutProvider<SendService> sutProvider,
-        Send send)
-    {
-        send.Type = SendType.File;
-
-        var badRequest = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.SaveFileSendAsync(send, null, 0)
-        );
-
-        Assert.Contains("no file data", badRequest.Message, StringComparison.InvariantCultureIgnoreCase);
-    }
-
-    [Theory]
-    [InlineUserSendAutoData]
-    public async void SaveFileSendAsync_UserCannotAccessPremium_ThrowsBadRequest(SutProvider<SendService> sutProvider,
-        Send send)
-    {
-        var user = new User
+        [Theory]
+        [InlineUserSendAutoData(SendType.File)]
+        [InlineUserSendAutoData(SendType.Text)]
+        public async void SaveSendAsync_DisableHideEmail_Applies_throws(SendType sendType,
+            SutProvider<SendService> sutProvider, Send send, Policy policy)
         {
-            Id = Guid.NewGuid(),
-        };
+            SaveSendAsync_Setup(sendType, false, sutProvider, send);
+            SaveSendAsync_HideEmail_Setup(true, sutProvider, send, policy);
 
-        send.UserId = user.Id;
-        send.Type = SendType.File;
+            await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SaveSendAsync(send));
+        }
 
-        sutProvider.GetDependency<IUserRepository>()
-            .GetByIdAsync(user.Id)
-            .Returns(user);
-
-        sutProvider.GetDependency<IUserService>()
-            .CanAccessPremium(user)
-            .Returns(false);
-
-        var badRequest = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.SaveFileSendAsync(send, null, 1)
-        );
-
-        Assert.Contains("must have premium", badRequest.Message, StringComparison.InvariantCultureIgnoreCase);
-    }
-
-    [Theory]
-    [InlineUserSendAutoData]
-    public async void SaveFileSendAsync_UserHasUnconfirmedEmail_ThrowsBadRequest(SutProvider<SendService> sutProvider,
-        Send send)
-    {
-        var user = new User
+        [Theory]
+        [InlineUserSendAutoData(SendType.File)]
+        [InlineUserSendAutoData(SendType.Text)]
+        public async void SaveSendAsync_DisableHideEmail_DoesntApply_success(SendType sendType,
+            SutProvider<SendService> sutProvider, Send send, Policy policy)
         {
-            Id = Guid.NewGuid(),
-            EmailVerified = false,
-        };
+            SaveSendAsync_Setup(sendType, false, sutProvider, send);
+            SaveSendAsync_HideEmail_Setup(false, sutProvider, send, policy);
 
-        send.UserId = user.Id;
-        send.Type = SendType.File;
+            await sutProvider.Sut.SaveSendAsync(send);
 
-        sutProvider.GetDependency<IUserRepository>()
-            .GetByIdAsync(user.Id)
-            .Returns(user);
+            await sutProvider.GetDependency<ISendRepository>().Received(1).CreateAsync(send);
+        }
 
-        sutProvider.GetDependency<IUserService>()
-            .CanAccessPremium(user)
-            .Returns(true);
-
-        var badRequest = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.SaveFileSendAsync(send, null, 1)
-        );
-
-        Assert.Contains("must confirm your email", badRequest.Message, StringComparison.InvariantCultureIgnoreCase);
-    }
-
-    [Theory]
-    [InlineUserSendAutoData]
-    public async void SaveFileSendAsync_UserCanAccessPremium_HasNoStorage_ThrowsBadRequest(SutProvider<SendService> sutProvider,
-        Send send)
-    {
-        var user = new User
+        [Theory]
+        [InlineUserSendAutoData]
+        [InlineUserSendAutoData]
+        public async void SaveSendAsync_ExistingSend_Updates(SutProvider<SendService> sutProvider,
+            Send send)
         {
-            Id = Guid.NewGuid(),
-            EmailVerified = true,
-            Premium = true,
-            MaxStorageGb = null,
-            Storage = 0,
-        };
+            send.Id = Guid.NewGuid();
 
-        send.UserId = user.Id;
-        send.Type = SendType.File;
+            var now = DateTime.UtcNow;
+            await sutProvider.Sut.SaveSendAsync(send);
 
-        sutProvider.GetDependency<IUserRepository>()
-            .GetByIdAsync(user.Id)
-            .Returns(user);
+            Assert.True(send.RevisionDate - now < TimeSpan.FromSeconds(1));
 
-        sutProvider.GetDependency<IUserService>()
-            .CanAccessPremium(user)
-            .Returns(true);
+            await sutProvider.GetDependency<ISendRepository>()
+                .Received(1)
+                .UpsertAsync(send);
 
-        var badRequest = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.SaveFileSendAsync(send, null, 1)
-        );
+            await sutProvider.GetDependency<IPushNotificationService>()
+                .Received(1)
+                .PushSyncSendUpdateAsync(send);
+        }
 
-        Assert.Contains("not enough storage", badRequest.Message, StringComparison.InvariantCultureIgnoreCase);
-    }
-
-    [Theory]
-    [InlineUserSendAutoData]
-    public async void SaveFileSendAsync_UserCanAccessPremium_StorageFull_ThrowsBadRequest(SutProvider<SendService> sutProvider,
-        Send send)
-    {
-        var user = new User
+        [Theory]
+        [InlineUserSendAutoData]
+        public async void SaveFileSendAsync_TextType_ThrowsBadRequest(SutProvider<SendService> sutProvider,
+            Send send)
         {
-            Id = Guid.NewGuid(),
-            EmailVerified = true,
-            Premium = true,
-            MaxStorageGb = 2,
-            Storage = 2 * UserTests.Multiplier,
-        };
+            send.Type = SendType.Text;
 
-        send.UserId = user.Id;
-        send.Type = SendType.File;
+            var badRequest = await Assert.ThrowsAsync<BadRequestException>(() =>
+                sutProvider.Sut.SaveFileSendAsync(send, null, 0)
+            );
 
-        sutProvider.GetDependency<IUserRepository>()
-            .GetByIdAsync(user.Id)
-            .Returns(user);
+            Assert.Contains("not of type \"file\"", badRequest.Message, StringComparison.InvariantCultureIgnoreCase);
+        }
 
-        sutProvider.GetDependency<IUserService>()
-            .CanAccessPremium(user)
-            .Returns(true);
-
-        var badRequest = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.SaveFileSendAsync(send, null, 1)
-        );
-
-        Assert.Contains("not enough storage", badRequest.Message, StringComparison.InvariantCultureIgnoreCase);
-    }
-
-    [Theory]
-    [InlineUserSendAutoData]
-    public async void SaveFileSendAsync_UserCanAccessPremium_IsNotPremium_IsSelfHosted_GiantFile_ThrowsBadRequest(SutProvider<SendService> sutProvider,
-        Send send)
-    {
-        var user = new User
+        [Theory]
+        [InlineUserSendAutoData]
+        public async void SaveFileSendAsync_EmptyFile_ThrowsBadRequest(SutProvider<SendService> sutProvider,
+            Send send)
         {
-            Id = Guid.NewGuid(),
-            EmailVerified = true,
-            Premium = false,
-        };
+            send.Type = SendType.File;
 
-        send.UserId = user.Id;
-        send.Type = SendType.File;
+            var badRequest = await Assert.ThrowsAsync<BadRequestException>(() =>
+                sutProvider.Sut.SaveFileSendAsync(send, null, 0)
+            );
 
-        sutProvider.GetDependency<IUserRepository>()
-            .GetByIdAsync(user.Id)
-            .Returns(user);
+            Assert.Contains("no file data", badRequest.Message, StringComparison.InvariantCultureIgnoreCase);
+        }
 
-        sutProvider.GetDependency<IUserService>()
-            .CanAccessPremium(user)
-            .Returns(true);
-
-        sutProvider.GetDependency<Settings.GlobalSettings>()
-            .SelfHosted = true;
-
-        var badRequest = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.SaveFileSendAsync(send, null, 11000 * UserTests.Multiplier)
-        );
-
-        Assert.Contains("not enough storage", badRequest.Message, StringComparison.InvariantCultureIgnoreCase);
-    }
-
-    [Theory]
-    [InlineUserSendAutoData]
-    public async void SaveFileSendAsync_UserCanAccessPremium_IsNotPremium_IsNotSelfHosted_TwoGigabyteFile_ThrowsBadRequest(SutProvider<SendService> sutProvider,
-        Send send)
-    {
-        var user = new User
+        [Theory]
+        [InlineUserSendAutoData]
+        public async void SaveFileSendAsync_UserCannotAccessPremium_ThrowsBadRequest(SutProvider<SendService> sutProvider,
+            Send send)
         {
-            Id = Guid.NewGuid(),
-            EmailVerified = true,
-            Premium = false,
-        };
+            var user = new User
+            {
+                Id = Guid.NewGuid(),
+            };
 
-        send.UserId = user.Id;
-        send.Type = SendType.File;
+            send.UserId = user.Id;
+            send.Type = SendType.File;
 
-        sutProvider.GetDependency<IUserRepository>()
-            .GetByIdAsync(user.Id)
-            .Returns(user);
+            sutProvider.GetDependency<IUserRepository>()
+                .GetByIdAsync(user.Id)
+                .Returns(user);
 
-        sutProvider.GetDependency<IUserService>()
-            .CanAccessPremium(user)
-            .Returns(true);
+            sutProvider.GetDependency<IUserService>()
+                .CanAccessPremium(user)
+                .Returns(false);
 
-        sutProvider.GetDependency<Settings.GlobalSettings>()
-            .SelfHosted = false;
+            var badRequest = await Assert.ThrowsAsync<BadRequestException>(() =>
+                sutProvider.Sut.SaveFileSendAsync(send, null, 1)
+            );
 
-        var badRequest = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.SaveFileSendAsync(send, null, 2 * UserTests.Multiplier)
-        );
+            Assert.Contains("must have premium", badRequest.Message, StringComparison.InvariantCultureIgnoreCase);
+        }
 
-        Assert.Contains("not enough storage", badRequest.Message, StringComparison.InvariantCultureIgnoreCase);
-    }
-
-    [Theory]
-    [InlineUserSendAutoData]
-    public async void SaveFileSendAsync_ThroughOrg_MaxStorageIsNull_ThrowsBadRequest(SutProvider<SendService> sutProvider,
-        Send send)
-    {
-        var org = new Organization
+        [Theory]
+        [InlineUserSendAutoData]
+        public async void SaveFileSendAsync_UserHasUnconfirmedEmail_ThrowsBadRequest(SutProvider<SendService> sutProvider,
+            Send send)
         {
-            Id = Guid.NewGuid(),
-            MaxStorageGb = null,
-        };
+            var user = new User
+            {
+                Id = Guid.NewGuid(),
+                EmailVerified = false,
+            };
 
-        send.UserId = null;
-        send.OrganizationId = org.Id;
-        send.Type = SendType.File;
+            send.UserId = user.Id;
+            send.Type = SendType.File;
 
-        sutProvider.GetDependency<IOrganizationRepository>()
-            .GetByIdAsync(org.Id)
-            .Returns(org);
+            sutProvider.GetDependency<IUserRepository>()
+                .GetByIdAsync(user.Id)
+                .Returns(user);
 
-        var badRequest = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.SaveFileSendAsync(send, null, 1)
-        );
+            sutProvider.GetDependency<IUserService>()
+                .CanAccessPremium(user)
+                .Returns(true);
 
-        Assert.Contains("organization cannot use file sends", badRequest.Message, StringComparison.InvariantCultureIgnoreCase);
-    }
+            var badRequest = await Assert.ThrowsAsync<BadRequestException>(() =>
+                sutProvider.Sut.SaveFileSendAsync(send, null, 1)
+            );
 
-    [Theory]
-    [InlineUserSendAutoData]
-    public async void SaveFileSendAsync_ThroughOrg_MaxStorageIsNull_TwoGBFile_ThrowsBadRequest(SutProvider<SendService> sutProvider,
-        Send send)
-    {
-        var org = new Organization
+            Assert.Contains("must confirm your email", badRequest.Message, StringComparison.InvariantCultureIgnoreCase);
+        }
+
+        [Theory]
+        [InlineUserSendAutoData]
+        public async void SaveFileSendAsync_UserCanAccessPremium_HasNoStorage_ThrowsBadRequest(SutProvider<SendService> sutProvider,
+            Send send)
         {
-            Id = Guid.NewGuid(),
-            MaxStorageGb = null,
-        };
+            var user = new User
+            {
+                Id = Guid.NewGuid(),
+                EmailVerified = true,
+                Premium = true,
+                MaxStorageGb = null,
+                Storage = 0,
+            };
 
-        send.UserId = null;
-        send.OrganizationId = org.Id;
-        send.Type = SendType.File;
+            send.UserId = user.Id;
+            send.Type = SendType.File;
 
-        sutProvider.GetDependency<IOrganizationRepository>()
-            .GetByIdAsync(org.Id)
-            .Returns(org);
+            sutProvider.GetDependency<IUserRepository>()
+                .GetByIdAsync(user.Id)
+                .Returns(user);
 
-        var badRequest = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.SaveFileSendAsync(send, null, 1)
-        );
+            sutProvider.GetDependency<IUserService>()
+                .CanAccessPremium(user)
+                .Returns(true);
 
-        Assert.Contains("organization cannot use file sends", badRequest.Message, StringComparison.InvariantCultureIgnoreCase);
-    }
+            var badRequest = await Assert.ThrowsAsync<BadRequestException>(() =>
+                sutProvider.Sut.SaveFileSendAsync(send, null, 1)
+            );
 
-    [Theory]
-    [InlineUserSendAutoData]
-    public async void SaveFileSendAsync_ThroughOrg_MaxStorageIsOneGB_TwoGBFile_ThrowsBadRequest(SutProvider<SendService> sutProvider,
-        Send send)
-    {
-        var org = new Organization
+            Assert.Contains("not enough storage", badRequest.Message, StringComparison.InvariantCultureIgnoreCase);
+        }
+
+        [Theory]
+        [InlineUserSendAutoData]
+        public async void SaveFileSendAsync_UserCanAccessPremium_StorageFull_ThrowsBadRequest(SutProvider<SendService> sutProvider,
+            Send send)
         {
-            Id = Guid.NewGuid(),
-            MaxStorageGb = 1,
-        };
+            var user = new User
+            {
+                Id = Guid.NewGuid(),
+                EmailVerified = true,
+                Premium = true,
+                MaxStorageGb = 2,
+                Storage = 2 * UserTests.Multiplier,
+            };
 
-        send.UserId = null;
-        send.OrganizationId = org.Id;
-        send.Type = SendType.File;
+            send.UserId = user.Id;
+            send.Type = SendType.File;
 
-        sutProvider.GetDependency<IOrganizationRepository>()
-            .GetByIdAsync(org.Id)
-            .Returns(org);
+            sutProvider.GetDependency<IUserRepository>()
+                .GetByIdAsync(user.Id)
+                .Returns(user);
 
-        var badRequest = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.SaveFileSendAsync(send, null, 2 * UserTests.Multiplier)
-        );
+            sutProvider.GetDependency<IUserService>()
+                .CanAccessPremium(user)
+                .Returns(true);
 
-        Assert.Contains("not enough storage", badRequest.Message, StringComparison.InvariantCultureIgnoreCase);
-    }
+            var badRequest = await Assert.ThrowsAsync<BadRequestException>(() =>
+                sutProvider.Sut.SaveFileSendAsync(send, null, 1)
+            );
 
-    [Theory]
-    [InlineUserSendAutoData]
-    public async void SaveFileSendAsync_HasEnouphStorage_Success(SutProvider<SendService> sutProvider,
-        Send send)
-    {
-        var user = new User
+            Assert.Contains("not enough storage", badRequest.Message, StringComparison.InvariantCultureIgnoreCase);
+        }
+
+        [Theory]
+        [InlineUserSendAutoData]
+        public async void SaveFileSendAsync_UserCanAccessPremium_IsNotPremium_IsSelfHosted_GiantFile_ThrowsBadRequest(SutProvider<SendService> sutProvider,
+            Send send)
         {
-            Id = Guid.NewGuid(),
-            EmailVerified = true,
-            MaxStorageGb = 10,
-        };
+            var user = new User
+            {
+                Id = Guid.NewGuid(),
+                EmailVerified = true,
+                Premium = false,
+            };
 
-        var data = new SendFileData
+            send.UserId = user.Id;
+            send.Type = SendType.File;
+
+            sutProvider.GetDependency<IUserRepository>()
+                .GetByIdAsync(user.Id)
+                .Returns(user);
+
+            sutProvider.GetDependency<IUserService>()
+                .CanAccessPremium(user)
+                .Returns(true);
+
+            sutProvider.GetDependency<Settings.GlobalSettings>()
+                .SelfHosted = true;
+
+            var badRequest = await Assert.ThrowsAsync<BadRequestException>(() =>
+                sutProvider.Sut.SaveFileSendAsync(send, null, 11000 * UserTests.Multiplier)
+            );
+
+            Assert.Contains("not enough storage", badRequest.Message, StringComparison.InvariantCultureIgnoreCase);
+        }
+
+        [Theory]
+        [InlineUserSendAutoData]
+        public async void SaveFileSendAsync_UserCanAccessPremium_IsNotPremium_IsNotSelfHosted_TwoGigabyteFile_ThrowsBadRequest(SutProvider<SendService> sutProvider,
+            Send send)
+        {
+            var user = new User
+            {
+                Id = Guid.NewGuid(),
+                EmailVerified = true,
+                Premium = false,
+            };
+
+            send.UserId = user.Id;
+            send.Type = SendType.File;
+
+            sutProvider.GetDependency<IUserRepository>()
+                .GetByIdAsync(user.Id)
+                .Returns(user);
+
+            sutProvider.GetDependency<IUserService>()
+                .CanAccessPremium(user)
+                .Returns(true);
+
+            sutProvider.GetDependency<Settings.GlobalSettings>()
+                .SelfHosted = false;
+
+            var badRequest = await Assert.ThrowsAsync<BadRequestException>(() =>
+                sutProvider.Sut.SaveFileSendAsync(send, null, 2 * UserTests.Multiplier)
+            );
+
+            Assert.Contains("not enough storage", badRequest.Message, StringComparison.InvariantCultureIgnoreCase);
+        }
+
+        [Theory]
+        [InlineUserSendAutoData]
+        public async void SaveFileSendAsync_ThroughOrg_MaxStorageIsNull_ThrowsBadRequest(SutProvider<SendService> sutProvider,
+            Send send)
+        {
+            var org = new Organization
+            {
+                Id = Guid.NewGuid(),
+                MaxStorageGb = null,
+            };
+
+            send.UserId = null;
+            send.OrganizationId = org.Id;
+            send.Type = SendType.File;
+
+            sutProvider.GetDependency<IOrganizationRepository>()
+                .GetByIdAsync(org.Id)
+                .Returns(org);
+
+            var badRequest = await Assert.ThrowsAsync<BadRequestException>(() =>
+                sutProvider.Sut.SaveFileSendAsync(send, null, 1)
+            );
+
+            Assert.Contains("organization cannot use file sends", badRequest.Message, StringComparison.InvariantCultureIgnoreCase);
+        }
+
+        [Theory]
+        [InlineUserSendAutoData]
+        public async void SaveFileSendAsync_ThroughOrg_MaxStorageIsNull_TwoGBFile_ThrowsBadRequest(SutProvider<SendService> sutProvider,
+            Send send)
+        {
+            var org = new Organization
+            {
+                Id = Guid.NewGuid(),
+                MaxStorageGb = null,
+            };
+
+            send.UserId = null;
+            send.OrganizationId = org.Id;
+            send.Type = SendType.File;
+
+            sutProvider.GetDependency<IOrganizationRepository>()
+                .GetByIdAsync(org.Id)
+                .Returns(org);
+
+            var badRequest = await Assert.ThrowsAsync<BadRequestException>(() =>
+                sutProvider.Sut.SaveFileSendAsync(send, null, 1)
+            );
+
+            Assert.Contains("organization cannot use file sends", badRequest.Message, StringComparison.InvariantCultureIgnoreCase);
+        }
+
+        [Theory]
+        [InlineUserSendAutoData]
+        public async void SaveFileSendAsync_ThroughOrg_MaxStorageIsOneGB_TwoGBFile_ThrowsBadRequest(SutProvider<SendService> sutProvider,
+            Send send)
+        {
+            var org = new Organization
+            {
+                Id = Guid.NewGuid(),
+                MaxStorageGb = 1,
+            };
+
+            send.UserId = null;
+            send.OrganizationId = org.Id;
+            send.Type = SendType.File;
+
+            sutProvider.GetDependency<IOrganizationRepository>()
+                .GetByIdAsync(org.Id)
+                .Returns(org);
+
+            var badRequest = await Assert.ThrowsAsync<BadRequestException>(() =>
+                sutProvider.Sut.SaveFileSendAsync(send, null, 2 * UserTests.Multiplier)
+            );
+
+            Assert.Contains("not enough storage", badRequest.Message, StringComparison.InvariantCultureIgnoreCase);
+        }
+
+        [Theory]
+        [InlineUserSendAutoData]
+        public async void SaveFileSendAsync_HasEnouphStorage_Success(SutProvider<SendService> sutProvider,
+            Send send)
+        {
+            var user = new User
+            {
+                Id = Guid.NewGuid(),
+                EmailVerified = true,
+                MaxStorageGb = 10,
+            };
+
+            var data = new SendFileData
+            {
+
+            };
+
+            send.UserId = user.Id;
+            send.Type = SendType.File;
+
+            var testUrl = "https://test.com/";
+
+            sutProvider.GetDependency<IUserRepository>()
+                .GetByIdAsync(user.Id)
+                .Returns(user);
+
+            sutProvider.GetDependency<IUserService>()
+                .CanAccessPremium(user)
+                .Returns(true);
+
+            sutProvider.GetDependency<ISendFileStorageService>()
+                .GetSendFileUploadUrlAsync(send, Arg.Any<string>())
+                .Returns(testUrl);
+
+            var utcNow = DateTime.UtcNow;
+
+            var url = await sutProvider.Sut.SaveFileSendAsync(send, data, 1 * UserTests.Multiplier);
+
+            Assert.Equal(testUrl, url);
+            Assert.True(send.RevisionDate - utcNow < TimeSpan.FromSeconds(1));
+
+            await sutProvider.GetDependency<ISendFileStorageService>()
+                .Received(1)
+                .GetSendFileUploadUrlAsync(send, Arg.Any<string>());
+
+            await sutProvider.GetDependency<ISendRepository>()
+                .Received(1)
+                .UpsertAsync(send);
+
+            await sutProvider.GetDependency<IPushNotificationService>()
+                .Received(1)
+                .PushSyncSendUpdateAsync(send);
+        }
+
+        [Theory]
+        [InlineUserSendAutoData]
+        public async void SaveFileSendAsync_HasEnouphStorage_SendFileThrows_CleansUp(SutProvider<SendService> sutProvider,
+            Send send)
+        {
+            var user = new User
+            {
+                Id = Guid.NewGuid(),
+                EmailVerified = true,
+                MaxStorageGb = 10,
+            };
+
+            var data = new SendFileData
+            {
+
+            };
+
+            send.UserId = user.Id;
+            send.Type = SendType.File;
+
+            sutProvider.GetDependency<IUserRepository>()
+                .GetByIdAsync(user.Id)
+                .Returns(user);
+
+            sutProvider.GetDependency<IUserService>()
+                .CanAccessPremium(user)
+                .Returns(true);
+
+            sutProvider.GetDependency<ISendFileStorageService>()
+                .GetSendFileUploadUrlAsync(send, Arg.Any<string>())
+                .Returns<string>(callInfo => throw new Exception("Problem"));
+
+            var utcNow = DateTime.UtcNow;
+
+            var exception = await Assert.ThrowsAsync<Exception>(() =>
+                sutProvider.Sut.SaveFileSendAsync(send, data, 1 * UserTests.Multiplier)
+            );
+
+            Assert.True(send.RevisionDate - utcNow < TimeSpan.FromSeconds(1));
+            Assert.Equal("Problem", exception.Message);
+
+            await sutProvider.GetDependency<ISendFileStorageService>()
+                .Received(1)
+                .GetSendFileUploadUrlAsync(send, Arg.Any<string>());
+
+            await sutProvider.GetDependency<ISendRepository>()
+                .Received(1)
+                .UpsertAsync(send);
+
+            await sutProvider.GetDependency<IPushNotificationService>()
+                .Received(1)
+                .PushSyncSendUpdateAsync(send);
+
+            await sutProvider.GetDependency<ISendFileStorageService>()
+                .Received(1)
+                .DeleteFileAsync(send, Arg.Any<string>());
+        }
+
+        [Theory]
+        [InlineUserSendAutoData]
+        public async void UpdateFileToExistingSendAsync_SendNull_ThrowsBadRequest(SutProvider<SendService> sutProvider)
         {
 
-        };
+            var badRequest = await Assert.ThrowsAsync<BadRequestException>(() =>
+                sutProvider.Sut.UploadFileToExistingSendAsync(new MemoryStream(), null)
+            );
 
-        send.UserId = user.Id;
-        send.Type = SendType.File;
+            Assert.Contains("does not have file data", badRequest.Message, StringComparison.InvariantCultureIgnoreCase);
+        }
 
-        var testUrl = "https://test.com/";
-
-        sutProvider.GetDependency<IUserRepository>()
-            .GetByIdAsync(user.Id)
-            .Returns(user);
-
-        sutProvider.GetDependency<IUserService>()
-            .CanAccessPremium(user)
-            .Returns(true);
-
-        sutProvider.GetDependency<ISendFileStorageService>()
-            .GetSendFileUploadUrlAsync(send, Arg.Any<string>())
-            .Returns(testUrl);
-
-        var utcNow = DateTime.UtcNow;
-
-        var url = await sutProvider.Sut.SaveFileSendAsync(send, data, 1 * UserTests.Multiplier);
-
-        Assert.Equal(testUrl, url);
-        Assert.True(send.RevisionDate - utcNow < TimeSpan.FromSeconds(1));
-
-        await sutProvider.GetDependency<ISendFileStorageService>()
-            .Received(1)
-            .GetSendFileUploadUrlAsync(send, Arg.Any<string>());
-
-        await sutProvider.GetDependency<ISendRepository>()
-            .Received(1)
-            .UpsertAsync(send);
-
-        await sutProvider.GetDependency<IPushNotificationService>()
-            .Received(1)
-            .PushSyncSendUpdateAsync(send);
-    }
-
-    [Theory]
-    [InlineUserSendAutoData]
-    public async void SaveFileSendAsync_HasEnouphStorage_SendFileThrows_CleansUp(SutProvider<SendService> sutProvider,
-        Send send)
-    {
-        var user = new User
+        [Theory]
+        [InlineUserSendAutoData]
+        public async void UpdateFileToExistingSendAsync_SendDataNull_ThrowsBadRequest(SutProvider<SendService> sutProvider,
+            Send send)
         {
-            Id = Guid.NewGuid(),
-            EmailVerified = true,
-            MaxStorageGb = 10,
-        };
+            send.Data = null;
 
-        var data = new SendFileData
+            var badRequest = await Assert.ThrowsAsync<BadRequestException>(() =>
+                sutProvider.Sut.UploadFileToExistingSendAsync(new MemoryStream(), send)
+            );
+
+            Assert.Contains("does not have file data", badRequest.Message, StringComparison.InvariantCultureIgnoreCase);
+        }
+
+        [Theory]
+        [InlineUserSendAutoData]
+        public async void UpdateFileToExistingSendAsync_NotFileType_ThrowsBadRequest(SutProvider<SendService> sutProvider,
+            Send send)
         {
+            var badRequest = await Assert.ThrowsAsync<BadRequestException>(() =>
+                sutProvider.Sut.UploadFileToExistingSendAsync(new MemoryStream(), send)
+            );
 
-        };
+            Assert.Contains("not a file type send", badRequest.Message, StringComparison.InvariantCultureIgnoreCase);
+        }
 
-        send.UserId = user.Id;
-        send.Type = SendType.File;
-
-        sutProvider.GetDependency<IUserRepository>()
-            .GetByIdAsync(user.Id)
-            .Returns(user);
-
-        sutProvider.GetDependency<IUserService>()
-            .CanAccessPremium(user)
-            .Returns(true);
-
-        sutProvider.GetDependency<ISendFileStorageService>()
-            .GetSendFileUploadUrlAsync(send, Arg.Any<string>())
-            .Returns<string>(callInfo => throw new Exception("Problem"));
-
-        var utcNow = DateTime.UtcNow;
-
-        var exception = await Assert.ThrowsAsync<Exception>(() =>
-            sutProvider.Sut.SaveFileSendAsync(send, data, 1 * UserTests.Multiplier)
-        );
-
-        Assert.True(send.RevisionDate - utcNow < TimeSpan.FromSeconds(1));
-        Assert.Equal("Problem", exception.Message);
-
-        await sutProvider.GetDependency<ISendFileStorageService>()
-            .Received(1)
-            .GetSendFileUploadUrlAsync(send, Arg.Any<string>());
-
-        await sutProvider.GetDependency<ISendRepository>()
-            .Received(1)
-            .UpsertAsync(send);
-
-        await sutProvider.GetDependency<IPushNotificationService>()
-            .Received(1)
-            .PushSyncSendUpdateAsync(send);
-
-        await sutProvider.GetDependency<ISendFileStorageService>()
-            .Received(1)
-            .DeleteFileAsync(send, Arg.Any<string>());
-    }
-
-    [Theory]
-    [InlineUserSendAutoData]
-    public async void UpdateFileToExistingSendAsync_SendNull_ThrowsBadRequest(SutProvider<SendService> sutProvider)
-    {
-
-        var badRequest = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.UploadFileToExistingSendAsync(new MemoryStream(), null)
-        );
-
-        Assert.Contains("does not have file data", badRequest.Message, StringComparison.InvariantCultureIgnoreCase);
-    }
-
-    [Theory]
-    [InlineUserSendAutoData]
-    public async void UpdateFileToExistingSendAsync_SendDataNull_ThrowsBadRequest(SutProvider<SendService> sutProvider,
-        Send send)
-    {
-        send.Data = null;
-
-        var badRequest = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.UploadFileToExistingSendAsync(new MemoryStream(), send)
-        );
-
-        Assert.Contains("does not have file data", badRequest.Message, StringComparison.InvariantCultureIgnoreCase);
-    }
-
-    [Theory]
-    [InlineUserSendAutoData]
-    public async void UpdateFileToExistingSendAsync_NotFileType_ThrowsBadRequest(SutProvider<SendService> sutProvider,
-        Send send)
-    {
-        var badRequest = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.UploadFileToExistingSendAsync(new MemoryStream(), send)
-        );
-
-        Assert.Contains("not a file type send", badRequest.Message, StringComparison.InvariantCultureIgnoreCase);
-    }
-
-    [Theory]
-    [InlineUserSendAutoData]
-    public async void UpdateFileToExistingSendAsync_Success(SutProvider<SendService> sutProvider,
-        Send send)
-    {
-        var fileContents = "Test file content";
-
-        var sendFileData = new SendFileData
+        [Theory]
+        [InlineUserSendAutoData]
+        public async void UpdateFileToExistingSendAsync_Success(SutProvider<SendService> sutProvider,
+            Send send)
         {
-            Id = "TEST",
-            Size = fileContents.Length,
-            Validated = false,
-        };
+            var fileContents = "Test file content";
 
-        send.Type = SendType.File;
-        send.Data = JsonSerializer.Serialize(sendFileData);
+            var sendFileData = new SendFileData
+            {
+                Id = "TEST",
+                Size = fileContents.Length,
+                Validated = false,
+            };
 
-        sutProvider.GetDependency<ISendFileStorageService>()
-            .ValidateFileAsync(send, sendFileData.Id, sendFileData.Size, Arg.Any<long>())
-            .Returns((true, sendFileData.Size));
+            send.Type = SendType.File;
+            send.Data = JsonSerializer.Serialize(sendFileData);
 
-        await sutProvider.Sut.UploadFileToExistingSendAsync(new MemoryStream(Encoding.UTF8.GetBytes(fileContents)), send);
-    }
+            sutProvider.GetDependency<ISendFileStorageService>()
+                .ValidateFileAsync(send, sendFileData.Id, sendFileData.Size, Arg.Any<long>())
+                .Returns((true, sendFileData.Size));
 
-    [Theory]
-    [InlineUserSendAutoData]
-    public async void UpdateFileToExistingSendAsync_InvalidSize(SutProvider<SendService> sutProvider,
-        Send send)
-    {
-        var fileContents = "Test file content";
+            await sutProvider.Sut.UploadFileToExistingSendAsync(new MemoryStream(Encoding.UTF8.GetBytes(fileContents)), send);
+        }
 
-        var sendFileData = new SendFileData
+        [Theory]
+        [InlineUserSendAutoData]
+        public async void UpdateFileToExistingSendAsync_InvalidSize(SutProvider<SendService> sutProvider,
+            Send send)
         {
-            Id = "TEST",
-            Size = fileContents.Length,
-        };
+            var fileContents = "Test file content";
 
-        send.Type = SendType.File;
-        send.Data = JsonSerializer.Serialize(sendFileData);
+            var sendFileData = new SendFileData
+            {
+                Id = "TEST",
+                Size = fileContents.Length,
+            };
 
-        sutProvider.GetDependency<ISendFileStorageService>()
-            .ValidateFileAsync(send, sendFileData.Id, sendFileData.Size, Arg.Any<long>())
-            .Returns((false, sendFileData.Size));
+            send.Type = SendType.File;
+            send.Data = JsonSerializer.Serialize(sendFileData);
 
-        var badRequest = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.UploadFileToExistingSendAsync(new MemoryStream(Encoding.UTF8.GetBytes(fileContents)), send)
-        );
-    }
+            sutProvider.GetDependency<ISendFileStorageService>()
+                .ValidateFileAsync(send, sendFileData.Id, sendFileData.Size, Arg.Any<long>())
+                .Returns((false, sendFileData.Size));
 
-    [Theory]
-    [InlineUserSendAutoData]
-    public void SendCanBeAccessed_Success(SutProvider<SendService> sutProvider, Send send)
-    {
-        var now = DateTime.UtcNow;
-        send.MaxAccessCount = 10;
-        send.AccessCount = 5;
-        send.ExpirationDate = now.AddYears(1);
-        send.DeletionDate = now.AddYears(1);
-        send.Disabled = false;
+            var badRequest = await Assert.ThrowsAsync<BadRequestException>(() =>
+                sutProvider.Sut.UploadFileToExistingSendAsync(new MemoryStream(Encoding.UTF8.GetBytes(fileContents)), send)
+            );
+        }
 
-        sutProvider.GetDependency<IPasswordHasher<User>>()
-            .VerifyHashedPassword(Arg.Any<User>(), send.Password, "TEST")
-            .Returns(PasswordVerificationResult.Success);
+        [Theory]
+        [InlineUserSendAutoData]
+        public void SendCanBeAccessed_Success(SutProvider<SendService> sutProvider, Send send)
+        {
+            var now = DateTime.UtcNow;
+            send.MaxAccessCount = 10;
+            send.AccessCount = 5;
+            send.ExpirationDate = now.AddYears(1);
+            send.DeletionDate = now.AddYears(1);
+            send.Disabled = false;
 
-        var (grant, passwordRequiredError, passwordInvalidError)
-            = sutProvider.Sut.SendCanBeAccessed(send, "TEST");
+            sutProvider.GetDependency<IPasswordHasher<User>>()
+                .VerifyHashedPassword(Arg.Any<User>(), send.Password, "TEST")
+                .Returns(PasswordVerificationResult.Success);
 
-        Assert.True(grant);
-        Assert.False(passwordRequiredError);
-        Assert.False(passwordInvalidError);
-    }
+            var (grant, passwordRequiredError, passwordInvalidError)
+                = sutProvider.Sut.SendCanBeAccessed(send, "TEST");
 
-    [Theory]
-    [InlineUserSendAutoData]
-    public void SendCanBeAccessed_NullMaxAccess_Success(SutProvider<SendService> sutProvider,
-        Send send)
-    {
-        var now = DateTime.UtcNow;
-        send.MaxAccessCount = null;
-        send.AccessCount = 5;
-        send.ExpirationDate = now.AddYears(1);
-        send.DeletionDate = now.AddYears(1);
-        send.Disabled = false;
+            Assert.True(grant);
+            Assert.False(passwordRequiredError);
+            Assert.False(passwordInvalidError);
+        }
 
-        sutProvider.GetDependency<IPasswordHasher<User>>()
-            .VerifyHashedPassword(Arg.Any<User>(), send.Password, "TEST")
-            .Returns(PasswordVerificationResult.Success);
+        [Theory]
+        [InlineUserSendAutoData]
+        public void SendCanBeAccessed_NullMaxAccess_Success(SutProvider<SendService> sutProvider,
+            Send send)
+        {
+            var now = DateTime.UtcNow;
+            send.MaxAccessCount = null;
+            send.AccessCount = 5;
+            send.ExpirationDate = now.AddYears(1);
+            send.DeletionDate = now.AddYears(1);
+            send.Disabled = false;
 
-        var (grant, passwordRequiredError, passwordInvalidError)
-            = sutProvider.Sut.SendCanBeAccessed(send, "TEST");
+            sutProvider.GetDependency<IPasswordHasher<User>>()
+                .VerifyHashedPassword(Arg.Any<User>(), send.Password, "TEST")
+                .Returns(PasswordVerificationResult.Success);
 
-        Assert.True(grant);
-        Assert.False(passwordRequiredError);
-        Assert.False(passwordInvalidError);
-    }
+            var (grant, passwordRequiredError, passwordInvalidError)
+                = sutProvider.Sut.SendCanBeAccessed(send, "TEST");
 
-    [Theory]
-    [InlineUserSendAutoData]
-    public void SendCanBeAccessed_NullSend_DoesNotGrantAccess(SutProvider<SendService> sutProvider)
-    {
-        sutProvider.GetDependency<IPasswordHasher<User>>()
-            .VerifyHashedPassword(Arg.Any<User>(), "TEST", "TEST")
-            .Returns(PasswordVerificationResult.Success);
+            Assert.True(grant);
+            Assert.False(passwordRequiredError);
+            Assert.False(passwordInvalidError);
+        }
 
-        var (grant, passwordRequiredError, passwordInvalidError)
-            = sutProvider.Sut.SendCanBeAccessed(null, "TEST");
+        [Theory]
+        [InlineUserSendAutoData]
+        public void SendCanBeAccessed_NullSend_DoesNotGrantAccess(SutProvider<SendService> sutProvider)
+        {
+            sutProvider.GetDependency<IPasswordHasher<User>>()
+                .VerifyHashedPassword(Arg.Any<User>(), "TEST", "TEST")
+                .Returns(PasswordVerificationResult.Success);
 
-        Assert.False(grant);
-        Assert.False(passwordRequiredError);
-        Assert.False(passwordInvalidError);
-    }
+            var (grant, passwordRequiredError, passwordInvalidError)
+                = sutProvider.Sut.SendCanBeAccessed(null, "TEST");
 
-    [Theory]
-    [InlineUserSendAutoData]
-    public void SendCanBeAccessed_NullPassword_PasswordRequiredErrorReturnsTrue(SutProvider<SendService> sutProvider,
-        Send send)
-    {
-        var now = DateTime.UtcNow;
-        send.MaxAccessCount = null;
-        send.AccessCount = 5;
-        send.ExpirationDate = now.AddYears(1);
-        send.DeletionDate = now.AddYears(1);
-        send.Disabled = false;
-        send.Password = "HASH";
+            Assert.False(grant);
+            Assert.False(passwordRequiredError);
+            Assert.False(passwordInvalidError);
+        }
 
-        sutProvider.GetDependency<IPasswordHasher<User>>()
-            .VerifyHashedPassword(Arg.Any<User>(), "TEST", "TEST")
-            .Returns(PasswordVerificationResult.Success);
+        [Theory]
+        [InlineUserSendAutoData]
+        public void SendCanBeAccessed_NullPassword_PasswordRequiredErrorReturnsTrue(SutProvider<SendService> sutProvider,
+            Send send)
+        {
+            var now = DateTime.UtcNow;
+            send.MaxAccessCount = null;
+            send.AccessCount = 5;
+            send.ExpirationDate = now.AddYears(1);
+            send.DeletionDate = now.AddYears(1);
+            send.Disabled = false;
+            send.Password = "HASH";
 
-        var (grant, passwordRequiredError, passwordInvalidError)
-            = sutProvider.Sut.SendCanBeAccessed(send, null);
+            sutProvider.GetDependency<IPasswordHasher<User>>()
+                .VerifyHashedPassword(Arg.Any<User>(), "TEST", "TEST")
+                .Returns(PasswordVerificationResult.Success);
 
-        Assert.False(grant);
-        Assert.True(passwordRequiredError);
-        Assert.False(passwordInvalidError);
-    }
+            var (grant, passwordRequiredError, passwordInvalidError)
+                = sutProvider.Sut.SendCanBeAccessed(send, null);
 
-    [Theory]
-    [InlineUserSendAutoData]
-    public void SendCanBeAccessed_RehashNeeded_RehashesPassword(SutProvider<SendService> sutProvider,
-        Send send)
-    {
-        var now = DateTime.UtcNow;
-        send.MaxAccessCount = null;
-        send.AccessCount = 5;
-        send.ExpirationDate = now.AddYears(1);
-        send.DeletionDate = now.AddYears(1);
-        send.Disabled = false;
-        send.Password = "TEST";
+            Assert.False(grant);
+            Assert.True(passwordRequiredError);
+            Assert.False(passwordInvalidError);
+        }
 
-        sutProvider.GetDependency<IPasswordHasher<User>>()
-            .VerifyHashedPassword(Arg.Any<User>(), "TEST", "TEST")
-            .Returns(PasswordVerificationResult.SuccessRehashNeeded);
+        [Theory]
+        [InlineUserSendAutoData]
+        public void SendCanBeAccessed_RehashNeeded_RehashesPassword(SutProvider<SendService> sutProvider,
+            Send send)
+        {
+            var now = DateTime.UtcNow;
+            send.MaxAccessCount = null;
+            send.AccessCount = 5;
+            send.ExpirationDate = now.AddYears(1);
+            send.DeletionDate = now.AddYears(1);
+            send.Disabled = false;
+            send.Password = "TEST";
 
-        var (grant, passwordRequiredError, passwordInvalidError)
-            = sutProvider.Sut.SendCanBeAccessed(send, "TEST");
+            sutProvider.GetDependency<IPasswordHasher<User>>()
+                .VerifyHashedPassword(Arg.Any<User>(), "TEST", "TEST")
+                .Returns(PasswordVerificationResult.SuccessRehashNeeded);
 
-        sutProvider.GetDependency<IPasswordHasher<User>>()
-            .Received(1)
-            .HashPassword(Arg.Any<User>(), "TEST");
+            var (grant, passwordRequiredError, passwordInvalidError)
+                = sutProvider.Sut.SendCanBeAccessed(send, "TEST");
 
-        Assert.True(grant);
-        Assert.False(passwordRequiredError);
-        Assert.False(passwordInvalidError);
-    }
+            sutProvider.GetDependency<IPasswordHasher<User>>()
+                .Received(1)
+                .HashPassword(Arg.Any<User>(), "TEST");
 
-    [Theory]
-    [InlineUserSendAutoData]
-    public void SendCanBeAccessed_VerifyFailed_PasswordInvalidReturnsTrue(SutProvider<SendService> sutProvider,
-        Send send)
-    {
-        var now = DateTime.UtcNow;
-        send.MaxAccessCount = null;
-        send.AccessCount = 5;
-        send.ExpirationDate = now.AddYears(1);
-        send.DeletionDate = now.AddYears(1);
-        send.Disabled = false;
-        send.Password = "TEST";
+            Assert.True(grant);
+            Assert.False(passwordRequiredError);
+            Assert.False(passwordInvalidError);
+        }
 
-        sutProvider.GetDependency<IPasswordHasher<User>>()
-            .VerifyHashedPassword(Arg.Any<User>(), "TEST", "TEST")
-            .Returns(PasswordVerificationResult.Failed);
+        [Theory]
+        [InlineUserSendAutoData]
+        public void SendCanBeAccessed_VerifyFailed_PasswordInvalidReturnsTrue(SutProvider<SendService> sutProvider,
+            Send send)
+        {
+            var now = DateTime.UtcNow;
+            send.MaxAccessCount = null;
+            send.AccessCount = 5;
+            send.ExpirationDate = now.AddYears(1);
+            send.DeletionDate = now.AddYears(1);
+            send.Disabled = false;
+            send.Password = "TEST";
 
-        var (grant, passwordRequiredError, passwordInvalidError)
-            = sutProvider.Sut.SendCanBeAccessed(send, "TEST");
+            sutProvider.GetDependency<IPasswordHasher<User>>()
+                .VerifyHashedPassword(Arg.Any<User>(), "TEST", "TEST")
+                .Returns(PasswordVerificationResult.Failed);
 
-        Assert.False(grant);
-        Assert.False(passwordRequiredError);
-        Assert.True(passwordInvalidError);
+            var (grant, passwordRequiredError, passwordInvalidError)
+                = sutProvider.Sut.SendCanBeAccessed(send, "TEST");
+
+            Assert.False(grant);
+            Assert.False(passwordRequiredError);
+            Assert.True(passwordInvalidError);
+        }
     }
 }

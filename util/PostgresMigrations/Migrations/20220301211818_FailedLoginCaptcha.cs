@@ -1,33 +1,34 @@
 ﻿using Microsoft.EntityFrameworkCore.Migrations;
 
-namespace Bit.PostgresMigrations.Migrations;
-
-public partial class FailedLoginCaptcha : Migration
+namespace Bit.PostgresMigrations.Migrations
 {
-    protected override void Up(MigrationBuilder migrationBuilder)
+    public partial class FailedLoginCaptcha : Migration
     {
-        migrationBuilder.AddColumn<int>(
-            name: "FailedLoginCount",
-            table: "User",
-            type: "integer",
-            nullable: false,
-            defaultValue: 0);
+        protected override void Up(MigrationBuilder migrationBuilder)
+        {
+            migrationBuilder.AddColumn<int>(
+                name: "FailedLoginCount",
+                table: "User",
+                type: "integer",
+                nullable: false,
+                defaultValue: 0);
 
-        migrationBuilder.AddColumn<DateTime>(
-            name: "LastFailedLoginDate",
-            table: "User",
-            type: "timestamp without time zone",
-            nullable: true);
-    }
+            migrationBuilder.AddColumn<DateTime>(
+                name: "LastFailedLoginDate",
+                table: "User",
+                type: "timestamp without time zone",
+                nullable: true);
+        }
 
-    protected override void Down(MigrationBuilder migrationBuilder)
-    {
-        migrationBuilder.DropColumn(
-            name: "FailedLoginCount",
-            table: "User");
+        protected override void Down(MigrationBuilder migrationBuilder)
+        {
+            migrationBuilder.DropColumn(
+                name: "FailedLoginCount",
+                table: "User");
 
-        migrationBuilder.DropColumn(
-            name: "LastFailedLoginDate",
-            table: "User");
+            migrationBuilder.DropColumn(
+                name: "LastFailedLoginDate",
+                table: "User");
+        }
     }
 }

@@ -1,9 +1,10 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace Bit.Api.Models.Request;
-
-public class LicenseRequestModel
+namespace Bit.Api.Models.Request
 {
-    [Required]
-    public IFormFile License { get; set; }
+    public class LicenseRequestModel
+    {
+        [Required]
+        public IFormFile License { get; set; }
+    }
 }

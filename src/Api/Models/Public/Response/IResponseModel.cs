@@ -1,6 +1,7 @@
-﻿namespace Bit.Api.Models.Public.Response;
-
-public interface IResponseModel
+﻿namespace Bit.Api.Models.Public.Response
 {
-    string Object { get; }
+    public interface IResponseModel
+    {
+        string Object { get; }
+    }
 }

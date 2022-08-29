@@ -1,14 +1,15 @@
-﻿namespace Bit.Scim.Models;
-
-public abstract class BaseScimModel
+﻿namespace Bit.Scim.Models
 {
-    public BaseScimModel()
-    { }
-
-    public BaseScimModel(string schema)
+    public abstract class BaseScimModel
     {
-        Schemas = new List<string> { schema };
-    }
+        public BaseScimModel()
+        { }
 
-    public List<string> Schemas { get; set; }
+        public BaseScimModel(string schema)
+        {
+            Schemas = new List<string> { schema };
+        }
+
+        public List<string> Schemas { get; set; }
+    }
 }

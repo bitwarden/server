@@ -6,48 +6,49 @@ using Bit.Core.Models;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using Bit.Test.Common.AutoFixture;
 
-namespace Bit.Core.Test.AutoFixture.UserFixtures;
-
-public class UserBuilder : ISpecimenBuilder
+namespace Bit.Core.Test.AutoFixture.UserFixtures
 {
-    public object Create(object request, ISpecimenContext context)
+    public class UserBuilder : ISpecimenBuilder
     {
-        if (context == null)
+        public object Create(object request, ISpecimenContext context)
         {
-            throw new ArgumentNullException(nameof(context));
-        }
-
-        var type = request as Type;
-        if (type == typeof(User))
-        {
-            var fixture = new Fixture();
-            var providers = fixture.Create<Dictionary<TwoFactorProviderType, TwoFactorProvider>>();
-            var user = fixture.WithAutoNSubstitutions().Create<User>();
-            user.SetTwoFactorProviders(providers);
-            return user;
-        }
-        else if (type == typeof(List<User>))
-        {
-            var fixture = new Fixture();
-            var users = fixture.WithAutoNSubstitutions().CreateMany<User>(2);
-            foreach (var user in users)
+            if (context == null)
             {
-                var providers = fixture.Create<Dictionary<TwoFactorProviderType, TwoFactorProvider>>();
-                user.SetTwoFactorProviders(providers);
+                throw new ArgumentNullException(nameof(context));
             }
-            return users;
+
+            var type = request as Type;
+            if (type == typeof(User))
+            {
+                var fixture = new Fixture();
+                var providers = fixture.Create<Dictionary<TwoFactorProviderType, TwoFactorProvider>>();
+                var user = fixture.WithAutoNSubstitutions().Create<User>();
+                user.SetTwoFactorProviders(providers);
+                return user;
+            }
+            else if (type == typeof(List<User>))
+            {
+                var fixture = new Fixture();
+                var users = fixture.WithAutoNSubstitutions().CreateMany<User>(2);
+                foreach (var user in users)
+                {
+                    var providers = fixture.Create<Dictionary<TwoFactorProviderType, TwoFactorProvider>>();
+                    user.SetTwoFactorProviders(providers);
+                }
+                return users;
+            }
+
+            return new NoSpecimen();
         }
-
-        return new NoSpecimen();
     }
-}
 
-public class UserFixture : ICustomization
-{
-    public virtual void Customize(IFixture fixture)
+    public class UserFixture : ICustomization
     {
-        fixture.Customizations.Add(new GlobalSettingsBuilder());
-        fixture.Customizations.Add(new UserBuilder());
-        fixture.Customizations.Add(new OrganizationBuilder());
+        public virtual void Customize(IFixture fixture)
+        {
+            fixture.Customizations.Add(new GlobalSettingsBuilder());
+            fixture.Customizations.Add(new UserBuilder());
+            fixture.Customizations.Add(new OrganizationBuilder());
+        }
     }
 }

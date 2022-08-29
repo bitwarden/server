@@ -1,11 +1,12 @@
 ﻿using Bit.Core.Enums;
 
-namespace Bit.Core.Models;
-
-public interface ITwoFactorProvidersUser
+namespace Bit.Core.Models
 {
-    string TwoFactorProviders { get; }
-    Dictionary<TwoFactorProviderType, TwoFactorProvider> GetTwoFactorProviders();
-    Guid? GetUserId();
-    bool GetPremium();
+    public interface ITwoFactorProvidersUser
+    {
+        string TwoFactorProviders { get; }
+        Dictionary<TwoFactorProviderType, TwoFactorProvider> GetTwoFactorProviders();
+        Guid? GetUserId();
+        bool GetPremium();
+    }
 }

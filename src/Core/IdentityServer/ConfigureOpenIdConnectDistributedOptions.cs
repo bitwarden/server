@@ -5,48 +5,49 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Caching.StackExchangeRedis;
 using Microsoft.Extensions.Options;
 
-namespace Bit.Core.IdentityServer;
-
-public class ConfigureOpenIdConnectDistributedOptions : IPostConfigureOptions<CookieAuthenticationOptions>
+namespace Bit.Core.IdentityServer
 {
-    private readonly IdentityServerOptions _idsrv;
-    private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly GlobalSettings _globalSettings;
-
-    public ConfigureOpenIdConnectDistributedOptions(IHttpContextAccessor httpContextAccessor, GlobalSettings globalSettings,
-        IdentityServerOptions idsrv)
+    public class ConfigureOpenIdConnectDistributedOptions : IPostConfigureOptions<CookieAuthenticationOptions>
     {
-        _httpContextAccessor = httpContextAccessor ?? throw new ArgumentNullException(nameof(httpContextAccessor));
-        _globalSettings = globalSettings;
-        _idsrv = idsrv;
-    }
+        private readonly IdentityServerOptions _idsrv;
+        private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly GlobalSettings _globalSettings;
 
-    public void PostConfigure(string name, CookieAuthenticationOptions options)
-    {
-        options.CookieManager = new DistributedCacheCookieManager();
-
-        if (name != AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme)
+        public ConfigureOpenIdConnectDistributedOptions(IHttpContextAccessor httpContextAccessor, GlobalSettings globalSettings,
+            IdentityServerOptions idsrv)
         {
-            // Ignore
-            return;
+            _httpContextAccessor = httpContextAccessor ?? throw new ArgumentNullException(nameof(httpContextAccessor));
+            _globalSettings = globalSettings;
+            _idsrv = idsrv;
         }
 
-        options.Cookie.Name = AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme;
-        options.Cookie.IsEssential = true;
-        options.Cookie.SameSite = _idsrv.Authentication.CookieSameSiteMode;
-        options.TicketDataFormat = new DistributedCacheTicketDataFormatter(_httpContextAccessor, name);
+        public void PostConfigure(string name, CookieAuthenticationOptions options)
+        {
+            options.CookieManager = new DistributedCacheCookieManager();
 
-        if (string.IsNullOrWhiteSpace(_globalSettings.IdentityServer?.RedisConnectionString))
-        {
-            options.SessionStore = new MemoryCacheTicketStore();
-        }
-        else
-        {
-            var redisOptions = new RedisCacheOptions
+            if (name != AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme)
             {
-                Configuration = _globalSettings.IdentityServer.RedisConnectionString,
-            };
-            options.SessionStore = new RedisCacheTicketStore(redisOptions);
+                // Ignore
+                return;
+            }
+
+            options.Cookie.Name = AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme;
+            options.Cookie.IsEssential = true;
+            options.Cookie.SameSite = _idsrv.Authentication.CookieSameSiteMode;
+            options.TicketDataFormat = new DistributedCacheTicketDataFormatter(_httpContextAccessor, name);
+
+            if (string.IsNullOrWhiteSpace(_globalSettings.IdentityServer?.RedisConnectionString))
+            {
+                options.SessionStore = new MemoryCacheTicketStore();
+            }
+            else
+            {
+                var redisOptions = new RedisCacheOptions
+                {
+                    Configuration = _globalSettings.IdentityServer.RedisConnectionString,
+                };
+                options.SessionStore = new RedisCacheTicketStore(redisOptions);
+            }
         }
     }
 }

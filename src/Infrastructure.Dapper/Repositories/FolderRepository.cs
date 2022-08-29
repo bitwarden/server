@@ -5,39 +5,40 @@ using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Dapper;
 
-namespace Bit.Infrastructure.Dapper.Repositories;
-
-public class FolderRepository : Repository<Folder, Guid>, IFolderRepository
+namespace Bit.Infrastructure.Dapper.Repositories
 {
-    public FolderRepository(GlobalSettings globalSettings)
-        : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
-    { }
-
-    public FolderRepository(string connectionString, string readOnlyConnectionString)
-        : base(connectionString, readOnlyConnectionString)
-    { }
-
-    public async Task<Folder> GetByIdAsync(Guid id, Guid userId)
+    public class FolderRepository : Repository<Folder, Guid>, IFolderRepository
     {
-        var folder = await GetByIdAsync(id);
-        if (folder == null || folder.UserId != userId)
+        public FolderRepository(GlobalSettings globalSettings)
+            : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
+        { }
+
+        public FolderRepository(string connectionString, string readOnlyConnectionString)
+            : base(connectionString, readOnlyConnectionString)
+        { }
+
+        public async Task<Folder> GetByIdAsync(Guid id, Guid userId)
         {
-            return null;
+            var folder = await GetByIdAsync(id);
+            if (folder == null || folder.UserId != userId)
+            {
+                return null;
+            }
+
+            return folder;
         }
 
-        return folder;
-    }
-
-    public async Task<ICollection<Folder>> GetManyByUserIdAsync(Guid userId)
-    {
-        using (var connection = new SqlConnection(ConnectionString))
+        public async Task<ICollection<Folder>> GetManyByUserIdAsync(Guid userId)
         {
-            var results = await connection.QueryAsync<Folder>(
-                $"[{Schema}].[Folder_ReadByUserId]",
-                new { UserId = userId },
-                commandType: CommandType.StoredProcedure);
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                var results = await connection.QueryAsync<Folder>(
+                    $"[{Schema}].[Folder_ReadByUserId]",
+                    new { UserId = userId },
+                    commandType: CommandType.StoredProcedure);
 
-            return results.ToList();
+                return results.ToList();
+            }
         }
     }
 }

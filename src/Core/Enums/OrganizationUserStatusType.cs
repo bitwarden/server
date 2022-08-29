@@ -1,9 +1,10 @@
-﻿namespace Bit.Core.Enums;
-
-public enum OrganizationUserStatusType : short
+﻿namespace Bit.Core.Enums
 {
-    Invited = 0,
-    Accepted = 1,
-    Confirmed = 2,
-    Revoked = -1,
+    public enum OrganizationUserStatusType : short
+    {
+        Invited = 0,
+        Accepted = 1,
+        Confirmed = 2,
+        Revoked = -1,
+    }
 }

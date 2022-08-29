@@ -6,50 +6,51 @@ using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 
-namespace Bit.Infrastructure.EFIntegration.Test.AutoFixture;
-
-internal class GrantBuilder : ISpecimenBuilder
+namespace Bit.Infrastructure.EFIntegration.Test.AutoFixture
 {
-    public object Create(object request, ISpecimenContext context)
+    internal class GrantBuilder : ISpecimenBuilder
     {
-        if (context == null)
+        public object Create(object request, ISpecimenContext context)
         {
-            throw new ArgumentNullException(nameof(context));
-        }
+            if (context == null)
+            {
+                throw new ArgumentNullException(nameof(context));
+            }
 
-        var type = request as Type;
-        if (type == null || type != typeof(Grant))
-        {
-            return new NoSpecimen();
-        }
+            var type = request as Type;
+            if (type == null || type != typeof(Grant))
+            {
+                return new NoSpecimen();
+            }
 
-        var fixture = new Fixture();
-        fixture.Customizations.Insert(0, new MaxLengthStringRelay());
-        var obj = fixture.WithAutoNSubstitutions().Create<Grant>();
-        return obj;
+            var fixture = new Fixture();
+            fixture.Customizations.Insert(0, new MaxLengthStringRelay());
+            var obj = fixture.WithAutoNSubstitutions().Create<Grant>();
+            return obj;
+        }
     }
-}
 
-internal class EfGrant : ICustomization
-{
-    public void Customize(IFixture fixture)
+    internal class EfGrant : ICustomization
     {
-        fixture.Customizations.Add(new IgnoreVirtualMembersCustomization());
-        fixture.Customizations.Add(new GlobalSettingsBuilder());
-        fixture.Customizations.Add(new GrantBuilder());
-        fixture.Customizations.Add(new EfRepositoryListBuilder<GrantRepository>());
+        public void Customize(IFixture fixture)
+        {
+            fixture.Customizations.Add(new IgnoreVirtualMembersCustomization());
+            fixture.Customizations.Add(new GlobalSettingsBuilder());
+            fixture.Customizations.Add(new GrantBuilder());
+            fixture.Customizations.Add(new EfRepositoryListBuilder<GrantRepository>());
+        }
     }
-}
 
-internal class EfGrantAutoDataAttribute : CustomAutoDataAttribute
-{
-    public EfGrantAutoDataAttribute() : base(new SutProviderCustomization(), new EfGrant())
-    { }
-}
+    internal class EfGrantAutoDataAttribute : CustomAutoDataAttribute
+    {
+        public EfGrantAutoDataAttribute() : base(new SutProviderCustomization(), new EfGrant())
+        { }
+    }
 
-internal class InlineEfGrantAutoDataAttribute : InlineCustomAutoDataAttribute
-{
-    public InlineEfGrantAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
-        typeof(EfGrant) }, values)
-    { }
+    internal class InlineEfGrantAutoDataAttribute : InlineCustomAutoDataAttribute
+    {
+        public InlineEfGrantAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
+            typeof(EfGrant) }, values)
+        { }
+    }
 }

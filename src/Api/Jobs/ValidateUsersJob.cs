@@ -2,22 +2,23 @@
 using Bit.Core.Services;
 using Quartz;
 
-namespace Bit.Api.Jobs;
-
-public class ValidateUsersJob : BaseJob
+namespace Bit.Api.Jobs
 {
-    private readonly ILicensingService _licensingService;
-
-    public ValidateUsersJob(
-        ILicensingService licensingService,
-        ILogger<ValidateUsersJob> logger)
-        : base(logger)
+    public class ValidateUsersJob : BaseJob
     {
-        _licensingService = licensingService;
-    }
+        private readonly ILicensingService _licensingService;
 
-    protected async override Task ExecuteJobAsync(IJobExecutionContext context)
-    {
-        await _licensingService.ValidateUsersAsync();
+        public ValidateUsersJob(
+            ILicensingService licensingService,
+            ILogger<ValidateUsersJob> logger)
+            : base(logger)
+        {
+            _licensingService = licensingService;
+        }
+
+        protected async override Task ExecuteJobAsync(IJobExecutionContext context)
+        {
+            await _licensingService.ValidateUsersAsync();
+        }
     }
 }

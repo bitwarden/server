@@ -1,8 +1,9 @@
 ﻿using Bit.Core.Entities;
 
-namespace Bit.Core.Services;
-
-public interface ISsoConfigService
+namespace Bit.Core.Services
 {
-    Task SaveAsync(SsoConfig config, Organization organization);
+    public interface ISsoConfigService
+    {
+        Task SaveAsync(SsoConfig config, Organization organization);
+    }
 }

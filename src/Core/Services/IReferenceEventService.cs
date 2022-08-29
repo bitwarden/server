@@ -1,8 +1,9 @@
 ﻿using Bit.Core.Models.Business;
 
-namespace Bit.Core.Services;
-
-public interface IReferenceEventService
+namespace Bit.Core.Services
 {
-    Task RaiseEventAsync(ReferenceEvent referenceEvent);
+    public interface IReferenceEventService
+    {
+        Task RaiseEventAsync(ReferenceEvent referenceEvent);
+    }
 }

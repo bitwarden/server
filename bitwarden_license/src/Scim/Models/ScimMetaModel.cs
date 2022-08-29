@@ -1,13 +1,14 @@
-﻿namespace Bit.Scim.Models;
-
-public class ScimMetaModel
+﻿namespace Bit.Scim.Models
 {
-    public ScimMetaModel(string resourceType)
+    public class ScimMetaModel
     {
-        ResourceType = resourceType;
-    }
+        public ScimMetaModel(string resourceType)
+        {
+            ResourceType = resourceType;
+        }
 
-    public string ResourceType { get; set; }
-    public DateTime? Created { get; set; }
-    public DateTime? LastModified { get; set; }
+        public string ResourceType { get; set; }
+        public DateTime? Created { get; set; }
+        public DateTime? LastModified { get; set; }
+    }
 }
