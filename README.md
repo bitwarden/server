@@ -94,4 +94,5 @@ We have switched to using file scoped namespace. All previous branches will need
 3. Run `dotnet format`
 4. Commit
 5. Run `git merge -Xours 34fb4cca2aa78deb84d4cbc359992a7c6bba7ea5`
-6. Push
+6. Resolve merge conflicts
+7. Push
