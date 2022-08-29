@@ -9,8 +9,9 @@ namespace Bit.Api.Utilities
     {
         public void OnResourceExecuting(ResourceExecutingContext context)
         {
-            var env = context.HttpContext.RequestServices.GetService<IHostEnvironment>();
-            if (!env.IsDevelopment())
+            var isDev = context.HttpContext.RequestServices.GetService<IHostEnvironment>().IsDevelopment();
+            var isEE = Environment.GetEnvironmentVariable("EE_TESTING_ENV") != null;
+            if (!isDev && !isEE)
             {
                 context.Result = new NotFoundResult();
             }
