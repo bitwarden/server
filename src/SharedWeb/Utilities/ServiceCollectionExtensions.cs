@@ -621,7 +621,7 @@ namespace Bit.SharedWeb.Utilities
 
                 // Use a custom Redis processing strategy that skips Ip limiting if Redis is down
                 // Requires a registered IConnectionMultiplexer
-                services.AddSingleton<IProcessingStrategy, CustomRedisProcessingStrategy>(); 
+                services.AddSingleton<IProcessingStrategy, CustomRedisProcessingStrategy>();
             }
         }
 
