@@ -1,7 +1,6 @@
-﻿namespace Bit.Icons.Services
+﻿namespace Bit.Icons.Services;
+
+public interface IDomainMappingService
 {
-    public interface IDomainMappingService
-    {
-        string MapDomain(string hostname);
-    }
+    string MapDomain(string hostname);
 }

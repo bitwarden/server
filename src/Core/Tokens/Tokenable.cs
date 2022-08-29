@@ -1,20 +1,19 @@
 ﻿using System.Text.Json;
 
-namespace Bit.Core.Tokens
+namespace Bit.Core.Tokens;
+
+public abstract class Tokenable
 {
-    public abstract class Tokenable
+    public abstract bool Valid { get; }
+
+    public Token ToToken()
     {
-        public abstract bool Valid { get; }
+        return new Token(JsonSerializer.Serialize(this, this.GetType()));
+    }
 
-        public Token ToToken()
-        {
-            return new Token(JsonSerializer.Serialize(this, this.GetType()));
-        }
-
-        public static T FromToken<T>(string token) => FromToken<T>(new Token(token));
-        public static T FromToken<T>(Token token)
-        {
-            return JsonSerializer.Deserialize<T>(token.ToString());
-        }
+    public static T FromToken<T>(string token) => FromToken<T>(new Token(token));
+    public static T FromToken<T>(Token token)
+    {
+        return JsonSerializer.Deserialize<T>(token.ToString());
     }
 }

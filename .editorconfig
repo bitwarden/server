@@ -114,6 +114,9 @@ csharp_new_line_before_finally = true
 csharp_new_line_before_members_in_object_initializers = true
 csharp_new_line_before_members_in_anonymous_types = true
 
+# Namespace settings
+csharp_style_namespace_declarations = file_scoped:warning
+
 # All files
 [*]
 guidelines = 120
