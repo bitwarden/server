@@ -40,7 +40,7 @@ namespace Bit.Api.Controllers
             var result = new OrganizationExportResponseModel
             {
                 Collections = GetOrganizationCollectionsResponse(orgCollections),
-                Ciphers = await GetOrganizationCiphersResponse(orgCiphers, collectionCiphersGroupDict)
+                Ciphers = GetOrganizationCiphersResponse(orgCiphers, collectionCiphersGroupDict)
             };
 
             return result;
@@ -52,7 +52,7 @@ namespace Bit.Api.Controllers
             return new ListResponseModel<CollectionResponseModel>(collections);
         }
 
-        private async Task<ListResponseModel<CipherMiniDetailsResponseModel>> GetOrganizationCiphersResponse(IEnumerable<CipherOrganizationDetails> orgCiphers,
+        private ListResponseModel<CipherMiniDetailsResponseModel> GetOrganizationCiphersResponse(IEnumerable<CipherOrganizationDetails> orgCiphers,
             Dictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphersGroupDict)
         {
             var responses = orgCiphers.Select(c => new CipherMiniDetailsResponseModel(c, _globalSettings,
