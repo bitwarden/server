@@ -608,7 +608,7 @@ namespace Bit.SharedWeb.Utilities
             services.AddHostedService<IpRateLimitSeedStartupService>();
             services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
 
-            if (string.IsNullOrEmpty(globalSettings.Redis.ConnectionString))
+            if (!globalSettings.DistributedIpRateLimiting.Enabled || string.IsNullOrEmpty(globalSettings.Redis.ConnectionString))
             {
                 services.AddInMemoryRateLimiting();
             }
@@ -619,7 +619,9 @@ namespace Bit.SharedWeb.Utilities
                 services.AddSingleton<IIpPolicyStore, MemoryCacheIpPolicyStore>();
                 services.AddSingleton<IClientPolicyStore, MemoryCacheClientPolicyStore>();
 
-                services.AddSingleton<IProcessingStrategy, CustomRedisProcessingStrategy>(); // Requires a registered IConnectionMultiplexer 
+                // Use a custom Redis processing strategy that skips Ip limiting if Redis is down
+                // Requires a registered IConnectionMultiplexer
+                services.AddSingleton<IProcessingStrategy, CustomRedisProcessingStrategy>(); 
             }
         }
 
@@ -640,10 +642,7 @@ namespace Bit.SharedWeb.Utilities
             // Register the IConnectionMultiplexer explicitly so it can be accessed via DI
             // (e.g. for the IP rate limiting store)
             services.AddSingleton<IConnectionMultiplexer>(
-                _ => ConnectionMultiplexer.Connect(globalSettings.Redis.ConnectionString, options =>
-                {
-                    options.AbortOnConnectFail = false;
-                }));
+                _ => ConnectionMultiplexer.Connect(globalSettings.Redis.ConnectionString));
 
             // Explicitly register IDistributedCache to re-use existing IConnectionMultiplexer 
             // to reduce the number of redundant connections to the Redis instance

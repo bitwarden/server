@@ -70,6 +70,9 @@
         public virtual StripeSettings Stripe { get; set; } = new StripeSettings();
         public virtual ITwoFactorAuthSettings TwoFactorAuth { get; set; } = new TwoFactorAuthSettings();
 
+        public virtual DistributedIpRateLimitingSettings DistributedIpRateLimiting { get; set; } =
+            new DistributedIpRateLimitingSettings();
+
         public string BuildExternalUri(string explicitValue, string name)
         {
             if (!string.IsNullOrWhiteSpace(explicitValue))
@@ -497,6 +500,24 @@
         public class TwoFactorAuthSettings : ITwoFactorAuthSettings
         {
             public bool EmailOnNewDeviceLogin { get; set; } = false;
+        }
+
+        public class DistributedIpRateLimitingSettings
+        {
+            public bool Enabled { get; set; } = true;
+
+            /// <summary>
+            /// Maximum number of Redis timeouts that can be experienced within the sliding timeout
+            /// window before IP rate limiting is temporarily disabled.
+            /// TODO: Determine/discuss a suitable maximum
+            /// </summary>
+            public int MaxRedisTimeoutsThreshold { get; set; } = 10;
+
+            /// <summary>
+            /// Length of the sliding window in seconds to track Redis timeout exceptions.
+            /// TODO: Determine/discuss a suitable sliding window
+            /// </summary>
+            public int SlidingWindowSeconds { get; set; } = 120;
         }
     }
 }

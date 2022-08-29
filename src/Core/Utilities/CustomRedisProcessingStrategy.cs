@@ -1,4 +1,5 @@
 ﻿using AspNetCoreRateLimit;
+using Bit.Core.Settings;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using StackExchange.Redis;
@@ -20,23 +21,14 @@ public class CustomRedisProcessingStrategy : ProcessingStrategy
     private readonly IRateLimitConfiguration _config;
     private readonly ILogger<CustomRedisProcessingStrategy> _logger;
     private readonly IMemoryCache _memoryCache;
-
-    /// <summary>
-    /// Maximum number of Redis timeouts that can be experienced within the sliding timeout
-    /// window before IP rate limiting is temporarily disabled.
-    /// </summary>
-    private const int _maxRedisTimeoutCount = 1;
-
-    /// <summary>
-    /// Length of the sliding window to track Redis timeout exceptions.
-    /// </summary>
-    private static readonly TimeSpan _redisTimeoutWindow = TimeSpan.FromSeconds(30);
+    private readonly GlobalSettings.DistributedIpRateLimitingSettings _distributedSettings;
 
     public CustomRedisProcessingStrategy(
         IConnectionMultiplexer connectionMultiplexer,
         IRateLimitConfiguration config,
         ILogger<CustomRedisProcessingStrategy> logger,
-        IMemoryCache memoryCache)
+        IMemoryCache memoryCache,
+        GlobalSettings globalSettings)
         : base(config)
     {
         _connectionMultiplexer = connectionMultiplexer ??
@@ -45,6 +37,7 @@ public class CustomRedisProcessingStrategy : ProcessingStrategy
         _config = config;
         _logger = logger;
         _memoryCache = memoryCache;
+        _distributedSettings = globalSettings.DistributedIpRateLimiting;
     }
 
     private static readonly LuaScript _atomicIncrement = LuaScript.Prepare(
@@ -54,22 +47,22 @@ public class CustomRedisProcessingStrategy : ProcessingStrategy
         RateLimitRule rule, ICounterKeyBuilder counterKeyBuilder, RateLimitOptions rateLimitOptions,
         CancellationToken cancellationToken = default)
     {
-        // If Redis is down entirely, don't attempt any rate limiting
+        // If Redis is down entirely, skip rate limiting
         if (!_connectionMultiplexer.IsConnected)
         {
             _logger.LogDebug("Redis connection is down, skipping IP rate limiting");
-            return DisabledRateLimitResult();
+            return SkipRateLimitResult();
         }
 
         // Check if any Redis timeouts have occured recently
         if (_memoryCache.TryGetValue<TimeoutCounter>("redisTimeout", out var timeoutCounter))
         {
-            // We've exceeded threshold, backoff Redis and don't attempt rate limiting for now
-            if (timeoutCounter.Count >= _maxRedisTimeoutCount)
+            // We've exceeded threshold, backoff Redis and skip rate limiting for now
+            if (timeoutCounter.Count >= _distributedSettings.MaxRedisTimeoutsThreshold)
             {
                 _logger.LogDebug(
                     "Redis timeout threshold has been exceeded, backing off and skipping IP rate limiting");
-                return DisabledRateLimitResult();
+                return SkipRateLimitResult();
             }
         }
 
@@ -85,7 +78,7 @@ public class CustomRedisProcessingStrategy : ProcessingStrategy
             timeoutCounter ??= new TimeoutCounter()
             {
                 Count = 0,
-                ExpiresAt = DateTime.UtcNow.Add(_redisTimeoutWindow)
+                ExpiresAt = DateTime.UtcNow.AddSeconds(_distributedSettings.SlidingWindowSeconds)
             };
             timeoutCounter.Count++;
 
@@ -93,7 +86,7 @@ public class CustomRedisProcessingStrategy : ProcessingStrategy
                 new MemoryCacheEntryOptions { AbsoluteExpiration = timeoutCounter.ExpiresAt });
 
             // Just because Redis timed out does not mean we should kill the request
-            return DisabledRateLimitResult();
+            return SkipRateLimitResult();
         }
     }
 
@@ -119,7 +112,7 @@ public class CustomRedisProcessingStrategy : ProcessingStrategy
     /// A RateLimitCounter result used when the rate limiting middleware should
     /// fail open and allow the request to proceed without checking request limits.
     /// </summary>
-    private static RateLimitCounter DisabledRateLimitResult()
+    private static RateLimitCounter SkipRateLimitResult()
     {
         return new RateLimitCounter { Count = 0, Timestamp = DateTime.UtcNow };
     }
