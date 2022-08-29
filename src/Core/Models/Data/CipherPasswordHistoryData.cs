@@ -1,10 +1,9 @@
-﻿namespace Bit.Core.Models.Data
-{
-    public class CipherPasswordHistoryData
-    {
-        public CipherPasswordHistoryData() { }
+﻿namespace Bit.Core.Models.Data;
 
-        public string Password { get; set; }
-        public DateTime LastUsedDate { get; set; }
-    }
+public class CipherPasswordHistoryData
+{
+    public CipherPasswordHistoryData() { }
+
+    public string Password { get; set; }
+    public DateTime LastUsedDate { get; set; }
 }
