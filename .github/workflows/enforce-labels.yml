@@ -4,13 +4,17 @@ name: Enforce PR labels
 on:
   pull_request:
     types: [labeled, unlabeled, opened, edited, synchronize]
+  workflow_run:
+    workflows: [Protect Files]
+    types: [completed]
+
 jobs:
   enforce-label:
     name: EnforceLabel
     runs-on: ubuntu-20.04
     steps:
       - name: Enforce Label
-        uses: yogevbd/enforce-label-action@8d1e1709b1011e6d90400a0e6cf7c0b77aa5efeb
+        uses: yogevbd/enforce-label-action@a3c219da6b8fa73f6ba62b68ff09c469b3a1c024
         with:
-          BANNED_LABELS: "hold"
-          BANNED_LABELS_DESCRIPTION: "PRs on hold cannot be merged"
+          BANNED_LABELS: "hold,DB-migrations-changed"
+          BANNED_LABELS_DESCRIPTION: "PRs with ${bannedLabel.name} label cannot be merged"

@@ -40,6 +40,10 @@ namespace Bit.Api.Models.Response
                 providerUserOrganizationDetails?.Select(po => new ProfileProviderOrganizationResponseModel(po));
         }
 
+        public ProfileResponseModel() : base("profile")
+        {
+        }
+
         public string Id { get; set; }
         public string Name { get; set; }
         public string Email { get; set; }

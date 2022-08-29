@@ -413,7 +413,7 @@ namespace Bit.Core.Services
             var model = new AdminResetPasswordViewModel()
             {
                 UserName = GetUserIdentifier(email, userName),
-                OrgName = CoreHelpers.SanitizeForEmail(orgName),
+                OrgName = CoreHelpers.SanitizeForEmail(orgName, false),
             };
             await AddMessageContentAsync(message, "AdminResetPassword", model);
             message.Category = "AdminResetPassword";
