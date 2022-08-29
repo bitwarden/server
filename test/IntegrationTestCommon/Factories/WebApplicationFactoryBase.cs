@@ -39,7 +39,7 @@ namespace Bit.IntegrationTestCommon.Factories
                     .AddJsonFile("appsettings.json")
                     .AddJsonFile("appsettings.Development.json");
 
-                c.AddUserSecrets(typeof(Api.Startup).Assembly, optional: true);
+                c.AddUserSecrets(typeof(Identity.Startup).Assembly, optional: true);
                 c.AddInMemoryCollection(new Dictionary<string, string>
                 {
                     // Manually insert a EF provider so that ConfigureServices will add EF repositories but we will override
