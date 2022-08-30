@@ -31,7 +31,7 @@ public class CustomRedisProcessingStrategyTests
         Path = "/"
     };
 
-    private readonly RateLimitRule _sampleRule = new() { Endpoint = "/", Limit = 5, Period = "1m" };
+    private readonly RateLimitRule _sampleRule = new() { Endpoint = "/", Limit = 5, Period = "1m", PeriodTimespan = TimeSpan.FromMinutes(1) };
 
     private readonly RateLimitOptions _sampleOptions = new() { };
 
