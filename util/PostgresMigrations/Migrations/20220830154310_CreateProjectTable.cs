@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+﻿using System;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
@@ -15,9 +16,9 @@ namespace Bit.PostgresMigrations.Migrations
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     OrganizationId = table.Column<Guid>(type: "uuid", nullable: false),
                     Name = table.Column<string>(type: "text", nullable: true),
-                    CreationDate = table.Column<DateTime>(type: "timestamp without time zone", nullable: true),
-                    DeletedDate = table.Column<DateTime>(type: "timestamp without time zone", nullable: true),
-                    RevisionDate = table.Column<DateTime>(type: "timestamp without time zone", nullable: true)
+                    CreationDate = table.Column<DateTime>(type: "timestamp without time zone", nullable: false),
+                    RevisionDate = table.Column<DateTime>(type: "timestamp without time zone", nullable: true),
+                    DeletedDate = table.Column<DateTime>(type: "timestamp without time zone", nullable: true)
                 },
                 constraints: table =>
                 {

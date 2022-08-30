@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.MySqlMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20220818213331_CreateProjectTable")]
+    [Migration("20220830152256_CreateProjectTable")]
     partial class CreateProjectTable
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -773,7 +773,7 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("char(36)");
 
-                    b.Property<DateTime?>("CreationDate")
+                    b.Property<DateTime>("CreationDate")
                         .HasColumnType("datetime(6)");
 
                     b.Property<DateTime?>("DeletedDate")

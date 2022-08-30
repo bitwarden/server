@@ -771,7 +771,7 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("char(36)");
 
-                    b.Property<DateTime?>("CreationDate")
+                    b.Property<DateTime>("CreationDate")
                         .HasColumnType("datetime(6)");
 
                     b.Property<DateTime?>("DeletedDate")

@@ -11,11 +11,11 @@ namespace Bit.Core.Entities
 
         public string? Name { get; set; }
 
-        public DateTime? CreationDate { get; set; }
-
-        public DateTime? DeletedDate { get; set; }
+        public DateTime CreationDate { get; set; }
 
         public DateTime? RevisionDate { get; set; }
+
+        public DateTime? DeletedDate { get; set; }
 
         public void SetNewId()
         {
