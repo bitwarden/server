@@ -627,11 +627,11 @@ namespace Bit.SharedWeb.Utilities
             this IServiceCollection services,
             GlobalSettings globalSettings)
         {
-            if (globalSettings.SelfHosted || string.IsNullOrEmpty(globalSettings.Redis.ConnectionString))
-            {
-                services.AddDistributedMemoryCache();
-                return;
-            }
+                if (globalSettings.SelfHosted || string.IsNullOrEmpty(globalSettings.Redis.ConnectionString))
+                {
+                    services.AddDistributedMemoryCache();
+                    return;
+                }
 
             // Register the IConnectionMultiplexer explicitly so it can be accessed via DI
             // (e.g. for the IP rate limiting store)

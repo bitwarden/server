@@ -10,6 +10,8 @@ internal static class HealthCheckServices
     public static void ConfigureHealthCheckServices(this IServiceCollection services,
         GlobalSettings globalSettings, IHostEnvironment environment)
     {
+        var identityUri = new Uri(globalSettings.BaseServiceUri.Identity + "/.well-known/openid-configuration");
+        
         var heathCheckInitializer = services.AddHealthChecks();
 
         if (!string.IsNullOrEmpty(GetConnectionString(globalSettings)))
@@ -17,6 +19,10 @@ internal static class HealthCheckServices
             //add custom db health check
             heathCheckInitializer.AddDatabaseCheck(globalSettings);
         }
+        //identity server
+        heathCheckInitializer.AddUrlGroup(identityUri, "identity_server");
+        //billing api
+        //notifications api
     }
 
     private static string GetConnectionString(GlobalSettings globalSettings)
