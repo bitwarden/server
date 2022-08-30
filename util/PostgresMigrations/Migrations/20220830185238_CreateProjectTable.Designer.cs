@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Bit.PostgresMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20220830154310_CreateProjectTable")]
+    [Migration("20220830185238_CreateProjectTable")]
     partial class CreateProjectTable
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -790,7 +790,7 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("uuid");
 
-                    b.Property<DateTime?>("RevisionDate")
+                    b.Property<DateTime>("RevisionDate")
                         .HasColumnType("timestamp without time zone");
 
                     b.HasKey("Id")

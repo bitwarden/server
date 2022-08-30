@@ -788,7 +788,7 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("uuid");
 
-                    b.Property<DateTime?>("RevisionDate")
+                    b.Property<DateTime>("RevisionDate")
                         .HasColumnType("timestamp without time zone");
 
                     b.HasKey("Id")

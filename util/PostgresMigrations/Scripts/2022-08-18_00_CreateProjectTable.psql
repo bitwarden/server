@@ -5,7 +5,7 @@ CREATE TABLE "Project" (
     "OrganizationId" uuid NOT NULL,
     "Name" text NULL,
     "CreationDate" timestamp without time zone NOT NULL,
-    "RevisionDate" timestamp without time zone NULL,
+    "RevisionDate" timestamp without time zone NOT NULL,
     "DeletedDate" timestamp without time zone NULL,
     CONSTRAINT "PK_Project" PRIMARY KEY ("Id"),
     CONSTRAINT "FK_Project_Organization_OrganizationId" FOREIGN KEY ("OrganizationId") REFERENCES "Organization" ("Id") ON DELETE CASCADE
@@ -16,6 +16,6 @@ CREATE INDEX "IX_Project_DeletedDate" ON "Project" ("DeletedDate");
 CREATE INDEX "IX_Project_OrganizationId" ON "Project" ("OrganizationId");
 
 INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
-VALUES ('20220830154310_CreateProjectTable', '6.0.4');
+VALUES ('20220830185238_CreateProjectTable', '6.0.4');
 
 COMMIT;

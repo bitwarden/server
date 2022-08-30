@@ -13,7 +13,7 @@ namespace Bit.Core.Entities
 
         public DateTime CreationDate { get; set; }
 
-        public DateTime? RevisionDate { get; set; }
+        public DateTime RevisionDate { get; set; }
 
         public DateTime? DeletedDate { get; set; }
 

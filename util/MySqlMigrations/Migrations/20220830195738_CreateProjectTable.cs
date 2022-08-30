@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace Bit.PostgresMigrations.Migrations
+namespace Bit.MySqlMigrations.Migrations
 {
     public partial class CreateProjectTable : Migration
     {
@@ -13,12 +13,13 @@ namespace Bit.PostgresMigrations.Migrations
                 name: "Project",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    OrganizationId = table.Column<Guid>(type: "uuid", nullable: false),
-                    Name = table.Column<string>(type: "text", nullable: true),
-                    CreationDate = table.Column<DateTime>(type: "timestamp without time zone", nullable: false),
-                    RevisionDate = table.Column<DateTime>(type: "timestamp without time zone", nullable: true),
-                    DeletedDate = table.Column<DateTime>(type: "timestamp without time zone", nullable: true)
+                    Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    OrganizationId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    Name = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    CreationDate = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                    RevisionDate = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                    DeletedDate = table.Column<DateTime>(type: "datetime(6)", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -29,7 +30,8 @@ namespace Bit.PostgresMigrations.Migrations
                         principalTable: "Organization",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
-                });
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Project_DeletedDate",
