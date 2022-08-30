@@ -21,6 +21,7 @@ internal static class HealthCheckServices
         }
         //identity server
         heathCheckInitializer.AddUrlGroup(identityUri, "identity_server");
+        
         //billing api
         //notifications api
     }
