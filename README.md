@@ -86,13 +86,14 @@ We recently migrated to using dotnet-format as code formatter. All previous bran
 7. Push
 
 ### File Scoped Namespaces
-We have switched to using file scoped namespace. All previous branches will need to update to avoid large merge conflicts using the following steps:
+
+We recently migrated to using file scoped namespaces to save some horizontal space. All previous branches will need to update to avoid large merge conflicts using the following steps:
 
 1. Check out your local Branch
-1. Run `git merge 7c4521e0b428d523f2153cda3fb51d51bca9f194`
-2. Resolve any merge conflicts, commit.
-3. Run `dotnet format`
-4. Commit
-5. Run `git merge -Xours 34fb4cca2aa78deb84d4cbc359992a7c6bba7ea5`
-6. Resolve merge conflicts
-7. Push
+2. Run `git merge 9b7aef0763ad14e229b337c3b5b27cb411009792`
+3. Resolve any merge conflicts, commit.
+4. Run `dotnet format`
+5. Commit
+6. Run `git merge -Xours 7f5f010e1eea400300c47f776604ecf46c4b4f2d`
+7. Fix Merge conflicts
+8. Push
