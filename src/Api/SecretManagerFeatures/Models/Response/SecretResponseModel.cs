@@ -16,6 +16,8 @@ namespace Bit.Api.SecretManagerFeatures.Models.Response
             Id = secret.Id.ToString();
             OrganizationId = secret.OrganizationId.ToString();
             Key = secret.Key;
+            Value = secret.Value;
+            Note = secret.Note;
             CreationDate = secret.CreationDate;
             RevisionDate = secret.RevisionDate;
         }
@@ -25,6 +27,10 @@ namespace Bit.Api.SecretManagerFeatures.Models.Response
         public string OrganizationId { get; set; }
 
         public string Key { get; set; }
+
+        public string Value { get; set; }
+
+        public string Note { get; set; }
 
         public DateTime CreationDate { get; set; }
 

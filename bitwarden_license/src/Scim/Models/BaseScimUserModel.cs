@@ -16,6 +16,7 @@ namespace Bit.Scim.Models
         public NameModel Name { get; set; }
         public List<EmailModel> Emails { get; set; }
         public string PrimaryEmail => Emails?.FirstOrDefault(e => e.Primary)?.Value;
+        public string WorkEmail => Emails?.FirstOrDefault(e => e.Type == "work")?.Value;
         public string DisplayName { get; set; }
         public bool Active { get; set; }
         public List<string> Groups { get; set; }
