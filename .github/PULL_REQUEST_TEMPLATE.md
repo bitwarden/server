@@ -23,8 +23,6 @@
 
 ## Before you submit
 
-<!-- (mark with an `X`) -->
-
 - Please check for formatting errors (`dotnet format --verify-no-changes`) (required)
 - If making database changes - make sure you also update Entity Framework queries and/or migrations
 - Please add **unit tests** where it makes sense to do so (encouraged but not required)
