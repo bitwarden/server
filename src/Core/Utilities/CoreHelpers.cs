@@ -500,6 +500,7 @@ public static class CoreHelpers
             baseUri = urlSplit[0];
             queryString = urlSplit.Length > 1 ? urlSplit[1] : string.Empty;
         }
+
         var queryCollection = HttpUtility.ParseQueryString(queryString);
         foreach (var kvp in values ?? new Dictionary<string, string>())
         {
