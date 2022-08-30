@@ -87,7 +87,7 @@ We recently migrated to using dotnet-format as code formatter. All previous bran
 
 ### File Scoped Namespaces
 
-We recently migrated to using dotnet-format as code formatter. All previous branches will need to updated to avoid large merge conflicts using the following steps:
+We recently migrated to using file scoped namespaces to save some horizontal space. All previous branches will need to update to avoid large merge conflicts using the following steps:
 
 1. Check out your local Branch
 2. Run `git merge 9b7aef0763ad14e229b337c3b5b27cb411009792`
