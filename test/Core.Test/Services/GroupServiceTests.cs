@@ -65,6 +65,20 @@ public class GroupServiceTests
     }
 
     [Theory, BitAutoData]
+    public async Task SaveAsync_NonDefaultGroupId_ReplaceGroupInRepository_NoCollections(Group group, Organization organization, SutProvider<GroupService> sutProvider)
+    {
+        organization.UseGroups = true;
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+
+        await sutProvider.Sut.SaveAsync(group, null);
+
+        await sutProvider.GetDependency<IGroupRepository>().Received().ReplaceAsync(group);
+        await sutProvider.GetDependency<IEventService>().Received()
+            .LogGroupEventAsync(group, EventType.Group_Updated);
+        Assert.True(group.RevisionDate - DateTime.UtcNow < TimeSpan.FromSeconds(1));
+    }
+
+    [Theory, BitAutoData]
     public async Task SaveAsync_NonExistingOrganizationId_ThrowsBadRequest(Group group, SutProvider<GroupService> sutProvider)
     {
         var exception = await Assert.ThrowsAsync<BadRequestException>(
