@@ -18,6 +18,7 @@ namespace Bit.Api.Models.Response
             PublicKey = authRequest.PublicKey;
             RequestDeviceType = authRequest.RequestDeviceType;
             RequestIpAddress = authRequest.RequestIpAddress;
+            RequestFingerprint = authRequest.RequestFingerprint;
             Key = authRequest.Key;
             MasterPasswordHash = authRequest.MasterPasswordHash;
             CreationDate = authRequest.CreationDate;
@@ -29,6 +30,7 @@ namespace Bit.Api.Models.Response
         public string PublicKey { get; set; }
         public DeviceType RequestDeviceType { get; set; }
         public string RequestIpAddress { get; set; }
+        public string RequestFingerprint { get; set; }
         public string Key { get; set; }
         public string MasterPasswordHash { get; set; }
         public DateTime CreationDate { get; set; }
