@@ -152,6 +152,27 @@ public class NotificationsApiPushNotificationService : BaseIdentityClientService
         await PushSendAsync(send, PushType.SyncSendDelete);
     }
 
+    public async Task PushAuthRequestAsync(AuthRequest authRequest)
+    {
+        await PushAuthRequestAsync(authRequest, PushType.AuthRequest);
+    }
+
+    public async Task PushAuthRequestResponseAsync(AuthRequest authRequest)
+    {
+        await PushAuthRequestAsync(authRequest, PushType.AuthRequestResponse);
+    }
+
+    private async Task PushAuthRequestAsync(AuthRequest authRequest, PushType type)
+    {
+        var message = new AuthRequestPushNotification
+        {
+            Id = authRequest.Id,
+            UserId = authRequest.UserId
+        };
+
+        await SendMessageAsync(type, message, true);
+    }
+
     private async Task PushSendAsync(Send send, PushType type)
     {
         if (send.UserId.HasValue)
