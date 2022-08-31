@@ -2,6 +2,7 @@
 using AutoFixture.Kernel;
 using Bit.Core.Context;
 using Bit.Test.Common.AutoFixture;
+using Bit.Test.Common.AutoFixture.Attributes;
 
 namespace Bit.Core.Test.AutoFixture.CurrentContextFixtures;
 
@@ -34,4 +35,9 @@ internal class CurrentContextBuilder : ISpecimenBuilder
         obj.Organizations = context.Create<List<CurrentContentOrganization>>();
         return obj;
     }
+}
+
+internal class CurrentContextCustomize : BitCustomizeAttribute
+{
+    public override ICustomization GetCustomization() => new CurrentContext();
 }

@@ -4,7 +4,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Test.AutoFixture.GroupFixtures;
+using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -12,9 +12,11 @@ using Xunit;
 
 namespace Bit.Core.Test.Services;
 
+[SutProviderCustomize]
+[OrganizationCustomize(UseGroups = true)]
 public class GroupServiceTests
 {
-    [Theory, GroupOrganizationAutoData]
+    [Theory, BitAutoData]
     public async Task SaveAsync_DefaultGroupId_CreatesGroupInRepository(Group group, Organization organization, SutProvider<GroupService> sutProvider)
     {
         group.Id = default(Guid);
@@ -31,7 +33,7 @@ public class GroupServiceTests
         Assert.True(group.RevisionDate - utcNow < TimeSpan.FromSeconds(1));
     }
 
-    [Theory, GroupOrganizationAutoData]
+    [Theory, BitAutoData]
     public async Task SaveAsync_DefaultGroupIdAndCollections_CreatesGroupInRepository(Group group, Organization organization, List<SelectionReadOnly> collections, SutProvider<GroupService> sutProvider)
     {
         group.Id = default(Guid);
@@ -48,7 +50,7 @@ public class GroupServiceTests
         Assert.True(group.RevisionDate - utcNow < TimeSpan.FromSeconds(1));
     }
 
-    [Theory, GroupOrganizationAutoData]
+    [Theory, BitAutoData]
     public async Task SaveAsync_NonDefaultGroupId_ReplaceGroupInRepository(Group group, Organization organization, List<SelectionReadOnly> collections, SutProvider<GroupService> sutProvider)
     {
         organization.UseGroups = true;
@@ -62,7 +64,7 @@ public class GroupServiceTests
         Assert.True(group.RevisionDate - DateTime.UtcNow < TimeSpan.FromSeconds(1));
     }
 
-    [Theory, GroupOrganizationAutoData]
+    [Theory, BitAutoData]
     public async Task SaveAsync_NonDefaultGroupId_ReplaceGroupInRepository_NoCollections(Group group, Organization organization, SutProvider<GroupService> sutProvider)
     {
         organization.UseGroups = true;
@@ -76,7 +78,7 @@ public class GroupServiceTests
         Assert.True(group.RevisionDate - DateTime.UtcNow < TimeSpan.FromSeconds(1));
     }
 
-    [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+    [Theory, BitAutoData]
     public async Task SaveAsync_NonExistingOrganizationId_ThrowsBadRequest(Group group, SutProvider<GroupService> sutProvider)
     {
         var exception = await Assert.ThrowsAsync<BadRequestException>(
@@ -87,7 +89,7 @@ public class GroupServiceTests
         await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogGroupEventAsync(default, default, default);
     }
 
-    [Theory, GroupOrganizationNotUseGroupsAutoData]
+    [Theory, OrganizationCustomize(UseGroups = false), BitAutoData]
     public async Task SaveAsync_OrganizationDoesNotUseGroups_ThrowsBadRequest(Group group, Organization organization, SutProvider<GroupService> sutProvider)
     {
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
@@ -101,7 +103,7 @@ public class GroupServiceTests
         await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogGroupEventAsync(default, default, default);
     }
 
-    [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+    [Theory, BitAutoData]
     public async Task DeleteAsync_ValidData_DeletesGroup(Group group, SutProvider<GroupService> sutProvider)
     {
         await sutProvider.Sut.DeleteAsync(group);
@@ -111,7 +113,7 @@ public class GroupServiceTests
             .LogGroupEventAsync(group, EventType.Group_Deleted);
     }
 
-    [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+    [Theory, BitAutoData]
     public async Task DeleteUserAsync_ValidData_DeletesUserInGroupRepository(Group group, Organization organization, OrganizationUser organizationUser, SutProvider<GroupService> sutProvider)
     {
         group.OrganizationId = organization.Id;
@@ -128,7 +130,7 @@ public class GroupServiceTests
             .LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_UpdatedGroups);
     }
 
-    [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+    [Theory, BitAutoData]
     public async Task DeleteUserAsync_InvalidUser_ThrowsNotFound(Group group, Organization organization, OrganizationUser organizationUser, SutProvider<GroupService> sutProvider)
     {
         group.OrganizationId = organization.Id;

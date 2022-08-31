@@ -7,15 +7,20 @@ using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.Policies;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Test.AutoFixture.CurrentContextFixtures;
 using Bit.Core.Test.AutoFixture.SendFixtures;
 using Bit.Core.Test.Entities;
 using Bit.Test.Common.AutoFixture;
+using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Identity;
 using NSubstitute;
 using Xunit;
 
 namespace Bit.Core.Test.Services;
 
+[SutProviderCustomize]
+[CurrentContextCustomize]
+[UserSendCustomize]
 public class SendServiceTests
 {
     private void SaveSendAsync_Setup(SendType sendType, bool disableSendPolicyAppliesToUser,
@@ -31,8 +36,8 @@ public class SendServiceTests
     // Disable Send policy check
 
     [Theory]
-    [InlineUserSendAutoData(SendType.File)]
-    [InlineUserSendAutoData(SendType.Text)]
+    [BitAutoData(SendType.File)]
+    [BitAutoData(SendType.Text)]
     public async void SaveSendAsync_DisableSend_Applies_throws(SendType sendType,
         SutProvider<SendService> sutProvider, Send send)
     {
@@ -42,8 +47,8 @@ public class SendServiceTests
     }
 
     [Theory]
-    [InlineUserSendAutoData(SendType.File)]
-    [InlineUserSendAutoData(SendType.Text)]
+    [BitAutoData(SendType.File)]
+    [BitAutoData(SendType.Text)]
     public async void SaveSendAsync_DisableSend_DoesntApply_success(SendType sendType,
         SutProvider<SendService> sutProvider, Send send)
     {
@@ -78,8 +83,8 @@ public class SendServiceTests
     }
 
     [Theory]
-    [InlineUserSendAutoData(SendType.File)]
-    [InlineUserSendAutoData(SendType.Text)]
+    [BitAutoData(SendType.File)]
+    [BitAutoData(SendType.Text)]
     public async void SaveSendAsync_DisableHideEmail_Applies_throws(SendType sendType,
         SutProvider<SendService> sutProvider, Send send, Policy policy)
     {
@@ -90,8 +95,8 @@ public class SendServiceTests
     }
 
     [Theory]
-    [InlineUserSendAutoData(SendType.File)]
-    [InlineUserSendAutoData(SendType.Text)]
+    [BitAutoData(SendType.File)]
+    [BitAutoData(SendType.Text)]
     public async void SaveSendAsync_DisableHideEmail_DoesntApply_success(SendType sendType,
         SutProvider<SendService> sutProvider, Send send, Policy policy)
     {
@@ -104,8 +109,7 @@ public class SendServiceTests
     }
 
     [Theory]
-    [InlineUserSendAutoData]
-    [InlineUserSendAutoData]
+    [BitAutoData]
     public async void SaveSendAsync_ExistingSend_Updates(SutProvider<SendService> sutProvider,
         Send send)
     {
@@ -126,7 +130,7 @@ public class SendServiceTests
     }
 
     [Theory]
-    [InlineUserSendAutoData]
+    [BitAutoData]
     public async void SaveFileSendAsync_TextType_ThrowsBadRequest(SutProvider<SendService> sutProvider,
         Send send)
     {
@@ -140,7 +144,7 @@ public class SendServiceTests
     }
 
     [Theory]
-    [InlineUserSendAutoData]
+    [BitAutoData]
     public async void SaveFileSendAsync_EmptyFile_ThrowsBadRequest(SutProvider<SendService> sutProvider,
         Send send)
     {
@@ -154,7 +158,7 @@ public class SendServiceTests
     }
 
     [Theory]
-    [InlineUserSendAutoData]
+    [BitAutoData]
     public async void SaveFileSendAsync_UserCannotAccessPremium_ThrowsBadRequest(SutProvider<SendService> sutProvider,
         Send send)
     {
@@ -182,7 +186,7 @@ public class SendServiceTests
     }
 
     [Theory]
-    [InlineUserSendAutoData]
+    [BitAutoData]
     public async void SaveFileSendAsync_UserHasUnconfirmedEmail_ThrowsBadRequest(SutProvider<SendService> sutProvider,
         Send send)
     {
@@ -211,7 +215,7 @@ public class SendServiceTests
     }
 
     [Theory]
-    [InlineUserSendAutoData]
+    [BitAutoData]
     public async void SaveFileSendAsync_UserCanAccessPremium_HasNoStorage_ThrowsBadRequest(SutProvider<SendService> sutProvider,
         Send send)
     {
@@ -243,7 +247,7 @@ public class SendServiceTests
     }
 
     [Theory]
-    [InlineUserSendAutoData]
+    [BitAutoData]
     public async void SaveFileSendAsync_UserCanAccessPremium_StorageFull_ThrowsBadRequest(SutProvider<SendService> sutProvider,
         Send send)
     {
@@ -275,7 +279,7 @@ public class SendServiceTests
     }
 
     [Theory]
-    [InlineUserSendAutoData]
+    [BitAutoData]
     public async void SaveFileSendAsync_UserCanAccessPremium_IsNotPremium_IsSelfHosted_GiantFile_ThrowsBadRequest(SutProvider<SendService> sutProvider,
         Send send)
     {
@@ -308,7 +312,7 @@ public class SendServiceTests
     }
 
     [Theory]
-    [InlineUserSendAutoData]
+    [BitAutoData]
     public async void SaveFileSendAsync_UserCanAccessPremium_IsNotPremium_IsNotSelfHosted_TwoGigabyteFile_ThrowsBadRequest(SutProvider<SendService> sutProvider,
         Send send)
     {
@@ -341,7 +345,7 @@ public class SendServiceTests
     }
 
     [Theory]
-    [InlineUserSendAutoData]
+    [BitAutoData]
     public async void SaveFileSendAsync_ThroughOrg_MaxStorageIsNull_ThrowsBadRequest(SutProvider<SendService> sutProvider,
         Send send)
     {
@@ -367,7 +371,7 @@ public class SendServiceTests
     }
 
     [Theory]
-    [InlineUserSendAutoData]
+    [BitAutoData]
     public async void SaveFileSendAsync_ThroughOrg_MaxStorageIsNull_TwoGBFile_ThrowsBadRequest(SutProvider<SendService> sutProvider,
         Send send)
     {
@@ -393,7 +397,7 @@ public class SendServiceTests
     }
 
     [Theory]
-    [InlineUserSendAutoData]
+    [BitAutoData]
     public async void SaveFileSendAsync_ThroughOrg_MaxStorageIsOneGB_TwoGBFile_ThrowsBadRequest(SutProvider<SendService> sutProvider,
         Send send)
     {
@@ -419,7 +423,7 @@ public class SendServiceTests
     }
 
     [Theory]
-    [InlineUserSendAutoData]
+    [BitAutoData]
     public async void SaveFileSendAsync_HasEnouphStorage_Success(SutProvider<SendService> sutProvider,
         Send send)
     {
@@ -473,7 +477,7 @@ public class SendServiceTests
     }
 
     [Theory]
-    [InlineUserSendAutoData]
+    [BitAutoData]
     public async void SaveFileSendAsync_HasEnouphStorage_SendFileThrows_CleansUp(SutProvider<SendService> sutProvider,
         Send send)
     {
@@ -531,7 +535,7 @@ public class SendServiceTests
     }
 
     [Theory]
-    [InlineUserSendAutoData]
+    [BitAutoData]
     public async void UpdateFileToExistingSendAsync_SendNull_ThrowsBadRequest(SutProvider<SendService> sutProvider)
     {
 
@@ -543,7 +547,7 @@ public class SendServiceTests
     }
 
     [Theory]
-    [InlineUserSendAutoData]
+    [BitAutoData]
     public async void UpdateFileToExistingSendAsync_SendDataNull_ThrowsBadRequest(SutProvider<SendService> sutProvider,
         Send send)
     {
@@ -557,7 +561,7 @@ public class SendServiceTests
     }
 
     [Theory]
-    [InlineUserSendAutoData]
+    [BitAutoData]
     public async void UpdateFileToExistingSendAsync_NotFileType_ThrowsBadRequest(SutProvider<SendService> sutProvider,
         Send send)
     {
@@ -569,7 +573,7 @@ public class SendServiceTests
     }
 
     [Theory]
-    [InlineUserSendAutoData]
+    [BitAutoData]
     public async void UpdateFileToExistingSendAsync_Success(SutProvider<SendService> sutProvider,
         Send send)
     {
@@ -593,7 +597,7 @@ public class SendServiceTests
     }
 
     [Theory]
-    [InlineUserSendAutoData]
+    [BitAutoData]
     public async void UpdateFileToExistingSendAsync_InvalidSize(SutProvider<SendService> sutProvider,
         Send send)
     {
@@ -618,7 +622,7 @@ public class SendServiceTests
     }
 
     [Theory]
-    [InlineUserSendAutoData]
+    [BitAutoData]
     public void SendCanBeAccessed_Success(SutProvider<SendService> sutProvider, Send send)
     {
         var now = DateTime.UtcNow;
@@ -641,7 +645,7 @@ public class SendServiceTests
     }
 
     [Theory]
-    [InlineUserSendAutoData]
+    [BitAutoData]
     public void SendCanBeAccessed_NullMaxAccess_Success(SutProvider<SendService> sutProvider,
         Send send)
     {
@@ -665,7 +669,7 @@ public class SendServiceTests
     }
 
     [Theory]
-    [InlineUserSendAutoData]
+    [BitAutoData]
     public void SendCanBeAccessed_NullSend_DoesNotGrantAccess(SutProvider<SendService> sutProvider)
     {
         sutProvider.GetDependency<IPasswordHasher<User>>()
@@ -681,7 +685,7 @@ public class SendServiceTests
     }
 
     [Theory]
-    [InlineUserSendAutoData]
+    [BitAutoData]
     public void SendCanBeAccessed_NullPassword_PasswordRequiredErrorReturnsTrue(SutProvider<SendService> sutProvider,
         Send send)
     {
@@ -706,7 +710,7 @@ public class SendServiceTests
     }
 
     [Theory]
-    [InlineUserSendAutoData]
+    [BitAutoData]
     public void SendCanBeAccessed_RehashNeeded_RehashesPassword(SutProvider<SendService> sutProvider,
         Send send)
     {
@@ -735,7 +739,7 @@ public class SendServiceTests
     }
 
     [Theory]
-    [InlineUserSendAutoData]
+    [BitAutoData]
     public void SendCanBeAccessed_VerifyFailed_PasswordInvalidReturnsTrue(SutProvider<SendService> sutProvider,
         Send send)
     {
