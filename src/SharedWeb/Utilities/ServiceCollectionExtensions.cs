@@ -2,7 +2,6 @@
 using System.Security.Claims;
 using System.Security.Cryptography.X509Certificates;
 using AspNetCoreRateLimit;
-using AspNetCoreRateLimit.Redis;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.HostedServices;
@@ -609,15 +608,22 @@ namespace Bit.SharedWeb.Utilities
             services.AddHostedService<IpRateLimitSeedStartupService>();
             services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
 
-            if (string.IsNullOrEmpty(globalSettings.Redis.ConnectionString))
-            {
-                services.AddInMemoryRateLimiting();
-            }
-            else
-            {
-                services.AddRedisRateLimiting(); // Requires a registered IConnectionMultiplexer 
-            }
+        if (!globalSettings.DistributedIpRateLimiting.Enabled || string.IsNullOrEmpty(globalSettings.Redis.ConnectionString))
+        {
+            services.AddInMemoryRateLimiting();
         }
+        else
+        {
+            // Use memory stores for Ip and Client Policy stores as we don't currently use them
+            // and they add unnecessary Redis network delays checking for policies that don't exist
+            services.AddSingleton<IIpPolicyStore, MemoryCacheIpPolicyStore>();
+            services.AddSingleton<IClientPolicyStore, MemoryCacheClientPolicyStore>();
+
+            // Use a custom Redis processing strategy that skips Ip limiting if Redis is down
+            // Requires a registered IConnectionMultiplexer
+            services.AddSingleton<IProcessingStrategy, CustomRedisProcessingStrategy>();
+        }
+    }
 
         /// <summary>
         ///     Adds an implementation of <see cref="IDistributedCache"/> to the service collection. Uses a memory
