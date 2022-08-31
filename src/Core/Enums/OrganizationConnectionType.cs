@@ -1,7 +1,7 @@
-﻿namespace Bit.Core.Enums
+﻿namespace Bit.Core.Enums;
+
+public enum OrganizationConnectionType : byte
 {
-    public enum OrganizationConnectionType : byte
-    {
-        CloudBillingSync = 1,
-    }
+    CloudBillingSync = 1,
+    Scim = 2,
 }
