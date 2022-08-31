@@ -6,7 +6,7 @@ using Xunit;
 
 namespace Bit.Scim.IntegrationTest.Controllers.v2
 {
-    public class GroupsControllerTests : IClassFixture<ScimApplicationFactory>
+    public class GroupsControllerTests : IClassFixture<ScimApplicationFactory>, IAsyncLifetime
     {
         private readonly ScimApplicationFactory _factory;
 
@@ -14,10 +14,16 @@ namespace Bit.Scim.IntegrationTest.Controllers.v2
         {
             _factory = factory;
             _factory.DatabaseName = "test_database_groups";
-
-            var databaseContext = factory.GetDatabaseContext();
-            _factory.ReinitializeDbForTests(databaseContext);
         }
+
+        public Task InitializeAsync()
+        {
+            var databaseContext = _factory.GetDatabaseContext();
+            _factory.ReinitializeDbForTests(databaseContext);
+            return Task.CompletedTask;
+        }
+
+        Task IAsyncLifetime.DisposeAsync() => Task.CompletedTask;
 
         [Fact]
         public async Task Get_Success()
