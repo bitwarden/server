@@ -47,6 +47,7 @@ namespace Bit.Scim.IntegrationTest.Controllers.v2
         {
             var organizationId = ScimApplicationFactory.TestOrganizationId1;
             var id = Guid.NewGuid();
+
             var context = await _factory.GroupsGetAsync(organizationId, id.ToString());
 
             Assert.Equal(StatusCodes.Status404NotFound, context.Response.StatusCode);
@@ -61,7 +62,11 @@ namespace Bit.Scim.IntegrationTest.Controllers.v2
         public async Task GetList_Success()
         {
             var organizationId = ScimApplicationFactory.TestOrganizationId1;
-            var context = await _factory.GroupsGetListAsync(organizationId, null, 2, 1);
+            string filter = null;
+            int? count = 2;
+            int? startIndex = 1;
+
+            var context = await _factory.GroupsGetListAsync(organizationId, filter, count, startIndex);
 
             Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
 
@@ -78,7 +83,11 @@ namespace Bit.Scim.IntegrationTest.Controllers.v2
         public async Task GetList_SearchDisplayName_Success()
         {
             var organizationId = ScimApplicationFactory.TestOrganizationId1;
-            var context = await _factory.GroupsGetListAsync(organizationId, "displayName eq Test Group 2", 10, 1);
+            string filter = "displayName eq Test Group 2";
+            int? count = 10;
+            int? startIndex = 1;
+
+            var context = await _factory.GroupsGetListAsync(organizationId, filter, count, startIndex);
 
             Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
 
@@ -99,7 +108,11 @@ namespace Bit.Scim.IntegrationTest.Controllers.v2
         public async Task GetList_SearchExternalId_Success()
         {
             var organizationId = ScimApplicationFactory.TestOrganizationId1;
-            var context = await _factory.GroupsGetListAsync(organizationId, "externalId eq C", 10, 1);
+            string filter = "externalId eq C";
+            int? count = 10;
+            int? startIndex = 1;
+
+            var context = await _factory.GroupsGetListAsync(organizationId, filter, count, startIndex);
 
             Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
 
