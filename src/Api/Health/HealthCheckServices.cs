@@ -1,8 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
-using Bit.Core.Enums;
 using Bit.Core.Settings;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 
-namespace Bit.Api.Utilities;
+namespace Bit.Api.Health;
 
 [ExcludeFromCodeCoverage]
 internal static class HealthCheckServices
@@ -12,18 +12,25 @@ internal static class HealthCheckServices
     {
         var identityUri = new Uri(globalSettings.BaseServiceUri.Identity + "/.well-known/openid-configuration");
         
-        var heathCheckInitializer = services.AddHealthChecks();
+        var builder = services.AddHealthChecks();
 
         if (!string.IsNullOrEmpty(GetConnectionString(globalSettings)))
         {
             //add custom db health check
-            heathCheckInitializer.AddDatabaseCheck(globalSettings);
+            builder.AddDatabaseCheck(globalSettings);
         }
-        //identity server
-        heathCheckInitializer.AddUrlGroup(identityUri, "identity_server");
         
-        //billing api
-        //notifications api
+        //smtp mail server
+        if (environment.IsDevelopment())
+        {
+            builder.AddSmtpHealthCheck(setup =>
+            {
+                setup.Host = globalSettings.Mail.Smtp.Host;
+                setup.Port = globalSettings.Mail.Smtp.Port;
+            });
+        }
+        
+        builder.AddUrlGroup(identityUri, "identity_server");
     }
 
     private static string GetConnectionString(GlobalSettings globalSettings)
