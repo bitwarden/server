@@ -2,15 +2,17 @@
 using Bit.Core.Test.AutoFixture.Attributes;
 using Bit.Infrastructure.EFIntegration.Test.AutoFixture;
 using Bit.Infrastructure.EFIntegration.Test.Repositories.EqualityComparers;
+using Bit.Test.Common.AutoFixture.Attributes;
 using Xunit;
 using EfRepo = Bit.Infrastructure.EntityFramework.Repositories;
 using SqlRepo = Bit.Infrastructure.Dapper.Repositories;
 
 namespace Bit.Infrastructure.EFIntegration.Test.Repositories;
 
+[EfCollectionCustomize]
 public class CollectionRepositoryTests
 {
-    [CiSkippedTheory, EfCollectionAutoData]
+    [CiSkippedTheory, BitAutoData]
     public async void CreateAsync_Works_DataMatches(
         Collection collection,
         Organization organization,

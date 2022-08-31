@@ -16,9 +16,10 @@ using Xunit;
 
 namespace Bit.Core.Test.Services;
 
+[SutProviderCustomize]
 public class UserServiceTests
 {
-    [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+    [Theory, BitAutoData]
     public async Task UpdateLicenseAsync_Success(SutProvider<UserService> sutProvider,
         User user, UserLicense userLicense)
     {
@@ -55,7 +56,7 @@ public class UserServiceTests
         Assert.Equal(1, versionProp.GetInt32());
     }
 
-    [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+    [Theory, BitAutoData]
     public async Task SendTwoFactorEmailAsync_Success(SutProvider<UserService> sutProvider, User user)
     {
         var email = user.Email.ToLowerInvariant();
@@ -86,7 +87,7 @@ public class UserServiceTests
             .SendTwoFactorEmailAsync(email, token);
     }
 
-    [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+    [Theory, BitAutoData]
     public async Task SendTwoFactorEmailBecauseNewDeviceLoginAsync_Success(SutProvider<UserService> sutProvider, User user)
     {
         var email = user.Email.ToLowerInvariant();
@@ -117,7 +118,7 @@ public class UserServiceTests
             .SendNewDeviceLoginTwoFactorEmailAsync(email, token);
     }
 
-    [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+    [Theory, BitAutoData]
     public async Task SendTwoFactorEmailAsync_ExceptionBecauseNoProviderOnUser(SutProvider<UserService> sutProvider, User user)
     {
         user.TwoFactorProviders = null;
@@ -125,7 +126,7 @@ public class UserServiceTests
         await Assert.ThrowsAsync<ArgumentNullException>("No email.", () => sutProvider.Sut.SendTwoFactorEmailAsync(user));
     }
 
-    [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+    [Theory, BitAutoData]
     public async Task SendTwoFactorEmailAsync_ExceptionBecauseNoProviderMetadataOnUser(SutProvider<UserService> sutProvider, User user)
     {
         user.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
@@ -140,7 +141,7 @@ public class UserServiceTests
         await Assert.ThrowsAsync<ArgumentNullException>("No email.", () => sutProvider.Sut.SendTwoFactorEmailAsync(user));
     }
 
-    [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+    [Theory, BitAutoData]
     public async Task SendTwoFactorEmailAsync_ExceptionBecauseNoProviderEmailMetadataOnUser(SutProvider<UserService> sutProvider, User user)
     {
         user.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
@@ -155,7 +156,7 @@ public class UserServiceTests
         await Assert.ThrowsAsync<ArgumentNullException>("No email.", () => sutProvider.Sut.SendTwoFactorEmailAsync(user));
     }
 
-    [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+    [Theory, BitAutoData]
     public async Task Needs2FABecauseNewDeviceAsync_ReturnsTrue(SutProvider<UserService> sutProvider, User user)
     {
         user.EmailVerified = true;
@@ -177,7 +178,7 @@ public class UserServiceTests
         Assert.True(await sutProvider.Sut.Needs2FABecauseNewDeviceAsync(user, deviceIdToCheck, "password"));
     }
 
-    [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+    [Theory, BitAutoData]
     public async Task Needs2FABecauseNewDeviceAsync_ReturnsFalse_When_GranType_Is_AuthorizationCode(SutProvider<UserService> sutProvider, User user)
     {
         user.EmailVerified = true;
@@ -195,7 +196,7 @@ public class UserServiceTests
         Assert.False(await sutProvider.Sut.Needs2FABecauseNewDeviceAsync(user, deviceIdToCheck, "authorization_code"));
     }
 
-    [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+    [Theory, BitAutoData]
     public async Task Needs2FABecauseNewDeviceAsync_ReturnsFalse_When_Email_Is_Not_Verified(SutProvider<UserService> sutProvider, User user)
     {
         user.EmailVerified = false;
@@ -213,7 +214,7 @@ public class UserServiceTests
         Assert.False(await sutProvider.Sut.Needs2FABecauseNewDeviceAsync(user, deviceIdToCheck, "password"));
     }
 
-    [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+    [Theory, BitAutoData]
     public async Task Needs2FABecauseNewDeviceAsync_ReturnsFalse_When_Is_The_First_Device(SutProvider<UserService> sutProvider, User user)
     {
         user.EmailVerified = true;
@@ -227,7 +228,7 @@ public class UserServiceTests
         Assert.False(await sutProvider.Sut.Needs2FABecauseNewDeviceAsync(user, deviceIdToCheck, "password"));
     }
 
-    [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+    [Theory, BitAutoData]
     public async Task Needs2FABecauseNewDeviceAsync_ReturnsFalse_When_DeviceId_Is_Already_In_Repo(SutProvider<UserService> sutProvider, User user)
     {
         user.EmailVerified = true;
@@ -244,7 +245,7 @@ public class UserServiceTests
         Assert.False(await sutProvider.Sut.Needs2FABecauseNewDeviceAsync(user, deviceIdToCheck, "password"));
     }
 
-    [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+    [Theory, BitAutoData]
     public async Task Needs2FABecauseNewDeviceAsync_ReturnsFalse_When_GlobalSettings_2FA_EmailOnNewDeviceLogin_Is_Disabled(SutProvider<UserService> sutProvider, User user)
     {
         user.EmailVerified = true;
@@ -264,7 +265,7 @@ public class UserServiceTests
         Assert.False(await sutProvider.Sut.Needs2FABecauseNewDeviceAsync(user, deviceIdToCheck, "password"));
     }
 
-    [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+    [Theory, BitAutoData]
     public async Task Needs2FABecauseNewDeviceAsync_ReturnsFalse_When_UnknownDeviceVerification_Is_Disabled(SutProvider<UserService> sutProvider, User user)
     {
         user.EmailVerified = true;
@@ -285,7 +286,7 @@ public class UserServiceTests
         Assert.False(await sutProvider.Sut.Needs2FABecauseNewDeviceAsync(user, deviceIdToCheck, "password"));
     }
 
-    [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+    [Theory, BitAutoData]
     public void CanEditDeviceVerificationSettings_ReturnsTrue(SutProvider<UserService> sutProvider, User user)
     {
         user.EmailVerified = true;
@@ -296,7 +297,7 @@ public class UserServiceTests
         Assert.True(sutProvider.Sut.CanEditDeviceVerificationSettings(user));
     }
 
-    [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+    [Theory, BitAutoData]
     public void CanEditDeviceVerificationSettings_ReturnsFalse_When_GlobalSettings_2FA_EmailOnNewDeviceLogin_Is_Disabled(SutProvider<UserService> sutProvider, User user)
     {
         user.EmailVerified = true;
@@ -307,7 +308,7 @@ public class UserServiceTests
         Assert.False(sutProvider.Sut.CanEditDeviceVerificationSettings(user));
     }
 
-    [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+    [Theory, BitAutoData]
     public void CanEditDeviceVerificationSettings_ReturnsFalse_When_Email_Is_Not_Verified(SutProvider<UserService> sutProvider, User user)
     {
         user.EmailVerified = false;
@@ -318,7 +319,7 @@ public class UserServiceTests
         Assert.False(sutProvider.Sut.CanEditDeviceVerificationSettings(user));
     }
 
-    [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+    [Theory, BitAutoData]
     public void CanEditDeviceVerificationSettings_ReturnsFalse_When_User_Uses_Key_Connector(SutProvider<UserService> sutProvider, User user)
     {
         user.EmailVerified = true;
@@ -330,7 +331,7 @@ public class UserServiceTests
         Assert.False(sutProvider.Sut.CanEditDeviceVerificationSettings(user));
     }
 
-    [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+    [Theory, BitAutoData]
     public void CanEditDeviceVerificationSettings_ReturnsFalse_When_User_Has_A_2FA_Already_Set_Up(SutProvider<UserService> sutProvider, User user)
     {
         user.EmailVerified = true;
@@ -348,7 +349,7 @@ public class UserServiceTests
         Assert.False(sutProvider.Sut.CanEditDeviceVerificationSettings(user));
     }
 
-    [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+    [Theory, BitAutoData]
     public async void HasPremiumFromOrganization_Returns_False_If_No_Orgs(SutProvider<UserService> sutProvider, User user)
     {
         sutProvider.GetDependency<IOrganizationUserRepository>().GetManyByUserAsync(user.Id).Returns(new List<OrganizationUser>());
@@ -357,8 +358,8 @@ public class UserServiceTests
     }
 
     [Theory]
-    [InlineCustomAutoData(new[] { typeof(SutProviderCustomization) }, false, true)]
-    [InlineCustomAutoData(new[] { typeof(SutProviderCustomization) }, true, false)]
+    [BitAutoData(false, true)]
+    [BitAutoData(true, false)]
     public async void HasPremiumFromOrganization_Returns_False_If_Org_Not_Eligible(bool orgEnabled, bool orgUsersGetPremium, SutProvider<UserService> sutProvider, User user, OrganizationUser orgUser, Organization organization)
     {
         orgUser.OrganizationId = organization.Id;
@@ -372,7 +373,7 @@ public class UserServiceTests
         Assert.False(await sutProvider.Sut.HasPremiumFromOrganization(user));
     }
 
-    [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+    [Theory, BitAutoData]
     public async void HasPremiumFromOrganization_Returns_True_If_Org_Eligible(SutProvider<UserService> sutProvider, User user, OrganizationUser orgUser, Organization organization)
     {
         orgUser.OrganizationId = organization.Id;
