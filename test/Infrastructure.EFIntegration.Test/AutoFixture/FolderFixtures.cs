@@ -7,54 +7,53 @@ using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 
-namespace Bit.Infrastructure.EFIntegration.Test.AutoFixture
+namespace Bit.Infrastructure.EFIntegration.Test.AutoFixture;
+
+internal class FolderBuilder : ISpecimenBuilder
 {
-    internal class FolderBuilder : ISpecimenBuilder
+    public object Create(object request, ISpecimenContext context)
     {
-        public object Create(object request, ISpecimenContext context)
+        if (context == null)
         {
-            if (context == null)
-            {
-                throw new ArgumentNullException(nameof(context));
-            }
-
-            var type = request as Type;
-            if (type == null || type != typeof(Folder))
-            {
-                return new NoSpecimen();
-            }
-
-            var fixture = new Fixture();
-            fixture.Customizations.Insert(0, new MaxLengthStringRelay());
-            var obj = fixture.WithAutoNSubstitutions().Create<Folder>();
-            return obj;
+            throw new ArgumentNullException(nameof(context));
         }
-    }
 
-    internal class EfFolder : ICustomization
-    {
-        public void Customize(IFixture fixture)
+        var type = request as Type;
+        if (type == null || type != typeof(Folder))
         {
-            fixture.Customizations.Add(new IgnoreVirtualMembersCustomization());
-            fixture.Customizations.Add(new GlobalSettingsBuilder());
-            fixture.Customizations.Add(new FolderBuilder());
-            fixture.Customizations.Add(new UserBuilder());
-            fixture.Customizations.Add(new EfRepositoryListBuilder<FolderRepository>());
-            fixture.Customizations.Add(new EfRepositoryListBuilder<UserRepository>());
+            return new NoSpecimen();
         }
-    }
 
-    internal class EfFolderAutoDataAttribute : CustomAutoDataAttribute
-    {
-        public EfFolderAutoDataAttribute() : base(new SutProviderCustomization(), new EfFolder())
-        { }
+        var fixture = new Fixture();
+        fixture.Customizations.Insert(0, new MaxLengthStringRelay());
+        var obj = fixture.WithAutoNSubstitutions().Create<Folder>();
+        return obj;
     }
+}
 
-    internal class InlineEfFolderAutoDataAttribute : InlineCustomAutoDataAttribute
+internal class EfFolder : ICustomization
+{
+    public void Customize(IFixture fixture)
     {
-        public InlineEfFolderAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
-            typeof(EfFolder) }, values)
-        { }
+        fixture.Customizations.Add(new IgnoreVirtualMembersCustomization());
+        fixture.Customizations.Add(new GlobalSettingsBuilder());
+        fixture.Customizations.Add(new FolderBuilder());
+        fixture.Customizations.Add(new UserBuilder());
+        fixture.Customizations.Add(new EfRepositoryListBuilder<FolderRepository>());
+        fixture.Customizations.Add(new EfRepositoryListBuilder<UserRepository>());
     }
+}
+
+internal class EfFolderAutoDataAttribute : CustomAutoDataAttribute
+{
+    public EfFolderAutoDataAttribute() : base(new SutProviderCustomization(), new EfFolder())
+    { }
+}
+
+internal class InlineEfFolderAutoDataAttribute : InlineCustomAutoDataAttribute
+{
+    public InlineEfFolderAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
+        typeof(EfFolder) }, values)
+    { }
 }
 

@@ -1,9 +1,8 @@
 ﻿using Bit.Core.Entities;
 
-namespace Core.Models.Data
+namespace Core.Models.Data;
+
+public class CipherOrganizationDetails : Cipher
 {
-    public class CipherOrganizationDetails : Cipher
-    {
-        public bool OrganizationUseTotp { get; set; }
-    }
+    public bool OrganizationUseTotp { get; set; }
 }

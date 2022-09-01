@@ -6,54 +6,53 @@ using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 
-namespace Bit.Infrastructure.EFIntegration.Test.AutoFixture
+namespace Bit.Infrastructure.EFIntegration.Test.AutoFixture;
+
+internal class SsoConfigBuilder : ISpecimenBuilder
 {
-    internal class SsoConfigBuilder : ISpecimenBuilder
+    public object Create(object request, ISpecimenContext context)
     {
-        public object Create(object request, ISpecimenContext context)
+        if (context == null)
         {
-            if (context == null)
-            {
-                throw new ArgumentNullException(nameof(context));
-            }
-
-            var type = request as Type;
-            if (type == null || type != typeof(SsoConfig))
-            {
-                return new NoSpecimen();
-            }
-
-            var fixture = new Fixture();
-            var ssoConfig = fixture.WithAutoNSubstitutions().Create<SsoConfig>();
-            var ssoConfigData = fixture.WithAutoNSubstitutions().Create<SsoConfigurationData>();
-            ssoConfig.SetData(ssoConfigData);
-            return ssoConfig;
+            throw new ArgumentNullException(nameof(context));
         }
-    }
 
-    internal class EfSsoConfig : ICustomization
-    {
-        public void Customize(IFixture fixture)
+        var type = request as Type;
+        if (type == null || type != typeof(SsoConfig))
         {
-            fixture.Customizations.Add(new IgnoreVirtualMembersCustomization());
-            fixture.Customizations.Add(new GlobalSettingsBuilder());
-            fixture.Customizations.Add(new OrganizationBuilder());
-            fixture.Customizations.Add(new SsoConfigBuilder());
-            fixture.Customizations.Add(new EfRepositoryListBuilder<SsoConfigRepository>());
-            fixture.Customizations.Add(new EfRepositoryListBuilder<OrganizationRepository>());
+            return new NoSpecimen();
         }
-    }
 
-    internal class EfSsoConfigAutoDataAttribute : CustomAutoDataAttribute
-    {
-        public EfSsoConfigAutoDataAttribute() : base(new SutProviderCustomization(), new EfSsoConfig())
-        { }
+        var fixture = new Fixture();
+        var ssoConfig = fixture.WithAutoNSubstitutions().Create<SsoConfig>();
+        var ssoConfigData = fixture.WithAutoNSubstitutions().Create<SsoConfigurationData>();
+        ssoConfig.SetData(ssoConfigData);
+        return ssoConfig;
     }
+}
 
-    internal class InlineEfSsoConfigAutoDataAttribute : InlineCustomAutoDataAttribute
+internal class EfSsoConfig : ICustomization
+{
+    public void Customize(IFixture fixture)
     {
-        public InlineEfSsoConfigAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
-            typeof(EfSsoConfig) }, values)
-        { }
+        fixture.Customizations.Add(new IgnoreVirtualMembersCustomization());
+        fixture.Customizations.Add(new GlobalSettingsBuilder());
+        fixture.Customizations.Add(new OrganizationBuilder());
+        fixture.Customizations.Add(new SsoConfigBuilder());
+        fixture.Customizations.Add(new EfRepositoryListBuilder<SsoConfigRepository>());
+        fixture.Customizations.Add(new EfRepositoryListBuilder<OrganizationRepository>());
     }
+}
+
+internal class EfSsoConfigAutoDataAttribute : CustomAutoDataAttribute
+{
+    public EfSsoConfigAutoDataAttribute() : base(new SutProviderCustomization(), new EfSsoConfig())
+    { }
+}
+
+internal class InlineEfSsoConfigAutoDataAttribute : InlineCustomAutoDataAttribute
+{
+    public InlineEfSsoConfigAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
+        typeof(EfSsoConfig) }, values)
+    { }
 }

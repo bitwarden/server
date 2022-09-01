@@ -97,6 +97,17 @@ services:
       - '636:636'
     profiles:
       - ldap
+  
+  reverse-proxy:
+    image: nginx:alpine
+    container_name: reverse-proxy
+    volumes:
+      - "./reverse-proxy.conf:/etc/nginx/conf.d/default.conf"
+    ports: 
+      - "${API_PROXY_PORT}:${API_PROXY_PORT}" 
+      - "${IDENTITY_PROXY_PORT}:${IDENTITY_PROXY_PORT}" 
+    profiles:
+      - proxy
 
 volumes:
   edgesql_dev_data:
