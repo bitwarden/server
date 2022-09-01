@@ -21,9 +21,10 @@ using ProviderUser = Bit.Core.Entities.Provider.ProviderUser;
 
 namespace Bit.Commercial.Core.Test.Services;
 
+[SutProviderCustomize]
 public class ProviderServiceTests
 {
-    [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+    [Theory, BitAutoData]
     public async Task CreateAsync_UserIdIsInvalid_Throws(SutProvider<ProviderService> sutProvider)
     {
         var exception = await Assert.ThrowsAsync<BadRequestException>(
@@ -31,7 +32,7 @@ public class ProviderServiceTests
         Assert.Contains("Invalid owner.", exception.Message);
     }
 
-    [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+    [Theory, BitAutoData]
     public async Task CreateAsync_Success(User user, SutProvider<ProviderService> sutProvider)
     {
         var userRepository = sutProvider.GetDependency<IUserRepository>();
@@ -43,7 +44,7 @@ public class ProviderServiceTests
         await sutProvider.GetDependency<IMailService>().ReceivedWithAnyArgs().SendProviderSetupInviteEmailAsync(default, default, default);
     }
 
-    [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+    [Theory, BitAutoData]
     public async Task CompleteSetupAsync_UserIdIsInvalid_Throws(SutProvider<ProviderService> sutProvider)
     {
         var exception = await Assert.ThrowsAsync<BadRequestException>(
@@ -51,7 +52,7 @@ public class ProviderServiceTests
         Assert.Contains("Invalid owner.", exception.Message);
     }
 
-    [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+    [Theory, BitAutoData]
     public async Task CompleteSetupAsync_TokenIsInvalid_Throws(User user, Provider provider,
         SutProvider<ProviderService> sutProvider)
     {
@@ -63,7 +64,7 @@ public class ProviderServiceTests
         Assert.Contains("Invalid token.", exception.Message);
     }
 
-    [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+    [Theory, BitAutoData]
     public async Task CompleteSetupAsync_Success(User user, Provider provider, string key,
         [ProviderUser(ProviderUserStatusType.Confirmed, ProviderUserType.ProviderAdmin)] ProviderUser providerUser,
         SutProvider<ProviderService> sutProvider)
@@ -91,7 +92,7 @@ public class ProviderServiceTests
             .ReplaceAsync(Arg.Is<ProviderUser>(pu => pu.UserId == user.Id && pu.ProviderId == provider.Id && pu.Key == key));
     }
 
-    [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+    [Theory, BitAutoData]
     public async Task UpdateAsync_ProviderIdIsInvalid_Throws(Provider provider, SutProvider<ProviderService> sutProvider)
     {
         provider.Id = default;
@@ -101,13 +102,13 @@ public class ProviderServiceTests
         Assert.Contains("Cannot create provider this way.", exception.Message);
     }
 
-    [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+    [Theory, BitAutoData]
     public async Task UpdateAsync_Success(Provider provider, SutProvider<ProviderService> sutProvider)
     {
         await sutProvider.Sut.UpdateAsync(provider);
     }
 
-    [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+    [Theory, BitAutoData]
     public async Task InviteUserAsync_ProviderIdIsInvalid_Throws(ProviderUserInvite<string> invite, SutProvider<ProviderService> sutProvider)
     {
         sutProvider.GetDependency<ICurrentContext>().ProviderManageUsers(invite.ProviderId).Returns(true);
@@ -115,14 +116,14 @@ public class ProviderServiceTests
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.InviteUserAsync(invite));
     }
 
-    [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+    [Theory, BitAutoData]
     public async Task InviteUserAsync_InvalidPermissions_Throws(ProviderUserInvite<string> invite, SutProvider<ProviderService> sutProvider)
     {
         sutProvider.GetDependency<ICurrentContext>().ProviderManageUsers(invite.ProviderId).Returns(false);
         await Assert.ThrowsAsync<InvalidOperationException>(() => sutProvider.Sut.InviteUserAsync(invite));
     }
 
-    [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+    [Theory, BitAutoData]
     public async Task InviteUserAsync_EmailsInvalid_Throws(Provider provider, ProviderUserInvite<string> providerUserInvite,
         SutProvider<ProviderService> sutProvider)
     {
@@ -135,7 +136,7 @@ public class ProviderServiceTests
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.InviteUserAsync(providerUserInvite));
     }
 
-    [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+    [Theory, BitAutoData]
     public async Task InviteUserAsync_AlreadyInvited(Provider provider, ProviderUserInvite<string> providerUserInvite,
         SutProvider<ProviderService> sutProvider)
     {
@@ -149,7 +150,7 @@ public class ProviderServiceTests
         Assert.Empty(result);
     }
 
-    [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+    [Theory, BitAutoData]
     public async Task InviteUserAsync_Success(Provider provider, ProviderUserInvite<string> providerUserInvite,
         SutProvider<ProviderService> sutProvider)
     {
@@ -165,14 +166,14 @@ public class ProviderServiceTests
         Assert.True(result.TrueForAll(pu => pu.ProviderId == providerUserInvite.ProviderId), "Provider Id must be correct");
     }
 
-    [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+    [Theory, BitAutoData]
     public async Task ResendInviteUserAsync_InvalidPermissions_Throws(ProviderUserInvite<Guid> invite, SutProvider<ProviderService> sutProvider)
     {
         sutProvider.GetDependency<ICurrentContext>().ProviderManageUsers(invite.ProviderId).Returns(false);
         await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.ResendInvitesAsync(invite));
     }
 
-    [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+    [Theory, BitAutoData]
     public async Task ResendInvitesAsync_Errors(Provider provider,
         [ProviderUser(ProviderUserStatusType.Invited)] ProviderUser pu1,
         [ProviderUser(ProviderUserStatusType.Accepted)] ProviderUser pu2,
@@ -202,7 +203,7 @@ public class ProviderServiceTests
         Assert.Equal("User invalid.", result[3].Item2);
     }
 
-    [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+    [Theory, BitAutoData]
     public async Task ResendInvitesAsync_Success(Provider provider, IEnumerable<ProviderUser> providerUsers,
         SutProvider<ProviderService> sutProvider)
     {
@@ -228,7 +229,7 @@ public class ProviderServiceTests
         Assert.True(result.All(r => r.Item2 == ""));
     }
 
-    [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+    [Theory, BitAutoData]
     public async Task AcceptUserAsync_UserIsInvalid_Throws(SutProvider<ProviderService> sutProvider)
     {
         var exception = await Assert.ThrowsAsync<BadRequestException>(
@@ -236,7 +237,7 @@ public class ProviderServiceTests
         Assert.Equal("User invalid.", exception.Message);
     }
 
-    [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+    [Theory, BitAutoData]
     public async Task AcceptUserAsync_AlreadyAccepted_Throws(
         [ProviderUser(ProviderUserStatusType.Accepted)] ProviderUser providerUser, User user,
         SutProvider<ProviderService> sutProvider)
@@ -249,7 +250,7 @@ public class ProviderServiceTests
         Assert.Equal("Already accepted.", exception.Message);
     }
 
-    [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+    [Theory, BitAutoData]
     public async Task AcceptUserAsync_TokenIsInvalid_Throws(
         [ProviderUser(ProviderUserStatusType.Invited)] ProviderUser providerUser, User user,
         SutProvider<ProviderService> sutProvider)
@@ -262,7 +263,7 @@ public class ProviderServiceTests
         Assert.Equal("Invalid token.", exception.Message);
     }
 
-    [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+    [Theory, BitAutoData]
     public async Task AcceptUserAsync_WrongEmail_Throws(
         [ProviderUser(ProviderUserStatusType.Invited)] ProviderUser providerUser, User user,
         SutProvider<ProviderService> sutProvider)
@@ -283,7 +284,7 @@ public class ProviderServiceTests
         Assert.Equal("User email does not match invite.", exception.Message);
     }
 
-    [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+    [Theory, BitAutoData]
     public async Task AcceptUserAsync_Success(
         [ProviderUser(ProviderUserStatusType.Invited)] ProviderUser providerUser, User user,
         SutProvider<ProviderService> sutProvider)
@@ -306,7 +307,7 @@ public class ProviderServiceTests
         Assert.Equal(user.Id, pu.UserId);
     }
 
-    [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+    [Theory, BitAutoData]
     public async Task ConfirmUsersAsync_NoValid(
         [ProviderUser(ProviderUserStatusType.Invited)] ProviderUser pu1,
         [ProviderUser(ProviderUserStatusType.Accepted)] ProviderUser pu2,
@@ -324,7 +325,7 @@ public class ProviderServiceTests
         Assert.Empty(result);
     }
 
-    [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+    [Theory, BitAutoData]
     public async Task ConfirmUsersAsync_Success(
         [ProviderUser(ProviderUserStatusType.Invited)] ProviderUser pu1, User u1,
         [ProviderUser(ProviderUserStatusType.Accepted)] ProviderUser pu2, User u2,
@@ -352,7 +353,7 @@ public class ProviderServiceTests
         Assert.Equal("Invalid user.", result[2].Item2);
     }
 
-    [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+    [Theory, BitAutoData]
     public async Task SaveUserAsync_UserIdIsInvalid_Throws(ProviderUser providerUser,
         SutProvider<ProviderService> sutProvider)
     {
@@ -362,7 +363,7 @@ public class ProviderServiceTests
         Assert.Equal("Invite the user first.", exception.Message);
     }
 
-    [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+    [Theory, BitAutoData]
     public async Task SaveUserAsync_Success(
         [ProviderUser(type: ProviderUserType.ProviderAdmin)] ProviderUser providerUser, User savingUser,
         SutProvider<ProviderService> sutProvider)
@@ -376,7 +377,7 @@ public class ProviderServiceTests
             .LogProviderUserEventAsync(providerUser, EventType.ProviderUser_Updated, null);
     }
 
-    [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+    [Theory, BitAutoData]
     public async Task DeleteUsersAsync_NoRemainingOwner_Throws(Provider provider, User deletingUser,
         ICollection<ProviderUser> providerUsers, SutProvider<ProviderService> sutProvider)
     {
@@ -399,7 +400,7 @@ public class ProviderServiceTests
         Assert.Equal("Provider must have at least one confirmed ProviderAdmin.", exception.Message);
     }
 
-    [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+    [Theory, BitAutoData]
     public async Task DeleteUsersAsync_Success(Provider provider, User deletingUser, ICollection<ProviderUser> providerUsers,
         [ProviderUser(ProviderUserStatusType.Confirmed, ProviderUserType.ProviderAdmin)] ProviderUser remainingOwner,
         SutProvider<ProviderService> sutProvider)
@@ -426,7 +427,7 @@ public class ProviderServiceTests
         Assert.Equal("Invalid user.", result[2].Item2);
     }
 
-    [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+    [Theory, BitAutoData]
     public async Task AddOrganization_OrganizationAlreadyBelongsToAProvider_Throws(Provider provider,
         Organization organization, ProviderOrganization po, User user, string key,
         SutProvider<ProviderService> sutProvider)
@@ -441,7 +442,7 @@ public class ProviderServiceTests
         Assert.Equal("Organization already belongs to a provider.", exception.Message);
     }
 
-    [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+    [Theory, BitAutoData]
     public async Task AddOrganization_Success(Provider provider, Organization organization, User user, string key,
         SutProvider<ProviderService> sutProvider)
     {
@@ -460,7 +461,7 @@ public class ProviderServiceTests
                 EventType.ProviderOrganization_Added);
     }
 
-    [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+    [Theory, BitAutoData]
     public async Task CreateOrganizationAsync_Success(Provider provider, OrganizationSignup organizationSignup,
         Organization organization, string clientOwnerEmail, User user, SutProvider<ProviderService> sutProvider)
     {
@@ -488,7 +489,7 @@ public class ProviderServiceTests
                 t.First().Item2 == null));
     }
 
-    [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+    [Theory, BitAutoData]
     public async Task RemoveOrganization_ProviderOrganizationIsInvalid_Throws(Provider provider,
         ProviderOrganization providerOrganization, User user, SutProvider<ProviderService> sutProvider)
     {
@@ -501,7 +502,7 @@ public class ProviderServiceTests
         Assert.Equal("Invalid organization.", exception.Message);
     }
 
-    [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+    [Theory, BitAutoData]
     public async Task RemoveOrganization_ProviderOrganizationBelongsToWrongProvider_Throws(Provider provider,
         ProviderOrganization providerOrganization, User user, SutProvider<ProviderService> sutProvider)
     {
@@ -514,7 +515,7 @@ public class ProviderServiceTests
         Assert.Equal("Invalid organization.", exception.Message);
     }
 
-    [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+    [Theory, BitAutoData]
     public async Task RemoveOrganization_HasNoOwners_Throws(Provider provider,
         ProviderOrganization providerOrganization, User user, SutProvider<ProviderService> sutProvider)
     {
@@ -530,7 +531,7 @@ public class ProviderServiceTests
         Assert.Equal("Organization needs to have at least one confirmed owner.", exception.Message);
     }
 
-    [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+    [Theory, BitAutoData]
     public async Task RemoveOrganization_Success(Provider provider,
         ProviderOrganization providerOrganization, User user, SutProvider<ProviderService> sutProvider)
     {

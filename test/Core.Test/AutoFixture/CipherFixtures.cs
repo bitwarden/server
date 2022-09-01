@@ -33,36 +33,12 @@ internal class UserCipher : ICustomization
     }
 }
 
-internal class UserCipherAutoDataAttribute : CustomAutoDataAttribute
+internal class UserCipherCustomizeAttribute : BitCustomizeAttribute
 {
-    public UserCipherAutoDataAttribute(string userId = null) : base(new SutProviderCustomization(),
-        new UserCipher { UserId = userId == null ? (Guid?)null : new Guid(userId) })
-    { }
-}
-internal class InlineUserCipherAutoDataAttribute : InlineCustomAutoDataAttribute
-{
-    public InlineUserCipherAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
-        typeof(UserCipher) }, values)
-    { }
+    public override ICustomization GetCustomization() => new UserCipher();
 }
 
-internal class InlineKnownUserCipherAutoDataAttribute : InlineCustomAutoDataAttribute
+internal class OrganizationCipherCustomizeAttribute : BitCustomizeAttribute
 {
-    public InlineKnownUserCipherAutoDataAttribute(string userId, params object[] values) : base(new ICustomization[]
-        { new SutProviderCustomization(), new UserCipher { UserId = new Guid(userId) } }, values)
-    { }
-}
-
-internal class OrganizationCipherAutoDataAttribute : CustomAutoDataAttribute
-{
-    public OrganizationCipherAutoDataAttribute(string organizationId = null) : base(new SutProviderCustomization(),
-        new OrganizationCipher { OrganizationId = organizationId == null ? (Guid?)null : new Guid(organizationId) })
-    { }
-}
-
-internal class InlineOrganizationCipherAutoDataAttribute : InlineCustomAutoDataAttribute
-{
-    public InlineOrganizationCipherAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
-        typeof(OrganizationCipher) }, values)
-    { }
+    public override ICustomization GetCustomization() => new OrganizationCipher();
 }

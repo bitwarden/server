@@ -4,6 +4,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture.CipherFixtures;
 using Bit.Test.Common.AutoFixture;
+using Bit.Test.Common.AutoFixture.Attributes;
 using Castle.Core.Internal;
 using Core.Models.Data;
 using NSubstitute;
@@ -11,9 +12,11 @@ using Xunit;
 
 namespace Bit.Core.Test.Services;
 
+[UserCipherCustomize]
+[SutProviderCustomize]
 public class CipherServiceTests
 {
-    [Theory, UserCipherAutoData]
+    [Theory, BitAutoData]
     public async Task SaveAsync_WrongRevisionDate_Throws(SutProvider<CipherService> sutProvider, Cipher cipher)
     {
         var lastKnownRevisionDate = cipher.RevisionDate.AddDays(-1);
@@ -23,7 +26,7 @@ public class CipherServiceTests
         Assert.Contains("out of date", exception.Message);
     }
 
-    [Theory, UserCipherAutoData]
+    [Theory, BitAutoData]
     public async Task SaveDetailsAsync_WrongRevisionDate_Throws(SutProvider<CipherService> sutProvider,
         CipherDetails cipherDetails)
     {
@@ -34,7 +37,7 @@ public class CipherServiceTests
         Assert.Contains("out of date", exception.Message);
     }
 
-    [Theory, UserCipherAutoData]
+    [Theory, BitAutoData]
     public async Task ShareAsync_WrongRevisionDate_Throws(SutProvider<CipherService> sutProvider, Cipher cipher,
         Organization organization, List<Guid> collectionIds)
     {
@@ -47,7 +50,7 @@ public class CipherServiceTests
         Assert.Contains("out of date", exception.Message);
     }
 
-    [Theory, UserCipherAutoData("99ab4f6c-44f8-4ff5-be7a-75c37c33c69e")]
+    [Theory, BitAutoData]
     public async Task ShareManyAsync_WrongRevisionDate_Throws(SutProvider<CipherService> sutProvider,
         IEnumerable<Cipher> ciphers, Guid organizationId, List<Guid> collectionIds)
     {
@@ -66,8 +69,8 @@ public class CipherServiceTests
     }
 
     [Theory]
-    [InlineUserCipherAutoData("")]
-    [InlineUserCipherAutoData("Correct Time")]
+    [BitAutoData("")]
+    [BitAutoData("Correct Time")]
     public async Task SaveAsync_CorrectRevisionDate_Passes(string revisionDateString,
         SutProvider<CipherService> sutProvider, Cipher cipher)
     {
@@ -78,8 +81,8 @@ public class CipherServiceTests
     }
 
     [Theory]
-    [InlineUserCipherAutoData("")]
-    [InlineUserCipherAutoData("Correct Time")]
+    [BitAutoData("")]
+    [BitAutoData("Correct Time")]
     public async Task SaveDetailsAsync_CorrectRevisionDate_Passes(string revisionDateString,
         SutProvider<CipherService> sutProvider, CipherDetails cipherDetails)
     {
@@ -90,8 +93,8 @@ public class CipherServiceTests
     }
 
     [Theory]
-    [InlineUserCipherAutoData("")]
-    [InlineUserCipherAutoData("Correct Time")]
+    [BitAutoData("")]
+    [BitAutoData("Correct Time")]
     public async Task ShareAsync_CorrectRevisionDate_Passes(string revisionDateString,
         SutProvider<CipherService> sutProvider, Cipher cipher, Organization organization, List<Guid> collectionIds)
     {
@@ -106,8 +109,8 @@ public class CipherServiceTests
     }
 
     [Theory]
-    [InlineKnownUserCipherAutoData(userId: "99ab4f6c-44f8-4ff5-be7a-75c37c33c69e", "")]
-    [InlineKnownUserCipherAutoData(userId: "99ab4f6c-44f8-4ff5-be7a-75c37c33c69e", "CorrectTime")]
+    [BitAutoData("")]
+    [BitAutoData("Correct Time")]
     public async Task ShareManyAsync_CorrectRevisionDate_Passes(string revisionDateString,
         SutProvider<CipherService> sutProvider, IEnumerable<Cipher> ciphers, Organization organization, List<Guid> collectionIds)
     {
@@ -128,9 +131,8 @@ public class CipherServiceTests
     }
 
     [Theory]
-    [InlineKnownUserCipherAutoData("c64d8a15-606e-41d6-9c7e-174d4d8f3b2e", "c64d8a15-606e-41d6-9c7e-174d4d8f3b2e")]
-    [InlineOrganizationCipherAutoData("c64d8a15-606e-41d6-9c7e-174d4d8f3b2e")]
-    public async Task RestoreAsync_UpdatesCipher(Guid restoringUserId, Cipher cipher, SutProvider<CipherService> sutProvider)
+    [BitAutoData]
+    public async Task RestoreAsync_UpdatesUserCipher(Guid restoringUserId, Cipher cipher, SutProvider<CipherService> sutProvider)
     {
         sutProvider.GetDependency<ICipherRepository>().GetCanEditByIdAsync(restoringUserId, cipher.Id).Returns(true);
 
@@ -145,10 +147,28 @@ public class CipherServiceTests
     }
 
     [Theory]
-    [InlineKnownUserCipherAutoData("c64d8a15-606e-41d6-9c7e-174d4d8f3b2e", "c64d8a15-606e-41d6-9c7e-174d4d8f3b2e")]
-    public async Task RestoreManyAsync_UpdatesCiphers(Guid restoringUserId, IEnumerable<CipherDetails> ciphers,
+    [OrganizationCipherCustomize]
+    [BitAutoData]
+    public async Task RestoreAsync_UpdatesOrganizationCipher(Guid restoringUserId, Cipher cipher, SutProvider<CipherService> sutProvider)
+    {
+        sutProvider.GetDependency<ICipherRepository>().GetCanEditByIdAsync(restoringUserId, cipher.Id).Returns(true);
+
+        var initialRevisionDate = new DateTime(1970, 1, 1, 0, 0, 0);
+        cipher.DeletedDate = initialRevisionDate;
+        cipher.RevisionDate = initialRevisionDate;
+
+        await sutProvider.Sut.RestoreAsync(cipher, restoringUserId, cipher.OrganizationId.HasValue);
+
+        Assert.Null(cipher.DeletedDate);
+        Assert.NotEqual(initialRevisionDate, cipher.RevisionDate);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RestoreManyAsync_UpdatesCiphers(IEnumerable<CipherDetails> ciphers,
         SutProvider<CipherService> sutProvider)
     {
+        var restoringUserId = ciphers.First().UserId.Value;
         var previousRevisionDate = DateTime.UtcNow;
         foreach (var cipher in ciphers)
         {
@@ -168,8 +188,7 @@ public class CipherServiceTests
         }
     }
 
-    [Theory]
-    [InlineUserCipherAutoData]
+    [Theory, BitAutoData]
     public async Task ShareManyAsync_FreeOrgWithAttachment_Throws(SutProvider<CipherService> sutProvider,
         IEnumerable<Cipher> ciphers, Guid organizationId, List<Guid> collectionIds)
     {
@@ -190,8 +209,7 @@ public class CipherServiceTests
         Assert.Contains("This organization cannot use attachments", exception.Message);
     }
 
-    [Theory]
-    [InlineUserCipherAutoData]
+    [Theory, BitAutoData]
     public async Task ShareManyAsync_PaidOrgWithAttachment_Passes(SutProvider<CipherService> sutProvider,
         IEnumerable<Cipher> ciphers, Guid organizationId, List<Guid> collectionIds)
     {
