@@ -41,6 +41,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories
         public DbSet<TaxRate> TaxRates { get; set; }
         public DbSet<Transaction> Transactions { get; set; }
         public DbSet<User> Users { get; set; }
+        public DbSet<Project> Projects { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
