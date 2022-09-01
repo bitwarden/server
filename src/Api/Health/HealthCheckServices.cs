@@ -1,6 +1,5 @@
-using System.Diagnostics.CodeAnalysis;
+﻿using System.Diagnostics.CodeAnalysis;
 using Bit.Core.Settings;
-using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 namespace Bit.Api.Health;
 
@@ -11,7 +10,7 @@ internal static class HealthCheckServices
         GlobalSettings globalSettings, IHostEnvironment environment)
     {
         var identityUri = new Uri(globalSettings.BaseServiceUri.Identity + "/.well-known/openid-configuration");
-        
+
         var builder = services.AddHealthChecks();
 
         if (!string.IsNullOrEmpty(GetConnectionString(globalSettings)))
@@ -19,7 +18,7 @@ internal static class HealthCheckServices
             //add custom db health check
             builder.AddDatabaseCheck(globalSettings);
         }
-        
+
         //smtp mail server
         if (environment.IsDevelopment())
         {
@@ -29,14 +28,14 @@ internal static class HealthCheckServices
                 setup.Port = globalSettings.Mail.Smtp.Port;
             });
         }
-        
+
         builder.AddUrlGroup(identityUri, "identity_server");
     }
 
     private static string GetConnectionString(GlobalSettings globalSettings)
     {
         var selectedDatabaseProvider = globalSettings.DatabaseProvider.ToLowerInvariant();
-        
+
         return selectedDatabaseProvider switch
         {
             "postgres" or "postgresql" => globalSettings.PostgreSql.ConnectionString,
@@ -46,7 +45,7 @@ internal static class HealthCheckServices
         };
     }
 
-    private static IHealthChecksBuilder AddDatabaseCheck(this IHealthChecksBuilder healthChecksBuilder, 
+    private static IHealthChecksBuilder AddDatabaseCheck(this IHealthChecksBuilder healthChecksBuilder,
         GlobalSettings globalSettings)
     {
         var connectionString = GetConnectionString(globalSettings);

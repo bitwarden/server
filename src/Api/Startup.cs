@@ -124,7 +124,7 @@ public class Startup
         services.AddBaseServices(globalSettings);
         services.AddDefaultServices(globalSettings);
         services.AddCoreLocalizationServices();
-        
+
         //health check
         services.ConfigureHealthCheckServices(globalSettings, Environment);
 
@@ -207,7 +207,8 @@ public class Startup
             endpoints.MapHealthChecks("/health/extended",
                 new HealthCheckOptions
                 {
-                    Predicate = _ => true, ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
+                    Predicate = _ => true,
+                    ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
                 });
         });
 
