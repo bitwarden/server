@@ -8,3 +8,9 @@
     CONSTRAINT [PK_Project] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_Project_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id]),
 );
+
+GO
+CREATE NONCLUSTERED INDEX [IX_Project_OrganizationId] ON [dbo].[Project] ([OrganizationId] ASC);
+
+GO
+CREATE NONCLUSTERED INDEX [IX_Project_DeletedDate] ON [dbo].[Project] ([DeletedDate] ASC);
