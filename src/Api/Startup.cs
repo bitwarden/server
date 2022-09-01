@@ -8,6 +8,7 @@ using Stripe;
 using Bit.Core.Utilities;
 using IdentityModel;
 using System.Globalization;
+using Bit.Api.Health;
 using Microsoft.IdentityModel.Logging;
 using Microsoft.OpenApi.Models;
 using Bit.SharedWeb.Utilities;

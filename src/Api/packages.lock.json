@@ -12,6 +12,17 @@
           "MySqlConnector": "2.0.0"
         }
       },
+      "AspNetCore.HealthChecks.Network": {
+        "type": "Direct",
+        "requested": "[6.0.4, )",
+        "resolved": "6.0.4",
+        "contentHash": "rvoPkqlvhX1HW6dpqjE1rbvmmMo9v7+Uf9dJffEcd3mA/DyyEitlZFc6cwYtmZVFdgy2gbIU4ubs3654nVfvjA==",
+        "dependencies": {
+          "Microsoft.Extensions.Diagnostics.HealthChecks": "6.0.7",
+          "SSH.NET": "2020.0.2",
+          "System.Buffers": "4.5.1"
+        }
+      },
       "AspNetCore.HealthChecks.NpgSql": {
         "type": "Direct",
         "requested": "[6.0.2, )",
@@ -40,6 +51,16 @@
         "dependencies": {
           "AspNetCore.HealthChecks.UI.Core": "6.0.5",
           "Microsoft.Extensions.Diagnostics.HealthChecks": "6.0.7"
+        }
+      },
+      "AspNetCore.HealthChecks.Uris": {
+        "type": "Direct",
+        "requested": "[6.0.3, )",
+        "resolved": "6.0.3",
+        "contentHash": "EY0Vh8s2UrbnyvM/QhbyYuCnbrBw36BKkdh5LqdINxqAGnlPFQXf+/UoNlH/76MTEyg+nvdp2wjr5MqWDkVFaQ==",
+        "dependencies": {
+          "Microsoft.Extensions.Diagnostics.HealthChecks": "6.0.0",
+          "Microsoft.Extensions.Http": "6.0.0"
         }
       },
       "Azure.Messaging.EventGrid": {
@@ -763,6 +784,17 @@
           "Microsoft.Extensions.FileProviders.Abstractions": "6.0.0"
         }
       },
+      "Microsoft.Extensions.Http": {
+        "type": "Transitive",
+        "resolved": "6.0.0",
+        "contentHash": "15+pa2G0bAMHbHewaQIdr/y6ag2H3yh4rd9hTXavtWDzQBkvpe2RMqFg8BxDpcQWssmjmBApGPcw93QRz6YcMg==",
+        "dependencies": {
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "6.0.0",
+          "Microsoft.Extensions.Logging": "6.0.0",
+          "Microsoft.Extensions.Logging.Abstractions": "6.0.0",
+          "Microsoft.Extensions.Options": "6.0.0"
+        }
+      },
       "Microsoft.Extensions.Identity.Core": {
         "type": "Transitive",
         "resolved": "6.0.4",
@@ -1398,6 +1430,19 @@
           "Serilog": "2.5.0",
           "Serilog.Sinks.PeriodicBatching": "2.3.0"
         }
+      },
+      "SSH.NET": {
+        "type": "Transitive",
+        "resolved": "2020.0.2",
+        "contentHash": "G0dNlTBAM00KZXv1wWVwgg26d9/METcM6qWBpNQwllzQmmbu+Zu+FS1L1X4fFgGdPu3e8k9mmTBu6SwtQ0614g==",
+        "dependencies": {
+          "SshNet.Security.Cryptography": "[1.3.0]"
+        }
+      },
+      "SshNet.Security.Cryptography": {
+        "type": "Transitive",
+        "resolved": "1.3.0",
+        "contentHash": "5pBIXRjcSO/amY8WztpmNOhaaCNHY/B6CcYDI7FSTgqSyo/ZUojlLiKcsl+YGbxQuLX439qIkMfP0PHqxqJi/Q=="
       },
       "StackExchange.Redis": {
         "type": "Transitive",
