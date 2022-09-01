@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using Bit.Core.Settings;
+using HealthChecks.Network.Core;
 
 namespace Bit.Api.Health;
 
@@ -26,7 +27,8 @@ internal static class HealthCheckServices
             {
                 setup.Host = globalSettings.Mail.Smtp.Host;
                 setup.Port = globalSettings.Mail.Smtp.Port;
-            });
+                setup.ConnectionType = SmtpConnectionType.PLAIN;
+            }, "mail_server");
         }
 
         builder.AddUrlGroup(identityUri, "identity_server");
