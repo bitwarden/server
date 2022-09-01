@@ -37,7 +37,7 @@ namespace Bit.Test.Common.Helpers
                     $"Actual:\n{JsonSerializer.Serialize(actual, JsonHelpers.Indented)}"));
                 }
 
-                if (expectedPropInfo.PropertyType == typeof(string) || expectedPropInfo.PropertyType.IsValueType)
+                if (typeof(IComparable).IsAssignableFrom(expectedPropInfo.PropertyType) || expectedPropInfo.PropertyType.IsPrimitive || expectedPropInfo.PropertyType.IsValueType)
                 {
                     Assert.Equal(expectedPropInfo.GetValue(expected), actualPropInfo.GetValue(actual));
                 }
