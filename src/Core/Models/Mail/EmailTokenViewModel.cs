@@ -1,7 +1,6 @@
-﻿namespace Bit.Core.Models.Mail
+﻿namespace Bit.Core.Models.Mail;
+
+public class EmailTokenViewModel : BaseMailModel
 {
-    public class EmailTokenViewModel : BaseMailModel
-    {
-        public string Token { get; set; }
-    }
+    public string Token { get; set; }
 }

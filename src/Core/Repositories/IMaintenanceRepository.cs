@@ -1,11 +1,10 @@
-﻿namespace Bit.Core.Repositories
+﻿namespace Bit.Core.Repositories;
+
+public interface IMaintenanceRepository
 {
-    public interface IMaintenanceRepository
-    {
-        Task UpdateStatisticsAsync();
-        Task DisableCipherAutoStatsAsync();
-        Task RebuildIndexesAsync();
-        Task DeleteExpiredGrantsAsync();
-        Task DeleteExpiredSponsorshipsAsync(DateTime validUntilBeforeDate);
-    }
+    Task UpdateStatisticsAsync();
+    Task DisableCipherAutoStatsAsync();
+    Task RebuildIndexesAsync();
+    Task DeleteExpiredGrantsAsync();
+    Task DeleteExpiredSponsorshipsAsync(DateTime validUntilBeforeDate);
 }
