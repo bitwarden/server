@@ -24,7 +24,6 @@ namespace Bit.Scim.IntegrationTest.Factories
         public const string TestGroupId2 = "562e5371-7020-40b6-b092-099ac66dbdf9";
         public const string TestGroupId3 = "362c2782-0f1f-4c86-95dd-edbdf7d6040b";
         public const string TestOrganizationId1 = "fb98e04f-0303-4914-9b37-a983943bf1ca";
-        public const string TestOrganizationId2 = "b79dc576-9e4b-4517-adb2-b3d0dd49fd7a";
         public const string TestOrganizationUserId1 = "5d421196-8c59-485b-8926-2d6d0101e05f";
         public const string TestOrganizationUserId2 = "3a63d520-0d84-4679-b887-13fe2058d53b";
         public const string TestOrganizationUserId3 = "be2f9045-e2b6-4173-ad44-4c69c3ea8140";
