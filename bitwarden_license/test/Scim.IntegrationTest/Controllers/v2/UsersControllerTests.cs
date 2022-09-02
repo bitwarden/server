@@ -62,6 +62,7 @@ namespace Bit.Scim.IntegrationTest.Controllers.v2
 
             var responseModel = JsonSerializer.Deserialize<ScimListResponseModel<ScimUserResponseModel>>(context.Response.Body, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
             Assert.Equal(2, responseModel.ItemsPerPage);
+            // Note: total matching results is larger than resources actually returned due to pagination settings. See https://www.rfc-editor.org/rfc/rfc7644#section-3.4.2
             Assert.Equal(3, responseModel.TotalResults);
             Assert.Equal(1, responseModel.StartIndex);
 
@@ -195,7 +196,7 @@ namespace Bit.Scim.IntegrationTest.Controllers.v2
         }
 
         [Fact]
-        public async Task Put_ActivateUser_Success()
+        public async Task Put_RestoreUser_Success()
         {
             var organizationId = ScimApplicationFactory.TestOrganizationId1;
             var id = ScimApplicationFactory.TestOrganizationUserId3;
