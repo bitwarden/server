@@ -108,34 +108,34 @@ public class StripeController : Controller
             return new BadRequestResult();
         }
 
-            var isSubDeletedEvent = parsedEvent.Type.Equals(HandledStripeWebhook.SubscriptionDeleted);
-            var isSubUpdatedEvent = parsedEvent.Type.Equals(HandledStripeWebhook.SubscriptionUpdated);
+        var isSubDeletedEvent = parsedEvent.Type.Equals(HandledStripeWebhook.SubscriptionDeleted);
+        var isSubUpdatedEvent = parsedEvent.Type.Equals(HandledStripeWebhook.SubscriptionUpdated);
 
-            if (isSubDeletedEvent || isSubUpdatedEvent)
+        if (isSubDeletedEvent || isSubUpdatedEvent)
+        {
+            await HandleSubscriptionUpdateAndDelete(parsedEvent, isSubDeletedEvent, isSubUpdatedEvent);
+        }
+        else if (parsedEvent.Type.Equals(HandledStripeWebhook.UpcomingInvoice))
+        {
+            var invoice = await GetInvoiceAsync(parsedEvent);
+            var subscriptionService = new SubscriptionService();
+            var subscription = await subscriptionService.GetAsync(invoice.SubscriptionId);
+            if (subscription == null)
             {
-                await HandleSubscriptionUpdateAndDelete(parsedEvent, isSubDeletedEvent, isSubUpdatedEvent);
+                throw new Exception("Invoice subscription is null. " + invoice.Id);
             }
-            else if (parsedEvent.Type.Equals(HandledStripeWebhook.UpcomingInvoice))
-            {
-                var invoice = await GetInvoiceAsync(parsedEvent);
-                var subscriptionService = new SubscriptionService();
-                var subscription = await subscriptionService.GetAsync(invoice.SubscriptionId);
-                if (subscription == null)
-                {
-                    throw new Exception("Invoice subscription is null. " + invoice.Id);
-                }
 
             subscription = await VerifyCorrectTaxRateForCharge(invoice, subscription);
 
-                string email = null;
-                var ids = GetIdsFromMetaData(subscription.Metadata);
-                if (ids.HasOrg)
+            string email = null;
+            var ids = GetIdsFromMetaData(subscription.Metadata);
+            if (ids.HasOrg)
+            {
+                // sponsored org
+                if (IsSponsoredSubscription(subscription))
                 {
-                    // sponsored org
-                    if (IsSponsoredSubscription(subscription))
-                    {
-                        await _validateSponsorshipCommand.ValidateSponsorshipAsync(ids.OrgId.Value);
-                    }
+                    await _validateSponsorshipCommand.ValidateSponsorshipAsync(ids.OrgId.Value);
+                }
 
                 var org = await _organizationRepository.GetByIdAsync(ids.OrgId.Value);
                 if (org != null && OrgPlanForInvoiceNotifications(org))
@@ -153,23 +153,23 @@ public class StripeController : Controller
                 }
             }
 
-                if (!string.IsNullOrWhiteSpace(email) && invoice.NextPaymentAttempt.HasValue)
-                {
-                    var items = invoice.Lines.Select(i => i.Description).ToList();
-                    await _mailService.SendInvoiceUpcomingAsync(email, invoice.AmountDue / 100M,
-                        invoice.NextPaymentAttempt.Value, items, true);
-                }
-            }
-            else if (parsedEvent.Type.Equals(HandledStripeWebhook.ChargeSucceeded))
+            if (!string.IsNullOrWhiteSpace(email) && invoice.NextPaymentAttempt.HasValue)
             {
-                var charge = await GetChargeAsync(parsedEvent);
-                var chargeTransaction = await _transactionRepository.GetByGatewayIdAsync(
-                    GatewayType.Stripe, charge.Id);
-                if (chargeTransaction != null)
-                {
-                    _logger.LogWarning("Charge success already processed. " + charge.Id);
-                    return new OkResult();
-                }
+                var items = invoice.Lines.Select(i => i.Description).ToList();
+                await _mailService.SendInvoiceUpcomingAsync(email, invoice.AmountDue / 100M,
+                    invoice.NextPaymentAttempt.Value, items, true);
+            }
+        }
+        else if (parsedEvent.Type.Equals(HandledStripeWebhook.ChargeSucceeded))
+        {
+            var charge = await GetChargeAsync(parsedEvent);
+            var chargeTransaction = await _transactionRepository.GetByGatewayIdAsync(
+                GatewayType.Stripe, charge.Id);
+            if (chargeTransaction != null)
+            {
+                _logger.LogWarning("Charge success already processed. " + charge.Id);
+                return new OkResult();
+            }
 
             SubscriptionIdResult ids = null;
             Subscription subscription = null;
@@ -186,31 +186,31 @@ public class StripeController : Controller
                 }
             }
 
-                if (subscription == null || ids == null || (ids.HasOrg && ids.HasUser))
+            if (subscription == null || ids == null || (ids.HasOrg && ids.HasUser))
+            {
+                var subscriptions = await subscriptionService.ListAsync(new SubscriptionListOptions
                 {
-                    var subscriptions = await subscriptionService.ListAsync(new SubscriptionListOptions
+                    Customer = charge.CustomerId
+                });
+                foreach (var sub in subscriptions)
+                {
+                    if (sub.Status != "canceled" && sub.Status != "incomplete_expired")
                     {
-                        Customer = charge.CustomerId
-                    });
-                    foreach (var sub in subscriptions)
-                    {
-                        if (sub.Status != "canceled" && sub.Status != "incomplete_expired")
+                        ids = GetIdsFromMetaData(sub.Metadata);
+                        if (ids.HasOrg || ids.HasUser)
                         {
-                            ids = GetIdsFromMetaData(sub.Metadata);
-                            if (ids.HasOrg || ids.HasUser)
-                            {
-                                subscription = sub;
-                                break;
-                            }
+                            subscription = sub;
+                            break;
                         }
                     }
                 }
+            }
 
-                if (!ids.HasOrg && !ids.HasUser)
-                {
-                    _logger.LogWarning("Charge success has no subscriber ids. " + charge.Id);
-                    return new BadRequestResult();
-                }
+            if (!ids.HasOrg && !ids.HasUser)
+            {
+                _logger.LogWarning("Charge success has no subscriber ids. " + charge.Id);
+                return new BadRequestResult();
+            }
 
             var tx = new Transaction
             {
@@ -223,56 +223,56 @@ public class StripeController : Controller
                 GatewayId = charge.Id
             };
 
-                if (charge.Source != null && charge.Source is Card card)
+            if (charge.Source != null && charge.Source is Card card)
+            {
+                tx.PaymentMethodType = PaymentMethodType.Card;
+                tx.Details = $"{card.Brand}, *{card.Last4}";
+            }
+            else if (charge.Source != null && charge.Source is BankAccount bankAccount)
+            {
+                tx.PaymentMethodType = PaymentMethodType.BankAccount;
+                tx.Details = $"{bankAccount.BankName}, *{bankAccount.Last4}";
+            }
+            else if (charge.Source != null && charge.Source is Source source)
+            {
+                if (source.Card != null)
                 {
                     tx.PaymentMethodType = PaymentMethodType.Card;
-                    tx.Details = $"{card.Brand}, *{card.Last4}";
+                    tx.Details = $"{source.Card.Brand}, *{source.Card.Last4}";
                 }
-                else if (charge.Source != null && charge.Source is BankAccount bankAccount)
+                else if (source.AchDebit != null)
                 {
                     tx.PaymentMethodType = PaymentMethodType.BankAccount;
-                    tx.Details = $"{bankAccount.BankName}, *{bankAccount.Last4}";
+                    tx.Details = $"{source.AchDebit.BankName}, *{source.AchDebit.Last4}";
                 }
-                else if (charge.Source != null && charge.Source is Source source)
+                else if (source.AchCreditTransfer != null)
                 {
-                    if (source.Card != null)
-                    {
-                        tx.PaymentMethodType = PaymentMethodType.Card;
-                        tx.Details = $"{source.Card.Brand}, *{source.Card.Last4}";
-                    }
-                    else if (source.AchDebit != null)
-                    {
-                        tx.PaymentMethodType = PaymentMethodType.BankAccount;
-                        tx.Details = $"{source.AchDebit.BankName}, *{source.AchDebit.Last4}";
-                    }
-                    else if (source.AchCreditTransfer != null)
-                    {
-                        tx.PaymentMethodType = PaymentMethodType.BankAccount;
-                        tx.Details = $"ACH => {source.AchCreditTransfer.BankName}, " +
-                            $"{source.AchCreditTransfer.AccountNumber}";
-                    }
+                    tx.PaymentMethodType = PaymentMethodType.BankAccount;
+                    tx.Details = $"ACH => {source.AchCreditTransfer.BankName}, " +
+                        $"{source.AchCreditTransfer.AccountNumber}";
                 }
-                else if (charge.PaymentMethodDetails != null)
+            }
+            else if (charge.PaymentMethodDetails != null)
+            {
+                if (charge.PaymentMethodDetails.Card != null)
                 {
-                    if (charge.PaymentMethodDetails.Card != null)
-                    {
-                        tx.PaymentMethodType = PaymentMethodType.Card;
-                        tx.Details = $"{charge.PaymentMethodDetails.Card.Brand?.ToUpperInvariant()}, " +
-                            $"*{charge.PaymentMethodDetails.Card.Last4}";
-                    }
-                    else if (charge.PaymentMethodDetails.AchDebit != null)
-                    {
-                        tx.PaymentMethodType = PaymentMethodType.BankAccount;
-                        tx.Details = $"{charge.PaymentMethodDetails.AchDebit.BankName}, " +
-                            $"*{charge.PaymentMethodDetails.AchDebit.Last4}";
-                    }
-                    else if (charge.PaymentMethodDetails.AchCreditTransfer != null)
-                    {
-                        tx.PaymentMethodType = PaymentMethodType.BankAccount;
-                        tx.Details = $"ACH => {charge.PaymentMethodDetails.AchCreditTransfer.BankName}, " +
-                            $"{charge.PaymentMethodDetails.AchCreditTransfer.AccountNumber}";
-                    }
+                    tx.PaymentMethodType = PaymentMethodType.Card;
+                    tx.Details = $"{charge.PaymentMethodDetails.Card.Brand?.ToUpperInvariant()}, " +
+                        $"*{charge.PaymentMethodDetails.Card.Last4}";
                 }
+                else if (charge.PaymentMethodDetails.AchDebit != null)
+                {
+                    tx.PaymentMethodType = PaymentMethodType.BankAccount;
+                    tx.Details = $"{charge.PaymentMethodDetails.AchDebit.BankName}, " +
+                        $"*{charge.PaymentMethodDetails.AchDebit.Last4}";
+                }
+                else if (charge.PaymentMethodDetails.AchCreditTransfer != null)
+                {
+                    tx.PaymentMethodType = PaymentMethodType.BankAccount;
+                    tx.Details = $"ACH => {charge.PaymentMethodDetails.AchCreditTransfer.BankName}, " +
+                        $"{charge.PaymentMethodDetails.AchCreditTransfer.AccountNumber}";
+                }
+            }
 
             if (!tx.PaymentMethodType.HasValue)
             {
@@ -351,13 +351,13 @@ public class StripeController : Controller
                         await Task.Delay(5000);
                     }
 
-                        var ids = GetIdsFromMetaData(subscription.Metadata);
-                        // org
-                        if (ids.HasOrg)
+                    var ids = GetIdsFromMetaData(subscription.Metadata);
+                    // org
+                    if (ids.HasOrg)
+                    {
+                        if (subscription.Items.Any(i => StaticStore.Plans.Any(p => p.StripePlanId == i.Plan.Id)))
                         {
-                            if (subscription.Items.Any(i => StaticStore.Plans.Any(p => p.StripePlanId == i.Plan.Id)))
-                            {
-                                await _organizationService.EnableAsync(ids.OrgId.Value, subscription.CurrentPeriodEnd);
+                            await _organizationService.EnableAsync(ids.OrgId.Value, subscription.CurrentPeriodEnd);
 
                             var organization = await _organizationRepository.GetByIdAsync(ids.OrgId.Value);
                             await _referenceEventService.RaiseEventAsync(
@@ -377,100 +377,101 @@ public class StripeController : Controller
                         {
                             await _userService.EnablePremiumAsync(ids.UserId.Value, subscription.CurrentPeriodEnd);
 
-                                var user = await _userRepository.GetByIdAsync(ids.UserId.Value);
-                                await _referenceEventService.RaiseEventAsync(
-                                    new ReferenceEvent(ReferenceEventType.Rebilled, user)
-                                    {
-                                        PlanName = PremiumPlanId,
-                                        Storage = user?.MaxStorageGb,
-                                    });
-                            }
+                            var user = await _userRepository.GetByIdAsync(ids.UserId.Value);
+                            await _referenceEventService.RaiseEventAsync(
+                                new ReferenceEvent(ReferenceEventType.Rebilled, user)
+                                {
+                                    PlanName = PremiumPlanId,
+                                    Storage = user?.MaxStorageGb,
+                                });
                         }
                     }
                 }
             }
-            else if (parsedEvent.Type.Equals(HandledStripeWebhook.PaymentFailed))
+        }
+        else if (parsedEvent.Type.Equals(HandledStripeWebhook.PaymentFailed))
+        {
+            await HandlePaymentFailed(await GetInvoiceAsync(parsedEvent, true));
+        }
+        else if (parsedEvent.Type.Equals(HandledStripeWebhook.InvoiceCreated))
+        {
+            var invoice = await GetInvoiceAsync(parsedEvent, true);
+            if (!invoice.Paid && UnpaidAutoChargeInvoiceForSubscriptionCycle(invoice))
             {
-                await HandlePaymentFailed(await GetInvoiceAsync(parsedEvent, true));
+                await AttemptToPayInvoiceAsync(invoice);
             }
-            else if (parsedEvent.Type.Equals(HandledStripeWebhook.InvoiceCreated))
-            {
-                var invoice = await GetInvoiceAsync(parsedEvent, true);
-                if (!invoice.Paid && UnpaidAutoChargeInvoiceForSubscriptionCycle(invoice))
-                {
-                    await AttemptToPayInvoiceAsync(invoice);
-                }
-            }
-            else
-            {
-                _logger.LogWarning("Unsupported event received. " + parsedEvent.Type);
-            }
+        }
+        else
+        {
+            _logger.LogWarning("Unsupported event received. " + parsedEvent.Type);
+        }
 
         return new OkResult();
     }
 
-        private async Task HandleSubscriptionUpdateAndDelete(Stripe.Event parsedEvent, bool isSubDeletedEvent, bool isSubUpdatedEvent)
+    private async Task HandleSubscriptionUpdateAndDelete(Stripe.Event parsedEvent, bool isSubDeletedEvent, bool isSubUpdatedEvent)
+    {
+        var subscription = await GetSubscriptionAsync(parsedEvent, true);
+        var ids = GetIdsFromMetaData(subscription.Metadata);
+
+        // There are 3 ways we can end up with a subscription that needs to be disabled:
+        //   1. The Delete webhook fires with a "canceled" status on the subscription, or
+        //   2. The Update webhook fires with an "unpaid" subscription status, or
+        //   3. The Update webhook fires with an "incomplete_expired" subscription status, meaning the initial payment never processed
+        var subCanceled = isSubDeletedEvent && subscription.Status == "canceled";
+        var subUnpaid = isSubUpdatedEvent && subscription.Status == "unpaid";
+        var subIncompleteExpired = isSubUpdatedEvent && subscription.Status == "incomplete_expired";
+        var needToDisable = subCanceled || subUnpaid || subIncompleteExpired;
+
+        if (needToDisable)
         {
-            var subscription = await GetSubscriptionAsync(parsedEvent, true);
-            var ids = GetIdsFromMetaData(subscription.Metadata);
-
-            // There are 3 ways we can end up with a subscription that needs to be disabled:
-            //   1. The Delete webhook fires with a "canceled" status on the subscription, or
-            //   2. The Update webhook fires with an "unpaid" subscription status, or
-            //   3. The Update webhook fires with an "incomplete_expired" subscription status, meaning the initial payment never processed
-            var subCanceled = isSubDeletedEvent && subscription.Status == "canceled";
-            var subUnpaid = isSubUpdatedEvent && subscription.Status == "unpaid";
-            var subIncompleteExpired = isSubUpdatedEvent && subscription.Status == "incomplete_expired";
-            var needToDisable = subCanceled || subUnpaid || subIncompleteExpired;
-
-            if (needToDisable)
+            if (ids.HasOrg)
             {
-                if (ids.HasOrg)
-                {
-                    await _organizationService.DisableAsync(ids.OrgId.Value, subscription.CurrentPeriodEnd);
-                }
-                else if (ids.HasUser)
-                {
-                    await _userService.DisablePremiumAsync(ids.UserId.Value, subscription.CurrentPeriodEnd);
-                }
+                await _organizationService.DisableAsync(ids.OrgId.Value, subscription.CurrentPeriodEnd);
             }
-
-            if (isSubUpdatedEvent)
+            else if (ids.HasUser)
             {
-                // org
-                if (ids.HasOrg)
-                {
-                    await _organizationService.UpdateExpirationDateAsync(ids.OrgId.Value,
-                        subscription.CurrentPeriodEnd);
-                    if (IsSponsoredSubscription(subscription))
-                    {
-                        await _organizationSponsorshipRenewCommand.UpdateExpirationDateAsync(ids.OrgId.Value, subscription.CurrentPeriodEnd);
-                    }
-                }
-                // user
-                else if (ids.HasUser)
-                {
-                    await _userService.UpdatePremiumExpirationAsync(ids.UserId.Value,
-                        subscription.CurrentPeriodEnd);
-                }
+                await _userService.DisablePremiumAsync(ids.UserId.Value, subscription.CurrentPeriodEnd);
             }
         }
 
-        private record SubscriptionIdResult {
-            public Guid? OrgId {get; init;} = null;
-            public Guid? UserId {get;init;} = null;
-
-            public bool HasOrg { get { return OrgId.HasValue; }}
-            public bool HasUser { get { return UserId.HasValue; }}
-
-        }
-
-        private SubscriptionIdResult GetIdsFromMetaData(IDictionary<string, string> metaData)
+        if (isSubUpdatedEvent)
         {
-            if (metaData == null || !metaData.Any())
+            // org
+            if (ids.HasOrg)
             {
-                return new SubscriptionIdResult();
+                await _organizationService.UpdateExpirationDateAsync(ids.OrgId.Value,
+                    subscription.CurrentPeriodEnd);
+                if (IsSponsoredSubscription(subscription))
+                {
+                    await _organizationSponsorshipRenewCommand.UpdateExpirationDateAsync(ids.OrgId.Value, subscription.CurrentPeriodEnd);
+                }
             }
+            // user
+            else if (ids.HasUser)
+            {
+                await _userService.UpdatePremiumExpirationAsync(ids.UserId.Value,
+                    subscription.CurrentPeriodEnd);
+            }
+        }
+    }
+
+    private record SubscriptionIdResult
+    {
+        public Guid? OrgId { get; init; } = null;
+        public Guid? UserId { get; init; } = null;
+
+        public bool HasOrg { get { return OrgId.HasValue; } }
+        public bool HasUser { get { return UserId.HasValue; } }
+
+    }
+
+    private SubscriptionIdResult GetIdsFromMetaData(IDictionary<string, string> metaData)
+    {
+        if (metaData == null || !metaData.Any())
+        {
+            return new SubscriptionIdResult();
+        }
 
         Guid? orgId = null;
         Guid? userId = null;
@@ -504,18 +505,18 @@ public class StripeController : Controller
         return new SubscriptionIdResult() { OrgId = orgId, UserId = userId };
     }
 
-        private bool OrgPlanForInvoiceNotifications(Organization org)
+    private bool OrgPlanForInvoiceNotifications(Organization org)
+    {
+        switch (org.PlanType)
         {
-            switch (org.PlanType)
-            {
-                case PlanType.FamiliesAnnually:
-                case PlanType.TeamsAnnually:
-                case PlanType.EnterpriseAnnually:
-                    return true;
-                default:
-                    return false;
-            }
+            case PlanType.FamiliesAnnually:
+            case PlanType.TeamsAnnually:
+            case PlanType.EnterpriseAnnually:
+                return true;
+            default:
+                return false;
         }
+    }
 
     private async Task<bool> AttemptToPayInvoiceAsync(Invoice invoice)
     {
@@ -546,21 +547,21 @@ public class StripeController : Controller
             return false;
         }
 
-            var subscriptionService = new SubscriptionService();
-            var subscription = await subscriptionService.GetAsync(invoice.SubscriptionId);
-            var ids = GetIdsFromMetaData(subscription?.Metadata);
-            if (!ids.HasUser)
-            {
-                // Apple receipt is only for user subscriptions
-                return false;
-            }
+        var subscriptionService = new SubscriptionService();
+        var subscription = await subscriptionService.GetAsync(invoice.SubscriptionId);
+        var ids = GetIdsFromMetaData(subscription?.Metadata);
+        if (!ids.HasUser)
+        {
+            // Apple receipt is only for user subscriptions
+            return false;
+        }
 
-            if (appleReceiptRecord.Item2.Value != ids.UserId.Value)
-            {
-                _logger.LogError("User Ids for Apple Receipt and subscription do not match: {0} != {1}.",
-                    appleReceiptRecord.Item2.Value, ids.UserId.Value);
-                return false;
-            }
+        if (appleReceiptRecord.Item2.Value != ids.UserId.Value)
+        {
+            _logger.LogError("User Ids for Apple Receipt and subscription do not match: {0} != {1}.",
+                appleReceiptRecord.Item2.Value, ids.UserId.Value);
+            return false;
+        }
 
         var appleReceiptStatus = await _appleIapService.GetVerifiedReceiptStatusAsync(appleReceiptRecord.Item1);
         if (appleReceiptStatus == null)
@@ -592,17 +593,17 @@ public class StripeController : Controller
             PremiumPlanAppleIapPrice, ids.UserId.Value);
         appleTransaction.Type = TransactionType.Charge;
 
-            var invoiceService = new InvoiceService();
-            try
+        var invoiceService = new InvoiceService();
+        try
+        {
+            await invoiceService.UpdateAsync(invoice.Id, new InvoiceUpdateOptions
             {
-                await invoiceService.UpdateAsync(invoice.Id, new InvoiceUpdateOptions
+                Metadata = new Dictionary<string, string>
                 {
-                    Metadata = new Dictionary<string, string>
-                    {
-                        ["appleReceipt"] = appleReceiptStatus.GetOriginalTransactionId(),
-                        ["appleReceiptTransactionId"] = receiptLastTransactionId
-                    }
-                });
+                    ["appleReceipt"] = appleReceiptStatus.GetOriginalTransactionId(),
+                    ["appleReceiptTransactionId"] = receiptLastTransactionId
+                }
+            });
 
             await _transactionRepository.CreateAsync(appleTransaction);
             await invoiceService.PayAsync(invoice.Id, new InvoicePayOptions { PaidOutOfBand = true });
@@ -625,39 +626,39 @@ public class StripeController : Controller
         return true;
     }
 
-        private async Task<bool> AttemptToPayInvoiceWithBraintreeAsync(Invoice invoice, Customer customer)
+    private async Task<bool> AttemptToPayInvoiceWithBraintreeAsync(Invoice invoice, Customer customer)
+    {
+        if (!customer?.Metadata?.ContainsKey("btCustomerId") ?? true)
         {
-            if (!customer?.Metadata?.ContainsKey("btCustomerId") ?? true)
-            {
-                return false;
-            }
+            return false;
+        }
 
-            var subscriptionService = new SubscriptionService();
-            var subscription = await subscriptionService.GetAsync(invoice.SubscriptionId);
-            var ids = GetIdsFromMetaData(subscription?.Metadata);
-            if (!ids.OrgId.HasValue && !ids.UserId.HasValue)
-            {
-                return false;
-            }
+        var subscriptionService = new SubscriptionService();
+        var subscription = await subscriptionService.GetAsync(invoice.SubscriptionId);
+        var ids = GetIdsFromMetaData(subscription?.Metadata);
+        if (!ids.OrgId.HasValue && !ids.UserId.HasValue)
+        {
+            return false;
+        }
 
         var orgTransaction = ids.HasOrg;
         var btObjIdField = orgTransaction ? "organization_id" : "user_id";
         var btObjId = orgTransaction ? ids.OrgId.Value : ids.UserId.Value;
         var btInvoiceAmount = (invoice.AmountDue / 100M);
 
-            var existingTransactions = orgTransaction ?
-                await _transactionRepository.GetManyByOrganizationIdAsync(ids.OrgId.Value) :
-                await _transactionRepository.GetManyByUserIdAsync(ids.UserId.Value);
-            var duplicateTimeSpan = TimeSpan.FromHours(24);
-            var now = DateTime.UtcNow;
-            var duplicateTransaction = existingTransactions?
-                .FirstOrDefault(t => (now - t.CreationDate) < duplicateTimeSpan);
-            if (duplicateTransaction != null)
-            {
-                _logger.LogWarning("There is already a recent PayPal transaction ({0}). " +
-                    "Do not charge again to prevent possible duplicate.", duplicateTransaction.GatewayId);
-                return false;
-            }
+        var existingTransactions = orgTransaction ?
+            await _transactionRepository.GetManyByOrganizationIdAsync(ids.OrgId.Value) :
+            await _transactionRepository.GetManyByUserIdAsync(ids.UserId.Value);
+        var duplicateTimeSpan = TimeSpan.FromHours(24);
+        var now = DateTime.UtcNow;
+        var duplicateTransaction = existingTransactions?
+            .FirstOrDefault(t => (now - t.CreationDate) < duplicateTimeSpan);
+        if (duplicateTransaction != null)
+        {
+            _logger.LogWarning("There is already a recent PayPal transaction ({0}). " +
+                "Do not charge again to prevent possible duplicate.", duplicateTransaction.GatewayId);
+            return false;
+        }
 
         var transactionResult = await _btGateway.Transaction.SaleAsync(
             new Braintree.TransactionRequest
