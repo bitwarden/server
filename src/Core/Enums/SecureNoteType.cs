@@ -1,7 +1,6 @@
-﻿namespace Bit.Core.Enums
+﻿namespace Bit.Core.Enums;
+
+public enum SecureNoteType : byte
 {
-    public enum SecureNoteType : byte
-    {
-        Generic = 0
-    }
+    Generic = 0
 }

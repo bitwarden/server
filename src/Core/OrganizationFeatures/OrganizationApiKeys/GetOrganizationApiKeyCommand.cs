@@ -4,43 +4,42 @@ using Bit.Core.OrganizationFeatures.OrganizationApiKeys.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Utilities;
 
-namespace Bit.Core.OrganizationFeatures.OrganizationApiKeys
+namespace Bit.Core.OrganizationFeatures.OrganizationApiKeys;
+
+public class GetOrganizationApiKeyCommand : IGetOrganizationApiKeyCommand
 {
-    public class GetOrganizationApiKeyCommand : IGetOrganizationApiKeyCommand
+    private readonly IOrganizationApiKeyRepository _organizationApiKeyRepository;
+
+    public GetOrganizationApiKeyCommand(IOrganizationApiKeyRepository organizationApiKeyRepository)
     {
-        private readonly IOrganizationApiKeyRepository _organizationApiKeyRepository;
+        _organizationApiKeyRepository = organizationApiKeyRepository;
+    }
 
-        public GetOrganizationApiKeyCommand(IOrganizationApiKeyRepository organizationApiKeyRepository)
+    public async Task<OrganizationApiKey> GetOrganizationApiKeyAsync(Guid organizationId, OrganizationApiKeyType organizationApiKeyType)
+    {
+        if (!Enum.IsDefined(organizationApiKeyType))
         {
-            _organizationApiKeyRepository = organizationApiKeyRepository;
+            throw new ArgumentOutOfRangeException(nameof(organizationApiKeyType), $"Invalid value for enum {nameof(OrganizationApiKeyType)}");
         }
 
-        public async Task<OrganizationApiKey> GetOrganizationApiKeyAsync(Guid organizationId, OrganizationApiKeyType organizationApiKeyType)
+        var apiKeys = await _organizationApiKeyRepository
+            .GetManyByOrganizationIdTypeAsync(organizationId, organizationApiKeyType);
+
+        if (apiKeys == null || !apiKeys.Any())
         {
-            if (!Enum.IsDefined(organizationApiKeyType))
+            var apiKey = new OrganizationApiKey
             {
-                throw new ArgumentOutOfRangeException(nameof(organizationApiKeyType), $"Invalid value for enum {nameof(OrganizationApiKeyType)}");
-            }
+                OrganizationId = organizationId,
+                Type = organizationApiKeyType,
+                ApiKey = CoreHelpers.SecureRandomString(30),
+                RevisionDate = DateTime.UtcNow,
+            };
 
-            var apiKeys = await _organizationApiKeyRepository
-                .GetManyByOrganizationIdTypeAsync(organizationId, organizationApiKeyType);
-
-            if (apiKeys == null || !apiKeys.Any())
-            {
-                var apiKey = new OrganizationApiKey
-                {
-                    OrganizationId = organizationId,
-                    Type = organizationApiKeyType,
-                    ApiKey = CoreHelpers.SecureRandomString(30),
-                    RevisionDate = DateTime.UtcNow,
-                };
-
-                await _organizationApiKeyRepository.CreateAsync(apiKey);
-                return apiKey;
-            }
-
-            // NOTE: Currently we only allow one type of api key per organization
-            return apiKeys.Single();
+            await _organizationApiKeyRepository.CreateAsync(apiKey);
+            return apiKey;
         }
+
+        // NOTE: Currently we only allow one type of api key per organization
+        return apiKeys.Single();
     }
 }
