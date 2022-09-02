@@ -52,7 +52,7 @@
 
   <!--
     This section is for getting & setting the gitHash value, which can easily be accessed
-    via the Core.Utilities.AssembleyHelpers class.
+    via the Core.Utilities.AssemblyHelpers class.
   -->
   <Target Name="SetSourceRevisionId" BeforeTargets="CoreGenerateAssemblyInfo">
     <Exec Command="git describe --long --always --dirty --exclude=* --abbrev=8" ConsoleToMSBuild="True" IgnoreExitCode="False">
