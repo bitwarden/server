@@ -34,6 +34,7 @@ namespace Bit.Commercial.Infrastructure.EntityFramework.Repositories
                 var dbContext = GetDatabaseContext(scope);
                 var project = await dbContext.Project
                                         .Where(c => c.OrganizationId == organizationId && c.DeletedDate == null)
+                                        .OrderBy(c => c.RevisionDate)
                                         .ToListAsync();
                 return Mapper.Map<List<Core.Entities.Project>>(project);
             }
