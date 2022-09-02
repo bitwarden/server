@@ -1,10 +1,9 @@
 ﻿using Bit.Core.Entities;
 
-namespace Bit.Core.Services
+namespace Bit.Core.Services;
+
+public interface IPolicyService
 {
-    public interface IPolicyService
-    {
-        Task SaveAsync(Policy policy, IUserService userService, IOrganizationService organizationService,
-            Guid? savingUserId);
-    }
+    Task SaveAsync(Policy policy, IUserService userService, IOrganizationService organizationService,
+        Guid? savingUserId);
 }

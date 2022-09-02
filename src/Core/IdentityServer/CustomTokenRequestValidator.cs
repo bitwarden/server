@@ -11,143 +11,142 @@ using IdentityServer4.Validation;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 
-namespace Bit.Core.IdentityServer
+namespace Bit.Core.IdentityServer;
+
+public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenRequestValidationContext>,
+    ICustomTokenRequestValidator
 {
-    public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenRequestValidationContext>,
-        ICustomTokenRequestValidator
+    private UserManager<User> _userManager;
+    private readonly ISsoConfigRepository _ssoConfigRepository;
+    private readonly IOrganizationRepository _organizationRepository;
+
+    public CustomTokenRequestValidator(
+        UserManager<User> userManager,
+        IDeviceRepository deviceRepository,
+        IDeviceService deviceService,
+        IUserService userService,
+        IEventService eventService,
+        IOrganizationDuoWebTokenProvider organizationDuoWebTokenProvider,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IApplicationCacheService applicationCacheService,
+        IMailService mailService,
+        ILogger<ResourceOwnerPasswordValidator> logger,
+        ICurrentContext currentContext,
+        GlobalSettings globalSettings,
+        IPolicyRepository policyRepository,
+        ISsoConfigRepository ssoConfigRepository,
+        IUserRepository userRepository,
+        ICaptchaValidationService captchaValidationService)
+        : base(userManager, deviceRepository, deviceService, userService, eventService,
+              organizationDuoWebTokenProvider, organizationRepository, organizationUserRepository,
+              applicationCacheService, mailService, logger, currentContext, globalSettings, policyRepository,
+              userRepository, captchaValidationService)
     {
-        private UserManager<User> _userManager;
-        private readonly ISsoConfigRepository _ssoConfigRepository;
-        private readonly IOrganizationRepository _organizationRepository;
+        _userManager = userManager;
+        _ssoConfigRepository = ssoConfigRepository;
+        _organizationRepository = organizationRepository;
+    }
 
-        public CustomTokenRequestValidator(
-            UserManager<User> userManager,
-            IDeviceRepository deviceRepository,
-            IDeviceService deviceService,
-            IUserService userService,
-            IEventService eventService,
-            IOrganizationDuoWebTokenProvider organizationDuoWebTokenProvider,
-            IOrganizationRepository organizationRepository,
-            IOrganizationUserRepository organizationUserRepository,
-            IApplicationCacheService applicationCacheService,
-            IMailService mailService,
-            ILogger<ResourceOwnerPasswordValidator> logger,
-            ICurrentContext currentContext,
-            GlobalSettings globalSettings,
-            IPolicyRepository policyRepository,
-            ISsoConfigRepository ssoConfigRepository,
-            IUserRepository userRepository,
-            ICaptchaValidationService captchaValidationService)
-            : base(userManager, deviceRepository, deviceService, userService, eventService,
-                  organizationDuoWebTokenProvider, organizationRepository, organizationUserRepository,
-                  applicationCacheService, mailService, logger, currentContext, globalSettings, policyRepository,
-                  userRepository, captchaValidationService)
+    public async Task ValidateAsync(CustomTokenRequestValidationContext context)
+    {
+        string[] allowedGrantTypes = { "authorization_code", "client_credentials" };
+        if (!allowedGrantTypes.Contains(context.Result.ValidatedRequest.GrantType)
+            || context.Result.ValidatedRequest.ClientId.StartsWith("organization")
+            || context.Result.ValidatedRequest.ClientId.StartsWith("installation"))
         {
-            _userManager = userManager;
-            _ssoConfigRepository = ssoConfigRepository;
-            _organizationRepository = organizationRepository;
+            return;
         }
+        await ValidateAsync(context, context.Result.ValidatedRequest,
+            new CustomValidatorRequestContext { KnownDevice = true });
+    }
 
-        public async Task ValidateAsync(CustomTokenRequestValidationContext context)
+    protected async override Task<bool> ValidateContextAsync(CustomTokenRequestValidationContext context,
+        CustomValidatorRequestContext validatorContext)
+    {
+        var email = context.Result.ValidatedRequest.Subject?.GetDisplayName()
+            ?? context.Result.ValidatedRequest.ClientClaims?.FirstOrDefault(claim => claim.Type == JwtClaimTypes.Email)?.Value;
+        if (!string.IsNullOrWhiteSpace(email))
         {
-            string[] allowedGrantTypes = { "authorization_code", "client_credentials" };
-            if (!allowedGrantTypes.Contains(context.Result.ValidatedRequest.GrantType)
-                || context.Result.ValidatedRequest.ClientId.StartsWith("organization")
-                || context.Result.ValidatedRequest.ClientId.StartsWith("installation"))
-            {
-                return;
-            }
-            await ValidateAsync(context, context.Result.ValidatedRequest,
-                new CustomValidatorRequestContext { KnownDevice = true });
+            validatorContext.User = await _userManager.FindByEmailAsync(email);
         }
+        return validatorContext.User != null;
+    }
 
-        protected async override Task<bool> ValidateContextAsync(CustomTokenRequestValidationContext context,
-            CustomValidatorRequestContext validatorContext)
+    protected override async Task SetSuccessResult(CustomTokenRequestValidationContext context, User user,
+        List<Claim> claims, Dictionary<string, object> customResponse)
+    {
+        context.Result.CustomResponse = customResponse;
+        if (claims?.Any() ?? false)
         {
-            var email = context.Result.ValidatedRequest.Subject?.GetDisplayName()
-                ?? context.Result.ValidatedRequest.ClientClaims?.FirstOrDefault(claim => claim.Type == JwtClaimTypes.Email)?.Value;
-            if (!string.IsNullOrWhiteSpace(email))
+            context.Result.ValidatedRequest.Client.AlwaysSendClientClaims = true;
+            context.Result.ValidatedRequest.Client.ClientClaimsPrefix = string.Empty;
+            foreach (var claim in claims)
             {
-                validatorContext.User = await _userManager.FindByEmailAsync(email);
-            }
-            return validatorContext.User != null;
-        }
-
-        protected override async Task SetSuccessResult(CustomTokenRequestValidationContext context, User user,
-            List<Claim> claims, Dictionary<string, object> customResponse)
-        {
-            context.Result.CustomResponse = customResponse;
-            if (claims?.Any() ?? false)
-            {
-                context.Result.ValidatedRequest.Client.AlwaysSendClientClaims = true;
-                context.Result.ValidatedRequest.Client.ClientClaimsPrefix = string.Empty;
-                foreach (var claim in claims)
-                {
-                    context.Result.ValidatedRequest.ClientClaims.Add(claim);
-                }
-            }
-
-            if (context.Result.CustomResponse == null || user.MasterPassword != null)
-            {
-                return;
-            }
-
-            // KeyConnector responses below
-
-            // Apikey login
-            if (context.Result.ValidatedRequest.GrantType == "client_credentials")
-            {
-                if (user.UsesKeyConnector)
-                {
-                    // KeyConnectorUrl is configured in the CLI client, we just need to tell the client to use it
-                    context.Result.CustomResponse["ApiUseKeyConnector"] = true;
-                    context.Result.CustomResponse["ResetMasterPassword"] = false;
-                }
-                return;
-            }
-
-            // SSO login
-            var organizationClaim = context.Result.ValidatedRequest.Subject?.FindFirst(c => c.Type == "organizationId");
-            if (organizationClaim?.Value != null)
-            {
-                var organizationId = new Guid(organizationClaim.Value);
-
-                var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(organizationId);
-                var ssoConfigData = ssoConfig.GetData();
-
-                if (ssoConfigData is { KeyConnectorEnabled: true } && !string.IsNullOrEmpty(ssoConfigData.KeyConnectorUrl))
-                {
-                    context.Result.CustomResponse["KeyConnectorUrl"] = ssoConfigData.KeyConnectorUrl;
-                    // Prevent clients redirecting to set-password
-                    context.Result.CustomResponse["ResetMasterPassword"] = false;
-                }
+                context.Result.ValidatedRequest.ClientClaims.Add(claim);
             }
         }
 
-        protected override void SetTwoFactorResult(CustomTokenRequestValidationContext context,
-            Dictionary<string, object> customResponse)
+        if (context.Result.CustomResponse == null || user.MasterPassword != null)
         {
-            context.Result.Error = "invalid_grant";
-            context.Result.ErrorDescription = "Two factor required.";
-            context.Result.IsError = true;
-            context.Result.CustomResponse = customResponse;
+            return;
         }
 
-        protected override void SetSsoResult(CustomTokenRequestValidationContext context,
-            Dictionary<string, object> customResponse)
+        // KeyConnector responses below
+
+        // Apikey login
+        if (context.Result.ValidatedRequest.GrantType == "client_credentials")
         {
-            context.Result.Error = "invalid_grant";
-            context.Result.ErrorDescription = "Single Sign on required.";
-            context.Result.IsError = true;
-            context.Result.CustomResponse = customResponse;
+            if (user.UsesKeyConnector)
+            {
+                // KeyConnectorUrl is configured in the CLI client, we just need to tell the client to use it
+                context.Result.CustomResponse["ApiUseKeyConnector"] = true;
+                context.Result.CustomResponse["ResetMasterPassword"] = false;
+            }
+            return;
         }
 
-        protected override void SetErrorResult(CustomTokenRequestValidationContext context,
-            Dictionary<string, object> customResponse)
+        // SSO login
+        var organizationClaim = context.Result.ValidatedRequest.Subject?.FindFirst(c => c.Type == "organizationId");
+        if (organizationClaim?.Value != null)
         {
-            context.Result.Error = "invalid_grant";
-            context.Result.IsError = true;
-            context.Result.CustomResponse = customResponse;
+            var organizationId = new Guid(organizationClaim.Value);
+
+            var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(organizationId);
+            var ssoConfigData = ssoConfig.GetData();
+
+            if (ssoConfigData is { KeyConnectorEnabled: true } && !string.IsNullOrEmpty(ssoConfigData.KeyConnectorUrl))
+            {
+                context.Result.CustomResponse["KeyConnectorUrl"] = ssoConfigData.KeyConnectorUrl;
+                // Prevent clients redirecting to set-password
+                context.Result.CustomResponse["ResetMasterPassword"] = false;
+            }
         }
+    }
+
+    protected override void SetTwoFactorResult(CustomTokenRequestValidationContext context,
+        Dictionary<string, object> customResponse)
+    {
+        context.Result.Error = "invalid_grant";
+        context.Result.ErrorDescription = "Two factor required.";
+        context.Result.IsError = true;
+        context.Result.CustomResponse = customResponse;
+    }
+
+    protected override void SetSsoResult(CustomTokenRequestValidationContext context,
+        Dictionary<string, object> customResponse)
+    {
+        context.Result.Error = "invalid_grant";
+        context.Result.ErrorDescription = "Single Sign on required.";
+        context.Result.IsError = true;
+        context.Result.CustomResponse = customResponse;
+    }
+
+    protected override void SetErrorResult(CustomTokenRequestValidationContext context,
+        Dictionary<string, object> customResponse)
+    {
+        context.Result.Error = "invalid_grant";
+        context.Result.IsError = true;
+        context.Result.CustomResponse = customResponse;
     }
 }

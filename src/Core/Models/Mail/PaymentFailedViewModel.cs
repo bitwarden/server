@@ -1,8 +1,7 @@
-﻿namespace Bit.Core.Models.Mail
+﻿namespace Bit.Core.Models.Mail;
+
+public class PaymentFailedViewModel : BaseMailModel
 {
-    public class PaymentFailedViewModel : BaseMailModel
-    {
-        public decimal Amount { get; set; }
-        public bool MentionInvoices { get; set; }
-    }
+    public decimal Amount { get; set; }
+    public bool MentionInvoices { get; set; }
 }

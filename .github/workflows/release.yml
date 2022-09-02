@@ -182,7 +182,9 @@ jobs:
           - service_name: Api
           - service_name: Attachments
           - service_name: Events
+            prod_acr: true
           - service_name: Icons
+            prod_acr: true
           - service_name: Identity
           - service_name: K8S-Proxy
           - service_name: MsSql
@@ -266,7 +268,7 @@ jobs:
           docker logout
           echo "DOCKER_CONTENT_TRUST=0" >> $GITHUB_ENV
 
-      ########## ACR ##########
+      ########## ACR QA ##########
       - name: Login to Azure - QA Subscription
         uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a
         with:
@@ -295,6 +297,41 @@ jobs:
           docker push $REGISTRY/$SERVICE_NAME:$_RELEASE_VERSION
 
       - name: Log out of Docker
+        run: docker logout
+
+      ########## ACR PROD ##########
+      - name: Login to Azure - PROD Subscription
+        if: matrix.prod_acr == true
+        uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a
+        with:
+          creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
+
+      - name: Login to Azure ACR
+        if: matrix.prod_acr == true
+        run: az acr login -n bitwardenprod
+
+      - name: Tag version and latest
+        if: matrix.prod_acr == true
+        env:
+          SERVICE_NAME: ${{ steps.setup.outputs.service_name }}
+          REGISTRY: bitwardenprod.azurecr.io
+        run: |
+          if [[ "${{ github.event.inputs.release_type }}" == "Dry Run" ]]; then
+            docker tag bitwarden/$SERVICE_NAME:latest $REGISTRY/$SERVICE_NAME:dryrun
+          else
+            docker tag bitwarden/$SERVICE_NAME:$_BRANCH_NAME $REGISTRY/$SERVICE_NAME:$_RELEASE_VERSION
+          fi
+
+      - name: Push version and latest image
+        if: ${{ github.event.inputs.release_type != 'Dry Run' && matrix.prod_acr == true }}
+        env:
+          SERVICE_NAME: ${{ steps.setup.outputs.service_name }}
+          REGISTRY: bitwardenprod.azurecr.io
+        run: |
+          docker push $REGISTRY/$SERVICE_NAME:$_RELEASE_VERSION
+
+      - name: Log out of Docker
+        if: matrix.prod_acr == true
         run: docker logout
 
 
