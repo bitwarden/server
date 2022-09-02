@@ -203,13 +203,13 @@ public class Startup
         {
             endpoints.MapDefaultControllerRoute();
 
-            endpoints.MapHealthChecks("/health/simple");
+            endpoints.MapHealthChecks("/health/simple").RequireAuthorization();
             endpoints.MapHealthChecks("/health/extended",
                 new HealthCheckOptions
                 {
-                    Predicate = _ => true,
-                    ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
-                });
+                    Predicate = _ => true, ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
+                })
+                .RequireAuthorization();
         });
 
         // Add Swagger
