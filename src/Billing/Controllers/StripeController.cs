@@ -108,51 +108,12 @@ namespace Bit.Billing.Controllers
                 return new BadRequestResult();
             }
 
-            var subDeleted = parsedEvent.Type.Equals(HandledStripeWebhook.SubscriptionDeleted);
-            var subUpdated = parsedEvent.Type.Equals(HandledStripeWebhook.SubscriptionUpdated);
+            var isSubDeletedEvent = parsedEvent.Type.Equals(HandledStripeWebhook.SubscriptionDeleted);
+            var isSubUpdatedEvent = parsedEvent.Type.Equals(HandledStripeWebhook.SubscriptionUpdated);
 
-            if (subDeleted || subUpdated)
+            if (isSubDeletedEvent || isSubUpdatedEvent)
             {
-                var subscription = await GetSubscriptionAsync(parsedEvent, true);
-                var ids = GetIdsFromMetaData(subscription.Metadata);
-
-                var subCanceled = subDeleted && subscription.Status == "canceled";
-                var subUnpaid = subUpdated && subscription.Status == "unpaid";
-                var subIncompleteExpired = subUpdated && subscription.Status == "incomplete_expired";
-
-                if (subCanceled || subUnpaid || subIncompleteExpired)
-                {
-                    // org
-                    if (ids.Item1.HasValue)
-                    {
-                        await _organizationService.DisableAsync(ids.Item1.Value, subscription.CurrentPeriodEnd);
-                    }
-                    // user
-                    else if (ids.Item2.HasValue)
-                    {
-                        await _userService.DisablePremiumAsync(ids.Item2.Value, subscription.CurrentPeriodEnd);
-                    }
-                }
-
-                if (subUpdated)
-                {
-                    // org
-                    if (ids.Item1.HasValue)
-                    {
-                        await _organizationService.UpdateExpirationDateAsync(ids.Item1.Value,
-                            subscription.CurrentPeriodEnd);
-                        if (IsSponsoredSubscription(subscription))
-                        {
-                            await _organizationSponsorshipRenewCommand.UpdateExpirationDateAsync(ids.Item1.Value, subscription.CurrentPeriodEnd);
-                        }
-                    }
-                    // user
-                    else if (ids.Item2.HasValue)
-                    {
-                        await _userService.UpdatePremiumExpirationAsync(ids.Item2.Value,
-                            subscription.CurrentPeriodEnd);
-                    }
-                }
+                await HandleSubscriptionUpdateAndDelete(parsedEvent, isSubDeletedEvent, isSubUpdatedEvent);
             }
             else if (parsedEvent.Type.Equals(HandledStripeWebhook.UpcomingInvoice))
             {
@@ -168,25 +129,24 @@ namespace Bit.Billing.Controllers
 
                 string email = null;
                 var ids = GetIdsFromMetaData(subscription.Metadata);
-                // org
-                if (ids.Item1.HasValue)
+                if (ids.HasOrg)
                 {
                     // sponsored org
                     if (IsSponsoredSubscription(subscription))
                     {
-                        await _validateSponsorshipCommand.ValidateSponsorshipAsync(ids.Item1.Value);
+                        await _validateSponsorshipCommand.ValidateSponsorshipAsync(ids.OrgId.Value);
                     }
 
-                    var org = await _organizationRepository.GetByIdAsync(ids.Item1.Value);
+                    var org = await _organizationRepository.GetByIdAsync(ids.OrgId.Value);
                     if (org != null && OrgPlanForInvoiceNotifications(org))
                     {
                         email = org.BillingEmail;
                     }
                 }
                 // user
-                else if (ids.Item2.HasValue)
+                else if (ids.HasUser)
                 {
-                    var user = await _userService.GetUserByIdAsync(ids.Item2.Value);
+                    var user = await _userService.GetUserByIdAsync(ids.UserId.Value);
                     if (user.Premium)
                     {
                         email = user.Email;
@@ -211,7 +171,7 @@ namespace Bit.Billing.Controllers
                     return new OkResult();
                 }
 
-                Tuple<Guid?, Guid?> ids = null;
+                SubscriptionIdResult ids = null;
                 Subscription subscription = null;
                 var subscriptionService = new SubscriptionService();
 
@@ -226,7 +186,7 @@ namespace Bit.Billing.Controllers
                     }
                 }
 
-                if (subscription == null || ids == null || (ids.Item1.HasValue && ids.Item2.HasValue))
+                if (subscription == null || ids == null || (ids.HasOrg && ids.HasUser))
                 {
                     var subscriptions = await subscriptionService.ListAsync(new SubscriptionListOptions
                     {
@@ -237,7 +197,7 @@ namespace Bit.Billing.Controllers
                         if (sub.Status != "canceled" && sub.Status != "incomplete_expired")
                         {
                             ids = GetIdsFromMetaData(sub.Metadata);
-                            if (ids.Item1.HasValue || ids.Item2.HasValue)
+                            if (ids.HasOrg || ids.HasUser)
                             {
                                 subscription = sub;
                                 break;
@@ -246,7 +206,7 @@ namespace Bit.Billing.Controllers
                     }
                 }
 
-                if (!ids.Item1.HasValue && !ids.Item2.HasValue)
+                if (!ids.HasOrg && !ids.HasUser)
                 {
                     _logger.LogWarning("Charge success has no subscriber ids. " + charge.Id);
                     return new BadRequestResult();
@@ -256,8 +216,8 @@ namespace Bit.Billing.Controllers
                 {
                     Amount = charge.Amount / 100M,
                     CreationDate = charge.Created,
-                    OrganizationId = ids.Item1,
-                    UserId = ids.Item2,
+                    OrganizationId = ids.OrgId,
+                    UserId = ids.UserId,
                     Type = TransactionType.Charge,
                     Gateway = GatewayType.Stripe,
                     GatewayId = charge.Id
@@ -393,13 +353,13 @@ namespace Bit.Billing.Controllers
 
                         var ids = GetIdsFromMetaData(subscription.Metadata);
                         // org
-                        if (ids.Item1.HasValue)
+                        if (ids.HasOrg)
                         {
                             if (subscription.Items.Any(i => StaticStore.Plans.Any(p => p.StripePlanId == i.Plan.Id)))
                             {
-                                await _organizationService.EnableAsync(ids.Item1.Value, subscription.CurrentPeriodEnd);
+                                await _organizationService.EnableAsync(ids.OrgId.Value, subscription.CurrentPeriodEnd);
 
-                                var organization = await _organizationRepository.GetByIdAsync(ids.Item1.Value);
+                                var organization = await _organizationRepository.GetByIdAsync(ids.OrgId.Value);
                                 await _referenceEventService.RaiseEventAsync(
                                     new ReferenceEvent(ReferenceEventType.Rebilled, organization)
                                     {
@@ -411,13 +371,13 @@ namespace Bit.Billing.Controllers
                             }
                         }
                         // user
-                        else if (ids.Item2.HasValue)
+                        else if (ids.HasUser)
                         {
                             if (subscription.Items.Any(i => i.Plan.Id == PremiumPlanId))
                             {
-                                await _userService.EnablePremiumAsync(ids.Item2.Value, subscription.CurrentPeriodEnd);
+                                await _userService.EnablePremiumAsync(ids.UserId.Value, subscription.CurrentPeriodEnd);
 
-                                var user = await _userRepository.GetByIdAsync(ids.Item2.Value);
+                                var user = await _userRepository.GetByIdAsync(ids.UserId.Value);
                                 await _referenceEventService.RaiseEventAsync(
                                     new ReferenceEvent(ReferenceEventType.Rebilled, user)
                                     {
@@ -449,11 +409,67 @@ namespace Bit.Billing.Controllers
             return new OkResult();
         }
 
-        private Tuple<Guid?, Guid?> GetIdsFromMetaData(IDictionary<string, string> metaData)
+        private async Task HandleSubscriptionUpdateAndDelete(Stripe.Event parsedEvent, bool isSubDeletedEvent, bool isSubUpdatedEvent)
+        {
+            var subscription = await GetSubscriptionAsync(parsedEvent, true);
+            var ids = GetIdsFromMetaData(subscription.Metadata);
+
+            // There are 3 ways we can end up with a subscription that needs to be disabled:
+            //   1. The Delete webhook fires with a "canceled" status on the subscription, or
+            //   2. The Update webhook fires with an "unpaid" subscription status, or
+            //   3. The Update webhook fires with an "incomplete_expired" subscription status, meaning the initial payment never processed
+            var subCanceled = isSubDeletedEvent && subscription.Status == "canceled";
+            var subUnpaid = isSubUpdatedEvent && subscription.Status == "unpaid";
+            var subIncompleteExpired = isSubUpdatedEvent && subscription.Status == "incomplete_expired";
+            var needToDisable = subCanceled || subUnpaid || subIncompleteExpired;
+
+            if (needToDisable)
+            {
+                if (ids.HasOrg)
+                {
+                    await _organizationService.DisableAsync(ids.OrgId.Value, subscription.CurrentPeriodEnd);
+                }
+                else if (ids.HasUser)
+                {
+                    await _userService.DisablePremiumAsync(ids.UserId.Value, subscription.CurrentPeriodEnd);
+                }
+            }
+
+            if (isSubUpdatedEvent)
+            {
+                // org
+                if (ids.HasOrg)
+                {
+                    await _organizationService.UpdateExpirationDateAsync(ids.OrgId.Value,
+                        subscription.CurrentPeriodEnd);
+                    if (IsSponsoredSubscription(subscription))
+                    {
+                        await _organizationSponsorshipRenewCommand.UpdateExpirationDateAsync(ids.OrgId.Value, subscription.CurrentPeriodEnd);
+                    }
+                }
+                // user
+                else if (ids.HasUser)
+                {
+                    await _userService.UpdatePremiumExpirationAsync(ids.UserId.Value,
+                        subscription.CurrentPeriodEnd);
+                }
+            }
+        }
+
+        private record SubscriptionIdResult {
+            public Guid? OrgId {get; init;} = null;
+            public Guid? UserId {get;init;} = null;
+
+            public bool HasOrg { get { return OrgId.HasValue; }}
+            public bool HasUser { get { return UserId.HasValue; }}
+
+        }
+
+        private SubscriptionIdResult GetIdsFromMetaData(IDictionary<string, string> metaData)
         {
             if (metaData == null || !metaData.Any())
             {
-                return new Tuple<Guid?, Guid?>(null, null);
+                return new SubscriptionIdResult();
             }
 
             Guid? orgId = null;
@@ -485,7 +501,7 @@ namespace Bit.Billing.Controllers
                 }
             }
 
-            return new Tuple<Guid?, Guid?>(orgId, userId);
+            return new SubscriptionIdResult() { OrgId = orgId, UserId = userId };
         }
 
         private bool OrgPlanForInvoiceNotifications(Organization org)
@@ -533,16 +549,16 @@ namespace Bit.Billing.Controllers
             var subscriptionService = new SubscriptionService();
             var subscription = await subscriptionService.GetAsync(invoice.SubscriptionId);
             var ids = GetIdsFromMetaData(subscription?.Metadata);
-            if (!ids.Item2.HasValue)
+            if (!ids.HasUser)
             {
                 // Apple receipt is only for user subscriptions
                 return false;
             }
 
-            if (appleReceiptRecord.Item2.Value != ids.Item2.Value)
+            if (appleReceiptRecord.Item2.Value != ids.UserId.Value)
             {
                 _logger.LogError("User Ids for Apple Receipt and subscription do not match: {0} != {1}.",
-                    appleReceiptRecord.Item2.Value, ids.Item2.Value);
+                    appleReceiptRecord.Item2.Value, ids.UserId.Value);
                 return false;
             }
 
@@ -573,7 +589,7 @@ namespace Bit.Billing.Controllers
             }
 
             var appleTransaction = appleReceiptStatus.BuildTransactionFromLastTransaction(
-                PremiumPlanAppleIapPrice, ids.Item2.Value);
+                PremiumPlanAppleIapPrice, ids.UserId.Value);
             appleTransaction.Type = TransactionType.Charge;
 
             var invoiceService = new InvoiceService();
@@ -619,19 +635,19 @@ namespace Bit.Billing.Controllers
             var subscriptionService = new SubscriptionService();
             var subscription = await subscriptionService.GetAsync(invoice.SubscriptionId);
             var ids = GetIdsFromMetaData(subscription?.Metadata);
-            if (!ids.Item1.HasValue && !ids.Item2.HasValue)
+            if (!ids.OrgId.HasValue && !ids.UserId.HasValue)
             {
                 return false;
             }
 
-            var orgTransaction = ids.Item1.HasValue;
+            var orgTransaction = ids.HasOrg;
             var btObjIdField = orgTransaction ? "organization_id" : "user_id";
-            var btObjId = ids.Item1 ?? ids.Item2.Value;
+            var btObjId = orgTransaction ? ids.OrgId.Value : ids.UserId.Value;
             var btInvoiceAmount = (invoice.AmountDue / 100M);
 
             var existingTransactions = orgTransaction ?
-                await _transactionRepository.GetManyByOrganizationIdAsync(ids.Item1.Value) :
-                await _transactionRepository.GetManyByUserIdAsync(ids.Item2.Value);
+                await _transactionRepository.GetManyByOrganizationIdAsync(ids.OrgId.Value) :
+                await _transactionRepository.GetManyByUserIdAsync(ids.UserId.Value);
             var duplicateTimeSpan = TimeSpan.FromHours(24);
             var now = DateTime.UtcNow;
             var duplicateTransaction = existingTransactions?
