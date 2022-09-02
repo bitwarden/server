@@ -171,9 +171,9 @@ namespace Bit.Scim.IntegrationTest.Factories
         {
             return new List<Infrastructure.EntityFramework.Models.User>()
             {
-                new Infrastructure.EntityFramework.Models.User { Id = Guid.Parse(TestUserId1), Name = "Test User 1", ApiKey = "", Email = "user1@mail.com", SecurityStamp = "" },
-                new Infrastructure.EntityFramework.Models.User { Id = Guid.Parse(TestUserId2), Name = "Test User 2", ApiKey = "", Email = "user2@mail.com", SecurityStamp = "" },
-                new Infrastructure.EntityFramework.Models.User { Id = Guid.Parse(TestUserId3), Name = "Test User 3", ApiKey = "", Email = "user3@mail.com", SecurityStamp = "" }
+                new Infrastructure.EntityFramework.Models.User { Id = Guid.Parse(TestUserId1), Name = "Test User 1", ApiKey = "", Email = "user1@example.com", SecurityStamp = "" },
+                new Infrastructure.EntityFramework.Models.User { Id = Guid.Parse(TestUserId2), Name = "Test User 2", ApiKey = "", Email = "user2@example.com", SecurityStamp = "" },
+                new Infrastructure.EntityFramework.Models.User { Id = Guid.Parse(TestUserId3), Name = "Test User 3", ApiKey = "", Email = "user3@example.com", SecurityStamp = "" }
             };
         }
 
@@ -199,9 +199,9 @@ namespace Bit.Scim.IntegrationTest.Factories
         {
             return new List<Infrastructure.EntityFramework.Models.OrganizationUser>()
             {
-                new Infrastructure.EntityFramework.Models.OrganizationUser { Id = Guid.Parse(TestOrganizationUserId1), OrganizationId = Guid.Parse(TestOrganizationId1), UserId = Guid.Parse(TestUserId1), Status = Core.Enums.OrganizationUserStatusType.Confirmed, ExternalId = "UA", Email = "user1@mail.com" },
-                new Infrastructure.EntityFramework.Models.OrganizationUser { Id = Guid.Parse(TestOrganizationUserId2), OrganizationId = Guid.Parse(TestOrganizationId1), UserId = Guid.Parse(TestUserId2), Status = Core.Enums.OrganizationUserStatusType.Confirmed, ExternalId = "UB", Email = "user2@mail.com" },
-                new Infrastructure.EntityFramework.Models.OrganizationUser { Id = Guid.Parse(TestOrganizationUserId3), OrganizationId = Guid.Parse(TestOrganizationId1), UserId = Guid.Parse(TestUserId3), Status = Core.Enums.OrganizationUserStatusType.Revoked, ExternalId = "UC", Email = "user3@mail.com" }
+                new Infrastructure.EntityFramework.Models.OrganizationUser { Id = Guid.Parse(TestOrganizationUserId1), OrganizationId = Guid.Parse(TestOrganizationId1), UserId = Guid.Parse(TestUserId1), Status = Core.Enums.OrganizationUserStatusType.Confirmed, ExternalId = "UA", Email = "user1@example.com" },
+                new Infrastructure.EntityFramework.Models.OrganizationUser { Id = Guid.Parse(TestOrganizationUserId2), OrganizationId = Guid.Parse(TestOrganizationId1), UserId = Guid.Parse(TestUserId2), Status = Core.Enums.OrganizationUserStatusType.Confirmed, ExternalId = "UB", Email = "user2@example.com" },
+                new Infrastructure.EntityFramework.Models.OrganizationUser { Id = Guid.Parse(TestOrganizationUserId3), OrganizationId = Guid.Parse(TestOrganizationId1), UserId = Guid.Parse(TestUserId3), Status = Core.Enums.OrganizationUserStatusType.Revoked, ExternalId = "UC", Email = "user3@example.com" }
             };
         }
 
