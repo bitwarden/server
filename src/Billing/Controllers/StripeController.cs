@@ -117,277 +117,19 @@ public class StripeController : Controller
         }
         else if (parsedEvent.Type.Equals(HandledStripeWebhook.UpcomingInvoice))
         {
-            var invoice = await GetInvoiceAsync(parsedEvent);
-            var subscriptionService = new SubscriptionService();
-            var subscription = await subscriptionService.GetAsync(invoice.SubscriptionId);
-            if (subscription == null)
-            {
-                throw new Exception("Invoice subscription is null. " + invoice.Id);
-            }
-
-            subscription = await VerifyCorrectTaxRateForCharge(invoice, subscription);
-
-            string email = null;
-            var ids = GetIdsFromMetaData(subscription.Metadata);
-            if (ids.HasOrg)
-            {
-                // sponsored org
-                if (IsSponsoredSubscription(subscription))
-                {
-                    await _validateSponsorshipCommand.ValidateSponsorshipAsync(ids.OrgId.Value);
-                }
-
-                var org = await _organizationRepository.GetByIdAsync(ids.OrgId.Value);
-                if (org != null && OrgPlanForInvoiceNotifications(org))
-                {
-                    email = org.BillingEmail;
-                }
-            }
-            // user
-            else if (ids.HasUser)
-            {
-                var user = await _userService.GetUserByIdAsync(ids.UserId.Value);
-                if (user.Premium)
-                {
-                    email = user.Email;
-                }
-            }
-
-            if (!string.IsNullOrWhiteSpace(email) && invoice.NextPaymentAttempt.HasValue)
-            {
-                var items = invoice.Lines.Select(i => i.Description).ToList();
-                await _mailService.SendInvoiceUpcomingAsync(email, invoice.AmountDue / 100M,
-                    invoice.NextPaymentAttempt.Value, items, true);
-            }
+           await HandleUpcomingInvoice(parsedEvent);
         }
         else if (parsedEvent.Type.Equals(HandledStripeWebhook.ChargeSucceeded))
         {
-            var charge = await GetChargeAsync(parsedEvent);
-            var chargeTransaction = await _transactionRepository.GetByGatewayIdAsync(
-                GatewayType.Stripe, charge.Id);
-            if (chargeTransaction != null)
-            {
-                _logger.LogWarning("Charge success already processed. " + charge.Id);
-                return new OkResult();
-            }
-
-            SubscriptionIdResult ids = null;
-            Subscription subscription = null;
-            var subscriptionService = new SubscriptionService();
-
-            if (charge.InvoiceId != null)
-            {
-                var invoiceService = new InvoiceService();
-                var invoice = await invoiceService.GetAsync(charge.InvoiceId);
-                if (invoice?.SubscriptionId != null)
-                {
-                    subscription = await subscriptionService.GetAsync(invoice.SubscriptionId);
-                    ids = GetIdsFromMetaData(subscription?.Metadata);
-                }
-            }
-
-            if (subscription == null || ids == null || (ids.HasOrg && ids.HasUser))
-            {
-                var subscriptions = await subscriptionService.ListAsync(new SubscriptionListOptions
-                {
-                    Customer = charge.CustomerId
-                });
-                foreach (var sub in subscriptions)
-                {
-                    if (sub.Status != "canceled" && sub.Status != "incomplete_expired")
-                    {
-                        ids = GetIdsFromMetaData(sub.Metadata);
-                        if (ids.HasOrg || ids.HasUser)
-                        {
-                            subscription = sub;
-                            break;
-                        }
-                    }
-                }
-            }
-
-            if (!ids.HasOrg && !ids.HasUser)
-            {
-                _logger.LogWarning("Charge success has no subscriber ids. " + charge.Id);
-                return new BadRequestResult();
-            }
-
-            var tx = new Transaction
-            {
-                Amount = charge.Amount / 100M,
-                CreationDate = charge.Created,
-                OrganizationId = ids.OrgId,
-                UserId = ids.UserId,
-                Type = TransactionType.Charge,
-                Gateway = GatewayType.Stripe,
-                GatewayId = charge.Id
-            };
-
-            if (charge.Source != null && charge.Source is Card card)
-            {
-                tx.PaymentMethodType = PaymentMethodType.Card;
-                tx.Details = $"{card.Brand}, *{card.Last4}";
-            }
-            else if (charge.Source != null && charge.Source is BankAccount bankAccount)
-            {
-                tx.PaymentMethodType = PaymentMethodType.BankAccount;
-                tx.Details = $"{bankAccount.BankName}, *{bankAccount.Last4}";
-            }
-            else if (charge.Source != null && charge.Source is Source source)
-            {
-                if (source.Card != null)
-                {
-                    tx.PaymentMethodType = PaymentMethodType.Card;
-                    tx.Details = $"{source.Card.Brand}, *{source.Card.Last4}";
-                }
-                else if (source.AchDebit != null)
-                {
-                    tx.PaymentMethodType = PaymentMethodType.BankAccount;
-                    tx.Details = $"{source.AchDebit.BankName}, *{source.AchDebit.Last4}";
-                }
-                else if (source.AchCreditTransfer != null)
-                {
-                    tx.PaymentMethodType = PaymentMethodType.BankAccount;
-                    tx.Details = $"ACH => {source.AchCreditTransfer.BankName}, " +
-                        $"{source.AchCreditTransfer.AccountNumber}";
-                }
-            }
-            else if (charge.PaymentMethodDetails != null)
-            {
-                if (charge.PaymentMethodDetails.Card != null)
-                {
-                    tx.PaymentMethodType = PaymentMethodType.Card;
-                    tx.Details = $"{charge.PaymentMethodDetails.Card.Brand?.ToUpperInvariant()}, " +
-                        $"*{charge.PaymentMethodDetails.Card.Last4}";
-                }
-                else if (charge.PaymentMethodDetails.AchDebit != null)
-                {
-                    tx.PaymentMethodType = PaymentMethodType.BankAccount;
-                    tx.Details = $"{charge.PaymentMethodDetails.AchDebit.BankName}, " +
-                        $"*{charge.PaymentMethodDetails.AchDebit.Last4}";
-                }
-                else if (charge.PaymentMethodDetails.AchCreditTransfer != null)
-                {
-                    tx.PaymentMethodType = PaymentMethodType.BankAccount;
-                    tx.Details = $"ACH => {charge.PaymentMethodDetails.AchCreditTransfer.BankName}, " +
-                        $"{charge.PaymentMethodDetails.AchCreditTransfer.AccountNumber}";
-                }
-            }
-
-            if (!tx.PaymentMethodType.HasValue)
-            {
-                _logger.LogWarning("Charge success from unsupported source/method. " + charge.Id);
-                return new OkResult();
-            }
-
-            try
-            {
-                await _transactionRepository.CreateAsync(tx);
-            }
-            // Catch foreign key violations because user/org could have been deleted.
-            catch (SqlException e) when (e.Number == 547) { }
+           return await HandleChargeSucceeded(parsedEvent);
         }
         else if (parsedEvent.Type.Equals(HandledStripeWebhook.ChargeRefunded))
         {
-            var charge = await GetChargeAsync(parsedEvent);
-            var chargeTransaction = await _transactionRepository.GetByGatewayIdAsync(
-                GatewayType.Stripe, charge.Id);
-            if (chargeTransaction == null)
-            {
-                throw new Exception("Cannot find refunded charge. " + charge.Id);
-            }
-
-            var amountRefunded = charge.AmountRefunded / 100M;
-
-            if (!chargeTransaction.Refunded.GetValueOrDefault() &&
-                chargeTransaction.RefundedAmount.GetValueOrDefault() < amountRefunded)
-            {
-                chargeTransaction.RefundedAmount = amountRefunded;
-                if (charge.Refunded)
-                {
-                    chargeTransaction.Refunded = true;
-                }
-                await _transactionRepository.ReplaceAsync(chargeTransaction);
-
-                foreach (var refund in charge.Refunds)
-                {
-                    var refundTransaction = await _transactionRepository.GetByGatewayIdAsync(
-                        GatewayType.Stripe, refund.Id);
-                    if (refundTransaction != null)
-                    {
-                        continue;
-                    }
-
-                    await _transactionRepository.CreateAsync(new Transaction
-                    {
-                        Amount = refund.Amount / 100M,
-                        CreationDate = refund.Created,
-                        OrganizationId = chargeTransaction.OrganizationId,
-                        UserId = chargeTransaction.UserId,
-                        Type = TransactionType.Refund,
-                        Gateway = GatewayType.Stripe,
-                        GatewayId = refund.Id,
-                        PaymentMethodType = chargeTransaction.PaymentMethodType,
-                        Details = chargeTransaction.Details
-                    });
-                }
-            }
-            else
-            {
-                _logger.LogWarning("Charge refund amount doesn't seem correct. " + charge.Id);
-            }
+            await HandleChargeRefunded(parsedEvent);
         }
         else if (parsedEvent.Type.Equals(HandledStripeWebhook.PaymentSucceeded))
         {
-            var invoice = await GetInvoiceAsync(parsedEvent, true);
-            if (invoice.Paid && invoice.BillingReason == "subscription_create")
-            {
-                var subscriptionService = new SubscriptionService();
-                var subscription = await subscriptionService.GetAsync(invoice.SubscriptionId);
-                if (subscription?.Status == "active")
-                {
-                    if (DateTime.UtcNow - invoice.Created < TimeSpan.FromMinutes(1))
-                    {
-                        await Task.Delay(5000);
-                    }
-
-                    var ids = GetIdsFromMetaData(subscription.Metadata);
-                    // org
-                    if (ids.HasOrg)
-                    {
-                        if (subscription.Items.Any(i => StaticStore.Plans.Any(p => p.StripePlanId == i.Plan.Id)))
-                        {
-                            await _organizationService.EnableAsync(ids.OrgId.Value, subscription.CurrentPeriodEnd);
-
-                            var organization = await _organizationRepository.GetByIdAsync(ids.OrgId.Value);
-                            await _referenceEventService.RaiseEventAsync(
-                                new ReferenceEvent(ReferenceEventType.Rebilled, organization)
-                                {
-                                    PlanName = organization?.Plan,
-                                    PlanType = organization?.PlanType,
-                                    Seats = organization?.Seats,
-                                    Storage = organization?.MaxStorageGb,
-                                });
-                        }
-                    }
-                    // user
-                    else if (ids.HasUser)
-                    {
-                        if (subscription.Items.Any(i => i.Plan.Id == PremiumPlanId))
-                        {
-                            await _userService.EnablePremiumAsync(ids.UserId.Value, subscription.CurrentPeriodEnd);
-
-                            var user = await _userRepository.GetByIdAsync(ids.UserId.Value);
-                            await _referenceEventService.RaiseEventAsync(
-                                new ReferenceEvent(ReferenceEventType.Rebilled, user)
-                                {
-                                    PlanName = PremiumPlanId,
-                                    Storage = user?.MaxStorageGb,
-                                });
-                        }
-                    }
-                }
-            }
+            await HandlePaymentSucceeded(parsedEvent);
         }
         else if (parsedEvent.Type.Equals(HandledStripeWebhook.PaymentFailed))
         {
@@ -452,6 +194,298 @@ public class StripeController : Controller
             {
                 await _userService.UpdatePremiumExpirationAsync(ids.UserId.Value,
                     subscription.CurrentPeriodEnd);
+            }
+        }
+    }
+
+    private async Task HandleUpcomingInvoice(Stripe.Event parsedEvent)
+    {
+        var invoice = await GetInvoiceAsync(parsedEvent);
+        var subscriptionService = new SubscriptionService();
+        var subscription = await subscriptionService.GetAsync(invoice.SubscriptionId);
+        if (subscription == null)
+        {
+            throw new Exception("Invoice subscription is null. " + invoice.Id);
+        }
+
+        subscription = await VerifyCorrectTaxRateForCharge(invoice, subscription);
+
+        string email = null;
+        var ids = GetIdsFromMetaData(subscription.Metadata);
+        if (ids.HasOrg)
+        {
+            // sponsored org
+            if (IsSponsoredSubscription(subscription))
+            {
+                await _validateSponsorshipCommand.ValidateSponsorshipAsync(ids.OrgId.Value);
+            }
+
+            var org = await _organizationRepository.GetByIdAsync(ids.OrgId.Value);
+            if (org != null && OrgPlanForInvoiceNotifications(org))
+            {
+                email = org.BillingEmail;
+            }
+        }
+        // user
+        else if (ids.HasUser)
+        {
+            var user = await _userService.GetUserByIdAsync(ids.UserId.Value);
+            if (user.Premium)
+            {
+                email = user.Email;
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(email) && invoice.NextPaymentAttempt.HasValue)
+        {
+            var items = invoice.Lines.Select(i => i.Description).ToList();
+            await _mailService.SendInvoiceUpcomingAsync(email, invoice.AmountDue / 100M,
+                invoice.NextPaymentAttempt.Value, items, true);
+        }
+    }
+
+    private async Task<IActionResult> HandleChargeSucceeded(Stripe.Event parsedEvent)
+    {
+        var charge = await GetChargeAsync(parsedEvent);
+        var chargeTransaction = await _transactionRepository.GetByGatewayIdAsync(
+            GatewayType.Stripe, charge.Id);
+        if (chargeTransaction != null)
+        {
+            _logger.LogWarning("Charge success already processed. " + charge.Id);
+            return new OkResult();
+        }
+
+        var ids = await DetermineSubscriptionIdsFromCharge(charge);
+
+        if (!ids.HasOrg && !ids.HasUser)
+        {
+            _logger.LogWarning("Charge success has no subscriber ids. " + charge.Id);
+            return new BadRequestResult();
+        }
+
+        var tx = MapChargeToTransaction(charge, ids);
+
+        if (!tx.PaymentMethodType.HasValue)
+        {
+            _logger.LogWarning("Charge success from unsupported source/method. " + charge.Id);
+            return new OkResult();
+        }
+
+        try
+        {
+            await _transactionRepository.CreateAsync(tx);
+        }
+        // Catch foreign key violations because user/org could have been deleted.
+        catch (SqlException e) when (e.Number == 547) { }
+
+        return new OkResult();
+    }
+
+    private Transaction MapChargeToTransaction(Stripe.Charge charge, SubscriptionIdResult ids)
+    {
+         var tx = new Transaction
+        {
+            Amount = charge.Amount / 100M,
+            CreationDate = charge.Created,
+            OrganizationId = ids.OrgId,
+            UserId = ids.UserId,
+            Type = TransactionType.Charge,
+            Gateway = GatewayType.Stripe,
+            GatewayId = charge.Id
+        };
+
+        if (charge.Source != null && charge.Source is Card card)
+        {
+            tx.PaymentMethodType = PaymentMethodType.Card;
+            tx.Details = $"{card.Brand}, *{card.Last4}";
+        }
+        else if (charge.Source != null && charge.Source is BankAccount bankAccount)
+        {
+            tx.PaymentMethodType = PaymentMethodType.BankAccount;
+            tx.Details = $"{bankAccount.BankName}, *{bankAccount.Last4}";
+        }
+        else if (charge.Source != null && charge.Source is Source source)
+        {
+            if (source.Card != null)
+            {
+                tx.PaymentMethodType = PaymentMethodType.Card;
+                tx.Details = $"{source.Card.Brand}, *{source.Card.Last4}";
+            }
+            else if (source.AchDebit != null)
+            {
+                tx.PaymentMethodType = PaymentMethodType.BankAccount;
+                tx.Details = $"{source.AchDebit.BankName}, *{source.AchDebit.Last4}";
+            }
+            else if (source.AchCreditTransfer != null)
+            {
+                tx.PaymentMethodType = PaymentMethodType.BankAccount;
+                tx.Details = $"ACH => {source.AchCreditTransfer.BankName}, " +
+                    $"{source.AchCreditTransfer.AccountNumber}";
+            }
+        }
+        else if (charge.PaymentMethodDetails != null)
+        {
+            if (charge.PaymentMethodDetails.Card != null)
+            {
+                tx.PaymentMethodType = PaymentMethodType.Card;
+                tx.Details = $"{charge.PaymentMethodDetails.Card.Brand?.ToUpperInvariant()}, " +
+                    $"*{charge.PaymentMethodDetails.Card.Last4}";
+            }
+            else if (charge.PaymentMethodDetails.AchDebit != null)
+            {
+                tx.PaymentMethodType = PaymentMethodType.BankAccount;
+                tx.Details = $"{charge.PaymentMethodDetails.AchDebit.BankName}, " +
+                    $"*{charge.PaymentMethodDetails.AchDebit.Last4}";
+            }
+            else if (charge.PaymentMethodDetails.AchCreditTransfer != null)
+            {
+                tx.PaymentMethodType = PaymentMethodType.BankAccount;
+                tx.Details = $"ACH => {charge.PaymentMethodDetails.AchCreditTransfer.BankName}, " +
+                    $"{charge.PaymentMethodDetails.AchCreditTransfer.AccountNumber}";
+            }
+        }
+        return tx;
+    }
+
+    private async Task<SubscriptionIdResult> DetermineSubscriptionIdsFromCharge(Stripe.Charge charge)
+    {
+        SubscriptionIdResult ids = null;
+        Subscription subscription = null;
+        var subscriptionService = new SubscriptionService();
+
+        if (charge.InvoiceId != null)
+        {
+            var invoiceService = new InvoiceService();
+            var invoice = await invoiceService.GetAsync(charge.InvoiceId);
+            if (invoice?.SubscriptionId != null)
+            {
+                subscription = await subscriptionService.GetAsync(invoice.SubscriptionId);
+                ids = GetIdsFromMetaData(subscription?.Metadata);
+            }
+        }
+
+        if (subscription == null || ids == null || (ids.HasOrg && ids.HasUser))
+        {
+            var subscriptions = await subscriptionService.ListAsync(new SubscriptionListOptions
+            {
+                Customer = charge.CustomerId
+            });
+            foreach (var sub in subscriptions)
+            {
+                if (sub.Status != "canceled" && sub.Status != "incomplete_expired")
+                {
+                    ids = GetIdsFromMetaData(sub.Metadata);
+                    if (ids.HasOrg || ids.HasUser)
+                    {
+                        subscription = sub;
+                        break;
+                    }
+                }
+            }
+        }
+        return ids;
+    }
+
+    private async Task HandleChargeRefunded(Stripe.Event parsedEvent)
+    {
+        var charge = await GetChargeAsync(parsedEvent);
+        var chargeTransaction = await _transactionRepository.GetByGatewayIdAsync(
+            GatewayType.Stripe, charge.Id);
+        if (chargeTransaction == null)
+        {
+            throw new Exception("Cannot find refunded charge. " + charge.Id);
+        }
+
+        var amountRefunded = charge.AmountRefunded / 100M;
+
+        if (!chargeTransaction.Refunded.GetValueOrDefault() &&
+            chargeTransaction.RefundedAmount.GetValueOrDefault() < amountRefunded)
+        {
+            chargeTransaction.RefundedAmount = amountRefunded;
+            if (charge.Refunded)
+            {
+                chargeTransaction.Refunded = true;
+            }
+            await _transactionRepository.ReplaceAsync(chargeTransaction);
+
+            foreach (var refund in charge.Refunds)
+            {
+                var refundTransaction = await _transactionRepository.GetByGatewayIdAsync(
+                    GatewayType.Stripe, refund.Id);
+                if (refundTransaction != null)
+                {
+                    continue;
+                }
+
+                await _transactionRepository.CreateAsync(new Transaction
+                {
+                    Amount = refund.Amount / 100M,
+                    CreationDate = refund.Created,
+                    OrganizationId = chargeTransaction.OrganizationId,
+                    UserId = chargeTransaction.UserId,
+                    Type = TransactionType.Refund,
+                    Gateway = GatewayType.Stripe,
+                    GatewayId = refund.Id,
+                    PaymentMethodType = chargeTransaction.PaymentMethodType,
+                    Details = chargeTransaction.Details
+                });
+            }
+        }
+        else
+        {
+            _logger.LogWarning("Charge refund amount doesn't seem correct. " + charge.Id);
+        }
+    }
+
+    private async Task HandlePaymentSucceeded(Stripe.Event parsedEvent)
+    {
+        var invoice = await GetInvoiceAsync(parsedEvent, true);
+        if (invoice.Paid && invoice.BillingReason == "subscription_create")
+        {
+            var subscriptionService = new SubscriptionService();
+            var subscription = await subscriptionService.GetAsync(invoice.SubscriptionId);
+            if (subscription?.Status == "active")
+            {
+                if (DateTime.UtcNow - invoice.Created < TimeSpan.FromMinutes(1))
+                {
+                    await Task.Delay(5000);
+                }
+
+                var ids = GetIdsFromMetaData(subscription.Metadata);
+                // org
+                if (ids.HasOrg)
+                {
+                    if (subscription.Items.Any(i => StaticStore.Plans.Any(p => p.StripePlanId == i.Plan.Id)))
+                    {
+                        await _organizationService.EnableAsync(ids.OrgId.Value, subscription.CurrentPeriodEnd);
+
+                        var organization = await _organizationRepository.GetByIdAsync(ids.OrgId.Value);
+                        await _referenceEventService.RaiseEventAsync(
+                            new ReferenceEvent(ReferenceEventType.Rebilled, organization)
+                            {
+                                PlanName = organization?.Plan,
+                                PlanType = organization?.PlanType,
+                                Seats = organization?.Seats,
+                                Storage = organization?.MaxStorageGb,
+                            });
+                    }
+                }
+                // user
+                else if (ids.HasUser)
+                {
+                    if (subscription.Items.Any(i => i.Plan.Id == PremiumPlanId))
+                    {
+                        await _userService.EnablePremiumAsync(ids.UserId.Value, subscription.CurrentPeriodEnd);
+
+                        var user = await _userRepository.GetByIdAsync(ids.UserId.Value);
+                        await _referenceEventService.RaiseEventAsync(
+                            new ReferenceEvent(ReferenceEventType.Rebilled, user)
+                            {
+                                PlanName = PremiumPlanId,
+                                Storage = user?.MaxStorageGb,
+                            });
+                    }
+                }
             }
         }
     }
