@@ -15,7 +15,7 @@ public class InfoController : Controller
     [HttpGet("~/version")]
     public JsonResult GetVersion()
     {
-        return Json(CoreHelpers.GetVersion());
+        return Json(AssemblyHelpers.GetVersion());
     }
 
     [HttpGet("~/ip")]
