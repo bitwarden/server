@@ -3,6 +3,7 @@ using System.Security.Claims;
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
+using Bit.Core.Services;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.IntegrationTestCommon.Factories;
 using Bit.Scim.Models;
@@ -49,6 +50,10 @@ public class ScimApplicationFactory : WebApplicationFactoryBase<Startup>
                         policy.RequireAssertion(a => true);
                     });
                 });
+
+                var mailService = services.First(sd => sd.ServiceType == typeof(IMailService));
+                services.Remove(mailService);
+                services.AddSingleton<IMailService, NoopMailService>();
             });
         });
 
