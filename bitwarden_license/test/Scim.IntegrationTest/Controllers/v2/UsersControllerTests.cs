@@ -3,12 +3,15 @@ using Bit.Core.Enums;
 using Bit.Scim.IntegrationTest.Factories;
 using Bit.Scim.Models;
 using Bit.Scim.Utilities;
+using Bit.Test.Common.Helpers;
 using Xunit;
 
 namespace Bit.Scim.IntegrationTest.Controllers.v2;
 
 public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyncLifetime
 {
+    private const int INITIAL_USER_COUNT = 4;
+
     private readonly ScimApplicationFactory _factory;
 
     public UsersControllerTests(ScimApplicationFactory factory)
@@ -30,33 +33,49 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
     public async Task Get_Success()
     {
         var organizationId = ScimApplicationFactory.TestOrganizationId1;
-        var id = ScimApplicationFactory.TestOrganizationUserId1;
+        var organizationUserId = ScimApplicationFactory.TestOrganizationUserId1;
+        var expectedResponse = new ScimUserResponseModel
+        {
+            Id = ScimApplicationFactory.TestOrganizationUserId1,
+            DisplayName = "Test User 1",
+            ExternalId = "UA",
+            Active = true,
+            Emails = new List<BaseScimUserModel.EmailModel>
+            {
+                new BaseScimUserModel.EmailModel { Primary = true, Type = "work", Value = "user1@example.com" }
+            },
+            Groups = new List<string>(),
+            Name = new BaseScimUserModel.NameModel("Test User 1"),
+            UserName = "user1@example.com",
+            Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
+        };
 
-        var context = await _factory.UsersGetAsync(organizationId, id);
+        var context = await _factory.UsersGetAsync(organizationId, organizationUserId);
 
         Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
 
         var responseModel = JsonSerializer.Deserialize<ScimUserResponseModel>(context.Response.Body, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
-        Assert.Equal(ScimApplicationFactory.TestOrganizationUserId1, responseModel.Id);
-        Assert.Equal("Test User 1", responseModel.DisplayName);
-        Assert.Equal("UA", responseModel.ExternalId);
-        Assert.Equal(new List<string> { ScimConstants.Scim2SchemaUser }, responseModel.Schemas);
+        AssertHelper.AssertPropertyEqual(expectedResponse, responseModel);
     }
 
     [Fact]
     public async Task Get_NotFound()
     {
         var organizationId = ScimApplicationFactory.TestOrganizationId1;
-        var id = Guid.NewGuid();
+        var organizationUserId = Guid.NewGuid().ToString();
+        var expectedResponse = new ScimErrorResponseModel
+        {
+            Status = StatusCodes.Status404NotFound,
+            Detail = "User not found.",
+            Schemas = new List<string> { ScimConstants.Scim2SchemaError }
+        };
 
-        var context = await _factory.UsersGetAsync(organizationId, id.ToString());
+        var context = await _factory.UsersGetAsync(organizationId, organizationUserId);
 
         Assert.Equal(StatusCodes.Status404NotFound, context.Response.StatusCode);
 
         var responseModel = JsonSerializer.Deserialize<ScimErrorResponseModel>(context.Response.Body, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
-        Assert.Equal(404, responseModel.Status);
-        Assert.Equal("User not found.", responseModel.Detail);
-        Assert.Equal(new List<string> { ScimConstants.Scim2SchemaError }, responseModel.Schemas);
+        AssertHelper.AssertPropertyEqual(expectedResponse, responseModel);
     }
 
     [Fact]
@@ -64,46 +83,97 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
     {
         var organizationId = ScimApplicationFactory.TestOrganizationId1;
         string filter = null;
-        int? count = 2;
+        int? itemsPerPage = 2;
         int? startIndex = 1;
+        var expectedResponse = new ScimListResponseModel<ScimUserResponseModel>
+        {
+            ItemsPerPage = itemsPerPage.Value,
+            // Note: total matching results is larger than resources actually returned due to pagination settings. See https://www.rfc-editor.org/rfc/rfc7644#section-3.4.2
+            TotalResults = 4,
+            StartIndex = startIndex.Value,
+            Resources = new List<ScimUserResponseModel>
+            {
+                new ScimUserResponseModel
+                {
+                    Id = ScimApplicationFactory.TestOrganizationUserId1,
+                    DisplayName = "Test User 1",
+                    ExternalId = "UA",
+                    Active = true,
+                    Emails = new List<BaseScimUserModel.EmailModel>
+                    {
+                        new BaseScimUserModel.EmailModel { Primary = true, Type = "work", Value = "user1@example.com" }
+                    },
+                    Groups = new List<string>(),
+                    Name = new BaseScimUserModel.NameModel("Test User 1"),
+                    UserName = "user1@example.com",
+                    Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
+                },
+                new ScimUserResponseModel
+                {
+                    Id = ScimApplicationFactory.TestOrganizationUserId2,
+                    DisplayName = "Test User 2",
+                    ExternalId = "UB",
+                    Active = true,
+                    Emails = new List<BaseScimUserModel.EmailModel>
+                    {
+                        new BaseScimUserModel.EmailModel { Primary = true, Type = "work", Value = "user2@example.com" }
+                    },
+                    Groups = new List<string>(),
+                    Name = new BaseScimUserModel.NameModel("Test User 2"),
+                    UserName = "user2@example.com",
+                    Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
+                }
+            },
+            Schemas = new List<string> { ScimConstants.Scim2SchemaListResponse }
+        };
 
-        var context = await _factory.UsersGetListAsync(organizationId, filter, count, startIndex);
+        var context = await _factory.UsersGetListAsync(organizationId, filter, itemsPerPage, startIndex);
 
         Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
 
         var responseModel = JsonSerializer.Deserialize<ScimListResponseModel<ScimUserResponseModel>>(context.Response.Body, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
-        Assert.Equal(2, responseModel.ItemsPerPage);
-        // Note: total matching results is larger than resources actually returned due to pagination settings. See https://www.rfc-editor.org/rfc/rfc7644#section-3.4.2
-        Assert.Equal(3, responseModel.TotalResults);
-        Assert.Equal(1, responseModel.StartIndex);
-
-        Assert.Equal(2, responseModel.Resources.Count);
-        Assert.Equal(new List<string> { ScimConstants.Scim2SchemaListResponse }, responseModel.Schemas);
+        AssertHelper.AssertPropertyEqual(expectedResponse, responseModel);
     }
 
     [Fact]
-    public async Task GetList_SearchEmail_Success()
+    public async Task GetList_SearchUserName_Success()
     {
         var organizationId = ScimApplicationFactory.TestOrganizationId1;
         string filter = "userName eq user2@example.com";
-        int? count = 10;
+        int? itemsPerPage = 10;
         int? startIndex = 1;
+        var expectedResponse = new ScimListResponseModel<ScimUserResponseModel>
+        {
+            ItemsPerPage = itemsPerPage.Value,
+            TotalResults = 1,
+            StartIndex = startIndex.Value,
+            Resources = new List<ScimUserResponseModel>
+            {
+                new ScimUserResponseModel
+                {
+                    Id = ScimApplicationFactory.TestOrganizationUserId2,
+                    DisplayName = "Test User 2",
+                    ExternalId = "UB",
+                    Active = true,
+                    Emails = new List<BaseScimUserModel.EmailModel>
+                    {
+                        new BaseScimUserModel.EmailModel { Primary = true, Type = "work", Value = "user2@example.com" }
+                    },
+                    Groups = new List<string>(),
+                    Name = new BaseScimUserModel.NameModel("Test User 2"),
+                    UserName = "user2@example.com",
+                    Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
+                }
+            },
+            Schemas = new List<string> { ScimConstants.Scim2SchemaListResponse }
+        };
 
-        var context = await _factory.UsersGetListAsync(organizationId, filter, count, startIndex);
+        var context = await _factory.UsersGetListAsync(organizationId, filter, itemsPerPage, startIndex);
 
         Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
 
         var responseModel = JsonSerializer.Deserialize<ScimListResponseModel<ScimUserResponseModel>>(context.Response.Body, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
-        Assert.Single(responseModel.Resources);
-        Assert.Equal(10, responseModel.ItemsPerPage);
-        Assert.Equal(1, responseModel.TotalResults);
-        Assert.Equal(1, responseModel.StartIndex);
-
-        var user = responseModel.Resources.Single();
-        Assert.Equal(ScimApplicationFactory.TestOrganizationUserId2.ToString(), user.Id);
-        Assert.Equal("Test User 2", user.DisplayName);
-        Assert.Equal("UB", user.ExternalId);
-        Assert.Equal(new List<string> { ScimConstants.Scim2SchemaListResponse }, responseModel.Schemas);
+        AssertHelper.AssertPropertyEqual(expectedResponse, responseModel);
     }
 
     [Fact]
@@ -111,106 +181,210 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
     {
         var organizationId = ScimApplicationFactory.TestOrganizationId1;
         string filter = "externalId eq UC";
-        int? count = 10;
+        int? itemsPerPage = 10;
         int? startIndex = 1;
+        var expectedResponse = new ScimListResponseModel<ScimUserResponseModel>
+        {
+            ItemsPerPage = itemsPerPage.Value,
+            TotalResults = 1,
+            StartIndex = startIndex.Value,
+            Resources = new List<ScimUserResponseModel>
+            {
+                new ScimUserResponseModel
+                {
+                    Id = ScimApplicationFactory.TestOrganizationUserId3,
+                    DisplayName = "Test User 3",
+                    ExternalId = "UC",
+                    Active = false,
+                    Emails = new List<BaseScimUserModel.EmailModel>
+                    {
+                        new BaseScimUserModel.EmailModel { Primary = true, Type = "work", Value = "user3@example.com" }
+                    },
+                    Groups = new List<string>(),
+                    Name = new BaseScimUserModel.NameModel("Test User 3"),
+                    UserName = "user3@example.com",
+                    Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
+                }
+            },
+            Schemas = new List<string> { ScimConstants.Scim2SchemaListResponse }
+        };
 
-        var context = await _factory.UsersGetListAsync(organizationId, filter, count, startIndex);
+        var context = await _factory.UsersGetListAsync(organizationId, filter, itemsPerPage, startIndex);
 
         Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
 
         var responseModel = JsonSerializer.Deserialize<ScimListResponseModel<ScimUserResponseModel>>(context.Response.Body, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
-        Assert.Single(responseModel.Resources);
-        Assert.Equal(10, responseModel.ItemsPerPage);
-        Assert.Equal(1, responseModel.TotalResults);
-        Assert.Equal(1, responseModel.StartIndex);
+        AssertHelper.AssertPropertyEqual(expectedResponse, responseModel);
+    }
 
-        var user = responseModel.Resources.Single();
-        Assert.Equal(ScimApplicationFactory.TestOrganizationUserId3.ToString(), user.Id);
-        Assert.Equal("Test User 3", user.DisplayName);
-        Assert.Equal("UC", user.ExternalId);
-        Assert.Equal(new List<string> { ScimConstants.Scim2SchemaListResponse }, responseModel.Schemas);
+    [Fact]
+    public async Task GetList_EmptyResult_Success()
+    {
+        var organizationId = ScimApplicationFactory.TestOrganizationId1;
+        string filter = "externalId eq UZ";
+        int? itemsPerPage = 10;
+        int? startIndex = 1;
+        var expectedResponse = new ScimListResponseModel<ScimUserResponseModel>
+        {
+            ItemsPerPage = itemsPerPage.Value,
+            TotalResults = 0,
+            StartIndex = startIndex.Value,
+            Resources = new List<ScimUserResponseModel>(),
+            Schemas = new List<string> { ScimConstants.Scim2SchemaListResponse }
+        };
+
+        var context = await _factory.UsersGetListAsync(organizationId, filter, itemsPerPage, startIndex);
+
+        Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
+
+        var responseModel = JsonSerializer.Deserialize<ScimListResponseModel<ScimUserResponseModel>>(context.Response.Body, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+        AssertHelper.AssertPropertyEqual(expectedResponse, responseModel);
     }
 
     [Fact]
     public async Task Post_Success()
     {
         var organizationId = ScimApplicationFactory.TestOrganizationId1;
-        var model = new ScimUserRequestModel
+        var email = "user5@example.com";
+        var displayName = "Test User 5";
+        var externalId = "UE";
+        var inputModel = new ScimUserRequestModel
         {
-            DisplayName = "New User",
-            Emails = new List<BaseScimUserModel.EmailModel> { new BaseScimUserModel.EmailModel("user4@example.com") },
-            ExternalId = null,
-            Schemas = null,
-            Active = true
+            Name = new BaseScimUserModel.NameModel(displayName),
+            DisplayName = displayName,
+            Emails = new List<BaseScimUserModel.EmailModel> { new BaseScimUserModel.EmailModel(email) },
+            ExternalId = externalId,
+            Active = true,
+            Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
+        };
+        var expectedResponse = new ScimUserResponseModel
+        {
+            // DisplayName is not being saved
+            ExternalId = externalId,
+            Active = true,
+            Emails = new List<BaseScimUserModel.EmailModel>
+            {
+                new BaseScimUserModel.EmailModel { Primary = true, Type = "work", Value = email }
+            },
+            Groups = new List<string>(),
+            Name = new BaseScimUserModel.NameModel(),
+            UserName = email,
+            Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
         };
 
-        var context = await _factory.UsersPostAsync(organizationId, model);
+        var context = await _factory.UsersPostAsync(organizationId, inputModel);
 
         Assert.Equal(StatusCodes.Status201Created, context.Response.StatusCode);
 
+        // Verifying that the response includes a header with the URL of the created Group
+        Assert.Contains(context.Response.Headers, h => h.Key == "Location");
+
+        var responseModel = JsonSerializer.Deserialize<ScimUserResponseModel>(context.Response.Body, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+        AssertHelper.AssertPropertyEqual(expectedResponse, responseModel, "Id");
+        Assert.NotNull(responseModel.Id);
+
         var databaseContext = _factory.GetDatabaseContext();
-        Assert.Equal(4, databaseContext.OrganizationUsers.Count());
+        Assert.Equal(INITIAL_USER_COUNT + 1, databaseContext.OrganizationUsers.Count());
     }
 
     [Theory]
     [InlineData(null)]
     [InlineData("")]
     [InlineData(" ")]
-    public async Task Post_InvalidDisplayName_BadRequest(string displayName)
+    public async Task Post_InvalidEmail_BadRequest(string email)
     {
         var organizationId = ScimApplicationFactory.TestOrganizationId1;
-        var model = new ScimUserRequestModel
+        var displayName = "Test User 5";
+        var externalId = "UE";
+        var inputModel = new ScimUserRequestModel
         {
+            Name = new BaseScimUserModel.NameModel(displayName),
             DisplayName = displayName,
-            ExternalId = null,
-            Schemas = null,
-            Active = true
+            Emails = new List<BaseScimUserModel.EmailModel> { new BaseScimUserModel.EmailModel(email) },
+            ExternalId = externalId,
+            Active = true,
+            Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
         };
 
-        var context = await _factory.UsersPostAsync(organizationId, model);
+        var context = await _factory.UsersPostAsync(organizationId, inputModel);
 
         Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
     }
 
     [Fact]
-    public async Task Post_ExistingEmail_Conflict()
+    public async Task Post_Inactive_BadRequest()
     {
         var organizationId = ScimApplicationFactory.TestOrganizationId1;
-        var model = new ScimUserRequestModel
+        var displayName = "Test User 5";
+        var inputModel = new ScimUserRequestModel
+        {
+            DisplayName = displayName,
+            ExternalId = null,
+            Active = false,
+            Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
+        };
+
+        var context = await _factory.UsersPostAsync(organizationId, inputModel);
+
+        Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData("user1@example.com", "UZ")]
+    [InlineData("userZ@example.com", "UA")]
+    public async Task Post_ExistingData_Conflict(string email, string externalId)
+    {
+        var organizationId = ScimApplicationFactory.TestOrganizationId1;
+        var inputModel = new ScimUserRequestModel
         {
             DisplayName = "New User",
-            Emails = new List<BaseScimUserModel.EmailModel> { new BaseScimUserModel.EmailModel("user1@example.com") },
-            ExternalId = "UA",
+            Emails = new List<BaseScimUserModel.EmailModel> { new BaseScimUserModel.EmailModel(email) },
+            ExternalId = externalId,
             Schemas = null,
             Active = true
         };
 
-        var context = await _factory.UsersPostAsync(organizationId, model);
+        var context = await _factory.UsersPostAsync(organizationId, inputModel);
 
         Assert.Equal(StatusCodes.Status409Conflict, context.Response.StatusCode);
 
         var databaseContext = _factory.GetDatabaseContext();
-        Assert.Equal(3, databaseContext.OrganizationUsers.Count());
+        Assert.Equal(INITIAL_USER_COUNT, databaseContext.OrganizationUsers.Count());
     }
 
     [Fact]
     public async Task Put_RevokeUser_Success()
     {
         var organizationId = ScimApplicationFactory.TestOrganizationId1;
-        var id = ScimApplicationFactory.TestOrganizationUserId2;
-        var model = new ScimUserRequestModel
+        var organizationUserId = ScimApplicationFactory.TestOrganizationUserId2;
+        var inputModel = new ScimUserRequestModel
         {
             Active = false
         };
+        var expectedResponse = new ScimUserResponseModel
+        {
+            Id = ScimApplicationFactory.TestOrganizationUserId2,
+            DisplayName = "Test User 2",
+            ExternalId = "UB",
+            Active = false,
+            Emails = new List<BaseScimUserModel.EmailModel>
+            {
+                new BaseScimUserModel.EmailModel { Primary = true, Type = "work", Value = "user2@example.com" }
+            },
+            Groups = new List<string>(),
+            Name = new BaseScimUserModel.NameModel("Test User 2"),
+            UserName = "user2@example.com",
+            Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
+        };
 
-        var context = await _factory.UsersPutAsync(organizationId, id, model);
+        var context = await _factory.UsersPutAsync(organizationId, organizationUserId, inputModel);
 
         var responseModel = JsonSerializer.Deserialize<ScimUserResponseModel>(context.Response.Body, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
         Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
-        Assert.False(responseModel.Active);
+        AssertHelper.AssertPropertyEqual(expectedResponse, responseModel);
 
         var databaseContext = _factory.GetDatabaseContext();
-        var revokedUser = databaseContext.OrganizationUsers.FirstOrDefault(g => g.Id.ToString() == id);
+        var revokedUser = databaseContext.OrganizationUsers.FirstOrDefault(g => g.Id.ToString() == organizationUserId);
         Assert.Equal(OrganizationUserStatusType.Revoked, revokedUser.Status);
     }
 
@@ -218,56 +392,70 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
     public async Task Put_RestoreUser_Success()
     {
         var organizationId = ScimApplicationFactory.TestOrganizationId1;
-        var id = ScimApplicationFactory.TestOrganizationUserId3;
-        var model = new ScimUserRequestModel
+        var organizationUserId = ScimApplicationFactory.TestOrganizationUserId3;
+        var inputModel = new ScimUserRequestModel
         {
             Active = true
         };
+        var expectedResponse = new ScimUserResponseModel
+        {
+            Id = ScimApplicationFactory.TestOrganizationUserId3,
+            DisplayName = "Test User 3",
+            ExternalId = "UC",
+            Active = true,
+            Emails = new List<BaseScimUserModel.EmailModel>
+            {
+                new BaseScimUserModel.EmailModel { Primary = true, Type = "work", Value = "user3@example.com" }
+            },
+            Groups = new List<string>(),
+            Name = new BaseScimUserModel.NameModel("Test User 3"),
+            UserName = "user3@example.com",
+            Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
+        };
 
-        var context = await _factory.UsersPutAsync(organizationId, id, model);
+        var context = await _factory.UsersPutAsync(organizationId, organizationUserId, inputModel);
 
         var responseModel = JsonSerializer.Deserialize<ScimUserResponseModel>(context.Response.Body, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
         Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
-        Assert.True(responseModel.Active);
+        AssertHelper.AssertPropertyEqual(expectedResponse, responseModel);
 
         var databaseContext = _factory.GetDatabaseContext();
-        var revokedUser = databaseContext.OrganizationUsers.FirstOrDefault(g => g.Id.ToString() == id);
+        var revokedUser = databaseContext.OrganizationUsers.FirstOrDefault(g => g.Id.ToString() == organizationUserId);
         Assert.NotEqual(OrganizationUserStatusType.Revoked, revokedUser.Status);
     }
 
     [Fact]
     public async Task Put_NotFound()
     {
-        var newGroupName = "Test Group 1 New Name";
         var organizationId = ScimApplicationFactory.TestOrganizationId1;
-        var id = Guid.NewGuid();
-        var model = new ScimUserRequestModel
+        var organizationUserId = Guid.NewGuid();
+        var inputModel = new ScimUserRequestModel
         {
-            DisplayName = newGroupName,
+            DisplayName = "Test Group 1",
             ExternalId = "AA",
             Schemas = new List<string>()
         };
+        var expectedResponse = new ScimErrorResponseModel
+        {
+            Status = StatusCodes.Status404NotFound,
+            Detail = "User not found.",
+            Schemas = new List<string> { ScimConstants.Scim2SchemaError }
+        };
 
-        var context = await _factory.UsersPutAsync(organizationId, id.ToString(), model);
+        var context = await _factory.UsersPutAsync(organizationId, organizationUserId.ToString(), inputModel);
 
         Assert.Equal(StatusCodes.Status404NotFound, context.Response.StatusCode);
 
         var responseModel = JsonSerializer.Deserialize<ScimErrorResponseModel>(context.Response.Body, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
-        Assert.Equal(404, responseModel.Status);
-        Assert.Equal("User not found.", responseModel.Detail);
-        Assert.Equal(new List<string> { ScimConstants.Scim2SchemaError }, responseModel.Schemas);
-
-        var databaseContext = _factory.GetDatabaseContext();
-        Assert.Equal(3, databaseContext.OrganizationUsers.Count());
-        Assert.True(databaseContext.OrganizationUsers.FirstOrDefault(g => g.Id == id) == null);
+        AssertHelper.AssertPropertyEqual(expectedResponse, responseModel);
     }
 
     [Fact]
     public async Task Patch_ReplaceRevoke_Success()
     {
         var organizationId = ScimApplicationFactory.TestOrganizationId1;
-        var id = ScimApplicationFactory.TestOrganizationUserId2;
-        var model = new ScimPatchModel
+        var organizationUserId = ScimApplicationFactory.TestOrganizationUserId2;
+        var inputModel = new ScimPatchModel
         {
             Operations = new List<ScimPatchModel.OperationModel>()
             {
@@ -276,13 +464,13 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
             Schemas = new List<string>()
         };
 
-        var context = await _factory.UsersPatchAsync(organizationId, id, model);
+        var context = await _factory.UsersPatchAsync(organizationId, organizationUserId, inputModel);
 
         Assert.Equal(StatusCodes.Status204NoContent, context.Response.StatusCode);
 
         var databaseContext = _factory.GetDatabaseContext();
 
-        var organizationUser = databaseContext.OrganizationUsers.FirstOrDefault(g => g.Id.ToString() == id);
+        var organizationUser = databaseContext.OrganizationUsers.FirstOrDefault(g => g.Id.ToString() == organizationUserId);
         Assert.Equal(OrganizationUserStatusType.Revoked, organizationUser.Status);
     }
 
@@ -290,8 +478,8 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
     public async Task Patch_ReplaceRestore_Success()
     {
         var organizationId = ScimApplicationFactory.TestOrganizationId1;
-        var id = ScimApplicationFactory.TestOrganizationUserId3;
-        var model = new ScimPatchModel
+        var organizationUserId = ScimApplicationFactory.TestOrganizationUserId3;
+        var inputModel = new ScimPatchModel
         {
             Operations = new List<ScimPatchModel.OperationModel>()
             {
@@ -300,13 +488,13 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
             Schemas = new List<string>()
         };
 
-        var context = await _factory.UsersPatchAsync(organizationId, id, model);
+        var context = await _factory.UsersPatchAsync(organizationId, organizationUserId, inputModel);
 
         Assert.Equal(StatusCodes.Status204NoContent, context.Response.StatusCode);
 
         var databaseContext = _factory.GetDatabaseContext();
 
-        var organizationUser = databaseContext.OrganizationUsers.FirstOrDefault(g => g.Id.ToString() == id);
+        var organizationUser = databaseContext.OrganizationUsers.FirstOrDefault(g => g.Id.ToString() == organizationUserId);
         Assert.NotEqual(OrganizationUserStatusType.Revoked, organizationUser.Status);
     }
 
@@ -314,56 +502,64 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
     public async Task Patch_NotFound()
     {
         var organizationId = ScimApplicationFactory.TestOrganizationId1;
-        var id = Guid.NewGuid();
-        var model = new Models.ScimPatchModel
+        var organizationUserId = Guid.NewGuid().ToString();
+        var inputModel = new Models.ScimPatchModel
         {
             Operations = new List<ScimPatchModel.OperationModel>(),
             Schemas = new List<string>()
         };
+        var expectedResponse = new ScimErrorResponseModel
+        {
+            Status = StatusCodes.Status404NotFound,
+            Detail = "User not found.",
+            Schemas = new List<string> { ScimConstants.Scim2SchemaError }
+        };
 
-        var context = await _factory.UsersPatchAsync(organizationId, id.ToString(), model);
+        var context = await _factory.UsersPatchAsync(organizationId, organizationUserId, inputModel);
 
         Assert.Equal(StatusCodes.Status404NotFound, context.Response.StatusCode);
 
         var responseModel = JsonSerializer.Deserialize<ScimErrorResponseModel>(context.Response.Body, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
-        Assert.Equal(404, responseModel.Status);
-        Assert.Equal("User not found.", responseModel.Detail);
-        Assert.Equal(new List<string> { ScimConstants.Scim2SchemaError }, responseModel.Schemas);
+        AssertHelper.AssertPropertyEqual(expectedResponse, responseModel);
     }
 
     [Fact]
     public async Task Delete_Success()
     {
         var organizationId = ScimApplicationFactory.TestOrganizationId1;
-        var id = ScimApplicationFactory.TestOrganizationUserId1;
-        var model = new ScimUserRequestModel();
+        var organizationUserId = ScimApplicationFactory.TestOrganizationUserId1;
+        var inputModel = new ScimUserRequestModel();
 
-        var context = await _factory.UsersDeleteAsync(organizationId, id, model);
+        var context = await _factory.UsersDeleteAsync(organizationId, organizationUserId, inputModel);
 
         Assert.Equal(StatusCodes.Status204NoContent, context.Response.StatusCode);
 
         var databaseContext = _factory.GetDatabaseContext();
-        Assert.Equal(2, databaseContext.OrganizationUsers.Count());
-        Assert.False(databaseContext.OrganizationUsers.Any(g => g.Id.ToString() == id));
+        Assert.Equal(INITIAL_USER_COUNT - 1, databaseContext.OrganizationUsers.Count());
+        Assert.False(databaseContext.OrganizationUsers.Any(g => g.Id.ToString() == organizationUserId));
     }
 
     [Fact]
     public async Task Delete_NotFound()
     {
         var organizationId = ScimApplicationFactory.TestOrganizationId1;
-        var id = Guid.NewGuid();
-        var model = new ScimUserRequestModel();
+        var organizationUserId = Guid.NewGuid().ToString();
+        var inputModel = new ScimUserRequestModel();
+        var expectedResponse = new ScimErrorResponseModel
+        {
+            Status = StatusCodes.Status404NotFound,
+            Detail = "User not found.",
+            Schemas = new List<string> { ScimConstants.Scim2SchemaError }
+        };
 
-        var context = await _factory.UsersDeleteAsync(organizationId, id.ToString(), model);
+        var context = await _factory.UsersDeleteAsync(organizationId, organizationUserId, inputModel);
 
         Assert.Equal(StatusCodes.Status404NotFound, context.Response.StatusCode);
 
         var responseModel = JsonSerializer.Deserialize<ScimErrorResponseModel>(context.Response.Body, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
-        Assert.Equal(404, responseModel.Status);
-        Assert.Equal("User not found.", responseModel.Detail);
-        Assert.Equal(new List<string> { ScimConstants.Scim2SchemaError }, responseModel.Schemas);
+        AssertHelper.AssertPropertyEqual(expectedResponse, responseModel);
 
         var databaseContext = _factory.GetDatabaseContext();
-        Assert.Equal(3, databaseContext.OrganizationUsers.Count());
+        Assert.Equal(INITIAL_USER_COUNT, databaseContext.OrganizationUsers.Count());
     }
 }
