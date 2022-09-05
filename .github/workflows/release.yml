@@ -181,7 +181,7 @@ jobs:
           - service_name: Admin
           - service_name: Api
           - service_name: Attachments
-          - service_name: Events
+          - service_name: EventsProcessor
             prod_acr: true
           - service_name: Icons
             prod_acr: true
