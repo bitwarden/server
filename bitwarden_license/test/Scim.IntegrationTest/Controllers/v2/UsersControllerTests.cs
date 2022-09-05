@@ -10,7 +10,7 @@ namespace Bit.Scim.IntegrationTest.Controllers.v2;
 
 public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyncLifetime
 {
-    private const int INITIAL_USER_COUNT = 4;
+    private const int InitialUserCount = 4;
 
     private readonly ScimApplicationFactory _factory;
 
@@ -32,7 +32,6 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
     [Fact]
     public async Task Get_Success()
     {
-        var organizationId = ScimApplicationFactory.TestOrganizationId1;
         var organizationUserId = ScimApplicationFactory.TestOrganizationUserId1;
         var expectedResponse = new ScimUserResponseModel
         {
@@ -50,7 +49,7 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
             Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
         };
 
-        var context = await _factory.UsersGetAsync(organizationId, organizationUserId);
+        var context = await _factory.UsersGetAsync(ScimApplicationFactory.TestOrganizationId1, organizationUserId);
 
         Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
 
@@ -61,7 +60,6 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
     [Fact]
     public async Task Get_NotFound()
     {
-        var organizationId = ScimApplicationFactory.TestOrganizationId1;
         var organizationUserId = Guid.NewGuid().ToString();
         var expectedResponse = new ScimErrorResponseModel
         {
@@ -70,7 +68,7 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
             Schemas = new List<string> { ScimConstants.Scim2SchemaError }
         };
 
-        var context = await _factory.UsersGetAsync(organizationId, organizationUserId);
+        var context = await _factory.UsersGetAsync(ScimApplicationFactory.TestOrganizationId1, organizationUserId);
 
         Assert.Equal(StatusCodes.Status404NotFound, context.Response.StatusCode);
 
@@ -81,7 +79,6 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
     [Fact]
     public async Task GetList_Success()
     {
-        var organizationId = ScimApplicationFactory.TestOrganizationId1;
         string filter = null;
         int? itemsPerPage = 2;
         int? startIndex = 1;
@@ -127,7 +124,7 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
             Schemas = new List<string> { ScimConstants.Scim2SchemaListResponse }
         };
 
-        var context = await _factory.UsersGetListAsync(organizationId, filter, itemsPerPage, startIndex);
+        var context = await _factory.UsersGetListAsync(ScimApplicationFactory.TestOrganizationId1, filter, itemsPerPage, startIndex);
 
         Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
 
@@ -138,7 +135,6 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
     [Fact]
     public async Task GetList_SearchUserName_Success()
     {
-        var organizationId = ScimApplicationFactory.TestOrganizationId1;
         string filter = "userName eq user2@example.com";
         int? itemsPerPage = 10;
         int? startIndex = 1;
@@ -168,7 +164,7 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
             Schemas = new List<string> { ScimConstants.Scim2SchemaListResponse }
         };
 
-        var context = await _factory.UsersGetListAsync(organizationId, filter, itemsPerPage, startIndex);
+        var context = await _factory.UsersGetListAsync(ScimApplicationFactory.TestOrganizationId1, filter, itemsPerPage, startIndex);
 
         Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
 
@@ -179,7 +175,6 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
     [Fact]
     public async Task GetList_SearchExternalId_Success()
     {
-        var organizationId = ScimApplicationFactory.TestOrganizationId1;
         string filter = "externalId eq UC";
         int? itemsPerPage = 10;
         int? startIndex = 1;
@@ -209,7 +204,7 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
             Schemas = new List<string> { ScimConstants.Scim2SchemaListResponse }
         };
 
-        var context = await _factory.UsersGetListAsync(organizationId, filter, itemsPerPage, startIndex);
+        var context = await _factory.UsersGetListAsync(ScimApplicationFactory.TestOrganizationId1, filter, itemsPerPage, startIndex);
 
         Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
 
@@ -220,7 +215,6 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
     [Fact]
     public async Task GetList_EmptyResult_Success()
     {
-        var organizationId = ScimApplicationFactory.TestOrganizationId1;
         string filter = "externalId eq UZ";
         int? itemsPerPage = 10;
         int? startIndex = 1;
@@ -233,7 +227,7 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
             Schemas = new List<string> { ScimConstants.Scim2SchemaListResponse }
         };
 
-        var context = await _factory.UsersGetListAsync(organizationId, filter, itemsPerPage, startIndex);
+        var context = await _factory.UsersGetListAsync(ScimApplicationFactory.TestOrganizationId1, filter, itemsPerPage, startIndex);
 
         Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
 
@@ -244,7 +238,6 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
     [Fact]
     public async Task Post_Success()
     {
-        var organizationId = ScimApplicationFactory.TestOrganizationId1;
         var email = "user5@example.com";
         var displayName = "Test User 5";
         var externalId = "UE";
@@ -272,7 +265,7 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
             Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
         };
 
-        var context = await _factory.UsersPostAsync(organizationId, inputModel);
+        var context = await _factory.UsersPostAsync(ScimApplicationFactory.TestOrganizationId1, inputModel);
 
         Assert.Equal(StatusCodes.Status201Created, context.Response.StatusCode);
 
@@ -284,7 +277,7 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
         Assert.NotNull(responseModel.Id);
 
         var databaseContext = _factory.GetDatabaseContext();
-        Assert.Equal(INITIAL_USER_COUNT + 1, databaseContext.OrganizationUsers.Count());
+        Assert.Equal(InitialUserCount + 1, databaseContext.OrganizationUsers.Count());
     }
 
     [Theory]
@@ -293,7 +286,6 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
     [InlineData(" ")]
     public async Task Post_InvalidEmail_BadRequest(string email)
     {
-        var organizationId = ScimApplicationFactory.TestOrganizationId1;
         var displayName = "Test User 5";
         var externalId = "UE";
         var inputModel = new ScimUserRequestModel
@@ -306,7 +298,7 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
             Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
         };
 
-        var context = await _factory.UsersPostAsync(organizationId, inputModel);
+        var context = await _factory.UsersPostAsync(ScimApplicationFactory.TestOrganizationId1, inputModel);
 
         Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
     }
@@ -314,7 +306,6 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
     [Fact]
     public async Task Post_Inactive_BadRequest()
     {
-        var organizationId = ScimApplicationFactory.TestOrganizationId1;
         var displayName = "Test User 5";
         var inputModel = new ScimUserRequestModel
         {
@@ -324,7 +315,7 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
             Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
         };
 
-        var context = await _factory.UsersPostAsync(organizationId, inputModel);
+        var context = await _factory.UsersPostAsync(ScimApplicationFactory.TestOrganizationId1, inputModel);
 
         Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
     }
@@ -334,7 +325,6 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
     [InlineData("userZ@example.com", "UA")]
     public async Task Post_ExistingData_Conflict(string email, string externalId)
     {
-        var organizationId = ScimApplicationFactory.TestOrganizationId1;
         var inputModel = new ScimUserRequestModel
         {
             DisplayName = "New User",
@@ -344,18 +334,17 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
             Active = true
         };
 
-        var context = await _factory.UsersPostAsync(organizationId, inputModel);
+        var context = await _factory.UsersPostAsync(ScimApplicationFactory.TestOrganizationId1, inputModel);
 
         Assert.Equal(StatusCodes.Status409Conflict, context.Response.StatusCode);
 
         var databaseContext = _factory.GetDatabaseContext();
-        Assert.Equal(INITIAL_USER_COUNT, databaseContext.OrganizationUsers.Count());
+        Assert.Equal(InitialUserCount, databaseContext.OrganizationUsers.Count());
     }
 
     [Fact]
     public async Task Put_RevokeUser_Success()
     {
-        var organizationId = ScimApplicationFactory.TestOrganizationId1;
         var organizationUserId = ScimApplicationFactory.TestOrganizationUserId2;
         var inputModel = new ScimUserRequestModel
         {
@@ -377,7 +366,7 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
             Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
         };
 
-        var context = await _factory.UsersPutAsync(organizationId, organizationUserId, inputModel);
+        var context = await _factory.UsersPutAsync(ScimApplicationFactory.TestOrganizationId1, organizationUserId, inputModel);
 
         var responseModel = JsonSerializer.Deserialize<ScimUserResponseModel>(context.Response.Body, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
         Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
@@ -391,7 +380,6 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
     [Fact]
     public async Task Put_RestoreUser_Success()
     {
-        var organizationId = ScimApplicationFactory.TestOrganizationId1;
         var organizationUserId = ScimApplicationFactory.TestOrganizationUserId3;
         var inputModel = new ScimUserRequestModel
         {
@@ -413,7 +401,7 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
             Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
         };
 
-        var context = await _factory.UsersPutAsync(organizationId, organizationUserId, inputModel);
+        var context = await _factory.UsersPutAsync(ScimApplicationFactory.TestOrganizationId1, organizationUserId, inputModel);
 
         var responseModel = JsonSerializer.Deserialize<ScimUserResponseModel>(context.Response.Body, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
         Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
@@ -427,7 +415,6 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
     [Fact]
     public async Task Put_NotFound()
     {
-        var organizationId = ScimApplicationFactory.TestOrganizationId1;
         var organizationUserId = Guid.NewGuid();
         var inputModel = new ScimUserRequestModel
         {
@@ -442,7 +429,7 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
             Schemas = new List<string> { ScimConstants.Scim2SchemaError }
         };
 
-        var context = await _factory.UsersPutAsync(organizationId, organizationUserId.ToString(), inputModel);
+        var context = await _factory.UsersPutAsync(ScimApplicationFactory.TestOrganizationId1, organizationUserId.ToString(), inputModel);
 
         Assert.Equal(StatusCodes.Status404NotFound, context.Response.StatusCode);
 
@@ -453,7 +440,6 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
     [Fact]
     public async Task Patch_ReplaceRevoke_Success()
     {
-        var organizationId = ScimApplicationFactory.TestOrganizationId1;
         var organizationUserId = ScimApplicationFactory.TestOrganizationUserId2;
         var inputModel = new ScimPatchModel
         {
@@ -464,7 +450,7 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
             Schemas = new List<string>()
         };
 
-        var context = await _factory.UsersPatchAsync(organizationId, organizationUserId, inputModel);
+        var context = await _factory.UsersPatchAsync(ScimApplicationFactory.TestOrganizationId1, organizationUserId, inputModel);
 
         Assert.Equal(StatusCodes.Status204NoContent, context.Response.StatusCode);
 
@@ -477,7 +463,6 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
     [Fact]
     public async Task Patch_ReplaceRestore_Success()
     {
-        var organizationId = ScimApplicationFactory.TestOrganizationId1;
         var organizationUserId = ScimApplicationFactory.TestOrganizationUserId3;
         var inputModel = new ScimPatchModel
         {
@@ -488,7 +473,7 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
             Schemas = new List<string>()
         };
 
-        var context = await _factory.UsersPatchAsync(organizationId, organizationUserId, inputModel);
+        var context = await _factory.UsersPatchAsync(ScimApplicationFactory.TestOrganizationId1, organizationUserId, inputModel);
 
         Assert.Equal(StatusCodes.Status204NoContent, context.Response.StatusCode);
 
@@ -501,7 +486,6 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
     [Fact]
     public async Task Patch_NotFound()
     {
-        var organizationId = ScimApplicationFactory.TestOrganizationId1;
         var organizationUserId = Guid.NewGuid().ToString();
         var inputModel = new Models.ScimPatchModel
         {
@@ -515,7 +499,7 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
             Schemas = new List<string> { ScimConstants.Scim2SchemaError }
         };
 
-        var context = await _factory.UsersPatchAsync(organizationId, organizationUserId, inputModel);
+        var context = await _factory.UsersPatchAsync(ScimApplicationFactory.TestOrganizationId1, organizationUserId, inputModel);
 
         Assert.Equal(StatusCodes.Status404NotFound, context.Response.StatusCode);
 
@@ -526,23 +510,21 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
     [Fact]
     public async Task Delete_Success()
     {
-        var organizationId = ScimApplicationFactory.TestOrganizationId1;
         var organizationUserId = ScimApplicationFactory.TestOrganizationUserId1;
         var inputModel = new ScimUserRequestModel();
 
-        var context = await _factory.UsersDeleteAsync(organizationId, organizationUserId, inputModel);
+        var context = await _factory.UsersDeleteAsync(ScimApplicationFactory.TestOrganizationId1, organizationUserId, inputModel);
 
         Assert.Equal(StatusCodes.Status204NoContent, context.Response.StatusCode);
 
         var databaseContext = _factory.GetDatabaseContext();
-        Assert.Equal(INITIAL_USER_COUNT - 1, databaseContext.OrganizationUsers.Count());
+        Assert.Equal(InitialUserCount - 1, databaseContext.OrganizationUsers.Count());
         Assert.False(databaseContext.OrganizationUsers.Any(g => g.Id.ToString() == organizationUserId));
     }
 
     [Fact]
     public async Task Delete_NotFound()
     {
-        var organizationId = ScimApplicationFactory.TestOrganizationId1;
         var organizationUserId = Guid.NewGuid().ToString();
         var inputModel = new ScimUserRequestModel();
         var expectedResponse = new ScimErrorResponseModel
@@ -552,7 +534,7 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
             Schemas = new List<string> { ScimConstants.Scim2SchemaError }
         };
 
-        var context = await _factory.UsersDeleteAsync(organizationId, organizationUserId, inputModel);
+        var context = await _factory.UsersDeleteAsync(ScimApplicationFactory.TestOrganizationId1, organizationUserId, inputModel);
 
         Assert.Equal(StatusCodes.Status404NotFound, context.Response.StatusCode);
 
@@ -560,6 +542,6 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
         AssertHelper.AssertPropertyEqual(expectedResponse, responseModel);
 
         var databaseContext = _factory.GetDatabaseContext();
-        Assert.Equal(INITIAL_USER_COUNT, databaseContext.OrganizationUsers.Count());
+        Assert.Equal(InitialUserCount, databaseContext.OrganizationUsers.Count());
     }
 }
