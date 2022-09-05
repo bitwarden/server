@@ -36,13 +36,13 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579
 
-      - name: Check Release Version
-        id: version
-        uses: bitwarden/gh-actions/release-version-check@4cf17a5ff15a995a2daf2b60ba371e5c9907c068
-        with:
-          release-type: ${{ github.event.inputs.release_type }}
-          project-type: dotnet
-          file: Directory.Build.props
+      # - name: Check Release Version
+      #   id: version
+      #   uses: bitwarden/gh-actions/release-version-check@4cf17a5ff15a995a2daf2b60ba371e5c9907c068
+      #   with:
+      #     release-type: ${{ github.event.inputs.release_type }}
+      #     project-type: dotnet
+      #     file: Directory.Build.props
 
       - name: Get branch name
         id: branch
