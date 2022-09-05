@@ -179,21 +179,35 @@ jobs:
       matrix:
         include:
           - service_name: Admin
+            origin_docker_repo: bitwarden
           - service_name: Api
+            origin_docker_repo: bitwarden
           - service_name: Attachments
+            origin_docker_repo: bitwarden
           - service_name: EventsProcessor
             prod_acr: true
+            origin_docker_repo: bitwardenqa.azurecr.io
           - service_name: Icons
+            origin_docker_repo: bitwarden
             prod_acr: true
           - service_name: Identity
+            origin_docker_repo: bitwarden
           - service_name: K8S-Proxy
+            origin_docker_repo: bitwarden
           - service_name: MsSql
+            origin_docker_repo: bitwarden
           - service_name: Nginx
+            origin_docker_repo: bitwarden
           - service_name: Notifications
+            origin_docker_repo: bitwarden
           - service_name: Server
+            origin_docker_repo: bitwarden
           - service_name: Setup
+            origin_docker_repo: bitwarden
           - service_name: Sso
+            origin_docker_repo: bitwarden
           - service_name: Scim
+            origin_docker_repo: bitwarden
             skip_dct: true
     steps:
       - name: Print environment
@@ -220,6 +234,7 @@ jobs:
       ########## DockerHub ##########
       - name: Setup DCT
         id: setup-dct
+        if: matrix.origin_docker_repo == 'bitwarden'
         uses: bitwarden/gh-actions/setup-docker-trust@a8c384a05a974c05c48374c818b004be221d43ff
         with:
           azure-creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
@@ -227,6 +242,7 @@ jobs:
 
       - name: Check for DCT value
         id: check-matrix-dct
+        if: matrix.origin_docker_repo == 'bitwarden'
         run: |
           if [[ "${{ matrix.skip_dct }}" == "true" ]]; then
             echo "::set-output name=dct_enabled::0"
@@ -235,6 +251,7 @@ jobs:
           fi
 
       - name: Pull latest selfhost image
+        if: matrix.origin_docker_repo == 'bitwarden'
         env:
           SERVICE_NAME: ${{ steps.setup.outputs.service_name }}
         run: |
@@ -245,6 +262,7 @@ jobs:
           fi
 
       - name: Tag version and latest
+        if: matrix.origin_docker_repo == 'bitwarden'
         env:
           SERVICE_NAME: ${{ steps.setup.outputs.service_name }}
         run: |
@@ -255,7 +273,7 @@ jobs:
           fi
 
       # - name: Push version and latest image
-      #   if: ${{ github.event.inputs.release_type != 'Dry Run' }}
+      #   if: ${{ github.event.inputs.release_type != 'Dry Run' }} && ${{ matrix.origin_docker_repo == 'bitwarden' }}
       #   env:
       #     DOCKER_CONTENT_TRUST: ${{ steps.check-matrix-dct.outputs.dct_enabled }}
       #     DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ steps.setup-dct.outputs.dct-delegate-repo-passphrase }}
@@ -264,6 +282,7 @@ jobs:
       #     docker push bitwarden/$SERVICE_NAME:$_RELEASE_VERSION
 
       - name: Log out of Docker and disable Docker Notary
+        if: matrix.origin_docker_repo == 'bitwarden'
         run: |
           docker logout
           echo "DOCKER_CONTENT_TRUST=0" >> $GITHUB_ENV
@@ -277,15 +296,28 @@ jobs:
       - name: Login to Azure ACR
         run: az acr login -n bitwardenqa
 
-      - name: Tag version and latest
+      - name: Pull latest selfhost image
+        if: matrix.origin_docker_repo == 'bitwardenqa.azurecr.io'
         env:
           SERVICE_NAME: ${{ steps.setup.outputs.service_name }}
           REGISTRY: bitwardenqa.azurecr.io
         run: |
           if [[ "${{ github.event.inputs.release_type }}" == "Dry Run" ]]; then
-            docker tag bitwarden/$SERVICE_NAME:latest $REGISTRY/$SERVICE_NAME:dryrun
+            docker pull $REGISTRY/$SERVICE_NAME:latest
           else
-            docker tag bitwarden/$SERVICE_NAME:$_BRANCH_NAME $REGISTRY/$SERVICE_NAME:$_RELEASE_VERSION
+            docker pull $REGISTRY/$SERVICE_NAME:$_BRANCH_NAME
+          fi
+
+      - name: Tag version and latest
+        env:
+          SERVICE_NAME: ${{ steps.setup.outputs.service_name }}
+          REGISTRY: bitwardenqa.azurecr.io
+          ORIGIN_REGISTY: ${{ matrix.origin_docker_repo }}
+        run: |
+          if [[ "${{ github.event.inputs.release_type }}" == "Dry Run" ]]; then
+            docker tag $ORIGIN_REGISTY/$SERVICE_NAME:latest $REGISTRY/$SERVICE_NAME:dryrun
+          else
+            docker tag $ORIGIN_REGISTY/$SERVICE_NAME:$_BRANCH_NAME $REGISTRY/$SERVICE_NAME:$_RELEASE_VERSION
           fi
 
       # - name: Push version and latest image
@@ -315,11 +347,12 @@ jobs:
         env:
           SERVICE_NAME: ${{ steps.setup.outputs.service_name }}
           REGISTRY: bitwardenprod.azurecr.io
+          ORIGIN_REGISTY: ${{ matrix.origin_docker_repo }}
         run: |
           if [[ "${{ github.event.inputs.release_type }}" == "Dry Run" ]]; then
-            docker tag bitwarden/$SERVICE_NAME:latest $REGISTRY/$SERVICE_NAME:dryrun
+            docker tag $ORIGIN_REGISTY/$SERVICE_NAME:latest $REGISTRY/$SERVICE_NAME:dryrun
           else
-            docker tag bitwarden/$SERVICE_NAME:$_BRANCH_NAME $REGISTRY/$SERVICE_NAME:$_RELEASE_VERSION
+            docker tag $ORIGIN_REGISTY/$SERVICE_NAME:$_BRANCH_NAME $REGISTRY/$SERVICE_NAME:$_RELEASE_VERSION
           fi
 
       # - name: Push version and latest image
