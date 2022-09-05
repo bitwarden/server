@@ -23,15 +23,15 @@ jobs:
       release_version: ${{ steps.version.outputs.version }}
       branch-name: ${{ steps.branch.outputs.branch-name }}
     steps:
-      - name: Branch check
-        if: ${{ github.event.inputs.release_type != 'Dry Run' }}
-        run: |
-          if [[ "$GITHUB_REF" != "refs/heads/rc" ]] && [[ "$GITHUB_REF" != "refs/heads/hotfix-rc" ]]; then
-            echo "==================================="
-            echo "[!] Can only release from the 'rc' or 'hotfix-rc' branches"
-            echo "==================================="
-            exit 1
-          fi
+      # - name: Branch check
+      #   if: ${{ github.event.inputs.release_type != 'Dry Run' }}
+      #   run: |
+      #     if [[ "$GITHUB_REF" != "refs/heads/rc" ]] && [[ "$GITHUB_REF" != "refs/heads/hotfix-rc" ]]; then
+      #       echo "==================================="
+      #       echo "[!] Can only release from the 'rc' or 'hotfix-rc' branches"
+      #       echo "==================================="
+      #       exit 1
+      #     fi
 
       - name: Checkout repo
         uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579
