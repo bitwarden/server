@@ -1,10 +1,8 @@
-﻿using System;
-using Bit.Scim.Models;
+﻿using Bit.Scim.Models;
 
-namespace Bit.Scim.Commands.Users.Interfaces
+namespace Bit.Scim.Commands.Users.Interfaces;
+
+public interface IGetUsersListCommand
 {
-    public interface IGetUsersListCommand
-    {
-        Task<ScimListResponseModel<ScimUserResponseModel>> GetUsersListAsync(Guid organizationId, string filter, int? count, int? startIndex);
-    }
+    Task<ScimListResponseModel<ScimUserResponseModel>> GetUsersListAsync(Guid organizationId, string filter, int? count, int? startIndex);
 }

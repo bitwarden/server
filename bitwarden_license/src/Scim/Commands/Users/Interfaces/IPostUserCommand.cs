@@ -1,10 +1,9 @@
 ﻿using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Scim.Models;
 
-namespace Bit.Scim.Commands.Users.Interfaces
+namespace Bit.Scim.Commands.Users.Interfaces;
+
+public interface IPostUserCommand
 {
-    public interface IPostUserCommand
-    {
-        Task<OrganizationUserUserDetails> PostUserAsync(Guid organizationId, ScimUserRequestModel model);
-    }
+    Task<OrganizationUserUserDetails> PostUserAsync(Guid organizationId, ScimUserRequestModel model);
 }

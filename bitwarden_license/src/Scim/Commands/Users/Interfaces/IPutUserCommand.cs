@@ -1,9 +1,8 @@
 ﻿using Bit.Scim.Models;
 
-namespace Bit.Scim.Commands.Users.Interfaces
+namespace Bit.Scim.Commands.Users.Interfaces;
+
+public interface IPutUserCommand
 {
-    public interface IPutUserCommand
-    {
-        Task<ScimUserResponseModel> PutUserAsync(Guid organizationId, Guid id, ScimUserRequestModel model);
-    }
+    Task<ScimUserResponseModel> PutUserAsync(Guid organizationId, Guid id, ScimUserRequestModel model);
 }

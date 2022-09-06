@@ -73,3 +73,4 @@ public class PostGroupCommand : IPostGroupCommand
         await _groupRepository.UpdateUsersAsync(group.Id, memberIds);
     }
 }
+
