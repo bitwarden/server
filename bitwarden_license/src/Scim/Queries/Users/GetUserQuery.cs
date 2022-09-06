@@ -1,7 +1,6 @@
 ﻿using Bit.Scim.Models;
 using MediatR;
 
-namespace Bit.Scim.Queries.Users
-{
-    public record GetUserQuery(Guid OrganizationId, Guid Id) : IRequest<ScimUserResponseModel>;
-}
+namespace Bit.Scim.Queries.Users;
+
+public record GetUserQuery(Guid OrganizationId, Guid Id) : IRequest<ScimUserResponseModel>;

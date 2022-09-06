@@ -1,4 +1,3 @@
-﻿namespace Bit.Core.Exceptions
-{
-    public class ConflictException : Exception { }
-}
+﻿namespace Bit.Core.Exceptions;
+
+public class ConflictException : Exception { }

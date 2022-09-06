@@ -1,7 +1,6 @@
 ﻿using Bit.Scim.Models;
 using MediatR;
 
-namespace Bit.Scim.Commands.Users
-{
-    public record PutUserCommand(Guid OrganizationId, Guid Id, ScimUserRequestModel Model) : IRequest<ScimUserResponseModel>;
-}
+namespace Bit.Scim.Commands.Users;
+
+public record PutUserCommand(Guid OrganizationId, Guid Id, ScimUserRequestModel Model) : IRequest<ScimUserResponseModel>;

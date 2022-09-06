@@ -4,32 +4,31 @@ using Bit.Core.Services;
 using Bit.Scim.Commands.Groups;
 using MediatR;
 
-namespace Bit.Scim.Handlers.Groups
+namespace Bit.Scim.Handlers.Groups;
+
+public class DeleteGroupHandler : IRequestHandler<DeleteGroupCommand>
 {
-    public class DeleteGroupHandler : IRequestHandler<DeleteGroupCommand>
+    private readonly IGroupRepository _groupRepository;
+    private readonly IGroupService _groupService;
+
+    public DeleteGroupHandler(
+        IGroupRepository groupRepository,
+        IGroupService groupService)
     {
-        private readonly IGroupRepository _groupRepository;
-        private readonly IGroupService _groupService;
+        _groupRepository = groupRepository;
+        _groupService = groupService;
+    }
 
-        public DeleteGroupHandler(
-            IGroupRepository groupRepository,
-            IGroupService groupService)
+    public async Task<Unit> Handle(DeleteGroupCommand request, CancellationToken cancellationToken)
+    {
+        var group = await _groupRepository.GetByIdAsync(request.Id);
+        if (group == null || group.OrganizationId != request.OrganizationId)
         {
-            _groupRepository = groupRepository;
-            _groupService = groupService;
+            throw new NotFoundException("Group not found.");
         }
 
-        public async Task<Unit> Handle(DeleteGroupCommand request, CancellationToken cancellationToken)
-        {
-            var group = await _groupRepository.GetByIdAsync(request.Id);
-            if (group == null || group.OrganizationId != request.OrganizationId)
-            {
-                throw new NotFoundException("Group not found.");
-            }
+        await _groupService.DeleteAsync(group);
 
-            await _groupService.DeleteAsync(group);
-
-            return Unit.Value;
-        }
+        return Unit.Value;
     }
 }

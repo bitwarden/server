@@ -4,26 +4,25 @@ using Bit.Scim.Models;
 using Bit.Scim.Queries.Users;
 using MediatR;
 
-namespace Bit.Scim.Handlers.Users
+namespace Bit.Scim.Handlers.Users;
+
+public class GetUserHandler : IRequestHandler<GetUserQuery, ScimUserResponseModel>
 {
-    public class GetUserHandler : IRequestHandler<GetUserQuery, ScimUserResponseModel>
+    private readonly IOrganizationUserRepository _organizationUserRepository;
+
+    public GetUserHandler(IOrganizationUserRepository organizationUserRepository)
     {
-        private readonly IOrganizationUserRepository _organizationUserRepository;
+        _organizationUserRepository = organizationUserRepository;
+    }
 
-        public GetUserHandler(IOrganizationUserRepository organizationUserRepository)
+    public async Task<ScimUserResponseModel> Handle(GetUserQuery request, CancellationToken cancellationToken)
+    {
+        var orgUser = await _organizationUserRepository.GetDetailsByIdAsync(request.Id);
+        if (orgUser == null || orgUser.OrganizationId != request.OrganizationId)
         {
-            _organizationUserRepository = organizationUserRepository;
+            throw new NotFoundException("User not found.");
         }
 
-        public async Task<ScimUserResponseModel> Handle(GetUserQuery request, CancellationToken cancellationToken)
-        {
-            var orgUser = await _organizationUserRepository.GetDetailsByIdAsync(request.Id);
-            if (orgUser == null || orgUser.OrganizationId != request.OrganizationId)
-            {
-                throw new NotFoundException("User not found.");
-            }
-
-            return new ScimUserResponseModel(orgUser);
-        }
+        return new ScimUserResponseModel(orgUser);
     }
 }

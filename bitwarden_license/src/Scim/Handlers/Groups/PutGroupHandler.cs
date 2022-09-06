@@ -7,66 +7,65 @@ using Bit.Scim.Context;
 using Bit.Scim.Models;
 using MediatR;
 
-namespace Bit.Scim.Handlers.Groups
+namespace Bit.Scim.Handlers.Groups;
+
+public class PutGroupHandler : IRequestHandler<PutGroupCommand, ScimGroupResponseModel>
 {
-    public class PutGroupHandler : IRequestHandler<PutGroupCommand, ScimGroupResponseModel>
+    private readonly IGroupRepository _groupRepository;
+    private readonly IGroupService _groupService;
+    private readonly IScimContext _scimContext;
+
+    public PutGroupHandler(
+        IGroupRepository groupRepository,
+        IGroupService groupService,
+        IScimContext scimContext)
     {
-        private readonly IGroupRepository _groupRepository;
-        private readonly IGroupService _groupService;
-        private readonly IScimContext _scimContext;
+        _groupRepository = groupRepository;
+        _groupService = groupService;
+        _scimContext = scimContext;
+    }
 
-        public PutGroupHandler(
-            IGroupRepository groupRepository,
-            IGroupService groupService,
-            IScimContext scimContext)
+    public async Task<ScimGroupResponseModel> Handle(PutGroupCommand request, CancellationToken cancellationToken)
+    {
+        var group = await _groupRepository.GetByIdAsync(request.Id);
+        if (group == null || group.OrganizationId != request.OrganizationId)
         {
-            _groupRepository = groupRepository;
-            _groupService = groupService;
-            _scimContext = scimContext;
+            throw new NotFoundException("Group not found.");
         }
 
-        public async Task<ScimGroupResponseModel> Handle(PutGroupCommand request, CancellationToken cancellationToken)
+        group.Name = request.Model.DisplayName;
+        await _groupService.SaveAsync(group);
+        await UpdateGroupMembersAsync(group, request.Model, false);
+
+        return new ScimGroupResponseModel(group);
+    }
+
+    private async Task UpdateGroupMembersAsync(Group group, ScimGroupRequestModel model, bool skipIfEmpty)
+    {
+        if (_scimContext.RequestScimProvider != Core.Enums.ScimProviderType.Okta)
         {
-            var group = await _groupRepository.GetByIdAsync(request.Id);
-            if (group == null || group.OrganizationId != request.OrganizationId)
-            {
-                throw new NotFoundException("Group not found.");
-            }
-
-            group.Name = request.Model.DisplayName;
-            await _groupService.SaveAsync(group);
-            await UpdateGroupMembersAsync(group, request.Model, false);
-
-            return new ScimGroupResponseModel(group);
+            return;
         }
 
-        private async Task UpdateGroupMembersAsync(Group group, ScimGroupRequestModel model, bool skipIfEmpty)
+        if (model.Members == null)
         {
-            if (_scimContext.RequestScimProvider != Core.Enums.ScimProviderType.Okta)
-            {
-                return;
-            }
-
-            if (model.Members == null)
-            {
-                return;
-            }
-
-            var memberIds = new List<Guid>();
-            foreach (var id in model.Members.Select(i => i.Value))
-            {
-                if (Guid.TryParse(id, out var guidId))
-                {
-                    memberIds.Add(guidId);
-                }
-            }
-
-            if (!memberIds.Any() && skipIfEmpty)
-            {
-                return;
-            }
-
-            await _groupRepository.UpdateUsersAsync(group.Id, memberIds);
+            return;
         }
+
+        var memberIds = new List<Guid>();
+        foreach (var id in model.Members.Select(i => i.Value))
+        {
+            if (Guid.TryParse(id, out var guidId))
+            {
+                memberIds.Add(guidId);
+            }
+        }
+
+        if (!memberIds.Any() && skipIfEmpty)
+        {
+            return;
+        }
+
+        await _groupRepository.UpdateUsersAsync(group.Id, memberIds);
     }
 }

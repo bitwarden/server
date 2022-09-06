@@ -1,8 +1,7 @@
-﻿namespace Bit.Core.Enums
+﻿namespace Bit.Core.Enums;
+
+public enum EmergencyAccessType : byte
 {
-    public enum EmergencyAccessType : byte
-    {
-        View = 0,
-        Takeover = 1,
-    }
+    View = 0,
+    Takeover = 1,
 }

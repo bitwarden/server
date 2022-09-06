@@ -12,109 +12,108 @@ using Bit.Core.Settings;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Api.Test.Controllers
+namespace Bit.Api.Test.Controllers;
+
+public class OrganizationsControllerTests : IDisposable
 {
-    public class OrganizationsControllerTests : IDisposable
+    private readonly GlobalSettings _globalSettings;
+    private readonly ICurrentContext _currentContext;
+    private readonly IOrganizationRepository _organizationRepository;
+    private readonly IOrganizationService _organizationService;
+    private readonly IOrganizationUserRepository _organizationUserRepository;
+    private readonly IPaymentService _paymentService;
+    private readonly IPolicyRepository _policyRepository;
+    private readonly ISsoConfigRepository _ssoConfigRepository;
+    private readonly ISsoConfigService _ssoConfigService;
+    private readonly IUserService _userService;
+    private readonly IGetOrganizationApiKeyCommand _getOrganizationApiKeyCommand;
+    private readonly IRotateOrganizationApiKeyCommand _rotateOrganizationApiKeyCommand;
+    private readonly IOrganizationApiKeyRepository _organizationApiKeyRepository;
+
+    private readonly OrganizationsController _sut;
+
+    public OrganizationsControllerTests()
     {
-        private readonly GlobalSettings _globalSettings;
-        private readonly ICurrentContext _currentContext;
-        private readonly IOrganizationRepository _organizationRepository;
-        private readonly IOrganizationService _organizationService;
-        private readonly IOrganizationUserRepository _organizationUserRepository;
-        private readonly IPaymentService _paymentService;
-        private readonly IPolicyRepository _policyRepository;
-        private readonly ISsoConfigRepository _ssoConfigRepository;
-        private readonly ISsoConfigService _ssoConfigService;
-        private readonly IUserService _userService;
-        private readonly IGetOrganizationApiKeyCommand _getOrganizationApiKeyCommand;
-        private readonly IRotateOrganizationApiKeyCommand _rotateOrganizationApiKeyCommand;
-        private readonly IOrganizationApiKeyRepository _organizationApiKeyRepository;
+        _currentContext = Substitute.For<ICurrentContext>();
+        _globalSettings = Substitute.For<GlobalSettings>();
+        _organizationRepository = Substitute.For<IOrganizationRepository>();
+        _organizationService = Substitute.For<IOrganizationService>();
+        _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
+        _paymentService = Substitute.For<IPaymentService>();
+        _policyRepository = Substitute.For<IPolicyRepository>();
+        _ssoConfigRepository = Substitute.For<ISsoConfigRepository>();
+        _ssoConfigService = Substitute.For<ISsoConfigService>();
+        _getOrganizationApiKeyCommand = Substitute.For<IGetOrganizationApiKeyCommand>();
+        _rotateOrganizationApiKeyCommand = Substitute.For<IRotateOrganizationApiKeyCommand>();
+        _organizationApiKeyRepository = Substitute.For<IOrganizationApiKeyRepository>();
+        _userService = Substitute.For<IUserService>();
 
-        private readonly OrganizationsController _sut;
+        _sut = new OrganizationsController(_organizationRepository, _organizationUserRepository,
+            _policyRepository, _organizationService, _userService, _paymentService, _currentContext,
+            _ssoConfigRepository, _ssoConfigService, _getOrganizationApiKeyCommand, _rotateOrganizationApiKeyCommand,
+            _organizationApiKeyRepository, _globalSettings);
+    }
 
-        public OrganizationsControllerTests()
+    public void Dispose()
+    {
+        _sut?.Dispose();
+    }
+
+    [Theory, AutoData]
+    public async Task OrganizationsController_UserCannotLeaveOrganizationThatProvidesKeyConnector(
+        Guid orgId, User user)
+    {
+        var ssoConfig = new SsoConfig
         {
-            _currentContext = Substitute.For<ICurrentContext>();
-            _globalSettings = Substitute.For<GlobalSettings>();
-            _organizationRepository = Substitute.For<IOrganizationRepository>();
-            _organizationService = Substitute.For<IOrganizationService>();
-            _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
-            _paymentService = Substitute.For<IPaymentService>();
-            _policyRepository = Substitute.For<IPolicyRepository>();
-            _ssoConfigRepository = Substitute.For<ISsoConfigRepository>();
-            _ssoConfigService = Substitute.For<ISsoConfigService>();
-            _getOrganizationApiKeyCommand = Substitute.For<IGetOrganizationApiKeyCommand>();
-            _rotateOrganizationApiKeyCommand = Substitute.For<IRotateOrganizationApiKeyCommand>();
-            _organizationApiKeyRepository = Substitute.For<IOrganizationApiKeyRepository>();
-            _userService = Substitute.For<IUserService>();
-
-            _sut = new OrganizationsController(_organizationRepository, _organizationUserRepository,
-                _policyRepository, _organizationService, _userService, _paymentService, _currentContext,
-                _ssoConfigRepository, _ssoConfigService, _getOrganizationApiKeyCommand, _rotateOrganizationApiKeyCommand,
-                _organizationApiKeyRepository, _globalSettings);
-        }
-
-        public void Dispose()
-        {
-            _sut?.Dispose();
-        }
-
-        [Theory, AutoData]
-        public async Task OrganizationsController_UserCannotLeaveOrganizationThatProvidesKeyConnector(
-            Guid orgId, User user)
-        {
-            var ssoConfig = new SsoConfig
+            Id = default,
+            Data = new SsoConfigurationData
             {
-                Id = default,
-                Data = new SsoConfigurationData
-                {
-                    KeyConnectorEnabled = true,
-                }.Serialize(),
-                Enabled = true,
-                OrganizationId = orgId,
-            };
+                KeyConnectorEnabled = true,
+            }.Serialize(),
+            Enabled = true,
+            OrganizationId = orgId,
+        };
 
-            user.UsesKeyConnector = true;
+        user.UsesKeyConnector = true;
 
-            _currentContext.OrganizationUser(orgId).Returns(true);
-            _ssoConfigRepository.GetByOrganizationIdAsync(orgId).Returns(ssoConfig);
-            _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
+        _currentContext.OrganizationUser(orgId).Returns(true);
+        _ssoConfigRepository.GetByOrganizationIdAsync(orgId).Returns(ssoConfig);
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
 
-            var exception = await Assert.ThrowsAsync<BadRequestException>(
-                () => _sut.Leave(orgId.ToString()));
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => _sut.Leave(orgId.ToString()));
 
-            Assert.Contains("Your organization's Single Sign-On settings prevent you from leaving.",
-                exception.Message);
+        Assert.Contains("Your organization's Single Sign-On settings prevent you from leaving.",
+            exception.Message);
 
-            await _organizationService.DidNotReceiveWithAnyArgs().DeleteUserAsync(default, default);
-        }
+        await _organizationService.DidNotReceiveWithAnyArgs().DeleteUserAsync(default, default);
+    }
 
-        [Theory]
-        [InlineAutoData(true, false)]
-        [InlineAutoData(false, true)]
-        [InlineAutoData(false, false)]
-        public async Task OrganizationsController_UserCanLeaveOrganizationThatDoesntProvideKeyConnector(
-            bool keyConnectorEnabled, bool userUsesKeyConnector, Guid orgId, User user)
+    [Theory]
+    [InlineAutoData(true, false)]
+    [InlineAutoData(false, true)]
+    [InlineAutoData(false, false)]
+    public async Task OrganizationsController_UserCanLeaveOrganizationThatDoesntProvideKeyConnector(
+        bool keyConnectorEnabled, bool userUsesKeyConnector, Guid orgId, User user)
+    {
+        var ssoConfig = new SsoConfig
         {
-            var ssoConfig = new SsoConfig
+            Id = default,
+            Data = new SsoConfigurationData
             {
-                Id = default,
-                Data = new SsoConfigurationData
-                {
-                    KeyConnectorEnabled = keyConnectorEnabled,
-                }.Serialize(),
-                Enabled = true,
-                OrganizationId = orgId,
-            };
+                KeyConnectorEnabled = keyConnectorEnabled,
+            }.Serialize(),
+            Enabled = true,
+            OrganizationId = orgId,
+        };
 
-            user.UsesKeyConnector = userUsesKeyConnector;
+        user.UsesKeyConnector = userUsesKeyConnector;
 
-            _currentContext.OrganizationUser(orgId).Returns(true);
-            _ssoConfigRepository.GetByOrganizationIdAsync(orgId).Returns(ssoConfig);
-            _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
+        _currentContext.OrganizationUser(orgId).Returns(true);
+        _ssoConfigRepository.GetByOrganizationIdAsync(orgId).Returns(ssoConfig);
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
 
-            await _organizationService.DeleteUserAsync(orgId, user.Id);
-            await _organizationService.Received(1).DeleteUserAsync(orgId, user.Id);
-        }
+        await _organizationService.DeleteUserAsync(orgId, user.Id);
+        await _organizationService.Received(1).DeleteUserAsync(orgId, user.Id);
     }
 }

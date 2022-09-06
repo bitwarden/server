@@ -4,26 +4,25 @@ using Bit.Scim.Models;
 using Bit.Scim.Queries.Groups;
 using MediatR;
 
-namespace Bit.Scim.Handlers.Groups
+namespace Bit.Scim.Handlers.Groups;
+
+public class GetGroupHandler : IRequestHandler<GetGroupQuery, ScimGroupResponseModel>
 {
-    public class GetGroupHandler : IRequestHandler<GetGroupQuery, ScimGroupResponseModel>
+    private readonly IGroupRepository _groupRepository;
+
+    public GetGroupHandler(IGroupRepository groupRepository)
     {
-        private readonly IGroupRepository _groupRepository;
+        _groupRepository = groupRepository;
+    }
 
-        public GetGroupHandler(IGroupRepository groupRepository)
+    public async Task<ScimGroupResponseModel> Handle(GetGroupQuery request, CancellationToken cancellationToken)
+    {
+        var group = await _groupRepository.GetByIdAsync(request.Id);
+        if (group == null || group.OrganizationId != request.OrganizationId)
         {
-            _groupRepository = groupRepository;
+            throw new NotFoundException("Group not found.");
         }
 
-        public async Task<ScimGroupResponseModel> Handle(GetGroupQuery request, CancellationToken cancellationToken)
-        {
-            var group = await _groupRepository.GetByIdAsync(request.Id);
-            if (group == null || group.OrganizationId != request.OrganizationId)
-            {
-                throw new NotFoundException("Group not found.");
-            }
-
-            return new ScimGroupResponseModel(group);
-        }
+        return new ScimGroupResponseModel(group);
     }
 }

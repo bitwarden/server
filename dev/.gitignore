@@ -13,3 +13,6 @@ identity_server_dev.pfx
 data_protection_dev.crt
 data_protection_dev.key
 data_protection_dev.pfx
+
+# Reverse Proxy Conifg
+reverse-proxy.conf

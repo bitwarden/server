@@ -1,17 +1,16 @@
 ﻿using AutoMapper;
 
-namespace Bit.Infrastructure.EntityFramework.Models
-{
-    public class OrganizationApiKey : Core.Entities.OrganizationApiKey
-    {
-        public virtual Organization Organization { get; set; }
-    }
+namespace Bit.Infrastructure.EntityFramework.Models;
 
-    public class OrganizationApiKeyMapperProfile : Profile
+public class OrganizationApiKey : Core.Entities.OrganizationApiKey
+{
+    public virtual Organization Organization { get; set; }
+}
+
+public class OrganizationApiKeyMapperProfile : Profile
+{
+    public OrganizationApiKeyMapperProfile()
     {
-        public OrganizationApiKeyMapperProfile()
-        {
-            CreateMap<Core.Entities.OrganizationApiKey, OrganizationApiKey>().ReverseMap();
-        }
+        CreateMap<Core.Entities.OrganizationApiKey, OrganizationApiKey>().ReverseMap();
     }
 }

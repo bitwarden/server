@@ -5,86 +5,85 @@ using Bit.Core.Services;
 using Bit.Scim.Commands.Users;
 using MediatR;
 
-namespace Bit.Scim.Handlers.Users
-{
-    public class PatchUserHandler : IRequestHandler<PatchUserCommand>
-    {
-        private readonly IUserService _userService;
-        private readonly IOrganizationUserRepository _organizationUserRepository;
-        private readonly IOrganizationService _organizationService;
-        private readonly ILogger<PatchUserHandler> _logger;
+namespace Bit.Scim.Handlers.Users;
 
-        public PatchUserHandler(
-            IUserService userService,
-            IOrganizationUserRepository organizationUserRepository,
-            IOrganizationService organizationService,
-            ILogger<PatchUserHandler> logger)
+public class PatchUserHandler : IRequestHandler<PatchUserCommand>
+{
+    private readonly IUserService _userService;
+    private readonly IOrganizationUserRepository _organizationUserRepository;
+    private readonly IOrganizationService _organizationService;
+    private readonly ILogger<PatchUserHandler> _logger;
+
+    public PatchUserHandler(
+        IUserService userService,
+        IOrganizationUserRepository organizationUserRepository,
+        IOrganizationService organizationService,
+        ILogger<PatchUserHandler> logger)
+    {
+        _userService = userService;
+        _organizationUserRepository = organizationUserRepository;
+        _organizationService = organizationService;
+        _logger = logger;
+    }
+
+    public async Task<Unit> Handle(PatchUserCommand request, CancellationToken cancellationToken)
+    {
+        var orgUser = await _organizationUserRepository.GetByIdAsync(request.Id);
+        if (orgUser == null || orgUser.OrganizationId != request.OrganizationId)
         {
-            _userService = userService;
-            _organizationUserRepository = organizationUserRepository;
-            _organizationService = organizationService;
-            _logger = logger;
+            throw new NotFoundException("User not found.");
         }
 
-        public async Task<Unit> Handle(PatchUserCommand request, CancellationToken cancellationToken)
+        var operationHandled = false;
+        foreach (var operation in request.Model.Operations)
         {
-            var orgUser = await _organizationUserRepository.GetByIdAsync(request.Id);
-            if (orgUser == null || orgUser.OrganizationId != request.OrganizationId)
+            // Replace operations
+            if (operation.Op?.ToLowerInvariant() == "replace")
             {
-                throw new NotFoundException("User not found.");
-            }
-
-            var operationHandled = false;
-            foreach (var operation in request.Model.Operations)
-            {
-                // Replace operations
-                if (operation.Op?.ToLowerInvariant() == "replace")
+                // Active from path
+                if (operation.Path?.ToLowerInvariant() == "active")
                 {
-                    // Active from path
-                    if (operation.Path?.ToLowerInvariant() == "active")
+                    var active = operation.Value.ToString()?.ToLowerInvariant();
+                    var handled = await HandleActiveOperationAsync(orgUser, active == "true");
+                    if (!operationHandled)
                     {
-                        var active = operation.Value.ToString()?.ToLowerInvariant();
-                        var handled = await HandleActiveOperationAsync(orgUser, active == "true");
-                        if (!operationHandled)
-                        {
-                            operationHandled = handled;
-                        }
+                        operationHandled = handled;
                     }
-                    // Active from value object
-                    else if (string.IsNullOrWhiteSpace(operation.Path) &&
-                        operation.Value.TryGetProperty("active", out var activeProperty))
+                }
+                // Active from value object
+                else if (string.IsNullOrWhiteSpace(operation.Path) &&
+                    operation.Value.TryGetProperty("active", out var activeProperty))
+                {
+                    var handled = await HandleActiveOperationAsync(orgUser, activeProperty.GetBoolean());
+                    if (!operationHandled)
                     {
-                        var handled = await HandleActiveOperationAsync(orgUser, activeProperty.GetBoolean());
-                        if (!operationHandled)
-                        {
-                            operationHandled = handled;
-                        }
+                        operationHandled = handled;
                     }
                 }
             }
-
-            if (!operationHandled)
-            {
-                _logger.LogWarning("User patch operation not handled: {operation} : ",
-                    string.Join(", ", request.Model.Operations.Select(o => $"{o.Op}:{o.Path}")));
-            }
-
-            return Unit.Value;
         }
 
-        private async Task<bool> HandleActiveOperationAsync(Core.Entities.OrganizationUser orgUser, bool active)
+        if (!operationHandled)
         {
-            if (active && orgUser.Status == OrganizationUserStatusType.Revoked)
-            {
-                await _organizationService.RestoreUserAsync(orgUser, null, _userService);
-                return true;
-            }
-            else if (!active && orgUser.Status != OrganizationUserStatusType.Revoked)
-            {
-                await _organizationService.RevokeUserAsync(orgUser, null);
-                return true;
-            }
-            return false;
+            _logger.LogWarning("User patch operation not handled: {operation} : ",
+                string.Join(", ", request.Model.Operations.Select(o => $"{o.Op}:{o.Path}")));
         }
+
+        return Unit.Value;
+    }
+
+    private async Task<bool> HandleActiveOperationAsync(Core.Entities.OrganizationUser orgUser, bool active)
+    {
+        if (active && orgUser.Status == OrganizationUserStatusType.Revoked)
+        {
+            await _organizationService.RestoreUserAsync(orgUser, null, _userService);
+            return true;
+        }
+        else if (!active && orgUser.Status != OrganizationUserStatusType.Revoked)
+        {
+            await _organizationService.RevokeUserAsync(orgUser, null);
+            return true;
+        }
+        return false;
     }
 }
