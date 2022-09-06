@@ -1,4 +1,5 @@
-﻿using Bit.Core.Exceptions;
+﻿using System;
+using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Scim.Commands.Groups;
@@ -8,15 +9,15 @@ namespace Bit.Scim.Handlers.Groups;
 
 public class DeleteGroupHandler : IRequestHandler<DeleteGroupCommand>
 {
+    private readonly IEventService _eventService;
     private readonly IGroupRepository _groupRepository;
-    private readonly IGroupService _groupService;
 
     public DeleteGroupHandler(
-        IGroupRepository groupRepository,
-        IGroupService groupService)
+        IEventService eventService,
+        IGroupRepository groupRepository)
     {
+        _eventService = eventService;
         _groupRepository = groupRepository;
-        _groupService = groupService;
     }
 
     public async Task<Unit> Handle(DeleteGroupCommand request, CancellationToken cancellationToken)
@@ -27,7 +28,8 @@ public class DeleteGroupHandler : IRequestHandler<DeleteGroupCommand>
             throw new NotFoundException("Group not found.");
         }
 
-        await _groupService.DeleteAsync(group);
+        await _groupRepository.DeleteAsync(group);
+        await _eventService.LogGroupEventAsync(group, Core.Enums.EventType.Group_Deleted);
 
         return Unit.Value;
     }
