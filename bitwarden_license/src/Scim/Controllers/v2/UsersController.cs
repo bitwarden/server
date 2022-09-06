@@ -1,11 +1,9 @@
 ﻿using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Scim.Commands.Users;
+using Bit.Scim.Commands.Users.Interfaces;
 using Bit.Scim.Context;
 using Bit.Scim.Models;
-using Bit.Scim.Queries.Users;
-using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
@@ -22,8 +20,13 @@ public class UsersController : Controller
     private readonly IOrganizationService _organizationService;
     private readonly IScimContext _scimContext;
     private readonly ScimSettings _scimSettings;
+    private readonly IGetUserCommand _getUserCommand;
+    private readonly IGetUsersListCommand _getUsersListCommand;
+    private readonly IPostUserCommand _postUserCommand;
+    private readonly IPutUserCommand _putUserCommand;
+    private readonly IPatchUserCommand _patchUserCommand;
+    private readonly IDeleteUserCommand _deleteUserCommand;
     private readonly ILogger<UsersController> _logger;
-    private readonly IMediator _mediator;
 
     public UsersController(
         IUserService userService,
@@ -32,8 +35,13 @@ public class UsersController : Controller
         IOrganizationService organizationService,
         IScimContext scimContext,
         IOptions<ScimSettings> scimSettings,
-        ILogger<UsersController> logger,
-        IMediator mediator)
+        IGetUserCommand getUserCommand,
+        IGetUsersListCommand getUsersListCommand,
+        IPostUserCommand postUserCommand,
+        IPutUserCommand putUserCommand,
+        IPatchUserCommand patchUserCommand,
+        IDeleteUserCommand deleteUserCommand,
+        ILogger<UsersController> logger)
     {
         _userService = userService;
         _userRepository = userRepository;
@@ -41,8 +49,13 @@ public class UsersController : Controller
         _organizationService = organizationService;
         _scimContext = scimContext;
         _scimSettings = scimSettings?.Value;
+        _getUserCommand = getUserCommand;
+        _getUsersListCommand = getUsersListCommand;
+        _postUserCommand = postUserCommand;
+        _putUserCommand = putUserCommand;
+        _patchUserCommand = patchUserCommand;
+        _deleteUserCommand = deleteUserCommand;
         _logger = logger;
-        _mediator = mediator;
     }
 
     [HttpGet("{id}")]
@@ -50,7 +63,7 @@ public class UsersController : Controller
     {
         try
         {
-            var scimUserResponseModel = await _mediator.Send(new GetUserQuery(organizationId, id));
+            var scimUserResponseModel = await _getUserCommand.GetUserAsync(organizationId, id);
             return Ok(scimUserResponseModel);
         }
         catch (NotFoundException ex)
@@ -70,7 +83,7 @@ public class UsersController : Controller
         [FromQuery] int? count,
         [FromQuery] int? startIndex)
     {
-        var scimListResponseModel = await _mediator.Send(new GetUsersListQuery(organizationId, filter, count, startIndex));
+        var scimListResponseModel = await _getUsersListCommand.GetUsersListAsync(organizationId, filter, count, startIndex);
         return Ok(scimListResponseModel);
     }
 
@@ -79,7 +92,7 @@ public class UsersController : Controller
     {
         try
         {
-            var orgUser = await _mediator.Send(new PostUserCommand(organizationId, model));
+            var orgUser = await _postUserCommand.PostUserAsync(organizationId, model);
             var scimUserResponseModel = new ScimUserResponseModel(orgUser);
             return new CreatedResult(Url.Action(nameof(Get), new { orgUser.OrganizationId, orgUser.Id }), scimUserResponseModel);
 
@@ -99,7 +112,7 @@ public class UsersController : Controller
     {
         try
         {
-            var scimUserResponseModel = await _mediator.Send(new PutUserCommand(organizationId, id, model));
+            var scimUserResponseModel = await _putUserCommand.PutUserAsync(organizationId, id, model);
             return Ok(scimUserResponseModel);
         }
         catch (NotFoundException ex)
@@ -117,7 +130,7 @@ public class UsersController : Controller
     {
         try
         {
-            await _mediator.Send(new PatchUserCommand(organizationId, id, model));
+            await _patchUserCommand.PatchUserAsync(organizationId, id, model);
             return new NoContentResult();
         }
         catch (NotFoundException ex)
@@ -135,7 +148,7 @@ public class UsersController : Controller
     {
         try
         {
-            await _mediator.Send(new DeleteUserCommand(organizationId, id, model));
+            await _deleteUserCommand.DeleteUserAsync(organizationId, id, model);
             return new NoContentResult();
         }
         catch (NotFoundException)

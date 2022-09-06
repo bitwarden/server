@@ -1,11 +1,9 @@
 ﻿using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Scim.Commands.Groups;
+using Bit.Scim.Commands.Groups.Interfaces;
 using Bit.Scim.Context;
 using Bit.Scim.Models;
-using Bit.Scim.Queries.Groups;
-using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
@@ -21,22 +19,37 @@ public class GroupsController : Controller
     private readonly IGroupService _groupService;
     private readonly IScimContext _scimContext;
     private readonly ILogger<GroupsController> _logger;
-    private readonly IMediator _mediator;
+    private readonly IGetGroupCommand _getGroupCommand;
+    private readonly IGetGroupsListCommand _getGroupsListCommand;
+    private readonly IPostGroupCommand _postGroupCommand;
+    private readonly IPutGroupCommand _putGroupCommand;
+    private readonly IPatchGroupCommand _patchGroupCommand;
+    private readonly IDeleteGroupCommand _deleteGroupCommand;
 
     public GroupsController(
         IGroupRepository groupRepository,
         IGroupService groupService,
         IOptions<ScimSettings> scimSettings,
         IScimContext scimContext,
-        ILogger<GroupsController> logger,
-        IMediator mediator)
+        IGetGroupCommand getGroupCommand,
+        IGetGroupsListCommand getGroupsListCommand,
+        IPostGroupCommand postGroupCommand,
+        IPutGroupCommand putGroupCommand,
+        IPatchGroupCommand patchGroupCommand,
+        IDeleteGroupCommand deleteGroupCommand,
+        ILogger<GroupsController> logger)
     {
         _scimSettings = scimSettings?.Value;
         _groupRepository = groupRepository;
         _groupService = groupService;
         _scimContext = scimContext;
+        _getGroupCommand = getGroupCommand;
+        _getGroupsListCommand = getGroupsListCommand;
+        _postGroupCommand = postGroupCommand;
+        _putGroupCommand = putGroupCommand;
+        _patchGroupCommand = patchGroupCommand;
+        _deleteGroupCommand = deleteGroupCommand;
         _logger = logger;
-        _mediator = mediator;
     }
 
     [HttpGet("{id}")]
@@ -44,7 +57,7 @@ public class GroupsController : Controller
     {
         try
         {
-            var scimGroupResponseModel = await _mediator.Send(new GetGroupQuery(organizationId, id));
+            var scimGroupResponseModel = await _getGroupCommand.GetGroupAsync(organizationId, id);
             return Ok(scimGroupResponseModel);
         }
         catch (NotFoundException ex)
@@ -64,7 +77,7 @@ public class GroupsController : Controller
         [FromQuery] int? count,
         [FromQuery] int? startIndex)
     {
-        var scimListResponseModel = await _mediator.Send(new GetGroupsListQuery(organizationId, filter, count, startIndex));
+        var scimListResponseModel = await _getGroupsListCommand.GetGroupsListAsync(organizationId, filter, count, startIndex);
         return Ok(scimListResponseModel);
     }
 
@@ -73,7 +86,7 @@ public class GroupsController : Controller
     {
         try
         {
-            var group = await _mediator.Send(new PostGroupCommand(organizationId, model));
+            var group = await _postGroupCommand.PostGroupAsync(organizationId, model);
             var scimGroupResponseModel = new ScimGroupResponseModel(group);
             return new CreatedResult(Url.Action(nameof(Get), new { group.OrganizationId, group.Id }), scimGroupResponseModel);
         }
@@ -92,7 +105,7 @@ public class GroupsController : Controller
     {
         try
         {
-            var scimGroupResponseModel = await _mediator.Send(new PutGroupCommand(organizationId, id, model));
+            var scimGroupResponseModel = await _putGroupCommand.PutGroupAsync(organizationId, id, model);
             return Ok(scimGroupResponseModel);
         }
         catch (NotFoundException ex)
@@ -110,7 +123,7 @@ public class GroupsController : Controller
     {
         try
         {
-            await _mediator.Send(new PatchGroupCommand(organizationId, id, model));
+            await _patchGroupCommand.PatchGroupAsync(organizationId, id, model);
             return new NoContentResult();
         }
         catch (NotFoundException ex)
@@ -128,7 +141,7 @@ public class GroupsController : Controller
     {
         try
         {
-            await _mediator.Send(new DeleteGroupCommand(organizationId, id));
+            await _deleteGroupCommand.DeleteGroupAsync(organizationId, id);
             return new NoContentResult();
         }
         catch (NotFoundException ex)

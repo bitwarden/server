@@ -2,11 +2,14 @@
 using Bit.Core.Context;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
+using Bit.Scim.Commands.Groups;
+using Bit.Scim.Commands.Groups.Interfaces;
+using Bit.Scim.Commands.Users;
+using Bit.Scim.Commands.Users.Interfaces;
 using Bit.Scim.Context;
 using Bit.Scim.Utilities;
 using Bit.SharedWeb.Utilities;
 using IdentityModel;
-using MediatR;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Stripe;
 
@@ -77,7 +80,18 @@ public class Startup
         });
         services.Configure<RouteOptions>(options => options.LowercaseUrls = true);
 
-        services.AddMediatR(AppDomain.CurrentDomain.GetAssemblies());
+        services.AddScoped<IGetGroupCommand, GetGroupCommand>();
+        services.AddScoped<IGetGroupsListCommand, GetGroupsListCommand>();
+        services.AddScoped<IPostGroupCommand, PostGroupCommand>();
+        services.AddScoped<IPutGroupCommand, PutGroupCommand>();
+        services.AddScoped<IDeleteGroupCommand, DeleteGroupCommand>();
+        services.AddScoped<IPatchGroupCommand, PatchGroupCommand>();
+        services.AddScoped<IGetUserCommand, GetUserCommand>();
+        services.AddScoped<IGetUsersListCommand, GetUsersListCommand>();
+        services.AddScoped<IPostUserCommand, PostUserCommand>();
+        services.AddScoped<IPutUserCommand, PutUserCommand>();
+        services.AddScoped<IPatchUserCommand, PatchUserCommand>();
+        services.AddScoped<IDeleteUserCommand, DeleteUserCommand>();
     }
 
     public void Configure(
