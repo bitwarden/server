@@ -2,7 +2,6 @@
 using System.Security.Claims;
 using System.Security.Cryptography.X509Certificates;
 using AspNetCoreRateLimit;
-using AspNetCoreRateLimit.Redis;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.HostedServices;
@@ -512,7 +511,7 @@ public static class ServiceCollectionExtensions
             {
                 httpContext.Response.OnStarting((state) =>
                 {
-                    httpContext.Response.Headers.Append("Server-Version", CoreHelpers.GetVersion());
+                    httpContext.Response.Headers.Append("Server-Version", AssemblyHelpers.GetVersion());
                     return Task.FromResult(0);
                 }, null);
                 await next.Invoke();
@@ -609,13 +608,20 @@ public static class ServiceCollectionExtensions
         services.AddHostedService<IpRateLimitSeedStartupService>();
         services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
 
-        if (string.IsNullOrEmpty(globalSettings.Redis.ConnectionString))
+        if (!globalSettings.DistributedIpRateLimiting.Enabled || string.IsNullOrEmpty(globalSettings.Redis.ConnectionString))
         {
             services.AddInMemoryRateLimiting();
         }
         else
         {
-            services.AddRedisRateLimiting(); // Requires a registered IConnectionMultiplexer 
+            // Use memory stores for Ip and Client Policy stores as we don't currently use them
+            // and they add unnecessary Redis network delays checking for policies that don't exist
+            services.AddSingleton<IIpPolicyStore, MemoryCacheIpPolicyStore>();
+            services.AddSingleton<IClientPolicyStore, MemoryCacheClientPolicyStore>();
+
+            // Use a custom Redis processing strategy that skips Ip limiting if Redis is down
+            // Requires a registered IConnectionMultiplexer
+            services.AddSingleton<IProcessingStrategy, CustomRedisProcessingStrategy>();
         }
     }
 
