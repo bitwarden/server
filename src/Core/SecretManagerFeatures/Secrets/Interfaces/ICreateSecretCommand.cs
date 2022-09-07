@@ -7,4 +7,3 @@ namespace Bit.Core.SecretManagerFeatures.Secrets.Interfaces
         Task<Secret> CreateAsync(Secret secret);
     }
 }
-

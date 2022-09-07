@@ -31,4 +31,3 @@ namespace Bit.Api.SecretManagerFeatures.Models.Request
         }
     }
 }
-
