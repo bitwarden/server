@@ -69,7 +69,7 @@ jobs:
 
       - name: Migrate
         working-directory: "dev"
-        run: "./migrate.ps1"
+        run: "pwsh ./migrate.ps1"
         shell: pwsh
 
       - name: Diff sqlproj to migrations
