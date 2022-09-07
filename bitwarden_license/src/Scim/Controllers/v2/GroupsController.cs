@@ -64,7 +64,7 @@ public class GroupsController : Controller
         {
             return NotFound(new ScimErrorResponseModel
             {
-                Status = 404,
+                Status = StatusCodes.Status404NotFound,
                 Detail = ex.Message
             });
         }
@@ -112,7 +112,7 @@ public class GroupsController : Controller
         {
             return NotFound(new ScimErrorResponseModel
             {
-                Status = 404,
+                Status = StatusCodes.Status404NotFound,
                 Detail = ex.Message
             });
         }
@@ -130,7 +130,7 @@ public class GroupsController : Controller
         {
             return NotFound(new ScimErrorResponseModel
             {
-                Status = 404,
+                Status = StatusCodes.Status404NotFound,
                 Detail = ex.Message
             });
         }
@@ -148,7 +148,7 @@ public class GroupsController : Controller
         {
             return NotFound(new ScimErrorResponseModel
             {
-                Status = 404,
+                Status = StatusCodes.Status404NotFound,
                 Detail = ex.Message
             });
         }

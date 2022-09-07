@@ -70,7 +70,7 @@ public class UsersController : Controller
         {
             return NotFound(new ScimErrorResponseModel
             {
-                Status = 404,
+                Status = StatusCodes.Status404NotFound,
                 Detail = ex.Message
             });
         }
@@ -119,7 +119,7 @@ public class UsersController : Controller
         {
             return NotFound(new ScimErrorResponseModel
             {
-                Status = 404,
+                Status = StatusCodes.Status404NotFound,
                 Detail = ex.Message
             });
         }
@@ -137,7 +137,7 @@ public class UsersController : Controller
         {
             return NotFound(new ScimErrorResponseModel
             {
-                Status = 404,
+                Status = StatusCodes.Status404NotFound,
                 Detail = ex.Message
             });
         }
@@ -155,7 +155,7 @@ public class UsersController : Controller
         {
             return NotFound(new ScimErrorResponseModel
             {
-                Status = 404,
+                Status = StatusCodes.Status404NotFound,
                 Detail = "User not found."
             });
         }
