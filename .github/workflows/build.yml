@@ -6,15 +6,41 @@ on:
     branches-ignore:
       - 'l10n_master'
       - 'gh-pages'
-    paths:
-      - 'src/Sql/**'
-      - 'util/Migrator/**'
+    paths-ignore:
+      - '.github/workflows/**'
   workflow_dispatch:
     inputs: {}
 
 jobs:
-  build:
-    name: Build DACPAC
+  cloc:
+    name: CLOC
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b
+
+      - name: Install cloc
+        run: |
+          sudo apt-get update
+          sudo apt-get -y install cloc
+
+      - name: Print lines of code
+        run: cloc --include-lang C#,SQL,Razor,"Bourne Shell",PowerShell,HTML,CSS,Sass,JavaScript,TypeScript --vcs git
+
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@a12a3943b4bdde767164f792f33f40b04645d846
+
+      - name: Verify Format
+        run: dotnet format --verify-no-changes
+
+
+  testing:
+    name: Testing
     runs-on: windows-2022
     env:
       NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
@@ -37,64 +63,465 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@a12a3943b4bdde767164f792f33f40b04645d846
 
-      - name: Build DACPAC
-        run: msbuild src/Sql/Sql.sqlproj /p:Configuration=Release /verbosity:minimal
+      - name: Restore
+        run: dotnet restore --locked-mode
         shell: pwsh
 
-      - name: Upload DACPAC
-        uses: actions/upload-artifact@6673cd052c4cd6fcf4b4e6e60ea986c889389535
-        with:
-          name: sql.dacpac
-          path: src/Sql/bin/Release/Sql.dacpac
+      - name: Build OSS solution
+        run: msbuild bitwarden-server.sln /p:Configuration=Debug /p:DefineConstants="OSS" /verbosity:minimal
+        shell: pwsh
 
-  validate:
-    name: Validate
+      - name: Build solution
+        run: msbuild bitwarden-server.sln /p:Configuration=Debug /verbosity:minimal
+        shell: pwsh
+
+      - name: Test OSS solution
+        run: dotnet test ./test --configuration Debug --no-build
+        shell: pwsh
+
+      - name: Test Bitwarden solution
+        run: dotnet test ./bitwarden_license/test/Commercial.Core.Test --configuration Debug --no-build
+        shell: pwsh
+
+
+  build-artifacts:
+    name: Build artifacts
     runs-on: ubuntu-20.04
-    needs: build
+    needs:
+      - testing
+      - lint
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service_name: Admin
+            base_path: ./src
+            node: true
+          - service_name: Api
+            base_path: ./src
+          - service_name: Billing
+            base_path: ./src
+          - service_name: Events
+            base_path: ./src
+          - service_name: EventsProcessor
+            base_path: ./src
+          - service_name: Icons
+            base_path: ./src
+          - service_name: Identity
+            base_path: ./src
+          - service_name: Notifications
+            base_path: ./src
+          - service_name: Server
+            base_path: ./util
+          - service_name: Setup
+            base_path: ./util
+          - service_name: Sso
+            base_path: ./bitwarden_license/src
+            node: true
+          - service_name: Scim
+            base_path: ./bitwarden_license/src
+            dotnet: true
     steps:
       - name: Checkout repo
         uses: actions/checkout@a12a3943b4bdde767164f792f33f40b04645d846
 
-      - name: Download dacpac
-        uses: actions/download-artifact@fb598a63ae348fa914e94cd0ff38f362e927b741
+      - name: Set up Node
+        uses: actions/setup-node@9ced9a43a244f3ac94f13bfd896db8c8f30da67a  # v3.0.0
         with:
-          name: sql.dacpac
+          cache: 'npm'
+          cache-dependency-path: '**/package-lock.json'
+          node-version: '16'
 
-      - name: Docker Compose up
-        working-directory: "dev"
+      - name: Print environment
         run: |
-          cp .env.example .env
-          docker compose --profile mssql up -d
-        shell: pwsh
+          whoami
+          dotnet --info
+          node --version
+          npm --version
+          echo "GitHub ref: $GITHUB_REF"
+          echo "GitHub event: $GITHUB_EVENT"
 
-      - name: Migrate
-        working-directory: "dev"
-        run: "pwsh ./migrate.ps1"
-        shell: pwsh
+      - name: Restore/Clean service
+        working-directory: ${{ matrix.base_path }}/${{ matrix.service_name }}
+        run: |
+          echo "Restore"
+          dotnet restore
+          echo "Clean"
+          dotnet clean -c "Release" -o obj/build-output/publish
 
-      - name: Diff sqlproj to migrations
-        run: /usr/local/sqlpackage/sqlpackage /action:DeployReport /SourceFile:"Sql.dacpac" /TargetConnectionString:"Server=localhost;Database=vault_dev;User Id=SA;Password=SET_A_PASSWORD_HERE_123;Encrypt=True;TrustServerCertificate=True;" /OutputPath:"report.xml" /p:IgnoreColumnOrder=True /p:IgnoreComments=True
-        shell: pwsh
+      - name: Build node
+        if: ${{ matrix.node }}
+        working-directory: ${{ matrix.base_path }}/${{ matrix.service_name }}
+        run: |
+          npm ci
+          npm run build
 
-      - name: Upload Report
+      - name: Publish service
+        working-directory: ${{ matrix.base_path }}/${{ matrix.service_name }}
+        run: |
+          echo "Publish"
+          dotnet publish -c "Release" -o obj/build-output/publish
+
+          cd obj/build-output/publish
+          zip -r ${{ matrix.service_name }}.zip .
+          mv ${{ matrix.service_name }}.zip ../../../
+
+          pwd
+          ls -atlh ../../../
+
+      - name: Upload service artifact
         uses: actions/upload-artifact@6673cd052c4cd6fcf4b4e6e60ea986c889389535
         with:
-          name: report.xml
-          path: report.xml
+          name: ${{ matrix.service_name }}.zip
+          path: ${{ matrix.base_path }}/${{ matrix.service_name }}/${{ matrix.service_name }}.zip
+          if-no-files-found: error
 
-      - name: Validate XML
+
+  build-docker:
+    name: Build Docker images
+    runs-on: ubuntu-20.04
+    needs: build-artifacts
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service_name: Admin
+            base_path: ./src
+            docker_repos: [bitwarden, bitwardenqa.azurecr.io]
+            dotnet: true
+          - service_name: Api
+            base_path: ./src
+            docker_repos: [bitwarden, bitwardenqa.azurecr.io]
+            dotnet: true
+          - service_name: Attachments
+            base_path: ./util
+            docker_repos: [bitwarden, bitwardenqa.azurecr.io]
+          - service_name: Events
+            base_path: ./src
+            docker_repos: [bitwarden, bitwardenqa.azurecr.io]
+            dotnet: true
+          - service_name: EventsProcessor
+            base_path: ./src
+            docker_repos: [bitwardenqa.azurecr.io]
+            dotnet: true
+          - service_name: Icons
+            base_path: ./src
+            docker_repos: [bitwarden, bitwardenqa.azurecr.io]
+            dotnet: true
+          - service_name: Identity
+            base_path: ./src
+            docker_repos: [bitwarden, bitwardenqa.azurecr.io]
+            dotnet: true
+          - service_name: K8S-Proxy
+            base_path: ./util
+            docker_repos: [bitwarden, bitwardenqa.azurecr.io]
+          - service_name: MsSql
+            base_path: ./util
+            docker_repos: [bitwarden, bitwardenqa.azurecr.io]
+          - service_name: Nginx
+            base_path: ./util
+            docker_repos: [bitwarden, bitwardenqa.azurecr.io]
+          - service_name: Notifications
+            base_path: ./src
+            docker_repos: [bitwarden, bitwardenqa.azurecr.io]
+            dotnet: true
+          - service_name: Server
+            base_path: ./util
+            docker_repos: [bitwarden, bitwardenqa.azurecr.io]
+            dotnet: true
+          - service_name: Setup
+            base_path: ./util
+            docker_repos: [bitwarden, bitwardenqa.azurecr.io]
+            dotnet: true
+          - service_name: Sso
+            base_path: ./bitwarden_license/src
+            docker_repos: [bitwarden, bitwardenqa.azurecr.io]
+            dotnet: true
+          - service_name: Scim
+            base_path: ./bitwarden_license/src
+            docker_repos: [bitwarden, bitwardenqa.azurecr.io]
+            dotnet: true
+            skip_dct: true
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@a12a3943b4bdde767164f792f33f40b04645d846
+
+      ########## Build Docker Image ##########
+      - name: Setup service name
+        id: setup
         run: |
-          if grep -q "<Operations>" "report.xml"; then
-             echo
-             echo "Migrations are out of sync with sqlproj!"
-             exit 1
-           else
-             echo "Report looks good"
-           fi
-        shell: bash
+          SERVICE_NAME=$(echo "${{ matrix.service_name }}" | awk '{print tolower($0)}')
+          echo "Matrix name: ${{ matrix.service_name }}"
+          echo "SERVICE_NAME: $SERVICE_NAME"
+          echo "::set-output name=service_name::$SERVICE_NAME"
 
-      - name: Docker compose down
-        if: ${{ always() }}
-        working-directory: "dev"
-        run: docker compose down
-        shell: pwsh
+      - name: Get build artifact
+        if: ${{ matrix.dotnet }}
+        uses: actions/download-artifact@fb598a63ae348fa914e94cd0ff38f362e927b741
+        with:
+          name: ${{ matrix.service_name }}.zip
+
+      - name: Setup build artifact
+        if: ${{ matrix.dotnet }}
+        run: |
+          mkdir -p ${{ matrix.base_path}}/${{ matrix.service_name }}/obj/build-output/publish
+          unzip ${{ matrix.service_name }}.zip \
+            -d ${{ matrix.base_path }}/${{ matrix.service_name }}/obj/build-output/publish
+
+      - name: Build Docker images
+        run: |
+          if [ "${{ matrix.service_name }}" = "K8S-Proxy" ]; then
+            docker build -f ${{ matrix.base_path }}/Nginx/Dockerfile-k8s \
+              -t ${{ steps.setup.outputs.service_name }} ${{ matrix.base_path }}/Nginx
+          else
+            docker build -t ${{ steps.setup.outputs.service_name }} \
+              ${{ matrix.base_path }}/${{ matrix.service_name }}
+          fi
+
+      ########## ACR ##########
+      - name: Login to Azure - QA Subscription
+        uses: Azure/login@1f63701bf3e6892515f1b7ce2d2bf1708b46beaf
+        with:
+          creds: ${{ secrets.AZURE_QA_KV_CREDENTIALS }}
+
+      - name: Login to Azure ACR
+        run: az acr login -n bitwardenqa
+
+      - name: Tag and Push RC to Azure ACR QA registry
+        env:
+          REGISTRY: bitwardenqa.azurecr.io
+        run: |
+          IMAGE_TAG=$(echo "${GITHUB_REF:11}" | sed "s#/#-#g")  # slash safe branch name
+          if [[ "$IMAGE_TAG" == "master" ]]; then
+            IMAGE_TAG=dev
+          fi
+
+          docker tag ${{ steps.setup.outputs.service_name }} \
+            $REGISTRY/${{ steps.setup.outputs.service_name }}:$IMAGE_TAG
+          docker push $REGISTRY/${{ steps.setup.outputs.service_name }}:$IMAGE_TAG
+
+      - name: Log out of Docker
+        run: docker logout
+
+      ########## DockerHub ##########
+      - name: Login to Azure - Prod Subscription
+        if: |
+          contains(matrix.docker_repos, 'bitwarden')
+          && (github.ref == 'refs/heads/master' ||
+            github.ref == 'refs/heads/rc' ||
+            github.ref == 'refs/heads/hotfix-rc')
+        uses: Azure/login@1f63701bf3e6892515f1b7ce2d2bf1708b46beaf
+        with:
+          creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
+
+      - name: Retrieve secrets
+        if: |
+          contains(matrix.docker_repos, 'bitwarden')
+          && (github.ref == 'refs/heads/master' ||
+            github.ref == 'refs/heads/rc' ||
+            github.ref == 'refs/heads/hotfix-rc')
+        id: retrieve-secrets
+        uses: Azure/get-keyvault-secrets@b5c723b9ac7870c022b8c35befe620b7009b336f
+        with:
+          keyvault: "bitwarden-prod-kv"
+          secrets: "docker-password,
+                    docker-username,
+                    dct-delegate-2-repo-passphrase,
+                    dct-delegate-2-key"
+
+      - name: Log into Docker
+        if: |
+          contains(matrix.docker_repos, 'bitwarden')
+          && (github.ref == 'refs/heads/master' ||
+            github.ref == 'refs/heads/rc' ||
+            github.ref == 'refs/heads/hotfix-rc')
+        env:
+          DOCKER_USERNAME: ${{ steps.retrieve-secrets.outputs.docker-username }}
+          DOCKER_PASSWORD: ${{ steps.retrieve-secrets.outputs.docker-password }}
+        run: echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+
+      - name: Setup Docker Trust
+        if: |
+          contains(matrix.docker_repos, 'bitwarden')
+          && (github.ref == 'refs/heads/master' ||
+            github.ref == 'refs/heads/rc' ||
+            github.ref == 'refs/heads/hotfix-rc')
+          && (!matrix.skip_dct)
+        env:
+          DCT_DELEGATION_KEY_ID: "c9bde8ec820701516491e5e03d3a6354e7bd66d05fa3df2b0062f68b116dc59c"
+          DCT_DELEGATE_KEY: ${{ steps.retrieve-secrets.outputs.dct-delegate-2-key }}
+          DCT_REPO_PASSPHRASE: ${{ steps.retrieve-secrets.outputs.dct-delegate-2-repo-passphrase }}
+        run: |
+          mkdir -p ~/.docker/trust/private
+          echo "$DCT_DELEGATE_KEY" > ~/.docker/trust/private/$DCT_DELEGATION_KEY_ID.key
+          echo "DOCKER_CONTENT_TRUST=1" >> $GITHUB_ENV
+          echo "DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE=$DCT_REPO_PASSPHRASE" >> $GITHUB_ENV
+
+      - name: Tag and Push RC to Docker Hub
+        if: |
+          contains(matrix.docker_repos, 'bitwarden')
+          && (github.ref == 'refs/heads/master' ||
+            github.ref == 'refs/heads/rc' ||
+            github.ref == 'refs/heads/hotfix-rc')
+        env:
+          REGISTRY: bitwarden
+        run: |
+          IMAGE_TAG=$(echo "${GITHUB_REF:11}" | sed "s#/#-#g")  # slash safe branch name
+          if [[ "$IMAGE_TAG" == "master" ]]; then
+            IMAGE_TAG=dev
+          fi
+
+          docker tag ${{ steps.setup.outputs.service_name }} \
+            $REGISTRY/${{ steps.setup.outputs.service_name }}:$IMAGE_TAG
+          docker push $REGISTRY/${{ steps.setup.outputs.service_name }}:$IMAGE_TAG
+
+      - name: Log out of Docker and disable Docker Notary
+        if: |
+          contains(matrix.docker_repos, 'bitwarden')
+          && (github.ref == 'refs/heads/master' ||
+            github.ref == 'refs/heads/rc' ||
+            github.ref == 'refs/heads/hotfix-rc')
+        run: |
+          docker logout
+          echo "DOCKER_CONTENT_TRUST=0" >> $GITHUB_ENV
+
+
+  upload:
+    name: Upload
+    runs-on: ubuntu-20.04
+    needs: build-docker
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@a12a3943b4bdde767164f792f33f40b04645d846
+
+      - name: Restore
+        run: dotnet tool restore
+
+      - name: Make Docker stub
+        if: github.ref == 'refs/heads/master' ||
+          github.ref == 'refs/heads/rc' ||
+          github.ref == 'refs/heads/hotfix-rc'
+        run: |
+          if [[ "${{ github.ref }}" == "rc" ]]; then
+            SETUP_IMAGE="bitwarden/setup:rc"
+          elif [[ "${{ github.ref }}" == "hotfix-rc" ]]; then
+            SETUP_IMAGE="bitwarden/setup:hotfix-rc"
+          else
+            SETUP_IMAGE="bitwarden/setup:dev"
+          fi
+
+          STUB_OUTPUT=$(pwd)/docker-stub
+          docker run -i --rm --name setup -v $STUB_OUTPUT:/bitwarden $SETUP_IMAGE \
+            dotnet Setup.dll -stub 1 -install 1 -domain bitwarden.example.com -os lin
+          sudo chown -R $(whoami):$(whoami) $STUB_OUTPUT
+          rm -rf $STUB_OUTPUT/letsencrypt
+          rm $STUB_OUTPUT/env/uid.env $STUB_OUTPUT/config.yml
+          touch $STUB_OUTPUT/env/uid.env
+          cd docker-stub; zip -r ../docker-stub.zip *; cd ..
+
+      - name: Make Docker stub checksum
+        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc'
+        run: sha256sum docker-stub.zip > docker-stub-sha256.txt
+
+      - name: Upload Docker stub artifact
+        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc'
+        uses: actions/upload-artifact@6673cd052c4cd6fcf4b4e6e60ea986c889389535
+        with:
+          name: docker-stub.zip
+          path: docker-stub.zip
+          if-no-files-found: error
+
+      - name: Upload Docker stub checksum artifact
+        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc'
+        uses: actions/upload-artifact@6673cd052c4cd6fcf4b4e6e60ea986c889389535
+        with:
+          name: docker-stub-sha256.txt
+          path: docker-stub-sha256.txt
+          if-no-files-found: error
+
+      - name: Build Swagger
+        run: |
+          cd ./src/Api
+          echo "Restore"
+          dotnet restore
+          echo "Clean"
+          dotnet clean -c "Release" -o obj/build-output/publish
+          echo "Publish"
+          dotnet publish -c "Release" -o obj/build-output/publish
+
+          dotnet swagger tofile --output ../../swagger.json --host https://api.bitwarden.com \
+            ./obj/build-output/publish/Api.dll public
+          cd ../..
+        env:
+          ASPNETCORE_ENVIRONMENT: Production
+          swaggerGen: 'True'
+          DOTNET_ROLL_FORWARD_ON_NO_CANDIDATE_FX: 2
+
+      - name: Upload Swagger artifact
+        uses: actions/upload-artifact@6673cd052c4cd6fcf4b4e6e60ea986c889389535
+        with:
+          name: swagger.json
+          path: swagger.json
+          if-no-files-found: error
+
+
+  check-failures:
+    name: Check for failures
+    if: always()
+    runs-on: ubuntu-20.04
+    needs:
+      - cloc
+      - lint
+      - testing
+      - build-artifacts
+      - build-docker
+      - upload
+    steps:
+      - name: Check if any job failed
+        if: |
+          github.ref == 'refs/heads/master'
+          || github.ref == 'refs/heads/rc'
+          || github.ref == 'refs/heads/hotfix-rc'
+        env:
+          CLOC_STATUS: ${{ needs.cloc.result }}
+          LINT_STATUS: ${{ needs.lint.result }}
+          TESTING_STATUS: ${{ needs.testing.result }}
+          BUILD_ARTIFACTS_STATUS: ${{ needs.build-artifacts.result }}
+          BUILD_DOCKER_STATUS: ${{ needs.build-docker.result }}
+          UPLOAD_STATUS: ${{ needs.upload.result }}
+        run: |
+          if [ "$CLOC_STATUS" = "failure" ]; then
+              exit 1
+          elif [ "$LINT_STATUS" = "failure" ]; then
+              exit 1
+          elif [ "$TESTING_STATUS" = "failure" ]; then
+              exit 1
+          elif [ "$BUILD_ARTIFACTS_STATUS" = "failure" ]; then
+              exit 1
+          elif [ "$BUILD_DOCKER_STATUS" = "failure" ]; then
+              exit 1
+          elif [ "$UPLOAD_STATUS" = "failure" ]; then
+              exit 1
+          fi
+
+      - name: Login to Azure - Prod Subscription
+        uses: Azure/login@1f63701bf3e6892515f1b7ce2d2bf1708b46beaf
+        if: failure()
+        with:
+          creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
+
+      - name: Retrieve secrets
+        id: retrieve-secrets
+        uses: Azure/get-keyvault-secrets@b5c723b9ac7870c022b8c35befe620b7009b336f
+        if: failure()
+        with:
+          keyvault: "bitwarden-prod-kv"
+          secrets: "devops-alerts-slack-webhook-url"
+
+      - name: Notify Slack on failure
+        uses: act10ns/slack@da3191ebe2e67f49b46880b4633f5591a96d1d33  # v1.2.2
+        if: failure()
+        env:
+          SLACK_WEBHOOK_URL: ${{ steps.retrieve-secrets.outputs.devops-alerts-slack-webhook-url }}
+        with:
+          status: ${{ job.status }}

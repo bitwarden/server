@@ -1,5 +1,5 @@
 ﻿---
-name: Test Migrations
+name: Validate Database
 
 on:
   push:
@@ -13,8 +13,8 @@ on:
     inputs: {}
 
 jobs:
-  databse:
-    name: Test Migrations
+  build:
+    name: Build DACPAC
     runs-on: windows-2022
     env:
       NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
@@ -37,33 +37,61 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@a12a3943b4bdde767164f792f33f40b04645d846
 
-      - name: Restore
-        run: dotnet restore --locked-mode
-        shell: pwsh
-
       - name: Build DACPAC
         run: msbuild src/Sql/Sql.sqlproj /p:Configuration=Release /verbosity:minimal
         shell: pwsh
+
+      - name: Upload DACPAC
+        uses: actions/upload-artifact@6673cd052c4cd6fcf4b4e6e60ea986c889389535
+        with:
+          name: sql.dacpac
+          path: src/Sql/bin/Release/Sql.dacpac
+
+  validate:
+    name: Validate
+    runs-on: ubuntu-20.04
+    needs: build
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@a12a3943b4bdde767164f792f33f40b04645d846
+
+      - name: Download dacpac
+        uses: actions/download-artifact@fb598a63ae348fa914e94cd0ff38f362e927b741
+        with:
+          name: sql.dacpac
 
       - name: Docker Compose up
         working-directory: "dev"
         run: |
           cp .env.example .env
-          docker compose up --profile mssql
+          docker compose --profile mssql up -d
         shell: pwsh
 
       - name: Migrate
         working-directory: "dev"
-        run: "./migrate.ps1"
+        run: "pwsh ./migrate.ps1"
         shell: pwsh
 
       - name: Diff sqlproj to migrations
-        run: C:\Program Files\Microsoft SQL Server\160\DAC\bin\SqlPackage.exe /action:DeployReport /SourceFile:"..\src\Sql\bin\Release\Sql.dacpac" /TargetConnectionString:"Server=localhost;Database=vault_dev;User Id=SA;Password=SET_A_PASSWORD_HERE_123;Encrypt=True;TrustServerCertificate=True;" /OutputPath:"test.xml" /p:IgnoreColumnOrder=True /p:IgnoreComments=True
+        run: /usr/local/sqlpackage/sqlpackage /action:DeployReport /SourceFile:"Sql.dacpac" /TargetConnectionString:"Server=localhost;Database=vault_dev;User Id=SA;Password=SET_A_PASSWORD_HERE_123;Encrypt=True;TrustServerCertificate=True;" /OutputPath:"report.xml" /p:IgnoreColumnOrder=True /p:IgnoreComments=True
         shell: pwsh
 
+      - name: Upload Report
+        uses: actions/upload-artifact@6673cd052c4cd6fcf4b4e6e60ea986c889389535
+        with:
+          name: report.xml
+          path: report.xml
+
       - name: Validate XML
-        run: cat report.xml
-        shell: pwsh
+        run: |
+          if grep -q "<Operations>" "report.xml"; then
+             echo
+             echo "Migrations are out of sync with sqlproj!"
+             exit 1
+           else
+             echo "Report looks good"
+           fi
+        shell: bash
 
       - name: Docker compose down
         if: ${{ always() }}
