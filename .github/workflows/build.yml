@@ -50,6 +50,7 @@ jobs:
   validate:
     name: Validate
     runs-on: ubuntu-20.04
+    needs: build
     steps:
       - name: Download dacpac
         uses: actions/download-artifact@fb598a63ae348fa914e94cd0ff38f362e927b741
