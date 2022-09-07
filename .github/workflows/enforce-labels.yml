@@ -16,4 +16,4 @@ jobs:
       - name: Enforce Label
         uses: yogevbd/enforce-label-action@a3c219da6b8fa73f6ba62b68ff09c469b3a1c024
         with:
-          BANNED_LABELS: "hold,DB-migrations-changed"
+          BANNED_LABELS: "hold,DB-migrations-changed,needs-qa"
