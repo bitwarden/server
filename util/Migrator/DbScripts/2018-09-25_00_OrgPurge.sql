@@ -61,6 +61,7 @@ BEGIN
 END
 GO
 
+-- ref: https://blogs.msdn.microsoft.com/azuresqldbsupport/2016/07/03/how-to-maintain-azure-sql-indexes-and-statistics/
 CREATE Procedure [dbo].[AzureSQLMaintenance]
     (
         @operation nvarchar(10) = null,
