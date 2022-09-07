@@ -1,0 +1,72 @@
+﻿---
+name: Test Migrations
+
+on:
+  push:
+    branches-ignore:
+      - 'l10n_master'
+      - 'gh-pages'
+    paths:
+      - 'src/Sql/**'
+      - 'util/Migrator/**'
+  workflow_dispatch:
+    inputs: {}
+
+jobs:
+  databse:
+    name: Test Migrations
+    runs-on: windows-2022
+    env:
+      NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
+    steps:
+      - name: Set up dotnet
+        uses: actions/setup-dotnet@9211491ffb35dd6a6657ca4f45d43dfe6e97c829
+        with:
+          dotnet-version: '6.0.x'
+      - name: Set up MSBuild
+        uses: microsoft/setup-msbuild@ab534842b4bdf384b8aaf93765dc6f721d9f5fab
+
+      - name: Print environment
+        run: |
+          dotnet --info
+          msbuild -version
+          nuget help | grep Version
+          echo "GitHub ref: $GITHUB_REF"
+          echo "GitHub event: $GITHUB_EVENT"
+
+      - name: Checkout repo
+        uses: actions/checkout@a12a3943b4bdde767164f792f33f40b04645d846
+
+      - name: Restore
+        run: dotnet restore --locked-mode
+        shell: pwsh
+
+      - name: Build DACPAC
+        run: msbuild src/Sql/Sql.sqlproj /p:Configuration=Release /verbosity:minimal
+        shell: pwsh
+
+      - name: Docker Compose up
+        working-directory: "dev"
+        run: |
+          cp .env.example .env
+          docker compose up --profile mssql
+        shell: pwsh
+
+      - name: Migrate
+        working-directory: "dev"
+        run: "./migrate.ps1"
+        shell: pwsh
+
+      - name: Diff sqlproj to migrations
+        run: C:\Program Files\Microsoft SQL Server\160\DAC\bin\SqlPackage.exe /action:DeployReport /SourceFile:"..\src\Sql\bin\Release\Sql.dacpac" /TargetConnectionString:"Server=localhost;Database=vault_dev;User Id=SA;Password=SET_A_PASSWORD_HERE_123;Encrypt=True;TrustServerCertificate=True;" /OutputPath:"test.xml" /p:IgnoreColumnOrder=True /p:IgnoreComments=True
+        shell: pwsh
+
+      - name: Validate XML
+        run: cat report.xml
+        shell: pwsh
+
+      - name: Docker compose down
+        if: ${{ always() }}
+        working-directory: "dev"
+        run: docker compose down
+        shell: pwsh
