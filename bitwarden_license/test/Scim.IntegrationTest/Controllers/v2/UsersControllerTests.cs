@@ -10,7 +10,7 @@ namespace Bit.Scim.IntegrationTest.Controllers.v2;
 
 public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyncLifetime
 {
-    private const int InitialUserCount = 4;
+    private const int _initialUserCount = 4;
 
     private readonly ScimApplicationFactory _factory;
 
@@ -277,7 +277,7 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
         Assert.NotNull(responseModel.Id);
 
         var databaseContext = _factory.GetDatabaseContext();
-        Assert.Equal(InitialUserCount + 1, databaseContext.OrganizationUsers.Count());
+        Assert.Equal(_initialUserCount + 1, databaseContext.OrganizationUsers.Count());
     }
 
     [Theory]
@@ -339,7 +339,7 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
         Assert.Equal(StatusCodes.Status409Conflict, context.Response.StatusCode);
 
         var databaseContext = _factory.GetDatabaseContext();
-        Assert.Equal(InitialUserCount, databaseContext.OrganizationUsers.Count());
+        Assert.Equal(_initialUserCount, databaseContext.OrganizationUsers.Count());
     }
 
     [Fact]
@@ -518,7 +518,7 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
         Assert.Equal(StatusCodes.Status204NoContent, context.Response.StatusCode);
 
         var databaseContext = _factory.GetDatabaseContext();
-        Assert.Equal(InitialUserCount - 1, databaseContext.OrganizationUsers.Count());
+        Assert.Equal(_initialUserCount - 1, databaseContext.OrganizationUsers.Count());
         Assert.False(databaseContext.OrganizationUsers.Any(g => g.Id.ToString() == organizationUserId));
     }
 
@@ -542,6 +542,6 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
         AssertHelper.AssertPropertyEqual(expectedResponse, responseModel);
 
         var databaseContext = _factory.GetDatabaseContext();
-        Assert.Equal(InitialUserCount, databaseContext.OrganizationUsers.Count());
+        Assert.Equal(_initialUserCount, databaseContext.OrganizationUsers.Count());
     }
 }

@@ -9,8 +9,8 @@ namespace Bit.Scim.IntegrationTest.Controllers.v2;
 
 public class GroupsControllerTests : IClassFixture<ScimApplicationFactory>, IAsyncLifetime
 {
-    private const int InitialGroupCount = 3;
-    private const int InitialGroupUsersCount = 2;
+    private const int _initialGroupCount = 3;
+    private const int _initialGroupUsersCount = 2;
 
     private readonly ScimApplicationFactory _factory;
 
@@ -237,10 +237,10 @@ public class GroupsControllerTests : IClassFixture<ScimApplicationFactory>, IAsy
         Assert.NotNull(responseModel.Id);
 
         var databaseContext = _factory.GetDatabaseContext();
-        Assert.Equal(InitialGroupCount + 1, databaseContext.Groups.Count());
+        Assert.Equal(_initialGroupCount + 1, databaseContext.Groups.Count());
         Assert.True(databaseContext.Groups.Any(g => g.Name == displayName && g.ExternalId == externalId));
 
-        Assert.Equal(InitialGroupUsersCount + 1, databaseContext.GroupUsers.Count());
+        Assert.Equal(_initialGroupUsersCount + 1, databaseContext.GroupUsers.Count());
         Assert.True(databaseContext.GroupUsers.Any(gu => gu.GroupId.ToString() == responseModel.Id && gu.OrganizationUserId.ToString() == ScimApplicationFactory.TestOrganizationUserId1));
     }
 
@@ -281,7 +281,7 @@ public class GroupsControllerTests : IClassFixture<ScimApplicationFactory>, IAsy
         Assert.Equal(StatusCodes.Status409Conflict, context.Response.StatusCode);
 
         var databaseContext = _factory.GetDatabaseContext();
-        Assert.Equal(InitialGroupCount, databaseContext.Groups.Count());
+        Assert.Equal(_initialGroupCount, databaseContext.Groups.Count());
         Assert.False(databaseContext.Groups.Any(g => g.Name == "New Group"));
     }
 
@@ -381,7 +381,7 @@ public class GroupsControllerTests : IClassFixture<ScimApplicationFactory>, IAsy
         var group = databaseContext.Groups.FirstOrDefault(g => g.Id.ToString() == groupId);
         Assert.Equal(newDisplayName, group.Name);
 
-        Assert.Equal(InitialGroupUsersCount, databaseContext.GroupUsers.Count());
+        Assert.Equal(_initialGroupUsersCount, databaseContext.GroupUsers.Count());
         Assert.True(databaseContext.GroupUsers.Any(gu => gu.OrganizationUserId.ToString() == ScimApplicationFactory.TestOrganizationUserId1));
         Assert.True(databaseContext.GroupUsers.Any(gu => gu.OrganizationUserId.ToString() == ScimApplicationFactory.TestOrganizationUserId4));
     }
@@ -412,7 +412,7 @@ public class GroupsControllerTests : IClassFixture<ScimApplicationFactory>, IAsy
         var databaseContext = _factory.GetDatabaseContext();
         Assert.Single(databaseContext.GroupUsers);
 
-        Assert.Equal(InitialGroupUsersCount - 1, databaseContext.GroupUsers.Count());
+        Assert.Equal(_initialGroupUsersCount - 1, databaseContext.GroupUsers.Count());
         var groupUser = databaseContext.GroupUsers.FirstOrDefault();
         Assert.Equal(ScimApplicationFactory.TestOrganizationUserId2, groupUser.OrganizationUserId.ToString());
     }
@@ -441,7 +441,7 @@ public class GroupsControllerTests : IClassFixture<ScimApplicationFactory>, IAsy
         Assert.Equal(StatusCodes.Status204NoContent, context.Response.StatusCode);
 
         var databaseContext = _factory.GetDatabaseContext();
-        Assert.Equal(InitialGroupUsersCount + 1, databaseContext.GroupUsers.Count());
+        Assert.Equal(_initialGroupUsersCount + 1, databaseContext.GroupUsers.Count());
         Assert.True(databaseContext.GroupUsers.Any(gu => gu.GroupId.ToString() == groupId && gu.OrganizationUserId.ToString() == ScimApplicationFactory.TestOrganizationUserId1));
         Assert.True(databaseContext.GroupUsers.Any(gu => gu.GroupId.ToString() == groupId && gu.OrganizationUserId.ToString() == ScimApplicationFactory.TestOrganizationUserId2));
         Assert.True(databaseContext.GroupUsers.Any(gu => gu.GroupId.ToString() == groupId && gu.OrganizationUserId.ToString() == ScimApplicationFactory.TestOrganizationUserId4));
@@ -505,8 +505,8 @@ public class GroupsControllerTests : IClassFixture<ScimApplicationFactory>, IAsy
         Assert.Equal(StatusCodes.Status204NoContent, context.Response.StatusCode);
 
         var databaseContext = _factory.GetDatabaseContext();
-        Assert.Equal(InitialGroupUsersCount - 1, databaseContext.GroupUsers.Count());
-        Assert.Equal(InitialGroupCount, databaseContext.Groups.Count());
+        Assert.Equal(_initialGroupUsersCount - 1, databaseContext.GroupUsers.Count());
+        Assert.Equal(_initialGroupCount, databaseContext.Groups.Count());
 
         var group = databaseContext.Groups.FirstOrDefault(g => g.Id.ToString() == groupId);
         Assert.Equal(newDisplayName, group.Name);
@@ -575,7 +575,7 @@ public class GroupsControllerTests : IClassFixture<ScimApplicationFactory>, IAsy
         Assert.Equal(StatusCodes.Status204NoContent, context.Response.StatusCode);
 
         var databaseContext = _factory.GetDatabaseContext();
-        Assert.Equal(InitialGroupCount - 1, databaseContext.Groups.Count());
+        Assert.Equal(_initialGroupCount - 1, databaseContext.Groups.Count());
         Assert.True(databaseContext.Groups.FirstOrDefault(g => g.Id.ToString() == groupId) == null);
     }
 

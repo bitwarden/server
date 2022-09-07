@@ -51,12 +51,7 @@ public static class AssertHelper
                 var expectedItems = ((IEnumerable)expectedPropInfo.GetValue(expected)).Cast<object>();
                 var actualItems = ((IEnumerable)actualPropInfo.GetValue(actual)).Cast<object>();
 
-                Assert.Equal(expectedItems.Count(), actualItems.Count());
-
-                for (int i = 0; i < expectedItems.Count(); i++)
-                {
-                    AssertPropertyEqual(expectedItems.ElementAt(i), actualItems.ElementAt(i));
-                }
+                AssertPropertyEqualPredicate(expectedItems, excludedPropertyStrings)(actualItems);
             }
             else
             {
