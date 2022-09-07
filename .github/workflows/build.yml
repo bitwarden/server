@@ -13,7 +13,7 @@ on:
     inputs: {}
 
 jobs:
-  databse:
+  build:
     name: Build DACPAC
     runs-on: windows-2022
     env:
@@ -44,5 +44,40 @@ jobs:
       - name: Upload DACPAC
         uses: actions/upload-artifact@6673cd052c4cd6fcf4b4e6e60ea986c889389535
         with:
-          name: Sql.dacpac
+          name: sql.dacpac
           path: src/Sql/bin/Release/Sql.dacpac
+
+  validate:
+    name: Validate
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Download dacpac
+        uses: actions/download-artifact@fb598a63ae348fa914e94cd0ff38f362e927b741
+        with:
+          name: sql.dacpac
+
+      - name: Docker Compose up
+        working-directory: "dev"
+        run: |
+          cp .env.example .env
+          docker compose --profile mssql up
+        shell: pwsh
+
+      - name: Migrate
+        working-directory: "dev"
+        run: "./migrate.ps1"
+        shell: pwsh
+
+      - name: Diff sqlproj to migrations
+        run: /usr/local/sqlpackage/sqlpackage /action:DeployReport /SourceFile:"sql.dacpac" /TargetConnectionString:"Server=localhost;Database=vault_dev;User Id=SA;Password=SET_A_PASSWORD_HERE_123;Encrypt=True;TrustServerCertificate=True;" /OutputPath:"test.xml" /p:IgnoreColumnOrder=True /p:IgnoreComments=True
+        shell: pwsh
+
+      - name: Validate XML
+        run: cat report.xml
+        shell: pwsh
+
+      - name: Docker compose down
+        if: ${{ always() }}
+        working-directory: "dev"
+        run: docker compose down
+        shell: pwsh
