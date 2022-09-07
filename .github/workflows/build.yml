@@ -1,5 +1,5 @@
 ---
-name: Test Migrations
+name: Build
 
 on:
   push:
