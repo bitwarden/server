@@ -33,5 +33,12 @@ namespace Bit.Api.Controllers
             var result = await _createProjectCommand.CreateAsync(createRequest.ToProject());
             return new ProjectResponseModel(result);
         }
+
+        [HttpPut("projects/{id}")]
+        public async Task<ProjectResponseModel> UpdateProjectAsync([FromRoute] Guid id, [FromBody] ProjectUpdateRequestModel updateRequest)
+        {
+            var result = await _updateProjectCommand.UpdateAsync(updateRequest.ToProject(id));
+            return new ProjectResponseModel(result);
+        }
     }
 }
