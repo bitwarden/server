@@ -151,12 +151,12 @@ public class UsersController : Controller
             await _deleteUserCommand.DeleteUserAsync(organizationId, id, model);
             return new NoContentResult();
         }
-        catch (NotFoundException)
+        catch (NotFoundException ex)
         {
             return NotFound(new ScimErrorResponseModel
             {
                 Status = StatusCodes.Status404NotFound,
-                Detail = "User not found."
+                Detail = ex.Message
             });
         }
     }
