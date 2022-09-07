@@ -64,7 +64,7 @@ jobs:
         working-directory: "dev"
         run: |
           cp .env.example .env
-          docker compose --profile mssql up
+          docker compose --profile mssql up -d
         shell: pwsh
 
       - name: Migrate
