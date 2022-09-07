@@ -19,4 +19,3 @@ namespace Bit.Commercial.Core.SecretManagerFeatures.Secrets
         }
     }
 }
-

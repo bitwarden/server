@@ -4,31 +4,21 @@ using Bit.Core.Utilities;
 
 namespace Bit.Api.SecretManagerFeatures.Models.Request
 {
-    public class SecretCreateRequestModel : IValidatableObject
+    public class ProjectCreateRequestModel : IValidatableObject
     {
         [Required]
         public Guid OrganizationId { get; set; }
 
         [Required]
         [EncryptedString]
-        public string Key { get; set; }
+        public string Name { get; set; }
 
-        [Required]
-        [EncryptedString]
-        public string Value { get; set; }
-
-        [Required]
-        [EncryptedString]
-        public string Note { get; set; }
-
-        public Secret ToSecret()
+        public Project ToProject()
         {
-            return new Secret()
+            return new Project()
             {
                 OrganizationId = this.OrganizationId,
-                Key = this.Key,
-                Value = this.Value,
-                Note = this.Note,
+                Name = this.Name,
                 DeletedDate = null,
             };
         }
