@@ -10,6 +10,7 @@ namespace Bit.Commercial.Core.SecretManagerFeatures
         {
             services.AddScoped<ICreateSecretCommand, CreateSecretCommand>();
             services.AddScoped<IUpdateSecretCommand, UpdateSecretCommand>();
+            services.AddScoped<IDeleteSecretCommand, DeleteSecretCommand>();
         }
     }
 }
