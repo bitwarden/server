@@ -621,7 +621,7 @@ public class AccountsController : Controller
             Success = result.Item1
         };
     }
-    
+
     [HttpGet("subscription")]
     public async Task<SubscriptionResponseModel> GetSubscription()
     {
