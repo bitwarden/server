@@ -1,4 +1,4 @@
-﻿namespace Bit.Attachments
+﻿namespace Bit.Attachments;
 
 public class Program
 {
