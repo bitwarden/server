@@ -17,7 +17,7 @@ namespace Bit.Commercial.Core.SecretManagerFeatures.Secrets
         {
             var secrets = await _secretRepository.GetManyByIds(ids);
 
-            if (secrets == null || secrets.Count() == 0)
+            if (secrets?.Any() != true)
             {
                 throw new NotFoundException();
             }

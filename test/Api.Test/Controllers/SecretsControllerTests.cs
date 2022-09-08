@@ -102,7 +102,7 @@ namespace Bit.Api.Test.Controllers
             var results = await sutProvider.Sut.BulkDeleteAsync(data);
             await sutProvider.GetDependency<IDeleteSecretCommand>().Received(1)
                          .DeleteSecrets(Arg.Is(data));
-            Assert.Equal(data.Count(), results.Data.Count());
+            Assert.Equal(data.Count, results.Data.Count());
         }
 
         [Theory]

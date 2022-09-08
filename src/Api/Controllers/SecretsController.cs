@@ -29,7 +29,7 @@ namespace Bit.Api.Controllers
         public async Task<ListResponseModel<SecretIdentifierResponseModel>> GetSecretsByOrganizationAsync([FromRoute] Guid organizationId)
         {
             var secrets = await _secretRepository.GetManyByOrganizationIdAsync(organizationId);
-            if (secrets == null || !secrets.Any())
+            if (secrets?.Any() != true)
             {
                 throw new NotFoundException();
             }
