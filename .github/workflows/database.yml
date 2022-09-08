@@ -2,10 +2,17 @@
 name: Validate Database
 
 on:
-  push:
+  pull_request:
     branches-ignore:
       - 'l10n_master'
       - 'gh-pages'
+    paths:
+      - 'src/Sql/**'
+      - 'util/Migrator/**'
+  push:
+    branches:
+      - 'master'
+      - 'rc'
     paths:
       - 'src/Sql/**'
       - 'util/Migrator/**'
