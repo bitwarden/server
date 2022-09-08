@@ -8,46 +8,45 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Scim.Test.Commands.Groups
+namespace Bit.Scim.Test.Commands.Groups;
+
+[SutProviderCustomize]
+public class DeleteGroupCommandTests
 {
-    [SutProviderCustomize]
-    public class DeleteGroupCommandTests
+    [Theory]
+    [BitAutoData]
+    public async Task DeleteGroup_Success(SutProvider<DeleteGroupCommand> sutProvider, Group group)
     {
-        [Theory]
-        [BitAutoData]
-        public async Task DeleteGroup_Success(SutProvider<DeleteGroupCommand> sutProvider, Group group)
-        {
-            sutProvider.GetDependency<IGroupRepository>()
-                .GetByIdAsync(group.Id)
-                .Returns(group);
+        sutProvider.GetDependency<IGroupRepository>()
+            .GetByIdAsync(group.Id)
+            .Returns(group);
 
-            await sutProvider.Sut.DeleteGroupAsync(group.OrganizationId, group.Id);
+        await sutProvider.Sut.DeleteGroupAsync(group.OrganizationId, group.Id);
 
-            await sutProvider.GetDependency<IGroupRepository>().Received(1).GetByIdAsync(group.Id);
-            await sutProvider.GetDependency<IGroupRepository>().Received(1).DeleteAsync(group);
-            await sutProvider.GetDependency<IEventService>().Received(1).LogGroupEventAsync(group, Core.Enums.EventType.Group_Deleted);
-        }
+        await sutProvider.GetDependency<IGroupRepository>().Received(1).GetByIdAsync(group.Id);
+        await sutProvider.GetDependency<IGroupRepository>().Received(1).DeleteAsync(group);
+        await sutProvider.GetDependency<IEventService>().Received(1).LogGroupEventAsync(group, Core.Enums.EventType.Group_Deleted);
+    }
 
-        [Theory]
-        [BitAutoData]
-        public async Task DeleteGroup_NotFound_Throws(SutProvider<DeleteGroupCommand> sutProvider, Guid organizationId, Guid groupId)
-        {
-            await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.DeleteGroupAsync(organizationId, groupId));
-        }
+    [Theory]
+    [BitAutoData]
+    public async Task DeleteGroup_NotFound_Throws(SutProvider<DeleteGroupCommand> sutProvider, Guid organizationId, Guid groupId)
+    {
+        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.DeleteGroupAsync(organizationId, groupId));
+    }
 
-        [Theory]
-        [BitAutoData]
-        public async Task DeleteGroup_MismatchingOrganizationId_Throws(SutProvider<DeleteGroupCommand> sutProvider, Guid organizationId, Guid groupId)
-        {
-            sutProvider.GetDependency<IGroupRepository>()
-                .GetByIdAsync(groupId)
-                .Returns(new Core.Entities.Group
-                {
-                    Id = groupId,
-                    OrganizationId = Guid.NewGuid()
-                });
+    [Theory]
+    [BitAutoData]
+    public async Task DeleteGroup_MismatchingOrganizationId_Throws(SutProvider<DeleteGroupCommand> sutProvider, Guid organizationId, Guid groupId)
+    {
+        sutProvider.GetDependency<IGroupRepository>()
+            .GetByIdAsync(groupId)
+            .Returns(new Core.Entities.Group
+            {
+                Id = groupId,
+                OrganizationId = Guid.NewGuid()
+            });
 
-            await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.DeleteGroupAsync(organizationId, groupId));
-        }
+        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.DeleteGroupAsync(organizationId, groupId));
     }
 }
