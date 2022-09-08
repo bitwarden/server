@@ -33,14 +33,6 @@ namespace Bit.Api.Test.Controllers
 
         [Theory]
         [BitAutoData]
-        public async void CreateSecret_MismatchedOrgId_Throws(SutProvider<SecretsController> sutProvider, SecretCreateRequestModel data)
-        {
-            var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.CreateSecretAsync(Guid.NewGuid(), data));
-            Assert.Contains("Organization ID does not match.", exception.Message);
-        }
-
-        [Theory]
-        [BitAutoData]
         public async void GetSecret_Success(SutProvider<SecretsController> sutProvider, Secret resultSecret)
         {
             sutProvider.GetDependency<ISecretRepository>().GetByIdAsync(default).ReturnsForAnyArgs(resultSecret);
@@ -65,13 +57,13 @@ namespace Bit.Api.Test.Controllers
 
         [Theory]
         [BitAutoData]
-        public async void CreateSecret_Success(SutProvider<SecretsController> sutProvider, SecretCreateRequestModel data)
+        public async void CreateSecret_Success(SutProvider<SecretsController> sutProvider, SecretCreateRequestModel data, Guid organizationId)
         {
-            var resultSecret = data.ToSecret();
+            var resultSecret = data.ToSecret(organizationId);
 
             sutProvider.GetDependency<ICreateSecretCommand>().CreateAsync(default).ReturnsForAnyArgs(resultSecret);
 
-            var result = await sutProvider.Sut.CreateSecretAsync(data.OrganizationId, data);
+            var result = await sutProvider.Sut.CreateSecretAsync(organizationId, data);
             await sutProvider.GetDependency<ICreateSecretCommand>().Received(1)
                          .CreateAsync(Arg.Any<Secret>());
         }
