@@ -622,21 +622,6 @@ public class AccountsController : Controller
         };
     }
 
-    [Obsolete("2022-04-01 Use separate Billing History/Payment APIs, left for backwards compatability with older clients")]
-    [HttpGet("billing")]
-    [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task<BillingResponseModel> GetBilling()
-    {
-        var user = await _userService.GetUserByPrincipalAsync(User);
-        if (user == null)
-        {
-            throw new UnauthorizedAccessException();
-        }
-
-        var billingInfo = await _paymentService.GetBillingAsync(user);
-        return new BillingResponseModel(billingInfo);
-    }
-
     [HttpGet("subscription")]
     public async Task<SubscriptionResponseModel> GetSubscription()
     {
