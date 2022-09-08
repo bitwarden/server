@@ -203,11 +203,8 @@ jobs:
             docker_repos: [bitwarden, bitwardenqa.azurecr.io]
           - service_name: Sso
             docker_repos: [bitwarden, bitwardenqa.azurecr.io]
-            dotnet: true
           - service_name: Scim
-            base_path: ./bitwarden_license/src
             docker_repos: [bitwarden, bitwardenqa.azurecr.io]
-            dotnet: true
             skip_dct: true
     steps:
       - name: Checkout repo
