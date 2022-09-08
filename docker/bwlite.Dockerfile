@@ -48,7 +48,7 @@ COPY src/Infrastructure.Dapper/*.csproj ./src/Infrastructure.Dapper/
 COPY src/Infrastructure.EntityFramework/*.csproj ./src/Infrastructure.EntityFramework/
 COPY src/SharedWeb/*.csproj ./src/SharedWeb/
 COPY util/Migrator/*.csproj ./util/Migrator/
-COPY bitwarden_license/src/CommCore/*.csproj ./bitwarden_license/src/CommCore/
+COPY bitwarden_license/src/Commercial.Core/*.csproj ./bitwarden_license/src/Commercial.Core/
 COPY Directory.Build.props .
 
 # Copy csproj file for Web
@@ -105,7 +105,7 @@ COPY src/Infrastructure.Dapper/. ./src/Infrastructure.Dapper/
 COPY src/Infrastructure.EntityFramework/. ./src/Infrastructure.EntityFramework/
 COPY src/SharedWeb/. ./src/SharedWeb/
 COPY util/Migrator/. ./util/Migrator/
-COPY bitwarden_license/src/CommCore/. ./bitwarden_license/src/CommCore/
+COPY bitwarden_license/src/Commercial.Core/. ./bitwarden_license/src/Commercial.Core/
 
 # Copy required project files for Web
 COPY --from=node-build /source/apps/web/dotnet-src/Web/. ./src/Web/
