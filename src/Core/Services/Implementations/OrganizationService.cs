@@ -2352,10 +2352,12 @@ public class OrganizationService : IOrganizationService
         
         var organization = await _organizationRepository.GetByIdAsync(organizationId);
         var occupiedSeats = await GetOccupiedSeatCount(organization);
-        if (organization.Seats.HasValue && organization.Seats.Value - occupiedSeats < organizationUserIds.Count())
+        var availableSeats = organization.Seats.GetValueOrDefault(0) - occupiedSeats;
+        if (organization.Seats.HasValue && availableSeats < organizationUserIds.Count())
         {
-            // TODO: required vs available count
-            throw new BadRequestException(_i18nService.T("NoSeatsAvailable", organization.Name));
+            throw new BadRequestException("Not enough seats available. " +
+                                          $"You are trying to restore ${organizationUserIds.Count()} users, but you " +
+                                          $"only have {availableSeats} seats available.");
         }
 
         var deletingUserIsOwner = false;
