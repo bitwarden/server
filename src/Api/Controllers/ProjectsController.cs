@@ -5,6 +5,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.SecretManagerFeatures.Projects.Interfaces;
 using Microsoft.AspNetCore.Mvc;
+using Bit.Api.Models.Response;
 
 namespace Bit.Api.Controllers
 {
@@ -39,6 +40,18 @@ namespace Bit.Api.Controllers
         {
             var result = await _updateProjectCommand.UpdateAsync(updateRequest.ToProject(id));
             return new ProjectResponseModel(result);
+        }
+
+        [HttpGet("organizations/{organizationId}/projects")]
+        public async Task<ListResponseModel<ProjectResponseModel>> GetProjectsByOrganizationAsync([FromRoute] Guid organizationId)
+        {
+            var projects = await _projectRepository.GetManyByOrganizationIdAsync(organizationId);
+            if (projects == null || !projects.Any())
+            {
+                throw new NotFoundException();
+            }
+            var responses = projects.Select(project => new ProjectResponseModel(project));
+            return new ListResponseModel<ProjectResponseModel>(responses);
         }
     }
 }
