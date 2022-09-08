@@ -106,6 +106,7 @@ COPY src/Infrastructure.EntityFramework/. ./src/Infrastructure.EntityFramework/
 COPY src/SharedWeb/. ./src/SharedWeb/
 COPY util/Migrator/. ./util/Migrator/
 COPY bitwarden_license/src/Commercial.Core/. ./bitwarden_license/src/Commercial.Core/
+COPY .git/. ./.git/
 
 # Copy required project files for Web
 COPY --from=node-build /source/apps/web/dotnet-src/Web/. ./src/Web/
