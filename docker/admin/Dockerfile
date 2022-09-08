@@ -32,6 +32,7 @@ COPY src/Infrastructure.EntityFramework/. ./src/Infrastructure.EntityFramework/
 COPY src/SharedWeb/. ./src/SharedWeb/
 COPY util/Migrator/. ./util/Migrator/
 COPY bitwarden_license/src/Commercial.Core/. ./bitwarden_license/src/Commercial.Core/
+COPY .git/. ./.git/
 
 # Build app
 WORKDIR /source/src/Admin

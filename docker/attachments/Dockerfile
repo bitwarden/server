@@ -20,6 +20,7 @@ RUN dotnet restore
 # Copy required project files
 WORKDIR /source
 COPY src/Attachments/. ./src/Attachments/
+COPY .git/. ./.git/
 
 # Build app
 WORKDIR /source/src/Attachments
