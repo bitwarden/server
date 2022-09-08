@@ -90,6 +90,16 @@ jobs:
 
           mkdir publish
 
+      - name: Create GitHub deployment for ${{ matrix.name }}
+        uses: chrnorm/deployment-action@1b599fe41a0ef1f95191e7f2eec4743f2d7dfc48
+        id: deployment
+        with:
+          token: '${{ secrets.GITHUB_TOKEN }}'
+          initial-status: 'in_progress'
+          environment: 'Server ${{ matrix.name }} - QA'
+          task: 'deploy'
+          description: 'Deploy from ${{ env.branch_name }} branch'
+
       - name: Download latest ${{ matrix.name }} asset from ${{ env.branch_name }}
         uses: bitwarden/gh-actions/download-artifacts@c1fa8e09871a860862d6bbe36184b06d2c7e35a8
         env:
@@ -137,3 +147,19 @@ jobs:
         run: |
           az webapp start --name ${{ steps.retrieve-secrets.outputs.webapp-name }} \
             --resource-group $AZURE_RESOURCE_GROUP
+
+      - name: Update ${{ matrix.name }} deployment status to Success
+        if: ${{ success() }}
+        uses: chrnorm/deployment-status@07b3930847f65e71c9c6802ff5a402f6dfb46b86
+        with:
+          token: '${{ secrets.GITHUB_TOKEN }}'
+          state: 'success'
+          deployment-id: ${{ steps.deployment.outputs.deployment_id }}
+
+      - name: Update ${{ matrix.name }} deployment status to Failure
+        if: ${{ failure() }}
+        uses: chrnorm/deployment-status@07b3930847f65e71c9c6802ff5a402f6dfb46b86
+        with:
+          token: '${{ secrets.GITHUB_TOKEN }}'
+          state: 'failure'
+          deployment-id: ${{ steps.deployment.outputs.deployment_id }}

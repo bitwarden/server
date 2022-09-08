@@ -1,0 +1,177 @@
+﻿#######################################################################
+# WARNING: This file is generated. Do not make changes to this file.  #
+# They will be overwritten on update. You can manage various settings #
+# used in this file from the ./bwdata/config.yml file for your        #
+# installation.                                                       #
+#######################################################################
+
+server {
+  listen 8080 default_server;
+  listen [::]:8080 default_server;
+  server_name {{{Domain}}};
+{{#if Ssl}}
+
+  return 301 {{{Url}}}$request_uri;
+}
+
+server {
+  listen 8443 ssl http2;
+  listen [::]:8443 ssl http2;
+  server_name {{{Domain}}};
+
+  ssl_certificate {{{CertificatePath}}};
+  ssl_certificate_key {{{KeyPath}}};
+  ssl_session_timeout 30m;
+  ssl_session_cache shared:SSL:20m;
+  ssl_session_tickets off;
+{{#if DiffieHellmanPath}}
+
+  # Diffie-Hellman parameter for DHE ciphersuites, recommended 2048 bits
+  ssl_dhparam {{{DiffieHellmanPath}}};
+{{/if}}
+
+  ssl_protocols {{{SslProtocols}}};
+  ssl_ciphers "{{{SslCiphers}}}";
+  # Enables server-side protection from BEAST attacks
+  ssl_prefer_server_ciphers on;
+{{#if CaPath}}
+
+  # OCSP Stapling ---
+  # Fetch OCSP records from URL in ssl_certificate and cache them
+  ssl_stapling on;
+  ssl_stapling_verify on;
+
+  # Verify chain of trust of OCSP response using Root CA and Intermediate certs
+  ssl_trusted_certificate {{{CaPath}}};
+  resolver 1.1.1.1 1.0.0.1 9.9.9.9 149.112.112.112 valid=300s;
+{{/if}}
+
+  include /etc/nginx/security-headers-ssl.conf;
+{{/if}}
+  include /etc/nginx/security-headers.conf;
+{{#if RealIps}}
+
+{{#each RealIps}}
+  set_real_ip_from {{{this}}};
+{{/each}}
+  real_ip_header X-Forwarded-For;
+  real_ip_recursive on;
+{{/if}}
+
+  location / {
+    proxy_pass http://web:5000/;
+{{#if Ssl}}
+    include /etc/nginx/security-headers-ssl.conf;
+{{/if}}
+    include /etc/nginx/security-headers.conf;
+    add_header Content-Security-Policy "{{{ContentSecurityPolicy}}}";
+    add_header X-Frame-Options SAMEORIGIN;
+    add_header X-Robots-Tag "noindex, nofollow";
+  }
+
+  location /alive {
+    return 200 'alive';
+    add_header Content-Type text/plain;
+  }
+
+  location = /app-id.json {
+    proxy_pass http://web:5000/app-id.json;
+{{#if Ssl}}
+    include /etc/nginx/security-headers-ssl.conf;
+{{/if}}
+    include /etc/nginx/security-headers.conf;
+    proxy_hide_header Content-Type;
+    add_header Content-Type $fido_content_type;
+  }
+
+  location = /duo-connector.html {
+    proxy_pass http://web:5000/duo-connector.html;
+  }
+
+  location = /webauthn-connector.html {
+    proxy_pass http://web:5000/webauthn-connector.html;
+  }
+
+  location = /webauthn-fallback-connector.html {
+    proxy_pass http://web:5000/webauthn-fallback-connector.html;
+  }
+
+  location = /sso-connector.html {
+    proxy_pass http://web:5000/sso-connector.html;
+  }
+
+{{#if Captcha}}
+  location = /captcha-connector.html {
+    proxy_pass http://web:5000/captcha-connector.html;
+  }
+
+  location = /captcha-mobile-connector.html {
+    proxy_pass http://web:5000/captcha-mobile-connector.html;
+  }
+{{/if}}
+
+  location /attachments/ {
+    proxy_pass http://attachments:5000/;
+  }
+
+  location /api/ {
+    proxy_pass http://api:5000/;
+  }
+
+  location /icons/ {
+    proxy_pass http://icons:5000/;
+  }
+
+  location /notifications/ {
+    proxy_pass http://notifications:5000/;
+  }
+
+  location /notifications/hub {
+    proxy_pass http://notifications:5000/hub;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection $http_connection;
+  }
+
+  location /events/ {
+    proxy_pass http://events:5000/;
+  }
+
+  location /sso {
+    proxy_pass http://sso:5000;
+{{#if Ssl}}
+    include /etc/nginx/security-headers-ssl.conf;
+{{/if}}
+    include /etc/nginx/security-headers.conf;
+    add_header X-Frame-Options SAMEORIGIN;
+  }
+
+  location /identity {
+    proxy_pass http://identity:5000;
+{{#if Ssl}}
+    include /etc/nginx/security-headers-ssl.conf;
+{{/if}}
+    include /etc/nginx/security-headers.conf;
+    add_header X-Frame-Options SAMEORIGIN;
+  }
+
+  location /admin {
+    proxy_pass http://admin:5000;
+{{#if Ssl}}
+    include /etc/nginx/security-headers-ssl.conf;
+{{/if}}
+    include /etc/nginx/security-headers.conf;
+    add_header X-Frame-Options SAMEORIGIN;
+  }
+
+{{#if EnableKeyConnector}}
+  location /key-connector/ {
+    proxy_pass http://key-connector:5000/;
+  }
+{{/if}}
+{{#if EnableScim}}
+
+  location /scim/ {
+    proxy_pass http://scim:5000/;
+  }
+{{/if}}
+}

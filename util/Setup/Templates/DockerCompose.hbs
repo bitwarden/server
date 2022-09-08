@@ -1,0 +1,244 @@
+﻿#
+# Useful references:
+# https://docs.docker.com/compose/compose-file/
+# https://docs.docker.com/compose/reference/overview/#use--f-to-specify-name-and-path-of-one-or-more-compose-files
+# https://docs.docker.com/compose/reference/envvars/
+#
+#########################################################################
+# WARNING: This file is generated. Do not make changes to this file.    #
+# They will be overwritten on update. If you want to make additions to  #
+# this file, you can create a `docker-compose.override.yml` file in the #
+# same directory and it will be merged into this file at runtime. You   #
+# can also manage various settings used in this file from the           #
+# ./bwdata/config.yml file for your installation.                       #
+#########################################################################
+
+version: '{{{ComposeVersion}}}'
+
+services:
+  mssql:
+    image: bitwarden/mssql:{{{CoreVersion}}}
+    container_name: bitwarden-mssql
+    restart: always
+    stop_grace_period: 60s
+    volumes:
+{{#if MssqlDataDockerVolume}}
+      - mssql_data:/var/opt/mssql/data
+{{else}}
+      - ../mssql/data:/var/opt/mssql/data
+{{/if}}
+      - ../logs/mssql:/var/opt/mssql/log
+      - ../mssql/backups:/etc/bitwarden/mssql/backups
+    env_file:
+      - mssql.env
+      - ../env/uid.env
+      - ../env/mssql.override.env
+
+  web:
+    image: bitwarden/web:{{{WebVersion}}}
+    container_name: bitwarden-web
+    restart: always
+    volumes:
+      - ../web:/etc/bitwarden/web
+    env_file:
+      - global.env
+      - ../env/uid.env
+
+  attachments:
+    image: bitwarden/attachments:{{{CoreVersion}}}
+    container_name: bitwarden-attachments
+    restart: always
+    volumes:
+      - ../core/attachments:/etc/bitwarden/core/attachments
+    env_file:
+      - global.env
+      - ../env/uid.env
+
+  api:
+    image: bitwarden/api:{{{CoreVersion}}}
+    container_name: bitwarden-api
+    restart: always
+    volumes:
+      - ../core:/etc/bitwarden/core
+      - ../ca-certificates:/etc/bitwarden/ca-certificates
+      - ../logs/api:/etc/bitwarden/logs
+    env_file:
+      - global.env
+      - ../env/uid.env
+      - ../env/global.override.env
+    networks:
+      - default
+      - public
+
+  identity:
+    image: bitwarden/identity:{{{CoreVersion}}}
+    container_name: bitwarden-identity
+    restart: always
+    volumes:
+      - ../identity:/etc/bitwarden/identity
+      - ../core:/etc/bitwarden/core
+      - ../ca-certificates:/etc/bitwarden/ca-certificates
+      - ../logs/identity:/etc/bitwarden/logs
+    env_file:
+      - global.env
+      - ../env/uid.env
+      - ../env/global.override.env
+    networks:
+      - default
+      - public
+
+  sso:
+    image: bitwarden/sso:{{{CoreVersion}}}
+    container_name: bitwarden-sso
+    restart: always
+    volumes:
+      - ../identity:/etc/bitwarden/identity
+      - ../core:/etc/bitwarden/core
+      - ../ca-certificates:/etc/bitwarden/ca-certificates
+      - ../logs/sso:/etc/bitwarden/logs
+    env_file:
+      - global.env
+      - ../env/uid.env
+      - ../env/global.override.env
+    networks:
+      - default
+      - public
+
+  admin:
+    image: bitwarden/admin:{{{CoreVersion}}}
+    container_name: bitwarden-admin
+    restart: always
+    depends_on:
+      - mssql
+    volumes:
+      - ../core:/etc/bitwarden/core
+      - ../ca-certificates:/etc/bitwarden/ca-certificates
+      - ../logs/admin:/etc/bitwarden/logs
+    env_file:
+      - global.env
+      - ../env/uid.env
+      - ../env/global.override.env
+    networks:
+      - default
+      - public
+
+  icons:
+    image: bitwarden/icons:{{{CoreVersion}}}
+    container_name: bitwarden-icons
+    restart: always
+    volumes:
+      - ../ca-certificates:/etc/bitwarden/ca-certificates
+      - ../logs/icons:/etc/bitwarden/logs
+    env_file:
+      - global.env
+      - ../env/uid.env
+    networks:
+      - default
+      - public
+
+  notifications:
+    image: bitwarden/notifications:{{{CoreVersion}}}
+    container_name: bitwarden-notifications
+    restart: always
+    volumes:
+      - ../ca-certificates:/etc/bitwarden/ca-certificates
+      - ../logs/notifications:/etc/bitwarden/logs
+    env_file:
+      - global.env
+      - ../env/uid.env
+      - ../env/global.override.env
+    networks:
+      - default
+      - public
+
+  events:
+    image: bitwarden/events:{{{CoreVersion}}}
+    container_name: bitwarden-events
+    restart: always
+    volumes:
+      - ../ca-certificates:/etc/bitwarden/ca-certificates
+      - ../logs/events:/etc/bitwarden/logs
+    env_file:
+      - global.env
+      - ../env/uid.env
+      - ../env/global.override.env
+    networks:
+      - default
+      - public
+
+  nginx:
+    image: bitwarden/nginx:{{{CoreVersion}}}
+    container_name: bitwarden-nginx
+    restart: always
+    depends_on:
+      - web
+      - admin
+      - api
+      - identity
+{{#if HasPort}}
+    ports:
+{{#if HttpPort}}
+      - '{{{HttpPort}}}:8080'
+{{/if}}
+{{#if HttpsPort}}
+      - '{{{HttpsPort}}}:8443'
+{{/if}}
+{{/if}}
+    volumes:
+      - ../nginx:/etc/bitwarden/nginx
+      - ../letsencrypt:/etc/letsencrypt
+      - ../ssl:/etc/ssl
+      - ../logs/nginx:/var/log/nginx
+    env_file:
+      - ../env/uid.env
+    networks:
+      - default
+      - public
+
+{{#if EnableKeyConnector}}
+  key-connector:
+    image: bitwarden/key-connector:{{{KeyConnectorVersion}}}
+    container_name: bitwarden-key-connector
+    restart: always
+    volumes:
+      - ../key-connector:/etc/bitwarden/key-connector
+      - ../ca-certificates:/etc/bitwarden/ca-certificates
+      - ../logs/key-connector:/etc/bitwarden/logs
+    env_file:
+      - ../env/uid.env
+      - ../env/key-connector.override.env
+    networks:
+      - default
+      - public
+{{/if}}
+{{#if EnableScim}}
+
+  scim:
+    image: bitwarden/scim:{{{CoreVersion}}}
+    container_name: bitwarden-scim
+    restart: always
+    volumes:
+      - ../core:/etc/bitwarden/core
+      - ../ca-certificates:/etc/bitwarden/ca-certificates
+      - ../logs/scim:/etc/bitwarden/logs
+    env_file:
+      - global.env
+      - ../env/uid.env
+      - ../env/global.override.env
+    networks:
+      - default
+      - public
+{{/if}}
+{{#if MssqlDataDockerVolume}}
+
+volumes:
+  mssql_data:
+    labels:
+      com.bitwarden.product: bitwarden
+{{/if}}
+
+networks:
+  default:
+    internal: true
+  public:
+    internal: false

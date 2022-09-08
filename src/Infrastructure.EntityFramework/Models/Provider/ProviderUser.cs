@@ -1,18 +1,17 @@
 ﻿using AutoMapper;
 
-namespace Bit.Infrastructure.EntityFramework.Models
-{
-    public class ProviderUser : Core.Entities.Provider.ProviderUser
-    {
-        public virtual User User { get; set; }
-        public virtual Provider Provider { get; set; }
-    }
+namespace Bit.Infrastructure.EntityFramework.Models;
 
-    public class ProviderUserMapperProfile : Profile
+public class ProviderUser : Core.Entities.Provider.ProviderUser
+{
+    public virtual User User { get; set; }
+    public virtual Provider Provider { get; set; }
+}
+
+public class ProviderUserMapperProfile : Profile
+{
+    public ProviderUserMapperProfile()
     {
-        public ProviderUserMapperProfile()
-        {
-            CreateMap<Core.Entities.Provider.ProviderUser, ProviderUser>().ReverseMap();
-        }
+        CreateMap<Core.Entities.Provider.ProviderUser, ProviderUser>().ReverseMap();
     }
 }

@@ -4,30 +4,29 @@ using Bit.Core.Models.Business.Tokenables;
 using Bit.Core.Tokens;
 using Xunit;
 
-namespace Bit.Core.Test.Models.Business.Tokenables
+namespace Bit.Core.Test.Models.Business.Tokenables;
+
+public class EmergencyAccessInviteTokenableTests
 {
-    public class EmergencyAccessInviteTokenableTests
+    [Theory, AutoData]
+    public void SerializationSetsCorrectDateTime(EmergencyAccess emergencyAccess)
     {
-        [Theory, AutoData]
-        public void SerializationSetsCorrectDateTime(EmergencyAccess emergencyAccess)
-        {
-            var token = new EmergencyAccessInviteTokenable(emergencyAccess, 2);
-            Assert.Equal(Tokenable.FromToken<EmergencyAccessInviteTokenable>(token.ToToken().ToString()).ExpirationDate,
-                token.ExpirationDate,
-                TimeSpan.FromMilliseconds(10));
-        }
+        var token = new EmergencyAccessInviteTokenable(emergencyAccess, 2);
+        Assert.Equal(Tokenable.FromToken<EmergencyAccessInviteTokenable>(token.ToToken().ToString()).ExpirationDate,
+            token.ExpirationDate,
+            TimeSpan.FromMilliseconds(10));
+    }
 
-        [Fact]
-        public void IsInvalidIfIdentifierIsWrong()
+    [Fact]
+    public void IsInvalidIfIdentifierIsWrong()
+    {
+        var token = new EmergencyAccessInviteTokenable(DateTime.MaxValue)
         {
-            var token = new EmergencyAccessInviteTokenable(DateTime.MaxValue)
-            {
-                Email = "email",
-                Id = Guid.NewGuid(),
-                Identifier = "not correct"
-            };
+            Email = "email",
+            Id = Guid.NewGuid(),
+            Identifier = "not correct"
+        };
 
-            Assert.False(token.Valid);
-        }
+        Assert.False(token.Valid);
     }
 }
