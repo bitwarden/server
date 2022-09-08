@@ -87,5 +87,29 @@ namespace Bit.Api.Test.Controllers
             await sutProvider.GetDependency<IUpdateSecretCommand>().Received(1)
                          .UpdateAsync(Arg.Any<Secret>());
         }
+
+        [Theory]
+        [BitAutoData]
+        public async void BulkDeleteSecret_Success(SutProvider<SecretsController> sutProvider, List<Guid> data)
+        {
+            var mockResult = new List<Tuple<Guid, string>>();
+            foreach (var id in data)
+            {
+                mockResult.Add(new Tuple<Guid, string>(id, ""));
+            }
+            sutProvider.GetDependency<IDeleteSecretCommand>().DeleteSecrets(data).ReturnsForAnyArgs(mockResult);
+
+            var results = await sutProvider.Sut.BulkDeleteAsync(data);
+            await sutProvider.GetDependency<IDeleteSecretCommand>().Received(1)
+                         .DeleteSecrets(Arg.Is(data));
+            Assert.Equal(data.Count(), results.Data.Count());
+        }
+
+        [Theory]
+        [BitAutoData]
+        public async void BulkDeleteSecret_NoGuids_ThrowsArgumentNullException(SutProvider<SecretsController> sutProvider)
+        {
+            await Assert.ThrowsAsync<ArgumentNullException>(() => sutProvider.Sut.BulkDeleteAsync(new List<Guid>()));
+        }
     }
 }

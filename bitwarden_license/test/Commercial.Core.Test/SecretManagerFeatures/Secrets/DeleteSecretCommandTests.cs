@@ -1,10 +1,9 @@
-using Bit.Commercial.Core.SecretManagerFeatures.Secrets;
+﻿using Bit.Commercial.Core.SecretManagerFeatures.Secrets;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
-using Bit.Test.Common.Helpers;
 using NSubstitute;
 using Xunit;
 
