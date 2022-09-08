@@ -43,6 +43,7 @@ public class OrganizationService : IOrganizationService
     private readonly IOrganizationConnectionRepository _organizationConnectionRepository;
     private readonly ICurrentContext _currentContext;
     private readonly ILogger<OrganizationService> _logger;
+    private readonly I18nService _i18nService;
 
 
     public OrganizationService(
@@ -70,7 +71,8 @@ public class OrganizationService : IOrganizationService
         IOrganizationApiKeyRepository organizationApiKeyRepository,
         IOrganizationConnectionRepository organizationConnectionRepository,
         ICurrentContext currentContext,
-        ILogger<OrganizationService> logger)
+        ILogger<OrganizationService> logger,
+        I18nService i18nService)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -97,6 +99,7 @@ public class OrganizationService : IOrganizationService
         _organizationConnectionRepository = organizationConnectionRepository;
         _currentContext = currentContext;
         _logger = logger;
+        _i18nService = i18nService;
     }
 
     public async Task ReplacePaymentMethodAsync(Guid organizationId, string paymentToken,
@@ -2319,6 +2322,13 @@ public class OrganizationService : IOrganizationService
             throw new BadRequestException("Only owners can restore other owners.");
         }
 
+        var organization = await _organizationRepository.GetByIdAsync(organizationUser.OrganizationId);
+        var occupiedSeats = await GetOccupiedSeatCount(organization);
+        if (organization.Seats.HasValue && organization.Seats.Value - occupiedSeats < 1)
+        {
+            throw new BadRequestException(_i18nService.T("NoSeatsAvailable", organization.Name));
+        }
+
         await CheckPoliciesBeforeRestoreAsync(organizationUser, userService);
 
         var status = GetPriorActiveOrganizationUserStatusType(organizationUser);
@@ -2338,6 +2348,14 @@ public class OrganizationService : IOrganizationService
         if (!filteredUsers.Any())
         {
             throw new BadRequestException("Users invalid.");
+        }
+        
+        var organization = await _organizationRepository.GetByIdAsync(organizationId);
+        var occupiedSeats = await GetOccupiedSeatCount(organization);
+        if (organization.Seats.HasValue && organization.Seats.Value - occupiedSeats < organizationUserIds.Count())
+        {
+            // TODO: required vs available count
+            throw new BadRequestException(_i18nService.T("NoSeatsAvailable", organization.Name));
         }
 
         var deletingUserIsOwner = false;
