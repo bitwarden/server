@@ -56,7 +56,7 @@ public class OrganizationUserUserDetails : IExternal, ITwoFactorProvidersUser
     {
         return Premium.GetValueOrDefault(false);
     }
-    
+
     public bool OccupiesOrganizationSeat
     {
         get

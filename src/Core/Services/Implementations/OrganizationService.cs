@@ -2345,7 +2345,7 @@ public class OrganizationService : IOrganizationService
         {
             throw new BadRequestException("Users invalid.");
         }
-        
+
         var organization = await _organizationRepository.GetByIdAsync(organizationId);
         var occupiedSeats = await GetOccupiedSeatCount(organization);
         var availableSeats = organization.Seats.GetValueOrDefault(0) - occupiedSeats;
@@ -2466,7 +2466,7 @@ public class OrganizationService : IOrganizationService
 
         return status;
     }
-    
+
     public async Task<int> GetOccupiedSeatCount(Organization organization)
     {
         var orgUsers = await _organizationUserRepository.GetManyByOrganizationAsync(organization.Id, null);
