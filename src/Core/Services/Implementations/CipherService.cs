@@ -31,7 +31,6 @@ public class CipherService : ICipherService
     private const long _fileSizeLeeway = 1024L * 1024L; // 1MB 
     private readonly IReferenceEventService _referenceEventService;
     private readonly ICurrentContext _currentContext;
-    private readonly IProviderService _providerService;
 
     public CipherService(
         ICipherRepository cipherRepository,
@@ -875,12 +874,6 @@ public class CipherService : ICipherService
         var collectionCiphersGroupDict = collectionCiphers
             .Where(c => orgCipherIds.Contains(c.CipherId))
             .GroupBy(c => c.CipherId).ToDictionary(s => s.Key);
-
-        var providerId = await _currentContext.ProviderIdForOrg(organizationId);
-        if (providerId.HasValue)
-        {
-            await _providerService.LogProviderAccessToOrganizationAsync(organizationId);
-        }
 
         return (orgCiphers, collectionCiphersGroupDict);
     }
