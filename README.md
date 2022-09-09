@@ -92,4 +92,4 @@ We recently migrated to using file scoped namespaces to save some horizontal spa
 5. Commit
 6. Run `git merge -Xours 7f5f010e1eea400300c47f776604ecf46c4b4f2d`
 7. Fix Merge conflicts
-8. Pus
+8. Push
