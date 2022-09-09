@@ -6,6 +6,12 @@
 #  in the future and investigate if we can migrate back.
 # docker-compose --profile mssql exec mssql bash /mnt/helpers/run_migrations.sh @args
 
+param([switch]$all = $false, [switch]$postgres = $false, [switch]$mysql = $false)
+
+if ($all -or $postgres -or $mysql) {
+  Write-Host "Starting Microsoft SQL Server Migrations"
+}
+
 docker run `
   -v "$(pwd)/helpers/mssql:/mnt/helpers" `
   -v "$(pwd)/../util/Migrator:/mnt/migrator/" `
@@ -15,3 +21,16 @@ docker run `
   --rm `
   mcr.microsoft.com/mssql-tools `
   /mnt/helpers/run_migrations.sh @args
+
+$currentDir = Get-Location
+
+if ($all -or $mysql) {
+  Write-Host "Starting MySQL Migrations"
+  Set-Location "$currentDir/../util/MySqlMigrations/"
+  dotnet ef database update
+}
+if ($all -or $postgres) {
+  Write-Host "Starting PostgreSQL Migrations"
+  Set-Location "$currentDir/../util/PostgresMigrations/"
+  dotnet ef database update
+}
