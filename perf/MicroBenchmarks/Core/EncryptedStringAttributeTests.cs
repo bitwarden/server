@@ -1,5 +1,5 @@
+﻿using BenchmarkDotNet.Attributes;
 using Bit.Core.Utilities;
-using BenchmarkDotNet.Attributes;
 
 namespace Bit.MicroBenchmarks.Core;
 

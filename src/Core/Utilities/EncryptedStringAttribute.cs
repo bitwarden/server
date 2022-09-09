@@ -18,18 +18,18 @@ public class EncryptedStringAttribute : ValidationAttribute
     {
         _encryptionTypeMap = new()
         {
-            [EncryptionType.AesCbc256_B64] = 2,
-            [EncryptionType.AesCbc128_HmacSha256_B64] = 3,
-            [EncryptionType.AesCbc256_HmacSha256_B64] = 3,
-            [EncryptionType.Rsa2048_OaepSha256_B64] = 1,
-            [EncryptionType.Rsa2048_OaepSha1_B64] = 1,
-            [EncryptionType.Rsa2048_OaepSha256_HmacSha256_B64] = 2,
-            [EncryptionType.Rsa2048_OaepSha1_HmacSha256_B64] = 2,
+            [EncryptionType.AesCbc256_B64] = 2, // iv|ct
+            [EncryptionType.AesCbc128_HmacSha256_B64] = 3, // iv|ct|mac
+            [EncryptionType.AesCbc256_HmacSha256_B64] = 3, // iv|ct|mac
+            [EncryptionType.Rsa2048_OaepSha256_B64] = 1, // rsaCt
+            [EncryptionType.Rsa2048_OaepSha1_B64] = 1, // rsaCt
+            [EncryptionType.Rsa2048_OaepSha256_HmacSha256_B64] = 2, // rsaCt|mac
+            [EncryptionType.Rsa2048_OaepSha1_HmacSha256_B64] = 2, // rsaCt|mac
         };
 
 #if DEBUG
         var enumValues = Enum.GetValues<EncryptionType>();
-        Debug.Assert(enumValues.Length == _encryptionTypeMap.Count, 
+        Debug.Assert(enumValues.Length == _encryptionTypeMap.Count,
             $"New {nameof(EncryptionType)} enums should be added to the {nameof(_encryptionTypeMap)}");
 #endif
     }
@@ -75,7 +75,7 @@ public class EncryptedStringAttribute : ValidationAttribute
             var pieces = 1;
             var findIndex = encryptionPiecesChunk.IndexOf('|');
 
-            while(findIndex != -1)
+            while (findIndex != -1)
             {
                 pieces++;
                 encryptionPiecesChunk = encryptionPiecesChunk[++findIndex..];
@@ -131,11 +131,13 @@ public class EncryptedStringAttribute : ValidationAttribute
         {
             if (requiredPieces == 1)
             {
+                // Only one more part is needed so don't split and check the chunk
                 if (!IsValidBase64(rest))
                 {
                     return false;
                 }
 
+                // Make sure there isn't another split character possibly denoting another chunk
                 return rest.IndexOf('|') == -1;
             }
             else
@@ -153,6 +155,7 @@ public class EncryptedStringAttribute : ValidationAttribute
                 }
             }
 
+            // This current piece is valid so we can count down
             requiredPieces--;
         }
 
@@ -176,6 +179,7 @@ public class EncryptedStringAttribute : ValidationAttribute
         }
         finally
         {
+            // Check if we rented the pool and if so, return it.
             if (pooledChunks != null)
             {
                 ArrayPool<byte>.Shared.Return(pooledChunks);
