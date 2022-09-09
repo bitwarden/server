@@ -47,7 +47,8 @@ public class CipherService : ICipherService
         IPolicyRepository policyRepository,
         GlobalSettings globalSettings,
         IReferenceEventService referenceEventService,
-        ICurrentContext currentContext)
+        ICurrentContext currentContext,
+        IProviderService providerService)
     {
         _cipherRepository = cipherRepository;
         _folderRepository = folderRepository;
@@ -63,6 +64,7 @@ public class CipherService : ICipherService
         _globalSettings = globalSettings;
         _referenceEventService = referenceEventService;
         _currentContext = currentContext;
+        _providerService = providerService;
     }
 
     public async Task SaveAsync(Cipher cipher, Guid savingUserId, DateTime? lastKnownRevisionDate,
