@@ -8,19 +8,21 @@
 
 param([switch]$all = $false, [switch]$postgres = $false, [switch]$mysql = $false)
 
-if ($all -or $postgres -or $mysql) {
+if ($all) {
   Write-Host "Starting Microsoft SQL Server Migrations"
 }
 
-docker run `
-  -v "$(pwd)/helpers/mssql:/mnt/helpers" `
-  -v "$(pwd)/../util/Migrator:/mnt/migrator/" `
-  -v "$(pwd)/.data/mssql:/mnt/data" `
-  --env-file .env `
-  --network=bitwardenserver_default `
-  --rm `
-  mcr.microsoft.com/mssql-tools `
-  /mnt/helpers/run_migrations.sh @args
+if ($all -or (!$postgres -and !$mysql)) {
+  docker run `
+    -v "$(pwd)/helpers/mssql:/mnt/helpers" `
+    -v "$(pwd)/../util/Migrator:/mnt/migrator/" `
+    -v "$(pwd)/.data/mssql:/mnt/data" `
+    --env-file .env `
+    --network=bitwardenserver_default `
+    --rm `
+    mcr.microsoft.com/mssql-tools `
+    /mnt/helpers/run_migrations.sh @args
+}
 
 $currentDir = Get-Location
 
