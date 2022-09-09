@@ -2,6 +2,8 @@
 using Bit.Core.Context;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
+using Bit.Scim.Commands.Groups;
+using Bit.Scim.Commands.Groups.Interfaces;
 using Bit.Scim.Context;
 using Bit.Scim.Utilities;
 using Bit.SharedWeb.Utilities;
@@ -75,6 +77,8 @@ public class Startup
             config.Filters.Add(new LoggingExceptionHandlerFilterAttribute());
         });
         services.Configure<RouteOptions>(options => options.LowercaseUrls = true);
+
+        services.AddScoped<IGetGroupCommand, GetGroupCommand>();
     }
 
     public void Configure(
