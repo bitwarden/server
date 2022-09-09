@@ -43,8 +43,6 @@ public class OrganizationService : IOrganizationService
     private readonly IOrganizationConnectionRepository _organizationConnectionRepository;
     private readonly ICurrentContext _currentContext;
     private readonly ILogger<OrganizationService> _logger;
-    private readonly I18nService _i18nService;
-
 
     public OrganizationService(
         IOrganizationRepository organizationRepository,
@@ -71,8 +69,7 @@ public class OrganizationService : IOrganizationService
         IOrganizationApiKeyRepository organizationApiKeyRepository,
         IOrganizationConnectionRepository organizationConnectionRepository,
         ICurrentContext currentContext,
-        ILogger<OrganizationService> logger,
-        I18nService i18nService)
+        ILogger<OrganizationService> logger)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -99,7 +96,6 @@ public class OrganizationService : IOrganizationService
         _organizationConnectionRepository = organizationConnectionRepository;
         _currentContext = currentContext;
         _logger = logger;
-        _i18nService = i18nService;
     }
 
     public async Task ReplacePaymentMethodAsync(Guid organizationId, string paymentToken,
@@ -2326,7 +2322,7 @@ public class OrganizationService : IOrganizationService
         var occupiedSeats = await GetOccupiedSeatCount(organization);
         if (organization.Seats.HasValue && organization.Seats.Value - occupiedSeats < 1)
         {
-            throw new BadRequestException(_i18nService.T("NoSeatsAvailable", organization.Name));
+            throw new BadRequestException("Cannot restore user. Seat limit has been reached.");
         }
 
         await CheckPoliciesBeforeRestoreAsync(organizationUser, userService);
@@ -2356,8 +2352,8 @@ public class OrganizationService : IOrganizationService
         if (organization.Seats.HasValue && availableSeats < organizationUserIds.Count())
         {
             throw new BadRequestException("Not enough seats available. " +
-                                          $"You are trying to restore ${organizationUserIds.Count()} users, but you " +
-                                          $"only have {availableSeats} seats available.");
+                                          $"You are trying to restore {organizationUserIds.Count()} users, but you " +
+                                          $"have {availableSeats} seat(s) available.");
         }
 
         var deletingUserIsOwner = false;
