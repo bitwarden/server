@@ -1,8 +1,8 @@
 ﻿using Bit.Core.Enums;
-using Bit.Core.Models.Data;
+using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Utilities;
+using Bit.Scim.Commands.Users.Interfaces;
 using Bit.Scim.Context;
 using Bit.Scim.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -21,6 +21,7 @@ public class UsersController : Controller
     private readonly IOrganizationService _organizationService;
     private readonly IScimContext _scimContext;
     private readonly ScimSettings _scimSettings;
+    private readonly IPostUserCommand _postUserCommand;
     private readonly ILogger<UsersController> _logger;
 
     public UsersController(
@@ -30,6 +31,7 @@ public class UsersController : Controller
         IOrganizationService organizationService,
         IScimContext scimContext,
         IOptions<ScimSettings> scimSettings,
+        IPostUserCommand postUserCommand,
         ILogger<UsersController> logger)
     {
         _userService = userService;
@@ -38,6 +40,7 @@ public class UsersController : Controller
         _organizationService = organizationService;
         _scimContext = scimContext;
         _scimSettings = scimSettings?.Value;
+        _postUserCommand = postUserCommand;
         _logger = logger;
     }
 
@@ -126,61 +129,21 @@ public class UsersController : Controller
     [HttpPost("")]
     public async Task<IActionResult> Post(Guid organizationId, [FromBody] ScimUserRequestModel model)
     {
-        var email = model.PrimaryEmail?.ToLowerInvariant();
-        if (string.IsNullOrWhiteSpace(email))
+        try
         {
-            switch (_scimContext.RequestScimProvider)
-            {
-                case ScimProviderType.AzureAd:
-                    email = model.UserName?.ToLowerInvariant();
-                    break;
-                default:
-                    email = model.WorkEmail?.ToLowerInvariant();
-                    if (string.IsNullOrWhiteSpace(email))
-                    {
-                        email = model.Emails?.FirstOrDefault()?.Value?.ToLowerInvariant();
-                    }
-                    break;
-            }
-        }
+            var orgUser = await _postUserCommand.PostUserAsync(organizationId, model);
+            var scimUserResponseModel = new ScimUserResponseModel(orgUser);
+            return new CreatedResult(Url.Action(nameof(Get), new { orgUser.OrganizationId, orgUser.Id }), scimUserResponseModel);
 
-        if (string.IsNullOrWhiteSpace(email) || !model.Active)
-        {
-            return new BadRequestResult();
         }
-
-        var orgUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(organizationId);
-        var orgUserByEmail = orgUsers.FirstOrDefault(ou => ou.Email?.ToLowerInvariant() == email);
-        if (orgUserByEmail != null)
+        catch (BadRequestException)
         {
-            return new ConflictResult();
+            return BadRequest();
         }
-
-        string externalId = null;
-        if (!string.IsNullOrWhiteSpace(model.ExternalId))
+        catch (ConflictException)
         {
-            externalId = model.ExternalId;
+            return Conflict();
         }
-        else if (!string.IsNullOrWhiteSpace(model.UserName))
-        {
-            externalId = model.UserName;
-        }
-        else
-        {
-            externalId = CoreHelpers.RandomString(15);
-        }
-
-        var orgUserByExternalId = orgUsers.FirstOrDefault(ou => ou.ExternalId == externalId);
-        if (orgUserByExternalId != null)
-        {
-            return new ConflictResult();
-        }
-
-        var invitedOrgUser = await _organizationService.InviteUserAsync(organizationId, null, email,
-            OrganizationUserType.User, false, externalId, new List<SelectionReadOnly>());
-        var orgUser = await _organizationUserRepository.GetDetailsByIdAsync(invitedOrgUser.Id);
-        var response = new ScimUserResponseModel(orgUser);
-        return new CreatedResult(Url.Action(nameof(Get), new { orgUser.OrganizationId, orgUser.Id }), response);
     }
 
     [HttpPut("{id}")]
