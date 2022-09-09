@@ -1,8 +1,10 @@
 ﻿using Bit.Core.Enums;
+using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
+using Bit.Scim.Commands.Users.Interfaces;
 using Bit.Scim.Context;
 using Bit.Scim.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -21,6 +23,7 @@ public class UsersController : Controller
     private readonly IOrganizationService _organizationService;
     private readonly IScimContext _scimContext;
     private readonly ScimSettings _scimSettings;
+    private readonly IGetUserCommand _getUserCommand;
     private readonly ILogger<UsersController> _logger;
 
     public UsersController(
@@ -30,6 +33,7 @@ public class UsersController : Controller
         IOrganizationService organizationService,
         IScimContext scimContext,
         IOptions<ScimSettings> scimSettings,
+        IGetUserCommand getUserCommand,
         ILogger<UsersController> logger)
     {
         _userService = userService;
@@ -38,22 +42,26 @@ public class UsersController : Controller
         _organizationService = organizationService;
         _scimContext = scimContext;
         _scimSettings = scimSettings?.Value;
+        _getUserCommand = getUserCommand;
         _logger = logger;
     }
 
     [HttpGet("{id}")]
     public async Task<IActionResult> Get(Guid organizationId, Guid id)
     {
-        var orgUser = await _organizationUserRepository.GetDetailsByIdAsync(id);
-        if (orgUser == null || orgUser.OrganizationId != organizationId)
+        try
         {
-            return new NotFoundObjectResult(new ScimErrorResponseModel
+            var scimUserResponseModel = await _getUserCommand.GetUserAsync(organizationId, id);
+            return Ok(scimUserResponseModel);
+        }
+        catch (NotFoundException ex)
+        {
+            return NotFound(new ScimErrorResponseModel
             {
-                Status = 404,
-                Detail = "User not found."
+                Status = StatusCodes.Status404NotFound,
+                Detail = ex.Message
             });
         }
-        return new ObjectResult(new ScimUserResponseModel(orgUser));
     }
 
     [HttpGet("")]
