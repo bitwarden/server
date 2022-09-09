@@ -1,6 +1,5 @@
 ﻿using System.Buffers;
 using System.ComponentModel.DataAnnotations;
-using System.Diagnostics;
 using Bit.Core.Enums;
 
 #nullable enable
@@ -12,27 +11,16 @@ namespace Bit.Core.Utilities;
 /// </summary>
 public class EncryptedStringAttribute : ValidationAttribute
 {
-    private static readonly Dictionary<EncryptionType, int> _encryptionTypeMap;
-
-    static EncryptedStringAttribute()
+    internal static readonly Dictionary<EncryptionType, int> _encryptionTypeMap = new()
     {
-        _encryptionTypeMap = new()
-        {
-            [EncryptionType.AesCbc256_B64] = 2, // iv|ct
-            [EncryptionType.AesCbc128_HmacSha256_B64] = 3, // iv|ct|mac
-            [EncryptionType.AesCbc256_HmacSha256_B64] = 3, // iv|ct|mac
-            [EncryptionType.Rsa2048_OaepSha256_B64] = 1, // rsaCt
-            [EncryptionType.Rsa2048_OaepSha1_B64] = 1, // rsaCt
-            [EncryptionType.Rsa2048_OaepSha256_HmacSha256_B64] = 2, // rsaCt|mac
-            [EncryptionType.Rsa2048_OaepSha1_HmacSha256_B64] = 2, // rsaCt|mac
-        };
-
-#if DEBUG
-        var enumValues = Enum.GetValues<EncryptionType>();
-        Debug.Assert(enumValues.Length == _encryptionTypeMap.Count,
-            $"New {nameof(EncryptionType)} enums should be added to the {nameof(_encryptionTypeMap)}");
-#endif
-    }
+        [EncryptionType.AesCbc256_B64] = 2, // iv|ct
+        [EncryptionType.AesCbc128_HmacSha256_B64] = 3, // iv|ct|mac
+        [EncryptionType.AesCbc256_HmacSha256_B64] = 3, // iv|ct|mac
+        [EncryptionType.Rsa2048_OaepSha256_B64] = 1, // rsaCt
+        [EncryptionType.Rsa2048_OaepSha1_B64] = 1, // rsaCt
+        [EncryptionType.Rsa2048_OaepSha256_HmacSha256_B64] = 2, // rsaCt|mac
+        [EncryptionType.Rsa2048_OaepSha1_HmacSha256_B64] = 2, // rsaCt|mac
+    };
 
     public EncryptedStringAttribute()
         : base("{0} is not a valid encrypted string.")
