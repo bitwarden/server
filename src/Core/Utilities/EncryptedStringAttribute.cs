@@ -1,0 +1,185 @@
+﻿using System.Buffers;
+using System.ComponentModel.DataAnnotations;
+using System.Diagnostics;
+using Bit.Core.Enums;
+
+#nullable enable
+
+namespace Bit.Core.Utilities;
+
+/// <summary>
+/// Validates a string that is in encrypted form: "head.b64iv=|b64ct=|b64mac="
+/// </summary>
+public class EncryptedStringAttribute : ValidationAttribute
+{
+    private static readonly Dictionary<EncryptionType, int> _encryptionTypeMap;
+
+    static EncryptedStringAttribute()
+    {
+        _encryptionTypeMap = new()
+        {
+            [EncryptionType.AesCbc256_B64] = 2,
+            [EncryptionType.AesCbc128_HmacSha256_B64] = 3,
+            [EncryptionType.AesCbc256_HmacSha256_B64] = 3,
+            [EncryptionType.Rsa2048_OaepSha256_B64] = 1,
+            [EncryptionType.Rsa2048_OaepSha1_B64] = 1,
+            [EncryptionType.Rsa2048_OaepSha256_HmacSha256_B64] = 2,
+            [EncryptionType.Rsa2048_OaepSha1_HmacSha256_B64] = 2,
+        };
+
+#if DEBUG
+        var enumValues = Enum.GetValues<EncryptionType>();
+        Debug.Assert(enumValues.Length == _encryptionTypeMap.Count, 
+            $"New {nameof(EncryptionType)} enums should be added to the {nameof(_encryptionTypeMap)}");
+#endif
+    }
+
+    public EncryptedStringAttribute()
+        : base("{0} is not a valid encrypted string.")
+    { }
+
+    public override bool IsValid(object? value)
+    {
+        try
+        {
+            if (value is null)
+            {
+                return true;
+            }
+
+            if (value is string stringValue)
+            {
+                // Fast path
+                return IsValidCore(stringValue);
+            }
+
+            // Slow path (ish)
+            return IsValidCore(value.ToString());
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    internal static bool IsValidCore(ReadOnlySpan<char> value)
+    {
+        if (!value.TrySplitBy('.', out var headerChunk, out var rest))
+        {
+            // We coundn't find a header part, this is the slow path, because we have to do two loops over
+            // the data.
+            // If it has 3 encryption parts that means it is AesCbc128_HmacSha256_B64
+            // else we assume it is AesCbc256_B64
+            var encryptionPiecesChunk = rest;
+
+            var pieces = 1;
+            var findIndex = encryptionPiecesChunk.IndexOf('|');
+
+            while(findIndex != -1)
+            {
+                pieces++;
+                encryptionPiecesChunk = encryptionPiecesChunk[++findIndex..];
+                findIndex = encryptionPiecesChunk.IndexOf('|');
+            }
+
+            if (pieces == 3)
+            {
+                return ValidatePieces(rest, _encryptionTypeMap[EncryptionType.AesCbc128_HmacSha256_B64]);
+            }
+            else
+            {
+                return ValidatePieces(rest, _encryptionTypeMap[EncryptionType.AesCbc256_B64]);
+            }
+        }
+
+        EncryptionType encryptionType;
+
+        // Using byte here because that is the backing type for EncryptionType
+        if (!byte.TryParse(headerChunk, out var encryptionTypeNumber))
+        {
+            // We can't read the header chunk as a number, this is the slow path
+            if (!Enum.TryParse(headerChunk, out encryptionType))
+            {
+                // Can't even get the enum from a non-number header, fail
+                return false;
+            }
+
+            // Since this value came from Enum.TryParse we know it is an enumerated object and we can therefore
+            // just access the dictionary
+            return ValidatePieces(rest, _encryptionTypeMap[encryptionType]);
+        }
+
+        // Simply cast the number to the enum, this could be a value that doesn't actually have a backing enum
+        // entry but that is alright we will use it to look in the dictionary and non-valid 
+        // numbers will be filtered out there.
+        encryptionType = (EncryptionType)encryptionTypeNumber;
+
+        if (!_encryptionTypeMap.TryGetValue(encryptionType, out var encryptionPieces))
+        {
+            // Could not find a configuration map for the given header piece. This is an invalid string
+            return false;
+        }
+
+        return ValidatePieces(rest, encryptionPieces);
+    }
+
+    private static bool ValidatePieces(ReadOnlySpan<char> encryptionPart, int requiredPieces)
+    {
+        var rest = encryptionPart;
+
+        while (requiredPieces != 0)
+        {
+            if (requiredPieces == 1)
+            {
+                if (!IsValidBase64(rest))
+                {
+                    return false;
+                }
+
+                return rest.IndexOf('|') == -1;
+            }
+            else
+            {
+                // More than one part is required so split it out
+                if (!rest.TrySplitBy('|', out var chunk, out rest))
+                {
+                    return false;
+                }
+
+                // Is the required chunk valid base 64?
+                if (!IsValidBase64(chunk))
+                {
+                    return false;
+                }
+            }
+
+            requiredPieces--;
+        }
+
+        // No more parts are required, so check there are no extra parts
+        return rest.IndexOf('|') == -1;
+    }
+
+    private static bool IsValidBase64(ReadOnlySpan<char> input)
+    {
+        byte[]? pooledChunks = null;
+
+        // Ref: https://vcsjones.dev/stackalloc/
+        var byteBuffer = input.Length > 128
+            ? (pooledChunks = ArrayPool<byte>.Shared.Rent(input.Length * 2))
+            : stackalloc byte[256];
+
+        try
+        {
+            var successful = Convert.TryFromBase64Chars(input, byteBuffer, out var bytesWritten);
+            return successful && bytesWritten > 0;
+        }
+        finally
+        {
+            if (pooledChunks != null)
+            {
+                ArrayPool<byte>.Shared.Return(pooledChunks);
+            }
+        }
+    }
+}
