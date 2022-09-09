@@ -1,0 +1,56 @@
+﻿using Bit.Core.Entities;
+using Bit.Core.Exceptions;
+using Bit.Core.Repositories;
+using Bit.Core.Services;
+using Bit.Scim.Commands.Users;
+using Bit.Scim.Models;
+using Bit.Test.Common.AutoFixture;
+using Bit.Test.Common.AutoFixture.Attributes;
+using NSubstitute;
+using Xunit;
+
+namespace Bit.Scim.Test.Commands.Users;
+
+[SutProviderCustomize]
+public class DeleteUserCommandTests
+{
+    [Theory]
+    [BitAutoData]
+    public async Task DeleteUser_Success(SutProvider<DeleteUserCommand> sutProvider, Guid organizationId, Guid organizationUserId, ScimUserRequestModel model)
+    {
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(organizationUserId)
+            .Returns(new OrganizationUser
+            {
+                Id = organizationUserId,
+                OrganizationId = organizationId
+            });
+
+        await sutProvider.Sut.DeleteUserAsync(organizationId, organizationUserId, model);
+
+        await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).GetByIdAsync(organizationUserId);
+        await sutProvider.GetDependency<IOrganizationService>().Received(1).DeleteUserAsync(organizationId, organizationUserId, null);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task DeleteUser_NotFound_Throws(SutProvider<DeleteUserCommand> sutProvider, Guid organizationId, Guid organizationUserId, ScimUserRequestModel model)
+    {
+        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.DeleteUserAsync(organizationId, organizationUserId, model));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task DeleteUser_MismatchingOrganizationId_Throws(SutProvider<DeleteUserCommand> sutProvider, Guid organizationId, Guid organizationUserId, ScimUserRequestModel model)
+    {
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(organizationUserId)
+            .Returns(new OrganizationUser
+            {
+                Id = organizationUserId,
+                OrganizationId = Guid.NewGuid()
+            });
+
+        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.DeleteUserAsync(organizationId, organizationUserId, model));
+    }
+}

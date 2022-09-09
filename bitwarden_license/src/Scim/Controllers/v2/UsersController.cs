@@ -1,8 +1,10 @@
 ﻿using Bit.Core.Enums;
+using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
+using Bit.Scim.Commands.Users.Interfaces;
 using Bit.Scim.Context;
 using Bit.Scim.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -21,6 +23,7 @@ public class UsersController : Controller
     private readonly IOrganizationService _organizationService;
     private readonly IScimContext _scimContext;
     private readonly ScimSettings _scimSettings;
+    private readonly IDeleteUserCommand _deleteUserCommand;
     private readonly ILogger<UsersController> _logger;
 
     public UsersController(
@@ -30,6 +33,7 @@ public class UsersController : Controller
         IOrganizationService organizationService,
         IScimContext scimContext,
         IOptions<ScimSettings> scimSettings,
+        IDeleteUserCommand deleteUserCommand,
         ILogger<UsersController> logger)
     {
         _userService = userService;
@@ -38,6 +42,7 @@ public class UsersController : Controller
         _organizationService = organizationService;
         _scimContext = scimContext;
         _scimSettings = scimSettings?.Value;
+        _deleteUserCommand = deleteUserCommand;
         _logger = logger;
     }
 
@@ -264,17 +269,19 @@ public class UsersController : Controller
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(Guid organizationId, Guid id, [FromBody] ScimUserRequestModel model)
     {
-        var orgUser = await _organizationUserRepository.GetByIdAsync(id);
-        if (orgUser == null || orgUser.OrganizationId != organizationId)
+        try
         {
-            return new NotFoundObjectResult(new ScimErrorResponseModel
+            await _deleteUserCommand.DeleteUserAsync(organizationId, id, model);
+            return new NoContentResult();
+        }
+        catch (NotFoundException ex)
+        {
+            return NotFound(new ScimErrorResponseModel
             {
-                Status = 404,
-                Detail = "User not found."
+                Status = StatusCodes.Status404NotFound,
+                Detail = ex.Message
             });
         }
-        await _organizationService.DeleteUserAsync(organizationId, id, null);
-        return new NoContentResult();
     }
 
     private async Task<bool> HandleActiveOperationAsync(Core.Entities.OrganizationUser orgUser, bool active)
