@@ -1,7 +1,9 @@
 ﻿using System.Text.Json;
 using Bit.Core.Entities;
+using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Scim.Commands.Groups.Interfaces;
 using Bit.Scim.Context;
 using Bit.Scim.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -19,18 +21,21 @@ public class GroupsController : Controller
     private readonly IGroupService _groupService;
     private readonly IScimContext _scimContext;
     private readonly ILogger<GroupsController> _logger;
+    private readonly IDeleteGroupCommand _deleteGroupCommand;
 
     public GroupsController(
         IGroupRepository groupRepository,
         IGroupService groupService,
         IOptions<ScimSettings> scimSettings,
         IScimContext scimContext,
+        IDeleteGroupCommand deleteGroupCommand,
         ILogger<GroupsController> logger)
     {
         _scimSettings = scimSettings?.Value;
         _groupRepository = groupRepository;
         _groupService = groupService;
         _scimContext = scimContext;
+        _deleteGroupCommand = deleteGroupCommand;
         _logger = logger;
     }
 
@@ -257,17 +262,19 @@ public class GroupsController : Controller
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(Guid organizationId, Guid id)
     {
-        var group = await _groupRepository.GetByIdAsync(id);
-        if (group == null || group.OrganizationId != organizationId)
+        try
         {
-            return new NotFoundObjectResult(new ScimErrorResponseModel
+            await _deleteGroupCommand.DeleteGroupAsync(organizationId, id);
+            return new NoContentResult();
+        }
+        catch (NotFoundException ex)
+        {
+            return NotFound(new ScimErrorResponseModel
             {
-                Status = 404,
-                Detail = "Group not found."
+                Status = StatusCodes.Status404NotFound,
+                Detail = ex.Message
             });
         }
-        await _groupService.DeleteAsync(group);
-        return new NoContentResult();
     }
 
     private List<Guid> GetOperationValueIds(JsonElement objArray)
