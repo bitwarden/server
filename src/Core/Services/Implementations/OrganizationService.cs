@@ -2469,7 +2469,7 @@ public class OrganizationService : IOrganizationService
 
     public async Task<int> GetOccupiedSeatCount(Organization organization)
     {
-        var orgUsers = await _organizationUserRepository.GetManyByOrganizationAsync(organization.Id, null);
+        var orgUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(organization.Id);
         return orgUsers.Count(ou => ou.OccupiesOrganizationSeat);
     }
 }

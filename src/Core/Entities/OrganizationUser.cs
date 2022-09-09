@@ -27,12 +27,4 @@ public class OrganizationUser : ITableObject<Guid>, IExternal
     {
         Id = CoreHelpers.GenerateComb();
     }
-
-    public bool OccupiesOrganizationSeat
-    {
-        get
-        {
-            return Status != OrganizationUserStatusType.Revoked;
-        }
-    }
 }
