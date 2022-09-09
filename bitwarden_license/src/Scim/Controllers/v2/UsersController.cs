@@ -1,8 +1,10 @@
 ﻿using Bit.Core.Enums;
 using Bit.Core.Models.Data;
+﻿using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
+using Bit.Scim.Commands.Users.Interfaces;
 using Bit.Scim.Context;
 using Bit.Scim.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -21,6 +23,7 @@ public class UsersController : Controller
     private readonly IOrganizationService _organizationService;
     private readonly IScimContext _scimContext;
     private readonly ScimSettings _scimSettings;
+    private readonly IPutUserCommand _putUserCommand;
     private readonly ILogger<UsersController> _logger;
 
     public UsersController(
@@ -30,6 +33,7 @@ public class UsersController : Controller
         IOrganizationService organizationService,
         IScimContext scimContext,
         IOptions<ScimSettings> scimSettings,
+        IPutUserCommand putUserCommand,
         ILogger<UsersController> logger)
     {
         _userService = userService;
@@ -38,6 +42,7 @@ public class UsersController : Controller
         _organizationService = organizationService;
         _scimContext = scimContext;
         _scimSettings = scimSettings?.Value;
+        _putUserCommand = putUserCommand;
         _logger = logger;
     }
 
@@ -186,28 +191,19 @@ public class UsersController : Controller
     [HttpPut("{id}")]
     public async Task<IActionResult> Put(Guid organizationId, Guid id, [FromBody] ScimUserRequestModel model)
     {
-        var orgUser = await _organizationUserRepository.GetByIdAsync(id);
-        if (orgUser == null || orgUser.OrganizationId != organizationId)
+        try
         {
-            return new NotFoundObjectResult(new ScimErrorResponseModel
+            var scimUserResponseModel = await _putUserCommand.PutUserAsync(organizationId, id, model);
+            return Ok(scimUserResponseModel);
+        }
+        catch (NotFoundException ex)
+        {
+            return NotFound(new ScimErrorResponseModel
             {
-                Status = 404,
-                Detail = "User not found."
+                Status = StatusCodes.Status404NotFound,
+                Detail = ex.Message
             });
         }
-
-        if (model.Active && orgUser.Status == OrganizationUserStatusType.Revoked)
-        {
-            await _organizationService.RestoreUserAsync(orgUser, null, _userService);
-        }
-        else if (!model.Active && orgUser.Status != OrganizationUserStatusType.Revoked)
-        {
-            await _organizationService.RevokeUserAsync(orgUser, null);
-        }
-
-        // Have to get full details object for response model
-        var orgUserDetails = await _organizationUserRepository.GetDetailsByIdAsync(id);
-        return new ObjectResult(new ScimUserResponseModel(orgUserDetails));
     }
 
     [HttpPatch("{id}")]
