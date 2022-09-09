@@ -222,6 +222,12 @@ namespace Bit.Api.Controllers
             var responses = orgCiphers.Select(c => new CipherMiniDetailsResponseModel(c, _globalSettings,
                 collectionCiphersGroupDict, c.OrganizationUseTotp));
 
+            var providerId = await _currentContext.ProviderIdForOrg(orgIdGuid);
+            if (providerId.HasValue)
+            {
+                await _providerService.LogProviderAccessToOrganizationAsync(orgIdGuid);
+            }
+
             return new ListResponseModel<CipherMiniDetailsResponseModel>(responses);
         }
 
