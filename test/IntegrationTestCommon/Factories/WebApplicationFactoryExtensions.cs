@@ -46,6 +46,21 @@ public static class WebApplicationFactoryExtensions
         string requestUri,
         Action<HttpContext> extraConfiguration = null)
         => SendAsync(server, HttpMethod.Get, requestUri, content: null, extraConfiguration);
+    public static Task<HttpContext> PutAsync(this TestServer server,
+        string requestUri,
+        HttpContent content,
+        Action<HttpContext> extraConfiguration = null)
+        => SendAsync(server, HttpMethod.Put, requestUri, content, extraConfiguration);
+    public static Task<HttpContext> PatchAsync(this TestServer server,
+        string requestUri,
+        HttpContent content,
+        Action<HttpContext> extraConfiguration = null)
+        => SendAsync(server, HttpMethod.Patch, requestUri, content, extraConfiguration);
+    public static Task<HttpContext> DeleteAsync(this TestServer server,
+        string requestUri,
+        HttpContent content,
+        Action<HttpContext> extraConfiguration = null)
+        => SendAsync(server, HttpMethod.Delete, requestUri, content: content, extraConfiguration);
 
     public static HttpContext SetAuthEmail(this HttpContext context, string username)
     {

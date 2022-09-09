@@ -40,7 +40,7 @@ SELECT
     OS.[ValidUntil] FamilySponsorshipValidUntil
 FROM
     [dbo].[OrganizationUser] OU
-INNER JOIN
+LEFT JOIN
     [dbo].[Organization] O ON O.[Id] = OU.[OrganizationId]
 LEFT JOIN
     [dbo].[SsoUser] SU ON SU.[UserId] = OU.[UserId] AND SU.[OrganizationId] = OU.[OrganizationId]
