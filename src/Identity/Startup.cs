@@ -144,8 +144,6 @@ public class Startup
             services.AddHostedService<Core.HostedServices.ApplicationCacheHostedService>();
         }
 
-        services.AddOosServices();
-
         // HttpClients
         services.AddHttpClient("InternalSso", client =>
         {
