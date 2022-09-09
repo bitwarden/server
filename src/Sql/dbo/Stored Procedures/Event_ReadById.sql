@@ -1,5 +1,5 @@
-﻿CREATE PROCEDURE [dbo].[SsoConfig_ReadById]
-    @Id BIGINT
+﻿CREATE PROCEDURE [dbo].[Event_ReadById]
+    @Id UNIQUEIDENTIFIER
 AS
 BEGIN
     SET NOCOUNT ON
@@ -7,7 +7,7 @@ BEGIN
     SELECT
         *
     FROM
-        [dbo].[SsoConfigView]
+        [dbo].[Event]
     WHERE
         [Id] = @Id
 END
