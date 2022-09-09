@@ -1,7 +1,9 @@
 ﻿using System.Text.Json;
 using Bit.Core.Entities;
+using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Scim.Commands.Groups.Interfaces;
 using Bit.Scim.Context;
 using Bit.Scim.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -19,18 +21,21 @@ public class GroupsController : Controller
     private readonly IGroupService _groupService;
     private readonly IScimContext _scimContext;
     private readonly ILogger<GroupsController> _logger;
+    private readonly IPostGroupCommand _postGroupCommand;
 
     public GroupsController(
         IGroupRepository groupRepository,
         IGroupService groupService,
         IOptions<ScimSettings> scimSettings,
         IScimContext scimContext,
+        IPostGroupCommand postGroupCommand,
         ILogger<GroupsController> logger)
     {
         _scimSettings = scimSettings?.Value;
         _groupRepository = groupRepository;
         _groupService = groupService;
         _scimContext = scimContext;
+        _postGroupCommand = postGroupCommand;
         _logger = logger;
     }
 
@@ -114,22 +119,20 @@ public class GroupsController : Controller
     [HttpPost("")]
     public async Task<IActionResult> Post(Guid organizationId, [FromBody] ScimGroupRequestModel model)
     {
-        if (string.IsNullOrWhiteSpace(model.DisplayName))
+        try
         {
-            return new BadRequestResult();
+            var group = await _postGroupCommand.PostGroupAsync(organizationId, model);
+            var scimGroupResponseModel = new ScimGroupResponseModel(group);
+            return new CreatedResult(Url.Action(nameof(Get), new { group.OrganizationId, group.Id }), scimGroupResponseModel);
         }
-
-        var groups = await _groupRepository.GetManyByOrganizationIdAsync(organizationId);
-        if (!string.IsNullOrWhiteSpace(model.ExternalId) && groups.Any(g => g.ExternalId == model.ExternalId))
+        catch (BadRequestException)
         {
-            return new ConflictResult();
+            return BadRequest();
         }
-
-        var group = model.ToGroup(organizationId);
-        await _groupService.SaveAsync(group, null);
-        await UpdateGroupMembersAsync(group, model, true);
-        var response = new ScimGroupResponseModel(group);
-        return new CreatedResult(Url.Action(nameof(Get), new { group.OrganizationId, group.Id }), response);
+        catch (ConflictException)
+        {
+            return Conflict();
+        }
     }
 
     [HttpPut("{id}")]
