@@ -1,7 +1,6 @@
-﻿namespace Bit.Core.Settings
+﻿namespace Bit.Core.Settings;
+
+public interface IPasswordlessAuthSettings
 {
-    public interface IPasswordlessAuthSettings
-    {
-        bool KnownDevicesOnly { get; set; }
-    }
+    bool KnownDevicesOnly { get; set; }
 }

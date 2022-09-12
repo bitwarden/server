@@ -1,8 +1,7 @@
-namespace Bit.Notifications
+﻿namespace Bit.Notifications;
+
+public interface INotificationHub
 {
-    public interface INotificationHub
-    {
-        Task OnConnectedAsync();
-        Task OnDisconnectedAsync(Exception exception);
-    }
+    Task OnConnectedAsync();
+    Task OnDisconnectedAsync(Exception exception);
 }

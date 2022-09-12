@@ -79,8 +79,8 @@ public static class HubHelpers
                 await hubContext.Clients.User(authRequestNotification.Payload.UserId.ToString())
                     .SendAsync("ReceiveMessage", authRequestNotification, cancellationToken);
                 break;
-                default:
-                    break;
+            default:
+                break;
         }
     }
 }

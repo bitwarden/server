@@ -2,38 +2,37 @@
 using Bit.Core.Enums;
 using Bit.Core.Models.Api;
 
-namespace Bit.Api.Models.Response
-{
-    public class AuthRequestResponseModel : ResponseModel
-    {
-        public AuthRequestResponseModel(AuthRequest authRequest, string obj = "auth-request")
-            : base(obj)
-        {
-            if (authRequest == null)
-            {
-                throw new ArgumentNullException(nameof(authRequest));
-            }
+namespace Bit.Api.Models.Response;
 
-            Id = authRequest.Id.ToString();
-            PublicKey = authRequest.PublicKey;
-            RequestDeviceType = authRequest.RequestDeviceType;
-            RequestIpAddress = authRequest.RequestIpAddress;
-            RequestFingerprint = authRequest.RequestFingerprint;
-            Key = authRequest.Key;
-            MasterPasswordHash = authRequest.MasterPasswordHash;
-            CreationDate = authRequest.CreationDate;
-            RequestApproved = !string.IsNullOrWhiteSpace(Key) &&
-                (authRequest.Type == AuthRequestType.Unlock || !string.IsNullOrWhiteSpace(MasterPasswordHash));
+public class AuthRequestResponseModel : ResponseModel
+{
+    public AuthRequestResponseModel(AuthRequest authRequest, string obj = "auth-request")
+        : base(obj)
+    {
+        if (authRequest == null)
+        {
+            throw new ArgumentNullException(nameof(authRequest));
         }
 
-        public string Id { get; set; }
-        public string PublicKey { get; set; }
-        public DeviceType RequestDeviceType { get; set; }
-        public string RequestIpAddress { get; set; }
-        public string RequestFingerprint { get; set; }
-        public string Key { get; set; }
-        public string MasterPasswordHash { get; set; }
-        public DateTime CreationDate { get; set; }
-        public bool RequestApproved { get; set; }
+        Id = authRequest.Id.ToString();
+        PublicKey = authRequest.PublicKey;
+        RequestDeviceType = authRequest.RequestDeviceType;
+        RequestIpAddress = authRequest.RequestIpAddress;
+        RequestFingerprint = authRequest.RequestFingerprint;
+        Key = authRequest.Key;
+        MasterPasswordHash = authRequest.MasterPasswordHash;
+        CreationDate = authRequest.CreationDate;
+        RequestApproved = !string.IsNullOrWhiteSpace(Key) &&
+            (authRequest.Type == AuthRequestType.Unlock || !string.IsNullOrWhiteSpace(MasterPasswordHash));
     }
+
+    public string Id { get; set; }
+    public string PublicKey { get; set; }
+    public DeviceType RequestDeviceType { get; set; }
+    public string RequestIpAddress { get; set; }
+    public string RequestFingerprint { get; set; }
+    public string Key { get; set; }
+    public string MasterPasswordHash { get; set; }
+    public DateTime CreationDate { get; set; }
+    public bool RequestApproved { get; set; }
 }

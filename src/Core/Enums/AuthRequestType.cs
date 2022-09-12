@@ -1,8 +1,7 @@
-﻿namespace Bit.Core.Enums
+﻿namespace Bit.Core.Enums;
+
+public enum AuthRequestType : byte
 {
-    public enum AuthRequestType : byte
-    {
-        AuthenticateAndUnlock = 0,
-        Unlock = 1
-    }
+    AuthenticateAndUnlock = 0,
+    Unlock = 1
 }

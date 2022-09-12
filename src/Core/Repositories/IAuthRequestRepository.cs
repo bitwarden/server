@@ -1,10 +1,9 @@
 ﻿using Bit.Core.Entities;
 
-namespace Bit.Core.Repositories
+namespace Bit.Core.Repositories;
+
+public interface IAuthRequestRepository : IRepository<AuthRequest, Guid>
 {
-    public interface IAuthRequestRepository : IRepository<AuthRequest, Guid>
-    {
-        Task<int> DeleteExpiredAsync();
-        Task<ICollection<AuthRequest>> GetManyByUserIdAsync(Guid userId);
-    }
+    Task<int> DeleteExpiredAsync();
+    Task<ICollection<AuthRequest>> GetManyByUserIdAsync(Guid userId);
 }

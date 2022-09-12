@@ -25,7 +25,7 @@ public class AzureQueueHostedService : IHostedService, IDisposable
         _logger = logger;
         _hubContext = hubContext;
         _globalSettings = globalSettings;
-        _anonymousHubContext= anonymousHubContext;
+        _anonymousHubContext = anonymousHubContext;
     }
 
     public Task StartAsync(CancellationToken cancellationToken)

@@ -3,7 +3,6 @@ using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
 using IdentityModel;
-using Microsoft.AspNetCore.Http.Connections;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.IdentityModel.Logging;
 
