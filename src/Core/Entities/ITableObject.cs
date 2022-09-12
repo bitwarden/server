@@ -1,10 +1,9 @@
 ﻿#nullable enable
 
-namespace Bit.Core.Entities
+namespace Bit.Core.Entities;
+
+public interface ITableObject<T> where T : IEquatable<T>
 {
-    public interface ITableObject<T> where T : IEquatable<T>
-    {
-        T Id { get; set; }
-        void SetNewId();
-    }
+    T Id { get; set; }
+    void SetNewId();
 }

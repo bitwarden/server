@@ -1,11 +1,10 @@
 ﻿#nullable enable
 
-namespace Bit.Core.Entities
+namespace Bit.Core.Entities;
+
+public interface IReferenceable
 {
-    public interface IReferenceable
-    {
-        Guid Id { get; set; }
-        string? ReferenceData { get; set; }
-        bool IsUser();
-    }
+    Guid Id { get; set; }
+    string? ReferenceData { get; set; }
+    bool IsUser();
 }

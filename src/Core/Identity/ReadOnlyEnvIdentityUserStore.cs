@@ -2,66 +2,65 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 
-namespace Bit.Core.Identity
+namespace Bit.Core.Identity;
+
+public class ReadOnlyEnvIdentityUserStore : ReadOnlyIdentityUserStore
 {
-    public class ReadOnlyEnvIdentityUserStore : ReadOnlyIdentityUserStore
+    private readonly IConfiguration _configuration;
+
+    public ReadOnlyEnvIdentityUserStore(IConfiguration configuration)
     {
-        private readonly IConfiguration _configuration;
+        _configuration = configuration;
+    }
 
-        public ReadOnlyEnvIdentityUserStore(IConfiguration configuration)
+    public override Task<IdentityUser> FindByEmailAsync(string normalizedEmail,
+        CancellationToken cancellationToken = default(CancellationToken))
+    {
+        var usersCsv = _configuration["adminSettings:admins"];
+        if (!CoreHelpers.SettingHasValue(usersCsv))
         {
-            _configuration = configuration;
+            return Task.FromResult<IdentityUser>(null);
         }
 
-        public override Task<IdentityUser> FindByEmailAsync(string normalizedEmail,
-            CancellationToken cancellationToken = default(CancellationToken))
+        var users = usersCsv.ToLowerInvariant().Split(',');
+        var usersDict = new Dictionary<string, string>();
+        foreach (var u in users)
         {
-            var usersCsv = _configuration["adminSettings:admins"];
-            if (!CoreHelpers.SettingHasValue(usersCsv))
+            var parts = u.Split(':');
+            if (parts.Length == 2)
             {
-                return Task.FromResult<IdentityUser>(null);
+                var email = parts[0].Trim();
+                var stamp = parts[1].Trim();
+                usersDict.Add(email, stamp);
             }
-
-            var users = usersCsv.ToLowerInvariant().Split(',');
-            var usersDict = new Dictionary<string, string>();
-            foreach (var u in users)
+            else
             {
-                var parts = u.Split(':');
-                if (parts.Length == 2)
-                {
-                    var email = parts[0].Trim();
-                    var stamp = parts[1].Trim();
-                    usersDict.Add(email, stamp);
-                }
-                else
-                {
-                    var email = parts[0].Trim();
-                    usersDict.Add(email, email);
-                }
+                var email = parts[0].Trim();
+                usersDict.Add(email, email);
             }
-
-            var userStamp = usersDict.ContainsKey(normalizedEmail) ? usersDict[normalizedEmail] : null;
-            if (userStamp == null)
-            {
-                return Task.FromResult<IdentityUser>(null);
-            }
-
-            return Task.FromResult(new IdentityUser
-            {
-                Id = normalizedEmail,
-                Email = normalizedEmail,
-                NormalizedEmail = normalizedEmail,
-                EmailConfirmed = true,
-                UserName = normalizedEmail,
-                NormalizedUserName = normalizedEmail,
-                SecurityStamp = userStamp
-            });
         }
 
-        public override Task<IdentityUser> FindByIdAsync(string userId,
-            CancellationToken cancellationToken = default(CancellationToken))
+        var userStamp = usersDict.ContainsKey(normalizedEmail) ? usersDict[normalizedEmail] : null;
+        if (userStamp == null)
         {
-            return FindByEmailAsync(userId, cancellationToken);
+            return Task.FromResult<IdentityUser>(null);
         }
+
+        return Task.FromResult(new IdentityUser
+        {
+            Id = normalizedEmail,
+            Email = normalizedEmail,
+            NormalizedEmail = normalizedEmail,
+            EmailConfirmed = true,
+            UserName = normalizedEmail,
+            NormalizedUserName = normalizedEmail,
+            SecurityStamp = userStamp
+        });
+    }
+
+    public override Task<IdentityUser> FindByIdAsync(string userId,
+        CancellationToken cancellationToken = default(CancellationToken))
+    {
+        return FindByEmailAsync(userId, cancellationToken);
     }
 }

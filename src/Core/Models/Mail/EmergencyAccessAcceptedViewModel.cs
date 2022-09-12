@@ -1,7 +1,6 @@
-﻿namespace Bit.Core.Models.Mail
+﻿namespace Bit.Core.Models.Mail;
+
+public class EmergencyAccessAcceptedViewModel : BaseMailModel
 {
-    public class EmergencyAccessAcceptedViewModel : BaseMailModel
-    {
-        public string GranteeEmail { get; set; }
-    }
+    public string GranteeEmail { get; set; }
 }

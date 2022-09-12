@@ -1,10 +1,9 @@
 ﻿#nullable enable
 
-namespace Bit.Core.Entities
+namespace Bit.Core.Entities;
+
+public class GroupUser
 {
-    public class GroupUser
-    {
-        public Guid GroupId { get; set; }
-        public Guid OrganizationUserId { get; set; }
-    }
+    public Guid GroupId { get; set; }
+    public Guid OrganizationUserId { get; set; }
 }

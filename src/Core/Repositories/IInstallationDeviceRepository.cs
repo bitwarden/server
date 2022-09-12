@@ -1,11 +1,10 @@
 ﻿using Bit.Core.Models.Data;
 
-namespace Bit.Core.Repositories
+namespace Bit.Core.Repositories;
+
+public interface IInstallationDeviceRepository
 {
-    public interface IInstallationDeviceRepository
-    {
-        Task UpsertAsync(InstallationDeviceEntity entity);
-        Task UpsertManyAsync(IList<InstallationDeviceEntity> entities);
-        Task DeleteAsync(InstallationDeviceEntity entity);
-    }
+    Task UpsertAsync(InstallationDeviceEntity entity);
+    Task UpsertManyAsync(IList<InstallationDeviceEntity> entities);
+    Task DeleteAsync(InstallationDeviceEntity entity);
 }
