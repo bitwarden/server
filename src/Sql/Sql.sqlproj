@@ -411,7 +411,9 @@
     <Build Include="dbo\Stored Procedures\AuthRequest_Create.sql" />
     <Build Include="dbo\Stored Procedures\AuthRequest_DeleteById.sql" />
     <Build Include="dbo\Stored Procedures\AuthRequest_ReadById.sql" />
+    <Build Include="dbo\Stored Procedures\AuthRequest_ReadByUserId.sql" />
     <Build Include="dbo\Stored Procedures\AuthRequest_Update.sql" />
+    <Build Include="dbo\Stored Procedures\AuthRequest_DeleteIfExpired.sql" />
     <Build Include="dbo\Views\AuthRequestView.sql" />
   </ItemGroup>
 </Project>

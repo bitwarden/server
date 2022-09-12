@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[AuthRequest_ReadManyByUserId]
+CREATE PROCEDURE [dbo].[AuthRequest_ReadByUserId]
     @UserId UNIQUEIDENTIFIER
 AS
 BEGIN
