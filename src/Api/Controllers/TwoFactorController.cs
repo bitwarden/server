@@ -229,6 +229,7 @@ public class TwoFactorController : Controller
     }
 
     [HttpPost("get-webauthn-challenge")]
+    [ApiExplorerSettings(IgnoreApi = true)]
     public async Task<CredentialCreateOptions> GetWebAuthnChallenge([FromBody] SecretVerificationRequestModel model)
     {
         var user = await CheckAsync(model, true);
