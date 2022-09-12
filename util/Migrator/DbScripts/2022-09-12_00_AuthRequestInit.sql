@@ -22,7 +22,6 @@ CREATE TABLE [dbo].[AuthRequest] (
     [CreationDate]              DATETIME2 (7)    NOT NULL,
     [ResponseDate]              DATETIME2 (7)    NULL,
     [AuthenticationDate]        DATETIME2 (7)    NULL,
-    [FailedLoginAttempts]       TINYINT          NOT NULL,
     CONSTRAINT [PK_AuthRequest] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_AuthRequest_User] FOREIGN KEY ([UserId]) REFERENCES [dbo].[User] ([Id]),
     CONSTRAINT [FK_AuthRequest_ResponseDevice] FOREIGN KEY ([ResponseDeviceId]) REFERENCES [dbo].[Device] ([Id])
@@ -68,7 +67,6 @@ CREATE PROCEDURE [dbo].[AuthRequest_Create]
     @CreationDate DATETIME2(7),
     @ResponseDate DATETIME2(7),
     @AuthenticationDate DATETIME2(7),
-    @FailedLoginAttempts TINYINT
 AS
 BEGIN
     SET NOCOUNT ON
@@ -90,7 +88,6 @@ BEGIN
         [CreationDate],
         [ResponseDate],
         [AuthenticationDate],
-        [FailedLoginAttempts]
     )
     VALUES
     (
@@ -109,7 +106,6 @@ BEGIN
         @CreationDate,
         @ResponseDate,
         @AuthenticationDate,
-        @FailedLoginAttempts
     )
 END
 GO
@@ -127,7 +123,6 @@ CREATE PROCEDURE [dbo].[AuthRequest_Update]
     @MasterPasswordHash VARCHAR(MAX),
     @ResponseDate DATETIME2(7),
     @AuthenticationDate DATETIME2(7),
-    @FailedLoginAttempts TINYINT
 AS
 BEGIN
     SET NOCOUNT ON
@@ -140,7 +135,6 @@ BEGIN
         [MasterPasswordHash] = @MasterPasswordHash,
         [ResponseDate] = @ResponseDate,
         [AuthenticationDate] = @AuthenticationDate,
-        [FailedLoginAttempts] = @FailedLoginAttempts
     WHERE
         [Id] = @Id
 END
