@@ -19,7 +19,6 @@ namespace Bit.Api.SecretManagerFeatures.Models.Request
             {
                 OrganizationId = this.OrganizationId,
                 Name = this.Name,
-                DeletedDate = null,
             };
         }
 
