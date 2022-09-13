@@ -66,7 +66,7 @@ CREATE PROCEDURE [dbo].[AuthRequest_Create]
     @MasterPasswordHash VARCHAR(MAX),
     @CreationDate DATETIME2(7),
     @ResponseDate DATETIME2(7),
-    @AuthenticationDate DATETIME2(7),
+    @AuthenticationDate DATETIME2(7)
 AS
 BEGIN
     SET NOCOUNT ON
@@ -87,7 +87,7 @@ BEGIN
         [MasterPasswordHash],
         [CreationDate],
         [ResponseDate],
-        [AuthenticationDate],
+        [AuthenticationDate]
     )
     VALUES
     (
@@ -105,7 +105,7 @@ BEGIN
         @MasterPasswordHash,
         @CreationDate,
         @ResponseDate,
-        @AuthenticationDate,
+        @AuthenticationDate
     )
 END
 GO
@@ -122,7 +122,7 @@ CREATE PROCEDURE [dbo].[AuthRequest_Update]
     @Key VARCHAR(MAX),
     @MasterPasswordHash VARCHAR(MAX),
     @ResponseDate DATETIME2(7),
-    @AuthenticationDate DATETIME2(7),
+    @AuthenticationDate DATETIME2(7)
 AS
 BEGIN
     SET NOCOUNT ON
@@ -134,7 +134,7 @@ BEGIN
         [Key] = @Key,
         [MasterPasswordHash] = @MasterPasswordHash,
         [ResponseDate] = @ResponseDate,
-        [AuthenticationDate] = @AuthenticationDate,
+        [AuthenticationDate] = @AuthenticationDate
     WHERE
         [Id] = @Id
 END
