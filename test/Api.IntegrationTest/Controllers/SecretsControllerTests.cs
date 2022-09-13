@@ -13,22 +13,26 @@ public class SecretsControllerTest : IClassFixture<ApiApplicationFactory>
 {
     private readonly string _mockEncryptedString = "2.3Uk+WNBIoU5xzmVFNcoWzz==|1MsPIYuRfdOHfu/0uY6H2Q==|/98sp4wb6pHP1VTZ9JcNCYgQjEUMFPlqJgCwRk1YXKg=";
     private readonly int _secretsToDelete = 3;
+    private readonly HttpClient _client;
     private readonly ApiApplicationFactory _factory;
 
-    public SecretsControllerTest(ApiApplicationFactory factory) => _factory = factory;
+    public SecretsControllerTest(ApiApplicationFactory factory)
+    {
+        _factory = factory;
+        _client = _factory.CreateClient();
+    }
 
     [Fact]
     public async Task DeleteSecrets()
     {
         var tokens = await _factory.LoginWithNewAccount();
-        var client = _factory.CreateClient();
 
-        var orgId = await CreateOrganization(client, tokens.Token);
+        var orgId = await CreateOrganization(tokens.Token);
         var createdSecretIds = new List<Guid>();
 
         foreach (var i in Enumerable.Range(0, _secretsToDelete))
         {
-            var createdSecret = await CreateSecret(orgId, client, tokens.Token);
+            var createdSecret = await CreateSecret(orgId, tokens.Token);
             createdSecretIds.Add(createdSecret.Id);
         }
 
@@ -39,7 +43,7 @@ public class SecretsControllerTest : IClassFixture<ApiApplicationFactory>
             "application/json"),
         };
         message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", tokens.Token);
-        var response = await client.SendAsync(message);
+        var response = await _client.SendAsync(message);
         response.EnsureSuccessStatusCode();
 
         var content = await response.Content.ReadAsStringAsync();
@@ -55,7 +59,7 @@ public class SecretsControllerTest : IClassFixture<ApiApplicationFactory>
         }
     }
 
-    private async Task<Secret> CreateSecret(Guid organizationId, HttpClient client, string token)
+    private async Task<Secret> CreateSecret(Guid organizationId, string token)
     {
         var request = new SecretCreateRequestModel()
         {
@@ -72,12 +76,12 @@ public class SecretsControllerTest : IClassFixture<ApiApplicationFactory>
         };
         message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-        var response = await client.SendAsync(message);
+        var response = await _client.SendAsync(message);
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<Secret>();
     }
 
-    private async Task<Guid> CreateOrganization(HttpClient client, string token)
+    private async Task<Guid> CreateOrganization(string token)
     {
         var request = new OrganizationCreateRequestModel()
         {
@@ -94,7 +98,7 @@ public class SecretsControllerTest : IClassFixture<ApiApplicationFactory>
             "application/json")
         };
         message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        var response = await client.SendAsync(message);
+        var response = await _client.SendAsync(message);
         response.EnsureSuccessStatusCode();
         var result = await response.Content.ReadAsStringAsync();
         return new Guid(JsonDocument.Parse(result).RootElement.GetProperty("id").ToString());
