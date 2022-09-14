@@ -1558,7 +1558,7 @@ public class OrganizationService : IOrganizationService
             organization.MaxAutoscaleSeats.HasValue &&
             organization.MaxAutoscaleSeats.Value < organization.Seats.Value + seatsToAdd)
         {
-            return (false, $"Cannot invite new users. Seat limit has been reached.");
+            return (false, $"Seat limit has been reached.");
         }
 
         return (true, failureReason);
@@ -2352,7 +2352,7 @@ public class OrganizationService : IOrganizationService
             throw new BadRequestException("Users invalid.");
         }
 
-        var organization = await _organizationRepository.GetByIdAsync(organizationUser.OrganizationId);
+        var organization = await _organizationRepository.GetByIdAsync(organizationId);
         var occupiedSeats = await GetOccupiedSeatCount(organization);
         var availableSeats = organization.Seats.GetValueOrDefault(0) - occupiedSeats;
         var newSeatsRequired = organizationUserIds.Count() - availableSeats;
