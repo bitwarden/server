@@ -1375,6 +1375,11 @@ public class OrganizationService : IOrganizationService
     private async Task<OrganizationUser> AcceptUserAsync(OrganizationUser orgUser, User user,
         IUserService userService)
     {
+        if (orgUser.Status == OrganizationUserStatusType.Revoked)
+        {
+            throw new BadRequestException("Your organization access has been revoked.");
+        }
+
         if (orgUser.Status != OrganizationUserStatusType.Invited)
         {
             throw new BadRequestException("Already accepted.");

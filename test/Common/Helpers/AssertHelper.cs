@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System.Collections;
+using System.Diagnostics;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text.Json;
@@ -25,7 +26,7 @@ public static class AssertHelper
             throw new Exception("Actual object is null but expected is not");
         }
 
-        foreach (var expectedPropInfo in expected.GetType().GetProperties().Where(pi => !relevantExcludedProperties.Contains(pi.Name)))
+        foreach (var expectedPropInfo in expected.GetType().GetProperties().Where(pi => !relevantExcludedProperties.Contains(pi.Name) && !pi.GetIndexParameters().Any()))
         {
             var actualPropInfo = actual.GetType().GetProperty(expectedPropInfo.Name);
 
@@ -36,7 +37,7 @@ public static class AssertHelper
                 $"Actual:\n{JsonSerializer.Serialize(actual, JsonHelpers.Indented)}"));
             }
 
-            if (expectedPropInfo.PropertyType == typeof(string) || expectedPropInfo.PropertyType.IsValueType)
+            if (typeof(IComparable).IsAssignableFrom(expectedPropInfo.PropertyType) || expectedPropInfo.PropertyType.IsPrimitive || expectedPropInfo.PropertyType.IsValueType)
             {
                 Assert.Equal(expectedPropInfo.GetValue(expected), actualPropInfo.GetValue(actual));
             }
@@ -44,6 +45,13 @@ public static class AssertHelper
             {
                 static string JsonDocString(PropertyInfo info, object obj) => JsonSerializer.Serialize(info.GetValue(obj));
                 Assert.Equal(JsonDocString(expectedPropInfo, expected), JsonDocString(actualPropInfo, actual));
+            }
+            else if (typeof(IEnumerable).IsAssignableFrom(expectedPropInfo.PropertyType) && typeof(IEnumerable).IsAssignableFrom(actualPropInfo.PropertyType))
+            {
+                var expectedItems = ((IEnumerable)expectedPropInfo.GetValue(expected)).Cast<object>();
+                var actualItems = ((IEnumerable)actualPropInfo.GetValue(actual)).Cast<object>();
+
+                AssertPropertyEqualPredicate(expectedItems, excludedPropertyStrings)(actualItems);
             }
             else
             {

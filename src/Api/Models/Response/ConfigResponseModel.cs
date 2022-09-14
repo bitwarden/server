@@ -27,7 +27,6 @@ public class ConfigResponseModel : ResponseModel
             Vault = globalSettings.BaseServiceUri.Vault,
             Api = globalSettings.BaseServiceUri.Api,
             Identity = globalSettings.BaseServiceUri.Identity,
-            Admin = globalSettings.BaseServiceUri.Admin,
             Notifications = globalSettings.BaseServiceUri.Notifications,
             Sso = globalSettings.BaseServiceUri.Sso
         };
@@ -45,7 +44,6 @@ public class EnvironmentConfigResponseModel
     public string Vault { get; set; }
     public string Api { get; set; }
     public string Identity { get; set; }
-    public string Admin { get; set; }
     public string Notifications { get; set; }
     public string Sso { get; set; }
 }
