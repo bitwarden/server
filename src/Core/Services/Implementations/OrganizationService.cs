@@ -2320,9 +2320,10 @@ public class OrganizationService : IOrganizationService
 
         var organization = await _organizationRepository.GetByIdAsync(organizationUser.OrganizationId);
         var occupiedSeats = await GetOccupiedSeatCount(organization);
-        if (organization.Seats.HasValue && organization.Seats.Value - occupiedSeats < 1)
+        var availableSeats = organization.Seats.GetValueOrDefault(0) - occupiedSeats;
+        if (availableSeats < 1)
         {
-            throw new BadRequestException("Cannot restore user. Seat limit has been reached.");
+            await AutoAddSeatsAsync(organization, 1, DateTime.UtcNow);
         }
 
         await CheckPoliciesBeforeRestoreAsync(organizationUser, userService);
@@ -2346,15 +2347,11 @@ public class OrganizationService : IOrganizationService
             throw new BadRequestException("Users invalid.");
         }
 
-        var organization = await _organizationRepository.GetByIdAsync(organizationId);
+        var organization = await _organizationRepository.GetByIdAsync(organizationUser.OrganizationId);
         var occupiedSeats = await GetOccupiedSeatCount(organization);
         var availableSeats = organization.Seats.GetValueOrDefault(0) - occupiedSeats;
-        if (organization.Seats.HasValue && availableSeats < organizationUserIds.Count())
-        {
-            throw new BadRequestException("Not enough seats available. " +
-                                          $"You are trying to restore {organizationUserIds.Count()} users, but you " +
-                                          $"have {availableSeats} seat(s) available.");
-        }
+        var newSeatsRequired = organizationUserIds.Count() - availableSeats;
+        await AutoAddSeatsAsync(organization, newSeatsRequired, DateTime.UtcNow);
 
         var deletingUserIsOwner = false;
         if (restoringUserId.HasValue)
