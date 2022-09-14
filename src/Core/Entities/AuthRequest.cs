@@ -29,12 +29,12 @@ public class AuthRequest : ITableObject<Guid>
         Id = CoreHelpers.GenerateComb();
     }
 
-    public bool isSpent()
+    public bool IsSpent()
     {
-        return ResponseDate.HasValue || AuthenticationDate.HasValue || getExpirationDate() < DateTime.UtcNow;
+        return ResponseDate.HasValue || AuthenticationDate.HasValue || GetExpirationDate() < DateTime.UtcNow;
     }
 
-    public DateTime getExpirationDate()
+    public DateTime GetExpirationDate()
     {
         return CreationDate.AddMinutes(15);
     }

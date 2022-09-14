@@ -73,7 +73,7 @@ public class AuthRequestsController : Controller
             throw new NotFoundException();
         }
 
-        if (authRequest.isSpent())
+        if (authRequest.GetExpirationDate() < DateTime.UtcNow)
         {
             throw new NotFoundException();
         }
