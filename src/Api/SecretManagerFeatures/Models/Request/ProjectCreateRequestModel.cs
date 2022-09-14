@@ -4,7 +4,7 @@ using Bit.Core.Utilities;
 
 namespace Bit.Api.SecretManagerFeatures.Models.Request
 {
-    public class ProjectCreateRequestModel : IValidatableObject
+    public class ProjectCreateRequestModel
     {
         [Required]
         public Guid OrganizationId { get; set; }
@@ -13,11 +13,11 @@ namespace Bit.Api.SecretManagerFeatures.Models.Request
         [EncryptedString]
         public string Name { get; set; }
 
-        public Project ToProject()
+        public Project ToProject(Guid organizationId)
         {
             return new Project()
             {
-                OrganizationId = this.OrganizationId,
+                OrganizationId = organizationId,
                 Name = this.Name,
             };
         }
