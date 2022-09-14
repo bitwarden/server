@@ -38,11 +38,11 @@ public class AccountsController : Controller
     [CaptchaProtected]
     public async Task<RegisterResponseModel> PostRegister([FromBody] RegisterRequestModel model)
     {
-        var result = await _userService.RegisterUserAsync(model.ToUser(), model.MasterPasswordHash,
+        var user = model.ToUser();
+        var result = await _userService.RegisterUserAsync(user, model.MasterPasswordHash,
             model.Token, model.OrganizationUserId);
         if (result.Succeeded)
         {
-            var user = await _userRepository.GetByEmailAsync(model.Email);
             var captchaBypassToken = _captchaValidationService.GenerateCaptchaBypassToken(user);
             return new RegisterResponseModel(captchaBypassToken);
         }
