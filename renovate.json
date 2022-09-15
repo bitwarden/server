@@ -6,7 +6,8 @@
     ":maintainLockFilesMonthly",
     ":preserveSemverRanges",
     ":rebaseStalePrs",
-    ":disableDependencyDashboard"
+    ":disableDependencyDashboard",
+    ":disableMajorUpdates"
   ],
   "enabledManagers": [
     "nuget"
