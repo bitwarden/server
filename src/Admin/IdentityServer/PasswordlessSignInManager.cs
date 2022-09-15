@@ -1,11 +1,9 @@
 ﻿using Bit.Core.Services;
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace Bit.Core.Identity;
+namespace Bit.Admin.IdentityServer;
 
 public class PasswordlessSignInManager<TUser> : SignInManager<TUser> where TUser : class
 {
