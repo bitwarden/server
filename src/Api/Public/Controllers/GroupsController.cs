@@ -77,15 +77,14 @@ public class GroupsController : Controller
     /// </summary>
     /// <remarks>
     /// Returns a list of your organization's groups.
-    /// Group objects listed in this call do not include information about their associated collections.
+    /// Group objects listed in this call include information about their associated collections.
     /// </remarks>
     [HttpGet]
     [ProducesResponseType(typeof(ListResponseModel<GroupResponseModel>), (int)HttpStatusCode.OK)]
     public async Task<IActionResult> List()
     {
-        var groups = await _groupRepository.GetManyByOrganizationIdAsync(_currentContext.OrganizationId.Value);
-        // TODO: Get all CollectionGroup associations for the organization and marry them up here for the response.
-        var groupResponses = groups.Select(g => new GroupResponseModel(g, null));
+        var groups = await _groupRepository.GetManyWithCollectionsByOrganizationIdAsync(_currentContext.OrganizationId.Value);
+        var groupResponses = groups.Select(g => new GroupResponseModel(g.Item1, g.Item2));
         var response = new ListResponseModel<GroupResponseModel>(groupResponses);
         return new JsonResult(response);
     }

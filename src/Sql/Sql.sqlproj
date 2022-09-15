@@ -196,6 +196,7 @@
     <Build Include="dbo\Stored Procedures\Group_ReadById.sql" />
     <Build Include="dbo\Stored Procedures\Group_ReadByOrganizationId.sql" />
     <Build Include="dbo\Stored Procedures\Group_ReadWithCollectionsById.sql" />
+    <Build Include="dbo\Stored Procedures\Group_ReadWithCollectionsByOrganizationId.sql" />
     <Build Include="dbo\Stored Procedures\Group_Update.sql" />
     <Build Include="dbo\Stored Procedures\Group_UpdateWithCollections.sql" />
     <Build Include="dbo\Stored Procedures\GroupUser_Delete.sql" />
@@ -266,6 +267,7 @@
     <Build Include="dbo\Stored Procedures\OrganizationUser_ReadCountByOrganizationIdEmail.sql" />
     <Build Include="dbo\Stored Procedures\CipherDetails_ReadWithoutOrganizationsByUserId.sql" />
     <Build Include="dbo\Stored Procedures\CollectionCipher_UpdateCollectionsForCiphers.sql" />
+    <Build Include="dbo\Stored Procedures\CollectionGroup_ReadByOrganizationId.sql" />
     <Build Include="dbo\Stored Procedures\User_UpdateRenewalReminderDate.sql" />
     <Build Include="dbo\Stored Procedures\Grant_DeleteExpired.sql" />
     <Build Include="dbo\Stored Procedures\User_ReadKdfByEmail.sql" />

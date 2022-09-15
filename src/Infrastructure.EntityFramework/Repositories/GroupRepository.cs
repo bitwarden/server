@@ -84,6 +84,32 @@ public class GroupRepository : Repository<Core.Entities.Group, Group, Guid>, IGr
         }
     }
 
+    public async Task<ICollection<Tuple<Core.Entities.Group, ICollection<SelectionReadOnly>>>>
+        GetManyWithCollectionsByOrganizationIdAsync(Guid organizationId)
+    {
+        var groups = await GetManyByOrganizationIdAsync(organizationId);
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var query = await (
+                from cg in dbContext.CollectionGroups
+                where cg.Group.OrganizationId == organizationId
+                select cg).ToListAsync();
+
+            return groups.Select(group =>
+                new Tuple<Core.Entities.Group, ICollection<SelectionReadOnly>>(
+                    group,
+                    query.Select(c => new SelectionReadOnly
+                    {
+                        Id = c.CollectionId,
+                        ReadOnly = c.ReadOnly,
+                        HidePasswords = c.HidePasswords,
+                    }).ToList()
+                )
+            ).ToList();
+        }
+    }
+
     public async Task<ICollection<Core.Entities.GroupUser>> GetManyGroupUsersByOrganizationIdAsync(Guid organizationId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())

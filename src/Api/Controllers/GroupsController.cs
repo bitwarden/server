@@ -52,7 +52,7 @@ public class GroupsController : Controller
     }
 
     [HttpGet("")]
-    public async Task<ListResponseModel<GroupResponseModel>> Get(string orgId)
+    public async Task<ListResponseModel<GroupDetailsResponseModel>> Get(string orgId)
     {
         var orgIdGuid = new Guid(orgId);
         var canAccess = await _currentContext.ManageGroups(orgIdGuid) ||
@@ -65,9 +65,9 @@ public class GroupsController : Controller
             throw new NotFoundException();
         }
 
-        var groups = await _groupRepository.GetManyByOrganizationIdAsync(orgIdGuid);
-        var responses = groups.Select(g => new GroupResponseModel(g));
-        return new ListResponseModel<GroupResponseModel>(responses);
+        var groups = await _groupRepository.GetManyWithCollectionsByOrganizationIdAsync(orgIdGuid);
+        var responses = groups.Select(g => new GroupDetailsResponseModel(g.Item1, g.Item2));
+        return new ListResponseModel<GroupDetailsResponseModel>(responses);
     }
 
     [HttpGet("{id}/users")]

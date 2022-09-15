@@ -48,6 +48,34 @@ public class GroupRepository : Repository<Group, Guid>, IGroupRepository
         }
     }
 
+    public async Task<ICollection<Tuple<Group, ICollection<SelectionReadOnly>>>> GetManyWithCollectionsByOrganizationIdAsync(Guid organizationId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryMultipleAsync(
+                $"[{Schema}].[Group_ReadWithCollectionsByOrganizationId]",
+                new { OrganizationId = organizationId },
+                commandType: CommandType.StoredProcedure);
+
+            var groups = (await results.ReadAsync<Group>()).ToList();
+            var collections = (await results.ReadAsync<CollectionGroup>()).ToList();
+
+            return groups.Select(group =>
+                new Tuple<Group, ICollection<SelectionReadOnly>>(
+                    group,
+                    collections
+                        .Where(c => c.GroupId == group.Id)
+                        .Select(c => new SelectionReadOnly
+                        {
+                            Id = c.CollectionId,
+                            HidePasswords = c.HidePasswords,
+                            ReadOnly = c.ReadOnly
+                        }).ToList()
+                )
+            ).ToList();
+        }
+    }
+
     public async Task<ICollection<Guid>> GetManyIdsByUserIdAsync(Guid organizationUserId)
     {
         using (var connection = new SqlConnection(ConnectionString))
