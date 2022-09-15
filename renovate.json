@@ -16,7 +16,10 @@
       "matchManagers": ["nuget"],
       "groupName": "Nuget updates",
       "groupSlug": "nuget",
-      "separateMajorMinor": false
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ]
     }
   ]
 }
