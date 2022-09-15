@@ -1,7 +1,7 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Models.Business;
 
-namespace Bit.Core.IdentityServer;
+namespace Bit.Identity.IdentityServer;
 
 public class CustomValidatorRequestContext
 {

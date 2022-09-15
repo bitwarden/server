@@ -2,7 +2,7 @@
 using Bit.Core.Utilities;
 using IdentityServer4.Services;
 
-namespace Bit.Core.IdentityServer;
+namespace Bit.Identity.IdentityServer;
 
 public class CustomCorsPolicyService : ICorsPolicyService
 {

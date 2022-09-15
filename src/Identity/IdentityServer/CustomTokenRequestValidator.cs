@@ -9,9 +9,8 @@ using IdentityModel;
 using IdentityServer4.Extensions;
 using IdentityServer4.Validation;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.Logging;
 
-namespace Bit.Core.IdentityServer;
+namespace Bit.Identity.IdentityServer;
 
 public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenRequestValidationContext>,
     ICustomTokenRequestValidator

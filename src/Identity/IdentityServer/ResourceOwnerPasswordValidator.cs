@@ -9,9 +9,8 @@ using Bit.Core.Utilities;
 using IdentityServer4.Models;
 using IdentityServer4.Validation;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.Logging;
 
-namespace Bit.Core.IdentityServer;
+namespace Bit.Identity.IdentityServer;
 
 public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwnerPasswordValidationContext>,
     IResourceOwnerPasswordValidator

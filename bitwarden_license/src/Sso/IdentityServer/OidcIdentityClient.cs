@@ -2,7 +2,7 @@
 using IdentityServer4;
 using IdentityServer4.Models;
 
-namespace Bit.Core.IdentityServer;
+namespace Bit.Sso.IdentityServer;
 
 public class OidcIdentityClient : Client
 {
@@ -11,8 +11,8 @@ public class OidcIdentityClient : Client
         ClientId = "oidc-identity";
         RequireClientSecret = true;
         RequirePkce = true;
-        ClientSecrets = new List<Secret> { new Secret(globalSettings.OidcIdentityClientKey.Sha256()) };
-        AllowedScopes = new string[]
+        ClientSecrets = new List<Secret> { new(globalSettings.OidcIdentityClientKey.Sha256()) };
+        AllowedScopes = new[]
         {
             IdentityServerConstants.StandardScopes.OpenId,
             IdentityServerConstants.StandardScopes.Profile
