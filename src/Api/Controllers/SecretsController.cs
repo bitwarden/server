@@ -50,12 +50,7 @@ namespace Bit.Api.Controllers
         [HttpPost("organizations/{organizationId}/secrets")]
         public async Task<SecretResponseModel> CreateSecretAsync([FromRoute] Guid organizationId, [FromBody] SecretCreateRequestModel createRequest)
         {
-            if (organizationId != createRequest.OrganizationId)
-            {
-                throw new BadRequestException("Organization ID does not match.");
-            }
-
-            var result = await _createSecretCommand.CreateAsync(createRequest.ToSecret());
+            var result = await _createSecretCommand.CreateAsync(createRequest.ToSecret(organizationId));
             return new SecretResponseModel(result);
         }
 
