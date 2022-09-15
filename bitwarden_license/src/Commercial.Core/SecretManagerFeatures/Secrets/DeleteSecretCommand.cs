@@ -22,9 +22,7 @@ namespace Bit.Commercial.Core.SecretManagerFeatures.Secrets
                 throw new NotFoundException();
             }
 
-            var results = new List<Tuple<Guid, string>>();
-
-            foreach (Guid id in ids)
+            var results = ids.Select(id =>
             {
                 if (!secrets.Any(secret => secret.Id == id))
                 {
@@ -33,9 +31,9 @@ namespace Bit.Commercial.Core.SecretManagerFeatures.Secrets
                 // TODO Once permissions are implemented add check for each secret here.
                 else
                 {
-                    results.Add(new Tuple<Guid, string>(id, ""));
+                    return new Tuple<Guid, string>(id, "");
                 }
-            }
+            }).ToList();
 
             await _secretRepository.SoftDeleteManyByIdAsync(ids);
             return results;

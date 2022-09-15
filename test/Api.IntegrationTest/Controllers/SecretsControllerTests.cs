@@ -36,7 +36,7 @@ public class SecretsControllerTest : IClassFixture<ApiApplicationFactory>
             createdSecretIds.Add(createdSecret.Id);
         }
 
-        using var message = new HttpRequestMessage(HttpMethod.Delete, "/secrets/bulk")
+        using var message = new HttpRequestMessage(HttpMethod.Post, "/secrets/delete")
         {
             Content = new StringContent(JsonSerializer.Serialize(createdSecretIds),
             Encoding.UTF8,

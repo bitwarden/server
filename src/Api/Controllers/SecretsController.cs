@@ -64,7 +64,7 @@ namespace Bit.Api.Controllers
         }
 
         // TODO Once permissions are setup for Secrets Manager need to enforce them on delete.
-        [HttpDelete("secrets/bulk")]
+        [HttpPost("secrets/delete")]
         public async Task<ListResponseModel<SecretDeleteBulkResponseModel>> BulkDeleteAsync([FromBody] List<Guid> ids)
         {
             var results = await _deleteSecretCommand.DeleteSecrets(ids);
