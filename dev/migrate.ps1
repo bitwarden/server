@@ -11,7 +11,8 @@ param([switch]$all = $false, [switch]$postgres = $false, [switch]$mysql = $false
 if ($all -or $postgres -or $mysql) {
   dotnet ef *> $null
   if ($LASTEXITCODE -ne 0) {
-    throw "Entity Framework Core tools were not found in the dotnet global tools. Please install dotnet-ef globally" 
+    Write-Host "Entity Framework Core tools were not found in the dotnet global tools. Attempting to install"
+    dotnet tool install dotnet-ef -g
   }
 }
 
