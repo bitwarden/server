@@ -8,11 +8,18 @@
 
 param([switch]$all = $false, [switch]$postgres = $false, [switch]$mysql = $false)
 
+if ($all -or $postgres -or $mysql) {
+  dotnet ef *> $null
+  if ($LASTEXITCODE -ne 0) {
+    throw "Entity Framework Core tools were not found in the dotnet global tools. Please install dotnet-ef globally" 
+  }
+}
+
 if ($all) {
   Write-Host "Starting Microsoft SQL Server Migrations"
 }
 
-if ($all -or (!$postgres -and !$mysql)) {
+if ($all -or ($postgres -eq $false -and $mysql -eq $false)) {
   docker run `
     -v "$(pwd)/helpers/mssql:/mnt/helpers" `
     -v "$(pwd)/../util/Migrator:/mnt/migrator/" `
