@@ -184,6 +184,9 @@ jobs:
             origin_docker_repo: bitwarden
           - service_name: Attachments
             origin_docker_repo: bitwarden
+          - service_name: Events
+            prod_acr: true
+            origin_docker_repo: bitwarden
           - service_name: EventsProcessor
             prod_acr: true
             origin_docker_repo: bitwardenqa.azurecr.io
