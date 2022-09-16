@@ -32,7 +32,7 @@ public class DeleteGroupCommand : IDeleteGroupCommand
         {
             throw new BadRequestException("Groups invalid.");
         }
-        
+
         var deleteDate = DateTime.UtcNow;
         foreach (var group in filteredGroups)
         {

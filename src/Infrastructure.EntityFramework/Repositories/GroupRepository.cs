@@ -116,8 +116,8 @@ public class GroupRepository : Repository<Core.Entities.Group, Group, Guid>, IGr
         {
             var dbContext = GetDatabaseContext(scope);
             var query = from g in dbContext.Groups
-                where groupIds.Contains(g.Id)
-                select g;
+                        where groupIds.Contains(g.Id)
+                        select g;
             var data = await query.ToArrayAsync();
             return data;
         }
