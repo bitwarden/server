@@ -2,6 +2,7 @@
 using Bit.Api.Models.Response;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
+using Bit.Core.OrganizationFeatures.OrganizationGroups;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -15,15 +16,18 @@ public class GroupsController : Controller
 {
     private readonly IGroupRepository _groupRepository;
     private readonly IGroupService _groupService;
+    private readonly IDeleteGroupCommand _deleteGroupCommand;
     private readonly ICurrentContext _currentContext;
 
     public GroupsController(
         IGroupRepository groupRepository,
         IGroupService groupService,
+        IDeleteGroupCommand deleteGroupCommand,
         ICurrentContext currentContext)
     {
         _groupRepository = groupRepository;
         _groupService = groupService;
+        _deleteGroupCommand = deleteGroupCommand;
         _currentContext = currentContext;
     }
 
@@ -133,7 +137,23 @@ public class GroupsController : Controller
             throw new NotFoundException();
         }
 
-        await _groupService.DeleteAsync(group);
+        await _deleteGroupCommand.DeleteAsync(group);
+    }
+    
+    [HttpDelete("")]
+    [HttpPost("delete")]
+    public async Task<ListResponseModel<GroupResponseModel>> BulkDelete(string orgId, [FromBody] GroupBulkRequestModel model)
+    {
+        var orgGuidId = new Guid(orgId);
+        if (!await _currentContext.ManageGroups(orgGuidId))
+        {
+            throw new NotFoundException();
+        }
+
+        var result = await _deleteGroupCommand.DeleteManyAsync(orgGuidId, model.Ids);
+
+        return new ListResponseModel<GroupResponseModel>(result.Select(g => 
+            new GroupResponseModel(g)));
     }
 
     [HttpDelete("{id}/user/{orgUserId}")]

@@ -30,3 +30,9 @@ public class GroupRequestModel
         return existingGroup;
     }
 }
+
+public class GroupBulkRequestModel
+{
+    [Required]
+    public IEnumerable<Guid> Ids { get; set; }
+}

@@ -75,12 +75,6 @@ public class GroupService : IGroupService
         }
     }
 
-    public async Task DeleteAsync(Group group)
-    {
-        await _groupRepository.DeleteAsync(group);
-        await _eventService.LogGroupEventAsync(group, Enums.EventType.Group_Deleted);
-    }
-
     public async Task DeleteUserAsync(Group group, Guid organizationUserId)
     {
         var orgUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);

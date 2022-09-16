@@ -9,6 +9,7 @@ public interface IGroupRepository : IRepository<Group, Guid>
     Task<ICollection<Group>> GetManyByOrganizationIdAsync(Guid organizationId);
     Task<ICollection<Tuple<Group, ICollection<SelectionReadOnly>>>> GetManyWithCollectionsByOrganizationIdAsync(
         Guid organizationId);
+    Task<ICollection<Group>> GetManyByManyIds(IEnumerable<Guid> groupIds);
     Task<ICollection<Guid>> GetManyIdsByUserIdAsync(Guid organizationUserId);
     Task<ICollection<Guid>> GetManyUserIdsByIdAsync(Guid id);
     Task<ICollection<GroupUser>> GetManyGroupUsersByOrganizationIdAsync(Guid organizationId);
@@ -16,4 +17,5 @@ public interface IGroupRepository : IRepository<Group, Guid>
     Task ReplaceAsync(Group obj, IEnumerable<SelectionReadOnly> collections);
     Task DeleteUserAsync(Guid groupId, Guid organizationUserId);
     Task UpdateUsersAsync(Guid groupId, IEnumerable<Guid> organizationUserIds);
+    Task DeleteManyAsync(Guid organizationId, IEnumerable<Guid> groupIds);
 }

@@ -76,6 +76,19 @@ public class GroupRepository : Repository<Group, Guid>, IGroupRepository
         }
     }
 
+    public async Task<ICollection<Group>> GetManyByManyIds(IEnumerable<Guid> groupIds)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<Group>(
+                $"[{Schema}].[Group_ReadByIds]",
+                new { Ids = groupIds.ToGuidIdArrayTVP() },
+                commandType: CommandType.StoredProcedure);
+
+            return results.ToList();
+        }
+    }
+
     public async Task<ICollection<Guid>> GetManyIdsByUserIdAsync(Guid organizationUserId)
     {
         using (var connection = new SqlConnection(ConnectionString))
@@ -163,6 +176,15 @@ public class GroupRepository : Repository<Group, Guid>, IGroupRepository
                 "[dbo].[GroupUser_UpdateUsers]",
                 new { GroupId = groupId, OrganizationUserIds = organizationUserIds.ToGuidIdArrayTVP() },
                 commandType: CommandType.StoredProcedure);
+        }
+    }
+
+    public async Task DeleteManyAsync(Guid organizationId, IEnumerable<Guid> groupIds)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            await connection.ExecuteAsync("[dbo].[Group_DeleteByIdsOrganizationId]",
+                new { OrganizationId = organizationId, Ids = groupIds.ToGuidIdArrayTVP() }, commandType: CommandType.StoredProcedure);
         }
     }
 }

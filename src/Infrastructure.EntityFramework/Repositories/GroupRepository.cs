@@ -110,6 +110,19 @@ public class GroupRepository : Repository<Core.Entities.Group, Group, Guid>, IGr
         }
     }
 
+    public async Task<ICollection<Core.Entities.Group>> GetManyByManyIds(IEnumerable<Guid> groupIds)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var query = from g in dbContext.Groups
+                where groupIds.Contains(g.Id)
+                select g;
+            var data = await query.ToArrayAsync();
+            return data;
+        }
+    }
+
     public async Task<ICollection<Core.Entities.GroupUser>> GetManyGroupUsersByOrganizationIdAsync(Guid organizationId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
@@ -188,6 +201,21 @@ public class GroupRepository : Repository<Core.Entities.Group, Group, Guid>, IGr
             dbContext.RemoveRange(delete);
             await dbContext.SaveChangesAsync();
             await UserBumpAccountRevisionDateByOrganizationId(orgId);
+        }
+    }
+
+    public async Task DeleteManyAsync(Guid organizationId, IEnumerable<Guid> groupIds)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var entities = await dbContext.Groups
+                .Where(g => groupIds.Contains(g.Id) && g.OrganizationId == organizationId)
+                .ToListAsync();
+
+            dbContext.Groups.RemoveRange(entities);
+            await dbContext.SaveChangesAsync();
+            await UserBumpAccountRevisionDateByOrganizationId(organizationId);
         }
     }
 }
