@@ -19,9 +19,14 @@ namespace Bit.Api.Test.Controllers
     {
         [Theory]
         [BitAutoData]
-        public async void GetSecretsByOrganization_ThrowsNotFound(SutProvider<SecretsController> sutProvider)
+        public async void GetSecretsByOrganization_ReturnsEmptyList(SutProvider<SecretsController> sutProvider, Guid id)
         {
-            var exception = await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetSecretsByOrganizationAsync(Guid.NewGuid()));
+            var result = await sutProvider.Sut.GetSecretsByOrganizationAsync(id);
+
+            await sutProvider.GetDependency<ISecretRepository>().Received(1)
+                         .GetManyByOrganizationIdAsync(Arg.Is(AssertHelper.AssertPropertyEqual(id)));
+
+            Assert.Equal(0, result.Data.Count());
         }
 
         [Theory]
