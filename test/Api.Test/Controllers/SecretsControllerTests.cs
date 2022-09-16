@@ -26,7 +26,7 @@ namespace Bit.Api.Test.Controllers
             await sutProvider.GetDependency<ISecretRepository>().Received(1)
                          .GetManyByOrganizationIdAsync(Arg.Is(AssertHelper.AssertPropertyEqual(id)));
 
-            Assert.Equal(0, result.Data.Count());
+            Assert.Empty(result.Data);
         }
 
         [Theory]
