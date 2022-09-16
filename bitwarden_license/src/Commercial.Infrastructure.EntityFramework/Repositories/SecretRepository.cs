@@ -27,6 +27,18 @@ namespace Bit.Commercial.Infrastructure.EntityFramework.Repositories
             }
         }
 
+        public async Task<IEnumerable<Core.Entities.Secret>> GetManyByIds(IEnumerable<Guid> ids)
+        {
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var secrets = await dbContext.Secret
+                                        .Where(c => ids.Contains(c.Id) && c.DeletedDate == null)
+                                        .ToListAsync();
+                return Mapper.Map<List<Core.Entities.Secret>>(secrets);
+            }
+        }
+
         public async Task<IEnumerable<Core.Entities.Secret>> GetManyByOrganizationIdAsync(Guid organizationId)
         {
             using (var scope = ServiceScopeFactory.CreateScope())

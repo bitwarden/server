@@ -15,19 +15,21 @@ namespace Bit.Api.Controllers
         private readonly ISecretRepository _secretRepository;
         private readonly ICreateSecretCommand _createSecretCommand;
         private readonly IUpdateSecretCommand _updateSecretCommand;
+        private readonly IDeleteSecretCommand _deleteSecretCommand;
 
-        public SecretsController(ISecretRepository secretRepository, ICreateSecretCommand createSecretCommand, IUpdateSecretCommand updateSecretCommand)
+        public SecretsController(ISecretRepository secretRepository, ICreateSecretCommand createSecretCommand, IUpdateSecretCommand updateSecretCommand, IDeleteSecretCommand deleteSecretCommand)
         {
             _secretRepository = secretRepository;
             _createSecretCommand = createSecretCommand;
             _updateSecretCommand = updateSecretCommand;
+            _deleteSecretCommand = deleteSecretCommand;
         }
 
         [HttpGet("organizations/{organizationId}/secrets")]
         public async Task<ListResponseModel<SecretIdentifierResponseModel>> GetSecretsByOrganizationAsync([FromRoute] Guid organizationId)
         {
             var secrets = await _secretRepository.GetManyByOrganizationIdAsync(organizationId);
-            if (secrets == null || !secrets.Any())
+            if (secrets?.Any() != true)
             {
                 throw new NotFoundException();
             }
@@ -59,6 +61,15 @@ namespace Bit.Api.Controllers
         {
             var result = await _updateSecretCommand.UpdateAsync(updateRequest.ToSecret(id));
             return new SecretResponseModel(result);
+        }
+
+        // TODO Once permissions are setup for Secrets Manager need to enforce them on delete.
+        [HttpPost("secrets/delete")]
+        public async Task<ListResponseModel<SecretDeleteBulkResponseModel>> BulkDeleteAsync([FromBody] List<Guid> ids)
+        {
+            var results = await _deleteSecretCommand.DeleteSecrets(ids);
+            var responses = results.Select(r => new SecretDeleteBulkResponseModel(r.Item1, r.Item2));
+            return new ListResponseModel<SecretDeleteBulkResponseModel>(responses);
         }
     }
 }
