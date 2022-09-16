@@ -46,7 +46,7 @@ public class AuthRequestsController : Controller
     {
         var userId = _userService.GetProperUserId(User).Value;
         var authRequests = await _authRequestRepository.GetManyByUserIdAsync(userId);
-        var responses = authRequests.Select(a => new AuthRequestResponseModel(a)).ToList();
+        var responses = authRequests.Select(a => new AuthRequestResponseModel(a, _globalSettings.SelfHosted)).ToList();
         return new ListResponseModel<AuthRequestResponseModel>(responses);
     }
 
@@ -60,7 +60,7 @@ public class AuthRequestsController : Controller
             throw new NotFoundException();
         }
 
-        return new AuthRequestResponseModel(authRequest);
+        return new AuthRequestResponseModel(authRequest, _globalSettings.SelfHosted);
     }
 
     [HttpGet("{id}/response")]
@@ -78,7 +78,7 @@ public class AuthRequestsController : Controller
             throw new NotFoundException();
         }
 
-        return new AuthRequestResponseModel(authRequest);
+        return new AuthRequestResponseModel(authRequest, _globalSettings.SelfHosted);
     }
 
     [HttpPost("")]
@@ -94,7 +94,7 @@ public class AuthRequestsController : Controller
         {
             throw new BadRequestException("Device type not provided.");
         }
-        if (_globalSettings.PasswordlessAuth.KnownDevicesOnly)
+        if (!_globalSettings.PasswordlessAuth.KnownDevicesOnly)
         {
             var d = await _deviceRepository.GetByIdentifierAsync(_currentContext.DeviceIdentifier);
             if (d == null || d.UserId != user.Id)
@@ -116,7 +116,7 @@ public class AuthRequestsController : Controller
         };
         authRequest = await _authRequestRepository.CreateAsync(authRequest);
         await _pushNotificationService.PushAuthRequestAsync(authRequest);
-        return new AuthRequestResponseModel(authRequest);
+        return new AuthRequestResponseModel(authRequest, _globalSettings.SelfHosted);
     }
 
     [HttpPut("{id}")]
@@ -150,6 +150,6 @@ public class AuthRequestsController : Controller
         }
 
         await _pushNotificationService.PushAuthRequestResponseAsync(authRequest);
-        return new AuthRequestResponseModel(authRequest);
+        return new AuthRequestResponseModel(authRequest, _globalSettings.SelfHosted);
     }
 }

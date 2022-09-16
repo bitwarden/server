@@ -6,7 +6,7 @@ namespace Bit.Api.Models.Response;
 
 public class AuthRequestResponseModel : ResponseModel
 {
-    public AuthRequestResponseModel(AuthRequest authRequest, string obj = "auth-request")
+    public AuthRequestResponseModel(AuthRequest authRequest, bool isSelfHosted, string obj = "auth-request")
         : base(obj)
     {
         if (authRequest == null)
@@ -24,6 +24,7 @@ public class AuthRequestResponseModel : ResponseModel
         CreationDate = authRequest.CreationDate;
         RequestApproved = !string.IsNullOrWhiteSpace(Key) &&
             (authRequest.Type == AuthRequestType.Unlock || !string.IsNullOrWhiteSpace(MasterPasswordHash));
+        Origin = Origin = isSelfHosted ? "SelfHosted" : "bitwarden.com";
     }
 
     public string Id { get; set; }
@@ -35,4 +36,5 @@ public class AuthRequestResponseModel : ResponseModel
     public string MasterPasswordHash { get; set; }
     public DateTime CreationDate { get; set; }
     public bool RequestApproved { get; set; }
+    public string Origin { get; set; }
 }
