@@ -345,7 +345,6 @@ public class CipherRepository : Repository<Core.Entities.Cipher, Cipher, Guid>, 
             var idsToMove = from ucd in userCipherDetails
                             join c in cipherEntities
                                 on ucd.Id equals c.Id
-                            where ucd.Edit
                             select c;
             await idsToMove.ForEachAsync(cipher =>
             {
