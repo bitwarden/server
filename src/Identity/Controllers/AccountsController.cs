@@ -6,7 +6,6 @@ using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
-using Bit.Identity.Models;
 using Bit.SharedWeb.Utilities;
 using Microsoft.AspNetCore.Mvc;
 
@@ -33,7 +32,7 @@ public class AccountsController : Controller
         _captchaValidationService = captchaValidationService;
     }
 
-    // Moved from API, If you modify this endpoint, please update API as well.
+    // Moved from API, If you modify this endpoint, please update API as well. Self hosted installs still use the API endpoints.
     [HttpPost("register")]
     [CaptchaProtected]
     public async Task<RegisterResponseModel> PostRegister([FromBody] RegisterRequestModel model)
@@ -56,7 +55,7 @@ public class AccountsController : Controller
         throw new BadRequestException(ModelState);
     }
 
-    // Moved from API, If you modify this endpoint, please update API as well.
+    // Moved from API, If you modify this endpoint, please update API as well. Self hosted installs still use the API endpoints.
     [HttpPost("prelogin")]
     public async Task<PreloginResponseModel> PostPrelogin([FromBody] PreloginRequestModel model)
     {
