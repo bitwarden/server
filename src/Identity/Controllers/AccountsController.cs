@@ -6,7 +6,6 @@ using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
-using Bit.Identity.Models;
 using Bit.SharedWeb.Utilities;
 using Microsoft.AspNetCore.Mvc;
 

@@ -35,6 +35,7 @@ namespace Bit.Api.Controllers
         private readonly IUserService _userService;
         private readonly ISendRepository _sendRepository;
         private readonly ISendService _sendService;
+        private readonly ICaptchaValidationService _captchaValidationService;
 
         public AccountsController(
             GlobalSettings globalSettings,
@@ -47,7 +48,8 @@ namespace Bit.Api.Controllers
             IUserRepository userRepository,
             IUserService userService,
             ISendRepository sendRepository,
-            ISendService sendService)
+            ISendService sendService,
+            ICaptchaValidationService captchaValidationService)
         {
             _cipherRepository = cipherRepository;
             _folderRepository = folderRepository;
@@ -60,10 +62,12 @@ namespace Bit.Api.Controllers
             _userService = userService;
             _sendRepository = sendRepository;
             _sendService = sendService;
+            _captchaValidationService = captchaValidationService;
         }
 
         #region DEPRECATED (Moved to Identity Service)
 
+        // This method is still used by self hosted intalls
         [Obsolete("2022-01-12 Moved to Identity, left for backwards compatability with older clients")]
         [HttpPost("prelogin")]
         [AllowAnonymous]
@@ -81,17 +85,20 @@ namespace Bit.Api.Controllers
             return new PreloginResponseModel(kdfInformation);
         }
 
+        // This method is still used by self hosted intalls
         [Obsolete("2022-01-12 Moved to Identity, left for backwards compatability with older clients")]
         [HttpPost("register")]
         [AllowAnonymous]
         [CaptchaProtected]
-        public async Task PostRegister([FromBody] RegisterRequestModel model)
+        public async Task<RegisterResponseModel> PostRegister([FromBody] RegisterRequestModel model)
         {
+            var user = model.ToUser();
             var result = await _userService.RegisterUserAsync(model.ToUser(), model.MasterPasswordHash,
                 model.Token, model.OrganizationUserId);
             if (result.Succeeded)
             {
-                return;
+                var captchaBypassToken = _captchaValidationService.GenerateCaptchaBypassToken(user);
+                return new RegisterResponseModel(captchaBypassToken);
             }
 
             foreach (var error in result.Errors.Where(e => e.Code != "DuplicateUserName"))

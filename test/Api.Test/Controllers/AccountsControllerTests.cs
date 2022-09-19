@@ -30,6 +30,7 @@ namespace Bit.Api.Test.Controllers
         private readonly ISendRepository _sendRepository;
         private readonly ISendService _sendService;
         private readonly IProviderUserRepository _providerUserRepository;
+        private readonly ICaptchaValidationService _captchaValidationService;
 
         public AccountsControllerTests()
         {
@@ -44,6 +45,7 @@ namespace Bit.Api.Test.Controllers
             _globalSettings = new GlobalSettings();
             _sendRepository = Substitute.For<ISendRepository>();
             _sendService = Substitute.For<ISendService>();
+            _captchaValidationService = Substitute.For<ICaptchaValidationService>();
             _sut = new AccountsController(
                 _globalSettings,
                 _cipherRepository,
@@ -55,7 +57,8 @@ namespace Bit.Api.Test.Controllers
                 _userRepository,
                 _userService,
                 _sendRepository,
-                _sendService
+                _sendService,
+                _captchaValidationService
             );
         }
 
