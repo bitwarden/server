@@ -40,7 +40,11 @@ BEGIN
 END;
 
 GO
-IF OBJECT_ID('[migrations_$DATABASE].[dbo].[migrations]') IS NULL
+"
+
+/opt/mssql-tools/bin/sqlcmd -S $SERVER -d master -U $USER -P $PASSWD -I -Q "$QUERY"
+echo "Return code: $?"
+QUERY="IF OBJECT_ID('[migrations_$DATABASE].[dbo].[migrations]') IS NULL
 BEGIN
     CREATE TABLE [migrations_$DATABASE].[dbo].[migrations] (
       [Id]                   INT IDENTITY(1,1) PRIMARY KEY,
@@ -48,9 +52,9 @@ BEGIN
       [CreationDate]         DATETIME2 (7)    NULL,
     );
 END;
-GO"
-
-/opt/mssql-tools/bin/sqlcmd -S $SERVER -d master -U $USER -P $PASSWD -I -Q "$QUERY"
+GO
+"
+/opt/mssql-tools/bin/sqlcmd -S $SERVER -d migrations_$DATABASE -U $USER -P $PASSWD -I -Q "$QUERY"
 echo "Return code: $?"
 
 should_migrate () {
