@@ -41,9 +41,10 @@ END;
 
 GO
 "
-
 /opt/mssql-tools/bin/sqlcmd -S $SERVER -d master -U $USER -P $PASSWD -I -Q "$QUERY"
 echo "Return code: $?"
+
+# Create migrations table if it does not already exist
 QUERY="IF OBJECT_ID('[migrations_$DATABASE].[dbo].[migrations]') IS NULL
 BEGIN
     CREATE TABLE [migrations_$DATABASE].[dbo].[migrations] (
