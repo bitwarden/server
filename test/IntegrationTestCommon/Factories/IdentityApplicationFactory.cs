@@ -13,11 +13,6 @@ namespace Bit.IntegrationTestCommon.Factories
     {
         public const string DefaultDeviceIdentifier = "92b9d953-b9b6-4eaf-9d3e-11d57144dfeb";
 
-        public IdentityApplicationFactory(string databaseName)
-        {
-            DatabaseName = databaseName;
-        }
-
         public async Task<HttpContext> RegisterAsync(RegisterRequestModel model)
         {
             return await Server.PostAsync("/accounts/register", JsonContent.Create(model));
