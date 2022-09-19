@@ -49,6 +49,7 @@ BEGIN
 END;"
 
 /opt/mssql-tools/bin/sqlcmd -S $SERVER -d master -U $USER -P $PASSWD -I -Q "$QUERY"
+echo "Return code: $?"
 
 should_migrate () {
   local file=$(basename $1)
