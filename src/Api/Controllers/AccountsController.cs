@@ -67,8 +67,7 @@ public class AccountsController : Controller
 
     #region DEPRECATED (Moved to Identity Service)
 
-    // This method is still used by self hosted intalls
-    [Obsolete("2022-01-12 Moved to Identity, left for backwards compatability with older clients.")]
+    [Obsolete("TDL-136 Moved to Identity (2022-01-12 cloud, 2022-09-19 self-hosted), left for backwards compatability with older clients.")]
     [HttpPost("prelogin")]
     [AllowAnonymous]
     public async Task<PreloginResponseModel> PostPrelogin([FromBody] PreloginRequestModel model)
@@ -85,8 +84,7 @@ public class AccountsController : Controller
         return new PreloginResponseModel(kdfInformation);
     }
 
-    // This method is still used by self hosted intalls
-    [Obsolete("2022-01-12 Moved to Identity, left for backwards compatability with older clients.")]
+    [Obsolete("TDL-136 Moved to Identity (2022-01-12 cloud, 2022-09-19 self-hosted), left for backwards compatability with older clients.")]
     [HttpPost("register")]
     [AllowAnonymous]
     [CaptchaProtected]
