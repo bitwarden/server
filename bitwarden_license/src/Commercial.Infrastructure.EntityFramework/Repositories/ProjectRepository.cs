@@ -56,5 +56,37 @@ namespace Bit.Commercial.Infrastructure.EntityFramework.Repositories
                 await dbContext.SaveChangesAsync();
             }
         }
+
+        public async Task AddSecretToProject(Guid projectId , Guid secretId){   
+              using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                
+                var project = await dbContext.Project
+                                        .Where(c => c.Id == projectId && c.DeletedDate == null)
+                                        .FirstAsync();
+
+                
+                var secret = await dbContext.Secret
+                                        .Where(c => c.Id == secretId && c.DeletedDate == null)
+                                        .FirstAsync();
+                project.Secrets.Add(secret);
+                await dbContext.SaveChangesAsync();
+            }
+        }
+
+        // Get projects by secret SecretRepository
+
+        // Add secret to project ProjectRepository
+
+        // Add project to Secret SecretRepository 
+
+        // Remove secrets from a project ProjectRepository
+
+        // Remove project from a secret SecretRepository
+
+        //get project with the id
+        //get secret 
+        //project.secrets.Add(secret)
     }
 }

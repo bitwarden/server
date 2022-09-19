@@ -10,7 +10,6 @@ namespace Bit.Commercial.Infrastructure.EntityFramework
         {
             services.AddSingleton<ISecretRepository, SecretRepository>();
             services.AddSingleton<IProjectRepository, ProjectRepository>();
-            services.AddSingleton<IProjectSecretsRepository, ProjectSecretsRepository>();
         }
     }
 }

@@ -18,6 +18,7 @@ namespace Bit.Api.SecretManagerFeatures.Models.Response
             Name = project.Name;
             CreationDate = project.CreationDate;
             RevisionDate = project.RevisionDate;
+            Secrets = project.Secrets;
         }
 
         public string Id { get; set; }
@@ -29,5 +30,7 @@ namespace Bit.Api.SecretManagerFeatures.Models.Response
         public DateTime CreationDate { get; set; }
 
         public DateTime RevisionDate { get; set; }
+
+        public ICollection<Secret> Secrets { get; set; }
     }
 }
