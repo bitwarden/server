@@ -33,6 +33,7 @@ BEGIN
   CREATE DATABASE $DATABASE;
 END;
 
+GO
 IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = 'migrations_$DATABASE')
 BEGIN
   CREATE DATABASE migrations_$DATABASE;
@@ -46,7 +47,8 @@ BEGIN
       [Filename]             NVARCHAR(MAX) NOT NULL,
       [CreationDate]         DATETIME2 (7)    NULL,
     );
-END;"
+END;
+GO"
 
 /opt/mssql-tools/bin/sqlcmd -S $SERVER -d master -U $USER -P $PASSWD -I -Q "$QUERY"
 echo "Return code: $?"
