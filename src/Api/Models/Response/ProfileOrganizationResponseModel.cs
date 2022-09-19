@@ -9,8 +9,8 @@ namespace Bit.Api.Models.Response
     public class ProfileOrganizationResponseModel : ResponseModel
     {
         public ProfileOrganizationResponseModel(string str) : base(str) { }
-
-        public ProfileOrganizationResponseModel(OrganizationUserOrganizationDetails organization) : this("profileOrganization")
+        public ProfileOrganizationResponseModel() : this("profileOrganization") { }
+        public ProfileOrganizationResponseModel(OrganizationUserOrganizationDetails organization) : this()
         {
             Id = organization.OrganizationId.ToString();
             Name = organization.Name;
