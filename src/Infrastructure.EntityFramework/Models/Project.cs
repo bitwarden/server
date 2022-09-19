@@ -4,7 +4,7 @@ namespace Bit.Infrastructure.EntityFramework.Models
 {
     public class Project : Core.Entities.Project
     {
-        public virtual ICollection<Secret> Secret { get; set; }
+        public new ICollection<Secret> Secrets { get; set; }
         public virtual Organization Organization { get; set; }
     }
 

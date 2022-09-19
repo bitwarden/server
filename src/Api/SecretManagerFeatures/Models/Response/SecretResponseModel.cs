@@ -37,7 +37,7 @@ namespace Bit.Api.SecretManagerFeatures.Models.Response
 
         public DateTime RevisionDate { get; set; }
 
-        public ICollection<Project> Projects { get; set; };
+        public ICollection<Project> Projects { get; set; }
     }
 }
 
