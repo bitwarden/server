@@ -60,7 +60,7 @@ jobs:
   deploy:
     name: Deploy
     runs-on: ubuntu-20.04
-    if: false
+    if: always()
     needs:
       - reset-db
       - update-db
