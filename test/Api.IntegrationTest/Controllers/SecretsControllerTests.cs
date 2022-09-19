@@ -3,8 +3,8 @@ using System.Text;
 using System.Text.Json;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.Models.Request.Organizations;
-using Bit.Api.SecretManagerFeatures.Models.Request;
 using Bit.Core.Entities;
+using Bit.Core.Repositories;
 using Xunit;
 
 namespace Bit.Api.IntegrationTest.Controllers;
@@ -15,11 +15,13 @@ public class SecretsControllerTest : IClassFixture<ApiApplicationFactory>
     private readonly int _secretsToDelete = 3;
     private readonly HttpClient _client;
     private readonly ApiApplicationFactory _factory;
+    private ISecretRepository _secretRepository;
 
     public SecretsControllerTest(ApiApplicationFactory factory)
     {
         _factory = factory;
         _client = _factory.CreateClient();
+        _secretRepository = _factory.GetService<ISecretRepository>();
     }
 
     [Fact]
@@ -30,10 +32,16 @@ public class SecretsControllerTest : IClassFixture<ApiApplicationFactory>
         var orgId = await CreateOrganization(tokens.Token);
         var createdSecretIds = new List<Guid>();
 
-        foreach (var i in Enumerable.Range(0, _secretsToDelete))
+        for (var i = 0; i < _secretsToDelete; i++)
         {
-            var createdSecret = await CreateSecret(orgId, tokens.Token);
-            createdSecretIds.Add(createdSecret.Id);
+            var secret = await _secretRepository.CreateAsync(new Secret
+            {
+                OrganizationId = orgId,
+                Key = _mockEncryptedString,
+                Value = _mockEncryptedString,
+                Note = _mockEncryptedString
+            });
+            createdSecretIds.Add(secret.Id);
         }
 
         using var message = new HttpRequestMessage(HttpMethod.Post, "/secrets/delete")
@@ -57,28 +65,9 @@ public class SecretsControllerTest : IClassFixture<ApiApplicationFactory>
             Assert.Empty(element.GetProperty("error").ToString());
             index++;
         }
-    }
 
-    private async Task<Secret> CreateSecret(Guid organizationId, string token)
-    {
-        var request = new SecretCreateRequestModel()
-        {
-            Key = _mockEncryptedString,
-            Value = _mockEncryptedString,
-            Note = _mockEncryptedString
-        };
-        using var message = new HttpRequestMessage(HttpMethod.Post, $"/organizations/{organizationId.ToString()}/secrets")
-        {
-            Content = new StringContent(
-            JsonSerializer.Serialize(request),
-            Encoding.UTF8,
-            "application/json")
-        };
-        message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-
-        var response = await _client.SendAsync(message);
-        response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<Secret>();
+        var secrets = await _secretRepository.GetManyByIds(createdSecretIds);
+        Assert.Empty(secrets);
     }
 
     private async Task<Guid> CreateOrganization(string token)

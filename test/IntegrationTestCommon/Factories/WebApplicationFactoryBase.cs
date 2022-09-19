@@ -107,5 +107,11 @@ namespace Bit.IntegrationTestCommon.Factories
             var scope = Services.CreateScope();
             return scope.ServiceProvider.GetRequiredService<DatabaseContext>();
         }
+
+        public T GetService<T>()
+        {
+            var scope = Services.CreateScope();
+            return scope.ServiceProvider.GetRequiredService<T>();
+        }
     }
 }
