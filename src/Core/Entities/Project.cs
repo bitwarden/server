@@ -16,9 +16,8 @@ namespace Bit.Core.Entities
         public DateTime RevisionDate { get; set; }
 
         public DateTime? DeletedDate { get; set; }
-        
-        public ICollection<Secret> Secrets { get; set; }
 
+          public ICollection<Secret> Secrets { get; set; }
         public void SetNewId()
         {
             if (Id == default(Guid))

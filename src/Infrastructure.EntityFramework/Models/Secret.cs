@@ -4,7 +4,7 @@ namespace Bit.Infrastructure.EntityFramework.Models
 {
     public class Secret : Core.Entities.Secret
     {
-        public new ICollection<Project> Projects { get; set; }
+        public virtual new ICollection<Project> Projects { get; set; }
         public virtual Organization Organization { get; set; }
     }
 
@@ -12,7 +12,7 @@ namespace Bit.Infrastructure.EntityFramework.Models
     {
         public SecretMapperProfile()
         {
-            CreateMap<Core.Entities.Secret, Secret>().ReverseMap();
+            CreateMap<Core.Entities.Secret, Secret>();
         }
     }
 }
