@@ -4,31 +4,19 @@ using Bit.Core.Utilities;
 
 namespace Bit.Api.SecretManagerFeatures.Models.Request
 {
-    public class ProjectCreateRequestModel : IValidatableObject
+    public class ProjectCreateRequestModel
     {
-        [Required]
-        public Guid OrganizationId { get; set; }
-
         [Required]
         [EncryptedString]
         public string Name { get; set; }
 
-        public Project ToProject()
+        public Project ToProject(Guid organizationId)
         {
             return new Project()
             {
-                OrganizationId = this.OrganizationId,
+                OrganizationId = organizationId,
                 Name = this.Name,
-                DeletedDate = null,
             };
-        }
-
-        public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
-        {
-            if (OrganizationId == default(Guid))
-            {
-                yield return new ValidationResult("Organization ID is required.");
-            }
         }
     }
 }

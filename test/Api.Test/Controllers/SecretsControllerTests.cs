@@ -19,9 +19,14 @@ namespace Bit.Api.Test.Controllers
     {
         [Theory]
         [BitAutoData]
-        public async void GetSecretsByOrganization_ThrowsNotFound(SutProvider<SecretsController> sutProvider)
+        public async void GetSecretsByOrganization_ReturnsEmptyList(SutProvider<SecretsController> sutProvider, Guid id)
         {
-            var exception = await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetSecretsByOrganizationAsync(Guid.NewGuid()));
+            var result = await sutProvider.Sut.GetSecretsByOrganizationAsync(id);
+
+            await sutProvider.GetDependency<ISecretRepository>().Received(1)
+                         .GetManyByOrganizationIdAsync(Arg.Is(AssertHelper.AssertPropertyEqual(id)));
+
+            Assert.Empty(result.Data);
         }
 
         [Theory]
@@ -29,14 +34,6 @@ namespace Bit.Api.Test.Controllers
         public async void GetSecret_NotFound(SutProvider<SecretsController> sutProvider)
         {
             await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetSecretAsync(Guid.NewGuid()));
-        }
-
-        [Theory]
-        [BitAutoData]
-        public async void CreateSecret_MismatchedOrgId_Throws(SutProvider<SecretsController> sutProvider, SecretCreateRequestModel data)
-        {
-            var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.CreateSecretAsync(Guid.NewGuid(), data));
-            Assert.Contains("Organization ID does not match.", exception.Message);
         }
 
         [Theory]
@@ -65,13 +62,13 @@ namespace Bit.Api.Test.Controllers
 
         [Theory]
         [BitAutoData]
-        public async void CreateSecret_Success(SutProvider<SecretsController> sutProvider, SecretCreateRequestModel data)
+        public async void CreateSecret_Success(SutProvider<SecretsController> sutProvider, SecretCreateRequestModel data, Guid organizationId)
         {
-            var resultSecret = data.ToSecret();
+            var resultSecret = data.ToSecret(organizationId);
 
             sutProvider.GetDependency<ICreateSecretCommand>().CreateAsync(default).ReturnsForAnyArgs(resultSecret);
 
-            var result = await sutProvider.Sut.CreateSecretAsync(data.OrganizationId, data);
+            var result = await sutProvider.Sut.CreateSecretAsync(organizationId, data);
             await sutProvider.GetDependency<ICreateSecretCommand>().Received(1)
                          .CreateAsync(Arg.Any<Secret>());
         }
@@ -86,6 +83,30 @@ namespace Bit.Api.Test.Controllers
             var result = await sutProvider.Sut.UpdateSecretAsync(secretId, data);
             await sutProvider.GetDependency<IUpdateSecretCommand>().Received(1)
                          .UpdateAsync(Arg.Any<Secret>());
+        }
+
+        [Theory]
+        [BitAutoData]
+        public async void BulkDeleteSecret_Success(SutProvider<SecretsController> sutProvider, List<Guid> data)
+        {
+            var mockResult = new List<Tuple<Guid, string>>();
+            foreach (var id in data)
+            {
+                mockResult.Add(new Tuple<Guid, string>(id, ""));
+            }
+            sutProvider.GetDependency<IDeleteSecretCommand>().DeleteSecrets(data).ReturnsForAnyArgs(mockResult);
+
+            var results = await sutProvider.Sut.BulkDeleteAsync(data);
+            await sutProvider.GetDependency<IDeleteSecretCommand>().Received(1)
+                         .DeleteSecrets(Arg.Is(data));
+            Assert.Equal(data.Count, results.Data.Count());
+        }
+
+        [Theory]
+        [BitAutoData]
+        public async void BulkDeleteSecret_NoGuids_ThrowsArgumentNullException(SutProvider<SecretsController> sutProvider)
+        {
+            await Assert.ThrowsAsync<ArgumentNullException>(() => sutProvider.Sut.BulkDeleteAsync(new List<Guid>()));
         }
     }
 }

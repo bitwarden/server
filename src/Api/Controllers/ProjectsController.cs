@@ -26,12 +26,7 @@ namespace Bit.Api.Controllers
         [HttpPost("organizations/{organizationId}/projects")]
         public async Task<ProjectResponseModel> CreateAsync([FromRoute] Guid organizationId, [FromBody] ProjectCreateRequestModel createRequest)
         {
-            if (organizationId != createRequest.OrganizationId)
-            {
-                throw new BadRequestException("Organization ID does not match.");
-            }
-
-            var result = await _createProjectCommand.CreateAsync(createRequest.ToProject());
+            var result = await _createProjectCommand.CreateAsync(createRequest.ToProject(organizationId));
             return new ProjectResponseModel(result);
         }
 
