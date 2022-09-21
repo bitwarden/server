@@ -262,7 +262,7 @@ public class UsersController : Controller
     }
 
     [HttpDelete("{id}")]
-    public async Task<IActionResult> Delete(Guid organizationId, Guid id, [FromBody] ScimUserRequestModel model)
+    public async Task<IActionResult> Delete(Guid organizationId, Guid id)
     {
         var orgUser = await _organizationUserRepository.GetByIdAsync(id);
         if (orgUser == null || orgUser.OrganizationId != organizationId)
