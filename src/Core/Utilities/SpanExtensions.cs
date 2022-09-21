@@ -7,7 +7,7 @@ public static class SpanExtensions
     {
         var splitIndex = input.IndexOf(splitChar);
 
-        if (splitIndex < 1)
+        if (splitIndex == -1)
         {
             chunk = default;
             rest = input;

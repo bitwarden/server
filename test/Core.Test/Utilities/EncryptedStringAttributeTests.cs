@@ -75,13 +75,13 @@ public class EncryptedStringAttributeTests
     public void EncryptionTypeMap_HasEntry_ForEachEnumValue()
     {
         var enumValues = Enum.GetValues<EncryptionType>();
-        Assert.Equal(enumValues.Length, EncryptedStringAttribute._encryptionTypeMap.Count);
+        Assert.Equal(enumValues.Length, EncryptedStringAttribute._encryptionTypeToRequiredPiecesMap.Count);
 
         foreach (var enumValue in enumValues)
         {
             // Go a step further and ensure that the map contains a value for each value instead of just casting
             // a random number for one of the keys.
-            Assert.True(EncryptedStringAttribute._encryptionTypeMap.ContainsKey(enumValue));
+            Assert.True(EncryptedStringAttribute._encryptionTypeToRequiredPiecesMap.ContainsKey(enumValue));
         }
     }
 }

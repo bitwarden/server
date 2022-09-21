@@ -11,7 +11,7 @@ namespace Bit.Core.Utilities;
 /// </summary>
 public class EncryptedStringAttribute : ValidationAttribute
 {
-    internal static readonly Dictionary<EncryptionType, int> _encryptionTypeMap = new()
+    internal static readonly Dictionary<EncryptionType, int> _encryptionTypeToRequiredPiecesMap = new()
     {
         [EncryptionType.AesCbc256_B64] = 2, // iv|ct
         [EncryptionType.AesCbc128_HmacSha256_B64] = 3, // iv|ct|mac
@@ -54,7 +54,7 @@ public class EncryptedStringAttribute : ValidationAttribute
     {
         if (!value.TrySplitBy('.', out var headerChunk, out var rest))
         {
-            // We coundn't find a header part, this is the slow path, because we have to do two loops over
+            // We couldn't find a header part, this is the slow path, because we have to do two loops over
             // the data.
             // If it has 3 encryption parts that means it is AesCbc128_HmacSha256_B64
             // else we assume it is AesCbc256_B64
@@ -72,11 +72,11 @@ public class EncryptedStringAttribute : ValidationAttribute
 
             if (pieces == 3)
             {
-                return ValidatePieces(rest, _encryptionTypeMap[EncryptionType.AesCbc128_HmacSha256_B64]);
+                return ValidatePieces(rest, _encryptionTypeToRequiredPiecesMap[EncryptionType.AesCbc128_HmacSha256_B64]);
             }
             else
             {
-                return ValidatePieces(rest, _encryptionTypeMap[EncryptionType.AesCbc256_B64]);
+                return ValidatePieces(rest, _encryptionTypeToRequiredPiecesMap[EncryptionType.AesCbc256_B64]);
             }
         }
 
@@ -94,7 +94,7 @@ public class EncryptedStringAttribute : ValidationAttribute
 
             // Since this value came from Enum.TryParse we know it is an enumerated object and we can therefore
             // just access the dictionary
-            return ValidatePieces(rest, _encryptionTypeMap[encryptionType]);
+            return ValidatePieces(rest, _encryptionTypeToRequiredPiecesMap[encryptionType]);
         }
 
         // Simply cast the number to the enum, this could be a value that doesn't actually have a backing enum
@@ -102,7 +102,7 @@ public class EncryptedStringAttribute : ValidationAttribute
         // numbers will be filtered out there.
         encryptionType = (EncryptionType)encryptionTypeNumber;
 
-        if (!_encryptionTypeMap.TryGetValue(encryptionType, out var encryptionPieces))
+        if (!_encryptionTypeToRequiredPiecesMap.TryGetValue(encryptionType, out var encryptionPieces))
         {
             // Could not find a configuration map for the given header piece. This is an invalid string
             return false;
@@ -170,7 +170,7 @@ public class EncryptedStringAttribute : ValidationAttribute
             // Check if we rented the pool and if so, return it.
             if (pooledChunks != null)
             {
-                ArrayPool<byte>.Shared.Return(pooledChunks);
+                ArrayPool<byte>.Shared.Return(pooledChunks, true);
             }
         }
     }
