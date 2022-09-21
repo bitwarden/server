@@ -1,11 +1,11 @@
-﻿using Bit.Api.SecretManagerFeatures.Models.Request;
+﻿using Bit.Api.Models.Response;
+using Bit.Api.SecretManagerFeatures.Models.Request;
 using Bit.Api.SecretManagerFeatures.Models.Response;
 using Bit.Api.Utilities;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.SecretManagerFeatures.Projects.Interfaces;
 using Microsoft.AspNetCore.Mvc;
-using Bit.Api.Models.Response;
 
 namespace Bit.Api.Controllers
 {
