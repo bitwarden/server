@@ -55,12 +55,12 @@ namespace Bit.Core.IdentityServer
                 || context.Result.ValidatedRequest.Client.AllowedScopes.Contains("secrets"))
             {
                 // TODO: Is this the best approach?
-                if (context.Result.ValidatedRequest.Client.Properties.ContainsKey("encryptedSecrets"))
+                if (context.Result.ValidatedRequest.Client.Properties.ContainsKey("encryptedPayload"))
                 {
                     context.Result.CustomResponse = new Dictionary<string, object>
                     {
                         {
-                            "EncryptedPayload", context.Result.ValidatedRequest.Client.Properties["encryptedSecrets"]
+                            "encrypted_payload", context.Result.ValidatedRequest.Client.Properties["encryptedPayload"]
                         },
                     };
                 }

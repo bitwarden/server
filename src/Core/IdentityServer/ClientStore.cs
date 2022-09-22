@@ -104,7 +104,7 @@ namespace Bit.Core.IdentityServer
                 AccessTokenLifetime = 3600 * 1,
                 ClientClaimsPrefix = null,
                 Properties = new Dictionary<string, string> {
-                    {"encryptedSecrets", apiKey.EncryptedPayload},
+                    {"encryptedPayload", apiKey.EncryptedPayload},
                 },
                 Claims = new List<ClientClaim>
                 {
