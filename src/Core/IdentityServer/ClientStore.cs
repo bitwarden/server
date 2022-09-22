@@ -99,10 +99,13 @@ namespace Bit.Core.IdentityServer
                 ClientId = clientId,
                 RequireClientSecret = true,
                 ClientSecrets = { new Secret(apiKey.ClientSecret.Sha256()) },
-                AllowedScopes = new[] { "api" },
+                AllowedScopes = new[] { "api", "secrets" },
                 AllowedGrantTypes = GrantTypes.ClientCredentials,
                 AccessTokenLifetime = 3600 * 1,
                 ClientClaimsPrefix = null,
+                Properties = new Dictionary<string, string> {
+                    {"encryptedSecrets", apiKey.EncryptedPayload},
+                },
                 Claims = new List<ClientClaim>
                 {
                     new(JwtClaimTypes.Subject, subj.ToString()),

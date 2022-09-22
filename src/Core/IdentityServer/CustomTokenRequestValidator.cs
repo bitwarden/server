@@ -51,8 +51,20 @@ namespace Bit.Core.IdentityServer
             string[] allowedGrantTypes = { "authorization_code", "client_credentials" };
             if (!allowedGrantTypes.Contains(context.Result.ValidatedRequest.GrantType)
                 || context.Result.ValidatedRequest.ClientId.StartsWith("organization")
-                || context.Result.ValidatedRequest.ClientId.StartsWith("installation"))
+                || context.Result.ValidatedRequest.ClientId.StartsWith("installation")
+                || context.Result.ValidatedRequest.Client.AllowedScopes.Contains("secrets"))
             {
+                // TODO: Is this the best approach?
+                if (context.Result.ValidatedRequest.Client.Properties.ContainsKey("encryptedSecrets"))
+                {
+                    context.Result.CustomResponse = new Dictionary<string, object>
+                    {
+                        {
+                            "EncryptedPayload", context.Result.ValidatedRequest.Client.Properties["encryptedSecrets"]
+                        },
+                    };
+                }
+
                 return;
             }
             await ValidateAsync(context, context.Result.ValidatedRequest,
@@ -101,6 +113,7 @@ namespace Bit.Core.IdentityServer
                     context.Result.CustomResponse["ApiUseKeyConnector"] = true;
                     context.Result.CustomResponse["ResetMasterPassword"] = false;
                 }
+
                 return;
             }
 
