@@ -1,5 +1,4 @@
-﻿using Amazon.Runtime.Internal.Util;
-using Microsoft.AspNetCore.DataProtection;
+﻿using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Tokens;

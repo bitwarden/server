@@ -1,6 +1,5 @@
 ﻿using Bit.Core.Utilities;
 using Serilog;
-using Serilog.Events;
 
 namespace Bit.Sso;
 

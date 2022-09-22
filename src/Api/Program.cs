@@ -1,7 +1,6 @@
 ﻿using AspNetCoreRateLimit;
 using Bit.Core.Utilities;
 using Microsoft.IdentityModel.Tokens;
-using Serilog.Events;
 
 namespace Bit.Api;
 
