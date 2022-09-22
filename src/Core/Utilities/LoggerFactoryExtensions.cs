@@ -33,10 +33,10 @@ public static class LoggerFactoryExtensions
         WebHostBuilderContext context,
         Func<LogEvent, IGlobalSettings, bool> filter = null)
     {
-        // if (context.HostingEnvironment.IsDevelopment())
-        // {
-        //     return builder;
-        // }
+        if (context.HostingEnvironment.IsDevelopment())
+        {
+            return builder;
+        }
 
         var globalSettings = new GlobalSettings();
         ConfigurationBinder.Bind(context.Configuration.GetSection("GlobalSettings"), globalSettings);
