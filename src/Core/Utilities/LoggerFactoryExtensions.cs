@@ -31,12 +31,15 @@ public static class LoggerFactoryExtensions
     public static ILoggingBuilder AddSerilog(
         this ILoggingBuilder builder,
         WebHostBuilderContext context,
-        Func<LogEvent, bool> filter = null)
+        Func<LogEvent, IGlobalSettings, bool> filter = null)
     {
-        if (context.HostingEnvironment.IsDevelopment())
-        {
-            return builder;
-        }
+        // if (context.HostingEnvironment.IsDevelopment())
+        // {
+        //     return builder;
+        // }
+
+        var globalSettings = new GlobalSettings();
+        ConfigurationBinder.Bind(context.Configuration.GetSection("GlobalSettings"), globalSettings);
 
         bool inclusionPredicate(LogEvent e)
         {
@@ -49,11 +52,8 @@ public static class LoggerFactoryExtensions
             {
                 return true;
             }
-            return filter(e);
+            return filter(e, globalSettings);
         }
-
-        var globalSettings = new GlobalSettings();
-        ConfigurationBinder.Bind(context.Configuration.GetSection("GlobalSettings"), globalSettings);
 
         var config = new LoggerConfiguration()
             .Enrich.FromLogContext()
