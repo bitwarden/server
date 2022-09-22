@@ -27,7 +27,7 @@ public static class SpanExtensions
         var count = 0;
         int pos;
 
-        while((pos = span.IndexOf(value)) >= 0)
+        while ((pos = span.IndexOf(value)) >= 0)
         {
             span = span[++pos..];
             count++;

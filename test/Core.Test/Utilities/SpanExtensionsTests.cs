@@ -1,4 +1,4 @@
-using Bit.Core.Utilities;
+﻿using Bit.Core.Utilities;
 using Xunit;
 
 #nullable enable
@@ -42,9 +42,9 @@ public class SpanExtensionsTests
     }
 
     [Theory]
-    [InlineData(new [] {5, 4}, 5, 1)]
-    [InlineData(new [] { 1 }, 5, 0)]
-    [InlineData(new [] { 5, 5, 5}, 5, 3)]
+    [InlineData(new[] { 5, 4 }, 5, 1)]
+    [InlineData(new[] { 1 }, 5, 0)]
+    [InlineData(new[] { 5, 5, 5 }, 5, 3)]
     public void CountIntegers_ReturnsCount(int[] array, int countNumber, int expectedInstances)
     {
         Assert.Equal(expectedInstances, ((ReadOnlySpan<int>)array.AsSpan()).Count(countNumber));
