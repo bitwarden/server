@@ -41,8 +41,8 @@ public class EncryptedStringAttribute : ValidationAttribute
                 return IsValidCore(stringValue);
             }
 
-            // Slow path (ish)
-            return IsValidCore(value.ToString());
+            // This attribute should only be placed on string properties, fail
+            return false;
         }
         catch
         {
@@ -58,19 +58,9 @@ public class EncryptedStringAttribute : ValidationAttribute
             // the data.
             // If it has 3 encryption parts that means it is AesCbc128_HmacSha256_B64
             // else we assume it is AesCbc256_B64
-            var encryptionPiecesChunk = rest;
+            var splitChars = rest.Count('|');
 
-            var pieces = 1;
-            var findIndex = encryptionPiecesChunk.IndexOf('|');
-
-            while (findIndex != -1)
-            {
-                pieces++;
-                encryptionPiecesChunk = encryptionPiecesChunk[++findIndex..];
-                findIndex = encryptionPiecesChunk.IndexOf('|');
-            }
-
-            if (pieces == 3)
+            if (splitChars == 2)
             {
                 return ValidatePieces(rest, _encryptionTypeToRequiredPiecesMap[EncryptionType.AesCbc128_HmacSha256_B64]);
             }
@@ -153,12 +143,16 @@ public class EncryptedStringAttribute : ValidationAttribute
 
     private static bool IsValidBase64(ReadOnlySpan<char> input)
     {
+        const int StackLimit = 256;
+
         byte[]? pooledChunks = null;
 
+        var upperLimitLength = CalculateBase64ByteLengthUpperLimit(input.Length);
+
         // Ref: https://vcsjones.dev/stackalloc/
-        var byteBuffer = input.Length > 128
-            ? (pooledChunks = ArrayPool<byte>.Shared.Rent(input.Length * 2))
-            : stackalloc byte[256];
+        var byteBuffer = upperLimitLength > StackLimit
+            ? (pooledChunks = ArrayPool<byte>.Shared.Rent(upperLimitLength))
+            : stackalloc byte[StackLimit];
 
         try
         {
@@ -173,5 +167,10 @@ public class EncryptedStringAttribute : ValidationAttribute
                 ArrayPool<byte>.Shared.Return(pooledChunks, true);
             }
         }
+    }
+
+    internal static int CalculateBase64ByteLengthUpperLimit(int charLength)
+    {
+        return 3 * (charLength / 4);
     }
 }
