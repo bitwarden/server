@@ -46,3 +46,24 @@ BEGIN
         ON [dbo].[ApiKey]([ServiceAccountId] ASC);
 END
 GO
+
+CREATE OR ALTER VIEW [dbo].[ApiKeyView]
+AS
+SELECT
+    *
+FROM
+    [dbo].[ApiKey]
+
+CREATE OR ALTER PROCEDURE [dbo].[ApiKey_ReadById]
+    @Id UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    SELECT
+        *
+    FROM
+        [dbo].[ApiKeyView]
+    WHERE
+        [Id] = @Id
+END
