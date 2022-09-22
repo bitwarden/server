@@ -86,7 +86,28 @@ namespace Bit.Core.IdentityServer
         private async Task<Client> CreateApiKeyClientAsync(string clientId)
         {
             var apiKey = await _apiKeyRepository.GetByIdAsync(new Guid(clientId));
-            throw new NotImplementedException();
+
+            if (apiKey == null)
+            {
+                return null;
+            }
+
+            var subj = apiKey.UserId ?? apiKey.OrganizationId ?? apiKey.ServiceAccountId;
+
+            return new Client
+            {
+                ClientId = clientId,
+                RequireClientSecret = true,
+                ClientSecrets = { new Secret(apiKey.ClientSecret.Sha256()) },
+                AllowedScopes = new[] { "api" },
+                AllowedGrantTypes = GrantTypes.ClientCredentials,
+                AccessTokenLifetime = 3600 * 1,
+                ClientClaimsPrefix = null,
+                Claims = new List<ClientClaim>
+                {
+                    new(JwtClaimTypes.Subject, subj.ToString()),
+                },
+            };
         }
 
         private async Task<Client> CreateUserClientAsync(string clientId)
@@ -132,7 +153,6 @@ namespace Bit.Core.IdentityServer
                 ClientClaimsPrefix = null,
                 Claims = claims,
             };
-
         }
 
         private async Task<Client> CreateOrganizationClientAsync(string clientId)
