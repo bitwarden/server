@@ -20,7 +20,7 @@ namespace Bit.Api.SecretManagerFeatures.Models.Response
             Note = secret.Note;
             CreationDate = secret.CreationDate;
             RevisionDate = secret.RevisionDate;
-            Projects = secret.Projects;
+            Projects = secret.Projects.Select(p => p.Id);
         }
 
         public string Id { get; set; }
@@ -37,7 +37,7 @@ namespace Bit.Api.SecretManagerFeatures.Models.Response
 
         public DateTime RevisionDate { get; set; }
 
-        public ICollection<Project> Projects { get; set; }
+        public IEnumerable<Guid> Projects { get; set; }
     }
 }
 

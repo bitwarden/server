@@ -20,7 +20,9 @@ namespace Bit.Core.Entities
         public DateTime RevisionDate { get; set; } = DateTime.UtcNow;
 
         public DateTime? DeletedDate { get; set; }
+
         public ICollection<Project> Projects {get; set; }
+        
         public void SetNewId()
         {
             if (Id == default(Guid))
