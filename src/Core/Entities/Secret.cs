@@ -21,8 +21,8 @@ namespace Bit.Core.Entities
 
         public DateTime? DeletedDate { get; set; }
 
-        public ICollection<Project> Projects {get; set; }
-        
+        public ICollection<Project>? Projects { get; set; }
+
         public void SetNewId()
         {
             if (Id == default(Guid))
