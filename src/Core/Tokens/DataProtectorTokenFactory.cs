@@ -48,8 +48,9 @@ public class DataProtectorTokenFactory<T> : IDataProtectorTokenFactory<T> where 
             data = Unprotect(token);
             return true;
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogInformation(ex, "Failed to unprotect token: {0}", token);
             data = default;
             return false;
         }
