@@ -12,7 +12,9 @@ namespace Bit.Infrastructure.EntityFramework.Models
     {
         public ProjectMapperProfile()
         {
-            CreateMap<Core.Entities.Project, Project>().PreserveReferences();
+            CreateMap<Core.Entities.Project, Project>()
+                .PreserveReferences()
+                .ReverseMap();
         }
     }
 }
