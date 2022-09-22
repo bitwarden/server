@@ -37,7 +37,7 @@ namespace Bit.Commercial.Infrastructure.EntityFramework.Repositories
                                         .Where(c => c.OrganizationId == organizationId && c.DeletedDate == null)
                                         .OrderBy(c => c.RevisionDate)
                                         .ToListAsync();
-                                        
+
                 return Mapper.Map<List<Core.Entities.Secret>>(secrets);
             }
         }
