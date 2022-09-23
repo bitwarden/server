@@ -544,14 +544,14 @@ public class GlobalSettings : IGlobalSettings
 
     public class ApiLogLevelSettings : IApiLogLevelSettings
     {
-        public LogEventLevel Default { get; set; } = LogEventLevel.Error;
+        public LogEventLevel Default { get; set; } = LogEventLevel.Debug;
         public LogEventLevel IdentityToken { get; set; } = LogEventLevel.Error;
         public LogEventLevel IpRateLimit { get; set; } = LogEventLevel.Information;
     }
 
     public class IdentityLogLevelSettings : IIdentityLogLevelSettings
     {
-        public LogEventLevel Default { get; set; } = LogEventLevel.Error;
+        public LogEventLevel Default { get; set; } = LogEventLevel.Debug;
         public LogEventLevel IdentityToken { get; set; } = LogEventLevel.Fatal;
         public LogEventLevel IpRateLimit { get; set; } = LogEventLevel.Information;
     }
@@ -589,7 +589,7 @@ public class GlobalSettings : IGlobalSettings
 
     public class NotificationsLogLevelSettings : INotificationsLogLevelSettings
     {
-        public LogEventLevel Default { get; set; } = LogEventLevel.Warning;
+        public LogEventLevel Default { get; set; } = LogEventLevel.Debug;
         public LogEventLevel IdentityToken { get; set; } = LogEventLevel.Fatal;
     }
 }
