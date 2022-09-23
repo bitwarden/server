@@ -63,7 +63,7 @@ public class InstallationAuthenticatingHandler : DelegatingHandler
         {
             if (_accessToken == null || DateTime.UtcNow > _nextAuthAttempt)
             {
-                var response = await CallConnectTokenAsync();
+                var response = await CallConnectTokenAsync(cancellationToken);
                 if (response.StatusCode != HttpStatusCode.OK)
                 {
                     return false;
@@ -104,7 +104,7 @@ public class InstallationAuthenticatingHandler : DelegatingHandler
         }
     }
 
-    private async Task<HttpResponseMessage> CallConnectTokenAsync()
+    private async Task<HttpResponseMessage> CallConnectTokenAsync(CancellationToken cancellationToken)
     {
         return await _identityClient.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
         {
@@ -112,6 +112,6 @@ public class InstallationAuthenticatingHandler : DelegatingHandler
             { "client_id", _tokenOptions.ClientId },
             { "client_secret", _tokenOptions.ClientSecret },
             { "scope", _tokenOptions.Scope },
-        }));
+        }), cancellationToken);
     }
 }
