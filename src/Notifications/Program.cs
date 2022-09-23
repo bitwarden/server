@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Utilities;
 using Serilog.Events;
+using Serilog;
 
 namespace Bit.Notifications;
 
@@ -10,6 +11,7 @@ public class Program
         Host
             .CreateDefaultBuilder(args)
             .ConfigureCustomAppConfiguration(args)
+            .UseSerilog()
             .ConfigureWebHostDefaults(webBuilder =>
             {
                 webBuilder.UseStartup<Startup>();

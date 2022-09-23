@@ -10,6 +10,7 @@ public class Program
         Host
             .CreateDefaultBuilder(args)
             .ConfigureCustomAppConfiguration(args)
+            .UseSerilog()
             .ConfigureWebHostDefaults(webBuilder =>
             {
                 webBuilder.UseStartup<Startup>();

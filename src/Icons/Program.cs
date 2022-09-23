@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Utilities;
+using Serilog;
 
 namespace Bit.Icons;
 
@@ -8,6 +9,7 @@ public class Program
     {
         Host
             .CreateDefaultBuilder(args)
+            .UseSerilog()
             .ConfigureWebHostDefaults(webBuilder =>
             {
                 webBuilder.UseStartup<Startup>();

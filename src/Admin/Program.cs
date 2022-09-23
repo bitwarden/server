@@ -1,5 +1,5 @@
 ﻿using Bit.Core.Utilities;
-
+using Serilog;
 namespace Bit.Admin;
 
 public class Program
@@ -9,6 +9,7 @@ public class Program
         Host
             .CreateDefaultBuilder(args)
             .ConfigureCustomAppConfiguration(args)
+            .UseSerilog()
             .ConfigureWebHostDefaults(webBuilder =>
             {
                 webBuilder.ConfigureKestrel(o =>
