@@ -1,4 +1,4 @@
-﻿using Serilog.Events;
+﻿using Bit.Core.Settings.LogSettings;
 
 namespace Bit.Core.Settings;
 
@@ -520,76 +520,5 @@ public class GlobalSettings : IGlobalSettings
         /// TODO: Determine/discuss a suitable sliding window
         /// </summary>
         public int SlidingWindowSeconds { get; set; } = 120;
-    }
-
-    public class LogLevelSettings : ILogLevelSettings
-    {
-        public IBillingLogLevelSettings BillingSettings { get; set; } = new BillingLogLevelSettings();
-        public IApiLogLevelSettings ApiSettings { get; set; } = new ApiLogLevelSettings();
-        public IIdentityLogLevelSettings IdentitySettings { get; set; } = new IdentityLogLevelSettings();
-        public IScimLogLevelSettings ScimSettings { get; set; } = new ScimLogLevelSettings();
-        public ISsoLogLevelSettings SsoSettings { get; set; } = new SsoLogLevelSettings();
-        public IAdminLogLevelSettings AdminSettings { get; set; } = new AdminLogLevelSettings();
-        public IEventsLogLevelSettings EventsSettings { get; set; } = new EventsLogLevelSettings();
-        public IEventsProcessorLogLevelSettings EventsProcessorSettings { get; set; } = new EventsProcessorLogLevelSettings();
-        public IIconsLogLevelSettings IconsSettings { get; set; } = new IconsLogLevelSettings();
-        public INotificationsLogLevelSettings NotificationsSettings { get; set; } = new NotificationsLogLevelSettings();
-    }
-
-    public class BillingLogLevelSettings : IBillingLogLevelSettings
-    {
-        public LogEventLevel Default { get; set; } = LogEventLevel.Warning;
-        public LogEventLevel Jobs { get; set; } = LogEventLevel.Information;
-    }
-
-    public class ApiLogLevelSettings : IApiLogLevelSettings
-    {
-        public LogEventLevel Default { get; set; } = LogEventLevel.Error;
-        public LogEventLevel IdentityToken { get; set; } = LogEventLevel.Error;
-        public LogEventLevel IpRateLimit { get; set; } = LogEventLevel.Information;
-    }
-
-    public class IdentityLogLevelSettings : IIdentityLogLevelSettings
-    {
-        public LogEventLevel Default { get; set; } = LogEventLevel.Error;
-        public LogEventLevel IdentityToken { get; set; } = LogEventLevel.Fatal;
-        public LogEventLevel IpRateLimit { get; set; } = LogEventLevel.Information;
-    }
-
-    public class ScimLogLevelSettings : IScimLogLevelSettings
-    {
-        public LogEventLevel Default { get; set; } = LogEventLevel.Warning;
-    }
-
-    public class SsoLogLevelSettings : ISsoLogLevelSettings
-    {
-        public LogEventLevel Default { get; set; } = LogEventLevel.Error;
-    }
-
-    public class AdminLogLevelSettings : IAdminLogLevelSettings
-    {
-        public LogEventLevel Default { get; set; } = LogEventLevel.Error;
-    }
-
-    public class EventsLogLevelSettings : IEventsLogLevelSettings
-    {
-        public LogEventLevel Default { get; set; } = LogEventLevel.Error;
-        public LogEventLevel IdentityToken { get; set; } = LogEventLevel.Fatal;
-    }
-
-    public class EventsProcessorLogLevelSettings : IEventsProcessorLogLevelSettings
-    {
-        public LogEventLevel Default { get; set; } = LogEventLevel.Warning;
-    }
-
-    public class IconsLogLevelSettings : IIconsLogLevelSettings
-    {
-        public LogEventLevel Default { get; set; } = LogEventLevel.Error;
-    }
-
-    public class NotificationsLogLevelSettings : INotificationsLogLevelSettings
-    {
-        public LogEventLevel Default { get; set; } = LogEventLevel.Warning;
-        public LogEventLevel IdentityToken { get; set; } = LogEventLevel.Fatal;
     }
 }
