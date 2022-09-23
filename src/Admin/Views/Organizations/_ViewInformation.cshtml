@@ -11,7 +11,7 @@
 
     <dt class="col-sm-4 col-lg-3">Users</dt>
     <dd class="col-sm-8 col-lg-9">
-        @Model.UserCount / @(Model.Organization.Seats?.ToString() ?? "-")
+        @Model.OccupiedSeatCount / @(Model.Organization.Seats?.ToString() ?? "-")
         (<span title="Invited">@Model.UserInvitedCount</span> /
         <span title="Accepted">@Model.UserAcceptedCount</span> /
         <span title="Confirmed">@Model.UserConfirmedCount</span>)
