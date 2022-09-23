@@ -1,4 +1,4 @@
-using Serilog.Events;
+﻿using Serilog.Events;
 
 namespace Bit.Core.Settings.LogSettings;
 

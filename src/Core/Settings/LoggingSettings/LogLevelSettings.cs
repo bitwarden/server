@@ -1,4 +1,4 @@
-
+﻿
 namespace Bit.Core.Settings.LogSettings;
 
 public class LogLevelSettings : ILogLevelSettings
