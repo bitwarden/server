@@ -1,4 +1,4 @@
-using Bit.Api.IntegrationTest.Factories;
+﻿using Bit.Api.IntegrationTest.Factories;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Api.Request.Accounts;

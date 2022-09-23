@@ -1,4 +1,4 @@
-using Bit.Core.Settings;
+﻿using Bit.Core.Settings;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
