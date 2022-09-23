@@ -30,7 +30,7 @@ public class Token
 
     public Token ProtectWith<T>(IDataProtector dataProtector, ILogger<T> logger)
     {
-        logger.LogDebug("Protecting token: {0}", this);
+        logger.LogDebug("Protecting token: {@0}", this);
         return new(dataProtector.Protect(ToString()));
     }
 
@@ -43,10 +43,10 @@ public class Token
         }
         catch (Exception e)
         {
-            logger.LogInformation(e, "Failed to unprotect token: {0}", this);
+            logger.LogInformation(e, "Failed to unprotect token: {@0}", this);
             throw;
         }
-        logger.LogDebug("Unprotected token: {0} to {1}", this, unprotected);
+        logger.LogDebug("Unprotected token: {@0} to {@1}", this, unprotected);
         return new(dataProtector.Unprotect(ToString()));
     }
 
