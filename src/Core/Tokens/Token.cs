@@ -43,11 +43,11 @@ public class Token
         }
         catch (Exception e)
         {
-            logger.LogInformation(e, "Failed to unprotect token: {@0}", this);
+            logger.LogInformation(e, "Failed to unprotect token: {token}", this);
             throw;
         }
-        logger.LogDebug("Unprotected token: {@0} to {@1}", this, unprotected);
-        return new(dataProtector.Unprotect(ToString()));
+        logger.LogDebug("Unprotected token: {token} to {@decryptedToken}", this, unprotected);
+        return new(unprotected);
     }
 
     public override string ToString() => _token;
