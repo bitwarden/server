@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.DataProtection;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Tokens;
 
@@ -6,15 +7,17 @@ public class DataProtectorTokenFactory<T> : IDataProtectorTokenFactory<T> where 
 {
     private readonly IDataProtector _dataProtector;
     private readonly string _clearTextPrefix;
+    private readonly ILogger<DataProtectorTokenFactory<T>> _logger;
 
-    public DataProtectorTokenFactory(string clearTextPrefix, string purpose, IDataProtectionProvider dataProtectionProvider)
+    public DataProtectorTokenFactory(string clearTextPrefix, string purpose, IDataProtectionProvider dataProtectionProvider, ILogger<DataProtectorTokenFactory<T>> logger)
     {
         _dataProtector = dataProtectionProvider.CreateProtector(purpose);
         _clearTextPrefix = clearTextPrefix;
+        _logger = logger;
     }
 
     public string Protect(T data) =>
-        data.ToToken().ProtectWith(_dataProtector).WithPrefix(_clearTextPrefix).ToString();
+        data.ToToken().ProtectWith(_dataProtector, _logger).WithPrefix(_clearTextPrefix).ToString();
 
     /// <summary>
     /// Unprotect token
@@ -24,7 +27,7 @@ public class DataProtectorTokenFactory<T> : IDataProtectorTokenFactory<T> where 
     /// <returns>The parsed tokenable</returns>
     /// <exception>Throws CryptographicException if fails to unprotect</exception>
     public T Unprotect(string token) =>
-        Tokenable.FromToken<T>(new Token(token).RemovePrefix(_clearTextPrefix).UnprotectWith(_dataProtector).ToString());
+        Tokenable.FromToken<T>(new Token(token).RemovePrefix(_clearTextPrefix).UnprotectWith(_dataProtector, _logger).ToString());
 
     public bool TokenValid(string token)
     {
@@ -45,8 +48,9 @@ public class DataProtectorTokenFactory<T> : IDataProtectorTokenFactory<T> where 
             data = Unprotect(token);
             return true;
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogInformation(ex, "Failed to unprotect token: {@0}", token);
             data = default;
             return false;
         }
