@@ -4,7 +4,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Test.AutoFixture.CollectionFixtures;
+using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -12,9 +12,11 @@ using Xunit;
 
 namespace Bit.Core.Test.Services;
 
+[SutProviderCustomize]
+[OrganizationCustomize]
 public class CollectionServiceTest
 {
-    [Theory, CollectionAutoData]
+    [Theory, BitAutoData]
     public async Task SaveAsync_DefaultId_CreatesCollectionInTheRepository(Collection collection, Organization organization, SutProvider<CollectionService> sutProvider)
     {
         collection.Id = default;
@@ -30,7 +32,7 @@ public class CollectionServiceTest
         Assert.True(collection.RevisionDate - utcNow < TimeSpan.FromSeconds(1));
     }
 
-    [Theory, CollectionAutoData]
+    [Theory, BitAutoData]
     public async Task SaveAsync_DefaultIdWithGroups_CreateCollectionWithGroupsInRepository(Collection collection,
         IEnumerable<SelectionReadOnly> groups, Organization organization, SutProvider<CollectionService> sutProvider)
     {
@@ -48,7 +50,7 @@ public class CollectionServiceTest
         Assert.True(collection.RevisionDate - utcNow < TimeSpan.FromSeconds(1));
     }
 
-    [Theory, CollectionAutoData]
+    [Theory, BitAutoData]
     public async Task SaveAsync_NonDefaultId_ReplacesCollectionInRepository(Collection collection, Organization organization, SutProvider<CollectionService> sutProvider)
     {
         var creationDate = collection.CreationDate;
@@ -64,7 +66,7 @@ public class CollectionServiceTest
         Assert.True(collection.RevisionDate - utcNow < TimeSpan.FromSeconds(1));
     }
 
-    [Theory, CollectionAutoData]
+    [Theory, BitAutoData]
     public async Task SaveAsync_OrganizationNotUseGroup_CreateCollectionWithoutGroupsInRepository(Collection collection, IEnumerable<SelectionReadOnly> groups,
         Organization organization, SutProvider<CollectionService> sutProvider)
     {
@@ -81,7 +83,7 @@ public class CollectionServiceTest
         Assert.True(collection.RevisionDate - utcNow < TimeSpan.FromSeconds(1));
     }
 
-    [Theory, CollectionAutoData]
+    [Theory, BitAutoData]
     public async Task SaveAsync_DefaultIdWithUserId_UpdateUserInCollectionRepository(Collection collection,
         Organization organization, OrganizationUser organizationUser, SutProvider<CollectionService> sutProvider)
     {
@@ -104,7 +106,7 @@ public class CollectionServiceTest
         Assert.True(collection.RevisionDate - utcNow < TimeSpan.FromSeconds(1));
     }
 
-    [Theory, CustomAutoData(typeof(SutProviderCustomization))]
+    [Theory, BitAutoData]
     public async Task SaveAsync_NonExistingOrganizationId_ThrowsBadRequest(Collection collection, SutProvider<CollectionService> sutProvider)
     {
         var ex = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SaveAsync(collection));
@@ -115,7 +117,7 @@ public class CollectionServiceTest
         await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogCollectionEventAsync(default, default);
     }
 
-    [Theory, CollectionAutoData]
+    [Theory, BitAutoData]
     public async Task SaveAsync_ExceedsOrganizationMaxCollections_ThrowsBadRequest(Collection collection, Organization organization, SutProvider<CollectionService> sutProvider)
     {
         collection.Id = default;
@@ -131,7 +133,7 @@ public class CollectionServiceTest
         await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogCollectionEventAsync(default, default);
     }
 
-    [Theory, CollectionAutoData]
+    [Theory, BitAutoData]
     public async Task DeleteUserAsync_DeletesValidUserWhoBelongsToCollection(Collection collection,
         Organization organization, OrganizationUser organizationUser, SutProvider<CollectionService> sutProvider)
     {
@@ -148,7 +150,7 @@ public class CollectionServiceTest
         await sutProvider.GetDependency<IEventService>().Received().LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Updated);
     }
 
-    [Theory, CollectionAutoData]
+    [Theory, BitAutoData]
     public async Task DeleteUserAsync_InvalidUser_ThrowsNotFound(Collection collection, Organization organization,
         OrganizationUser organizationUser, SutProvider<CollectionService> sutProvider)
     {

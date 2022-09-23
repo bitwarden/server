@@ -96,24 +96,12 @@ internal class EfCipher : ICustomization
     }
 }
 
-internal class EfUserCipherAutoDataAttribute : CustomAutoDataAttribute
+internal class EfUserCipherCustomizeAttribute : BitCustomizeAttribute
 {
-    public EfUserCipherAutoDataAttribute() : base(new SutProviderCustomization(), new EfCipher())
-    { }
+    public override ICustomization GetCustomization() => new EfCipher();
 }
 
-internal class EfOrganizationCipherAutoDataAttribute : CustomAutoDataAttribute
+internal class EfOrganizationCipherCustomizeAttribute : BitCustomizeAttribute
 {
-    public EfOrganizationCipherAutoDataAttribute() : base(new SutProviderCustomization(), new EfCipher()
-    {
-        OrganizationOwned = true,
-    })
-    { }
-}
-
-internal class InlineEfCipherAutoDataAttribute : InlineCustomAutoDataAttribute
-{
-    public InlineEfCipherAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
-        typeof(EfCipher) }, values)
-    { }
+    public override ICustomization GetCustomization() => new EfCipher();
 }

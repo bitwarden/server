@@ -70,31 +70,6 @@ public class CoreHelpersTests
         Assert.Equal(expectedComb, comb);
     }
 
-    [Theory]
-    [InlineData(2, 5, new[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 0 })]
-    [InlineData(2, 3, new[] { 1, 2, 3, 4, 5 })]
-    [InlineData(2, 1, new[] { 1, 2 })]
-    [InlineData(1, 1, new[] { 1 })]
-    [InlineData(2, 2, new[] { 1, 2, 3 })]
-    public void Batch_Success(int batchSize, int totalBatches, int[] collection)
-    {
-        // Arrange
-        var remainder = collection.Length % batchSize;
-
-        // Act
-        var batches = collection.Batch(batchSize);
-
-        // Assert
-        Assert.Equal(totalBatches, batches.Count());
-
-        foreach (var batch in batches.Take(totalBatches - 1))
-        {
-            Assert.Equal(batchSize, batch.Count());
-        }
-
-        Assert.Equal(batches.Last().Count(), remainder == 0 ? batchSize : remainder);
-    }
-
     /*
     [Fact]
     public void ToGuidIdArrayTVP_Success()
@@ -286,7 +261,7 @@ public class CoreHelpersTests
         Assert.Equal("Contents of embeddedResource.txt\n", fileContents.Replace("\r\n", "\n"));
     }
 
-    [Theory, CustomAutoData(typeof(UserFixture))]
+    [Theory, BitAutoData, UserCustomize]
     public void BuildIdentityClaims_BaseClaims_Success(User user, bool isPremium)
     {
         var expected = new Dictionary<string, string>
@@ -308,7 +283,7 @@ public class CoreHelpersTests
         Assert.Equal(expected.Count, actual.Count);
     }
 
-    [Theory, CustomAutoData(typeof(UserFixture))]
+    [Theory, BitAutoData, UserCustomize]
     public void BuildIdentityClaims_NonCustomOrganizationUserType_Success(User user)
     {
         var fixture = new Fixture().WithAutoNSubstitutions();
@@ -324,7 +299,7 @@ public class CoreHelpersTests
         }
     }
 
-    [Theory, CustomAutoData(typeof(UserFixture))]
+    [Theory, BitAutoData, UserCustomize]
     public void BuildIdentityClaims_CustomOrganizationUserClaims_Success(User user, CurrentContentOrganization org)
     {
         var fixture = new Fixture().WithAutoNSubstitutions();
@@ -346,7 +321,7 @@ public class CoreHelpersTests
         }
     }
 
-    [Theory, CustomAutoData(typeof(UserFixture))]
+    [Theory, BitAutoData, UserCustomize]
     public void BuildIdentityClaims_ProviderClaims_Success(User user)
     {
         var fixture = new Fixture().WithAutoNSubstitutions();

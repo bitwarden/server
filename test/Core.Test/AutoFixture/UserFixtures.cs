@@ -5,6 +5,7 @@ using Bit.Core.Enums;
 using Bit.Core.Models;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using Bit.Test.Common.AutoFixture;
+using Bit.Test.Common.AutoFixture.Attributes;
 
 namespace Bit.Core.Test.AutoFixture.UserFixtures;
 
@@ -40,6 +41,11 @@ public class UserBuilder : ISpecimenBuilder
 
         return new NoSpecimen();
     }
+}
+
+internal class UserCustomizeAttribute : BitCustomizeAttribute
+{
+    public override ICustomization GetCustomization() => new UserFixture();
 }
 
 public class UserFixture : ICustomization

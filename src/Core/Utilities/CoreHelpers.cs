@@ -70,32 +70,6 @@ public static class CoreHelpers
         return new Guid(guidArray);
     }
 
-    public static IEnumerable<IEnumerable<T>> Batch<T>(this IEnumerable<T> source, int size)
-    {
-        T[] bucket = null;
-        var count = 0;
-        foreach (var item in source)
-        {
-            if (bucket == null)
-            {
-                bucket = new T[size];
-            }
-            bucket[count++] = item;
-            if (count != size)
-            {
-                continue;
-            }
-            yield return bucket.Select(x => x);
-            bucket = null;
-            count = 0;
-        }
-        // Return the last bucket with all remaining elements
-        if (bucket != null && count > 0)
-        {
-            yield return bucket.Take(count);
-        }
-    }
-
     public static string CleanCertificateThumbprint(string thumbprint)
     {
         // Clean possible garbage characters from thumbprint copy/paste
@@ -457,18 +431,6 @@ public static class CoreHelpers
         }
 
         return val.ToString();
-    }
-
-    public static string GetVersion()
-    {
-        if (string.IsNullOrWhiteSpace(_version))
-        {
-            _version = Assembly.GetEntryAssembly()
-                .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
-                .InformationalVersion;
-        }
-
-        return _version;
     }
 
     public static string SanitizeForEmail(string value, bool htmlEncode = true)

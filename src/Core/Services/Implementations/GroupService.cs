@@ -61,7 +61,16 @@ public class GroupService : IGroupService
         else
         {
             group.RevisionDate = DateTime.UtcNow;
-            await _groupRepository.ReplaceAsync(group, collections ?? new List<SelectionReadOnly>());
+
+            if (collections == null)
+            {
+                await _groupRepository.ReplaceAsync(group);
+            }
+            else
+            {
+                await _groupRepository.ReplaceAsync(group, collections);
+            }
+
             await _eventService.LogGroupEventAsync(group, Enums.EventType.Group_Updated);
         }
     }

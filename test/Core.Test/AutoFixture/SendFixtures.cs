@@ -4,17 +4,6 @@ using Bit.Test.Common.AutoFixture.Attributes;
 
 namespace Bit.Core.Test.AutoFixture.SendFixtures;
 
-internal class OrganizationSend : ICustomization
-{
-    public Guid? OrganizationId { get; set; }
-    public void Customize(IFixture fixture)
-    {
-        fixture.Customize<Send>(composer => composer
-            .With(s => s.OrganizationId, OrganizationId ?? Guid.NewGuid())
-            .Without(s => s.UserId));
-    }
-}
-
 internal class UserSend : ICustomization
 {
     public Guid? UserId { get; set; }
@@ -26,38 +15,7 @@ internal class UserSend : ICustomization
     }
 }
 
-internal class UserSendAutoDataAttribute : CustomAutoDataAttribute
+internal class UserSendCustomizeAttribute : BitCustomizeAttribute
 {
-    public UserSendAutoDataAttribute(string userId = null) : base(new SutProviderCustomization(),
-        new UserSend { UserId = userId == null ? (Guid?)null : new Guid(userId) })
-    { }
-}
-internal class InlineUserSendAutoDataAttribute : InlineCustomAutoDataAttribute
-{
-    public InlineUserSendAutoDataAttribute(params object[] values) : base(new[] { typeof(CurrentContextFixtures.CurrentContext),
-        typeof(SutProviderCustomization), typeof(UserSend) }, values)
-    { }
-}
-
-internal class InlineKnownUserSendAutoDataAttribute : InlineCustomAutoDataAttribute
-{
-    public InlineKnownUserSendAutoDataAttribute(string userId, params object[] values) : base(new ICustomization[]
-        { new CurrentContextFixtures.CurrentContext(), new SutProviderCustomization(),
-        new UserSend { UserId = new Guid(userId) } }, values)
-    { }
-}
-
-internal class OrganizationSendAutoDataAttribute : CustomAutoDataAttribute
-{
-    public OrganizationSendAutoDataAttribute(string organizationId = null) : base(new CurrentContextFixtures.CurrentContext(),
-        new SutProviderCustomization(),
-        new OrganizationSend { OrganizationId = organizationId == null ? (Guid?)null : new Guid(organizationId) })
-    { }
-}
-
-internal class InlineOrganizationSendAutoDataAttribute : InlineCustomAutoDataAttribute
-{
-    public InlineOrganizationSendAutoDataAttribute(params object[] values) : base(new[] { typeof(CurrentContextFixtures.CurrentContext),
-        typeof(SutProviderCustomization), typeof(OrganizationSend) }, values)
-    { }
+    public override ICustomization GetCustomization() => new UserSend();
 }
