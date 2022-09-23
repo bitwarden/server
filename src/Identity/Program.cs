@@ -1,5 +1,6 @@
 ﻿using AspNetCoreRateLimit;
 using Bit.Core.Utilities;
+using Serilog;
 
 namespace Bit.Identity;
 
@@ -16,6 +17,7 @@ public class Program
     {
         return Host
             .CreateDefaultBuilder(args)
+            .UseSerilog()
             .ConfigureCustomAppConfiguration(args)
             .ConfigureWebHostDefaults(webBuilder =>
             {
