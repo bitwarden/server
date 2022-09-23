@@ -1,11 +1,10 @@
 ﻿using Bit.Core.Enums;
 
-namespace Bit.Core.Models.Data
-{
-    public class CipherSecureNoteData : CipherData
-    {
-        public CipherSecureNoteData() { }
+namespace Bit.Core.Models.Data;
 
-        public SecureNoteType Type { get; set; }
-    }
+public class CipherSecureNoteData : CipherData
+{
+    public CipherSecureNoteData() { }
+
+    public SecureNoteType Type { get; set; }
 }

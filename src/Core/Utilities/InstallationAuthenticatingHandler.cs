@@ -7,112 +7,111 @@ using Microsoft.Extensions.Options;
 
 #nullable enable
 
-namespace Bit.Core.Utilities
+namespace Bit.Core.Utilities;
+
+public class InstallationAuthenticatingHandler : DelegatingHandler
 {
-    public class InstallationAuthenticatingHandler : DelegatingHandler
+    public static readonly HttpRequestOptionsKey<bool> OptOutKey = new("Bitwarden-OptOut");
+
+    private readonly HttpClient _identityClient;
+    private readonly ILogger<InstallationAuthenticatingHandler> _logger;
+    private readonly IOptionsMonitor<ConnectTokenOptions> _options;
+    private readonly string _optionsName;
+
+    private ConnectTokenOptions _tokenOptions;
+    private string? _accessToken;
+    private DateTime? _nextAuthAttempt;
+
+    public InstallationAuthenticatingHandler(HttpClient httpClient,
+        ILogger<InstallationAuthenticatingHandler> logger,
+        IOptionsMonitor<ConnectTokenOptions> options,
+        string optionsName)
     {
-        public static readonly HttpRequestOptionsKey<bool> OptOutKey = new("Bitwarden-OptOut");
-
-        private readonly HttpClient _identityClient;
-        private readonly ILogger<InstallationAuthenticatingHandler> _logger;
-        private readonly IOptionsMonitor<ConnectTokenOptions> _options;
-        private readonly string _optionsName;
-
-        private ConnectTokenOptions _tokenOptions;
-        private string? _accessToken;
-        private DateTime? _nextAuthAttempt;
-
-        public InstallationAuthenticatingHandler(HttpClient httpClient,
-            ILogger<InstallationAuthenticatingHandler> logger,
-            IOptionsMonitor<ConnectTokenOptions> options,
-            string optionsName)
+        _identityClient = httpClient;
+        _logger = logger;
+        _options = options;
+        _optionsName = optionsName;
+        _tokenOptions = _options.Get(_optionsName);
+        _options.OnChange((options, name) =>
         {
-            _identityClient = httpClient;
-            _logger = logger;
-            _options = options;
-            _optionsName = optionsName;
-            _tokenOptions = _options.Get(_optionsName);
-            _options.OnChange((options, name) =>
+            if (name == _optionsName)
             {
-                if (name == _optionsName)
-                {
-                    _tokenOptions = options;
-                }
-            });
-        }
+                _tokenOptions = options;
+            }
+        });
+    }
 
-        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+        if (!request.Options.TryGetValue(OptOutKey, out var shouldOptOut) || !shouldOptOut)
         {
-            if (!request.Options.TryGetValue(OptOutKey, out var shouldOptOut) || !shouldOptOut)
+            // Attempt to add an authorization header since they don't have one
+            if (!await EnsureTokenAsync(cancellationToken))
             {
-                // Attempt to add an authorization header since they don't have one
-                if (!await EnsureTokenAsync(cancellationToken))
-                {
-                    throw new HttpRequestException($"Cannot obtain an access_token from {_identityClient.BaseAddress}, please check logs to determine the error.");
-                }
-
-                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _accessToken);
+                throw new HttpRequestException($"Cannot obtain an access_token from {_identityClient.BaseAddress}, please check logs to determine the error.");
             }
 
-            return await base.SendAsync(request, cancellationToken);
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _accessToken);
         }
 
-        private async Task<bool> EnsureTokenAsync(CancellationToken cancellationToken)
+        return await base.SendAsync(request, cancellationToken);
+    }
+
+    private async Task<bool> EnsureTokenAsync(CancellationToken cancellationToken)
+    {
+        try
         {
-            try
+            if (_accessToken == null || DateTime.UtcNow > _nextAuthAttempt)
             {
-                if (_accessToken == null || DateTime.UtcNow > _nextAuthAttempt)
+                var response = await CallConnectTokenAsync();
+                if (response.StatusCode != HttpStatusCode.OK)
                 {
-                    var response = await CallConnectTokenAsync();
-                    if (response.StatusCode != HttpStatusCode.OK)
-                    {
-                        return false;
-                    }
-                    using var jsonDocument = await response.Content.ReadFromJsonAsync<JsonDocument>(cancellationToken: cancellationToken);
-                    (_accessToken, _nextAuthAttempt) = ReadTokenBody(jsonDocument!);
+                    return false;
                 }
-
-                return true;
-            }
-            catch (FormatException formatException)
-            {
-                _logger.LogError(formatException, "Token body could not be parsed.");
-                return false;
+                using var jsonDocument = await response.Content.ReadFromJsonAsync<JsonDocument>(cancellationToken: cancellationToken);
+                (_accessToken, _nextAuthAttempt) = ReadTokenBody(jsonDocument!);
             }
 
-
-            static (string? accessToken, DateTime nextAuthAttempt) ReadTokenBody(JsonDocument jsonDocument)
-            {
-                var now = DateTime.UtcNow;
-                var root = jsonDocument.RootElement;
-                if (!root.TryGetProperty("access_token", out var accessTokenProperty))
-                {
-                    throw new FormatException("The response body did not contain an 'access_token' property");
-                }
-
-                if (!root.TryGetProperty("expires_in", out var expiresInProperty))
-                {
-                    throw new FormatException("The response body did not contain an 'expires_in' property");
-                }
-
-
-                var expiresIn = TimeSpan.FromSeconds(expiresInProperty.GetInt32())
-                    .Subtract(TimeSpan.FromMinutes(10));
-
-
-                return (accessTokenProperty.GetString(), now + expiresIn);
-            }
+            return true;
         }
-
-        private async Task<HttpResponseMessage> CallConnectTokenAsync()
+        catch (FormatException formatException)
         {
-            return await _identityClient.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
-            {
-                { "grant_type", "client_credentials" },
-                { "client_id", _tokenOptions.ClientId },
-                { "client_secret", _tokenOptions.ClientSecret },
-                { "scope", _tokenOptions.Scope },
-            }));
+            _logger.LogError(formatException, "Token body could not be parsed.");
+            return false;
         }
+
+
+        static (string? accessToken, DateTime nextAuthAttempt) ReadTokenBody(JsonDocument jsonDocument)
+        {
+            var now = DateTime.UtcNow;
+            var root = jsonDocument.RootElement;
+            if (!root.TryGetProperty("access_token", out var accessTokenProperty))
+            {
+                throw new FormatException("The response body did not contain an 'access_token' property");
+            }
+
+            if (!root.TryGetProperty("expires_in", out var expiresInProperty))
+            {
+                throw new FormatException("The response body did not contain an 'expires_in' property");
+            }
+
+
+            var expiresIn = TimeSpan.FromSeconds(expiresInProperty.GetInt32())
+                .Subtract(TimeSpan.FromMinutes(10));
+
+
+            return (accessTokenProperty.GetString(), now + expiresIn);
+        }
+    }
+
+    private async Task<HttpResponseMessage> CallConnectTokenAsync()
+    {
+        return await _identityClient.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            { "grant_type", "client_credentials" },
+            { "client_id", _tokenOptions.ClientId },
+            { "client_secret", _tokenOptions.ClientSecret },
+            { "scope", _tokenOptions.Scope },
+        }));
     }
 }

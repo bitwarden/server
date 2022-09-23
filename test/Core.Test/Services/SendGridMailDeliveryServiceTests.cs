@@ -8,78 +8,77 @@ using SendGrid;
 using SendGrid.Helpers.Mail;
 using Xunit;
 
-namespace Bit.Core.Test.Services
+namespace Bit.Core.Test.Services;
+
+public class SendGridMailDeliveryServiceTests : IDisposable
 {
-    public class SendGridMailDeliveryServiceTests : IDisposable
+    private readonly SendGridMailDeliveryService _sut;
+
+    private readonly GlobalSettings _globalSettings;
+    private readonly IWebHostEnvironment _hostingEnvironment;
+    private readonly ILogger<SendGridMailDeliveryService> _logger;
+    private readonly ISendGridClient _sendGridClient;
+
+    public SendGridMailDeliveryServiceTests()
     {
-        private readonly SendGridMailDeliveryService _sut;
-
-        private readonly GlobalSettings _globalSettings;
-        private readonly IWebHostEnvironment _hostingEnvironment;
-        private readonly ILogger<SendGridMailDeliveryService> _logger;
-        private readonly ISendGridClient _sendGridClient;
-
-        public SendGridMailDeliveryServiceTests()
+        _globalSettings = new GlobalSettings
         {
-            _globalSettings = new GlobalSettings
+            Mail =
             {
-                Mail =
-                {
-                    SendGridApiKey = "SendGridApiKey"
-                }
-            };
+                SendGridApiKey = "SendGridApiKey"
+            }
+        };
 
-            _hostingEnvironment = Substitute.For<IWebHostEnvironment>();
-            _logger = Substitute.For<ILogger<SendGridMailDeliveryService>>();
-            _sendGridClient = Substitute.For<ISendGridClient>();
+        _hostingEnvironment = Substitute.For<IWebHostEnvironment>();
+        _logger = Substitute.For<ILogger<SendGridMailDeliveryService>>();
+        _sendGridClient = Substitute.For<ISendGridClient>();
 
-            _sut = new SendGridMailDeliveryService(
-                _sendGridClient,
-                _globalSettings,
-                _hostingEnvironment,
-                _logger
-            );
-        }
+        _sut = new SendGridMailDeliveryService(
+            _sendGridClient,
+            _globalSettings,
+            _hostingEnvironment,
+            _logger
+        );
+    }
 
-        public void Dispose()
+    public void Dispose()
+    {
+        _sut?.Dispose();
+    }
+
+    [Fact]
+    public async Task SendEmailAsync_CallsSendEmailAsync_WhenMessageIsValid()
+    {
+        var mailMessage = new MailMessage
         {
-            _sut?.Dispose();
-        }
+            ToEmails = new List<string> { "ToEmails" },
+            BccEmails = new List<string> { "BccEmails" },
+            Subject = "Subject",
+            HtmlContent = "HtmlContent",
+            TextContent = "TextContent",
+            Category = "Category"
+        };
 
-        [Fact]
-        public async Task SendEmailAsync_CallsSendEmailAsync_WhenMessageIsValid()
-        {
-            var mailMessage = new MailMessage
+        _sendGridClient.SendEmailAsync(Arg.Any<SendGridMessage>()).Returns(
+            new Response(System.Net.HttpStatusCode.OK, null, null));
+        await _sut.SendEmailAsync(mailMessage);
+
+        await _sendGridClient.Received(1).SendEmailAsync(
+            Arg.Do<SendGridMessage>(msg =>
             {
-                ToEmails = new List<string> { "ToEmails" },
-                BccEmails = new List<string> { "BccEmails" },
-                Subject = "Subject",
-                HtmlContent = "HtmlContent",
-                TextContent = "TextContent",
-                Category = "Category"
-            };
+                msg.Received(1).AddTos(new List<EmailAddress> { new EmailAddress(mailMessage.ToEmails.First()) });
+                msg.Received(1).AddBccs(new List<EmailAddress> { new EmailAddress(mailMessage.ToEmails.First()) });
 
-            _sendGridClient.SendEmailAsync(Arg.Any<SendGridMessage>()).Returns(
-                new Response(System.Net.HttpStatusCode.OK, null, null));
-            await _sut.SendEmailAsync(mailMessage);
+                Assert.Equal(mailMessage.Subject, msg.Subject);
+                Assert.Equal(mailMessage.HtmlContent, msg.HtmlContent);
+                Assert.Equal(mailMessage.TextContent, msg.PlainTextContent);
 
-            await _sendGridClient.Received(1).SendEmailAsync(
-                Arg.Do<SendGridMessage>(msg =>
-                {
-                    msg.Received(1).AddTos(new List<EmailAddress> { new EmailAddress(mailMessage.ToEmails.First()) });
-                    msg.Received(1).AddBccs(new List<EmailAddress> { new EmailAddress(mailMessage.ToEmails.First()) });
+                Assert.Contains("type:Cateogry", msg.Categories);
+                Assert.Contains(msg.Categories, x => x.StartsWith("env:"));
+                Assert.Contains(msg.Categories, x => x.StartsWith("sender:"));
 
-                    Assert.Equal(mailMessage.Subject, msg.Subject);
-                    Assert.Equal(mailMessage.HtmlContent, msg.HtmlContent);
-                    Assert.Equal(mailMessage.TextContent, msg.PlainTextContent);
-
-                    Assert.Contains("type:Cateogry", msg.Categories);
-                    Assert.Contains(msg.Categories, x => x.StartsWith("env:"));
-                    Assert.Contains(msg.Categories, x => x.StartsWith("sender:"));
-
-                    msg.Received(1).SetClickTracking(false, false);
-                    msg.Received(1).SetOpenTracking(false);
-                }));
-        }
+                msg.Received(1).SetClickTracking(false, false);
+                msg.Received(1).SetOpenTracking(false);
+            }));
     }
 }

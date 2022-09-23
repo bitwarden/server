@@ -5,114 +5,113 @@ using Bit.Core.Models.Data;
 using Bit.Core.Settings;
 using Core.Models.Data;
 
-namespace Bit.Api.Models.Response
+namespace Bit.Api.Models.Response;
+
+public class EmergencyAccessResponseModel : ResponseModel
 {
-    public class EmergencyAccessResponseModel : ResponseModel
+    public EmergencyAccessResponseModel(EmergencyAccess emergencyAccess, string obj = "emergencyAccess") : base(obj)
     {
-        public EmergencyAccessResponseModel(EmergencyAccess emergencyAccess, string obj = "emergencyAccess") : base(obj)
+        if (emergencyAccess == null)
         {
-            if (emergencyAccess == null)
-            {
-                throw new ArgumentNullException(nameof(emergencyAccess));
-            }
-
-            Id = emergencyAccess.Id.ToString();
-            Status = emergencyAccess.Status;
-            Type = emergencyAccess.Type;
-            WaitTimeDays = emergencyAccess.WaitTimeDays;
+            throw new ArgumentNullException(nameof(emergencyAccess));
         }
 
-        public EmergencyAccessResponseModel(EmergencyAccessDetails emergencyAccess, string obj = "emergencyAccess") : base(obj)
-        {
-            if (emergencyAccess == null)
-            {
-                throw new ArgumentNullException(nameof(emergencyAccess));
-            }
-
-            Id = emergencyAccess.Id.ToString();
-            Status = emergencyAccess.Status;
-            Type = emergencyAccess.Type;
-            WaitTimeDays = emergencyAccess.WaitTimeDays;
-        }
-
-        public string Id { get; private set; }
-        public EmergencyAccessStatusType Status { get; private set; }
-        public EmergencyAccessType Type { get; private set; }
-        public int WaitTimeDays { get; private set; }
+        Id = emergencyAccess.Id.ToString();
+        Status = emergencyAccess.Status;
+        Type = emergencyAccess.Type;
+        WaitTimeDays = emergencyAccess.WaitTimeDays;
     }
 
-    public class EmergencyAccessGranteeDetailsResponseModel : EmergencyAccessResponseModel
+    public EmergencyAccessResponseModel(EmergencyAccessDetails emergencyAccess, string obj = "emergencyAccess") : base(obj)
     {
-        public EmergencyAccessGranteeDetailsResponseModel(EmergencyAccessDetails emergencyAccess)
-            : base(emergencyAccess, "emergencyAccessGranteeDetails")
+        if (emergencyAccess == null)
         {
-            if (emergencyAccess == null)
-            {
-                throw new ArgumentNullException(nameof(emergencyAccess));
-            }
-
-            GranteeId = emergencyAccess.GranteeId.ToString();
-            Email = emergencyAccess.GranteeEmail;
-            Name = emergencyAccess.GranteeName;
+            throw new ArgumentNullException(nameof(emergencyAccess));
         }
 
-        public string GranteeId { get; private set; }
-        public string Name { get; private set; }
-        public string Email { get; private set; }
+        Id = emergencyAccess.Id.ToString();
+        Status = emergencyAccess.Status;
+        Type = emergencyAccess.Type;
+        WaitTimeDays = emergencyAccess.WaitTimeDays;
     }
 
-    public class EmergencyAccessGrantorDetailsResponseModel : EmergencyAccessResponseModel
-    {
-        public EmergencyAccessGrantorDetailsResponseModel(EmergencyAccessDetails emergencyAccess)
-            : base(emergencyAccess, "emergencyAccessGrantorDetails")
-        {
-            if (emergencyAccess == null)
-            {
-                throw new ArgumentNullException(nameof(emergencyAccess));
-            }
+    public string Id { get; private set; }
+    public EmergencyAccessStatusType Status { get; private set; }
+    public EmergencyAccessType Type { get; private set; }
+    public int WaitTimeDays { get; private set; }
+}
 
-            GrantorId = emergencyAccess.GrantorId.ToString();
-            Email = emergencyAccess.GrantorEmail;
-            Name = emergencyAccess.GrantorName;
+public class EmergencyAccessGranteeDetailsResponseModel : EmergencyAccessResponseModel
+{
+    public EmergencyAccessGranteeDetailsResponseModel(EmergencyAccessDetails emergencyAccess)
+        : base(emergencyAccess, "emergencyAccessGranteeDetails")
+    {
+        if (emergencyAccess == null)
+        {
+            throw new ArgumentNullException(nameof(emergencyAccess));
         }
 
-        public string GrantorId { get; private set; }
-        public string Name { get; private set; }
-        public string Email { get; private set; }
+        GranteeId = emergencyAccess.GranteeId.ToString();
+        Email = emergencyAccess.GranteeEmail;
+        Name = emergencyAccess.GranteeName;
     }
 
-    public class EmergencyAccessTakeoverResponseModel : ResponseModel
-    {
-        public EmergencyAccessTakeoverResponseModel(EmergencyAccess emergencyAccess, User grantor, string obj = "emergencyAccessTakeover") : base(obj)
-        {
-            if (emergencyAccess == null)
-            {
-                throw new ArgumentNullException(nameof(emergencyAccess));
-            }
+    public string GranteeId { get; private set; }
+    public string Name { get; private set; }
+    public string Email { get; private set; }
+}
 
-            KeyEncrypted = emergencyAccess.KeyEncrypted;
-            Kdf = grantor.Kdf;
-            KdfIterations = grantor.KdfIterations;
+public class EmergencyAccessGrantorDetailsResponseModel : EmergencyAccessResponseModel
+{
+    public EmergencyAccessGrantorDetailsResponseModel(EmergencyAccessDetails emergencyAccess)
+        : base(emergencyAccess, "emergencyAccessGrantorDetails")
+    {
+        if (emergencyAccess == null)
+        {
+            throw new ArgumentNullException(nameof(emergencyAccess));
         }
 
-        public int KdfIterations { get; private set; }
-        public KdfType Kdf { get; private set; }
-        public string KeyEncrypted { get; private set; }
+        GrantorId = emergencyAccess.GrantorId.ToString();
+        Email = emergencyAccess.GrantorEmail;
+        Name = emergencyAccess.GrantorName;
     }
 
-    public class EmergencyAccessViewResponseModel : ResponseModel
+    public string GrantorId { get; private set; }
+    public string Name { get; private set; }
+    public string Email { get; private set; }
+}
+
+public class EmergencyAccessTakeoverResponseModel : ResponseModel
+{
+    public EmergencyAccessTakeoverResponseModel(EmergencyAccess emergencyAccess, User grantor, string obj = "emergencyAccessTakeover") : base(obj)
     {
-        public EmergencyAccessViewResponseModel(
-            IGlobalSettings globalSettings,
-            EmergencyAccess emergencyAccess,
-            IEnumerable<CipherDetails> ciphers)
-            : base("emergencyAccessView")
+        if (emergencyAccess == null)
         {
-            KeyEncrypted = emergencyAccess.KeyEncrypted;
-            Ciphers = ciphers.Select(c => new CipherResponseModel(c, globalSettings));
+            throw new ArgumentNullException(nameof(emergencyAccess));
         }
 
-        public string KeyEncrypted { get; set; }
-        public IEnumerable<CipherResponseModel> Ciphers { get; set; }
+        KeyEncrypted = emergencyAccess.KeyEncrypted;
+        Kdf = grantor.Kdf;
+        KdfIterations = grantor.KdfIterations;
     }
+
+    public int KdfIterations { get; private set; }
+    public KdfType Kdf { get; private set; }
+    public string KeyEncrypted { get; private set; }
+}
+
+public class EmergencyAccessViewResponseModel : ResponseModel
+{
+    public EmergencyAccessViewResponseModel(
+        IGlobalSettings globalSettings,
+        EmergencyAccess emergencyAccess,
+        IEnumerable<CipherDetails> ciphers)
+        : base("emergencyAccessView")
+    {
+        KeyEncrypted = emergencyAccess.KeyEncrypted;
+        Ciphers = ciphers.Select(c => new CipherResponseModel(c, globalSettings));
+    }
+
+    public string KeyEncrypted { get; set; }
+    public IEnumerable<CipherResponseModel> Ciphers { get; set; }
 }

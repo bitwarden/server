@@ -1,9 +1,8 @@
-﻿namespace Bit.Core.Enums
+﻿namespace Bit.Core.Enums;
+
+public enum Saml2SigningBehavior : byte
 {
-    public enum Saml2SigningBehavior : byte
-    {
-        IfIdpWantAuthnRequestsSigned = 0,
-        Always = 1,
-        Never = 3
-    }
+    IfIdpWantAuthnRequestsSigned = 0,
+    Always = 1,
+    Never = 3
 }

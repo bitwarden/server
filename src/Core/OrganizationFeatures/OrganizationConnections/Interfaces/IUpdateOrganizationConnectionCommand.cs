@@ -1,10 +1,9 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Models.Data.Organizations.OrganizationConnections;
 
-namespace Bit.Core.OrganizationFeatures.OrganizationConnections.Interfaces
+namespace Bit.Core.OrganizationFeatures.OrganizationConnections.Interfaces;
+
+public interface IUpdateOrganizationConnectionCommand
 {
-    public interface IUpdateOrganizationConnectionCommand
-    {
-        Task<OrganizationConnection> UpdateAsync<T>(OrganizationConnectionData<T> connectionData) where T : new();
-    }
+    Task<OrganizationConnection> UpdateAsync<T>(OrganizationConnectionData<T> connectionData) where T : new();
 }

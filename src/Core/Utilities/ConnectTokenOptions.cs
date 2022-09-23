@@ -1,9 +1,8 @@
-﻿namespace Bit.Core.Utilities
+﻿namespace Bit.Core.Utilities;
+
+public class ConnectTokenOptions
 {
-    public class ConnectTokenOptions
-    {
-        public string ClientId { get; set; }
-        public string ClientSecret { get; set; }
-        public string Scope { get; set; }
-    }
+    public string ClientId { get; set; }
+    public string ClientSecret { get; set; }
+    public string Scope { get; set; }
 }
