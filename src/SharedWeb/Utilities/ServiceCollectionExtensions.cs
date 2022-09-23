@@ -662,35 +662,19 @@ public static class ServiceCollectionExtensions
 
     public static IServiceCollection AddPushSyncClients(this IServiceCollection services, GlobalSettings globalSettings)
     {
-        // Reuse the name of the HttpClient for the name of the options
-        services.Configure<ConnectTokenOptions>(HttpClientNames.CloudApiRelayPush, options =>
-        {
-            options.ClientId = $"installation.{globalSettings.Installation.Id}";
-            options.ClientSecret = globalSettings.Installation.Key;
-            options.Scope = ApiScopes.ApiPush;
-        });
-
         services.AddHttpClient(HttpClientNames.CloudApiRelayPush)
-            .ConfigureHttpClient((sp, client) =>
-            {
-                var gs = sp.GetRequiredService<GlobalSettings>();
-                client.BaseAddress = new Uri(gs.PushRelayBaseUri);
-            })
-            .AddHttpMessageHandler(sp =>
-            {
-                return new InstallationAuthenticatingHandler(
-                    sp.GetRequiredService<IHttpClientFactory>().CreateClient(HttpClientNames.CloudIdentityRelayPush),
-                    sp.GetRequiredService<ILogger<InstallationAuthenticatingHandler>>(),
-                    sp.GetRequiredService<IOptionsMonitor<ConnectTokenOptions>>(),
-                    HttpClientNames.CloudApiRelayPush);
-            });
+            .ConfigureBaseAddress(gs => gs.PushRelayBaseUri)
+            .AddInstallationAuthentication(HttpClientNames.CloudIdentityRelayPush, HttpClientNames.CloudApiRelayPush,
+                options =>
+                {
+                    options.ClientId = $"installation.{globalSettings.Installation.Id}";
+                    options.ClientSecret = globalSettings.Installation.Key;
+                    options.Scope = ApiScopes.ApiPush;
+                }
+            );
 
         services.AddHttpClient(HttpClientNames.CloudIdentityRelayPush)
-            .ConfigureHttpClient((sp, client) =>
-            {
-                var gs = sp.GetRequiredService<GlobalSettings>();
-                client.BaseAddress = new Uri(gs.Installation.IdentityUri);
-            });
+            .ConfigureBaseAddress(gs => gs.Installation.IdentityUri);
 
         return services;
     }

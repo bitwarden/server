@@ -1,4 +1,5 @@
-﻿using AspNetCoreRateLimit;
+﻿using System.Net.Http.Headers;
+using AspNetCoreRateLimit;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Infrastructure.EntityFramework.Repositories;
@@ -8,6 +9,7 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using NSubstitute;
 
 namespace Bit.IntegrationTestCommon.Factories;
 
@@ -29,6 +31,53 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
     public string DatabaseName { get; set; } = FactoryConstants.DefaultDatabaseName;
 
     /// <summary>
+    /// Tell the server to startup in self hosted mode and self hosted specific configuration
+    /// </summary>
+    public bool SelfHosted { get; set; }
+
+
+    private readonly List<Action<WebHostBuilderContext, IConfigurationBuilder>> _configureAppConfigurationActions = new();
+
+    public void AddConfiguration(string key, string value)
+    {
+        _configureAppConfigurationActions.Add((_, builder) =>
+        {
+            builder.AddInMemoryCollection(new Dictionary<string, string>
+            {
+                { key, value },
+            });
+        });
+    }
+
+    private readonly List<Action<IServiceCollection>> _configureTestServiceActions = new();
+
+    public void SubstituteService<TService>(Action<TService> configureService = null)
+        where TService : class
+    {
+        _configureTestServiceActions.Add(services =>
+        {
+            var existingService = services.FirstOrDefault(sd => sd.ServiceType == typeof(TService));
+            if (existingService != null)
+            {
+                services.Remove(existingService);
+            }
+
+            var substitutedService = Substitute.For<TService>();
+            configureService?.Invoke(substitutedService);
+            services.AddSingleton(substitutedService);
+        });
+    }
+
+    public void OverrideHttpHandler(string httpClientName, HttpMessageHandler handler)
+    {
+        _configureTestServiceActions.Add(services =>
+        {
+            services.AddHttpClient(httpClientName)
+                .ConfigurePrimaryHttpMessageHandler(() => handler);
+        });
+    }
+
+    /// <summary>
     /// Configure the web host to use an EF in memory database
     /// </summary>
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -42,6 +91,7 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
             c.AddUserSecrets(typeof(Identity.Startup).Assembly, optional: true);
             c.AddInMemoryCollection(new Dictionary<string, string>
             {
+                { "globalSettings:selfHosted", SelfHosted ? "true" : "false" },
                 // Manually insert a EF provider so that ConfigureServices will add EF repositories but we will override
                 // DbContextOptions to use an in memory database
                 { "globalSettings:databaseProvider", "postgres" },
@@ -51,6 +101,11 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
                 { "globalSettings:redis:connectionString", ""}
             });
         });
+
+        foreach (var appConfigurationAction in _configureAppConfigurationActions)
+        {
+            builder.ConfigureAppConfiguration(appConfigurationAction);
+        }
 
         builder.ConfigureTestServices(services =>
         {
@@ -100,11 +155,23 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
             // Fix IP Rate Limiting
             services.AddSingleton<IStartupFilter, CustomStartupFilter>();
         });
+
+        foreach (var configureTestServicesAction in _configureTestServiceActions)
+        {
+            builder.ConfigureTestServices(configureTestServicesAction);
+        }
     }
 
     public DatabaseContext GetDatabaseContext()
     {
         var scope = Services.CreateScope();
         return scope.ServiceProvider.GetRequiredService<DatabaseContext>();
+    }
+
+    public HttpClient CreateAuthenticatedClient(string token)
+    {
+        var client = CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        return client;
     }
 }
