@@ -6,7 +6,6 @@
     ":maintainLockFilesMonthly",
     ":preserveSemverRanges",
     ":rebaseStalePrs",
-    ":disableDependencyDashboard",
     ":disableMajorUpdates"
   ],
   "enabledManagers": [
