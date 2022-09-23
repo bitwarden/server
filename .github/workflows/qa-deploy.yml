@@ -95,16 +95,10 @@ jobs:
         id: deployment
         with:
           token: '${{ secrets.GITHUB_TOKEN }}'
+          initial-status: 'in_progress'
           environment: 'Server ${{ matrix.name }} - QA'
           task: 'deploy'
           description: 'Deploy from ${{ env.branch_name }} branch'
-
-      - name: Update ${{ matrix.name }} deployment status to In Progress
-        uses: chrnorm/deployment-status@07b3930847f65e71c9c6802ff5a402f6dfb46b86
-        with:
-          token: '${{ secrets.GITHUB_TOKEN }}'
-          state: 'in_progress'
-          deployment-id: ${{ steps.deployment.outputs.deployment_id }}
 
       - name: Download latest ${{ matrix.name }} asset from ${{ env.branch_name }}
         uses: bitwarden/gh-actions/download-artifacts@c1fa8e09871a860862d6bbe36184b06d2c7e35a8
@@ -155,7 +149,7 @@ jobs:
             --resource-group $AZURE_RESOURCE_GROUP
 
       - name: Update ${{ matrix.name }} deployment status to Success
-        if: success()
+        if: ${{ success() }}
         uses: chrnorm/deployment-status@07b3930847f65e71c9c6802ff5a402f6dfb46b86
         with:
           token: '${{ secrets.GITHUB_TOKEN }}'
@@ -163,7 +157,7 @@ jobs:
           deployment-id: ${{ steps.deployment.outputs.deployment_id }}
 
       - name: Update ${{ matrix.name }} deployment status to Failure
-        if: failure()
+        if: ${{ failure() }}
         uses: chrnorm/deployment-status@07b3930847f65e71c9c6802ff5a402f6dfb46b86
         with:
           token: '${{ secrets.GITHUB_TOKEN }}'

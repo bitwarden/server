@@ -67,6 +67,10 @@ jobs:
         run: dotnet restore --locked-mode
         shell: pwsh
 
+      - name: Build OSS solution
+        run: msbuild bitwarden-server.sln /p:Configuration=Debug /p:DefineConstants="OSS" /verbosity:minimal
+        shell: pwsh
+
       - name: Build solution
         run: msbuild bitwarden-server.sln /p:Configuration=Debug /verbosity:minimal
         shell: pwsh
@@ -76,7 +80,7 @@ jobs:
         shell: pwsh
 
       - name: Test Bitwarden solution
-        run: dotnet test ./bitwarden_license/test/CmmCore.Test --configuration Debug --no-build
+        run: dotnet test ./bitwarden_license/test/Commercial.Core.Test --configuration Debug --no-build
         shell: pwsh
 
 

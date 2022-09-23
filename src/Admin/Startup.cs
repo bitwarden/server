@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Identity;
 using Stripe;
 
 #if !OSS
-using Bit.CommCore.Utilities;
+using Bit.Commercial.Core.Utilities;
 #endif
 
 namespace Bit.Admin
