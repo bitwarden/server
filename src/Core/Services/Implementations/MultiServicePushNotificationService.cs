@@ -36,8 +36,7 @@ public class MultiServicePushNotificationService : IPushNotificationService
             }
             else
             {
-                _logger.LogInformation("Self-hosted startup not configuring push relay. Push Relay Base Uri? {0} | Installation Id? {1} | Installation Key? {2}", 
-                    CoreHelpers.SettingHasValue(globalSettings.PushRelayBaseUri), globalSettings.Installation?.Id != null, CoreHelpers.SettingHasValue(globalSettings.Installation?.Key));
+                _logger.LogInformation("Self-hosted startup not configuring push relay. Push Relay Base Uri? {0} | Installation Id? {1} | Installation Key? {2}",  CoreHelpers.SettingHasValue(globalSettings.PushRelayBaseUri), globalSettings.Installation?.Id != null, CoreHelpers.SettingHasValue(globalSettings.Installation?.Key));
             }
             if (CoreHelpers.SettingHasValue(globalSettings.InternalIdentityKey) &&
                 CoreHelpers.SettingHasValue(globalSettings.BaseServiceUri.InternalNotifications))
@@ -48,8 +47,7 @@ public class MultiServicePushNotificationService : IPushNotificationService
             }
             else
             {
-                _logger.LogInformation("Self-hosted startup not configuring Notifications API push notifications. Internal Identity Key? {0} | Internal Notifications Uri? {1}", 
-                    CoreHelpers.SettingHasValue(globalSettings.InternalIdentityKey), CoreHelpers.SettingHasValue(globalSettings.BaseServiceUri.InternalNotifications));
+                _logger.LogInformation("Self-hosted startup not configuring Notifications API push notifications. Internal Identity Key? {0} | Internal Notifications Uri? {1}", CoreHelpers.SettingHasValue(globalSettings.InternalIdentityKey), CoreHelpers.SettingHasValue(globalSettings.BaseServiceUri.InternalNotifications));
             }
         }
         else
