@@ -136,7 +136,7 @@ public class Startup
             config.Conventions.Add(new PublicApiControllersModelConvention());
         });
 
-        if (globalSettings.SelfHosted)
+        if (globalSettings.IsSetupForPushSync())
         {
             services.AddPushSyncClients(globalSettings);
         }
