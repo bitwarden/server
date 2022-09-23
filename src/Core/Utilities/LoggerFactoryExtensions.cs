@@ -20,12 +20,13 @@ public static class LoggerFactoryExtensions
         IHostApplicationLifetime applicationLifetime,
         GlobalSettings globalSettings)
     {
-        appBuilder.UseSerilogRequestLogging();
 
         if (env.IsDevelopment())
         {
             return;
         }
+
+        appBuilder.UseSerilogRequestLogging();
 
         applicationLifetime.ApplicationStopped.Register(Log.CloseAndFlush);
     }
