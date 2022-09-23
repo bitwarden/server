@@ -21,7 +21,7 @@ public static class LoggerFactoryExtensions
         GlobalSettings globalSettings)
     {
         appBuilder.UseSerilogRequestLogging();
-        
+
         if (env.IsDevelopment())
         {
             return;
