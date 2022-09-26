@@ -12,6 +12,7 @@ using Bit.Core.Settings;
 using Bit.Core.Tokens;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.OrganizationFeatures
 {
@@ -70,7 +71,8 @@ namespace Bit.Core.OrganizationFeatures
                 new DataProtectorTokenFactory<OrganizationSponsorshipOfferTokenable>(
                     OrganizationSponsorshipOfferTokenable.ClearTextPrefix,
                     OrganizationSponsorshipOfferTokenable.DataProtectorPurpose,
-                    serviceProvider.GetDataProtectionProvider())
+                    serviceProvider.GetDataProtectionProvider(),
+                    serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<OrganizationSponsorshipOfferTokenable>>>())
             );
         }
     }

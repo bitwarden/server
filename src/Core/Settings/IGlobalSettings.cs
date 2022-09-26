@@ -15,5 +15,6 @@
         IBaseServiceUriSettings BaseServiceUri { get; set; }
         ITwoFactorAuthSettings TwoFactorAuth { get; set; }
         ISsoSettings Sso { get; set; }
+        ILogLevelSettings MinLogLevel { get; set; }
     }
 }
