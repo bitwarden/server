@@ -37,11 +37,10 @@ namespace Bit.Infrastructure.EntityFramework
 
         public static void AddPasswordManagerEFRepositories(this IServiceCollection services, bool selfHosted)
         {
-
-
             // TODO: We should move away from using LINQ syntax for EF (TDL-48).
             LinqToDBForEFTools.Initialize();
 
+            services.AddSingleton<IApiKeyRepository, ApiKeyRepository>();
             services.AddSingleton<ICipherRepository, CipherRepository>();
             services.AddSingleton<ICollectionCipherRepository, CollectionCipherRepository>();
             services.AddSingleton<ICollectionRepository, CollectionRepository>();
@@ -52,21 +51,21 @@ namespace Bit.Infrastructure.EntityFramework
             services.AddSingleton<IGroupRepository, GroupRepository>();
             services.AddSingleton<IInstallationRepository, InstallationRepository>();
             services.AddSingleton<IMaintenanceRepository, MaintenanceRepository>();
-            services.AddSingleton<IOrganizationRepository, OrganizationRepository>();
             services.AddSingleton<IOrganizationApiKeyRepository, OrganizationApiKeyRepository>();
             services.AddSingleton<IOrganizationConnectionRepository, OrganizationConnectionRepository>();
+            services.AddSingleton<IOrganizationRepository, OrganizationRepository>();
             services.AddSingleton<IOrganizationSponsorshipRepository, OrganizationSponsorshipRepository>();
             services.AddSingleton<IOrganizationUserRepository, OrganizationUserRepository>();
             services.AddSingleton<IPolicyRepository, PolicyRepository>();
+            services.AddSingleton<IProviderOrganizationRepository, ProviderOrganizationRepository>();
+            services.AddSingleton<IProviderRepository, ProviderRepository>();
+            services.AddSingleton<IProviderUserRepository, ProviderUserRepository>();
             services.AddSingleton<ISendRepository, SendRepository>();
             services.AddSingleton<ISsoConfigRepository, SsoConfigRepository>();
             services.AddSingleton<ISsoUserRepository, SsoUserRepository>();
             services.AddSingleton<ITaxRateRepository, TaxRateRepository>();
             services.AddSingleton<ITransactionRepository, TransactionRepository>();
             services.AddSingleton<IUserRepository, UserRepository>();
-            services.AddSingleton<IProviderRepository, ProviderRepository>();
-            services.AddSingleton<IProviderUserRepository, ProviderUserRepository>();
-            services.AddSingleton<IProviderOrganizationRepository, ProviderOrganizationRepository>();
 
             if (selfHosted)
             {
