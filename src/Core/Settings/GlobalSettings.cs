@@ -71,6 +71,7 @@ public class GlobalSettings : IGlobalSettings
     public virtual ITwoFactorAuthSettings TwoFactorAuth { get; set; } = new TwoFactorAuthSettings();
     public virtual DistributedIpRateLimitingSettings DistributedIpRateLimiting { get; set; } =
         new DistributedIpRateLimitingSettings();
+    public virtual IPasswordlessAuthSettings PasswordlessAuth { get; set; } = new PasswordlessAuthSettings();
 
     public string BuildExternalUri(string explicitValue, string name)
     {
@@ -453,6 +454,7 @@ public class GlobalSettings : IGlobalSettings
             get => string.IsNullOrWhiteSpace(_apiUri) ? "https://api.bitwarden.com" : _apiUri;
             set => _apiUri = value;
         }
+
     }
 
     public class AmazonSettings
@@ -519,4 +521,8 @@ public class GlobalSettings : IGlobalSettings
         public int SlidingWindowSeconds { get; set; } = 120;
     }
 
+    public class PasswordlessAuthSettings : IPasswordlessAuthSettings
+    {
+        public bool KnownDevicesOnly { get; set; } = true;
+    }
 }
