@@ -9,7 +9,7 @@ namespace Bit.Core.Tokens
         private readonly string _clearTextPrefix;
         private readonly ILogger<DataProtectorTokenFactory<T>> _logger;
 
-        public DataProtectorTokenFactory(string clearTextPrefix, string purpose, IDataProtectionProvider dataProtectionProvider)
+        public DataProtectorTokenFactory(string clearTextPrefix, string purpose, IDataProtectionProvider dataProtectionProvider, ILogger<DataProtectorTokenFactory<T>> logger)
         {
             _dataProtector = dataProtectionProvider.CreateProtector(purpose);
             _clearTextPrefix = clearTextPrefix;
