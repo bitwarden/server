@@ -12,6 +12,7 @@ namespace Bit.Api.IntegrationTest.Factories
         public ApiApplicationFactory()
         {
             _identityApplicationFactory = new IdentityApplicationFactory();
+            _identityApplicationFactory.DatabaseName = DatabaseName;
         }
 
         protected override void ConfigureWebHost(IWebHostBuilder builder)

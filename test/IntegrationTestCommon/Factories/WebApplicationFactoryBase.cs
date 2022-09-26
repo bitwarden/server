@@ -26,7 +26,7 @@ namespace Bit.IntegrationTestCommon.Factories
         /// <remarks>
         /// This will need to be set BEFORE using the <c>Server</c> property
         /// </remarks>
-        public string DatabaseName { get; set; } = FactoryConstants.DefaultDatabaseName;
+        public string DatabaseName { get; set; } = Guid.NewGuid().ToString();
 
         /// <summary>
         /// Configure the web host to use an EF in memory database
@@ -106,6 +106,12 @@ namespace Bit.IntegrationTestCommon.Factories
         {
             var scope = Services.CreateScope();
             return scope.ServiceProvider.GetRequiredService<DatabaseContext>();
+        }
+
+        public T GetService<T>()
+        {
+            var scope = Services.CreateScope();
+            return scope.ServiceProvider.GetRequiredService<T>();
         }
     }
 }
