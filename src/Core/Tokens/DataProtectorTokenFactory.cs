@@ -56,3 +56,4 @@ namespace Bit.Core.Tokens
             }
         }
     }
+}
