@@ -1,4 +1,5 @@
-﻿using IdentityModel;
+﻿using Bit.Core.Identity;
+using IdentityModel;
 using IdentityServer4.Models;
 
 namespace Bit.Core.IdentityServer
@@ -9,27 +10,27 @@ namespace Bit.Core.IdentityServer
         {
             return new List<ApiResource>
             {
-                new ApiResource("api", new string[] {
+                new("api", new[] {
                     JwtClaimTypes.Name,
                     JwtClaimTypes.Email,
                     JwtClaimTypes.EmailVerified,
-                    "sstamp", // security stamp
-                    "premium",
-                    "device",
-                    "orgowner",
-                    "orgadmin",
-                    "orgmanager",
-                    "orguser",
-                    "orgcustom",
-                    "providerprovideradmin",
-                    "providerserviceuser",
+                    Claims.SecurityStamp,
+                    Claims.Premium,
+                    Claims.Device,
+                    Claims.OrganizationOwner,
+                    Claims.OrganizationAdmin,
+                    Claims.OrganizationManager,
+                    Claims.OrganizationUser,
+                    Claims.OrganizationCustom,
+                    Claims.ProviderAdmin,
+                    Claims.ProviderServiceUser,
                 }),
-                new ApiResource("internal", new string[] { JwtClaimTypes.Subject }),
-                new ApiResource("api.push", new string[] { JwtClaimTypes.Subject }),
-                new ApiResource("api.licensing", new string[] { JwtClaimTypes.Subject }),
-                new ApiResource("api.organization", new string[] { JwtClaimTypes.Subject }),
-                new ApiResource("api.provider", new string[] { JwtClaimTypes.Subject }),
-                new ApiResource("api.installation", new string[] { JwtClaimTypes.Subject }),
+                new("internal", new[] { JwtClaimTypes.Subject }),
+                new("api.push", new[] { JwtClaimTypes.Subject }),
+                new("api.licensing", new[] { JwtClaimTypes.Subject }),
+                new("api.organization", new[] { JwtClaimTypes.Subject }),
+                new("api.provider", new[] { JwtClaimTypes.Subject }),
+                new("api.installation", new[] { JwtClaimTypes.Subject }),
             };
         }
     }

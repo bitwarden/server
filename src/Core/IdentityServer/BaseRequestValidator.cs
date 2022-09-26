@@ -172,7 +172,7 @@ namespace Bit.Core.IdentityServer
 
             if (device != null)
             {
-                claims.Add(new Claim("device", device.Identifier));
+                claims.Add(new Claim(Claims.Device, device.Identifier));
             }
 
             var customResponse = new Dictionary<string, object>();

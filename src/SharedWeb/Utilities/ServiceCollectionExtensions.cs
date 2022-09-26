@@ -337,9 +337,9 @@ namespace Bit.SharedWeb.Utilities
                 };
                 options.ClaimsIdentity = new ClaimsIdentityOptions
                 {
-                    SecurityStampClaimType = "sstamp",
+                    SecurityStampClaimType = Claims.SecurityStamp,
                     UserNameClaimType = JwtClaimTypes.Email,
-                    UserIdClaimType = JwtClaimTypes.Subject
+                    UserIdClaimType = JwtClaimTypes.Subject,
                 };
                 options.Tokens.ChangeEmailTokenProvider = TokenOptions.DefaultEmailProvider;
             });

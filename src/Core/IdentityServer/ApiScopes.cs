@@ -8,12 +8,12 @@ namespace Bit.Core.IdentityServer
         {
             return new List<ApiScope>
             {
-                new ApiScope("api", "API Access"),
-                new ApiScope("api.push", "API Push Access"),
-                new ApiScope("api.licensing", "API Licensing Access"),
-                new ApiScope("api.organization", "API Organization Access"),
-                new ApiScope("api.installation", "API Installation Access"),
-                new ApiScope("internal", "Internal Access")
+                new("api", "API Access"),
+                new("api.push", "API Push Access"),
+                new("api.licensing", "API Licensing Access"),
+                new("api.organization", "API Organization Access"),
+                new("api.installation", "API Installation Access"),
+                new("internal", "Internal Access"),
             };
         }
     }

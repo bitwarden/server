@@ -14,6 +14,7 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Enums.Provider;
+using Bit.Core.Identity;
 using Bit.Core.Settings;
 using IdentityModel;
 using Microsoft.AspNetCore.DataProtection;
@@ -670,10 +671,10 @@ namespace Bit.Core.Utilities
         {
             var claims = new List<KeyValuePair<string, string>>()
             {
-                new KeyValuePair<string, string>("premium", isPremium ? "true" : "false"),
-                new KeyValuePair<string, string>(JwtClaimTypes.Email, user.Email),
-                new KeyValuePair<string, string>(JwtClaimTypes.EmailVerified, user.EmailVerified ? "true" : "false"),
-                new KeyValuePair<string, string>("sstamp", user.SecurityStamp)
+                new(Claims.Premium, isPremium ? "true" : "false"),
+                new(JwtClaimTypes.Email, user.Email),
+                new(JwtClaimTypes.EmailVerified, user.EmailVerified ? "true" : "false"),
+                new(Claims.SecurityStamp, user.SecurityStamp),
             };
 
             if (!string.IsNullOrWhiteSpace(user.Name))
@@ -691,31 +692,31 @@ namespace Bit.Core.Utilities
                         case Enums.OrganizationUserType.Owner:
                             foreach (var org in group)
                             {
-                                claims.Add(new KeyValuePair<string, string>("orgowner", org.Id.ToString()));
+                                claims.Add(new KeyValuePair<string, string>(Claims.OrganizationOwner, org.Id.ToString()));
                             }
                             break;
                         case Enums.OrganizationUserType.Admin:
                             foreach (var org in group)
                             {
-                                claims.Add(new KeyValuePair<string, string>("orgadmin", org.Id.ToString()));
+                                claims.Add(new KeyValuePair<string, string>(Claims.OrganizationAdmin, org.Id.ToString()));
                             }
                             break;
                         case Enums.OrganizationUserType.Manager:
                             foreach (var org in group)
                             {
-                                claims.Add(new KeyValuePair<string, string>("orgmanager", org.Id.ToString()));
+                                claims.Add(new KeyValuePair<string, string>(Claims.OrganizationManager, org.Id.ToString()));
                             }
                             break;
                         case Enums.OrganizationUserType.User:
                             foreach (var org in group)
                             {
-                                claims.Add(new KeyValuePair<string, string>("orguser", org.Id.ToString()));
+                                claims.Add(new KeyValuePair<string, string>(Claims.OrganizationUser, org.Id.ToString()));
                             }
                             break;
                         case Enums.OrganizationUserType.Custom:
                             foreach (var org in group)
                             {
-                                claims.Add(new KeyValuePair<string, string>("orgcustom", org.Id.ToString()));
+                                claims.Add(new KeyValuePair<string, string>(Claims.OrganizationCustom, org.Id.ToString()));
                                 foreach (var (permission, claimName) in org.Permissions.ClaimsMap)
                                 {
                                     if (!permission)
@@ -742,13 +743,13 @@ namespace Bit.Core.Utilities
                         case ProviderUserType.ProviderAdmin:
                             foreach (var provider in group)
                             {
-                                claims.Add(new KeyValuePair<string, string>("providerprovideradmin", provider.Id.ToString()));
+                                claims.Add(new KeyValuePair<string, string>(Claims.ProviderAdmin, provider.Id.ToString()));
                             }
                             break;
                         case ProviderUserType.ServiceUser:
                             foreach (var provider in group)
                             {
-                                claims.Add(new KeyValuePair<string, string>("providerserviceuser", provider.Id.ToString()));
+                                claims.Add(new KeyValuePair<string, string>(Claims.ProviderServiceUser, provider.Id.ToString()));
                             }
                             break;
                     }
