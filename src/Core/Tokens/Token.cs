@@ -28,13 +28,13 @@ public class Token
     }
 
 
-    public Token ProtectWith<T>(IDataProtector dataProtector, ILogger<T> logger)
+    public Token ProtectWith(IDataProtector dataProtector, ILogger logger)
     {
         logger.LogDebug("Protecting token: {token}", this);
         return new(dataProtector.Protect(ToString()));
     }
 
-    public Token UnprotectWith<T>(IDataProtector dataProtector, ILogger<T> logger)
+    public Token UnprotectWith(IDataProtector dataProtector, ILogger logger)
     {
         var unprotected = "";
         try

@@ -1,4 +1,4 @@
-﻿using Bit.Core.Settings.LogSettings;
+﻿using Bit.Core.Settings.LoggingSettings;
 
 namespace Bit.Core.Settings;
 

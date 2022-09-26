@@ -1,6 +1,6 @@
 ﻿using Serilog.Events;
 
-namespace Bit.Core.Settings.LogSettings;
+namespace Bit.Core.Settings.LoggingSettings;
 
 public class ApiLogLevelSettings : IApiLogLevelSettings
 {
