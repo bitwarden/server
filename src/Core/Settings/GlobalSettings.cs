@@ -1,4 +1,6 @@
-﻿namespace Bit.Core.Settings
+﻿using Bit.Core.Settings.LoggingSettings;
+
+namespace Bit.Core.Settings
 {
     public class GlobalSettings : IGlobalSettings
     {
@@ -58,6 +60,7 @@
         public virtual DocumentDbSettings DocumentDb { get; set; } = new DocumentDbSettings();
         public virtual SentrySettings Sentry { get; set; } = new SentrySettings();
         public virtual SyslogSettings Syslog { get; set; } = new SyslogSettings();
+        public virtual ILogLevelSettings MinLogLevel { get; set; } = new LogLevelSettings();
         public virtual NotificationHubSettings NotificationHub { get; set; } = new NotificationHubSettings();
         public virtual YubicoSettings Yubico { get; set; } = new YubicoSettings();
         public virtual DuoSettings Duo { get; set; } = new DuoSettings();
