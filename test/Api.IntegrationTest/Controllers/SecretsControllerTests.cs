@@ -10,7 +10,7 @@ using Xunit;
 
 namespace Bit.Api.IntegrationTest.Controllers;
 
-public class SecretsControllerTest : IClassFixture<ApiApplicationFactory>
+public class SecretsControllerTest : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {
     private readonly string _mockEncryptedString =
         "2.3Uk+WNBIoU5xzmVFNcoWzz==|1MsPIYuRfdOHfu/0uY6H2Q==|/98sp4wb6pHP1VTZ9JcNCYgQjEUMFPlqJgCwRk1YXKg=";
@@ -18,6 +18,7 @@ public class SecretsControllerTest : IClassFixture<ApiApplicationFactory>
     private readonly HttpClient _client;
     private readonly ApiApplicationFactory _factory;
     private readonly ISecretRepository _secretRepository;
+    private Organization? _organization;
 
     public SecretsControllerTest(ApiApplicationFactory factory)
     {
@@ -26,11 +27,24 @@ public class SecretsControllerTest : IClassFixture<ApiApplicationFactory>
         _secretRepository = _factory.GetService<ISecretRepository>();
     }
 
+    public async Task InitializeAsync()
+    {
+        var ownerEmail = $"integration-test{Guid.NewGuid()}@bitwarden.com";
+        var tokens = await _factory.LoginWithNewAccount(ownerEmail);
+        var (organization, _) = await OrganizationTestHelpers.SignUpAsync(_factory, ownerEmail: ownerEmail, billingEmail: ownerEmail);
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokens.Token);
+        _organization = organization;
+    }
+
+    public Task DisposeAsync()
+    {
+        _client.Dispose();
+        return Task.CompletedTask;
+    }
+
     [Fact]
     public async Task CreateSecret()
     {
-        var organization = await SetupTest();
-
         var request = new SecretCreateRequestModel()
         {
             Key = _mockEncryptedString,
@@ -38,7 +52,7 @@ public class SecretsControllerTest : IClassFixture<ApiApplicationFactory>
             Note = _mockEncryptedString
         };
 
-        var response = await _client.PostAsJsonAsync($"/organizations/{organization.Id}/secrets", request);
+        var response = await _client.PostAsJsonAsync($"/organizations/{_organization.Id}/secrets", request);
         response.EnsureSuccessStatusCode();
         var result = await response.Content.ReadFromJsonAsync<Secret>();
 
@@ -63,11 +77,9 @@ public class SecretsControllerTest : IClassFixture<ApiApplicationFactory>
     [Fact]
     public async Task UpdateSecret()
     {
-        var organization = await SetupTest();
-
         var initialSecret = await _secretRepository.CreateAsync(new Secret
         {
-            OrganizationId = organization.Id,
+            OrganizationId = _organization.Id,
             Key = _mockEncryptedString,
             Value = _mockEncryptedString,
             Note = _mockEncryptedString
@@ -107,14 +119,12 @@ public class SecretsControllerTest : IClassFixture<ApiApplicationFactory>
     public async Task DeleteSecrets()
     {
         var secretsToDelete = 3;
-        var organization = await SetupTest();
-
         var secretIds = new List<Guid>();
         for (var i = 0; i < secretsToDelete; i++)
         {
             var secret = await _secretRepository.CreateAsync(new Secret
             {
-                OrganizationId = organization.Id,
+                OrganizationId = _organization.Id,
                 Key = _mockEncryptedString,
                 Value = _mockEncryptedString,
                 Note = _mockEncryptedString
@@ -144,11 +154,9 @@ public class SecretsControllerTest : IClassFixture<ApiApplicationFactory>
     [Fact]
     public async Task GetSecret()
     {
-        var organization = await SetupTest();
-
         var createdSecret = await _secretRepository.CreateAsync(new Secret
         {
-            OrganizationId = organization.Id,
+            OrganizationId = _organization.Id,
             Key = _mockEncryptedString,
             Value = _mockEncryptedString,
             Note = _mockEncryptedString
@@ -170,14 +178,12 @@ public class SecretsControllerTest : IClassFixture<ApiApplicationFactory>
     public async Task GetSecretsByOrganization()
     {
         var secretsToCreate = 3;
-        var organization = await SetupTest();
-
         var secretIds = new List<Guid>();
         for (var i = 0; i < secretsToCreate; i++)
         {
             var secret = await _secretRepository.CreateAsync(new Secret
             {
-                OrganizationId = organization.Id,
+                OrganizationId = _organization.Id,
                 Key = _mockEncryptedString,
                 Value = _mockEncryptedString,
                 Note = _mockEncryptedString
@@ -185,7 +191,7 @@ public class SecretsControllerTest : IClassFixture<ApiApplicationFactory>
             secretIds.Add(secret.Id);
         }
 
-        var response = await _client.GetAsync($"/organizations/{organization.Id}/secrets");
+        var response = await _client.GetAsync($"/organizations/{_organization.Id}/secrets");
         response.EnsureSuccessStatusCode();
         var content = await response.Content.ReadAsStringAsync();
 
@@ -193,14 +199,5 @@ public class SecretsControllerTest : IClassFixture<ApiApplicationFactory>
 
         Assert.NotEmpty(jsonResult.RootElement.GetProperty("data").EnumerateArray());
         Assert.Equal(secretIds.Count(), jsonResult.RootElement.GetProperty("data").EnumerateArray().Count());
-    }
-
-    private async Task<Organization> SetupTest()
-    {
-        var ownerEmail = $"integration-test{Guid.NewGuid()}@bitwarden.com";
-        var tokens = await _factory.LoginWithNewAccount(ownerEmail);
-        var (organization, _) = await OrganizationTestHelpers.SignUpAsync(_factory, ownerEmail: ownerEmail, billingEmail: ownerEmail);
-        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokens.Token);
-        return organization;
     }
 }
