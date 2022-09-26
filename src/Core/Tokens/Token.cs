@@ -30,7 +30,7 @@ public class Token
 
     public Token ProtectWith<T>(IDataProtector dataProtector, ILogger<T> logger)
     {
-        logger.LogDebug("Protecting token: {@0}", this);
+        logger.LogDebug("Protecting token: {token}", this);
         return new(dataProtector.Protect(ToString()));
     }
 
@@ -46,7 +46,7 @@ public class Token
             logger.LogInformation(e, "Failed to unprotect token: {token}", this);
             throw;
         }
-        logger.LogDebug("Unprotected token: {token} to {@decryptedToken}", this, unprotected);
+        logger.LogDebug("Unprotected token: {token} to {decryptedToken}", this, unprotected);
         return new(unprotected);
     }
 
