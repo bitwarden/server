@@ -16,4 +16,5 @@ public interface IGlobalSettings
     ITwoFactorAuthSettings TwoFactorAuth { get; set; }
     ISsoSettings Sso { get; set; }
     ILogLevelSettings MinLogLevel { get; set; }
+    IPasswordlessAuthSettings PasswordlessAuth { get; set; }
 }

@@ -20,6 +20,7 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
     private readonly IUserService _userService;
     private readonly ICurrentContext _currentContext;
     private readonly ICaptchaValidationService _captchaValidationService;
+    private readonly IAuthRequestRepository _authRequestRepository;
     public ResourceOwnerPasswordValidator(
         UserManager<User> userManager,
         IDeviceRepository deviceRepository,
@@ -36,6 +37,7 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
         GlobalSettings globalSettings,
         IPolicyRepository policyRepository,
         ICaptchaValidationService captchaValidationService,
+        IAuthRequestRepository authRequestRepository,
         IUserRepository userRepository)
         : base(userManager, deviceRepository, deviceService, userService, eventService,
               organizationDuoWebTokenProvider, organizationRepository, organizationUserRepository,
@@ -46,6 +48,7 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
         _userService = userService;
         _currentContext = currentContext;
         _captchaValidationService = captchaValidationService;
+        _authRequestRepository = authRequestRepository;
     }
 
     public async Task ValidateAsync(ResourceOwnerPasswordValidationContext context)
@@ -104,12 +107,31 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
             return false;
         }
 
-        if (!await _userService.CheckPasswordAsync(validatorContext.User, context.Password))
+        var authRequestId = context.Request.Raw["AuthRequest"]?.ToString()?.ToLowerInvariant();
+        if (!string.IsNullOrWhiteSpace(authRequestId) && Guid.TryParse(authRequestId, out var authRequestGuid))
         {
+            var authRequest = await _authRequestRepository.GetByIdAsync(authRequestGuid);
+            if (authRequest != null)
+            {
+                var requestAge = DateTime.UtcNow - authRequest.CreationDate;
+                if (requestAge < TimeSpan.FromHours(1) && !authRequest.AuthenticationDate.HasValue &&
+                    CoreHelpers.FixedTimeEquals(authRequest.AccessCode, context.Password))
+                {
+                    authRequest.AuthenticationDate = DateTime.UtcNow;
+                    await _authRequestRepository.ReplaceAsync(authRequest);
+                    return true;
+                }
+            }
             return false;
         }
-
-        return true;
+        else
+        {
+            if (!await _userService.CheckPasswordAsync(validatorContext.User, context.Password))
+            {
+                return false;
+            }
+            return true;
+        }
     }
 
     protected override Task SetSuccessResult(ResourceOwnerPasswordValidationContext context, User user,
