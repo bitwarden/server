@@ -25,13 +25,12 @@ namespace Bit.Core.IdentityServer
                     Claims.ProviderAdmin,
                     Claims.ProviderServiceUser,
                 }),
-                new("internal", new[] { JwtClaimTypes.Subject }),
-                new("api.push", new[] { JwtClaimTypes.Subject }),
-                new("api.licensing", new[] { JwtClaimTypes.Subject }),
-                new("api.organization", new[] { JwtClaimTypes.Subject }),
-                new("api.provider", new[] { JwtClaimTypes.Subject }),
-                new("api.installation", new[] { JwtClaimTypes.Subject }),
-                new("api.secrets", new[] { JwtClaimTypes.Subject }),
+                new(ApiScopes.Internal, new[] { JwtClaimTypes.Subject }),
+                new(ApiScopes.ApiPush, new[] { JwtClaimTypes.Subject }),
+                new(ApiScopes.ApiLicensing, new[] { JwtClaimTypes.Subject }),
+                new(ApiScopes.ApiOrganization, new[] { JwtClaimTypes.Subject }),
+                new(ApiScopes.ApiInstallation, new[] { JwtClaimTypes.Subject }),
+                new(ApiScopes.ApiSecrets, new[] { JwtClaimTypes.Subject }),
             };
         }
     }

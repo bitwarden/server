@@ -52,7 +52,7 @@ namespace Bit.Core.IdentityServer
             if (!allowedGrantTypes.Contains(context.Result.ValidatedRequest.GrantType)
                 || context.Result.ValidatedRequest.ClientId.StartsWith("organization")
                 || context.Result.ValidatedRequest.ClientId.StartsWith("installation")
-                || context.Result.ValidatedRequest.Client.AllowedScopes.Contains("api.secrets"))
+                || context.Result.ValidatedRequest.Client.AllowedScopes.Contains(ApiScopes.ApiSecrets))
             {
                 // TODO: Is this the best approach?
                 if (context.Result.ValidatedRequest.Client.Properties.ContainsKey("encryptedPayload"))
