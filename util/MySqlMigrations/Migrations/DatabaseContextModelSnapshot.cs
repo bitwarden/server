@@ -1015,6 +1015,32 @@ namespace Bit.MySqlMigrations.Migrations
                     b.ToTable("Send", (string)null);
                 });
 
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.ServiceAccount", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("CreationDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Name")
+                        .HasColumnType("longtext");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("RevisionDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("Id")
+                        .HasAnnotation("SqlServer:Clustered", true);
+
+                    b.HasIndex("OrganizationId")
+                        .HasAnnotation("SqlServer:Clustered", false);
+
+                    b.ToTable("ServiceAccount", (string)null);
+                });
+
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.SsoConfig", b =>
                 {
                     b.Property<long>("Id")
@@ -1574,6 +1600,17 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Navigation("Organization");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.ServiceAccount", b =>
+                {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.Organization", "Organization")
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Organization");
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.SsoConfig", b =>
