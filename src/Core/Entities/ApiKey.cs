@@ -1,5 +1,4 @@
-﻿#nullable enable
-using Bit.Core.Utilities;
+﻿using Bit.Core.Utilities;
 
 namespace Bit.Core.Entities;
 
@@ -18,5 +17,10 @@ public class ApiKey : ITableObject<Guid>
     public void SetNewId()
     {
         Id = CoreHelpers.GenerateComb();
+    }
+
+    public ICollection<string> GetScopes()
+    {
+        return CoreHelpers.LoadClassFromJsonData<List<string>>(Scope);
     }
 }

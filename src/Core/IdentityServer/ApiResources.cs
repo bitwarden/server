@@ -31,6 +31,7 @@ namespace Bit.Core.IdentityServer
                 new("api.organization", new[] { JwtClaimTypes.Subject }),
                 new("api.provider", new[] { JwtClaimTypes.Subject }),
                 new("api.installation", new[] { JwtClaimTypes.Subject }),
+                new("api.secrets", new[] { JwtClaimTypes.Subject }),
             };
         }
     }

@@ -99,7 +99,7 @@ namespace Bit.Core.IdentityServer
                 ClientId = clientId,
                 RequireClientSecret = true,
                 ClientSecrets = { new Secret(apiKey.ClientSecret.Sha256()) },
-                AllowedScopes = new[] { "api", "secrets" },
+                AllowedScopes = apiKey.GetScopes(),
                 AllowedGrantTypes = GrantTypes.ClientCredentials,
                 AccessTokenLifetime = 3600 * 1,
                 ClientClaimsPrefix = null,

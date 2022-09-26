@@ -14,6 +14,7 @@ namespace Bit.Core.IdentityServer
                 new("api.organization", "API Organization Access"),
                 new("api.installation", "API Installation Access"),
                 new("internal", "Internal Access"),
+                new("api.secrets", "Secrets Manager Access"),
             };
         }
     }
