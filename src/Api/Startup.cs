@@ -118,7 +118,10 @@ namespace Bit.Api
                 config.AddPolicy("Secrets", policy =>
                 {
                     policy.RequireAuthenticatedUser();
-                    policy.RequireClaim(JwtClaimTypes.Scope, ApiScopes.ApiSecrets);
+                    policy.RequireAssertion(ctx => ctx.User.HasClaim(c =>
+                        c.Type == JwtClaimTypes.Scope &&
+                        (c.Value.Contains(ApiScopes.Api) || c.Value.Contains(ApiScopes.ApiOrganization))
+                    ));
                 });
             });
 

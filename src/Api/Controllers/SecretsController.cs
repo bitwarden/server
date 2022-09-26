@@ -5,11 +5,13 @@ using Bit.Api.Utilities;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.SecretManagerFeatures.Secrets.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.Controllers
 {
     [SecretsManager]
+    [Authorize("secrets")]
     public class SecretsController : Controller
     {
         private readonly ISecretRepository _secretRepository;

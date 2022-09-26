@@ -217,7 +217,7 @@ namespace Bit.Core.IdentityServer
                 Enabled = true,
                 Claims = new List<ClientClaim>
                 {
-                    new(JwtClaimTypes.Subject, id)
+                    new(JwtClaimTypes.Subject, id),
                 },
             };
         }
