@@ -1,16 +1,15 @@
 ﻿using AutoMapper;
 
-namespace Bit.Infrastructure.EntityFramework.Models
-{
-    public class Grant : Core.Entities.Grant
-    {
-    }
+namespace Bit.Infrastructure.EntityFramework.Models;
 
-    public class GrantMapperProfile : Profile
+public class Grant : Core.Entities.Grant
+{
+}
+
+public class GrantMapperProfile : Profile
+{
+    public GrantMapperProfile()
     {
-        public GrantMapperProfile()
-        {
-            CreateMap<Core.Entities.Grant, Grant>().ReverseMap();
-        }
+        CreateMap<Core.Entities.Grant, Grant>().ReverseMap();
     }
 }

@@ -1,12 +1,11 @@
 ﻿using Bit.Core.Entities;
 
-namespace Bit.Core.Repositories
+namespace Bit.Core.Repositories;
+
+public interface IServiceAccountRepository
 {
-    public interface IServiceAccountRepository
-    {
-        Task<IEnumerable<ServiceAccount>> GetManyByOrganizationIdAsync(Guid organizationId);
-        Task<ServiceAccount> GetByIdAsync(Guid id);
-        Task<ServiceAccount> CreateAsync(ServiceAccount serviceAccount);
-        Task ReplaceAsync(ServiceAccount serviceAccount);
-    }
+    Task<IEnumerable<ServiceAccount>> GetManyByOrganizationIdAsync(Guid organizationId);
+    Task<ServiceAccount> GetByIdAsync(Guid id);
+    Task<ServiceAccount> CreateAsync(ServiceAccount serviceAccount);
+    Task ReplaceAsync(ServiceAccount serviceAccount);
 }

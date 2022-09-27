@@ -8,123 +8,122 @@ using Bit.Test.Common.Helpers;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Commercial.Core.Test.SecretManagerFeatures.Secrets
+namespace Bit.Commercial.Core.Test.SecretManagerFeatures.Secrets;
+
+[SutProviderCustomize]
+public class UpdateSecretCommandTests
 {
-    [SutProviderCustomize]
-    public class UpdateSecretCommandTests
+    [Theory]
+    [BitAutoData]
+    public async Task UpdateAsync_DefaultGuidId_ThrowsNotFound(Secret data, SutProvider<UpdateSecretCommand> sutProvider)
     {
-        [Theory]
-        [BitAutoData]
-        public async Task UpdateAsync_DefaultGuidId_ThrowsNotFound(Secret data, SutProvider<UpdateSecretCommand> sutProvider)
+        data.Id = new Guid();
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateAsync(data));
+
+        Assert.Contains("Cannot update secret, secret does not exist.", exception.Message);
+        await sutProvider.GetDependency<ISecretRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task UpdateAsync_SecretDoesNotExist_ThrowsNotFound(Secret data, SutProvider<UpdateSecretCommand> sutProvider)
+    {
+        var exception = await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.UpdateAsync(data));
+
+        await sutProvider.GetDependency<ISecretRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task UpdateAsync_CallsReplaceAsync(Secret data, SutProvider<UpdateSecretCommand> sutProvider)
+    {
+        sutProvider.GetDependency<ISecretRepository>().GetByIdAsync(data.Id).Returns(data);
+        await sutProvider.Sut.UpdateAsync(data);
+
+        await sutProvider.GetDependency<ISecretRepository>().Received(1)
+            .ReplaceAsync(Arg.Is(AssertHelper.AssertPropertyEqual(data)));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task UpdateAsync_DoesNotModifyOrganizationId(Secret existingSecret, SutProvider<UpdateSecretCommand> sutProvider)
+    {
+        sutProvider.GetDependency<ISecretRepository>().GetByIdAsync(existingSecret.Id).Returns(existingSecret);
+
+        var updatedOrgId = Guid.NewGuid();
+        var secretUpdate = new Secret()
         {
-            data.Id = new Guid();
+            OrganizationId = updatedOrgId,
+            Id = existingSecret.Id,
+            Key = existingSecret.Key,
+        };
 
-            var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateAsync(data));
+        var result = await sutProvider.Sut.UpdateAsync(secretUpdate);
 
-            Assert.Contains("Cannot update secret, secret does not exist.", exception.Message);
-            await sutProvider.GetDependency<ISecretRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default);
-        }
+        Assert.Equal(existingSecret.OrganizationId, result.OrganizationId);
+        Assert.NotEqual(existingSecret.OrganizationId, updatedOrgId);
+    }
 
-        [Theory]
-        [BitAutoData]
-        public async Task UpdateAsync_SecretDoesNotExist_ThrowsNotFound(Secret data, SutProvider<UpdateSecretCommand> sutProvider)
+    [Theory]
+    [BitAutoData]
+    public async Task UpdateAsync_DoesNotModifyCreationDate(Secret existingSecret, SutProvider<UpdateSecretCommand> sutProvider)
+    {
+        sutProvider.GetDependency<ISecretRepository>().GetByIdAsync(existingSecret.Id).Returns(existingSecret);
+
+        var updatedCreationDate = DateTime.UtcNow;
+        var secretUpdate = new Secret()
         {
-            var exception = await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.UpdateAsync(data));
+            CreationDate = updatedCreationDate,
+            Id = existingSecret.Id,
+            Key = existingSecret.Key,
+        };
 
-            await sutProvider.GetDependency<ISecretRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default);
-        }
+        var result = await sutProvider.Sut.UpdateAsync(secretUpdate);
 
-        [Theory]
-        [BitAutoData]
-        public async Task UpdateAsync_CallsReplaceAsync(Secret data, SutProvider<UpdateSecretCommand> sutProvider)
+        Assert.Equal(existingSecret.CreationDate, result.CreationDate);
+        Assert.NotEqual(existingSecret.CreationDate, updatedCreationDate);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task UpdateAsync_DoesNotModifyDeletionDate(Secret existingSecret, SutProvider<UpdateSecretCommand> sutProvider)
+    {
+        sutProvider.GetDependency<ISecretRepository>().GetByIdAsync(existingSecret.Id).Returns(existingSecret);
+
+        var updatedDeletionDate = DateTime.UtcNow;
+        var secretUpdate = new Secret()
         {
-            sutProvider.GetDependency<ISecretRepository>().GetByIdAsync(data.Id).Returns(data);
-            await sutProvider.Sut.UpdateAsync(data);
+            DeletedDate = updatedDeletionDate,
+            Id = existingSecret.Id,
+            Key = existingSecret.Key,
+        };
 
-            await sutProvider.GetDependency<ISecretRepository>().Received(1)
-                .ReplaceAsync(Arg.Is(AssertHelper.AssertPropertyEqual(data)));
-        }
+        var result = await sutProvider.Sut.UpdateAsync(secretUpdate);
 
-        [Theory]
-        [BitAutoData]
-        public async Task UpdateAsync_DoesNotModifyOrganizationId(Secret existingSecret, SutProvider<UpdateSecretCommand> sutProvider)
+        Assert.Equal(existingSecret.DeletedDate, result.DeletedDate);
+        Assert.NotEqual(existingSecret.DeletedDate, updatedDeletionDate);
+    }
+
+
+    [Theory]
+    [BitAutoData]
+    public async Task UpdateAsync_RevisionDateIsUpdatedToUtcNow(Secret existingSecret, SutProvider<UpdateSecretCommand> sutProvider)
+    {
+        sutProvider.GetDependency<ISecretRepository>().GetByIdAsync(existingSecret.Id).Returns(existingSecret);
+
+        var updatedRevisionDate = DateTime.UtcNow.AddDays(10);
+        var secretUpdate = new Secret()
         {
-            sutProvider.GetDependency<ISecretRepository>().GetByIdAsync(existingSecret.Id).Returns(existingSecret);
+            RevisionDate = updatedRevisionDate,
+            Id = existingSecret.Id,
+            Key = existingSecret.Key,
+        };
 
-            var updatedOrgId = Guid.NewGuid();
-            var secretUpdate = new Secret()
-            {
-                OrganizationId = updatedOrgId,
-                Id = existingSecret.Id,
-                Key = existingSecret.Key,
-            };
+        var result = await sutProvider.Sut.UpdateAsync(secretUpdate);
 
-            var result = await sutProvider.Sut.UpdateAsync(secretUpdate);
-
-            Assert.Equal(existingSecret.OrganizationId, result.OrganizationId);
-            Assert.NotEqual(existingSecret.OrganizationId, updatedOrgId);
-        }
-
-        [Theory]
-        [BitAutoData]
-        public async Task UpdateAsync_DoesNotModifyCreationDate(Secret existingSecret, SutProvider<UpdateSecretCommand> sutProvider)
-        {
-            sutProvider.GetDependency<ISecretRepository>().GetByIdAsync(existingSecret.Id).Returns(existingSecret);
-
-            var updatedCreationDate = DateTime.UtcNow;
-            var secretUpdate = new Secret()
-            {
-                CreationDate = updatedCreationDate,
-                Id = existingSecret.Id,
-                Key = existingSecret.Key,
-            };
-
-            var result = await sutProvider.Sut.UpdateAsync(secretUpdate);
-
-            Assert.Equal(existingSecret.CreationDate, result.CreationDate);
-            Assert.NotEqual(existingSecret.CreationDate, updatedCreationDate);
-        }
-
-        [Theory]
-        [BitAutoData]
-        public async Task UpdateAsync_DoesNotModifyDeletionDate(Secret existingSecret, SutProvider<UpdateSecretCommand> sutProvider)
-        {
-            sutProvider.GetDependency<ISecretRepository>().GetByIdAsync(existingSecret.Id).Returns(existingSecret);
-
-            var updatedDeletionDate = DateTime.UtcNow;
-            var secretUpdate = new Secret()
-            {
-                DeletedDate = updatedDeletionDate,
-                Id = existingSecret.Id,
-                Key = existingSecret.Key,
-            };
-
-            var result = await sutProvider.Sut.UpdateAsync(secretUpdate);
-
-            Assert.Equal(existingSecret.DeletedDate, result.DeletedDate);
-            Assert.NotEqual(existingSecret.DeletedDate, updatedDeletionDate);
-        }
-
-
-        [Theory]
-        [BitAutoData]
-        public async Task UpdateAsync_RevisionDateIsUpdatedToUtcNow(Secret existingSecret, SutProvider<UpdateSecretCommand> sutProvider)
-        {
-            sutProvider.GetDependency<ISecretRepository>().GetByIdAsync(existingSecret.Id).Returns(existingSecret);
-
-            var updatedRevisionDate = DateTime.UtcNow.AddDays(10);
-            var secretUpdate = new Secret()
-            {
-                RevisionDate = updatedRevisionDate,
-                Id = existingSecret.Id,
-                Key = existingSecret.Key,
-            };
-
-            var result = await sutProvider.Sut.UpdateAsync(secretUpdate);
-
-            Assert.NotEqual(existingSecret.RevisionDate, result.RevisionDate);
-            AssertHelper.AssertRecent(result.RevisionDate);
-        }
+        Assert.NotEqual(existingSecret.RevisionDate, result.RevisionDate);
+        AssertHelper.AssertRecent(result.RevisionDate);
     }
 }
 

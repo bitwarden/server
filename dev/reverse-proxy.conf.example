@@ -1,0 +1,35 @@
+# Begin API Service
+
+upstream api_loadbalancer {
+    # Add additional API services here uniquely identified by their port
+    # Below assumes two services running on the docker host machine on ports 4000 and 4002
+    server host.docker.internal:4000;
+    server host.docker.internal:4002;
+}
+
+server {
+    listen 4100; # The port clients will connect to for the Api, must be exposed via Docker
+    location / {
+        proxy_pass http://api_loadbalancer;
+    }
+}
+
+# End API Service
+
+# Begin Identity Service
+
+upstream identity_loadbalancer {
+    # Add additional Identity services here uniquely identified by their port
+    # Below assumes two services running on the docker host machine on ports 33656 and 33658
+    server host.docker.internal:33656;
+    server host.docker.internal:33658;
+}
+
+server {
+    listen 33756; # The port clients will connect to for the Identiy, must be exposed via Docker
+    location / {
+        proxy_pass http://identity_loadbalancer;
+    }
+}
+
+# End Identity Service

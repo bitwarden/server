@@ -7,21 +7,20 @@ using Bit.Test.Common.Helpers;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Commercial.Core.Test.SecretManagerFeatures.Secrets
-{
-    [SutProviderCustomize]
-    public class CreateSecretCommandTests
-    {
-        [Theory]
-        [BitAutoData]
-        public async Task CreateAsync_CallsCreate(Secret data,
-          SutProvider<CreateSecretCommand> sutProvider)
-        {
-            await sutProvider.Sut.CreateAsync(data);
+namespace Bit.Commercial.Core.Test.SecretManagerFeatures.Secrets;
 
-            await sutProvider.GetDependency<ISecretRepository>().Received(1)
-                .CreateAsync(Arg.Is(AssertHelper.AssertPropertyEqual(data)));
-        }
+[SutProviderCustomize]
+public class CreateSecretCommandTests
+{
+    [Theory]
+    [BitAutoData]
+    public async Task CreateAsync_CallsCreate(Secret data,
+      SutProvider<CreateSecretCommand> sutProvider)
+    {
+        await sutProvider.Sut.CreateAsync(data);
+
+        await sutProvider.GetDependency<ISecretRepository>().Received(1)
+            .CreateAsync(Arg.Is(AssertHelper.AssertPropertyEqual(data)));
     }
 }
 

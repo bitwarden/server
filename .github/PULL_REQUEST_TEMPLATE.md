@@ -23,12 +23,8 @@
 
 ## Before you submit
 
-<!-- (mark with an `X`) -->
-
-```
-- [ ] I have checked for formatting errors (`dotnet format --verify-no-changes`) (required)
-- [ ] If making database changes - I have also updated Entity Framework queries and/or migrations
-- [ ] I have added **unit tests** where it makes sense to do so (encouraged but not required)
-- [ ] This change requires a **documentation update** (notify the documentation team)
-- [ ] This change has particular **deployment requirements** (notify the DevOps team)
-```
+- Please check for formatting errors (`dotnet format --verify-no-changes`) (required)
+- If making database changes - make sure you also update Entity Framework queries and/or migrations
+- Please add **unit tests** where it makes sense to do so (encouraged but not required)
+- If this change requires a **documentation update** - notify the documentation team
+- If this change has particular **deployment requirements** - notify the DevOps team
