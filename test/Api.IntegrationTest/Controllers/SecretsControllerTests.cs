@@ -1,49 +1,138 @@
 ﻿using System.Net.Http.Headers;
-using System.Text;
 using System.Text.Json;
 using Bit.Api.IntegrationTest.Factories;
-using Bit.Api.Models.Request.Organizations;
+using Bit.Api.IntegrationTest.Helpers;
 using Bit.Api.SecretManagerFeatures.Models.Request;
 using Bit.Core.Entities;
+using Bit.Core.Repositories;
+using Bit.Test.Common.Helpers;
 using Xunit;
 
 namespace Bit.Api.IntegrationTest.Controllers;
 
-public class SecretsControllerTest : IClassFixture<ApiApplicationFactory>
+public class SecretsControllerTest : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {
-    private readonly string _mockEncryptedString = "2.3Uk+WNBIoU5xzmVFNcoWzz==|1MsPIYuRfdOHfu/0uY6H2Q==|/98sp4wb6pHP1VTZ9JcNCYgQjEUMFPlqJgCwRk1YXKg=";
-    private readonly int _secretsToDelete = 3;
+    private readonly string _mockEncryptedString =
+        "2.3Uk+WNBIoU5xzmVFNcoWzz==|1MsPIYuRfdOHfu/0uY6H2Q==|/98sp4wb6pHP1VTZ9JcNCYgQjEUMFPlqJgCwRk1YXKg=";
+
     private readonly HttpClient _client;
     private readonly ApiApplicationFactory _factory;
+    private readonly ISecretRepository _secretRepository;
+    private Organization? _organization;
 
     public SecretsControllerTest(ApiApplicationFactory factory)
     {
         _factory = factory;
         _client = _factory.CreateClient();
+        _secretRepository = _factory.GetService<ISecretRepository>();
+    }
+
+    public async Task InitializeAsync()
+    {
+        var ownerEmail = $"integration-test{Guid.NewGuid()}@bitwarden.com";
+        var tokens = await _factory.LoginWithNewAccount(ownerEmail);
+        var (organization, _) = await OrganizationTestHelpers.SignUpAsync(_factory, ownerEmail: ownerEmail, billingEmail: ownerEmail);
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokens.Token);
+        _organization = organization;
+    }
+
+    public Task DisposeAsync()
+    {
+        _client.Dispose();
+        return Task.CompletedTask;
+    }
+
+    [Fact]
+    public async Task CreateSecret()
+    {
+        var request = new SecretCreateRequestModel()
+        {
+            Key = _mockEncryptedString,
+            Value = _mockEncryptedString,
+            Note = _mockEncryptedString
+        };
+
+        var response = await _client.PostAsJsonAsync($"/organizations/{_organization.Id}/secrets", request);
+        response.EnsureSuccessStatusCode();
+        var result = await response.Content.ReadFromJsonAsync<Secret>();
+
+        Assert.NotNull(result);
+        Assert.Equal(request.Key, result.Key);
+        Assert.Equal(request.Value, result.Value);
+        Assert.Equal(request.Note, result.Note);
+        AssertHelper.AssertRecent(result.RevisionDate);
+        AssertHelper.AssertRecent(result.CreationDate);
+        Assert.Null(result.DeletedDate);
+
+        var createdSecret = await _secretRepository.GetByIdAsync(result.Id);
+        Assert.NotNull(result);
+        Assert.Equal(request.Key, createdSecret.Key);
+        Assert.Equal(request.Value, createdSecret.Value);
+        Assert.Equal(request.Note, createdSecret.Note);
+        AssertHelper.AssertRecent(createdSecret.RevisionDate);
+        AssertHelper.AssertRecent(createdSecret.CreationDate);
+        Assert.Null(createdSecret.DeletedDate);
+    }
+
+    [Fact]
+    public async Task UpdateSecret()
+    {
+        var initialSecret = await _secretRepository.CreateAsync(new Secret
+        {
+            OrganizationId = _organization.Id,
+            Key = _mockEncryptedString,
+            Value = _mockEncryptedString,
+            Note = _mockEncryptedString
+        });
+
+        var request = new SecretUpdateRequestModel()
+        {
+            Key = _mockEncryptedString,
+            Value = "2.3Uk+WNBIoU5xzmVFNcoWzz==|1MsPIYuRfdOHfu/0uY6H2Q==|/98xy4wb6pHP1VTZ9JcNCYgQjEUMFPlqJgCwRk1YXKg=",
+            Note = _mockEncryptedString
+        };
+
+        var response = await _client.PutAsJsonAsync($"/secrets/{initialSecret.Id}", request);
+        response.EnsureSuccessStatusCode();
+        var result = await response.Content.ReadFromJsonAsync<Secret>();
+        Assert.Equal(request.Key, result.Key);
+        Assert.Equal(request.Value, result.Value);
+        Assert.NotEqual(initialSecret.Value, result.Value);
+        Assert.Equal(request.Note, result.Note);
+        AssertHelper.AssertRecent(result.RevisionDate);
+        Assert.NotEqual(initialSecret.RevisionDate, result.RevisionDate);
+        Assert.Null(result.DeletedDate);
+
+        var updatedSecret = await _secretRepository.GetByIdAsync(result.Id);
+        Assert.NotNull(result);
+        Assert.Equal(request.Key, updatedSecret.Key);
+        Assert.Equal(request.Value, updatedSecret.Value);
+        Assert.Equal(request.Note, updatedSecret.Note);
+        AssertHelper.AssertRecent(updatedSecret.RevisionDate);
+        AssertHelper.AssertRecent(updatedSecret.CreationDate);
+        Assert.Null(updatedSecret.DeletedDate);
+        Assert.NotEqual(initialSecret.Value, updatedSecret.Value);
+        Assert.NotEqual(initialSecret.RevisionDate, updatedSecret.RevisionDate);
     }
 
     [Fact]
     public async Task DeleteSecrets()
     {
-        var tokens = await _factory.LoginWithNewAccount();
-
-        var orgId = await CreateOrganization(tokens.Token);
-        var createdSecretIds = new List<Guid>();
-
-        foreach (var i in Enumerable.Range(0, _secretsToDelete))
+        var secretsToDelete = 3;
+        var secretIds = new List<Guid>();
+        for (var i = 0; i < secretsToDelete; i++)
         {
-            var createdSecret = await CreateSecret(orgId, tokens.Token);
-            createdSecretIds.Add(createdSecret.Id);
+            var secret = await _secretRepository.CreateAsync(new Secret
+            {
+                OrganizationId = _organization.Id,
+                Key = _mockEncryptedString,
+                Value = _mockEncryptedString,
+                Note = _mockEncryptedString
+            });
+            secretIds.Add(secret.Id);
         }
 
-        using var message = new HttpRequestMessage(HttpMethod.Post, "/secrets/delete")
-        {
-            Content = new StringContent(JsonSerializer.Serialize(createdSecretIds),
-            Encoding.UTF8,
-            "application/json"),
-        };
-        message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", tokens.Token);
-        var response = await _client.SendAsync(message);
+        var response = await _client.PostAsync("/secrets/delete", JsonContent.Create(secretIds));
         response.EnsureSuccessStatusCode();
 
         var content = await response.Content.ReadAsStringAsync();
@@ -53,54 +142,62 @@ public class SecretsControllerTest : IClassFixture<ApiApplicationFactory>
         var index = 0;
         foreach (var element in jsonResult.RootElement.GetProperty("data").EnumerateArray())
         {
-            Assert.Equal(createdSecretIds[index].ToString(), element.GetProperty("id").ToString());
+            Assert.Equal(secretIds[index].ToString(), element.GetProperty("id").ToString());
             Assert.Empty(element.GetProperty("error").ToString());
             index++;
         }
+
+        var secrets = await _secretRepository.GetManyByIds(secretIds);
+        Assert.Empty(secrets);
     }
 
-    private async Task<Secret> CreateSecret(Guid organizationId, string token)
+    [Fact]
+    public async Task GetSecret()
     {
-        var request = new SecretCreateRequestModel()
+        var createdSecret = await _secretRepository.CreateAsync(new Secret
         {
+            OrganizationId = _organization.Id,
             Key = _mockEncryptedString,
             Value = _mockEncryptedString,
             Note = _mockEncryptedString
-        };
-        using var message = new HttpRequestMessage(HttpMethod.Post, $"/organizations/{organizationId.ToString()}/secrets")
-        {
-            Content = new StringContent(
-            JsonSerializer.Serialize(request),
-            Encoding.UTF8,
-            "application/json")
-        };
-        message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        });
 
-        var response = await _client.SendAsync(message);
+
+        var response = await _client.GetAsync($"/secrets/{createdSecret.Id}");
         response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<Secret>();
+        var result = await response.Content.ReadFromJsonAsync<Secret>();
+        Assert.Equal(createdSecret.Key, result.Key);
+        Assert.Equal(createdSecret.Value, result.Value);
+        Assert.Equal(createdSecret.Note, result.Note);
+        Assert.Equal(createdSecret.RevisionDate, result.RevisionDate);
+        Assert.Equal(createdSecret.CreationDate, result.CreationDate);
+        Assert.Null(result.DeletedDate);
     }
 
-    private async Task<Guid> CreateOrganization(string token)
+    [Fact]
+    public async Task GetSecretsByOrganization()
     {
-        var request = new OrganizationCreateRequestModel()
+        var secretsToCreate = 3;
+        var secretIds = new List<Guid>();
+        for (var i = 0; i < secretsToCreate; i++)
         {
-            Name = "Integration Test Org",
-            BillingEmail = "integration-test@bitwarden.com",
-            PlanType = Core.Enums.PlanType.Free,
-            Key = "test-key"
-        };
-        using var message = new HttpRequestMessage(HttpMethod.Post, $"/organizations")
-        {
-            Content = new StringContent(
-            JsonSerializer.Serialize(request),
-            Encoding.UTF8,
-            "application/json")
-        };
-        message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        var response = await _client.SendAsync(message);
+            var secret = await _secretRepository.CreateAsync(new Secret
+            {
+                OrganizationId = _organization.Id,
+                Key = _mockEncryptedString,
+                Value = _mockEncryptedString,
+                Note = _mockEncryptedString
+            });
+            secretIds.Add(secret.Id);
+        }
+
+        var response = await _client.GetAsync($"/organizations/{_organization.Id}/secrets");
         response.EnsureSuccessStatusCode();
-        var result = await response.Content.ReadAsStringAsync();
-        return new Guid(JsonDocument.Parse(result).RootElement.GetProperty("id").ToString());
+        var content = await response.Content.ReadAsStringAsync();
+
+        var jsonResult = JsonDocument.Parse(content);
+
+        Assert.NotEmpty(jsonResult.RootElement.GetProperty("data").EnumerateArray());
+        Assert.Equal(secretIds.Count(), jsonResult.RootElement.GetProperty("data").EnumerateArray().Count());
     }
 }

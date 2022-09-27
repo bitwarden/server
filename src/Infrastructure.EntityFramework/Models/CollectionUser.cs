@@ -1,18 +1,17 @@
 ﻿using AutoMapper;
 
-namespace Bit.Infrastructure.EntityFramework.Models
-{
-    public class CollectionUser : Core.Entities.CollectionUser
-    {
-        public virtual Collection Collection { get; set; }
-        public virtual OrganizationUser OrganizationUser { get; set; }
-    }
+namespace Bit.Infrastructure.EntityFramework.Models;
 
-    public class CollectionUserMapperProfile : Profile
+public class CollectionUser : Core.Entities.CollectionUser
+{
+    public virtual Collection Collection { get; set; }
+    public virtual OrganizationUser OrganizationUser { get; set; }
+}
+
+public class CollectionUserMapperProfile : Profile
+{
+    public CollectionUserMapperProfile()
     {
-        public CollectionUserMapperProfile()
-        {
-            CreateMap<Core.Entities.CollectionUser, CollectionUser>().ReverseMap();
-        }
+        CreateMap<Core.Entities.CollectionUser, CollectionUser>().ReverseMap();
     }
 }

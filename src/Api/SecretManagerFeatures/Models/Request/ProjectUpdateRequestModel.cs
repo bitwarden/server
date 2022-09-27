@@ -2,22 +2,21 @@
 using Bit.Core.Entities;
 using Bit.Core.Utilities;
 
-namespace Bit.Api.SecretManagerFeatures.Models.Request
-{
-    public class ProjectUpdateRequestModel
-    {
-        [Required]
-        [EncryptedString]
-        public string Name { get; set; }
+namespace Bit.Api.SecretManagerFeatures.Models.Request;
 
-        public Project ToProject(Guid id)
+public class ProjectUpdateRequestModel
+{
+    [Required]
+    [EncryptedString]
+    public string Name { get; set; }
+
+    public Project ToProject(Guid id)
+    {
+        return new Project()
         {
-            return new Project()
-            {
-                Id = id,
-                Name = this.Name,
-            };
-        }
+            Id = id,
+            Name = this.Name,
+        };
     }
 }
 

@@ -1,9 +1,8 @@
-﻿namespace Bit.Core.Models.Data.Organizations.OrganizationUsers
+﻿namespace Bit.Core.Models.Data.Organizations.OrganizationUsers;
+
+public class OrganizationUserPublicKey
 {
-    public class OrganizationUserPublicKey
-    {
-        public Guid Id { get; set; }
-        public Guid UserId { get; set; }
-        public string PublicKey { get; set; }
-    }
+    public Guid Id { get; set; }
+    public Guid UserId { get; set; }
+    public string PublicKey { get; set; }
 }

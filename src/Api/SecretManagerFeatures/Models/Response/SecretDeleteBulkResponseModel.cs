@@ -1,26 +1,25 @@
 ﻿#nullable enable
 using Bit.Core.Models.Api;
 
-namespace Bit.Api.SecretManagerFeatures.Models.Response
+namespace Bit.Api.SecretManagerFeatures.Models.Response;
+
+public class SecretDeleteBulkResponseModel : ResponseModel
 {
-    public class SecretDeleteBulkResponseModel : ResponseModel
+    public SecretDeleteBulkResponseModel(Guid id, string error, string obj = "SecretDeleteBulkResponseModel") : base(obj)
     {
-        public SecretDeleteBulkResponseModel(Guid id, string error, string obj = "SecretDeleteBulkResponseModel") : base(obj)
+        Id = id;
+
+        if (string.IsNullOrWhiteSpace(error))
         {
-            Id = id;
-
-            if (string.IsNullOrWhiteSpace(error))
-            {
-                Error = null;
-            }
-            else
-            {
-                Error = error;
-            }
+            Error = null;
         }
-
-        public Guid Id { get; set; }
-
-        public string? Error { get; set; }
+        else
+        {
+            Error = error;
+        }
     }
+
+    public Guid Id { get; set; }
+
+    public string? Error { get; set; }
 }

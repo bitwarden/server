@@ -7,54 +7,53 @@ using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 
-namespace Bit.Infrastructure.EFIntegration.Test.AutoFixture
+namespace Bit.Infrastructure.EFIntegration.Test.AutoFixture;
+
+internal class DeviceBuilder : ISpecimenBuilder
 {
-    internal class DeviceBuilder : ISpecimenBuilder
+    public object Create(object request, ISpecimenContext context)
     {
-        public object Create(object request, ISpecimenContext context)
+        if (context == null)
         {
-            if (context == null)
-            {
-                throw new ArgumentNullException(nameof(context));
-            }
-
-            var type = request as Type;
-            if (type == null || type != typeof(Device))
-            {
-                return new NoSpecimen();
-            }
-
-            var fixture = new Fixture();
-            fixture.Customizations.Insert(0, new MaxLengthStringRelay());
-            var obj = fixture.WithAutoNSubstitutions().Create<Device>();
-            return obj;
+            throw new ArgumentNullException(nameof(context));
         }
-    }
 
-    internal class EfDevice : ICustomization
-    {
-        public void Customize(IFixture fixture)
+        var type = request as Type;
+        if (type == null || type != typeof(Device))
         {
-            fixture.Customizations.Add(new IgnoreVirtualMembersCustomization());
-            fixture.Customizations.Add(new GlobalSettingsBuilder());
-            fixture.Customizations.Add(new DeviceBuilder());
-            fixture.Customizations.Add(new UserBuilder());
-            fixture.Customizations.Add(new EfRepositoryListBuilder<DeviceRepository>());
-            fixture.Customizations.Add(new EfRepositoryListBuilder<UserRepository>());
+            return new NoSpecimen();
         }
-    }
 
-    internal class EfDeviceAutoDataAttribute : CustomAutoDataAttribute
-    {
-        public EfDeviceAutoDataAttribute() : base(new SutProviderCustomization(), new EfDevice())
-        { }
+        var fixture = new Fixture();
+        fixture.Customizations.Insert(0, new MaxLengthStringRelay());
+        var obj = fixture.WithAutoNSubstitutions().Create<Device>();
+        return obj;
     }
+}
 
-    internal class InlineEfDeviceAutoDataAttribute : InlineCustomAutoDataAttribute
+internal class EfDevice : ICustomization
+{
+    public void Customize(IFixture fixture)
     {
-        public InlineEfDeviceAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
-            typeof(EfDevice) }, values)
-        { }
+        fixture.Customizations.Add(new IgnoreVirtualMembersCustomization());
+        fixture.Customizations.Add(new GlobalSettingsBuilder());
+        fixture.Customizations.Add(new DeviceBuilder());
+        fixture.Customizations.Add(new UserBuilder());
+        fixture.Customizations.Add(new EfRepositoryListBuilder<DeviceRepository>());
+        fixture.Customizations.Add(new EfRepositoryListBuilder<UserRepository>());
     }
+}
+
+internal class EfDeviceAutoDataAttribute : CustomAutoDataAttribute
+{
+    public EfDeviceAutoDataAttribute() : base(new SutProviderCustomization(), new EfDevice())
+    { }
+}
+
+internal class InlineEfDeviceAutoDataAttribute : InlineCustomAutoDataAttribute
+{
+    public InlineEfDeviceAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
+        typeof(EfDevice) }, values)
+    { }
 }
 

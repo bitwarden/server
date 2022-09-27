@@ -1,9 +1,8 @@
 ﻿using Bit.Core.Entities;
 
-namespace Bit.Core.SecretManagerFeatures.Projects.Interfaces
+namespace Bit.Core.SecretManagerFeatures.Projects.Interfaces;
+
+public interface ICreateProjectCommand
 {
-    public interface ICreateProjectCommand
-    {
-        Task<Project> CreateAsync(Project project);
-    }
+    Task<Project> CreateAsync(Project project);
 }

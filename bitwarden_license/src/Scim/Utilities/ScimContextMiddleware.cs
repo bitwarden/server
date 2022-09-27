@@ -2,22 +2,21 @@
 using Bit.Core.Settings;
 using Bit.Scim.Context;
 
-namespace Bit.Scim.Utilities
+namespace Bit.Scim.Utilities;
+
+public class ScimContextMiddleware
 {
-    public class ScimContextMiddleware
+    private readonly RequestDelegate _next;
+
+    public ScimContextMiddleware(RequestDelegate next)
     {
-        private readonly RequestDelegate _next;
+        _next = next;
+    }
 
-        public ScimContextMiddleware(RequestDelegate next)
-        {
-            _next = next;
-        }
-
-        public async Task Invoke(HttpContext httpContext, IScimContext scimContext, GlobalSettings globalSettings,
-            IOrganizationRepository organizationRepository, IOrganizationConnectionRepository organizationConnectionRepository)
-        {
-            await scimContext.BuildAsync(httpContext, globalSettings, organizationRepository, organizationConnectionRepository);
-            await _next.Invoke(httpContext);
-        }
+    public async Task Invoke(HttpContext httpContext, IScimContext scimContext, GlobalSettings globalSettings,
+        IOrganizationRepository organizationRepository, IOrganizationConnectionRepository organizationConnectionRepository)
+    {
+        await scimContext.BuildAsync(httpContext, globalSettings, organizationRepository, organizationConnectionRepository);
+        await _next.Invoke(httpContext);
     }
 }

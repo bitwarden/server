@@ -3,37 +3,36 @@ using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.SecretManagerFeatures.Secrets.Interfaces;
 
-namespace Bit.Commercial.Core.SecretManagerFeatures.Secrets
+namespace Bit.Commercial.Core.SecretManagerFeatures.Secrets;
+
+public class UpdateSecretCommand : IUpdateSecretCommand
 {
-    public class UpdateSecretCommand : IUpdateSecretCommand
+    private readonly ISecretRepository _secretRepository;
+
+    public UpdateSecretCommand(ISecretRepository secretRepository)
     {
-        private readonly ISecretRepository _secretRepository;
+        _secretRepository = secretRepository;
+    }
 
-        public UpdateSecretCommand(ISecretRepository secretRepository)
+    public async Task<Secret> UpdateAsync(Secret secret)
+    {
+        if (secret.Id == default(Guid))
         {
-            _secretRepository = secretRepository;
+            throw new BadRequestException("Cannot update secret, secret does not exist.");
         }
 
-        public async Task<Secret> UpdateAsync(Secret secret)
+        var existingSecret = await _secretRepository.GetByIdAsync(secret.Id);
+        if (existingSecret == null)
         {
-            if (secret.Id == default(Guid))
-            {
-                throw new BadRequestException("Cannot update secret, secret does not exist.");
-            }
-
-            var existingSecret = await _secretRepository.GetByIdAsync(secret.Id);
-            if (existingSecret == null)
-            {
-                throw new NotFoundException();
-            }
-
-            secret.OrganizationId = existingSecret.OrganizationId;
-            secret.CreationDate = existingSecret.CreationDate;
-            secret.DeletedDate = existingSecret.DeletedDate;
-            secret.RevisionDate = DateTime.UtcNow;
-
-            await _secretRepository.ReplaceAsync(secret);
-            return secret;
+            throw new NotFoundException();
         }
+
+        secret.OrganizationId = existingSecret.OrganizationId;
+        secret.CreationDate = existingSecret.CreationDate;
+        secret.DeletedDate = existingSecret.DeletedDate;
+        secret.RevisionDate = DateTime.UtcNow;
+
+        await _secretRepository.ReplaceAsync(secret);
+        return secret;
     }
 }

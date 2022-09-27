@@ -1,8 +1,7 @@
-﻿namespace Bit.Core.SecretManagerFeatures.Secrets.Interfaces
+﻿namespace Bit.Core.SecretManagerFeatures.Secrets.Interfaces;
+
+public interface IDeleteSecretCommand
 {
-    public interface IDeleteSecretCommand
-    {
-        Task<List<Tuple<Guid, string>>> DeleteSecrets(List<Guid> ids);
-    }
+    Task<List<Tuple<Guid, string>>> DeleteSecrets(List<Guid> ids);
 }
 
