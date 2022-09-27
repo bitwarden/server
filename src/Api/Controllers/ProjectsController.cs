@@ -43,8 +43,9 @@ namespace Bit.Api.Controllers
             var projects = await _projectRepository.GetManyByOrganizationIdAsync(organizationId);
             if (projects == null || !projects.Any())
             {
-                throw new NotFoundException();
+                return new ListResponseModel<ProjectResponseModel>(null);
             }
+
             var responses = projects.Select(project => new ProjectResponseModel(project));
             return new ListResponseModel<ProjectResponseModel>(responses);
         }
