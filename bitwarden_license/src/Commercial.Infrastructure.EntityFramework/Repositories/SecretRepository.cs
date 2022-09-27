@@ -11,9 +11,7 @@ namespace Bit.Commercial.Infrastructure.EntityFramework.Repositories
     {
         public SecretRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
             : base(serviceScopeFactory, mapper, db => db.Secret)
-        {
-
-        }
+        { }
 
         public override async Task<Core.Entities.Secret> GetByIdAsync(Guid id)
         {
