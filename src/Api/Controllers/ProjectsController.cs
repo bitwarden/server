@@ -2,7 +2,6 @@
 using Bit.Api.SecretManagerFeatures.Models.Request;
 using Bit.Api.SecretManagerFeatures.Models.Response;
 using Bit.Api.Utilities;
-using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.SecretManagerFeatures.Projects.Interfaces;
 using Microsoft.AspNetCore.Mvc;
@@ -41,11 +40,6 @@ namespace Bit.Api.Controllers
         public async Task<ListResponseModel<ProjectResponseModel>> GetProjectsByOrganizationAsync([FromRoute] Guid organizationId)
         {
             var projects = await _projectRepository.GetManyByOrganizationIdAsync(organizationId);
-            if (projects == null || !projects.Any())
-            {
-                return new ListResponseModel<ProjectResponseModel>(null);
-            }
-
             var responses = projects.Select(project => new ProjectResponseModel(project));
             return new ListResponseModel<ProjectResponseModel>(responses);
         }
