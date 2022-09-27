@@ -2,6 +2,7 @@
 using System.Reflection;
 using System.Security.Claims;
 using System.Text.Json;
+using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -15,9 +16,8 @@ using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using IdentityServer4.Validation;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.Logging;
 
-namespace Bit.Core.IdentityServer;
+namespace Bit.Identity.IdentityServer;
 
 public abstract class BaseRequestValidator<T> where T : class
 {

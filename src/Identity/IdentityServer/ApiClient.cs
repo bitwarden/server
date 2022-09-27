@@ -1,7 +1,7 @@
 ﻿using Bit.Core.Settings;
 using IdentityServer4.Models;
 
-namespace Bit.Core.IdentityServer;
+namespace Bit.Identity.IdentityServer;
 
 public class ApiClient : Client
 {

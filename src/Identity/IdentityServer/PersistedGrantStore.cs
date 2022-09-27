@@ -3,7 +3,7 @@ using IdentityServer4.Models;
 using IdentityServer4.Stores;
 using Grant = Bit.Core.Entities.Grant;
 
-namespace Bit.Core.IdentityServer;
+namespace Bit.Identity.IdentityServer;
 
 public class PersistedGrantStore : IPersistedGrantStore
 {
