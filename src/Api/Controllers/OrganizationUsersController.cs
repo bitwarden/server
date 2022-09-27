@@ -409,7 +409,7 @@ public class OrganizationUsersController : Controller
     [HttpPut("{id}/revoke")]
     public async Task RevokeAsync(Guid orgId, Guid id)
     {
-        await RestoreOrRevokeUserAsync(orgId, id, _organizationService.RevokeUserAsync);
+        await RestoreOrRevokeUserAsync(orgId, id, null, _organizationService.RevokeUserAsync);
     }
 
     [HttpPatch("revoke")]
@@ -423,7 +423,7 @@ public class OrganizationUsersController : Controller
     [HttpPut("{id}/restore")]
     public async Task RestoreAsync(Guid orgId, Guid id)
     {
-        await RestoreOrRevokeUserAsync(orgId, id, (orgUser, userId) => _organizationService.RestoreUserAsync(orgUser, userId, _userService));
+        await RestoreOrRevokeUserAsync(orgId, id, null, (orgUser, userId, systemUser) => _organizationService.RestoreUserAsync(orgUser, userId, _userService));
     }
 
     [HttpPatch("restore")]
@@ -436,7 +436,8 @@ public class OrganizationUsersController : Controller
     private async Task RestoreOrRevokeUserAsync(
         Guid orgId,
         Guid id,
-        Func<OrganizationUser, Guid?, Task> statusAction)
+        EventSystemUser? systemUser,
+        Func<OrganizationUser, Guid?, EventSystemUser?, Task> statusAction)
     {
         if (!await _currentContext.ManageUsers(orgId))
         {
@@ -450,7 +451,7 @@ public class OrganizationUsersController : Controller
             throw new NotFoundException();
         }
 
-        await statusAction(orgUser, userId);
+        await statusAction(orgUser, userId, systemUser);
     }
 
     private async Task<ListResponseModel<OrganizationUserBulkResponseModel>> RestoreOrRevokeUsersAsync(

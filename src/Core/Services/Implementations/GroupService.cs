@@ -29,7 +29,7 @@ public class GroupService : IGroupService
         _referenceEventService = referenceEventService;
     }
 
-    public async Task SaveAsync(Group group, IEnumerable<SelectionReadOnly> collections = null)
+    public async Task SaveAsync(Group group, IEnumerable<SelectionReadOnly> collections = null, EventSystemUser? systemUser = null)
     {
         var org = await _organizationRepository.GetByIdAsync(group.OrganizationId);
         if (org == null)
@@ -55,7 +55,7 @@ public class GroupService : IGroupService
                 await _groupRepository.CreateAsync(group, collections);
             }
 
-            await _eventService.LogGroupEventAsync(group, Enums.EventType.Group_Created);
+            await _eventService.LogGroupEventAsync(group, Enums.EventType.Group_Created, null, systemUser);
             await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.GroupCreated, org));
         }
         else
@@ -71,17 +71,17 @@ public class GroupService : IGroupService
                 await _groupRepository.ReplaceAsync(group, collections);
             }
 
-            await _eventService.LogGroupEventAsync(group, Enums.EventType.Group_Updated);
+            await _eventService.LogGroupEventAsync(group, Enums.EventType.Group_Updated, null, systemUser);
         }
     }
 
-    public async Task DeleteAsync(Group group)
+    public async Task DeleteAsync(Group group, EventSystemUser? systemUser = null)
     {
         await _groupRepository.DeleteAsync(group);
-        await _eventService.LogGroupEventAsync(group, Enums.EventType.Group_Deleted);
+        await _eventService.LogGroupEventAsync(group, EventType.Group_Deleted, null, systemUser);
     }
 
-    public async Task DeleteUserAsync(Group group, Guid organizationUserId)
+    public async Task DeleteUserAsync(Group group, Guid organizationUserId, EventSystemUser? systemUser = null)
     {
         var orgUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
         if (orgUser == null || orgUser.OrganizationId != group.OrganizationId)
@@ -89,6 +89,6 @@ public class GroupService : IGroupService
             throw new NotFoundException();
         }
         await _groupRepository.DeleteUserAsync(group.Id, organizationUserId);
-        await _eventService.LogOrganizationUserEventAsync(orgUser, Enums.EventType.OrganizationUser_UpdatedGroups);
+        await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_UpdatedGroups, null, systemUser);
     }
 }

@@ -177,7 +177,7 @@ public class UsersController : Controller
         }
 
         var invitedOrgUser = await _organizationService.InviteUserAsync(organizationId, null, email,
-            OrganizationUserType.User, false, externalId, new List<SelectionReadOnly>());
+            OrganizationUserType.User, false, externalId, new List<SelectionReadOnly>(), EventSystemUser.SCIM);
         var orgUser = await _organizationUserRepository.GetDetailsByIdAsync(invitedOrgUser.Id);
         var response = new ScimUserResponseModel(orgUser);
         return new CreatedResult(Url.Action(nameof(Get), new { orgUser.OrganizationId, orgUser.Id }), response);
@@ -198,11 +198,11 @@ public class UsersController : Controller
 
         if (model.Active && orgUser.Status == OrganizationUserStatusType.Revoked)
         {
-            await _organizationService.RestoreUserAsync(orgUser, null, _userService);
+            await _organizationService.RestoreUserAsync(orgUser, null, _userService, EventSystemUser.SCIM);
         }
         else if (!model.Active && orgUser.Status != OrganizationUserStatusType.Revoked)
         {
-            await _organizationService.RevokeUserAsync(orgUser, null);
+            await _organizationService.RevokeUserAsync(orgUser, null, EventSystemUser.SCIM);
         }
 
         // Have to get full details object for response model
@@ -273,7 +273,7 @@ public class UsersController : Controller
                 Detail = "User not found."
             });
         }
-        await _organizationService.DeleteUserAsync(organizationId, id, null);
+        await _organizationService.DeleteUserAsync(organizationId, id, null, EventSystemUser.SCIM);
         return new NoContentResult();
     }
 
@@ -281,12 +281,12 @@ public class UsersController : Controller
     {
         if (active && orgUser.Status == OrganizationUserStatusType.Revoked)
         {
-            await _organizationService.RestoreUserAsync(orgUser, null, _userService);
+            await _organizationService.RestoreUserAsync(orgUser, null, _userService, EventSystemUser.SCIM);
             return true;
         }
         else if (!active && orgUser.Status != OrganizationUserStatusType.Revoked)
         {
-            await _organizationService.RevokeUserAsync(orgUser, null);
+            await _organizationService.RevokeUserAsync(orgUser, null, EventSystemUser.SCIM);
             return true;
         }
         return false;
