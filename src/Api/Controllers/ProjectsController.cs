@@ -1,4 +1,5 @@
-﻿using Bit.Api.SecretManagerFeatures.Models.Request;
+﻿using Bit.Api.Models.Response;
+using Bit.Api.SecretManagerFeatures.Models.Request;
 using Bit.Api.SecretManagerFeatures.Models.Response;
 using Bit.Api.Utilities;
 using Bit.Core.Repositories;
@@ -33,6 +34,14 @@ namespace Bit.Api.Controllers
         {
             var result = await _updateProjectCommand.UpdateAsync(updateRequest.ToProject(id));
             return new ProjectResponseModel(result);
+        }
+
+        [HttpGet("organizations/{organizationId}/projects")]
+        public async Task<ListResponseModel<ProjectResponseModel>> GetProjectsByOrganizationAsync([FromRoute] Guid organizationId)
+        {
+            var projects = await _projectRepository.GetManyByOrganizationIdAsync(organizationId);
+            var responses = projects.Select(project => new ProjectResponseModel(project));
+            return new ListResponseModel<ProjectResponseModel>(responses);
         }
     }
 }
