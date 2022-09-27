@@ -57,6 +57,7 @@ namespace Bit.Core.Utilities
             }
 
             var config = new LoggerConfiguration()
+                .MinimumLevel.Debug()
                 .Enrich.FromLogContext()
                 .Filter.ByIncludingOnly(inclusionPredicate);
 
