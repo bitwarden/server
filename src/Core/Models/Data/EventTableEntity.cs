@@ -26,6 +26,7 @@ public class EventTableEntity : TableEntity, IEvent
         DeviceType = e.DeviceType;
         IpAddress = e.IpAddress;
         ActingUserId = e.ActingUserId;
+        SystemUser = e.SystemUser;
     }
 
     public DateTime Date { get; set; }
@@ -44,6 +45,7 @@ public class EventTableEntity : TableEntity, IEvent
     public DeviceType? DeviceType { get; set; }
     public string IpAddress { get; set; }
     public Guid? ActingUserId { get; set; }
+    public EventSystemUser? SystemUser { get; set; }
 
     public override IDictionary<string, EntityProperty> WriteEntity(OperationContext operationContext)
     {
