@@ -75,12 +75,21 @@ No grant of any rights in the trademarks, service marks, or logos of Bitwarden i
 
 ### Dotnet-format
 
-We recently migrated to using dotnet-format as code formatter. All previous branches will need to updated to avoid large merge conflicts using the following steps:
+Consider installing our git pre-commit hook for automatic formatting.
+
+```bash
+git config --local core.hooksPath .git-hooks
+```
+
+### File Scoped Namespaces
+
+We recently migrated to using file scoped namespaces to save some horizontal space. All previous branches will need to update to avoid large merge conflicts using the following steps:
 
 1. Check out your local Branch
-2. Run `git merge 61dc65aa598b1f492d2f0222bb7bf0dd15d116f5`
+2. Run `git merge 9b7aef0763ad14e229b337c3b5b27cb411009792`
 3. Resolve any merge conflicts, commit.
-4. Run `dotnet tool run dotnet-format`
+4. Run `dotnet format`
 5. Commit
-6. Run `git merge -Xours 23b0a1f9df25058ab29785ecad9a233113c10889`
-7. Push
+6. Run `git merge -Xours 7f5f010e1eea400300c47f776604ecf46c4b4f2d`
+7. Fix Merge conflicts
+8. Push

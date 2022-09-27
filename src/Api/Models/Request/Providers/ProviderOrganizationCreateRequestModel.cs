@@ -2,15 +2,14 @@
 using Bit.Api.Models.Request.Organizations;
 using Bit.Core.Utilities;
 
-namespace Bit.Api.Models.Request.Providers
+namespace Bit.Api.Models.Request.Providers;
+
+public class ProviderOrganizationCreateRequestModel
 {
-    public class ProviderOrganizationCreateRequestModel
-    {
-        [Required]
-        [StringLength(256)]
-        [StrictEmailAddress]
-        public string ClientOwnerEmail { get; set; }
-        [Required]
-        public OrganizationCreateRequestModel OrganizationCreateRequest { get; set; }
-    }
+    [Required]
+    [StringLength(256)]
+    [StrictEmailAddress]
+    public string ClientOwnerEmail { get; set; }
+    [Required]
+    public OrganizationCreateRequestModel OrganizationCreateRequest { get; set; }
 }

@@ -1,28 +1,27 @@
 ﻿using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 
-namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud
+namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud;
+
+public class OrganizationSponsorshipRenewCommand : IOrganizationSponsorshipRenewCommand
 {
-    public class OrganizationSponsorshipRenewCommand : IOrganizationSponsorshipRenewCommand
+    private readonly IOrganizationSponsorshipRepository _organizationSponsorshipRepository;
+
+    public OrganizationSponsorshipRenewCommand(IOrganizationSponsorshipRepository organizationSponsorshipRepository)
     {
-        private readonly IOrganizationSponsorshipRepository _organizationSponsorshipRepository;
+        _organizationSponsorshipRepository = organizationSponsorshipRepository;
+    }
 
-        public OrganizationSponsorshipRenewCommand(IOrganizationSponsorshipRepository organizationSponsorshipRepository)
+    public async Task UpdateExpirationDateAsync(Guid organizationId, DateTime expireDate)
+    {
+        var sponsorship = await _organizationSponsorshipRepository.GetBySponsoredOrganizationIdAsync(organizationId);
+
+        if (sponsorship == null)
         {
-            _organizationSponsorshipRepository = organizationSponsorshipRepository;
+            return;
         }
 
-        public async Task UpdateExpirationDateAsync(Guid organizationId, DateTime expireDate)
-        {
-            var sponsorship = await _organizationSponsorshipRepository.GetBySponsoredOrganizationIdAsync(organizationId);
-
-            if (sponsorship == null)
-            {
-                return;
-            }
-
-            sponsorship.ValidUntil = expireDate;
-            await _organizationSponsorshipRepository.UpsertAsync(sponsorship);
-        }
+        sponsorship.ValidUntil = expireDate;
+        await _organizationSponsorshipRepository.UpsertAsync(sponsorship);
     }
 }
