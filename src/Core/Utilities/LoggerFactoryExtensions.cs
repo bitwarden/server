@@ -56,6 +56,7 @@ public static class LoggerFactoryExtensions
         }
 
         var config = new LoggerConfiguration()
+            .MinimumLevel.Verbose()
             .Enrich.FromLogContext()
             .Filter.ByIncludingOnly(inclusionPredicate);
 
