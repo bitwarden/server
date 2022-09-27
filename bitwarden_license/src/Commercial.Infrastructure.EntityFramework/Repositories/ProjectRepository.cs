@@ -11,9 +11,7 @@ namespace Bit.Commercial.Infrastructure.EntityFramework.Repositories
     {
         public ProjectRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
             : base(serviceScopeFactory, mapper, db => db.Project)
-        {
-
-        }
+        { }
 
         public override async Task<Core.Entities.Project> GetByIdAsync(Guid id)
         {

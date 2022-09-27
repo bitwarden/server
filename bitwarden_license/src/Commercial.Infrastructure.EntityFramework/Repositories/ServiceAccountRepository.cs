@@ -11,9 +11,7 @@ namespace Bit.Commercial.Infrastructure.EntityFramework.Repositories
     {
         public ServiceAccountRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
             : base(serviceScopeFactory, mapper, db => db.ServiceAccount)
-        {
-
-        }
+        { }
 
         public async Task<IEnumerable<Core.Entities.ServiceAccount>> GetManyByOrganizationIdAsync(Guid organizationId)
         {
