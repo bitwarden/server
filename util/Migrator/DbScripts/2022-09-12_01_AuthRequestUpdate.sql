@@ -1,4 +1,10 @@
-﻿CREATE PROCEDURE [dbo].[AuthRequest_Update]
+IF OBJECT_ID('[dbo].[AuthRequest_Update]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[AuthRequest_Update]
+END
+GO
+
+CREATE PROCEDURE [dbo].[AuthRequest_Update]
     @Id UNIQUEIDENTIFIER OUTPUT,
     @UserId UNIQUEIDENTIFIER,
     @Type SMALLINT, 
@@ -38,3 +44,4 @@ BEGIN
     WHERE
         [Id] = @Id
 END
+GO
