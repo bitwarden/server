@@ -4,24 +4,23 @@ using Bit.Api.Utilities;
 using Bit.Core.Repositories;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Bit.Api.Controllers
+namespace Bit.Api.Controllers;
+
+[SecretsManager]
+public class ServiceAccountsController : Controller
 {
-    [SecretsManager]
-    public class ServiceAccountsController : Controller
+    private readonly IServiceAccountRepository _serviceAccountRepository;
+
+    public ServiceAccountsController(IServiceAccountRepository serviceAccountRepository)
     {
-        private readonly IServiceAccountRepository _serviceAccountRepository;
+        _serviceAccountRepository = serviceAccountRepository;
+    }
 
-        public ServiceAccountsController(IServiceAccountRepository serviceAccountRepository)
-        {
-            _serviceAccountRepository = serviceAccountRepository;
-        }
-
-        [HttpGet("organizations/{organizationId}/service-accounts")]
-        public async Task<ListResponseModel<ServiceAccountResponseModel>> GetServiceAccountsByOrganizationAsync([FromRoute] Guid organizationId)
-        {
-            var serviceAccounts = await _serviceAccountRepository.GetManyByOrganizationIdAsync(organizationId);
-            var responses = serviceAccounts.Select(serviceAccount => new ServiceAccountResponseModel(serviceAccount));
-            return new ListResponseModel<ServiceAccountResponseModel>(responses);
-        }
+    [HttpGet("organizations/{organizationId}/service-accounts")]
+    public async Task<ListResponseModel<ServiceAccountResponseModel>> GetServiceAccountsByOrganizationAsync([FromRoute] Guid organizationId)
+    {
+        var serviceAccounts = await _serviceAccountRepository.GetManyByOrganizationIdAsync(organizationId);
+        var responses = serviceAccounts.Select(serviceAccount => new ServiceAccountResponseModel(serviceAccount));
+        return new ListResponseModel<ServiceAccountResponseModel>(responses);
     }
 }

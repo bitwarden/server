@@ -7,35 +7,34 @@ using Bit.Test.Common.Helpers;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Api.Test.Controllers
+namespace Bit.Api.Test.Controllers;
+
+[ControllerCustomize(typeof(ServiceAccountsController))]
+[SutProviderCustomize]
+[JsonDocumentCustomize]
+public class ServiceAccountsControllerTests
 {
-    [ControllerCustomize(typeof(ServiceAccountsController))]
-    [SutProviderCustomize]
-    [JsonDocumentCustomize]
-    public class ServiceAccountsControllerTests
+    [Theory]
+    [BitAutoData]
+    public async void GetServiceAccountsByOrganization_ReturnsEmptyList(SutProvider<ServiceAccountsController> sutProvider, Guid id)
     {
-        [Theory]
-        [BitAutoData]
-        public async void GetServiceAccountsByOrganization_ReturnsEmptyList(SutProvider<ServiceAccountsController> sutProvider, Guid id)
-        {
-            var result = await sutProvider.Sut.GetServiceAccountsByOrganizationAsync(id);
+        var result = await sutProvider.Sut.GetServiceAccountsByOrganizationAsync(id);
 
-            await sutProvider.GetDependency<IServiceAccountRepository>().Received(1)
-                         .GetManyByOrganizationIdAsync(Arg.Is(AssertHelper.AssertPropertyEqual(id)));
+        await sutProvider.GetDependency<IServiceAccountRepository>().Received(1)
+                     .GetManyByOrganizationIdAsync(Arg.Is(AssertHelper.AssertPropertyEqual(id)));
 
-            Assert.Empty(result.Data);
-        }
+        Assert.Empty(result.Data);
+    }
 
-        [Theory]
-        [BitAutoData]
-        public async void GetServiceAccountsByOrganization_Success(SutProvider<ServiceAccountsController> sutProvider, ServiceAccount resultServiceAccount)
-        {
-            sutProvider.GetDependency<IServiceAccountRepository>().GetManyByOrganizationIdAsync(default).ReturnsForAnyArgs(new List<ServiceAccount>() { resultServiceAccount });
+    [Theory]
+    [BitAutoData]
+    public async void GetServiceAccountsByOrganization_Success(SutProvider<ServiceAccountsController> sutProvider, ServiceAccount resultServiceAccount)
+    {
+        sutProvider.GetDependency<IServiceAccountRepository>().GetManyByOrganizationIdAsync(default).ReturnsForAnyArgs(new List<ServiceAccount>() { resultServiceAccount });
 
-            var result = await sutProvider.Sut.GetServiceAccountsByOrganizationAsync(resultServiceAccount.OrganizationId);
+        var result = await sutProvider.Sut.GetServiceAccountsByOrganizationAsync(resultServiceAccount.OrganizationId);
 
-            await sutProvider.GetDependency<IServiceAccountRepository>().Received(1)
-                         .GetManyByOrganizationIdAsync(Arg.Is(AssertHelper.AssertPropertyEqual(resultServiceAccount.OrganizationId)));
-        }
+        await sutProvider.GetDependency<IServiceAccountRepository>().Received(1)
+                     .GetManyByOrganizationIdAsync(Arg.Is(AssertHelper.AssertPropertyEqual(resultServiceAccount.OrganizationId)));
     }
 }
