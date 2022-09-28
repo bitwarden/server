@@ -9,7 +9,8 @@ CREATE TABLE [dbo].[Secret]
     [RevisionDate] DATETIME2(7) NOT NULL,
     [DeletedDate] DATETIME2(7) NULL,
     CONSTRAINT [PK_Secret] PRIMARY KEY CLUSTERED ([Id] ASC),
-    CONSTRAINT [FK_Secret_OrganizationId] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization]([Id]) ON DELETE CASCADE
+    CONSTRAINT [FK_Secret_OrganizationId] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization]([Id]) ON DELETE CASCADE,
+    CONSTRAINT [FK_Project_ProjectSecret] FOREIGN KEY ([Id]) REFERENCES [dbo].[ProjectSecret] ([SecretId]) ON DELETE CASCADE
 );
 
 GO
