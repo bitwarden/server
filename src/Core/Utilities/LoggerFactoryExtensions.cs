@@ -20,7 +20,7 @@ public static class LoggerFactoryExtensions
         IHostApplicationLifetime applicationLifetime,
         GlobalSettings globalSettings)
     {
-        if (env.IsDevelopment())
+        if (env.IsDevelopment() && !globalSettings.EnableDevLogging)
         {
             return;
         }
@@ -33,13 +33,13 @@ public static class LoggerFactoryExtensions
         WebHostBuilderContext context,
         Func<LogEvent, IGlobalSettings, bool> filter = null)
     {
-        if (context.HostingEnvironment.IsDevelopment())
+        var globalSettings = new GlobalSettings();
+        ConfigurationBinder.Bind(context.Configuration.GetSection("GlobalSettings"), globalSettings);
+
+        if (context.HostingEnvironment.IsDevelopment() && !globalSettings.EnableDevLogging)
         {
             return builder;
         }
-
-        var globalSettings = new GlobalSettings();
-        ConfigurationBinder.Bind(context.Configuration.GetSection("GlobalSettings"), globalSettings);
 
         bool inclusionPredicate(LogEvent e)
         {
