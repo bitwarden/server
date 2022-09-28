@@ -16,7 +16,7 @@
     [ProviderId]             UNIQUEIDENTIFIER NULL,
     [ProviderUserId]         UNIQUEIDENTIFIER NULL,
     [ProviderOrganizationId] UNIQUEIDENTIFIER NULL,
-    [SystemUserType]         TINYINT          NULL
+    [SystemUser]             TINYINT          NULL
     CONSTRAINT [PK_Event] PRIMARY KEY CLUSTERED ([Id] ASC)
 );
 
