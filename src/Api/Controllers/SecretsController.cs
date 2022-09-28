@@ -32,7 +32,7 @@ public class SecretsController : Controller
         var responses = secrets.Select(secret => new SecretIdentifierResponseModel(secret));
         return new ListResponseModel<SecretIdentifierResponseModel>(responses);
     }
-    
+
     [HttpGet("secrets/{id}")]
     public async Task<SecretResponseModel> GetSecretAsync([FromRoute] Guid id)
     {
