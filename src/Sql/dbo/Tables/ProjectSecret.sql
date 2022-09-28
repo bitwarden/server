@@ -1,4 +1,4 @@
-﻿CREATE TABLE [ProjectSecret] (
+﻿CREATE TABLE [dbo].[ProjectSecret] (
     [ProjectsId] uniqueidentifier NOT NULL,
     [SecretsId] uniqueidentifier NOT NULL,
     CONSTRAINT [PK_ProjectSecret] PRIMARY KEY ([ProjectsId], [SecretsId]),
