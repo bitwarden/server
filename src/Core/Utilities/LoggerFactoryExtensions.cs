@@ -40,7 +40,7 @@ public static class LoggerFactoryExtensions
         {
             return builder;
         }
-        
+
         bool inclusionPredicate(LogEvent e)
         {
             if (filter == null)
