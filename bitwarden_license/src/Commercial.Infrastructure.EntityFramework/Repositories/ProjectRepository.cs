@@ -53,6 +53,5 @@ public class ProjectRepository : Repository<Core.Entities.Project, Project, Guid
             });
             await dbContext.SaveChangesAsync();
         }
-
     }
 }
