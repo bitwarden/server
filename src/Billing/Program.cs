@@ -1,5 +1,4 @@
 ﻿using Bit.Core.Utilities;
-using Serilog.Events;
 
 namespace Bit.Billing;
 
@@ -13,13 +12,12 @@ public class Program
             {
                 webBuilder.UseStartup<Startup>();
                 webBuilder.ConfigureLogging((hostingContext, logging) =>
-                    logging.AddSerilog(hostingContext, e =>
+                    logging.AddSerilog(hostingContext, (e, globalSettings) =>
                     {
                         var context = e.Properties["SourceContext"].ToString();
-                        if (e.Level == LogEventLevel.Information &&
-                            (context.StartsWith("\"Bit.Billing.Jobs") || context.StartsWith("\"Bit.Core.Jobs")))
+                        if (context.StartsWith("\"Bit.Billing.Jobs") || context.StartsWith("\"Bit.Core.Jobs"))
                         {
-                            return true;
+                            return e.Level >= globalSettings.MinLogLevel.BillingSettings.Jobs;
                         }
 
                         if (e.Properties.ContainsKey("RequestPath") &&
@@ -29,7 +27,7 @@ public class Program
                             return false;
                         }
 
-                        return e.Level >= LogEventLevel.Warning;
+                        return e.Level >= globalSettings.MinLogLevel.BillingSettings.Default;
                     }));
             })
             .Build()
