@@ -1,17 +1,16 @@
 ﻿using AutoMapper;
 
-namespace Bit.Infrastructure.EntityFramework.Models
-{
-    public class ServiceAccount : Core.Entities.ServiceAccount
-    {
-        public virtual Organization Organization { get; set; }
-    }
+namespace Bit.Infrastructure.EntityFramework.Models;
 
-    public class ServiceAccountMapperProfile : Profile
+public class ServiceAccount : Core.Entities.ServiceAccount
+{
+    public virtual Organization Organization { get; set; }
+}
+
+public class ServiceAccountMapperProfile : Profile
+{
+    public ServiceAccountMapperProfile()
     {
-        public ServiceAccountMapperProfile()
-        {
-            CreateMap<Core.Entities.ServiceAccount, ServiceAccount>().ReverseMap();
-        }
+        CreateMap<Core.Entities.ServiceAccount, ServiceAccount>().ReverseMap();
     }
 }

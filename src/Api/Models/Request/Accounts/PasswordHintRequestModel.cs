@@ -1,12 +1,11 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace Bit.Api.Models.Request.Accounts
+namespace Bit.Api.Models.Request.Accounts;
+
+public class PasswordHintRequestModel
 {
-    public class PasswordHintRequestModel
-    {
-        [Required]
-        [EmailAddress]
-        [StringLength(256)]
-        public string Email { get; set; }
-    }
+    [Required]
+    [EmailAddress]
+    [StringLength(256)]
+    public string Email { get; set; }
 }

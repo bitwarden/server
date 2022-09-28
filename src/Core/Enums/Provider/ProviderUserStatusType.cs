@@ -1,9 +1,8 @@
-﻿namespace Bit.Core.Enums.Provider
+﻿namespace Bit.Core.Enums.Provider;
+
+public enum ProviderUserStatusType : byte
 {
-    public enum ProviderUserStatusType : byte
-    {
-        Invited = 0,
-        Accepted = 1,
-        Confirmed = 2,
-    }
+    Invited = 0,
+    Accepted = 1,
+    Confirmed = 2,
 }
