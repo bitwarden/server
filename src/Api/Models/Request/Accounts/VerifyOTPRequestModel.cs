@@ -1,10 +1,9 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace Bit.Api.Models.Request.Accounts
+namespace Bit.Api.Models.Request.Accounts;
+
+public class VerifyOTPRequestModel
 {
-    public class VerifyOTPRequestModel
-    {
-        [Required]
-        public string OTP { get; set; }
-    }
+    [Required]
+    public string OTP { get; set; }
 }

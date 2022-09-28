@@ -4,17 +4,17 @@ using Bit.Core.SecretManagerFeatures.Projects.Interfaces;
 using Bit.Core.SecretManagerFeatures.Secrets.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Bit.Commercial.Core.SecretManagerFeatures
+namespace Bit.Commercial.Core.SecretManagerFeatures;
+
+public static class SecretManagerCollectionExtensions
 {
-    public static class SecretManagerCollectionExtensions
+    public static void AddSecretManagerServices(this IServiceCollection services)
     {
-        public static void AddSecretManagerServices(this IServiceCollection services)
-        {
-            services.AddScoped<ICreateSecretCommand, CreateSecretCommand>();
-            services.AddScoped<IUpdateSecretCommand, UpdateSecretCommand>();
-            services.AddScoped<ICreateProjectCommand, CreateProjectCommand>();
-            services.AddScoped<IUpdateProjectCommand, UpdateProjectCommand>();
-        }
+        services.AddScoped<ICreateSecretCommand, CreateSecretCommand>();
+        services.AddScoped<IUpdateSecretCommand, UpdateSecretCommand>();
+        services.AddScoped<IDeleteSecretCommand, DeleteSecretCommand>();
+        services.AddScoped<ICreateProjectCommand, CreateProjectCommand>();
+        services.AddScoped<IUpdateProjectCommand, UpdateProjectCommand>();
     }
 }
 

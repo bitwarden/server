@@ -2,20 +2,19 @@
 using Bit.Core.Repositories;
 using Bit.Core.SecretManagerFeatures.Projects.Interfaces;
 
-namespace Bit.Commercial.Core.SecretManagerFeatures.Projects
+namespace Bit.Commercial.Core.SecretManagerFeatures.Projects;
+
+public class CreateProjectCommand : ICreateProjectCommand
 {
-    public class CreateProjectCommand : ICreateProjectCommand
+    private readonly IProjectRepository _projectRepository;
+
+    public CreateProjectCommand(IProjectRepository projectRepository)
     {
-        private readonly IProjectRepository _projectRepository;
+        _projectRepository = projectRepository;
+    }
 
-        public CreateProjectCommand(IProjectRepository projectRepository)
-        {
-            _projectRepository = projectRepository;
-        }
-
-        public async Task<Project> CreateAsync(Project project)
-        {
-            return await _projectRepository.CreateAsync(project);
-        }
+    public async Task<Project> CreateAsync(Project project)
+    {
+        return await _projectRepository.CreateAsync(project);
     }
 }

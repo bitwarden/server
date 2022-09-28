@@ -13,6 +13,5 @@ docker run `
   --env-file .env `
   --network=bitwardenserver_default `
   --rm `
-  -it `
   mcr.microsoft.com/mssql-tools `
   /mnt/helpers/run_migrations.sh @args

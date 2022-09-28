@@ -3,42 +3,42 @@ using Bit.IntegrationTestCommon.Factories;
 using IdentityServer4.AccessTokenValidation;
 using Microsoft.AspNetCore.TestHost;
 
-namespace Bit.Api.IntegrationTest.Factories
+namespace Bit.Api.IntegrationTest.Factories;
+
+public class ApiApplicationFactory : WebApplicationFactoryBase<Startup>
 {
-    public class ApiApplicationFactory : WebApplicationFactoryBase<Startup>
+    private readonly IdentityApplicationFactory _identityApplicationFactory;
+
+    public ApiApplicationFactory()
     {
-        private readonly IdentityApplicationFactory _identityApplicationFactory;
+        _identityApplicationFactory = new IdentityApplicationFactory();
+        _identityApplicationFactory.DatabaseName = DatabaseName;
+    }
 
-        public ApiApplicationFactory()
+    protected override void ConfigureWebHost(IWebHostBuilder builder)
+    {
+        base.ConfigureWebHost(builder);
+
+        builder.ConfigureTestServices(services =>
         {
-            _identityApplicationFactory = new IdentityApplicationFactory();
-        }
-
-        protected override void ConfigureWebHost(IWebHostBuilder builder)
-        {
-            base.ConfigureWebHost(builder);
-
-            builder.ConfigureTestServices(services =>
+            services.PostConfigure<IdentityServerAuthenticationOptions>(IdentityServerAuthenticationDefaults.AuthenticationScheme, options =>
             {
-                services.PostConfigure<IdentityServerAuthenticationOptions>(IdentityServerAuthenticationDefaults.AuthenticationScheme, options =>
-                {
-                    options.JwtBackChannelHandler = _identityApplicationFactory.Server.CreateHandler();
-                });
+                options.JwtBackChannelHandler = _identityApplicationFactory.Server.CreateHandler();
             });
-        }
+        });
+    }
 
-        /// <summary>
-        /// Helper for registering and logging in to a new account
-        /// </summary>
-        public async Task<(string Token, string RefreshToken)> LoginWithNewAccount(string email = "integration-test@bitwarden.com", string masterPasswordHash = "master_password_hash")
+    /// <summary>
+    /// Helper for registering and logging in to a new account
+    /// </summary>
+    public async Task<(string Token, string RefreshToken)> LoginWithNewAccount(string email = "integration-test@bitwarden.com", string masterPasswordHash = "master_password_hash")
+    {
+        await _identityApplicationFactory.RegisterAsync(new RegisterRequestModel
         {
-            await _identityApplicationFactory.RegisterAsync(new RegisterRequestModel
-            {
-                Email = email,
-                MasterPasswordHash = masterPasswordHash,
-            });
+            Email = email,
+            MasterPasswordHash = masterPasswordHash,
+        });
 
-            return await _identityApplicationFactory.TokenFromPasswordAsync(email, masterPasswordHash);
-        }
+        return await _identityApplicationFactory.TokenFromPasswordAsync(email, masterPasswordHash);
     }
 }

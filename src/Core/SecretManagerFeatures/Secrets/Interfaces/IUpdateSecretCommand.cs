@@ -1,9 +1,8 @@
 ﻿using Bit.Core.Entities;
 
-namespace Bit.Core.SecretManagerFeatures.Secrets.Interfaces
+namespace Bit.Core.SecretManagerFeatures.Secrets.Interfaces;
+
+public interface IUpdateSecretCommand
 {
-    public interface IUpdateSecretCommand
-    {
-        Task<Secret> UpdateAsync(Secret secret);
-    }
+    Task<Secret> UpdateAsync(Secret secret);
 }

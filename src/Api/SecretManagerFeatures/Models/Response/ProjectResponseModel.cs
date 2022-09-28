@@ -1,36 +1,34 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Models.Api;
 
-namespace Bit.Api.SecretManagerFeatures.Models.Response
-{
-    public class ProjectResponseModel : ResponseModel
-    {
-        public ProjectResponseModel(Project project, string obj = "project")
-            : base(obj)
-        {
-            if (project == null)
-            {
-                throw new ArgumentNullException(nameof(project));
-            }
+namespace Bit.Api.SecretManagerFeatures.Models.Response;
 
-            Id = project.Id.ToString();
-            OrganizationId = project.OrganizationId.ToString();
-            Name = project.Name;
-            CreationDate = project.CreationDate;
-            RevisionDate = project.RevisionDate;
-            Secrets = project.Secrets;
+public class ProjectResponseModel : ResponseModel
+{
+    public ProjectResponseModel(Project project, string obj = "project")
+        : base(obj)
+    {
+        if (project == null)
+        {
+            throw new ArgumentNullException(nameof(project));
         }
 
-        public string Id { get; set; }
-
-        public string OrganizationId { get; set; }
-
-        public string Name { get; set; }
-
-        public DateTime CreationDate { get; set; }
-
-        public DateTime RevisionDate { get; set; }
-
-        public ICollection<Secret> Secrets { get; set; }
+        Id = project.Id.ToString();
+        OrganizationId = project.OrganizationId.ToString();
+        Name = project.Name;
+        CreationDate = project.CreationDate;
+        RevisionDate = project.RevisionDate;
     }
+
+    public string Id { get; set; }
+
+    public string OrganizationId { get; set; }
+
+    public string Name { get; set; }
+
+    public DateTime CreationDate { get; set; }
+
+    public DateTime RevisionDate { get; set; }
+
+    public ICollection<Secret> Secrets { get; set; }
 }

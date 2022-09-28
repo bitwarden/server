@@ -1,9 +1,8 @@
-﻿namespace Bit.Scim.Models
+﻿namespace Bit.Scim.Models;
+
+public class ScimUserRequestModel : BaseScimUserModel
 {
-    public class ScimUserRequestModel : BaseScimUserModel
-    {
-        public ScimUserRequestModel()
-            : base(false)
-        { }
-    }
+    public ScimUserRequestModel()
+        : base(false)
+    { }
 }

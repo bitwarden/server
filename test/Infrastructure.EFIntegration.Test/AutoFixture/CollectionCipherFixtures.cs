@@ -7,57 +7,56 @@ using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 
-namespace Bit.Infrastructure.EFIntegration.Test.AutoFixture
+namespace Bit.Infrastructure.EFIntegration.Test.AutoFixture;
+
+internal class CollectionCipherBuilder : ISpecimenBuilder
 {
-    internal class CollectionCipherBuilder : ISpecimenBuilder
+    public object Create(object request, ISpecimenContext context)
     {
-        public object Create(object request, ISpecimenContext context)
+        if (context == null)
         {
-            if (context == null)
-            {
-                throw new ArgumentNullException(nameof(context));
-            }
-
-            var type = request as Type;
-            if (type == null || type != typeof(CollectionCipher))
-            {
-                return new NoSpecimen();
-            }
-
-            var fixture = new Fixture();
-            fixture.Customizations.Insert(0, new MaxLengthStringRelay());
-            var obj = fixture.WithAutoNSubstitutions().Create<CollectionCipher>();
-            return obj;
+            throw new ArgumentNullException(nameof(context));
         }
-    }
 
-    internal class EfCollectionCipher : ICustomization
-    {
-        public void Customize(IFixture fixture)
+        var type = request as Type;
+        if (type == null || type != typeof(CollectionCipher))
         {
-            fixture.Customizations.Add(new IgnoreVirtualMembersCustomization());
-            fixture.Customizations.Add(new GlobalSettingsBuilder());
-            fixture.Customizations.Add(new CollectionCipherBuilder());
-            fixture.Customizations.Add(new CollectionBuilder());
-            fixture.Customizations.Add(new CipherBuilder());
-            fixture.Customizations.Add(new UserBuilder());
-            fixture.Customizations.Add(new EfRepositoryListBuilder<CollectionCipherRepository>());
-            fixture.Customizations.Add(new EfRepositoryListBuilder<CollectionRepository>());
-            fixture.Customizations.Add(new EfRepositoryListBuilder<CipherRepository>());
-            fixture.Customizations.Add(new EfRepositoryListBuilder<UserRepository>());
+            return new NoSpecimen();
         }
-    }
 
-    internal class EfCollectionCipherAutoDataAttribute : CustomAutoDataAttribute
-    {
-        public EfCollectionCipherAutoDataAttribute() : base(new SutProviderCustomization(), new EfCollectionCipher())
-        { }
+        var fixture = new Fixture();
+        fixture.Customizations.Insert(0, new MaxLengthStringRelay());
+        var obj = fixture.WithAutoNSubstitutions().Create<CollectionCipher>();
+        return obj;
     }
+}
 
-    internal class InlineEfCollectionCipherAutoDataAttribute : InlineCustomAutoDataAttribute
+internal class EfCollectionCipher : ICustomization
+{
+    public void Customize(IFixture fixture)
     {
-        public InlineEfCollectionCipherAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
-            typeof(EfCollectionCipher) }, values)
-        { }
+        fixture.Customizations.Add(new IgnoreVirtualMembersCustomization());
+        fixture.Customizations.Add(new GlobalSettingsBuilder());
+        fixture.Customizations.Add(new CollectionCipherBuilder());
+        fixture.Customizations.Add(new CollectionBuilder());
+        fixture.Customizations.Add(new CipherBuilder());
+        fixture.Customizations.Add(new UserBuilder());
+        fixture.Customizations.Add(new EfRepositoryListBuilder<CollectionCipherRepository>());
+        fixture.Customizations.Add(new EfRepositoryListBuilder<CollectionRepository>());
+        fixture.Customizations.Add(new EfRepositoryListBuilder<CipherRepository>());
+        fixture.Customizations.Add(new EfRepositoryListBuilder<UserRepository>());
     }
+}
+
+internal class EfCollectionCipherAutoDataAttribute : CustomAutoDataAttribute
+{
+    public EfCollectionCipherAutoDataAttribute() : base(new SutProviderCustomization(), new EfCollectionCipher())
+    { }
+}
+
+internal class InlineEfCollectionCipherAutoDataAttribute : InlineCustomAutoDataAttribute
+{
+    public InlineEfCollectionCipherAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
+        typeof(EfCollectionCipher) }, values)
+    { }
 }

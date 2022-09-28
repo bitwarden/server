@@ -10,11 +10,8 @@ namespace Bit.Infrastructure.EntityFramework.Models
 
     public class SecretMapperProfile : Profile
     {
-        public SecretMapperProfile()
-        {
-            CreateMap<Core.Entities.Secret, Secret>()
-                .PreserveReferences()
-                .ReverseMap();
-        }
+        CreateMap<Core.Entities.Secret, Secret>()
+            .PreserveReferences()
+            .ReverseMap();
     }
 }
