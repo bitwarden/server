@@ -39,25 +39,10 @@ public class OrganizationExportController : Controller
 
         var result = new OrganizationExportResponseModel
         {
-            Collections = GetOrganizationCollectionsResponse(orgCollections),
-            Ciphers = GetOrganizationCiphersResponse(orgCiphers, collectionCiphersGroupDict)
+            Collections = orgCollections.Select(c => new CollectionResponseModel(c)),
+            Ciphers = orgCiphers.Select(c => new CipherMiniDetailsResponseModel(c, _globalSettings, collectionCiphersGroupDict, c.OrganizationUseTotp))
         };
 
         return result;
-    }
-
-    private ListResponseModel<CollectionResponseModel> GetOrganizationCollectionsResponse(IEnumerable<Collection> orgCollections)
-    {
-        var collections = orgCollections.Select(c => new CollectionResponseModel(c));
-        return new ListResponseModel<CollectionResponseModel>(collections);
-    }
-
-    private ListResponseModel<CipherMiniDetailsResponseModel> GetOrganizationCiphersResponse(IEnumerable<CipherOrganizationDetails> orgCiphers,
-        Dictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphersGroupDict)
-    {
-        var responses = orgCiphers.Select(c => new CipherMiniDetailsResponseModel(c, _globalSettings,
-            collectionCiphersGroupDict, c.OrganizationUseTotp));
-
-        return new ListResponseModel<CipherMiniDetailsResponseModel>(responses);
     }
 }
