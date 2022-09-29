@@ -38,12 +38,19 @@ jobs:
 
       - name: Retrieve secrets
         id: retrieve-secrets
-        uses: Azure/get-keyvault-secrets@80ccd3fafe5662407cc2e55f202ee34bfff8c403
-        with:
-          keyvault: "bitwarden-qa-kv"
-          secrets: "mssql-server-host,
-                    mssql-admin-login,
-                    mssql-admin-login-password"
+        env:
+          KEYVAULT: bitwarden-qa-kv
+          SECRETS: |
+            mssql-server-host,
+            mssql-admin-login,
+            mssql-admin-login-password
+        run: |
+          for i in ${SECRETS//,/ }
+          do
+            VALUE=$(az keyvault secret show --vault-name $KEYVAULT --name $i --query value --output tsv)
+            echo "::add-mask::$VALUE"
+            echo "::set-output name=$i::$VALUE"
+          done
 
       - name: Migrate database
         env:
