@@ -89,9 +89,9 @@ public class AuthRequestsController : Controller
         {
             throw new BadRequestException("Device type not provided.");
         }
-        if (!_globalSettings.PasswordlessAuth.KnownDevicesOnly)
+        if (_globalSettings.PasswordlessAuth.KnownDevicesOnly)
         {
-            var d = await _deviceRepository.GetByIdentifierAsync(_currentContext.DeviceIdentifier);
+            var d = await _deviceRepository.GetByIdentifierAsync(model.DeviceIdentifier);
             if (d == null || d.UserId != user.Id)
             {
                 throw new NotFoundException();
