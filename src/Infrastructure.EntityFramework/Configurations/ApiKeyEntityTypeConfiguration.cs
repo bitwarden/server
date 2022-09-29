@@ -28,6 +28,6 @@ public class ApiKeyEntityTypeConfiguration : IEntityTypeConfiguration<ApiKey>
             .HasIndex(s => s.ServiceAccountId)
             .IsClustered(false);
 
-        builder.ToTable(nameof(Project));
+        builder.ToTable(nameof(ApiKey));
     }
 }
