@@ -16,15 +16,12 @@ BEGIN
         CONSTRAINT [FK_ApiKey_ServiceAccountId] FOREIGN KEY ([ServiceAccountId]) REFERENCES [dbo].[ServiceAccount] ([Id])
     );
 
-    GO
     CREATE NONCLUSTERED INDEX [IX_ApiKey_UserId]
         ON [dbo].[ApiKey]([UserId] ASC);
 
-    GO
     CREATE NONCLUSTERED INDEX [IX_ApiKey_OrganizationId]
         ON [dbo].[ApiKey]([OrganizationId] ASC);
 
-    GO
     CREATE NONCLUSTERED INDEX [IX_ApiKey_ServiceAccountId]
         ON [dbo].[ApiKey]([ServiceAccountId] ASC);
 END
@@ -36,6 +33,7 @@ SELECT
     *
 FROM
     [dbo].[ApiKey]
+GO
 
 CREATE OR ALTER PROCEDURE [dbo].[ApiKey_ReadById]
     @Id UNIQUEIDENTIFIER
