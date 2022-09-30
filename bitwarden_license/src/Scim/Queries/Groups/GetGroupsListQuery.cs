@@ -1,14 +1,14 @@
 ﻿using Bit.Core.Repositories;
-using Bit.Scim.Commands.Groups.Interfaces;
 using Bit.Scim.Models;
+using Bit.Scim.Queries.Groups.Interfaces;
 
-namespace Bit.Scim.Commands.Groups;
+namespace Bit.Scim.Queries.Groups;
 
-public class GetGroupsListCommand : IGetGroupsListCommand
+public class GetGroupsListQuery : IGetGroupsListQuery
 {
     private readonly IGroupRepository _groupRepository;
 
-    public GetGroupsListCommand(IGroupRepository groupRepository)
+    public GetGroupsListQuery(IGroupRepository groupRepository)
     {
         _groupRepository = groupRepository;
     }

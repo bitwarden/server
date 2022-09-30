@@ -2,8 +2,6 @@
 using Bit.Core.Context;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
-using Bit.Scim.Commands.Groups;
-using Bit.Scim.Commands.Groups.Interfaces;
 using Bit.Scim.Context;
 using Bit.Scim.Utilities;
 using Bit.SharedWeb.Utilities;
@@ -78,7 +76,7 @@ public class Startup
         });
         services.Configure<RouteOptions>(options => options.LowercaseUrls = true);
 
-        services.AddScoped<IGetGroupsListCommand, GetGroupsListCommand>();
+        services.AddScimCommands();
     }
 
     public void Configure(

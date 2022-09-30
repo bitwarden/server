@@ -2,9 +2,9 @@
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Scim.Commands.Groups.Interfaces;
 using Bit.Scim.Context;
 using Bit.Scim.Models;
+using Bit.Scim.Queries.Groups.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
@@ -20,21 +20,21 @@ public class GroupsController : Controller
     private readonly IGroupService _groupService;
     private readonly IScimContext _scimContext;
     private readonly ILogger<GroupsController> _logger;
-    private readonly IGetGroupsListCommand _getGroupsListCommand;
+    private readonly IGetGroupsListQuery _getGroupsListQuery;
 
     public GroupsController(
         IGroupRepository groupRepository,
         IGroupService groupService,
         IOptions<ScimSettings> scimSettings,
         IScimContext scimContext,
-        IGetGroupsListCommand getGroupsListCommand,
+        IGetGroupsListQuery getGroupsListQuery,
         ILogger<GroupsController> logger)
     {
         _scimSettings = scimSettings?.Value;
         _groupRepository = groupRepository;
         _groupService = groupService;
         _scimContext = scimContext;
-        _getGroupsListCommand = getGroupsListCommand;
+        _getGroupsListQuery = getGroupsListQuery;
         _logger = logger;
     }
 
@@ -60,7 +60,7 @@ public class GroupsController : Controller
         [FromQuery] int? count,
         [FromQuery] int? startIndex)
     {
-        var scimListResponseModel = await _getGroupsListCommand.GetGroupsListAsync(organizationId, filter, count, startIndex);
+        var scimListResponseModel = await _getGroupsListQuery.GetGroupsListAsync(organizationId, filter, count, startIndex);
         return Ok(scimListResponseModel);
     }
 

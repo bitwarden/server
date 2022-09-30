@@ -1,7 +1,7 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Repositories;
-using Bit.Scim.Commands.Groups;
 using Bit.Scim.Models;
+using Bit.Scim.Queries.Groups;
 using Bit.Scim.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -9,7 +9,7 @@ using Bit.Test.Common.Helpers;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Scim.Test.Commands.Groups;
+namespace Bit.Scim.Test.Queries.Groups;
 
 [SutProviderCustomize]
 public class GetGroupsListCommandTests
@@ -18,7 +18,7 @@ public class GetGroupsListCommandTests
     [BitAutoData(10, 1)]
     [BitAutoData(2, 1)]
     [BitAutoData(1, 3)]
-    public async Task GetGroupsList_Success(int? count, int? startIndex, SutProvider<GetGroupsListCommand> sutProvider, Guid organizationId, IList<Group> groups)
+    public async Task GetGroupsList_Success(int? count, int? startIndex, SutProvider<GetGroupsListQuery> sutProvider, Guid organizationId, IList<Group> groups)
     {
         groups = SetGroupsOrganizationId(groups, organizationId);
 
@@ -49,7 +49,7 @@ public class GetGroupsListCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task GetGroupsList_FilterDisplayName_Success(SutProvider<GetGroupsListCommand> sutProvider, Guid organizationId, IList<Group> groups)
+    public async Task GetGroupsList_FilterDisplayName_Success(SutProvider<GetGroupsListQuery> sutProvider, Guid organizationId, IList<Group> groups)
     {
         groups = SetGroupsOrganizationId(groups, organizationId);
         string name = groups.First().Name;
@@ -80,7 +80,7 @@ public class GetGroupsListCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task GetGroupsList_FilterDisplayName_Empty(string name, SutProvider<GetGroupsListCommand> sutProvider, Guid organizationId, IList<Group> groups)
+    public async Task GetGroupsList_FilterDisplayName_Empty(string name, SutProvider<GetGroupsListQuery> sutProvider, Guid organizationId, IList<Group> groups)
     {
         groups = SetGroupsOrganizationId(groups, organizationId);
         string filter = $"displayName eq {name}";
@@ -107,7 +107,7 @@ public class GetGroupsListCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task GetGroupsList_FilterExternalId_Success(SutProvider<GetGroupsListCommand> sutProvider, Guid organizationId, IList<Group> groups)
+    public async Task GetGroupsList_FilterExternalId_Success(SutProvider<GetGroupsListQuery> sutProvider, Guid organizationId, IList<Group> groups)
     {
         groups = SetGroupsOrganizationId(groups, organizationId);
         string externalId = groups.First().ExternalId;
@@ -138,7 +138,7 @@ public class GetGroupsListCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task GetGroupsList_FilterExternalId_Empty(string externalId, SutProvider<GetGroupsListCommand> sutProvider, Guid organizationId, IList<Group> groups)
+    public async Task GetGroupsList_FilterExternalId_Empty(string externalId, SutProvider<GetGroupsListQuery> sutProvider, Guid organizationId, IList<Group> groups)
     {
         groups = SetGroupsOrganizationId(groups, organizationId);
         string filter = $"externalId eq {externalId}";
