@@ -137,9 +137,9 @@ public class AuthRequestsController : Controller
             authRequest.ResponseDeviceId = device.Id;
             authRequest.ResponseDate = DateTime.UtcNow;
             await _authRequestRepository.ReplaceAsync(authRequest);
+            await _pushNotificationService.PushAuthRequestResponseAsync(authRequest);
         }
 
-        await _pushNotificationService.PushAuthRequestResponseAsync(authRequest);
         return new AuthRequestResponseModel(authRequest, _globalSettings.SelfHosted);
     }
 }
