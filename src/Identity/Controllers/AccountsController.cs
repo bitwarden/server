@@ -18,27 +18,32 @@ public class AccountsController : Controller
     private readonly ILogger<AccountsController> _logger;
     private readonly IUserRepository _userRepository;
     private readonly IUserService _userService;
+    private readonly ICaptchaValidationService _captchaValidationService;
 
     public AccountsController(
         ILogger<AccountsController> logger,
         IUserRepository userRepository,
-        IUserService userService)
+        IUserService userService,
+        ICaptchaValidationService captchaValidationService)
     {
         _logger = logger;
         _userRepository = userRepository;
         _userService = userService;
+        _captchaValidationService = captchaValidationService;
     }
 
-    // Moved from API, If you modify this endpoint, please update API as well.
+    // Moved from API, If you modify this endpoint, please update API as well. Self hosted installs still use the API endpoints.
     [HttpPost("register")]
     [CaptchaProtected]
-    public async Task PostRegister([FromBody] RegisterRequestModel model)
+    public async Task<RegisterResponseModel> PostRegister([FromBody] RegisterRequestModel model)
     {
-        var result = await _userService.RegisterUserAsync(model.ToUser(), model.MasterPasswordHash,
+        var user = model.ToUser();
+        var result = await _userService.RegisterUserAsync(user, model.MasterPasswordHash,
             model.Token, model.OrganizationUserId);
         if (result.Succeeded)
         {
-            return;
+            var captchaBypassToken = _captchaValidationService.GenerateCaptchaBypassToken(user);
+            return new RegisterResponseModel(captchaBypassToken);
         }
 
         foreach (var error in result.Errors.Where(e => e.Code != "DuplicateUserName"))
@@ -50,7 +55,7 @@ public class AccountsController : Controller
         throw new BadRequestException(ModelState);
     }
 
-    // Moved from API, If you modify this endpoint, please update API as well.
+    // Moved from API, If you modify this endpoint, please update API as well. Self hosted installs still use the API endpoints.
     [HttpPost("prelogin")]
     public async Task<PreloginResponseModel> PostPrelogin([FromBody] PreloginRequestModel model)
     {
