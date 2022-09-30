@@ -2,7 +2,7 @@
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
-using Bit.Scim.Commands.Users;
+using Bit.Scim.Queries.Users;
 using Bit.Scim.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -10,14 +10,14 @@ using Bit.Test.Common.Helpers;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Scim.Test.Commands.Users;
+namespace Bit.Scim.Test.Queries.Users;
 
 [SutProviderCustomize]
-public class GetUserCommandTests
+public class GetUserQueryTests
 {
     [Theory]
     [BitAutoData]
-    public async Task GetUser_Success(SutProvider<GetUserCommand> sutProvider, OrganizationUserUserDetails organizationUserUserDetails)
+    public async Task GetUser_Success(SutProvider<GetUserQuery> sutProvider, OrganizationUserUserDetails organizationUserUserDetails)
     {
         var expectedResult = new Models.ScimUserResponseModel
         {
@@ -44,14 +44,14 @@ public class GetUserCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task GetUser_NotFound_Throws(SutProvider<GetUserCommand> sutProvider, Guid organizationId, Guid organizationUserId)
+    public async Task GetUser_NotFound_Throws(SutProvider<GetUserQuery> sutProvider, Guid organizationId, Guid organizationUserId)
     {
         await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.GetUserAsync(organizationId, organizationUserId));
     }
 
     [Theory]
     [BitAutoData]
-    public async Task GetUser_MismatchingOrganizationId_Throws(SutProvider<GetUserCommand> sutProvider, Guid organizationId, Guid organizationUserId)
+    public async Task GetUser_MismatchingOrganizationId_Throws(SutProvider<GetUserQuery> sutProvider, Guid organizationId, Guid organizationUserId)
     {
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByIdAsync(organizationUserId)

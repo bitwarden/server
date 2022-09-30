@@ -1,15 +1,15 @@
 ﻿using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
-using Bit.Scim.Commands.Users.Interfaces;
 using Bit.Scim.Models;
+using Bit.Scim.Queries.Users.Interfaces;
 
-namespace Bit.Scim.Commands.Users;
+namespace Bit.Scim.Queries.Users;
 
-public class GetUserCommand : IGetUserCommand
+public class GetUserQuery : IGetUserQuery
 {
     private readonly IOrganizationUserRepository _organizationUserRepository;
 
-    public GetUserCommand(IOrganizationUserRepository organizationUserRepository)
+    public GetUserQuery(IOrganizationUserRepository organizationUserRepository)
     {
         _organizationUserRepository = organizationUserRepository;
     }
