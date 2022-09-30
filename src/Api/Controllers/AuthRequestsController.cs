@@ -46,7 +46,7 @@ public class AuthRequestsController : Controller
     {
         var userId = _userService.GetProperUserId(User).Value;
         var authRequests = await _authRequestRepository.GetManyByUserIdAsync(userId);
-        var responses = authRequests.Select(a => new AuthRequestResponseModel(a, _globalSettings.SelfHosted)).ToList();
+        var responses = authRequests.Select(a => new AuthRequestResponseModel(a, _globalSettings)).ToList();
         return new ListResponseModel<AuthRequestResponseModel>(responses);
     }
 
@@ -60,7 +60,7 @@ public class AuthRequestsController : Controller
             throw new NotFoundException();
         }
 
-        return new AuthRequestResponseModel(authRequest, _globalSettings.SelfHosted);
+        return new AuthRequestResponseModel(authRequest, _globalSettings);
     }
 
     [HttpGet("{id}/response")]
@@ -73,7 +73,7 @@ public class AuthRequestsController : Controller
             throw new NotFoundException();
         }
 
-        return new AuthRequestResponseModel(authRequest, _globalSettings.SelfHosted);
+        return new AuthRequestResponseModel(authRequest, _globalSettings);
     }
 
     [HttpPost("")]
@@ -111,7 +111,8 @@ public class AuthRequestsController : Controller
         };
         authRequest = await _authRequestRepository.CreateAsync(authRequest);
         await _pushNotificationService.PushAuthRequestAsync(authRequest);
-        return new AuthRequestResponseModel(authRequest, _globalSettings.SelfHosted);
+        var r = new AuthRequestResponseModel(authRequest, _globalSettings);
+        return r;
     }
 
     [HttpPut("{id}")]
@@ -140,6 +141,6 @@ public class AuthRequestsController : Controller
             await _pushNotificationService.PushAuthRequestResponseAsync(authRequest);
         }
 
-        return new AuthRequestResponseModel(authRequest, _globalSettings.SelfHosted);
+        return new AuthRequestResponseModel(authRequest, _globalSettings);
     }
 }
