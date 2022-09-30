@@ -248,19 +248,4 @@ public class UsersController : Controller
         await _organizationService.DeleteUserAsync(organizationId, id, null);
         return new NoContentResult();
     }
-
-    private async Task<bool> HandleActiveOperationAsync(Core.Entities.OrganizationUser orgUser, bool active)
-    {
-        if (active && orgUser.Status == OrganizationUserStatusType.Revoked)
-        {
-            await _organizationService.RestoreUserAsync(orgUser, null, _userService);
-            return true;
-        }
-        else if (!active && orgUser.Status != OrganizationUserStatusType.Revoked)
-        {
-            await _organizationService.RevokeUserAsync(orgUser, null);
-            return true;
-        }
-        return false;
-    }
 }
