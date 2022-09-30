@@ -94,7 +94,7 @@ public class AuthRequestsController : Controller
             var devices = await _deviceRepository.GetManyByUserIdAsync(user.Id);
             if (devices == null || !devices.Any(d => d.Identifier == model.DeviceIdentifier))
             {
-                throw new NotFoundException();
+                throw new BadRequestException("Login with device is only available on devices that have been previously logged in.");
             }
         }
 
