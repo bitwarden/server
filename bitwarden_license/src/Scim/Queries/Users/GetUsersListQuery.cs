@@ -1,14 +1,14 @@
 ﻿using Bit.Core.Repositories;
-using Bit.Scim.Commands.Users.Interfaces;
 using Bit.Scim.Models;
+using Bit.Scim.Queries.Users.Interfaces;
 
-namespace Bit.Scim.Commands.Users;
+namespace Bit.Scim.Queries.Users;
 
-public class GetUsersListCommand : IGetUsersListCommand
+public class GetUsersListQuery : IGetUsersListQuery
 {
     private readonly IOrganizationUserRepository _organizationUserRepository;
 
-    public GetUsersListCommand(IOrganizationUserRepository organizationUserRepository)
+    public GetUsersListQuery(IOrganizationUserRepository organizationUserRepository)
     {
         _organizationUserRepository = organizationUserRepository;
     }

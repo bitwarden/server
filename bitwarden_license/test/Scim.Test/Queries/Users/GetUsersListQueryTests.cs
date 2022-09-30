@@ -1,7 +1,7 @@
 ﻿using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
-using Bit.Scim.Commands.Users;
 using Bit.Scim.Models;
+using Bit.Scim.Queries.Users;
 using Bit.Scim.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -9,16 +9,16 @@ using Bit.Test.Common.Helpers;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Scim.Test.Commands.Users;
+namespace Bit.Scim.Test.Queries.Users;
 
 [SutProviderCustomize]
-public class GetUsersListCommandTests
+public class GetUsersListQueryTests
 {
     [Theory]
     [BitAutoData(10, 1)]
     [BitAutoData(2, 1)]
     [BitAutoData(1, 3)]
-    public async Task GetUsersList_Success(int? count, int? startIndex, SutProvider<GetUsersListCommand> sutProvider, Guid organizationId, IList<OrganizationUserUserDetails> organizationUserUserDetails)
+    public async Task GetUsersList_Success(int? count, int? startIndex, SutProvider<GetUsersListQuery> sutProvider, Guid organizationId, IList<OrganizationUserUserDetails> organizationUserUserDetails)
     {
         organizationUserUserDetails = SetUsersOrganizationId(organizationUserUserDetails, organizationId);
 
@@ -59,7 +59,7 @@ public class GetUsersListCommandTests
 
     [Theory]
     [BitAutoData("user1@example.com")]
-    public async Task GetUsersList_FilterUserName_Success(string email, SutProvider<GetUsersListCommand> sutProvider, Guid organizationId, IList<OrganizationUserUserDetails> organizationUserUserDetails)
+    public async Task GetUsersList_FilterUserName_Success(string email, SutProvider<GetUsersListQuery> sutProvider, Guid organizationId, IList<OrganizationUserUserDetails> organizationUserUserDetails)
     {
         organizationUserUserDetails = SetUsersOrganizationId(organizationUserUserDetails, organizationId);
         organizationUserUserDetails.First().Email = email;
@@ -100,7 +100,7 @@ public class GetUsersListCommandTests
 
     [Theory]
     [BitAutoData("user1@example.com")]
-    public async Task GetUsersList_FilterUserName_Empty(string email, SutProvider<GetUsersListCommand> sutProvider, Guid organizationId, IList<OrganizationUserUserDetails> organizationUserUserDetails)
+    public async Task GetUsersList_FilterUserName_Empty(string email, SutProvider<GetUsersListQuery> sutProvider, Guid organizationId, IList<OrganizationUserUserDetails> organizationUserUserDetails)
     {
         organizationUserUserDetails = SetUsersOrganizationId(organizationUserUserDetails, organizationId);
         string filter = $"userName eq {email}";
@@ -127,7 +127,7 @@ public class GetUsersListCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task GetUsersList_FilterExternalId_Success(SutProvider<GetUsersListCommand> sutProvider, Guid organizationId, IList<OrganizationUserUserDetails> organizationUserUserDetails)
+    public async Task GetUsersList_FilterExternalId_Success(SutProvider<GetUsersListQuery> sutProvider, Guid organizationId, IList<OrganizationUserUserDetails> organizationUserUserDetails)
     {
         organizationUserUserDetails = SetUsersOrganizationId(organizationUserUserDetails, organizationId);
         string externalId = organizationUserUserDetails.First().ExternalId;
@@ -168,7 +168,7 @@ public class GetUsersListCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task GetUsersList_FilterExternalId_Empty(string externalId, SutProvider<GetUsersListCommand> sutProvider, Guid organizationId, IList<OrganizationUserUserDetails> organizationUserUserDetails)
+    public async Task GetUsersList_FilterExternalId_Empty(string externalId, SutProvider<GetUsersListQuery> sutProvider, Guid organizationId, IList<OrganizationUserUserDetails> organizationUserUserDetails)
     {
         organizationUserUserDetails = SetUsersOrganizationId(organizationUserUserDetails, organizationId);
         string filter = $"externalId eq {externalId}";

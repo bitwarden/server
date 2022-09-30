@@ -3,9 +3,9 @@ using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
-using Bit.Scim.Commands.Users.Interfaces;
 using Bit.Scim.Context;
 using Bit.Scim.Models;
+using Bit.Scim.Queries.Users.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
@@ -22,7 +22,7 @@ public class UsersController : Controller
     private readonly IOrganizationService _organizationService;
     private readonly IScimContext _scimContext;
     private readonly ScimSettings _scimSettings;
-    private readonly IGetUsersListCommand _getUsersListCommand;
+    private readonly IGetUsersListQuery _getUsersListQuery;
     private readonly ILogger<UsersController> _logger;
 
     public UsersController(
@@ -32,7 +32,7 @@ public class UsersController : Controller
         IOrganizationService organizationService,
         IScimContext scimContext,
         IOptions<ScimSettings> scimSettings,
-        IGetUsersListCommand getUsersListCommand,
+        IGetUsersListQuery getUsersListQuery,
         ILogger<UsersController> logger)
     {
         _userService = userService;
@@ -41,7 +41,7 @@ public class UsersController : Controller
         _organizationService = organizationService;
         _scimContext = scimContext;
         _scimSettings = scimSettings?.Value;
-        _getUsersListCommand = getUsersListCommand;
+        _getUsersListQuery = getUsersListQuery;
         _logger = logger;
     }
 
@@ -67,7 +67,7 @@ public class UsersController : Controller
         [FromQuery] int? count,
         [FromQuery] int? startIndex)
     {
-        var scimListResponseModel = await _getUsersListCommand.GetUsersListAsync(organizationId, filter, count, startIndex);
+        var scimListResponseModel = await _getUsersListQuery.GetUsersListAsync(organizationId, filter, count, startIndex);
         return Ok(scimListResponseModel);
     }
 
