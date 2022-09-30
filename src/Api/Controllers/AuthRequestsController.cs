@@ -91,8 +91,8 @@ public class AuthRequestsController : Controller
         }
         if (_globalSettings.PasswordlessAuth.KnownDevicesOnly)
         {
-            var d = await _deviceRepository.GetByIdentifierAsync(model.DeviceIdentifier);
-            if (d == null || d.UserId != user.Id)
+            var devices = await _deviceRepository.GetManyByUserIdAsync(user.Id);
+            if (devices == null || !devices.Any(d => d.Identifier == model.DeviceIdentifier))
             {
                 throw new NotFoundException();
             }
