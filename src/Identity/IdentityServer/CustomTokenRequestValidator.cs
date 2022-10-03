@@ -2,6 +2,7 @@
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Identity;
+using Bit.Core.IdentityServer;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -52,10 +53,23 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         string[] allowedGrantTypes = { "authorization_code", "client_credentials" };
         if (!allowedGrantTypes.Contains(context.Result.ValidatedRequest.GrantType)
             || context.Result.ValidatedRequest.ClientId.StartsWith("organization")
-            || context.Result.ValidatedRequest.ClientId.StartsWith("installation"))
+            || context.Result.ValidatedRequest.ClientId.StartsWith("installation")
+            || context.Result.ValidatedRequest.Client.AllowedScopes.Contains(ApiScopes.ApiSecrets))
         {
+            // TODO: Is this the best approach?
+            if (context.Result.ValidatedRequest.Client.Properties.ContainsKey("encryptedPayload"))
+            {
+                context.Result.CustomResponse = new Dictionary<string, object>
+                {
+                    {
+                        "encrypted_payload", context.Result.ValidatedRequest.Client.Properties["encryptedPayload"]
+                    },
+                };
+            }
+
             return;
         }
+
         await ValidateAsync(context, context.Result.ValidatedRequest,
             new CustomValidatorRequestContext { KnownDevice = true });
     }
