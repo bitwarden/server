@@ -1,11 +1,11 @@
 ﻿using System.Text.Json;
 using Bit.Core.Entities;
-using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Scim.Commands.Groups.Interfaces;
 using Bit.Scim.Context;
 using Bit.Scim.Models;
+using Bit.Scim.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
@@ -14,6 +14,7 @@ namespace Bit.Scim.Controllers.v2;
 
 [Authorize("Scim")]
 [Route("v2/{organizationId}/groups")]
+[ExceptionHandlerFilter]
 public class GroupsController : Controller
 {
     private readonly ScimSettings _scimSettings;
@@ -119,20 +120,9 @@ public class GroupsController : Controller
     [HttpPost("")]
     public async Task<IActionResult> Post(Guid organizationId, [FromBody] ScimGroupRequestModel model)
     {
-        try
-        {
-            var group = await _postGroupCommand.PostGroupAsync(organizationId, model);
-            var scimGroupResponseModel = new ScimGroupResponseModel(group);
-            return new CreatedResult(Url.Action(nameof(Get), new { group.OrganizationId, group.Id }), scimGroupResponseModel);
-        }
-        catch (BadRequestException)
-        {
-            return BadRequest();
-        }
-        catch (ConflictException)
-        {
-            return Conflict();
-        }
+        var group = await _postGroupCommand.PostGroupAsync(organizationId, model);
+        var scimGroupResponseModel = new ScimGroupResponseModel(group);
+        return new CreatedResult(Url.Action(nameof(Get), new { group.OrganizationId, group.Id }), scimGroupResponseModel);
     }
 
     [HttpPut("{id}")]
