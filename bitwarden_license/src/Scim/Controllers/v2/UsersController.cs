@@ -1,10 +1,10 @@
 ﻿using Bit.Core.Enums;
-using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Scim.Commands.Users.Interfaces;
 using Bit.Scim.Context;
 using Bit.Scim.Models;
+using Bit.Scim.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
@@ -13,6 +13,7 @@ namespace Bit.Scim.Controllers.v2;
 
 [Authorize("Scim")]
 [Route("v2/{organizationId}/users")]
+[ExceptionHandlerFilter]
 public class UsersController : Controller
 {
     private readonly IUserService _userService;
@@ -129,21 +130,9 @@ public class UsersController : Controller
     [HttpPost("")]
     public async Task<IActionResult> Post(Guid organizationId, [FromBody] ScimUserRequestModel model)
     {
-        try
-        {
-            var orgUser = await _postUserCommand.PostUserAsync(organizationId, model);
-            var scimUserResponseModel = new ScimUserResponseModel(orgUser);
-            return new CreatedResult(Url.Action(nameof(Get), new { orgUser.OrganizationId, orgUser.Id }), scimUserResponseModel);
-
-        }
-        catch (BadRequestException)
-        {
-            return BadRequest();
-        }
-        catch (ConflictException)
-        {
-            return Conflict();
-        }
+        var orgUser = await _postUserCommand.PostUserAsync(organizationId, model);
+        var scimUserResponseModel = new ScimUserResponseModel(orgUser);
+        return new CreatedResult(Url.Action(nameof(Get), new { orgUser.OrganizationId, orgUser.Id }), scimUserResponseModel);
     }
 
     [HttpPut("{id}")]
