@@ -2,8 +2,6 @@
 using Bit.Core.Context;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
-using Bit.Scim.Commands.Users;
-using Bit.Scim.Commands.Users.Interfaces;
 using Bit.Scim.Context;
 using Bit.Scim.Utilities;
 using Bit.SharedWeb.Utilities;
@@ -78,7 +76,7 @@ public class Startup
         });
         services.Configure<RouteOptions>(options => options.LowercaseUrls = true);
 
-        services.AddScoped<IDeleteUserCommand, DeleteUserCommand>();
+        services.AddScimUserCommands();
     }
 
     public void Configure(
