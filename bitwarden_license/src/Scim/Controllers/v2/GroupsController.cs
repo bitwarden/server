@@ -1,11 +1,11 @@
 ﻿using System.Text.Json;
 using Bit.Core.Entities;
-using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Scim.Context;
 using Bit.Scim.Models;
 using Bit.Scim.Queries.Groups.Interfaces;
+using Bit.Scim.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
@@ -14,6 +14,7 @@ namespace Bit.Scim.Controllers.v2;
 
 [Authorize("Scim")]
 [Route("v2/{organizationId}/groups")]
+[ExceptionHandlerFilter]
 public class GroupsController : Controller
 {
     private readonly ScimSettings _scimSettings;
@@ -42,19 +43,8 @@ public class GroupsController : Controller
     [HttpGet("{id}")]
     public async Task<IActionResult> Get(Guid organizationId, Guid id)
     {
-        try
-        {
-            var scimGroupResponseModel = await _getGroupQuery.GetGroupAsync(organizationId, id);
-            return Ok(scimGroupResponseModel);
-        }
-        catch (NotFoundException ex)
-        {
-            return NotFound(new ScimErrorResponseModel
-            {
-                Status = StatusCodes.Status404NotFound,
-                Detail = ex.Message
-            });
-        }
+        var scimGroupResponseModel = await _getGroupQuery.GetGroupAsync(organizationId, id);
+        return Ok(scimGroupResponseModel);
     }
 
     [HttpGet("")]
