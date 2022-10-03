@@ -5,7 +5,7 @@ namespace Bit.Scim.Utilities;
 
 public static class ScimServiceCollectionExtensions
 {
-    public static void AddScimCommands(this IServiceCollection services)
+    public static void AddScimUserCommands(this IServiceCollection services)
     {
         services.AddScoped<IPatchUserCommand, PatchUserCommand>();
     }
