@@ -1,11 +1,11 @@
 ﻿using System.Text.Json;
 using Bit.Core.Entities;
-using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Scim.Commands.Groups.Interfaces;
 using Bit.Scim.Context;
 using Bit.Scim.Models;
+using Bit.Scim.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
@@ -14,6 +14,7 @@ namespace Bit.Scim.Controllers.v2;
 
 [Authorize("Scim")]
 [Route("v2/{organizationId}/groups")]
+[ExceptionHandlerFilter]
 public class GroupsController : Controller
 {
     private readonly ScimSettings _scimSettings;
@@ -262,19 +263,8 @@ public class GroupsController : Controller
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(Guid organizationId, Guid id)
     {
-        try
-        {
-            await _deleteGroupCommand.DeleteGroupAsync(organizationId, id);
-            return new NoContentResult();
-        }
-        catch (NotFoundException ex)
-        {
-            return NotFound(new ScimErrorResponseModel
-            {
-                Status = StatusCodes.Status404NotFound,
-                Detail = ex.Message
-            });
-        }
+        await _deleteGroupCommand.DeleteGroupAsync(organizationId, id);
+        return new NoContentResult();
     }
 
     private List<Guid> GetOperationValueIds(JsonElement objArray)
