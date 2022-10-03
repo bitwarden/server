@@ -41,17 +41,14 @@ public class SecretRepository : Repository<Core.Entities.Secret, Secret, Guid>, 
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
-            using (var scope = ServiceScopeFactory.CreateScope())
-            {
-                var dbContext = GetDatabaseContext(scope);
-                var secrets = await dbContext.Secret
-                                        .Include("Projects")
-                                        .Where(c => c.OrganizationId == organizationId && c.DeletedDate == null)
-                                        .OrderBy(c => c.RevisionDate)
-                                        .ToListAsync();
+            var dbContext = GetDatabaseContext(scope);
+            var secrets = await dbContext.Secret
+                                    .Where(c => c.OrganizationId == organizationId && c.DeletedDate == null)
+                                    .Include("Projects")
+                                    .OrderBy(c => c.RevisionDate)
+                                    .ToListAsync();
 
-                return Mapper.Map<List<Core.Entities.Secret>>(secrets);
-            }
+            return Mapper.Map<List<Core.Entities.Secret>>(secrets);
         }
     }
 
