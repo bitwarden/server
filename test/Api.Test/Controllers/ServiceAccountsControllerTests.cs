@@ -1,6 +1,8 @@
 ﻿using Bit.Api.Controllers;
+using Bit.Api.SecretManagerFeatures.Models.Request;
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
+using Bit.Core.SecretManagerFeatures.ServiceAccounts.Interfaces;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
@@ -36,5 +38,31 @@ public class ServiceAccountsControllerTests
 
         await sutProvider.GetDependency<IServiceAccountRepository>().Received(1)
                      .GetManyByOrganizationIdAsync(Arg.Is(AssertHelper.AssertPropertyEqual(resultServiceAccount.OrganizationId)));
+    }
+
+
+    [Theory]
+    [BitAutoData]
+    public async void CreateServiceAccount_Success(SutProvider<ServiceAccountsController> sutProvider, ServiceAccountCreateRequestModel data, Guid organizationId)
+    {
+        var resultServiceAccount = data.ToServiceAccount(organizationId);
+
+        sutProvider.GetDependency<ICreateServiceAccountCommand>().CreateAsync(default).ReturnsForAnyArgs(resultServiceAccount);
+
+        var result = await sutProvider.Sut.CreateServiceAccountAsync(organizationId, data);
+        await sutProvider.GetDependency<ICreateServiceAccountCommand>().Received(1)
+                     .CreateAsync(Arg.Any<ServiceAccount>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async void UpdateSecret_Success(SutProvider<ServiceAccountsController> sutProvider, ServiceAccountUpdateRequestModel data, Guid secretId)
+    {
+        var resultServiceAccount = data.ToServiceAccount(secretId);
+        sutProvider.GetDependency<IUpdateServiceAccountCommand>().UpdateAsync(default).ReturnsForAnyArgs(resultServiceAccount);
+
+        var result = await sutProvider.Sut.UpdateServiceAccountAsync(secretId, data);
+        await sutProvider.GetDependency<IUpdateServiceAccountCommand>().Received(1)
+                     .UpdateAsync(Arg.Any<ServiceAccount>());
     }
 }
