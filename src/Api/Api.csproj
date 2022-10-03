@@ -23,7 +23,7 @@
   <Choose>
     <When Condition="!$(DefineConstants.Contains('OSS'))">
       <ItemGroup>
-        <ProjectReference Include="..\..\bitwarden_license\src\CommCore\CommCore.csproj" />
+        <ProjectReference Include="..\..\bitwarden_license\src\Commercial.Core\Commercial.Core.csproj" />
       </ItemGroup>
     </When>
   </Choose>
@@ -32,5 +32,5 @@
     <PackageReference Include="Azure.Messaging.EventGrid" Version="4.10.0" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.3.1" />
   </ItemGroup>
-  
+
 </Project>

@@ -61,12 +61,12 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sso", "bitwarden_license\sr
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Icons.Test", "test\Icons.Test\Icons.Test.csproj", "{C7BA2255-C1B1-4789-8BB9-C27540DA6FB8}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CommCore", "bitwarden_license\src\CommCore\CommCore.csproj", "{EDC0D688-D58C-4CE1-AA07-3606AC6874B8}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Commercial.Core", "bitwarden_license\src\Commercial.Core\Commercial.Core.csproj", "{EDC0D688-D58C-4CE1-AA07-3606AC6874B8}"
 	ProjectSection(ProjectDependencies) = postProject
 		{3973D21B-A692-4B60-9B70-3631C057423A} = {3973D21B-A692-4B60-9B70-3631C057423A}
 	EndProjectSection
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CommCore.Test", "bitwarden_license\test\CmmCore.Test\CommCore.Test.csproj", "{0E99A21B-684B-4C59-9831-90F775CAB6F7}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Commercial.Core.Test", "bitwarden_license\test\Commercial.Core.Test\Commercial.Core.Test.csproj", "{0E99A21B-684B-4C59-9831-90F775CAB6F7}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test - Bitwarden License", "test - Bitwarden License", "{287CFF34-BBDB-4BC4-AF88-1E19A5A4679B}"
 EndProject
@@ -91,6 +91,12 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "IntegrationTestCommon", "test\IntegrationTestCommon\IntegrationTestCommon.csproj", "{0923DE59-5FB1-44F2-9302-A09D2236B470}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Scim", "bitwarden_license\src\Scim\Scim.csproj", "{BC3B3F8C-621A-4CB8-9563-6EC0A2C8C747}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Infrastructure.EFIntegration.Test", "test\Infrastructure.EFIntegration.Test\Infrastructure.EFIntegration.Test.csproj", "{7EFB1124-F40A-40EB-9EDA-94FD540AA8FD}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Api.IntegrationTest", "test\Api.IntegrationTest\Api.IntegrationTest.csproj", "{CBE96C6D-A4D6-46E1-94C5-42D6CAD8531C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Scim.IntegrationTest", "bitwarden_license\test\Scim.IntegrationTest\Scim.IntegrationTest.csproj", "{FE998849-5FC8-41A2-B7C9-9227901471A0}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -220,6 +226,18 @@ Global
 		{BC3B3F8C-621A-4CB8-9563-6EC0A2C8C747}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BC3B3F8C-621A-4CB8-9563-6EC0A2C8C747}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BC3B3F8C-621A-4CB8-9563-6EC0A2C8C747}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7EFB1124-F40A-40EB-9EDA-94FD540AA8FD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7EFB1124-F40A-40EB-9EDA-94FD540AA8FD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7EFB1124-F40A-40EB-9EDA-94FD540AA8FD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7EFB1124-F40A-40EB-9EDA-94FD540AA8FD}.Release|Any CPU.Build.0 = Release|Any CPU
+        {CBE96C6D-A4D6-46E1-94C5-42D6CAD8531C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+        {CBE96C6D-A4D6-46E1-94C5-42D6CAD8531C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+        {CBE96C6D-A4D6-46E1-94C5-42D6CAD8531C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+        {CBE96C6D-A4D6-46E1-94C5-42D6CAD8531C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FE998849-5FC8-41A2-B7C9-9227901471A0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FE998849-5FC8-41A2-B7C9-9227901471A0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FE998849-5FC8-41A2-B7C9-9227901471A0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FE998849-5FC8-41A2-B7C9-9227901471A0}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -255,6 +273,9 @@ Global
 		{0D3B2BD2-53F3-421D-AD8F-C19B954C796B} = {DD5BD056-4AAE-43EF-BBD2-0B569B8DA84F}
 		{0923DE59-5FB1-44F2-9302-A09D2236B470} = {DD5BD056-4AAE-43EF-BBD2-0B569B8DA84F}
 		{BC3B3F8C-621A-4CB8-9563-6EC0A2C8C747} = {4FDB6543-F68B-4202-9EA6-7FEA984D2D0A}
+		{7EFB1124-F40A-40EB-9EDA-94FD540AA8FD} = {DD5BD056-4AAE-43EF-BBD2-0B569B8DA84F}
+        {CBE96C6D-A4D6-46E1-94C5-42D6CAD8531C} = {DD5BD056-4AAE-43EF-BBD2-0B569B8DA84F}
+		{FE998849-5FC8-41A2-B7C9-9227901471A0} = {287CFF34-BBDB-4BC4-AF88-1E19A5A4679B}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {E01CBF68-2E20-425F-9EDB-E0A6510CA92F}

@@ -1,9 +1,8 @@
 ﻿using Microsoft.AspNetCore.Authentication;
 
-namespace Bit.Scim.Utilities
+namespace Bit.Scim.Utilities;
+
+public class ApiKeyAuthenticationOptions : AuthenticationSchemeOptions
 {
-    public class ApiKeyAuthenticationOptions : AuthenticationSchemeOptions
-    {
-        public const string DefaultScheme = "ScimApiKey";
-    }
+    public const string DefaultScheme = "ScimApiKey";
 }

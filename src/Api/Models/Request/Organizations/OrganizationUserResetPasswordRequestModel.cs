@@ -1,13 +1,12 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace Bit.Api.Models.Request.Organizations
+namespace Bit.Api.Models.Request.Organizations;
+
+public class OrganizationUserResetPasswordRequestModel
 {
-    public class OrganizationUserResetPasswordRequestModel
-    {
-        [Required]
-        [StringLength(300)]
-        public string NewMasterPasswordHash { get; set; }
-        [Required]
-        public string Key { get; set; }
-    }
+    [Required]
+    [StringLength(300)]
+    public string NewMasterPasswordHash { get; set; }
+    [Required]
+    public string Key { get; set; }
 }

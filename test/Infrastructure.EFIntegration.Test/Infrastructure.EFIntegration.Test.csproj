@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" Version="$(CoverletCollectorVersion)">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(MicrosoftNetTestSdkVersion)" />
+    <PackageReference Include="Moq" Version="4.17.2" />
+    <PackageReference Include="NSubstitute" Version="$(NSubstitueVersion)" />
+    <PackageReference Include="xunit" Version="$(XUnitVersion)" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="$(XUnitRunnerVisualStudioVersion)">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="AutoFixture.Xunit2" Version="$(AutoFixtureXUnit2Version)" />
+    <PackageReference Include="AutoFixture.AutoNSubstitute" Version="$(AutoFixtureAutoNSubstituteVersion)" />
+  </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\src\Infrastructure.Dapper\Infrastructure.Dapper.csproj" />
+      <ProjectReference Include="..\..\src\Infrastructure.EntityFramework\Infrastructure.EntityFramework.csproj" />
+      <ProjectReference Include="..\Common\Common.csproj" />
+      <ProjectReference Include="..\Core.Test\Core.Test.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="AutoFixture" />
+    </ItemGroup>
+
+</Project>
