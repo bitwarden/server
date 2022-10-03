@@ -3,12 +3,13 @@ using System.Reflection;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Api;
+using Bit.Core.Settings;
 
 namespace Bit.Api.Models.Response;
 
 public class AuthRequestResponseModel : ResponseModel
 {
-    public AuthRequestResponseModel(AuthRequest authRequest, bool isSelfHosted, string obj = "auth-request")
+    public AuthRequestResponseModel(AuthRequest authRequest, IGlobalSettings globalSettings, string obj = "auth-request")
         : base(obj)
     {
         if (authRequest == null)
@@ -27,7 +28,7 @@ public class AuthRequestResponseModel : ResponseModel
         CreationDate = authRequest.CreationDate;
         RequestApproved = !string.IsNullOrWhiteSpace(Key) &&
             (authRequest.Type == AuthRequestType.Unlock || !string.IsNullOrWhiteSpace(MasterPasswordHash));
-        Origin = Origin = isSelfHosted ? "SelfHosted" : "bitwarden.com";
+        Origin = globalSettings.SelfHosted ? globalSettings.BaseServiceUri.Vault : "bitwarden.com";
     }
 
     public string Id { get; set; }
