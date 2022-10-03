@@ -22,7 +22,11 @@ public class ExceptionHandlerFilterAttribute : ExceptionFilterAttribute
             Detail = exception.Message
         };
 
-        if (exception is BadRequestException)
+        if (exception is NotFoundException)
+        {
+            statusCode = StatusCodes.Status404NotFound;
+        }
+        else if (exception is BadRequestException)
         {
             statusCode = StatusCodes.Status400BadRequest;
         }
