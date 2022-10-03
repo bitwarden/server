@@ -30,5 +30,4 @@ public class Secret : ITableObject<Guid>
             Id = CoreHelpers.GenerateComb();
         }
     }
-
 }
