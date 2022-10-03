@@ -1,5 +1,4 @@
 ﻿using Bit.Core.Enums;
-using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -7,6 +6,7 @@ using Bit.Core.Utilities;
 using Bit.Scim.Commands.Users.Interfaces;
 using Bit.Scim.Context;
 using Bit.Scim.Models;
+using Bit.Scim.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
@@ -15,6 +15,7 @@ namespace Bit.Scim.Controllers.v2;
 
 [Authorize("Scim")]
 [Route("v2/{organizationId}/users")]
+[ExceptionHandlerFilter]
 public class UsersController : Controller
 {
     private readonly IUserService _userService;
@@ -218,19 +219,8 @@ public class UsersController : Controller
     [HttpPatch("{id}")]
     public async Task<IActionResult> Patch(Guid organizationId, Guid id, [FromBody] ScimPatchModel model)
     {
-        try
-        {
-            await _patchUserCommand.PatchUserAsync(organizationId, id, model);
-            return new NoContentResult();
-        }
-        catch (NotFoundException ex)
-        {
-            return NotFound(new ScimErrorResponseModel
-            {
-                Status = StatusCodes.Status404NotFound,
-                Detail = ex.Message
-            });
-        }
+        await _patchUserCommand.PatchUserAsync(organizationId, id, model);
+        return new NoContentResult();
     }
 
     [HttpDelete("{id}")]
