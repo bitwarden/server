@@ -18,7 +18,7 @@ public class OrganizationViewModel
         UserInvitedCount = orgUsers.Count(u => u.Status == OrganizationUserStatusType.Invited);
         UserAcceptedCount = orgUsers.Count(u => u.Status == OrganizationUserStatusType.Accepted);
         UserConfirmedCount = orgUsers.Count(u => u.Status == OrganizationUserStatusType.Confirmed);
-        UserCount = orgUsers.Count();
+        OccupiedSeatCount = orgUsers.Count(u => u.OccupiesOrganizationSeat);
         CipherCount = ciphers.Count();
         CollectionCount = collections.Count();
         GroupCount = groups?.Count() ?? 0;
@@ -40,7 +40,7 @@ public class OrganizationViewModel
     public int UserInvitedCount { get; set; }
     public int UserConfirmedCount { get; set; }
     public int UserAcceptedCount { get; set; }
-    public int UserCount { get; set; }
+    public int OccupiedSeatCount { get; set; }
     public int CipherCount { get; set; }
     public int CollectionCount { get; set; }
     public int GroupCount { get; set; }
