@@ -1,5 +1,4 @@
 ﻿using Bit.Core.Enums;
-using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -7,6 +6,7 @@ using Bit.Core.Utilities;
 using Bit.Scim.Context;
 using Bit.Scim.Models;
 using Bit.Scim.Queries.Users.Interfaces;
+using Bit.Scim.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
@@ -15,6 +15,7 @@ namespace Bit.Scim.Controllers.v2;
 
 [Authorize("Scim")]
 [Route("v2/{organizationId}/users")]
+[ExceptionHandlerFilter]
 public class UsersController : Controller
 {
     private readonly IUserService _userService;
@@ -49,19 +50,8 @@ public class UsersController : Controller
     [HttpGet("{id}")]
     public async Task<IActionResult> Get(Guid organizationId, Guid id)
     {
-        try
-        {
-            var scimUserResponseModel = await _getUserQuery.GetUserAsync(organizationId, id);
-            return Ok(scimUserResponseModel);
-        }
-        catch (NotFoundException ex)
-        {
-            return NotFound(new ScimErrorResponseModel
-            {
-                Status = StatusCodes.Status404NotFound,
-                Detail = ex.Message
-            });
-        }
+        var scimUserResponseModel = await _getUserQuery.GetUserAsync(organizationId, id);
+        return Ok(scimUserResponseModel);
     }
 
     [HttpGet("")]
