@@ -9,7 +9,6 @@ using Bit.Scim.Queries.Users.Interfaces;
 using Bit.Scim.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Options;
 
 namespace Bit.Scim.Controllers.v2;
 
@@ -19,32 +18,26 @@ namespace Bit.Scim.Controllers.v2;
 public class UsersController : Controller
 {
     private readonly IUserService _userService;
-    private readonly IUserRepository _userRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IOrganizationService _organizationService;
     private readonly IScimContext _scimContext;
-    private readonly ScimSettings _scimSettings;
     private readonly IGetUsersListQuery _getUsersListQuery;
     private readonly IGetUserQuery _getUserQuery;
     private readonly ILogger<UsersController> _logger;
 
     public UsersController(
         IUserService userService,
-        IUserRepository userRepository,
         IOrganizationUserRepository organizationUserRepository,
         IOrganizationService organizationService,
         IScimContext scimContext,
-        IOptions<ScimSettings> scimSettings,
         IGetUsersListQuery getUsersListQuery,
         IGetUserQuery getUserQuery,
         ILogger<UsersController> logger)
     {
         _userService = userService;
-        _userRepository = userRepository;
         _organizationUserRepository = organizationUserRepository;
         _organizationService = organizationService;
         _scimContext = scimContext;
-        _scimSettings = scimSettings?.Value;
         _getUsersListQuery = getUsersListQuery;
         _getUserQuery = getUserQuery;
         _logger = logger;
