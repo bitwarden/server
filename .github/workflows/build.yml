@@ -4,10 +4,10 @@ name: Build
 on:
   push:
     branches-ignore:
-      - 'l10n_master'
-      - 'gh-pages'
+      - "l10n_master"
+      - "gh-pages"
     paths-ignore:
-      - '.github/workflows/**'
+      - ".github/workflows/**"
   workflow_dispatch:
     inputs: {}
 
@@ -27,7 +27,6 @@ jobs:
       - name: Print lines of code
         run: cloc --include-lang C#,SQL,Razor,"Bourne Shell",PowerShell,HTML,CSS,Sass,JavaScript,TypeScript --vcs git
 
-
   lint:
     name: Lint
     runs-on: ubuntu-20.04
@@ -38,7 +37,6 @@ jobs:
       - name: Verify Format
         run: dotnet format --verify-no-changes
 
-
   testing:
     name: Testing
     runs-on: windows-2022
@@ -48,7 +46,7 @@ jobs:
       - name: Set up dotnet
         uses: actions/setup-dotnet@9211491ffb35dd6a6657ca4f45d43dfe6e97c829
         with:
-          dotnet-version: '6.0.x'
+          dotnet-version: "6.0.x"
       - name: Set up MSBuild
         uses: microsoft/setup-msbuild@ab534842b4bdf384b8aaf93765dc6f721d9f5fab
 
@@ -82,7 +80,6 @@ jobs:
       - name: Test Bitwarden solution
         run: dotnet test ./bitwarden_license/test/Commercial.Core.Test --configuration Debug --no-build
         shell: pwsh
-
 
   build-artifacts:
     name: Build artifacts
@@ -126,11 +123,11 @@ jobs:
         uses: actions/checkout@a12a3943b4bdde767164f792f33f40b04645d846
 
       - name: Set up Node
-        uses: actions/setup-node@9ced9a43a244f3ac94f13bfd896db8c8f30da67a  # v3.0.0
+        uses: actions/setup-node@9ced9a43a244f3ac94f13bfd896db8c8f30da67a
         with:
-          cache: 'npm'
-          cache-dependency-path: '**/package-lock.json'
-          node-version: '16'
+          cache: "npm"
+          cache-dependency-path: "**/package-lock.json"
+          node-version: "16"
 
       - name: Print environment
         run: |
@@ -175,7 +172,6 @@ jobs:
           name: ${{ matrix.service_name }}.zip
           path: ${{ matrix.base_path }}/${{ matrix.service_name }}/${{ matrix.service_name }}.zip
           if-no-files-found: error
-
 
   build-docker:
     name: Build Docker images
@@ -321,13 +317,13 @@ jobs:
             github.ref == 'refs/heads/rc' ||
             github.ref == 'refs/heads/hotfix-rc')
         id: retrieve-secrets
-        uses: Azure/get-keyvault-secrets@b5c723b9ac7870c022b8c35befe620b7009b336f
+        uses: bitwarden/gh-actions/get-keyvault-secrets@c3b3285993151c5af47cefcb3b9134c28ab479af
         with:
           keyvault: "bitwarden-prod-kv"
           secrets: "docker-password,
-                    docker-username,
-                    dct-delegate-2-repo-passphrase,
-                    dct-delegate-2-key"
+            docker-username,
+            dct-delegate-2-repo-passphrase,
+            dct-delegate-2-key"
 
       - name: Log into Docker
         if: |
@@ -384,7 +380,6 @@ jobs:
         run: |
           docker logout
           echo "DOCKER_CONTENT_TRUST=0" >> $GITHUB_ENV
-
 
   upload:
     name: Upload
@@ -454,7 +449,7 @@ jobs:
           cd ../..
         env:
           ASPNETCORE_ENVIRONMENT: Production
-          swaggerGen: 'True'
+          swaggerGen: "True"
           DOTNET_ROLL_FORWARD_ON_NO_CANDIDATE_FX: 2
 
       - name: Upload Swagger artifact
@@ -463,7 +458,6 @@ jobs:
           name: swagger.json
           path: swagger.json
           if-no-files-found: error
-
 
   check-failures:
     name: Check for failures
@@ -512,14 +506,14 @@ jobs:
 
       - name: Retrieve secrets
         id: retrieve-secrets
-        uses: Azure/get-keyvault-secrets@b5c723b9ac7870c022b8c35befe620b7009b336f
+        uses: bitwarden/gh-actions/get-keyvault-secrets@c3b3285993151c5af47cefcb3b9134c28ab479af
         if: failure()
         with:
           keyvault: "bitwarden-prod-kv"
           secrets: "devops-alerts-slack-webhook-url"
 
       - name: Notify Slack on failure
-        uses: act10ns/slack@da3191ebe2e67f49b46880b4633f5591a96d1d33  # v1.2.2
+        uses: act10ns/slack@da3191ebe2e67f49b46880b4633f5591a96d1d33
         if: failure()
         env:
           SLACK_WEBHOOK_URL: ${{ steps.retrieve-secrets.outputs.devops-alerts-slack-webhook-url }}
