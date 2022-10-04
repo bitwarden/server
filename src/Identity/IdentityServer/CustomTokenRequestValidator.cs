@@ -53,15 +53,10 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
             || context.Result.ValidatedRequest.ClientId.StartsWith("installation")
             || context.Result.ValidatedRequest.Client.AllowedScopes.Contains(ApiScopes.ApiSecrets))
         {
-            // TODO: Is this the best approach?
-            if (context.Result.ValidatedRequest.Client.Properties.ContainsKey("encryptedPayload"))
+            if (context.Result.ValidatedRequest.Client.Properties.TryGetValue("encryptedPayload", out var payload) &&
+                !string.IsNullOrWhiteSpace(payload))
             {
-                context.Result.CustomResponse = new Dictionary<string, object>
-                {
-                    {
-                        "encrypted_payload", context.Result.ValidatedRequest.Client.Properties["encryptedPayload"]
-                    },
-                };
+                context.Result.CustomResponse = new Dictionary<string, object> { { "encrypted_payload", payload } };
             }
 
             return;
