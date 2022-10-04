@@ -1,3 +1,94 @@
+IF OBJECT_ID('[dbo].[Organization_DeleteById]') IS NOT NULL 
+BEGIN
+    DROP PROCEDURE [dbo].[Organization_DeleteById]
+END 
+GO
+
+CREATE PROCEDURE [dbo].[Organization_DeleteById]
+    @Id UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationId] @Id
+
+    DECLARE @BatchSize INT = 100
+    WHILE @BatchSize > 0
+    BEGIN
+        BEGIN TRANSACTION Organization_DeleteById_Ciphers
+
+        DELETE TOP(@BatchSize)
+        FROM
+            [dbo].[Cipher]
+        WHERE
+            [UserId] IS NULL
+            AND [OrganizationId] = @Id
+
+        SET @BatchSize = @@ROWCOUNT
+
+        COMMIT TRANSACTION Organization_DeleteById_Ciphers
+    END
+
+    BEGIN TRANSACTION Organization_DeleteById
+
+    DELETE
+    FROM
+        [dbo].[SsoUser]
+    WHERE
+        [OrganizationId] = @Id
+
+    DELETE
+    FROM
+        [dbo].[SsoConfig]
+    WHERE
+        [OrganizationId] = @Id
+
+    DELETE CU
+    FROM 
+        [dbo].[CollectionUser] CU
+    INNER JOIN 
+        [dbo].[OrganizationUser] OU ON [CU].[OrganizationUserId] = [OU].[Id]
+    WHERE 
+        [OU].[OrganizationId] = @Id
+
+    DELETE
+    FROM 
+        [dbo].[OrganizationUser]
+    WHERE 
+        [OrganizationId] = @Id
+
+    DELETE
+    FROM
+         [dbo].[ProviderOrganization]
+    WHERE
+        [OrganizationId] = @Id
+
+    EXEC [dbo].[OrganizationApiKey_OrganizationDeleted] @Id
+    EXEC [dbo].[OrganizationConnection_OrganizationDeleted] @Id
+    EXEC [dbo].[OrganizationSponsorship_OrganizationDeleted] @Id
+
+    DELETE
+    FROM
+        [dbo].[Project]
+    WHERE
+        [OrganizationId] = @Id
+
+    DELETE
+    FROM
+        [dbo].[Secret]
+    WHERE
+        [OrganizationId] = @Id
+
+    DELETE
+    FROM
+        [dbo].[Organization]
+    WHERE
+        [Id] = @Id
+
+    COMMIT TRANSACTION Organization_DeleteById
+END
+GO
+
 IF OBJECT_ID('[dbo].[ProjectSecret]') IS NULL
 BEGIN
 CREATE TABLE [ProjectSecret] (
@@ -13,3 +104,10 @@ CREATE INDEX [IX_ProjectSecret_SecretsId] ON [ProjectSecret] ([SecretsId]);
 END
 
 GO
+
+-- Update project and secret table to NOT on delete cascade anymore
+ALTER TABLE [Project] DROP CONSTRAINT FK_Project_Organization;
+ALTER TABLE [Project] ADD FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id]);
+
+ALTER TABLE [Secret] DROP CONSTRAINT FK_Secret_OrganizationId;
+ALTER TABLE [Secret] ADD FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id]);
