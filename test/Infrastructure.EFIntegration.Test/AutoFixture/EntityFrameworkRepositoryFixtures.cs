@@ -63,6 +63,7 @@ public class EfRepositoryListBuilder<T> : ISpecimenBuilder where T : BaseEntityF
             fixture.Customize<IMapper>(x => x.FromFactory(() =>
                 new MapperConfiguration(cfg =>
                 {
+                    cfg.AddProfile<AuthRequestMapperProfile>();
                     cfg.AddProfile<CipherMapperProfile>();
                     cfg.AddProfile<CollectionCipherMapperProfile>();
                     cfg.AddProfile<CollectionMapperProfile>();
