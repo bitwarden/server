@@ -113,14 +113,14 @@ public class Startup
             config.AddPolicy("Installation", policy =>
             {
                 policy.RequireAuthenticatedUser();
-                policy.RequireClaim(JwtClaimTypes.Scope, ApiScopes.ApiOrganization);
+                policy.RequireClaim(JwtClaimTypes.Scope, ApiScopes.ApiInstallation);
             });
             config.AddPolicy("Secrets", policy =>
             {
                 policy.RequireAuthenticatedUser();
                 policy.RequireAssertion(ctx => ctx.User.HasClaim(c =>
                     c.Type == JwtClaimTypes.Scope &&
-                    (c.Value.Contains(ApiScopes.Api) || c.Value.Contains(ApiScopes.ApiOrganization))
+                    (c.Value.Contains(ApiScopes.Api) || c.Value.Contains(ApiScopes.ApiSecrets))
                 ));
             });
         });
