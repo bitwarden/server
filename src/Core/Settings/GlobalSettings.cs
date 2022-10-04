@@ -412,7 +412,7 @@ public class GlobalSettings : IGlobalSettings
             set => _connectionString = value.Trim('"');
         }
         public string HubName { get; set; }
-        public bool EnableTestSend { get; set; } = false;
+        public bool EnableLogging { get; set; } = false;
     }
 
     public class YubicoSettings

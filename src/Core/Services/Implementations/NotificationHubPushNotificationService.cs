@@ -33,7 +33,7 @@ public class NotificationHubPushNotificationService : IPushNotificationService
         _client = NotificationHubClient.CreateClientFromConnectionString(
             _globalSettings.NotificationHub.ConnectionString,
             _globalSettings.NotificationHub.HubName,
-            _globalSettings.NotificationHub.EnableTestSend);
+            _globalSettings.NotificationHub.EnableLogging);
         _logger = logger;
     }
 
@@ -254,12 +254,7 @@ public class NotificationHubPushNotificationService : IPushNotificationService
                 { "type",  ((byte)type).ToString() },
                 { "payload", JsonSerializer.Serialize(payload) }
             }, tag);
-        if (outcome.Failure > 0)
-        {
-            _logger.LogError("Tracking ID: {id} | Failed to send {type} push notification to {count} devices with payload of {@payload}",
-                outcome.TrackingId, type, outcome.Failure, payload);
-        }
-        if (_globalSettings.NotificationHub.EnableTestSend)
+        if (_globalSettings.NotificationHub.EnableLogging)
         {
             _logger.LogInformation("Tracking ID: {id} | {type} push notification with {success} successes and {failure} failures with a payload of {@payload} and result of {@results}",
                 outcome.TrackingId, type, outcome.Success, outcome.Failure, payload, outcome.Results);
