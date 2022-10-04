@@ -18,7 +18,6 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
 {
     private UserManager<User> _userManager;
     private readonly ISsoConfigRepository _ssoConfigRepository;
-    private readonly IOrganizationRepository _organizationRepository;
 
     public CustomTokenRequestValidator(
         UserManager<User> userManager,
@@ -31,21 +30,19 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         IOrganizationUserRepository organizationUserRepository,
         IApplicationCacheService applicationCacheService,
         IMailService mailService,
-        ILogger<ResourceOwnerPasswordValidator> logger,
+        ILogger<CustomTokenRequestValidator> logger,
         ICurrentContext currentContext,
         GlobalSettings globalSettings,
         IPolicyRepository policyRepository,
         ISsoConfigRepository ssoConfigRepository,
-        IUserRepository userRepository,
-        ICaptchaValidationService captchaValidationService)
+        IUserRepository userRepository)
         : base(userManager, deviceRepository, deviceService, userService, eventService,
               organizationDuoWebTokenProvider, organizationRepository, organizationUserRepository,
               applicationCacheService, mailService, logger, currentContext, globalSettings, policyRepository,
-              userRepository, captchaValidationService)
+              userRepository)
     {
         _userManager = userManager;
         _ssoConfigRepository = ssoConfigRepository;
-        _organizationRepository = organizationRepository;
     }
 
     public async Task ValidateAsync(CustomTokenRequestValidationContext context)
