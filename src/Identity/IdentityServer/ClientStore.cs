@@ -88,7 +88,7 @@ public class ClientStore : IClientStore
     {
         var apiKey = await _apiKeyRepository.GetByIdAsync(new Guid(clientId));
 
-        if (apiKey == null)
+        if (apiKey == null || apiKey.ExpireAt <= DateTime.Now)
         {
             return null;
         }
