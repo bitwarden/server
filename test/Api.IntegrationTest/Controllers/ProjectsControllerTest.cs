@@ -9,7 +9,10 @@ using Xunit;
 
 namespace Bit.Api.IntegrationTest.Controllers;
 
-public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
+// TODO Quartz jobs are conflicting when integration tests are ran in parallel. 
+// For now sequently run integration tests.
+[Collection("Sequential")]
+public class ProjectsControllerTest : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {
     private readonly string _mockEncryptedString =
         "2.3Uk+WNBIoU5xzmVFNcoWzz==|1MsPIYuRfdOHfu/0uY6H2Q==|/98sp4wb6pHP1VTZ9JcNCYgQjEUMFPlqJgCwRk1YXKg=";
@@ -19,7 +22,7 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
     private readonly IProjectRepository _projectRepository;
     private Organization? _organization;
 
-    public ProjectsControllerTests(ApiApplicationFactory factory)
+    public ProjectsControllerTest(ApiApplicationFactory factory)
     {
         _factory = factory;
         _client = _factory.CreateClient();
