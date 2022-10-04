@@ -11,9 +11,9 @@ public class Project : ITableObject<Guid>
 
     public string? Name { get; set; }
 
-    public DateTime CreationDate { get; set; }
+    public DateTime CreationDate { get; set; } = DateTime.UtcNow;
 
-    public DateTime RevisionDate { get; set; }
+    public DateTime RevisionDate { get; set; } = DateTime.UtcNow;
 
     public DateTime? DeletedDate { get; set; }
 
