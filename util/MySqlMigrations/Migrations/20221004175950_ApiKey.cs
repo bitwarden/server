@@ -4,7 +4,7 @@
 
 namespace Bit.MySqlMigrations.Migrations;
 
-public partial class apikey : Migration
+public partial class ApiKey : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)
     {
@@ -16,12 +16,15 @@ public partial class apikey : Migration
                 UserId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
                 OrganizationId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
                 ServiceAccountId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
+                Name = table.Column<string>(type: "varchar(200)", maxLength: 200, nullable: true)
+                    .Annotation("MySql:CharSet", "utf8mb4"),
                 ClientSecret = table.Column<string>(type: "varchar(30)", maxLength: 30, nullable: true)
                     .Annotation("MySql:CharSet", "utf8mb4"),
                 Scope = table.Column<string>(type: "varchar(4000)", maxLength: 4000, nullable: true)
                     .Annotation("MySql:CharSet", "utf8mb4"),
                 EncryptedPayload = table.Column<string>(type: "varchar(4000)", maxLength: 4000, nullable: true)
                     .Annotation("MySql:CharSet", "utf8mb4"),
+                ExpireAt = table.Column<DateTime>(type: "datetime(6)", nullable: false),
                 CreationDate = table.Column<DateTime>(type: "datetime(6)", nullable: false),
                 RevisionDate = table.Column<DateTime>(type: "datetime(6)", nullable: false)
             },

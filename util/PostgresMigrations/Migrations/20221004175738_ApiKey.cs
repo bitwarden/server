@@ -4,7 +4,7 @@
 
 namespace Bit.PostgresMigrations.Migrations;
 
-public partial class apikey : Migration
+public partial class ApiKey : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)
     {
@@ -72,9 +72,11 @@ public partial class apikey : Migration
                 UserId = table.Column<Guid>(type: "uuid", nullable: true),
                 OrganizationId = table.Column<Guid>(type: "uuid", nullable: true),
                 ServiceAccountId = table.Column<Guid>(type: "uuid", nullable: true),
+                Name = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
                 ClientSecret = table.Column<string>(type: "character varying(30)", maxLength: 30, nullable: true),
                 Scope = table.Column<string>(type: "character varying(4000)", maxLength: 4000, nullable: true),
                 EncryptedPayload = table.Column<string>(type: "character varying(4000)", maxLength: 4000, nullable: true),
+                ExpireAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: false),
                 CreationDate = table.Column<DateTime>(type: "timestamp without time zone", nullable: false),
                 RevisionDate = table.Column<DateTime>(type: "timestamp without time zone", nullable: false)
             },

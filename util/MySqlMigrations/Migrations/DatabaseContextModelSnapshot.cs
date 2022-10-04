@@ -35,6 +35,13 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasMaxLength(4000)
                         .HasColumnType("varchar(4000)");
 
+                    b.Property<DateTime>("ExpireAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Name")
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)");
+
                     b.Property<Guid?>("OrganizationId")
                         .HasColumnType("char(36)");
 

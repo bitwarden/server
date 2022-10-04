@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.MySqlMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20221004092711_apikey")]
-    partial class apikey
+    [Migration("20221004175950_ApiKey")]
+    partial class ApiKey
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
@@ -36,6 +36,13 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<string>("EncryptedPayload")
                         .HasMaxLength(4000)
                         .HasColumnType("varchar(4000)");
+
+                    b.Property<DateTime>("ExpireAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Name")
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)");
 
                     b.Property<Guid?>("OrganizationId")
                         .HasColumnType("char(36)");
