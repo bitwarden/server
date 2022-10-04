@@ -897,7 +897,7 @@ public class OrganizationServiceTests
     [BitAutoData(0, 100, 100, true, "")]
     [BitAutoData(0, null, 100, true, "")]
     [BitAutoData(1, 100, null, true, "")]
-    [BitAutoData(1, 100, 100, false, "Cannot invite new users. Seat limit has been reached")]
+    [BitAutoData(1, 100, 100, false, "Seat limit has been reached")]
     public void CanScale(int seatsToAdd, int? currentSeats, int? maxAutoscaleSeats,
         bool expectedResult, string expectedFailureMessage, Organization organization,
         SutProvider<OrganizationService> sutProvider)
