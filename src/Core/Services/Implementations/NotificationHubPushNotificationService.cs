@@ -9,6 +9,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Azure.NotificationHubs;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Services;
 
@@ -17,20 +18,23 @@ public class NotificationHubPushNotificationService : IPushNotificationService
     private readonly IInstallationDeviceRepository _installationDeviceRepository;
     private readonly GlobalSettings _globalSettings;
     private readonly IHttpContextAccessor _httpContextAccessor;
-
     private NotificationHubClient _client = null;
+    private ILogger _logger;
 
     public NotificationHubPushNotificationService(
         IInstallationDeviceRepository installationDeviceRepository,
         GlobalSettings globalSettings,
-        IHttpContextAccessor httpContextAccessor)
+        IHttpContextAccessor httpContextAccessor,
+        ILogger<NotificationsApiPushNotificationService> logger)
     {
         _installationDeviceRepository = installationDeviceRepository;
         _globalSettings = globalSettings;
         _httpContextAccessor = httpContextAccessor;
         _client = NotificationHubClient.CreateClientFromConnectionString(
             _globalSettings.NotificationHub.ConnectionString,
-            _globalSettings.NotificationHub.HubName);
+            _globalSettings.NotificationHub.HubName,
+            _globalSettings.NotificationHub.EnableTestSend);
+        _logger = logger;
     }
 
     public async Task PushSyncCipherCreateAsync(Cipher cipher, IEnumerable<Guid> collectionIds)
@@ -244,12 +248,22 @@ public class NotificationHubPushNotificationService : IPushNotificationService
 
     private async Task SendPayloadAsync(string tag, PushType type, object payload)
     {
-        await _client.SendTemplateNotificationAsync(
+        var outcome = await _client.SendTemplateNotificationAsync(
             new Dictionary<string, string>
             {
                 { "type",  ((byte)type).ToString() },
                 { "payload", JsonSerializer.Serialize(payload) }
             }, tag);
+        if (outcome.Failure > 0)
+        {
+            _logger.LogError("Tracking ID: {id} | Failed to send {type} push notification to {count} devices with payload of {@payload}",
+                outcome.TrackingId, type, outcome.Failure, payload);
+        }
+        if (_globalSettings.NotificationHub.EnableTestSend)
+        {
+            _logger.LogInformation("Tracking ID: {id} | {type} push notification with {success} successes and {failure} failures with a payload of {@payload} and result of {@results}",
+                outcome.TrackingId, type, outcome.Success, outcome.Failure, payload, outcome.Results);
+        }
     }
 
     private string SanitizeTagInput(string input)
