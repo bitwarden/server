@@ -18,7 +18,7 @@ jobs:
     steps:
       - name: Retrieve secrets
         id: retrieve-secrets
-        uses: bitwarden/gh-actions/get-keyvault-secrets@7b97eaf6be16fb49e6c5f31ad01b37fdf10c58cd
+        uses: bitwarden/gh-actions/get-keyvault-secrets@6de5d94d3151e8dd2fa4889b5f54e9389b3c5440
         with:
           keyvault: "bitwarden-prod-kv"
           secrets: "docker-password,
@@ -334,7 +334,7 @@ jobs:
             github.ref == 'refs/heads/rc' ||
             github.ref == 'refs/heads/hotfix-rc')
         id: retrieve-secrets
-        uses: bitwarden/gh-actions/get-keyvault-secrets@7b97eaf6be16fb49e6c5f31ad01b37fdf10c58cd
+        uses: bitwarden/gh-actions/get-keyvault-secrets@6de5d94d3151e8dd2fa4889b5f54e9389b3c5440
         with:
           keyvault: "bitwarden-prod-kv"
           secrets: "docker-password,
@@ -523,7 +523,7 @@ jobs:
 
       - name: Retrieve secrets
         id: retrieve-secrets
-        uses: bitwarden/gh-actions/get-keyvault-secrets@7b97eaf6be16fb49e6c5f31ad01b37fdf10c58cd
+        uses: bitwarden/gh-actions/get-keyvault-secrets@6de5d94d3151e8dd2fa4889b5f54e9389b3c5440
         if: failure()
         with:
           keyvault: "bitwarden-prod-kv"
