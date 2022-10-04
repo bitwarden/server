@@ -418,5 +418,6 @@
     <Build Include="dbo\Views\UserView.sql" />
     <Build Include="dbo\Tables\Secret.sql" />
     <Build Include="dbo\Tables\Project.sql" />
+    <Build Include="dbo\Tables\ServiceAccount.sql" />
   </ItemGroup>
 </Project>
