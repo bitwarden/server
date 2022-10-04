@@ -38,12 +38,19 @@ jobs:
 
       - name: Retrieve secrets
         id: retrieve-secrets
-        uses: Azure/get-keyvault-secrets@80ccd3fafe5662407cc2e55f202ee34bfff8c403
-        with:
-          keyvault: "bitwarden-qa-kv"
-          secrets: "mssql-server-host,
-                    mssql-admin-login,
-                    mssql-admin-login-password"
+        env:
+          KEYVAULT: bitwarden-qa-kv
+          SECRETS: |
+            mssql-server-host,
+            mssql-admin-login,
+            mssql-admin-login-password
+        run: |
+          for i in ${SECRETS//,/ }
+          do
+            VALUE=$(az keyvault secret show --vault-name $KEYVAULT --name $i --query value --output tsv)
+            echo "::add-mask::$VALUE"
+            echo "::set-output name=$i::$VALUE"
+          done
 
       - name: Migrate database
         env:
@@ -101,7 +108,7 @@ jobs:
           description: 'Deploy from ${{ env.branch_name }} branch'
 
       - name: Download latest ${{ matrix.name }} asset from ${{ env.branch_name }}
-        uses: bitwarden/gh-actions/download-artifacts@c1fa8e09871a860862d6bbe36184b06d2c7e35a8
+        uses: bitwarden/gh-actions/download-artifacts@850faad0cf6c02a8c0dc46eddde2363fbd6c373a
         env:
           branch_name: ${{ steps.setup.outputs.branch_name }}
         with:
