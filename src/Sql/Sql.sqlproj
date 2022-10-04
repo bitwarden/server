@@ -416,5 +416,7 @@
     <Build Include="dbo\Views\SsoUserView.sql" />
     <Build Include="dbo\Views\TransactionView.sql" />
     <Build Include="dbo\Views\UserView.sql" />
+    <Build Include="dbo\Tables\Secret.sql" />
+    <Build Include="dbo\Tables\Project.sql" />
   </ItemGroup>
 </Project>
