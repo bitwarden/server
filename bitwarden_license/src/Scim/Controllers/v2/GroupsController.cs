@@ -1,5 +1,4 @@
-﻿using System.Text.Json;
-using Bit.Core.Entities;
+﻿using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Scim.Commands.Groups.Interfaces;
@@ -8,7 +7,6 @@ using Bit.Scim.Models;
 using Bit.Scim.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Options;
 
 namespace Bit.Scim.Controllers.v2;
 
@@ -17,27 +15,21 @@ namespace Bit.Scim.Controllers.v2;
 [ExceptionHandlerFilter]
 public class GroupsController : Controller
 {
-    private readonly ScimSettings _scimSettings;
     private readonly IGroupRepository _groupRepository;
     private readonly IGroupService _groupService;
     private readonly IScimContext _scimContext;
-    private readonly ILogger<GroupsController> _logger;
     private readonly IPatchGroupCommand _patchGroupCommand;
 
     public GroupsController(
         IGroupRepository groupRepository,
         IGroupService groupService,
-        IOptions<ScimSettings> scimSettings,
         IScimContext scimContext,
-        IPatchGroupCommand patchGroupCommand,
-        ILogger<GroupsController> logger)
+        IPatchGroupCommand patchGroupCommand)
     {
-        _scimSettings = scimSettings?.Value;
         _groupRepository = groupRepository;
         _groupService = groupService;
         _scimContext = scimContext;
         _patchGroupCommand = patchGroupCommand;
-        _logger = logger;
     }
 
     [HttpGet("{id}")]
@@ -178,32 +170,6 @@ public class GroupsController : Controller
         }
         await _groupService.DeleteAsync(group);
         return new NoContentResult();
-    }
-
-    private List<Guid> GetOperationValueIds(JsonElement objArray)
-    {
-        var ids = new List<Guid>();
-        foreach (var obj in objArray.EnumerateArray())
-        {
-            if (obj.TryGetProperty("value", out var valueProperty))
-            {
-                if (valueProperty.TryGetGuid(out var guid))
-                {
-                    ids.Add(guid);
-                }
-            }
-        }
-        return ids;
-    }
-
-    private Guid? GetOperationPathId(string path)
-    {
-        // Parse Guid from string like: members[value eq "{GUID}"}]
-        if (Guid.TryParse(path.Substring(18).Replace("\"]", string.Empty), out var id))
-        {
-            return id;
-        }
-        return null;
     }
 
     private async Task UpdateGroupMembersAsync(Group group, ScimGroupRequestModel model, bool skipIfEmpty)
