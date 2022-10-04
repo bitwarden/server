@@ -133,6 +133,18 @@ public class MultiServicePushNotificationService : IPushNotificationService
         return Task.FromResult(0);
     }
 
+    public Task PushAuthRequestAsync(AuthRequest authRequest)
+    {
+        PushToServices((s) => s.PushAuthRequestAsync(authRequest));
+        return Task.FromResult(0);
+    }
+
+    public Task PushAuthRequestResponseAsync(AuthRequest authRequest)
+    {
+        PushToServices((s) => s.PushAuthRequestResponseAsync(authRequest));
+        return Task.FromResult(0);
+    }
+
     public Task PushSyncSendDeleteAsync(Send send)
     {
         PushToServices((s) => s.PushSyncSendDeleteAsync(send));
