@@ -1,6 +1,6 @@
 ﻿using System.Globalization;
+using Bit.Admin.IdentityServer;
 using Bit.Core.Context;
-using Bit.Core.Identity;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
