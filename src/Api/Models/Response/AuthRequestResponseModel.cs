@@ -27,7 +27,7 @@ public class AuthRequestResponseModel : ResponseModel
         CreationDate = authRequest.CreationDate;
         RequestApproved = !string.IsNullOrWhiteSpace(Key) &&
             (authRequest.Type == AuthRequestType.Unlock || !string.IsNullOrWhiteSpace(MasterPasswordHash));
-        Origin = vaultUri;
+        Origin = new Uri(vaultUri).Host;
     }
 
     public string Id { get; set; }
