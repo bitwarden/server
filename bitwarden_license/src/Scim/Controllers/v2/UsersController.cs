@@ -6,6 +6,7 @@ using Bit.Core.Utilities;
 using Bit.Scim.Commands.Users.Interfaces;
 using Bit.Scim.Context;
 using Bit.Scim.Models;
+using Bit.Scim.Queries.Users.Interfaces;
 using Bit.Scim.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -24,6 +25,7 @@ public class UsersController : Controller
     private readonly IOrganizationService _organizationService;
     private readonly IScimContext _scimContext;
     private readonly ScimSettings _scimSettings;
+    private readonly IGetUserQuery _getUserQuery;
     private readonly IDeleteUserCommand _deleteUserCommand;
     private readonly ILogger<UsersController> _logger;
 
@@ -34,6 +36,7 @@ public class UsersController : Controller
         IOrganizationService organizationService,
         IScimContext scimContext,
         IOptions<ScimSettings> scimSettings,
+        IGetUserQuery getUserQuery,
         IDeleteUserCommand deleteUserCommand,
         ILogger<UsersController> logger)
     {
@@ -43,6 +46,7 @@ public class UsersController : Controller
         _organizationService = organizationService;
         _scimContext = scimContext;
         _scimSettings = scimSettings?.Value;
+        _getUserQuery = getUserQuery;
         _deleteUserCommand = deleteUserCommand;
         _logger = logger;
     }
@@ -50,16 +54,8 @@ public class UsersController : Controller
     [HttpGet("{id}")]
     public async Task<IActionResult> Get(Guid organizationId, Guid id)
     {
-        var orgUser = await _organizationUserRepository.GetDetailsByIdAsync(id);
-        if (orgUser == null || orgUser.OrganizationId != organizationId)
-        {
-            return new NotFoundObjectResult(new ScimErrorResponseModel
-            {
-                Status = 404,
-                Detail = "User not found."
-            });
-        }
-        return new ObjectResult(new ScimUserResponseModel(orgUser));
+        var scimUserResponseModel = await _getUserQuery.GetUserAsync(organizationId, id);
+        return Ok(scimUserResponseModel);
     }
 
     [HttpGet("")]
@@ -268,7 +264,7 @@ public class UsersController : Controller
     }
 
     [HttpDelete("{id}")]
-    public async Task<IActionResult> Delete(Guid organizationId, Guid id, [FromBody] ScimUserRequestModel model)
+    public async Task<IActionResult> Delete(Guid organizationId, Guid id)
     {
         await _deleteUserCommand.DeleteUserAsync(organizationId, id, model);
         return new NoContentResult();

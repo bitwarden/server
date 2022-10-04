@@ -1,4 +1,6 @@
-﻿namespace Bit.Core.Settings;
+﻿using Bit.Core.Settings.LoggingSettings;
+
+namespace Bit.Core.Settings;
 
 public class GlobalSettings : IGlobalSettings
 {
@@ -23,6 +25,7 @@ public class GlobalSettings : IGlobalSettings
         set => _logDirectory = value;
     }
     public virtual long? LogRollBySizeLimit { get; set; }
+    public virtual bool EnableDevLogging { get; set; } = false;
     public virtual string LicenseDirectory
     {
         get => BuildDirectory(_licenseDirectory, "/core/licenses");
@@ -58,6 +61,7 @@ public class GlobalSettings : IGlobalSettings
     public virtual DocumentDbSettings DocumentDb { get; set; } = new DocumentDbSettings();
     public virtual SentrySettings Sentry { get; set; } = new SentrySettings();
     public virtual SyslogSettings Syslog { get; set; } = new SyslogSettings();
+    public virtual ILogLevelSettings MinLogLevel { get; set; } = new LogLevelSettings();
     public virtual NotificationHubSettings NotificationHub { get; set; } = new NotificationHubSettings();
     public virtual YubicoSettings Yubico { get; set; } = new YubicoSettings();
     public virtual DuoSettings Duo { get; set; } = new DuoSettings();
@@ -71,6 +75,7 @@ public class GlobalSettings : IGlobalSettings
     public virtual ITwoFactorAuthSettings TwoFactorAuth { get; set; } = new TwoFactorAuthSettings();
     public virtual DistributedIpRateLimitingSettings DistributedIpRateLimiting { get; set; } =
         new DistributedIpRateLimitingSettings();
+    public virtual IPasswordlessAuthSettings PasswordlessAuth { get; set; } = new PasswordlessAuthSettings();
 
     public string BuildExternalUri(string explicitValue, string name)
     {
@@ -453,6 +458,7 @@ public class GlobalSettings : IGlobalSettings
             get => string.IsNullOrWhiteSpace(_apiUri) ? "https://api.bitwarden.com" : _apiUri;
             set => _apiUri = value;
         }
+
     }
 
     public class AmazonSettings
@@ -519,4 +525,8 @@ public class GlobalSettings : IGlobalSettings
         public int SlidingWindowSeconds { get; set; } = 120;
     }
 
+    public class PasswordlessAuthSettings : IPasswordlessAuthSettings
+    {
+        public bool KnownDevicesOnly { get; set; } = true;
+    }
 }
