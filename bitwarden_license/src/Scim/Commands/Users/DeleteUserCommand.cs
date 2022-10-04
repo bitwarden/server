@@ -2,7 +2,6 @@
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Scim.Commands.Users.Interfaces;
-using Bit.Scim.Models;
 
 namespace Bit.Scim.Commands.Users;
 
@@ -19,7 +18,7 @@ public class DeleteUserCommand : IDeleteUserCommand
         _organizationUserRepository = organizationUserRepository;
     }
 
-    public async Task DeleteUserAsync(Guid organizationId, Guid id, ScimUserRequestModel model)
+    public async Task DeleteUserAsync(Guid organizationId, Guid id)
     {
         var orgUser = await _organizationUserRepository.GetByIdAsync(id);
         if (orgUser == null || orgUser.OrganizationId != organizationId)
