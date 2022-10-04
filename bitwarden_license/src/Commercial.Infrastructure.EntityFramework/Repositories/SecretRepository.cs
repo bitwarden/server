@@ -50,6 +50,19 @@ public class SecretRepository : Repository<Core.Entities.Secret, Secret, Guid>, 
         }
     }
 
+    public async Task<IEnumerable<Core.Entities.Secret>> GetManyByProjectIdAsync(Guid organizationId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var secrets = await dbContext.Secret
+                .Where(c => c.OrganizationId == organizationId && c.DeletedDate == null)
+                .OrderBy(c => c.RevisionDate)
+                .ToListAsync();
+            return Mapper.Map<List<Core.Entities.Secret>>(secrets);
+        }
+    }
+
     public async Task SoftDeleteManyByIdAsync(IEnumerable<Guid> ids)
     {
         using (var scope = ServiceScopeFactory.CreateScope())

@@ -5,6 +5,7 @@ namespace Bit.Core.Repositories;
 public interface ISecretRepository
 {
     Task<IEnumerable<Secret>> GetManyByOrganizationIdAsync(Guid organizationId);
+    Task<IEnumerable<Secret>> GetManyByProjectIdAsync(Guid projectId);
     Task<IEnumerable<Secret>> GetManyByIds(IEnumerable<Guid> ids);
     Task<Secret> GetByIdAsync(Guid id);
     Task<Secret> CreateAsync(Secret secret);

@@ -33,7 +33,13 @@ public class SecretsController : Controller
         return new ListResponseModel<SecretIdentifierResponseModel>(responses);
     }
 
-
+    [HttpGet("projects/{projectId}/secrets")]
+    public async Task<ListResponseModel<SecretIdentifierResponseModel>> GetSecretsByProjectAsync([FromRoute] Guid organizationId)
+    {
+        var secrets = await _secretRepository.GetManyByProjectIdAsync(organizationId);
+        var responses = secrets.Select(secret => new SecretIdentifierResponseModel(secret));
+        return new ListResponseModel<SecretIdentifierResponseModel>(responses);
+    }
 
     [HttpGet("secrets/{id}")]
     public async Task<SecretResponseModel> GetSecretAsync([FromRoute] Guid id)
