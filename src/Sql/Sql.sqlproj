@@ -370,7 +370,6 @@
     <Build Include="dbo\Tables\OrganizationSponsorship.sql" />
     <Build Include="dbo\Tables\OrganizationUser.sql" />
     <Build Include="dbo\Tables\Policy.sql" />
-    <Build Include="dbo\Tables\Project.sql" />
     <Build Include="dbo\Tables\ProjectSecret.sql" />
     <Build Include="dbo\Tables\Provider.sql" />
     <Build Include="dbo\Tables\ProviderOrganization.sql" />
@@ -412,7 +411,6 @@
     <Build Include="dbo\Views\ProviderUserUserDetailsView.sql" />
     <Build Include="dbo\Views\ProviderUserView.sql" />
     <Build Include="dbo\Views\ProviderView.sql" />
-    <Build Include="dbo\Tables\Secret.sql" />
     <Build Include="dbo\Views\SendView.sql" />
     <Build Include="dbo\Views\SsoConfigView.sql" />
     <Build Include="dbo\Views\SsoUserView.sql" />
