@@ -32,7 +32,7 @@ jobs:
             dct-delegate-2-key"
 
       - name: Test Output
-        run: echo ${{ steps.retrieve-secrets.outputs.dct-deletgate-2-key }}
+        run: echo ${{ steps.retrieve-secrets.outputs.dct-delegate-2-key }}
 
   cloc:
     name: CLOC
