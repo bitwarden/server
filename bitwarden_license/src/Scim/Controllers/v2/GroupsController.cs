@@ -8,7 +8,6 @@ using Bit.Scim.Queries.Groups.Interfaces;
 using Bit.Scim.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Options;
 
 namespace Bit.Scim.Controllers.v2;
 
@@ -17,22 +16,19 @@ namespace Bit.Scim.Controllers.v2;
 [ExceptionHandlerFilter]
 public class GroupsController : Controller
 {
-    private readonly ScimSettings _scimSettings;
     private readonly IGroupRepository _groupRepository;
     private readonly IGroupService _groupService;
     private readonly IScimContext _scimContext;
-    private readonly ILogger<GroupsController> _logger;
     private readonly IGetGroupQuery _getGroupQuery;
+    private readonly ILogger<GroupsController> _logger;
 
     public GroupsController(
         IGroupRepository groupRepository,
         IGroupService groupService,
-        IOptions<ScimSettings> scimSettings,
         IScimContext scimContext,
         IGetGroupQuery getGroupQuery,
         ILogger<GroupsController> logger)
     {
-        _scimSettings = scimSettings?.Value;
         _groupRepository = groupRepository;
         _groupService = groupService;
         _scimContext = scimContext;
