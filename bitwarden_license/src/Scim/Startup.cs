@@ -76,8 +76,8 @@ public class Startup
         });
         services.Configure<RouteOptions>(options => options.LowercaseUrls = true);
 
-        services.AddScimUserQueries();
         services.AddScimGroupQueries();
+        services.AddScimUserQueries();
     }
 
     public void Configure(

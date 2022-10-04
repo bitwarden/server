@@ -7,13 +7,13 @@ namespace Bit.Scim.Utilities;
 
 public static class ScimServiceCollectionExtensions
 {
-    public static void AddScimUserQueries(this IServiceCollection services)
-    {
-        services.AddScoped<IGetUserQuery, GetUserQuery>();
-    }
-
     public static void AddScimGroupQueries(this IServiceCollection services)
     {
         services.AddScoped<IGetGroupQuery, GetGroupQuery>();
+    }
+
+    public static void AddScimUserQueries(this IServiceCollection services)
+    {
+        services.AddScoped<IGetUserQuery, GetUserQuery>();
     }
 }
