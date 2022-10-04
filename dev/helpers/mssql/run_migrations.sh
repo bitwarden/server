@@ -33,22 +33,30 @@ BEGIN
   CREATE DATABASE $DATABASE;
 END;
 
+GO
 IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = 'migrations_$DATABASE')
 BEGIN
   CREATE DATABASE migrations_$DATABASE;
 END;
 
 GO
-IF OBJECT_ID('[migrations_$DATABASE].[dbo].[migrations]') IS NULL
+"
+/opt/mssql-tools/bin/sqlcmd -S $SERVER -d master -U $USER -P $PASSWD -I -Q "$QUERY"
+echo "Return code: $?"
+
+# Create migrations table if it does not already exist
+QUERY="IF OBJECT_ID('[migrations_$DATABASE].[dbo].[migrations]') IS NULL
 BEGIN
     CREATE TABLE [migrations_$DATABASE].[dbo].[migrations] (
       [Id]                   INT IDENTITY(1,1) PRIMARY KEY,
       [Filename]             NVARCHAR(MAX) NOT NULL,
       [CreationDate]         DATETIME2 (7)    NULL,
     );
-END;"
-
-/opt/mssql-tools/bin/sqlcmd -S $SERVER -d master -U $USER -P $PASSWD -I -Q "$QUERY"
+END;
+GO
+"
+/opt/mssql-tools/bin/sqlcmd -S $SERVER -d migrations_$DATABASE -U $USER -P $PASSWD -I -Q "$QUERY"
+echo "Return code: $?"
 
 should_migrate () {
   local file=$(basename $1)

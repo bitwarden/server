@@ -8,7 +8,6 @@ using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterpri
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Core.Utilities;
 using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.SelfHosted;
@@ -71,7 +70,7 @@ public class SelfHostedSyncSponsorshipsCommand : BaseIdentityClientService, ISel
         }
         var syncedSponsorships = new List<OrganizationSponsorshipData>();
 
-        foreach (var orgSponsorshipsBatch in CoreHelpers.Batch(organizationSponsorshipsDict.Values, 1000))
+        foreach (var orgSponsorshipsBatch in organizationSponsorshipsDict.Values.Chunk(1000))
         {
             var response = await SendAsync<OrganizationSponsorshipSyncRequestModel, OrganizationSponsorshipSyncResponseModel>(HttpMethod.Post, "organization/sponsorship/sync", new OrganizationSponsorshipSyncRequestModel
             {

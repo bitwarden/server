@@ -403,7 +403,7 @@ public class CipherService : ICipherService
 
         var events = deletingCiphers.Select(c =>
             new Tuple<Cipher, EventType, DateTime?>(c, EventType.Cipher_Deleted, null));
-        foreach (var eventsBatch in events.Batch(100))
+        foreach (var eventsBatch in events.Chunk(100))
         {
             await _eventService.LogCipherEventsAsync(eventsBatch);
         }
@@ -574,7 +574,7 @@ public class CipherService : ICipherService
 
         var events = cipherInfos.Select(c =>
             new Tuple<Cipher, EventType, DateTime?>(c.cipher, EventType.Cipher_Shared, null));
-        foreach (var eventsBatch in events.Batch(100))
+        foreach (var eventsBatch in events.Chunk(100))
         {
             await _eventService.LogCipherEventsAsync(eventsBatch);
         }
@@ -791,7 +791,7 @@ public class CipherService : ICipherService
 
         var events = deletingCiphers.Select(c =>
             new Tuple<Cipher, EventType, DateTime?>(c, EventType.Cipher_SoftDeleted, null));
-        foreach (var eventsBatch in events.Batch(100))
+        foreach (var eventsBatch in events.Chunk(100))
         {
             await _eventService.LogCipherEventsAsync(eventsBatch);
         }
@@ -840,7 +840,7 @@ public class CipherService : ICipherService
             c.DeletedDate = null;
             return new Tuple<Cipher, EventType, DateTime?>(c, EventType.Cipher_Restored, null);
         });
-        foreach (var eventsBatch in events.Batch(100))
+        foreach (var eventsBatch in events.Chunk(100))
         {
             await _eventService.LogCipherEventsAsync(eventsBatch);
         }
