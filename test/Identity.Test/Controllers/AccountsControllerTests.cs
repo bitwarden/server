@@ -20,16 +20,19 @@ public class AccountsControllerTests : IDisposable
     private readonly ILogger<AccountsController> _logger;
     private readonly IUserRepository _userRepository;
     private readonly IUserService _userService;
+    private readonly ICaptchaValidationService _captchaValidationService;
 
     public AccountsControllerTests()
     {
         _logger = Substitute.For<ILogger<AccountsController>>();
         _userRepository = Substitute.For<IUserRepository>();
         _userService = Substitute.For<IUserService>();
+        _captchaValidationService = Substitute.For<ICaptchaValidationService>();
         _sut = new AccountsController(
             _logger,
             _userRepository,
-            _userService
+            _userService,
+            _captchaValidationService
         );
     }
 

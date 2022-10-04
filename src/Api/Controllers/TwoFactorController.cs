@@ -229,6 +229,7 @@ public class TwoFactorController : Controller
     }
 
     [HttpPost("get-webauthn-challenge")]
+    [ApiExplorerSettings(IgnoreApi = true)] // Disable Swagger due to CredentialCreateOptions not converting properly
     public async Task<CredentialCreateOptions> GetWebAuthnChallenge([FromBody] SecretVerificationRequestModel model)
     {
         var user = await CheckAsync(model, true);

@@ -1,6 +1,5 @@
 ﻿using Bit.Core.Utilities;
 using Serilog;
-using Serilog.Events;
 
 namespace Bit.Sso;
 
@@ -15,7 +14,7 @@ public class Program
             {
                 webBuilder.UseStartup<Startup>();
                 webBuilder.ConfigureLogging((hostingContext, logging) =>
-                logging.AddSerilog(hostingContext, e =>
+                logging.AddSerilog(hostingContext, (e, globalSettings) =>
                 {
                     var context = e.Properties["SourceContext"].ToString();
                     if (e.Properties.ContainsKey("RequestPath") &&
@@ -24,7 +23,7 @@ public class Program
                     {
                         return false;
                     }
-                    return e.Level >= LogEventLevel.Error;
+                    return e.Level >= globalSettings.MinLogLevel.SsoSettings.Default;
                 }));
             })
             .Build()
