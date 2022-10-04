@@ -7,7 +7,6 @@ using Bit.Scim.Models;
 using Bit.Scim.Queries.Groups.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Options;
 
 namespace Bit.Scim.Controllers.v2;
 
@@ -15,7 +14,6 @@ namespace Bit.Scim.Controllers.v2;
 [Route("v2/{organizationId}/groups")]
 public class GroupsController : Controller
 {
-    private readonly ScimSettings _scimSettings;
     private readonly IGroupRepository _groupRepository;
     private readonly IGroupService _groupService;
     private readonly IScimContext _scimContext;
@@ -25,12 +23,10 @@ public class GroupsController : Controller
     public GroupsController(
         IGroupRepository groupRepository,
         IGroupService groupService,
-        IOptions<ScimSettings> scimSettings,
         IScimContext scimContext,
         IGetGroupsListQuery getGroupsListQuery,
         ILogger<GroupsController> logger)
     {
-        _scimSettings = scimSettings?.Value;
         _groupRepository = groupRepository;
         _groupService = groupService;
         _scimContext = scimContext;
