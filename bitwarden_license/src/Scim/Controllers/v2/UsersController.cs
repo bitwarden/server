@@ -21,8 +21,8 @@ public class UsersController : Controller
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IOrganizationService _organizationService;
     private readonly IScimContext _scimContext;
-    private readonly IGetUsersListQuery _getUsersListQuery;
     private readonly IGetUserQuery _getUserQuery;
+    private readonly IGetUsersListQuery _getUsersListQuery;
     private readonly ILogger<UsersController> _logger;
 
     public UsersController(
@@ -30,16 +30,16 @@ public class UsersController : Controller
         IOrganizationUserRepository organizationUserRepository,
         IOrganizationService organizationService,
         IScimContext scimContext,
-        IGetUsersListQuery getUsersListQuery,
         IGetUserQuery getUserQuery,
+        IGetUsersListQuery getUsersListQuery,
         ILogger<UsersController> logger)
     {
         _userService = userService;
         _organizationUserRepository = organizationUserRepository;
         _organizationService = organizationService;
         _scimContext = scimContext;
-        _getUsersListQuery = getUsersListQuery;
         _getUserQuery = getUserQuery;
+        _getUsersListQuery = getUsersListQuery;
         _logger = logger;
     }
 
