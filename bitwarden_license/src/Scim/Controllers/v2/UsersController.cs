@@ -6,6 +6,7 @@ using Bit.Core.Utilities;
 using Bit.Scim.Context;
 using Bit.Scim.Models;
 using Bit.Scim.Queries.Users.Interfaces;
+using Bit.Scim.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
@@ -14,6 +15,7 @@ namespace Bit.Scim.Controllers.v2;
 
 [Authorize("Scim")]
 [Route("v2/{organizationId}/users")]
+[ExceptionHandlerFilter]
 public class UsersController : Controller
 {
     private readonly IUserService _userService;
@@ -23,6 +25,7 @@ public class UsersController : Controller
     private readonly IScimContext _scimContext;
     private readonly ScimSettings _scimSettings;
     private readonly IGetUsersListQuery _getUsersListQuery;
+    private readonly IGetUserQuery _getUserQuery;
     private readonly ILogger<UsersController> _logger;
 
     public UsersController(
@@ -33,6 +36,7 @@ public class UsersController : Controller
         IScimContext scimContext,
         IOptions<ScimSettings> scimSettings,
         IGetUsersListQuery getUsersListQuery,
+        IGetUserQuery getUserQuery,
         ILogger<UsersController> logger)
     {
         _userService = userService;
@@ -42,22 +46,15 @@ public class UsersController : Controller
         _scimContext = scimContext;
         _scimSettings = scimSettings?.Value;
         _getUsersListQuery = getUsersListQuery;
+        _getUserQuery = getUserQuery;
         _logger = logger;
     }
 
     [HttpGet("{id}")]
     public async Task<IActionResult> Get(Guid organizationId, Guid id)
     {
-        var orgUser = await _organizationUserRepository.GetDetailsByIdAsync(id);
-        if (orgUser == null || orgUser.OrganizationId != organizationId)
-        {
-            return new NotFoundObjectResult(new ScimErrorResponseModel
-            {
-                Status = 404,
-                Detail = "User not found."
-            });
-        }
-        return new ObjectResult(new ScimUserResponseModel(orgUser));
+        var scimUserResponseModel = await _getUserQuery.GetUserAsync(organizationId, id);
+        return Ok(scimUserResponseModel);
     }
 
     [HttpGet("")]
