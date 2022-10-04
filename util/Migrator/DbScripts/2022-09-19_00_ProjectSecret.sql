@@ -89,6 +89,25 @@ BEGIN
 END
 GO
 
+-- Update project and secret table to NOT on delete cascade anymore
+IF EXISTS (SELECT  name
+                FROM    sys.foreign_keys
+                WHERE   name = 'FK_Project_Organization') 
+BEGIN
+    ALTER TABLE [Project] DROP CONSTRAINT FK_Project_Organization;
+END 
+
+ALTER TABLE [Project] ADD FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id]);
+
+IF EXISTS (SELECT  name
+                FROM    sys.foreign_keys
+                WHERE   name = 'FK_Secret_OrganizationId') 
+BEGIN
+    ALTER TABLE [Secret] DROP CONSTRAINT FK_Secret_OrganizationId;
+END
+
+ALTER TABLE [Secret] ADD FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id]);
+
 IF OBJECT_ID('[dbo].[ProjectSecret]') IS NULL
 BEGIN
 CREATE TABLE [ProjectSecret] (
@@ -105,9 +124,3 @@ END
 
 GO
 
--- Update project and secret table to NOT on delete cascade anymore
-ALTER TABLE [Project] DROP CONSTRAINT FK_Project_Organization;
-ALTER TABLE [Project] ADD FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id]);
-
-ALTER TABLE [Secret] DROP CONSTRAINT FK_Secret_OrganizationId;
-ALTER TABLE [Secret] ADD FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id]);
