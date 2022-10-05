@@ -97,7 +97,7 @@ BEGIN
     ALTER TABLE [Project] DROP CONSTRAINT FK_Project_Organization;
 END 
 
-ALTER TABLE [Project] ADD FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id]);
+ALTER TABLE [Project] ADD CONSTRAINT [FK_Project_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id]);
 
 IF EXISTS (SELECT  name
                 FROM    sys.foreign_keys
@@ -106,7 +106,7 @@ BEGIN
     ALTER TABLE [Secret] DROP CONSTRAINT FK_Secret_OrganizationId;
 END
 
-ALTER TABLE [Secret] ADD FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id]);
+ALTER TABLE [Secret] ADD CONSTRAINT [FK_Secret_OrganizationId] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id]);
 
 IF OBJECT_ID('[dbo].[ProjectSecret]') IS NULL
 BEGIN
