@@ -30,5 +30,5 @@ public class ProjectResponseModel : ResponseModel
 
     public DateTime RevisionDate { get; set; }
 
-    public ICollection<Secret> Secrets { get; set; }
+    public IEnumerable<Guid> Secrets { get; set; }
 }
