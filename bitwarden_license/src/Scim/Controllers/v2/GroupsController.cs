@@ -1,10 +1,10 @@
 ﻿using System.Text.Json;
 using Bit.Core.Entities;
+using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Scim.Context;
 using Bit.Scim.Models;
-using Bit.Scim.Queries.Groups.Interfaces;
 using Bit.Scim.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -19,28 +19,29 @@ public class GroupsController : Controller
     private readonly IGroupRepository _groupRepository;
     private readonly IGroupService _groupService;
     private readonly IScimContext _scimContext;
-    private readonly IGetGroupQuery _getGroupQuery;
     private readonly ILogger<GroupsController> _logger;
 
     public GroupsController(
         IGroupRepository groupRepository,
         IGroupService groupService,
         IScimContext scimContext,
-        IGetGroupQuery getGroupQuery,
         ILogger<GroupsController> logger)
     {
         _groupRepository = groupRepository;
         _groupService = groupService;
         _scimContext = scimContext;
-        _getGroupQuery = getGroupQuery;
         _logger = logger;
     }
 
     [HttpGet("{id}")]
     public async Task<IActionResult> Get(Guid organizationId, Guid id)
     {
-        var scimGroupResponseModel = await _getGroupQuery.GetGroupAsync(organizationId, id);
-        return Ok(scimGroupResponseModel);
+        var group = await _groupRepository.GetByIdAsync(id);
+        if (group == null || group.OrganizationId != organizationId)
+        {
+            throw new NotFoundException("Group not found.");
+        }
+        return Ok(new ScimGroupResponseModel(group));
     }
 
     [HttpGet("")]
