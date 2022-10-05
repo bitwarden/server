@@ -1,4 +1,18 @@
-﻿CREATE PROCEDURE [dbo].[User_Update]
+--Add column
+IF COL_LENGTH('[dbo].[User]', 'AvatarColor') IS NULL
+BEGIN
+    ALTER TABLE [dbo].[User] ADD [AvatarColor] NVARCHAR	(8) NULL;
+END
+GO
+
+-- Recreate procedure User_Update
+IF OBJECT_ID('[dbo].[User_Update]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[User_Update]
+END
+GO
+
+CREATE PROCEDURE [dbo].[User_Update]
     @Id UNIQUEIDENTIFIER,
     @Name NVARCHAR(50),
     @Email NVARCHAR(256),
@@ -82,3 +96,19 @@ BEGIN
     WHERE
         [Id] = @Id
 END
+
+-- Recreate VIEW UserView
+IF OBJECT_ID('[dbo].[UserView]') IS NOT NULL
+BEGIN
+    DROP VIEW [dbo].[UserView]
+END
+GO
+
+CREATE VIEW [dbo].[UserView]
+AS
+SELECT
+    *
+FROM
+    [dbo].[User]
+GO
+
