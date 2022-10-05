@@ -24,14 +24,14 @@ public class CipherRepositoryTests
     }
 
     [CiSkippedTheory, EfUserCipherCustomize, BitAutoData]
-    public void UserCipher_CreateAsync_Works_DataMatches(Cipher cipher, User user, Organization org,
+    public Task UserCipher_CreateAsync_Works_DataMatches(Cipher cipher, User user, Organization org,
         CipherCompare equalityComparer, List<EfRepo.CipherRepository> suts, List<EfRepo.UserRepository> efUserRepos,
         List<EfRepo.OrganizationRepository> efOrgRepos, SqlRepo.CipherRepository sqlCipherRepo,
         SqlRepo.UserRepository sqlUserRepo, SqlRepo.OrganizationRepository sqlOrgRepo) => new Task(CreateAsync_Works_DataMatches(
             cipher, user, org, equalityComparer, suts, efUserRepos, efOrgRepos, sqlCipherRepo, sqlUserRepo, sqlOrgRepo));
 
     [CiSkippedTheory, EfOrganizationCipherCustomize, BitAutoData]
-    public void OrganizationCipher_CreateAsync_Works_DataMatches(Cipher cipher, User user, Organization org,
+    public Task OrganizationCipher_CreateAsync_Works_DataMatches(Cipher cipher, User user, Organization org,
         CipherCompare equalityComparer, List<EfRepo.CipherRepository> suts, List<EfRepo.UserRepository> efUserRepos,
         List<EfRepo.OrganizationRepository> efOrgRepos, SqlRepo.CipherRepository sqlCipherRepo,
         SqlRepo.UserRepository sqlUserRepo, SqlRepo.OrganizationRepository sqlOrgRepo) => new Task(CreateAsync_Works_DataMatches(
