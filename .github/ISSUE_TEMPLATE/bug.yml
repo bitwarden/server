@@ -71,3 +71,11 @@ body:
         - Operating system: [e.g. Windows 10, Mac OS Catalina]
         - Environment: [e.g. Docker, EKS, ECS, K8S]
         - Hardware: [e.g. Intel 6-core, 8GB RAM]
+  - type: input
+    id: issue-tracking-info
+    attributes:
+      label: Issue Tracking Info
+      description: |
+        Please don't change this value, it's intended to inform you and anyone who reads this issue.
+      value: |
+        Note that we track work outside of Github, we'll link a PR to this issue should one be opened to address this, but we don't use fields like "assigned", "milestone", or "project" to track progress. We'll do our best to respond to and provide updates through comments.
