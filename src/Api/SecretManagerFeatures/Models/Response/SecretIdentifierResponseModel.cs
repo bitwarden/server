@@ -18,6 +18,7 @@ public class SecretIdentifierResponseModel : ResponseModel
         Key = secret.Key;
         CreationDate = secret.CreationDate;
         RevisionDate = secret.RevisionDate;
+        ProjectGuids = secret.ProjectGuids;
     }
 
     public string Id { get; set; }
@@ -30,6 +31,6 @@ public class SecretIdentifierResponseModel : ResponseModel
 
     public DateTime RevisionDate { get; set; }
 
-    public IEnumerable<Guid> Projects { get; set; }
+    public IEnumerable<Guid> ProjectGuids { get; set; }
 }
 

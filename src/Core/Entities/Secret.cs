@@ -1,5 +1,6 @@
 ﻿#nullable enable
 using Bit.Core.Utilities;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Bit.Core.Entities;
 
@@ -21,7 +22,8 @@ public class Secret : ITableObject<Guid>
 
     public DateTime? DeletedDate { get; set; }
 
-    public IEnumerable<Guid>? Projects { get; set; }
+    [NotMapped]
+    public IEnumerable<Guid>? ProjectGuids { get; set; }
 
     public void SetNewId()
     {

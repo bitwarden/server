@@ -52,8 +52,8 @@ public class SecretRepository : Repository<Core.Entities.Secret, Secret, Guid>, 
 
             foreach(var secret in secrets){
                 var projectGuids = secret.Projects.Select(x => x.Id).ToList();
+                secret.ProjectGuids = projectGuids;
                 var returnSecret = Mapper.Map<Core.Entities.Secret>(secret);
-                returnSecret.Projects = projectGuids;
                 returnList.Add(returnSecret);
             }                        
             
