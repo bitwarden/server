@@ -48,16 +48,16 @@ public class SecretRepository : Repository<Core.Entities.Secret, Secret, Guid>, 
                                     .OrderBy(c => c.RevisionDate)
                                     .ToListAsync();
 
-            var returnList = new List<Core.Entities.Secret>();
+            var secretsWithProjectDetails = new List<Core.Entities.Secret>();
 
-            foreach(var secret in secrets){
-                var projectGuids = secret.Projects.Select(x => x.Id).ToList();
-                secret.ProjectGuids = projectGuids;
-                var returnSecret = Mapper.Map<Core.Entities.Secret>(secret);
-                returnList.Add(returnSecret);
-            }                        
-            
-            return returnList;
+            foreach (var secret in secrets)
+            {
+                secret.ProjectGuids = secret.Projects?.ToDictionary(x => x.Id, x => x.Name);
+                var secretWithProjectDetails = Mapper.Map<Core.Entities.Secret>(secret);
+                secretsWithProjectDetails.Add(secretWithProjectDetails);
+            }
+
+            return secretsWithProjectDetails;
         }
     }
 

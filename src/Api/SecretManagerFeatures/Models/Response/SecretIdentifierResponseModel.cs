@@ -31,6 +31,6 @@ public class SecretIdentifierResponseModel : ResponseModel
 
     public DateTime RevisionDate { get; set; }
 
-    public IEnumerable<Guid> ProjectGuids { get; set; }
+    public Dictionary<System.Guid, string> ProjectGuids { get; set; }
 }
 
