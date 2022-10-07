@@ -1,4 +1,5 @@
 ﻿using Bit.Api.Models.Response;
+using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -12,17 +13,20 @@ namespace Bit.Api.Controllers;
 [Authorize("Application")]
 public class OrganizationExportController : Controller
 {
+    private readonly ICurrentContext _currentContext;
     private readonly IUserService _userService;
     private readonly ICollectionService _collectionService;
     private readonly ICipherService _cipherService;
     private readonly GlobalSettings _globalSettings;
 
     public OrganizationExportController(
+        ICurrentContext currentContext,
         ICipherService cipherService,
         ICollectionService collectionService,
         IUserService userService,
         GlobalSettings globalSettings)
     {
+        _currentContext = currentContext;
         _cipherService = cipherService;
         _collectionService = collectionService;
         _userService = userService;
@@ -37,16 +41,16 @@ public class OrganizationExportController : Controller
         IEnumerable<Collection> orgCollections = await _collectionService.GetOrganizationCollections(organizationId);
         (IEnumerable<CipherOrganizationDetails> orgCiphers, Dictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphersGroupDict) = await _cipherService.GetOrganizationCiphers(userId, organizationId);
 
-        var clientVersion = this.HttpContext.Request.Headers["Bitwarden-Client-Version"];
-        if (clientVersion == "2022.9.0")
+        // Backward compatibility
+        if (_currentContext.ClientVersion == "2022.9.0")
         {
-            var listResponseOrganizationExportResponseModel = new ListResponseOrganizationExportResponseModel
+            var organizationExportListResponseModel = new OrganizationExportListResponseModel
             {
                 Collections = GetOrganizationCollectionsResponse(orgCollections),
                 Ciphers = GetOrganizationCiphersResponse(orgCiphers, collectionCiphersGroupDict)
             };
 
-            return Ok(listResponseOrganizationExportResponseModel);
+            return Ok(organizationExportListResponseModel);
         }
 
         var organizationExportResponseModel = new OrganizationExportResponseModel

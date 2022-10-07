@@ -14,7 +14,7 @@ public class OrganizationExportResponseModel : ResponseModel
 }
 
 [Obsolete("This version is for backwards compatibility for client version 2022.9.0")]
-public class ListResponseOrganizationExportResponseModel
+public class OrganizationExportListResponseModel
 {
     public ListResponseModel<CollectionResponseModel> Collections { get; set; }
 
