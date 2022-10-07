@@ -1,0 +1,71 @@
+---
+name: Build Packer
+
+on:
+  push:
+    paths:
+      # Maintain for testing
+      - '.github/workflows/build-packer.yml'
+
+jobs:
+  build:
+    runs-on: "ubuntu-22.04"
+    steps:
+
+      - name: Checkout DevOps repo
+        uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b
+        with:
+          repository: bitwarden/devops
+          path: devops
+
+      - name: Login to Azure - QA Subscription
+        uses: Azure/login@24848bc889cfc0a8313c2b3e378ac0d625b9bc16
+        with:
+          creds: ${{ secrets.AZURE_QA_KV_CREDENTIALS }}
+
+      - name: Retrieve secrets
+        id: retrieve-secrets
+        env:
+          KEYVAULT: "bitwarden-qa-kv"
+          SECRETS: |
+            packer-sp-id
+            packer-sp-secret
+            packer-ssl-crt-com-bitwarden
+            packer-ssl-key-com-bitwarden
+        run: |
+          for i in ${SECRETS//,/ }
+          do
+            VALUE=$(az keyvault secret show --vault-name $KEYVAULT --name $i --query value --output tsv)
+            echo "::add-mask::$VALUE"
+            echo "::set-output name=$i::$VALUE"
+          done
+
+      - name: Download Notifications Artifact
+        uses: bitwarden/gh-actions/download-artifacts@850faad0cf6c02a8c0dc46eddde2363fbd6c373a
+        with:
+          workflow: build.yml
+          workflow_conclusion: success
+          branch: master
+          artifacts: "Notifications.zip"
+          path: "devops/packer/notifications/artifact/Notifications.zip"
+
+      - name: Setup SSL
+        working-directory: devops/packer/notifications
+        run: |
+          mkdir ssl
+          echo "${{ steps.retrieve-secrets.outputs.packer-ssl-crt-com-bitwarden }}" > ssl/bitwarden.com.crt
+          echo "${{ steps.retrieve-secrets.outputs.packer-ssl-key-com-bitwarden }}" > ssl/bitwarden.com.key
+
+      - name: Build Notifications Packer Image
+        working-directory: devops/packer/notifications
+        run: |
+          packer build \
+            -var "client_id=${{ steps.retrieve-secrets.outputs.packer-sp-id }}" \
+            -var "client_secret=${{ steps.retrieve-secrets.outputs.packer-sp-secret }}" \
+            -var "commit_hash=${{ github.sha }}" \
+            notifications.pkr.hcl
+
+      - name: Clean up
+        if: always()
+        working-directory: devops/packer/notifications
+        run: rm -rf ssl
