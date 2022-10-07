@@ -16,6 +16,14 @@ jobs:
       - name: Checkout Branch
         uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579
 
+      - name: Import GPG key
+        uses: crazy-max/ghaction-import-gpg@v5
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.PASSPHRASE }}
+          git_user_signingkey: true
+          git_commit_gpgsign: true
+
       - name: Create Version Branch
         run: |
           git switch -c version_bump_${{ github.event.inputs.version_number }}
@@ -28,8 +36,8 @@ jobs:
 
       - name: Setup git
         run: |
-          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
+          git config --local user.email "106330231+bitwarden-devops-bot@users.noreply.github.com"
+          git config --local user.name "bitwarden-devops-bot"
 
       - name: Check if version changed
         id: version-changed
