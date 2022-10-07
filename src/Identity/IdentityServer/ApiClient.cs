@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Settings;
 using IdentityServer4.Models;
+using static Bit.Core.Utilities.IdentityConstants;
 
 namespace Bit.Identity.IdentityServer;
 
@@ -70,7 +71,7 @@ public class ApiClient : Client
 
         if (scopes == null)
         {
-            scopes = new string[] { "api" };
+            scopes = new string[] { Scopes.Api };
         }
         AllowedScopes = scopes;
     }

@@ -5,6 +5,7 @@ using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
 using IdentityModel;
+using static Bit.Core.Utilities.IdentityConstants;
 
 namespace Bit.Events;
 
@@ -41,7 +42,7 @@ public class Startup
             {
                 policy.RequireAuthenticatedUser();
                 policy.RequireClaim(JwtClaimTypes.AuthenticationMethod, "Application", "external");
-                policy.RequireClaim(JwtClaimTypes.Scope, "api");
+                policy.RequireClaim(JwtClaimTypes.Scope, Scopes.Api);
             });
         });
 

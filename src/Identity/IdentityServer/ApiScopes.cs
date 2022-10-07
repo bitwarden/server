@@ -1,27 +1,20 @@
 ﻿using IdentityServer4.Models;
+using static Bit.Core.Utilities.IdentityConstants;
 
 namespace Bit.Identity.IdentityServer;
 
 public static class ApiScopes
 {
-    public const string Api = "api";
-    public const string ApiPush = "api.push";
-    public const string ApiLicensing = "api.licensing";
-    public const string ApiOrganization = "api.organization";
-    public const string ApiInstallation = "api.installation";
-    public const string Internal = "internal";
-
-
     public static IEnumerable<ApiScope> GetApiScopes()
     {
         return new List<ApiScope>
         {
-            new ApiScope(Api, "API Access"),
-            new ApiScope(ApiPush, "API Push Access"),
-            new ApiScope(ApiLicensing, "API Licensing Access"),
-            new ApiScope(ApiOrganization, "API Organization Access"),
-            new ApiScope(ApiInstallation, "API Installation Access"),
-            new ApiScope(Internal, "Internal Access"),
+            new ApiScope(Scopes.Api, "API Access"),
+            new ApiScope(Scopes.ApiPush, "API Push Access"),
+            new ApiScope(Scopes.ApiLicensing, "API Licensing Access"),
+            new ApiScope(Scopes.ApiOrganization, "API Organization Access"),
+            new ApiScope(Scopes.ApiInstallation, "API Installation Access"),
+            new ApiScope(Scopes.Internal, "Internal Access"),
         };
     }
 }

@@ -9,6 +9,7 @@ using Bit.Core.Utilities;
 using IdentityModel;
 using IdentityServer4.Models;
 using IdentityServer4.Stores;
+using static Bit.Core.Utilities.IdentityConstants;
 
 namespace Bit.Identity.IdentityServer;
 
@@ -67,7 +68,7 @@ public class ClientStore : IClientStore
                         ClientId = $"installation.{installation.Id}",
                         RequireClientSecret = true,
                         ClientSecrets = { new Secret(installation.Key.Sha256()) },
-                        AllowedScopes = new string[] { ApiScopes.ApiPush, ApiScopes.ApiLicensing, ApiScopes.ApiInstallation },
+                        AllowedScopes = new string[] { Scopes.ApiPush, Scopes.ApiLicensing, Scopes.ApiInstallation },
                         AllowedGrantTypes = GrantTypes.ClientCredentials,
                         AccessTokenLifetime = 3600 * 24,
                         Enabled = installation.Enabled,
@@ -93,7 +94,7 @@ public class ClientStore : IClientStore
                         ClientId = $"internal.{id}",
                         RequireClientSecret = true,
                         ClientSecrets = { new Secret(_globalSettings.InternalIdentityKey.Sha256()) },
-                        AllowedScopes = new string[] { ApiScopes.Internal },
+                        AllowedScopes = new string[] { Scopes.Internal },
                         AllowedGrantTypes = GrantTypes.ClientCredentials,
                         AccessTokenLifetime = 3600 * 24,
                         Enabled = true,
@@ -121,7 +122,7 @@ public class ClientStore : IClientStore
                         ClientId = $"organization.{org.Id}",
                         RequireClientSecret = true,
                         ClientSecrets = { new Secret(orgApiKey.ApiKey.Sha256()) },
-                        AllowedScopes = new string[] { ApiScopes.ApiOrganization },
+                        AllowedScopes = new string[] { Scopes.ApiOrganization },
                         AllowedGrantTypes = GrantTypes.ClientCredentials,
                         AccessTokenLifetime = 3600 * 1,
                         Enabled = org.Enabled && org.UseApi,
@@ -164,7 +165,7 @@ public class ClientStore : IClientStore
                         ClientId = clientId,
                         RequireClientSecret = true,
                         ClientSecrets = { new Secret(user.ApiKey.Sha256()) },
-                        AllowedScopes = new string[] { ApiScopes.Api },
+                        AllowedScopes = new string[] { Scopes.Api },
                         AllowedGrantTypes = GrantTypes.ClientCredentials,
                         AccessTokenLifetime = 3600 * 1,
                         ClientClaimsPrefix = null,

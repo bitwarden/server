@@ -9,6 +9,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Microsoft.Extensions.Logging;
+using static Bit.Core.Utilities.IdentityConstants;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.SelfHosted;
 
@@ -30,7 +31,7 @@ public class SelfHostedSyncSponsorshipsCommand : BaseIdentityClientService, ISel
         httpFactory,
         globalSettings.Installation.ApiUri,
         globalSettings.Installation.IdentityUri,
-        "api.installation",
+        Scopes.ApiInstallation,
         $"installation.{globalSettings.Installation.Id}",
         globalSettings.Installation.Key,
         logger)

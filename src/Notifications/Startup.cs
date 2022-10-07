@@ -5,6 +5,7 @@ using Bit.SharedWeb.Utilities;
 using IdentityModel;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.IdentityModel.Logging;
+using static Bit.Core.Utilities.IdentityConstants;
 
 namespace Bit.Notifications;
 
@@ -35,12 +36,12 @@ public class Startup
             {
                 policy.RequireAuthenticatedUser();
                 policy.RequireClaim(JwtClaimTypes.AuthenticationMethod, "Application", "external");
-                policy.RequireClaim(JwtClaimTypes.Scope, "api");
+                policy.RequireClaim(JwtClaimTypes.Scope, Scopes.Api);
             });
             config.AddPolicy("Internal", policy =>
             {
                 policy.RequireAuthenticatedUser();
-                policy.RequireClaim(JwtClaimTypes.Scope, "internal");
+                policy.RequireClaim(JwtClaimTypes.Scope, Scopes.Internal);
             });
         });
 

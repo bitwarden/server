@@ -38,6 +38,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Serilog.Context;
 using StackExchange.Redis;
+using static Bit.Core.Utilities.IdentityConstants;
 using NoopRepos = Bit.Core.Repositories.Noop;
 using Role = Bit.Core.Entities.Role;
 using TableStorageRepos = Bit.Core.Repositories.TableStorage;
@@ -639,7 +640,7 @@ public static class ServiceCollectionExtensions
                 {
                     options.ClientId = $"installation.{globalSettings.Installation.Id}";
                     options.ClientSecret = globalSettings.Installation.Key;
-                    options.Scope = ApiScopes.ApiPush;
+                    options.Scope = Scopes.ApiPush;
                 }
             );
 

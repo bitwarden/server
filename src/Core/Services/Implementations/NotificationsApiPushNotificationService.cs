@@ -5,6 +5,7 @@ using Bit.Core.Models;
 using Bit.Core.Settings;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using static Bit.Core.Utilities.IdentityConstants;
 
 namespace Bit.Core.Services;
 
@@ -22,7 +23,7 @@ public class NotificationsApiPushNotificationService : BaseIdentityClientService
             httpFactory,
             globalSettings.BaseServiceUri.InternalNotifications,
             globalSettings.BaseServiceUri.InternalIdentity,
-            "internal",
+            Scopes.Internal,
             $"internal.{globalSettings.ProjectName}",
             globalSettings.InternalIdentityKey,
             logger)

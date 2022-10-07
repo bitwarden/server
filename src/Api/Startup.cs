@@ -12,7 +12,7 @@ using Microsoft.IdentityModel.Logging;
 using Microsoft.OpenApi.Models;
 using Bit.SharedWeb.Utilities;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Bit.Core.IdentityServer;
+using static Bit.Core.Utilities.IdentityConstants;
 
 #if !OSS
 using Bit.Commercial.Core.Utilities;
@@ -85,34 +85,34 @@ public class Startup
             {
                 policy.RequireAuthenticatedUser();
                 policy.RequireClaim(JwtClaimTypes.AuthenticationMethod, "Application", "external");
-                policy.RequireClaim(JwtClaimTypes.Scope, ApiScopes.Api);
+                policy.RequireClaim(JwtClaimTypes.Scope, Scopes.Api);
             });
             config.AddPolicy("Web", policy =>
             {
                 policy.RequireAuthenticatedUser();
                 policy.RequireClaim(JwtClaimTypes.AuthenticationMethod, "Application", "external");
-                policy.RequireClaim(JwtClaimTypes.Scope, ApiScopes.Api);
+                policy.RequireClaim(JwtClaimTypes.Scope, Scopes.Api);
                 policy.RequireClaim(JwtClaimTypes.ClientId, "web");
             });
             config.AddPolicy("Push", policy =>
             {
                 policy.RequireAuthenticatedUser();
-                policy.RequireClaim(JwtClaimTypes.Scope, ApiScopes.ApiPush);
+                policy.RequireClaim(JwtClaimTypes.Scope, Scopes.ApiPush);
             });
             config.AddPolicy("Licensing", policy =>
             {
                 policy.RequireAuthenticatedUser();
-                policy.RequireClaim(JwtClaimTypes.Scope, ApiScopes.ApiLicensing);
+                policy.RequireClaim(JwtClaimTypes.Scope, Scopes.ApiLicensing);
             });
             config.AddPolicy("Organization", policy =>
             {
                 policy.RequireAuthenticatedUser();
-                policy.RequireClaim(JwtClaimTypes.Scope, ApiScopes.ApiOrganization);
+                policy.RequireClaim(JwtClaimTypes.Scope, Scopes.ApiOrganization);
             });
             config.AddPolicy("Installation", policy =>
             {
                 policy.RequireAuthenticatedUser();
-                policy.RequireClaim(JwtClaimTypes.Scope, ApiScopes.ApiInstallation);
+                policy.RequireClaim(JwtClaimTypes.Scope, Scopes.ApiInstallation);
             });
         });
 
