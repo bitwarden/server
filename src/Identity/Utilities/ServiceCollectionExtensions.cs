@@ -1,5 +1,5 @@
-﻿using Bit.Core.IdentityServer;
-using Bit.Core.Settings;
+﻿using Bit.Core.Settings;
+using Bit.Identity.IdentityServer;
 using Bit.SharedWeb.Utilities;
 using IdentityServer4.ResponseHandling;
 using IdentityServer4.Services;
