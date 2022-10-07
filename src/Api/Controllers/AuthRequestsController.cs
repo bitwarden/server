@@ -46,7 +46,7 @@ public class AuthRequestsController : Controller
     {
         var userId = _userService.GetProperUserId(User).Value;
         var authRequests = await _authRequestRepository.GetManyByUserIdAsync(userId);
-        var responses = authRequests.Select(a => new AuthRequestResponseModel(a, _globalSettings.SelfHosted)).ToList();
+        var responses = authRequests.Select(a => new AuthRequestResponseModel(a, _globalSettings.BaseServiceUri.Vault)).ToList();
         return new ListResponseModel<AuthRequestResponseModel>(responses);
     }
 
@@ -60,7 +60,7 @@ public class AuthRequestsController : Controller
             throw new NotFoundException();
         }
 
-        return new AuthRequestResponseModel(authRequest, _globalSettings.SelfHosted);
+        return new AuthRequestResponseModel(authRequest, _globalSettings.BaseServiceUri.Vault);
     }
 
     [HttpGet("{id}/response")]
@@ -73,7 +73,7 @@ public class AuthRequestsController : Controller
             throw new NotFoundException();
         }
 
-        return new AuthRequestResponseModel(authRequest, _globalSettings.SelfHosted);
+        return new AuthRequestResponseModel(authRequest, _globalSettings.BaseServiceUri.Vault);
     }
 
     [HttpPost("")]
@@ -89,12 +89,12 @@ public class AuthRequestsController : Controller
         {
             throw new BadRequestException("Device type not provided.");
         }
-        if (!_globalSettings.PasswordlessAuth.KnownDevicesOnly)
+        if (_globalSettings.PasswordlessAuth.KnownDevicesOnly)
         {
-            var d = await _deviceRepository.GetByIdentifierAsync(_currentContext.DeviceIdentifier);
-            if (d == null || d.UserId != user.Id)
+            var devices = await _deviceRepository.GetManyByUserIdAsync(user.Id);
+            if (devices == null || !devices.Any(d => d.Identifier == model.DeviceIdentifier))
             {
-                throw new NotFoundException();
+                throw new BadRequestException("Login with device is only available on devices that have been previously logged in.");
             }
         }
 
@@ -111,7 +111,8 @@ public class AuthRequestsController : Controller
         };
         authRequest = await _authRequestRepository.CreateAsync(authRequest);
         await _pushNotificationService.PushAuthRequestAsync(authRequest);
-        return new AuthRequestResponseModel(authRequest, _globalSettings.SelfHosted);
+        var r = new AuthRequestResponseModel(authRequest, _globalSettings.BaseServiceUri.Vault);
+        return r;
     }
 
     [HttpPut("{id}")]
@@ -137,9 +138,9 @@ public class AuthRequestsController : Controller
             authRequest.ResponseDeviceId = device.Id;
             authRequest.ResponseDate = DateTime.UtcNow;
             await _authRequestRepository.ReplaceAsync(authRequest);
+            await _pushNotificationService.PushAuthRequestResponseAsync(authRequest);
         }
 
-        await _pushNotificationService.PushAuthRequestResponseAsync(authRequest);
-        return new AuthRequestResponseModel(authRequest, _globalSettings.SelfHosted);
+        return new AuthRequestResponseModel(authRequest, _globalSettings.BaseServiceUri.Vault);
     }
 }
