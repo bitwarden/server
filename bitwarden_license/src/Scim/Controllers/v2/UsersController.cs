@@ -1,9 +1,9 @@
-﻿using Bit.Core.Enums;
+﻿using Bit.Core.Commands.Interfaces;
+using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
-using Bit.Scim.Commands.Users.Interfaces;
 using Bit.Scim.Context;
 using Bit.Scim.Models;
 using Bit.Scim.Queries.Users.Interfaces;
@@ -23,7 +23,7 @@ public class UsersController : Controller
     private readonly IOrganizationService _organizationService;
     private readonly IScimContext _scimContext;
     private readonly IGetUserQuery _getUserQuery;
-    private readonly IDeleteUserCommand _deleteUserCommand;
+    private readonly IDeleteOrganizationUserCommand _deleteOrganizationUserCommand;
     private readonly ILogger<UsersController> _logger;
 
     public UsersController(
@@ -32,7 +32,7 @@ public class UsersController : Controller
         IOrganizationService organizationService,
         IScimContext scimContext,
         IGetUserQuery getUserQuery,
-        IDeleteUserCommand deleteUserCommand,
+        IDeleteOrganizationUserCommand deleteOrganizationUserCommand,
         ILogger<UsersController> logger)
     {
         _userService = userService;
@@ -40,7 +40,7 @@ public class UsersController : Controller
         _organizationService = organizationService;
         _scimContext = scimContext;
         _getUserQuery = getUserQuery;
-        _deleteUserCommand = deleteUserCommand;
+        _deleteOrganizationUserCommand = deleteOrganizationUserCommand;
         _logger = logger;
     }
 
@@ -259,7 +259,7 @@ public class UsersController : Controller
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(Guid organizationId, Guid id)
     {
-        await _deleteUserCommand.DeleteUserAsync(organizationId, id);
+        await _deleteOrganizationUserCommand.DeleteUserAsync(organizationId, id, null);
         return new NoContentResult();
     }
 
