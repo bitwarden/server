@@ -30,19 +30,46 @@ public class OrganizationExportController : Controller
     }
 
     [HttpGet("export")]
-    public async Task<OrganizationExportResponseModel> Export(Guid organizationId)
+    public async Task<IActionResult> Export(Guid organizationId)
     {
         var userId = _userService.GetProperUserId(User).Value;
 
         IEnumerable<Collection> orgCollections = await _collectionService.GetOrganizationCollections(organizationId);
         (IEnumerable<CipherOrganizationDetails> orgCiphers, Dictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphersGroupDict) = await _cipherService.GetOrganizationCiphers(userId, organizationId);
 
-        var result = new OrganizationExportResponseModel
+        var clientVersion = this.HttpContext.Request.Headers["Bitwarden-Client-Version"];
+        if (clientVersion == "2022.9.0")
+        {
+            var listResponseOrganizationExportResponseModel = new ListResponseOrganizationExportResponseModel
+            {
+                Collections = GetOrganizationCollectionsResponse(orgCollections),
+                Ciphers = GetOrganizationCiphersResponse(orgCiphers, collectionCiphersGroupDict)
+            };
+
+            return Ok(listResponseOrganizationExportResponseModel);
+        }
+
+        var organizationExportResponseModel = new OrganizationExportResponseModel
         {
             Collections = orgCollections.Select(c => new CollectionResponseModel(c)),
             Ciphers = orgCiphers.Select(c => new CipherMiniDetailsResponseModel(c, _globalSettings, collectionCiphersGroupDict, c.OrganizationUseTotp))
         };
 
-        return result;
+        return Ok(organizationExportResponseModel);
+    }
+
+    private ListResponseModel<CollectionResponseModel> GetOrganizationCollectionsResponse(IEnumerable<Collection> orgCollections)
+    {
+        var collections = orgCollections.Select(c => new CollectionResponseModel(c));
+        return new ListResponseModel<CollectionResponseModel>(collections);
+    }
+
+    private ListResponseModel<CipherMiniDetailsResponseModel> GetOrganizationCiphersResponse(IEnumerable<CipherOrganizationDetails> orgCiphers,
+        Dictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphersGroupDict)
+    {
+        var responses = orgCiphers.Select(c => new CipherMiniDetailsResponseModel(c, _globalSettings,
+            collectionCiphersGroupDict, c.OrganizationUseTotp));
+
+        return new ListResponseModel<CipherMiniDetailsResponseModel>(responses);
     }
 }

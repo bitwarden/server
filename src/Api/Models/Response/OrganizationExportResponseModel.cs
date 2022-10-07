@@ -12,3 +12,11 @@ public class OrganizationExportResponseModel : ResponseModel
 
     public IEnumerable<CipherMiniDetailsResponseModel> Ciphers { get; set; }
 }
+
+[Obsolete("This version is for backwards compatibility for client version 2022.9.0")]
+public class ListResponseOrganizationExportResponseModel
+{
+    public ListResponseModel<CollectionResponseModel> Collections { get; set; }
+
+    public ListResponseModel<CipherMiniDetailsResponseModel> Ciphers { get; set; }
+}
