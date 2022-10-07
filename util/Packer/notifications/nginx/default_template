@@ -1,0 +1,35 @@
+server {
+    listen 80;
+    server_name ${domain};
+    return 301 'https://${domain}$request_uri';
+}
+
+server {
+    listen 443 ssl http2;
+    server_name ${domain};
+
+    ssl_certificate /etc/ssl/bitwarden.com/bitwarden.com.crt;
+    ssl_certificate_key /etc/ssl/bitwarden.com/bitwarden.com.key;
+    ssl_session_timeout 30m;
+    ssl_session_cache shared:SSL:20m;
+    ssl_session_tickets off;
+
+    ssl_protocols TLSv1.2;
+    ssl_ciphers "ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256";
+    ssl_prefer_server_ciphers on;
+
+    location / {
+        proxy_pass http://localhost:5000;
+    }
+
+    location /hub {
+        proxy_pass http://localhost:5000/hub;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $http_connection;
+    }
+}
+
+server {
+    listen 80 default_server;
+    return 444;
+}

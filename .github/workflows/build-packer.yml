@@ -4,6 +4,7 @@ name: Build Packer
 on:
   push:
     paths:
+      - 'util/Packer/**'
       # Maintain for testing
       - '.github/workflows/build-packer.yml'
 
@@ -12,11 +13,8 @@ jobs:
     runs-on: "ubuntu-22.04"
     steps:
 
-      - name: Checkout DevOps repo
+      - name: Checkout repo
         uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b
-        with:
-          repository: bitwarden/devops
-          path: devops
 
       - name: Login to Azure - QA Subscription
         uses: Azure/login@24848bc889cfc0a8313c2b3e378ac0d625b9bc16
@@ -25,41 +23,38 @@ jobs:
 
       - name: Retrieve secrets
         id: retrieve-secrets
-        env:
-          KEYVAULT: "bitwarden-qa-kv"
-          SECRETS: |
-            packer-sp-id
-            packer-sp-secret
-            packer-ssl-crt-com-bitwarden
-            packer-ssl-key-com-bitwarden
-        run: |
-          for i in ${SECRETS//,/ }
-          do
-            VALUE=$(az keyvault secret show --vault-name $KEYVAULT --name $i --query value --output tsv)
-            echo "::add-mask::$VALUE"
-            echo "::set-output name=$i::$VALUE"
-          done
+        uses: bitwarden/gh-actions/get-keyvault-secrets@c3b3285993151c5af47cefcb3b9134c28ab479af
+        with:
+          keyvault: "bitwarden-qa-kv"
+          secrets: "packer-sp-tenant-id,
+            packer-sp-subscription-id,
+            packer-sp-id,
+            packer-sp-secret,
+            packer-ssl-crt-com-bitwarden,
+            packer-ssl-key-com-bitwarden"
 
-      - name: Download Notifications Artifact
+      - name: Download Notifications artifact
         uses: bitwarden/gh-actions/download-artifacts@850faad0cf6c02a8c0dc46eddde2363fbd6c373a
         with:
           workflow: build.yml
           workflow_conclusion: success
           branch: master
           artifacts: "Notifications.zip"
-          path: "devops/packer/notifications/artifact/Notifications.zip"
+          path: "util/Packer/notifications/artifact"
 
       - name: Setup SSL
-        working-directory: devops/packer/notifications
+        working-directory: util/Packer/notifications
         run: |
           mkdir ssl
           echo "${{ steps.retrieve-secrets.outputs.packer-ssl-crt-com-bitwarden }}" > ssl/bitwarden.com.crt
           echo "${{ steps.retrieve-secrets.outputs.packer-ssl-key-com-bitwarden }}" > ssl/bitwarden.com.key
 
-      - name: Build Notifications Packer Image
-        working-directory: devops/packer/notifications
+      - name: Build Notifications Packer image
+        working-directory: util/Packer/notifications
         run: |
           packer build \
+            -var "tenant_id=${{ steps.retrieve-secrets.outputs.packer-sp-tentant-id }}" \
+            -var "subscription_id=${{ steps.retrieve-secrets.outputs.packer-sp-subscription-id }}" \
             -var "client_id=${{ steps.retrieve-secrets.outputs.packer-sp-id }}" \
             -var "client_secret=${{ steps.retrieve-secrets.outputs.packer-sp-secret }}" \
             -var "commit_hash=${{ github.sha }}" \
@@ -67,5 +62,5 @@ jobs:
 
       - name: Clean up
         if: always()
-        working-directory: devops/packer/notifications
+        working-directory: util/Packer/notifications
         run: rm -rf ssl
