@@ -110,12 +110,7 @@ public class Startup
         {
             endpoints.MapHub<NotificationsHub>("/hub", options =>
             {
-                options.ApplicationMaxBufferSize = 2048;
-                options.TransportMaxBufferSize = 4096;
-            });
-            endpoints.MapHub<AnonymousNotificationsHub>("/anonymous-hub", options =>
-            {
-                options.ApplicationMaxBufferSize = 2048;
+                options.ApplicationMaxBufferSize = 2048; // client => server messages are not even used
                 options.TransportMaxBufferSize = 4096;
             });
             endpoints.MapDefaultControllerRoute();

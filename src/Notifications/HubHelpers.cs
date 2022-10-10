@@ -7,12 +7,8 @@ namespace Bit.Notifications;
 
 public static class HubHelpers
 {
-    public static async Task SendNotificationToHubAsync(
-        string notificationJson,
-        IHubContext<NotificationsHub> hubContext,
-        IHubContext<AnonymousNotificationsHub> anonymousHubContext,
-        CancellationToken cancellationToken = default(CancellationToken)
-    )
+    public static async Task SendNotificationToHubAsync(string notificationJson,
+        IHubContext<NotificationsHub> hubContext, CancellationToken cancellationToken = default(CancellationToken))
     {
         var notification = JsonSerializer.Deserialize<PushNotificationData<object>>(notificationJson);
         switch (notification.Type)
@@ -64,20 +60,6 @@ public static class HubHelpers
                             notificationJson);
                 await hubContext.Clients.User(sendNotification.Payload.UserId.ToString())
                     .SendAsync("ReceiveMessage", sendNotification, cancellationToken);
-                break;
-            case PushType.AuthRequestResponse:
-                var authRequestResponseNotification =
-                    JsonSerializer.Deserialize<PushNotificationData<AuthRequestPushNotification>>(
-                            notificationJson);
-                await anonymousHubContext.Clients.Group(authRequestResponseNotification.Payload.Id.ToString())
-                    .SendAsync("AuthRequestResponseRecieved", authRequestResponseNotification, cancellationToken);
-                break;
-            case PushType.AuthRequest:
-                var authRequestNotification =
-                    JsonSerializer.Deserialize<PushNotificationData<AuthRequestPushNotification>>(
-                            notificationJson);
-                await hubContext.Clients.User(authRequestNotification.Payload.UserId.ToString())
-                    .SendAsync("ReceiveMessage", authRequestNotification, cancellationToken);
                 break;
             default:
                 break;

@@ -44,6 +44,7 @@ public class OrganizationService : IOrganizationService
     private readonly ICurrentContext _currentContext;
     private readonly ILogger<OrganizationService> _logger;
 
+
     public OrganizationService(
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
@@ -198,10 +199,10 @@ public class OrganizationService : IOrganizationService
             (newPlan.HasAdditionalSeatsOption ? upgrade.AdditionalSeats : 0));
         if (!organization.Seats.HasValue || organization.Seats.Value > newPlanSeats)
         {
-            var occupiedSeats = await GetOccupiedSeatCount(organization);
-            if (occupiedSeats > newPlanSeats)
+            var userCount = await _organizationUserRepository.GetCountByOrganizationIdAsync(organization.Id);
+            if (userCount > newPlanSeats)
             {
-                throw new BadRequestException($"Your organization currently has {occupiedSeats} seats filled. " +
+                throw new BadRequestException($"Your organization currently has {userCount} seats filled. " +
                     $"Your new plan only has ({newPlanSeats}) seats. Remove some users.");
             }
         }
@@ -493,10 +494,10 @@ public class OrganizationService : IOrganizationService
 
         if (!organization.Seats.HasValue || organization.Seats.Value > newSeatTotal)
         {
-            var occupiedSeats = await GetOccupiedSeatCount(organization);
-            if (occupiedSeats > newSeatTotal)
+            var userCount = await _organizationUserRepository.GetCountByOrganizationIdAsync(organization.Id);
+            if (userCount > newSeatTotal)
             {
-                throw new BadRequestException($"Your organization currently has {occupiedSeats} seats filled. " +
+                throw new BadRequestException($"Your organization currently has {userCount} seats filled. " +
                     $"Your new plan only has ({newSeatTotal}) seats. Remove some users.");
             }
         }
@@ -860,10 +861,10 @@ public class OrganizationService : IOrganizationService
         if (license.Seats.HasValue &&
             (!organization.Seats.HasValue || organization.Seats.Value > license.Seats.Value))
         {
-            var occupiedSeats = await GetOccupiedSeatCount(organization);
-            if (occupiedSeats > license.Seats.Value)
+            var userCount = await _organizationUserRepository.GetCountByOrganizationIdAsync(organization.Id);
+            if (userCount > license.Seats.Value)
             {
-                throw new BadRequestException($"Your organization currently has {occupiedSeats} seats filled. " +
+                throw new BadRequestException($"Your organization currently has {userCount} seats filled. " +
                     $"Your new license only has ({license.Seats.Value}) seats. Remove some users.");
             }
         }
@@ -1137,8 +1138,8 @@ public class OrganizationService : IOrganizationService
             organizationId, invites.SelectMany(i => i.invite.Emails), false), StringComparer.InvariantCultureIgnoreCase);
         if (organization.Seats.HasValue)
         {
-            var occupiedSeats = await GetOccupiedSeatCount(organization);
-            var availableSeats = organization.Seats.Value - occupiedSeats;
+            var userCount = await _organizationUserRepository.GetCountByOrganizationIdAsync(organizationId);
+            var availableSeats = organization.Seats.Value - userCount;
             newSeatsRequired = invites.Sum(i => i.invite.Emails.Count()) - existingEmails.Count() - availableSeats;
         }
 
@@ -1558,7 +1559,7 @@ public class OrganizationService : IOrganizationService
             organization.MaxAutoscaleSeats.HasValue &&
             organization.MaxAutoscaleSeats.Value < organization.Seats.Value + seatsToAdd)
         {
-            return (false, $"Seat limit has been reached.");
+            return (false, $"Cannot invite new users. Seat limit has been reached.");
         }
 
         return (true, failureReason);
@@ -1950,8 +1951,8 @@ public class OrganizationService : IOrganizationService
             var enoughSeatsAvailable = true;
             if (organization.Seats.HasValue)
             {
-                var occupiedSeats = await GetOccupiedSeatCount(organization);
-                seatsAvailable = organization.Seats.Value - occupiedSeats;
+                var userCount = await _organizationUserRepository.GetCountByOrganizationIdAsync(organizationId);
+                seatsAvailable = organization.Seats.Value - userCount;
                 enoughSeatsAvailable = seatsAvailable >= usersToAdd.Count;
             }
 
@@ -2323,14 +2324,6 @@ public class OrganizationService : IOrganizationService
             throw new BadRequestException("Only owners can restore other owners.");
         }
 
-        var organization = await _organizationRepository.GetByIdAsync(organizationUser.OrganizationId);
-        var occupiedSeats = await GetOccupiedSeatCount(organization);
-        var availableSeats = organization.Seats.GetValueOrDefault(0) - occupiedSeats;
-        if (availableSeats < 1)
-        {
-            await AutoAddSeatsAsync(organization, 1, DateTime.UtcNow);
-        }
-
         await CheckPoliciesBeforeRestoreAsync(organizationUser, userService);
 
         var status = GetPriorActiveOrganizationUserStatusType(organizationUser);
@@ -2351,12 +2344,6 @@ public class OrganizationService : IOrganizationService
         {
             throw new BadRequestException("Users invalid.");
         }
-
-        var organization = await _organizationRepository.GetByIdAsync(organizationId);
-        var occupiedSeats = await GetOccupiedSeatCount(organization);
-        var availableSeats = organization.Seats.GetValueOrDefault(0) - occupiedSeats;
-        var newSeatsRequired = organizationUserIds.Count() - availableSeats;
-        await AutoAddSeatsAsync(organization, newSeatsRequired, DateTime.UtcNow);
 
         var deletingUserIsOwner = false;
         if (restoringUserId.HasValue)
@@ -2467,11 +2454,5 @@ public class OrganizationService : IOrganizationService
         }
 
         return status;
-    }
-
-    public async Task<int> GetOccupiedSeatCount(Organization organization)
-    {
-        var orgUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(organization.Id);
-        return orgUsers.Count(ou => ou.OccupiesOrganizationSeat);
     }
 }

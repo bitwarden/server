@@ -64,5 +64,4 @@ public interface IOrganizationService
     Task RestoreUserAsync(OrganizationUser organizationUser, Guid? restoringUserId, IUserService userService);
     Task<List<Tuple<OrganizationUser, string>>> RestoreUsersAsync(Guid organizationId,
         IEnumerable<Guid> organizationUserIds, Guid? restoringUserId, IUserService userService);
-    Task<int> GetOccupiedSeatCount(Organization organization);
 }

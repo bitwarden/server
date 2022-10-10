@@ -75,8 +75,6 @@ public class Startup
             config.Filters.Add(new LoggingExceptionHandlerFilterAttribute());
         });
         services.Configure<RouteOptions>(options => options.LowercaseUrls = true);
-
-        services.AddScimUserQueries();
     }
 
     public void Configure(

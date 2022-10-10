@@ -9,7 +9,6 @@ public class AzureQueueHostedService : IHostedService, IDisposable
 {
     private readonly ILogger _logger;
     private readonly IHubContext<NotificationsHub> _hubContext;
-    private readonly IHubContext<AnonymousNotificationsHub> _anonymousHubContext;
     private readonly GlobalSettings _globalSettings;
 
     private Task _executingTask;
@@ -19,13 +18,11 @@ public class AzureQueueHostedService : IHostedService, IDisposable
     public AzureQueueHostedService(
         ILogger<AzureQueueHostedService> logger,
         IHubContext<NotificationsHub> hubContext,
-        IHubContext<AnonymousNotificationsHub> anonymousHubContext,
         GlobalSettings globalSettings)
     {
         _logger = logger;
         _hubContext = hubContext;
         _globalSettings = globalSettings;
-        _anonymousHubContext = anonymousHubContext;
     }
 
     public Task StartAsync(CancellationToken cancellationToken)
@@ -65,7 +62,7 @@ public class AzureQueueHostedService : IHostedService, IDisposable
                         try
                         {
                             await HubHelpers.SendNotificationToHubAsync(
-                                message.DecodeMessageText(), _hubContext, _anonymousHubContext, cancellationToken);
+                                message.DecodeMessageText(), _hubContext, cancellationToken);
                             await _queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt);
                         }
                         catch (Exception e)

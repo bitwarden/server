@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Utilities;
+using Serilog.Events;
 
 namespace Bit.Icons;
 
@@ -12,7 +13,7 @@ public class Program
             {
                 webBuilder.UseStartup<Startup>();
                 webBuilder.ConfigureLogging((hostingContext, logging) =>
-                    logging.AddSerilog(hostingContext, (e, globalSettings) => e.Level >= globalSettings.MinLogLevel.IconsSettings.Default));
+                    logging.AddSerilog(hostingContext, e => e.Level >= LogEventLevel.Error));
             })
             .Build()
             .Run();

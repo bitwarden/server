@@ -101,7 +101,7 @@ jobs:
           description: 'Deploy from ${{ env.branch_name }} branch'
 
       - name: Download latest ${{ matrix.name }} asset from ${{ env.branch_name }}
-        uses: bitwarden/gh-actions/download-artifacts@850faad0cf6c02a8c0dc46eddde2363fbd6c373a
+        uses: bitwarden/gh-actions/download-artifacts@c1fa8e09871a860862d6bbe36184b06d2c7e35a8
         env:
           branch_name: ${{ steps.setup.outputs.branch_name }}
         with:

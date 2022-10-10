@@ -15,6 +15,4 @@ public interface IGlobalSettings
     IBaseServiceUriSettings BaseServiceUri { get; set; }
     ITwoFactorAuthSettings TwoFactorAuth { get; set; }
     ISsoSettings Sso { get; set; }
-    ILogLevelSettings MinLogLevel { get; set; }
-    IPasswordlessAuthSettings PasswordlessAuth { get; set; }
 }

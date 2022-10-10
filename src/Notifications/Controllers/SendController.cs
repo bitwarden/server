@@ -25,7 +25,7 @@ public class SendController : Controller
             var notificationJson = await reader.ReadToEndAsync();
             if (!string.IsNullOrWhiteSpace(notificationJson))
             {
-                await HubHelpers.SendNotificationToHubAsync(notificationJson, _hubContext, null);
+                await HubHelpers.SendNotificationToHubAsync(notificationJson, _hubContext);
             }
         }
     }

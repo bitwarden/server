@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Utilities;
+using Serilog.Events;
 
 namespace Bit.Events;
 
@@ -13,13 +14,13 @@ public class Program
             {
                 webBuilder.UseStartup<Startup>();
                 webBuilder.ConfigureLogging((hostingContext, logging) =>
-                    logging.AddSerilog(hostingContext, (e, globalSettings) =>
+                    logging.AddSerilog(hostingContext, e =>
                     {
                         var context = e.Properties["SourceContext"].ToString();
                         if (context.Contains("IdentityServer4.Validation.TokenValidator") ||
                             context.Contains("IdentityServer4.Validation.TokenRequestValidator"))
                         {
-                            return e.Level >= globalSettings.MinLogLevel.EventsSettings.IdentityToken;
+                            return e.Level > LogEventLevel.Error;
                         }
 
                         if (e.Properties.ContainsKey("RequestPath") &&
@@ -29,7 +30,7 @@ public class Program
                             return false;
                         }
 
-                        return e.Level >= globalSettings.MinLogLevel.EventsSettings.Default;
+                        return e.Level >= LogEventLevel.Error;
                     }));
             })
             .Build()

@@ -28,7 +28,7 @@ public static class ServiceCollectionExtensions
             });
             config.SwaggerDoc("internal", new OpenApiInfo { Title = "Bitwarden Internal API", Version = "latest" });
 
-            config.AddSecurityDefinition("oauth2-client-credentials", new OpenApiSecurityScheme
+            config.AddSecurityDefinition("OAuth2 Client Credentials", new OpenApiSecurityScheme
             {
                 Type = SecuritySchemeType.OAuth2,
                 Flows = new OpenApiOAuthFlows
@@ -52,7 +52,7 @@ public static class ServiceCollectionExtensions
                         Reference = new OpenApiReference
                         {
                             Type = ReferenceType.SecurityScheme,
-                            Id = "oauth2-client-credentials"
+                            Id = "OAuth2 Client Credentials"
                         },
                     },
                     new[] { "api.organization" }

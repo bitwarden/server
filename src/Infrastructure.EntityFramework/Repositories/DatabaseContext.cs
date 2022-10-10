@@ -39,7 +39,6 @@ public class DatabaseContext : DbContext
     public DbSet<TaxRate> TaxRates { get; set; }
     public DbSet<Transaction> Transactions { get; set; }
     public DbSet<User> Users { get; set; }
-    public DbSet<AuthRequest> AuthRequests { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -71,7 +70,6 @@ public class DatabaseContext : DbContext
         var eUser = builder.Entity<User>();
         var eOrganizationApiKey = builder.Entity<OrganizationApiKey>();
         var eOrganizationConnection = builder.Entity<OrganizationConnection>();
-        var eAuthRequest = builder.Entity<AuthRequest>();
 
         eCipher.Property(c => c.Id).ValueGeneratedNever();
         eCollection.Property(c => c.Id).ValueGeneratedNever();
@@ -92,7 +90,6 @@ public class DatabaseContext : DbContext
         eUser.Property(c => c.Id).ValueGeneratedNever();
         eOrganizationApiKey.Property(c => c.Id).ValueGeneratedNever();
         eOrganizationConnection.Property(c => c.Id).ValueGeneratedNever();
-        eAuthRequest.Property(ar => ar.Id).ValueGeneratedNever();
 
         eCollectionCipher.HasKey(cc => new { cc.CollectionId, cc.CipherId });
         eCollectionUser.HasKey(cu => new { cu.CollectionId, cu.OrganizationUserId });
@@ -138,6 +135,5 @@ public class DatabaseContext : DbContext
         eUser.ToTable(nameof(User));
         eOrganizationApiKey.ToTable(nameof(OrganizationApiKey));
         eOrganizationConnection.ToTable(nameof(OrganizationConnection));
-        eAuthRequest.ToTable(nameof(AuthRequest));
     }
 }

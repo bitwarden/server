@@ -1,6 +1,7 @@
 ﻿using AspNetCoreRateLimit;
 using Bit.Core.Utilities;
 using Microsoft.IdentityModel.Tokens;
+using Serilog.Events;
 
 namespace Bit.Api;
 
@@ -15,7 +16,7 @@ public class Program
             {
                 webBuilder.UseStartup<Startup>();
                 webBuilder.ConfigureLogging((hostingContext, logging) =>
-                    logging.AddSerilog(hostingContext, (e, globalSettings) =>
+                    logging.AddSerilog(hostingContext, e =>
                     {
                         var context = e.Properties["SourceContext"].ToString();
                         if (e.Exception != null &&
@@ -25,19 +26,19 @@ public class Program
                             return false;
                         }
 
-                        if (
+                        if (e.Level == LogEventLevel.Information &&
                             context.Contains(typeof(IpRateLimitMiddleware).FullName))
                         {
-                            return e.Level >= globalSettings.MinLogLevel.ApiSettings.IpRateLimit;
+                            return true;
                         }
 
                         if (context.Contains("IdentityServer4.Validation.TokenValidator") ||
                             context.Contains("IdentityServer4.Validation.TokenRequestValidator"))
                         {
-                            return e.Level >= globalSettings.MinLogLevel.ApiSettings.IdentityToken;
+                            return e.Level > LogEventLevel.Error;
                         }
 
-                        return e.Level >= globalSettings.MinLogLevel.ApiSettings.Default;
+                        return e.Level >= LogEventLevel.Error;
                     }));
             })
             .Build()

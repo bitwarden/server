@@ -35,7 +35,6 @@ public class AccountsController : Controller
     private readonly IUserService _userService;
     private readonly ISendRepository _sendRepository;
     private readonly ISendService _sendService;
-    private readonly ICaptchaValidationService _captchaValidationService;
 
     public AccountsController(
         GlobalSettings globalSettings,
@@ -48,8 +47,7 @@ public class AccountsController : Controller
         IUserRepository userRepository,
         IUserService userService,
         ISendRepository sendRepository,
-        ISendService sendService,
-        ICaptchaValidationService captchaValidationService)
+        ISendService sendService)
     {
         _cipherRepository = cipherRepository;
         _folderRepository = folderRepository;
@@ -62,12 +60,11 @@ public class AccountsController : Controller
         _userService = userService;
         _sendRepository = sendRepository;
         _sendService = sendService;
-        _captchaValidationService = captchaValidationService;
     }
 
     #region DEPRECATED (Moved to Identity Service)
 
-    [Obsolete("TDL-136 Moved to Identity (2022-01-12 cloud, 2022-09-19 self-hosted), left for backwards compatability with older clients.")]
+    [Obsolete("2022-01-12 Moved to Identity, left for backwards compatability with older clients")]
     [HttpPost("prelogin")]
     [AllowAnonymous]
     public async Task<PreloginResponseModel> PostPrelogin([FromBody] PreloginRequestModel model)
@@ -84,19 +81,17 @@ public class AccountsController : Controller
         return new PreloginResponseModel(kdfInformation);
     }
 
-    [Obsolete("TDL-136 Moved to Identity (2022-01-12 cloud, 2022-09-19 self-hosted), left for backwards compatability with older clients.")]
+    [Obsolete("2022-01-12 Moved to Identity, left for backwards compatability with older clients")]
     [HttpPost("register")]
     [AllowAnonymous]
     [CaptchaProtected]
-    public async Task<RegisterResponseModel> PostRegister([FromBody] RegisterRequestModel model)
+    public async Task PostRegister([FromBody] RegisterRequestModel model)
     {
-        var user = model.ToUser();
-        var result = await _userService.RegisterUserAsync(user, model.MasterPasswordHash,
+        var result = await _userService.RegisterUserAsync(model.ToUser(), model.MasterPasswordHash,
             model.Token, model.OrganizationUserId);
         if (result.Succeeded)
         {
-            var captchaBypassToken = _captchaValidationService.GenerateCaptchaBypassToken(user);
-            return new RegisterResponseModel(captchaBypassToken);
+            return;
         }
 
         foreach (var error in result.Errors.Where(e => e.Code != "DuplicateUserName"))

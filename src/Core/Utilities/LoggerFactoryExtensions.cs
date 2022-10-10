@@ -20,7 +20,7 @@ public static class LoggerFactoryExtensions
         IHostApplicationLifetime applicationLifetime,
         GlobalSettings globalSettings)
     {
-        if (env.IsDevelopment() && !globalSettings.EnableDevLogging)
+        if (env.IsDevelopment())
         {
             return;
         }
@@ -31,12 +31,9 @@ public static class LoggerFactoryExtensions
     public static ILoggingBuilder AddSerilog(
         this ILoggingBuilder builder,
         WebHostBuilderContext context,
-        Func<LogEvent, IGlobalSettings, bool> filter = null)
+        Func<LogEvent, bool> filter = null)
     {
-        var globalSettings = new GlobalSettings();
-        ConfigurationBinder.Bind(context.Configuration.GetSection("GlobalSettings"), globalSettings);
-
-        if (context.HostingEnvironment.IsDevelopment() && !globalSettings.EnableDevLogging)
+        if (context.HostingEnvironment.IsDevelopment())
         {
             return builder;
         }
@@ -52,11 +49,13 @@ public static class LoggerFactoryExtensions
             {
                 return true;
             }
-            return filter(e, globalSettings);
+            return filter(e);
         }
 
+        var globalSettings = new GlobalSettings();
+        ConfigurationBinder.Bind(context.Configuration.GetSection("GlobalSettings"), globalSettings);
+
         var config = new LoggerConfiguration()
-            .MinimumLevel.Verbose()
             .Enrich.FromLogContext()
             .Filter.ByIncludingOnly(inclusionPredicate);
 

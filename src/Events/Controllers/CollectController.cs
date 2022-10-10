@@ -3,6 +3,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Utilities;
 using Bit.Events.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -94,7 +95,7 @@ public class CollectController : Controller
         }
         if (cipherEvents.Any())
         {
-            foreach (var eventsBatch in cipherEvents.Chunk(50))
+            foreach (var eventsBatch in cipherEvents.Batch(50))
             {
                 await _eventService.LogCipherEventsAsync(eventsBatch);
             }

@@ -1,5 +1,5 @@
-﻿using Bit.Admin.IdentityServer;
-using Bit.Admin.Models;
+﻿using Bit.Admin.Models;
+using Bit.Core.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 

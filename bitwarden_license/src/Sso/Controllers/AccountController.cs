@@ -483,9 +483,9 @@ public class AccountController : Controller
         // Before any user creation - if Org User doesn't exist at this point - make sure there are enough seats to add one
         if (orgUser == null && organization.Seats.HasValue)
         {
-            var occupiedSeats = await _organizationService.GetOccupiedSeatCount(organization);
+            var userCount = await _organizationUserRepository.GetCountByOrganizationIdAsync(orgId);
             var initialSeatCount = organization.Seats.Value;
-            var availableSeats = initialSeatCount - occupiedSeats;
+            var availableSeats = initialSeatCount - userCount;
             var prorationDate = DateTime.UtcNow;
             if (availableSeats < 1)
             {

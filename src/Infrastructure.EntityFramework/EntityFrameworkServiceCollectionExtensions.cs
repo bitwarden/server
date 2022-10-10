@@ -56,7 +56,6 @@ public static class EntityFrameworkServiceCollectionExtensions
         services.AddSingleton<IProviderRepository, ProviderRepository>();
         services.AddSingleton<IProviderUserRepository, ProviderUserRepository>();
         services.AddSingleton<IProviderOrganizationRepository, ProviderOrganizationRepository>();
-        services.AddSingleton<IAuthRequestRepository, AuthRequestRepository>();
 
         if (selfHosted)
         {

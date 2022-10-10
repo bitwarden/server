@@ -3,7 +3,6 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Api.Request.Accounts;
 using Bit.Core.Repositories;
-using Bit.Identity.IdentityServer;
 using Bit.IntegrationTestCommon.Factories;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
@@ -280,7 +279,7 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
 
     /// <summary>
     /// This test currently does not test any code that is not covered by other tests but 
-    /// it shows that we probably have some dead code in <see cref="ClientStore"/>
+    /// it shows that we probably have some dead code in <see cref="Core.IdentityServer.ClientStore"/>
     /// for installation, organization, and user they split on a <c>'.'</c> but have already checked that at least one
     /// <c>'.'</c> exists in the <c>client_id</c> by checking it with <see cref="string.StartsWith(string)"/> 
     /// I believe that idParts.Length > 1 will ALWAYS return true
