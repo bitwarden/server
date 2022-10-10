@@ -14,7 +14,6 @@ BEGIN
         CONSTRAINT [FK_ApiKey_ServiceAccountId] FOREIGN KEY ([ServiceAccountId]) REFERENCES [dbo].[ServiceAccount] ([Id])
     );
 
-    GO
     CREATE NONCLUSTERED INDEX [IX_ApiKey_ServiceAccountId]
         ON [dbo].[ApiKey]([ServiceAccountId] ASC);
 END
