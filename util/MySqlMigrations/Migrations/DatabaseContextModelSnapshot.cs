@@ -38,6 +38,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<DateTime>("ExpireAt")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<string>("Key")
+                        .HasColumnType("longtext");
+
                     b.Property<string>("Name")
                         .HasMaxLength(200)
                         .HasColumnType("varchar(200)");

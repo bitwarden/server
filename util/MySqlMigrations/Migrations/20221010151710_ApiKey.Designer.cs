@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.MySqlMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20221010124536_ApiKey")]
+    [Migration("20221010151710_ApiKey")]
     partial class ApiKey
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -39,6 +39,9 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.Property<DateTime>("ExpireAt")
                         .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Key")
+                        .HasColumnType("longtext");
 
                     b.Property<string>("Name")
                         .HasMaxLength(200)

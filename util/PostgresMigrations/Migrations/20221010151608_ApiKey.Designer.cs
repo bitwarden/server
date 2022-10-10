@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Bit.PostgresMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20221010124725_ApiKey")]
+    [Migration("20221010151608_ApiKey")]
     partial class ApiKey
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -43,6 +43,9 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.Property<DateTime>("ExpireAt")
                         .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("Key")
+                        .HasColumnType("text");
 
                     b.Property<string>("Name")
                         .HasMaxLength(200)

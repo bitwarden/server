@@ -22,6 +22,8 @@ public partial class ApiKey : Migration
                     .Annotation("MySql:CharSet", "utf8mb4"),
                 EncryptedPayload = table.Column<string>(type: "varchar(4000)", maxLength: 4000, nullable: true)
                     .Annotation("MySql:CharSet", "utf8mb4"),
+                Key = table.Column<string>(type: "longtext", nullable: true)
+                    .Annotation("MySql:CharSet", "utf8mb4"),
                 ExpireAt = table.Column<DateTime>(type: "datetime(6)", nullable: false),
                 CreationDate = table.Column<DateTime>(type: "datetime(6)", nullable: false),
                 RevisionDate = table.Column<DateTime>(type: "datetime(6)", nullable: false)

@@ -19,6 +19,7 @@ CREATE TABLE "ApiKey" (
     "ClientSecret" character varying(30) NULL,
     "Scope" character varying(4000) NULL,
     "EncryptedPayload" character varying(4000) NULL,
+    "Key" text NULL,
     "ExpireAt" timestamp without time zone NOT NULL,
     "CreationDate" timestamp without time zone NOT NULL,
     "RevisionDate" timestamp without time zone NOT NULL,
@@ -29,6 +30,6 @@ CREATE TABLE "ApiKey" (
 CREATE INDEX "IX_ApiKey_ServiceAccountId" ON "ApiKey" ("ServiceAccountId");
 
 INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
-VALUES ('20221010124725_ApiKey', '6.0.4');
+VALUES ('20221010151608_ApiKey', '6.0.4');
 
 COMMIT;

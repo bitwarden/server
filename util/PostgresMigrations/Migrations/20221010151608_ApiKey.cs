@@ -74,6 +74,7 @@ public partial class ApiKey : Migration
                 ClientSecret = table.Column<string>(type: "character varying(30)", maxLength: 30, nullable: true),
                 Scope = table.Column<string>(type: "character varying(4000)", maxLength: 4000, nullable: true),
                 EncryptedPayload = table.Column<string>(type: "character varying(4000)", maxLength: 4000, nullable: true),
+                Key = table.Column<string>(type: "text", nullable: true),
                 ExpireAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: false),
                 CreationDate = table.Column<DateTime>(type: "timestamp without time zone", nullable: false),
                 RevisionDate = table.Column<DateTime>(type: "timestamp without time zone", nullable: false)
