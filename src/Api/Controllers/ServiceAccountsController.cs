@@ -29,8 +29,6 @@ public class ServiceAccountsController : Controller
         var responses = serviceAccounts.Select(serviceAccount => new ServiceAccountResponseModel(serviceAccount));
         return new ListResponseModel<ServiceAccountResponseModel>(responses);
     }
-
-
     [HttpPost("organizations/{organizationId}/service-accounts")]
     public async Task<ServiceAccountResponseModel> CreateServiceAccountAsync([FromRoute] Guid organizationId, [FromBody] ServiceAccountCreateRequestModel createRequest)
     {
