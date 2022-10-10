@@ -147,4 +147,38 @@ public class ProjectsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         Assert.NotEmpty(jsonResult.RootElement.GetProperty("data").EnumerateArray());
         Assert.Equal(projectIds.Count(), jsonResult.RootElement.GetProperty("data").EnumerateArray().Count());
     }
+
+    [Fact]
+    public async Task DeleteProjects()
+    {
+        var projectsToDelete = 3;
+        var projectIds = new List<Guid>();
+        for (var i = 0; i < projectsToDelete; i++)
+        {
+            var project = await _projectRepository.CreateAsync(new Project
+            {
+                OrganizationId = _organization.Id,
+                Name = _mockEncryptedString,
+            });
+            projectIds.Add(project.Id);
+        }
+
+        var response = await _client.PostAsync("/projects/delete", JsonContent.Create(projectIds));
+        response.EnsureSuccessStatusCode();
+
+        var content = await response.Content.ReadAsStringAsync();
+        Assert.NotEmpty(content);
+
+        var jsonResult = JsonDocument.Parse(content);
+        var index = 0;
+        foreach (var element in jsonResult.RootElement.GetProperty("data").EnumerateArray())
+        {
+            Assert.Equal(projectIds[index].ToString(), element.GetProperty("id").ToString());
+            Assert.Empty(element.GetProperty("error").ToString());
+            index++;
+        }
+
+        var projects = await _projectRepository.GetManyByIds(projectIds);
+        Assert.Empty(projects);
+    }
 }

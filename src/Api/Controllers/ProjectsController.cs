@@ -15,12 +15,18 @@ public class ProjectsController : Controller
     private readonly IProjectRepository _projectRepository;
     private readonly ICreateProjectCommand _createProjectCommand;
     private readonly IUpdateProjectCommand _updateProjectCommand;
+    private readonly IDeleteProjectCommand _deleteProjectCommand;
 
-    public ProjectsController(IProjectRepository projectRepository, ICreateProjectCommand createProjectCommand, IUpdateProjectCommand updateProjectCommand)
+    public ProjectsController(
+        IProjectRepository projectRepository,
+        ICreateProjectCommand createProjectCommand,
+        IUpdateProjectCommand updateProjectCommand,
+        IDeleteProjectCommand deleteProjectCommand)
     {
         _projectRepository = projectRepository;
         _createProjectCommand = createProjectCommand;
         _updateProjectCommand = updateProjectCommand;
+        _deleteProjectCommand = deleteProjectCommand;
     }
 
     [HttpPost("organizations/{organizationId}/projects")]
@@ -54,5 +60,13 @@ public class ProjectsController : Controller
             throw new NotFoundException();
         }
         return new ProjectResponseModel(project);
+    }
+
+    [HttpPost("projects/delete")]
+    public async Task<ListResponseModel<BulkDeleteResponseModel>> BulkDeleteProjectsAsync([FromBody] List<Guid> ids)
+    {
+        var results = await _deleteProjectCommand.DeleteProjects(ids);
+        var responses = results.Select(r => new BulkDeleteResponseModel(r.Item1, r.Item2));
+        return new ListResponseModel<BulkDeleteResponseModel>(responses);
     }
 }
