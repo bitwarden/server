@@ -1,4 +1,4 @@
-IF OBJECT_ID('[dbo].[ApiKey]') IS NULL
+﻿IF OBJECT_ID('[dbo].[ApiKey]') IS NULL
 BEGIN
     CREATE TABLE [dbo].[ApiKey] (
         [Id]               UNIQUEIDENTIFIER,
@@ -7,6 +7,7 @@ BEGIN
         [ClientSecret]     VARCHAR(30) NOT NULL,
         [Scope]            NVARCHAR (4000) NOT NULL,
         [EncryptedPayload] NVARCHAR (4000) NOT NULL,
+        [Key]              VARCHAR (MAX) NOT NULL,
         [ExpireAt]         DATETIME2(7) NOT NULL,
         [CreationDate]     DATETIME2(7) NOT NULL,
         [RevisionDate]     DATETIME2(7) NOT NULL,
