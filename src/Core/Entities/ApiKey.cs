@@ -6,8 +6,6 @@ namespace Bit.Core.Entities;
 public class ApiKey : ITableObject<Guid>
 {
     public Guid Id { get; set; }
-    public Guid? UserId { get; set; }
-    public Guid? OrganizationId { get; set; }
     public Guid? ServiceAccountId { get; set; }
     [MaxLength(200)]
     public string Name { get; set; }

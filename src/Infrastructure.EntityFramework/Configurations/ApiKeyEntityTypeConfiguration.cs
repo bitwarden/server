@@ -17,14 +17,6 @@ public class ApiKeyEntityTypeConfiguration : IEntityTypeConfiguration<ApiKey>
             .IsClustered();
 
         builder
-            .HasIndex(s => s.UserId)
-            .IsClustered(false);
-
-        builder
-            .HasIndex(s => s.OrganizationId)
-            .IsClustered(false);
-
-        builder
             .HasIndex(s => s.ServiceAccountId)
             .IsClustered(false);
 

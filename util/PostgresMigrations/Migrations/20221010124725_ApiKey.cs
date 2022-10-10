@@ -69,8 +69,6 @@ public partial class ApiKey : Migration
             columns: table => new
             {
                 Id = table.Column<Guid>(type: "uuid", nullable: false),
-                UserId = table.Column<Guid>(type: "uuid", nullable: true),
-                OrganizationId = table.Column<Guid>(type: "uuid", nullable: true),
                 ServiceAccountId = table.Column<Guid>(type: "uuid", nullable: true),
                 Name = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
                 ClientSecret = table.Column<string>(type: "character varying(30)", maxLength: 30, nullable: true),
@@ -84,36 +82,16 @@ public partial class ApiKey : Migration
             {
                 table.PrimaryKey("PK_ApiKey", x => x.Id);
                 table.ForeignKey(
-                    name: "FK_ApiKey_Organization_OrganizationId",
-                    column: x => x.OrganizationId,
-                    principalTable: "Organization",
-                    principalColumn: "Id");
-                table.ForeignKey(
                     name: "FK_ApiKey_ServiceAccount_ServiceAccountId",
                     column: x => x.ServiceAccountId,
                     principalTable: "ServiceAccount",
                     principalColumn: "Id");
-                table.ForeignKey(
-                    name: "FK_ApiKey_User_UserId",
-                    column: x => x.UserId,
-                    principalTable: "User",
-                    principalColumn: "Id");
             });
-
-        migrationBuilder.CreateIndex(
-            name: "IX_ApiKey_OrganizationId",
-            table: "ApiKey",
-            column: "OrganizationId");
 
         migrationBuilder.CreateIndex(
             name: "IX_ApiKey_ServiceAccountId",
             table: "ApiKey",
             column: "ServiceAccountId");
-
-        migrationBuilder.CreateIndex(
-            name: "IX_ApiKey_UserId",
-            table: "ApiKey",
-            column: "UserId");
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)

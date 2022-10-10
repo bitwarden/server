@@ -42,9 +42,6 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("varchar(200)");
 
-                    b.Property<Guid?>("OrganizationId")
-                        .HasColumnType("char(36)");
-
                     b.Property<DateTime>("RevisionDate")
                         .HasColumnType("datetime(6)");
 
@@ -55,19 +52,10 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<Guid?>("ServiceAccountId")
                         .HasColumnType("char(36)");
 
-                    b.Property<Guid?>("UserId")
-                        .HasColumnType("char(36)");
-
                     b.HasKey("Id")
                         .HasAnnotation("SqlServer:Clustered", true);
 
-                    b.HasIndex("OrganizationId")
-                        .HasAnnotation("SqlServer:Clustered", false);
-
                     b.HasIndex("ServiceAccountId")
-                        .HasAnnotation("SqlServer:Clustered", false);
-
-                    b.HasIndex("UserId")
                         .HasAnnotation("SqlServer:Clustered", false);
 
                     b.ToTable("ApiKey", (string)null);
@@ -1419,23 +1407,11 @@ namespace Bit.MySqlMigrations.Migrations
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.ApiKey", b =>
                 {
-                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.Organization", "Organization")
-                        .WithMany()
-                        .HasForeignKey("OrganizationId");
-
                     b.HasOne("Bit.Infrastructure.EntityFramework.Models.ServiceAccount", "ServiceAccount")
                         .WithMany()
                         .HasForeignKey("ServiceAccountId");
 
-                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId");
-
-                    b.Navigation("Organization");
-
                     b.Navigation("ServiceAccount");
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.AuthRequest", b =>

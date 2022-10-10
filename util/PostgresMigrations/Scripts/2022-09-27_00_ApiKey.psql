@@ -1,4 +1,4 @@
-START TRANSACTION;
+﻿START TRANSACTION;
 
 ALTER TABLE "AuthRequest" ALTER COLUMN "ResponseDate" TYPE timestamp without time zone;
 
@@ -14,8 +14,6 @@ ALTER TABLE "AuthRequest" ALTER COLUMN "AccessCode" TYPE character varying(25);
 
 CREATE TABLE "ApiKey" (
     "Id" uuid NOT NULL,
-    "UserId" uuid NULL,
-    "OrganizationId" uuid NULL,
     "ServiceAccountId" uuid NULL,
     "Name" character varying(200) NULL,
     "ClientSecret" character varying(30) NULL,
@@ -25,18 +23,12 @@ CREATE TABLE "ApiKey" (
     "CreationDate" timestamp without time zone NOT NULL,
     "RevisionDate" timestamp without time zone NOT NULL,
     CONSTRAINT "PK_ApiKey" PRIMARY KEY ("Id"),
-    CONSTRAINT "FK_ApiKey_Organization_OrganizationId" FOREIGN KEY ("OrganizationId") REFERENCES "Organization" ("Id"),
-    CONSTRAINT "FK_ApiKey_ServiceAccount_ServiceAccountId" FOREIGN KEY ("ServiceAccountId") REFERENCES "ServiceAccount" ("Id"),
-    CONSTRAINT "FK_ApiKey_User_UserId" FOREIGN KEY ("UserId") REFERENCES "User" ("Id")
+    CONSTRAINT "FK_ApiKey_ServiceAccount_ServiceAccountId" FOREIGN KEY ("ServiceAccountId") REFERENCES "ServiceAccount" ("Id")
 );
-
-CREATE INDEX "IX_ApiKey_OrganizationId" ON "ApiKey" ("OrganizationId");
 
 CREATE INDEX "IX_ApiKey_ServiceAccountId" ON "ApiKey" ("ServiceAccountId");
 
-CREATE INDEX "IX_ApiKey_UserId" ON "ApiKey" ("UserId");
-
 INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
-VALUES ('20221004175738_ApiKey', '6.0.4');
+VALUES ('20221010124725_ApiKey', '6.0.4');
 
-COMMIT
+COMMIT;

@@ -93,8 +93,6 @@ public class ClientStore : IClientStore
             return null;
         }
 
-        var subj = apiKey.UserId ?? apiKey.OrganizationId ?? apiKey.ServiceAccountId;
-
         return new Client
         {
             ClientId = clientId,
@@ -109,7 +107,7 @@ public class ClientStore : IClientStore
             },
             Claims = new List<ClientClaim>
             {
-                new(JwtClaimTypes.Subject, subj.ToString()),
+                new(JwtClaimTypes.Subject, apiKey.ServiceAccountId.ToString()),
             },
         };
     }
