@@ -15,18 +15,6 @@ public class UpdateSecretCommandTests
 {
     [Theory]
     [BitAutoData]
-    public async Task UpdateAsync_DefaultGuidId_ThrowsNotFound(Secret data, SutProvider<UpdateSecretCommand> sutProvider)
-    {
-        data.Id = new Guid();
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateAsync(data));
-
-        Assert.Contains("Cannot update secret, secret does not exist.", exception.Message);
-        await sutProvider.GetDependency<ISecretRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default);
-    }
-
-    [Theory]
-    [BitAutoData]
     public async Task UpdateAsync_SecretDoesNotExist_ThrowsNotFound(Secret data, SutProvider<UpdateSecretCommand> sutProvider)
     {
         var exception = await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.UpdateAsync(data));
