@@ -33,8 +33,6 @@ public class SecretsController : Controller
         return new ListResponseModel<SecretIdentifierResponseModel>(responses);
     }
 
-
-
     [HttpGet("secrets/{id}")]
     public async Task<SecretResponseModel> GetSecretAsync([FromRoute] Guid id)
     {
