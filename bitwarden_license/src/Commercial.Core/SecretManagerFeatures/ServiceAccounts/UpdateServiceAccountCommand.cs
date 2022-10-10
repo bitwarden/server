@@ -16,11 +16,6 @@ public class UpdateServiceAccountCommand : IUpdateServiceAccountCommand
 
     public async Task<ServiceAccount> UpdateAsync(ServiceAccount serviceAccount)
     {
-        if (serviceAccount.Id == default(Guid))
-        {
-            throw new BadRequestException("Cannot update service account, service account does not exist.");
-        }
-
         var existingServiceAccount = await _serviceAccountRepository.GetByIdAsync(serviceAccount.Id);
         if (existingServiceAccount == null)
         {

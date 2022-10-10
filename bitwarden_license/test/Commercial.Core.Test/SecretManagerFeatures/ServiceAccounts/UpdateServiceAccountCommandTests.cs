@@ -15,18 +15,6 @@ public class UpdateServiceAccountCommandTests
 {
     [Theory]
     [BitAutoData]
-    public async Task UpdateAsync_DefaultGuidId_ThrowsNotFound(ServiceAccount data, SutProvider<UpdateServiceAccountCommand> sutProvider)
-    {
-        data.Id = new Guid();
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateAsync(data));
-
-        Assert.Contains("Cannot update service account, service account does not exist.", exception.Message);
-        await sutProvider.GetDependency<IServiceAccountRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default);
-    }
-
-    [Theory]
-    [BitAutoData]
     public async Task UpdateAsync_ServiceAccountDoesNotExist_ThrowsNotFound(ServiceAccount data, SutProvider<UpdateServiceAccountCommand> sutProvider)
     {
         var exception = await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.UpdateAsync(data));

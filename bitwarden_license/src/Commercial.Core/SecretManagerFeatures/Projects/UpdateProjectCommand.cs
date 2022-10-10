@@ -16,11 +16,6 @@ public class UpdateProjectCommand : IUpdateProjectCommand
 
     public async Task<Project> UpdateAsync(Project project)
     {
-        if (project.Id == default(Guid))
-        {
-            throw new BadRequestException("Cannot update project, project does not exist.");
-        }
-
         var existingProject = await _projectRepository.GetByIdAsync(project.Id);
         if (existingProject == null)
         {
