@@ -73,6 +73,12 @@
     <Build Include="dbo\Functions\PolicyApplicableToUser.sql" />
     <Build Include="dbo\Functions\UserCipherDetails.sql" />
     <Build Include="dbo\Functions\UserCollectionDetails.sql" />
+    <Build Include="dbo\Stored Procedures\AuthRequest_Create.sql" />
+    <Build Include="dbo\Stored Procedures\AuthRequest_DeleteById.sql" />
+    <Build Include="dbo\Stored Procedures\AuthRequest_DeleteIfExpired.sql" />
+    <Build Include="dbo\Stored Procedures\AuthRequest_ReadById.sql" />
+    <Build Include="dbo\Stored Procedures\AuthRequest_ReadByUserId.sql" />
+    <Build Include="dbo\Stored Procedures\AuthRequest_Update.sql" />
     <Build Include="dbo\Stored Procedures\AzureSQLMaintenance.sql" />
     <Build Include="dbo\Stored Procedures\CipherDetails_Create.sql" />
     <Build Include="dbo\Stored Procedures\CipherDetails_CreateWithCollections.sql" />
@@ -344,6 +350,7 @@
     <Build Include="dbo\Stored Procedures\User_UpdateKeys.sql" />
     <Build Include="dbo\Stored Procedures\User_UpdateRenewalReminderDate.sql" />
     <Build Include="dbo\Stored Procedures\User_UpdateStorage.sql" />
+    <Build Include="dbo\Tables\AuthRequest.sql" />
     <Build Include="dbo\Tables\Cipher.sql" />
     <Build Include="dbo\Tables\Collection.sql" />
     <Build Include="dbo\Tables\CollectionCipher.sql" />
@@ -378,6 +385,7 @@
     <Build Include="dbo\User Defined Types\OrganizationUserType.sql" />
     <Build Include="dbo\User Defined Types\SelectionReadOnlyArray.sql" />
     <Build Include="dbo\User Defined Types\TwoGuidIdArray.sql" />
+    <Build Include="dbo\Views\AuthRequestView.sql" />
     <Build Include="dbo\Views\CipherView.sql" />
     <Build Include="dbo\Views\CollectionView.sql" />
     <Build Include="dbo\Views\DeviceView.sql" />

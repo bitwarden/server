@@ -59,6 +59,11 @@ public class JobsHostedService : BaseJobsHostedService
             .StartNow()
             .WithCronSchedule("0 0 0 * * ?")
             .Build();
+        var everyFifteenMinutesTrigger = TriggerBuilder.Create()
+            .WithIdentity("everyFifteenMinutesTrigger")
+            .StartNow()
+            .WithCronSchedule("0 */15 * ? * *")
+            .Build();
 
         var jobs = new List<Tuple<Type, ITrigger>>
         {
@@ -67,7 +72,8 @@ public class JobsHostedService : BaseJobsHostedService
             new Tuple<Type, ITrigger>(typeof(DatabaseUpdateStatisticsJob), everySaturdayAtMidnightTrigger),
             new Tuple<Type, ITrigger>(typeof(DatabaseRebuildlIndexesJob), everySundayAtMidnightTrigger),
             new Tuple<Type, ITrigger>(typeof(DeleteCiphersJob), everyDayAtMidnightUtc),
-            new Tuple<Type, ITrigger>(typeof(DatabaseExpiredSponsorshipsJob), everyMondayAtMidnightTrigger)
+            new Tuple<Type, ITrigger>(typeof(DatabaseExpiredSponsorshipsJob), everyMondayAtMidnightTrigger),
+            new Tuple<Type, ITrigger>(typeof(DeleteAuthRequestsJob), everyFifteenMinutesTrigger),
         };
 
         if (!_globalSettings.SelfHosted)
@@ -91,5 +97,6 @@ public class JobsHostedService : BaseJobsHostedService
         services.AddTransient<DatabaseExpiredSponsorshipsJob>();
         services.AddTransient<DeleteSendsJob>();
         services.AddTransient<DeleteCiphersJob>();
+        services.AddTransient<DeleteAuthRequestsJob>();
     }
 }
