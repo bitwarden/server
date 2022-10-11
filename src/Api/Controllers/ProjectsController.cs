@@ -66,7 +66,7 @@ public class ProjectsController : Controller
     public async Task<ListResponseModel<BulkDeleteResponseModel>> BulkDeleteProjectsAsync([FromBody] List<Guid> ids)
     {
         var results = await _deleteProjectCommand.DeleteProjects(ids);
-        var responses = results.Select(r => new BulkDeleteResponseModel(r.Item1, r.Item2));
+        var responses = results.Select(r => new BulkDeleteResponseModel(r.Item1.Id, r.Item2));
         return new ListResponseModel<BulkDeleteResponseModel>(responses);
     }
 }

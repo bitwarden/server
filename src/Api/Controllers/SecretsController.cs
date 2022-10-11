@@ -63,7 +63,7 @@ public class SecretsController : Controller
     public async Task<ListResponseModel<BulkDeleteResponseModel>> BulkDeleteAsync([FromBody] List<Guid> ids)
     {
         var results = await _deleteSecretCommand.DeleteSecrets(ids);
-        var responses = results.Select(r => new BulkDeleteResponseModel(r.Item1, r.Item2));
+        var responses = results.Select(r => new BulkDeleteResponseModel(r.Item1.Id, r.Item2));
         return new ListResponseModel<BulkDeleteResponseModel>(responses);
     }
 }
