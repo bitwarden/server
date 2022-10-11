@@ -3,11 +3,12 @@ using System;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
 
-namespace Bit.MySqlMigrations.Migrations
+namespace Bit.SqlServerEFScaffold.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
     partial class DatabaseContextModelSnapshot : ModelSnapshot
@@ -17,149 +18,47 @@ namespace Bit.MySqlMigrations.Migrations
 #pragma warning disable 612, 618
             modelBuilder
                 .HasAnnotation("ProductVersion", "6.0.4")
-                .HasAnnotation("Relational:MaxIdentifierLength", 64);
+                .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.ApiKey", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("char(36)");
-
-                    b.Property<string>("ClientSecret")
-                        .HasMaxLength(30)
-                        .HasColumnType("varchar(30)");
-
-                    b.Property<DateTime>("CreationDate")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<string>("EncryptedPayload")
-                        .HasMaxLength(4000)
-                        .HasColumnType("varchar(4000)");
-
-                    b.Property<DateTime>("ExpireAt")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<string>("Key")
-                        .HasColumnType("longtext");
-
-                    b.Property<string>("Name")
-                        .HasMaxLength(200)
-                        .HasColumnType("varchar(200)");
-
-                    b.Property<DateTime>("RevisionDate")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<string>("Scope")
-                        .HasMaxLength(4000)
-                        .HasColumnType("varchar(4000)");
-
-                    b.Property<Guid?>("ServiceAccountId")
-                        .HasColumnType("char(36)");
-
-                    b.HasKey("Id")
-                        .HasAnnotation("SqlServer:Clustered", true);
-
-                    b.HasIndex("ServiceAccountId")
-                        .HasAnnotation("SqlServer:Clustered", false);
-
-                    b.ToTable("ApiKey", (string)null);
-                });
-
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.AuthRequest", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("char(36)");
-
-                    b.Property<string>("AccessCode")
-                        .HasMaxLength(25)
-                        .HasColumnType("varchar(25)");
-
-                    b.Property<DateTime?>("AuthenticationDate")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<DateTime>("CreationDate")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<string>("Key")
-                        .HasColumnType("longtext");
-
-                    b.Property<string>("MasterPasswordHash")
-                        .HasColumnType("longtext");
-
-                    b.Property<string>("PublicKey")
-                        .HasColumnType("longtext");
-
-                    b.Property<string>("RequestDeviceIdentifier")
-                        .HasMaxLength(50)
-                        .HasColumnType("varchar(50)");
-
-                    b.Property<byte>("RequestDeviceType")
-                        .HasColumnType("tinyint unsigned");
-
-                    b.Property<string>("RequestFingerprint")
-                        .HasColumnType("longtext");
-
-                    b.Property<string>("RequestIpAddress")
-                        .HasMaxLength(50)
-                        .HasColumnType("varchar(50)");
-
-                    b.Property<DateTime?>("ResponseDate")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<Guid?>("ResponseDeviceId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<byte>("Type")
-                        .HasColumnType("tinyint unsigned");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("char(36)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ResponseDeviceId");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("AuthRequest", (string)null);
-                });
+            SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder, 1L, 1);
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Cipher", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Attachments")
-                        .HasColumnType("longtext");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("CreationDate")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Data")
-                        .HasColumnType("longtext");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("DeletedDate")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Favorites")
-                        .HasColumnType("longtext");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Folders")
-                        .HasColumnType("longtext");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<Guid?>("OrganizationId")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<byte?>("Reprompt")
-                        .HasColumnType("tinyint unsigned");
+                        .HasColumnType("tinyint");
 
                     b.Property<DateTime>("RevisionDate")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime2");
 
                     b.Property<byte>("Type")
-                        .HasColumnType("tinyint unsigned");
+                        .HasColumnType("tinyint");
 
                     b.Property<Guid?>("UserId")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
 
@@ -173,23 +72,23 @@ namespace Bit.MySqlMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Collection", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("CreationDate")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("ExternalId")
                         .HasMaxLength(300)
-                        .HasColumnType("varchar(300)");
+                        .HasColumnType("nvarchar(300)");
 
                     b.Property<string>("Name")
-                        .HasColumnType("longtext");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<Guid>("OrganizationId")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("RevisionDate")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime2");
 
                     b.HasKey("Id");
 
@@ -201,10 +100,10 @@ namespace Bit.MySqlMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.CollectionCipher", b =>
                 {
                     b.Property<Guid>("CollectionId")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid>("CipherId")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.HasKey("CollectionId", "CipherId");
 
@@ -216,16 +115,16 @@ namespace Bit.MySqlMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.CollectionGroup", b =>
                 {
                     b.Property<Guid>("CollectionId")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid>("GroupId")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<bool>("HidePasswords")
-                        .HasColumnType("tinyint(1)");
+                        .HasColumnType("bit");
 
                     b.Property<bool>("ReadOnly")
-                        .HasColumnType("tinyint(1)");
+                        .HasColumnType("bit");
 
                     b.HasKey("CollectionId", "GroupId");
 
@@ -237,19 +136,19 @@ namespace Bit.MySqlMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.CollectionUser", b =>
                 {
                     b.Property<Guid>("CollectionId")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid>("OrganizationUserId")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<bool>("HidePasswords")
-                        .HasColumnType("tinyint(1)");
+                        .HasColumnType("bit");
 
                     b.Property<bool>("ReadOnly")
-                        .HasColumnType("tinyint(1)");
+                        .HasColumnType("bit");
 
                     b.Property<Guid?>("UserId")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.HasKey("CollectionId", "OrganizationUserId");
 
@@ -264,31 +163,31 @@ namespace Bit.MySqlMigrations.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("CreationDate")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Identifier")
                         .HasMaxLength(50)
-                        .HasColumnType("varchar(50)");
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("Name")
                         .HasMaxLength(50)
-                        .HasColumnType("varchar(50)");
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("PushToken")
                         .HasMaxLength(255)
-                        .HasColumnType("varchar(255)");
+                        .HasColumnType("nvarchar(255)");
 
                     b.Property<DateTime>("RevisionDate")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime2");
 
                     b.Property<byte>("Type")
-                        .HasColumnType("tinyint unsigned");
+                        .HasColumnType("tinyint");
 
                     b.Property<Guid>("UserId")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
 
@@ -300,38 +199,38 @@ namespace Bit.MySqlMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.EmergencyAccess", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("CreationDate")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Email")
                         .HasMaxLength(256)
-                        .HasColumnType("varchar(256)");
+                        .HasColumnType("nvarchar(256)");
 
                     b.Property<Guid?>("GranteeId")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid>("GrantorId")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("KeyEncrypted")
-                        .HasColumnType("longtext");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("LastNotificationDate")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime?>("RecoveryInitiatedDate")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime>("RevisionDate")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime2");
 
                     b.Property<byte>("Status")
-                        .HasColumnType("tinyint unsigned");
+                        .HasColumnType("tinyint");
 
                     b.Property<byte>("Type")
-                        .HasColumnType("tinyint unsigned");
+                        .HasColumnType("tinyint");
 
                     b.Property<int>("WaitTimeDays")
                         .HasColumnType("int");
@@ -348,56 +247,56 @@ namespace Bit.MySqlMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Event", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid?>("ActingUserId")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid?>("CipherId")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid?>("CollectionId")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("Date")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime2");
 
                     b.Property<byte?>("DeviceType")
-                        .HasColumnType("tinyint unsigned");
+                        .HasColumnType("tinyint");
 
                     b.Property<Guid?>("GroupId")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid?>("InstallationId")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("IpAddress")
                         .HasMaxLength(50)
-                        .HasColumnType("varchar(50)");
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<Guid?>("OrganizationId")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid?>("OrganizationUserId")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid?>("PolicyId")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid?>("ProviderId")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid?>("ProviderOrganizationId")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid?>("ProviderUserId")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<int>("Type")
                         .HasColumnType("int");
 
                     b.Property<Guid?>("UserId")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
 
@@ -407,19 +306,19 @@ namespace Bit.MySqlMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Folder", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("CreationDate")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Name")
-                        .HasColumnType("longtext");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("RevisionDate")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime2");
 
                     b.Property<Guid>("UserId")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
 
@@ -432,39 +331,39 @@ namespace Bit.MySqlMigrations.Migrations
                 {
                     b.Property<string>("Key")
                         .HasMaxLength(200)
-                        .HasColumnType("varchar(200)");
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("ClientId")
                         .HasMaxLength(200)
-                        .HasColumnType("varchar(200)");
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<DateTime?>("ConsumedDate")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime>("CreationDate")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Data")
-                        .HasColumnType("longtext");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Description")
                         .HasMaxLength(200)
-                        .HasColumnType("varchar(200)");
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<DateTime?>("ExpirationDate")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("SessionId")
                         .HasMaxLength(100)
-                        .HasColumnType("varchar(100)");
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("SubjectId")
                         .HasMaxLength(200)
-                        .HasColumnType("varchar(200)");
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("Type")
                         .HasMaxLength(50)
-                        .HasColumnType("varchar(50)");
+                        .HasColumnType("nvarchar(50)");
 
                     b.HasKey("Key");
 
@@ -474,27 +373,27 @@ namespace Bit.MySqlMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Group", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<bool>("AccessAll")
-                        .HasColumnType("tinyint(1)");
+                        .HasColumnType("bit");
 
                     b.Property<DateTime>("CreationDate")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("ExternalId")
                         .HasMaxLength(300)
-                        .HasColumnType("varchar(300)");
+                        .HasColumnType("nvarchar(300)");
 
                     b.Property<string>("Name")
                         .HasMaxLength(100)
-                        .HasColumnType("varchar(100)");
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<Guid>("OrganizationId")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("RevisionDate")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime2");
 
                     b.HasKey("Id");
 
@@ -506,13 +405,13 @@ namespace Bit.MySqlMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.GroupUser", b =>
                 {
                     b.Property<Guid>("GroupId")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid>("OrganizationUserId")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid?>("UserId")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.HasKey("GroupId", "OrganizationUserId");
 
@@ -526,21 +425,21 @@ namespace Bit.MySqlMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Installation", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("CreationDate")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Email")
                         .HasMaxLength(256)
-                        .HasColumnType("varchar(256)");
+                        .HasColumnType("nvarchar(256)");
 
                     b.Property<bool>("Enabled")
-                        .HasColumnType("tinyint(1)");
+                        .HasColumnType("bit");
 
                     b.Property<string>("Key")
                         .HasMaxLength(150)
-                        .HasColumnType("varchar(150)");
+                        .HasColumnType("nvarchar(150)");
 
                     b.HasKey("Id");
 
@@ -550,63 +449,63 @@ namespace Bit.MySqlMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Organization", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("BillingEmail")
                         .HasMaxLength(256)
-                        .HasColumnType("varchar(256)");
+                        .HasColumnType("nvarchar(256)");
 
                     b.Property<string>("BusinessAddress1")
                         .HasMaxLength(50)
-                        .HasColumnType("varchar(50)");
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("BusinessAddress2")
                         .HasMaxLength(50)
-                        .HasColumnType("varchar(50)");
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("BusinessAddress3")
                         .HasMaxLength(50)
-                        .HasColumnType("varchar(50)");
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("BusinessCountry")
                         .HasMaxLength(2)
-                        .HasColumnType("varchar(2)");
+                        .HasColumnType("nvarchar(2)");
 
                     b.Property<string>("BusinessName")
                         .HasMaxLength(50)
-                        .HasColumnType("varchar(50)");
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("BusinessTaxNumber")
                         .HasMaxLength(30)
-                        .HasColumnType("varchar(30)");
+                        .HasColumnType("nvarchar(30)");
 
                     b.Property<DateTime>("CreationDate")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime2");
 
                     b.Property<bool>("Enabled")
-                        .HasColumnType("tinyint(1)");
+                        .HasColumnType("bit");
 
                     b.Property<DateTime?>("ExpirationDate")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime2");
 
                     b.Property<byte?>("Gateway")
-                        .HasColumnType("tinyint unsigned");
+                        .HasColumnType("tinyint");
 
                     b.Property<string>("GatewayCustomerId")
                         .HasMaxLength(50)
-                        .HasColumnType("varchar(50)");
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("GatewaySubscriptionId")
                         .HasMaxLength(50)
-                        .HasColumnType("varchar(50)");
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("Identifier")
                         .HasMaxLength(50)
-                        .HasColumnType("varchar(50)");
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("LicenseKey")
                         .HasMaxLength(100)
-                        .HasColumnType("varchar(100)");
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<int?>("MaxAutoscaleSeats")
                         .HasColumnType("int");
@@ -619,77 +518,77 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.Property<string>("Name")
                         .HasMaxLength(50)
-                        .HasColumnType("varchar(50)");
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<DateTime?>("OwnersNotifiedOfAutoscaling")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Plan")
                         .HasMaxLength(50)
-                        .HasColumnType("varchar(50)");
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<byte>("PlanType")
-                        .HasColumnType("tinyint unsigned");
+                        .HasColumnType("tinyint");
 
                     b.Property<string>("PrivateKey")
-                        .HasColumnType("longtext");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("PublicKey")
-                        .HasColumnType("longtext");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ReferenceData")
-                        .HasColumnType("longtext");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("RevisionDate")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime2");
 
                     b.Property<int?>("Seats")
                         .HasColumnType("int");
 
                     b.Property<bool>("SelfHost")
-                        .HasColumnType("tinyint(1)");
+                        .HasColumnType("bit");
 
                     b.Property<long?>("Storage")
                         .HasColumnType("bigint");
 
                     b.Property<string>("TwoFactorProviders")
-                        .HasColumnType("longtext");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("Use2fa")
-                        .HasColumnType("tinyint(1)");
+                        .HasColumnType("bit");
 
                     b.Property<bool>("UseApi")
-                        .HasColumnType("tinyint(1)");
+                        .HasColumnType("bit");
 
                     b.Property<bool>("UseDirectory")
-                        .HasColumnType("tinyint(1)");
+                        .HasColumnType("bit");
 
                     b.Property<bool>("UseEvents")
-                        .HasColumnType("tinyint(1)");
+                        .HasColumnType("bit");
 
                     b.Property<bool>("UseGroups")
-                        .HasColumnType("tinyint(1)");
+                        .HasColumnType("bit");
 
                     b.Property<bool>("UseKeyConnector")
-                        .HasColumnType("tinyint(1)");
+                        .HasColumnType("bit");
 
                     b.Property<bool>("UsePolicies")
-                        .HasColumnType("tinyint(1)");
+                        .HasColumnType("bit");
 
                     b.Property<bool>("UseResetPassword")
-                        .HasColumnType("tinyint(1)");
+                        .HasColumnType("bit");
 
                     b.Property<bool>("UseScim")
-                        .HasColumnType("tinyint(1)");
+                        .HasColumnType("bit");
 
                     b.Property<bool>("UseSso")
-                        .HasColumnType("tinyint(1)");
+                        .HasColumnType("bit");
 
                     b.Property<bool>("UseTotp")
-                        .HasColumnType("tinyint(1)");
+                        .HasColumnType("bit");
 
                     b.Property<bool>("UsersGetPremium")
-                        .HasColumnType("tinyint(1)");
+                        .HasColumnType("bit");
 
                     b.HasKey("Id");
 
@@ -699,20 +598,20 @@ namespace Bit.MySqlMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.OrganizationApiKey", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("ApiKey")
                         .HasMaxLength(30)
-                        .HasColumnType("varchar(30)");
+                        .HasColumnType("nvarchar(30)");
 
                     b.Property<Guid>("OrganizationId")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("RevisionDate")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime2");
 
                     b.Property<byte>("Type")
-                        .HasColumnType("tinyint unsigned");
+                        .HasColumnType("tinyint");
 
                     b.HasKey("Id");
 
@@ -724,19 +623,19 @@ namespace Bit.MySqlMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.OrganizationConnection", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Config")
-                        .HasColumnType("longtext");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("Enabled")
-                        .HasColumnType("tinyint(1)");
+                        .HasColumnType("bit");
 
                     b.Property<Guid>("OrganizationId")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<byte>("Type")
-                        .HasColumnType("tinyint unsigned");
+                        .HasColumnType("tinyint");
 
                     b.HasKey("Id");
 
@@ -748,36 +647,36 @@ namespace Bit.MySqlMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.OrganizationSponsorship", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("FriendlyName")
                         .HasMaxLength(256)
-                        .HasColumnType("varchar(256)");
+                        .HasColumnType("nvarchar(256)");
 
                     b.Property<DateTime?>("LastSyncDate")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("OfferedToEmail")
                         .HasMaxLength(256)
-                        .HasColumnType("varchar(256)");
+                        .HasColumnType("nvarchar(256)");
 
                     b.Property<byte?>("PlanSponsorshipType")
-                        .HasColumnType("tinyint unsigned");
+                        .HasColumnType("tinyint");
 
                     b.Property<Guid?>("SponsoredOrganizationId")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid?>("SponsoringOrganizationId")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid>("SponsoringOrganizationUserId")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<bool>("ToDelete")
-                        .HasColumnType("tinyint(1)");
+                        .HasColumnType("bit");
 
                     b.Property<DateTime?>("ValidUntil")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime2");
 
                     b.HasKey("Id");
 
@@ -791,45 +690,45 @@ namespace Bit.MySqlMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.OrganizationUser", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<bool>("AccessAll")
-                        .HasColumnType("tinyint(1)");
+                        .HasColumnType("bit");
 
                     b.Property<DateTime>("CreationDate")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Email")
                         .HasMaxLength(256)
-                        .HasColumnType("varchar(256)");
+                        .HasColumnType("nvarchar(256)");
 
                     b.Property<string>("ExternalId")
                         .HasMaxLength(300)
-                        .HasColumnType("varchar(300)");
+                        .HasColumnType("nvarchar(300)");
 
                     b.Property<string>("Key")
-                        .HasColumnType("longtext");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<Guid>("OrganizationId")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Permissions")
-                        .HasColumnType("longtext");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ResetPasswordKey")
-                        .HasColumnType("longtext");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("RevisionDate")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime2");
 
                     b.Property<short>("Status")
                         .HasColumnType("smallint");
 
                     b.Property<byte>("Type")
-                        .HasColumnType("tinyint unsigned");
+                        .HasColumnType("tinyint");
 
                     b.Property<Guid?>("UserId")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
 
@@ -843,25 +742,25 @@ namespace Bit.MySqlMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Policy", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("CreationDate")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Data")
-                        .HasColumnType("longtext");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("Enabled")
-                        .HasColumnType("tinyint(1)");
+                        .HasColumnType("bit");
 
                     b.Property<Guid>("OrganizationId")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("RevisionDate")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime2");
 
                     b.Property<byte>("Type")
-                        .HasColumnType("tinyint unsigned");
+                        .HasColumnType("tinyint");
 
                     b.HasKey("Id");
 
@@ -873,31 +772,34 @@ namespace Bit.MySqlMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Project", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("CreationDate")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime?>("DeletedDate")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Name")
-                        .HasColumnType("longtext");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<Guid>("OrganizationId")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("RevisionDate")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime2");
 
-                    b.HasKey("Id")
-                        .HasAnnotation("SqlServer:Clustered", true);
+                    b.HasKey("Id");
 
-                    b.HasIndex("DeletedDate")
-                        .HasAnnotation("SqlServer:Clustered", false);
+                    SqlServerKeyBuilderExtensions.IsClustered(b.HasKey("Id"));
 
-                    b.HasIndex("OrganizationId")
-                        .HasAnnotation("SqlServer:Clustered", false);
+                    b.HasIndex("DeletedDate");
+
+                    SqlServerIndexBuilderExtensions.IsClustered(b.HasIndex("DeletedDate"), false);
+
+                    b.HasIndex("OrganizationId");
+
+                    SqlServerIndexBuilderExtensions.IsClustered(b.HasIndex("OrganizationId"), false);
 
                     b.ToTable("Project", (string)null);
                 });
@@ -905,46 +807,46 @@ namespace Bit.MySqlMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Provider", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("BillingEmail")
-                        .HasColumnType("longtext");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("BusinessAddress1")
-                        .HasColumnType("longtext");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("BusinessAddress2")
-                        .HasColumnType("longtext");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("BusinessAddress3")
-                        .HasColumnType("longtext");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("BusinessCountry")
-                        .HasColumnType("longtext");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("BusinessName")
-                        .HasColumnType("longtext");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("BusinessTaxNumber")
-                        .HasColumnType("longtext");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("CreationDate")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime2");
 
                     b.Property<bool>("Enabled")
-                        .HasColumnType("tinyint(1)");
+                        .HasColumnType("bit");
 
                     b.Property<string>("Name")
-                        .HasColumnType("longtext");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("RevisionDate")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime2");
 
                     b.Property<byte>("Status")
-                        .HasColumnType("tinyint unsigned");
+                        .HasColumnType("tinyint");
 
                     b.Property<bool>("UseEvents")
-                        .HasColumnType("tinyint(1)");
+                        .HasColumnType("bit");
 
                     b.HasKey("Id");
 
@@ -954,25 +856,25 @@ namespace Bit.MySqlMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.ProviderOrganization", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("CreationDate")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Key")
-                        .HasColumnType("longtext");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<Guid>("OrganizationId")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid>("ProviderId")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("RevisionDate")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Settings")
-                        .HasColumnType("longtext");
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
@@ -986,34 +888,34 @@ namespace Bit.MySqlMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.ProviderUser", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("CreationDate")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Email")
-                        .HasColumnType("longtext");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Key")
-                        .HasColumnType("longtext");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Permissions")
-                        .HasColumnType("longtext");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<Guid>("ProviderId")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("RevisionDate")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime2");
 
                     b.Property<byte>("Status")
-                        .HasColumnType("tinyint unsigned");
+                        .HasColumnType("tinyint");
 
                     b.Property<byte>("Type")
-                        .HasColumnType("tinyint unsigned");
+                        .HasColumnType("tinyint");
 
                     b.Property<Guid?>("UserId")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
 
@@ -1027,37 +929,40 @@ namespace Bit.MySqlMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Secret", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("CreationDate")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime?>("DeletedDate")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Key")
-                        .HasColumnType("longtext");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Note")
-                        .HasColumnType("longtext");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<Guid>("OrganizationId")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("RevisionDate")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Value")
-                        .HasColumnType("longtext");
+                        .HasColumnType("nvarchar(max)");
 
-                    b.HasKey("Id")
-                        .HasAnnotation("SqlServer:Clustered", true);
+                    b.HasKey("Id");
 
-                    b.HasIndex("DeletedDate")
-                        .HasAnnotation("SqlServer:Clustered", false);
+                    SqlServerKeyBuilderExtensions.IsClustered(b.HasKey("Id"));
 
-                    b.HasIndex("OrganizationId")
-                        .HasAnnotation("SqlServer:Clustered", false);
+                    b.HasIndex("DeletedDate");
+
+                    SqlServerIndexBuilderExtensions.IsClustered(b.HasIndex("DeletedDate"), false);
+
+                    b.HasIndex("OrganizationId");
+
+                    SqlServerIndexBuilderExtensions.IsClustered(b.HasIndex("OrganizationId"), false);
 
                     b.ToTable("Secret", (string)null);
                 });
@@ -1065,50 +970,50 @@ namespace Bit.MySqlMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Send", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<int>("AccessCount")
                         .HasColumnType("int");
 
                     b.Property<DateTime>("CreationDate")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Data")
-                        .HasColumnType("longtext");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("DeletionDate")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime2");
 
                     b.Property<bool>("Disabled")
-                        .HasColumnType("tinyint(1)");
+                        .HasColumnType("bit");
 
                     b.Property<DateTime?>("ExpirationDate")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime2");
 
                     b.Property<bool?>("HideEmail")
-                        .HasColumnType("tinyint(1)");
+                        .HasColumnType("bit");
 
                     b.Property<string>("Key")
-                        .HasColumnType("longtext");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int?>("MaxAccessCount")
                         .HasColumnType("int");
 
                     b.Property<Guid?>("OrganizationId")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Password")
                         .HasMaxLength(300)
-                        .HasColumnType("varchar(300)");
+                        .HasColumnType("nvarchar(300)");
 
                     b.Property<DateTime>("RevisionDate")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime2");
 
                     b.Property<byte>("Type")
-                        .HasColumnType("tinyint unsigned");
+                        .HasColumnType("tinyint");
 
                     b.Property<Guid?>("UserId")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
 
@@ -1119,52 +1024,28 @@ namespace Bit.MySqlMigrations.Migrations
                     b.ToTable("Send", (string)null);
                 });
 
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.ServiceAccount", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("char(36)");
-
-                    b.Property<DateTime>("CreationDate")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<string>("Name")
-                        .HasColumnType("longtext");
-
-                    b.Property<Guid>("OrganizationId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<DateTime>("RevisionDate")
-                        .HasColumnType("datetime(6)");
-
-                    b.HasKey("Id")
-                        .HasAnnotation("SqlServer:Clustered", true);
-
-                    b.HasIndex("OrganizationId")
-                        .HasAnnotation("SqlServer:Clustered", false);
-
-                    b.ToTable("ServiceAccount", (string)null);
-                });
-
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.SsoConfig", b =>
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bigint");
 
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"), 1L, 1);
+
                     b.Property<DateTime>("CreationDate")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Data")
-                        .HasColumnType("longtext");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("Enabled")
-                        .HasColumnType("tinyint(1)");
+                        .HasColumnType("bit");
 
                     b.Property<Guid>("OrganizationId")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("RevisionDate")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime2");
 
                     b.HasKey("Id");
 
@@ -1179,18 +1060,20 @@ namespace Bit.MySqlMigrations.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bigint");
 
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"), 1L, 1);
+
                     b.Property<DateTime>("CreationDate")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("ExternalId")
                         .HasMaxLength(50)
-                        .HasColumnType("varchar(50)");
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<Guid?>("OrganizationId")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid>("UserId")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
 
@@ -1205,25 +1088,25 @@ namespace Bit.MySqlMigrations.Migrations
                 {
                     b.Property<string>("Id")
                         .HasMaxLength(40)
-                        .HasColumnType("varchar(40)");
+                        .HasColumnType("nvarchar(40)");
 
                     b.Property<bool>("Active")
-                        .HasColumnType("tinyint(1)");
+                        .HasColumnType("bit");
 
                     b.Property<string>("Country")
                         .HasMaxLength(50)
-                        .HasColumnType("varchar(50)");
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("PostalCode")
                         .HasMaxLength(10)
-                        .HasColumnType("varchar(10)");
+                        .HasColumnType("nvarchar(10)");
 
                     b.Property<decimal>("Rate")
-                        .HasColumnType("decimal(65,30)");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("State")
                         .HasMaxLength(2)
-                        .HasColumnType("varchar(2)");
+                        .HasColumnType("nvarchar(2)");
 
                     b.HasKey("Id");
 
@@ -1233,42 +1116,42 @@ namespace Bit.MySqlMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Transaction", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<decimal>("Amount")
-                        .HasColumnType("decimal(65,30)");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime>("CreationDate")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Details")
                         .HasMaxLength(100)
-                        .HasColumnType("varchar(100)");
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<byte?>("Gateway")
-                        .HasColumnType("tinyint unsigned");
+                        .HasColumnType("tinyint");
 
                     b.Property<string>("GatewayId")
                         .HasMaxLength(50)
-                        .HasColumnType("varchar(50)");
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<Guid?>("OrganizationId")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<byte?>("PaymentMethodType")
-                        .HasColumnType("tinyint unsigned");
+                        .HasColumnType("tinyint");
 
                     b.Property<bool?>("Refunded")
-                        .HasColumnType("tinyint(1)");
+                        .HasColumnType("bit");
 
                     b.Property<decimal?>("RefundedAmount")
-                        .HasColumnType("decimal(65,30)");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<byte>("Type")
-                        .HasColumnType("tinyint unsigned");
+                        .HasColumnType("tinyint");
 
                     b.Property<Guid?>("UserId")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
 
@@ -1282,156 +1165,145 @@ namespace Bit.MySqlMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.User", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("AccountRevisionDate")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("ApiKey")
                         .IsRequired()
                         .HasMaxLength(30)
-                        .HasColumnType("varchar(30)");
+                        .HasColumnType("nvarchar(30)");
 
                     b.Property<DateTime>("CreationDate")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Culture")
                         .HasMaxLength(10)
-                        .HasColumnType("varchar(10)");
+                        .HasColumnType("nvarchar(10)");
 
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasMaxLength(256)
-                        .HasColumnType("varchar(256)");
+                        .HasColumnType("nvarchar(256)");
 
                     b.Property<bool>("EmailVerified")
-                        .HasColumnType("tinyint(1)");
+                        .HasColumnType("bit");
 
                     b.Property<string>("EquivalentDomains")
-                        .HasColumnType("longtext");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ExcludedGlobalEquivalentDomains")
-                        .HasColumnType("longtext");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("FailedLoginCount")
                         .HasColumnType("int");
 
                     b.Property<bool>("ForcePasswordReset")
-                        .HasColumnType("tinyint(1)");
+                        .HasColumnType("bit");
 
                     b.Property<byte?>("Gateway")
-                        .HasColumnType("tinyint unsigned");
+                        .HasColumnType("tinyint");
 
                     b.Property<string>("GatewayCustomerId")
                         .HasMaxLength(50)
-                        .HasColumnType("varchar(50)");
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("GatewaySubscriptionId")
                         .HasMaxLength(50)
-                        .HasColumnType("varchar(50)");
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<byte>("Kdf")
-                        .HasColumnType("tinyint unsigned");
+                        .HasColumnType("tinyint");
 
                     b.Property<int>("KdfIterations")
                         .HasColumnType("int");
 
                     b.Property<string>("Key")
-                        .HasColumnType("longtext");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("LastFailedLoginDate")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("LicenseKey")
                         .HasMaxLength(100)
-                        .HasColumnType("varchar(100)");
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("MasterPassword")
                         .HasMaxLength(300)
-                        .HasColumnType("varchar(300)");
+                        .HasColumnType("nvarchar(300)");
 
                     b.Property<string>("MasterPasswordHint")
                         .HasMaxLength(50)
-                        .HasColumnType("varchar(50)");
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<short?>("MaxStorageGb")
                         .HasColumnType("smallint");
 
                     b.Property<string>("Name")
                         .HasMaxLength(50)
-                        .HasColumnType("varchar(50)");
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<bool>("Premium")
-                        .HasColumnType("tinyint(1)");
+                        .HasColumnType("bit");
 
                     b.Property<DateTime?>("PremiumExpirationDate")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("PrivateKey")
-                        .HasColumnType("longtext");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("PublicKey")
-                        .HasColumnType("longtext");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ReferenceData")
-                        .HasColumnType("longtext");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("RenewalReminderDate")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime>("RevisionDate")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("SecurityStamp")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("varchar(50)");
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<long?>("Storage")
                         .HasColumnType("bigint");
 
                     b.Property<string>("TwoFactorProviders")
-                        .HasColumnType("longtext");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("TwoFactorRecoveryCode")
                         .HasMaxLength(32)
-                        .HasColumnType("varchar(32)");
+                        .HasColumnType("nvarchar(32)");
 
                     b.Property<bool>("UnknownDeviceVerificationEnabled")
-                        .HasColumnType("tinyint(1)");
+                        .HasColumnType("bit");
 
                     b.Property<bool>("UsesKeyConnector")
-                        .HasColumnType("tinyint(1)");
+                        .HasColumnType("bit");
 
                     b.HasKey("Id");
 
                     b.ToTable("User", (string)null);
                 });
 
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.ApiKey", b =>
+            modelBuilder.Entity("ProjectSecret", b =>
                 {
-                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.ServiceAccount", "ServiceAccount")
-                        .WithMany()
-                        .HasForeignKey("ServiceAccountId");
+                    b.Property<Guid>("ProjectsId")
+                        .HasColumnType("uniqueidentifier");
 
-                    b.Navigation("ServiceAccount");
-                });
+                    b.Property<Guid>("SecretsId")
+                        .HasColumnType("uniqueidentifier");
 
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.AuthRequest", b =>
-                {
-                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.Device", "ResponseDevice")
-                        .WithMany()
-                        .HasForeignKey("ResponseDeviceId");
+                    b.HasKey("ProjectsId", "SecretsId");
 
-                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                    b.HasIndex("SecretsId");
 
-                    b.Navigation("ResponseDevice");
-
-                    b.Navigation("User");
+                    b.ToTable("ProjectSecret");
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Cipher", b =>
@@ -1732,17 +1604,6 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.ServiceAccount", b =>
-                {
-                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.Organization", "Organization")
-                        .WithMany()
-                        .HasForeignKey("OrganizationId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Organization");
-                });
-
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.SsoConfig", b =>
                 {
                     b.HasOne("Bit.Infrastructure.EntityFramework.Models.Organization", "Organization")
@@ -1784,6 +1645,21 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Navigation("Organization");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("ProjectSecret", b =>
+                {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.Project", null)
+                        .WithMany()
+                        .HasForeignKey("ProjectsId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.Secret", null)
+                        .WithMany()
+                        .HasForeignKey("SecretsId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Cipher", b =>

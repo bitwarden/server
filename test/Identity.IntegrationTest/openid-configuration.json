@@ -11,6 +11,7 @@
     "api.organization",
     "api.installation",
     "internal",
+    "api.secrets",
     "offline_access"
   ],
   "claims_supported": [
