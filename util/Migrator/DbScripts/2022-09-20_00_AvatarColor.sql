@@ -5,6 +5,21 @@ BEGIN
 END
 GO
 
+-- Recreate VIEW UserView
+IF EXISTS(SELECT * FROM sys.views WHERE [Name] = 'UserView')
+    BEGIN
+        DROP VIEW [dbo].[UserView]
+    END
+GO
+
+CREATE VIEW [dbo].[UserView]
+AS
+SELECT
+    *
+FROM
+    [dbo].[User]
+GO
+
 -- Recreate procedure User_Update
 IF OBJECT_ID('[dbo].[User_Update]') IS NOT NULL
 BEGIN
@@ -96,19 +111,134 @@ BEGIN
     WHERE
         [Id] = @Id
 END
+GO
 
--- Recreate VIEW UserView
-IF OBJECT_ID('[dbo].[UserView]') IS NOT NULL
+IF OBJECT_ID('[dbo].[User_Create]') IS NOT NULL
 BEGIN
-    DROP VIEW [dbo].[UserView]
+    DROP PROCEDURE [dbo].[User_Create]
 END
 GO
 
-CREATE VIEW [dbo].[UserView]
+CREATE PROCEDURE [dbo].[User_Create]
+    @Id UNIQUEIDENTIFIER OUTPUT,
+    @Name NVARCHAR(50),
+    @Email NVARCHAR(256),
+    @EmailVerified BIT,
+    @MasterPassword NVARCHAR(300),
+    @MasterPasswordHint NVARCHAR(50),
+    @Culture NVARCHAR(10),
+    @SecurityStamp NVARCHAR(50),
+    @TwoFactorProviders NVARCHAR(MAX),
+    @TwoFactorRecoveryCode NVARCHAR(32),
+    @EquivalentDomains NVARCHAR(MAX),
+    @ExcludedGlobalEquivalentDomains NVARCHAR(MAX),
+    @AccountRevisionDate DATETIME2(7),
+    @Key NVARCHAR(MAX),
+    @PublicKey NVARCHAR(MAX),
+    @PrivateKey NVARCHAR(MAX),
+    @Premium BIT,
+    @PremiumExpirationDate DATETIME2(7),
+    @RenewalReminderDate DATETIME2(7),
+    @Storage BIGINT,
+    @MaxStorageGb SMALLINT,
+    @Gateway TINYINT,
+    @GatewayCustomerId VARCHAR(50),
+    @GatewaySubscriptionId VARCHAR(50),
+    @ReferenceData VARCHAR(MAX),
+    @LicenseKey VARCHAR(100),
+    @Kdf TINYINT,
+    @KdfIterations INT,
+    @CreationDate DATETIME2(7),
+    @RevisionDate DATETIME2(7),
+    @ApiKey VARCHAR(30),
+    @ForcePasswordReset BIT = 0,
+    @UsesKeyConnector BIT = 0,
+    @FailedLoginCount INT = 0,
+    @LastFailedLoginDate DATETIME2(7),
+    @UnknownDeviceVerificationEnabled BIT = 1,
+    @AvatarColor VARCHAR(7) = NULL
 AS
-SELECT
-    *
-FROM
-    [dbo].[User]
-GO
+BEGIN
+    SET NOCOUNT ON
 
+    INSERT INTO [dbo].[User]
+    (
+        [Id],
+        [Name],
+        [Email],
+        [EmailVerified],
+        [MasterPassword],
+        [MasterPasswordHint],
+        [Culture],
+        [SecurityStamp],
+        [TwoFactorProviders],
+        [TwoFactorRecoveryCode],
+        [EquivalentDomains],
+        [ExcludedGlobalEquivalentDomains],
+        [AccountRevisionDate],
+        [Key],
+        [PublicKey],
+        [PrivateKey],
+        [Premium],
+        [PremiumExpirationDate],
+        [RenewalReminderDate],
+        [Storage],
+        [MaxStorageGb],
+        [Gateway],
+        [GatewayCustomerId],
+        [GatewaySubscriptionId],
+        [ReferenceData],
+        [LicenseKey],
+        [Kdf],
+        [KdfIterations],
+        [CreationDate],
+        [RevisionDate],
+        [ApiKey],
+        [ForcePasswordReset],
+        [UsesKeyConnector],
+        [FailedLoginCount],
+        [LastFailedLoginDate],
+        [UnknownDeviceVerificationEnabled],
+        [AvatarColor]
+    )
+    VALUES
+    (
+        @Id,
+        @Name,
+        @Email,
+        @EmailVerified,
+        @MasterPassword,
+        @MasterPasswordHint,
+        @Culture,
+        @SecurityStamp,
+        @TwoFactorProviders,
+        @TwoFactorRecoveryCode,
+        @EquivalentDomains,
+        @ExcludedGlobalEquivalentDomains,
+        @AccountRevisionDate,
+        @Key,
+        @PublicKey,
+        @PrivateKey,
+        @Premium,
+        @PremiumExpirationDate,
+        @RenewalReminderDate,
+        @Storage,
+        @MaxStorageGb,
+        @Gateway,
+        @GatewayCustomerId,
+        @GatewaySubscriptionId,
+        @ReferenceData,
+        @LicenseKey,
+        @Kdf,
+        @KdfIterations,
+        @CreationDate,
+        @RevisionDate,
+        @ApiKey,
+        @ForcePasswordReset,
+        @UsesKeyConnector,
+        @FailedLoginCount,
+        @LastFailedLoginDate,
+        @UnknownDeviceVerificationEnabled,
+        @AvatarColor
+    )
+END
