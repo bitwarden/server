@@ -10,4 +10,8 @@
     <ProjectReference Include="..\Core\Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Serilog" Version="2.10.0.0" />
+  </ItemGroup>
+
 </Project>

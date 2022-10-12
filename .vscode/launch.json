@@ -82,6 +82,7 @@
         }
     ],
     "configurations": [
+    
         {
             "name": "Identity",
             "presentation": {
