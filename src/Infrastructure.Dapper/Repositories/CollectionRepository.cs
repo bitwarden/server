@@ -69,6 +69,19 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
         }
     }
 
+    public async Task<ICollection<Collection>> GetManyByManyIds(IEnumerable<Guid> collectionIds)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<Collection>(
+                $"[{Schema}].[Collection_ReadByIds]",
+                new { Ids = collectionIds.ToGuidIdArrayTVP() },
+                commandType: CommandType.StoredProcedure);
+
+            return results.ToList();
+        }
+    }
+
     public async Task<ICollection<Collection>> GetManyByOrganizationIdAsync(Guid organizationId)
     {
         using (var connection = new SqlConnection(ConnectionString))
@@ -79,6 +92,34 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
                 commandType: CommandType.StoredProcedure);
 
             return results.ToList();
+        }
+    }
+
+    public async Task<ICollection<Tuple<Collection, ICollection<SelectionReadOnly>>>> GetManyWithGroupsByOrganizationIdAsync(Guid organizationId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryMultipleAsync(
+                $"[{Schema}].[Collection_ReadWithGroupsByOrganizationId]",
+                new { OrganizationId = organizationId },
+                commandType: CommandType.StoredProcedure);
+
+            var collections = (await results.ReadAsync<Collection>()).ToList();
+            var groups = (await results.ReadAsync<CollectionGroup>()).ToList();
+
+            return collections.Select(collection =>
+                new Tuple<Collection, ICollection<SelectionReadOnly>>(
+                    collection,
+                    groups
+                        .Where(g => g.GroupId == collection.Id)
+                        .Select(g => new SelectionReadOnly
+                        {
+                            Id = g.CollectionId,
+                            HidePasswords = g.HidePasswords,
+                            ReadOnly = g.ReadOnly
+                        }).ToList()
+                )
+            ).ToList();
         }
     }
 
@@ -138,6 +179,15 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
                 $"[{Schema}].[Collection_UpdateWithGroupsAndUsers]",
                 objWithGroupsAndUsers,
                 commandType: CommandType.StoredProcedure);
+        }
+    }
+
+    public async Task DeleteManyAsync(Guid organizationId, IEnumerable<Guid> collectionIds)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            await connection.ExecuteAsync("[dbo].[Collection_DeleteByIdsOrganizationId]",
+                new { OrganizationId = organizationId, Ids = collectionIds.ToGuidIdArrayTVP() }, commandType: CommandType.StoredProcedure);
         }
     }
 

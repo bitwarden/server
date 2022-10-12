@@ -153,6 +153,45 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         }
     }
 
+    public async Task<ICollection<Tuple<Core.Entities.Collection, ICollection<SelectionReadOnly>>>>
+        GetManyWithGroupsByOrganizationIdAsync(Guid organizationId)
+    {
+        var collections = await GetManyByOrganizationIdAsync(organizationId);
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var query = await (
+                from cg in dbContext.CollectionGroups
+                where cg.Collection.OrganizationId == organizationId
+                select cg).ToListAsync();
+
+            return collections.Select(collection =>
+                new Tuple<Core.Entities.Collection, ICollection<SelectionReadOnly>>(
+                    collection,
+                    query.Select(g => new SelectionReadOnly
+                    {
+                        Id = g.CollectionId,
+                        ReadOnly = g.ReadOnly,
+                        HidePasswords = g.HidePasswords,
+                    }).ToList()
+                )
+            ).ToList();
+        }
+    }
+
+    public async Task<ICollection<Core.Entities.Collection>> GetManyByManyIds(IEnumerable<Guid> collectionIds)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var query = from c in dbContext.Collections
+                        where collectionIds.Contains(c.Id)
+                        select c;
+            var data = await query.ToArrayAsync();
+            return data;
+        }
+    }
+
     public async Task<int> GetCountByOrganizationIdAsync(Guid organizationId)
     {
         var query = new CollectionReadCountByOrganizationIdQuery(organizationId);
@@ -235,6 +274,21 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
             var insertData = await procedure.Insert.BuildInMemory(dbContext);
             await dbContext.AddRangeAsync(insertData);
             dbContext.RemoveRange(await procedure.Delete.Run(dbContext).ToListAsync());
+        }
+    }
+
+    public async Task DeleteManyAsync(Guid organizationId, IEnumerable<Guid> collectionIds)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var entities = await dbContext.Collections
+                .Where(c => collectionIds.Contains(c.Id) && c.OrganizationId == organizationId)
+                .ToListAsync();
+
+            dbContext.Collections.RemoveRange(entities);
+            await dbContext.SaveChangesAsync();
+            await UserBumpAccountRevisionDateByOrganizationId(organizationId);
         }
     }
 
