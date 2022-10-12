@@ -537,7 +537,7 @@ public class OrganizationsController : Controller
     }
 
     [HttpGet("{id}/api-key-information/{type?}")]
-    public async Task<ListResponseModel<OrganizationApiKeyInformation>> ApiKeyInformation(Guid id, OrganizationApiKeyType? type)
+    public async Task<ListResponseModel<OrganizationApiKeyInformation>> ApiKeyInformation(Guid id, [FromRoute] OrganizationApiKeyType? type)
     {
         if (!await HasApiKeyAccessAsync(id, type))
         {

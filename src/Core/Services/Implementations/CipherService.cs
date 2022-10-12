@@ -31,7 +31,6 @@ public class CipherService : ICipherService
     private const long _fileSizeLeeway = 1024L * 1024L; // 1MB 
     private readonly IReferenceEventService _referenceEventService;
     private readonly ICurrentContext _currentContext;
-    private readonly IProviderService _providerService;
 
     public CipherService(
         ICipherRepository cipherRepository,
@@ -404,7 +403,7 @@ public class CipherService : ICipherService
 
         var events = deletingCiphers.Select(c =>
             new Tuple<Cipher, EventType, DateTime?>(c, EventType.Cipher_Deleted, null));
-        foreach (var eventsBatch in events.Batch(100))
+        foreach (var eventsBatch in events.Chunk(100))
         {
             await _eventService.LogCipherEventsAsync(eventsBatch);
         }
@@ -575,7 +574,7 @@ public class CipherService : ICipherService
 
         var events = cipherInfos.Select(c =>
             new Tuple<Cipher, EventType, DateTime?>(c.cipher, EventType.Cipher_Shared, null));
-        foreach (var eventsBatch in events.Batch(100))
+        foreach (var eventsBatch in events.Chunk(100))
         {
             await _eventService.LogCipherEventsAsync(eventsBatch);
         }
@@ -792,7 +791,7 @@ public class CipherService : ICipherService
 
         var events = deletingCiphers.Select(c =>
             new Tuple<Cipher, EventType, DateTime?>(c, EventType.Cipher_SoftDeleted, null));
-        foreach (var eventsBatch in events.Batch(100))
+        foreach (var eventsBatch in events.Chunk(100))
         {
             await _eventService.LogCipherEventsAsync(eventsBatch);
         }
@@ -841,7 +840,7 @@ public class CipherService : ICipherService
             c.DeletedDate = null;
             return new Tuple<Cipher, EventType, DateTime?>(c, EventType.Cipher_Restored, null);
         });
-        foreach (var eventsBatch in events.Batch(100))
+        foreach (var eventsBatch in events.Chunk(100))
         {
             await _eventService.LogCipherEventsAsync(eventsBatch);
         }
@@ -875,12 +874,6 @@ public class CipherService : ICipherService
         var collectionCiphersGroupDict = collectionCiphers
             .Where(c => orgCipherIds.Contains(c.CipherId))
             .GroupBy(c => c.CipherId).ToDictionary(s => s.Key);
-
-        var providerId = await _currentContext.ProviderIdForOrg(organizationId);
-        if (providerId.HasValue)
-        {
-            await _providerService.LogProviderAccessToOrganizationAsync(organizationId);
-        }
 
         return (orgCiphers, collectionCiphersGroupDict);
     }

@@ -1,5 +1,4 @@
 ﻿using Bit.Core.Utilities;
-using Serilog.Events;
 
 namespace Bit.Scim;
 
@@ -13,7 +12,7 @@ public class Program
             {
                 webBuilder.UseStartup<Startup>();
                 webBuilder.ConfigureLogging((hostingContext, logging) =>
-                    logging.AddSerilog(hostingContext, e =>
+                    logging.AddSerilog(hostingContext, (e, globalSettings) =>
                     {
                         var context = e.Properties["SourceContext"].ToString();
 
@@ -24,7 +23,7 @@ public class Program
                             return false;
                         }
 
-                        return e.Level >= LogEventLevel.Warning;
+                        return e.Level >= globalSettings.MinLogLevel.ScimSettings.Default;
                     }));
             })
             .Build()
