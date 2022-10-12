@@ -260,6 +260,17 @@ public class OrganizationUsersController : Controller
             throw new NotFoundException();
         }
 
+        var organization = await _organizationRepository.GetByIdAsync(orgGuidId);
+        if (organization == null)
+        {
+            throw new NotFoundException();
+        }
+
+        if (model.Type == OrganizationUserType.Custom && !organization.UseCustomPermissions)
+        {
+            throw new BadRequestException("To enable custom permissions the organization must be on an Enterprise 2020 plan.");
+        }
+
         var userId = _userService.GetProperUserId(User);
         await _organizationService.SaveUserAsync(model.ToOrganizationUser(organizationUser), userId.Value,
             model.Collections?.Select(c => c.ToSelectionReadOnly()));

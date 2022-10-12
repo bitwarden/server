@@ -22,6 +22,7 @@ public class ProfileProviderOrganizationResponseModel : ProfileOrganizationRespo
         UseApi = organization.UseApi;
         UseResetPassword = organization.UseResetPassword;
         UsersGetPremium = organization.UsersGetPremium;
+        UseCustomPermissions = organization.UseCustomPermissions;
         SelfHost = organization.SelfHost;
         Seats = organization.Seats;
         MaxCollections = organization.MaxCollections;
