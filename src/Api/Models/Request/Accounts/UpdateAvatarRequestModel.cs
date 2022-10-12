@@ -5,7 +5,7 @@ namespace Bit.Api.Models.Request.Accounts;
 
 public class UpdateAvatarRequestModel
 {
-    [StringLength(8)]
+    [StringLength(7)]
     public string AvatarColor { get; set; }
 
     public User ToUser(User existingUser)
