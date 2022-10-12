@@ -72,6 +72,20 @@ public class CollectionsController : Controller
         }
     }
 
+    [HttpGet("details")]
+    public async Task<ListResponseModel<CollectionGroupDetailsResponseModel>> GetManyWithDetails(Guid orgId)
+    {
+        if (!await ViewAtLeastOneCollectionAsync(orgId) && !await _currentContext.ManageUsers(orgId))
+        {
+            throw new NotFoundException();
+        }
+
+        var collections = await _collectionService.GetOrganizationCollections(orgId);
+        var details = collections.Select(async (c) => await _collectionRepository.GetByIdWithGroupsAsync(c.Id));
+        var responses = details.Select(d => new CollectionGroupDetailsResponseModel(d.Result.Item1, d.Result.Item2));
+        return new ListResponseModel<CollectionGroupDetailsResponseModel>(responses);
+    }
+
     [HttpGet("")]
     public async Task<ListResponseModel<CollectionResponseModel>> Get(Guid orgId)
     {
