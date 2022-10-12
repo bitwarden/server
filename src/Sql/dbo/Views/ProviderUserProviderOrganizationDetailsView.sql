@@ -18,6 +18,7 @@ SELECT
     O.[UseResetPassword],
     O.[SelfHost],
     O.[UsersGetPremium],
+    O.[UseCustomPermissions],
     O.[Seats],
     O.[MaxCollections],
     O.[MaxStorageGb],

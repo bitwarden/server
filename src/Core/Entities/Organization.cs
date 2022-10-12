@@ -47,6 +47,7 @@ public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorabl
     public bool UseResetPassword { get; set; }
     public bool SelfHost { get; set; }
     public bool UsersGetPremium { get; set; }
+    public bool UseCustomPermissions { get; set; }
     public long? Storage { get; set; }
     public short? MaxStorageGb { get; set; }
     public GatewayType? Gateway { get; set; }
