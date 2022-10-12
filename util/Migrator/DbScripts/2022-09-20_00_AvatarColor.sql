@@ -1,7 +1,7 @@
 --Add column
 IF COL_LENGTH('[dbo].[User]', 'AvatarColor') IS NULL
 BEGIN
-    ALTER TABLE [dbo].[User] ADD [AvatarColor] NVARCHAR	(8) NULL;
+    ALTER TABLE [dbo].[User] ADD [AvatarColor] VARCHAR (7) NULL;
 END
 GO
 
@@ -49,7 +49,7 @@ CREATE PROCEDURE [dbo].[User_Update]
     @FailedLoginCount INT,
     @LastFailedLoginDate DATETIME2(7),
     @UnknownDeviceVerificationEnabled BIT = 1,
-	@AvatarColor NVARCHAR(8)
+    @AvatarColor VARCHAR(7)
 AS
 BEGIN
     SET NOCOUNT ON
@@ -92,7 +92,7 @@ BEGIN
         [FailedLoginCount] = @FailedLoginCount,
         [LastFailedLoginDate] = @LastFailedLoginDate,
         [UnknownDeviceVerificationEnabled] = @UnknownDeviceVerificationEnabled,
-		[AvatarColor] = @AvatarColor
+	  [AvatarColor] = @AvatarColor
     WHERE
         [Id] = @Id
 END
