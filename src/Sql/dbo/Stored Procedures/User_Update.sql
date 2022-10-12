@@ -78,7 +78,7 @@ BEGIN
         [FailedLoginCount] = @FailedLoginCount,
         [LastFailedLoginDate] = @LastFailedLoginDate,
         [UnknownDeviceVerificationEnabled] = @UnknownDeviceVerificationEnabled,
-	[AvatarColor] = @AvatarColor
+	    [AvatarColor] = @AvatarColor
     WHERE
         [Id] = @Id
 END
