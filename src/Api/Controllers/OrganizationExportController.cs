@@ -41,8 +41,8 @@ public class OrganizationExportController : Controller
         IEnumerable<Collection> orgCollections = await _collectionService.GetOrganizationCollections(organizationId);
         (IEnumerable<CipherOrganizationDetails> orgCiphers, Dictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphersGroupDict) = await _cipherService.GetOrganizationCiphers(userId, organizationId);
 
-        // Backward compatibility
-        if (_currentContext.ClientVersion == "2022.9.0")
+        // Backward compatibility with versions 2022.9.0 and 2022.10.0 that use ListResponseModel
+        if (new[] { "2022.9.0", "2022.10.0" }.Contains(_currentContext.ClientVersion))
         {
             var organizationExportListResponseModel = new OrganizationExportListResponseModel
             {
