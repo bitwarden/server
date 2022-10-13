@@ -1,5 +1,6 @@
 ﻿using Bit.Api.Controllers;
 using Bit.Api.SecretManagerFeatures.Models.Request;
+using Bit.Api.Test.AutoFixture;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
@@ -15,6 +16,7 @@ namespace Bit.Api.Test.Controllers;
 [ControllerCustomize(typeof(SecretsController))]
 [SutProviderCustomize]
 [JsonDocumentCustomize]
+[SecretCustomize]
 public class SecretsControllerTests
 {
     [Theory]
@@ -26,7 +28,7 @@ public class SecretsControllerTests
         await sutProvider.GetDependency<ISecretRepository>().Received(1)
                      .GetManyByOrganizationIdAsync(Arg.Is(AssertHelper.AssertPropertyEqual(id)));
 
-        Assert.Empty(result.Data);
+        Assert.Empty(result.Secrets);
     }
 
     [Theory]
