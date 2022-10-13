@@ -7,12 +7,13 @@ namespace Bit.Commercial.Core.Utilities;
 
 public static class ServiceCollectionExtensions
 {
-    public static void AddCommCoreServices(this IServiceCollection services, bool api = false)
+    public static void AddCommercialCoreServices(this IServiceCollection services)
     {
         services.AddScoped<IProviderService, ProviderService>();
-        if (api)
-        {
-            services.AddSecretManagerServices();
-        }
+    }
+
+    public static void AddCommercialSecretsServices(this IServiceCollection services)
+    {
+        services.AddSecretManagerServices();
     }
 }

@@ -68,7 +68,7 @@ public class Startup
 #if OSS
         services.AddOosServices();
 #else
-        services.AddCommCoreServices();
+        services.AddCommercialCoreServices();
 #endif
 
         // Mvc
