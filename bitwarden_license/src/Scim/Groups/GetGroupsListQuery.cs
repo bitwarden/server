@@ -1,8 +1,8 @@
 ﻿using Bit.Core.Repositories;
+using Bit.Scim.Groups.Interfaces;
 using Bit.Scim.Models;
-using Bit.Scim.Queries.Groups.Interfaces;
 
-namespace Bit.Scim.Queries.Groups;
+namespace Bit.Scim.Groups;
 
 public class GetGroupsListQuery : IGetGroupsListQuery
 {

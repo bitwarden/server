@@ -3,8 +3,8 @@ using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Scim.Context;
+using Bit.Scim.Groups.Interfaces;
 using Bit.Scim.Models;
-using Bit.Scim.Queries.Groups.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

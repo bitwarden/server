@@ -1,7 +1,7 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Repositories;
+using Bit.Scim.Groups;
 using Bit.Scim.Models;
-using Bit.Scim.Queries.Groups;
 using Bit.Scim.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -9,7 +9,7 @@ using Bit.Test.Common.Helpers;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Scim.Test.Queries.Groups;
+namespace Bit.Scim.Test.Groups;
 
 [SutProviderCustomize]
 public class GetGroupsListCommandTests
