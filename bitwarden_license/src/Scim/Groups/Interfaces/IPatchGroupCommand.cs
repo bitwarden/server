@@ -1,6 +1,6 @@
 ﻿using Bit.Scim.Models;
 
-namespace Bit.Scim.Commands.Groups.Interfaces;
+namespace Bit.Scim.Groups.Interfaces;
 
 public interface IPatchGroupCommand
 {

@@ -1,7 +1,7 @@
-﻿using Bit.Scim.Commands.Groups;
-using Bit.Scim.Commands.Groups.Interfaces;
-using Bit.Scim.Queries.Users;
-using Bit.Scim.Queries.Users.Interfaces;
+﻿using Bit.Scim.Groups;
+using Bit.Scim.Groups.Interfaces;
+using Bit.Scim.Users;
+using Bit.Scim.Users.Interfaces;
 
 namespace Bit.Scim.Utilities;
 
