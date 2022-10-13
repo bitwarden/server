@@ -35,6 +35,7 @@ public class AccountsController : Controller
     private readonly IUserService _userService;
     private readonly ISendRepository _sendRepository;
     private readonly ISendService _sendService;
+    private readonly ICaptchaValidationService _captchaValidationService;
 
     public AccountsController(
         GlobalSettings globalSettings,
@@ -47,7 +48,8 @@ public class AccountsController : Controller
         IUserRepository userRepository,
         IUserService userService,
         ISendRepository sendRepository,
-        ISendService sendService)
+        ISendService sendService,
+        ICaptchaValidationService captchaValidationService)
     {
         _cipherRepository = cipherRepository;
         _folderRepository = folderRepository;
@@ -60,11 +62,12 @@ public class AccountsController : Controller
         _userService = userService;
         _sendRepository = sendRepository;
         _sendService = sendService;
+        _captchaValidationService = captchaValidationService;
     }
 
     #region DEPRECATED (Moved to Identity Service)
 
-    [Obsolete("2022-01-12 Moved to Identity, left for backwards compatability with older clients")]
+    [Obsolete("TDL-136 Moved to Identity (2022-01-12 cloud, 2022-09-19 self-hosted), left for backwards compatability with older clients.")]
     [HttpPost("prelogin")]
     [AllowAnonymous]
     public async Task<PreloginResponseModel> PostPrelogin([FromBody] PreloginRequestModel model)
@@ -81,17 +84,19 @@ public class AccountsController : Controller
         return new PreloginResponseModel(kdfInformation);
     }
 
-    [Obsolete("2022-01-12 Moved to Identity, left for backwards compatability with older clients")]
+    [Obsolete("TDL-136 Moved to Identity (2022-01-12 cloud, 2022-09-19 self-hosted), left for backwards compatability with older clients.")]
     [HttpPost("register")]
     [AllowAnonymous]
     [CaptchaProtected]
-    public async Task PostRegister([FromBody] RegisterRequestModel model)
+    public async Task<RegisterResponseModel> PostRegister([FromBody] RegisterRequestModel model)
     {
-        var result = await _userService.RegisterUserAsync(model.ToUser(), model.MasterPasswordHash,
+        var user = model.ToUser();
+        var result = await _userService.RegisterUserAsync(user, model.MasterPasswordHash,
             model.Token, model.OrganizationUserId);
         if (result.Succeeded)
         {
-            return;
+            var captchaBypassToken = _captchaValidationService.GenerateCaptchaBypassToken(user);
+            return new RegisterResponseModel(captchaBypassToken);
         }
 
         foreach (var error in result.Errors.Where(e => e.Code != "DuplicateUserName"))
@@ -620,21 +625,6 @@ public class AccountsController : Controller
             PaymentIntentClientSecret = result.Item2,
             Success = result.Item1
         };
-    }
-
-    [Obsolete("2022-04-01 Use separate Billing History/Payment APIs, left for backwards compatability with older clients")]
-    [HttpGet("billing")]
-    [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task<BillingResponseModel> GetBilling()
-    {
-        var user = await _userService.GetUserByPrincipalAsync(User);
-        if (user == null)
-        {
-            throw new UnauthorizedAccessException();
-        }
-
-        var billingInfo = await _paymentService.GetBillingAsync(user);
-        return new BillingResponseModel(billingInfo);
     }
 
     [HttpGet("subscription")]
