@@ -1,6 +1,6 @@
 ﻿using Bit.Scim.Models;
 
-namespace Bit.Scim.Commands.Users.Interfaces;
+namespace Bit.Scim.Users.Interfaces;
 
 public interface IPatchUserCommand
 {

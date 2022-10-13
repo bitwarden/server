@@ -2,10 +2,10 @@
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Scim.Commands.Users.Interfaces;
 using Bit.Scim.Models;
+using Bit.Scim.Users.Interfaces;
 
-namespace Bit.Scim.Commands.Users;
+namespace Bit.Scim.Users;
 
 public class PatchUserCommand : IPatchUserCommand
 {
