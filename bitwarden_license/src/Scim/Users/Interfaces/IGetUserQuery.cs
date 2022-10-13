@@ -1,6 +1,6 @@
 ﻿using Bit.Scim.Models;
 
-namespace Bit.Scim.Queries.Users.Interfaces;
+namespace Bit.Scim.Users.Interfaces;
 
 public interface IGetUserQuery
 {

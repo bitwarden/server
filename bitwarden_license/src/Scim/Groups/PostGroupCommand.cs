@@ -2,11 +2,11 @@
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Scim.Commands.Groups.Interfaces;
 using Bit.Scim.Context;
+using Bit.Scim.Groups.Interfaces;
 using Bit.Scim.Models;
 
-namespace Bit.Scim.Commands.Groups;
+namespace Bit.Scim.Groups;
 
 public class PostGroupCommand : IPostGroupCommand
 {
