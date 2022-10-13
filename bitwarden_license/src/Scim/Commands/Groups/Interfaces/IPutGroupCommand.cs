@@ -1,8 +1,9 @@
-﻿using Bit.Scim.Models;
+﻿using Bit.Core.Entities;
+using Bit.Scim.Models;
 
 namespace Bit.Scim.Commands.Groups.Interfaces;
 
 public interface IPutGroupCommand
 {
-    Task<ScimGroupResponseModel> PutGroupAsync(Guid organizationId, Guid id, ScimGroupRequestModel model);
+    Task<Group> PutGroupAsync(Guid organizationId, Guid id, ScimGroupRequestModel model);
 }

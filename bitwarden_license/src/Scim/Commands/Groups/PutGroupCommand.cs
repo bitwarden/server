@@ -24,7 +24,7 @@ public class PutGroupCommand : IPutGroupCommand
         _scimContext = scimContext;
     }
 
-    public async Task<ScimGroupResponseModel> PutGroupAsync(Guid organizationId, Guid id, ScimGroupRequestModel model)
+    public async Task<Group> PutGroupAsync(Guid organizationId, Guid id, ScimGroupRequestModel model)
     {
         var group = await _groupRepository.GetByIdAsync(id);
         if (group == null || group.OrganizationId != organizationId)
@@ -34,12 +34,12 @@ public class PutGroupCommand : IPutGroupCommand
 
         group.Name = model.DisplayName;
         await _groupService.SaveAsync(group);
-        await UpdateGroupMembersAsync(group, model, false);
+        await UpdateGroupMembersAsync(group, model);
 
-        return new ScimGroupResponseModel(group);
+        return group;
     }
 
-    private async Task UpdateGroupMembersAsync(Group group, ScimGroupRequestModel model, bool skipIfEmpty)
+    private async Task UpdateGroupMembersAsync(Group group, ScimGroupRequestModel model)
     {
         if (_scimContext.RequestScimProvider != Core.Enums.ScimProviderType.Okta)
         {
@@ -60,7 +60,7 @@ public class PutGroupCommand : IPutGroupCommand
             }
         }
 
-        if (!memberIds.Any() && skipIfEmpty)
+        if (!memberIds.Any())
         {
             return;
         }

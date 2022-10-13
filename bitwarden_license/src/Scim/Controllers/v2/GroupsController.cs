@@ -137,8 +137,10 @@ public class GroupsController : Controller
     [HttpPut("{id}")]
     public async Task<IActionResult> Put(Guid organizationId, Guid id, [FromBody] ScimGroupRequestModel model)
     {
-        var scimGroupResponseModel = await _putGroupCommand.PutGroupAsync(organizationId, id, model);
-        return Ok(scimGroupResponseModel);
+        var group = await _putGroupCommand.PutGroupAsync(organizationId, id, model);
+        var response = new ScimGroupResponseModel(group);
+
+        return Ok(response);
     }
 
     [HttpPatch("{id}")]
