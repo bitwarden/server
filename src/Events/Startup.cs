@@ -1,5 +1,6 @@
 ﻿using System.Globalization;
 using Bit.Core.Context;
+using Bit.Core.IdentityServer;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
@@ -41,7 +42,7 @@ public class Startup
             {
                 policy.RequireAuthenticatedUser();
                 policy.RequireClaim(JwtClaimTypes.AuthenticationMethod, "Application", "external");
-                policy.RequireClaim(JwtClaimTypes.Scope, "api");
+                policy.RequireClaim(JwtClaimTypes.Scope, ApiScopes.Api);
             });
         });
 

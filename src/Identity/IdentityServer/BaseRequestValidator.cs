@@ -31,12 +31,11 @@ public abstract class BaseRequestValidator<T> where T : class
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly IMailService _mailService;
-    private readonly ILogger<ResourceOwnerPasswordValidator> _logger;
+    private readonly ILogger _logger;
     private readonly ICurrentContext _currentContext;
     private readonly GlobalSettings _globalSettings;
     private readonly IPolicyRepository _policyRepository;
     private readonly IUserRepository _userRepository;
-    private readonly ICaptchaValidationService _captchaValidationService;
 
     public BaseRequestValidator(
         UserManager<User> userManager,
@@ -49,12 +48,11 @@ public abstract class BaseRequestValidator<T> where T : class
         IOrganizationUserRepository organizationUserRepository,
         IApplicationCacheService applicationCacheService,
         IMailService mailService,
-        ILogger<ResourceOwnerPasswordValidator> logger,
+        ILogger logger,
         ICurrentContext currentContext,
         GlobalSettings globalSettings,
         IPolicyRepository policyRepository,
-        IUserRepository userRepository,
-        ICaptchaValidationService captchaValidationService)
+        IUserRepository userRepository)
     {
         _userManager = userManager;
         _deviceRepository = deviceRepository;
@@ -71,7 +69,6 @@ public abstract class BaseRequestValidator<T> where T : class
         _globalSettings = globalSettings;
         _policyRepository = policyRepository;
         _userRepository = userRepository;
-        _captchaValidationService = captchaValidationService;
     }
 
     protected async Task ValidateAsync(T context, ValidatedTokenRequest request,
@@ -172,7 +169,7 @@ public abstract class BaseRequestValidator<T> where T : class
 
         if (device != null)
         {
-            claims.Add(new Claim("device", device.Identifier));
+            claims.Add(new Claim(Claims.Device, device.Identifier));
         }
 
         var customResponse = new Dictionary<string, object>();
