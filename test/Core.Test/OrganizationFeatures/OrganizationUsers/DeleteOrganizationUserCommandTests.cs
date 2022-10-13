@@ -1,6 +1,6 @@
-﻿using Bit.Core.Commands;
-using Bit.Core.Entities;
+﻿using Bit.Core.Entities;
 using Bit.Core.Exceptions;
+using Bit.Core.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
@@ -8,7 +8,7 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Core.Test.Commands;
+namespace Bit.Core.Test.OrganizationFeatures.OrganizationUsers;
 
 [SutProviderCustomize]
 public class DeleteOrganizationUserCommandTests
@@ -27,7 +27,6 @@ public class DeleteOrganizationUserCommandTests
 
         await sutProvider.Sut.DeleteUserAsync(organizationId, organizationUserId, null);
 
-        await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).GetByIdAsync(organizationUserId);
         await sutProvider.GetDependency<IOrganizationService>().Received(1).DeleteUserAsync(organizationId, organizationUserId, null);
     }
 

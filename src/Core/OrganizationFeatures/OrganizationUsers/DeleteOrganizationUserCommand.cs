@@ -1,9 +1,9 @@
-﻿using Bit.Core.Commands.Interfaces;
-using Bit.Core.Exceptions;
+﻿using Bit.Core.Exceptions;
+using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 
-namespace Bit.Core.Commands;
+namespace Bit.Core.OrganizationFeatures.OrganizationUsers;
 
 public class DeleteOrganizationUserCommand : IDeleteOrganizationUserCommand
 {
@@ -13,7 +13,7 @@ public class DeleteOrganizationUserCommand : IDeleteOrganizationUserCommand
     public DeleteOrganizationUserCommand(
         IOrganizationUserRepository organizationUserRepository,
         IOrganizationService organizationService
-        )
+    )
     {
         _organizationUserRepository = organizationUserRepository;
         _organizationService = organizationService;

@@ -1,4 +1,4 @@
-﻿namespace Bit.Core.Commands.Interfaces;
+﻿namespace Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 
 public interface IDeleteOrganizationUserCommand
 {
