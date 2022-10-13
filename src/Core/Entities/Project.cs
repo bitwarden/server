@@ -17,7 +17,7 @@ public class Project : ITableObject<Guid>
 
     public DateTime? DeletedDate { get; set; }
 
-    public virtual ICollection<Secret> Secrets { get; set; }
+    public virtual ICollection<Secret>? Secrets { get; set; }
 
     public void SetNewId()
     {
