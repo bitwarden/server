@@ -7,7 +7,6 @@
 
   <ItemGroup>
     <PackageReference Include="AngleSharp" Version="0.16.1" />
-    <PackageReference Include="Serilog" Version="2.10.0.0" />
   </ItemGroup>
 
   <ItemGroup>
