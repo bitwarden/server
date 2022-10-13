@@ -18,7 +18,7 @@ public class SecretIdentifierResponseModel : ResponseModel
         Key = secret.Key;
         CreationDate = secret.CreationDate;
         RevisionDate = secret.RevisionDate;
-        ProjectGuids = secret.ProjectGuids;
+        Projects = secret.Projects.ToDictionary(p => p.Id, p => p.Name);
     }
 
     public string Id { get; set; }
@@ -31,6 +31,6 @@ public class SecretIdentifierResponseModel : ResponseModel
 
     public DateTime RevisionDate { get; set; }
 
-    public Dictionary<System.Guid, string> ProjectGuids { get; set; }
+    public Dictionary<System.Guid, string> Projects { get; set; }
 }
 
