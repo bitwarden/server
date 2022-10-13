@@ -5,7 +5,7 @@ using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Bit.Scim.Context;
 using Bit.Scim.Models;
-using Bit.Scim.Queries.Users.Interfaces;
+using Bit.Scim.Users.Interfaces;
 using Bit.Scim.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

@@ -1,7 +1,7 @@
 ﻿using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Scim.Models;
-using Bit.Scim.Queries.Users;
+using Bit.Scim.Users;
 using Bit.Scim.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -9,7 +9,7 @@ using Bit.Test.Common.Helpers;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Scim.Test.Queries.Users;
+namespace Bit.Scim.Test.Users;
 
 [SutProviderCustomize]
 public class GetUsersListQueryTests

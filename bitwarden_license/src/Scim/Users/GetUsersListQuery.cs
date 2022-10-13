@@ -1,8 +1,8 @@
 ﻿using Bit.Core.Repositories;
 using Bit.Scim.Models;
-using Bit.Scim.Queries.Users.Interfaces;
+using Bit.Scim.Users.Interfaces;
 
-namespace Bit.Scim.Queries.Users;
+namespace Bit.Scim.Users;
 
 public class GetUsersListQuery : IGetUsersListQuery
 {
