@@ -4,15 +4,15 @@ using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Scim.Commands.Users;
 using Bit.Scim.Models;
+using Bit.Scim.Users;
 using Bit.Scim.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Scim.Test.Commands.Users;
+namespace Bit.Scim.Test.Users;
 
 [SutProviderCustomize]
 public class PostUserCommandTests

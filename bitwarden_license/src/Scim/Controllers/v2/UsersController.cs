@@ -1,9 +1,8 @@
 ﻿using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Scim.Commands.Users.Interfaces;
 using Bit.Scim.Models;
-using Bit.Scim.Queries.Users.Interfaces;
+using Bit.Scim.Users.Interfaces;
 using Bit.Scim.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
