@@ -1645,7 +1645,7 @@ public class OrganizationService : IOrganizationService
         await _eventService.LogOrganizationUserEventAsync(user, EventType.OrganizationUser_Updated);
     }
 
-    [Obsolete("EC-508 DeleteOrganizationUserCommand should be used instead.")]
+    [Obsolete("IDeleteOrganizationUserCommand should be used instead. To be removed by EC-607.")]
     public async Task DeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid? deletingUserId)
     {
         var orgUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
@@ -1761,7 +1761,6 @@ public class OrganizationService : IOrganizationService
         return result;
     }
 
-    [Obsolete("EC-508 OrganizationHasConfirmedOwnersExceptQuery should be used instead.")]
     public async Task<bool> HasConfirmedOwnersExceptAsync(Guid organizationId, IEnumerable<Guid> organizationUsersId, bool includeProvider = true)
     {
         var confirmedOwners = await GetConfirmedOwnersAsync(organizationId);
@@ -2106,7 +2105,6 @@ public class OrganizationService : IOrganizationService
         return owners.Where(o => o.Status == OrganizationUserStatusType.Confirmed);
     }
 
-    [Obsolete("EC-508 PushDeleteUserRegistrationOrganizationCommand should be used instead.")]
     private async Task DeleteAndPushUserRegistrationAsync(Guid organizationId, Guid userId)
     {
         var deviceIds = await GetUserDeviceIdsAsync(userId);
