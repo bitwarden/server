@@ -135,7 +135,7 @@ public class Startup
 #if OSS
         services.AddOosServices();
 #else
-        services.AddCommCoreServices();
+        services.AddCommCoreServices(true);
         services.AddCommercialEFRepositories();
 #endif
 
