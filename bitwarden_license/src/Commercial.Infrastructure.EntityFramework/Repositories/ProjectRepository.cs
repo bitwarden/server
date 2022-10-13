@@ -38,20 +38,31 @@ public class ProjectRepository : Repository<Core.Entities.Project, Project, Guid
         }
     }
 
-    public async Task SoftDeleteManyByIdAsync(IEnumerable<Guid> ids)
+    public async Task DeleteManyByIdAsync(IEnumerable<Guid> ids)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
             var utcNow = DateTime.UtcNow;
-            var project = dbContext.Project.Where(c => ids.Contains(c.Id));
-            await project.ForEachAsync(project =>
+            var projects = dbContext.Project.Where(c => ids.Contains(c.Id));
+            await projects.ForEachAsync(project =>
             {
-                dbContext.Attach(project);
-                project.DeletedDate = utcNow;
-                project.RevisionDate = utcNow;
+                dbContext.Remove(project);
             });
             await dbContext.SaveChangesAsync();
         }
+    }
+
+    public async Task<IEnumerable<Core.Entities.Project>> GetManyByIds(IEnumerable<Guid> ids)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var projects = await dbContext.Project
+                                    .Where(c => ids.Contains(c.Id) && c.DeletedDate == null)
+                                    .ToListAsync();
+            return Mapper.Map<List<Core.Entities.Project>>(projects);
+        }
+
     }
 }

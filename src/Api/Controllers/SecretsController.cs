@@ -62,10 +62,10 @@ public class SecretsController : Controller
 
     // TODO Once permissions are setup for Secrets Manager need to enforce them on delete.
     [HttpPost("secrets/delete")]
-    public async Task<ListResponseModel<SecretDeleteBulkResponseModel>> BulkDeleteAsync([FromBody] List<Guid> ids)
+    public async Task<ListResponseModel<BulkDeleteResponseModel>> BulkDeleteAsync([FromBody] List<Guid> ids)
     {
         var results = await _deleteSecretCommand.DeleteSecrets(ids);
-        var responses = results.Select(r => new SecretDeleteBulkResponseModel(r.Item1, r.Item2));
-        return new ListResponseModel<SecretDeleteBulkResponseModel>(responses);
+        var responses = results.Select(r => new BulkDeleteResponseModel(r.Item1.Id, r.Item2));
+        return new ListResponseModel<BulkDeleteResponseModel>(responses);
     }
 }

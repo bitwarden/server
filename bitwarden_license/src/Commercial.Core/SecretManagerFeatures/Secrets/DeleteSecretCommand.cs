@@ -1,4 +1,5 @@
-﻿using Bit.Core.Exceptions;
+﻿using Bit.Core.Entities;
+using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.SecretManagerFeatures.Secrets.Interfaces;
 
@@ -13,7 +14,7 @@ public class DeleteSecretCommand : IDeleteSecretCommand
         _secretRepository = secretRepository;
     }
 
-    public async Task<List<Tuple<Guid, string>>> DeleteSecrets(List<Guid> ids)
+    public async Task<List<Tuple<Secret, string>>> DeleteSecrets(List<Guid> ids)
     {
         var secrets = await _secretRepository.GetManyByIds(ids);
 
@@ -24,14 +25,15 @@ public class DeleteSecretCommand : IDeleteSecretCommand
 
         var results = ids.Select(id =>
         {
-            if (!secrets.Any(secret => secret.Id == id))
+            var secret = secrets.FirstOrDefault(secret => secret.Id == id);
+            if (secret == null)
             {
                 throw new NotFoundException();
             }
             // TODO Once permissions are implemented add check for each secret here.
             else
             {
-                return new Tuple<Guid, string>(id, "");
+                return new Tuple<Secret, string>(secret, "");
             }
         }).ToList();
 
