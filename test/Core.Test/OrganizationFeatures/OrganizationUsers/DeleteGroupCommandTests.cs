@@ -1,14 +1,14 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Exceptions;
+using Bit.Core.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Scim.Commands.Groups;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Scim.Test.Commands.Groups;
+namespace Bit.Core.Test.OrganizationFeatures.OrganizationUsers;
 
 [SutProviderCustomize]
 public class DeleteGroupCommandTests
@@ -23,7 +23,6 @@ public class DeleteGroupCommandTests
 
         await sutProvider.Sut.DeleteGroupAsync(group.OrganizationId, group.Id);
 
-        await sutProvider.GetDependency<IGroupRepository>().Received(1).GetByIdAsync(group.Id);
         await sutProvider.GetDependency<IGroupRepository>().Received(1).DeleteAsync(group);
         await sutProvider.GetDependency<IEventService>().Received(1).LogGroupEventAsync(group, Core.Enums.EventType.Group_Deleted);
     }

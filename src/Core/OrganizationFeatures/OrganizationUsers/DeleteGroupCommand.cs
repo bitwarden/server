@@ -1,9 +1,9 @@
 ﻿using Bit.Core.Exceptions;
+using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Scim.Commands.Groups.Interfaces;
 
-namespace Bit.Scim.Commands.Groups;
+namespace Bit.Core.OrganizationFeatures.OrganizationUsers;
 
 public class DeleteGroupCommand : IDeleteGroupCommand
 {
