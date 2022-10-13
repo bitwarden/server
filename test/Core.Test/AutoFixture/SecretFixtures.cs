@@ -2,7 +2,7 @@
 using Bit.Core.Entities;
 using Bit.Test.Common.AutoFixture.Attributes;
 
-namespace Bit.Api.Test.AutoFixture;
+namespace Bit.Core.Test.AutoFixture.SecretsFixture;
 
 public class SecretCustomization : ICustomization
 {
@@ -16,7 +16,7 @@ public class SecretCustomization : ICustomization
     }
 }
 
-internal class SecretCustomizeAttribute : BitCustomizeAttribute
+public class SecretCustomizeAttribute : BitCustomizeAttribute
 {
     public override ICustomization GetCustomization() => new SecretCustomization();
 }
