@@ -2,8 +2,8 @@
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Scim.Commands.Groups;
 using Bit.Scim.Context;
+using Bit.Scim.Groups;
 using Bit.Scim.Models;
 using Bit.Scim.Utilities;
 using Bit.Test.Common.AutoFixture;
@@ -12,7 +12,7 @@ using Bit.Test.Common.Helpers;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Scim.Test.Commands.Groups;
+namespace Bit.Scim.Test.Groups;
 
 [SutProviderCustomize]
 public class PutGroupCommandTests
