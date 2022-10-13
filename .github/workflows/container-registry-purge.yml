@@ -81,18 +81,11 @@ jobs:
 
       - name: Retrieve secrets
         id: retrieve-secrets
+        uses: Azure/get-keyvault-secrets@b5c723b9ac7870c022b8c35befe620b7009b336f
         if: failure()
-        env:
-          KEYVAULT: bitwarden-prod-kv
-          SECRETS: |
-            devops-alerts-slack-webhook-url
-        run: |
-          for i in ${SECRETS//,/ }
-          do
-            VALUE=$(az keyvault secret show --vault-name $KEYVAULT --name $i --query value --output tsv)
-            echo "::add-mask::$VALUE"
-            echo "::set-output name=$i::$VALUE"
-          done
+        with:
+          keyvault: "bitwarden-prod-kv"
+          secrets: "devops-alerts-slack-webhook-url"
 
       - name: Notify Slack on failure
         uses: act10ns/slack@da3191ebe2e67f49b46880b4633f5591a96d1d33
