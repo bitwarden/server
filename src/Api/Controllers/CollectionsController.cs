@@ -80,9 +80,9 @@ public class CollectionsController : Controller
             throw new NotFoundException();
         }
 
-        var collections = await _collectionService.GetOrganizationCollections(orgId);
-        var details = collections.Select(async (c) => await _collectionRepository.GetByIdWithGroupsAsync(c.Id));
-        var responses = details.Select(d => new CollectionGroupDetailsResponseModel(d.Result.Item1, d.Result.Item2));
+        var collectionDetails = await _collectionService.GetOrganizationCollectionsWithGroups(orgId);
+
+        var responses = collectionDetails.Select(d => new CollectionGroupDetailsResponseModel(d.Item1, d.Item2));
         return new ListResponseModel<CollectionGroupDetailsResponseModel>(responses);
     }
 
