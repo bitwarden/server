@@ -1,8 +1,6 @@
 ﻿using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
-using Bit.Scim.Models;
 using Bit.Scim.Users;
-using Bit.Scim.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
@@ -18,33 +16,9 @@ public class GetUsersListQueryTests
     [BitAutoData(10, 1)]
     [BitAutoData(2, 1)]
     [BitAutoData(1, 3)]
-    public async Task GetUsersList_Success(int? count, int? startIndex, SutProvider<GetUsersListQuery> sutProvider, Guid organizationId, IList<OrganizationUserUserDetails> organizationUserUserDetails)
+    public async Task GetUsersList_Success(int count, int startIndex, SutProvider<GetUsersListQuery> sutProvider, Guid organizationId, IList<OrganizationUserUserDetails> organizationUserUserDetails)
     {
         organizationUserUserDetails = SetUsersOrganizationId(organizationUserUserDetails, organizationId);
-
-        var expectedResult = new ScimListResponseModel<ScimUserResponseModel>
-        {
-            Resources = organizationUserUserDetails
-                .OrderBy(ouud => ouud.Email)
-                .Skip(startIndex.Value - 1)
-                .Take(count.Value)
-                .Select(ouud => new Models.ScimUserResponseModel
-                {
-                    Id = ouud.Id.ToString(),
-                    UserName = ouud.Email,
-                    Name = new Models.BaseScimUserModel.NameModel(ouud.Name),
-                    Emails = new List<Models.BaseScimUserModel.EmailModel> { new Models.BaseScimUserModel.EmailModel(ouud.Email) },
-                    DisplayName = ouud.Name,
-                    Active = ouud.Status != Core.Enums.OrganizationUserStatusType.Revoked ? true : false,
-                    Groups = new List<string>(),
-                    ExternalId = ouud.ExternalId,
-                    Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
-                }).ToList(),
-            ItemsPerPage = count.GetValueOrDefault(organizationUserUserDetails.Count),
-            TotalResults = organizationUserUserDetails.Count,
-            StartIndex = startIndex.GetValueOrDefault(1),
-            Schemas = new List<string> { ScimConstants.Scim2SchemaListResponse }
-        };
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetManyDetailsByOrganizationAsync(organizationId)
@@ -54,7 +28,8 @@ public class GetUsersListQueryTests
 
         await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).GetManyDetailsByOrganizationAsync(organizationId);
 
-        AssertHelper.AssertPropertyEqual(expectedResult, result);
+        AssertHelper.AssertPropertyEqual(organizationUserUserDetails.Skip(startIndex - 1).Take(count).ToList(), result.userList);
+        AssertHelper.AssertPropertyEqual(organizationUserUserDetails.Count, result.totalResults);
     }
 
     [Theory]
@@ -65,27 +40,10 @@ public class GetUsersListQueryTests
         organizationUserUserDetails.First().Email = email;
         string filter = $"userName eq {email}";
 
-        var expectedResult = new ScimListResponseModel<ScimUserResponseModel>
-        {
-            Resources = organizationUserUserDetails
-                .Where(ou => ou.Email.ToLowerInvariant() == email)
-                .Select(ouud => new Models.ScimUserResponseModel
-                {
-                    Id = ouud.Id.ToString(),
-                    UserName = ouud.Email,
-                    Name = new Models.BaseScimUserModel.NameModel(ouud.Name),
-                    Emails = new List<Models.BaseScimUserModel.EmailModel> { new Models.BaseScimUserModel.EmailModel(ouud.Email) },
-                    DisplayName = ouud.Name,
-                    Active = ouud.Status != Core.Enums.OrganizationUserStatusType.Revoked ? true : false,
-                    Groups = new List<string>(),
-                    ExternalId = ouud.ExternalId,
-                    Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
-                }).ToList(),
-            ItemsPerPage = 1,
-            TotalResults = 1,
-            StartIndex = 1,
-            Schemas = new List<string> { ScimConstants.Scim2SchemaListResponse }
-        };
+        var expectedUserList = organizationUserUserDetails
+            .Where(u => u.Email == email)
+            .ToList();
+        var expectedTotalResults = expectedUserList.Count;
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetManyDetailsByOrganizationAsync(organizationId)
@@ -95,7 +53,8 @@ public class GetUsersListQueryTests
 
         await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).GetManyDetailsByOrganizationAsync(organizationId);
 
-        AssertHelper.AssertPropertyEqual(expectedResult, result);
+        AssertHelper.AssertPropertyEqual(expectedUserList, result.userList);
+        AssertHelper.AssertPropertyEqual(expectedTotalResults, result.totalResults);
     }
 
     [Theory]
@@ -105,14 +64,8 @@ public class GetUsersListQueryTests
         organizationUserUserDetails = SetUsersOrganizationId(organizationUserUserDetails, organizationId);
         string filter = $"userName eq {email}";
 
-        var expectedResult = new ScimListResponseModel<ScimUserResponseModel>
-        {
-            Resources = new List<ScimUserResponseModel>(),
-            ItemsPerPage = 0,
-            TotalResults = 0,
-            StartIndex = 1,
-            Schemas = new List<string> { ScimConstants.Scim2SchemaListResponse }
-        };
+        var expectedUserList = new List<OrganizationUserUserDetails>();
+        var expectedTotalResults = expectedUserList.Count;
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetManyDetailsByOrganizationAsync(organizationId)
@@ -122,7 +75,8 @@ public class GetUsersListQueryTests
 
         await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).GetManyDetailsByOrganizationAsync(organizationId);
 
-        AssertHelper.AssertPropertyEqual(expectedResult, result);
+        AssertHelper.AssertPropertyEqual(expectedUserList, result.userList);
+        AssertHelper.AssertPropertyEqual(expectedTotalResults, result.totalResults);
     }
 
     [Theory]
@@ -133,27 +87,10 @@ public class GetUsersListQueryTests
         string externalId = organizationUserUserDetails.First().ExternalId;
         string filter = $"externalId eq {externalId}";
 
-        var expectedResult = new ScimListResponseModel<ScimUserResponseModel>
-        {
-            Resources = organizationUserUserDetails
-                .Where(ou => ou.ExternalId == externalId)
-                .Select(ouud => new Models.ScimUserResponseModel
-                {
-                    Id = ouud.Id.ToString(),
-                    UserName = ouud.Email,
-                    Name = new Models.BaseScimUserModel.NameModel(ouud.Name),
-                    Emails = new List<Models.BaseScimUserModel.EmailModel> { new Models.BaseScimUserModel.EmailModel(ouud.Email) },
-                    DisplayName = ouud.Name,
-                    Active = ouud.Status != Core.Enums.OrganizationUserStatusType.Revoked ? true : false,
-                    Groups = new List<string>(),
-                    ExternalId = ouud.ExternalId,
-                    Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
-                }).ToList(),
-            ItemsPerPage = 1,
-            TotalResults = 1,
-            StartIndex = 1,
-            Schemas = new List<string> { ScimConstants.Scim2SchemaListResponse }
-        };
+        var expectedUserList = organizationUserUserDetails
+            .Where(u => u.ExternalId == externalId)
+            .ToList();
+        var expectedTotalResults = expectedUserList.Count;
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetManyDetailsByOrganizationAsync(organizationId)
@@ -163,7 +100,8 @@ public class GetUsersListQueryTests
 
         await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).GetManyDetailsByOrganizationAsync(organizationId);
 
-        AssertHelper.AssertPropertyEqual(expectedResult, result);
+        AssertHelper.AssertPropertyEqual(expectedUserList, result.userList);
+        AssertHelper.AssertPropertyEqual(expectedTotalResults, result.totalResults);
     }
 
     [Theory]
@@ -173,14 +111,10 @@ public class GetUsersListQueryTests
         organizationUserUserDetails = SetUsersOrganizationId(organizationUserUserDetails, organizationId);
         string filter = $"externalId eq {externalId}";
 
-        var expectedResult = new ScimListResponseModel<ScimUserResponseModel>
-        {
-            Resources = new List<ScimUserResponseModel>(),
-            ItemsPerPage = 0,
-            TotalResults = 0,
-            StartIndex = 1,
-            Schemas = new List<string> { ScimConstants.Scim2SchemaListResponse }
-        };
+        var expectedUserList = organizationUserUserDetails
+            .Where(u => u.ExternalId == externalId)
+            .ToList();
+        var expectedTotalResults = expectedUserList.Count;
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetManyDetailsByOrganizationAsync(organizationId)
@@ -190,7 +124,8 @@ public class GetUsersListQueryTests
 
         await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).GetManyDetailsByOrganizationAsync(organizationId);
 
-        AssertHelper.AssertPropertyEqual(expectedResult, result);
+        AssertHelper.AssertPropertyEqual(expectedUserList, result.userList);
+        AssertHelper.AssertPropertyEqual(expectedTotalResults, result.totalResults);
     }
 
     private IList<OrganizationUserUserDetails> SetUsersOrganizationId(IList<OrganizationUserUserDetails> organizationUserUserDetails, Guid organizationId)

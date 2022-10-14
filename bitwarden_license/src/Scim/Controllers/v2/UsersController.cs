@@ -57,7 +57,14 @@ public class UsersController : Controller
         [FromQuery] int? count,
         [FromQuery] int? startIndex)
     {
-        var scimListResponseModel = await _getUsersListQuery.GetUsersListAsync(organizationId, filter, count, startIndex);
+        var usersListQueryResult = await _getUsersListQuery.GetUsersListAsync(organizationId, filter, count, startIndex);
+        var scimListResponseModel = new ScimListResponseModel<ScimUserResponseModel>
+        {
+            Resources = usersListQueryResult.userList.Select(u => new ScimUserResponseModel(u)).ToList(),
+            ItemsPerPage = count.GetValueOrDefault(usersListQueryResult.userList.Count()),
+            TotalResults = usersListQueryResult.totalResults,
+            StartIndex = startIndex.GetValueOrDefault(1),
+        };
         return Ok(scimListResponseModel);
     }
 

@@ -1,5 +1,5 @@
-﻿using Bit.Core.Repositories;
-using Bit.Scim.Models;
+﻿using Bit.Core.Models.Data.Organizations.OrganizationUsers;
+using Bit.Core.Repositories;
 using Bit.Scim.Users.Interfaces;
 
 namespace Bit.Scim.Users;
@@ -13,7 +13,7 @@ public class GetUsersListQuery : IGetUsersListQuery
         _organizationUserRepository = organizationUserRepository;
     }
 
-    public async Task<ScimListResponseModel<ScimUserResponseModel>> GetUsersListAsync(Guid organizationId, string filter, int? count, int? startIndex)
+    public async Task<(IEnumerable<OrganizationUserUserDetails> userList, int totalResults)> GetUsersListAsync(Guid organizationId, string filter, int? count, int? startIndex)
     {
         string emailFilter = null;
         string usernameFilter = null;
@@ -34,7 +34,7 @@ public class GetUsersListQuery : IGetUsersListQuery
             }
         }
 
-        var userList = new List<ScimUserResponseModel> { };
+        var userList = new List<OrganizationUserUserDetails>();
         var orgUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(organizationId);
         var totalResults = 0;
         if (!string.IsNullOrWhiteSpace(emailFilter))
@@ -42,7 +42,7 @@ public class GetUsersListQuery : IGetUsersListQuery
             var orgUser = orgUsers.FirstOrDefault(ou => ou.Email.ToLowerInvariant() == emailFilter);
             if (orgUser != null)
             {
-                userList.Add(new ScimUserResponseModel(orgUser));
+                userList.Add(orgUser);
             }
             totalResults = userList.Count;
         }
@@ -51,7 +51,7 @@ public class GetUsersListQuery : IGetUsersListQuery
             var orgUser = orgUsers.FirstOrDefault(ou => ou.ExternalId == externalIdFilter);
             if (orgUser != null)
             {
-                userList.Add(new ScimUserResponseModel(orgUser));
+                userList.Add(orgUser);
             }
             totalResults = userList.Count;
         }
@@ -60,19 +60,10 @@ public class GetUsersListQuery : IGetUsersListQuery
             userList = orgUsers.OrderBy(ou => ou.Email)
                 .Skip(startIndex.Value - 1)
                 .Take(count.Value)
-                .Select(ou => new ScimUserResponseModel(ou))
                 .ToList();
             totalResults = orgUsers.Count;
         }
 
-        var result = new ScimListResponseModel<ScimUserResponseModel>
-        {
-            Resources = userList,
-            ItemsPerPage = count.GetValueOrDefault(userList.Count),
-            TotalResults = totalResults,
-            StartIndex = startIndex.GetValueOrDefault(1),
-        };
-
-        return result;
+        return (userList, totalResults);
     }
 }
