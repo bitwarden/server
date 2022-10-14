@@ -204,6 +204,9 @@ public class TwoFactorEmailRequestModel : SecretVerificationRequestModel
 
     public string DeviceIdentifier { get; set; }
 
+    public Guid AuthRequestId { get; set; }
+    public string AuthRequestAccessCode { get; set; }
+
     public User ToUser(User extistingUser)
     {
         var providers = extistingUser.GetTwoFactorProviders();

@@ -6,6 +6,7 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.OrganizationFeatures.OrganizationApiKeys.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -28,6 +29,7 @@ public class TwoFactorController : Controller
     private readonly GlobalSettings _globalSettings;
     private readonly UserManager<User> _userManager;
     private readonly ICurrentContext _currentContext;
+    private readonly IVerifyAuthRequestCommand _verifyAuthRequestCommand;
 
     public TwoFactorController(
         IUserService userService,
@@ -35,7 +37,8 @@ public class TwoFactorController : Controller
         IOrganizationService organizationService,
         GlobalSettings globalSettings,
         UserManager<User> userManager,
-        ICurrentContext currentContext)
+        ICurrentContext currentContext,
+        IVerifyAuthRequestCommand verifyAuthRequestCommand)
     {
         _userService = userService;
         _organizationRepository = organizationRepository;
@@ -285,7 +288,8 @@ public class TwoFactorController : Controller
         var user = await _userManager.FindByEmailAsync(model.Email.ToLowerInvariant());
         if (user != null)
         {
-            if (await _userService.VerifySecretAsync(user, model.Secret))
+            if (await _userService.VerifySecretAsync(user, model.Secret) || 
+                await _verifyAuthRequestCommand.VerifyAuthRequestAsync(model.AuthRequestId, model.AuthRequestAccessCode))
             {
                 var isBecauseNewDeviceLogin = false;
                 if (user.GetTwoFactorProvider(TwoFactorProviderType.Email) is null
