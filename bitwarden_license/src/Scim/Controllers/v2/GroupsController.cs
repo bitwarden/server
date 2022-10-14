@@ -56,7 +56,14 @@ public class GroupsController : Controller
         [FromQuery] int? count,
         [FromQuery] int? startIndex)
     {
-        var scimListResponseModel = await _getGroupsListQuery.GetGroupsListAsync(organizationId, filter, count, startIndex);
+        var groupsListQueryResult = await _getGroupsListQuery.GetGroupsListAsync(organizationId, filter, count, startIndex);
+        var scimListResponseModel = new ScimListResponseModel<ScimGroupResponseModel>
+        {
+            Resources = groupsListQueryResult.groupList.Select(g => new ScimGroupResponseModel(g)).ToList(),
+            ItemsPerPage = count.GetValueOrDefault(groupsListQueryResult.groupList.Count()),
+            TotalResults = groupsListQueryResult.totalResults,
+            StartIndex = startIndex.GetValueOrDefault(1),
+        };
         return Ok(scimListResponseModel);
     }
 

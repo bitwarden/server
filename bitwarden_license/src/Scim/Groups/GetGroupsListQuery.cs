@@ -1,6 +1,6 @@
-﻿using Bit.Core.Repositories;
+﻿using Bit.Core.Entities;
+using Bit.Core.Repositories;
 using Bit.Scim.Groups.Interfaces;
-using Bit.Scim.Models;
 
 namespace Bit.Scim.Groups;
 
@@ -13,7 +13,7 @@ public class GetGroupsListQuery : IGetGroupsListQuery
         _groupRepository = groupRepository;
     }
 
-    public async Task<ScimListResponseModel<ScimGroupResponseModel>> GetGroupsListAsync(Guid organizationId, string filter, int? count, int? startIndex)
+    public async Task<(IEnumerable<Group> groupList, int totalResults)> GetGroupsListAsync(Guid organizationId, string filter, int? count, int? startIndex)
     {
         string nameFilter = null;
         string externalIdFilter = null;
@@ -29,7 +29,7 @@ public class GetGroupsListQuery : IGetGroupsListQuery
             }
         }
 
-        var groupList = new List<ScimGroupResponseModel>();
+        var groupList = new List<Group>();
         var groups = await _groupRepository.GetManyByOrganizationIdAsync(organizationId);
         var totalResults = 0;
         if (!string.IsNullOrWhiteSpace(nameFilter))
@@ -37,7 +37,7 @@ public class GetGroupsListQuery : IGetGroupsListQuery
             var group = groups.FirstOrDefault(g => g.Name == nameFilter);
             if (group != null)
             {
-                groupList.Add(new ScimGroupResponseModel(group));
+                groupList.Add(group);
             }
             totalResults = groupList.Count;
         }
@@ -46,7 +46,7 @@ public class GetGroupsListQuery : IGetGroupsListQuery
             var group = groups.FirstOrDefault(ou => ou.ExternalId == externalIdFilter);
             if (group != null)
             {
-                groupList.Add(new ScimGroupResponseModel(group));
+                groupList.Add(group);
             }
             totalResults = groupList.Count;
         }
@@ -55,19 +55,10 @@ public class GetGroupsListQuery : IGetGroupsListQuery
             groupList = groups.OrderBy(g => g.Name)
                 .Skip(startIndex.Value - 1)
                 .Take(count.Value)
-                .Select(g => new ScimGroupResponseModel(g))
                 .ToList();
             totalResults = groups.Count;
         }
 
-        var result = new ScimListResponseModel<ScimGroupResponseModel>
-        {
-            Resources = groupList,
-            ItemsPerPage = count.GetValueOrDefault(groupList.Count),
-            TotalResults = totalResults,
-            StartIndex = startIndex.GetValueOrDefault(1),
-        };
-
-        return result;
+        return (groupList, totalResults);
     }
 }

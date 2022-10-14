@@ -1,8 +1,6 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Bit.Scim.Groups;
-using Bit.Scim.Models;
-using Bit.Scim.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
@@ -18,23 +16,9 @@ public class GetGroupsListCommandTests
     [BitAutoData(10, 1)]
     [BitAutoData(2, 1)]
     [BitAutoData(1, 3)]
-    public async Task GetGroupsList_Success(int? count, int? startIndex, SutProvider<GetGroupsListQuery> sutProvider, Guid organizationId, IList<Group> groups)
+    public async Task GetGroupsList_Success(int count, int startIndex, SutProvider<GetGroupsListQuery> sutProvider, Guid organizationId, IList<Group> groups)
     {
         groups = SetGroupsOrganizationId(groups, organizationId);
-
-        var expectedResult = new ScimListResponseModel<ScimGroupResponseModel>
-        {
-            Resources = groups
-                .OrderBy(g => g.Name)
-                .Skip(startIndex.Value - 1)
-                .Take(count.Value)
-                .Select(g => new Models.ScimGroupResponseModel(g))
-                .ToList(),
-            ItemsPerPage = count.GetValueOrDefault(groups.Count),
-            TotalResults = groups.Count,
-            StartIndex = startIndex.GetValueOrDefault(1),
-            Schemas = new List<string> { ScimConstants.Scim2SchemaListResponse }
-        };
 
         sutProvider.GetDependency<IGroupRepository>()
             .GetManyByOrganizationIdAsync(organizationId)
@@ -44,7 +28,8 @@ public class GetGroupsListCommandTests
 
         await sutProvider.GetDependency<IGroupRepository>().Received(1).GetManyByOrganizationIdAsync(organizationId);
 
-        AssertHelper.AssertPropertyEqual(expectedResult, result);
+        AssertHelper.AssertPropertyEqual(groups.Skip(startIndex - 1).Take(count).ToList(), result.groupList);
+        AssertHelper.AssertPropertyEqual(groups.Count, result.totalResults);
     }
 
     [Theory]
@@ -55,17 +40,10 @@ public class GetGroupsListCommandTests
         string name = groups.First().Name;
         string filter = $"displayName eq {name}";
 
-        var expectedResult = new ScimListResponseModel<ScimGroupResponseModel>
-        {
-            Resources = groups
-                .Where(g => g.Name == name)
-                .Select(g => new Models.ScimGroupResponseModel(g))
-                .ToList(),
-            ItemsPerPage = 1,
-            TotalResults = 1,
-            StartIndex = 1,
-            Schemas = new List<string> { ScimConstants.Scim2SchemaListResponse }
-        };
+        var expectedGroupList = groups
+            .Where(g => g.Name == name)
+            .ToList();
+        var expectedTotalResults = expectedGroupList.Count;
 
         sutProvider.GetDependency<IGroupRepository>()
             .GetManyByOrganizationIdAsync(organizationId)
@@ -75,7 +53,8 @@ public class GetGroupsListCommandTests
 
         await sutProvider.GetDependency<IGroupRepository>().Received(1).GetManyByOrganizationIdAsync(organizationId);
 
-        AssertHelper.AssertPropertyEqual(expectedResult, result);
+        AssertHelper.AssertPropertyEqual(expectedGroupList, result.groupList);
+        AssertHelper.AssertPropertyEqual(expectedTotalResults, result.totalResults);
     }
 
     [Theory]
@@ -85,14 +64,8 @@ public class GetGroupsListCommandTests
         groups = SetGroupsOrganizationId(groups, organizationId);
         string filter = $"displayName eq {name}";
 
-        var expectedResult = new ScimListResponseModel<ScimGroupResponseModel>
-        {
-            Resources = new List<ScimGroupResponseModel>(),
-            ItemsPerPage = 0,
-            TotalResults = 0,
-            StartIndex = 1,
-            Schemas = new List<string> { ScimConstants.Scim2SchemaListResponse }
-        };
+        var expectedGroupList = new List<Group>();
+        var expectedTotalResults = expectedGroupList.Count;
 
         sutProvider.GetDependency<IGroupRepository>()
             .GetManyByOrganizationIdAsync(organizationId)
@@ -102,7 +75,8 @@ public class GetGroupsListCommandTests
 
         await sutProvider.GetDependency<IGroupRepository>().Received(1).GetManyByOrganizationIdAsync(organizationId);
 
-        AssertHelper.AssertPropertyEqual(expectedResult, result);
+        AssertHelper.AssertPropertyEqual(expectedGroupList, result.groupList);
+        AssertHelper.AssertPropertyEqual(expectedTotalResults, result.totalResults);
     }
 
     [Theory]
@@ -113,17 +87,10 @@ public class GetGroupsListCommandTests
         string externalId = groups.First().ExternalId;
         string filter = $"externalId eq {externalId}";
 
-        var expectedResult = new ScimListResponseModel<ScimGroupResponseModel>
-        {
-            Resources = groups
-                .Where(ou => ou.ExternalId == externalId)
-                .Select(g => new Models.ScimGroupResponseModel(g))
-                .ToList(),
-            ItemsPerPage = 1,
-            TotalResults = 1,
-            StartIndex = 1,
-            Schemas = new List<string> { ScimConstants.Scim2SchemaListResponse }
-        };
+        var expectedGroupList = groups
+            .Where(ou => ou.ExternalId == externalId)
+            .ToList();
+        var expectedTotalResults = expectedGroupList.Count;
 
         sutProvider.GetDependency<IGroupRepository>()
             .GetManyByOrganizationIdAsync(organizationId)
@@ -133,7 +100,8 @@ public class GetGroupsListCommandTests
 
         await sutProvider.GetDependency<IGroupRepository>().Received(1).GetManyByOrganizationIdAsync(organizationId);
 
-        AssertHelper.AssertPropertyEqual(expectedResult, result);
+        AssertHelper.AssertPropertyEqual(expectedGroupList, result.groupList);
+        AssertHelper.AssertPropertyEqual(expectedTotalResults, result.totalResults);
     }
 
     [Theory]
@@ -143,14 +111,10 @@ public class GetGroupsListCommandTests
         groups = SetGroupsOrganizationId(groups, organizationId);
         string filter = $"externalId eq {externalId}";
 
-        var expectedResult = new ScimListResponseModel<ScimGroupResponseModel>
-        {
-            Resources = new List<ScimGroupResponseModel>(),
-            ItemsPerPage = 0,
-            TotalResults = 0,
-            StartIndex = 1,
-            Schemas = new List<string> { ScimConstants.Scim2SchemaListResponse }
-        };
+        var expectedGroupList = groups
+            .Where(ou => ou.ExternalId == externalId)
+            .ToList();
+        var expectedTotalResults = expectedGroupList.Count;
 
         sutProvider.GetDependency<IGroupRepository>()
             .GetManyByOrganizationIdAsync(organizationId)
@@ -160,7 +124,8 @@ public class GetGroupsListCommandTests
 
         await sutProvider.GetDependency<IGroupRepository>().Received(1).GetManyByOrganizationIdAsync(organizationId);
 
-        AssertHelper.AssertPropertyEqual(expectedResult, result);
+        AssertHelper.AssertPropertyEqual(expectedGroupList, result.groupList);
+        AssertHelper.AssertPropertyEqual(expectedTotalResults, result.totalResults);
     }
 
     private IList<Group> SetGroupsOrganizationId(IList<Group> groups, Guid organizationId)

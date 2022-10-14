@@ -1,8 +1,8 @@
-﻿using Bit.Scim.Models;
+﻿using Bit.Core.Entities;
 
 namespace Bit.Scim.Groups.Interfaces;
 
 public interface IGetGroupsListQuery
 {
-    Task<ScimListResponseModel<ScimGroupResponseModel>> GetGroupsListAsync(Guid organizationId, string filter, int? count, int? startIndex);
+    Task<(IEnumerable<Group> groupList, int totalResults)> GetGroupsListAsync(Guid organizationId, string filter, int? count, int? startIndex);
 }
