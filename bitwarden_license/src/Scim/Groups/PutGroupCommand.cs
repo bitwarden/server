@@ -60,11 +60,6 @@ public class PutGroupCommand : IPutGroupCommand
             }
         }
 
-        if (!memberIds.Any())
-        {
-            return;
-        }
-
         await _groupRepository.UpdateUsersAsync(group.Id, memberIds);
     }
 }
