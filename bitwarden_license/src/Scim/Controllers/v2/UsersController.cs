@@ -46,7 +46,8 @@ public class UsersController : Controller
     [HttpGet("{id}")]
     public async Task<IActionResult> Get(Guid organizationId, Guid id)
     {
-        var scimUserResponseModel = await _getUserQuery.GetUserAsync(organizationId, id);
+        var orgUser = await _getUserQuery.GetUserAsync(organizationId, id);
+        var scimUserResponseModel = new ScimUserResponseModel(orgUser);
         return Ok(scimUserResponseModel);
     }
 
