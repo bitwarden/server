@@ -78,7 +78,7 @@ public class PostGroupCommandTests
         var group = await sutProvider.Sut.PostGroupAsync(organizationId, scimGroupRequestModel);
 
         await sutProvider.GetDependency<IGroupService>().Received(1).SaveAsync(group, null);
-        await sutProvider.GetDependency<IGroupRepository>().Received(1).UpdateUsersAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Guid>>());
+        await sutProvider.GetDependency<IGroupRepository>().Received(1).UpdateUsersAsync(Arg.Any<Guid>(), Arg.Is<IEnumerable<Guid>>(arg => arg.All(id => membersUserIds.Contains(id))));
 
         AssertHelper.AssertPropertyEqual(expectedResult, group, "Id", "CreationDate", "RevisionDate");
     }

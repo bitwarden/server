@@ -39,12 +39,12 @@ public class PostGroupCommand : IPostGroupCommand
 
         var group = model.ToGroup(organizationId);
         await _groupService.SaveAsync(group, null);
-        await UpdateGroupMembersAsync(group, model, true);
+        await UpdateGroupMembersAsync(group, model);
 
         return group;
     }
 
-    private async Task UpdateGroupMembersAsync(Group group, ScimGroupRequestModel model, bool skipIfEmpty)
+    private async Task UpdateGroupMembersAsync(Group group, ScimGroupRequestModel model)
     {
         if (_scimContext.RequestScimProvider != Core.Enums.ScimProviderType.Okta)
         {
@@ -65,7 +65,7 @@ public class PostGroupCommand : IPostGroupCommand
             }
         }
 
-        if (!memberIds.Any() && skipIfEmpty)
+        if (!memberIds.Any())
         {
             return;
         }
