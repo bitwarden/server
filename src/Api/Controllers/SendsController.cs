@@ -205,6 +205,7 @@ public class SendsController : Controller
             throw new BadRequestException($"Max file size is {SendService.MAX_FILE_SIZE_READABLE}.");
         }
 
+        model.ValidateCreation();
         var userId = _userService.GetProperUserId(User).Value;
         var (send, data) = model.ToSend(userId, model.File.FileName, _sendService);
         var uploadUrl = await _sendService.SaveFileSendAsync(send, data, model.FileLength.Value);
