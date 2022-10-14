@@ -40,7 +40,7 @@ public class PatchGroupCommandTests
 
         await sutProvider.Sut.PatchGroupAsync(group.OrganizationId, group.Id, scimPatchModel);
 
-        await sutProvider.GetDependency<IGroupRepository>().Received(1).UpdateUsersAsync(group.Id, Arg.Any<IEnumerable<Guid>>());
+        await sutProvider.GetDependency<IGroupRepository>().Received(1).UpdateUsersAsync(group.Id, Arg.Is<IEnumerable<Guid>>(arg => arg.All(id => userIds.Contains(id))));
     }
 
     [Theory]
@@ -68,6 +68,7 @@ public class PatchGroupCommandTests
         await sutProvider.Sut.PatchGroupAsync(group.OrganizationId, group.Id, scimPatchModel);
 
         await sutProvider.GetDependency<IGroupService>().Received(1).SaveAsync(group);
+        Assert.Equal(displayName, group.Name);
     }
 
     [Theory]
@@ -94,6 +95,7 @@ public class PatchGroupCommandTests
         await sutProvider.Sut.PatchGroupAsync(group.OrganizationId, group.Id, scimPatchModel);
 
         await sutProvider.GetDependency<IGroupService>().Received(1).SaveAsync(group);
+        Assert.Equal(displayName, group.Name);
     }
 
     [Theory]
@@ -123,7 +125,7 @@ public class PatchGroupCommandTests
 
         await sutProvider.Sut.PatchGroupAsync(group.OrganizationId, group.Id, scimPatchModel);
 
-        await sutProvider.GetDependency<IGroupRepository>().Received(1).UpdateUsersAsync(group.Id, Arg.Any<IEnumerable<Guid>>());
+        await sutProvider.GetDependency<IGroupRepository>().Received(1).UpdateUsersAsync(group.Id, Arg.Is<IEnumerable<Guid>>(arg => arg.All(id => existingMembers.Append(userId).Contains(id))));
     }
 
     [Theory]
@@ -154,7 +156,7 @@ public class PatchGroupCommandTests
 
         await sutProvider.Sut.PatchGroupAsync(group.OrganizationId, group.Id, scimPatchModel);
 
-        await sutProvider.GetDependency<IGroupRepository>().Received(1).UpdateUsersAsync(group.Id, Arg.Any<IEnumerable<Guid>>());
+        await sutProvider.GetDependency<IGroupRepository>().Received(1).UpdateUsersAsync(group.Id, Arg.Is<IEnumerable<Guid>>(arg => arg.All(id => existingMembers.Concat(userIds).Contains(id))));
     }
 
     [Theory]
@@ -211,7 +213,7 @@ public class PatchGroupCommandTests
 
         await sutProvider.Sut.PatchGroupAsync(group.OrganizationId, group.Id, scimPatchModel);
 
-        await sutProvider.GetDependency<IGroupRepository>().Received(1).UpdateUsersAsync(group.Id, Arg.Any<IEnumerable<Guid>>());
+        await sutProvider.GetDependency<IGroupRepository>().Received(1).UpdateUsersAsync(group.Id, Arg.Is<IEnumerable<Guid>>(arg => arg.All(id => existingMembers.Contains(id))));
     }
 
     [Theory]
