@@ -1,4 +1,5 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.Context;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
@@ -183,5 +184,69 @@ public class CollectionServiceTest
         await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().DeleteUserAsync(default, default);
         await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs()
             .LogOrganizationUserEventAsync(default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetOrganizationCollectionsWithGroups_NoManagerPermissions_ThrowsNotFound(Organization organization, User user, SutProvider<CollectionService> sutProvider)
+    {
+        sutProvider.GetDependency<ICurrentContext>().ViewAssignedCollections(organization.Id).Returns(false);
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetOrganizationCollectionsWithGroups(organization.Id));
+        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().GetManyWithGroupsByOrganizationIdAsync(default);
+        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().GetManyWithGroupsByUserIdAsync(default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetOrganizationCollectionsWithGroups_AdminPermissions_GetsAllCollections(Organization organization, User user, SutProvider<CollectionService> sutProvider)
+    {
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(user.Id);
+        sutProvider.GetDependency<ICurrentContext>().ViewAssignedCollections(organization.Id).Returns(true);
+        sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(organization.Id).Returns(true);
+
+        await sutProvider.Sut.GetOrganizationCollectionsWithGroups(organization.Id);
+
+        await sutProvider.GetDependency<ICollectionRepository>().Received().GetManyWithGroupsByOrganizationIdAsync(organization.Id);
+        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().GetManyWithGroupsByUserIdAsync(default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetOrganizationCollectionsWithGroups_ManagerPermissions_GetsAssignedCollections(Organization organization, User user, SutProvider<CollectionService> sutProvider)
+    {
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(user.Id);
+        sutProvider.GetDependency<ICurrentContext>().ViewAssignedCollections(organization.Id).Returns(true);
+        sutProvider.GetDependency<ICurrentContext>().OrganizationManager(organization.Id).Returns(true);
+
+        await sutProvider.Sut.GetOrganizationCollectionsWithGroups(organization.Id);
+
+        await sutProvider.GetDependency<ICollectionRepository>().Received().GetManyWithGroupsByUserIdAsync(user.Id, organization.Id);
+        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().GetManyWithGroupsByOrganizationIdAsync(default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetOrganizationCollectionsWithGroups_CustomUserWithAdminPermissions_GetsAllCollections(Organization organization, User user, SutProvider<CollectionService> sutProvider)
+    {
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(user.Id);
+        sutProvider.GetDependency<ICurrentContext>().ViewAssignedCollections(organization.Id).Returns(true);
+        sutProvider.GetDependency<ICurrentContext>().EditAnyCollection(organization.Id).Returns(true);
+
+
+        await sutProvider.Sut.GetOrganizationCollectionsWithGroups(organization.Id);
+
+        await sutProvider.GetDependency<ICollectionRepository>().Received().GetManyWithGroupsByOrganizationIdAsync(organization.Id);
+        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().GetManyWithGroupsByUserIdAsync(default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetOrganizationCollectionsWithGroups_CustomUserWithManagerPermissions_GetsAssignedCollections(Organization organization, User user, SutProvider<CollectionService> sutProvider)
+    {
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(user.Id);
+        sutProvider.GetDependency<ICurrentContext>().ViewAssignedCollections(organization.Id).Returns(true);
+        sutProvider.GetDependency<ICurrentContext>().EditAssignedCollections(organization.Id).Returns(true);
+
+
+        await sutProvider.Sut.GetOrganizationCollectionsWithGroups(organization.Id);
+
+        await sutProvider.GetDependency<ICollectionRepository>().Received().GetManyWithGroupsByUserIdAsync(user.Id, organization.Id);
+        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().GetManyWithGroupsByOrganizationIdAsync(default);
     }
 }
