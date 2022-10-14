@@ -170,7 +170,33 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                     collection,
                     query.Select(g => new SelectionReadOnly
                     {
-                        Id = g.CollectionId,
+                        Id = g.GroupId,
+                        ReadOnly = g.ReadOnly,
+                        HidePasswords = g.HidePasswords,
+                    }).ToList()
+                )
+            ).ToList();
+        }
+    }
+
+    public async Task<ICollection<Tuple<Core.Entities.Collection, ICollection<SelectionReadOnly>>>> GetManyWithGroupsByUserIdAsync(Guid userId, Guid organizationId)
+    {
+        var collections = (await GetManyByUserIdAsync(userId)).Where(c => c.OrganizationId == organizationId).ToList();
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var query = await (
+                from cg in dbContext.CollectionGroups
+                where cg.Collection.OrganizationId == organizationId
+                 && collections.Select(c => c.Id).Contains(cg.Collection.Id)
+                select cg).ToListAsync();
+
+            return collections.Select(collection =>
+                new Tuple<Core.Entities.Collection, ICollection<SelectionReadOnly>>(
+                    collection,
+                    query.Select(g => new SelectionReadOnly
+                    {
+                        Id = g.GroupId,
                         ReadOnly = g.ReadOnly,
                         HidePasswords = g.HidePasswords,
                     }).ToList()

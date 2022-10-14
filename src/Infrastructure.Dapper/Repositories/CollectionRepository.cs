@@ -111,16 +111,45 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
                 new Tuple<Collection, ICollection<SelectionReadOnly>>(
                     collection,
                     groups
-                        .Where(g => g.GroupId == collection.Id)
+                        .Where(g => g.CollectionId == collection.Id)
                         .Select(g => new SelectionReadOnly
                         {
-                            Id = g.CollectionId,
+                            Id = g.GroupId,
                             HidePasswords = g.HidePasswords,
                             ReadOnly = g.ReadOnly
                         }).ToList()
                 )
             ).ToList();
         }
+    }
+
+    public async Task<ICollection<Tuple<Collection, ICollection<SelectionReadOnly>>>> GetManyWithGroupsByUserIdAsync(Guid userId, Guid organizationId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryMultipleAsync(
+                $"[{Schema}].[Collection_ReadWithGroupsByUserIdOrganizationId]",
+                new { UserId = userId, OrganizationId = organizationId },
+                commandType: CommandType.StoredProcedure);
+
+            var collections = (await results.ReadAsync<Collection>()).ToList();
+            var groups = (await results.ReadAsync<CollectionGroup>()).ToList();
+
+            return collections.Select(collection =>
+                new Tuple<Collection, ICollection<SelectionReadOnly>>(
+                    collection,
+                    groups
+                        .Where(g => g.CollectionId == collection.Id)
+                        .Select(g => new SelectionReadOnly
+                        {
+                            Id = g.GroupId,
+                            HidePasswords = g.HidePasswords,
+                            ReadOnly = g.ReadOnly
+                        }).ToList()
+                )
+            ).ToList();
+        }
+
     }
 
     public async Task<CollectionDetails> GetByIdAsync(Guid id, Guid userId)
