@@ -25,16 +25,11 @@ public class DeleteCollectionCommand : IDeleteCollectionCommand
     public async Task<ICollection<Collection>> DeleteManyAsync(Guid orgId, IEnumerable<Guid> collectionIds)
     {
         var ids = collectionIds as Guid[] ?? collectionIds.ToArray();
-        var collectionsToDelete = await _collectionRepository.GetManyByManyIds(ids);
-        if (!collectionsToDelete.Any())
-        {
-            throw new BadRequestException("No collections found.");
-        }
-
+        var collectionsToDelete = await _collectionRepository.GetManyByManyIdsAsync(ids);
         var filteredCollections = collectionsToDelete.Where(c => c.OrganizationId == orgId).ToList();
         if (!filteredCollections.Any())
         {
-            throw new BadRequestException("Collections not associated with provided organization");
+            throw new BadRequestException("No collections found.");
         }
 
         var deleteDate = DateTime.UtcNow;

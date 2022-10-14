@@ -205,7 +205,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         }
     }
 
-    public async Task<ICollection<Core.Entities.Collection>> GetManyByManyIds(IEnumerable<Guid> collectionIds)
+    public async Task<ICollection<Core.Entities.Collection>> GetManyByManyIdsAsync(IEnumerable<Guid> collectionIds)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {

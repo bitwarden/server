@@ -3,6 +3,7 @@ using Bit.Api.Models.Response;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
+using Bit.Core.OrganizationFeatures.OrganizationCollections.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -16,17 +17,20 @@ public class CollectionsController : Controller
 {
     private readonly ICollectionRepository _collectionRepository;
     private readonly ICollectionService _collectionService;
+    private readonly IDeleteCollectionCommand _deleteCollectionCommand;
     private readonly IUserService _userService;
     private readonly ICurrentContext _currentContext;
 
     public CollectionsController(
         ICollectionRepository collectionRepository,
         ICollectionService collectionService,
+        IDeleteCollectionCommand deleteCollectionCommand,
         IUserService userService,
         ICurrentContext currentContext)
     {
         _collectionRepository = collectionRepository;
         _collectionService = collectionService;
+        _deleteCollectionCommand = deleteCollectionCommand;
         _userService = userService;
         _currentContext = currentContext;
     }
@@ -166,13 +170,25 @@ public class CollectionsController : Controller
     [HttpPost("{id}/delete")]
     public async Task Delete(Guid orgId, Guid id)
     {
-        if (!await CanDeleteCollectionAsync(orgId, id))
+        if (!await CanDeleteCollectionAsync(orgId, new[] { id }))
         {
             throw new NotFoundException();
         }
 
         var collection = await GetCollectionAsync(id, orgId);
-        await _collectionService.DeleteAsync(collection);
+        await _deleteCollectionCommand.DeleteAsync(collection);
+    }
+
+    [HttpDelete("")]
+    [HttpPost("delete")]
+    public async Task DeleteMany(Guid orgId, [FromBody] IEnumerable<Guid> collectionIds)
+    {
+        if (!await _currentContext.DeleteAssignedCollections(orgId))
+        {
+            throw new NotFoundException();
+        }
+
+        await _deleteCollectionCommand.DeleteManyAsync(orgId, collectionIds);
     }
 
     [HttpDelete("{id}/user/{orgUserId}")]
@@ -235,9 +251,9 @@ public class CollectionsController : Controller
         return false;
     }
 
-    private async Task<bool> CanDeleteCollectionAsync(Guid orgId, Guid collectionId)
+    private async Task<bool> CanDeleteCollectionAsync(Guid orgId, IEnumerable<Guid> collectionIds)
     {
-        if (collectionId == default)
+        if (collectionIds == default)
         {
             return false;
         }
@@ -249,7 +265,7 @@ public class CollectionsController : Controller
 
         if (await _currentContext.DeleteAssignedCollections(orgId))
         {
-            var collectionDetails = await _collectionRepository.GetByIdAsync(collectionId, _currentContext.UserId.Value);
+            var collectionDetails = await _collectionRepository.GetManyByManyIdsAsync(collectionIds);
             return collectionDetails != null;
         }
 

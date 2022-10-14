@@ -37,7 +37,7 @@ public class DeleteCollectionCommandTests
         var collectionIds = new[] { collection.Id, collection2.Id };
 
         sutProvider.GetDependency<ICollectionRepository>()
-            .GetManyByManyIds(collectionIds)
+            .GetManyByManyIdsAsync(collectionIds)
             .Returns(new List<Collection> { collection, collection2 });
 
         // Act
@@ -64,7 +64,7 @@ public class DeleteCollectionCommandTests
         org.Id = Guid.NewGuid(); // Org no longer associated with collections
 
         sutProvider.GetDependency<ICollectionRepository>()
-            .GetManyByManyIds(collectionIds)
+            .GetManyByManyIdsAsync(collectionIds)
             .Returns(new List<Collection> { collection, collection2 });
 
         // Act
@@ -76,7 +76,7 @@ public class DeleteCollectionCommandTests
         {
             // Assert
             Assert.IsType<BadRequestException>(ex);
-            Assert.Equal("Collections not associated with provided organization", ex.Message);
+            Assert.Equal("No collections found.", ex.Message);
         }
 
         await sutProvider.GetDependency<ICollectionRepository>().DidNotReceive().DeleteManyAsync(org.Id, Arg.Any<IEnumerable<Guid>>());

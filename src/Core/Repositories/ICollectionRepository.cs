@@ -12,7 +12,7 @@ public interface ICollectionRepository : IRepository<Collection, Guid>
     Task<ICollection<Tuple<Collection, ICollection<SelectionReadOnly>>>> GetManyWithGroupsByOrganizationIdAsync(Guid organizationId);
     Task<ICollection<Tuple<Collection, ICollection<SelectionReadOnly>>>> GetManyWithGroupsByUserIdAsync(Guid userId, Guid organizationId);
     Task<CollectionDetails> GetByIdAsync(Guid id, Guid userId);
-    Task<ICollection<Collection>> GetManyByManyIds(IEnumerable<Guid> collectionIds);
+    Task<ICollection<Collection>> GetManyByManyIdsAsync(IEnumerable<Guid> collectionIds);
     Task<ICollection<CollectionDetails>> GetManyByUserIdAsync(Guid userId);
     Task CreateAsync(Collection obj, IEnumerable<CollectionAccessSelection> groups, IEnumerable<CollectionAccessSelection> users);
     Task ReplaceAsync(Collection obj, IEnumerable<CollectionAccessSelection> groups, IEnumerable<CollectionAccessSelection> users);

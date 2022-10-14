@@ -69,7 +69,7 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
         }
     }
 
-    public async Task<ICollection<Collection>> GetManyByManyIds(IEnumerable<Guid> collectionIds)
+    public async Task<ICollection<Collection>> GetManyByManyIdsAsync(IEnumerable<Guid> collectionIds)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
