@@ -9,4 +9,5 @@ public interface ICollectionService
     Task DeleteAsync(Collection collection);
     Task DeleteUserAsync(Collection collection, Guid organizationUserId);
     Task<IEnumerable<Collection>> GetOrganizationCollections(Guid organizationId);
+    Task<IEnumerable<Tuple<Collection, ICollection<SelectionReadOnly>>>> GetOrganizationCollectionsWithGroups(Guid organizationId);
 }
