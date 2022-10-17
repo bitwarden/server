@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using Bit.Core.Entities;
+using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Scim.Context;
@@ -45,13 +46,9 @@ public class GroupsController : Controller
         var group = await _groupRepository.GetByIdAsync(id);
         if (group == null || group.OrganizationId != organizationId)
         {
-            return new NotFoundObjectResult(new ScimErrorResponseModel
-            {
-                Status = 404,
-                Detail = "Group not found."
-            });
+            throw new NotFoundException("Group not found.");
         }
-        return new ObjectResult(new ScimGroupResponseModel(group));
+        return Ok(new ScimGroupResponseModel(group));
     }
 
     [HttpGet("")]
