@@ -28,5 +28,6 @@ public static class ScimServiceCollectionExtensions
     public static void AddScimUserCommands(this IServiceCollection services)
     {
         services.AddScoped<IDeleteOrganizationUserCommand, DeleteOrganizationUserCommand>();
+        services.AddScoped<IPostUserCommand, PostUserCommand>();
     }
 }
