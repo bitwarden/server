@@ -1,5 +1,4 @@
 ﻿using System.Text.Json;
-using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Scim.Context;
@@ -276,34 +275,5 @@ public class GroupsController : Controller
             return id;
         }
         return null;
-    }
-
-    private async Task UpdateGroupMembersAsync(Group group, ScimGroupRequestModel model, bool skipIfEmpty)
-    {
-        if (_scimContext.RequestScimProvider != Core.Enums.ScimProviderType.Okta)
-        {
-            return;
-        }
-
-        if (model.Members == null)
-        {
-            return;
-        }
-
-        var memberIds = new List<Guid>();
-        foreach (var id in model.Members.Select(i => i.Value))
-        {
-            if (Guid.TryParse(id, out var guidId))
-            {
-                memberIds.Add(guidId);
-            }
-        }
-
-        if (!memberIds.Any() && skipIfEmpty)
-        {
-            return;
-        }
-
-        await _groupRepository.UpdateUsersAsync(group.Id, memberIds);
     }
 }
