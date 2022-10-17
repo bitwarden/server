@@ -26,8 +26,6 @@ public class GetGroupsListCommandTests
 
         var result = await sutProvider.Sut.GetGroupsListAsync(organizationId, null, count, startIndex);
 
-        await sutProvider.GetDependency<IGroupRepository>().Received(1).GetManyByOrganizationIdAsync(organizationId);
-
         AssertHelper.AssertPropertyEqual(groups.Skip(startIndex - 1).Take(count).ToList(), result.groupList);
         AssertHelper.AssertPropertyEqual(groups.Count, result.totalResults);
     }
@@ -51,8 +49,6 @@ public class GetGroupsListCommandTests
 
         var result = await sutProvider.Sut.GetGroupsListAsync(organizationId, filter, null, null);
 
-        await sutProvider.GetDependency<IGroupRepository>().Received(1).GetManyByOrganizationIdAsync(organizationId);
-
         AssertHelper.AssertPropertyEqual(expectedGroupList, result.groupList);
         AssertHelper.AssertPropertyEqual(expectedTotalResults, result.totalResults);
     }
@@ -72,8 +68,6 @@ public class GetGroupsListCommandTests
             .Returns(groups);
 
         var result = await sutProvider.Sut.GetGroupsListAsync(organizationId, filter, null, null);
-
-        await sutProvider.GetDependency<IGroupRepository>().Received(1).GetManyByOrganizationIdAsync(organizationId);
 
         AssertHelper.AssertPropertyEqual(expectedGroupList, result.groupList);
         AssertHelper.AssertPropertyEqual(expectedTotalResults, result.totalResults);
@@ -98,8 +92,6 @@ public class GetGroupsListCommandTests
 
         var result = await sutProvider.Sut.GetGroupsListAsync(organizationId, filter, null, null);
 
-        await sutProvider.GetDependency<IGroupRepository>().Received(1).GetManyByOrganizationIdAsync(organizationId);
-
         AssertHelper.AssertPropertyEqual(expectedGroupList, result.groupList);
         AssertHelper.AssertPropertyEqual(expectedTotalResults, result.totalResults);
     }
@@ -121,8 +113,6 @@ public class GetGroupsListCommandTests
             .Returns(groups);
 
         var result = await sutProvider.Sut.GetGroupsListAsync(organizationId, filter, null, null);
-
-        await sutProvider.GetDependency<IGroupRepository>().Received(1).GetManyByOrganizationIdAsync(organizationId);
 
         AssertHelper.AssertPropertyEqual(expectedGroupList, result.groupList);
         AssertHelper.AssertPropertyEqual(expectedTotalResults, result.totalResults);
