@@ -10,6 +10,7 @@ public static class ScimServiceCollectionExtensions
     public static void AddScimGroupCommands(this IServiceCollection services)
     {
         services.AddScoped<IPostGroupCommand, PostGroupCommand>();
+        services.AddScoped<IPutGroupCommand, PutGroupCommand>();
     }
 
     public static void AddScimUserQueries(this IServiceCollection services)

@@ -21,18 +21,21 @@ public class GroupsController : Controller
     private readonly IScimContext _scimContext;
     private readonly ILogger<GroupsController> _logger;
     private readonly IPostGroupCommand _postGroupCommand;
+    private readonly IPutGroupCommand _putGroupCommand;
 
     public GroupsController(
         IGroupRepository groupRepository,
         IGroupService groupService,
         IScimContext scimContext,
         IPostGroupCommand postGroupCommand,
+        IPutGroupCommand putGroupCommand,
         ILogger<GroupsController> logger)
     {
         _groupRepository = groupRepository;
         _groupService = groupService;
         _scimContext = scimContext;
         _postGroupCommand = postGroupCommand;
+        _putGroupCommand = putGroupCommand;
         _logger = logger;
     }
 
@@ -124,20 +127,10 @@ public class GroupsController : Controller
     [HttpPut("{id}")]
     public async Task<IActionResult> Put(Guid organizationId, Guid id, [FromBody] ScimGroupRequestModel model)
     {
-        var group = await _groupRepository.GetByIdAsync(id);
-        if (group == null || group.OrganizationId != organizationId)
-        {
-            return new NotFoundObjectResult(new ScimErrorResponseModel
-            {
-                Status = 404,
-                Detail = "Group not found."
-            });
-        }
+        var group = await _putGroupCommand.PutGroupAsync(organizationId, id, model);
+        var response = new ScimGroupResponseModel(group);
 
-        group.Name = model.DisplayName;
-        await _groupService.SaveAsync(group);
-        await UpdateGroupMembersAsync(group, model, false);
-        return new ObjectResult(new ScimGroupResponseModel(group));
+        return Ok(response);
     }
 
     [HttpPatch("{id}")]
