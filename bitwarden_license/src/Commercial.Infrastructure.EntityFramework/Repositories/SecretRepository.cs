@@ -48,16 +48,7 @@ public class SecretRepository : Repository<Core.Entities.Secret, Secret, Guid>, 
                                     .OrderBy(c => c.RevisionDate)
                                     .ToListAsync();
 
-            var secretsWithProjectDetails = new List<Core.Entities.Secret>();
-
-            foreach (var secret in secrets)
-            {
-                secret.ProjectGuids = secret.Projects?.ToDictionary(x => x.Id, x => x.Name);
-                var secretWithProjectDetails = Mapper.Map<Core.Entities.Secret>(secret);
-                secretsWithProjectDetails.Add(secretWithProjectDetails);
-            }
-
-            return secretsWithProjectDetails;
+            return Mapper.Map<List<Core.Entities.Secret>>(secrets); ;
         }
     }
 

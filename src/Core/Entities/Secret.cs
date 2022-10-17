@@ -1,5 +1,4 @@
 ﻿#nullable enable
-using System.ComponentModel.DataAnnotations.Schema;
 using Bit.Core.Utilities;
 
 namespace Bit.Core.Entities;
@@ -22,8 +21,7 @@ public class Secret : ITableObject<Guid>
 
     public DateTime? DeletedDate { get; set; }
 
-    [NotMapped]
-    public Dictionary<System.Guid, string>? ProjectGuids { get; set; }
+    public ICollection<Project>? Projects { get; set; }
 
     public void SetNewId()
     {

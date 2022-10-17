@@ -36,6 +36,5 @@ public class SecretResponseModel : ResponseModel
 
     public DateTime RevisionDate { get; set; }
 
-    public IEnumerable<Guid> Projects { get; set; }
 }
 
