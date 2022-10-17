@@ -5,6 +5,7 @@ using Bit.Core.Services;
 using Bit.Scim.Context;
 using Bit.Scim.Groups.Interfaces;
 using Bit.Scim.Models;
+using Bit.Scim.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -12,6 +13,7 @@ namespace Bit.Scim.Controllers.v2;
 
 [Authorize("Scim")]
 [Route("v2/{organizationId}/groups")]
+[ExceptionHandlerFilter]
 public class GroupsController : Controller
 {
     private readonly IGroupRepository _groupRepository;
@@ -19,18 +21,21 @@ public class GroupsController : Controller
     private readonly IScimContext _scimContext;
     private readonly ILogger<GroupsController> _logger;
     private readonly IGetGroupsListQuery _getGroupsListQuery;
+    private readonly IPutGroupCommand _putGroupCommand;
 
     public GroupsController(
         IGroupRepository groupRepository,
         IGroupService groupService,
         IScimContext scimContext,
         IGetGroupsListQuery getGroupsListQuery,
+        IPutGroupCommand putGroupCommand,
         ILogger<GroupsController> logger)
     {
         _groupRepository = groupRepository;
         _groupService = groupService;
         _scimContext = scimContext;
         _getGroupsListQuery = getGroupsListQuery;
+        _putGroupCommand = putGroupCommand;
         _logger = logger;
     }
 
@@ -91,20 +96,10 @@ public class GroupsController : Controller
     [HttpPut("{id}")]
     public async Task<IActionResult> Put(Guid organizationId, Guid id, [FromBody] ScimGroupRequestModel model)
     {
-        var group = await _groupRepository.GetByIdAsync(id);
-        if (group == null || group.OrganizationId != organizationId)
-        {
-            return new NotFoundObjectResult(new ScimErrorResponseModel
-            {
-                Status = 404,
-                Detail = "Group not found."
-            });
-        }
+        var group = await _putGroupCommand.PutGroupAsync(organizationId, id, model);
+        var response = new ScimGroupResponseModel(group);
 
-        group.Name = model.DisplayName;
-        await _groupService.SaveAsync(group);
-        await UpdateGroupMembersAsync(group, model, false);
-        return new ObjectResult(new ScimGroupResponseModel(group));
+        return Ok(response);
     }
 
     [HttpPatch("{id}")]

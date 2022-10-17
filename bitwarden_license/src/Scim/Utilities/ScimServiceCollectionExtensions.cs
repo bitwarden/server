@@ -12,6 +12,11 @@ public static class ScimServiceCollectionExtensions
         services.AddScoped<IGetGroupsListQuery, GetGroupsListQuery>();
     }
 
+    public static void AddScimGroupCommands(this IServiceCollection services)
+    {
+        services.AddScoped<IPutGroupCommand, PutGroupCommand>();
+    }
+
     public static void AddScimUserQueries(this IServiceCollection services)
     {
         services.AddScoped<IGetUserQuery, GetUserQuery>();
