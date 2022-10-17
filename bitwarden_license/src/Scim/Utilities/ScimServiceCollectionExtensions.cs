@@ -9,8 +9,14 @@ public static class ScimServiceCollectionExtensions
 {
     public static void AddScimGroupCommands(this IServiceCollection services)
     {
+        services.AddScoped<IPatchGroupCommand, PatchGroupCommand>();
         services.AddScoped<IPostGroupCommand, PostGroupCommand>();
         services.AddScoped<IPutGroupCommand, PutGroupCommand>();
+    }
+
+    public static void AddScimGroupQueries(this IServiceCollection services)
+    {
+        services.AddScoped<IGetGroupsListQuery, GetGroupsListQuery>();
     }
 
     public static void AddScimUserQueries(this IServiceCollection services)
