@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Enums;
 using Bit.Core.Models.Data;
+using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
@@ -9,7 +10,6 @@ using Bit.Scim.Users.Interfaces;
 using Bit.Scim.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Options;
 
 namespace Bit.Scim.Controllers.v2;
 
@@ -19,31 +19,28 @@ namespace Bit.Scim.Controllers.v2;
 public class UsersController : Controller
 {
     private readonly IUserService _userService;
-    private readonly IUserRepository _userRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IOrganizationService _organizationService;
     private readonly IScimContext _scimContext;
-    private readonly ScimSettings _scimSettings;
     private readonly IGetUserQuery _getUserQuery;
+    private readonly IDeleteOrganizationUserCommand _deleteOrganizationUserCommand;
     private readonly ILogger<UsersController> _logger;
 
     public UsersController(
         IUserService userService,
-        IUserRepository userRepository,
         IOrganizationUserRepository organizationUserRepository,
         IOrganizationService organizationService,
         IScimContext scimContext,
-        IOptions<ScimSettings> scimSettings,
         IGetUserQuery getUserQuery,
+        IDeleteOrganizationUserCommand deleteOrganizationUserCommand,
         ILogger<UsersController> logger)
     {
         _userService = userService;
-        _userRepository = userRepository;
         _organizationUserRepository = organizationUserRepository;
         _organizationService = organizationService;
         _scimContext = scimContext;
-        _scimSettings = scimSettings?.Value;
         _getUserQuery = getUserQuery;
+        _deleteOrganizationUserCommand = deleteOrganizationUserCommand;
         _logger = logger;
     }
 
@@ -262,16 +259,7 @@ public class UsersController : Controller
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(Guid organizationId, Guid id)
     {
-        var orgUser = await _organizationUserRepository.GetByIdAsync(id);
-        if (orgUser == null || orgUser.OrganizationId != organizationId)
-        {
-            return new NotFoundObjectResult(new ScimErrorResponseModel
-            {
-                Status = 404,
-                Detail = "User not found."
-            });
-        }
-        await _organizationService.DeleteUserAsync(organizationId, id, null);
+        await _deleteOrganizationUserCommand.DeleteUserAsync(organizationId, id, null);
         return new NoContentResult();
     }
 
