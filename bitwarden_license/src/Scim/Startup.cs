@@ -79,6 +79,7 @@ public class Startup
         services.AddScimGroupCommands();
         services.AddScimGroupQueries();
         services.AddScimUserQueries();
+        services.AddScimUserCommands();
     }
 
     public void Configure(

@@ -25,4 +25,10 @@ public static class ScimServiceCollectionExtensions
     {
         services.AddScoped<IGetUserQuery, GetUserQuery>();
     }
+
+    public static void AddScimUserCommands(this IServiceCollection services)
+    {
+        services.AddScoped<IDeleteOrganizationUserCommand, DeleteOrganizationUserCommand>();
+        services.AddScoped<IPostUserCommand, PostUserCommand>();
+    }
 }
