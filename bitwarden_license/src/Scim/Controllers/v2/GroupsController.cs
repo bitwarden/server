@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Entities;
+using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Scim.Context;
@@ -18,18 +19,27 @@ public class GroupsController : Controller
     private readonly IGroupRepository _groupRepository;
     private readonly IGroupService _groupService;
     private readonly IScimContext _scimContext;
+    private readonly IGetGroupsListQuery _getGroupsListQuery;
     private readonly IPatchGroupCommand _patchGroupCommand;
+    private readonly IPutGroupCommand _putGroupCommand;
+    private readonly ILogger<GroupsController> _logger;
 
     public GroupsController(
         IGroupRepository groupRepository,
         IGroupService groupService,
         IScimContext scimContext,
-        IPatchGroupCommand patchGroupCommand)
+        IGetGroupsListQuery getGroupsListQuery,
+        IPatchGroupCommand patchGroupCommand,
+        IPutGroupCommand putGroupCommand,
+        ILogger<GroupsController> logger)
     {
         _groupRepository = groupRepository;
         _groupService = groupService;
         _scimContext = scimContext;
+        _getGroupsListQuery = getGroupsListQuery;
         _patchGroupCommand = patchGroupCommand;
+        _putGroupCommand = putGroupCommand;
+        _logger = logger;
     }
 
     [HttpGet("{id}")]
@@ -38,13 +48,9 @@ public class GroupsController : Controller
         var group = await _groupRepository.GetByIdAsync(id);
         if (group == null || group.OrganizationId != organizationId)
         {
-            return new NotFoundObjectResult(new ScimErrorResponseModel
-            {
-                Status = 404,
-                Detail = "Group not found."
-            });
+            throw new NotFoundException("Group not found.");
         }
-        return new ObjectResult(new ScimGroupResponseModel(group));
+        return Ok(new ScimGroupResponseModel(group));
     }
 
     [HttpGet("")]
@@ -54,59 +60,15 @@ public class GroupsController : Controller
         [FromQuery] int? count,
         [FromQuery] int? startIndex)
     {
-        string nameFilter = null;
-        string externalIdFilter = null;
-        if (!string.IsNullOrWhiteSpace(filter))
+        var groupsListQueryResult = await _getGroupsListQuery.GetGroupsListAsync(organizationId, filter, count, startIndex);
+        var scimListResponseModel = new ScimListResponseModel<ScimGroupResponseModel>
         {
-            if (filter.StartsWith("displayName eq "))
-            {
-                nameFilter = filter.Substring(15).Trim('"');
-            }
-            else if (filter.StartsWith("externalId eq "))
-            {
-                externalIdFilter = filter.Substring(14).Trim('"');
-            }
-        }
-
-        var groupList = new List<ScimGroupResponseModel>();
-        var groups = await _groupRepository.GetManyByOrganizationIdAsync(organizationId);
-        var totalResults = 0;
-        if (!string.IsNullOrWhiteSpace(nameFilter))
-        {
-            var group = groups.FirstOrDefault(g => g.Name == nameFilter);
-            if (group != null)
-            {
-                groupList.Add(new ScimGroupResponseModel(group));
-            }
-            totalResults = groupList.Count;
-        }
-        else if (!string.IsNullOrWhiteSpace(externalIdFilter))
-        {
-            var group = groups.FirstOrDefault(ou => ou.ExternalId == externalIdFilter);
-            if (group != null)
-            {
-                groupList.Add(new ScimGroupResponseModel(group));
-            }
-            totalResults = groupList.Count;
-        }
-        else if (string.IsNullOrWhiteSpace(filter) && startIndex.HasValue && count.HasValue)
-        {
-            groupList = groups.OrderBy(g => g.Name)
-                .Skip(startIndex.Value - 1)
-                .Take(count.Value)
-                .Select(g => new ScimGroupResponseModel(g))
-                .ToList();
-            totalResults = groups.Count;
-        }
-
-        var result = new ScimListResponseModel<ScimGroupResponseModel>
-        {
-            Resources = groupList,
-            ItemsPerPage = count.GetValueOrDefault(groupList.Count),
-            TotalResults = totalResults,
+            Resources = groupsListQueryResult.groupList.Select(g => new ScimGroupResponseModel(g)).ToList(),
+            ItemsPerPage = count.GetValueOrDefault(groupsListQueryResult.groupList.Count()),
+            TotalResults = groupsListQueryResult.totalResults,
             StartIndex = startIndex.GetValueOrDefault(1),
         };
-        return new ObjectResult(result);
+        return Ok(scimListResponseModel);
     }
 
     [HttpPost("")]
@@ -133,20 +95,10 @@ public class GroupsController : Controller
     [HttpPut("{id}")]
     public async Task<IActionResult> Put(Guid organizationId, Guid id, [FromBody] ScimGroupRequestModel model)
     {
-        var group = await _groupRepository.GetByIdAsync(id);
-        if (group == null || group.OrganizationId != organizationId)
-        {
-            return new NotFoundObjectResult(new ScimErrorResponseModel
-            {
-                Status = 404,
-                Detail = "Group not found."
-            });
-        }
+        var group = await _putGroupCommand.PutGroupAsync(organizationId, id, model);
+        var response = new ScimGroupResponseModel(group);
 
-        group.Name = model.DisplayName;
-        await _groupService.SaveAsync(group);
-        await UpdateGroupMembersAsync(group, model, false);
-        return new ObjectResult(new ScimGroupResponseModel(group));
+        return Ok(response);
     }
 
     [HttpPatch("{id}")]
