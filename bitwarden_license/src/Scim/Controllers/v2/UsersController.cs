@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Enums;
+using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Scim.Models;
@@ -18,6 +19,7 @@ public class UsersController : Controller
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IOrganizationService _organizationService;
     private readonly IGetUserQuery _getUserQuery;
+    private readonly IDeleteOrganizationUserCommand _deleteOrganizationUserCommand;
     private readonly IPostUserCommand _postUserCommand;
     private readonly ILogger<UsersController> _logger;
 
@@ -26,6 +28,7 @@ public class UsersController : Controller
         IOrganizationUserRepository organizationUserRepository,
         IOrganizationService organizationService,
         IGetUserQuery getUserQuery,
+        IDeleteOrganizationUserCommand deleteOrganizationUserCommand,
         IPostUserCommand postUserCommand,
         ILogger<UsersController> logger)
     {
@@ -33,6 +36,7 @@ public class UsersController : Controller
         _organizationUserRepository = organizationUserRepository;
         _organizationService = organizationService;
         _getUserQuery = getUserQuery;
+        _deleteOrganizationUserCommand = deleteOrganizationUserCommand;
         _postUserCommand = postUserCommand;
         _logger = logger;
     }
@@ -200,16 +204,7 @@ public class UsersController : Controller
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(Guid organizationId, Guid id)
     {
-        var orgUser = await _organizationUserRepository.GetByIdAsync(id);
-        if (orgUser == null || orgUser.OrganizationId != organizationId)
-        {
-            return new NotFoundObjectResult(new ScimErrorResponseModel
-            {
-                Status = 404,
-                Detail = "User not found."
-            });
-        }
-        await _organizationService.DeleteUserAsync(organizationId, id, null);
+        await _deleteOrganizationUserCommand.DeleteUserAsync(organizationId, id, null);
         return new NoContentResult();
     }
 
