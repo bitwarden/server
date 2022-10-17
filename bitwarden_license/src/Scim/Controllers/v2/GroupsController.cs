@@ -20,18 +20,21 @@ public class GroupsController : Controller
     private readonly IGroupService _groupService;
     private readonly IScimContext _scimContext;
     private readonly ILogger<GroupsController> _logger;
+    private readonly IGetGroupsListQuery _getGroupsListQuery;
     private readonly IPutGroupCommand _putGroupCommand;
 
     public GroupsController(
         IGroupRepository groupRepository,
         IGroupService groupService,
         IScimContext scimContext,
+        IGetGroupsListQuery getGroupsListQuery,
         IPutGroupCommand putGroupCommand,
         ILogger<GroupsController> logger)
     {
         _groupRepository = groupRepository;
         _groupService = groupService;
         _scimContext = scimContext;
+        _getGroupsListQuery = getGroupsListQuery;
         _putGroupCommand = putGroupCommand;
         _logger = logger;
     }
@@ -58,59 +61,15 @@ public class GroupsController : Controller
         [FromQuery] int? count,
         [FromQuery] int? startIndex)
     {
-        string nameFilter = null;
-        string externalIdFilter = null;
-        if (!string.IsNullOrWhiteSpace(filter))
+        var groupsListQueryResult = await _getGroupsListQuery.GetGroupsListAsync(organizationId, filter, count, startIndex);
+        var scimListResponseModel = new ScimListResponseModel<ScimGroupResponseModel>
         {
-            if (filter.StartsWith("displayName eq "))
-            {
-                nameFilter = filter.Substring(15).Trim('"');
-            }
-            else if (filter.StartsWith("externalId eq "))
-            {
-                externalIdFilter = filter.Substring(14).Trim('"');
-            }
-        }
-
-        var groupList = new List<ScimGroupResponseModel>();
-        var groups = await _groupRepository.GetManyByOrganizationIdAsync(organizationId);
-        var totalResults = 0;
-        if (!string.IsNullOrWhiteSpace(nameFilter))
-        {
-            var group = groups.FirstOrDefault(g => g.Name == nameFilter);
-            if (group != null)
-            {
-                groupList.Add(new ScimGroupResponseModel(group));
-            }
-            totalResults = groupList.Count;
-        }
-        else if (!string.IsNullOrWhiteSpace(externalIdFilter))
-        {
-            var group = groups.FirstOrDefault(ou => ou.ExternalId == externalIdFilter);
-            if (group != null)
-            {
-                groupList.Add(new ScimGroupResponseModel(group));
-            }
-            totalResults = groupList.Count;
-        }
-        else if (string.IsNullOrWhiteSpace(filter) && startIndex.HasValue && count.HasValue)
-        {
-            groupList = groups.OrderBy(g => g.Name)
-                .Skip(startIndex.Value - 1)
-                .Take(count.Value)
-                .Select(g => new ScimGroupResponseModel(g))
-                .ToList();
-            totalResults = groups.Count;
-        }
-
-        var result = new ScimListResponseModel<ScimGroupResponseModel>
-        {
-            Resources = groupList,
-            ItemsPerPage = count.GetValueOrDefault(groupList.Count),
-            TotalResults = totalResults,
+            Resources = groupsListQueryResult.groupList.Select(g => new ScimGroupResponseModel(g)).ToList(),
+            ItemsPerPage = count.GetValueOrDefault(groupsListQueryResult.groupList.Count()),
+            TotalResults = groupsListQueryResult.totalResults,
             StartIndex = startIndex.GetValueOrDefault(1),
         };
-        return new ObjectResult(result);
+        return Ok(scimListResponseModel);
     }
 
     [HttpPost("")]
