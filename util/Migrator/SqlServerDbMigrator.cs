@@ -2,28 +2,30 @@
 using System.Data.SqlClient;
 using System.Reflection;
 using Bit.Core;
+using Bit.Core.Settings;
+using Bit.Core.Utilities;
 using DbUp;
 using Microsoft.Extensions.Logging;
 
 namespace Bit.Migrator;
 
-public class DbMigrator
+public class SqlServerDbMigrator : IDbMigrator
 {
     private readonly string _connectionString;
-    private readonly ILogger<DbMigrator> _logger;
+    private readonly ILogger<SqlServerDbMigrator> _logger;
     private readonly string _masterConnectionString;
 
-    public DbMigrator(string connectionString, ILogger<DbMigrator> logger)
+    public SqlServerDbMigrator(GlobalSettings globalSettings, ILogger<SqlServerDbMigrator> logger)
     {
-        _connectionString = connectionString;
+        _connectionString = globalSettings.MySql.ConnectionString;
         _logger = logger;
-        _masterConnectionString = new SqlConnectionStringBuilder(connectionString)
+        _masterConnectionString = new SqlConnectionStringBuilder(_connectionString)
         {
             InitialCatalog = "master"
         }.ConnectionString;
     }
 
-    public bool MigrateMsSqlDatabase(bool enableLogging = true,
+    public bool MigrateDatabase(bool enableLogging = true,
         CancellationToken cancellationToken = default(CancellationToken))
     {
         if (enableLogging && _logger != null)

@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+﻿using Bit.EfShared;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace Bit.PostgresMigrations.Migrations;
 

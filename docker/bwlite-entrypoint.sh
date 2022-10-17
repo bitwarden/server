@@ -38,7 +38,7 @@ if [ -z "$(ls -A /etc/bitwarden/ssl)" ]; then
   -out /etc/bitwarden/ssl/${BW_SSL_CERT:-certificate.crt} \
   -reqexts SAN \
   -extensions SAN \
-  -config <(cat /etc/ssl1.1/openssl.cnf <(printf "[SAN]\nsubjectAltName=DNS:${DOMAIN:-localhost}\nbasicConstraints=CA:true")) \
+  -config <(cat /etc/ssl/openssl.cnf <(printf "[SAN]\nsubjectAltName=DNS:${DOMAIN:-localhost}\nbasicConstraints=CA:true")) \
   -subj "/C=US/ST=California/L=Santa Barbara/O=Bitwarden Inc./OU=Bitwarden/CN=${DOMAIN:-localhost}"
 fi
 

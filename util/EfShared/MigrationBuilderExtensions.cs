@@ -2,7 +2,7 @@
 using Bit.Core.Utilities;
 using Microsoft.EntityFrameworkCore.Migrations;
 
-namespace Bit;
+namespace Bit.EfShared;
 
 // This file is a manual addition to a project that it helps, a project that chooses to compile it
 // should have a project reference to Core.csproj and a package reference to Microsoft.EntityFrameworkCore.Design

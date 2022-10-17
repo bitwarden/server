@@ -22,13 +22,14 @@ public static class EntityFrameworkServiceCollectionExtensions
         {
             if (provider == SupportedDatabaseProviders.Postgres)
             {
-                options.UseNpgsql(connectionString);
+                options.UseNpgsql(connectionString, b => b.MigrationsAssembly("PostgresMigrations"));
                 // Handle NpgSql Legacy Support for `timestamp without timezone` issue
                 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
             }
             else if (provider == SupportedDatabaseProviders.MySql)
             {
-                options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString));
+                options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString),
+                    b => b.MigrationsAssembly("MySqlMigrations"));
             }
         });
         services.AddSingleton<ICipherRepository, CipherRepository>();

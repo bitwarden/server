@@ -4,7 +4,7 @@
 FROM node:16-slim AS node-build
 
 # TODO: Change default branch name before merge into master
-ARG web_branch=update-self-hosted
+ARG web_branch=update-self-hosted-kyle
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
@@ -48,6 +48,8 @@ COPY src/Infrastructure.Dapper/*.csproj ./src/Infrastructure.Dapper/
 COPY src/Infrastructure.EntityFramework/*.csproj ./src/Infrastructure.EntityFramework/
 COPY src/SharedWeb/*.csproj ./src/SharedWeb/
 COPY util/Migrator/*.csproj ./util/Migrator/
+COPY util/MySqlMigrations/*.csproj ./util/MySqlMigrations/
+COPY util/PostgresMigrations/*.csproj ./util/PostgresMigrations/
 COPY bitwarden_license/src/Commercial.Core/*.csproj ./bitwarden_license/src/Commercial.Core/
 COPY Directory.Build.props .
 
@@ -105,6 +107,9 @@ COPY src/Infrastructure.Dapper/. ./src/Infrastructure.Dapper/
 COPY src/Infrastructure.EntityFramework/. ./src/Infrastructure.EntityFramework/
 COPY src/SharedWeb/. ./src/SharedWeb/
 COPY util/Migrator/. ./util/Migrator/
+COPY util/MySqlMigrations/. ./util/MySqlMigrations/
+COPY util/PostgresMigrations/. ./util/PostgresMigrations/
+COPY util/EfShared/. ./util/EfShared/
 COPY bitwarden_license/src/Commercial.Core/. ./bitwarden_license/src/Commercial.Core/
 COPY .git/. ./.git/
 
@@ -179,6 +184,7 @@ ENV BW_SERVICE_PORT_IDENTITY="5005"
 ENV BW_SERVICE_PORT_NOTIFICATIONS="5006"
 ENV BW_SERVICE_PORT_SSO="5007"
 ENV BW_SERVICE_PORT_WEB="5008"
+ENV globalSettings__selfHosted="true"
 ENV globalSettings__baseServiceUri__internalAdmin="http://localhost:5000"
 ENV globalSettings__baseServiceUri__internalApi="http://localhost:5001"
 ENV globalSettings__baseServiceUri__internalAttachments="http://localhost:5002"
