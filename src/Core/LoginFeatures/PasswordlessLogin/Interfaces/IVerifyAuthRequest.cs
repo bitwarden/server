@@ -1,7 +1,4 @@
-using Bit.Core.Entities;
-using Bit.Core.Enums;
-
-namespace Bit.Core.OrganizationFeatures.OrganizationApiKeys.Interfaces;
+namespace Bit.Core.LoginFeatures.PasswordlessLogin.Interfaces;
 
 public interface IVerifyAuthRequestCommand
 {
