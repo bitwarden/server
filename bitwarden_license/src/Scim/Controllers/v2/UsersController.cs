@@ -1,9 +1,7 @@
 ﻿using Bit.Core.Enums;
-using Bit.Core.Models.Data;
+using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Utilities;
-using Bit.Scim.Context;
 using Bit.Scim.Models;
 using Bit.Scim.Users.Interfaces;
 using Bit.Scim.Utilities;
@@ -20,24 +18,30 @@ public class UsersController : Controller
     private readonly IUserService _userService;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IOrganizationService _organizationService;
-    private readonly IScimContext _scimContext;
     private readonly IGetUserQuery _getUserQuery;
+    private readonly IDeleteOrganizationUserCommand _deleteOrganizationUserCommand;
     private readonly IPatchUserCommand _patchUserCommand;
+    private readonly IPostUserCommand _postUserCommand;
+    private readonly ILogger<UsersController> _logger;
 
     public UsersController(
         IUserService userService,
         IOrganizationUserRepository organizationUserRepository,
         IOrganizationService organizationService,
-        IScimContext scimContext,
         IGetUserQuery getUserQuery,
-        IPatchUserCommand patchUserCommand)
+        IDeleteOrganizationUserCommand deleteOrganizationUserCommand,
+        IPatchUserCommand patchUserCommand,
+        IPostUserCommand postUserCommand,
+        ILogger<UsersController> logger)
     {
         _userService = userService;
         _organizationUserRepository = organizationUserRepository;
         _organizationService = organizationService;
-        _scimContext = scimContext;
         _getUserQuery = getUserQuery;
+        _deleteOrganizationUserCommand = deleteOrganizationUserCommand;
         _patchUserCommand = patchUserCommand;
+        _postUserCommand = postUserCommand;
+        _logger = logger;
     }
 
     [HttpGet("{id}")]
@@ -117,61 +121,9 @@ public class UsersController : Controller
     [HttpPost("")]
     public async Task<IActionResult> Post(Guid organizationId, [FromBody] ScimUserRequestModel model)
     {
-        var email = model.PrimaryEmail?.ToLowerInvariant();
-        if (string.IsNullOrWhiteSpace(email))
-        {
-            switch (_scimContext.RequestScimProvider)
-            {
-                case ScimProviderType.AzureAd:
-                    email = model.UserName?.ToLowerInvariant();
-                    break;
-                default:
-                    email = model.WorkEmail?.ToLowerInvariant();
-                    if (string.IsNullOrWhiteSpace(email))
-                    {
-                        email = model.Emails?.FirstOrDefault()?.Value?.ToLowerInvariant();
-                    }
-                    break;
-            }
-        }
-
-        if (string.IsNullOrWhiteSpace(email) || !model.Active)
-        {
-            return new BadRequestResult();
-        }
-
-        var orgUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(organizationId);
-        var orgUserByEmail = orgUsers.FirstOrDefault(ou => ou.Email?.ToLowerInvariant() == email);
-        if (orgUserByEmail != null)
-        {
-            return new ConflictResult();
-        }
-
-        string externalId = null;
-        if (!string.IsNullOrWhiteSpace(model.ExternalId))
-        {
-            externalId = model.ExternalId;
-        }
-        else if (!string.IsNullOrWhiteSpace(model.UserName))
-        {
-            externalId = model.UserName;
-        }
-        else
-        {
-            externalId = CoreHelpers.RandomString(15);
-        }
-
-        var orgUserByExternalId = orgUsers.FirstOrDefault(ou => ou.ExternalId == externalId);
-        if (orgUserByExternalId != null)
-        {
-            return new ConflictResult();
-        }
-
-        var invitedOrgUser = await _organizationService.InviteUserAsync(organizationId, null, email,
-            OrganizationUserType.User, false, externalId, new List<SelectionReadOnly>());
-        var orgUser = await _organizationUserRepository.GetDetailsByIdAsync(invitedOrgUser.Id);
-        var response = new ScimUserResponseModel(orgUser);
-        return new CreatedResult(Url.Action(nameof(Get), new { orgUser.OrganizationId, orgUser.Id }), response);
+        var orgUser = await _postUserCommand.PostUserAsync(organizationId, model);
+        var scimUserResponseModel = new ScimUserResponseModel(orgUser);
+        return new CreatedResult(Url.Action(nameof(Get), new { orgUser.OrganizationId, orgUser.Id }), scimUserResponseModel);
     }
 
     [HttpPut("{id}")]
@@ -211,16 +163,7 @@ public class UsersController : Controller
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(Guid organizationId, Guid id)
     {
-        var orgUser = await _organizationUserRepository.GetByIdAsync(id);
-        if (orgUser == null || orgUser.OrganizationId != organizationId)
-        {
-            return new NotFoundObjectResult(new ScimErrorResponseModel
-            {
-                Status = 404,
-                Detail = "User not found."
-            });
-        }
-        await _organizationService.DeleteUserAsync(organizationId, id, null);
+        await _deleteOrganizationUserCommand.DeleteUserAsync(organizationId, id, null);
         return new NoContentResult();
     }
 }
