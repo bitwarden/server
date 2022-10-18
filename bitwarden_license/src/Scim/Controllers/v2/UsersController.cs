@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Enums;
+using Bit.Core.Exceptions;
 using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -18,7 +19,6 @@ public class UsersController : Controller
     private readonly IUserService _userService;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IOrganizationService _organizationService;
-    private readonly IGetUserQuery _getUserQuery;
     private readonly IGetUsersListQuery _getUsersListQuery;
     private readonly IDeleteOrganizationUserCommand _deleteOrganizationUserCommand;
     private readonly IPatchUserCommand _patchUserCommand;
@@ -29,7 +29,6 @@ public class UsersController : Controller
         IUserService userService,
         IOrganizationUserRepository organizationUserRepository,
         IOrganizationService organizationService,
-        IGetUserQuery getUserQuery,
         IGetUsersListQuery getUsersListQuery,
         IDeleteOrganizationUserCommand deleteOrganizationUserCommand,
         IPatchUserCommand patchUserCommand,
@@ -39,7 +38,6 @@ public class UsersController : Controller
         _userService = userService;
         _organizationUserRepository = organizationUserRepository;
         _organizationService = organizationService;
-        _getUserQuery = getUserQuery;
         _getUsersListQuery = getUsersListQuery;
         _deleteOrganizationUserCommand = deleteOrganizationUserCommand;
         _patchUserCommand = patchUserCommand;
@@ -50,9 +48,12 @@ public class UsersController : Controller
     [HttpGet("{id}")]
     public async Task<IActionResult> Get(Guid organizationId, Guid id)
     {
-        var orgUser = await _getUserQuery.GetUserAsync(organizationId, id);
-        var scimUserResponseModel = new ScimUserResponseModel(orgUser);
-        return Ok(scimUserResponseModel);
+        var orgUser = await _organizationUserRepository.GetDetailsByIdAsync(id);
+        if (orgUser == null || orgUser.OrganizationId != organizationId)
+        {
+            throw new NotFoundException("User not found.");
+        }
+        return Ok(new ScimUserResponseModel(orgUser));
     }
 
     [HttpGet("")]
