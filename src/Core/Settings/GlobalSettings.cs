@@ -25,6 +25,7 @@ public class GlobalSettings : IGlobalSettings
         set => _logDirectory = value;
     }
     public virtual long? LogRollBySizeLimit { get; set; }
+    public virtual bool EnableDevLogging { get; set; } = false;
     public virtual string LicenseDirectory
     {
         get => BuildDirectory(_licenseDirectory, "/core/licenses");
