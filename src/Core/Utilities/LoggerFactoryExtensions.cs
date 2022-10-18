@@ -57,7 +57,6 @@ public static class LoggerFactoryExtensions
 
         var config = new LoggerConfiguration()
             .MinimumLevel.Verbose()
-            .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
             .Enrich.FromLogContext()
             .Filter.ByIncludingOnly(inclusionPredicate);
 
