@@ -1,8 +1,8 @@
-﻿using Bit.Scim.Models;
+﻿using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 
 namespace Bit.Scim.Users.Interfaces;
 
 public interface IGetUserQuery
 {
-    Task<ScimUserResponseModel> GetUserAsync(Guid organizationId, Guid id);
+    Task<OrganizationUserUserDetails> GetUserAsync(Guid organizationId, Guid id);
 }

@@ -3,7 +3,6 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Scim.Users;
-using Bit.Scim.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
@@ -19,19 +18,6 @@ public class GetUserQueryTests
     [BitAutoData]
     public async Task GetUser_Success(SutProvider<GetUserQuery> sutProvider, OrganizationUserUserDetails organizationUserUserDetails)
     {
-        var expectedResult = new Models.ScimUserResponseModel
-        {
-            Id = organizationUserUserDetails.Id.ToString(),
-            UserName = organizationUserUserDetails.Email,
-            Name = new Models.BaseScimUserModel.NameModel(organizationUserUserDetails.Name),
-            Emails = new List<Models.BaseScimUserModel.EmailModel> { new Models.BaseScimUserModel.EmailModel(organizationUserUserDetails.Email) },
-            DisplayName = organizationUserUserDetails.Name,
-            Active = organizationUserUserDetails.Status != Core.Enums.OrganizationUserStatusType.Revoked ? true : false,
-            Groups = new List<string>(),
-            ExternalId = organizationUserUserDetails.ExternalId,
-            Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
-        };
-
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetDetailsByIdAsync(organizationUserUserDetails.Id)
             .Returns(organizationUserUserDetails);
@@ -39,7 +25,7 @@ public class GetUserQueryTests
         var result = await sutProvider.Sut.GetUserAsync(organizationUserUserDetails.OrganizationId, organizationUserUserDetails.Id);
 
         await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).GetDetailsByIdAsync(organizationUserUserDetails.Id);
-        AssertHelper.AssertPropertyEqual(expectedResult, result);
+        AssertHelper.AssertPropertyEqual(organizationUserUserDetails, result);
     }
 
     [Theory]

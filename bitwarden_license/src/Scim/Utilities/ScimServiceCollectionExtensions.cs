@@ -24,6 +24,7 @@ public static class ScimServiceCollectionExtensions
     public static void AddScimUserQueries(this IServiceCollection services)
     {
         services.AddScoped<IGetUserQuery, GetUserQuery>();
+        services.AddScoped<IGetUsersListQuery, GetUsersListQuery>();
     }
 
     public static void AddScimUserCommands(this IServiceCollection services)
