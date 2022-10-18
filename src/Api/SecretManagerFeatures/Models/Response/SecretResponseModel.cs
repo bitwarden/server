@@ -35,6 +35,5 @@ public class SecretResponseModel : ResponseModel
     public DateTime CreationDate { get; set; }
 
     public DateTime RevisionDate { get; set; }
-
 }
 
