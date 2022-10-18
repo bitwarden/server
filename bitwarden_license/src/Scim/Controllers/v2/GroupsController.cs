@@ -1,7 +1,6 @@
 ﻿using Bit.Core.Exceptions;
+using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
-using Bit.Scim.Context;
 using Bit.Scim.Groups.Interfaces;
 using Bit.Scim.Models;
 using Bit.Scim.Utilities;
@@ -16,9 +15,8 @@ namespace Bit.Scim.Controllers.v2;
 public class GroupsController : Controller
 {
     private readonly IGroupRepository _groupRepository;
-    private readonly IGroupService _groupService;
-    private readonly IScimContext _scimContext;
     private readonly IGetGroupsListQuery _getGroupsListQuery;
+    private readonly IDeleteGroupCommand _deleteGroupCommand;
     private readonly IPatchGroupCommand _patchGroupCommand;
     private readonly IPostGroupCommand _postGroupCommand;
     private readonly IPutGroupCommand _putGroupCommand;
@@ -26,18 +24,16 @@ public class GroupsController : Controller
 
     public GroupsController(
         IGroupRepository groupRepository,
-        IGroupService groupService,
-        IScimContext scimContext,
         IGetGroupsListQuery getGroupsListQuery,
+        IDeleteGroupCommand deleteGroupCommand,
         IPatchGroupCommand patchGroupCommand,
         IPostGroupCommand postGroupCommand,
         IPutGroupCommand putGroupCommand,
         ILogger<GroupsController> logger)
     {
         _groupRepository = groupRepository;
-        _groupService = groupService;
-        _scimContext = scimContext;
         _getGroupsListQuery = getGroupsListQuery;
+        _deleteGroupCommand = deleteGroupCommand;
         _patchGroupCommand = patchGroupCommand;
         _postGroupCommand = postGroupCommand;
         _putGroupCommand = putGroupCommand;
@@ -100,16 +96,7 @@ public class GroupsController : Controller
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(Guid organizationId, Guid id)
     {
-        var group = await _groupRepository.GetByIdAsync(id);
-        if (group == null || group.OrganizationId != organizationId)
-        {
-            return new NotFoundObjectResult(new ScimErrorResponseModel
-            {
-                Status = 404,
-                Detail = "Group not found."
-            });
-        }
-        await _groupService.DeleteAsync(group);
+        await _deleteGroupCommand.DeleteGroupAsync(organizationId, id);
         return new NoContentResult();
     }
 }
