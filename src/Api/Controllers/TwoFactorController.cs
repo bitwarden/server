@@ -296,13 +296,13 @@ public class TwoFactorController : Controller
                         .VerifyAuthRequestAsync(model.AuthRequestId, model.AuthRequestAccessCode))
                 {
                     var isBecauseNewDeviceLogin = await IsNewDeviceLoginAsync(user, model);
-                    
+
                     await _userService.SendTwoFactorEmailAsync(user, isBecauseNewDeviceLogin);
                     return;
                 }
             }
             else
-            {   
+            {
                 if (await _userService.VerifySecretAsync(user, model.Secret))
                 {
                     var isBecauseNewDeviceLogin = await IsNewDeviceLoginAsync(user, model);

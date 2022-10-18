@@ -11,3 +11,4 @@ public static class LoginServiceCollectionExtensions
         services.AddScoped<IVerifyAuthRequestCommand, VerifyAuthRequestCommand>();
     }
 }
+
