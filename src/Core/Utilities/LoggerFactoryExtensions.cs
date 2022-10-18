@@ -61,11 +61,7 @@ public static class LoggerFactoryExtensions
             .Enrich.FromLogContext()
             .Filter.ByIncludingOnly(inclusionPredicate);
 
-        if (context.HostingEnvironment.IsDevelopment())
-        {
-            config.WriteTo.Console();
-        }
-        else if (CoreHelpers.SettingHasValue(globalSettings?.DocumentDb.Uri) &&
+        if (CoreHelpers.SettingHasValue(globalSettings?.DocumentDb.Uri) &&
             CoreHelpers.SettingHasValue(globalSettings?.DocumentDb.Key))
         {
             config.WriteTo.AzureCosmosDB(new Uri(globalSettings.DocumentDb.Uri),
