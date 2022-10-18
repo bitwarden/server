@@ -1,5 +1,4 @@
-﻿using Bit.Core.Entities;
-using Bit.Core.Exceptions;
+﻿using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Scim.Context;
@@ -21,6 +20,7 @@ public class GroupsController : Controller
     private readonly IScimContext _scimContext;
     private readonly IGetGroupsListQuery _getGroupsListQuery;
     private readonly IPatchGroupCommand _patchGroupCommand;
+    private readonly IPostGroupCommand _postGroupCommand;
     private readonly IPutGroupCommand _putGroupCommand;
     private readonly ILogger<GroupsController> _logger;
 
@@ -30,6 +30,7 @@ public class GroupsController : Controller
         IScimContext scimContext,
         IGetGroupsListQuery getGroupsListQuery,
         IPatchGroupCommand patchGroupCommand,
+        IPostGroupCommand postGroupCommand,
         IPutGroupCommand putGroupCommand,
         ILogger<GroupsController> logger)
     {
@@ -38,6 +39,7 @@ public class GroupsController : Controller
         _scimContext = scimContext;
         _getGroupsListQuery = getGroupsListQuery;
         _patchGroupCommand = patchGroupCommand;
+        _postGroupCommand = postGroupCommand;
         _putGroupCommand = putGroupCommand;
         _logger = logger;
     }
@@ -74,22 +76,9 @@ public class GroupsController : Controller
     [HttpPost("")]
     public async Task<IActionResult> Post(Guid organizationId, [FromBody] ScimGroupRequestModel model)
     {
-        if (string.IsNullOrWhiteSpace(model.DisplayName))
-        {
-            return new BadRequestResult();
-        }
-
-        var groups = await _groupRepository.GetManyByOrganizationIdAsync(organizationId);
-        if (!string.IsNullOrWhiteSpace(model.ExternalId) && groups.Any(g => g.ExternalId == model.ExternalId))
-        {
-            return new ConflictResult();
-        }
-
-        var group = model.ToGroup(organizationId);
-        await _groupService.SaveAsync(group, null);
-        await UpdateGroupMembersAsync(group, model, true);
-        var response = new ScimGroupResponseModel(group);
-        return new CreatedResult(Url.Action(nameof(Get), new { group.OrganizationId, group.Id }), response);
+        var group = await _postGroupCommand.PostGroupAsync(organizationId, model);
+        var scimGroupResponseModel = new ScimGroupResponseModel(group);
+        return new CreatedResult(Url.Action(nameof(Get), new { group.OrganizationId, group.Id }), scimGroupResponseModel);
     }
 
     [HttpPut("{id}")]
@@ -122,34 +111,5 @@ public class GroupsController : Controller
         }
         await _groupService.DeleteAsync(group);
         return new NoContentResult();
-    }
-
-    private async Task UpdateGroupMembersAsync(Group group, ScimGroupRequestModel model, bool skipIfEmpty)
-    {
-        if (_scimContext.RequestScimProvider != Core.Enums.ScimProviderType.Okta)
-        {
-            return;
-        }
-
-        if (model.Members == null)
-        {
-            return;
-        }
-
-        var memberIds = new List<Guid>();
-        foreach (var id in model.Members.Select(i => i.Value))
-        {
-            if (Guid.TryParse(id, out var guidId))
-            {
-                memberIds.Add(guidId);
-            }
-        }
-
-        if (!memberIds.Any() && skipIfEmpty)
-        {
-            return;
-        }
-
-        await _groupRepository.UpdateUsersAsync(group.Id, memberIds);
     }
 }
