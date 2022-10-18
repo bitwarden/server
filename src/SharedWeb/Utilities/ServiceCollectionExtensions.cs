@@ -337,9 +337,9 @@ public static class ServiceCollectionExtensions
             };
             options.ClaimsIdentity = new ClaimsIdentityOptions
             {
-                SecurityStampClaimType = "sstamp",
+                SecurityStampClaimType = Claims.SecurityStamp,
                 UserNameClaimType = JwtClaimTypes.Email,
-                UserIdClaimType = JwtClaimTypes.Subject
+                UserIdClaimType = JwtClaimTypes.Subject,
             };
             options.Tokens.ChangeEmailTokenProvider = TokenOptions.DefaultEmailProvider;
         });

@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Exceptions;
+using Bit.Core.IdentityServer;
 using Bit.Core.Models.Api.Request.OrganizationSponsorships;
 using Bit.Core.Models.Api.Response.OrganizationSponsorships;
 using Bit.Core.Models.Data.Organizations.OrganizationSponsorships;
@@ -30,7 +31,7 @@ public class SelfHostedSyncSponsorshipsCommand : BaseIdentityClientService, ISel
         httpFactory,
         globalSettings.Installation.ApiUri,
         globalSettings.Installation.IdentityUri,
-        "api.installation",
+        ApiScopes.ApiInstallation,
         $"installation.{globalSettings.Installation.Id}",
         globalSettings.Installation.Key,
         logger)

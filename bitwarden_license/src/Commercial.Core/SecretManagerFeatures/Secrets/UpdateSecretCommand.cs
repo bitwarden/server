@@ -16,11 +16,6 @@ public class UpdateSecretCommand : IUpdateSecretCommand
 
     public async Task<Secret> UpdateAsync(Secret secret)
     {
-        if (secret.Id == default(Guid))
-        {
-            throw new BadRequestException("Cannot update secret, secret does not exist.");
-        }
-
         var existingSecret = await _secretRepository.GetByIdAsync(secret.Id);
         if (existingSecret == null)
         {

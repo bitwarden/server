@@ -3,9 +3,9 @@ using Bit.Core.Models.Api;
 
 namespace Bit.Api.SecretManagerFeatures.Models.Response;
 
-public class SecretDeleteBulkResponseModel : ResponseModel
+public class BulkDeleteResponseModel : ResponseModel
 {
-    public SecretDeleteBulkResponseModel(Guid id, string error, string obj = "SecretDeleteBulkResponseModel") : base(obj)
+    public BulkDeleteResponseModel(Guid id, string error, string obj = "BulkDeleteResponseModel") : base(obj)
     {
         Id = id;
 

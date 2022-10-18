@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.IdentityServer;
 using Bit.Core.Models;
 using Bit.Core.Models.Api;
 using Bit.Core.Repositories;
@@ -25,7 +26,7 @@ public class RelayPushNotificationService : BaseIdentityClientService, IPushNoti
             httpFactory,
             globalSettings.PushRelayBaseUri,
             globalSettings.Installation.IdentityUri,
-            "api.push",
+            ApiScopes.ApiPush,
             $"installation.{globalSettings.Installation.Id}",
             globalSettings.Installation.Key,
             logger)

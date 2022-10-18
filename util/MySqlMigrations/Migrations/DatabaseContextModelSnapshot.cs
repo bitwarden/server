@@ -19,6 +19,51 @@ namespace Bit.MySqlMigrations.Migrations
                 .HasAnnotation("ProductVersion", "6.0.4")
                 .HasAnnotation("Relational:MaxIdentifierLength", 64);
 
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.ApiKey", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("ClientSecret")
+                        .HasMaxLength(30)
+                        .HasColumnType("varchar(30)");
+
+                    b.Property<DateTime>("CreationDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("EncryptedPayload")
+                        .HasMaxLength(4000)
+                        .HasColumnType("varchar(4000)");
+
+                    b.Property<DateTime>("ExpireAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Key")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Name")
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)");
+
+                    b.Property<DateTime>("RevisionDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Scope")
+                        .HasMaxLength(4000)
+                        .HasColumnType("varchar(4000)");
+
+                    b.Property<Guid?>("ServiceAccountId")
+                        .HasColumnType("char(36)");
+
+                    b.HasKey("Id")
+                        .HasAnnotation("SqlServer:Clustered", true);
+
+                    b.HasIndex("ServiceAccountId")
+                        .HasAnnotation("SqlServer:Clustered", false);
+
+                    b.ToTable("ApiKey", (string)null);
+                });
+
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.AuthRequest", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1376,6 +1421,15 @@ namespace Bit.MySqlMigrations.Migrations
                     b.HasIndex("SecretsId");
 
                     b.ToTable("ProjectSecret");
+                });
+                
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.ApiKey", b =>
+                {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.ServiceAccount", "ServiceAccount")
+                        .WithMany()
+                        .HasForeignKey("ServiceAccountId");
+
+                    b.Navigation("ServiceAccount");
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.AuthRequest", b =>

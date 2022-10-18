@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Enums;
+using Bit.Core.IdentityServer;
 using Bit.Core.Models.Api;
 using Bit.Core.Settings;
 using Microsoft.Extensions.Logging;
@@ -16,7 +17,7 @@ public class RelayPushRegistrationService : BaseIdentityClientService, IPushRegi
             httpFactory,
             globalSettings.PushRelayBaseUri,
             globalSettings.Installation.IdentityUri,
-            "api.push",
+            ApiScopes.ApiPush,
             $"installation.{globalSettings.Installation.Id}",
             globalSettings.Installation.Key,
             logger)
