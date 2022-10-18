@@ -13,6 +13,7 @@ public static class ScimServiceCollectionExtensions
     {
         services.AddScoped<IDeleteGroupCommand, DeleteGroupCommand>();
         services.AddScoped<IPatchGroupCommand, PatchGroupCommand>();
+        services.AddScoped<IPostGroupCommand, PostGroupCommand>();
         services.AddScoped<IPutGroupCommand, PutGroupCommand>();
     }
 
@@ -24,11 +25,13 @@ public static class ScimServiceCollectionExtensions
     public static void AddScimUserQueries(this IServiceCollection services)
     {
         services.AddScoped<IGetUserQuery, GetUserQuery>();
+        services.AddScoped<IGetUsersListQuery, GetUsersListQuery>();
     }
 
     public static void AddScimUserCommands(this IServiceCollection services)
     {
         services.AddScoped<IDeleteOrganizationUserCommand, DeleteOrganizationUserCommand>();
+        services.AddScoped<IPatchUserCommand, PatchUserCommand>();
         services.AddScoped<IPostUserCommand, PostUserCommand>();
     }
 }
