@@ -127,7 +127,7 @@ public class GroupsController : Controller
         }
 
         var group = model.ToGroup(organizationId);
-        await _groupService.SaveAsync(group, null, EventSystemUser.SCIM);
+        await _groupService.SaveAsync(group, EventSystemUser.SCIM);
         await UpdateGroupMembersAsync(group, model, true);
         var response = new ScimGroupResponseModel(group);
         return new CreatedResult(Url.Action(nameof(Get), new { group.OrganizationId, group.Id }), response);
@@ -147,7 +147,7 @@ public class GroupsController : Controller
         }
 
         group.Name = model.DisplayName;
-        await _groupService.SaveAsync(group, null, EventSystemUser.SCIM);
+        await _groupService.SaveAsync(group, EventSystemUser.SCIM);
         await UpdateGroupMembersAsync(group, model, false);
         return new ObjectResult(new ScimGroupResponseModel(group));
     }
@@ -182,7 +182,7 @@ public class GroupsController : Controller
                 else if (operation.Path?.ToLowerInvariant() == "displayname")
                 {
                     group.Name = operation.Value.GetString();
-                    await _groupService.SaveAsync(group, null, EventSystemUser.SCIM);
+                    await _groupService.SaveAsync(group, EventSystemUser.SCIM);
                     operationHandled = true;
                 }
                 // Replace group name from value object
@@ -190,7 +190,7 @@ public class GroupsController : Controller
                     operation.Value.TryGetProperty("displayName", out var displayNameProperty))
                 {
                     group.Name = displayNameProperty.GetString();
-                    await _groupService.SaveAsync(group, null, EventSystemUser.SCIM);
+                    await _groupService.SaveAsync(group, EventSystemUser.SCIM);
                     operationHandled = true;
                 }
             }

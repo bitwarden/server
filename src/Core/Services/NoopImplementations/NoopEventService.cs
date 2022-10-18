@@ -26,7 +26,12 @@ public class NoopEventService : IEventService
         return Task.FromResult(0);
     }
 
-    public Task LogGroupEventAsync(Group group, EventType type, DateTime? date = null, EventSystemUser? systemUser = null)
+    public Task LogGroupEventAsync(Group group, EventType type, DateTime? date = null)
+    {
+        return Task.FromResult(0);
+    }
+
+    public Task LogGroupEventAsync(Group group, EventType type, EventSystemUser? systemUser, DateTime? date = null)
     {
         return Task.FromResult(0);
     }
@@ -52,13 +57,18 @@ public class NoopEventService : IEventService
         return Task.FromResult(0);
     }
 
-    public Task LogOrganizationUserEventAsync(OrganizationUser organizationUser, EventType type,
-        DateTime? date = null, EventSystemUser? systemUser = null)
+    public Task LogOrganizationUserEventAsync(OrganizationUser organizationUser, EventType type, DateTime? date = null)
     {
         return Task.FromResult(0);
     }
 
-    public Task LogOrganizationUserEventsAsync(IEnumerable<(OrganizationUser, EventType, DateTime?, EventSystemUser?)> events)
+    public Task LogOrganizationUserEventAsync(OrganizationUser organizationUser, EventType type,
+        EventSystemUser? systemUser, DateTime? date = null)
+    {
+        return Task.FromResult(0);
+    }
+
+    public Task LogOrganizationUserEventsAsync(IEnumerable<(OrganizationUser, EventType, EventSystemUser?, DateTime?)> events)
     {
         return Task.FromResult(0);
     }

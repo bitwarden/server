@@ -1162,7 +1162,7 @@ public class OrganizationService : IOrganizationService
         var limitedCollectionOrgUsers = new List<(OrganizationUser, IEnumerable<SelectionReadOnly>)>();
         var orgUserInvitedCount = 0;
         var exceptions = new List<Exception>();
-        var events = new List<(OrganizationUser, EventType, DateTime?, EventSystemUser?)>();
+        var events = new List<(OrganizationUser, EventType, EventSystemUser?, DateTime?)>();
         foreach (var (invite, externalId) in invites)
         {
             // Prevent duplicate invitations
@@ -1204,7 +1204,7 @@ public class OrganizationService : IOrganizationService
                         orgUsers.Add(orgUser);
                     }
 
-                    events.Add((orgUser, EventType.OrganizationUser_Invited, DateTime.UtcNow, systemUser));
+                    events.Add((orgUser, EventType.OrganizationUser_Invited, systemUser, DateTime.UtcNow));
                     orgUserInvitedCount++;
                 }
                 catch (Exception e)
@@ -1670,7 +1670,7 @@ public class OrganizationService : IOrganizationService
         }
 
         await _organizationUserRepository.DeleteAsync(orgUser);
-        await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Removed, null, systemUser);
+        await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Removed, systemUser);
 
         if (orgUser.UserId.HasValue)
         {
@@ -2243,7 +2243,7 @@ public class OrganizationService : IOrganizationService
 
         await _organizationUserRepository.RevokeAsync(organizationUser.Id);
         organizationUser.Status = OrganizationUserStatusType.Revoked;
-        await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Revoked, null, systemUser);
+        await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Revoked, systemUser);
     }
 
     public async Task<List<Tuple<OrganizationUser, string>>> RevokeUsersAsync(Guid organizationId,
@@ -2337,7 +2337,7 @@ public class OrganizationService : IOrganizationService
 
         await _organizationUserRepository.RestoreAsync(organizationUser.Id, status);
         organizationUser.Status = status;
-        await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Restored, null, systemUser);
+        await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Restored, systemUser);
     }
 
     public async Task<List<Tuple<OrganizationUser, string>>> RestoreUsersAsync(Guid organizationId,
