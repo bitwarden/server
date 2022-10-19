@@ -293,7 +293,7 @@ public class TwoFactorController : Controller
             if (!string.IsNullOrEmpty(model.AuthRequestAccessCode))
             {
                 if (await _verifyAuthRequestCommand
-                        .VerifyAuthRequestAsync(model.AuthRequestId, model.AuthRequestAccessCode))
+                        .VerifyAuthRequestAsync(new Guid(model.AuthRequestId), model.AuthRequestAccessCode))
                 {
                     var isBecauseNewDeviceLogin = await IsNewDeviceLoginAsync(user, model);
 
