@@ -1113,7 +1113,13 @@ public class OrganizationService : IOrganizationService
     }
 
     public async Task<List<OrganizationUser>> InviteUsersAsync(Guid organizationId, Guid? invitingUserId,
-        IEnumerable<(OrganizationUserInvite invite, string externalId)> invites, EventSystemUser? systemUser = null)
+        IEnumerable<(OrganizationUserInvite invite, string externalId)> invites)
+    {
+        return await InviteUsersAsync(organizationId, invitingUserId, invites, null);
+    }
+
+    public async Task<List<OrganizationUser>> InviteUsersAsync(Guid organizationId, Guid? invitingUserId,
+        IEnumerable<(OrganizationUserInvite invite, string externalId)> invites, EventSystemUser? systemUser)
     {
         var organization = await GetOrgById(organizationId);
         var initialSeatCount = organization.Seats;
@@ -1645,7 +1651,12 @@ public class OrganizationService : IOrganizationService
         await _eventService.LogOrganizationUserEventAsync(user, EventType.OrganizationUser_Updated);
     }
 
-    public async Task DeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid? deletingUserId, EventSystemUser? systemUser = null)
+    public async Task DeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid? deletingUserId)
+    {
+        await DeleteUserAsync(organizationId, organizationUserId, deletingUserId, null);
+    }
+
+    public async Task DeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid? deletingUserId, EventSystemUser? systemUser)
     {
         var orgUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
         if (orgUser == null || orgUser.OrganizationId != organizationId)
@@ -1850,7 +1861,14 @@ public class OrganizationService : IOrganizationService
     }
 
     public async Task<OrganizationUser> InviteUserAsync(Guid organizationId, Guid? invitingUserId, string email,
-        OrganizationUserType type, bool accessAll, string externalId, IEnumerable<SelectionReadOnly> collections, EventSystemUser? systemUser = null)
+        OrganizationUserType type, bool accessAll, string externalId, IEnumerable<SelectionReadOnly> collections)
+    {
+        return await InviteUserAsync(organizationId, invitingUserId, email, type, accessAll, externalId, collections,
+            null);
+    }
+
+    public async Task<OrganizationUser> InviteUserAsync(Guid organizationId, Guid? invitingUserId, string email,
+        OrganizationUserType type, bool accessAll, string externalId, IEnumerable<SelectionReadOnly> collections, EventSystemUser? systemUser)
     {
         var invite = new OrganizationUserInvite()
         {
@@ -2218,7 +2236,7 @@ public class OrganizationService : IOrganizationService
         }
     }
 
-    public async Task RevokeUserAsync(OrganizationUser organizationUser, Guid? revokingUserId, EventSystemUser? systemUser = null)
+    public async Task RevokeUserAsync(OrganizationUser organizationUser, Guid? revokingUserId, EventSystemUser? systemUser)
     {
         if (organizationUser.Status == OrganizationUserStatusType.Revoked)
         {
@@ -2305,7 +2323,13 @@ public class OrganizationService : IOrganizationService
         return result;
     }
 
-    public async Task RestoreUserAsync(OrganizationUser organizationUser, Guid? restoringUserId, IUserService userService, EventSystemUser? systemUser = null)
+    public async Task RestoreUserAsync(OrganizationUser organizationUser, Guid? restoringUserId,
+        IUserService userService)
+    {
+        await RestoreUserAsync(organizationUser, restoringUserId, userService, null);
+    }
+
+    public async Task RestoreUserAsync(OrganizationUser organizationUser, Guid? restoringUserId, IUserService userService, EventSystemUser? systemUser)
     {
         if (organizationUser.Status != OrganizationUserStatusType.Revoked)
         {

@@ -30,9 +30,13 @@ public interface IOrganizationService
     Task UpdateTwoFactorProviderAsync(Organization organization, TwoFactorProviderType type);
     Task DisableTwoFactorProviderAsync(Organization organization, TwoFactorProviderType type);
     Task<List<OrganizationUser>> InviteUsersAsync(Guid organizationId, Guid? invitingUserId,
-        IEnumerable<(OrganizationUserInvite invite, string externalId)> invites, EventSystemUser? systemUser = null);
+        IEnumerable<(OrganizationUserInvite invite, string externalId)> invites);
+    Task<List<OrganizationUser>> InviteUsersAsync(Guid organizationId, Guid? invitingUserId,
+        IEnumerable<(OrganizationUserInvite invite, string externalId)> invites, EventSystemUser? systemUser);
     Task<OrganizationUser> InviteUserAsync(Guid organizationId, Guid? invitingUserId, string email,
-        OrganizationUserType type, bool accessAll, string externalId, IEnumerable<SelectionReadOnly> collections, EventSystemUser? systemUser = null);
+        OrganizationUserType type, bool accessAll, string externalId, IEnumerable<SelectionReadOnly> collections);
+    Task<OrganizationUser> InviteUserAsync(Guid organizationId, Guid? invitingUserId, string email,
+        OrganizationUserType type, bool accessAll, string externalId, IEnumerable<SelectionReadOnly> collections, EventSystemUser? systemUser);
     Task<IEnumerable<Tuple<OrganizationUser, string>>> ResendInvitesAsync(Guid organizationId, Guid? invitingUserId, IEnumerable<Guid> organizationUsersId);
     Task ResendInviteAsync(Guid organizationId, Guid? invitingUserId, Guid organizationUserId);
     Task<OrganizationUser> AcceptUserAsync(Guid organizationUserId, User user, string token,
@@ -43,7 +47,8 @@ public interface IOrganizationService
     Task<List<Tuple<OrganizationUser, string>>> ConfirmUsersAsync(Guid organizationId, Dictionary<Guid, string> keys,
         Guid confirmingUserId, IUserService userService);
     Task SaveUserAsync(OrganizationUser user, Guid? savingUserId, IEnumerable<SelectionReadOnly> collections);
-    Task DeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid? deletingUserId, EventSystemUser? systemUser = null);
+    Task DeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid? deletingUserId);
+    Task DeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid? deletingUserId, EventSystemUser? systemUser);
     Task DeleteUserAsync(Guid organizationId, Guid userId);
     Task<List<Tuple<OrganizationUser, string>>> DeleteUsersAsync(Guid organizationId,
         IEnumerable<Guid> organizationUserIds, Guid? deletingUserId);
@@ -58,10 +63,11 @@ public interface IOrganizationService
     Task DeleteSsoUserAsync(Guid userId, Guid? organizationId);
     Task<Organization> UpdateOrganizationKeysAsync(Guid orgId, string publicKey, string privateKey);
     Task<bool> HasConfirmedOwnersExceptAsync(Guid organizationId, IEnumerable<Guid> organizationUsersId, bool includeProvider = true);
-    Task RevokeUserAsync(OrganizationUser organizationUser, Guid? revokingUserId, EventSystemUser? systemUser = null);
+    Task RevokeUserAsync(OrganizationUser organizationUser, Guid? revokingUserId, EventSystemUser? systemUser);
     Task<List<Tuple<OrganizationUser, string>>> RevokeUsersAsync(Guid organizationId,
         IEnumerable<Guid> organizationUserIds, Guid? revokingUserId);
-    Task RestoreUserAsync(OrganizationUser organizationUser, Guid? restoringUserId, IUserService userService, EventSystemUser? systemUser = null);
+    Task RestoreUserAsync(OrganizationUser organizationUser, Guid? restoringUserId, IUserService userService);
+    Task RestoreUserAsync(OrganizationUser organizationUser, Guid? restoringUserId, IUserService userService, EventSystemUser? systemUser);
     Task<List<Tuple<OrganizationUser, string>>> RestoreUsersAsync(Guid organizationId,
         IEnumerable<Guid> organizationUserIds, Guid? restoringUserId, IUserService userService);
     Task<int> GetOccupiedSeatCount(Organization organization);
