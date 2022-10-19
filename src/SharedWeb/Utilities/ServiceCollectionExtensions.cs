@@ -7,7 +7,6 @@ using Bit.Core.Enums;
 using Bit.Core.HostedServices;
 using Bit.Core.Identity;
 using Bit.Core.IdentityServer;
-using Bit.Core.LoginFeatures;
 using Bit.Core.Models.Business.Tokenables;
 using Bit.Core.OrganizationFeatures;
 using Bit.Core.Repositories;
@@ -109,7 +108,6 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IAppleIapService, AppleIapService>();
         services.AddScoped<ISsoConfigService, SsoConfigService>();
         services.AddScoped<ISendService, SendService>();
-        services.AddLoginServices();
     }
 
     public static void AddTokenizers(this IServiceCollection services)
