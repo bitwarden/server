@@ -43,7 +43,7 @@ public class GroupServiceTests
         await sutProvider.Sut.SaveAsync(group, collections);
 
         await sutProvider.GetDependency<IGroupRepository>().Received().CreateAsync(group, collections);
-        //await sutProvider.GetDependency<IEventService>().Received().LogGroupEventAsync(group, EventType.Group_Created);
+        await sutProvider.GetDependency<IEventService>().Received().LogGroupEventAsync(group, EventType.Group_Created, systemUser: null);
         Assert.True(group.CreationDate - utcNow < TimeSpan.FromSeconds(1));
         Assert.True(group.RevisionDate - utcNow < TimeSpan.FromSeconds(1));
     }
