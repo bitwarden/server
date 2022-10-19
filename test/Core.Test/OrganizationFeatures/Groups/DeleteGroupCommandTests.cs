@@ -1,6 +1,6 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Exceptions;
-using Bit.Core.OrganizationFeatures.OrganizationUsers;
+using Bit.Core.OrganizationFeatures.Groups;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
@@ -8,7 +8,7 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Core.Test.OrganizationFeatures.OrganizationUsers;
+namespace Bit.Core.Test.OrganizationFeatures.Groups;
 
 [SutProviderCustomize]
 public class DeleteGroupCommandTests

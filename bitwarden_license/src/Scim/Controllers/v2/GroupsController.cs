@@ -1,5 +1,5 @@
 ﻿using Bit.Core.Exceptions;
-using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.OrganizationFeatures.Groups.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Scim.Groups.Interfaces;
 using Bit.Scim.Models;

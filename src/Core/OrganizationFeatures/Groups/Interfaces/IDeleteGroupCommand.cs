@@ -1,4 +1,4 @@
-﻿namespace Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
+﻿namespace Bit.Core.OrganizationFeatures.Groups.Interfaces;
 
 public interface IDeleteGroupCommand
 {
