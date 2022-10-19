@@ -32,7 +32,7 @@ public class GroupService : IGroupService
     public async Task SaveAsync(Group group,
         IEnumerable<SelectionReadOnly> collections = null)
     {
-        await SaveAsync(group, null, collections);
+        await SaveAsync(group, systemUser: null, collections);
     }
 
     public async Task SaveAsync(Group group, EventSystemUser? systemUser, IEnumerable<SelectionReadOnly> collections = null)
@@ -83,7 +83,7 @@ public class GroupService : IGroupService
 
     public async Task DeleteAsync(Group group)
     {
-        await DeleteAsync(group, null);
+        await DeleteAsync(group, systemUser: null);
     }
 
     public async Task DeleteAsync(Group group, EventSystemUser? systemUser)
@@ -94,7 +94,7 @@ public class GroupService : IGroupService
 
     public async Task DeleteUserAsync(Group group, Guid organizationUserId)
     {
-        await DeleteUserAsync(group, organizationUserId, null);
+        await DeleteUserAsync(group, organizationUserId, systemUser: null);
     }
 
     public async Task DeleteUserAsync(Group group, Guid organizationUserId, EventSystemUser? systemUser)

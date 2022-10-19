@@ -1115,7 +1115,7 @@ public class OrganizationService : IOrganizationService
     public async Task<List<OrganizationUser>> InviteUsersAsync(Guid organizationId, Guid? invitingUserId,
         IEnumerable<(OrganizationUserInvite invite, string externalId)> invites)
     {
-        return await InviteUsersAsync(organizationId, invitingUserId, invites, null);
+        return await InviteUsersAsync(organizationId, invitingUserId, invites, systemUser: null);
     }
 
     public async Task<List<OrganizationUser>> InviteUsersAsync(Guid organizationId, Guid? invitingUserId,
@@ -1653,7 +1653,7 @@ public class OrganizationService : IOrganizationService
 
     public async Task DeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid? deletingUserId)
     {
-        await DeleteUserAsync(organizationId, organizationUserId, deletingUserId, null);
+        await DeleteUserAsync(organizationId, organizationUserId, deletingUserId, systemUser: null);
     }
 
     public async Task DeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid? deletingUserId, EventSystemUser? systemUser)
@@ -1864,7 +1864,7 @@ public class OrganizationService : IOrganizationService
         OrganizationUserType type, bool accessAll, string externalId, IEnumerable<SelectionReadOnly> collections)
     {
         return await InviteUserAsync(organizationId, invitingUserId, email, type, accessAll, externalId, collections,
-            null);
+            systemUser: null);
     }
 
     public async Task<OrganizationUser> InviteUserAsync(Guid organizationId, Guid? invitingUserId, string email,
@@ -2236,6 +2236,11 @@ public class OrganizationService : IOrganizationService
         }
     }
 
+    public async Task RevokeUserAsync(OrganizationUser organizationUser, Guid? revokingUserId)
+    {
+        await RevokeUserAsync(organizationUser, revokingUserId, systemUser: null);
+    }
+
     public async Task RevokeUserAsync(OrganizationUser organizationUser, Guid? revokingUserId, EventSystemUser? systemUser)
     {
         if (organizationUser.Status == OrganizationUserStatusType.Revoked)
@@ -2326,7 +2331,7 @@ public class OrganizationService : IOrganizationService
     public async Task RestoreUserAsync(OrganizationUser organizationUser, Guid? restoringUserId,
         IUserService userService)
     {
-        await RestoreUserAsync(organizationUser, restoringUserId, userService, null);
+        await RestoreUserAsync(organizationUser, restoringUserId, userService, systemUser: null);
     }
 
     public async Task RestoreUserAsync(OrganizationUser organizationUser, Guid? restoringUserId, IUserService userService, EventSystemUser? systemUser)
