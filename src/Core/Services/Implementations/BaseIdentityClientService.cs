@@ -54,16 +54,19 @@ public abstract class BaseIdentityClientService : IDisposable
 
     protected async Task<TResult> SendAsync<TRequest, TResult>(HttpMethod method, string path, TRequest requestModel)
     {
+        var fullRequestPath = string.Concat(Client.BaseAddress, path);
+
         var tokenStateResponse = await HandleTokenStateAsync();
         if (!tokenStateResponse)
         {
+            _logger.LogError("Unable to send {method} request to {requestUri} because an access token was unable to be obtained", method.Method, fullRequestPath);
             return default;
         }
 
         var message = new TokenHttpRequestMessage(requestModel, AccessToken)
         {
             Method = method,
-            RequestUri = new Uri(string.Concat(Client.BaseAddress, path))
+            RequestUri = new Uri(fullRequestPath)
         };
         try
         {
@@ -120,7 +123,7 @@ public abstract class BaseIdentityClientService : IDisposable
 
         if (!response.IsSuccessStatusCode)
         {
-            _logger.LogInformation("Unsuccessful token response with status code {StatusCode}", response.StatusCode);
+            _logger.LogInformation("Unsuccessful token response from {identity} for client {clientId} with status code {StatusCode}", IdentityClient.BaseAddress, _identityClientId, response.StatusCode);
 
             if (response.StatusCode == HttpStatusCode.BadRequest)
             {
