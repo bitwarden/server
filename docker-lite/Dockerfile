@@ -199,7 +199,7 @@ RUN apk add --update-cache \
     && rm -rf /var/cache/apk/*
 
 # Create required directories
-RUN mkdir -p /etc/bitwarden//attachments
+RUN mkdir -p /etc/bitwarden/attachments
 RUN mkdir -p /etc/bitwarden/logs
 RUN mkdir -p /etc/bitwarden/ssl
 
