@@ -44,7 +44,7 @@ public class MultiServicePushNotificationService : IPushNotificationService
             if (CoreHelpers.SettingHasValue(globalSettings.NotificationHub.ConnectionString))
             {
                 _services.Add(new NotificationHubPushNotificationService(installationDeviceRepository,
-                    globalSettings, httpContextAccessor));
+                    globalSettings, httpContextAccessor, hubLogger));
             }
             if (CoreHelpers.SettingHasValue(globalSettings.Notifications?.ConnectionString))
             {
@@ -130,6 +130,18 @@ public class MultiServicePushNotificationService : IPushNotificationService
     public Task PushSyncSendUpdateAsync(Send send)
     {
         PushToServices((s) => s.PushSyncSendUpdateAsync(send));
+        return Task.FromResult(0);
+    }
+
+    public Task PushAuthRequestAsync(AuthRequest authRequest)
+    {
+        PushToServices((s) => s.PushAuthRequestAsync(authRequest));
+        return Task.FromResult(0);
+    }
+
+    public Task PushAuthRequestResponseAsync(AuthRequest authRequest)
+    {
+        PushToServices((s) => s.PushAuthRequestResponseAsync(authRequest));
         return Task.FromResult(0);
     }
 

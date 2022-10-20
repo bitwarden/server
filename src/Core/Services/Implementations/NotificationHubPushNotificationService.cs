@@ -9,6 +9,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Azure.NotificationHubs;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Services;
 
@@ -17,20 +18,23 @@ public class NotificationHubPushNotificationService : IPushNotificationService
     private readonly IInstallationDeviceRepository _installationDeviceRepository;
     private readonly GlobalSettings _globalSettings;
     private readonly IHttpContextAccessor _httpContextAccessor;
-
     private NotificationHubClient _client = null;
+    private ILogger _logger;
 
     public NotificationHubPushNotificationService(
         IInstallationDeviceRepository installationDeviceRepository,
         GlobalSettings globalSettings,
-        IHttpContextAccessor httpContextAccessor)
+        IHttpContextAccessor httpContextAccessor,
+        ILogger<NotificationsApiPushNotificationService> logger)
     {
         _installationDeviceRepository = installationDeviceRepository;
         _globalSettings = globalSettings;
         _httpContextAccessor = httpContextAccessor;
         _client = NotificationHubClient.CreateClientFromConnectionString(
             _globalSettings.NotificationHub.ConnectionString,
-            _globalSettings.NotificationHub.HubName);
+            _globalSettings.NotificationHub.HubName,
+            _globalSettings.NotificationHub.EnableSendTracing);
+        _logger = logger;
     }
 
     public async Task PushSyncCipherCreateAsync(Cipher cipher, IEnumerable<Guid> collectionIds)
@@ -167,6 +171,27 @@ public class NotificationHubPushNotificationService : IPushNotificationService
         }
     }
 
+    public async Task PushAuthRequestAsync(AuthRequest authRequest)
+    {
+        await PushAuthRequestAsync(authRequest, PushType.AuthRequest);
+    }
+
+    public async Task PushAuthRequestResponseAsync(AuthRequest authRequest)
+    {
+        await PushAuthRequestAsync(authRequest, PushType.AuthRequestResponse);
+    }
+
+    private async Task PushAuthRequestAsync(AuthRequest authRequest, PushType type)
+    {
+        var message = new AuthRequestPushNotification
+        {
+            Id = authRequest.Id,
+            UserId = authRequest.UserId
+        };
+
+        await SendPayloadToUserAsync(authRequest.UserId, type, message, true);
+    }
+
     private async Task SendPayloadToUserAsync(Guid userId, PushType type, object payload, bool excludeCurrentContext)
     {
         await SendPayloadToUserAsync(userId.ToString(), type, payload, GetContextIdentifier(excludeCurrentContext));
@@ -223,12 +248,17 @@ public class NotificationHubPushNotificationService : IPushNotificationService
 
     private async Task SendPayloadAsync(string tag, PushType type, object payload)
     {
-        await _client.SendTemplateNotificationAsync(
+        var outcome = await _client.SendTemplateNotificationAsync(
             new Dictionary<string, string>
             {
                 { "type",  ((byte)type).ToString() },
                 { "payload", JsonSerializer.Serialize(payload) }
             }, tag);
+        if (_globalSettings.NotificationHub.EnableSendTracing)
+        {
+            _logger.LogInformation("Azure Notification Hub Tracking ID: {id} | {type} push notification with {success} successes and {failure} failures with a payload of {@payload} and result of {@results}",
+                outcome.TrackingId, type, outcome.Success, outcome.Failure, payload, outcome.Results);
+        }
     }
 
     private string SanitizeTagInput(string input)
