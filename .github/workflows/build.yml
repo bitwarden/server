@@ -381,6 +381,46 @@ jobs:
           docker logout
           echo "DOCKER_CONTENT_TRUST=0" >> $GITHUB_ENV
 
+
+  build-docker-lite:
+    name: Build Bitwarden Lite Docker image
+    runs-on: ubuntu-22.04
+    needs:
+      - testing
+      - lint
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@a12a3943b4bdde767164f792f33f40b04645d846
+
+      ########## Build Docker Image ##########
+      - name: Build Docker image
+        run: docker build -t lite -f docker-lite/Dockerfile .
+
+      ########## ACR ##########
+      - name: Login to Azure - QA Subscription
+        uses: Azure/login@1f63701bf3e6892515f1b7ce2d2bf1708b46beaf
+        with:
+          creds: ${{ secrets.AZURE_QA_KV_CREDENTIALS }}
+
+      - name: Login to Azure ACR
+        run: az acr login -n bitwardenqa
+
+      - name: Tag and Push RC to Azure ACR QA registry
+        env:
+          REGISTRY: bitwardenqa.azurecr.io
+        run: |
+          IMAGE_TAG=$(echo "${GITHUB_REF:11}" | sed "s#/#-#g")  # slash safe branch name
+          if [[ "$IMAGE_TAG" == "master" ]]; then
+            IMAGE_TAG=dev
+          fi
+
+          docker tag lite $REGISTRY/lite:$IMAGE_TAG
+          docker push $REGISTRY/lite:$IMAGE_TAG
+
+      - name: Log out of Docker
+        run: docker logout
+
+
   upload:
     name: Upload
     runs-on: ubuntu-20.04
@@ -469,6 +509,7 @@ jobs:
       - testing
       - build-artifacts
       - build-docker
+      - build-docker-lite
       - upload
     steps:
       - name: Check if any job failed
@@ -482,6 +523,7 @@ jobs:
           TESTING_STATUS: ${{ needs.testing.result }}
           BUILD_ARTIFACTS_STATUS: ${{ needs.build-artifacts.result }}
           BUILD_DOCKER_STATUS: ${{ needs.build-docker.result }}
+          BUILD_DOCKER_LITE_STATUS: ${{ needs.build-docker-lite.result }}
           UPLOAD_STATUS: ${{ needs.upload.result }}
         run: |
           if [ "$CLOC_STATUS" = "failure" ]; then
@@ -493,6 +535,8 @@ jobs:
           elif [ "$BUILD_ARTIFACTS_STATUS" = "failure" ]; then
               exit 1
           elif [ "$BUILD_DOCKER_STATUS" = "failure" ]; then
+              exit 1
+          elif [ "$BUILD_DOCKER_LITE_STATUS" = "failure" ]; then
               exit 1
           elif [ "$UPLOAD_STATUS" = "failure" ]; then
               exit 1
