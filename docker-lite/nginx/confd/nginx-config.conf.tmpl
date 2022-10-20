@@ -57,6 +57,11 @@ server {
     add_header X-Robots-Tag "noindex, nofollow";
   }
 
+  location /alive {
+    default_type text/plain;
+    return 200 $date_gmt;
+  }
+
   location = /app-id.json {
     root /etc/bitwarden;
 {{ if getenv "BW_ENABLE_SSL" }}
