@@ -250,6 +250,7 @@ RUN apk add --update-cache \
 RUN adduser -s /bin/false -D bitwarden && chown -R bitwarden:bitwarden \
     /app \
     /etc/bitwarden \
+    /etc/nginx/http.d \
     /etc/supervisor \
     /var/lib/nginx \
     /var/log \
