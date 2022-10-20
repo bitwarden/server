@@ -1,6 +1,7 @@
 ﻿using Bit.Api.Controllers;
 using Bit.Core.Entities;
 using Bit.Core.SecretManagerFeatures.Projects.Interfaces;
+using Bit.Core.Test.AutoFixture.ProjectsFixture;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -10,6 +11,7 @@ namespace Bit.Api.Test.Controllers;
 
 [ControllerCustomize(typeof(ProjectsController))]
 [SutProviderCustomize]
+[ProjectCustomize]
 [JsonDocumentCustomize]
 public class ProjectsControllerTests
 {
