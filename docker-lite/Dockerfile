@@ -227,8 +227,8 @@ COPY --from=node-build /source/apps/web/build ./Web/build
 # Set up supervisord
 RUN mkdir -p /etc/supervisor
 RUN mkdir -p /var/log/bitwarden
-COPY docker/bwlite-supervisord.ini /etc/supervisor.d/bitwarden-lite.ini
-COPY docker/bwlite-supervisord.conf /etc/supervisor/supervisord.conf
+COPY docker/supervisord.ini /etc/supervisor.d/bitwarden-lite.ini
+COPY docker/supervisord.conf /etc/supervisor/supervisord.conf
 RUN rm -f /etc/supervisord.conf
 
 # Set up nginx
@@ -252,7 +252,7 @@ ADD https://github.com/kelseyhightower/confd/releases/download/v0.16.0/confd-0.1
 RUN chmod +x /usr/local/bin/confd
 
 # Copy entrypoint script and make it executable
-COPY docker/bwlite-entrypoint.sh /entrypoint.sh
+COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 # TODO: Remove after testing
