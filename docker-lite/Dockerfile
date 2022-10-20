@@ -53,9 +53,6 @@ COPY util/PostgresMigrations/*.csproj ./util/PostgresMigrations/
 COPY bitwarden_license/src/Commercial.Core/*.csproj ./bitwarden_license/src/Commercial.Core/
 COPY Directory.Build.props .
 
-# Copy csproj file for Web
-COPY --from=node-build /source/apps/web/dotnet-src/Web/*.csproj ./src/Web/
-
 # Restore Admin project dependencies and tools
 WORKDIR /source/src/Admin
 RUN dotnet restore
@@ -88,10 +85,6 @@ RUN dotnet restore
 WORKDIR /source/bitwarden_license/src/Sso
 RUN dotnet restore
 
-# Restore Web project dependencies and tools
-WORKDIR /source/src/Web
-RUN dotnet restore
-
 # Copy required project files
 WORKDIR /source
 COPY src/Admin/. ./src/Admin/
@@ -114,7 +107,7 @@ COPY bitwarden_license/src/Commercial.Core/. ./bitwarden_license/src/Commercial.
 COPY .git/. ./.git/
 
 # Copy required project files for Web
-COPY --from=node-build /source/apps/web/dotnet-src/Web/. ./src/Web/
+#COPY --from=node-build /source/apps/web/dotnet-src/Web/. /app/Web/
 
 # Build Admin app
 WORKDIR /source/src/Admin
@@ -154,10 +147,6 @@ RUN npm install
 RUN gulp --gulpfile "gulpfile.js" build
 RUN dotnet publish -c release -o /app/Sso --no-restore
 
-# Build Web app
-WORKDIR /source/src/Web
-RUN dotnet publish -c release -o /app/Web --no-restore
-
 ###############################################
 #                  App stage                  #
 ###############################################
@@ -174,7 +163,6 @@ ENV BW_SERVICE_NAME_ICONS="localhost"
 ENV BW_SERVICE_NAME_IDENTITY="localhost"
 ENV BW_SERVICE_NAME_NOTIFICATIONS="localhost"
 ENV BW_SERVICE_NAME_SSO="localhost"
-ENV BW_SERVICE_NAME_WEB="localhost"
 ENV BW_SERVICE_PORT_ADMIN="5000"
 ENV BW_SERVICE_PORT_API="5001"
 ENV BW_SERVICE_PORT_ATTACHMENTS="5002"
@@ -183,7 +171,6 @@ ENV BW_SERVICE_PORT_ICONS="5004"
 ENV BW_SERVICE_PORT_IDENTITY="5005"
 ENV BW_SERVICE_PORT_NOTIFICATIONS="5006"
 ENV BW_SERVICE_PORT_SSO="5007"
-ENV BW_SERVICE_PORT_WEB="5008"
 ENV globalSettings__selfHosted="true"
 ENV globalSettings__baseServiceUri__internalAdmin="http://localhost:5000"
 ENV globalSettings__baseServiceUri__internalApi="http://localhost:5001"
@@ -193,7 +180,6 @@ ENV globalSettings__baseServiceUri__internalIcons="http://localhost:5004"
 ENV globalSettings__baseServiceUri__internalIdentity="http://localhost:5005"
 ENV globalSettings__baseServiceUri__internalNotifications="http://localhost:5006"
 ENV globalSettings__baseServiceUri__internalSso="http://localhost:5007"
-ENV globalSettings__baseServiceUri__internalWeb="http://localhost:5008"
 EXPOSE 8080
 EXPOSE 8443
 
@@ -222,7 +208,7 @@ WORKDIR /app
 COPY --from=dotnet-build /app ./
 
 # Copy Web files from node-build stage
-COPY --from=node-build /source/apps/web/build ./Web/build
+COPY --from=node-build /source/apps/web/build /app/Web
 
 # Set up supervisord
 RUN mkdir -p /etc/supervisor
