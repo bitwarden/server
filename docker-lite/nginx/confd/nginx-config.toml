@@ -1,6 +1,6 @@
 [template]
 src = "nginx-config.conf.tmpl"
-dest = "/etc/bitwarden/nginx/server.conf"
+dest = "/etc/nginx/bitwarden.conf"
 keys = [
   "BW_CA_ENABLE",
   "BW_CA_CERT",
