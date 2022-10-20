@@ -2,6 +2,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
+namespace Bit.Infrastructure.EntityFramework.Configurations;
+
 public class SecretEntityTypeConfiguration : IEntityTypeConfiguration<Secret>
 {
     public void Configure(EntityTypeBuilder<Secret> builder)

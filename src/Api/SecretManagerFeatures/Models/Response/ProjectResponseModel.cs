@@ -29,4 +29,6 @@ public class ProjectResponseModel : ResponseModel
     public DateTime CreationDate { get; set; }
 
     public DateTime RevisionDate { get; set; }
+
+    public IEnumerable<Guid> Secrets { get; set; }
 }

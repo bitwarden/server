@@ -4,6 +4,7 @@ using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.SecretManagerFeatures.Secrets.Interfaces;
+using Bit.Core.Test.AutoFixture.SecretsFixture;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
@@ -15,6 +16,7 @@ namespace Bit.Api.Test.Controllers;
 [ControllerCustomize(typeof(SecretsController))]
 [SutProviderCustomize]
 [JsonDocumentCustomize]
+[SecretCustomize]
 public class SecretsControllerTests
 {
     [Theory]
@@ -26,7 +28,7 @@ public class SecretsControllerTests
         await sutProvider.GetDependency<ISecretRepository>().Received(1)
                      .GetManyByOrganizationIdAsync(Arg.Is(AssertHelper.AssertPropertyEqual(id)));
 
-        Assert.Empty(result.Data);
+        Assert.Empty(result.Secrets);
     }
 
     [Theory]

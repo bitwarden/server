@@ -199,7 +199,7 @@ public class SecretsControllerTest : IClassFixture<ApiApplicationFactory>, IAsyn
 
         var jsonResult = JsonDocument.Parse(content);
 
-        Assert.NotEmpty(jsonResult.RootElement.GetProperty("data").EnumerateArray());
-        Assert.Equal(secretIds.Count(), jsonResult.RootElement.GetProperty("data").EnumerateArray().Count());
+        Assert.NotEmpty(jsonResult.RootElement.GetProperty("secrets").EnumerateArray());
+        Assert.Equal(secretIds.Count(), jsonResult.RootElement.GetProperty("secrets").EnumerateArray().Count());
     }
 }

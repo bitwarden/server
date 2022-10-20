@@ -2,6 +2,7 @@
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
+using Bit.Core.Test.AutoFixture.SecretsFixture;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
@@ -11,6 +12,7 @@ using Xunit;
 namespace Bit.Commercial.Core.Test.SecretManagerFeatures.Secrets;
 
 [SutProviderCustomize]
+[SecretCustomize]
 public class UpdateSecretCommandTests
 {
     [Theory]
@@ -30,7 +32,7 @@ public class UpdateSecretCommandTests
         await sutProvider.Sut.UpdateAsync(data);
 
         await sutProvider.GetDependency<ISecretRepository>().Received(1)
-            .ReplaceAsync(Arg.Is(AssertHelper.AssertPropertyEqual(data)));
+            .ReplaceAsync(data);
     }
 
     [Theory]
