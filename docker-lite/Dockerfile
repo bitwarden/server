@@ -227,20 +227,20 @@ COPY --from=node-build /source/apps/web/build ./Web/build
 # Set up supervisord
 RUN mkdir -p /etc/supervisor
 RUN mkdir -p /var/log/bitwarden
-COPY docker/supervisord.ini /etc/supervisor.d/bitwarden-lite.ini
-COPY docker/supervisord.conf /etc/supervisor/supervisord.conf
+COPY docker-lite/supervisord.ini /etc/supervisor.d/bitwarden-lite.ini
+COPY docker-lite/supervisord.conf /etc/supervisor/supervisord.conf
 RUN rm -f /etc/supervisord.conf
 
 # Set up nginx
 RUN mkdir -p /var/log/nginx/logs
-COPY docker/nginx/confd/nginx-config.toml /etc/confd/conf.d/
-COPY docker/nginx/confd/nginx-config.conf.tmpl /etc/confd/templates/
-COPY docker/nginx/nginx.conf /etc/nginx
-COPY docker/nginx/proxy.conf /etc/nginx
-COPY docker/nginx/mime.types /etc/nginx
-COPY docker/nginx/security-headers.conf /etc/nginx
-COPY docker/nginx/security-headers-ssl.conf /etc/nginx
-COPY docker/nginx/logrotate.sh /
+COPY docker-lite/nginx/confd/nginx-config.toml /etc/confd/conf.d/
+COPY docker-lite/nginx/confd/nginx-config.conf.tmpl /etc/confd/templates/
+COPY docker-lite/nginx/nginx.conf /etc/nginx
+COPY docker-lite/nginx/proxy.conf /etc/nginx
+COPY docker-lite/nginx/mime.types /etc/nginx
+COPY docker-lite/nginx/security-headers.conf /etc/nginx
+COPY docker-lite/nginx/security-headers-ssl.conf /etc/nginx
+COPY docker-lite/nginx/logrotate.sh /
 RUN chmod +x /logrotate.sh
 
 # Copy app-id configuration template
@@ -252,7 +252,7 @@ ADD https://github.com/kelseyhightower/confd/releases/download/v0.16.0/confd-0.1
 RUN chmod +x /usr/local/bin/confd
 
 # Copy entrypoint script and make it executable
-COPY docker/entrypoint.sh /entrypoint.sh
+COPY docker-lite/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 # TODO: Remove after testing

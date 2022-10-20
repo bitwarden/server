@@ -21,19 +21,19 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         vim \
     && rm -rf /var/lib/apt/lists/*
 
-COPY docker/nginx/confd/nginx-config.toml /etc/confd/conf.d/
-COPY docker/nginx/confd/nginx-config.conf.tmpl /etc/confd/templates/
+COPY docker-lite/nginx/confd/nginx-config.toml /etc/confd/conf.d/
+COPY docker-lite/nginx/confd/nginx-config.conf.tmpl /etc/confd/templates/
 
 ADD https://github.com/kelseyhightower/confd/releases/download/v0.16.0/confd-0.16.0-linux-amd64 /usr/local/bin/confd
 RUN chmod +x /usr/local/bin/confd
 
-COPY docker/nginx/nginx.conf /etc/nginx
-COPY docker/nginx/proxy.conf /etc/nginx
-COPY docker/nginx/mime.types /etc/nginx
-COPY docker/nginx/security-headers.conf /etc/nginx
-COPY docker/nginx/security-headers-ssl.conf /etc/nginx
-COPY docker/nginx/logrotate.sh /
-COPY docker/nginx/entrypoint.sh /
+COPY docker-lite/nginx/nginx.conf /etc/nginx
+COPY docker-lite/nginx/proxy.conf /etc/nginx
+COPY docker-lite/nginx/mime.types /etc/nginx
+COPY docker-lite/nginx/security-headers.conf /etc/nginx
+COPY docker-lite/nginx/security-headers-ssl.conf /etc/nginx
+COPY docker-lite/nginx/logrotate.sh /
+COPY docker-lite/nginx/entrypoint.sh /
 
 RUN chmod +x /entrypoint.sh
 RUN chmod +x /logrotate.sh
