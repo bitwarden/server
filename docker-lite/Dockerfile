@@ -106,9 +106,6 @@ COPY util/EfShared/. ./util/EfShared/
 COPY bitwarden_license/src/Commercial.Core/. ./bitwarden_license/src/Commercial.Core/
 COPY .git/. ./.git/
 
-# Copy required project files for Web
-#COPY --from=node-build /source/apps/web/dotnet-src/Web/. /app/Web/
-
 # Build Admin app
 WORKDIR /source/src/Admin
 RUN npm install -g gulp
