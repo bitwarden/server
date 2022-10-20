@@ -1,0 +1,7 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <MvcRazorCompileOnPublish>false</MvcRazorCompileOnPublish>
+  </PropertyGroup>
+
+</Project>
