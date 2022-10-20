@@ -11,7 +11,8 @@ namespace Bit.Core.IdentityServer
             string id,
             int refreshTokenSlidingDays,
             int accessTokenLifetimeHours,
-            string[] scopes = null)
+            string[] scopes = null,
+            ICollection<Secret> clientSecrets = null)
         {
             ClientId = id;
             AllowedGrantTypes = new[] { GrantType.ResourceOwnerPassword, GrantType.AuthorizationCode };
@@ -62,6 +63,11 @@ namespace Bit.Core.IdentityServer
                 }
                 RedirectUris = cliUris;
                 PostLogoutRedirectUris = cliUris;
+                
+                if (clientSecrets != null) 
+                {
+                  ClientSecrets = clientSecrets;
+                }
             }
             else if (id == "mobile")
             {
