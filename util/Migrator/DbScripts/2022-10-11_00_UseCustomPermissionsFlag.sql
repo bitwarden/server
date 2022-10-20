@@ -6,6 +6,21 @@ IF COL_LENGTH('[dbo].[Organization]', 'UseCustomPermissions') IS NULL
             [UseCustomPermissions] BIT NOT NULL CONSTRAINT [DF_Organization_UseCustomPermissions] DEFAULT (0);
     END
 GO
+    
+-- Recreate OrganizationView so that it includes the UseCustomPermissions column
+IF OBJECT_ID('[dbo].[OrganizationView]') IS NOT NULL
+BEGIN
+DROP VIEW [dbo].[OrganizationView]
+END
+GO
+
+CREATE VIEW [dbo].[OrganizationView]
+AS
+SELECT
+    *
+FROM
+    [dbo].[Organization]
+GO
 
 CREATE OR ALTER VIEW [dbo].[OrganizationUserOrganizationDetailsView]
 AS
