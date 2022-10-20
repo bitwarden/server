@@ -21,10 +21,6 @@ services:
   mysql:
     env_file:
       - global-settings.env
-    environment:
-      MARIADB_USER: bitwarden
-      MARIADB_PASSWORD: super_strong_password
-      MARIADB_DATABASE: vault
     image: mariadb:10.9.3
     restart: always
     volumes:
