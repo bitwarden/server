@@ -4,14 +4,14 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.Extensions.Configuration;
 
-namespace MySqlMigrations;
+namespace Bit.PostgresMigrations;
 
 public static class GlobalSettingsFactory
 {
     public static GlobalSettings GlobalSettings { get; } = new GlobalSettings();
     static GlobalSettingsFactory()
     {
-        var configBuilder = new ConfigurationBuilder().AddUserSecrets<Bit.Api.Startup>();
+        var configBuilder = new ConfigurationBuilder().AddUserSecrets("bitwarden-Api");
         var Configuration = configBuilder.Build();
         ConfigurationBinder.Bind(Configuration.GetSection("GlobalSettings"), GlobalSettings);
     }

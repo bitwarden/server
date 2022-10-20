@@ -1,0 +1,36 @@
+---
+version: "3.8"
+
+services:
+  lite:
+    depends_on:
+      - mysql
+    env_file:
+      - global-settings.env
+    environment:
+      BW_ENABLE_SSL: "true"
+    image: ${REGISTRY:-bitwarden}/lite:${TAG:-latest}
+    restart: always
+    ports:
+      - "80:8080"
+      - "443:8443"
+    volumes:
+      - bitwarden:/etc/bitwarden
+      - logs:/var/log/bitwarden
+
+  mysql:
+    env_file:
+      - global-settings.env
+    environment:
+      MARIADB_USER: bitwarden
+      MARIADB_PASSWORD: super_strong_password
+      MARIADB_DATABASE: vault
+    image: mariadb:10.9.3
+    restart: always
+    volumes:
+      - data:/var/lib/mysql
+
+volumes:
+  bitwarden:
+  logs:
+  data:
