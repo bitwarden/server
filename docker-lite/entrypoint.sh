@@ -1,30 +1,30 @@
 #!/bin/sh
 
 # Generate Identity certificate
-if [ ! -f /etc/bitwarden/identity/identity.pfx ]; then
+if [ ! -f /etc/bitwarden/identity.pfx ]; then
   openssl req \
   -x509 \
   -newkey rsa:4096 \
   -sha256 \
   -nodes \
-  -keyout /etc/bitwarden/identity/identity.key \
-  -out /etc/bitwarden/identity/identity.crt \
+  -keyout /etc/bitwarden/identity.key \
+  -out /etc/bitwarden/identity.crt \
   -subj "/CN=Bitwarden IdentityServer" \
   -days 36500
   
   openssl pkcs12 \
   -export \
-  -out /etc/bitwarden/identity/identity.pfx \
-  -inkey /etc/bitwarden/identity/identity.key \
-  -in /etc/bitwarden/identity/identity.crt \
+  -out /etc/bitwarden/identity.pfx \
+  -inkey /etc/bitwarden/identity.key \
+  -in /etc/bitwarden/identity.crt \
   -passout pass:$globalSettings__identityServer__certificatePassword
   
-  rm /etc/bitwarden/identity/identity.crt
-  rm /etc/bitwarden/identity/identity.key
+  rm /etc/bitwarden/identity.crt
+  rm /etc/bitwarden/identity.key
 fi
 
-cp /etc/bitwarden/identity/identity.pfx /app/Identity/identity.pfx
-cp /etc/bitwarden/identity/identity.pfx /app/Sso/identity.pfx
+cp /etc/bitwarden/identity.pfx /app/Identity/identity.pfx
+cp /etc/bitwarden/identity.pfx /app/Sso/identity.pfx
 
 # Generate SSL certificates
 if [ -z "$(ls -A /etc/bitwarden/ssl)" ]; then
@@ -48,6 +48,6 @@ fi
 /usr/local/bin/confd -onetime -backend env
 
 # Set up Web app-id.json
-cp /etc/bitwarden/web/app-id.json /app/Web/app-id.json
+cp /etc/bitwarden/app-id.json /app/Web/app-id.json
 
 exec /usr/bin/supervisord

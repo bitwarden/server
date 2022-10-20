@@ -180,6 +180,10 @@ ENV globalSettings__baseServiceUri__internalIcons="http://localhost:5004"
 ENV globalSettings__baseServiceUri__internalIdentity="http://localhost:5005"
 ENV globalSettings__baseServiceUri__internalNotifications="http://localhost:5006"
 ENV globalSettings__baseServiceUri__internalSso="http://localhost:5007"
+ENV globalSettings__dataProtection__directory="/etc/bitwarden"
+ENV globalSettings__identityServer__certificatePassword="default_cert_password"
+ENV globalSettings__attachment__baseDirectory="/etc/bitwarden/attachments"
+ENV globalSettings__send__baseDirectory="/etc/bitwarden/attachments/send"
 EXPOSE 8080
 EXPOSE 8443
 
@@ -195,13 +199,9 @@ RUN apk add --update-cache \
     && rm -rf /var/cache/apk/*
 
 # Create required directories
-RUN mkdir -p /etc/bitwarden/core/attachments
-RUN mkdir -p /etc/bitwarden/core/aspnet-dataprotection
-RUN mkdir -p /etc/bitwarden/identity
+RUN mkdir -p /etc/bitwarden//attachments
 RUN mkdir -p /etc/bitwarden/logs
-RUN mkdir -p /etc/bitwarden/nginx
 RUN mkdir -p /etc/bitwarden/ssl
-RUN mkdir -p /etc/bitwarden/web
 
 # Copy all apps from dotnet-build stage
 WORKDIR /app
