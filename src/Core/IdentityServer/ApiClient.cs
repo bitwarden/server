@@ -53,7 +53,7 @@ namespace Bit.Core.IdentityServer
                 PostLogoutRedirectUris = new[] { globalSettings.BaseServiceUri.Vault };
                 AllowedCorsOrigins = new[] { globalSettings.BaseServiceUri.Vault };
             }
-            else if (id == "cli")
+            else if (id.StartsWith("cli"))
             {
                 var cliUris = new List<string>();
                 for (var port = 8065; port <= 8070; port++)
