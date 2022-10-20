@@ -1204,5 +1204,12 @@ namespace Bit.Core.Services
             }
             return result;
         }
+
+        public async Task RotateApiKeyAsync(User user)
+        {
+            user.ApiKey = CoreHelpers.SecureRandomString(30);
+            user.RevisionDate = DateTime.UtcNow;
+            await _userRepository.ReplaceAsync(user);
+        }
     }
 }
