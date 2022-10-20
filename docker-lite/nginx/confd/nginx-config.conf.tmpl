@@ -47,7 +47,7 @@ server {
 {{ end }}
 
   location / {
-    proxy_pass http://{{ getenv "BW_SERVICE_NAME_WEB" "web"}}:{{ getenv "BW_SERVICE_PORT_WEB" "5000" }}/;
+    root /app/Web;
 {{ if getenv "BW_ENABLE_SSL" }}
     include /etc/nginx/security-headers-ssl.conf;
 {{ end }}
@@ -57,8 +57,13 @@ server {
     add_header X-Robots-Tag "noindex, nofollow";
   }
 
+  location /alive {
+    default_type text/plain;
+    return 200 $date_gmt;
+  }
+
   location = /app-id.json {
-    proxy_pass http://{{ getenv "BW_SERVICE_NAME_WEB" "web"}}:{{ getenv "BW_SERVICE_PORT_WEB" "5000" }}/app-id.json;
+    root /etc/bitwarden;
 {{ if getenv "BW_ENABLE_SSL" }}
     include /etc/nginx/security-headers-ssl.conf;
 {{ end }}
@@ -67,34 +72,8 @@ server {
     add_header Content-Type $fido_content_type;
   }
 
-  location = /duo-connector.html {
-    proxy_pass http://{{ getenv "BW_SERVICE_NAME_WEB" "web"}}:{{ getenv "BW_SERVICE_PORT_WEB" "5000" }}/duo-connector.html;
-  }
-
-  location = /webauthn-connector.html {
-    proxy_pass http://{{ getenv "BW_SERVICE_NAME_WEB" "web"}}:{{ getenv "BW_SERVICE_PORT_WEB" "5000" }}/webauthn-connector.html;
-  }
-
-  location = /webauthn-fallback-connector.html {
-    proxy_pass http://{{ getenv "BW_SERVICE_NAME_WEB" "web"}}:{{ getenv "BW_SERVICE_PORT_WEB" "5000" }}/webauthn-fallback-connector.html;
-  }
-
-  location = /sso-connector.html {
-    proxy_pass http://{{ getenv "BW_SERVICE_NAME_WEB" "web"}}:{{ getenv "BW_SERVICE_PORT_WEB" "5000" }}/sso-connector.html;
-  }
-
-{{ if getenv "BW_CAPTCHA" }}
-  location = /captcha-connector.html {
-    proxy_pass http://{{ getenv "BW_SERVICE_NAME_WEB" "web"}}:{{ getenv "BW_SERVICE_PORT_WEB" "5000" }}/captcha-connector.html;
-  }
-  
-  location = /captcha-mobile-connector.html {
-    proxy_pass http://{{ getenv "BW_SERVICE_NAME_WEB" "web"}}:{{ getenv "BW_SERVICE_PORT_WEB" "5000" }}/captcha-mobile-connector.html;
-  }
-{{ end }}
-
   location /attachments/ {
-    proxy_pass http://{{ getenv "BW_SERVICE_NAME_ATTACHMENTS" "attachments"}}:{{ getenv "BW_SERVICE_PORT_ATTACHMENTS" "5000" }}/;
+    root /etc/bitwarden/attachments;
   }
 
   location /api/ {

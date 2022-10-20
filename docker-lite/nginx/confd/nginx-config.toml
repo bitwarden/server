@@ -1,6 +1,6 @@
 [template]
 src = "nginx-config.conf.tmpl"
-dest = "/etc/nginx/bitwarden.conf"
+dest = "/etc/nginx/http.d/bitwarden.conf"
 keys = [
   "BW_CA_ENABLE",
   "BW_CA_CERT",
@@ -18,7 +18,6 @@ keys = [
   "BW_SERVICE_NAME_KEY_CONNECTOR",
   "BW_SERVICE_NAME_NOTIFICATIONS",
   "BW_SERVICE_NAME_SSO",
-  "BW_SERVICE_NAME_WEB",
   "BW_SERVICE_PORT_ADMIN",
   "BW_SERVICE_PORT_API",
   "BW_SERVICE_PORT_ATTACHMENTS",
@@ -27,7 +26,6 @@ keys = [
   "BW_SERVICE_PORT_IDENTITY",
   "BW_SERVICE_PORT_KEY_CONNECTOR",
   "BW_SERVICE_PORT_SSO",
-  "BW_SERVICE_PORT_WEB",
   "BW_SSL_CERT",
   "BW_SSL_CIPHERS",
   "BW_SSL_KEY",
