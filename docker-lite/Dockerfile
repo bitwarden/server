@@ -178,7 +178,7 @@ ENV globalSettings__baseServiceUri__internalIdentity="http://localhost:5005"
 ENV globalSettings__baseServiceUri__internalNotifications="http://localhost:5006"
 ENV globalSettings__baseServiceUri__internalSso="http://localhost:5007"
 ENV globalSettings__identityServer__certificatePassword="default_cert_password"
-ENV globalSettings__dataProtection__directory="/etc/bitwarden"
+ENV globalSettings__dataProtection__directory="/etc/bitwarden/data-protection"
 ENV globalSettings__attachment__baseDirectory="/etc/bitwarden/attachments"
 ENV globalSettings__send__baseDirectory="/etc/bitwarden/attachments/send"
 ENV globalSettings__licenseDirectory="/etc/bitwarden/licenses"
@@ -198,6 +198,7 @@ RUN apk add --update-cache \
 
 # Create required directories
 RUN mkdir -p /etc/bitwarden/attachments/send
+RUN mkdir -p /etc/bitwarden/data-protection
 RUN mkdir -p /etc/bitwarden/licenses
 RUN mkdir -p /etc/bitwarden/logs
 
