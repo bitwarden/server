@@ -63,7 +63,7 @@ server {
   }
 
   location = /app-id.json {
-    root /etc/bitwarden;
+    root /app/Web;
 {{ if getenv "BW_ENABLE_SSL" }}
     include /etc/nginx/security-headers-ssl.conf;
 {{ end }}

@@ -181,6 +181,7 @@ ENV globalSettings__dataProtection__directory="/etc/bitwarden"
 ENV globalSettings__identityServer__certificatePassword="default_cert_password"
 ENV globalSettings__attachment__baseDirectory="/etc/bitwarden/attachments"
 ENV globalSettings__send__baseDirectory="/etc/bitwarden/attachments/send"
+ENV globalSettings__licenseDirectory="/etc/bitwarden/licenses"
 EXPOSE 8080
 EXPOSE 8443
 
@@ -197,6 +198,7 @@ RUN apk add --update-cache \
 
 # Create required directories
 RUN mkdir -p /etc/bitwarden/attachments
+RUN mkdir -p /etc/bitwarden/licenses
 RUN mkdir -p /etc/bitwarden/logs
 RUN mkdir -p /etc/bitwarden/ssl
 
@@ -216,8 +218,6 @@ RUN rm -f /etc/supervisord.conf
 
 # Set up nginx
 RUN mkdir -p /var/log/nginx/logs
-COPY docker-lite/nginx/confd/nginx-config.toml /etc/confd/conf.d/
-COPY docker-lite/nginx/confd/nginx-config.conf.tmpl /etc/confd/templates/
 COPY docker-lite/nginx/nginx.conf /etc/nginx
 COPY docker-lite/nginx/proxy.conf /etc/nginx
 COPY docker-lite/nginx/mime.types /etc/nginx
@@ -226,9 +226,11 @@ COPY docker-lite/nginx/security-headers-ssl.conf /etc/nginx
 COPY docker-lite/nginx/logrotate.sh /
 RUN chmod +x /logrotate.sh
 
-# Copy app-id configuration template
-COPY --from=node-build /source/apps/web/docker/confd/app-id.toml /etc/confd/conf.d/
-COPY --from=node-build /source/apps/web/docker/confd/app-id.conf.tmpl /etc/confd/templates/
+# Copy configuration templates
+COPY docker-lite/confd/nginx-config.toml /etc/confd/conf.d/
+COPY docker-lite/confd/nginx-config.conf.tmpl /etc/confd/templates/
+COPY docker-lite/confd/app-id.toml /etc/confd/conf.d/
+COPY docker-lite/confd/app-id.conf.tmpl /etc/confd/templates/
 
 # Add confd tool for generating final configurations
 ADD https://github.com/kelseyhightower/confd/releases/download/v0.16.0/confd-0.16.0-linux-amd64 /usr/local/bin/confd
