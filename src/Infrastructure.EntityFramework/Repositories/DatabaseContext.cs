@@ -1,5 +1,6 @@
 ﻿using Bit.Infrastructure.EntityFramework.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories;
 
@@ -139,5 +140,29 @@ public class DatabaseContext : DbContext
         eOrganizationApiKey.ToTable(nameof(OrganizationApiKey));
         eOrganizationConnection.ToTable(nameof(OrganizationConnection));
         eAuthRequest.ToTable(nameof(AuthRequest));
+
+        ConfigureDateTimeUTCQueries(builder);
+    }
+
+    // Make sure this is called after configuring all the entities as it iterates through all setup entities.
+    private static void ConfigureDateTimeUTCQueries(ModelBuilder builder)
+    {
+        foreach (var entityType in builder.Model.GetEntityTypes())
+        {
+            if (entityType.IsKeyless)
+            {
+                continue;
+            }
+            foreach (var property in entityType.GetProperties())
+            {
+                if (property.ClrType == typeof(DateTime) || property.ClrType == typeof(DateTime?))
+                {
+                    property.SetValueConverter(
+                        new ValueConverter<DateTime, DateTime>(
+                            v => v,
+                            v => new DateTime(v.Ticks, DateTimeKind.Utc)));
+                }
+            }
+        }
     }
 }
