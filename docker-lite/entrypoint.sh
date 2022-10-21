@@ -47,7 +47,4 @@ fi
 
 /usr/local/bin/confd -onetime -backend env
 
-# Set up Web app-id.json
-cp /etc/bitwarden/app-id.json /app/Web/app-id.json
-
 exec /usr/bin/supervisord
