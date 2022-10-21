@@ -6,6 +6,7 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.LoginFeatures.PasswordlessLogin.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -28,6 +29,7 @@ public class TwoFactorController : Controller
     private readonly GlobalSettings _globalSettings;
     private readonly UserManager<User> _userManager;
     private readonly ICurrentContext _currentContext;
+    private readonly IVerifyAuthRequestCommand _verifyAuthRequestCommand;
 
     public TwoFactorController(
         IUserService userService,
@@ -35,7 +37,8 @@ public class TwoFactorController : Controller
         IOrganizationService organizationService,
         GlobalSettings globalSettings,
         UserManager<User> userManager,
-        ICurrentContext currentContext)
+        ICurrentContext currentContext,
+        IVerifyAuthRequestCommand verifyAuthRequestCommand)
     {
         _userService = userService;
         _organizationRepository = organizationRepository;
@@ -43,6 +46,7 @@ public class TwoFactorController : Controller
         _globalSettings = globalSettings;
         _userManager = userManager;
         _currentContext = currentContext;
+        _verifyAuthRequestCommand = verifyAuthRequestCommand;
     }
 
     [HttpGet("")]
@@ -285,19 +289,27 @@ public class TwoFactorController : Controller
         var user = await _userManager.FindByEmailAsync(model.Email.ToLowerInvariant());
         if (user != null)
         {
-            if (await _userService.VerifySecretAsync(user, model.Secret))
+            // check if 2FA email is from passwordless
+            if (!string.IsNullOrEmpty(model.AuthRequestAccessCode))
             {
-                var isBecauseNewDeviceLogin = false;
-                if (user.GetTwoFactorProvider(TwoFactorProviderType.Email) is null
-                    &&
-                    await _userService.Needs2FABecauseNewDeviceAsync(user, model.DeviceIdentifier, null))
+                if (await _verifyAuthRequestCommand
+                        .VerifyAuthRequestAsync(new Guid(model.AuthRequestId), model.AuthRequestAccessCode))
                 {
-                    model.ToUser(user);
-                    isBecauseNewDeviceLogin = true;
-                }
+                    var isBecauseNewDeviceLogin = await IsNewDeviceLoginAsync(user, model);
 
-                await _userService.SendTwoFactorEmailAsync(user, isBecauseNewDeviceLogin);
-                return;
+                    await _userService.SendTwoFactorEmailAsync(user, isBecauseNewDeviceLogin);
+                    return;
+                }
+            }
+            else
+            {
+                if (await _userService.VerifySecretAsync(user, model.Secret))
+                {
+                    var isBecauseNewDeviceLogin = await IsNewDeviceLoginAsync(user, model);
+
+                    await _userService.SendTwoFactorEmailAsync(user, isBecauseNewDeviceLogin);
+                    return;
+                }
             }
         }
 
@@ -454,5 +466,18 @@ public class TwoFactorController : Controller
         {
             await Task.Delay(500);
         }
+    }
+
+    private async Task<bool> IsNewDeviceLoginAsync(User user, TwoFactorEmailRequestModel model)
+    {
+        if (user.GetTwoFactorProvider(TwoFactorProviderType.Email) is null
+            &&
+            await _userService.Needs2FABecauseNewDeviceAsync(user, model.DeviceIdentifier, null))
+        {
+            model.ToUser(user);
+            return true;
+        }
+
+        return false;
     }
 }
