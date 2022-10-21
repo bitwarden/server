@@ -27,15 +27,15 @@ cp /etc/bitwarden/identity.pfx /app/Identity/identity.pfx
 cp /etc/bitwarden/identity.pfx /app/Sso/identity.pfx
 
 # Generate SSL certificates
-if [ -z "$(ls -A /etc/bitwarden/ssl)" ]; then
+if [ "$BW_ENABLE_SSL" == "true" -a ! -f /etc/bitwarden/ssl.key ]; then
   openssl req \
   -x509 \
   -newkey rsa:4096 \
   -sha256 \
   -nodes \
   -days 36500 \
-  -keyout /etc/bitwarden/ssl/${BW_SSL_KEY:-private.key} \
-  -out /etc/bitwarden/ssl/${BW_SSL_CERT:-certificate.crt} \
+  -keyout /etc/bitwarden/${BW_SSL_KEY:-ssl.key} \
+  -out /etc/bitwarden/${BW_SSL_CERT:-ssl.crt} \
   -reqexts SAN \
   -extensions SAN \
   -config <(cat /etc/ssl/openssl.cnf <(printf "[SAN]\nsubjectAltName=DNS:${DOMAIN:-localhost}\nbasicConstraints=CA:true")) \

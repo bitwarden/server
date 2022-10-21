@@ -177,13 +177,13 @@ ENV globalSettings__baseServiceUri__internalIcons="http://localhost:5004"
 ENV globalSettings__baseServiceUri__internalIdentity="http://localhost:5005"
 ENV globalSettings__baseServiceUri__internalNotifications="http://localhost:5006"
 ENV globalSettings__baseServiceUri__internalSso="http://localhost:5007"
-ENV globalSettings__dataProtection__directory="/etc/bitwarden"
 ENV globalSettings__identityServer__certificatePassword="default_cert_password"
+ENV globalSettings__dataProtection__directory="/etc/bitwarden"
 ENV globalSettings__attachment__baseDirectory="/etc/bitwarden/attachments"
 ENV globalSettings__send__baseDirectory="/etc/bitwarden/attachments/send"
 ENV globalSettings__licenseDirectory="/etc/bitwarden/licenses"
-EXPOSE 8080
-EXPOSE 8443
+EXPOSE 80
+EXPOSE 443
 
 # Add packages
 RUN apk add --update-cache \
@@ -197,10 +197,9 @@ RUN apk add --update-cache \
     && rm -rf /var/cache/apk/*
 
 # Create required directories
-RUN mkdir -p /etc/bitwarden/attachments
+RUN mkdir -p /etc/bitwarden/attachments/send
 RUN mkdir -p /etc/bitwarden/licenses
 RUN mkdir -p /etc/bitwarden/logs
-RUN mkdir -p /etc/bitwarden/ssl
 
 # Copy all apps from dotnet-build stage
 WORKDIR /app
@@ -259,5 +258,5 @@ VOLUME ["/etc/bitwarden"]
 
 WORKDIR /app
 USER bitwarden:bitwarden
-HEALTHCHECK CMD curl --insecure -Lfs https://localhost:8443/alive || curl -Lfs http://localhost:8080/alive || exit 1
+HEALTHCHECK CMD curl --insecure -Lfs https://localhost/alive || curl -Lfs http://localhost/alive || exit 1
 ENTRYPOINT ["/entrypoint.sh"]

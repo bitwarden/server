@@ -12,8 +12,8 @@ services:
     image: ${REGISTRY:-bitwarden}/lite:${TAG:-latest}
     restart: always
     ports:
-      - "80:8080"
-      - "443:8443"
+      - "80:80"
+      - "443:443"
     volumes:
       - bitwarden:/etc/bitwarden
       - logs:/var/log/bitwarden

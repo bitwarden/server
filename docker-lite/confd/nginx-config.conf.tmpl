@@ -1,6 +1,6 @@
 server {
-  listen 8080 default_server;
-  #listen [::]:8080 default_server;
+  listen 80 default_server;
+  #listen [::]:80 default_server;
   server_name {{ getenv "DOMAIN" "localhost" }};
 {{ if getenv "BW_ENABLE_SSL" }}
 
@@ -8,12 +8,12 @@ server {
 }
 
 server {
-  listen 8443 ssl http2;
-  #listen [::]:8443 ssl http2;
+  listen 443 ssl http2;
+  #listen [::]:443 ssl http2;
   server_name {{ getenv "DOMAIN" "localhost" }};
 
-  ssl_certificate /etc/bitwarden/ssl/{{ getenv "BW_SSL_CERT" "certificate.crt" }};
-  ssl_certificate_key /etc/bitwarden/ssl/{{ getenv "BW_SSL_KEY" "private.key" }};
+  ssl_certificate /etc/bitwarden/{{ getenv "BW_SSL_CERT" "ssl.crt" }};
+  ssl_certificate_key /etc/bitwarden/{{ getenv "BW_SSL_KEY" "ssl.key" }};
   ssl_session_timeout 30m;
   ssl_session_cache shared:SSL:20m;
   ssl_session_tickets off;
@@ -30,7 +30,7 @@ server {
   ssl_stapling_verify on;
 
   # Verify chain of trust of OCSP response using Root CA and Intermediate certs
-  ssl_trusted_certificate /etc/bitwarden/ca-certificates/{{ getenv "BW_CA_CERT" "ca.crt" }};
+  ssl_trusted_certificate /etc/bitwarden/{{ getenv "BW_CA_CERT" "ca.crt" }};
   resolver 1.1.1.1 1.0.0.1 9.9.9.9 149.112.112.112 valid=300s;
 {{ end }}
 
