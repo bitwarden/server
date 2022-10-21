@@ -158,10 +158,16 @@ public class EventService : IEventService
     public async Task LogGroupEventAsync(Group group, EventType type,
         DateTime? date = null)
     {
-        await LogGroupEventAsync(group, type, null, date);
+        await CreateLogGroupEventAsync(group, type, systemUser: null, date);
     }
 
-    public async Task LogGroupEventAsync(Group group, EventType type, EventSystemUser? systemUser, DateTime? date = null)
+    public async Task LogGroupEventAsync(Group group, EventType type, EventSystemUser systemUser,
+        DateTime? date = null)
+    {
+        await CreateLogGroupEventAsync(group, type, systemUser, date);
+    }
+
+    private async Task CreateLogGroupEventAsync(Group group, EventType type, EventSystemUser? systemUser, DateTime? date = null)
     {
         var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
         if (!CanUseEvents(orgAbilities, group.OrganizationId))
@@ -204,13 +210,25 @@ public class EventService : IEventService
 
     public async Task LogOrganizationUserEventAsync(OrganizationUser organizationUser, EventType type,
         DateTime? date = null) =>
-        await LogOrganizationUserEventsAsync(new (OrganizationUser, EventType, EventSystemUser?, DateTime?)[] { (organizationUser, type, null, date) });
+        await CreateLogOrganizationUserEventsAsync(new (OrganizationUser, EventType, EventSystemUser?, DateTime?)[] { (organizationUser, type, null, date) });
 
     public async Task LogOrganizationUserEventAsync(OrganizationUser organizationUser, EventType type,
-        EventSystemUser? systemUser, DateTime? date = null) =>
-        await LogOrganizationUserEventsAsync(new[] { (organizationUser, type, systemUser, date) });
+        EventSystemUser systemUser, DateTime? date = null) =>
+        await CreateLogOrganizationUserEventsAsync(new (OrganizationUser, EventType, EventSystemUser?, DateTime?)[] { (organizationUser, type, systemUser, date) });
 
-    public async Task LogOrganizationUserEventsAsync(IEnumerable<(OrganizationUser, EventType, EventSystemUser?, DateTime?)> events)
+    public async Task LogOrganizationUserEventsAsync(
+        IEnumerable<(OrganizationUser, EventType, DateTime?)> events)
+    {
+        await CreateLogOrganizationUserEventsAsync(events.Select(e => (e.Item1, e.Item2, (EventSystemUser?)null, e.Item3)));
+    }
+
+    public async Task LogOrganizationUserEventsAsync(
+        IEnumerable<(OrganizationUser, EventType, EventSystemUser, DateTime?)> events)
+    {
+        await CreateLogOrganizationUserEventsAsync(events.Select(e => (e.Item1, e.Item2, (EventSystemUser?)e.Item3, e.Item4)));
+    }
+
+    private async Task CreateLogOrganizationUserEventsAsync(IEnumerable<(OrganizationUser, EventType, EventSystemUser?, DateTime?)> events)
     {
         var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
         var eventMessages = new List<IEvent>();
