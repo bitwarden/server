@@ -24,8 +24,8 @@
         <option asp-selected="@(Model.Project == "Identity")" value="Identity">Identity</option>
         <option asp-selected="@(Model.Project == "Notifications")" value="Notifications">Notifications</option>
         <option asp-selected="@(Model.Project == "Icons")" value="Icons">Icons</option>
-        <option asp-selected="@(Model.Project == "Business Portal")" value="Business Portal">Business Portal</option>
         <option asp-selected="@(Model.Project == "SSO")" value="SSO">SSO</option>
+        <option asp-selected="@(Model.Project == "Scim")" value="Scim">SCIM</option>
     </select>
     <input class="form-control mb-2 mr-2" type="datetime-local" asp-for="Start" name="start" placeholder="Start Date">
     <input class="form-control mb-2 mr-2" type="datetime-local" asp-for="End" name="end" placeholder="End Date">
