@@ -141,7 +141,6 @@ public class DatabaseContext : DbContext
         eOrganizationConnection.ToTable(nameof(OrganizationConnection));
         eAuthRequest.ToTable(nameof(AuthRequest));
 
-
         ConfigureDateTimeUTCQueries(builder);
     }
 
