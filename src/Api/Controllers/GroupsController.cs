@@ -98,7 +98,7 @@ public class GroupsController : Controller
         }
 
         var group = model.ToGroup(orgIdGuid);
-        await _groupService.SaveAsync(group, model.Collections?.Select(c => c.ToSelectionReadOnly()));
+        await _groupService.SaveAsync(group, model.Collections?.Select(c => c.ToSelectionReadOnly()), model.Users);
         return new GroupResponseModel(group);
     }
 
@@ -112,7 +112,7 @@ public class GroupsController : Controller
             throw new NotFoundException();
         }
 
-        await _groupService.SaveAsync(model.ToGroup(group), model.Collections?.Select(c => c.ToSelectionReadOnly()));
+        await _groupService.SaveAsync(model.ToGroup(group), model.Collections?.Select(c => c.ToSelectionReadOnly()), model.Users);
         return new GroupResponseModel(group);
     }
 

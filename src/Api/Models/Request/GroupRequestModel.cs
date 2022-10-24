@@ -13,6 +13,7 @@ public class GroupRequestModel
     [StringLength(300)]
     public string ExternalId { get; set; }
     public IEnumerable<SelectionReadOnlyRequestModel> Collections { get; set; }
+    public IEnumerable<Guid> Users { get; set; }
 
     public Group ToGroup(Guid orgId)
     {
