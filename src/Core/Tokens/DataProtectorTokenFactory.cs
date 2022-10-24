@@ -23,7 +23,6 @@ public class DataProtectorTokenFactory<T> : IDataProtectorTokenFactory<T> where 
     /// Unprotect token
     /// </summary>
     /// <param name="token">The token to parse</param>
-    /// <typeparam name="T">The tokenable type to parse to</typeparam>
     /// <returns>The parsed tokenable</returns>
     /// <exception>Throws CryptographicException if fails to unprotect</exception>
     public T Unprotect(string token) =>
