@@ -204,18 +204,22 @@ public class GroupRepository : Repository<Core.Entities.Group, Group, Guid>, IGr
         }
     }
 
-    public async Task DeleteManyAsync(Guid organizationId, IEnumerable<Guid> groupIds)
+    public async Task DeleteManyAsync(IEnumerable<Guid> groupIds)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
             var entities = await dbContext.Groups
-                .Where(g => groupIds.Contains(g.Id) && g.OrganizationId == organizationId)
+                .Where(g => groupIds.Contains(g.Id))
                 .ToListAsync();
 
             dbContext.Groups.RemoveRange(entities);
             await dbContext.SaveChangesAsync();
-            await UserBumpAccountRevisionDateByOrganizationId(organizationId);
+
+            foreach (var group in entities.GroupBy(g => g.Organization.Id))
+            {
+                await UserBumpAccountRevisionDateByOrganizationId(group.Key);
+            }
         }
     }
 }

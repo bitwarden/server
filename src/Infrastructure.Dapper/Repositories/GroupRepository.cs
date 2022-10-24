@@ -179,12 +179,12 @@ public class GroupRepository : Repository<Group, Guid>, IGroupRepository
         }
     }
 
-    public async Task DeleteManyAsync(Guid organizationId, IEnumerable<Guid> groupIds)
+    public async Task DeleteManyAsync(IEnumerable<Guid> groupIds)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             await connection.ExecuteAsync("[dbo].[Group_DeleteByIdsOrganizationId]",
-                new { OrganizationId = organizationId, Ids = groupIds.ToGuidIdArrayTVP() }, commandType: CommandType.StoredProcedure);
+                new { Ids = groupIds.ToGuidIdArrayTVP() }, commandType: CommandType.StoredProcedure);
         }
     }
 }
