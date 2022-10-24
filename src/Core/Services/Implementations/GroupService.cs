@@ -54,7 +54,7 @@ public class GroupService : IGroupService
             {
                 await _groupRepository.CreateAsync(group, collections);
             }
-            
+
             if (users != null)
             {
                 await _groupRepository.UpdateUsersAsync(group.Id, users);
@@ -75,7 +75,7 @@ public class GroupService : IGroupService
             {
                 await _groupRepository.ReplaceAsync(group, collections);
             }
-            
+
             if (users != null)
             {
                 await _groupRepository.UpdateUsersAsync(group.Id, users);

@@ -24,7 +24,7 @@ public class DeleteGroupCommand : IDeleteGroupCommand
     public async Task DeleteManyAsync(IEnumerable<Group> groups)
     {
         var groupsToDelete = groups as Group[] ?? groups.ToArray();
-        
+
         var deleteDate = DateTime.UtcNow;
         foreach (var group in groupsToDelete)
         {

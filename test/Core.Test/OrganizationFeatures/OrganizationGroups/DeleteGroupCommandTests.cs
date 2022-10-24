@@ -27,7 +27,7 @@ public class DeleteGroupCommandTests
 
     [Theory, BitAutoData]
     [OrganizationCustomize]
-    public async Task DeleteManyAsync_DeletesManyGroup(Organization org, Group group, Group group2, SutProvider<DeleteGroupCommand> sutProvider)
+    public async Task DeleteManyAsync_DeletesManyGroup(Group group, Group group2, SutProvider<DeleteGroupCommand> sutProvider)
     {
         // Arrange
         var groupIds = new[] { group.Id, group2.Id };
