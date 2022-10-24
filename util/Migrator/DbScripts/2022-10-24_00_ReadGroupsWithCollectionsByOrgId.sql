@@ -93,7 +93,7 @@ GO
 
 IF OBJECT_ID('[dbo].[Group_DeleteByIds]') IS NOT NULL
 BEGIN
-    DROP PROCEDURE [dbo].[Group_DeleteByIds;
+    DROP PROCEDURE [dbo].[Group_DeleteByIds];
 END
 GO
 
