@@ -537,7 +537,7 @@ public class OrganizationsController : Controller
     }
 
     [HttpGet("{id}/api-key-information/{type?}")]
-    public async Task<ListResponseModel<OrganizationApiKeyInformation>> ApiKeyInformation(Guid id, OrganizationApiKeyType? type)
+    public async Task<ListResponseModel<OrganizationApiKeyInformation>> ApiKeyInformation(Guid id, [FromRoute] OrganizationApiKeyType? type)
     {
         if (!await HasApiKeyAccessAsync(id, type))
         {
@@ -706,8 +706,10 @@ public class OrganizationsController : Controller
 
         var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(id);
         ssoConfig = ssoConfig == null ? model.ToSsoConfig(id) : model.ToSsoConfig(ssoConfig);
+        organization.Identifier = model.Identifier;
 
         await _ssoConfigService.SaveAsync(ssoConfig, organization);
+        await _organizationService.UpdateAsync(organization);
 
         return new OrganizationSsoResponseModel(organization, _globalSettings, ssoConfig);
     }

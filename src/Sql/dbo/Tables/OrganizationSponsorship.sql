@@ -6,7 +6,7 @@ CREATE TABLE [dbo].[OrganizationSponsorship] (
     [FriendlyName]                  NVARCHAR(256)    NULL,
     [OfferedToEmail]                NVARCHAR (256)   NULL,
     [PlanSponsorshipType]           TINYINT          NULL,
-    [ToDelete]                      BIT              NULL,
+    [ToDelete]                      BIT              DEFAULT (0) NOT NULL,
     [LastSyncDate]                  DATETIME2 (7)    NULL,
     [ValidUntil]                    DATETIME2 (7)    NULL,
     CONSTRAINT [PK_OrganizationSponsorship] PRIMARY KEY CLUSTERED ([Id] ASC),
