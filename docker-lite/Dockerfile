@@ -177,12 +177,15 @@ ENV globalSettings__baseServiceUri__internalIcons="http://localhost:5004"
 ENV globalSettings__baseServiceUri__internalIdentity="http://localhost:5005"
 ENV globalSettings__baseServiceUri__internalNotifications="http://localhost:5006"
 ENV globalSettings__baseServiceUri__internalSso="http://localhost:5007"
-ENV globalSettings__dataProtection__directory="/etc/bitwarden"
 ENV globalSettings__identityServer__certificatePassword="default_cert_password"
+ENV globalSettings__dataProtection__directory="/etc/bitwarden/data-protection"
 ENV globalSettings__attachment__baseDirectory="/etc/bitwarden/attachments"
 ENV globalSettings__send__baseDirectory="/etc/bitwarden/attachments/send"
-EXPOSE 8080
-EXPOSE 8443
+ENV globalSettings__licenseDirectory="/etc/bitwarden/licenses"
+ENV globalSettings__logDirectoryByProject="false"
+ENV globalSettings__logRollBySizeLimit="1073741824"
+EXPOSE 80
+EXPOSE 443
 
 # Add packages
 RUN apk add --update-cache \
@@ -196,9 +199,10 @@ RUN apk add --update-cache \
     && rm -rf /var/cache/apk/*
 
 # Create required directories
-RUN mkdir -p /etc/bitwarden/attachments
+RUN mkdir -p /etc/bitwarden/attachments/send
+RUN mkdir -p /etc/bitwarden/data-protection
+RUN mkdir -p /etc/bitwarden/licenses
 RUN mkdir -p /etc/bitwarden/logs
-RUN mkdir -p /etc/bitwarden/ssl
 
 # Copy all apps from dotnet-build stage
 WORKDIR /app
@@ -216,8 +220,6 @@ RUN rm -f /etc/supervisord.conf
 
 # Set up nginx
 RUN mkdir -p /var/log/nginx/logs
-COPY docker-lite/nginx/confd/nginx-config.toml /etc/confd/conf.d/
-COPY docker-lite/nginx/confd/nginx-config.conf.tmpl /etc/confd/templates/
 COPY docker-lite/nginx/nginx.conf /etc/nginx
 COPY docker-lite/nginx/proxy.conf /etc/nginx
 COPY docker-lite/nginx/mime.types /etc/nginx
@@ -226,9 +228,11 @@ COPY docker-lite/nginx/security-headers-ssl.conf /etc/nginx
 COPY docker-lite/nginx/logrotate.sh /
 RUN chmod +x /logrotate.sh
 
-# Copy app-id configuration template
-COPY --from=node-build /source/apps/web/docker/confd/app-id.toml /etc/confd/conf.d/
-COPY --from=node-build /source/apps/web/docker/confd/app-id.conf.tmpl /etc/confd/templates/
+# Copy configuration templates
+COPY docker-lite/confd/nginx-config.toml /etc/confd/conf.d/
+COPY docker-lite/confd/nginx-config.conf.tmpl /etc/confd/templates/
+COPY docker-lite/confd/app-id.toml /etc/confd/conf.d/
+COPY docker-lite/confd/app-id.conf.tmpl /etc/confd/templates/
 
 # Add confd tool for generating final configurations
 ADD https://github.com/kelseyhightower/confd/releases/download/v0.16.0/confd-0.16.0-linux-amd64 /usr/local/bin/confd
@@ -257,5 +261,5 @@ VOLUME ["/etc/bitwarden"]
 
 WORKDIR /app
 USER bitwarden:bitwarden
-HEALTHCHECK CMD curl --insecure -Lfs https://localhost:8443/alive || curl -Lfs http://localhost:8080/alive || exit 1
+HEALTHCHECK CMD curl --insecure -Lfs https://localhost/alive || curl -Lfs http://localhost/alive || exit 1
 ENTRYPOINT ["/entrypoint.sh"]
