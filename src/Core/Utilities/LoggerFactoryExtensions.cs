@@ -125,7 +125,7 @@ public static class LoggerFactoryExtensions
         {
             if (globalSettings.LogRollBySizeLimit.HasValue)
             {
-                var pathFormat = $"{globalSettings.LogDirectory}/{globalSettings.ProjectName}.log";
+                var pathFormat = $"{globalSettings.LogDirectory}/{globalSettings.ProjectName.ToLowerInvariant()}.log";
                 if (globalSettings.LogDirectoryByProject)
                 {
                     pathFormat = $"{globalSettings.LogDirectory}/{globalSettings.ProjectName}/log.txt";
@@ -135,7 +135,7 @@ public static class LoggerFactoryExtensions
             }
             else
             {
-                var pathFormat = $"{globalSettings.LogDirectory}/{globalSettings.ProjectName}_{{Date}}.log";
+                var pathFormat = $"{globalSettings.LogDirectory}/{globalSettings.ProjectName.ToLowerInvariant()}_{{Date}}.log";
                 if (globalSettings.LogDirectoryByProject)
                 {
                     pathFormat = $"{globalSettings.LogDirectory}/{globalSettings.ProjectName}/{{Date}}.txt";
