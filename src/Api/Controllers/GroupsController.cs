@@ -142,17 +142,21 @@ public class GroupsController : Controller
 
     [HttpDelete("")]
     [HttpPost("delete")]
-    public async Task<ListResponseModel<GroupResponseModel>> BulkDelete(string orgId, [FromBody] GroupBulkRequestModel model)
+    public async Task<ListResponseModel<GroupResponseModel>> BulkDelete([FromBody] GroupBulkRequestModel model)
     {
-        var orgGuidId = new Guid(orgId);
-        if (!await _currentContext.ManageGroups(orgGuidId))
+        var groups = await _groupRepository.GetManyByManyIds(model.Ids);
+
+        foreach (var group in groups)
         {
-            throw new NotFoundException();
+            if (!await _currentContext.ManageGroups(group.OrganizationId))
+            {
+                throw new NotFoundException();
+            }
         }
 
-        var result = await _deleteGroupCommand.DeleteManyAsync(orgGuidId, model.Ids);
+        await _deleteGroupCommand.DeleteManyAsync(groups);
 
-        return new ListResponseModel<GroupResponseModel>(result.Select(g =>
+        return new ListResponseModel<GroupResponseModel>(groups.Select(g =>
             new GroupResponseModel(g)));
     }
 
