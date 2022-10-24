@@ -64,16 +64,41 @@ BEGIN
         [Id] IN (SELECT [Id] FROM @Ids)
 END
 GO
-
-IF OBJECT_ID('[dbo].[Group_DeleteByIdsOrganizationId]') IS NOT NULL
+    
+IF OBJECT_ID('[dbo].[User_BumpAccountRevisionDateByOrganizationIds]') IS NOT NULL
 BEGIN
-    DROP PROCEDURE [dbo].[Group_DeleteByIdsOrganizationId];
+    DROP PROCEDURE [dbo].[User_BumpAccountRevisionDateByOrganizationIds];
 END
 GO
 
-CREATE PROCEDURE [dbo].[Group_DeleteByIdsOrganizationId]
-    @Ids AS [dbo].[GuidIdArray] READONLY,
-    @OrganizationId AS UNIQUEIDENTIFIER
+CREATE PROCEDURE [dbo].[User_BumpAccountRevisionDateByOrganizationIds]
+    @OrganizationIds AS [dbo].[GuidIdArray] READONLY
+AS
+BEGIN
+    SET NOCOUNT ON
+
+UPDATE
+    U
+SET
+    U.[AccountRevisionDate] = GETUTCDATE()
+    FROM
+        [dbo].[User] U
+    INNER JOIN
+        [dbo].[OrganizationUser] OU ON OU.[UserId] = U.[Id]
+WHERE
+    OU.[OrganizationId] IN (SELECT [Id] FROM @OrganizationIds)
+  AND OU.[Status] = 2 -- Confirmed
+END
+GO
+
+IF OBJECT_ID('[dbo].[Group_DeleteByIds]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[Group_DeleteByIds;
+END
+GO
+
+CREATE PROCEDURE [dbo].[Group_DeleteByIds]
+    @Ids AS [dbo].[GuidIdArray] READONLY
 AS
 BEGIN
     SET NOCOUNT ON
@@ -88,11 +113,17 @@ BEGIN
                 [dbo].[Group]
             WHERE
                 [Id] IN (SELECT [Id] FROM @Ids)
-                AND [OrganizationId] = @OrganizationId
                 
             SET @BatchSize = @@ROWCOUNT
         COMMIT TRANSACTION Group_DeleteMany_Groups
     END
     
-    EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationId] @OrganizationId
+    EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationId] (SELECT 
+            [OrganizationId]
+        FROM
+            [dbo].[Group]
+        WHERE
+            [Id] in (SELECT [Id] FROM @Ids)
+        GROUP BY 
+            [OrganizationId])
 END
