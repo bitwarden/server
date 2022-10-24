@@ -1,6 +1,5 @@
 CREATE PROCEDURE [dbo].[Group_DeleteByIdsOrganizationId]
-    @Ids AS [dbo].[GuidIdArray] READONLY,
-    @OrganizationId AS UNIQUEIDENTIFIER
+    @Ids AS [dbo].[GuidIdArray] READONLY
 AS
 BEGIN
     SET NOCOUNT ON
@@ -20,6 +19,13 @@ BEGIN
             SET @BatchSize = @@ROWCOUNT
         COMMIT TRANSACTION Group_DeleteMany_Groups
     END
-    
-    EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationId] @OrganizationId
+
+    EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationIds] (SELECT 
+        [OrganizationId]
+    FROM
+        [dbo].[Group]
+    WHERE
+        [Id] in (SELECT [Id] FROM @Ids)
+    GROUP BY 
+        [OrganizationId])
 END

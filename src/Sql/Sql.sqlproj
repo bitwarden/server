@@ -146,6 +146,7 @@
     <Build Include="dbo\Stored Procedures\User_BumpAccountRevisionDate.sql" />
     <Build Include="dbo\Stored Procedures\User_BumpManyAccountRevisionDates.sql" />
     <Build Include="dbo\Stored Procedures\User_BumpAccountRevisionDateByOrganizationId.sql" />
+    <Build Include="dbo\Stored Procedures\User_BumpAccountRevisionDateByOrganizationIds.sql" />
     <Build Include="dbo\Stored Procedures\User_BumpAccountRevisionDateByOrganizationUserId.sql" />
     <Build Include="dbo\Stored Procedures\User_BumpAccountRevisionDateByOrganizationUserIds.sql" />
     <Build Include="dbo\Stored Procedures\User_BumpAccountRevisionDateByProviderUserIds.sql" />
