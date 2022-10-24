@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[Group_DeleteByIdsOrganizationId]
+CREATE PROCEDURE [dbo].[Group_DeleteByIds]
     @Ids AS [dbo].[GuidIdArray] READONLY
 AS
 BEGIN
@@ -14,7 +14,6 @@ BEGIN
                 [dbo].[Group]
             WHERE
                 [Id] IN (SELECT [Id] FROM @Ids)
-                AND [OrganizationId] = @OrganizationId
                 
             SET @BatchSize = @@ROWCOUNT
         COMMIT TRANSACTION Group_DeleteMany_Groups

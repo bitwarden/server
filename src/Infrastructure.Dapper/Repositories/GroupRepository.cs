@@ -183,7 +183,7 @@ public class GroupRepository : Repository<Group, Guid>, IGroupRepository
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
-            await connection.ExecuteAsync("[dbo].[Group_DeleteByIdsOrganizationId]",
+            await connection.ExecuteAsync("[dbo].[Group_DeleteByIds]",
                 new { Ids = groupIds.ToGuidIdArrayTVP() }, commandType: CommandType.StoredProcedure);
         }
     }

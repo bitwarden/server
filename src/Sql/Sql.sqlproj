@@ -396,7 +396,7 @@
     <Build Include="dbo\Views\OrganizationApiKeyView.sql" />
     <Build Include="dbo\Views\OrganizationConnectionView.sql" />
     <Build Include="dbo\Stored Procedures\CipherOrganizationDetails_ReadByOrganizationId.sql" />
-    <Build Include="dbo\Stored Procedures\Group_DeleteByIdsOrganizationId.sql" />
+    <Build Include="dbo\Stored Procedures\Group_DeleteByIds.sql" />
     <Build Include="dbo\Stored Procedures\Group_ReadByIds.sql" />
   </ItemGroup>
 </Project>
