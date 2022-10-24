@@ -1,16 +1,16 @@
 server {
   listen 80 default_server;
   #listen [::]:80 default_server;
-  server_name {{ getenv "DOMAIN" "localhost" }};
+  server_name {{ getenv "BW_DOMAIN" "localhost" }};
 {{ if getenv "BW_ENABLE_SSL" }}
 
-  return 301 https://{{ getenv "DOMAIN" "localhost" }}$request_uri;
+  return 301 https://{{ getenv "BW_DOMAIN" "localhost" }}$request_uri;
 }
 
 server {
   listen 443 ssl http2;
   #listen [::]:443 ssl http2;
-  server_name {{ getenv "DOMAIN" "localhost" }};
+  server_name {{ getenv "BW_DOMAIN" "localhost" }};
 
   ssl_certificate /etc/bitwarden/{{ getenv "BW_SSL_CERT" "ssl.crt" }};
   ssl_certificate_key /etc/bitwarden/{{ getenv "BW_SSL_KEY" "ssl.key" }};

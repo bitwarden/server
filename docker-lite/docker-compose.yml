@@ -19,8 +19,11 @@ services:
       - logs:/var/log/bitwarden
 
   mysql:
-    env_file:
-      - global-settings.env
+    environment:
+      MARIADB_USER: "bitwarden"
+      MARIADB_PASSWORD: "super_strong_password"
+      MARIADB_DATABASE: "bitwarden_vault"
+      MARIADB_RANDOM_ROOT_PASSWORD: "true"
     image: mariadb:10.9.3
     restart: always
     volumes:

@@ -1,5 +1,4 @@
 ﻿using Bit.Core.Settings.LoggingSettings;
-using Bit.Core.Utilities;
 
 namespace Bit.Core.Settings;
 
@@ -47,10 +46,10 @@ public class GlobalSettings : IGlobalSettings
     public virtual IInstallationSettings Installation { get; set; } = new InstallationSettings();
     public virtual IBaseServiceUriSettings BaseServiceUri { get; set; }
     public virtual string DatabaseProvider { get; set; }
-    public virtual SqlSettings SqlServer { get; set; } = new SqlSettings("Server={0};Database={1};User Id={2};Password={3};");
-    public virtual SqlSettings PostgreSql { get; set; } = new SqlSettings("Host={0};Database={1};Username={2};Password={3}");
-    public virtual SqlSettings MySql { get; set; } = new SqlSettings("server={0};database={1};user={2};password={3}");
-    public virtual SqlSettings Sqlite { get; set; } = new SqlSettings(null);
+    public virtual SqlSettings SqlServer { get; set; } = new SqlSettings();
+    public virtual SqlSettings PostgreSql { get; set; } = new SqlSettings();
+    public virtual SqlSettings MySql { get; set; } = new SqlSettings();
+    public virtual SqlSettings Sqlite { get; set; } = new SqlSettings();
     public virtual MailSettings Mail { get; set; } = new MailSettings();
     public virtual IConnectionStringSettings Storage { get; set; } = new ConnectionStringSettings();
     public virtual ConnectionStringSettings Events { get; set; } = new ConnectionStringSettings();
@@ -214,25 +213,14 @@ public class GlobalSettings : IGlobalSettings
 
     public class SqlSettings
     {
-        private readonly string _connectionStringFormat;
-
         private string _connectionString;
         private string _readOnlyConnectionString;
         private string _jobSchedulerConnectionString;
-        private string _server;
-        private string _database;
-        private string _username;
-        private string _password;
-
-        public SqlSettings(string connectionStringFormat)
-        {
-            _connectionStringFormat = connectionStringFormat;
-        }
 
         public string ConnectionString
         {
             get => _connectionString;
-            set => _connectionString = BuildConnectionString(value);
+            set => _connectionString = value.Trim('"');
         }
 
         public string ReadOnlyConnectionString
@@ -246,59 +234,6 @@ public class GlobalSettings : IGlobalSettings
         {
             get => _jobSchedulerConnectionString;
             set => _jobSchedulerConnectionString = value.Trim('"');
-        }
-
-        public string Server
-        {
-            get => _server;
-            set
-            {
-                _server = value;
-                _connectionString = BuildConnectionString(null);
-            }
-        }
-
-        public string Database
-        {
-            get => _database;
-            set
-            {
-                _database = value;
-                _connectionString = BuildConnectionString(null);
-            }
-        }
-
-        public string Username
-        {
-            get => _username;
-            set
-            {
-                _username = value;
-                _connectionString = BuildConnectionString(null);
-            }
-        }
-
-        public string Password
-        {
-            get => _password;
-            set
-            {
-                _password = value;
-                _connectionString = BuildConnectionString(null);
-            }
-        }
-
-        private string BuildConnectionString(string connectionString)
-        {
-            if (CoreHelpers.SettingHasValue(connectionString))
-            {
-                return connectionString.Trim('"');
-            }
-            if (!string.IsNullOrWhiteSpace(_connectionStringFormat))
-            {
-                return string.Format(_connectionStringFormat, Server, Database, Username, Password);
-            }
-            return null;
         }
     }
 
