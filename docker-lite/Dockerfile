@@ -182,6 +182,8 @@ ENV globalSettings__dataProtection__directory="/etc/bitwarden/data-protection"
 ENV globalSettings__attachment__baseDirectory="/etc/bitwarden/attachments"
 ENV globalSettings__send__baseDirectory="/etc/bitwarden/attachments/send"
 ENV globalSettings__licenseDirectory="/etc/bitwarden/licenses"
+ENV globalSettings__logDirectoryByProject="false"
+ENV globalSettings__logRollBySizeLimit="1073741824"
 EXPOSE 80
 EXPOSE 443
 
