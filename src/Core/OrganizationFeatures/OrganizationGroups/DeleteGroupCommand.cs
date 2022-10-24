@@ -1,7 +1,6 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using SendGrid.Helpers.Errors.Model;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationGroups;
 
@@ -22,25 +21,16 @@ public class DeleteGroupCommand : IDeleteGroupCommand
         await _eventService.LogGroupEventAsync(group, Enums.EventType.Group_Deleted);
     }
 
-    public async Task<ICollection<Group>> DeleteManyAsync(Guid orgId, IEnumerable<Guid> groupIds)
+    public async Task DeleteManyAsync(IEnumerable<Group> groups)
     {
-        var ids = groupIds as Guid[] ?? groupIds.ToArray();
-        var groupsToDelete = await _groupRepository.GetManyByManyIds(ids);
-        var filteredGroups = groupsToDelete.Where(g => g.OrganizationId == orgId).ToList();
-
-        if (!filteredGroups.Any())
-        {
-            throw new BadRequestException("Groups invalid.");
-        }
-
+        var groupsToDelete = groups as Group[] ?? groups.ToArray();
+        
         var deleteDate = DateTime.UtcNow;
-        foreach (var group in filteredGroups)
+        foreach (var group in groupsToDelete)
         {
             await _eventService.LogGroupEventAsync(group, Enums.EventType.Group_Deleted, deleteDate);
         }
 
-        await _groupRepository.DeleteManyAsync(orgId, filteredGroups.Select(g => g.Id));
-
-        return filteredGroups;
+        await _groupRepository.DeleteManyAsync(groupsToDelete.Select(g => g.Id));
     }
 }
