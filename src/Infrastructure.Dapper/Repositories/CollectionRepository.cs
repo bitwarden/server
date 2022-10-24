@@ -211,12 +211,12 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
         }
     }
 
-    public async Task DeleteManyAsync(Guid organizationId, IEnumerable<Guid> collectionIds)
+    public async Task DeleteManyAsync(IEnumerable<Guid> collectionIds)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
-            await connection.ExecuteAsync("[dbo].[Collection_DeleteByIdsOrganizationId]",
-                new { OrganizationId = organizationId, Ids = collectionIds.ToGuidIdArrayTVP() }, commandType: CommandType.StoredProcedure);
+            await connection.ExecuteAsync("[dbo].[Collection_DeleteByIds]",
+                new { Ids = collectionIds.ToGuidIdArrayTVP() }, commandType: CommandType.StoredProcedure);
         }
     }
 

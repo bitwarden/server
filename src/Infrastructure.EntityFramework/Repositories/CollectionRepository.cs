@@ -303,18 +303,21 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         }
     }
 
-    public async Task DeleteManyAsync(Guid organizationId, IEnumerable<Guid> collectionIds)
+    public async Task DeleteManyAsync(IEnumerable<Guid> collectionIds)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var entities = await dbContext.Collections
-                .Where(c => collectionIds.Contains(c.Id) && c.OrganizationId == organizationId)
+            var collectionGroupEntities = await dbContext.CollectionGroups
+                .Where(cg => collectionIds.Contains(cg.CollectionId))
+                .ToListAsync();
+            var collectionEntities = await dbContext.Collections
+                .Where(c => collectionIds.Contains(c.Id))
                 .ToListAsync();
 
-            dbContext.Collections.RemoveRange(entities);
+            dbContext.CollectionGroups.RemoveRange(collectionGroupEntities);
+            dbContext.Collections.RemoveRange(collectionEntities);
             await dbContext.SaveChangesAsync();
-            await UserBumpAccountRevisionDateByOrganizationId(organizationId);
         }
     }
 

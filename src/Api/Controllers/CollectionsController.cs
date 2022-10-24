@@ -183,12 +183,22 @@ public class CollectionsController : Controller
     [HttpPost("delete")]
     public async Task DeleteMany([FromBody] CollectionBulkDeleteRequestModel model)
     {
-        if (!await _currentContext.DeleteAssignedCollections(new Guid(model.OrganizationId)))
+        var orgId = new Guid(model.OrganizationId);
+        var collectionIds = model.Ids.Select(i => new Guid(i));
+        if (!await _currentContext.DeleteAssignedCollections(orgId))
         {
             throw new NotFoundException();
         }
 
-        await _deleteCollectionCommand.DeleteManyAsync(new Guid(model.OrganizationId), model.Ids.Select(i => new Guid(i)));
+        var userCollections = await _collectionRepository.GetManyByUserIdAsync(_currentContext.UserId.Value);
+        var filteredCollections = userCollections.Where(c => collectionIds.Contains(c.Id) && c.OrganizationId == orgId);
+
+        if (!filteredCollections.Any())
+        {
+            throw new BadRequestException("No collections found.");
+        }
+
+        await _deleteCollectionCommand.DeleteManyAsync(filteredCollections);
     }
 
     [HttpDelete("{id}/user/{orgUserId}")]

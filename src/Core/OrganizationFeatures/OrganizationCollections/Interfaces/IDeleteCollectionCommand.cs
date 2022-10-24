@@ -6,5 +6,7 @@ public interface IDeleteCollectionCommand
 {
     Task DeleteAsync(Collection collection);
 
-    Task<ICollection<Collection>> DeleteManyAsync(Guid orgId, IEnumerable<Guid> collectionIds);
+    Task DeleteManyAsync(IEnumerable<Guid> collectionIds);
+    Task DeleteManyAsync(IEnumerable<Collection> collections);
+
 }

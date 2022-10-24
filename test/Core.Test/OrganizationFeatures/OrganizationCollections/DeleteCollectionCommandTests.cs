@@ -31,7 +31,7 @@ public class DeleteCollectionCommandTests
 
     [Theory, BitAutoData]
     [OrganizationCustomize]
-    public async Task DeleteManyAsync_DeletesManyCollections(Organization org, Collection collection, Collection collection2, SutProvider<DeleteCollectionCommand> sutProvider)
+    public async Task DeleteManyAsync_DeletesManyCollections(Collection collection, Collection collection2, SutProvider<DeleteCollectionCommand> sutProvider)
     {
         // Arrange
         var collectionIds = new[] { collection.Id, collection2.Id };
@@ -41,44 +41,15 @@ public class DeleteCollectionCommandTests
             .Returns(new List<Collection> { collection, collection2 });
 
         // Act
-        var result = await sutProvider.Sut.DeleteManyAsync(org.Id, collectionIds);
+        await sutProvider.Sut.DeleteManyAsync(collectionIds);
 
         // Assert
         await sutProvider.GetDependency<ICollectionRepository>().Received()
-            .DeleteManyAsync(org.Id, Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(collectionIds)));
-
-        Assert.Contains(collection, result);
-        Assert.Contains(collection2, result);
+            .DeleteManyAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(collectionIds)));
 
         await sutProvider.GetDependency<IEventService>().Received().LogCollectionEventAsync(collection, EventType.Collection_Deleted, Arg.Any<DateTime>());
         await sutProvider.GetDependency<IEventService>().Received().LogCollectionEventAsync(collection2, EventType.Collection_Deleted, Arg.Any<DateTime>());
     }
 
 
-    [Theory, BitAutoData]
-    [OrganizationCustomize]
-    public async Task DeleteManyAsync_WrongOrg_Fails(Organization org, Collection collection, Collection collection2, SutProvider<DeleteCollectionCommand> sutProvider)
-    {
-        // Arrange
-        var collectionIds = new[] { collection.Id, collection2.Id };
-        org.Id = Guid.NewGuid(); // Org no longer associated with collections
-
-        sutProvider.GetDependency<ICollectionRepository>()
-            .GetManyByManyIdsAsync(collectionIds)
-            .Returns(new List<Collection> { collection, collection2 });
-
-        // Act
-        try
-        {
-            await sutProvider.Sut.DeleteManyAsync(org.Id, collectionIds);
-        }
-        catch (Exception ex)
-        {
-            // Assert
-            Assert.IsType<BadRequestException>(ex);
-            Assert.Equal("No collections found.", ex.Message);
-        }
-
-        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceive().DeleteManyAsync(org.Id, Arg.Any<IEnumerable<Guid>>());
-    }
 }

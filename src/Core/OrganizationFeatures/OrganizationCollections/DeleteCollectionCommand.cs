@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.OrganizationFeatures.OrganizationCollections.Interfaces;
@@ -22,24 +23,25 @@ public class DeleteCollectionCommand : IDeleteCollectionCommand
         await _collectionRepository.DeleteAsync(collection);
         await _eventService.LogCollectionEventAsync(collection, Enums.EventType.Collection_Deleted);
     }
-    public async Task<ICollection<Collection>> DeleteManyAsync(Guid orgId, IEnumerable<Guid> collectionIds)
+    public async Task DeleteManyAsync(IEnumerable<Guid> collectionIds)
     {
+
         var ids = collectionIds as Guid[] ?? collectionIds.ToArray();
         var collectionsToDelete = await _collectionRepository.GetManyByManyIdsAsync(ids);
-        var filteredCollections = collectionsToDelete.Where(c => c.OrganizationId == orgId).ToList();
-        if (!filteredCollections.Any())
-        {
-            throw new BadRequestException("No collections found.");
-        }
+        await this.DeleteManyAsync(collectionsToDelete);
+
+    }
+
+    public async Task DeleteManyAsync(IEnumerable<Collection> collections)
+    {
+
+        await _collectionRepository.DeleteManyAsync(collections.Select(c => c.Id));
 
         var deleteDate = DateTime.UtcNow;
-        foreach (var collection in filteredCollections)
+        foreach (var collection in collections)
         {
             await _eventService.LogCollectionEventAsync(collection, Enums.EventType.Collection_Deleted, deleteDate);
         }
 
-        await _collectionRepository.DeleteManyAsync(orgId, filteredCollections.Select(g => g.Id));
-
-        return filteredCollections;
     }
 }
