@@ -549,9 +549,11 @@ public class CipherRepository : Repository<Core.Entities.Cipher, Cipher, Guid>, 
         {
             var dbContext = GetDatabaseContext(scope);
             var cipher = await dbContext.Ciphers.FindAsync(attachment.Id);
-            var attachmentsJson = string.IsNullOrWhiteSpace(cipher.Attachments) ? new JObject() : JObject.Parse(cipher.Attachments);
-            attachmentsJson.Add(attachment.AttachmentId, attachment.AttachmentData);
-            cipher.Attachments = JsonConvert.SerializeObject(attachmentsJson);
+            var attachments = string.IsNullOrWhiteSpace(cipher.Attachments) ?
+                new Dictionary<string, CipherAttachment.MetaData>() :
+                JsonConvert.DeserializeObject<Dictionary<string, CipherAttachment.MetaData>>(cipher.Attachments);
+            attachments.Add(attachment.AttachmentId, JsonConvert.DeserializeObject<CipherAttachment.MetaData>(attachment.AttachmentData));
+            cipher.Attachments = JsonConvert.SerializeObject(attachments);
             await dbContext.SaveChangesAsync();
 
             if (attachment.OrganizationId.HasValue)
