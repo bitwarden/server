@@ -1,4 +1,12 @@
-﻿IF OBJECT_ID('[dbo].[AccessPolicy]') IS NULL
+﻿-- Remove ON DELETE for service accounts
+IF EXISTS (SELECT name FROM sys.foreign_keys WHERE name = 'FK_ServiceAccount_OrganizationId')
+BEGIN
+    ALTER TABLE [ServiceAccount] DROP CONSTRAINT FK_ServiceAccount_OrganizationId;
+END
+
+ALTER TABLE [ServiceAccount] ADD CONSTRAINT [FK_ServiceAccount_OrganizationId] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id]);
+
+IF OBJECT_ID('[dbo].[AccessPolicy]') IS NULL
 BEGIN
     CREATE TABLE [AccessPolicy] (
         [Id]                 UNIQUEIDENTIFIER NOT NULL,

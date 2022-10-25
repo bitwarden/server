@@ -1,6 +1,8 @@
-﻿namespace Bit.Core.Entities;
+﻿using Bit.Core.Utilities;
 
-public class AccessPolicy
+namespace Bit.Core.Entities;
+
+public class AccessPolicy : ITableObject<Guid>
 {
     public Guid Id { get; set; }
 
@@ -20,4 +22,9 @@ public class AccessPolicy
 
     public DateTime CreationDate { get; set; }
     public DateTime RevisionDate { get; set; }
+
+    public void SetNewId()
+    {
+        Id = CoreHelpers.GenerateComb();
+    }
 }
