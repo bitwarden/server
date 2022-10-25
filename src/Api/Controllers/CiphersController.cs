@@ -272,11 +272,16 @@ public class CiphersController : Controller
 
     [HttpPut("{id}/partial")]
     [HttpPost("{id}/partial")]
-    public async Task PutPartial(string id, [FromBody] CipherPartialRequestModel model)
+    public async Task<CipherResponseModel> PutPartial(string id, [FromBody] CipherPartialRequestModel model)
     {
         var userId = _userService.GetProperUserId(User).Value;
         var folderId = string.IsNullOrWhiteSpace(model.FolderId) ? null : (Guid?)new Guid(model.FolderId);
-        await _cipherRepository.UpdatePartialAsync(new Guid(id), userId, folderId, model.Favorite);
+        var cipherId = new Guid(id);
+        await _cipherRepository.UpdatePartialAsync(cipherId, userId, folderId, model.Favorite);
+
+        var cipher = await _cipherRepository.GetByIdAsync(cipherId, userId);
+        var response = new CipherResponseModel(cipher, _globalSettings);
+        return response;
     }
 
     [HttpPut("{id}/share")]
