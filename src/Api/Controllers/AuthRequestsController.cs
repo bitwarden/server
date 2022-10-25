@@ -130,7 +130,7 @@ public class AuthRequestsController : Controller
         {
             throw new BadRequestException("Invalid device.");
         }
-        
+
         authRequest.Key = model.Key;
         authRequest.MasterPasswordHash = model.MasterPasswordHash;
         authRequest.ResponseDeviceId = device.Id;
@@ -138,7 +138,7 @@ public class AuthRequestsController : Controller
         authRequest.Approved = model.RequestApproved;
         await _authRequestRepository.ReplaceAsync(authRequest);
         await _pushNotificationService.PushAuthRequestResponseAsync(authRequest);
-        
+
         return new AuthRequestResponseModel(authRequest, _globalSettings.BaseServiceUri.Vault);
     }
 }
