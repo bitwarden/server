@@ -52,7 +52,7 @@ BEGIN
         @PublicKey,
         @Key,
         @MasterPasswordHash,
-        @Approved
+        @Approved,
         @CreationDate,
         @ResponseDate,
         @AuthenticationDate
