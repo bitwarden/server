@@ -44,7 +44,7 @@ public class CollectionsController : Controller
     }
 
     [HttpGet("{id}/details")]
-    public async Task<CollectionGroupDetailsResponseModel> GetDetails(Guid orgId, Guid id)
+    public async Task<CollectionAccessDetailsResponseModel> GetDetails(Guid orgId, Guid id)
     {
         if (!await ViewAtLeastOneCollectionAsync(orgId) && !await _currentContext.ManageUsers(orgId))
         {
@@ -58,7 +58,7 @@ public class CollectionsController : Controller
             {
                 throw new NotFoundException();
             }
-            return new CollectionGroupDetailsResponseModel(collectionDetails.Item1, collectionDetails.Item2);
+            return new CollectionAccessDetailsResponseModel(collectionDetails.Item1, collectionDetails.Item2);
         }
         else
         {
@@ -68,7 +68,7 @@ public class CollectionsController : Controller
             {
                 throw new NotFoundException();
             }
-            return new CollectionGroupDetailsResponseModel(collectionDetails.Item1, collectionDetails.Item2);
+            return new CollectionAccessDetailsResponseModel(collectionDetails.Item1, collectionDetails.Item2);
         }
     }
 
