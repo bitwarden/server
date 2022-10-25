@@ -18,18 +18,15 @@ public class SendController : Controller
 
     [HttpPost("~/send")]
     [SelfHosted(SelfHostedOnly = true)]
-    public async Task<bool> PostSend()
+    public async Task PostSend()
     {
-        var sent = false;
         using (var reader = new StreamReader(Request.Body, Encoding.UTF8))
         {
             var notificationJson = await reader.ReadToEndAsync();
             if (!string.IsNullOrWhiteSpace(notificationJson))
             {
                 await HubHelpers.SendNotificationToHubAsync(notificationJson, _hubContext, null);
-                sent = true;
             }
         }
-        return sent;
     }
 }
