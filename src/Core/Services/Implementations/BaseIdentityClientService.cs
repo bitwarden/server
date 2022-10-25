@@ -92,7 +92,7 @@ public abstract class BaseIdentityClientService : IDisposable
 
     protected async Task<bool> HandleTokenStateAsync()
     {
-        if (_nextAuthAttempt.HasValue && DateTime.UtcNow > _nextAuthAttempt.Value)
+        if (_nextAuthAttempt.HasValue && DateTime.UtcNow < _nextAuthAttempt.Value)
         {
             _logger.LogInformation("Not requesting a token at {now} because the next request time is {nextAttempt}", DateTime.UtcNow, _nextAuthAttempt.Value);
             return false;
