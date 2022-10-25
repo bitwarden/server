@@ -133,10 +133,10 @@ public class OrganizationLicense : ILicense
     /// <summary>
     /// Represents the current version of the license format. Should be updated whenever new fields are added.
     /// </summary>
-    private const int CURRENT_LICENSE_FILE_VERSION = 9;
+    private const int CURRENT_LICENSE_FILE_VERSION = 11;
     private bool ValidLicenseVersion
     {
-        get => Version is >= 1 and <= 10;
+        get => Version is >= 1 and <= 11;
     }
 
     public byte[] GetDataBytes(bool forHash = false)
@@ -168,7 +168,7 @@ public class OrganizationLicense : ILicense
                     (Version >= 9 || !p.Name.Equals(nameof(UseKeyConnector))) &&
                     // UseScim was added in Version 10
                     (Version >= 10 || !p.Name.Equals(nameof(UseScim))) &&
-                    // UseScim was added in Version 11
+                    // UseCustomPermissions was added in Version 11
                     (Version >= 11 || !p.Name.Equals(nameof(UseCustomPermissions))) &&
                     (
                         !forHash ||
