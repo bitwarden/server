@@ -1,4 +1,6 @@
-﻿CREATE PROCEDURE [dbo].[Cipher_Move]
+-- Remove check for Edit permission. User should be able to move the cipher to a different folder even if they don't have Edit permissions
+
+ALTER PROCEDURE [dbo].[Cipher_Move]
     @Ids AS [dbo].[GuidIdArray] READONLY,
     @FolderId AS UNIQUEIDENTIFIER,
     @UserId AS UNIQUEIDENTIFIER
@@ -34,3 +36,4 @@ BEGIN
 
     EXEC [dbo].[User_BumpAccountRevisionDate] @UserId
 END
+GO
