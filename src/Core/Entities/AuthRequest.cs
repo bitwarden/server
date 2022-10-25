@@ -20,6 +20,7 @@ public class AuthRequest : ITableObject<Guid>
     public string PublicKey { get; set; }
     public string Key { get; set; }
     public string MasterPasswordHash { get; set; }
+    public bool? Approved { get; set; }
     public DateTime CreationDate { get; set; } = DateTime.UtcNow;
     public DateTime? ResponseDate { get; set; }
     public DateTime? AuthenticationDate { get; set; }
