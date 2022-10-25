@@ -45,6 +45,7 @@ public class OrganizationLicense : ILicense
         MaxStorageGb = org.MaxStorageGb;
         SelfHost = org.SelfHost;
         UsersGetPremium = org.UsersGetPremium;
+        UseCustomPermissions = org.UseCustomPermissions;
         Issued = DateTime.UtcNow;
 
         if (subscriptionInfo?.Subscription == null)
@@ -117,6 +118,7 @@ public class OrganizationLicense : ILicense
     public short? MaxStorageGb { get; set; }
     public bool SelfHost { get; set; }
     public bool UsersGetPremium { get; set; }
+    public bool UseCustomPermissions { get; set; }
     public int Version { get; set; }
     public DateTime Issued { get; set; }
     public DateTime? Refresh { get; set; }
@@ -166,6 +168,8 @@ public class OrganizationLicense : ILicense
                     (Version >= 9 || !p.Name.Equals(nameof(UseKeyConnector))) &&
                     // UseScim was added in Version 10
                     (Version >= 10 || !p.Name.Equals(nameof(UseScim))) &&
+                    // UseScim was added in Version 11
+                    (Version >= 11 || !p.Name.Equals(nameof(UseCustomPermissions))) &&
                     (
                         !forHash ||
                         (
@@ -277,6 +281,11 @@ public class OrganizationLicense : ILicense
             if (valid && Version >= 10)
             {
                 valid = organization.UseScim == UseScim;
+            }
+
+            if (valid && Version >= 11)
+            {
+                valid = organization.UseCustomPermissions == UseCustomPermissions;
             }
 
             return valid;

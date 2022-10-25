@@ -280,6 +280,18 @@ public class OrganizationService : IOrganizationService
             }
         }
 
+        if (!newPlan.HasCustomPermissions && organization.UseCustomPermissions)
+        {
+            var organizationCustomUsers =
+                await _organizationUserRepository.GetManyByOrganizationAsync(organization.Id,
+                    OrganizationUserType.Custom);
+            if (organizationCustomUsers.Any())
+            {
+                throw new BadRequestException("Your new plan does not allow the Custom Permissions feature. " +
+                                              "Disable your Custom Permissions configuration.");
+            }
+        }
+
         // TODO: Check storage?
 
         string paymentIntentClientSecret = null;
@@ -322,6 +334,7 @@ public class OrganizationService : IOrganizationService
         organization.UseResetPassword = newPlan.HasResetPassword;
         organization.SelfHost = newPlan.HasSelfHost;
         organization.UsersGetPremium = newPlan.UsersGetPremium || upgrade.PremiumAccessAddon;
+        organization.UseCustomPermissions = newPlan.HasCustomPermissions;
         organization.Plan = newPlan.Name;
         organization.Enabled = success;
         organization.PublicKey = upgrade.PublicKey;
@@ -621,6 +634,7 @@ public class OrganizationService : IOrganizationService
             UseResetPassword = plan.HasResetPassword,
             SelfHost = plan.HasSelfHost,
             UsersGetPremium = plan.UsersGetPremium || signup.PremiumAccessAddon,
+            UseCustomPermissions = plan.HasCustomPermissions,
             UseScim = plan.HasScim,
             Plan = plan.Name,
             Gateway = null,
@@ -730,6 +744,7 @@ public class OrganizationService : IOrganizationService
             Plan = license.Plan,
             SelfHost = license.SelfHost,
             UsersGetPremium = license.UsersGetPremium,
+            UseCustomPermissions = license.UseCustomPermissions,
             Gateway = null,
             GatewayCustomerId = null,
             GatewaySubscriptionId = null,
@@ -931,6 +946,18 @@ public class OrganizationService : IOrganizationService
             }
         }
 
+        if (!license.UseCustomPermissions && organization.UseCustomPermissions)
+        {
+            var organizationCustomUsers =
+                await _organizationUserRepository.GetManyByOrganizationAsync(organization.Id,
+                    OrganizationUserType.Custom);
+            if (organizationCustomUsers.Any())
+            {
+                throw new BadRequestException("Your new plan does not allow the Custom Permissions feature. " +
+                                              "Disable your Custom Permissions configuration.");
+            }
+        }
+
         if (!license.UseResetPassword && organization.UseResetPassword)
         {
             var resetPasswordPolicy =
@@ -966,6 +993,7 @@ public class OrganizationService : IOrganizationService
         organization.UseResetPassword = license.UseResetPassword;
         organization.SelfHost = license.SelfHost;
         organization.UsersGetPremium = license.UsersGetPremium;
+        organization.UseCustomPermissions = license.UseCustomPermissions;
         organization.Plan = license.Plan;
         organization.Enabled = license.Enabled;
         organization.ExpirationDate = license.Expires;

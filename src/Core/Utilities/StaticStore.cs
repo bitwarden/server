@@ -417,6 +417,7 @@ public class StaticStore
                 HasScim = true,
                 HasResetPassword = true,
                 UsersGetPremium = true,
+                HasCustomPermissions = true,
 
                 UpgradeSortOrder = 3,
                 DisplaySortOrder = 3,
@@ -457,6 +458,7 @@ public class StaticStore
                 HasScim = true,
                 HasResetPassword = true,
                 UsersGetPremium = true,
+                HasCustomPermissions = true,
 
                 UpgradeSortOrder = 3,
                 DisplaySortOrder = 3,

@@ -40,6 +40,7 @@ public class OrganizationUserOrganizationDetailsViewQuery : IQuery<OrganizationU
             UseApi = x.o.UseApi,
             SelfHost = x.o.SelfHost,
             UsersGetPremium = x.o.UsersGetPremium,
+            UseCustomPermissions = x.o.UseCustomPermissions,
             Seats = x.o.Seats,
             MaxCollections = x.o.MaxCollections,
             MaxStorageGb = x.o.MaxStorageGb,

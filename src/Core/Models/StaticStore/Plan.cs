@@ -37,6 +37,7 @@ public class Plan
     public bool HasScim { get; set; }
     public bool HasResetPassword { get; set; }
     public bool UsersGetPremium { get; set; }
+    public bool HasCustomPermissions { get; set; }
 
     public int UpgradeSortOrder { get; set; }
     public int DisplaySortOrder { get; set; }
