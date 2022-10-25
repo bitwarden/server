@@ -134,7 +134,7 @@ public class CollectionsControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task DeleteMany_CanNotDeleteAssignedCollection_ThrowsNotFound(Guid orgId, User user, Collection collection1, Collection collection2, SutProvider<CollectionsController> sutProvider)
+    public async Task DeleteMany_CanNotDeleteAssignedCollection_ThrowsNotFound(Guid orgId, Collection collection1, Collection collection2, SutProvider<CollectionsController> sutProvider)
     {
         // Arrange
         var model = new CollectionBulkDeleteRequestModel

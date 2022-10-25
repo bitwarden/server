@@ -187,7 +187,7 @@ public class CollectionServiceTest
     }
 
     [Theory, BitAutoData]
-    public async Task GetOrganizationCollectionsWithGroups_NoManagerPermissions_ThrowsNotFound(Organization organization, User user, SutProvider<CollectionService> sutProvider)
+    public async Task GetOrganizationCollectionsWithGroups_NoManagerPermissions_ThrowsNotFound(Organization organization, SutProvider<CollectionService> sutProvider)
     {
         sutProvider.GetDependency<ICurrentContext>().ViewAssignedCollections(organization.Id).Returns(false);
 

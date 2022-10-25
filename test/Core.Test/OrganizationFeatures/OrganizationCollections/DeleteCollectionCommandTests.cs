@@ -1,7 +1,6 @@
-
+﻿
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Exceptions;
 using Bit.Core.OrganizationFeatures.OrganizationCollections;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
