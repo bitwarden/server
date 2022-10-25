@@ -72,10 +72,10 @@ public abstract class BaseIdentityClientService : IDisposable
         {
             var response = await Client.SendAsync(message);
 
-            if(response.IsSuccessStatusCode)
+            if (response.IsSuccessStatusCode)
             {
                 return await response.Content.ReadFromJsonAsync<TResult>();
-            } 
+            }
             else
             {
                 _logger.LogError("Request to {url} is unsuccessful with status of {code}-{reason}", message.RequestUri.ToString(), response.StatusCode, response.ReasonPhrase);
