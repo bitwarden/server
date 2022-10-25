@@ -6,6 +6,7 @@ public class Project : Core.Entities.Project
 {
     public virtual new ICollection<Secret> Secrets { get; set; }
     public virtual Organization Organization { get; set; }
+    public virtual ICollection<AccessPolicy> AccessPolicies { get; set; }
 }
 
 public class ProjectMapperProfile : Profile
