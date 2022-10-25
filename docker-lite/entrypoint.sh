@@ -5,12 +5,16 @@ VAULT_SERVICE_URI=https://$BW_DOMAIN
 MYSQL_CONNECTION_STRING="server=$BW_DB_SERVER;database=$BW_DB_DATABASE;user=$BW_DB_USERNAME;password=$BW_DB_PASSWORD"
 POSTGRESQL_CONNECTION_STRING="Host=$BW_DB_SERVER;Database=$BW_DB_DATABASE;Username=$BW_DB_USERNAME;Password=$BW_DB_PASSWORD"
 SQLSERVER_CONNECTION_STRING="Server=$BW_DB_SERVER;Database=$BW_DB_DATABASE;User Id=$BW_DB_USERNAME;Password=$BW_DB_PASSWORD;"
+INTERNAL_IDENTITY_KEY=$(openssl rand -hex 30)
+OIDC_IDENTITY_CLIENT_KEY=$(openssl rand -hex 30)
+DUO_AKEY=$(openssl rand -hex 30)
 
 export globalSettings__baseServiceUri__vault=${globalSettings__baseServiceUri__vault:-$VAULT_SERVICE_URI}
-export globalSettings__disableUserRegistration=${BW_DISABLE_USER_REGISTRATION:-false}
 export globalSettings__installation__id=$BW_INSTALLATION_ID
 export globalSettings__installation__key=$BW_INSTALLATION_KEY
-export adminSettings__admins=$BW_ADMINS
+export globalSettings__internalIdentityKey=${globalSettings__internalIdentityKey:-$INTERNAL_IDENTITY_KEY}
+export globalSettings__oidcIdentityClientKey=${globalSettings__oidcIdentityClientKey:-$OIDC_IDENTITY_CLIENT_KEY}
+export globalSettings__duo__aKey=${globalSettings__duo__aKey:-$DUO_AKEY}
 
 export globalSettings__databaseProvider=$BW_DB_PROVIDER
 export globalSettings__mysql__connectionString=${globalSettings__mysql__connectionString:-$MYSQL_CONNECTION_STRING}
@@ -44,7 +48,7 @@ cp /etc/bitwarden/identity.pfx /app/Identity/identity.pfx
 cp /etc/bitwarden/identity.pfx /app/Sso/identity.pfx
 
 # Generate SSL certificates
-if [ "$BW_ENABLE_SSL" == "true" -a ! -f /etc/bitwarden/ssl.key ]; then
+if [ "$BW_SSL_ENABLE" == "true" -a ! -f /etc/bitwarden/ssl.key ]; then
   openssl req \
   -x509 \
   -newkey rsa:4096 \
