@@ -58,7 +58,7 @@ public class CollectionsController : Controller
             {
                 throw new NotFoundException();
             }
-            return new CollectionAccessDetailsResponseModel(collectionDetails.Item1, collectionDetails.Item2);
+            return new CollectionAccessDetailsResponseModel(collectionDetails.Item1, collectionDetails.Item2, collectionDetails.Item3);
         }
         else
         {
@@ -68,7 +68,7 @@ public class CollectionsController : Controller
             {
                 throw new NotFoundException();
             }
-            return new CollectionAccessDetailsResponseModel(collectionDetails.Item1, collectionDetails.Item2);
+            return new CollectionAccessDetailsResponseModel(collectionDetails.Item1, collectionDetails.Item2, collectionDetails.Item3);
         }
     }
 

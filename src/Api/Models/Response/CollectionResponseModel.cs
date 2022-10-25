@@ -41,11 +41,13 @@ public class CollectionDetailsResponseModel : CollectionResponseModel
 
 public class CollectionAccessDetailsResponseModel : CollectionResponseModel
 {
-    public CollectionAccessDetailsResponseModel(Collection collection, IEnumerable<SelectionReadOnly> groups)
+    public CollectionAccessDetailsResponseModel(Collection collection, IEnumerable<SelectionReadOnly> groups, IEnumerable<SelectionReadOnly> users)
         : base(collection, "collectionAccessDetails")
     {
         Groups = groups.Select(g => new SelectionReadOnlyResponseModel(g));
+        Users = users.Select(g => new SelectionReadOnlyResponseModel(g));
     }
 
     public IEnumerable<SelectionReadOnlyResponseModel> Groups { get; set; }
+    public IEnumerable<SelectionReadOnlyResponseModel> Users { get; set; }
 }

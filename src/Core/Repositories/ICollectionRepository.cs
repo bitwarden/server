@@ -6,8 +6,8 @@ namespace Bit.Core.Repositories;
 public interface ICollectionRepository : IRepository<Collection, Guid>
 {
     Task<int> GetCountByOrganizationIdAsync(Guid organizationId);
-    Task<Tuple<Collection, ICollection<SelectionReadOnly>>> GetByIdWithGroupsAsync(Guid id);
-    Task<Tuple<CollectionDetails, ICollection<SelectionReadOnly>>> GetByIdWithGroupsAsync(Guid id, Guid userId);
+    Task<Tuple<Collection, ICollection<SelectionReadOnly>, ICollection<SelectionReadOnly>>> GetByIdWithGroupsAsync(Guid id);
+    Task<Tuple<CollectionDetails, ICollection<SelectionReadOnly>, ICollection<SelectionReadOnly>>> GetByIdWithGroupsAsync(Guid id, Guid userId);
     Task<ICollection<Collection>> GetManyByOrganizationIdAsync(Guid organizationId);
     Task<CollectionDetails> GetByIdAsync(Guid id, Guid userId);
     Task<ICollection<CollectionDetails>> GetManyByUserIdAsync(Guid userId);

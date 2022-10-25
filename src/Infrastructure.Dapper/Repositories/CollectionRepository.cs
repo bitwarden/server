@@ -32,36 +32,38 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
         }
     }
 
-    public async Task<Tuple<Collection, ICollection<SelectionReadOnly>>> GetByIdWithGroupsAsync(Guid id)
+    public async Task<Tuple<Collection, ICollection<SelectionReadOnly>, ICollection<SelectionReadOnly>>> GetByIdWithGroupsAsync(Guid id)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryMultipleAsync(
-                $"[{Schema}].[Collection_ReadWithGroupsById]",
+                $"[{Schema}].[Collection_ReadWithGroupsAndUsersById]",
                 new { Id = id },
                 commandType: CommandType.StoredProcedure);
 
             var collection = await results.ReadFirstOrDefaultAsync<Collection>();
             var groups = (await results.ReadAsync<SelectionReadOnly>()).ToList();
+            var users = (await results.ReadAsync<SelectionReadOnly>()).ToList();
 
-            return new Tuple<Collection, ICollection<SelectionReadOnly>>(collection, groups);
+            return new Tuple<Collection, ICollection<SelectionReadOnly>, ICollection<SelectionReadOnly>>(collection, groups, users);
         }
     }
 
-    public async Task<Tuple<CollectionDetails, ICollection<SelectionReadOnly>>> GetByIdWithGroupsAsync(
+    public async Task<Tuple<CollectionDetails, ICollection<SelectionReadOnly>, ICollection<SelectionReadOnly>>> GetByIdWithGroupsAsync(
         Guid id, Guid userId)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryMultipleAsync(
-                $"[{Schema}].[Collection_ReadWithGroupsByIdUserId]",
+                $"[{Schema}].[Collection_ReadWithGroupsAndUsersByIdUserId]",
                 new { Id = id, UserId = userId },
                 commandType: CommandType.StoredProcedure);
 
             var collection = await results.ReadFirstOrDefaultAsync<CollectionDetails>();
             var groups = (await results.ReadAsync<SelectionReadOnly>()).ToList();
+            var users = (await results.ReadAsync<SelectionReadOnly>()).ToList();
 
-            return new Tuple<CollectionDetails, ICollection<SelectionReadOnly>>(collection, groups);
+            return new Tuple<CollectionDetails, ICollection<SelectionReadOnly>, ICollection<SelectionReadOnly>>(collection, groups, users);
         }
     }
 

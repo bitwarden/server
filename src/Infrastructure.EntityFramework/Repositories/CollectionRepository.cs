@@ -69,7 +69,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         }
     }
 
-    public async Task<Tuple<Core.Entities.Collection, ICollection<SelectionReadOnly>>> GetByIdWithGroupsAsync(Guid id)
+    public async Task<Tuple<Core.Entities.Collection, ICollection<SelectionReadOnly>, ICollection<SelectionReadOnly>>> GetByIdWithGroupsAsync(Guid id)
     {
         var collection = await base.GetByIdAsync(id);
         using (var scope = ServiceScopeFactory.CreateScope())
@@ -84,11 +84,11 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                 ReadOnly = cg.ReadOnly,
                 HidePasswords = cg.HidePasswords,
             }).ToList();
-            return new Tuple<Core.Entities.Collection, ICollection<SelectionReadOnly>>(collection, selectionReadOnlys);
+            return new Tuple<Core.Entities.Collection, ICollection<SelectionReadOnly>, ICollection<SelectionReadOnly>>(collection, selectionReadOnlys, Array.Empty<SelectionReadOnly>());
         }
     }
 
-    public async Task<Tuple<CollectionDetails, ICollection<SelectionReadOnly>>> GetByIdWithGroupsAsync(Guid id, Guid userId)
+    public async Task<Tuple<CollectionDetails, ICollection<SelectionReadOnly>, ICollection<SelectionReadOnly>>> GetByIdWithGroupsAsync(Guid id, Guid userId)
     {
         var collection = await GetByIdAsync(id, userId);
         using (var scope = ServiceScopeFactory.CreateScope())
@@ -103,7 +103,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                             HidePasswords = cg.HidePasswords,
                         };
             var configurations = await query.ToArrayAsync();
-            return new Tuple<CollectionDetails, ICollection<SelectionReadOnly>>(collection, configurations);
+            return new Tuple<CollectionDetails, ICollection<SelectionReadOnly>, ICollection<SelectionReadOnly>>(collection, configurations, Array.Empty<SelectionReadOnly>());
         }
     }
 
