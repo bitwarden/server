@@ -1,11 +1,5 @@
 -- Stored Procedure: CollectionGroup_ReadByCollectionId
-IF OBJECT_ID('[dbo].[CollectionGroup_ReadByCollectionId]') IS NOT NULL
-BEGIN
-    DROP PROCEDURE [dbo].[CollectionGroup_ReadByCollectionId]
-END
-GO
-
-CREATE PROCEDURE [dbo].[CollectionGroup_ReadByCollectionId]
+CREATE OR ALTER PROCEDURE [dbo].[CollectionGroup_ReadByCollectionId]
     @CollectionId UNIQUEIDENTIFIER
 AS
 BEGIN
@@ -20,15 +14,10 @@ BEGIN
     WHERE
         [CollectionId] = @CollectionId
 END
-
--- Stored Procedure: Collection_ReadWithGroupsAndUsersById
-IF OBJECT_ID('[dbo].[Collection_ReadWithGroupsAndUsersById]') IS NOT NULL
-BEGIN
-    DROP PROCEDURE [dbo].[Collection_ReadWithGroupsAndUsersById]
-END
 GO
 
-CREATE PROCEDURE [dbo].[Collection_ReadWithGroupsAndUsersById]
+-- Stored Procedure: Collection_ReadWithGroupsAndUsersById
+CREATE OR ALTER PROCEDURE [dbo].[Collection_ReadWithGroupsAndUsersById]
     @Id UNIQUEIDENTIFIER
 AS
 BEGIN
@@ -40,15 +29,10 @@ BEGIN
 
     EXEC [dbo].[CollectionUser_ReadByCollectionId] @Id
 END
-
--- Stored Procedure: Collection_ReadWithGroupsAndUsersByIdUserId
-IF OBJECT_ID('[dbo].[Collection_ReadWithGroupsAndUsersByIdUserId]') IS NOT NULL
-BEGIN
-    DROP PROCEDURE [dbo].[Collection_ReadWithGroupsAndUsersByIdUserId]
-END
 GO
 
-CREATE PROCEDURE [dbo].[Collection_ReadWithGroupsAndUsersByIdUserId]
+-- Stored Procedure: Collection_ReadWithGroupsAndUsersByIdUserId
+CREATE OR ALTER PROCEDURE [dbo].[Collection_ReadWithGroupsAndUsersByIdUserId]
     @Id UNIQUEIDENTIFIER,
     @UserId UNIQUEIDENTIFIER
 AS
