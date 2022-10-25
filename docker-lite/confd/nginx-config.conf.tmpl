@@ -77,29 +77,29 @@ server {
   }
 
   location /api/ {
-    proxy_pass http://{{ getenv "BW_SERVICE_NAME_API" "api"}}:{{ getenv "BW_SERVICE_PORT_API" "5000" }}/;
+    proxy_pass http://localhost:5001/;
   }
 
   location /icons/ {
-    proxy_pass http://{{ getenv "BW_SERVICE_NAME_ICONS" "icons"}}:{{ getenv "BW_SERVICE_PORT_ICONS" "5000" }}/;
+    proxy_pass http://localhost:5004/;
   }
 
   location /notifications/ {
-    proxy_pass http://{{ getenv "BW_SERVICE_NAME_NOTIFICATIONS" "notifications"}}:{{ getenv "BW_SERVICE_PORT_NOTIFICATIONS" "5000" }}/;
+    proxy_pass http://localhost:5006/;
   }
 
   location /notifications/hub {
-    proxy_pass http://{{ getenv "BW_SERVICE_NAME_NOTIFICATIONS" "notifications"}}:{{ getenv "BW_SERVICE_PORT_NOTIFICATIONS" "5000" }}/hub;
+    proxy_pass http://localhost:5006/hub;
     proxy_set_header Upgrade $http_upgrade;
     proxy_set_header Connection $http_connection;
   }
 
   location /events/ {
-    proxy_pass http://{{ getenv "BW_SERVICE_NAME_EVENTS" "events"}}:{{ getenv "BW_SERVICE_PORT_EVENTS" "5000" }}/;
+    proxy_pass http://localhost:5003/;
   }
 
   location /sso {
-    proxy_pass http://{{ getenv "BW_SERVICE_NAME_SSO" "sso"}}:{{ getenv "BW_SERVICE_PORT_SSO" "5000" }};
+    proxy_pass http://localhost:5007;
 {{ if eq (getenv "BW_SSL_ENABLE") "true" }}
     include /etc/nginx/security-headers-ssl.conf;
 {{ end }}
@@ -108,7 +108,7 @@ server {
   }
 
   location /identity {
-    proxy_pass http://{{ getenv "BW_SERVICE_NAME_IDENTITY" "identity"}}:{{ getenv "BW_SERVICE_PORT_IDENTITY" "5000" }};
+    proxy_pass http://localhost:5005;
 {{ if eq (getenv "BW_SSL_ENABLE") "true" }}
     include /etc/nginx/security-headers-ssl.conf;
 {{ end }}
@@ -117,7 +117,7 @@ server {
   }
 
   location /admin {
-    proxy_pass http://{{ getenv "BW_SERVICE_NAME_ADMIN" "admin"}}:{{ getenv "BW_SERVICE_PORT_ADMIN" "5000" }};
+    proxy_pass http://localhost:5000;
 {{ if eq (getenv "BW_SSL_ENABLE") "true" }}
     include /etc/nginx/security-headers-ssl.conf;
 {{ end }}
@@ -127,7 +127,11 @@ server {
 
 {{ if eq (getenv "BW_KEY_CONNECTOR_ENABLE") "true" }}
   location /key-connector/ {
-    proxy_pass http://{{ getenv "BW_SERVICE_NAME_KEY_CONNECTOR" "keyconnector"}}:{{ getenv "BW_SERVICE_PORT_KEY_CONNECTOR" "5000" }}/;
+    proxy_pass {{ getenv "BW_KEY_CONNECTOR_INTERNAL_URL"}}/;
   }
 {{ end }}
+
+  location /scim/ {
+    proxy_pass http://localhost:5002/;
+  }
 }
