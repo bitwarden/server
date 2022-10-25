@@ -94,6 +94,7 @@ public abstract class BaseIdentityClientService : IDisposable
     {
         if (_nextAuthAttempt.HasValue && DateTime.UtcNow > _nextAuthAttempt.Value)
         {
+            _logger.LogInformation("Not requesting a token at {now} because the next request time is {nextAttempt}", DateTime.UtcNow, _nextAuthAttempt.Value);
             return false;
         }
         _nextAuthAttempt = null;
@@ -128,12 +129,13 @@ public abstract class BaseIdentityClientService : IDisposable
 
         if (response == null)
         {
+            _logger.LogError("Empty token response from {identity} for client {clientId} with status {code}-{reason}", IdentityClient.BaseAddress, _identityClientId, response.StatusCode, response.ReasonPhrase);
             return false;
         }
 
         if (!response.IsSuccessStatusCode)
         {
-            _logger.LogInformation("Unsuccessful token response from {identity} for client {clientId} with status code {StatusCode}", IdentityClient.BaseAddress, _identityClientId, response.StatusCode);
+            _logger.LogError("Unsuccessful token response from {identity} for client {clientId} with status {code}-{reason}", IdentityClient.BaseAddress, _identityClientId, response.StatusCode, response.ReasonPhrase);
 
             if (response.StatusCode == HttpStatusCode.BadRequest)
             {
@@ -149,7 +151,8 @@ public abstract class BaseIdentityClientService : IDisposable
             return false;
         }
 
-        using var jsonDocument = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync());
+        var content = await response.Content.ReadAsStreamAsync();
+        using var jsonDocument = await JsonDocument.ParseAsync(content);
 
         AccessToken = jsonDocument.RootElement.GetProperty("access_token").GetString();
         return true;
