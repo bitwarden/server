@@ -30,12 +30,7 @@ public class DeleteGroupCommandTests
     public async Task DeleteManyAsync_DeletesManyGroup(Group group, Group group2, SutProvider<DeleteGroupCommand> sutProvider)
     {
         // Arrange
-        var groupIds = new[] { group.Id, group2.Id };
         var groups = new[] { group, group2 };
-
-        sutProvider.GetDependency<IGroupRepository>()
-            .GetManyByManyIds(groupIds)
-            .Returns(groups);
 
         // Act
         await sutProvider.Sut.DeleteManyAsync(groups);
