@@ -43,6 +43,7 @@ COPY src/Icons/*.csproj ./src/Icons/
 COPY src/Identity/*.csproj ./src/Identity/
 COPY src/Notifications/*.csproj ./src/Notifications/
 COPY bitwarden_license/src/Sso/*.csproj ./bitwarden_license/src/Sso/
+COPY bitwarden_license/src/Scim/*.csproj ./bitwarden_license/src/Scim/
 COPY src/Core/*.csproj ./src/Core/
 COPY src/Infrastructure.Dapper/*.csproj ./src/Infrastructure.Dapper/
 COPY src/Infrastructure.EntityFramework/*.csproj ./src/Infrastructure.EntityFramework/
@@ -85,6 +86,10 @@ RUN dotnet restore
 WORKDIR /source/bitwarden_license/src/Sso
 RUN dotnet restore
 
+# Restore Scim project dependencies and tools
+WORKDIR /source/bitwarden_license/src/Scim
+RUN dotnet restore
+
 # Copy required project files
 WORKDIR /source
 COPY src/Admin/. ./src/Admin/
@@ -95,6 +100,7 @@ COPY src/Icons/. ./src/Icons/
 COPY src/Identity/. ./src/Identity/
 COPY src/Notifications/. ./src/Notifications/
 COPY bitwarden_license/src/Sso/. ./bitwarden_license/src/Sso/
+COPY bitwarden_license/src/Scim/. ./bitwarden_license/src/Scim/
 COPY src/Core/. ./src/Core/
 COPY src/Infrastructure.Dapper/. ./src/Infrastructure.Dapper/
 COPY src/Infrastructure.EntityFramework/. ./src/Infrastructure.EntityFramework/
@@ -144,6 +150,10 @@ RUN npm install
 RUN gulp --gulpfile "gulpfile.js" build
 RUN dotnet publish -c release -o /app/Sso --no-restore
 
+# Build Scim app
+WORKDIR /source/bitwarden_license/src/Scim
+RUN dotnet publish -c release -o /app/Scim --no-restore
+
 ###############################################
 #                  App stage                  #
 ###############################################
@@ -152,32 +162,16 @@ LABEL com.bitwarden.product="bitwarden"
 LABEL com.bitwarden.project="lite"
 ENV ASPNETCORE_ENVIRONMENT=Production
 ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false
-ENV BW_SERVICE_NAME_ADMIN="localhost"
-ENV BW_SERVICE_NAME_API="localhost"
-ENV BW_SERVICE_NAME_ATTACHMENTS="localhost"
-ENV BW_SERVICE_NAME_EVENTS="localhost"
-ENV BW_SERVICE_NAME_ICONS="localhost"
-ENV BW_SERVICE_NAME_IDENTITY="localhost"
-ENV BW_SERVICE_NAME_NOTIFICATIONS="localhost"
-ENV BW_SERVICE_NAME_SSO="localhost"
-ENV BW_SERVICE_PORT_ADMIN="5000"
-ENV BW_SERVICE_PORT_API="5001"
-ENV BW_SERVICE_PORT_ATTACHMENTS="5002"
-ENV BW_SERVICE_PORT_EVENTS="5003"
-ENV BW_SERVICE_PORT_ICONS="5004"
-ENV BW_SERVICE_PORT_IDENTITY="5005"
-ENV BW_SERVICE_PORT_NOTIFICATIONS="5006"
-ENV BW_SERVICE_PORT_SSO="5007"
 ENV globalSettings__selfHosted="true"
 ENV globalSettings__pushRelayBaseUri="https://push.bitwarden.com"
 ENV globalSettings__baseServiceUri__internalAdmin="http://localhost:5000"
 ENV globalSettings__baseServiceUri__internalApi="http://localhost:5001"
-ENV globalSettings__baseServiceUri__internalAttachments="http://localhost:5002"
 ENV globalSettings__baseServiceUri__internalEvents="http://localhost:5003"
 ENV globalSettings__baseServiceUri__internalIcons="http://localhost:5004"
 ENV globalSettings__baseServiceUri__internalIdentity="http://localhost:5005"
 ENV globalSettings__baseServiceUri__internalNotifications="http://localhost:5006"
 ENV globalSettings__baseServiceUri__internalSso="http://localhost:5007"
+ENV globalSettings__baseServiceUri__internalScim="http://localhost:5002"
 ENV globalSettings__baseServiceUri__internalVault="http://localhost:80"
 ENV globalSettings__identityServer__certificatePassword="default_cert_password"
 ENV globalSettings__dataProtection__directory="/etc/bitwarden/data-protection"
