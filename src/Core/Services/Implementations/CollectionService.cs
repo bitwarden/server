@@ -60,14 +60,7 @@ public class CollectionService : ICollectionService
                 }
             }
 
-            if (groups == null || !org.UseGroups)
-            {
-                await _collectionRepository.CreateAsync(collection);
-            }
-            else
-            {
-                await _collectionRepository.CreateAsync(collection, groups);
-            }
+            await _collectionRepository.CreateAsync(collection, org.UseGroups ? groups : null, users);
 
             // Assign a user to the newly created collection.
             if (assignUserId.HasValue)

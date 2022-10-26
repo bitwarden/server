@@ -21,25 +21,47 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         return obj;
     }
 
-    public async Task CreateAsync(Core.Entities.Collection obj, IEnumerable<SelectionReadOnly> groups)
+    public async Task CreateAsync(Core.Entities.Collection obj, IEnumerable<SelectionReadOnly> groups, IEnumerable<SelectionReadOnly> users)
     {
         await base.CreateAsync(obj);
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var availibleGroups = await (from g in dbContext.Groups
-                                         where g.OrganizationId == obj.OrganizationId
-                                         select g.Id).ToListAsync();
-            var collectionGroups = groups
-                .Where(g => availibleGroups.Contains(g.Id))
-                .Select(g => new CollectionGroup
-                {
-                    CollectionId = obj.Id,
-                    GroupId = g.Id,
-                    ReadOnly = g.ReadOnly,
-                    HidePasswords = g.HidePasswords,
-                });
-            await dbContext.AddRangeAsync(collectionGroups);
+
+            if (groups != null)
+            {
+                var availableGroups = await (from g in dbContext.Groups
+                                             where g.OrganizationId == obj.OrganizationId
+                                             select g.Id).ToListAsync();
+                var collectionGroups = groups
+                    .Where(g => availableGroups.Contains(g.Id))
+                    .Select(g => new CollectionGroup
+                    {
+                        CollectionId = obj.Id,
+                        GroupId = g.Id,
+                        ReadOnly = g.ReadOnly,
+                        HidePasswords = g.HidePasswords,
+                    });
+                await dbContext.AddRangeAsync(collectionGroups);
+            }
+
+            if (users != null)
+            {
+                var availableUsers = await (from g in dbContext.OrganizationUsers
+                                             where g.OrganizationId == obj.OrganizationId
+                                             select g.Id).ToListAsync();
+                var collectionUsers = users
+                    .Where(u => availableUsers.Contains(u.Id))
+                    .Select(u => new CollectionUser
+                    {
+                        CollectionId = obj.Id,
+                        OrganizationUserId = u.Id,
+                        ReadOnly = u.ReadOnly,
+                        HidePasswords = u.HidePasswords,
+                    });
+                await dbContext.AddRangeAsync(collectionUsers);
+            }
+
             await dbContext.SaveChangesAsync();
             await UserBumpAccountRevisionDateByOrganizationId(obj.OrganizationId);
         }
