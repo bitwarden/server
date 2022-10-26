@@ -75,16 +75,27 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var collectionGroups = await (from cg in dbContext.CollectionGroups
-                                          where cg.CollectionId == id
-                                          select cg).ToListAsync();
-            var selectionReadOnlys = collectionGroups.Select(cg => new SelectionReadOnly
-            {
-                Id = cg.GroupId,
-                ReadOnly = cg.ReadOnly,
-                HidePasswords = cg.HidePasswords,
-            }).ToList();
-            return new Tuple<Core.Entities.Collection, ICollection<SelectionReadOnly>, ICollection<SelectionReadOnly>>(collection, selectionReadOnlys, Array.Empty<SelectionReadOnly>());
+            var groupQuery = from cg in dbContext.CollectionGroups
+                             where cg.CollectionId.Equals(id)
+                             select new SelectionReadOnly
+                             {
+                                 Id = cg.GroupId,
+                                 ReadOnly = cg.ReadOnly,
+                                 HidePasswords = cg.HidePasswords,
+                             };
+            var groupSelections = await groupQuery.ToArrayAsync();
+
+            var userQuery = from cg in dbContext.CollectionUsers
+                            where cg.CollectionId.Equals(id)
+                            select new SelectionReadOnly
+                            {
+                                Id = cg.OrganizationUserId,
+                                ReadOnly = cg.ReadOnly,
+                                HidePasswords = cg.HidePasswords,
+                            };
+            var userSelections = await userQuery.ToArrayAsync();
+
+            return new Tuple<Core.Entities.Collection, ICollection<SelectionReadOnly>, ICollection<SelectionReadOnly>>(collection, groupSelections, userSelections);
         }
     }
 
@@ -94,7 +105,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var query = from cg in dbContext.CollectionGroups
+            var groupQuery = from cg in dbContext.CollectionGroups
                         where cg.CollectionId.Equals(id)
                         select new SelectionReadOnly
                         {
@@ -102,8 +113,19 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                             ReadOnly = cg.ReadOnly,
                             HidePasswords = cg.HidePasswords,
                         };
-            var configurations = await query.ToArrayAsync();
-            return new Tuple<CollectionDetails, ICollection<SelectionReadOnly>, ICollection<SelectionReadOnly>>(collection, configurations, Array.Empty<SelectionReadOnly>());
+            var groupSelections = await groupQuery.ToArrayAsync();
+
+            var userQuery = from cg in dbContext.CollectionUsers
+                             where cg.CollectionId.Equals(id)
+                             select new SelectionReadOnly
+                             {
+                                 Id = cg.OrganizationUserId,
+                                 ReadOnly = cg.ReadOnly,
+                                 HidePasswords = cg.HidePasswords,
+                             };
+            var userSelections = await userQuery.ToArrayAsync();
+
+            return new Tuple<CollectionDetails, ICollection<SelectionReadOnly>, ICollection<SelectionReadOnly>>(collection, groupSelections, userSelections);
         }
     }
 
