@@ -5,6 +5,7 @@ VAULT_SERVICE_URI=https://$BW_DOMAIN
 MYSQL_CONNECTION_STRING="server=$BW_DB_SERVER;database=$BW_DB_DATABASE;user=$BW_DB_USERNAME;password=$BW_DB_PASSWORD"
 POSTGRESQL_CONNECTION_STRING="Host=$BW_DB_SERVER;Database=$BW_DB_DATABASE;Username=$BW_DB_USERNAME;Password=$BW_DB_PASSWORD"
 SQLSERVER_CONNECTION_STRING="Server=$BW_DB_SERVER;Database=$BW_DB_DATABASE;User Id=$BW_DB_USERNAME;Password=$BW_DB_PASSWORD;"
+IDENTITY_CERTIFICATE_PASSWORD=$(openssl rand -hex 32)
 INTERNAL_IDENTITY_KEY=$(openssl rand -hex 30)
 OIDC_IDENTITY_CLIENT_KEY=$(openssl rand -hex 30)
 DUO_AKEY=$(openssl rand -hex 30)
@@ -12,6 +13,7 @@ DUO_AKEY=$(openssl rand -hex 30)
 export globalSettings__baseServiceUri__vault=${globalSettings__baseServiceUri__vault:-$VAULT_SERVICE_URI}
 export globalSettings__installation__id=$BW_INSTALLATION_ID
 export globalSettings__installation__key=$BW_INSTALLATION_KEY
+export globalSettings__identityServer__certificatePassword=${globalSettings__identityServer__certificatePassword:-$IDENTITY_CERTIFICATE_PASSWORD}
 export globalSettings__internalIdentityKey=${globalSettings__internalIdentityKey:-$INTERNAL_IDENTITY_KEY}
 export globalSettings__oidcIdentityClientKey=${globalSettings__oidcIdentityClientKey:-$OIDC_IDENTITY_CLIENT_KEY}
 export globalSettings__duo__aKey=${globalSettings__duo__aKey:-$DUO_AKEY}
