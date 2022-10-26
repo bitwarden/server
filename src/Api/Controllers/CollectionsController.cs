@@ -110,11 +110,13 @@ public class CollectionsController : Controller
             throw new NotFoundException();
         }
 
+        var groups = model.Groups?.Select(g => g.ToSelectionReadOnly());
+        var users = model.Users?.Select(g => g.ToSelectionReadOnly());
+
         var assignUserToCollection = !(await _currentContext.EditAnyCollection(orgId)) &&
             await _currentContext.EditAssignedCollections(orgId);
 
-        await _collectionService.SaveAsync(collection, model.Groups?.Select(g => g.ToSelectionReadOnly()),
-            assignUserToCollection ? _currentContext.UserId : null);
+        await _collectionService.SaveAsync(collection, groups, users, assignUserToCollection ? _currentContext.UserId : null);
         return new CollectionResponseModel(collection);
     }
 
@@ -128,8 +130,9 @@ public class CollectionsController : Controller
         }
 
         var collection = await GetCollectionAsync(id, orgId);
-        await _collectionService.SaveAsync(model.ToCollection(collection),
-            model.Groups?.Select(g => g.ToSelectionReadOnly()));
+        var groups = model.Groups?.Select(g => g.ToSelectionReadOnly());
+        var users = model.Users?.Select(g => g.ToSelectionReadOnly());
+        await _collectionService.SaveAsync(model.ToCollection(collection), groups, users);
         return new CollectionResponseModel(collection);
     }
 

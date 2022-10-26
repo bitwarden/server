@@ -40,7 +40,7 @@ public class CollectionService : ICollectionService
     }
 
     public async Task SaveAsync(Collection collection, IEnumerable<SelectionReadOnly> groups = null,
-        Guid? assignUserId = null)
+        IEnumerable<SelectionReadOnly> users = null, Guid? assignUserId = null)
     {
         var org = await _organizationRepository.GetByIdAsync(collection.OrganizationId);
         if (org == null)
@@ -92,7 +92,7 @@ public class CollectionService : ICollectionService
             }
             else
             {
-                await _collectionRepository.ReplaceAsync(collection, groups ?? new List<SelectionReadOnly>());
+                await _collectionRepository.ReplaceAsync(collection, groups ?? new List<SelectionReadOnly>(), users ?? new List<SelectionReadOnly>());
             }
 
             await _eventService.LogCollectionEventAsync(collection, Enums.EventType.Collection_Updated);

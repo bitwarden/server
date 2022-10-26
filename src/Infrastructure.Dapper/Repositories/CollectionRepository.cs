@@ -121,7 +121,7 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
         }
     }
 
-    public async Task ReplaceAsync(Collection obj, IEnumerable<SelectionReadOnly> groups)
+    public async Task ReplaceAsync(Collection obj, IEnumerable<SelectionReadOnly> groups, IEnumerable<SelectionReadOnly> users)
     {
         var objWithGroups = JsonSerializer.Deserialize<CollectionWithGroups>(JsonSerializer.Serialize(obj));
         objWithGroups.Groups = groups.ToArrayTVP();
