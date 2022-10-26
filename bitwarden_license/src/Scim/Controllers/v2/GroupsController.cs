@@ -1,6 +1,6 @@
 ﻿using System.Text.Json;
 using Bit.Core.Entities;
-using Bit.Core.OrganizationFeatures.OrganizationGroups;
+using Bit.Core.OrganizationFeatures.Groups;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Scim.Context;

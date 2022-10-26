@@ -1,6 +1,6 @@
 ﻿using Bit.Core.Entities;
 
-namespace Bit.Core.OrganizationFeatures.OrganizationGroups;
+namespace Bit.Core.OrganizationFeatures.Groups;
 
 public interface IDeleteGroupCommand
 {

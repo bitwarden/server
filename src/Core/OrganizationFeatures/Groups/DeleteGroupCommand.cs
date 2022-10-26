@@ -2,7 +2,7 @@
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 
-namespace Bit.Core.OrganizationFeatures.OrganizationGroups;
+namespace Bit.Core.OrganizationFeatures.Groups;
 
 public class DeleteGroupCommand : IDeleteGroupCommand
 {
