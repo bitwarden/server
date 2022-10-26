@@ -96,16 +96,18 @@ public class GroupRepository : Repository<Core.Entities.Group, Group, Guid>, IGr
                 where cg.Group.OrganizationId == organizationId
                 select cg).ToListAsync();
 
+            var collections = query.GroupBy(c => c.GroupId).ToList();
+
             return groups.Select(group =>
                 new Tuple<Core.Entities.Group, ICollection<SelectionReadOnly>>(
                     group,
-                    query.Select(c => new SelectionReadOnly
-                    {
-                        Id = c.CollectionId,
-                        ReadOnly = c.ReadOnly,
-                        HidePasswords = c.HidePasswords,
-                    }).ToList()
-                )
+                    collections
+                        .FirstOrDefault(c => c.Key == group.Id)?
+                        .Select(c => new SelectionReadOnly
+                            {
+                                Id = c.CollectionId, HidePasswords = c.HidePasswords, ReadOnly = c.ReadOnly
+                            }
+                        ).ToList())
             ).ToList();
         }
     }
