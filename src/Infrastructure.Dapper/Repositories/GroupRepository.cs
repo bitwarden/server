@@ -72,7 +72,7 @@ public class GroupRepository : Repository<Group, Guid>, IGroupRepository
                                 HidePasswords = c.HidePasswords,
                                 ReadOnly = c.ReadOnly
                             }
-                            ).ToList())
+                            ).ToList() ?? new List<SelectionReadOnly>())
                 ).ToList();
         }
     }

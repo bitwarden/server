@@ -109,7 +109,7 @@ public class GroupRepository : Repository<Core.Entities.Group, Group, Guid>, IGr
                             HidePasswords = c.HidePasswords,
                             ReadOnly = c.ReadOnly
                         }
-                        ).ToList())
+                        ).ToList() ?? new List<SelectionReadOnly>())
             ).ToList();
         }
     }
