@@ -11,6 +11,7 @@ public interface IEventService
     Task LogCipherEventsAsync(IEnumerable<Tuple<Cipher, EventType, DateTime?>> events);
     Task LogCollectionEventAsync(Collection collection, EventType type, DateTime? date = null);
     Task LogGroupEventAsync(Group group, EventType type, DateTime? date = null);
+    Task LogGroupEventsAsync(IEnumerable<(Group group, EventType type, DateTime? date)> events);
     Task LogPolicyEventAsync(Policy policy, EventType type, DateTime? date = null);
     Task LogOrganizationUserEventAsync(OrganizationUser organizationUser, EventType type, DateTime? date = null);
     Task LogOrganizationUserEventsAsync(IEnumerable<(OrganizationUser, EventType, DateTime?)> events);

@@ -25,12 +25,13 @@ public class DeleteGroupCommand : IDeleteGroupCommand
     {
         var groupsToDelete = groups as Group[] ?? groups.ToArray();
 
-        var deleteDate = DateTime.UtcNow;
-        foreach (var group in groupsToDelete)
-        {
-            await _eventService.LogGroupEventAsync(group, Enums.EventType.Group_Deleted, deleteDate);
-        }
+        await _eventService.LogGroupEventsAsync(
+            groupsToDelete.Select(g =>
+                (g, Enums.EventType.Group_Deleted, (DateTime?)DateTime.UtcNow)
+            ));
 
-        await _groupRepository.DeleteManyAsync(groupsToDelete.Select(g => g.Id));
+        await _groupRepository.DeleteManyAsync(
+            groupsToDelete.Select(g => g.Id)
+            );
     }
 }
