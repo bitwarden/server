@@ -58,21 +58,20 @@ public class GroupRepository : Repository<Group, Guid>, IGroupRepository
                 commandType: CommandType.StoredProcedure);
 
             var groups = (await results.ReadAsync<Group>()).ToList();
-            var collections = (await results.ReadAsync<CollectionGroup>()).ToList();
+            var collections = (await results.ReadAsync<CollectionGroup>())
+                .GroupBy(c => c.GroupId)
+                .ToList();
 
             return groups.Select(group =>
-                new Tuple<Group, ICollection<SelectionReadOnly>>(
-                    group,
-                    collections
-                        .Where(c => c.GroupId == group.Id)
-                        .Select(c => new SelectionReadOnly
-                        {
-                            Id = c.CollectionId,
-                            HidePasswords = c.HidePasswords,
-                            ReadOnly = c.ReadOnly
-                        }).ToList()
-                )
-            ).ToList();
+                    new Tuple<Group, ICollection<SelectionReadOnly>>(
+                        group,
+                        collections.FirstOrDefault(c => c.Key == group.Id)?
+                            .Select(c => new SelectionReadOnly
+                                {
+                                    Id = c.CollectionId, HidePasswords = c.HidePasswords, ReadOnly = c.ReadOnly
+                                }
+                            ).ToList())
+                ).ToList();
         }
     }
 
