@@ -104,9 +104,11 @@ public class GroupRepository : Repository<Core.Entities.Group, Group, Guid>, IGr
                     collections
                         .FirstOrDefault(c => c.Key == group.Id)?
                         .Select(c => new SelectionReadOnly
-                            {
-                                Id = c.CollectionId, HidePasswords = c.HidePasswords, ReadOnly = c.ReadOnly
-                            }
+                        {
+                            Id = c.CollectionId,
+                            HidePasswords = c.HidePasswords,
+                            ReadOnly = c.ReadOnly
+                        }
                         ).ToList())
             ).ToList();
         }
