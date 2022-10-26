@@ -106,17 +106,19 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
         }
     }
 
-    public async Task CreateAsync(Collection obj, IEnumerable<SelectionReadOnly> groups)
+    public async Task CreateAsync(Collection obj, IEnumerable<SelectionReadOnly> groups, IEnumerable<SelectionReadOnly> users)
     {
         obj.SetNewId();
-        var objWithGroups = JsonSerializer.Deserialize<CollectionWithGroups>(JsonSerializer.Serialize(obj));
-        objWithGroups.Groups = groups.ToArrayTVP();
+        var objWithGroupsAndUsers = JsonSerializer.Deserialize<CollectionWithGroupsAndUsers>(JsonSerializer.Serialize(obj));
+
+        objWithGroupsAndUsers.Groups = groups != null ? groups.ToArrayTVP() : Enumerable.Empty<SelectionReadOnly>().ToArrayTVP();
+        objWithGroupsAndUsers.Users = users != null ? users.ToArrayTVP() : Enumerable.Empty<SelectionReadOnly>().ToArrayTVP();
 
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.ExecuteAsync(
-                $"[{Schema}].[Collection_CreateWithGroups]",
-                objWithGroups,
+                $"[{Schema}].[Collection_CreateWithGroupsAndUsers]",
+                objWithGroupsAndUsers,
                 commandType: CommandType.StoredProcedure);
         }
     }
@@ -184,5 +186,11 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
     public class CollectionWithGroups : Collection
     {
         public DataTable Groups { get; set; }
+    }
+
+    public class CollectionWithGroupsAndUsers : Collection
+    {
+        public DataTable Groups { get; set; }
+        public DataTable Users { get; set; }
     }
 }
