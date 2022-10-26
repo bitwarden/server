@@ -6,5 +6,5 @@ public interface IDeleteGroupCommand
 {
     Task DeleteAsync(Group group);
 
-    Task DeleteManyAsync(IEnumerable<Group> groupIds);
+    Task DeleteManyAsync(IEnumerable<Group> groups);
 }
