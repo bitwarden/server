@@ -118,8 +118,8 @@ public class GroupRepository : Repository<Core.Entities.Group, Group, Guid>, IGr
             var query = from g in dbContext.Groups
                         where groupIds.Contains(g.Id)
                         select g;
-            var data = await query.ToArrayAsync();
-            return data;
+            var groups = await query.ToListAsync();
+            return Mapper.Map<List<Core.Entities.Group>>(groups);
         }
     }
 
