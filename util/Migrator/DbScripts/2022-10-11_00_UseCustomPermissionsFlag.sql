@@ -398,7 +398,7 @@ GO
 -- Enable Existing Enterprise Customers to use Custom Permissions
 UPDATE  [dbo].[Organization]
 SET     [UseCustomPermissions] = 1
-WHERE   [PlanType] IN (10, 11) -- New Enterprise Annual/Monthly (not 2019)
+WHERE   [PlanType] IN (4, 5, 10, 11) -- Enterprise Annual/Monthly (2019 and 2020)
         AND [UseCustomPermissions] = 0;
 GO
 
@@ -408,5 +408,5 @@ SET [OU].[Type] = 3, [OU].Permissions = NULL
 FROM [dbo].[OrganizationUser] as OU
     LEFT JOIN
     [dbo].[Organization] O ON O.[Id] = OU.[OrganizationId]
-WHERE O.[PlanType] NOT IN (10, 11) AND OU.[Type] = 4
+WHERE O.[PlanType] NOT IN (4, 5, 10, 11) AND OU.[Type] = 4
 GO
