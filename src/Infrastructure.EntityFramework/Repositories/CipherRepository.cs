@@ -261,7 +261,7 @@ public class CipherRepository : Repository<Core.Entities.Cipher, Cipher, Guid>, 
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var query = new CipherOrganizationDetailsReadByOrgizationIdQuery(organizationId);
+            var query = new CipherOrganizationDetailsReadByOrganizationIdQuery(organizationId);
             var data = await query.Run(dbContext).ToListAsync();
             return data;
         }
