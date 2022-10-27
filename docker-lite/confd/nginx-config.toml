@@ -2,13 +2,13 @@
 src = "nginx-config.conf.tmpl"
 dest = "/etc/nginx/http.d/bitwarden.conf"
 keys = [
-  "BW_CA_ENABLE",
-  "BW_CA_CERT",
+  "BW_ENABLE_SSL_CA",
+  "BW_SSL_CA_CERT",
   "BW_CSP",
-  "BW_KEY_CONNECTOR_ENABLE",
+  "BW_ENABLE_KEY_CONNECTOR",
   "BW_KEY_CONNECTOR_INTERNAL_URL",
   "BW_REAL_IPS",
-  "BW_SSL_ENABLE",
+  "BW_ENABLE_SSL",
   "BW_SSL_CERT",
   "BW_SSL_CIPHERS",
   "BW_SSL_KEY",

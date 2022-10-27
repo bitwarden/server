@@ -7,8 +7,6 @@ services:
       - mysql
     env_file:
       - global-settings.env
-    environment:
-      BW_SSL_ENABLE: "true"
     image: ${REGISTRY:-bitwarden}/lite:${TAG:-latest}
     restart: always
     ports:
