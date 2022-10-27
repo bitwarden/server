@@ -49,45 +49,19 @@ public abstract class BaseIdentityClientService : IDisposable
     protected Task SendAsync(HttpMethod method, string path) =>
         SendAsync<object>(method, path, null);
 
-    protected async Task SendAsync<TRequest>(HttpMethod method, string path, TRequest requestModel)
+    protected Task SendAsync<TRequest>(HttpMethod method, string path, TRequest requestModel) =>
+        SendAsync<TRequest, object>(method, path, requestModel, false);
+
+    protected async Task<TResult> SendAsync<TRequest, TResult>(HttpMethod method, string path,
+        TRequest requestModel, bool hasJsonResult)
     {
         var fullRequestPath = string.Concat(Client.BaseAddress, path);
 
         var tokenStateResponse = await HandleTokenStateAsync();
         if (!tokenStateResponse)
         {
-            _logger.LogError("Unable to send {method} request to {requestUri} because an access token was unable to be obtained", method.Method, fullRequestPath);
-        }
-
-        var message = new TokenHttpRequestMessage(requestModel, AccessToken)
-        {
-            Method = method,
-            RequestUri = new Uri(fullRequestPath)
-        };
-        try
-        {
-            var response = await Client.SendAsync(message);
-
-            if (!response.IsSuccessStatusCode)
-            {
-                _logger.LogError("Request to {url} is unsuccessful with status of {code}-{reason}", message.RequestUri.ToString(), response.StatusCode, response.ReasonPhrase);
-            }
-
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(12334, e, "Failed to send to {0}.", message.RequestUri.ToString());
-        }
-    }
-
-    protected async Task<TResult> SendAsync<TRequest, TResult>(HttpMethod method, string path, TRequest requestModel)
-    {
-        var fullRequestPath = string.Concat(Client.BaseAddress, path);
-
-        var tokenStateResponse = await HandleTokenStateAsync();
-        if (!tokenStateResponse)
-        {
-            _logger.LogError("Unable to send {method} request to {requestUri} because an access token was unable to be obtained", method.Method, fullRequestPath);
+            _logger.LogError("Unable to send {method} request to {requestUri} because an access token was unable to be obtained",
+                method.Method, fullRequestPath);
             return default;
         }
 
@@ -99,17 +73,19 @@ public abstract class BaseIdentityClientService : IDisposable
         try
         {
             var response = await Client.SendAsync(message);
-
             if (response.IsSuccessStatusCode)
             {
-                return await response.Content.ReadFromJsonAsync<TResult>();
+                if (hasJsonResult)
+                {
+                    return await response.Content.ReadFromJsonAsync<TResult>();
+                }
             }
             else
             {
-                _logger.LogError("Request to {url} is unsuccessful with status of {code}-{reason}", message.RequestUri.ToString(), response.StatusCode, response.ReasonPhrase);
-                return default;
+                _logger.LogError("Request to {url} is unsuccessful with status of {code}-{reason}",
+                    message.RequestUri.ToString(), response.StatusCode, response.ReasonPhrase);
             }
-
+            return default;
         }
         catch (Exception e)
         {
