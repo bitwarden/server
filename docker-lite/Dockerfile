@@ -210,8 +210,8 @@ COPY --from=node-build /source/apps/web/build /app/Web
 # Set up supervisord
 RUN mkdir -p /etc/supervisor
 RUN mkdir -p /var/log/bitwarden
-COPY docker-lite/supervisord.ini /etc/supervisor.d/bitwarden-lite.ini
-COPY docker-lite/supervisord.conf /etc/supervisor/supervisord.conf
+COPY docker-lite/supervisord/*.ini /etc/supervisor.d/
+COPY docker-lite/supervisord/supervisord.conf /etc/supervisor/supervisord.conf
 RUN rm -f /etc/supervisord.conf
 
 # Set up nginx
@@ -249,6 +249,7 @@ RUN adduser -s /bin/false -D bitwarden && chown -R bitwarden:bitwarden \
     /etc/bitwarden \
     /etc/nginx/http.d \
     /etc/supervisor \
+    /etc/supervisor.d \
     /var/lib/nginx \
     /var/log \
     /run
