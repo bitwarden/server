@@ -240,6 +240,7 @@ public class StaticStore
                 Has2fa = true,
                 HasApi = true,
                 UsersGetPremium = true,
+                HasCustomPermissions = true,
 
                 UpgradeSortOrder = 3,
                 DisplaySortOrder = 3,
@@ -278,6 +279,7 @@ public class StaticStore
                 HasApi = true,
                 HasSelfHost = true,
                 UsersGetPremium = true,
+                HasCustomPermissions = true,
 
                 UpgradeSortOrder = 3,
                 DisplaySortOrder = 3,

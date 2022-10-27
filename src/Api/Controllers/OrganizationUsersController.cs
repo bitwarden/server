@@ -268,7 +268,7 @@ public class OrganizationUsersController : Controller
 
         if (model.Type == OrganizationUserType.Custom && !organization.UseCustomPermissions)
         {
-            throw new BadRequestException("To enable custom permissions the organization must be on an Enterprise 2020 plan.");
+            throw new BadRequestException("To enable custom permissions the organization must be on an Enterprise plan.");
         }
 
         var userId = _userService.GetProperUserId(User);
