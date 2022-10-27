@@ -74,11 +74,11 @@ public class SelfHostedSyncSponsorshipsCommand : BaseIdentityClientService, ISel
         {
             var response = await SendAsync<OrganizationSponsorshipSyncRequestModel, OrganizationSponsorshipSyncResponseModel>(
                 HttpMethod.Post, "organization/sponsorship/sync", new OrganizationSponsorshipSyncRequestModel
-            {
-                BillingSyncKey = billingSyncConfig.BillingSyncKey,
-                SponsoringOrganizationCloudId = cloudOrganizationId,
-                SponsorshipsBatch = orgSponsorshipsBatch.Select(s => new OrganizationSponsorshipRequestModel(s))
-            }, true);
+                {
+                    BillingSyncKey = billingSyncConfig.BillingSyncKey,
+                    SponsoringOrganizationCloudId = cloudOrganizationId,
+                    SponsorshipsBatch = orgSponsorshipsBatch.Select(s => new OrganizationSponsorshipRequestModel(s))
+                }, true);
 
             if (response == null)
             {
