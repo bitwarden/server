@@ -2,11 +2,11 @@
 
 namespace Bit.Infrastructure.EntityFramework.Repositories.Queries;
 
-public class CipherOrganizationDetailsReadByOrgizationIdQuery : IQuery<CipherOrganizationDetails>
+public class CipherOrganizationDetailsReadByOrganizationIdQuery : IQuery<CipherOrganizationDetails>
 {
     private readonly Guid _organizationId;
 
-    public CipherOrganizationDetailsReadByOrgizationIdQuery(Guid organizationId)
+    public CipherOrganizationDetailsReadByOrganizationIdQuery(Guid organizationId)
     {
         _organizationId = organizationId;
     }
