@@ -72,9 +72,9 @@ public class UserCipherDetailsQuery : IQuery<CipherDetails>
         if (userId.HasValue && !string.IsNullOrWhiteSpace(cipher.Folders))
         {
             var folders = JsonSerializer.Deserialize<Dictionary<Guid, Guid>>(cipher.Folders);
-            if (folders.ContainsKey(userId.Value))
+            if (folders.TryGetValue(userId.Value, out var folder)
             {
-                return folders[userId.Value];
+                return folder;
             }
         }
         return null;
