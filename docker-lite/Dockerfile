@@ -161,6 +161,14 @@ FROM mcr.microsoft.com/dotnet/aspnet:6.0-alpine
 LABEL com.bitwarden.product="bitwarden"
 LABEL com.bitwarden.project="lite"
 ENV ASPNETCORE_ENVIRONMENT=Production
+ENV BW_ENABLE_ADMIN=false
+ENV BW_ENABLE_API=true
+ENV BW_ENABLE_EVENTS=false
+ENV BW_ENABLE_ICONS=true
+ENV BW_ENABLE_IDENTITY=true
+ENV BW_ENABLE_NOTIFICATIONS=true
+ENV BW_ENABLE_SCIM=false
+ENV BW_ENABLE_SSO=false
 ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false
 ENV globalSettings__selfHosted="true"
 ENV globalSettings__pushRelayBaseUri="https://push.bitwarden.com"
@@ -210,8 +218,8 @@ COPY --from=node-build /source/apps/web/build /app/Web
 # Set up supervisord
 RUN mkdir -p /etc/supervisor
 RUN mkdir -p /var/log/bitwarden
-COPY docker-lite/supervisord.ini /etc/supervisor.d/bitwarden-lite.ini
-COPY docker-lite/supervisord.conf /etc/supervisor/supervisord.conf
+COPY docker-lite/supervisord/*.ini /etc/supervisor.d/
+COPY docker-lite/supervisord/supervisord.conf /etc/supervisor/supervisord.conf
 RUN rm -f /etc/supervisord.conf
 
 # Set up nginx
@@ -249,6 +257,7 @@ RUN adduser -s /bin/false -D bitwarden && chown -R bitwarden:bitwarden \
     /etc/bitwarden \
     /etc/nginx/http.d \
     /etc/supervisor \
+    /etc/supervisor.d \
     /var/lib/nginx \
     /var/log \
     /run
