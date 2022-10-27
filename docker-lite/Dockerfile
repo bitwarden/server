@@ -161,6 +161,14 @@ FROM mcr.microsoft.com/dotnet/aspnet:6.0-alpine
 LABEL com.bitwarden.product="bitwarden"
 LABEL com.bitwarden.project="lite"
 ENV ASPNETCORE_ENVIRONMENT=Production
+ENV BW_ENABLE_ADMIN=false
+ENV BW_ENABLE_API=true
+ENV BW_ENABLE_EVENTS=false
+ENV BW_ENABLE_ICONS=true
+ENV BW_ENABLE_IDENTITY=true
+ENV BW_ENABLE_NOTIFICATIONS=true
+ENV BW_ENABLE_SCIM=false
+ENV BW_ENABLE_SSO=false
 ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false
 ENV globalSettings__selfHosted="true"
 ENV globalSettings__pushRelayBaseUri="https://push.bitwarden.com"
