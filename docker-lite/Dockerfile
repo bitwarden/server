@@ -4,7 +4,7 @@
 FROM node:16-slim AS node-build
 
 # TODO: Change default branch name before merge into master
-ARG web_branch=beeep_bitwarden_lite
+ARG web_branch=master
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
@@ -37,7 +37,6 @@ RUN apk add --update-cache \
 WORKDIR /source
 COPY src/Admin/*.csproj ./src/Admin/
 COPY src/Api/*.csproj ./src/Api/
-COPY src/Attachments/*.csproj ./src/Attachments/
 COPY src/Events/*.csproj ./src/Events/
 COPY src/Icons/*.csproj ./src/Icons/
 COPY src/Identity/*.csproj ./src/Identity/
@@ -60,10 +59,6 @@ RUN dotnet restore
 
 # Restore Api project dependencies and tools
 WORKDIR /source/src/Api
-RUN dotnet restore
-
-# Restore Attachments project dependencies and tools
-WORKDIR /source/src/Attachments
 RUN dotnet restore
 
 # Restore Events project dependencies and tools
@@ -94,7 +89,6 @@ RUN dotnet restore
 WORKDIR /source
 COPY src/Admin/. ./src/Admin/
 COPY src/Api/. ./src/Api/
-COPY src/Attachments/. ./src/Attachments/
 COPY src/Events/. ./src/Events/
 COPY src/Icons/. ./src/Icons/
 COPY src/Identity/. ./src/Identity/
@@ -122,10 +116,6 @@ RUN dotnet publish -c release -o /app/Admin --no-restore
 # Build Api app
 WORKDIR /source/src/Api
 RUN dotnet publish -c release -o /app/Api --no-restore
-
-# Build Attachments app
-WORKDIR /source/src/Attachments
-RUN dotnet publish -c release -o /app/Attachments --no-restore
 
 # Build Events app
 WORKDIR /source/src/Events
