@@ -261,7 +261,7 @@ public class CipherRepository : Repository<Core.Entities.Cipher, Cipher, Guid>, 
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var query = new CipherOrganizationDetailsReadByIdQuery(organizationId);
+            var query = new CipherOrganizationDetailsReadByOrgizationIdQuery(organizationId);
             var data = await query.Run(dbContext).ToListAsync();
             return data;
         }
@@ -477,6 +477,16 @@ public class CipherRepository : Repository<Core.Entities.Cipher, Cipher, Guid>, 
 
     private async Task<DateTime> ToggleCipherStates(IEnumerable<Guid> ids, Guid userId, CipherStateAction action)
     {
+        static bool FilterDeletedDate(CipherStateAction action, CipherDetails ucd)
+        {
+            return action switch
+            {
+                CipherStateAction.Restore => ucd.DeletedDate != null,
+                CipherStateAction.SoftDelete => ucd.DeletedDate == null,
+                _ => true,
+            };
+        }
+
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
@@ -485,7 +495,7 @@ public class CipherRepository : Repository<Core.Entities.Cipher, Cipher, Guid>, 
             var query = from ucd in await (userCipherDetailsQuery.Run(dbContext)).ToListAsync()
                         join c in cipherEntitiesToCheck
                             on ucd.Id equals c.Id
-                        where ucd.Edit && ucd.DeletedDate == null
+                        where ucd.Edit && FilterDeletedDate(action, ucd)
                         select c;
 
             var utcNow = DateTime.UtcNow;
