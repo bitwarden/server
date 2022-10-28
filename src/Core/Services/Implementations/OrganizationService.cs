@@ -2368,16 +2368,18 @@ public class OrganizationService : IOrganizationService
     public async Task RestoreUserAsync(OrganizationUser organizationUser, Guid? restoringUserId,
         IUserService userService)
     {
-        await RepositoryRestoreUserAsync(organizationUser, restoringUserId, userService, systemUser: null);
+        await RepositoryRestoreUserAsync(organizationUser, restoringUserId, userService);
+        await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Restored);
     }
 
     public async Task RestoreUserAsync(OrganizationUser organizationUser, Guid? restoringUserId,
         IUserService userService, EventSystemUser systemUser)
     {
-        await RepositoryRestoreUserAsync(organizationUser, restoringUserId, userService, systemUser);
+        await RepositoryRestoreUserAsync(organizationUser, restoringUserId, userService);
+        await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Restored, systemUser);
     }
 
-    private async Task RepositoryRestoreUserAsync(OrganizationUser organizationUser, Guid? restoringUserId, IUserService userService, EventSystemUser? systemUser)
+    private async Task RepositoryRestoreUserAsync(OrganizationUser organizationUser, Guid? restoringUserId, IUserService userService)
     {
         if (organizationUser.Status != OrganizationUserStatusType.Revoked)
         {
@@ -2409,15 +2411,6 @@ public class OrganizationService : IOrganizationService
 
         await _organizationUserRepository.RestoreAsync(organizationUser.Id, status);
         organizationUser.Status = status;
-
-        if (systemUser.HasValue)
-        {
-            await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Restored, systemUser.Value);
-        }
-        else
-        {
-            await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Restored);
-        }
     }
 
     public async Task<List<Tuple<OrganizationUser, string>>> RestoreUsersAsync(Guid organizationId,
