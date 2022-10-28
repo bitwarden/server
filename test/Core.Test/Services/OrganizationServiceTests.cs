@@ -357,11 +357,6 @@ public class OrganizationServiceTests
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
         SutProvider<OrganizationService> sutProvider)
     {
-        // Autofixture will add collections for all of the invites, remove the first and for all the rest set all access false
-        invites.First().invite.AccessAll = true;
-        invites.First().invite.Collections = null;
-        invites.Skip(1).ToList().ForEach(i => i.invite.AccessAll = false);
-
         invitor.Permissions = JsonSerializer.Serialize(new Permissions() { ManageUsers = true },
             new JsonSerializerOptions
             {
@@ -396,11 +391,6 @@ public class OrganizationServiceTests
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
         SutProvider<OrganizationService> sutProvider)
     {
-        // Autofixture will add collections for all of the invites, remove the first and for all the rest set all access false
-        invites.First().invite.AccessAll = true;
-        invites.First().invite.Collections = null;
-        invites.Skip(1).ToList().ForEach(i => i.invite.AccessAll = false);
-
         invitor.Permissions = JsonSerializer.Serialize(new Permissions() { ManageUsers = true },
             new JsonSerializerOptions
             {
