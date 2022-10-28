@@ -562,7 +562,15 @@ public class CipherRepository : Repository<Core.Entities.Cipher, Cipher, Guid>, 
             var attachments = string.IsNullOrWhiteSpace(cipher.Attachments) ?
                 new Dictionary<string, CipherAttachment.MetaData>() :
                 JsonConvert.DeserializeObject<Dictionary<string, CipherAttachment.MetaData>>(cipher.Attachments);
-            attachments.Add(attachment.AttachmentId, JsonConvert.DeserializeObject<CipherAttachment.MetaData>(attachment.AttachmentData));
+            var metaData = JsonConvert.DeserializeObject<CipherAttachment.MetaData>(attachment.AttachmentData);
+            if (attachments.ContainsKey(attachment.AttachmentId))
+            {
+                attachments[attachment.AttachmentId] = metaData;
+            }
+            else
+            {
+                attachments.Add(attachment.AttachmentId, metaData);
+            }
             cipher.Attachments = JsonConvert.SerializeObject(attachments);
             await dbContext.SaveChangesAsync();
 
