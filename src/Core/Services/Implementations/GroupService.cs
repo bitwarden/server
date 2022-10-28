@@ -104,26 +104,14 @@ public class GroupService : IGroupService
 
     public async Task DeleteAsync(Group group)
     {
-        await GroupRepositoryDeleteAsync(group, systemUser: null);
+        await _groupRepository.DeleteAsync(group);
+        await _eventService.LogGroupEventAsync(group, EventType.Group_Deleted);
     }
 
     public async Task DeleteAsync(Group group, EventSystemUser systemUser)
     {
-        await GroupRepositoryDeleteAsync(group, systemUser);
-    }
-
-    private async Task GroupRepositoryDeleteAsync(Group group, EventSystemUser? systemUser)
-    {
         await _groupRepository.DeleteAsync(group);
-
-        if (systemUser.HasValue)
-        {
-            await _eventService.LogGroupEventAsync(group, EventType.Group_Deleted, systemUser.Value);
-        }
-        else
-        {
-            await _eventService.LogGroupEventAsync(group, EventType.Group_Deleted);
-        }
+        await _eventService.LogGroupEventAsync(group, EventType.Group_Deleted, systemUser);
     }
 
     public async Task DeleteUserAsync(Group group, Guid organizationUserId)
