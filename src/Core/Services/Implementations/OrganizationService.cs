@@ -1115,17 +1115,25 @@ public class OrganizationService : IOrganizationService
     public async Task<List<OrganizationUser>> InviteUsersAsync(Guid organizationId, Guid? invitingUserId,
         IEnumerable<(OrganizationUserInvite invite, string externalId)> invites)
     {
-        return await SaveUsersSendInvitesAsync(organizationId, invitingUserId, invites, systemUser: null);
+        var organizationUsers = await SaveUsersSendInvitesAsync(organizationId, invitingUserId, invites);
+
+        await _eventService.LogOrganizationUserEventsAsync(organizationUsers.Select(e => (e, EventType.OrganizationUser_Invited, (DateTime?)DateTime.UtcNow)));
+
+        return organizationUsers;
     }
 
     public async Task<List<OrganizationUser>> InviteUsersAsync(Guid organizationId, Guid? invitingUserId,
         IEnumerable<(OrganizationUserInvite invite, string externalId)> invites, EventSystemUser systemUser)
     {
-        return await SaveUsersSendInvitesAsync(organizationId, invitingUserId, invites, systemUser);
+        var organizationUsers = await SaveUsersSendInvitesAsync(organizationId, invitingUserId, invites);
+
+        await _eventService.LogOrganizationUserEventsAsync(organizationUsers.Select(e => (e, EventType.OrganizationUser_Invited, systemUser, (DateTime?)DateTime.UtcNow)));
+
+        return organizationUsers;
     }
 
     private async Task<List<OrganizationUser>> SaveUsersSendInvitesAsync(Guid organizationId, Guid? invitingUserId,
-        IEnumerable<(OrganizationUserInvite invite, string externalId)> invites, EventSystemUser? systemUser)
+        IEnumerable<(OrganizationUserInvite invite, string externalId)> invites)
     {
         var organization = await GetOrgById(organizationId);
         var initialSeatCount = organization.Seats;
@@ -1246,15 +1254,6 @@ public class OrganizationService : IOrganizationService
 
             await AutoAddSeatsAsync(organization, newSeatsRequired, prorationDate);
             await SendInvitesAsync(orgUsers.Concat(limitedCollectionOrgUsers.Select(u => u.Item1)), organization);
-
-            if (systemUser.HasValue)
-            {
-                await _eventService.LogOrganizationUserEventsAsync(events.Select(e => (e.Item1, e.Item2, systemUser.Value, e.Item3)));
-            }
-            else
-            {
-                await _eventService.LogOrganizationUserEventsAsync(events);
-            }
 
             await _referenceEventService.RaiseEventAsync(
                 new ReferenceEvent(ReferenceEventType.InvitedUsers, organization)
