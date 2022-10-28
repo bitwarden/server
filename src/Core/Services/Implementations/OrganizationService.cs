@@ -2268,16 +2268,18 @@ public class OrganizationService : IOrganizationService
 
     public async Task RevokeUserAsync(OrganizationUser organizationUser, Guid? revokingUserId)
     {
-        await RepositoryRevokeUserAsync(organizationUser, revokingUserId, systemUser: null);
+        await RepositoryRevokeUserAsync(organizationUser, revokingUserId);
+        await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Revoked);
     }
 
     public async Task RevokeUserAsync(OrganizationUser organizationUser, Guid? revokingUserId,
         EventSystemUser systemUser)
     {
-        await RepositoryRevokeUserAsync(organizationUser, revokingUserId, systemUser);
+        await RepositoryRevokeUserAsync(organizationUser, revokingUserId);
+        await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Revoked, systemUser);
     }
 
-    private async Task RepositoryRevokeUserAsync(OrganizationUser organizationUser, Guid? revokingUserId, EventSystemUser? systemUser)
+    private async Task RepositoryRevokeUserAsync(OrganizationUser organizationUser, Guid? revokingUserId)
     {
         if (organizationUser.Status == OrganizationUserStatusType.Revoked)
         {
@@ -2302,15 +2304,6 @@ public class OrganizationService : IOrganizationService
 
         await _organizationUserRepository.RevokeAsync(organizationUser.Id);
         organizationUser.Status = OrganizationUserStatusType.Revoked;
-
-        if (systemUser.HasValue)
-        {
-            await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Revoked, systemUser.Value);
-        }
-        else
-        {
-            await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Revoked);
-        }
     }
 
     public async Task<List<Tuple<OrganizationUser, string>>> RevokeUsersAsync(Guid organizationId,
