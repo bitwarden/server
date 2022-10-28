@@ -102,12 +102,14 @@ public class GroupService : IGroupService
         }
     }
 
+    [Obsolete("IDeleteGroupCommand should be used instead. To be removed by EC-608.")]
     public async Task DeleteAsync(Group group)
     {
         await _groupRepository.DeleteAsync(group);
         await _eventService.LogGroupEventAsync(group, EventType.Group_Deleted);
     }
 
+    [Obsolete("IDeleteGroupCommand should be used instead. To be removed by EC-608.")]
     public async Task DeleteAsync(Group group, EventSystemUser systemUser)
     {
         await _groupRepository.DeleteAsync(group);
