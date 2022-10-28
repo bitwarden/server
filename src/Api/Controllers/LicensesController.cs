@@ -61,7 +61,7 @@ public class LicensesController : Controller
         {
             return null;
         }
-        
+
         if (!org.LicenseKey.Equals(key))
         {
             await Task.Delay(2000);

@@ -1,6 +1,6 @@
-﻿using Bit.Core.Models.Business;
-using Bit.Core.Entities;
+﻿using Bit.Core.Entities;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Business;
 using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -22,7 +22,7 @@ public class GetOrganizationLicenseQuery : IGetOrganizationLicenseQuery
         _paymentService = paymentService;
         _licensingService = licensingService;
     }
-    
+
     public async Task<OrganizationLicense> GetLicenseAsync(Organization organization, Guid installationId,
         int? version = null)
     {

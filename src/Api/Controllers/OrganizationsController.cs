@@ -149,7 +149,7 @@ public class OrganizationsController : Controller
         {
             throw new NotFoundException();
         }
-        
+
         var org = await _organizationRepository.GetByIdAsync(new Guid(id));
         var license = await _getOrganizationLicenseQuery.GetLicenseAsync(org, installationId);
         if (license == null)
