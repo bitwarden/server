@@ -72,8 +72,8 @@ server {
     add_header Content-Type $fido_content_type;
   }
 
-  location /attachments/ {
-    root /etc/bitwarden/attachments;
+  location /attachments {
+    alias /etc/bitwarden/attachments/;
   }
 
   location /api/ {
