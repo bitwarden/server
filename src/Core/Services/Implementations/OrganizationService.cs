@@ -1665,16 +1665,18 @@ public class OrganizationService : IOrganizationService
 
     public async Task DeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid? deletingUserId)
     {
-        await RepositoryDeleteUserAsync(organizationId, organizationUserId, deletingUserId, systemUser: null);
+        var orgUser = await RepositoryDeleteUserAsync(organizationId, organizationUserId, deletingUserId);
+        await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Removed);
     }
 
     public async Task DeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid? deletingUserId,
         EventSystemUser systemUser)
     {
-        await RepositoryDeleteUserAsync(organizationId, organizationUserId, deletingUserId, systemUser);
+        var orgUser = await RepositoryDeleteUserAsync(organizationId, organizationUserId, deletingUserId);
+        await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Removed, systemUser);
     }
 
-    private async Task RepositoryDeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid? deletingUserId, EventSystemUser? systemUser)
+    private async Task<OrganizationUser> RepositoryDeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid? deletingUserId)
     {
         var orgUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
         if (orgUser == null || orgUser.OrganizationId != organizationId)
@@ -1700,19 +1702,12 @@ public class OrganizationService : IOrganizationService
 
         await _organizationUserRepository.DeleteAsync(orgUser);
 
-        if (systemUser.HasValue)
-        {
-            await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Removed, systemUser.Value);
-        }
-        else
-        {
-            await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Removed);
-        }
-
         if (orgUser.UserId.HasValue)
         {
             await DeleteAndPushUserRegistrationAsync(organizationId, orgUser.UserId.Value);
         }
+
+        return orgUser;
     }
 
     public async Task DeleteUserAsync(Guid organizationId, Guid userId)
