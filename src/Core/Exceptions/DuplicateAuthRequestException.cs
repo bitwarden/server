@@ -3,7 +3,7 @@
 public class DuplicateAuthRequestException : Exception
 {
     public DuplicateAuthRequestException()
-        : base("An authentication request with the same device already exist.")
+        : base("An authentication request with the same device already exists.")
     {
 
     }
