@@ -79,15 +79,7 @@ public class CollectionService : ICollectionService
         }
         else
         {
-            if (!org.UseGroups)
-            {
-                await _collectionRepository.ReplaceAsync(collection);
-            }
-            else
-            {
-                await _collectionRepository.ReplaceAsync(collection, groups ?? new List<SelectionReadOnly>(), users ?? new List<SelectionReadOnly>());
-            }
-
+            await _collectionRepository.ReplaceAsync(collection, org.UseGroups ? groups : null, users);
             await _eventService.LogCollectionEventAsync(collection, Enums.EventType.Collection_Updated);
         }
     }
