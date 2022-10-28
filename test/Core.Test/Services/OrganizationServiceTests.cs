@@ -186,11 +186,13 @@ public class OrganizationServiceTests
     }
 
     [Theory]
-    [OrganizationInviteCustomize, BitAutoData]
+    [OrganizationInviteCustomize(InviteeUserType = OrganizationUserType.User,
+         InvitorUserType = OrganizationUserType.Owner), BitAutoData]
     public async Task InviteUser_NoEmails_Throws(Organization organization, OrganizationUser invitor,
         OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
     {
         invite.Emails = null;
+        sutProvider.GetDependency<ICurrentContext>().ManageUsers(organization.Id).Returns(true);
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         await Assert.ThrowsAsync<NotFoundException>(
             () => sutProvider.Sut.InviteUsersAsync(organization.Id, invitor.UserId, new (OrganizationUserInvite, string)[] { (invite, null) }));
@@ -406,7 +408,7 @@ public class OrganizationServiceTests
             .Returns(new[] { owner });
         currentContext.ManageUsers(organization.Id).Returns(true);
 
-        await sutProvider.Sut.InviteUsersAsync(organization.Id, invitor.UserId, invites, eventSystemUser);
+        await sutProvider.Sut.InviteUsersAsync(organization.Id, eventSystemUser, invites);
 
         await sutProvider.GetDependency<IMailService>().Received(1)
             .BulkSendOrganizationInviteEmailAsync(organization.Name,
@@ -556,7 +558,7 @@ public class OrganizationServiceTests
             .Returns(new[] { deletingUser, organizationUser });
         currentContext.OrganizationOwner(deletingUser.OrganizationId).Returns(true);
 
-        await sutProvider.Sut.DeleteUserAsync(deletingUser.OrganizationId, organizationUser.Id, deletingUser.UserId, eventSystemUser);
+        await sutProvider.Sut.DeleteUserAsync(deletingUser.OrganizationId, organizationUser.Id, eventSystemUser);
 
         await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Removed, eventSystemUser);
     }
@@ -1050,7 +1052,7 @@ public class OrganizationServiceTests
             .Returns(new[] { owner });
         var eventService = sutProvider.GetDependency<IEventService>();
 
-        await sutProvider.Sut.RevokeUserAsync(organizationUser, owner.Id, eventSystemUser);
+        await sutProvider.Sut.RevokeUserAsync(organizationUser, eventSystemUser);
 
         await organizationUserRepository.Received().RevokeAsync(organizationUser.Id);
         await eventService.Received()
@@ -1094,7 +1096,7 @@ public class OrganizationServiceTests
             .Returns(new[] { owner });
         var eventService = sutProvider.GetDependency<IEventService>();
 
-        await sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id, userService, eventSystemUser);
+        await sutProvider.Sut.RestoreUserAsync(organizationUser, eventSystemUser, userService);
 
         await organizationUserRepository.Received().RestoreAsync(organizationUser.Id, OrganizationUserStatusType.Invited);
         await eventService.Received()

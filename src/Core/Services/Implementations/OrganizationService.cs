@@ -1115,33 +1115,6 @@ public class OrganizationService : IOrganizationService
     public async Task<List<OrganizationUser>> InviteUsersAsync(Guid organizationId, Guid? invitingUserId,
         IEnumerable<(OrganizationUserInvite invite, string externalId)> invites)
     {
-        var organizationUsers = await SaveUsersSendInvitesAsync(organizationId, invitingUserId, invites);
-
-        await _eventService.LogOrganizationUserEventsAsync(organizationUsers.Select(e => (e, EventType.OrganizationUser_Invited, (DateTime?)DateTime.UtcNow)));
-
-        return organizationUsers;
-    }
-
-    public async Task<List<OrganizationUser>> InviteUsersAsync(Guid organizationId, Guid? invitingUserId,
-        IEnumerable<(OrganizationUserInvite invite, string externalId)> invites, EventSystemUser systemUser)
-    {
-        var organizationUsers = await SaveUsersSendInvitesAsync(organizationId, invitingUserId, invites);
-
-        await _eventService.LogOrganizationUserEventsAsync(organizationUsers.Select(e => (e, EventType.OrganizationUser_Invited, systemUser, (DateTime?)DateTime.UtcNow)));
-
-        return organizationUsers;
-    }
-
-    private async Task<List<OrganizationUser>> SaveUsersSendInvitesAsync(Guid organizationId, Guid? invitingUserId,
-        IEnumerable<(OrganizationUserInvite invite, string externalId)> invites)
-    {
-        var organization = await GetOrgById(organizationId);
-        var initialSeatCount = organization.Seats;
-        if (organization == null || invites.Any(i => i.invite.Emails == null))
-        {
-            throw new NotFoundException();
-        }
-
         var inviteTypes = new HashSet<OrganizationUserType>(invites.Where(i => i.invite.Type.HasValue)
             .Select(i => i.invite.Type.Value));
         if (invitingUserId.HasValue && inviteTypes.Count > 0)
@@ -1150,6 +1123,33 @@ public class OrganizationService : IOrganizationService
             {
                 await ValidateOrganizationUserUpdatePermissions(organizationId, type, null);
             }
+        }
+
+        var organizationUsers = await SaveUsersSendInvitesAsync(organizationId, invites);
+
+        await _eventService.LogOrganizationUserEventsAsync(organizationUsers.Select(e => (e, EventType.OrganizationUser_Invited, (DateTime?)DateTime.UtcNow)));
+
+        return organizationUsers;
+    }
+
+    public async Task<List<OrganizationUser>> InviteUsersAsync(Guid organizationId, EventSystemUser systemUser,
+        IEnumerable<(OrganizationUserInvite invite, string externalId)> invites)
+    {
+        var organizationUsers = await SaveUsersSendInvitesAsync(organizationId, invites);
+
+        await _eventService.LogOrganizationUserEventsAsync(organizationUsers.Select(e => (e, EventType.OrganizationUser_Invited, systemUser, (DateTime?)DateTime.UtcNow)));
+
+        return organizationUsers;
+    }
+
+    private async Task<List<OrganizationUser>> SaveUsersSendInvitesAsync(Guid organizationId,
+        IEnumerable<(OrganizationUserInvite invite, string externalId)> invites)
+    {
+        var organization = await GetOrgById(organizationId);
+        var initialSeatCount = organization.Seats;
+        if (organization == null || invites.Any(i => i.invite.Emails == null))
+        {
+            throw new NotFoundException();
         }
 
         var newSeatsRequired = 0;
@@ -1669,10 +1669,10 @@ public class OrganizationService : IOrganizationService
         await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Removed);
     }
 
-    public async Task DeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid? deletingUserId,
+    public async Task DeleteUserAsync(Guid organizationId, Guid organizationUserId,
         EventSystemUser systemUser)
     {
-        var orgUser = await RepositoryDeleteUserAsync(organizationId, organizationUserId, deletingUserId);
+        var orgUser = await RepositoryDeleteUserAsync(organizationId, organizationUserId, null);
         await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Removed, systemUser);
     }
 
@@ -1884,20 +1884,17 @@ public class OrganizationService : IOrganizationService
     public async Task<OrganizationUser> InviteUserAsync(Guid organizationId, Guid? invitingUserId, string email,
         OrganizationUserType type, bool accessAll, string externalId, IEnumerable<SelectionReadOnly> collections)
     {
-        return await SaveUserSendInviteAsync(organizationId, invitingUserId, email, type, accessAll, externalId, collections,
-            systemUser: null);
+        return await SaveUserSendInviteAsync(organizationId, invitingUserId, systemUser: null, email, type, accessAll, externalId, collections);
     }
 
-    public async Task<OrganizationUser> InviteUserAsync(Guid organizationId, Guid? invitingUserId, string email,
-        OrganizationUserType type, bool accessAll, string externalId, IEnumerable<SelectionReadOnly> collections,
-        EventSystemUser systemUser)
+    public async Task<OrganizationUser> InviteUserAsync(Guid organizationId, EventSystemUser systemUser, string email,
+        OrganizationUserType type, bool accessAll, string externalId, IEnumerable<SelectionReadOnly> collections)
     {
-        return await SaveUserSendInviteAsync(organizationId, invitingUserId, email, type, accessAll, externalId, collections,
-            systemUser);
+        return await SaveUserSendInviteAsync(organizationId, invitingUserId: null, systemUser, email, type, accessAll, externalId, collections);
     }
 
-    private async Task<OrganizationUser> SaveUserSendInviteAsync(Guid organizationId, Guid? invitingUserId, string email,
-        OrganizationUserType type, bool accessAll, string externalId, IEnumerable<SelectionReadOnly> collections, EventSystemUser? systemUser)
+    private async Task<OrganizationUser> SaveUserSendInviteAsync(Guid organizationId, Guid? invitingUserId, EventSystemUser? systemUser, string email,
+        OrganizationUserType type, bool accessAll, string externalId, IEnumerable<SelectionReadOnly> collections)
     {
         var invite = new OrganizationUserInvite()
         {
@@ -1906,8 +1903,8 @@ public class OrganizationService : IOrganizationService
             AccessAll = accessAll,
             Collections = collections,
         };
-        var results = systemUser.HasValue ? await InviteUsersAsync(organizationId, invitingUserId,
-            new (OrganizationUserInvite, string)[] { (invite, externalId) }, systemUser.Value) : await InviteUsersAsync(organizationId, invitingUserId,
+        var results = systemUser.HasValue ? await InviteUsersAsync(organizationId, systemUser.Value,
+            new (OrganizationUserInvite, string)[] { (invite, externalId) }) : await InviteUsersAsync(organizationId, invitingUserId,
             new (OrganizationUserInvite, string)[] { (invite, externalId) });
         var result = results.FirstOrDefault();
         if (result == null)
@@ -2272,10 +2269,10 @@ public class OrganizationService : IOrganizationService
         await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Revoked);
     }
 
-    public async Task RevokeUserAsync(OrganizationUser organizationUser, Guid? revokingUserId,
+    public async Task RevokeUserAsync(OrganizationUser organizationUser,
         EventSystemUser systemUser)
     {
-        await RepositoryRevokeUserAsync(organizationUser, revokingUserId);
+        await RepositoryRevokeUserAsync(organizationUser, null);
         await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Revoked, systemUser);
     }
 
@@ -2372,10 +2369,10 @@ public class OrganizationService : IOrganizationService
         await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Restored);
     }
 
-    public async Task RestoreUserAsync(OrganizationUser organizationUser, Guid? restoringUserId,
-        IUserService userService, EventSystemUser systemUser)
+    public async Task RestoreUserAsync(OrganizationUser organizationUser, EventSystemUser systemUser,
+        IUserService userService)
     {
-        await RepositoryRestoreUserAsync(organizationUser, restoringUserId, userService);
+        await RepositoryRestoreUserAsync(organizationUser, restoringUserId: null, userService);
         await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Restored, systemUser);
     }
 
