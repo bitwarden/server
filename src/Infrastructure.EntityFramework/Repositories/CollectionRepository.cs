@@ -48,8 +48,8 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
             if (users != null)
             {
                 var availableUsers = await (from g in dbContext.OrganizationUsers
-                                             where g.OrganizationId == obj.OrganizationId
-                                             select g.Id).ToListAsync();
+                                            where g.OrganizationId == obj.OrganizationId
+                                            select g.Id).ToListAsync();
                 var collectionUsers = users
                     .Where(u => availableUsers.Contains(u.Id))
                     .Select(u => new CollectionUser
@@ -128,23 +128,23 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         {
             var dbContext = GetDatabaseContext(scope);
             var groupQuery = from cg in dbContext.CollectionGroups
-                        where cg.CollectionId.Equals(id)
-                        select new SelectionReadOnly
-                        {
-                            Id = cg.GroupId,
-                            ReadOnly = cg.ReadOnly,
-                            HidePasswords = cg.HidePasswords,
-                        };
-            var groupSelections = await groupQuery.ToArrayAsync();
-
-            var userQuery = from cg in dbContext.CollectionUsers
                              where cg.CollectionId.Equals(id)
                              select new SelectionReadOnly
                              {
-                                 Id = cg.OrganizationUserId,
+                                 Id = cg.GroupId,
                                  ReadOnly = cg.ReadOnly,
                                  HidePasswords = cg.HidePasswords,
                              };
+            var groupSelections = await groupQuery.ToArrayAsync();
+
+            var userQuery = from cg in dbContext.CollectionUsers
+                            where cg.CollectionId.Equals(id)
+                            select new SelectionReadOnly
+                            {
+                                Id = cg.OrganizationUserId,
+                                ReadOnly = cg.ReadOnly,
+                                HidePasswords = cg.HidePasswords,
+                            };
             var userSelections = await userQuery.ToArrayAsync();
 
             return new Tuple<CollectionDetails, ICollection<SelectionReadOnly>, ICollection<SelectionReadOnly>>(collection, groupSelections, userSelections);
@@ -238,7 +238,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
 
     private async Task ReplaceCollectionGroupsAsync(DatabaseContext dbContext, Core.Entities.Collection collection, IEnumerable<SelectionReadOnly> groups)
     {
-        
+
         var groupsInOrg = dbContext.Groups.Where(g => g.OrganizationId == collection.OrganizationId);
         var modifiedGroupEntities = dbContext.Groups.Where(x => groups.Select(x => x.Id).Contains(x.Id));
         var target = (from cg in dbContext.CollectionGroups
