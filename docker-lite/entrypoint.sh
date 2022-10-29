@@ -48,7 +48,7 @@ cp /etc/bitwarden/identity.pfx /app/Identity/identity.pfx
 cp /etc/bitwarden/identity.pfx /app/Sso/identity.pfx
 
 # Generate SSL certificates
-if [ "$BW_SSL_ENABLE" == "true" -a ! -f /etc/bitwarden/ssl.key ]; then
+if [ "$BW_ENABLE_SSL" == "true" -a ! -f /etc/bitwarden/ssl.key ]; then
   openssl req \
   -x509 \
   -newkey rsa:4096 \

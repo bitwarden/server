@@ -2,7 +2,7 @@ server {
   listen 80 default_server;
   #listen [::]:80 default_server;
   server_name {{ getenv "BW_DOMAIN" "localhost" }};
-{{ if eq (getenv "BW_SSL_ENABLE") "true" }}
+{{ if eq (getenv "BW_ENABLE_SSL") "true" }}
 
   return 301 https://{{ getenv "BW_DOMAIN" "localhost" }}$request_uri;
 }
@@ -22,7 +22,7 @@ server {
   ssl_ciphers "{{ getenv "BW_SSL_CIPHERS" "ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256" }}";
   # Enables server-side protection from BEAST attacks
   ssl_prefer_server_ciphers on;
-{{ if eq (getenv "BW_CA_ENABLE") "true" }}
+{{ if eq (getenv "BW_ENABLE_SSL_CA") "true" }}
 
   # OCSP Stapling ---
   # Fetch OCSP records from URL in ssl_certificate and cache them
@@ -30,7 +30,7 @@ server {
   ssl_stapling_verify on;
 
   # Verify chain of trust of OCSP response using Root CA and Intermediate certs
-  ssl_trusted_certificate /etc/bitwarden/{{ getenv "BW_CA_CERT" "ca.crt" }};
+  ssl_trusted_certificate /etc/bitwarden/{{ getenv "BW_SSL_CA_CERT" "ca.crt" }};
   resolver 1.1.1.1 1.0.0.1 9.9.9.9 149.112.112.112 valid=300s;
 {{ end }}
 
@@ -48,7 +48,7 @@ server {
 
   location / {
     root /app/Web;
-{{ if eq (getenv "BW_SSL_ENABLE") "true" }}
+{{ if eq (getenv "BW_ENABLE_SSL") "true" }}
     include /etc/nginx/security-headers-ssl.conf;
 {{ end }}
     include /etc/nginx/security-headers.conf;
@@ -64,7 +64,7 @@ server {
 
   location = /app-id.json {
     root /app/Web;
-{{ if eq (getenv "BW_SSL_ENABLE") "true" }}
+{{ if eq (getenv "BW_ENABLE_SSL") "true" }}
     include /etc/nginx/security-headers-ssl.conf;
 {{ end }}
     include /etc/nginx/security-headers.conf;
@@ -72,8 +72,8 @@ server {
     add_header Content-Type $fido_content_type;
   }
 
-  location /attachments/ {
-    root /etc/bitwarden/attachments;
+  location /attachments {
+    alias /etc/bitwarden/attachments/;
   }
 
   location /api/ {
@@ -100,7 +100,7 @@ server {
 
   location /sso {
     proxy_pass http://localhost:5007;
-{{ if eq (getenv "BW_SSL_ENABLE") "true" }}
+{{ if eq (getenv "BW_ENABLE_SSL") "true" }}
     include /etc/nginx/security-headers-ssl.conf;
 {{ end }}
     include /etc/nginx/security-headers.conf;
@@ -109,7 +109,7 @@ server {
 
   location /identity {
     proxy_pass http://localhost:5005;
-{{ if eq (getenv "BW_SSL_ENABLE") "true" }}
+{{ if eq (getenv "BW_ENABLE_SSL") "true" }}
     include /etc/nginx/security-headers-ssl.conf;
 {{ end }}
     include /etc/nginx/security-headers.conf;
@@ -118,14 +118,14 @@ server {
 
   location /admin {
     proxy_pass http://localhost:5000;
-{{ if eq (getenv "BW_SSL_ENABLE") "true" }}
+{{ if eq (getenv "BW_ENABLE_SSL") "true" }}
     include /etc/nginx/security-headers-ssl.conf;
 {{ end }}
     include /etc/nginx/security-headers.conf;
     add_header X-Frame-Options SAMEORIGIN;
   }
 
-{{ if eq (getenv "BW_KEY_CONNECTOR_ENABLE") "true" }}
+{{ if eq (getenv "BW_ENABLE_KEY_CONNECTOR") "true" }}
   location /key-connector/ {
     proxy_pass {{ getenv "BW_KEY_CONNECTOR_INTERNAL_URL"}}/;
   }
