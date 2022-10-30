@@ -1,6 +1,6 @@
-﻿using Bit.Core.Enums;
+﻿using System.Text.Json;
+using Bit.Core.Enums;
 using Core.Models.Data;
-using Newtonsoft.Json.Linq;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories.Queries;
 
@@ -59,13 +59,24 @@ public class UserCipherDetailsQuery : IQuery<CipherDetails>
             RevisionDate = c.RevisionDate,
             DeletedDate = c.DeletedDate,
             Favorite = _userId.HasValue && c.Favorites != null && c.Favorites.Contains($"\"{_userId}\":true"),
-            FolderId = _userId.HasValue && !string.IsNullOrWhiteSpace(c.Folders) ?
-                Guid.Parse(JObject.Parse(c.Folders)[_userId.Value.ToString()].Value<string>()) :
-                null,
+            FolderId = GetFolderId(_userId, c),
             Edit = true,
             ViewPassword = true,
             OrganizationUseTotp = false,
         });
         return union;
+    }
+
+    private static Guid? GetFolderId(Guid? userId, Models.Cipher cipher)
+    {
+        if (userId.HasValue && !string.IsNullOrWhiteSpace(cipher.Folders))
+        {
+            var folders = JsonSerializer.Deserialize<Dictionary<Guid, Guid>>(cipher.Folders);
+            if (folders.TryGetValue(userId.Value, out var folder))
+            {
+                return folder;
+            }
+        }
+        return null;
     }
 }

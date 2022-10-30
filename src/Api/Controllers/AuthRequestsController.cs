@@ -125,21 +125,24 @@ public class AuthRequestsController : Controller
             throw new NotFoundException();
         }
 
+        if (authRequest.Approved is not null)
+        {
+            throw new DuplicateAuthRequestException();
+        }
+
         var device = await _deviceRepository.GetByIdentifierAsync(model.DeviceIdentifier);
         if (device == null)
         {
             throw new BadRequestException("Invalid device.");
         }
 
-        if (model.RequestApproved)
-        {
-            authRequest.Key = model.Key;
-            authRequest.MasterPasswordHash = model.MasterPasswordHash;
-            authRequest.ResponseDeviceId = device.Id;
-            authRequest.ResponseDate = DateTime.UtcNow;
-            await _authRequestRepository.ReplaceAsync(authRequest);
-            await _pushNotificationService.PushAuthRequestResponseAsync(authRequest);
-        }
+        authRequest.Key = model.Key;
+        authRequest.MasterPasswordHash = model.MasterPasswordHash;
+        authRequest.ResponseDeviceId = device.Id;
+        authRequest.ResponseDate = DateTime.UtcNow;
+        authRequest.Approved = model.RequestApproved;
+        await _authRequestRepository.ReplaceAsync(authRequest);
+        await _pushNotificationService.PushAuthRequestResponseAsync(authRequest);
 
         return new AuthRequestResponseModel(authRequest, _globalSettings.BaseServiceUri.Vault);
     }
