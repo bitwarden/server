@@ -1019,9 +1019,7 @@ public class OrganizationServiceTests
         await applicationCacheService.DidNotReceiveWithAnyArgs().DeleteOrganizationAbilityAsync(default);
     }
 
-    [Theory, BitAutoData]
-    public async Task RevokeUser_Success(Organization organization, [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
-        [OrganizationUser] OrganizationUser organizationUser, SutProvider<OrganizationService> sutProvider)
+    private void RestoreRevokeUser_Setup(Organization organization, OrganizationUser owner, OrganizationUser organizationUser, SutProvider<OrganizationService> sutProvider)
     {
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationUser.OrganizationId).Returns(organization);
@@ -1030,6 +1028,14 @@ public class OrganizationServiceTests
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         organizationUserRepository.GetManyByOrganizationAsync(organizationUser.OrganizationId, OrganizationUserType.Owner)
             .Returns(new[] { owner });
+    }
+
+    [Theory, BitAutoData]
+    public async Task RevokeUser_Success(Organization organization, [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
+        [OrganizationUser] OrganizationUser organizationUser, SutProvider<OrganizationService> sutProvider)
+    {
+        RestoreRevokeUser_Setup(organization, owner, organizationUser, sutProvider);
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         var eventService = sutProvider.GetDependency<IEventService>();
 
         await sutProvider.Sut.RevokeUserAsync(organizationUser, owner.Id);
@@ -1043,13 +1049,8 @@ public class OrganizationServiceTests
     public async Task RevokeUser_WithEventSystemUser_Success(Organization organization, [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
         [OrganizationUser] OrganizationUser organizationUser, EventSystemUser eventSystemUser, SutProvider<OrganizationService> sutProvider)
     {
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationUser.OrganizationId).Returns(organization);
-        sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(organization.Id).Returns(true);
-        sutProvider.GetDependency<ICurrentContext>().ManageUsers(organization.Id).Returns(true);
+        RestoreRevokeUser_Setup(organization, owner, organizationUser, sutProvider);
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
-        organizationUserRepository.GetManyByOrganizationAsync(organizationUser.OrganizationId, OrganizationUserType.Owner)
-            .Returns(new[] { owner });
         var eventService = sutProvider.GetDependency<IEventService>();
 
         await sutProvider.Sut.RevokeUserAsync(organizationUser, eventSystemUser);
@@ -1063,15 +1064,9 @@ public class OrganizationServiceTests
     public async Task RestoreUser_Success(Organization organization, [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
         [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser, SutProvider<OrganizationService> sutProvider)
     {
+        RestoreRevokeUser_Setup(organization, owner, organizationUser, sutProvider);
         var userService = Substitute.For<IUserService>();
-
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationUser.OrganizationId).Returns(organization);
-        sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(organization.Id).Returns(true);
-        sutProvider.GetDependency<ICurrentContext>().ManageUsers(organization.Id).Returns(true);
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
-        organizationUserRepository.GetManyByOrganizationAsync(organizationUser.OrganizationId, OrganizationUserType.Owner)
-            .Returns(new[] { owner });
         var eventService = sutProvider.GetDependency<IEventService>();
 
         await sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id, userService);
@@ -1085,15 +1080,9 @@ public class OrganizationServiceTests
     public async Task RestoreUser_WithEventSystemUser_Success(Organization organization, [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
         [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser, EventSystemUser eventSystemUser, SutProvider<OrganizationService> sutProvider)
     {
+        RestoreRevokeUser_Setup(organization, owner, organizationUser, sutProvider);
         var userService = Substitute.For<IUserService>();
-
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationUser.OrganizationId).Returns(organization);
-        sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(organization.Id).Returns(true);
-        sutProvider.GetDependency<ICurrentContext>().ManageUsers(organization.Id).Returns(true);
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
-        organizationUserRepository.GetManyByOrganizationAsync(organizationUser.OrganizationId, OrganizationUserType.Owner)
-            .Returns(new[] { owner });
         var eventService = sutProvider.GetDependency<IEventService>();
 
         await sutProvider.Sut.RestoreUserAsync(organizationUser, eventSystemUser, userService);
