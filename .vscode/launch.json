@@ -240,6 +240,28 @@
             }
         },
         {
+            "name": "Notifications",
+            "presentation": {
+                "hidden": true,
+                "group": "cloud",
+                "order": 100
+            },
+            "requireExactSource": true,
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "buildNotifications",
+            "program": "${workspaceFolder}/src/Notifications/bin/Debug/net6.0/Notifications.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/src/Notifications",
+            "stopAtEntry": false,
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development"
+            },
+            "sourceFileMap": {
+                "/Views": "${workspaceFolder}/Views"
+            }
+        },
+        {
             "name": "Identity-SelfHost",
             "presentation": {
                 "hidden": true,
