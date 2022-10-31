@@ -125,6 +125,11 @@ public class AuthRequestsController : Controller
             throw new NotFoundException();
         }
 
+        if (authRequest.Approved is not null)
+        {
+            throw new DuplicateAuthRequestException();
+        }
+
         var device = await _deviceRepository.GetByIdentifierAsync(model.DeviceIdentifier);
         if (device == null)
         {

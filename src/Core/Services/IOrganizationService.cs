@@ -43,6 +43,7 @@ public interface IOrganizationService
     Task<List<Tuple<OrganizationUser, string>>> ConfirmUsersAsync(Guid organizationId, Dictionary<Guid, string> keys,
         Guid confirmingUserId, IUserService userService);
     Task SaveUserAsync(OrganizationUser user, Guid? savingUserId, IEnumerable<SelectionReadOnly> collections);
+    [Obsolete("IDeleteOrganizationUserCommand should be used instead. To be removed by EC-607.")]
     Task DeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid? deletingUserId);
     Task DeleteUserAsync(Guid organizationId, Guid userId);
     Task<List<Tuple<OrganizationUser, string>>> DeleteUsersAsync(Guid organizationId,
