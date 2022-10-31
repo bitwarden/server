@@ -1125,9 +1125,9 @@ public class OrganizationService : IOrganizationService
             }
         }
 
-        var organizationUsers = await SaveUsersSendInvitesAsync(organizationId, invites);
+        var (organizationUsers, events) = await SaveUsersSendInvitesAsync(organizationId, invites);
 
-        await _eventService.LogOrganizationUserEventsAsync(organizationUsers.Select(e => (e, EventType.OrganizationUser_Invited, (DateTime?)DateTime.UtcNow)));
+        await _eventService.LogOrganizationUserEventsAsync(events);
 
         return organizationUsers;
     }
@@ -1135,14 +1135,14 @@ public class OrganizationService : IOrganizationService
     public async Task<List<OrganizationUser>> InviteUsersAsync(Guid organizationId, EventSystemUser systemUser,
         IEnumerable<(OrganizationUserInvite invite, string externalId)> invites)
     {
-        var organizationUsers = await SaveUsersSendInvitesAsync(organizationId, invites);
+        var (organizationUsers, events) = await SaveUsersSendInvitesAsync(organizationId, invites);
 
-        await _eventService.LogOrganizationUserEventsAsync(organizationUsers.Select(e => (e, EventType.OrganizationUser_Invited, systemUser, (DateTime?)DateTime.UtcNow)));
+        await _eventService.LogOrganizationUserEventsAsync(events.Select(e => (e.Item1, e.Item2, systemUser, e.Item3)));
 
         return organizationUsers;
     }
 
-    private async Task<List<OrganizationUser>> SaveUsersSendInvitesAsync(Guid organizationId,
+    private async Task<(List<OrganizationUser> organizationUsers, List<(OrganizationUser, EventType, DateTime?)> events)> SaveUsersSendInvitesAsync(Guid organizationId,
         IEnumerable<(OrganizationUserInvite invite, string externalId)> invites)
     {
         var organization = await GetOrgById(organizationId);
@@ -1281,7 +1281,7 @@ public class OrganizationService : IOrganizationService
             throw new AggregateException("One or more errors occurred while inviting users.", exceptions);
         }
 
-        return orgUsers;
+        return (orgUsers, events);
     }
 
     public async Task<IEnumerable<Tuple<OrganizationUser, string>>> ResendInvitesAsync(Guid organizationId, Guid? invitingUserId,
