@@ -142,8 +142,12 @@ public class AuthRequestsController : Controller
         authRequest.ResponseDate = DateTime.UtcNow;
         authRequest.Approved = model.RequestApproved;
         await _authRequestRepository.ReplaceAsync(authRequest);
-        await _pushNotificationService.PushAuthRequestResponseAsync(authRequest);
 
+        if (model.RequestApproved)
+        {
+            await _pushNotificationService.PushAuthRequestResponseAsync(authRequest);
+        }
+        
         return new AuthRequestResponseModel(authRequest, _globalSettings.BaseServiceUri.Vault);
     }
 }
