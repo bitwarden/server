@@ -2367,24 +2367,6 @@ public class OrganizationService : IOrganizationService
     public async Task RestoreUserAsync(OrganizationUser organizationUser, Guid? restoringUserId,
         IUserService userService)
     {
-        await RepositoryRestoreUserAsync(organizationUser, restoringUserId, userService);
-        await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Restored);
-    }
-
-    public async Task RestoreUserAsync(OrganizationUser organizationUser, EventSystemUser systemUser,
-        IUserService userService)
-    {
-        await RepositoryRestoreUserAsync(organizationUser, restoringUserId: null, userService);
-        await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Restored, systemUser);
-    }
-
-    private async Task RepositoryRestoreUserAsync(OrganizationUser organizationUser, Guid? restoringUserId, IUserService userService)
-    {
-        if (organizationUser.Status != OrganizationUserStatusType.Revoked)
-        {
-            throw new BadRequestException("Already active.");
-        }
-
         if (restoringUserId.HasValue && organizationUser.UserId == restoringUserId.Value)
         {
             throw new BadRequestException("You cannot restore yourself.");
@@ -2394,6 +2376,24 @@ public class OrganizationService : IOrganizationService
             !await _currentContext.OrganizationOwner(organizationUser.OrganizationId))
         {
             throw new BadRequestException("Only owners can restore other owners.");
+        }
+
+        await RepositoryRestoreUserAsync(organizationUser, userService);
+        await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Restored);
+    }
+
+    public async Task RestoreUserAsync(OrganizationUser organizationUser, EventSystemUser systemUser,
+        IUserService userService)
+    {
+        await RepositoryRestoreUserAsync(organizationUser, userService);
+        await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Restored, systemUser);
+    }
+
+    private async Task RepositoryRestoreUserAsync(OrganizationUser organizationUser, IUserService userService)
+    {
+        if (organizationUser.Status != OrganizationUserStatusType.Revoked)
+        {
+            throw new BadRequestException("Already active.");
         }
 
         var organization = await _organizationRepository.GetByIdAsync(organizationUser.OrganizationId);
