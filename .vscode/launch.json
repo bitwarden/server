@@ -40,7 +40,8 @@
                 "Identity",
                 "Sso",
                 "Icons",
-                "Billing"
+                "Billing",
+                "Notifications"
             ],
             "presentation": {
                 "hidden": false,
