@@ -2267,24 +2267,6 @@ public class OrganizationService : IOrganizationService
 
     public async Task RevokeUserAsync(OrganizationUser organizationUser, Guid? revokingUserId)
     {
-        await RepositoryRevokeUserAsync(organizationUser, revokingUserId);
-        await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Revoked);
-    }
-
-    public async Task RevokeUserAsync(OrganizationUser organizationUser,
-        EventSystemUser systemUser)
-    {
-        await RepositoryRevokeUserAsync(organizationUser, null);
-        await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Revoked, systemUser);
-    }
-
-    private async Task RepositoryRevokeUserAsync(OrganizationUser organizationUser, Guid? revokingUserId)
-    {
-        if (organizationUser.Status == OrganizationUserStatusType.Revoked)
-        {
-            throw new BadRequestException("Already revoked.");
-        }
-
         if (revokingUserId.HasValue && organizationUser.UserId == revokingUserId.Value)
         {
             throw new BadRequestException("You cannot revoke yourself.");
@@ -2294,6 +2276,24 @@ public class OrganizationService : IOrganizationService
             !await _currentContext.OrganizationOwner(organizationUser.OrganizationId))
         {
             throw new BadRequestException("Only owners can revoke other owners.");
+        }
+
+        await RepositoryRevokeUserAsync(organizationUser);
+        await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Revoked);
+    }
+
+    public async Task RevokeUserAsync(OrganizationUser organizationUser,
+        EventSystemUser systemUser)
+    {
+        await RepositoryRevokeUserAsync(organizationUser);
+        await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Revoked, systemUser);
+    }
+
+    private async Task RepositoryRevokeUserAsync(OrganizationUser organizationUser)
+    {
+        if (organizationUser.Status == OrganizationUserStatusType.Revoked)
+        {
+            throw new BadRequestException("Already revoked.");
         }
 
         if (!await HasConfirmedOwnersExceptAsync(organizationUser.OrganizationId, new[] { organizationUser.Id }))
