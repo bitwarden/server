@@ -18,7 +18,6 @@ public class AccessPolicy : ITableObject<Guid>
     // Access
     public bool Read { get; set; }
     public bool Write { get; set; }
-    public bool Delete { get; set; }
 
     public DateTime CreationDate { get; set; }
     public DateTime RevisionDate { get; set; }
