@@ -22,7 +22,7 @@ BEGIN
         [RevisionDate]       DATETIME2 NOT NULL,
         CONSTRAINT [PK_AccessPolicy] PRIMARY KEY CLUSTERED ([Id]),
         CONSTRAINT [FK_AccessPolicy_Group_GroupId] FOREIGN KEY ([GroupId]) REFERENCES [Group] ([Id]) ON DELETE CASCADE,
-        CONSTRAINT [FK_AccessPolicy_OrganizationUser_OrganizationUserId] FOREIGN KEY ([OrganizationUserId]) REFERENCES [OrganizationUser] ([Id]) ON DELETE CASCADE,
+        CONSTRAINT [FK_AccessPolicy_OrganizationUser_OrganizationUserId] FOREIGN KEY ([OrganizationUserId]) REFERENCES [OrganizationUser] ([Id]),
         CONSTRAINT [FK_AccessPolicy_Project_ProjectId] FOREIGN KEY ([ProjectId]) REFERENCES [Project] ([Id]) ON DELETE CASCADE,
         CONSTRAINT [FK_AccessPolicy_Secret_SecretId] FOREIGN KEY ([SecretId]) REFERENCES [Secret] ([Id]) ON DELETE CASCADE,
         CONSTRAINT [FK_AccessPolicy_ServiceAccount_ServiceAccountId] FOREIGN KEY ([ServiceAccountId]) REFERENCES [ServiceAccount] ([Id]) ON DELETE CASCADE
