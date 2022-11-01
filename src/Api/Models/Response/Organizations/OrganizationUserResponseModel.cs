@@ -57,7 +57,7 @@ public class OrganizationUserResponseModel : ResponseModel
 public class OrganizationUserDetailsResponseModel : OrganizationUserResponseModel
 {
     public OrganizationUserDetailsResponseModel(OrganizationUser organizationUser,
-        IEnumerable<SelectionReadOnly> collections)
+        IEnumerable<CollectionAccessSelection> collections)
         : base(organizationUser, "organizationUserDetails")
     {
         Collections = collections.Select(c => new SelectionReadOnlyResponseModel(c));

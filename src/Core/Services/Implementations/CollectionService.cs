@@ -39,8 +39,8 @@ public class CollectionService : ICollectionService
         _currentContext = currentContext;
     }
 
-    public async Task SaveAsync(Collection collection, IEnumerable<SelectionReadOnly> groups = null,
-        IEnumerable<SelectionReadOnly> users = null, Guid? assignUserId = null)
+    public async Task SaveAsync(Collection collection, IEnumerable<CollectionAccessSelection> groups = null,
+        IEnumerable<CollectionAccessSelection> users = null, Guid? assignUserId = null)
     {
         var org = await _organizationRepository.GetByIdAsync(collection.OrganizationId);
         if (org == null)
@@ -69,8 +69,8 @@ public class CollectionService : ICollectionService
                 if (orgUser != null && orgUser.Status == Enums.OrganizationUserStatusType.Confirmed)
                 {
                     await _collectionRepository.UpdateUsersAsync(collection.Id,
-                        new List<SelectionReadOnly> {
-                            new SelectionReadOnly { Id = orgUser.Id, ReadOnly = false } });
+                        new List<CollectionAccessSelection> {
+                            new CollectionAccessSelection { Id = orgUser.Id, ReadOnly = false } });
                 }
             }
 

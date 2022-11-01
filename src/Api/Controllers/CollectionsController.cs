@@ -53,22 +53,22 @@ public class CollectionsController : Controller
 
         if (await _currentContext.ViewAllCollections(orgId))
         {
-            var collectionDetails = await _collectionRepository.GetByIdWithGroupsAsync(id);
-            if (collectionDetails?.Item1 == null || collectionDetails.Item1.OrganizationId != orgId)
+            (var collection, var access) = await _collectionRepository.GetByIdWithAccessAsync(id);
+            if (collection == null || collection.OrganizationId != orgId)
             {
                 throw new NotFoundException();
             }
-            return new CollectionAccessDetailsResponseModel(collectionDetails.Item1, collectionDetails.Item2, collectionDetails.Item3);
+            return new CollectionAccessDetailsResponseModel(collection, access.Groups, access.Users);
         }
         else
         {
-            var collectionDetails = await _collectionRepository.GetByIdWithGroupsAsync(id,
+            (var collection, var access) = await _collectionRepository.GetByIdWithAccessAsync(id,
                 _currentContext.UserId.Value);
-            if (collectionDetails?.Item1 == null || collectionDetails.Item1.OrganizationId != orgId)
+            if (collection == null || collection.OrganizationId != orgId)
             {
                 throw new NotFoundException();
             }
-            return new CollectionAccessDetailsResponseModel(collectionDetails.Item1, collectionDetails.Item2, collectionDetails.Item3);
+            return new CollectionAccessDetailsResponseModel(collection, access.Groups, access.Users);
         }
     }
 

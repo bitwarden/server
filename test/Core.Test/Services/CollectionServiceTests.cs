@@ -33,7 +33,7 @@ public class CollectionServiceTest
     }
 
     [Theory, BitAutoData]
-    public async Task SaveAsync_DefaultIdWithUsers_CreatesCollectionInTheRepository(Collection collection, Organization organization, IEnumerable<SelectionReadOnly> users, SutProvider<CollectionService> sutProvider)
+    public async Task SaveAsync_DefaultIdWithUsers_CreatesCollectionInTheRepository(Collection collection, Organization organization, IEnumerable<CollectionAccessSelection> users, SutProvider<CollectionService> sutProvider)
     {
         collection.Id = default;
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
@@ -50,7 +50,7 @@ public class CollectionServiceTest
 
     [Theory, BitAutoData]
     public async Task SaveAsync_DefaultIdWithGroupsAndUsers_CreateCollectionWithGroupsAndUsersInRepository(Collection collection,
-        IEnumerable<SelectionReadOnly> groups, IEnumerable<SelectionReadOnly> users, Organization organization, SutProvider<CollectionService> sutProvider)
+        IEnumerable<CollectionAccessSelection> groups, IEnumerable<CollectionAccessSelection> users, Organization organization, SutProvider<CollectionService> sutProvider)
     {
         collection.Id = default;
         organization.UseGroups = true;
@@ -83,7 +83,7 @@ public class CollectionServiceTest
     }
 
     [Theory, BitAutoData]
-    public async Task SaveAsync_OrganizationNotUseGroup_CreateCollectionWithoutGroupsInRepository(Collection collection, IEnumerable<SelectionReadOnly> groups,
+    public async Task SaveAsync_OrganizationNotUseGroup_CreateCollectionWithoutGroupsInRepository(Collection collection, IEnumerable<CollectionAccessSelection> groups,
         Organization organization, SutProvider<CollectionService> sutProvider)
     {
         collection.Id = default;
@@ -115,7 +115,7 @@ public class CollectionServiceTest
         await sutProvider.GetDependency<ICollectionRepository>().Received().CreateAsync(collection, null, null);
         await sutProvider.GetDependency<IOrganizationUserRepository>().Received()
             .GetByOrganizationAsync(organization.Id, organizationUser.Id);
-        await sutProvider.GetDependency<ICollectionRepository>().Received().UpdateUsersAsync(collection.Id, Arg.Any<List<SelectionReadOnly>>());
+        await sutProvider.GetDependency<ICollectionRepository>().Received().UpdateUsersAsync(collection.Id, Arg.Any<List<CollectionAccessSelection>>());
         await sutProvider.GetDependency<IEventService>().Received()
             .LogCollectionEventAsync(collection, EventType.Collection_Created);
         Assert.True(collection.CreationDate - utcNow < TimeSpan.FromSeconds(1));

@@ -140,8 +140,8 @@ public class CipherRepositoryTests
 
             orgUsers = await efOrgUserRepos[i].CreateMany(orgUsers);
 
-            var selectionReadOnlyList = new List<SelectionReadOnly>();
-            orgUsers.ForEach(ou => selectionReadOnlyList.Add(new SelectionReadOnly() { Id = ou.Id }));
+            var selectionReadOnlyList = new List<CollectionAccessSelection>();
+            orgUsers.ForEach(ou => selectionReadOnlyList.Add(new CollectionAccessSelection() { Id = ou.Id }));
 
             await efCollectionRepos[i].UpdateUsersAsync(efCollection.Id, selectionReadOnlyList);
             efCollectionRepos[i].ClearChangeTracking();

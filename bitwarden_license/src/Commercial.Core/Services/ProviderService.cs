@@ -419,7 +419,7 @@ public class ProviderService : IProviderService
                         AccessAll = true,
                         Type = OrganizationUserType.Owner,
                         Permissions = null,
-                        Collections = Array.Empty<SelectionReadOnly>(),
+                        Collections = Array.Empty<CollectionAccessSelection>(),
                     },
                     null
                 )

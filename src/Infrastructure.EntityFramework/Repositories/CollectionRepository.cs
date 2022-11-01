@@ -21,7 +21,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         return obj;
     }
 
-    public async Task CreateAsync(Core.Entities.Collection obj, IEnumerable<SelectionReadOnly> groups, IEnumerable<SelectionReadOnly> users)
+    public async Task CreateAsync(Core.Entities.Collection obj, IEnumerable<CollectionAccessSelection> groups, IEnumerable<CollectionAccessSelection> users)
     {
         await base.CreateAsync(obj);
         using (var scope = ServiceScopeFactory.CreateScope())
@@ -91,7 +91,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         }
     }
 
-    public async Task<Tuple<Core.Entities.Collection, ICollection<SelectionReadOnly>, ICollection<SelectionReadOnly>>> GetByIdWithGroupsAsync(Guid id)
+    public async Task<Tuple<Core.Entities.Collection, CollectionAccessDetails>> GetByIdWithAccessAsync(Guid id)
     {
         var collection = await base.GetByIdAsync(id);
         using (var scope = ServiceScopeFactory.CreateScope())
@@ -99,29 +99,30 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
             var dbContext = GetDatabaseContext(scope);
             var groupQuery = from cg in dbContext.CollectionGroups
                              where cg.CollectionId.Equals(id)
-                             select new SelectionReadOnly
+                             select new CollectionAccessSelection
                              {
                                  Id = cg.GroupId,
                                  ReadOnly = cg.ReadOnly,
                                  HidePasswords = cg.HidePasswords,
                              };
-            var groupSelections = await groupQuery.ToArrayAsync();
+            var groups = await groupQuery.ToArrayAsync();
 
             var userQuery = from cg in dbContext.CollectionUsers
                             where cg.CollectionId.Equals(id)
-                            select new SelectionReadOnly
+                            select new CollectionAccessSelection
                             {
                                 Id = cg.OrganizationUserId,
                                 ReadOnly = cg.ReadOnly,
                                 HidePasswords = cg.HidePasswords,
                             };
-            var userSelections = await userQuery.ToArrayAsync();
+            var users = await userQuery.ToArrayAsync();
+            var access = new CollectionAccessDetails { Users = users, Groups = groups };
 
-            return new Tuple<Core.Entities.Collection, ICollection<SelectionReadOnly>, ICollection<SelectionReadOnly>>(collection, groupSelections, userSelections);
+            return new Tuple<Core.Entities.Collection, CollectionAccessDetails>(collection, access);
         }
     }
 
-    public async Task<Tuple<CollectionDetails, ICollection<SelectionReadOnly>, ICollection<SelectionReadOnly>>> GetByIdWithGroupsAsync(Guid id, Guid userId)
+    public async Task<Tuple<CollectionDetails, CollectionAccessDetails>> GetByIdWithAccessAsync(Guid id, Guid userId)
     {
         var collection = await GetByIdAsync(id, userId);
         using (var scope = ServiceScopeFactory.CreateScope())
@@ -129,25 +130,26 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
             var dbContext = GetDatabaseContext(scope);
             var groupQuery = from cg in dbContext.CollectionGroups
                              where cg.CollectionId.Equals(id)
-                             select new SelectionReadOnly
+                             select new CollectionAccessSelection
                              {
                                  Id = cg.GroupId,
                                  ReadOnly = cg.ReadOnly,
                                  HidePasswords = cg.HidePasswords,
                              };
-            var groupSelections = await groupQuery.ToArrayAsync();
+            var groups = await groupQuery.ToArrayAsync();
 
             var userQuery = from cg in dbContext.CollectionUsers
                             where cg.CollectionId.Equals(id)
-                            select new SelectionReadOnly
+                            select new CollectionAccessSelection
                             {
                                 Id = cg.OrganizationUserId,
                                 ReadOnly = cg.ReadOnly,
                                 HidePasswords = cg.HidePasswords,
                             };
-            var userSelections = await userQuery.ToArrayAsync();
+            var users = await userQuery.ToArrayAsync();
+            var access = new CollectionAccessDetails { Users = users, Groups = groups };
 
-            return new Tuple<CollectionDetails, ICollection<SelectionReadOnly>, ICollection<SelectionReadOnly>>(collection, groupSelections, userSelections);
+            return new Tuple<CollectionDetails, CollectionAccessDetails>(collection, access);
         }
     }
 
@@ -191,7 +193,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         }
     }
 
-    public async Task<ICollection<SelectionReadOnly>> GetManyUsersByIdAsync(Guid id)
+    public async Task<ICollection<CollectionAccessSelection>> GetManyUsersByIdAsync(Guid id)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -200,7 +202,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                         where cu.CollectionId == id
                         select cu;
             var collectionUsers = await query.ToListAsync();
-            return collectionUsers.Select(cu => new SelectionReadOnly
+            return collectionUsers.Select(cu => new CollectionAccessSelection
             {
                 Id = cu.OrganizationUserId,
                 ReadOnly = cu.ReadOnly,
@@ -209,8 +211,8 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         }
     }
 
-    public async Task ReplaceAsync(Core.Entities.Collection collection, IEnumerable<SelectionReadOnly> groups,
-        IEnumerable<SelectionReadOnly> users)
+    public async Task ReplaceAsync(Core.Entities.Collection collection, IEnumerable<CollectionAccessSelection> groups,
+        IEnumerable<CollectionAccessSelection> users)
     {
         await base.ReplaceAsync(collection);
         using (var scope = ServiceScopeFactory.CreateScope())
@@ -222,7 +224,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         }
     }
 
-    public async Task UpdateUsersAsync(Guid id, IEnumerable<SelectionReadOnly> users)
+    public async Task UpdateUsersAsync(Guid id, IEnumerable<CollectionAccessSelection> users)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -236,7 +238,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         }
     }
 
-    private async Task ReplaceCollectionGroupsAsync(DatabaseContext dbContext, Core.Entities.Collection collection, IEnumerable<SelectionReadOnly> groups)
+    private async Task ReplaceCollectionGroupsAsync(DatabaseContext dbContext, Core.Entities.Collection collection, IEnumerable<CollectionAccessSelection> groups)
     {
 
         var groupsInOrg = dbContext.Groups.Where(g => g.OrganizationId == collection.OrganizationId);
@@ -299,7 +301,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         await dbContext.SaveChangesAsync();
     }
 
-    private async Task ReplaceCollectionUsersAsync(DatabaseContext dbContext, Core.Entities.Collection collection, IEnumerable<SelectionReadOnly> users)
+    private async Task ReplaceCollectionUsersAsync(DatabaseContext dbContext, Core.Entities.Collection collection, IEnumerable<CollectionAccessSelection> users)
     {
 
         var usersInOrg = dbContext.OrganizationUsers.Where(u => u.OrganizationId == collection.OrganizationId);

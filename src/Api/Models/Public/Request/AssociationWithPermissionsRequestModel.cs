@@ -4,9 +4,9 @@ namespace Bit.Api.Models.Public.Request;
 
 public class AssociationWithPermissionsRequestModel : AssociationWithPermissionsBaseModel
 {
-    public SelectionReadOnly ToSelectionReadOnly()
+    public CollectionAccessSelection ToSelectionReadOnly()
     {
-        return new SelectionReadOnly
+        return new CollectionAccessSelection
         {
             Id = Id.Value,
             ReadOnly = ReadOnly.Value

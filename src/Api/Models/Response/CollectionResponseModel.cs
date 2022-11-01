@@ -41,7 +41,7 @@ public class CollectionDetailsResponseModel : CollectionResponseModel
 
 public class CollectionAccessDetailsResponseModel : CollectionResponseModel
 {
-    public CollectionAccessDetailsResponseModel(Collection collection, IEnumerable<SelectionReadOnly> groups, IEnumerable<SelectionReadOnly> users)
+    public CollectionAccessDetailsResponseModel(Collection collection, IEnumerable<CollectionAccessSelection> groups, IEnumerable<CollectionAccessSelection> users)
         : base(collection, "collectionAccessDetails")
     {
         Groups = groups.Select(g => new SelectionReadOnlyResponseModel(g));

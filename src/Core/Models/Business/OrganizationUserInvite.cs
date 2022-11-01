@@ -9,7 +9,7 @@ public class OrganizationUserInvite
     public Enums.OrganizationUserType? Type { get; set; }
     public bool AccessAll { get; set; }
     public Permissions Permissions { get; set; }
-    public IEnumerable<SelectionReadOnly> Collections { get; set; }
+    public IEnumerable<CollectionAccessSelection> Collections { get; set; }
 
     public OrganizationUserInvite() { }
 

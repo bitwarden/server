@@ -386,7 +386,7 @@ public class OrganizationServiceTests
 
     [Theory, BitAutoData]
     public async Task SaveUser_NoUserId_Throws(OrganizationUser user, Guid? savingUserId,
-        IEnumerable<SelectionReadOnly> collections, SutProvider<OrganizationService> sutProvider)
+        IEnumerable<CollectionAccessSelection> collections, SutProvider<OrganizationService> sutProvider)
     {
         user.Id = default(Guid);
         var exception = await Assert.ThrowsAsync<BadRequestException>(
@@ -396,7 +396,7 @@ public class OrganizationServiceTests
 
     [Theory, BitAutoData]
     public async Task SaveUser_NoChangeToData_Throws(OrganizationUser user, Guid? savingUserId,
-        IEnumerable<SelectionReadOnly> collections, SutProvider<OrganizationService> sutProvider)
+        IEnumerable<CollectionAccessSelection> collections, SutProvider<OrganizationService> sutProvider)
     {
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         organizationUserRepository.GetByIdAsync(user.Id).Returns(user);
@@ -409,7 +409,7 @@ public class OrganizationServiceTests
     public async Task SaveUser_Passes(
         OrganizationUser oldUserData,
         OrganizationUser newUserData,
-        IEnumerable<SelectionReadOnly> collections,
+        IEnumerable<CollectionAccessSelection> collections,
         [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser savingUser,
         SutProvider<OrganizationService> sutProvider)
     {

@@ -4,7 +4,7 @@ namespace Bit.Api.Models.Response;
 
 public class SelectionReadOnlyResponseModel
 {
-    public SelectionReadOnlyResponseModel(SelectionReadOnly selection)
+    public SelectionReadOnlyResponseModel(CollectionAccessSelection selection)
     {
         if (selection == null)
         {
