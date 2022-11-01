@@ -3,9 +3,9 @@
 AS
 BEGIN
     SET NOCOUNT ON
-    
+
     EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationUserId] @Id
-    
+
     DECLARE @OrganizationId UNIQUEIDENTIFIER
     DECLARE @UserId UNIQUEIDENTIFIER
 
