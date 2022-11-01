@@ -18,7 +18,6 @@ BEGIN
         [SecretId]           UNIQUEIDENTIFIER NULL,
         [Read]               BIT NOT NULL,
         [Write]              BIT NOT NULL,
-        [Delete]             BIT NOT NULL,
         [CreationDate]       DATETIME2 NOT NULL,
         [RevisionDate]       DATETIME2 NOT NULL,
         CONSTRAINT [PK_AccessPolicy] PRIMARY KEY CLUSTERED ([Id]),
