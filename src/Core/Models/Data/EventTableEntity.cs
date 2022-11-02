@@ -71,6 +71,16 @@ public class EventTableEntity : TableEntity, IEvent
             result.Add(deviceTypeName, new EntityProperty((int?)DeviceType));
         }
 
+        var systemUserTypeName = nameof(SystemUser);
+        if (result.ContainsKey(systemUserTypeName))
+        {
+            result[systemUserTypeName] = new EntityProperty((int?)SystemUser);
+        }
+        else
+        {
+            result.Add(systemUserTypeName, new EntityProperty((int?)SystemUser));
+        }
+
         return result;
     }
 
@@ -89,6 +99,12 @@ public class EventTableEntity : TableEntity, IEvent
         if (properties.ContainsKey(deviceTypeName) && properties[deviceTypeName].Int32Value.HasValue)
         {
             DeviceType = (DeviceType)properties[deviceTypeName].Int32Value.Value;
+        }
+
+        var systemUserTypeName = nameof(SystemUser);
+        if (properties.ContainsKey(systemUserTypeName) && properties[systemUserTypeName].Int32Value.HasValue)
+        {
+            SystemUser = (EventSystemUser)properties[systemUserTypeName].Int32Value.Value;
         }
     }
 
