@@ -1645,6 +1645,7 @@ public class OrganizationService : IOrganizationService
         await _eventService.LogOrganizationUserEventAsync(user, EventType.OrganizationUser_Updated);
     }
 
+    [Obsolete("IDeleteOrganizationUserCommand should be used instead. To be removed by EC-607.")]
     public async Task DeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid? deletingUserId)
     {
         var orgUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
