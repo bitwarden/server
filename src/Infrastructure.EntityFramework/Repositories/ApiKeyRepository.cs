@@ -11,4 +11,6 @@ public class ApiKeyRepository : Repository<Core.Entities.ApiKey, ApiKey, Guid>, 
         : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.ApiKeys)
     {
     }
+
+    public Task<ICollection<Core.Entities.ApiKey>> GetManyByServiceAccountIdAsync(Guid id) => throw new NotImplementedException();
 }
