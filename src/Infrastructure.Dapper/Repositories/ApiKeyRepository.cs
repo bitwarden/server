@@ -1,6 +1,10 @@
-﻿using Bit.Core.Entities;
+﻿using System.Data;
+using Bit.Core.Entities;
+using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
+using Dapper;
+using Microsoft.Data.SqlClient;
 
 namespace Bit.Infrastructure.Dapper.Repositories;
 
@@ -13,4 +17,15 @@ public class ApiKeyRepository : Repository<ApiKey, Guid>, IApiKeyRepository
     public ApiKeyRepository(string connectionString, string readOnlyConnectionString)
         : base(connectionString, readOnlyConnectionString)
     { }
+
+    public async Task<ApiKeyDetails> GetDetailsByIdAsync(Guid id)
+    {
+        using var connection = new SqlConnection(ConnectionString);
+        var results = await connection.QueryAsync<ApiKeyDetails>(
+            $"[{Schema}].[ApiKeyDetails_ReadById]",
+            new { Id = id },
+            commandType: CommandType.StoredProcedure);
+
+        return results.SingleOrDefault();
+    }
 }

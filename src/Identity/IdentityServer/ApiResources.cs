@@ -31,7 +31,7 @@ public class ApiResources
             new(ApiScopes.ApiLicensing, new[] { JwtClaimTypes.Subject }),
             new(ApiScopes.ApiOrganization, new[] { JwtClaimTypes.Subject }),
             new(ApiScopes.ApiInstallation, new[] { JwtClaimTypes.Subject }),
-            new(ApiScopes.ApiSecrets, new[] { JwtClaimTypes.Subject }),
+            new(ApiScopes.ApiSecrets, new[] { JwtClaimTypes.Subject, Claims.Organization }),
         };
     }
 }

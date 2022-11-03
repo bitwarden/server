@@ -2,6 +2,7 @@
 using System.Security.Claims;
 using Bit.Core.Context;
 using Bit.Core.Enums;
+using Bit.Core.Identity;
 using Bit.Core.IdentityServer;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -86,7 +87,7 @@ public class ClientStore : IClientStore
 
     private async Task<Client> CreateApiKeyClientAsync(string clientId)
     {
-        var apiKey = await _apiKeyRepository.GetByIdAsync(new Guid(clientId));
+        var apiKey = await _apiKeyRepository.GetDetailsByIdAsync(new Guid(clientId));
 
         if (apiKey == null || apiKey.ExpireAt <= DateTime.Now)
         {
@@ -108,6 +109,7 @@ public class ClientStore : IClientStore
             Claims = new List<ClientClaim>
             {
                 new(JwtClaimTypes.Subject, apiKey.ServiceAccountId.ToString()),
+                new(Claims.Organization, apiKey.ServiceAccountOrganizationId.ToString())
             },
         };
     }
