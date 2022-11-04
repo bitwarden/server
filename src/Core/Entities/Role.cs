@@ -1,4 +1,4 @@
-﻿#nullable enable
+﻿#nullable disable
 
 namespace Bit.Core.Entities;
 
@@ -7,5 +7,5 @@ namespace Bit.Core.Entities;
 /// </summary>
 public class Role
 {
-    public string? Name { get; set; }
+    public string Name { get; set; }
 }
