@@ -7,11 +7,11 @@ namespace Bit.Api.IntegrationTest.Factories;
 
 public class ApiApplicationFactory : WebApplicationFactoryBase<Startup>
 {
-    public IdentityApplicationFactory Identity { get; }
+    public IdentityApplicationFactory IdentityFactory { get; }
 
     public ApiApplicationFactory()
     {
-        Identity = new IdentityApplicationFactory();
+        IdentityFactory = new IdentityApplicationFactory();
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -22,7 +22,7 @@ public class ApiApplicationFactory : WebApplicationFactoryBase<Startup>
         {
             services.PostConfigure<IdentityServerAuthenticationOptions>(IdentityServerAuthenticationDefaults.AuthenticationScheme, options =>
             {
-                options.JwtBackChannelHandler = Identity.Server.CreateHandler();
+                options.JwtBackChannelHandler = IdentityFactory.Server.CreateHandler();
             });
         });
     }
@@ -32,12 +32,12 @@ public class ApiApplicationFactory : WebApplicationFactoryBase<Startup>
     /// </summary>
     public async Task<(string Token, string RefreshToken)> LoginWithNewAccount(string email = "integration-test@bitwarden.com", string masterPasswordHash = "master_password_hash")
     {
-        await Identity.RegisterAsync(new RegisterRequestModel
+        await IdentityFactory.RegisterAsync(new RegisterRequestModel
         {
             Email = email,
             MasterPasswordHash = masterPasswordHash,
         });
 
-        return await Identity.TokenFromPasswordAsync(email, masterPasswordHash);
+        return await IdentityFactory.TokenFromPasswordAsync(email, masterPasswordHash);
     }
 }

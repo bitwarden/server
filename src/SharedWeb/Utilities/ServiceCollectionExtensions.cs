@@ -635,7 +635,7 @@ public static class ServiceCollectionExtensions
     {
         services.AddHttpClient(HttpClientNames.CloudApiRelayPush)
             .ConfigureBaseAddress(gs => gs.PushRelayBaseUri)
-            .AddInstallationAuthentication(HttpClientNames.CloudIdentityRelayPush, HttpClientNames.CloudApiRelayPush,
+            .AddInstallationAuthentication(
                 options =>
                 {
                     options.ClientId = $"installation.{globalSettings.Installation.Id}";
@@ -644,7 +644,7 @@ public static class ServiceCollectionExtensions
                 }
             );
 
-        services.AddHttpClient(HttpClientNames.CloudIdentityRelayPush)
+        services.AddHttpClient(HttpClientNames.CloudIdentity)
             .ConfigureBaseAddress(gs => gs.Installation.IdentityUri);
 
         return services;

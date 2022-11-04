@@ -8,19 +8,17 @@ namespace Bit.Core.Utilities;
 public static class HttpClientBuilderExtensions
 {
     public static IHttpClientBuilder AddInstallationAuthentication(this IHttpClientBuilder builder,
-        string identityClientName,
-        string optionsName,
         Action<ConnectTokenOptions> configureOptions)
     {
-        builder.Services.Configure(optionsName, configureOptions);
+        builder.Services.Configure(builder.Name, configureOptions);
 
         return builder.AddHttpMessageHandler(sp =>
         {
             return new InstallationAuthenticatingHandler(
-                sp.GetRequiredService<IHttpClientFactory>().CreateClient(identityClientName),
+                sp.GetRequiredService<IHttpClientFactory>().CreateClient(HttpClientNames.CloudIdentity),
                 sp.GetRequiredService<ILogger<InstallationAuthenticatingHandler>>(),
                 sp.GetRequiredService<IOptionsMonitor<ConnectTokenOptions>>(),
-                optionsName
+                builder.Name
             );
         });
     }

@@ -88,8 +88,8 @@ public class PushSyncTests
             DatabaseName = "SELFHOSTED_DB"
         };
 
-        selfHostedApiFactory.Identity.SelfHosted = true;
-        selfHostedApiFactory.Identity.DatabaseName = "SELFHOSTED_DB";
+        selfHostedApiFactory.IdentityFactory.SelfHosted = true;
+        selfHostedApiFactory.IdentityFactory.DatabaseName = "SELFHOSTED_DB";
 
         // Just has to exist and be a valid Uri
         selfHostedApiFactory.AddConfiguration("globalSettings:pushRelayBaseUri", "https://localhost");
@@ -97,7 +97,7 @@ public class PushSyncTests
         selfHostedApiFactory.AddConfiguration("globalSettings:installation:key", key);
 
         // Override the primary http handler for these HttpClients with an in memory one
-        selfHostedApiFactory.OverrideHttpHandler(HttpClientNames.CloudIdentityRelayPush, cloudApiFactory.Identity.Server.CreateHandler());
+        selfHostedApiFactory.OverrideHttpHandler(HttpClientNames.CloudIdentity, cloudApiFactory.IdentityFactory.Server.CreateHandler());
         selfHostedApiFactory.OverrideHttpHandler(HttpClientNames.CloudApiRelayPush, cloudApiFactory.Server.CreateHandler());
 
         return (cloudApiFactory, selfHostedApiFactory);
@@ -106,7 +106,7 @@ public class PushSyncTests
     private static async Task CreateCipherAsync(ApiApplicationFactory selfHostedApiFactory, string email)
     {
         // Create a user
-        await selfHostedApiFactory.Identity.RegisterAsync(new RegisterRequestModel
+        await selfHostedApiFactory.IdentityFactory.RegisterAsync(new RegisterRequestModel
         {
             Email = email,
             MasterPasswordHash = "master_password_hash"
