@@ -32,6 +32,7 @@ public class CurrentContext : ICurrentContext
     public virtual bool MaybeBot { get; set; }
     public virtual int? BotScore { get; set; }
     public virtual string ClientId { get; set; }
+    public virtual Version ClientVersion { get; set; }
 
     public CurrentContext(IProviderUserRepository providerUserRepository)
     {
@@ -79,6 +80,11 @@ public class CurrentContext : ICurrentContext
         if (httpContext.Request.Headers.ContainsKey("X-Cf-Maybe-Bot"))
         {
             MaybeBot = httpContext.Request.Headers["X-Cf-Maybe-Bot"] == "1";
+        }
+
+        if (httpContext.Request.Headers.ContainsKey("Bitwarden-Client-Version"))
+        {
+            ClientVersion = new Version(httpContext.Request.Headers["Bitwarden-Client-Version"]);
         }
     }
 
