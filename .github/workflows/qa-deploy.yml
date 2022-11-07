@@ -96,7 +96,7 @@ jobs:
         with:
           token: '${{ secrets.GITHUB_TOKEN }}'
           initial-status: 'in_progress'
-          environment: 'Server ${{ matrix.name }} - QA'
+          environment: 'QA Cloud'
           task: 'deploy'
           description: 'Deploy from ${{ env.branch_name }} branch'
 
