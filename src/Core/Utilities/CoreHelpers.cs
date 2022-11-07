@@ -798,16 +798,21 @@ public static class CoreHelpers
             return email;
         }
 
-        var sb = new StringBuilder();
-        sb.Append(emailParts[0][..2]);
-        for (var i = 2; i < emailParts[0].Length; i++)
-        {
-            sb.Append('*');
-        }
+        var finalLength = emailParts[0].Length + 1 + emailParts[1].Length;
 
-        return sb.Append('@')
-            .Append(emailParts[1])
-            .ToString();
+        return string.Create(finalLength, (name: emailParts[0], domain: emailParts[1]), (buffer, state) =>
+        {
+            var nameBuffer = buffer.Slice(0, state.name.Length);
+
+            nameBuffer[0] = state.name[0];
+            nameBuffer[1] = state.name[1];
+            nameBuffer[2..].Fill('*');
+
+            buffer[state.name.Length] = '@';
+
+            var domainBuffer = buffer.Slice(state.name.Length + 1);
+            state.domain.CopyTo(domainBuffer);
+        });
 
     }
 }

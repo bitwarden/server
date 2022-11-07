@@ -61,9 +61,9 @@ public static class ApiHelpers
                 }
             }
 
-            if (eventTypeHandlers.ContainsKey(eventGridEvent.EventType))
+            if (eventTypeHandlers.TryGetValue(eventGridEvent.EventType, out var handler))
             {
-                await eventTypeHandlers[eventGridEvent.EventType](eventGridEvent);
+                await handler(eventGridEvent);
             }
         }
 
