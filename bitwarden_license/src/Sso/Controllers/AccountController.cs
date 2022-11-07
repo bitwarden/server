@@ -118,7 +118,7 @@ public class AccountController : Controller
 
             // Validate Authentication Scheme exists and is loaded (cache)
             var scheme = await _schemeProvider.GetSchemeAsync(organization.Id.ToString());
-            if (scheme == null || !(scheme is IDynamicAuthenticationScheme dynamicScheme))
+            if (!(scheme is IDynamicAuthenticationScheme dynamicScheme))
             {
                 return InvalidJson("NoSchemeOrHandlerForSsoConfigurationFoundError");
             }
