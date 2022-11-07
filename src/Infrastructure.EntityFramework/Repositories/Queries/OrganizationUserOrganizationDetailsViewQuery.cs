@@ -20,7 +20,7 @@ public class OrganizationUserOrganizationDetailsViewQuery : IQuery<OrganizationU
                     join os in dbContext.OrganizationSponsorships on ou.Id equals os.SponsoringOrganizationUserId into os_g
                     from os in os_g.DefaultIfEmpty()
                     select new OrganizationUserOrganizationDetails
-                    { 
+                    {
                         UserId = ou.UserId,
                         OrganizationId = ou.OrganizationId,
                         Name = o.Name,
