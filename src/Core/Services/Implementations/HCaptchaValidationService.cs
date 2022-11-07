@@ -74,7 +74,7 @@ public class HCaptchaValidationService : ICaptchaValidationService
             _logger.LogError(11389, e, "Unable to verify with HCaptcha.");
             return response;
         }
-  
+
         if (!responseMessage.IsSuccessStatusCode)
         {
             _logger.LogError("Error submitting Captcha token to HCaptcha: {status} - {message}", responseMessage.StatusCode, responseMessage.ReasonPhrase);
@@ -133,7 +133,7 @@ public class HCaptchaValidationService : ICaptchaValidationService
         [JsonPropertyName("score_reason")]
         public List<string> ScoreReason { get; set; }
         [JsonPropertyName("error-codes")]
-        public List<string> ErrorCodes {get;set;}
+        public List<string> ErrorCodes { get; set; }
 
         public void Dispose() { }
     }
