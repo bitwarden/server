@@ -81,7 +81,14 @@ server {
   }
 
   location /icons/ {
+{{ if eq (getenv "BW_ICONS_PROXY_TO_CLOUD") "true" }}
+    proxy_pass https://icons.bitwarden.net/;
+    proxy_set_header Host icons.bitwarden.net;
+    proxy_set_header X-Forwarded-For $remote_addr;
+    proxy_ssl_server_name on;
+{{ else }}
     proxy_pass http://localhost:5004/;
+{{ end }}
   }
 
   location /notifications/ {
