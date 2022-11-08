@@ -239,6 +239,11 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         {
             var dbContext = GetDatabaseContext(scope);
 
+            var organizationId = await dbContext.Collections
+                .Where(c => c.Id == id)
+                .Select(c => c.OrganizationId)
+                .FirstOrDefaultAsync();
+
             var existingCollectionUsers = await dbContext.CollectionUsers
                 .Where(cu => cu.CollectionId == id)
                 .ToListAsync();
@@ -256,7 +261,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                         HidePasswords = requestedUser.HidePasswords,
                         ReadOnly = requestedUser.ReadOnly,
                     });
-                    break;
+                    continue;
                 }
 
                 // It already exists, update it
@@ -268,6 +273,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
             // Remove all existing ones that are no longer requested
             var requestedUserIds = requestedUsers.Select(u => u.Id);
             dbContext.CollectionUsers.RemoveRange(existingCollectionUsers.Where(cu => !requestedUserIds.Contains(cu.OrganizationUserId)));
+            await UserBumpAccountRevisionDateByCollectionId(id, organizationId);
             await dbContext.SaveChangesAsync();
         }
     }
