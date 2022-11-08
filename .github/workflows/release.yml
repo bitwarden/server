@@ -95,7 +95,7 @@ jobs:
           branch: ${{ needs.setup.outputs.branch-name }}
           artifacts: ${{ matrix.name }}.zip
 
-      - name: Download latest Release ${{ matrix.name }} asset
+      - name: Dry Run - Download latest Release ${{ matrix.name }} asset
         if: ${{ github.event.inputs.release_type == 'Dry Run' }}
         uses: bitwarden/gh-actions/download-artifacts@850faad0cf6c02a8c0dc46eddde2363fbd6c373a
         with:
@@ -387,7 +387,7 @@ jobs:
                       docker-stub-sha256.txt,
                       swagger.json"
 
-      - name: Download latest Release docker-stub
+      - name: Dry Run - Download latest Release docker-stub
         if: ${{ github.event.inputs.release_type == 'Dry Run' }}
         uses: bitwarden/gh-actions/download-artifacts@850faad0cf6c02a8c0dc46eddde2363fbd6c373a
         with:
