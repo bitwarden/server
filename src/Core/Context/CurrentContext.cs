@@ -82,9 +82,14 @@ public class CurrentContext : ICurrentContext
             MaybeBot = httpContext.Request.Headers["X-Cf-Maybe-Bot"] == "1";
         }
 
-        if (httpContext.Request.Headers.ContainsKey("Bitwarden-Client-Version") && Version.TryParse(httpContext.Request.Headers["Bitwarden-Client-Version"], out var cVersion))
+        if (httpContext.Request.Headers.ContainsKey("Bitwarden-Client-Version"))
         {
-            ClientVersion = cVersion;
+            // The string.Split method is being used for cases where QA builds include the git hash e.g. '2022.10.2 - 5f8c1c1'
+            var clientVersionHeader = httpContext.Request.Headers["Bitwarden-Client-Version"].ToString().Split(' ')[0];
+            if (Version.TryParse(clientVersionHeader, out var cVersion))
+            {
+                ClientVersion = cVersion;
+            }
         }
     }
 
