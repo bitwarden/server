@@ -192,28 +192,42 @@ RUN apk add --update-cache \
     tzdata \
     && rm -rf /var/cache/apk/*
 
+# Create non-root user to run app
+RUN adduser -s /bin/false -D bitwarden
+
 # Create required directories
 RUN mkdir -p /etc/bitwarden/attachments/send
 RUN mkdir -p /etc/bitwarden/data-protection
 RUN mkdir -p /etc/bitwarden/licenses
 RUN mkdir -p /etc/bitwarden/logs
+RUN mkdir -p /etc/supervisor
+RUN mkdir -p /etc/supervisor.d
+RUN mkdir -p /var/log/bitwarden
+RUN mkdir -p /var/log/nginx/logs
+RUN mkdir -p /app
+RUN chown -R bitwarden:bitwarden \
+    /app \
+    /etc/bitwarden \
+    /etc/nginx/http.d \
+    /etc/supervisor \
+    /etc/supervisor.d \
+    /var/lib/nginx \
+    /var/log \
+    /run
 
 # Copy all apps from dotnet-build stage
 WORKDIR /app
-COPY --from=dotnet-build /app ./
+COPY --chown=bitwarden:bitwarden --from=dotnet-build /app ./
 
 # Copy Web files from node-build stage
-COPY --from=node-build /source/apps/web/build /app/Web
+COPY --chown=bitwarden:bitwarden --from=node-build /source/apps/web/build /app/Web
 
 # Set up supervisord
-RUN mkdir -p /etc/supervisor
-RUN mkdir -p /var/log/bitwarden
-COPY docker-unified/supervisord/*.ini /etc/supervisor.d/
-COPY docker-unified/supervisord/supervisord.conf /etc/supervisor/supervisord.conf
+COPY --chown=bitwarden:bitwarden docker-unified/supervisord/*.ini /etc/supervisor.d/
+COPY --chown=bitwarden:bitwarden docker-unified/supervisord/supervisord.conf /etc/supervisor/supervisord.conf
 RUN rm -f /etc/supervisord.conf
 
 # Set up nginx
-RUN mkdir -p /var/log/nginx/logs
 COPY docker-unified/nginx/nginx.conf /etc/nginx
 COPY docker-unified/nginx/proxy.conf /etc/nginx
 COPY docker-unified/nginx/mime.types /etc/nginx
@@ -240,17 +254,6 @@ RUN chmod +x /entrypoint.sh
 RUN apk add --update-cache \
     vim \
     && rm -rf /var/cache/apk/*
-
-# Create non-root user to run app
-RUN adduser -s /bin/false -D bitwarden && chown -R bitwarden:bitwarden \
-    /app \
-    /etc/bitwarden \
-    /etc/nginx/http.d \
-    /etc/supervisor \
-    /etc/supervisor.d \
-    /var/lib/nginx \
-    /var/log \
-    /run
 
 VOLUME ["/etc/bitwarden"]
 
