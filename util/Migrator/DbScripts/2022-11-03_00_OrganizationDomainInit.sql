@@ -24,13 +24,7 @@ END
 GO
 
 -- Create View
-IF EXISTS(SELECT * FROM sys.views WHERE [Name] = 'OrganizationDomainView')
-BEGIN
-    DROP VIEW [dbo].[OrganizationDomainView]
-END
-GO
-
-CREATE VIEW [dbo].[OrganizationDomainView]
+CREATE OR ALTER VIEW [dbo].[OrganizationDomainView]
 AS
 SELECT
     *
@@ -40,13 +34,7 @@ GO
 
 -- Organization Domain CRUD SPs
 -- Create
-IF OBJECT_ID('[dbo].[OrganizationDomain_Create]') IS NOT NULL
-BEGIN 
-    DROP PROCEDURE [dbo].[OrganizationDomain_Create]
-END
-GO
-
-CREATE PROCEDURE [dbo].[OrganizationDomain_Create]
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationDomain_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
     @OrganizationId UNIQUEIDENTIFIER,
     @Txt    VARCHAR(MAX),
@@ -88,13 +76,7 @@ END
 GO
 
 --Update
-IF OBJECT_ID('[dbo].[OrganizationDomain_Update]') IS NOT NULL
-BEGIN 
-    DROP PROCEDURE [dbo].[OrganizationDomain_Update]
-END
-GO
-
-CREATE PROCEDURE [dbo].[OrganizationDomain_Update]
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationDomain_Update]
     @Id UNIQUEIDENTIFIER OUTPUT,
     @VerifiedDate   DATETIME2(7),
     @NextRunDate    DATETIME2(7),
@@ -115,13 +97,7 @@ END
 GO
     
 --Read
-IF OBJECT_ID('[dbo].[OrganizationDomain_ReadById]') IS NOT NULL
-BEGIN 
-    DROP PROCEDURE [dbo].[OrganizationDomain_ReadById]
-END
-GO
-
-CREATE PROCEDURE [dbo].[OrganizationDomain_ReadById]
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationDomain_ReadById]
     @Id UNIQUEIDENTIFIER
 AS
 BEGIN
@@ -137,13 +113,7 @@ END
 GO
 
 --Deactivate
-IF OBJECT_ID('[dbo].[OrganizationDomain_Deactivate]') IS NOT NULL
-BEGIN 
-    DROP PROCEDURE [dbo].[OrganizationDomain_Deactivate]
-END
-GO
-
-CREATE PROCEDURE [dbo].[OrganizationDomain_Deactivate]
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationDomain_Deactivate]
     @Id UNIQUEIDENTIFIER
 AS
 BEGIN
