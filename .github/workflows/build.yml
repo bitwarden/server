@@ -264,7 +264,7 @@ jobs:
           unzip ${{ matrix.project_name }}.zip \
             -d ${{ matrix.base_path }}/${{ matrix.project_name }}/obj/build-output/publish
 
-      - name: Build Docker images
+      - name: Build Docker image
         env:
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
         run: |
