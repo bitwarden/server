@@ -381,9 +381,8 @@ jobs:
           docker logout
           echo "DOCKER_CONTENT_TRUST=0" >> $GITHUB_ENV
 
-
-  build-docker-lite:
-    name: Build Bitwarden Lite Docker image
+  build-docker-self-host:
+    name: Build Bitwarden Unified Self-Host Docker image
     runs-on: ubuntu-22.04
     needs:
       - testing
@@ -394,7 +393,7 @@ jobs:
 
       ########## Build Docker Image ##########
       - name: Build Docker image
-        run: docker build -t lite -f docker-lite/Dockerfile .
+        run: docker build -t self-host -f docker-unified/Dockerfile .
 
       ########## ACR ##########
       - name: Login to Azure - QA Subscription
@@ -414,12 +413,11 @@ jobs:
             IMAGE_TAG=dev
           fi
 
-          docker tag lite $REGISTRY/lite:$IMAGE_TAG
-          docker push $REGISTRY/lite:$IMAGE_TAG
+          docker tag self-host $REGISTRY/self-host:$IMAGE_TAG
+          docker push $REGISTRY/self-host:$IMAGE_TAG
 
       - name: Log out of Docker
         run: docker logout
-
 
   upload:
     name: Upload
@@ -509,7 +507,7 @@ jobs:
       - testing
       - build-artifacts
       - build-docker
-      - build-docker-lite
+      - build-docker-self-host
       - upload
     steps:
       - name: Check if any job failed
@@ -523,7 +521,7 @@ jobs:
           TESTING_STATUS: ${{ needs.testing.result }}
           BUILD_ARTIFACTS_STATUS: ${{ needs.build-artifacts.result }}
           BUILD_DOCKER_STATUS: ${{ needs.build-docker.result }}
-          BUILD_DOCKER_LITE_STATUS: ${{ needs.build-docker-lite.result }}
+          BUILD_DOCKER_SELF_HOST_STATUS: ${{ needs.build-docker-self-host.result }}
           UPLOAD_STATUS: ${{ needs.upload.result }}
         run: |
           if [ "$CLOC_STATUS" = "failure" ]; then
@@ -536,7 +534,7 @@ jobs:
               exit 1
           elif [ "$BUILD_DOCKER_STATUS" = "failure" ]; then
               exit 1
-          elif [ "$BUILD_DOCKER_LITE_STATUS" = "failure" ]; then
+          elif [ "$BUILD_DOCKER_SELF_HOST_STATUS" = "failure" ]; then
               exit 1
           elif [ "$UPLOAD_STATUS" = "failure" ]; then
               exit 1
