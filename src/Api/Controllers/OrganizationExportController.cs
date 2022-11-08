@@ -42,7 +42,7 @@ public class OrganizationExportController : Controller
         (IEnumerable<CipherOrganizationDetails> orgCiphers, Dictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphersGroupDict) = await _cipherService.GetOrganizationCiphers(userId, organizationId);
 
         // Backward compatibility with versions before 2022.11.0 that use ListResponseModel
-        if (_currentContext.ClientVersion < new Version("2022.11.0"))
+        if (_currentContext.ClientVersion != null && _currentContext.ClientVersion < new Version("2022.11.0"))
         {
             var organizationExportListResponseModel = new OrganizationExportListResponseModel
             {
