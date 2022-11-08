@@ -17,7 +17,7 @@ on:
 jobs:
   setup:
     name: Setup
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     outputs:
       release_version: ${{ steps.version.outputs.version }}
       branch-name: ${{ steps.branch.outputs.branch-name }}
@@ -51,7 +51,7 @@ jobs:
 
   deploy:
     name: Deploy
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs:
       - setup
     strategy:
@@ -165,7 +165,7 @@ jobs:
 
   release-docker:
     name: Build Docker images
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs:
       - setup
     env:
@@ -198,6 +198,9 @@ jobs:
             origin_docker_repo: bitwarden
           - project_name: Notifications
             origin_docker_repo: bitwarden
+          - project_name: Self-Host
+            origin_docker_repo: bitwarden
+            beta: true
           - project_name: Server
             origin_docker_repo: bitwarden
           - project_name: Setup
@@ -227,7 +230,7 @@ jobs:
           PROJECT_NAME=$(echo "${{ matrix.project_name }}" | awk '{print tolower($0)}')
           echo "Matrix name: ${{ matrix.project_name }}"
           echo "PROJECT_NAME: $PROJECT_NAME"
-          echo "::set-output project_name=project_name::$PROJECT_NAME"
+          echo "::set-output name=project_name::$PROJECT_NAME"
 
       ########## DockerHub ##########
       - name: Setup DCT
@@ -254,7 +257,11 @@ jobs:
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
         run: |
           if [[ "${{ github.event.inputs.release_type }}" == "Dry Run" ]]; then
-            docker pull bitwarden/$PROJECT_NAME:latest
+            if [[ "${{ matrix.beta }}" == "true" ]]; then
+              docker pull bitwarden/$PROJECT_NAME:dev
+            else
+              docker pull bitwarden/$PROJECT_NAME:latest
+            fi
           else
             docker pull bitwarden/$PROJECT_NAME:$_BRANCH_NAME
           fi
@@ -265,9 +272,17 @@ jobs:
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
         run: |
           if [[ "${{ github.event.inputs.release_type }}" == "Dry Run" ]]; then
-            docker tag bitwarden/$PROJECT_NAME:latest bitwarden/$PROJECT_NAME:dryrun
+            if [[ "${{ matrix.beta }}" == "true" ]]; then
+              docker tag bitwarden/$PROJECT_NAME:dev bitwarden/$PROJECT_NAME:dryrun
+            else
+              docker tag bitwarden/$PROJECT_NAME:latest bitwarden/$PROJECT_NAME:dryrun
+            fi
           else
-            docker tag bitwarden/$PROJECT_NAME:$_BRANCH_NAME bitwarden/$PROJECT_NAME:$_RELEASE_VERSION
+            if [[ "${{ matrix.beta }}" == "true" ]]; then
+              docker tag bitwarden/$PROJECT_NAME:$_BRANCH_NAME bitwarden/$PROJECT_NAME:${_RELEASE_VERSION}-beta
+            else
+              docker tag bitwarden/$PROJECT_NAME:$_BRANCH_NAME bitwarden/$PROJECT_NAME:$_RELEASE_VERSION
+            fi
           fi
 
       - name: Push version and latest image
@@ -277,7 +292,11 @@ jobs:
           DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ steps.setup-dct.outputs.dct-delegate-repo-passphrase }}
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
         run: |
-          docker push bitwarden/$PROJECT_NAME:$_RELEASE_VERSION
+          if [[ "${{ matrix.beta }}" == "true" ]]; then
+            docker push bitwarden/$PROJECT_NAME:${_RELEASE_VERSION}-beta
+          else
+            docker push bitwarden/$PROJECT_NAME:$_RELEASE_VERSION
+          fi
 
       - name: Log out of Docker and disable Docker Notary
         if: matrix.origin_docker_repo == 'bitwarden'
@@ -294,14 +313,18 @@ jobs:
       - name: Login to Azure ACR
         run: az acr login -n bitwardenqa
 
-      - name: Pull latest selfhost image
+      - name: Pull latest project image
         if: matrix.origin_docker_repo == 'bitwardenqa.azurecr.io'
         env:
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
           REGISTRY: bitwardenqa.azurecr.io
         run: |
           if [[ "${{ github.event.inputs.release_type }}" == "Dry Run" ]]; then
-            docker pull $REGISTRY/$PROJECT_NAME:latest
+            if [[ "${{ matrix.beta }}" == "true" ]]; then
+              docker pull $REGISTRY/$PROJECT_NAME:dev
+            else
+              docker pull $REGISTRY/$PROJECT_NAME:latest
+            fi
           else
             docker pull $REGISTRY/$PROJECT_NAME:$_BRANCH_NAME
           fi
@@ -310,12 +333,21 @@ jobs:
         env:
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
           REGISTRY: bitwardenqa.azurecr.io
-          ORIGIN_REGISTY: ${{ matrix.origin_docker_repo }}
+          ORIGIN_REGISTRY: ${{ matrix.origin_docker_repo }}
         run: |
           if [[ "${{ github.event.inputs.release_type }}" == "Dry Run" ]]; then
-            docker tag $ORIGIN_REGISTY/$PROJECT_NAME:latest $REGISTRY/$PROJECT_NAME:dryrun
+            if [[ "${{ matrix.beta }}" == "true" ]]; then
+              docker tag $ORIGIN_REGISTRY/$PROJECT_NAME:dev $REGISTRY/$PROJECT_NAME:dryrun
+            else
+              docker tag $ORIGIN_REGISTRY/$PROJECT_NAME:latest $REGISTRY/$PROJECT_NAME:dryrun
+            fi
           else
-            docker tag $ORIGIN_REGISTY/$PROJECT_NAME:$_BRANCH_NAME $REGISTRY/$PROJECT_NAME:$_RELEASE_VERSION
+            if [[ "${{ matrix.beta }}" == "true" ]]; then
+              docker tag $ORIGIN_REGISTRY/$PROJECT_NAME:$_BRANCH_NAME $REGISTRY/$PROJECT_NAME:${_RELEASE_VERSION}-beta
+            else
+              docker tag $ORIGIN_REGISTRY/$PROJECT_NAME:$_BRANCH_NAME $REGISTRY/$PROJECT_NAME:$_RELEASE_VERSION
+              docker tag $ORIGIN_REGISTRY/$PROJECT_NAME:$_BRANCH_NAME $REGISTRY/$PROJECT_NAME:latest
+            fi
           fi
 
       - name: Push version and latest image
@@ -324,7 +356,12 @@ jobs:
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
           REGISTRY: bitwardenqa.azurecr.io
         run: |
-          docker push $REGISTRY/$PROJECT_NAME:$_RELEASE_VERSION
+          if [[ "${{ matrix.beta }}" == "true" ]]; then
+            docker push $REGISTRY/$PROJECT_NAME:${_RELEASE_VERSION}-beta
+          else
+            docker push $REGISTRY/$PROJECT_NAME:latest
+            docker push $REGISTRY/$PROJECT_NAME:$_RELEASE_VERSION
+          fi
 
       - name: Log out of Docker
         run: docker logout
@@ -345,12 +382,21 @@ jobs:
         env:
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
           REGISTRY: bitwardenprod.azurecr.io
-          ORIGIN_REGISTY: ${{ matrix.origin_docker_repo }}
+          ORIGIN_REGISTRY: ${{ matrix.origin_docker_repo }}
         run: |
           if [[ "${{ github.event.inputs.release_type }}" == "Dry Run" ]]; then
-            docker tag $ORIGIN_REGISTY/$PROJECT_NAME:latest $REGISTRY/$PROJECT_NAME:dryrun
+            if [[ "${{ matrix.beta }}" == "true" ]]; then
+              docker tag $ORIGIN_REGISTRY/$PROJECT_NAME:dev $REGISTRY/$PROJECT_NAME:dryrun
+            else
+              docker tag $ORIGIN_REGISTRY/$PROJECT_NAME:latest $REGISTRY/$PROJECT_NAME:dryrun
+            fi
           else
-            docker tag $ORIGIN_REGISTY/$PROJECT_NAME:$_BRANCH_NAME $REGISTRY/$PROJECT_NAME:$_RELEASE_VERSION
+            if [[ "${{ matrix.beta }}" == "true" ]]; then
+              docker tag $ORIGIN_REGISTRY/$PROJECT_NAME:$_BRANCH_NAME $REGISTRY/$PROJECT_NAME:${_RELEASE_VERSION}-beta
+            else
+              docker tag $ORIGIN_REGISTRY/$PROJECT_NAME:$_BRANCH_NAME $REGISTRY/$PROJECT_NAME:$_RELEASE_VERSION
+              docker tag $ORIGIN_REGISTRY/$PROJECT_NAME:$_BRANCH_NAME $REGISTRY/$PROJECT_NAME:latest
+            fi
           fi
 
       - name: Push version and latest image
@@ -359,7 +405,12 @@ jobs:
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
           REGISTRY: bitwardenprod.azurecr.io
         run: |
-          docker push $REGISTRY/$PROJECT_NAME:$_RELEASE_VERSION
+          if [[ "${{ matrix.beta }}" == "true" ]]; then
+            docker push $REGISTRY/$PROJECT_NAME:${_RELEASE_VERSION}-beta
+          else
+            docker push $REGISTRY/$PROJECT_NAME:$_RELEASE_VERSION
+            docker push $REGISTRY/$PROJECT_NAME:latest
+          fi
 
       - name: Log out of Docker
         if: matrix.prod_acr == true
