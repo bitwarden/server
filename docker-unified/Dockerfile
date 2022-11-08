@@ -149,7 +149,7 @@ RUN dotnet publish -c release -o /app/Scim --no-restore
 ###############################################
 FROM mcr.microsoft.com/dotnet/aspnet:6.0-alpine
 LABEL com.bitwarden.product="bitwarden"
-LABEL com.bitwarden.project="lite"
+LABEL com.bitwarden.project="unified"
 ENV ASPNETCORE_ENVIRONMENT=Production
 ENV BW_ENABLE_ADMIN=true
 ENV BW_ENABLE_API=true
@@ -208,32 +208,32 @@ COPY --from=node-build /source/apps/web/build /app/Web
 # Set up supervisord
 RUN mkdir -p /etc/supervisor
 RUN mkdir -p /var/log/bitwarden
-COPY docker-lite/supervisord/*.ini /etc/supervisor.d/
-COPY docker-lite/supervisord/supervisord.conf /etc/supervisor/supervisord.conf
+COPY docker-unified/supervisord/*.ini /etc/supervisor.d/
+COPY docker-unified/supervisord/supervisord.conf /etc/supervisor/supervisord.conf
 RUN rm -f /etc/supervisord.conf
 
 # Set up nginx
 RUN mkdir -p /var/log/nginx/logs
-COPY docker-lite/nginx/nginx.conf /etc/nginx
-COPY docker-lite/nginx/proxy.conf /etc/nginx
-COPY docker-lite/nginx/mime.types /etc/nginx
-COPY docker-lite/nginx/security-headers.conf /etc/nginx
-COPY docker-lite/nginx/security-headers-ssl.conf /etc/nginx
-COPY docker-lite/nginx/logrotate.sh /
+COPY docker-unified/nginx/nginx.conf /etc/nginx
+COPY docker-unified/nginx/proxy.conf /etc/nginx
+COPY docker-unified/nginx/mime.types /etc/nginx
+COPY docker-unified/nginx/security-headers.conf /etc/nginx
+COPY docker-unified/nginx/security-headers-ssl.conf /etc/nginx
+COPY docker-unified/nginx/logrotate.sh /
 RUN chmod +x /logrotate.sh
 
 # Copy configuration templates
-COPY docker-lite/confd/nginx-config.toml /etc/confd/conf.d/
-COPY docker-lite/confd/nginx-config.conf.tmpl /etc/confd/templates/
-COPY docker-lite/confd/app-id.toml /etc/confd/conf.d/
-COPY docker-lite/confd/app-id.conf.tmpl /etc/confd/templates/
+COPY docker-unified/confd/nginx-config.toml /etc/confd/conf.d/
+COPY docker-unified/confd/nginx-config.conf.tmpl /etc/confd/templates/
+COPY docker-unified/confd/app-id.toml /etc/confd/conf.d/
+COPY docker-unified/confd/app-id.conf.tmpl /etc/confd/templates/
 
 # Add confd tool for generating final configurations
 ADD https://github.com/kelseyhightower/confd/releases/download/v0.16.0/confd-0.16.0-linux-amd64 /usr/local/bin/confd
 RUN chmod +x /usr/local/bin/confd
 
 # Copy entrypoint script and make it executable
-COPY docker-lite/entrypoint.sh /entrypoint.sh
+COPY docker-unified/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 # TODO: Remove after testing
