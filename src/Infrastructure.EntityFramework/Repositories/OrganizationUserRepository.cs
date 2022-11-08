@@ -333,7 +333,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                         HidePasswords = requestedCollection.HidePasswords,
                         ReadOnly = requestedCollection.ReadOnly,
                     });
-                    break;
+                    continue;
                 }
 
                 // It already exists, update it
