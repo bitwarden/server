@@ -47,7 +47,7 @@ public class ProjectRepository : Repository<Core.Entities.Project, Project, Guid
             var projects = dbContext.Project.Where(c => ids.Contains(c.Id));
             await projects.ForEachAsync(project =>
             {
-                dbContext.Remove(project);
+                project.DeletedDate = DateTime.UtcNow;
             });
             await dbContext.SaveChangesAsync();
         }
