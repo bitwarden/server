@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.OrganizationFeatures.Groups;
 using Bit.Core.Repositories;
@@ -47,5 +48,19 @@ public class DeleteGroupCommandTests
             });
 
         await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.DeleteGroupAsync(organizationId, groupId));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task DeleteGroup_WithEventSystemUser_Success(SutProvider<DeleteGroupCommand> sutProvider, Group group, EventSystemUser eventSystemUser)
+    {
+        sutProvider.GetDependency<IGroupRepository>()
+            .GetByIdAsync(group.Id)
+            .Returns(group);
+
+        await sutProvider.Sut.DeleteGroupAsync(group.OrganizationId, group.Id, eventSystemUser);
+
+        await sutProvider.GetDependency<IGroupRepository>().Received(1).DeleteAsync(group);
+        await sutProvider.GetDependency<IEventService>().Received(1).LogGroupEventAsync(group, Core.Enums.EventType.Group_Deleted, eventSystemUser);
     }
 }
