@@ -149,9 +149,9 @@ RUN dotnet publish -c release -o /app/Scim --no-restore
 ###############################################
 FROM mcr.microsoft.com/dotnet/aspnet:6.0-alpine
 LABEL com.bitwarden.product="bitwarden"
-LABEL com.bitwarden.project="lite"
+LABEL com.bitwarden.project="unified"
 ENV ASPNETCORE_ENVIRONMENT=Production
-ENV BW_ENABLE_ADMIN=false
+ENV BW_ENABLE_ADMIN=true
 ENV BW_ENABLE_API=true
 ENV BW_ENABLE_EVENTS=false
 ENV BW_ENABLE_ICONS=true
@@ -192,57 +192,20 @@ RUN apk add --update-cache \
     tzdata \
     && rm -rf /var/cache/apk/*
 
+# Create non-root user to run app
+RUN adduser -s /bin/false -D bitwarden
+
 # Create required directories
 RUN mkdir -p /etc/bitwarden/attachments/send
 RUN mkdir -p /etc/bitwarden/data-protection
 RUN mkdir -p /etc/bitwarden/licenses
 RUN mkdir -p /etc/bitwarden/logs
-
-# Copy all apps from dotnet-build stage
-WORKDIR /app
-COPY --from=dotnet-build /app ./
-
-# Copy Web files from node-build stage
-COPY --from=node-build /source/apps/web/build /app/Web
-
-# Set up supervisord
 RUN mkdir -p /etc/supervisor
+RUN mkdir -p /etc/supervisor.d
 RUN mkdir -p /var/log/bitwarden
-COPY docker-lite/supervisord/*.ini /etc/supervisor.d/
-COPY docker-lite/supervisord/supervisord.conf /etc/supervisor/supervisord.conf
-RUN rm -f /etc/supervisord.conf
-
-# Set up nginx
 RUN mkdir -p /var/log/nginx/logs
-COPY docker-lite/nginx/nginx.conf /etc/nginx
-COPY docker-lite/nginx/proxy.conf /etc/nginx
-COPY docker-lite/nginx/mime.types /etc/nginx
-COPY docker-lite/nginx/security-headers.conf /etc/nginx
-COPY docker-lite/nginx/security-headers-ssl.conf /etc/nginx
-COPY docker-lite/nginx/logrotate.sh /
-RUN chmod +x /logrotate.sh
-
-# Copy configuration templates
-COPY docker-lite/confd/nginx-config.toml /etc/confd/conf.d/
-COPY docker-lite/confd/nginx-config.conf.tmpl /etc/confd/templates/
-COPY docker-lite/confd/app-id.toml /etc/confd/conf.d/
-COPY docker-lite/confd/app-id.conf.tmpl /etc/confd/templates/
-
-# Add confd tool for generating final configurations
-ADD https://github.com/kelseyhightower/confd/releases/download/v0.16.0/confd-0.16.0-linux-amd64 /usr/local/bin/confd
-RUN chmod +x /usr/local/bin/confd
-
-# Copy entrypoint script and make it executable
-COPY docker-lite/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
-
-# TODO: Remove after testing
-RUN apk add --update-cache \
-    vim \
-    && rm -rf /var/cache/apk/*
-
-# Create non-root user to run app
-RUN adduser -s /bin/false -D bitwarden && chown -R bitwarden:bitwarden \
+RUN mkdir -p /app
+RUN chown -R bitwarden:bitwarden \
     /app \
     /etc/bitwarden \
     /etc/nginx/http.d \
@@ -251,6 +214,46 @@ RUN adduser -s /bin/false -D bitwarden && chown -R bitwarden:bitwarden \
     /var/lib/nginx \
     /var/log \
     /run
+
+# Copy all apps from dotnet-build stage
+WORKDIR /app
+COPY --chown=bitwarden:bitwarden --from=dotnet-build /app ./
+
+# Copy Web files from node-build stage
+COPY --chown=bitwarden:bitwarden --from=node-build /source/apps/web/build /app/Web
+
+# Set up supervisord
+COPY --chown=bitwarden:bitwarden docker-unified/supervisord/*.ini /etc/supervisor.d/
+COPY --chown=bitwarden:bitwarden docker-unified/supervisord/supervisord.conf /etc/supervisor/supervisord.conf
+RUN rm -f /etc/supervisord.conf
+
+# Set up nginx
+COPY docker-unified/nginx/nginx.conf /etc/nginx
+COPY docker-unified/nginx/proxy.conf /etc/nginx
+COPY docker-unified/nginx/mime.types /etc/nginx
+COPY docker-unified/nginx/security-headers.conf /etc/nginx
+COPY docker-unified/nginx/security-headers-ssl.conf /etc/nginx
+COPY docker-unified/nginx/logrotate.sh /
+RUN chmod +x /logrotate.sh
+
+# Copy configuration templates
+COPY docker-unified/confd/nginx-config.toml /etc/confd/conf.d/
+COPY docker-unified/confd/nginx-config.conf.tmpl /etc/confd/templates/
+COPY docker-unified/confd/app-id.toml /etc/confd/conf.d/
+COPY docker-unified/confd/app-id.conf.tmpl /etc/confd/templates/
+
+# Add confd tool for generating final configurations
+ADD https://github.com/kelseyhightower/confd/releases/download/v0.16.0/confd-0.16.0-linux-amd64 /usr/local/bin/confd
+RUN chmod +x /usr/local/bin/confd
+
+# Copy entrypoint script and make it executable
+COPY docker-unified/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+# TODO: Remove after testing
+RUN apk add --update-cache \
+    vim \
+    && rm -rf /var/cache/apk/*
 
 VOLUME ["/etc/bitwarden"]
 
