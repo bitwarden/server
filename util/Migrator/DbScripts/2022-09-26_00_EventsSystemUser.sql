@@ -1,4 +1,29 @@
-﻿CREATE PROCEDURE [dbo].[Event_Create]
+-- Add column SystemUser to Event table
+IF COL_LENGTH('[dbo].[Event]', 'SystemUser') IS NULL
+    BEGIN
+        ALTER TABLE
+            [dbo].[Event]
+        ADD
+            [SystemUser] TINYINT NULL;
+    END
+GO
+    
+-- Recreate EventView so that it includes the SystemUser column
+IF OBJECT_ID('[dbo].[EventView]') IS NOT NULL
+BEGIN
+    DROP VIEW [dbo].[EventView]
+END
+GO
+
+CREATE VIEW [dbo].[EventView]
+AS
+SELECT
+    *
+FROM
+    [dbo].[Event]
+GO
+
+CREATE OR ALTER PROCEDURE [dbo].[Event_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
     @Type INT,
     @UserId UNIQUEIDENTIFIER,
@@ -64,3 +89,4 @@ BEGIN
         @SystemUser
     )
 END
+GO

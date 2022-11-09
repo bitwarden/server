@@ -119,7 +119,7 @@ public class UsersController : Controller
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(Guid organizationId, Guid id)
     {
-        await _deleteOrganizationUserCommand.DeleteUserAsync(organizationId, id, null);
+        await _deleteOrganizationUserCommand.DeleteUserAsync(organizationId, id, EventSystemUser.SCIM);
         return new NoContentResult();
     }
 }

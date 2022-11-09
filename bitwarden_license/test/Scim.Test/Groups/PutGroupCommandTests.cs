@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -45,7 +46,7 @@ public class PutGroupCommandTests
         AssertHelper.AssertPropertyEqual(expectedResult, result, "CreationDate", "RevisionDate");
         Assert.Equal(displayName, group.Name);
 
-        await sutProvider.GetDependency<IGroupService>().Received(1).SaveAsync(group);
+        await sutProvider.GetDependency<IGroupService>().Received(1).SaveAsync(group, EventSystemUser.SCIM);
         await sutProvider.GetDependency<IGroupRepository>().Received(0).UpdateUsersAsync(group.Id, Arg.Any<IEnumerable<Guid>>());
     }
 
@@ -82,7 +83,7 @@ public class PutGroupCommandTests
         AssertHelper.AssertPropertyEqual(expectedResult, result, "CreationDate", "RevisionDate");
         Assert.Equal(displayName, group.Name);
 
-        await sutProvider.GetDependency<IGroupService>().Received(1).SaveAsync(group);
+        await sutProvider.GetDependency<IGroupService>().Received(1).SaveAsync(group, EventSystemUser.SCIM);
         await sutProvider.GetDependency<IGroupRepository>().Received(1).UpdateUsersAsync(group.Id, Arg.Is<IEnumerable<Guid>>(arg => arg.All(id => membersUserIds.Contains(id))));
     }
 
