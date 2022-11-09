@@ -309,22 +309,42 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         }
     }
 
-    public async Task ReplaceAsync(Core.Entities.OrganizationUser obj, IEnumerable<SelectionReadOnly> collections)
+    public async Task ReplaceAsync(Core.Entities.OrganizationUser obj, IEnumerable<SelectionReadOnly> requestedCollections)
     {
         await base.ReplaceAsync(obj);
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
 
-            var procedure = new OrganizationUserUpdateWithCollectionsQuery(obj, collections);
+            var existingCollectionUsers = await dbContext.CollectionUsers
+                .Where(cu => cu.OrganizationUserId == obj.Id)
+                .ToListAsync();
 
-            var update = procedure.Update.Run(dbContext);
-            dbContext.UpdateRange(await update.ToListAsync());
+            foreach (var requestedCollection in requestedCollections)
+            {
+                var existingCollectionUser = existingCollectionUsers.FirstOrDefault(cu => cu.CollectionId == requestedCollection.Id);
+                if (existingCollectionUser == null)
+                {
+                    // This is a brand new entry
+                    dbContext.CollectionUsers.Add(new CollectionUser
+                    {
+                        CollectionId = requestedCollection.Id,
+                        OrganizationUserId = obj.Id,
+                        HidePasswords = requestedCollection.HidePasswords,
+                        ReadOnly = requestedCollection.ReadOnly,
+                    });
+                    continue;
+                }
 
-            var insert = procedure.Insert.Run(dbContext);
-            await dbContext.AddRangeAsync(await insert.ToListAsync());
+                // It already exists, update it
+                existingCollectionUser.HidePasswords = requestedCollection.HidePasswords;
+                existingCollectionUser.ReadOnly = requestedCollection.ReadOnly;
+                dbContext.CollectionUsers.Update(existingCollectionUser);
+            }
 
-            dbContext.RemoveRange(await procedure.Delete.Run(dbContext).ToListAsync());
+            // Remove all existing ones that are no longer requested
+            var requestedCollectionIds = requestedCollections.Select(c => c.Id).ToList();
+            dbContext.CollectionUsers.RemoveRange(existingCollectionUsers.Where(cu => !requestedCollectionIds.Contains(cu.CollectionId)));
             await dbContext.SaveChangesAsync();
         }
     }
