@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -42,7 +43,7 @@ public class PatchUserCommandTests
 
         await sutProvider.Sut.PatchUserAsync(organizationUser.OrganizationId, organizationUser.Id, scimPatchModel);
 
-        await sutProvider.GetDependency<IOrganizationService>().Received(1).RestoreUserAsync(organizationUser, null, Arg.Any<IUserService>());
+        await sutProvider.GetDependency<IOrganizationService>().Received(1).RestoreUserAsync(organizationUser, EventSystemUser.SCIM, Arg.Any<IUserService>());
     }
 
     [Theory]
@@ -70,7 +71,7 @@ public class PatchUserCommandTests
 
         await sutProvider.Sut.PatchUserAsync(organizationUser.OrganizationId, organizationUser.Id, scimPatchModel);
 
-        await sutProvider.GetDependency<IOrganizationService>().Received(1).RestoreUserAsync(organizationUser, null, Arg.Any<IUserService>());
+        await sutProvider.GetDependency<IOrganizationService>().Received(1).RestoreUserAsync(organizationUser, EventSystemUser.SCIM, Arg.Any<IUserService>());
     }
 
     [Theory]
@@ -99,7 +100,7 @@ public class PatchUserCommandTests
 
         await sutProvider.Sut.PatchUserAsync(organizationUser.OrganizationId, organizationUser.Id, scimPatchModel);
 
-        await sutProvider.GetDependency<IOrganizationService>().Received(1).RevokeUserAsync(organizationUser, null);
+        await sutProvider.GetDependency<IOrganizationService>().Received(1).RevokeUserAsync(organizationUser, EventSystemUser.SCIM);
     }
 
     [Theory]
@@ -127,7 +128,7 @@ public class PatchUserCommandTests
 
         await sutProvider.Sut.PatchUserAsync(organizationUser.OrganizationId, organizationUser.Id, scimPatchModel);
 
-        await sutProvider.GetDependency<IOrganizationService>().Received(1).RevokeUserAsync(organizationUser, null);
+        await sutProvider.GetDependency<IOrganizationService>().Received(1).RevokeUserAsync(organizationUser, EventSystemUser.SCIM);
     }
 
     [Theory]
@@ -146,8 +147,8 @@ public class PatchUserCommandTests
 
         await sutProvider.Sut.PatchUserAsync(organizationUser.OrganizationId, organizationUser.Id, scimPatchModel);
 
-        await sutProvider.GetDependency<IOrganizationService>().Received(0).RestoreUserAsync(organizationUser, null, Arg.Any<IUserService>());
-        await sutProvider.GetDependency<IOrganizationService>().Received(0).RevokeUserAsync(organizationUser, null);
+        await sutProvider.GetDependency<IOrganizationService>().Received(0).RestoreUserAsync(organizationUser, EventSystemUser.SCIM, Arg.Any<IUserService>());
+        await sutProvider.GetDependency<IOrganizationService>().Received(0).RevokeUserAsync(organizationUser, EventSystemUser.SCIM);
     }
 
     [Theory]
