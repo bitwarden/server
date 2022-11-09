@@ -460,8 +460,14 @@ public class OrganizationsController : Controller
         {
             throw new BadRequestException("Invalid license");
         }
+        
+        var organization = await _organizationRepository.GetByIdAsync(orgIdGuid);
+        if (organization == null)
+        {
+            throw new NotFoundException();
+        }
 
-        await _organizationService.UpdateLicenseAsync(new Guid(id), license);
+        await _organizationService.UpdateLicenseAsync(organization, license);
     }
 
     [HttpPost("{id}/import")]

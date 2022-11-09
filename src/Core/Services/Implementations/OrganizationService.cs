@@ -821,14 +821,8 @@ public class OrganizationService : IOrganizationService
         }
     }
 
-    public async Task UpdateLicenseAsync(Guid organizationId, OrganizationLicense license)
+    public async Task UpdateLicenseAsync(Organization organization, OrganizationLicense license)
     {
-        var organization = await GetOrgById(organizationId);
-        if (organization == null)
-        {
-            throw new NotFoundException();
-        }
-
         if (!_globalSettings.SelfHosted)
         {
             throw new InvalidOperationException("Licenses require self hosting.");
@@ -852,7 +846,7 @@ public class OrganizationService : IOrganizationService
         }
 
         var enabledOrgs = await _organizationRepository.GetManyByEnabledAsync();
-        if (enabledOrgs.Any(o => o.LicenseKey.Equals(license.LicenseKey) && o.Id != organizationId))
+        if (enabledOrgs.Any(o => o.LicenseKey.Equals(license.LicenseKey) && o.Id != organization.Id))
         {
             throw new BadRequestException("License is already in use by another organization.");
         }

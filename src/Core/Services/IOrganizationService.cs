@@ -20,7 +20,7 @@ public interface IOrganizationService
     Task<Tuple<Organization, OrganizationUser>> SignUpAsync(OrganizationSignup organizationSignup, bool provider = false);
     Task<Tuple<Organization, OrganizationUser>> SignUpAsync(OrganizationLicense license, User owner,
         string ownerKey, string collectionName, string publicKey, string privateKey);
-    Task UpdateLicenseAsync(Guid organizationId, OrganizationLicense license);
+    Task UpdateLicenseAsync(Organization organization, OrganizationLicense license);
     Task DeleteAsync(Organization organization);
     Task EnableAsync(Guid organizationId, DateTime? expirationDate);
     Task DisableAsync(Guid organizationId, DateTime? expirationDate);
