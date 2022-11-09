@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -33,7 +34,7 @@ public class PutGroupCommand : IPutGroupCommand
         }
 
         group.Name = model.DisplayName;
-        await _groupService.SaveAsync(group);
+        await _groupService.SaveAsync(group, EventSystemUser.SCIM);
         await UpdateGroupMembersAsync(group, model);
 
         return group;
