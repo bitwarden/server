@@ -11,6 +11,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data.Organizations.Policies;
 using Bit.Core.OrganizationFeatures.OrganizationApiKeys.Interfaces;
+using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -36,6 +37,7 @@ public class OrganizationsController : Controller
     private readonly IGetOrganizationApiKeyCommand _getOrganizationApiKeyCommand;
     private readonly IRotateOrganizationApiKeyCommand _rotateOrganizationApiKeyCommand;
     private readonly IOrganizationApiKeyRepository _organizationApiKeyRepository;
+    private readonly IUpdateLicenseCommand _updateLicenseCommand;
     private readonly GlobalSettings _globalSettings;
 
     public OrganizationsController(
@@ -51,6 +53,7 @@ public class OrganizationsController : Controller
         IGetOrganizationApiKeyCommand getOrganizationApiKeyCommand,
         IRotateOrganizationApiKeyCommand rotateOrganizationApiKeyCommand,
         IOrganizationApiKeyRepository organizationApiKeyRepository,
+        IUpdateLicenseCommand updateLicenseCommand,
         GlobalSettings globalSettings)
     {
         _organizationRepository = organizationRepository;
@@ -65,6 +68,7 @@ public class OrganizationsController : Controller
         _getOrganizationApiKeyCommand = getOrganizationApiKeyCommand;
         _rotateOrganizationApiKeyCommand = rotateOrganizationApiKeyCommand;
         _organizationApiKeyRepository = organizationApiKeyRepository;
+        _updateLicenseCommand = updateLicenseCommand;
         _globalSettings = globalSettings;
     }
 
@@ -467,7 +471,7 @@ public class OrganizationsController : Controller
             throw new NotFoundException();
         }
 
-        await _organizationService.UpdateLicenseAsync(organization, license);
+        await _updateLicenseCommand.UpdateLicenseAsync(organization, license);
     }
 
     [HttpPost("{id}/import")]
