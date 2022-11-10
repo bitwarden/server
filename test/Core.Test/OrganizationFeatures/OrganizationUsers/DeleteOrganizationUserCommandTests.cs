@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.Repositories;
@@ -50,5 +51,22 @@ public class DeleteOrganizationUserCommandTests
             });
 
         await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.DeleteUserAsync(organizationId, organizationUserId, null));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task DeleteUser_WithEventSystemUser_Success(SutProvider<DeleteOrganizationUserCommand> sutProvider, Guid organizationId, Guid organizationUserId, EventSystemUser eventSystemUser)
+    {
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(organizationUserId)
+            .Returns(new OrganizationUser
+            {
+                Id = organizationUserId,
+                OrganizationId = organizationId
+            });
+
+        await sutProvider.Sut.DeleteUserAsync(organizationId, organizationUserId, eventSystemUser);
+
+        await sutProvider.GetDependency<IOrganizationService>().Received(1).DeleteUserAsync(organizationId, organizationUserId, eventSystemUser);
     }
 }

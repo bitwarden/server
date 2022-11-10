@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -67,7 +68,7 @@ public class PatchGroupCommandTests
 
         await sutProvider.Sut.PatchGroupAsync(group.OrganizationId, group.Id, scimPatchModel);
 
-        await sutProvider.GetDependency<IGroupService>().Received(1).SaveAsync(group);
+        await sutProvider.GetDependency<IGroupService>().Received(1).SaveAsync(group, EventSystemUser.SCIM);
         Assert.Equal(displayName, group.Name);
     }
 
@@ -94,7 +95,7 @@ public class PatchGroupCommandTests
 
         await sutProvider.Sut.PatchGroupAsync(group.OrganizationId, group.Id, scimPatchModel);
 
-        await sutProvider.GetDependency<IGroupService>().Received(1).SaveAsync(group);
+        await sutProvider.GetDependency<IGroupService>().Received(1).SaveAsync(group, EventSystemUser.SCIM);
         Assert.Equal(displayName, group.Name);
     }
 
@@ -182,7 +183,7 @@ public class PatchGroupCommandTests
 
         await sutProvider.Sut.PatchGroupAsync(group.OrganizationId, group.Id, scimPatchModel);
 
-        await sutProvider.GetDependency<IGroupService>().Received(1).DeleteUserAsync(group, userId);
+        await sutProvider.GetDependency<IGroupService>().Received(1).DeleteUserAsync(group, userId, EventSystemUser.SCIM);
     }
 
     [Theory]
