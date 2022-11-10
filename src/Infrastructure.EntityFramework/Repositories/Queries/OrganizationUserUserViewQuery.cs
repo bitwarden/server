@@ -28,7 +28,7 @@ public class OrganizationUserUserDetailsViewQuery : IQuery<OrganizationUserUserD
             SsoExternalId = x.su.ExternalId,
             Permissions = x.ou.Permissions,
             ResetPasswordKey = x.ou.ResetPasswordKey,
-            UsesKeyConnector = x.u.UsesKeyConnector,
+            UsesKeyConnector = x.u != null && x.u.UsesKeyConnector,
         });
     }
 }
