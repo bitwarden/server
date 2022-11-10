@@ -50,9 +50,15 @@ public class UpdateLicenseCommand: IUpdateLicenseCommand
     public async Task UpdateLicenseAsync(Organization organization, OrganizationLicense license)
     {
         license.CanUse(_globalSettings, _licensingService);
+        await ValidateLicenseForOrganizationAsync(organization, license);
+        await WriteLicenseFileAsync(organization, license);
+        await UpdateOrganizationAsync(organization, license);
+    }
 
-        var enabledOrgs = await _organizationRepository.GetManyByEnabledAsync();
-        if (enabledOrgs.Any(o => o.LicenseKey.Equals(license.LicenseKey) && o.Id != organization.Id))
+    private async Task ValidateLicenseForOrganizationAsync(Organization organization, OrganizationLicense license)
+    {
+        var enabledOrganizations = await _organizationRepository.GetManyByEnabledAsync();
+        if (enabledOrganizations.Any(o => o.LicenseKey.Equals(license.LicenseKey) && o.Id != organization.Id))
         {
             throw new BadRequestException("License is already in use by another organization.");
         }
@@ -142,12 +148,18 @@ public class UpdateLicenseCommand: IUpdateLicenseCommand
                     + "Disable your Password Reset policy.");
             }
         }
+    }
 
+    private async Task WriteLicenseFileAsync(Organization organization, OrganizationLicense license)
+    {
         var dir = $"{_globalSettings.LicenseDirectory}/organization";
         Directory.CreateDirectory(dir);
         await using var fs = new FileStream(Path.Combine(dir, $"{organization.Id}.json"), FileMode.Create);
         await JsonSerializer.SerializeAsync(fs, license, JsonHelpers.Indented);
+    }
 
+    private async Task UpdateOrganizationAsync(Organization organization, OrganizationLicense license)
+    {
         organization.Name = license.Name;
         organization.BusinessName = license.BusinessName;
         organization.BillingEmail = license.BillingEmail;
