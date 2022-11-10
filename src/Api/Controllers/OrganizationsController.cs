@@ -37,7 +37,7 @@ public class OrganizationsController : Controller
     private readonly IGetOrganizationApiKeyCommand _getOrganizationApiKeyCommand;
     private readonly IRotateOrganizationApiKeyCommand _rotateOrganizationApiKeyCommand;
     private readonly IOrganizationApiKeyRepository _organizationApiKeyRepository;
-    private readonly IUpdateLicenseCommand _updateLicenseCommand;
+    private readonly IUpdateOrganizationLicenseCommand _updateOrganizationLicenseCommand;
     private readonly GlobalSettings _globalSettings;
 
     public OrganizationsController(
@@ -53,7 +53,7 @@ public class OrganizationsController : Controller
         IGetOrganizationApiKeyCommand getOrganizationApiKeyCommand,
         IRotateOrganizationApiKeyCommand rotateOrganizationApiKeyCommand,
         IOrganizationApiKeyRepository organizationApiKeyRepository,
-        IUpdateLicenseCommand updateLicenseCommand,
+        IUpdateOrganizationLicenseCommand updateOrganizationLicenseCommand,
         GlobalSettings globalSettings)
     {
         _organizationRepository = organizationRepository;
@@ -68,7 +68,7 @@ public class OrganizationsController : Controller
         _getOrganizationApiKeyCommand = getOrganizationApiKeyCommand;
         _rotateOrganizationApiKeyCommand = rotateOrganizationApiKeyCommand;
         _organizationApiKeyRepository = organizationApiKeyRepository;
-        _updateLicenseCommand = updateLicenseCommand;
+        _updateOrganizationLicenseCommand = updateOrganizationLicenseCommand;
         _globalSettings = globalSettings;
     }
 
@@ -471,7 +471,7 @@ public class OrganizationsController : Controller
             throw new NotFoundException();
         }
 
-        await _updateLicenseCommand.UpdateLicenseAsync(organization, license);
+        await _updateOrganizationLicenseCommand.UpdateLicenseAsync(organization, license);
     }
 
     [HttpPost("{id}/import")]

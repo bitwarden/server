@@ -12,7 +12,7 @@ using Bit.Core.Settings;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationLicenses;
 
-public class UpdateLicenseCommand: IUpdateLicenseCommand
+public class UpdateOrganizationLicenseCommand: IUpdateOrganizationLicenseCommand
 {
     private readonly IOrganizationRepository _organizationRepository;
     private readonly ICollectionRepository _collectionRepository;
@@ -25,7 +25,7 @@ public class UpdateLicenseCommand: IUpdateLicenseCommand
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IOrganizationService _organizationService;
 
-    public UpdateLicenseCommand(
+    public UpdateOrganizationLicenseCommand(
         IOrganizationRepository organizationRepository,
         ICollectionRepository collectionRepository,
         IGroupRepository groupRepository,

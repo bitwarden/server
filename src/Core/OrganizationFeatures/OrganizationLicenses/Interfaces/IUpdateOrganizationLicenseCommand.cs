@@ -3,7 +3,7 @@ using Bit.Core.Entities;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
 
-public interface IUpdateLicenseCommand
+public interface IUpdateOrganizationLicenseCommand
 {
     Task UpdateLicenseAsync(Organization organization, OrganizationLicense license);
 }
