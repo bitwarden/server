@@ -4,6 +4,7 @@ using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Identity;
 using Bit.Core.IdentityServer;
+using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -94,7 +95,7 @@ public class ClientStore : IClientStore
             return null;
         }
 
-        return new Client
+        var client = new Client
         {
             ClientId = clientId,
             RequireClientSecret = true,
@@ -109,9 +110,17 @@ public class ClientStore : IClientStore
             Claims = new List<ClientClaim>
             {
                 new(JwtClaimTypes.Subject, apiKey.ServiceAccountId.ToString()),
-                new(Claims.Organization, apiKey.ServiceAccountOrganizationId.ToString())
             },
         };
+
+        switch (apiKey)
+        {
+            case ServiceAccountApiKeyDetails key:
+                client.Claims.Add(new ClientClaim(Claims.Organization, key.ServiceAccountOrganizationId.ToString()));
+                break;
+        }
+
+        return client;
     }
 
     private async Task<Client> CreateUserClientAsync(string clientId)

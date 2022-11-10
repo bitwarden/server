@@ -21,7 +21,9 @@ public class ApiKeyRepository : Repository<ApiKey, Guid>, IApiKeyRepository
     public async Task<ApiKeyDetails> GetDetailsByIdAsync(Guid id)
     {
         using var connection = new SqlConnection(ConnectionString);
-        var results = await connection.QueryAsync<ApiKeyDetails>(
+        // When adding different key details, we should change the QueryAsync type to match the database data,
+        //  but cast it to the appropriate data model.
+        var results = await connection.QueryAsync<ServiceAccountApiKeyDetails>(
             $"[{Schema}].[ApiKeyDetails_ReadById]",
             new { Id = id },
             commandType: CommandType.StoredProcedure);

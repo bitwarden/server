@@ -21,22 +21,9 @@ public class ApiKeyRepository : Repository<Core.Entities.ApiKey, ApiKey, Guid>, 
         var entity = await GetDbSet(dbContext)
             .Where(apiKey => apiKey.Id == id)
             .Include(apiKey => apiKey.ServiceAccount)
-            .Select(apiKey => new ApiKeyDetails
-            {
-                Id = apiKey.Id,
-                ServiceAccountId = apiKey.ServiceAccountId,
-                Name = apiKey.Name,
-                ClientSecret = apiKey.ClientSecret,
-                Scope = apiKey.Scope,
-                EncryptedPayload = apiKey.EncryptedPayload,
-                Key = apiKey.Key,
-                ExpireAt = apiKey.ExpireAt,
-                CreationDate = apiKey.CreationDate,
-                RevisionDate = apiKey.RevisionDate,
-                ServiceAccountOrganizationId = apiKey.ServiceAccount.OrganizationId
-            })
+            .Select(apiKey => new ServiceAccountApiKeyDetails(apiKey, apiKey.ServiceAccount.OrganizationId))
             .FirstOrDefaultAsync();
 
-        return Mapper.Map<ApiKeyDetails>(entity);
+        return Mapper.Map<ServiceAccountApiKeyDetails>(entity);
     }
 }
