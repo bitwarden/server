@@ -4,12 +4,12 @@ namespace Bit.Core.Models.Data;
 
 public class ApiKeyDetails : ApiKey
 {
+    public ApiKeyDetails()
+    {
 
-}
+    }
 
-public class ServiceAccountApiKeyDetails : ApiKeyDetails
-{
-    public ServiceAccountApiKeyDetails(ApiKey apiKey, Guid organizationId)
+    public ApiKeyDetails(ApiKey apiKey)
     {
         Id = apiKey.Id;
         ServiceAccountId = apiKey.ServiceAccountId;
@@ -21,6 +21,18 @@ public class ServiceAccountApiKeyDetails : ApiKeyDetails
         ExpireAt = apiKey.ExpireAt;
         CreationDate = apiKey.CreationDate;
         RevisionDate = apiKey.RevisionDate;
+    }
+}
+
+public class ServiceAccountApiKeyDetails : ApiKeyDetails
+{
+    public ServiceAccountApiKeyDetails()
+    {
+
+    }
+
+    public ServiceAccountApiKeyDetails(ApiKey apiKey, Guid organizationId) : base(apiKey)
+    {
         ServiceAccountOrganizationId = organizationId;
     }
 
