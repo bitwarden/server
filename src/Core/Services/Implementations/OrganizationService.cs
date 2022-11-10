@@ -676,22 +676,7 @@ public class OrganizationService : IOrganizationService
         OrganizationLicense license, User owner, string ownerKey, string collectionName, string publicKey,
         string privateKey)
     {
-        if (license?.LicenseType != null && license.LicenseType != LicenseType.Organization)
-        {
-            throw new BadRequestException("Premium licenses cannot be applied to an organization. "
-                                          + "Upload this license from your personal account settings page.");
-        }
-
-        if (license == null || !_licensingService.VerifyLicense(license))
-        {
-            throw new BadRequestException("Invalid license.");
-        }
-
-        if (!license.CanUse(_globalSettings))
-        {
-            throw new BadRequestException("Invalid license. Make sure your license allows for on-premise " +
-                "hosting of organizations and that the installation id matches your current installation.");
-        }
+        license.CanUse(_globalSettings, _licensingService);
 
         if (license.PlanType != PlanType.Custom &&
             StaticStore.Plans.FirstOrDefault(p => p.Type == license.PlanType && !p.Disabled) == null)
@@ -823,27 +808,7 @@ public class OrganizationService : IOrganizationService
 
     public async Task UpdateLicenseAsync(Organization organization, OrganizationLicense license)
     {
-        if (!_globalSettings.SelfHosted)
-        {
-            throw new InvalidOperationException("Licenses require self hosting.");
-        }
-
-        if (license?.LicenseType != null && license.LicenseType != LicenseType.Organization)
-        {
-            throw new BadRequestException("Premium licenses cannot be applied to an organization. "
-                                          + "Upload this license from your personal account settings page.");
-        }
-
-        if (license == null || !_licensingService.VerifyLicense(license))
-        {
-            throw new BadRequestException("Invalid license.");
-        }
-
-        if (!license.CanUse(_globalSettings))
-        {
-            throw new BadRequestException("Invalid license. Make sure your license allows for on-premise " +
-                "hosting of organizations and that the installation id matches your current installation.");
-        }
+        license.CanUse(_globalSettings, _licensingService);
 
         var enabledOrgs = await _organizationRepository.GetManyByEnabledAsync();
         if (enabledOrgs.Any(o => o.LicenseKey.Equals(license.LicenseKey) && o.Id != organization.Id))

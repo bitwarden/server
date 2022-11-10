@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.Json.Serialization;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 
@@ -195,20 +196,33 @@ public class OrganizationLicense : ILicense
         }
     }
 
-    public bool CanUse(IGlobalSettings globalSettings)
+    public void CanUse(IGlobalSettings globalSettings, ILicensingService licensingService)
     {
         if (!Enabled || Issued > DateTime.UtcNow || Expires < DateTime.UtcNow)
         {
-            return false;
+            throw new BadRequestException("Invalid license. Your organization is disabled or the license has expired.");
         }
 
-        if (ValidLicenseVersion)
-        {
-            return InstallationId == globalSettings.Installation.Id && SelfHost;
-        }
-        else
+        if (!ValidLicenseVersion)
         {
             throw new NotSupportedException($"Version {Version} is not supported.");
+        }
+
+        if (InstallationId != globalSettings.Installation.Id || !SelfHost)
+        {
+            throw new BadRequestException("Invalid license. Make sure your license allows for on-premise " +
+                "hosting of organizations and that the installation id matches your current installation.");
+        }
+        
+        if (LicenseType != null && LicenseType != Enums.LicenseType.Organization)
+        {
+            throw new BadRequestException("Premium licenses cannot be applied to an organization. "
+                                          + "Upload this license from your personal account settings page.");
+        }
+        
+        if (!licensingService.VerifyLicense(this))
+        {
+            throw new BadRequestException("Invalid license.");
         }
     }
 
