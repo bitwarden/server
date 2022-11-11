@@ -17,17 +17,20 @@ public class DevicesController : Controller
     private readonly IDeviceService _deviceService;
     private readonly IUserService _userService;
     private readonly IUserRepository _userRepository;
+    private readonly IPushRegistrationService _pushRegistrationService;
 
     public DevicesController(
         IDeviceRepository deviceRepository,
         IDeviceService deviceService,
         IUserService userService,
-        IUserRepository userRepository)
+        IUserRepository userRepository,
+        IPushRegistrationService pushRegistrationService)
     {
         _deviceRepository = deviceRepository;
         _deviceService = deviceService;
         _userService = userService;
         _userRepository = userRepository;
+        _pushRegistrationService = pushRegistrationService;
     }
 
     [HttpGet("{id}")]
@@ -68,7 +71,10 @@ public class DevicesController : Controller
     public async Task<DeviceResponseModel> Post([FromBody] DeviceRequestModel model)
     {
         var device = model.ToDevice(_userService.GetProperUserId(User));
-        await _deviceService.SaveAsync(device);
+        var createdDevice = await _deviceService.SaveAsync(device);
+
+        await _pushRegistrationService.CreateOrUpdateRegistrationAsync(device.PushToken, createdDevice.Id.ToString(),
+            device.UserId.ToString(), device.Identifier, device.Type);
 
         var response = new DeviceResponseModel(device);
         return response;
@@ -86,6 +92,9 @@ public class DevicesController : Controller
 
         await _deviceService.SaveAsync(model.ToDevice(device));
 
+        await _pushRegistrationService.CreateOrUpdateRegistrationAsync(device.PushToken, device.Id.ToString(),
+            device.UserId.ToString(), device.Identifier, device.Type);
+
         var response = new DeviceResponseModel(device);
         return response;
     }
@@ -101,20 +110,10 @@ public class DevicesController : Controller
         }
 
         await _deviceService.SaveAsync(model.ToDevice(device));
-    }
 
-    [AllowAnonymous]
-    [HttpPut("identifier/{identifier}/clear-token")]
-    [HttpPost("identifier/{identifier}/clear-token")]
-    public async Task PutClearToken(string identifier)
-    {
-        var device = await _deviceRepository.GetByIdentifierAsync(identifier);
-        if (device == null)
-        {
-            throw new NotFoundException();
-        }
+        await _pushRegistrationService.CreateOrUpdateRegistrationAsync(device.PushToken, device.Id.ToString(),
+            device.UserId.ToString(), device.Identifier, device.Type);
 
-        await _deviceService.ClearTokenAsync(device);
     }
 
     [HttpDelete("{id}")]

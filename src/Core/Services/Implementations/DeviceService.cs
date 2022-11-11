@@ -16,20 +16,20 @@ public class DeviceService : IDeviceService
         _pushRegistrationService = pushRegistrationService;
     }
 
-    public async Task SaveAsync(Device device)
+    public async Task<Device> SaveAsync(Device device)
     {
+        Device result = null;
         if (device.Id == default(Guid))
         {
-            await _deviceRepository.CreateAsync(device);
+            result = await _deviceRepository.CreateAsync(device);
         }
         else
         {
             device.RevisionDate = DateTime.UtcNow;
             await _deviceRepository.ReplaceAsync(device);
+            result = device;
         }
-
-        await _pushRegistrationService.CreateOrUpdateRegistrationAsync(device.PushToken, device.Id.ToString(),
-            device.UserId.ToString(), device.Identifier, device.Type);
+        return result;
     }
 
     public async Task ClearTokenAsync(Device device)
