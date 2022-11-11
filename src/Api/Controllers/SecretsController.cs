@@ -50,14 +50,9 @@ public class SecretsController : Controller
     [HttpGet("projects/{projectId}/secrets")]
     public async Task<ListResponseModel<SecretResponseModel>> GetSecretsByProjectAsync([FromRoute] Guid projectId)
     {
-        var project = await _projectRepository.GetByIdAsync(projectId);
-        if (project == null)
-        {
-            throw new NotFoundException();
-        }
-
-        var secrets = project.Secrets.Select(s => new SecretResponseModel(s));
-        return new ListResponseModel<SecretResponseModel>(secrets);
+        var secrets = await _secretRepository.GetManyByProjectIdAsync(projectId);
+        var responses = secrets.Select(s => new SecretResponseModel(s));
+        return new ListResponseModel<SecretResponseModel>(responses);
     }
 
     [HttpPost("organizations/{organizationId}/secrets")]
