@@ -15,34 +15,27 @@ public class CollectionCipherReadByUserIdQuery : IQuery<CollectionCipher>
     public virtual IQueryable<CollectionCipher> Run(DatabaseContext dbContext)
     {
         var query = from cc in dbContext.CollectionCiphers
-
                     join c in dbContext.Collections
                         on cc.CollectionId equals c.Id
-
                     join ou in dbContext.OrganizationUsers
-                        on new { c.OrganizationId, UserId = (Guid?)_userId } equals
-                           new { ou.OrganizationId, ou.UserId }
-
+                        on c.OrganizationId equals ou.OrganizationId
+                    where ou.UserId == _userId
                     join cu in dbContext.CollectionUsers
-                        on new { ou.AccessAll, CollectionId = c.Id, OrganizationUserId = ou.Id } equals
-                           new { AccessAll = false, cu.CollectionId, cu.OrganizationUserId } into cu_g
-                    from cu in cu_g.DefaultIfEmpty()
-
+                        on c.Id equals cu.CollectionId into cu_g
+                    from cu in cu_g
+                    where ou.AccessAll && cu.OrganizationUserId == ou.Id
                     join gu in dbContext.GroupUsers
-                        on new { CollectionId = (Guid?)cu.CollectionId, ou.AccessAll, OrganizationUserId = ou.Id } equals
-                           new { CollectionId = (Guid?)null, AccessAll = false, gu.OrganizationUserId } into gu_g
-                    from gu in gu_g.DefaultIfEmpty()
-
+                        on ou.Id equals gu.OrganizationUserId into gu_g
+                    from gu in gu_g
+                    where cu.CollectionId == null && !ou.AccessAll
                     join g in dbContext.Groups
                         on gu.GroupId equals g.Id into g_g
-                    from g in g_g.DefaultIfEmpty()
-
+                    from g in g_g
                     join cg in dbContext.CollectionGroups
-                        on new { g.AccessAll, CollectionId = c.Id, gu.GroupId } equals
-                           new { AccessAll = false, cg.CollectionId, cg.GroupId } into cg_g
-                    from cg in cg_g.DefaultIfEmpty()
-
-                    where ou.Status == OrganizationUserStatusType.Confirmed &&
+                        on cc.CollectionId equals cg.CollectionId into cg_g
+                    from cg in cg_g
+                    where g.AccessAll && cg.GroupId == gu.GroupId &&
+                        ou.Status == OrganizationUserStatusType.Confirmed &&
                         (ou.AccessAll || cu.CollectionId != null || g.AccessAll || cg.CollectionId != null)
                     select cc;
         return query;

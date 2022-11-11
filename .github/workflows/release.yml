@@ -1,6 +1,5 @@
 ---
 name: Release
-run-name: Release ${{ inputs.release_type }}
 
 on:
   workflow_dispatch:
