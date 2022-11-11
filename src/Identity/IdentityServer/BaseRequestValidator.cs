@@ -572,14 +572,14 @@ public abstract class BaseRequestValidator<T> where T : class
                 }
 
             }
-            else 
+            else
             {
                 result = existingDeviceForUser;
             }
-            
+
             await _pushRegistrationService.CreateOrUpdateRegistrationAsync(result.PushToken, result.Id.ToString(),
                 result.UserId.ToString(), result.Identifier, result.Type);
- 
+
         }
 
         return result;
