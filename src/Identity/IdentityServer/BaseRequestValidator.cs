@@ -557,7 +557,7 @@ public abstract class BaseRequestValidator<T> where T : class
             if (existingDeviceForUser == null)
             {
                 requestDevice.UserId = user.Id;
-                result = await _deviceService.SaveAsync(requestDevice);
+                await _deviceService.SaveAsync(requestDevice);
 
                 var now = DateTime.UtcNow;
                 if (now - user.CreationDate > TimeSpan.FromMinutes(10))
@@ -574,12 +574,14 @@ public abstract class BaseRequestValidator<T> where T : class
             }
             else
             {
+                // Note that we are NOT updating the push token here if it comes in on a login request after the device exists. 
+                // Since we aren't using the PushToken on the table, this saves us having to save the data here.
+                // We should refactor the Device table to no longer have a PushToken column.
                 result = existingDeviceForUser;
             }
 
-            await _pushRegistrationService.CreateOrUpdateRegistrationAsync(result.PushToken, result.Id.ToString(),
-                result.UserId.ToString(), result.Identifier, result.Type);
-
+            await _pushRegistrationService.CreateOrUpdateRegistrationAsync(requestDevice.PushToken, requestDevice.Id.ToString(),
+                requestDevice.UserId.ToString(), requestDevice.Identifier, requestDevice.Type);
         }
 
         return result;
