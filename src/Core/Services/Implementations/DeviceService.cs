@@ -9,11 +9,9 @@ public class DeviceService : IDeviceService
     private readonly IPushRegistrationService _pushRegistrationService;
 
     public DeviceService(
-        IDeviceRepository deviceRepository,
-        IPushRegistrationService pushRegistrationService)
+        IDeviceRepository deviceRepository)
     {
         _deviceRepository = deviceRepository;
-        _pushRegistrationService = pushRegistrationService;
     }
 
     public async Task<Device> SaveAsync(Device device)
@@ -30,12 +28,6 @@ public class DeviceService : IDeviceService
             result = device;
         }
         return result;
-    }
-
-    public async Task ClearTokenAsync(Device device)
-    {
-        await _deviceRepository.ClearPushTokenAsync(device.Id);
-        await _pushRegistrationService.DeleteRegistrationAsync(device.Id.ToString());
     }
 
     public async Task DeleteAsync(Device device)

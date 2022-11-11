@@ -10,11 +10,10 @@ namespace Bit.Core.Test.Services;
 public class DeviceServiceTests
 {
     [Fact]
-    public async Task DeviceSaveShouldUpdateRevisionDateAndPushRegistration()
+    public async Task DeviceSaveShouldUpdateRevisionDate()
     {
         var deviceRepo = Substitute.For<IDeviceRepository>();
-        var pushRepo = Substitute.For<IPushRegistrationService>();
-        var deviceService = new DeviceService(deviceRepo, pushRepo);
+        var deviceService = new DeviceService(deviceRepo);
 
         var id = Guid.NewGuid();
         var userId = Guid.NewGuid();
@@ -30,7 +29,5 @@ public class DeviceServiceTests
         await deviceService.SaveAsync(device);
 
         Assert.True(device.RevisionDate - DateTime.UtcNow < TimeSpan.FromSeconds(1));
-        await pushRepo.Received().CreateOrUpdateRegistrationAsync("testtoken", id.ToString(),
-            userId.ToString(), "testid", DeviceType.Android);
     }
 }

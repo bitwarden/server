@@ -5,6 +5,5 @@ namespace Bit.Core.Services;
 public interface IDeviceService
 {
     Task<Device> SaveAsync(Device device);
-    Task ClearTokenAsync(Device device);
     Task DeleteAsync(Device device);
 }
