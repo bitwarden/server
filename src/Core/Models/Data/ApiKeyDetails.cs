@@ -4,12 +4,9 @@ namespace Bit.Core.Models.Data;
 
 public class ApiKeyDetails : ApiKey
 {
-    public ApiKeyDetails()
-    {
+    protected ApiKeyDetails() { }
 
-    }
-
-    public ApiKeyDetails(ApiKey apiKey)
+    protected ApiKeyDetails(ApiKey apiKey)
     {
         Id = apiKey.Id;
         ServiceAccountId = apiKey.ServiceAccountId;
