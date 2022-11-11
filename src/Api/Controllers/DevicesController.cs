@@ -71,9 +71,9 @@ public class DevicesController : Controller
     public async Task<DeviceResponseModel> Post([FromBody] DeviceRequestModel model)
     {
         var device = model.ToDevice(_userService.GetProperUserId(User));
-        var createdDevice = await _deviceService.SaveAsync(device);
+        await _deviceService.SaveAsync(device);
 
-        await _pushRegistrationService.CreateOrUpdateRegistrationAsync(device.PushToken, createdDevice.Id.ToString(),
+        await _pushRegistrationService.CreateOrUpdateRegistrationAsync(device.PushToken, device.Id.ToString(),
             device.UserId.ToString(), device.Identifier, device.Type);
 
         var response = new DeviceResponseModel(device);
@@ -127,6 +127,7 @@ public class DevicesController : Controller
         }
 
         await _deviceService.DeleteAsync(device);
+        await _pushRegistrationService.DeleteRegistrationAsync(device.Id.ToString());
     }
 
     [AllowAnonymous]

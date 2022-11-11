@@ -29,5 +29,6 @@ public class DeviceServiceTests
         await deviceService.SaveAsync(device);
 
         Assert.True(device.RevisionDate - DateTime.UtcNow < TimeSpan.FromSeconds(1));
+        Assert.True(id == device.Id);
     }
 }
