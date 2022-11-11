@@ -133,7 +133,7 @@ public class OrganizationLicense : ILicense
     /// <summary>
     /// Represents the current version of the license format. Should be updated whenever new fields are added.
     /// </summary>
-    private const int CURRENT_LICENSE_FILE_VERSION = 11;
+    private const int CURRENT_LICENSE_FILE_VERSION = 10;
     private bool ValidLicenseVersion
     {
         get => Version is >= 1 and <= 11;
