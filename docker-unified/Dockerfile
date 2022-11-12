@@ -190,7 +190,6 @@ RUN apk add --update-cache \
     su-exec \
     supervisor \
     tzdata \
-    ncdu \
     && rm -rf /var/cache/apk/*
 
 # Create non-root user to run app
