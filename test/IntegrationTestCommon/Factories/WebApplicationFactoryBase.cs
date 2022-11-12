@@ -90,7 +90,7 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
             services.Remove(mailDeliveryService);
             services.AddSingleton<IMailDeliveryService, NoopMailDeliveryService>();
 
-           var captchaValidationService = services.First(sd => sd.ServiceType == typeof(ICaptchaValidationService));
+            var captchaValidationService = services.First(sd => sd.ServiceType == typeof(ICaptchaValidationService));
             services.Remove(captchaValidationService);
             services.AddSingleton<ICaptchaValidationService, NoopCaptchaValidationService>();
 
