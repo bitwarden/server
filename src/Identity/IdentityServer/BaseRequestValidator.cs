@@ -37,7 +37,6 @@ public abstract class BaseRequestValidator<T> where T : class
     private readonly IPolicyRepository _policyRepository;
     private readonly IUserRepository _userRepository;
     private readonly ICaptchaValidationService _captchaValidationService;
-
     private readonly IPushRegistrationService _pushRegistrationService;
 
     public BaseRequestValidator(
