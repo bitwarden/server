@@ -409,6 +409,8 @@ public class CoreHelpersTests
     [InlineData("hi@email.com", "hi@email.com")] // Short email with no room to obfuscate
     [InlineData("name@email.com", "na**@email.com")] // Can obfuscate
     [InlineData("reallylongnamethatnooneshouldhave@email", "re*******************************@email")] // Really long email and no .com, .net, etc
+    [InlineData("emailwith\\@signinthelocalpart@email", "em***************************@email")] // Edge case
+    [InlineData("emailwith\"another@sign\"inthelocalpart@email", "em***********************************@email")] // Edge case
     [InlineData("name@", "name@")] // @ symbol but no domain
     [InlineData("", "")] // Empty string
     [InlineData(null, null)] // null

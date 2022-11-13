@@ -779,39 +779,25 @@ public static class CoreHelpers
 
     public static string ObfuscateEmail(string email)
     {
-        if (email == null)
+        const int CharsToNotObfuscate = 2;
+
+        if (email is null)
         {
             return email;
         }
 
-        var emailParts = email.Split('@', StringSplitOptions.RemoveEmptyEntries);
+        var idxDelimeter = email.LastIndexOf('@');
 
-        if (emailParts.Length != 2)
+        if (idxDelimeter <= CharsToNotObfuscate || idxDelimeter == email.Length - 1)
         {
             return email;
         }
 
-        var username = emailParts[0];
-
-        if (username.Length < 2)
+        return string.Create(email.Length, (email, idxDelimeter), (buffer, state) =>
         {
-            return email;
-        }
+            state.email.CopyTo(buffer);
 
-        var finalLength = emailParts[0].Length + 1 + emailParts[1].Length;
-
-        return string.Create(finalLength, (name: emailParts[0], domain: emailParts[1]), (buffer, state) =>
-        {
-            var nameBuffer = buffer.Slice(0, state.name.Length);
-
-            nameBuffer[0] = state.name[0];
-            nameBuffer[1] = state.name[1];
-            nameBuffer[2..].Fill('*');
-
-            buffer[state.name.Length] = '@';
-
-            var domainBuffer = buffer.Slice(state.name.Length + 1);
-            state.domain.CopyTo(domainBuffer);
+            buffer[CharsToNotObfuscate..idxDelimeter].Fill('*');
         });
 
     }
