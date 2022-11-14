@@ -1,6 +1,8 @@
-﻿using Bit.Commercial.Core.SecretManagerFeatures.Projects;
+﻿using Bit.Commercial.Core.SecretManagerFeatures.AccessTokens;
+using Bit.Commercial.Core.SecretManagerFeatures.Projects;
 using Bit.Commercial.Core.SecretManagerFeatures.Secrets;
 using Bit.Commercial.Core.SecretManagerFeatures.ServiceAccounts;
+using Bit.Core.SecretManagerFeatures.AccessTokens.Interfaces;
 using Bit.Core.SecretManagerFeatures.Projects.Interfaces;
 using Bit.Core.SecretManagerFeatures.Secrets.Interfaces;
 using Bit.Core.SecretManagerFeatures.ServiceAccounts.Interfaces;
@@ -20,6 +22,7 @@ public static class SecretManagerCollectionExtensions
         services.AddScoped<IDeleteProjectCommand, DeleteProjectCommand>();
         services.AddScoped<ICreateServiceAccountCommand, CreateServiceAccountCommand>();
         services.AddScoped<IUpdateServiceAccountCommand, UpdateServiceAccountCommand>();
+        services.AddScoped<ICreateAccessTokenCommand, CreateAccessTokenCommand>();
     }
 }
 

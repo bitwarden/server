@@ -76,6 +76,7 @@
     <Build Include="dbo\Stored Procedures\ApiKey\ApiKeyDetails_ReadById.sql" />
     <Build Include="dbo\Stored Procedures\ApiKey\ApiKey_ReadById.sql" />
     <Build Include="dbo\Stored Procedures\ApiKey\ApiKey_ReadByServiceAccountId.sql" />
+    <Build Include="dbo\Stored Procedures\ApiKey\ApiKey_Create.sql" />
     <Build Include="dbo\Stored Procedures\AuthRequest_Create.sql" />
     <Build Include="dbo\Stored Procedures\AuthRequest_DeleteById.sql" />
     <Build Include="dbo\Stored Procedures\AuthRequest_DeleteIfExpired.sql" />
