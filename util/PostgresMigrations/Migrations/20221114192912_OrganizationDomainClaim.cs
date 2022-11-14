@@ -2,7 +2,7 @@
 
 #nullable disable
 
-namespace Bit.MySqlMigrations.Migrations;
+namespace Bit.PostgresMigrations.Migrations;
 
 public partial class OrganizationDomainClaim : Migration
 {
@@ -12,17 +12,14 @@ public partial class OrganizationDomainClaim : Migration
             name: "OrganizationDomain",
             columns: table => new
             {
-                Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                OrganizationId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                Txt = table.Column<string>(type: "longtext", nullable: true)
-                    .Annotation("MySql:CharSet", "utf8mb4"),
-                DomainName = table.Column<string>(type: "varchar(255)", maxLength: 255, nullable: true)
-                    .Annotation("MySql:CharSet", "utf8mb4"),
-                CreationDate = table.Column<DateTime>(type: "datetime(6)", nullable: false),
-                VerifiedDate = table.Column<DateTime>(type: "datetime(6)", nullable: true),
-                NextRunDate = table.Column<DateTime>(type: "datetime(6)", nullable: false),
-                NextRunCount = table.Column<int>(type: "int", nullable: false),
-                Active = table.Column<bool>(type: "tinyint(1)", nullable: false)
+                Id = table.Column<Guid>(type: "uuid", nullable: false),
+                OrganizationId = table.Column<Guid>(type: "uuid", nullable: false),
+                Txt = table.Column<string>(type: "text", nullable: true),
+                DomainName = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
+                CreationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                VerifiedDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                NextRunDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                NextRunCount = table.Column<int>(type: "integer", nullable: false)
             },
             constraints: table =>
             {
@@ -33,8 +30,7 @@ public partial class OrganizationDomainClaim : Migration
                     principalTable: "Organization",
                     principalColumn: "Id",
                     onDelete: ReferentialAction.Cascade);
-            })
-            .Annotation("MySql:CharSet", "utf8mb4");
+            });
 
         migrationBuilder.CreateIndex(
             name: "IX_OrganizationDomain_OrganizationId",

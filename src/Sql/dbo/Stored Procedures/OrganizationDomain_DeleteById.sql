@@ -1,13 +1,12 @@
-CREATE PROCEDURE [dbo].[OrganizationDomain_Deactivate]
+CREATE PROCEDURE [dbo].[OrganizationDomain_DeleteById]
     @Id UNIQUEIDENTIFIER
 AS
 BEGIN
     SET NOCOUNT ON
         
-    UPDATE
+    DELETE      
+    FROM
         [dbo].[OrganizationDomain]
-    SET
-        [Active] = 0 -- False
     WHERE
         [Id] = @Id
 END

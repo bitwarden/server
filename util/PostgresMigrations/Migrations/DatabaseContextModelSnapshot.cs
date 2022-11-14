@@ -29,8 +29,9 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<string>("AccessCode")
-                        .HasColumnType("text");
-                    
+                        .HasMaxLength(25)
+                        .HasColumnType("character varying(25)");
+
                     b.Property<bool?>("Approved")
                         .HasColumnType("boolean");
 
@@ -50,7 +51,8 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("RequestDeviceIdentifier")
-                        .HasColumnType("text");
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
 
                     b.Property<byte>("RequestDeviceType")
                         .HasColumnType("smallint");
@@ -59,7 +61,8 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("RequestIpAddress")
-                        .HasColumnType("text");
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
 
                     b.Property<DateTime?>("ResponseDate")
                         .HasColumnType("timestamp with time zone");
@@ -709,9 +712,6 @@ namespace Bit.PostgresMigrations.Migrations
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
-
-                    b.Property<bool>("Active")
-                        .HasColumnType("boolean");
 
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("timestamp with time zone");

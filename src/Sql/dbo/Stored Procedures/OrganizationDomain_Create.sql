@@ -6,8 +6,7 @@ CREATE PROCEDURE [dbo].[OrganizationDomain_Create]
     @CreationDate   DATETIME2(7),
     @VerifiedDate   DATETIME2(7),
     @NextRunDate    DATETIME2(7),
-    @NextRunCount   TINYINT,
-    @Active BIT
+    @NextRunCount   TINYINT
 AS
 BEGIN
     SET NOCOUNT ON
@@ -21,8 +20,7 @@ BEGIN
         [CreationDate],
         [VerifiedDate],
         [NextRunDate],
-        [NextRunCount],
-        [Active]
+        [NextRunCount]
     )
     VALUES
     (
@@ -33,7 +31,6 @@ BEGIN
         @CreationDate,
         @VerifiedDate,
         @NextRunDate,
-        @NextRunCount,
-        @Active
+        @NextRunCount
     )
 END

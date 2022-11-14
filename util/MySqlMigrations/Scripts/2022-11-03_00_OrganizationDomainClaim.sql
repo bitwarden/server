@@ -9,7 +9,6 @@ CREATE TABLE `OrganizationDomain` (
     `VerifiedDate` datetime(6) NULL,
     `NextRunDate` datetime(6) NOT NULL,
     `NextRunCount` int NOT NULL,
-    `Active` tinyint(1) NOT NULL,
     CONSTRAINT `PK_OrganizationDomain` PRIMARY KEY (`Id`),
     CONSTRAINT `FK_OrganizationDomain_Organization_OrganizationId` FOREIGN KEY (`OrganizationId`) REFERENCES `Organization` (`Id`) ON DELETE CASCADE
 ) CHARACTER SET=utf8mb4;

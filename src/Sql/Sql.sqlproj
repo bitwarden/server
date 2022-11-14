@@ -418,7 +418,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="dbo\Stored Procedures\OrganizationDomain_Create.sql" />
-    <Content Include="dbo\Stored Procedures\OrganizationDomain_Deactivate.sql" />
+    <Content Include="dbo\Stored Procedures\OrganizationDomain_DeleteById.sql" />
     <Content Include="dbo\Stored Procedures\OrganizationDomain_ReadById.sql" />
     <Content Include="dbo\Stored Procedures\OrganizationDomain_Update.sql" />
     <Content Include="dbo\Tables\OrganizationDomain.sql" />

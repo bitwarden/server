@@ -15,8 +15,7 @@ CREATE TABLE [dbo].[OrganizationDomain] (
     [CreationDate]      DATETIME2(7)     NOT NULL,
     [VerifiedDate]      DATETIME2(7)     NULL,
     [NextRunDate]       DATETIME2(7)     NOT NULL,
-    [NextRunCount]      TINYINT          NOT NULL,
-    [Active]            BIT              NOT NULL,
+    [NextRunCount]      TINYINT          NOT NULL
     CONSTRAINT [PK_OrganizationDomain] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_OrganzationDomain_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id])
 )
@@ -42,8 +41,7 @@ CREATE OR ALTER PROCEDURE [dbo].[OrganizationDomain_Create]
     @CreationDate   DATETIME2(7),
     @VerifiedDate   DATETIME2(7),
     @NextRunDate    DATETIME2(7),
-    @NextRunCount   TINYINT,
-    @Active BIT
+    @NextRunCount   TINYINT
 AS
 BEGIN
     SET NOCOUNT ON
@@ -57,8 +55,7 @@ BEGIN
         [CreationDate],
         [VerifiedDate],
         [NextRunDate],
-        [NextRunCount],
-        [Active]
+        [NextRunCount]
     )
     VALUES
     (
@@ -69,8 +66,7 @@ BEGIN
         @CreationDate,
         @VerifiedDate,
         @NextRunDate,
-        @NextRunCount,
-        @Active
+        @NextRunCount
     )
 END
 GO
@@ -112,17 +108,16 @@ WHERE
 END
 GO
 
---Deactivate
-CREATE OR ALTER PROCEDURE [dbo].[OrganizationDomain_Deactivate]
+--Delete
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationDomain_DeleteById]
     @Id UNIQUEIDENTIFIER
 AS
 BEGIN
     SET NOCOUNT ON
 
-UPDATE
+DELETE
+FROM
     [dbo].[OrganizationDomain]
-SET
-    [Active] = 0 -- False
 WHERE
     [Id] = @Id
 END

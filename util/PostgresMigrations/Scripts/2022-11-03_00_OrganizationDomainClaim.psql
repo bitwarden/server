@@ -9,7 +9,6 @@ CREATE TABLE "OrganizationDomain" (
     "VerifiedDate" timestamp with time zone NULL,
     "NextRunDate" timestamp with time zone NOT NULL,
     "NextRunCount" integer NOT NULL,
-    "Active" boolean NOT NULL,
     CONSTRAINT "PK_OrganizationDomain" PRIMARY KEY ("Id"),
     CONSTRAINT "FK_OrganizationDomain_Organization_OrganizationId" FOREIGN KEY ("OrganizationId") REFERENCES "Organization" ("Id") ON DELETE CASCADE
 );

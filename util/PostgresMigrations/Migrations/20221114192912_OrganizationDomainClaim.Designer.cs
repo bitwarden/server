@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Bit.PostgresMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20221108020928_OrganizationDomainClaim")]
+    [Migration("20221114192912_OrganizationDomainClaim")]
     partial class OrganizationDomainClaim
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -714,9 +714,6 @@ namespace Bit.PostgresMigrations.Migrations
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
-
-                    b.Property<bool>("Active")
-                        .HasColumnType("boolean");
 
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("timestamp with time zone");

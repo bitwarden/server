@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.MySqlMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20221108015516_OrganizationDomainClaim")]
+    [Migration("20221114202829_OrganizationDomainClaim")]
     partial class OrganizationDomainClaim
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -709,9 +709,6 @@ namespace Bit.MySqlMigrations.Migrations
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("char(36)");
-
-                    b.Property<bool>("Active")
-                        .HasColumnType("tinyint(1)");
 
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("datetime(6)");

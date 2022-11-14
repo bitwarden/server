@@ -14,6 +14,5 @@ public class OrganizationDomain : ITableObject<Guid>
     public DateTime? VerifiedDate { get; set; }
     public DateTime NextRunDate { get; set; }
     public int NextRunCount { get; set; }
-    public bool Active { get; set; }
     public void SetNewId() => Id = CoreHelpers.GenerateComb();
 }
