@@ -1,9 +1,10 @@
 ﻿using Bit.Core.Enums;
 using Bit.Core.Utilities;
+using Bit.Core.Models;
 
 namespace Bit.Core.Models.Data.Organizations.OrganizationUsers;
 
-public class OrganizationUserUserDetails : IExternal, ITwoFactorProvidersUser
+public class OrganizationUserUserDetails : OrganizationSeatOccupant, IExternal, ITwoFactorProvidersUser
 {
     private Dictionary<TwoFactorProviderType, TwoFactorProvider> _twoFactorProviders;
 
@@ -14,7 +15,6 @@ public class OrganizationUserUserDetails : IExternal, ITwoFactorProvidersUser
     public string Email { get; set; }
     public string TwoFactorProviders { get; set; }
     public bool? Premium { get; set; }
-    public OrganizationUserStatusType Status { get; set; }
     public OrganizationUserType Type { get; set; }
     public bool AccessAll { get; set; }
     public string ExternalId { get; set; }
@@ -57,11 +57,4 @@ public class OrganizationUserUserDetails : IExternal, ITwoFactorProvidersUser
         return Premium.GetValueOrDefault(false);
     }
 
-    public bool OccupiesOrganizationSeat
-    {
-        get
-        {
-            return Status != OrganizationUserStatusType.Revoked;
-        }
-    }
 }
