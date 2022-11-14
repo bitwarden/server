@@ -131,19 +131,19 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            return (await new UserCollectionDetailsQuery(userId).Run(dbContext).ToListAsync())
-                .GroupBy(c => c.Id)
-                .Select(g => new CollectionDetails
-                {
-                    Id = g.Key,
-                    OrganizationId = g.FirstOrDefault().OrganizationId,
-                    Name = g.FirstOrDefault().Name,
-                    ExternalId = g.FirstOrDefault().ExternalId,
-                    CreationDate = g.FirstOrDefault().CreationDate,
-                    RevisionDate = g.FirstOrDefault().RevisionDate,
-                    ReadOnly = g.Min(c => c.ReadOnly),
-                    HidePasswords = g.Min(c => c.HidePasswords)
-                }).ToList();
+            return await (from c in new UserCollectionDetailsQuery(userId).Run(dbContext)
+                          group c by new { c.Id, c.OrganizationId, c.Name, c.CreationDate, c.RevisionDate, c.ExternalId } into collectionGroup
+                          select new CollectionDetails
+                          {
+                              Id = collectionGroup.Key.Id,
+                              OrganizationId = collectionGroup.Key.OrganizationId,
+                              Name = collectionGroup.Key.Name,
+                              CreationDate = collectionGroup.Key.CreationDate,
+                              RevisionDate = collectionGroup.Key.RevisionDate,
+                              ExternalId = collectionGroup.Key.ExternalId,
+                              ReadOnly = collectionGroup.Min(c => c.ReadOnly),
+                              HidePasswords = collectionGroup.Min(c => c.HidePasswords),
+                          }).ToListAsync();
         }
     }
 
