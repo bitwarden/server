@@ -793,11 +793,11 @@ public static class CoreHelpers
             return email;
         }
 
-        return string.Create(email.Length, (email, idxDelimeter), (buffer, state) =>
+        return string.Create(email.Length, (email, idxDelimeter), static (buffer, state) =>
         {
             state.email.CopyTo(buffer);
 
-            buffer[CharsToNotObfuscate..idxDelimeter].Fill('*');
+            buffer[CharsToNotObfuscate..state.idxDelimeter].Fill('*');
         });
 
     }
