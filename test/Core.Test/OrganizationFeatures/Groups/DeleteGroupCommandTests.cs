@@ -39,6 +39,9 @@ public class DeleteGroupCommandTests
         await sutProvider.GetDependency<IGroupRepository>().Received()
             .DeleteManyAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(groups.Select(g => g.Id))));
 
-        await sutProvider.GetDependency<IEventService>().Received().LogGroupEventsAsync(Arg.Any<IEnumerable<(Group, EventType, DateTime?)>>());
+        await sutProvider.GetDependency<IEventService>().Received().LogGroupEventsAsync(
+            Arg.Is<IEnumerable<(Group, EventType, DateTime?)>>(a =>
+                a.All(g => groups.Contains(g.Item1) && g.Item2 == EventType.Group_Deleted))
+            );
     }
 }
