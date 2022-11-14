@@ -118,4 +118,10 @@ public class OrganizationRepository : Repository<Core.Entities.Organization, Org
             return organization;
         }
     }
+
+    public async Task<OrganizationPlanUsage> GetPlanUsageByIdAsync(Guid id)
+    {
+        // TODO
+        return new OrganizationPlanUsage();
+    }
 }

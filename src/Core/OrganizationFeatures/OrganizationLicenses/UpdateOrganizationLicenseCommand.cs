@@ -1,11 +1,13 @@
-﻿using System.Text.Json;
+﻿#nullable enable
+
+using System.Text.Json;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.OrganizationConnectionConfigs;
 using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
-using Bit.Core.Models.Data.Organizations.OrganizationUsers;
+using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
@@ -28,76 +30,74 @@ public class UpdateOrganizationLicenseCommand : IUpdateOrganizationLicenseComman
         _organizationService = organizationService;
     }
 
-    public async Task UpdateLicenseAsync(Organization organization, OrganizationLicense license, SsoConfig ssoConfig)
+    public async Task UpdateLicenseAsync(Organization organization, OrganizationLicense license, 
+        Organization? existingOrganization, OrganizationPlanUsage planUsage)
     {
         license.CanUse(_globalSettings, _licensingService);
-        await ValidateLicenseForOrganizationAsync(organization, license);
+        ValidateLicenseForOrganizationAsync(organization, license, existingOrganization, planUsage);
+        
         await WriteLicenseFileAsync(organization, license);
         await UpdateOrganizationAsync(organization, license);
     }
 
-    private async Task ValidateLicenseForOrganizationAsync(Organization organization, OrganizationLicense license, 
-        SsoConfig ssoConfig, IEnumerable<Policy> policies, IEnumerable<Collection> collections, IEnumerable<Group> groups,
-        IEnumerable<OrganizationConnection> scimConnections, IEnumerable<OrganizationUserUserDetails> orgUsers,
-        IEnumerable<Organization> enabledOrganizations)
+    private void ValidateLicenseForOrganizationAsync(Organization organization, OrganizationLicense license, 
+        Organization? existingOrganization, OrganizationPlanUsage planUsage)
     {
-        // TODO: Consider getting by licenseKey in database query, rather than passing in all orgs
-        if (enabledOrganizations.Any(o => o.LicenseKey.Equals(license.LicenseKey) && o.Id != organization.Id))
+        if (existingOrganization != null && existingOrganization.Id != organization.Id)
         {
             throw new BadRequestException("License is already in use by another organization.");
         }
 
-        var occupiedSeats = orgUsers.Count(ou => ou.OccupiesOrganizationSeat);
+        var occupiedSeats = planUsage.OrganizationUsers.Count(ou => ou.OccupiesOrganizationSeat);
         if (license.Seats.HasValue && occupiedSeats > license.Seats.Value)
         {
             throw new BadRequestException($"Your organization currently has {occupiedSeats} seats filled. " +
                 $"Your new license only has ({license.Seats.Value}) seats. Remove some users.");
         }
 
-        var collectionCount = collections.Count();
-        if (license.MaxCollections.HasValue && collectionCount > license.MaxCollections.Value)
+        if (license.MaxCollections.HasValue && planUsage.CollectionCount > license.MaxCollections.Value)
         {
-            throw new BadRequestException($"Your organization currently has {collectionCount} collections. " +
+            throw new BadRequestException($"Your organization currently has {planUsage.CollectionCount} collections. " +
                 $"Your new license allows for a maximum of ({license.MaxCollections.Value}) collections. " +
                 "Remove some collections.");
         }
 
-        if (!license.UseGroups && organization.UseGroups && groups.Any())
+        if (!license.UseGroups && organization.UseGroups && planUsage.GroupCount > 1)
         {
-            throw new BadRequestException($"Your organization currently has {groups.Count()} groups. " +
+            throw new BadRequestException($"Your organization currently has {planUsage.GroupCount} groups. " +
                 $"Your new license does not allow for the use of groups. Remove all groups.");
         }
 
-        var enabledPolicyCount = policies.Count(p => p.Enabled);
+        var enabledPolicyCount = planUsage.Policies.Count(p => p.Enabled);
         if (!license.UsePolicies && organization.UsePolicies && enabledPolicyCount > 0)
         {
             throw new BadRequestException($"Your organization currently has {enabledPolicyCount} enabled " +
                 $"policies. Your new license does not allow for the use of policies. Disable all policies.");
         }
 
-        if (!license.UseSso && organization.UseSso && ssoConfig is { Enabled: true })
+        if (!license.UseSso && organization.UseSso && planUsage.SsoConfig is { Enabled: true })
         {
             throw new BadRequestException($"Your organization currently has a SSO configuration. " +
                 $"Your new license does not allow for the use of SSO. Disable your SSO configuration.");
         }
 
         if (!license.UseKeyConnector && organization.UseKeyConnector && 
-            ssoConfig != null && ssoConfig.GetData().KeyConnectorEnabled)
+            planUsage.SsoConfig != null && planUsage.SsoConfig.GetData().KeyConnectorEnabled)
         {
             throw new BadRequestException($"Your organization currently has Key Connector enabled. " +
                 $"Your new license does not allow for the use of Key Connector. Disable your Key Connector.");
         }
 
         if (!license.UseScim && organization.UseScim && 
-            scimConnections != null && 
-            scimConnections.Any(c => c.GetConfig<ScimConfig>() is {Enabled: true}))
+            planUsage.ScimConnections != null && 
+            planUsage.ScimConnections.Any(c => c.GetConfig<ScimConfig>() is {Enabled: true}))
         {
             throw new BadRequestException("Your new plan does not allow the SCIM feature. " +
                 "Disable your SCIM configuration.");
         }
 
         if (!license.UseResetPassword && organization.UseResetPassword &&
-            policies.Any(p => p.Type == PolicyType.ResetPassword && p.Enabled))
+            planUsage.Policies.Any(p => p.Type == PolicyType.ResetPassword && p.Enabled))
         {
             throw new BadRequestException("Your new license does not allow the Password Reset feature. "
                 + "Disable your Password Reset policy.");

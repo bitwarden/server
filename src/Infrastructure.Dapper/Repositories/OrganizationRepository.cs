@@ -100,11 +100,39 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
         using (var connection = new SqlConnection(ConnectionString))
         {
             var result = await connection.QueryAsync<Organization>(
-                "[dbo].[Organization_ReadByLicenseKey",
+                "[dbo].[Organization_ReadByLicenseKey]",
                 new { LicenseKey = licenseKey },
                 commandType: CommandType.StoredProcedure);
 
             return result.SingleOrDefault();
+        }
+    }
+    
+    public async Task<OrganizationPlanUsage> GetPlanUsageByIdAsync(Guid id)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var result = await connection.QueryMultipleAsync(
+                "[dbo].[Organization_ReadPlanUsageById]",
+                new { Id = id },
+                commandType: CommandType.StoredProcedure);
+
+            var organizationUsers = result.Read<OrganizationUser>();
+            var collectionCount = result.Read<int>();
+            var groupCount = result.Read<int>();
+            var policies = result.Read<Policy>();
+            var ssoConfig = result.Read<SsoConfig>();
+            var scimConnections = result.Read<OrganizationConnection>();
+
+            return new OrganizationPlanUsage()
+            {
+                OrganizationUsers = organizationUsers,
+                CollectionCount = collectionCount.FirstOrDefault(),
+                GroupCount = groupCount.FirstOrDefault(),
+                Policies = policies,
+                SsoConfig = ssoConfig.FirstOrDefault(),
+                ScimConnections = scimConnections
+            };
         }
     }
 }

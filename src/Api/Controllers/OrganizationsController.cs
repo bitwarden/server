@@ -471,7 +471,10 @@ public class OrganizationsController : Controller
             throw new NotFoundException();
         }
 
-        await _updateOrganizationLicenseCommand.UpdateLicenseAsync(organization, license);
+        var existingOrganization = await _organizationRepository.GetByLicenseKeyAsync(license.LicenseKey);
+        var planUsage = await _organizationRepository.GetPlanUsageByIdAsync(organization.Id);
+
+        await _updateOrganizationLicenseCommand.UpdateLicenseAsync(organization, license, existingOrganization, planUsage);
     }
 
     [HttpPost("{id}/import")]
