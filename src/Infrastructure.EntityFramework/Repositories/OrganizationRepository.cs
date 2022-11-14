@@ -111,7 +111,7 @@ public class OrganizationRepository : Repository<Core.Entities.Organization, Org
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var organization = await GetDbSet()
+            var organization = await GetDbSet(dbContext)
                 .Where(o => o.LicenseKey == licenseKey)
                 .FirstOrDefaultAsync();
 
