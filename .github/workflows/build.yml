@@ -78,7 +78,7 @@ jobs:
         shell: pwsh
 
       - name: Test Bitwarden solution
-        run: dotnet test ./bitwarden_license/test/Commercial.Core.Test --configuration Debug --no-build
+        run: dotnet test ./bitwarden_license/test --configuration Debug --no-build
         shell: pwsh
 
   build-artifacts:
