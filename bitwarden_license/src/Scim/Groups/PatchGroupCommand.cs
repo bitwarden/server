@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -48,7 +49,7 @@ public class PatchGroupCommand : IPatchGroupCommand
                 else if (operation.Path?.ToLowerInvariant() == "displayname")
                 {
                     group.Name = operation.Value.GetString();
-                    await _groupService.SaveAsync(group);
+                    await _groupService.SaveAsync(group, EventSystemUser.SCIM);
                     operationHandled = true;
                 }
                 // Replace group name from value object
@@ -56,7 +57,7 @@ public class PatchGroupCommand : IPatchGroupCommand
                     operation.Value.TryGetProperty("displayName", out var displayNameProperty))
                 {
                     group.Name = displayNameProperty.GetString();
-                    await _groupService.SaveAsync(group);
+                    await _groupService.SaveAsync(group, EventSystemUser.SCIM);
                     operationHandled = true;
                 }
             }
@@ -94,7 +95,7 @@ public class PatchGroupCommand : IPatchGroupCommand
                 var removeId = GetOperationPathId(operation.Path);
                 if (removeId.HasValue)
                 {
-                    await _groupService.DeleteUserAsync(group, removeId.Value);
+                    await _groupService.DeleteUserAsync(group, removeId.Value, EventSystemUser.SCIM);
                     operationHandled = true;
                 }
             }

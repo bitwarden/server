@@ -1,4 +1,5 @@
-﻿using Bit.Core.Exceptions;
+﻿using Bit.Core.Enums;
+using Bit.Core.Exceptions;
 using Bit.Core.OrganizationFeatures.Groups.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Scim.Groups.Interfaces;
@@ -96,7 +97,7 @@ public class GroupsController : Controller
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(Guid organizationId, Guid id)
     {
-        await _deleteGroupCommand.DeleteGroupAsync(organizationId, id);
+        await _deleteGroupCommand.DeleteGroupAsync(organizationId, id, EventSystemUser.SCIM);
         return new NoContentResult();
     }
 }

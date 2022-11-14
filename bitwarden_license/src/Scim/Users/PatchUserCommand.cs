@@ -74,12 +74,12 @@ public class PatchUserCommand : IPatchUserCommand
     {
         if (active && orgUser.Status == OrganizationUserStatusType.Revoked)
         {
-            await _organizationService.RestoreUserAsync(orgUser, null, _userService);
+            await _organizationService.RestoreUserAsync(orgUser, EventSystemUser.SCIM, _userService);
             return true;
         }
         else if (!active && orgUser.Status != OrganizationUserStatusType.Revoked)
         {
-            await _organizationService.RevokeUserAsync(orgUser, null);
+            await _organizationService.RevokeUserAsync(orgUser, EventSystemUser.SCIM);
             return true;
         }
         return false;

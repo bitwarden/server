@@ -34,12 +34,12 @@ public class PostUserCommandTests
             .Returns(organizationUsers);
 
         sutProvider.GetDependency<IOrganizationService>()
-            .InviteUserAsync(organizationId, null, scimUserRequestModel.PrimaryEmail.ToLowerInvariant(), OrganizationUserType.User, false, externalId, Arg.Any<List<SelectionReadOnly>>())
+            .InviteUserAsync(organizationId, EventSystemUser.SCIM, scimUserRequestModel.PrimaryEmail.ToLowerInvariant(), OrganizationUserType.User, false, externalId, Arg.Any<List<SelectionReadOnly>>())
             .Returns(newUser);
 
         var user = await sutProvider.Sut.PostUserAsync(organizationId, scimUserRequestModel);
 
-        await sutProvider.GetDependency<IOrganizationService>().Received(1).InviteUserAsync(organizationId, null, scimUserRequestModel.PrimaryEmail.ToLowerInvariant(),
+        await sutProvider.GetDependency<IOrganizationService>().Received(1).InviteUserAsync(organizationId, EventSystemUser.SCIM, scimUserRequestModel.PrimaryEmail.ToLowerInvariant(),
             OrganizationUserType.User, false, scimUserRequestModel.ExternalId, Arg.Any<List<SelectionReadOnly>>());
         await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).GetDetailsByIdAsync(newUser.Id);
     }
