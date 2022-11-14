@@ -6,13 +6,7 @@ END
 GO
 
 -- Recreate VIEW UserView
-IF EXISTS(SELECT * FROM sys.views WHERE [Name] = 'UserView')
-    BEGIN
-        DROP VIEW [dbo].[UserView]
-    END
-GO
-
-CREATE VIEW [dbo].[UserView]
+CREATE OR ALTER VIEW [dbo].[UserView]
 AS
 SELECT
     *
@@ -21,13 +15,7 @@ FROM
 GO
 
 -- Recreate procedure User_Update
-IF OBJECT_ID('[dbo].[User_Update]') IS NOT NULL
-BEGIN
-    DROP PROCEDURE [dbo].[User_Update]
-END
-GO
-
-CREATE PROCEDURE [dbo].[User_Update]
+CREATE OR ALTER PROCEDURE [dbo].[User_Update]
     @Id UNIQUEIDENTIFIER,
     @Name NVARCHAR(50),
     @Email NVARCHAR(256),
@@ -113,13 +101,7 @@ BEGIN
 END
 GO
 
-IF OBJECT_ID('[dbo].[User_Create]') IS NOT NULL
-BEGIN
-    DROP PROCEDURE [dbo].[User_Create]
-END
-GO
-
-CREATE PROCEDURE [dbo].[User_Create]
+CREATE OR ALTER PROCEDURE [dbo].[User_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
     @Name NVARCHAR(50),
     @Email NVARCHAR(256),
