@@ -55,35 +55,35 @@ COPY Directory.Build.props .
 
 # Restore Admin project dependencies and tools
 WORKDIR /source/src/Admin
-RUN dotnet restore
+RUN dotnet restore -r linux-musl-x64
 
 # Restore Api project dependencies and tools
 WORKDIR /source/src/Api
-RUN dotnet restore
+RUN dotnet restore -r linux-musl-x64
 
 # Restore Events project dependencies and tools
 WORKDIR /source/src/Events
-RUN dotnet restore
+RUN dotnet restore -r linux-musl-x64
 
 # Restore Icons project dependencies and tools
 WORKDIR /source/src/Icons
-RUN dotnet restore
+RUN dotnet restore -r linux-musl-x64
 
 # Restore Identity project dependencies and tools
 WORKDIR /source/src/Identity
-RUN dotnet restore
+RUN dotnet restore -r linux-musl-x64
 
 # Restore Notifications project dependencies and tools
 WORKDIR /source/src/Notifications
-RUN dotnet restore
+RUN dotnet restore -r linux-musl-x64
 
 # Restore Sso project dependencies and tools
 WORKDIR /source/bitwarden_license/src/Sso
-RUN dotnet restore
+RUN dotnet restore -r linux-musl-x64
 
 # Restore Scim project dependencies and tools
 WORKDIR /source/bitwarden_license/src/Scim
-RUN dotnet restore
+RUN dotnet restore -r linux-musl-x64
 
 # Copy required project files
 WORKDIR /source
@@ -111,38 +111,38 @@ WORKDIR /source/src/Admin
 RUN npm install -g gulp
 RUN npm install
 RUN gulp --gulpfile "gulpfile.js" build
-RUN dotnet publish -c release -o /app/Admin --no-restore
+RUN dotnet publish -c release -o /app/Admin --no-restore -r linux-musl-x64 --no-self-contained
 
 # Build Api app
 WORKDIR /source/src/Api
-RUN dotnet publish -c release -o /app/Api --no-restore
+RUN dotnet publish -c release -o /app/Api --no-restore -r linux-musl-x64 --no-self-contained
 
 # Build Events app
 WORKDIR /source/src/Events
-RUN dotnet publish -c release -o /app/Events --no-restore
+RUN dotnet publish -c release -o /app/Events --no-restore -r linux-musl-x64 --no-self-contained
 
 # Build Icons app
 WORKDIR /source/src/Icons
-RUN dotnet publish -c release -o /app/Icons --no-restore
+RUN dotnet publish -c release -o /app/Icons --no-restore -r linux-musl-x64 --no-self-contained
 
 # Build Identity app
 WORKDIR /source/src/Identity
-RUN dotnet publish -c release -o /app/Identity --no-restore
+RUN dotnet publish -c release -o /app/Identity --no-restore -r linux-musl-x64 --no-self-contained
 
 # Build Notifications app
 WORKDIR /source/src/Notifications
-RUN dotnet publish -c release -o /app/Notifications --no-restore
+RUN dotnet publish -c release -o /app/Notifications --no-restore -r linux-musl-x64 --no-self-contained
 
 # Build Sso app
 WORKDIR /source/bitwarden_license/src/Sso
 RUN npm install -g gulp
 RUN npm install
 RUN gulp --gulpfile "gulpfile.js" build
-RUN dotnet publish -c release -o /app/Sso --no-restore
+RUN dotnet publish -c release -o /app/Sso --no-restore -r linux-musl-x64 --no-self-contained
 
 # Build Scim app
 WORKDIR /source/bitwarden_license/src/Scim
-RUN dotnet publish -c release -o /app/Scim --no-restore
+RUN dotnet publish -c release -o /app/Scim --no-restore -r linux-musl-x64 --no-self-contained
 
 ###############################################
 #                  App stage                  #
