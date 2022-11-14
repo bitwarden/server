@@ -1,6 +1,7 @@
 ﻿using System.Data;
 using System.Data.SqlClient;
 using Bit.Core.Entities;
+using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Dapper;
@@ -16,6 +17,19 @@ public class ApiKeyRepository : Repository<ApiKey, Guid>, IApiKeyRepository
     public ApiKeyRepository(string connectionString, string readOnlyConnectionString)
         : base(connectionString, readOnlyConnectionString)
     { }
+
+    public async Task<ApiKeyDetails> GetDetailsByIdAsync(Guid id)
+    {
+        using var connection = new SqlConnection(ConnectionString);
+        // When adding different key details, we should change the QueryAsync type to match the database data,
+        //  but cast it to the appropriate data model.
+        var results = await connection.QueryAsync<ServiceAccountApiKeyDetails>(
+            $"[{Schema}].[ApiKeyDetails_ReadById]",
+            new { Id = id },
+            commandType: CommandType.StoredProcedure);
+
+        return results.SingleOrDefault();
+    }
 
     public async Task<ICollection<ApiKey>> GetManyByServiceAccountIdAsync(Guid serviceAccountId)
     {
