@@ -29,7 +29,7 @@ public class Startup
         var globalSettings = services.AddGlobalSettingsServices(Configuration, Environment);
 
         // Repositories
-        services.AddSqlServerRepositories(globalSettings);
+        services.AddDatabaseRepositories(globalSettings);
 
         // Context
         services.AddScoped<ICurrentContext, CurrentContext>();

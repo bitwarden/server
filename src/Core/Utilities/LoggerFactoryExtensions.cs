@@ -125,20 +125,20 @@ public static class LoggerFactoryExtensions
         {
             if (globalSettings.LogRollBySizeLimit.HasValue)
             {
-                var pathFormat = $"{globalSettings.LogDirectory}/{globalSettings.ProjectName.ToLowerInvariant()}.log";
+                var pathFormat = Path.Combine(globalSettings.LogDirectory, $"{globalSettings.ProjectName.ToLowerInvariant()}.log");
                 if (globalSettings.LogDirectoryByProject)
                 {
-                    pathFormat = $"{globalSettings.LogDirectory}/{globalSettings.ProjectName}/log.txt";
+                    pathFormat = Path.Combine(globalSettings.LogDirectory, globalSettings.ProjectName, "log.txt");
                 }
                 config.WriteTo.File(pathFormat, rollOnFileSizeLimit: true,
                     fileSizeLimitBytes: globalSettings.LogRollBySizeLimit);
             }
             else
             {
-                var pathFormat = $"{globalSettings.LogDirectory}/{globalSettings.ProjectName.ToLowerInvariant()}_{{Date}}.log";
+                var pathFormat = Path.Combine(globalSettings.LogDirectory, $"{globalSettings.ProjectName.ToLowerInvariant()}_{{Date}}.log");
                 if (globalSettings.LogDirectoryByProject)
                 {
-                    pathFormat = $"{globalSettings.LogDirectory}/{globalSettings.ProjectName}/{{Date}}.txt";
+                    pathFormat = Path.Combine(globalSettings.LogDirectory, globalSettings.ProjectName, "{Date}.txt");
                 }
                 config.WriteTo.RollingFile(pathFormat);
             }

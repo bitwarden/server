@@ -42,7 +42,7 @@ public class Startup
         StripeConfiguration.MaxNetworkRetries = globalSettings.Stripe.MaxNetworkRetries;
 
         // Repositories
-        var databaseProvider = services.AddSqlServerRepositories(globalSettings);
+        var databaseProvider = services.AddDatabaseRepositories(globalSettings);
         switch (databaseProvider)
         {
             case Core.Enums.SupportedDatabaseProviders.SqlServer:

@@ -34,7 +34,7 @@ public class Startup
         StripeConfiguration.MaxNetworkRetries = globalSettings.Stripe.MaxNetworkRetries;
 
         // Repositories
-        services.AddSqlServerRepositories(globalSettings);
+        services.AddDatabaseRepositories(globalSettings);
 
         // PayPal Client
         services.AddSingleton<Utilities.PayPalIpnClient>();

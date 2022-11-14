@@ -11,6 +11,7 @@ public static class GlobalSettingsFactory
     public static GlobalSettings GlobalSettings { get; } = new GlobalSettings();
     static GlobalSettingsFactory()
     {
+        // UserSecretsId here should match what is in Api.csproj
         var configBuilder = new ConfigurationBuilder().AddUserSecrets("bitwarden-Api");
         var Configuration = configBuilder.Build();
         ConfigurationBinder.Bind(Configuration.GetSection("GlobalSettings"), GlobalSettings);

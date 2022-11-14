@@ -44,7 +44,7 @@ public class Startup
         services.AddCustomDataProtectionServices(Environment, globalSettings);
 
         // Repositories
-        services.AddSqlServerRepositories(globalSettings);
+        services.AddDatabaseRepositories(globalSettings);
 
         // Context
         services.AddScoped<ICurrentContext, CurrentContext>();

@@ -58,7 +58,7 @@ public class Startup
         StripeConfiguration.MaxNetworkRetries = globalSettings.Stripe.MaxNetworkRetries;
 
         // Repositories
-        services.AddSqlServerRepositories(globalSettings);
+        services.AddDatabaseRepositories(globalSettings);
 
         // Context
         services.AddScoped<ICurrentContext, CurrentContext>();

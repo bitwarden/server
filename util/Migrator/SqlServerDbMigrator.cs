@@ -17,7 +17,7 @@ public class SqlServerDbMigrator : IDbMigrator
 
     public SqlServerDbMigrator(GlobalSettings globalSettings, ILogger<SqlServerDbMigrator> logger)
     {
-        _connectionString = globalSettings.MySql.ConnectionString;
+        _connectionString = globalSettings.SqlServer.ConnectionString;
         _logger = logger;
         _masterConnectionString = new SqlConnectionStringBuilder(_connectionString)
         {

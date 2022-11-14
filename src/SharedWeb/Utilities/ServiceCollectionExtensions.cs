@@ -47,7 +47,7 @@ namespace Bit.SharedWeb.Utilities;
 
 public static class ServiceCollectionExtensions
 {
-    public static SupportedDatabaseProviders AddSqlServerRepositories(this IServiceCollection services, GlobalSettings globalSettings)
+    public static SupportedDatabaseProviders AddDatabaseRepositories(this IServiceCollection services, GlobalSettings globalSettings)
     {
         var selectedDatabaseProvider = globalSettings.DatabaseProvider;
         var provider = SupportedDatabaseProviders.SqlServer;
