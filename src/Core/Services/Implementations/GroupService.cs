@@ -57,11 +57,11 @@ public class GroupService : IGroupService
 
             if (userIds != null)
             {
-                var newUserIds = userIds as Guid[] ?? userIds.ToArray();
+                var usersToAddToGroup = userIds as Guid[] ?? userIds.ToArray();
 
-                await _groupRepository.UpdateUsersAsync(group.Id, newUserIds);
+                await _groupRepository.UpdateUsersAsync(group.Id, usersToAddToGroup);
 
-                var users = await _organizationUserRepository.GetManyAsync(newUserIds);
+                var users = await _organizationUserRepository.GetManyAsync(usersToAddToGroup);
                 var eventDate = DateTime.UtcNow;
                 await _eventService.LogOrganizationUserEventsAsync(users.Select(u =>
                     (u, EventType.OrganizationUser_UpdatedGroups, (DateTime?)eventDate)));
