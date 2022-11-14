@@ -1,16 +1,10 @@
 ﻿using AutoMapper;
-using Bit.Core.Entities;
 
 namespace Bit.Infrastructure.EntityFramework.Models;
 
-public class AccessPolicy : Core.Entities.AccessPolicy
+public class BaseAccessPolicy : Core.Entities.BaseAccessPolicy
 {
-    public virtual OrganizationUser OrganizationUser { get; set; }
-    public virtual Group Group { get; set; }
-    public virtual ServiceAccount ServiceAccount { get; set; }
-
-    public virtual Project GrantedProject { get; set; }
-    public virtual Secret GrantedServiceAccount { get; set; }
+    public string Discriminator { get; set; }
 }
 
 public class AccessPolicyMapperProfile : Profile
@@ -21,34 +15,46 @@ public class AccessPolicyMapperProfile : Profile
     }
 }
 
-
-public class UserProjectAccessPolicy : BaseAccessPolicy
+public class AccessPolicy : BaseAccessPolicy
 {
-    public virtual OrganizationUser OrganizationUser { get; set; }
-
-    public Guid? GrantedProjectId { get; set; }
 }
 
-public class UserServiceAccountAccessPolicy : BaseAccessPolicy
+public class UserProjectAccessPolicy : AccessPolicy
 {
     public Guid? OrganizationUserId { get; set; }
-    public Guid? GrantedServiceAccountId { get; set; }
-}
-
-public class GroupProjectAccessPolicy : BaseAccessPolicy
-{
-    public Guid? GroupId { get; set; }
+    public virtual OrganizationUser OrganizationUser { get; set; }
     public Guid? GrantedProjectId { get; set; }
+    public virtual Project GrantedProject { get; set; }
 }
 
-public class GroupServiceAccountAccessPolicy : BaseAccessPolicy
+public class UserServiceAccountAccessPolicy : AccessPolicy
+{
+    public Guid? OrganizationUserId { get; set; }
+    public virtual OrganizationUser OrganizationUser { get; set; }
+    public Guid? GrantedServiceAccountId { get; set; }
+    public virtual ServiceAccount GrantedServiceAccount { get; set; }
+}
+
+public class GroupProjectAccessPolicy : AccessPolicy
 {
     public Guid? GroupId { get; set; }
-    public Guid? GrantedServiceAccountId { get; set; }
+    public virtual Group Group { get; set; }
+    public Guid? GrantedProjectId { get; set; }
+    public virtual Project GrantedProject { get; set; }
 }
 
-public class ServiceAccountProjectAccessPolicy : BaseAccessPolicy
+public class GroupServiceAccountAccessPolicy : AccessPolicy
+{
+    public Guid? GroupId { get; set; }
+    public virtual Group Group { get; set; }
+    public Guid? GrantedServiceAccountId { get; set; }
+    public virtual ServiceAccount GrantedServiceAccount { get; set; }
+}
+
+public class ServiceAccountProjectAccessPolicy : AccessPolicy
 {
     public Guid? ServiceAccountId { get; set; }
+    public virtual ServiceAccount ServiceAccount { get; set; }
     public Guid? GrantedProjectId { get; set; }
+    public virtual Project GrantedProject { get; set; }
 }

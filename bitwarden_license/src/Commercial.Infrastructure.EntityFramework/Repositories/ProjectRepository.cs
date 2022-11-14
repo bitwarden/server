@@ -25,17 +25,18 @@ public class ProjectRepository : Repository<Core.Entities.Project, Project, Guid
         }
     }
 
-    public async Task<IEnumerable<Core.Entities.Project>> GetManyByOrganizationIdAsync(Guid organizationId)
+    public async Task<IEnumerable<Core.Entities.Project>> GetManyByOrganizationIdAsync(Guid organizationId,
+        Core.Entities.User user)
     {
-        using (var scope = ServiceScopeFactory.CreateScope())
-        {
-            var dbContext = GetDatabaseContext(scope);
-            var project = await dbContext.Project
-                                    .Where(c => c.OrganizationId == organizationId && c.DeletedDate == null)
-                                    .OrderBy(c => c.RevisionDate)
-                                    .ToListAsync();
-            return Mapper.Map<List<Core.Entities.Project>>(project);
-        }
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        var project = await dbContext.Project
+            .Where(p => p.OrganizationId == organizationId &&
+                        p.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == user.Id) &&
+                        p.DeletedDate == null)
+            .OrderBy(p => p.RevisionDate)
+            .ToListAsync();
+        return Mapper.Map<List<Core.Entities.Project>>(project);
     }
 
     public async Task DeleteManyByIdAsync(IEnumerable<Guid> ids)

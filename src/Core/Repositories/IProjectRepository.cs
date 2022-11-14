@@ -4,7 +4,7 @@ namespace Bit.Core.Repositories;
 
 public interface IProjectRepository
 {
-    Task<IEnumerable<Project>> GetManyByOrganizationIdAsync(Guid organizationId);
+    Task<IEnumerable<Project>> GetManyByOrganizationIdAsync(Guid organizationId, User user);
     Task<IEnumerable<Project>> GetManyByIds(IEnumerable<Guid> ids);
     Task<Project> GetByIdAsync(Guid id);
     Task<Project> CreateAsync(Project project);
