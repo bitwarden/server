@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -38,7 +39,7 @@ public class PostGroupCommand : IPostGroupCommand
         }
 
         var group = model.ToGroup(organizationId);
-        await _groupService.SaveAsync(group, null);
+        await _groupService.SaveAsync(group, EventSystemUser.SCIM, null);
         await UpdateGroupMembersAsync(group, model);
 
         return group;

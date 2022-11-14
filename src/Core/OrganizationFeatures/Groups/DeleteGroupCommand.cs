@@ -1,4 +1,6 @@
-﻿using Bit.Core.Exceptions;
+﻿using Bit.Core.Entities;
+using Bit.Core.Enums;
+using Bit.Core.Exceptions;
 using Bit.Core.OrganizationFeatures.Groups.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -18,6 +20,18 @@ public class DeleteGroupCommand : IDeleteGroupCommand
 
     public async Task DeleteGroupAsync(Guid organizationId, Guid id)
     {
+        var group = await GroupRepositoryDeleteGroupAsync(organizationId, id);
+        await _eventService.LogGroupEventAsync(group, Core.Enums.EventType.Group_Deleted);
+    }
+
+    public async Task DeleteGroupAsync(Guid organizationId, Guid id, EventSystemUser eventSystemUser)
+    {
+        var group = await GroupRepositoryDeleteGroupAsync(organizationId, id);
+        await _eventService.LogGroupEventAsync(group, Core.Enums.EventType.Group_Deleted, eventSystemUser);
+    }
+
+    private async Task<Group> GroupRepositoryDeleteGroupAsync(Guid organizationId, Guid id)
+    {
         var group = await _groupRepository.GetByIdAsync(id);
         if (group == null || group.OrganizationId != organizationId)
         {
@@ -25,6 +39,7 @@ public class DeleteGroupCommand : IDeleteGroupCommand
         }
 
         await _groupRepository.DeleteAsync(group);
-        await _eventService.LogGroupEventAsync(group, Core.Enums.EventType.Group_Deleted);
+
+        return group;
     }
 }
