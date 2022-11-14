@@ -219,7 +219,7 @@ jobs:
             dotnet: true
           - project_name: Self-Host
             base_path: ./docker-unified
-            docker_repos: [bitwarden, bitwardenqa.azurecr.io]
+            docker_repos: [bitwardenqa.azurecr.io]
           - project_name: Server
             base_path: ./util
             docker_repos: [bitwarden, bitwardenqa.azurecr.io]

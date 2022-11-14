@@ -200,7 +200,7 @@ jobs:
           - project_name: Notifications
             origin_docker_repo: bitwarden
           - project_name: Self-Host
-            origin_docker_repo: bitwarden
+            origin_docker_repo: bitwardenqa.azurecr.io
             beta: true
           - project_name: Server
             origin_docker_repo: bitwarden
