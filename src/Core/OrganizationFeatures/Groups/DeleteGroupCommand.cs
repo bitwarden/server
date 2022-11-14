@@ -21,17 +21,15 @@ public class DeleteGroupCommand : IDeleteGroupCommand
         await _eventService.LogGroupEventAsync(group, Enums.EventType.Group_Deleted);
     }
 
-    public async Task DeleteManyAsync(IEnumerable<Group> groups)
+    public async Task DeleteManyAsync(ICollection<Group> groups)
     {
-        var groupsToDelete = groups as Group[] ?? groups.ToArray();
-
         await _eventService.LogGroupEventsAsync(
-            groupsToDelete.Select(g =>
+            groups.Select(g =>
                 (g, Enums.EventType.Group_Deleted, (DateTime?)DateTime.UtcNow)
             ));
 
         await _groupRepository.DeleteManyAsync(
-            groupsToDelete.Select(g => g.Id)
+            groups.Select(g => g.Id)
             );
     }
 }
