@@ -4,6 +4,7 @@ using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using User = Bit.Core.Entities.User;
 
 namespace Bit.Commercial.Infrastructure.EntityFramework.Repositories;
 
@@ -32,12 +33,21 @@ public class ProjectRepository : Repository<Core.Entities.Project, Project, Guid
         var dbContext = GetDatabaseContext(scope);
         var project = await dbContext.Project
             .Where(p => p.OrganizationId == organizationId &&
-                        p.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == user.Id) &&
+                        (
+                            p.UserAccessPolicies.Any(IsUser(user)) ||
+                            p.GroupAccessPolicies.Any(IsGroupUser(user))
+                        ) &&
                         p.DeletedDate == null)
             .OrderBy(p => p.RevisionDate)
             .ToListAsync();
         return Mapper.Map<List<Core.Entities.Project>>(project);
     }
+
+    private static Func<GroupProjectAccessPolicy, bool> IsGroupUser(User user) =>
+        ap => ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == user.Id);
+
+    private static Func<UserProjectAccessPolicy, bool> IsUser(User user) =>
+        ap => ap.OrganizationUser.User.Id == user.Id;
 
     public async Task DeleteManyByIdAsync(IEnumerable<Guid> ids)
     {
