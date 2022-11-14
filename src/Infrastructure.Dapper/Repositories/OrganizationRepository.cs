@@ -94,4 +94,17 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
             return results.ToList();
         }
     }
+
+    public async Task<Organization> GetByLicenseKeyAsync(string licenseKey)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var result = await connection.QueryAsync<Organization>(
+                "[dbo].[Organization_ReadByLicenseKey",
+                new { LicenseKey = licenseKey },
+                commandType: CommandType.StoredProcedure);
+
+            return result.SingleOrDefault();
+        }
+    }
 }

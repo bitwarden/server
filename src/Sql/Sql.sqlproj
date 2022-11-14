@@ -415,5 +415,6 @@
     <Build Include="dbo\Views\SsoUserView.sql" />
     <Build Include="dbo\Views\TransactionView.sql" />
     <Build Include="dbo\Views\UserView.sql" />
+    <Build Include="dbo\Stored Procedures\Organization_ReadByLicenseKey.sql" />
   </ItemGroup>
 </Project>

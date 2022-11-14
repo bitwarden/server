@@ -105,4 +105,17 @@ public class OrganizationRepository : Repository<Core.Entities.Organization, Org
             await dbContext.SaveChangesAsync();
         }
     }
+
+    public async Task<Core.Entities.Organization> GetByLicenseKeyAsync(string licenseKey)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var organization = await GetDbSet()
+                .Where(o => o.LicenseKey == licenseKey)
+                .FirstOrDefaultAsync();
+
+            return organization;
+        }
+    }
 }
