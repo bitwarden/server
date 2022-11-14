@@ -29,11 +29,11 @@ public class AccessPolicyEntityTypeConfiguration : IEntityTypeConfiguration<Acce
             .IsClustered(false);
 
         builder
-            .HasIndex(s => s.ProjectId)
+            .HasIndex(s => s.GrantedProjectId)
             .IsClustered(false);
 
         builder
-            .HasIndex(s => s.SecretId)
+            .HasIndex(s => s.GrantedServiceAccountId)
             .IsClustered(false);
 
         builder.ToTable(nameof(AccessPolicy));

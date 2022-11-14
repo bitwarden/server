@@ -1,20 +1,20 @@
 ﻿CREATE TABLE [AccessPolicy] (
-    [Id]                 UNIQUEIDENTIFIER NOT NULL,
-    [OrganizationUserId] UNIQUEIDENTIFIER NULL,
-    [GroupId]            UNIQUEIDENTIFIER NULL,
-    [ServiceAccountId]   UNIQUEIDENTIFIER NULL,
-    [ProjectId]          UNIQUEIDENTIFIER NULL,
-    [SecretId]           UNIQUEIDENTIFIER NULL,
-    [Read]               BIT NOT NULL,
-    [Write]              BIT NOT NULL,
-    [CreationDate]       DATETIME2 NOT NULL,
-    [RevisionDate]       DATETIME2 NOT NULL,
+    [Id]                      UNIQUEIDENTIFIER NOT NULL,
+    [OrganizationUserId]      UNIQUEIDENTIFIER NULL,
+    [GroupId]                 UNIQUEIDENTIFIER NULL,
+    [ServiceAccountId]        UNIQUEIDENTIFIER NULL,
+    [GrantedProjectId]        UNIQUEIDENTIFIER NULL,
+    [GrantedServiceAccountId] UNIQUEIDENTIFIER NULL,
+    [Read]                    BIT NOT NULL,
+    [Write]                   BIT NOT NULL,
+    [CreationDate]            DATETIME2 NOT NULL,
+    [RevisionDate]            DATETIME2 NOT NULL,
     CONSTRAINT [PK_AccessPolicy] PRIMARY KEY CLUSTERED ([Id]),
     CONSTRAINT [FK_AccessPolicy_Group_GroupId] FOREIGN KEY ([GroupId]) REFERENCES [Group] ([Id]) ON DELETE CASCADE,
     CONSTRAINT [FK_AccessPolicy_OrganizationUser_OrganizationUserId] FOREIGN KEY ([OrganizationUserId]) REFERENCES [OrganizationUser] ([Id]),
-    CONSTRAINT [FK_AccessPolicy_Project_ProjectId] FOREIGN KEY ([ProjectId]) REFERENCES [Project] ([Id]) ON DELETE CASCADE,
-    CONSTRAINT [FK_AccessPolicy_Secret_SecretId] FOREIGN KEY ([SecretId]) REFERENCES [Secret] ([Id]) ON DELETE CASCADE,
-    CONSTRAINT [FK_AccessPolicy_ServiceAccount_ServiceAccountId] FOREIGN KEY ([ServiceAccountId]) REFERENCES [ServiceAccount] ([Id]) ON DELETE CASCADE
+    CONSTRAINT [FK_AccessPolicy_Project_GrantedProjectId] FOREIGN KEY ([GrantedProjectId]) REFERENCES [Project] ([Id]) ON DELETE CASCADE,
+    CONSTRAINT [FK_AccessPolicy_ServiceAccount_ServiceAccountId] FOREIGN KEY ([ServiceAccountId]) REFERENCES [ServiceAccount] ([Id]),
+    CONSTRAINT [FK_AccessPolicy_ServiceAccount_GrantedServiceAccountId] FOREIGN KEY ([GrantedServiceAccountId]) REFERENCES [ServiceAccount] ([Id])
 );
 
 GO
@@ -24,10 +24,10 @@ GO
 CREATE NONCLUSTERED INDEX [IX_AccessPolicy_OrganizationUserId] ON [AccessPolicy] ([OrganizationUserId]);
 
 GO
-CREATE NONCLUSTERED INDEX [IX_AccessPolicy_ProjectId] ON [AccessPolicy] ([ProjectId]);
-
-GO
-CREATE NONCLUSTERED INDEX [IX_AccessPolicy_SecretId] ON [AccessPolicy] ([SecretId]);
+CREATE NONCLUSTERED INDEX [IX_AccessPolicy_GrantedProjectId] ON [AccessPolicy] ([GrantedProjectId]);
 
 GO
 CREATE NONCLUSTERED INDEX [IX_AccessPolicy_ServiceAccountId] ON [AccessPolicy] ([ServiceAccountId]);
+
+GO
+CREATE NONCLUSTERED INDEX [IX_AccessPolicy_GrantedServiceAccountId] ON [AccessPolicy] ([GrantedServiceAccountId]);
