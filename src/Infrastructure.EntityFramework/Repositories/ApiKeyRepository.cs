@@ -26,4 +26,13 @@ public class ApiKeyRepository : Repository<Core.Entities.ApiKey, ApiKey, Guid>, 
 
         return Mapper.Map<ServiceAccountApiKeyDetails>(entity);
     }
+
+    public async Task<ICollection<Core.Entities.ApiKey>> GetManyByServiceAccountIdAsync(Guid id)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        var apiKeys = await GetDbSet(dbContext).Where(e => e.ServiceAccountId == id).ToListAsync();
+
+        return Mapper.Map<List<Core.Entities.ApiKey>>(apiKeys);
+    }
 }
