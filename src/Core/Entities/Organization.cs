@@ -45,6 +45,7 @@ public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorabl
     public bool Use2fa { get; set; }
     public bool UseApi { get; set; }
     public bool UseResetPassword { get; set; }
+    public bool UseSecretsManager { get; set; }
     public bool SelfHost { get; set; }
     public bool UsersGetPremium { get; set; }
     public long? Storage { get; set; }

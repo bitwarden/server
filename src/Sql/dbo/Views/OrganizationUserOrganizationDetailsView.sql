@@ -17,6 +17,7 @@ SELECT
     O.[Use2fa],
     O.[UseApi],
     O.[UseResetPassword],
+    O.[UseSecretsManager],
     O.[SelfHost],
     O.[UsersGetPremium],
     O.[Seats],
