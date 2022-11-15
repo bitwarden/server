@@ -1,9 +1,11 @@
 ﻿using AutoMapper;
+using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
-using Bit.Infrastructure.EntityFramework.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Organization = Bit.Infrastructure.EntityFramework.Models.Organization;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories;
 
@@ -119,9 +121,20 @@ public class OrganizationRepository : Repository<Core.Entities.Organization, Org
         }
     }
 
-    public async Task<OrganizationPlanUsage> GetPlanUsageByIdAsync(Guid id)
+    public async Task<SelfHostedOrganizationDetails> GetSelfHostedOrganizationDetailsById(Guid id)
     {
-        // TODO
-        return new OrganizationPlanUsage();
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var organization = await GetDbSet(dbContext).FindAsync(id);
+            var selfHostOrganization = Mapper.Map<SelfHostedOrganizationDetails>(organization);
+            
+            selfHostOrganization.CollectionCount = organization.Collections?.Count ?? 0;
+            selfHostOrganization.GroupCount = organization?.Groups.Count ?? 0;
+            selfHostOrganization.SsoConfig = organization.SsoConfigs.SingleOrDefault();
+            selfHostOrganization.ScimConnections = organization.Connections.Where(c => c.Type == OrganizationConnectionType.Scim);
+
+            return selfHostOrganization;
+        }
     }
 }

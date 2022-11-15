@@ -6,6 +6,6 @@ namespace Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
 
 public interface IUpdateOrganizationLicenseCommand
 {
-    Task UpdateLicenseAsync(Organization organization, OrganizationLicense license, Organization? existingOrganization, 
-        OrganizationPlanUsage planUsage);
+    Task UpdateLicenseAsync(SelfHostedOrganizationDetails selfHostedOrganization,
+        OrganizationLicense license, Organization? existingOrganization);
 }

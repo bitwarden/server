@@ -465,16 +465,15 @@ public class OrganizationsController : Controller
             throw new BadRequestException("Invalid license");
         }
         
-        var organization = await _organizationRepository.GetByIdAsync(orgIdGuid);
-        if (organization == null)
+        var selfHostedOrganizationDetails = await _organizationRepository.GetSelfHostedOrganizationDetailsById(orgIdGuid);
+        if (selfHostedOrganizationDetails == null)
         {
             throw new NotFoundException();
         }
 
         var existingOrganization = await _organizationRepository.GetByLicenseKeyAsync(license.LicenseKey);
-        var planUsage = await _organizationRepository.GetPlanUsageByIdAsync(organization.Id);
 
-        await _updateOrganizationLicenseCommand.UpdateLicenseAsync(organization, license, existingOrganization, planUsage);
+        await _updateOrganizationLicenseCommand.UpdateLicenseAsync(selfHostedOrganizationDetails, license, existingOrganization);
     }
 
     [HttpPost("{id}/import")]

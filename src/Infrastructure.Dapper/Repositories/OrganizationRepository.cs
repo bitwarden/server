@@ -108,15 +108,22 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
         }
     }
     
-    public async Task<OrganizationPlanUsage> GetPlanUsageByIdAsync(Guid id)
+    public async Task<SelfHostedOrganizationDetails> GetSelfHostedOrganizationDetailsById(Guid id)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             var result = await connection.QueryMultipleAsync(
-                "[dbo].[Organization_ReadPlanUsageById]",
+                "[dbo].[Organization_ReadSelfHostedDetailsById]",
                 new { Id = id },
                 commandType: CommandType.StoredProcedure);
 
+            var selfHostOrganization = result.Read<SelfHostedOrganizationDetails>().First();
+
+            if (selfHostOrganization == null)
+            {
+                return null;
+            }
+            
             var organizationUsers = result.Read<OrganizationUser>();
             var collectionCount = result.Read<int>();
             var groupCount = result.Read<int>();
@@ -124,15 +131,14 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
             var ssoConfig = result.Read<SsoConfig>();
             var scimConnections = result.Read<OrganizationConnection>();
 
-            return new OrganizationPlanUsage()
-            {
-                OrganizationUsers = organizationUsers,
-                CollectionCount = collectionCount.FirstOrDefault(),
-                GroupCount = groupCount.FirstOrDefault(),
-                Policies = policies,
-                SsoConfig = ssoConfig.FirstOrDefault(),
-                ScimConnections = scimConnections
-            };
+            selfHostOrganization.OrganizationUsers = organizationUsers;
+            selfHostOrganization.CollectionCount = collectionCount.FirstOrDefault();
+            selfHostOrganization.GroupCount = groupCount.FirstOrDefault();
+            selfHostOrganization.Policies = policies;
+            selfHostOrganization.SsoConfig = ssoConfig.FirstOrDefault();
+            selfHostOrganization.ScimConnections = scimConnections;
+
+            return selfHostOrganization;
         }
     }
 }

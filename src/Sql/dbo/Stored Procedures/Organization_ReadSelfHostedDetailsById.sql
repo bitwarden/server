@@ -1,9 +1,10 @@
-CREATE PROCEDURE [dbo].[Organization_ReadPlanUsageById]
+CREATE PROCEDURE [dbo].[Organization_ReadSelfHostedDetailsById]
     @Id UNIQUEIDENTIFIER
 AS
 BEGIN
     SET NOCOUNT ON
         
+    EXEC [dbo].[Organization_ReadById] @Id
     EXEC [dbo].[OrganizationUser_ReadByOrganizationId] @Id, NULL
     EXEC [dbo].[Collection_ReadCountByOrganizationId] @Id
     EXEC [dbo].[Group_ReadCountByOrganizationId] @Id

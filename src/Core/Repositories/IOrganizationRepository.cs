@@ -12,5 +12,5 @@ public interface IOrganizationRepository : IRepository<Organization, Guid>
     Task UpdateStorageAsync(Guid id);
     Task<ICollection<OrganizationAbility>> GetManyAbilitiesAsync();
     Task<Organization> GetByLicenseKeyAsync(string licenseKey);
-    Task<OrganizationPlanUsage> GetPlanUsageByIdAsync(Guid id);
+    Task<SelfHostedOrganizationDetails> GetSelfHostedOrganizationDetailsById(Guid id);
 }
