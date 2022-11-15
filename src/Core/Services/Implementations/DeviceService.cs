@@ -29,7 +29,7 @@ public class DeviceService : IDeviceService
         }
 
         await _pushRegistrationService.CreateOrUpdateRegistrationAsync(device.PushToken, device.Id.ToString(),
-                device.UserId.ToString(), device.Identifier, device.Type);
+            device.UserId.ToString(), device.Identifier, device.Type);
     }
 
     public async Task ClearTokenAsync(Device device)
