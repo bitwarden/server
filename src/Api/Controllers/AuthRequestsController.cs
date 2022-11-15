@@ -125,6 +125,11 @@ public class AuthRequestsController : Controller
             throw new NotFoundException();
         }
 
+        if (authRequest.Approved is not null)
+        {
+            throw new DuplicateAuthRequestException();
+        }
+
         var device = await _deviceRepository.GetByIdentifierAsync(model.DeviceIdentifier);
         if (device == null)
         {
@@ -137,7 +142,13 @@ public class AuthRequestsController : Controller
         authRequest.ResponseDate = DateTime.UtcNow;
         authRequest.Approved = model.RequestApproved;
         await _authRequestRepository.ReplaceAsync(authRequest);
-        await _pushNotificationService.PushAuthRequestResponseAsync(authRequest);
+
+        // We only want to send an approval notification if the request is approved (or null), 
+        // to not leak that it was denied to the originating client if it was originated by a malicious actor.
+        if (authRequest.Approved ?? true)
+        {
+            await _pushNotificationService.PushAuthRequestResponseAsync(authRequest);
+        }
 
         return new AuthRequestResponseModel(authRequest, _globalSettings.BaseServiceUri.Vault);
     }

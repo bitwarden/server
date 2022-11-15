@@ -40,7 +40,8 @@
                 "Identity",
                 "Sso",
                 "Icons",
-                "Billing"
+                "Billing",
+                "Notifications"
             ],
             "presentation": {
                 "hidden": false,
@@ -57,6 +58,7 @@
                 "EventsProcessor-SelfHost",
                 "Identity-SelfHost",
                 "Sso-SelfHost",
+                "Notifications-SelfHost"
             ],
             "presentation": {
                 "hidden": false,
@@ -239,6 +241,28 @@
             }
         },
         {
+            "name": "Notifications",
+            "presentation": {
+                "hidden": true,
+                "group": "cloud",
+                "order": 100
+            },
+            "requireExactSource": true,
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "buildNotifications",
+            "program": "${workspaceFolder}/src/Notifications/bin/Debug/net6.0/Notifications.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/src/Notifications",
+            "stopAtEntry": false,
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development"
+            },
+            "sourceFileMap": {
+                "/Views": "${workspaceFolder}/Views"
+            }
+        },
+        {
             "name": "Identity-SelfHost",
             "presentation": {
                 "hidden": true,
@@ -330,6 +354,30 @@
             "env": {
                 "ASPNETCORE_ENVIRONMENT": "Development",
                 "ASPNETCORE_URLS": "http://localhost:51822",
+                "developSelfHosted": "true"
+            },
+            "sourceFileMap": {
+                "/Views": "${workspaceFolder}/Views"
+            }
+        },
+        {
+            "name": "Notifications-SelfHost",
+            "presentation": {
+                "hidden": true,
+                "group": "self-host",
+                "order": 999
+            },
+            "requireExactSource": true,
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "buildNotifications",
+            "program": "${workspaceFolder}/src/Notifications/bin/Debug/net6.0/Notifications.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/src/Notifications",
+            "stopAtEntry": false,
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development",
+                "ASPNETCORE_URLS": "http://localhost:61841",
                 "developSelfHosted": "true"
             },
             "sourceFileMap": {

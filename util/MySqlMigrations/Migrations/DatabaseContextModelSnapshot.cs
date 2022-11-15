@@ -351,6 +351,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<Guid?>("ProviderUserId")
                         .HasColumnType("char(36)");
 
+                    b.Property<byte?>("SystemUser")
+                        .HasColumnType("tinyint unsigned");
+
                     b.Property<int>("Type")
                         .HasColumnType("int");
 
