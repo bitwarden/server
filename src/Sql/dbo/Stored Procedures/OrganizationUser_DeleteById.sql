@@ -34,11 +34,11 @@ BEGIN
     WHERE
         [OrganizationUserId] = @Id
 
-   DELETE
-   FROM
-       [dbo].[AccessPolicy]
-   WHERE
-       [OrganizationUserId] = @Id
+    DELETE
+    FROM
+        [dbo].[AccessPolicy]
+    WHERE
+        [OrganizationUserId] = @Id
 
     EXEC [dbo].[OrganizationSponsorship_OrganizationUserDeleted] @Id
 

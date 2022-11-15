@@ -11,6 +11,7 @@ IF OBJECT_ID('[dbo].[AccessPolicy]') IS NULL
 BEGIN
     CREATE TABLE [AccessPolicy] (
         [Id]                      UNIQUEIDENTIFIER NOT NULL,
+        [Discriminator]           NVARCHAR(50)     NOT NULL,
         [OrganizationUserId]      UNIQUEIDENTIFIER NULL,
         [GroupId]                 UNIQUEIDENTIFIER NULL,
         [ServiceAccountId]        UNIQUEIDENTIFIER NULL,
@@ -24,8 +25,8 @@ BEGIN
         CONSTRAINT [FK_AccessPolicy_Group_GroupId] FOREIGN KEY ([GroupId]) REFERENCES [Group] ([Id]) ON DELETE CASCADE,
         CONSTRAINT [FK_AccessPolicy_OrganizationUser_OrganizationUserId] FOREIGN KEY ([OrganizationUserId]) REFERENCES [OrganizationUser] ([Id]),
         CONSTRAINT [FK_AccessPolicy_Project_GrantedProjectId] FOREIGN KEY ([GrantedProjectId]) REFERENCES [Project] ([Id]) ON DELETE CASCADE,
-        CONSTRAINT [FK_AccessPolicy_ServiceAccount_ServiceAccountId] FOREIGN KEY ([ServiceAccountId]) REFERENCES [ServiceAccount] ([Id]),
-        CONSTRAINT [FK_AccessPolicy_ServiceAccount_GrantedServiceAccountId] FOREIGN KEY ([GrantedServiceAccountId]) REFERENCES [ServiceAccount] ([Id])
+        CONSTRAINT [FK_AccessPolicy_ServiceAccount_GrantedServiceAccountId] FOREIGN KEY ([GrantedServiceAccountId]) REFERENCES [ServiceAccount] ([Id]),
+        CONSTRAINT [FK_AccessPolicy_ServiceAccount_ServiceAccountId] FOREIGN KEY ([ServiceAccountId]) REFERENCES [ServiceAccount] ([Id])
     );
 
     CREATE NONCLUSTERED INDEX [IX_AccessPolicy_GroupId] ON [AccessPolicy] ([GroupId]);
@@ -76,11 +77,11 @@ BEGIN
     WHERE
         [OrganizationUserId] = @Id
 
-   DELETE
-   FROM
-       [dbo].[AccessPolicy]
-   WHERE
-       [OrganizationUserId] = @Id
+    DELETE
+    FROM
+        [dbo].[AccessPolicy]
+    WHERE
+        [OrganizationUserId] = @Id
 
     EXEC [dbo].[OrganizationSponsorship_OrganizationUserDeleted] @Id
 
