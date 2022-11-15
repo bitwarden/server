@@ -24,28 +24,6 @@ public class AccessPolicyEntityTypeConfiguration : IEntityTypeConfiguration<Acce
             .HasKey(s => s.Id)
             .IsClustered();
 
-        /*
-        builder
-            .HasIndex(s => s.OrganizationUserId)
-            .IsClustered(false);
-
-        builder
-            .HasIndex(s => s.GroupId)
-            .IsClustered(false);
-
-        builder
-            .HasIndex(s => s.ServiceAccountId)
-            .IsClustered(false);
-
-        builder
-            .HasIndex(s => s.GrantedProjectId)
-            .IsClustered(false);
-
-        builder
-            .HasIndex(s => s.GrantedServiceAccountId)
-            .IsClustered(false);
-        */
-
         builder.ToTable(nameof(AccessPolicy));
     }
 }

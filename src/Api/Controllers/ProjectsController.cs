@@ -50,8 +50,8 @@ public class ProjectsController : Controller
     [HttpGet("organizations/{organizationId}/projects")]
     public async Task<ListResponseModel<ProjectResponseModel>> GetProjectsByOrganizationAsync([FromRoute] Guid organizationId)
     {
-        var user = await _userService.GetUserByPrincipalAsync(User);
-        var projects = await _projectRepository.GetManyByOrganizationIdAsync(organizationId, user);
+        var userId = _userService.GetProperUserId(User).Value;
+        var projects = await _projectRepository.GetManyByOrganizationIdAsync(organizationId, userId);
         var responses = projects.Select(project => new ProjectResponseModel(project));
         return new ListResponseModel<ProjectResponseModel>(responses);
     }
