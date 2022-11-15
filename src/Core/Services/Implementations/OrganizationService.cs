@@ -2206,6 +2206,17 @@ public class OrganizationService : IOrganizationService
     private async Task ValidateOrganizationUserUpdatePermissions(Guid organizationId, OrganizationUserType newType,
         OrganizationUserType? oldType)
     {
+        var organization = await _organizationRepository.GetByIdAsync(organizationId);
+        if (organization == null)
+        {
+            throw new NotFoundException();
+        }
+
+        if (newType == OrganizationUserType.Custom && !organization.UseCustomPermissions)
+        {
+            throw new BadRequestException("To enable custom permissions the organization must be on an Enterprise plan.");
+        }
+
         if (await _currentContext.OrganizationOwner(organizationId))
         {
             return;
