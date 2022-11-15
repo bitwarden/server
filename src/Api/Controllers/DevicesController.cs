@@ -21,8 +21,7 @@ public class DevicesController : Controller
         IDeviceRepository deviceRepository,
         IDeviceService deviceService,
         IUserService userService,
-        IUserRepository userRepository,
-        IPushRegistrationService pushRegistrationService)
+        IUserRepository userRepository)
     {
         _deviceRepository = deviceRepository;
         _deviceService = deviceService;
