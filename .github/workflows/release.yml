@@ -83,7 +83,7 @@ jobs:
         with:
           token: '${{ secrets.GITHUB_TOKEN }}'
           initial-status: 'in_progress'
-          environment: 'Server ${{ matrix.name }} - Production'
+          environment: 'Production Cloud'
           task: 'deploy'
           description: 'Deploy from ${{ needs.setup.outputs.branch-name }} branch'
 
