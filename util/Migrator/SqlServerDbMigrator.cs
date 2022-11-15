@@ -74,7 +74,7 @@ public class SqlServerDbMigrator : IDbMigrator
             .WithScriptsAndCodeEmbeddedInAssembly(Assembly.GetExecutingAssembly(),
                 s => s.Contains($".DbScripts.") && !s.Contains(".Archive."))
             .WithTransaction()
-            .WithExecutionTimeout(new TimeSpan(0, 5, 0));
+            .WithExecutionTimeout(TimeSpan.FromMinutes(5));
 
         if (enableLogging)
         {
