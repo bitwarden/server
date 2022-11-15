@@ -32,6 +32,12 @@ public class DeviceService : IDeviceService
                 device.UserId.ToString(), device.Identifier, device.Type);
     }
 
+    public async Task ClearTokenAsync(Device device)
+    {
+        await _deviceRepository.ClearPushTokenAsync(device.Id);
+        await _pushRegistrationService.DeleteRegistrationAsync(device.Id.ToString());
+    }
+
     public async Task DeleteAsync(Device device)
     {
         await _deviceRepository.DeleteAsync(device);

@@ -103,6 +103,20 @@ public class DevicesController : Controller
 
     }
 
+    [AllowAnonymous]
+    [HttpPut("identifier/{identifier}/clear-token")]
+    [HttpPost("identifier/{identifier}/clear-token")]
+    public async Task PutClearToken(string identifier)
+    {
+        var device = await _deviceRepository.GetByIdentifierAsync(identifier);
+        if (device == null)
+        {
+            throw new NotFoundException();
+        }
+
+        await _deviceService.ClearTokenAsync(device);
+    }
+
     [HttpDelete("{id}")]
     [HttpPost("{id}/delete")]
     public async Task Delete(string id)
