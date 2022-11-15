@@ -28,6 +28,9 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasMaxLength(25)
                         .HasColumnType("varchar(25)");
 
+                    b.Property<bool?>("Approved")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<DateTime?>("AuthenticationDate")
                         .HasColumnType("datetime(6)");
 
@@ -347,6 +350,9 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.Property<Guid?>("ProviderUserId")
                         .HasColumnType("char(36)");
+
+                    b.Property<byte?>("SystemUser")
+                        .HasColumnType("tinyint unsigned");
 
                     b.Property<int>("Type")
                         .HasColumnType("int");

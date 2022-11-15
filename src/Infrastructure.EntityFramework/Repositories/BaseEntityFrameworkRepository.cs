@@ -124,8 +124,14 @@ public abstract class BaseEntityFrameworkRepository
                     !string.IsNullOrWhiteSpace(e.Attachments))
                 .Select(e => e.Attachments)
                 .ToListAsync();
-            var storage = attachments.Sum(e => JsonDocument.Parse(e)?.RootElement.EnumerateArray()
-                .Sum(p => p.GetProperty("Size").GetInt64()) ?? 0);
+            var storage = attachments.Sum(e => JsonDocument.Parse(e)?.RootElement.EnumerateObject().Sum(p =>
+            {
+                if (long.TryParse(p.Value.GetProperty("Size").ToString(), out var s))
+                {
+                    return s;
+                }
+                return 0;
+            }) ?? 0);
             var organization = new Organization
             {
                 Id = organizationId,
@@ -152,8 +158,14 @@ public abstract class BaseEntityFrameworkRepository
                     !string.IsNullOrWhiteSpace(e.Attachments))
                 .Select(e => e.Attachments)
                 .ToListAsync();
-            var storage = attachments.Sum(e => JsonDocument.Parse(e)?.RootElement.EnumerateArray()
-                .Sum(p => p.GetProperty("Size").GetInt64()) ?? 0);
+            var storage = attachments.Sum(e => JsonDocument.Parse(e)?.RootElement.EnumerateObject().Sum(p =>
+            {
+                if (long.TryParse(p.Value.GetProperty("Size").ToString(), out var s))
+                {
+                    return s;
+                }
+                return 0;
+            }) ?? 0);
             var user = new Models.User
             {
                 Id = userId,
