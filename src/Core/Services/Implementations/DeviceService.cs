@@ -6,11 +6,14 @@ namespace Bit.Core.Services;
 public class DeviceService : IDeviceService
 {
     private readonly IDeviceRepository _deviceRepository;
+    private readonly IPushRegistrationService _pushRegistrationService;
 
     public DeviceService(
-        IDeviceRepository deviceRepository)
+        IDeviceRepository deviceRepository,
+        IPushRegistrationService pushRegistrationService)
     {
         _deviceRepository = deviceRepository;
+        _pushRegistrationService = pushRegistrationService;
     }
 
     public async Task SaveAsync(Device device)
@@ -24,10 +27,15 @@ public class DeviceService : IDeviceService
             device.RevisionDate = DateTime.UtcNow;
             await _deviceRepository.ReplaceAsync(device);
         }
+
+        await _pushRegistrationService.CreateOrUpdateRegistrationAsync(device.PushToken, device.Id.ToString(),
+                device.UserId.ToString(), device.Identifier, device.Type);      
     }
 
     public async Task DeleteAsync(Device device)
     {
         await _deviceRepository.DeleteAsync(device);
+
+        await _pushRegistrationService.DeleteRegistrationAsync(device.Id.ToString());
     }
 }

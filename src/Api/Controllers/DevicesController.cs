@@ -17,8 +17,6 @@ public class DevicesController : Controller
     private readonly IDeviceService _deviceService;
     private readonly IUserService _userService;
     private readonly IUserRepository _userRepository;
-    private readonly IPushRegistrationService _pushRegistrationService;
-
     public DevicesController(
         IDeviceRepository deviceRepository,
         IDeviceService deviceService,
@@ -30,7 +28,6 @@ public class DevicesController : Controller
         _deviceService = deviceService;
         _userService = userService;
         _userRepository = userRepository;
-        _pushRegistrationService = pushRegistrationService;
     }
 
     [HttpGet("{id}")]
@@ -73,9 +70,6 @@ public class DevicesController : Controller
         var device = model.ToDevice(_userService.GetProperUserId(User));
         await _deviceService.SaveAsync(device);
 
-        await _pushRegistrationService.CreateOrUpdateRegistrationAsync(device.PushToken, device.Id.ToString(),
-            device.UserId.ToString(), device.Identifier, device.Type);
-
         var response = new DeviceResponseModel(device);
         return response;
     }
@@ -91,9 +85,6 @@ public class DevicesController : Controller
         }
 
         await _deviceService.SaveAsync(model.ToDevice(device));
-
-        await _pushRegistrationService.CreateOrUpdateRegistrationAsync(device.PushToken, device.Id.ToString(),
-            device.UserId.ToString(), device.Identifier, device.Type);
 
         var response = new DeviceResponseModel(device);
         return response;
@@ -111,9 +102,6 @@ public class DevicesController : Controller
 
         await _deviceService.SaveAsync(model.ToDevice(device));
 
-        await _pushRegistrationService.CreateOrUpdateRegistrationAsync(device.PushToken, device.Id.ToString(),
-            device.UserId.ToString(), device.Identifier, device.Type);
-
     }
 
     [HttpDelete("{id}")]
@@ -127,7 +115,6 @@ public class DevicesController : Controller
         }
 
         await _deviceService.DeleteAsync(device);
-        await _pushRegistrationService.DeleteRegistrationAsync(device.Id.ToString());
     }
 
     [AllowAnonymous]

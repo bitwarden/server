@@ -37,8 +37,6 @@ public abstract class BaseRequestValidator<T> where T : class
     private readonly IPolicyRepository _policyRepository;
     private readonly IUserRepository _userRepository;
     private readonly ICaptchaValidationService _captchaValidationService;
-    private readonly IPushRegistrationService _pushRegistrationService;
-
     public BaseRequestValidator(
         UserManager<User> userManager,
         IDeviceRepository deviceRepository,
@@ -55,8 +53,7 @@ public abstract class BaseRequestValidator<T> where T : class
         GlobalSettings globalSettings,
         IPolicyRepository policyRepository,
         IUserRepository userRepository,
-        ICaptchaValidationService captchaValidationService,
-        IPushRegistrationService pushRegistrationService)
+        ICaptchaValidationService captchaValidationService)
     {
         _userManager = userManager;
         _deviceRepository = deviceRepository;
@@ -74,7 +71,6 @@ public abstract class BaseRequestValidator<T> where T : class
         _policyRepository = policyRepository;
         _userRepository = userRepository;
         _captchaValidationService = captchaValidationService;
-        _pushRegistrationService = pushRegistrationService;
     }
 
     protected async Task ValidateAsync(T context, ValidatedTokenRequest request,
@@ -548,20 +544,16 @@ public abstract class BaseRequestValidator<T> where T : class
 
     private async Task<Device> SaveDeviceAsync(User user, ValidatedTokenRequest request)
     {
-        Device result = null;
-        var requestDevice = GetDeviceFromRequest(request);
-        if (requestDevice != null)
+        var deviceFromRequest = GetDeviceFromRequest(request);
+        if (deviceFromRequest != null)
         {
-            var existingDeviceForUser = await GetKnownDeviceAsync(user, request);
-            if (existingDeviceForUser == null)
+            var existingDevice = await GetKnownDeviceAsync(user, request);
+            if (existingDevice == null)
             {
-                requestDevice.UserId = user.Id;
-                await _deviceService.SaveAsync(requestDevice);
-
                 var now = DateTime.UtcNow;
                 if (now - user.CreationDate > TimeSpan.FromMinutes(10))
                 {
-                    var deviceType = requestDevice.Type.GetType().GetMember(requestDevice.Type.ToString())
+                    var deviceType = deviceFromRequest.Type.GetType().GetMember(deviceFromRequest.Type.ToString())
                         .FirstOrDefault()?.GetCustomAttribute<DisplayAttribute>()?.GetName();
                     if (!_globalSettings.DisableEmailNewDevice)
                     {
@@ -569,21 +561,13 @@ public abstract class BaseRequestValidator<T> where T : class
                             _currentContext.IpAddress);
                     }
                 }
-
-            }
-            else
-            {
-                // Note that we are NOT updating the push token here if it comes in on a login request after the device exists. 
-                // Since we aren't using the PushToken on the table, this saves us having to save the data here.
-                // We should refactor the Device table to no longer have a PushToken column.
-                result = existingDeviceForUser;
             }
 
-            await _pushRegistrationService.CreateOrUpdateRegistrationAsync(requestDevice.PushToken, requestDevice.Id.ToString(),
-                requestDevice.UserId.ToString(), requestDevice.Identifier, requestDevice.Type);
+            deviceFromRequest.UserId = user.Id;
+            await _deviceService.SaveAsync(deviceFromRequest);
         }
 
-        return result;
+        return deviceFromRequest;
     }
 
     private async Task ResetFailedAuthDetailsAsync(User user)

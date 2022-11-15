@@ -36,12 +36,11 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         IPolicyRepository policyRepository,
         ISsoConfigRepository ssoConfigRepository,
         IUserRepository userRepository,
-        ICaptchaValidationService captchaValidationService,
-        IPushRegistrationService pushRegistrationService)
+        ICaptchaValidationService captchaValidationService)
         : base(userManager, deviceRepository, deviceService, userService, eventService,
               organizationDuoWebTokenProvider, organizationRepository, organizationUserRepository,
               applicationCacheService, mailService, logger, currentContext, globalSettings, policyRepository,
-              userRepository, captchaValidationService, pushRegistrationService)
+              userRepository, captchaValidationService)
     {
         _userManager = userManager;
         _ssoConfigRepository = ssoConfigRepository;

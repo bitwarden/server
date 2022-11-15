@@ -37,12 +37,11 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
         IPolicyRepository policyRepository,
         ICaptchaValidationService captchaValidationService,
         IAuthRequestRepository authRequestRepository,
-        IUserRepository userRepository,
-        IPushRegistrationService pushRegistrationService)
+        IUserRepository userRepository)
         : base(userManager, deviceRepository, deviceService, userService, eventService,
               organizationDuoWebTokenProvider, organizationRepository, organizationUserRepository,
               applicationCacheService, mailService, logger, currentContext, globalSettings, policyRepository,
-              userRepository, captchaValidationService, pushRegistrationService)
+              userRepository, captchaValidationService)
     {
         _userManager = userManager;
         _userService = userService;
