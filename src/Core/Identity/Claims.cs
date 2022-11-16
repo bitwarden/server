@@ -13,4 +13,7 @@ public static class Claims
     public const string OrganizationCustom = "orgcustom";
     public const string ProviderAdmin = "providerprovideradmin";
     public const string ProviderServiceUser = "providerserviceuser";
+
+    // Service Account
+    public const string Organization = "organization";
 }
