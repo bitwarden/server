@@ -1,7 +1,7 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
-using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
+using Bit.Core.OrganizationFeatures.OrganizationLicenses;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture;
@@ -19,7 +19,7 @@ public class GetOrganizationLicenseQueryTests
 {
     [Theory]
     [BitAutoData]
-    public async Task GetLicenseAsync_InvalidInstallationId_Throws(SutProvider<IGetOrganizationLicenseQuery> sutProvider,
+    public async Task GetLicenseAsync_InvalidInstallationId_Throws(SutProvider<GetOrganizationLicenseQuery> sutProvider,
         Organization organization, Guid installationId, int version)
     {
         sutProvider.GetDependency<IInstallationRepository>().GetByIdAsync(installationId).ReturnsNull();
@@ -30,7 +30,7 @@ public class GetOrganizationLicenseQueryTests
 
     [Theory]
     [BitAutoData]
-    public async Task GetLicenseAsync_DisabledOrganization_Throws(SutProvider<IGetOrganizationLicenseQuery> sutProvider,
+    public async Task GetLicenseAsync_DisabledOrganization_Throws(SutProvider<GetOrganizationLicenseQuery> sutProvider,
         Organization organization, Guid installationId, int version, Installation installation)
     {
         installation.Enabled = false;
@@ -43,7 +43,7 @@ public class GetOrganizationLicenseQueryTests
 
     [Theory]
     [BitAutoData]
-    public async Task GetLicenseAsync_CreatesAndReturns(SutProvider<IGetOrganizationLicenseQuery> sutProvider,
+    public async Task GetLicenseAsync_CreatesAndReturns(SutProvider<GetOrganizationLicenseQuery> sutProvider,
         Organization organization, Guid installationId, int version, Installation installation,
         SubscriptionInfo subInfo, byte[] licenseSignature)
     {
