@@ -35,9 +35,12 @@ RUN VERSION=$(cat version.txt) \
 FROM mcr.microsoft.com/dotnet/sdk:6.0 AS dotnet-build
 
 # Add packages
-RUN apk add --update-cache \
+# RUN apk add --update-cache \
+#     npm \
+#     && rm -rf /var/cache/apk/*
+RUN apt-get update && apt-get install -y \
     npm \
-    && rm -rf /var/cache/apk/*
+    && rm -rf /var/lib/apt/lists/*
 
 # Copy csproj files as distinct layers
 WORKDIR /source
