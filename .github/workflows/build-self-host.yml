@@ -1,0 +1,185 @@
+---
+name: Build Self-Host
+
+on:
+  push:
+    branches-ignore:
+      - "l10n_master"
+      - "gh-pages"
+    paths-ignore:
+      - ".github/workflows/**"
+  workflow_dispatch:
+
+jobs:
+  build-docker:
+    name: Build Docker image
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux/amd64
+          - platform: linux/arm/v7
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@a12a3943b4bdde767164f792f33f40b04645d846
+
+      ########## Build Docker Image ##########
+      - name: Create Docker context
+        run: docker context create builder-context
+
+      - name: Create Docker builder
+        run: docker buildx create --name builderx --driver docker-container --use builder-context
+
+      - name: Build Docker image
+        env:
+          PROJECT_NAME: self-host
+        run: docker buildx build --tag $PROJECT_NAME --platform ${{ matrix.platform }} --file docker-unified/Dockerfile .
+
+      ########## ACR ##########
+      - name: Login to Azure - QA Subscription
+        uses: Azure/login@1f63701bf3e6892515f1b7ce2d2bf1708b46beaf
+        with:
+          creds: ${{ secrets.AZURE_QA_KV_CREDENTIALS }}
+
+      - name: Login to Azure ACR
+        run: az acr login -n bitwardenqa
+
+      - name: Tag and Push image to Azure ACR QA registry
+        env:
+          PROJECT_NAME: self-host
+          REGISTRY: bitwardenqa.azurecr.io
+        run: |
+          IMAGE_TAG=$(echo "${GITHUB_REF:11}" | sed "s#/#-#g")  # slash safe branch name
+          if [[ "$IMAGE_TAG" == "master" ]]; then
+            IMAGE_TAG=dev
+          fi
+
+          docker tag $PROJECT_NAME \
+            $REGISTRY/$PROJECT_NAME:$IMAGE_TAG
+          docker push $REGISTRY/$PROJECT_NAME:$IMAGE_TAG
+
+      - name: Log out of Docker
+        run: docker logout
+
+      ########## DockerHub ##########
+      - name: Login to Azure - Prod Subscription
+        if: |
+          false
+          && (github.ref == 'refs/heads/master' ||
+            github.ref == 'refs/heads/rc' ||
+            github.ref == 'refs/heads/hotfix-rc')
+        uses: Azure/login@1f63701bf3e6892515f1b7ce2d2bf1708b46beaf
+        with:
+          creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
+
+      - name: Retrieve secrets
+        if: |
+          false
+          && (github.ref == 'refs/heads/master' ||
+            github.ref == 'refs/heads/rc' ||
+            github.ref == 'refs/heads/hotfix-rc')
+        id: retrieve-secrets
+        uses: bitwarden/gh-actions/get-keyvault-secrets@c3b3285993151c5af47cefcb3b9134c28ab479af
+        with:
+          keyvault: "bitwarden-prod-kv"
+          secrets: "docker-password,
+            docker-username,
+            dct-delegate-2-repo-passphrase,
+            dct-delegate-2-key"
+
+      - name: Log into Docker
+        if: |
+          false
+          && (github.ref == 'refs/heads/master' ||
+            github.ref == 'refs/heads/rc' ||
+            github.ref == 'refs/heads/hotfix-rc')
+        env:
+          DOCKER_USERNAME: ${{ steps.retrieve-secrets.outputs.docker-username }}
+          DOCKER_PASSWORD: ${{ steps.retrieve-secrets.outputs.docker-password }}
+        run: echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+
+      - name: Setup Docker Trust
+        if: |
+          false
+          && (github.ref == 'refs/heads/master' ||
+            github.ref == 'refs/heads/rc' ||
+            github.ref == 'refs/heads/hotfix-rc')
+        env:
+          DCT_DELEGATION_KEY_ID: "c9bde8ec820701516491e5e03d3a6354e7bd66d05fa3df2b0062f68b116dc59c"
+          DCT_DELEGATE_KEY: ${{ steps.retrieve-secrets.outputs.dct-delegate-2-key }}
+          DCT_REPO_PASSPHRASE: ${{ steps.retrieve-secrets.outputs.dct-delegate-2-repo-passphrase }}
+        run: |
+          mkdir -p ~/.docker/trust/private
+          echo "$DCT_DELEGATE_KEY" > ~/.docker/trust/private/$DCT_DELEGATION_KEY_ID.key
+          echo "DOCKER_CONTENT_TRUST=1" >> $GITHUB_ENV
+          echo "DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE=$DCT_REPO_PASSPHRASE" >> $GITHUB_ENV
+
+      - name: Tag and Push RC to Docker Hub
+        if: |
+          false
+          && (github.ref == 'refs/heads/master' ||
+            github.ref == 'refs/heads/rc' ||
+            github.ref == 'refs/heads/hotfix-rc')
+        env:
+          PROJECT_NAME: self-host
+          REGISTRY: bitwarden
+        run: |
+          IMAGE_TAG=$(echo "${GITHUB_REF:11}" | sed "s#/#-#g")  # slash safe branch name
+          if [[ "$IMAGE_TAG" == "master" ]]; then
+            IMAGE_TAG=dev
+          fi
+
+          docker tag $PROJECT_NAME \
+            $REGISTRY/$PROJECT_NAME:$IMAGE_TAG
+          docker push $REGISTRY/$PROJECT_NAME:$IMAGE_TAG
+
+      - name: Log out of Docker and disable Docker Notary
+        if: |
+          false
+          && (github.ref == 'refs/heads/master' ||
+            github.ref == 'refs/heads/rc' ||
+            github.ref == 'refs/heads/hotfix-rc')
+        run: |
+          docker logout
+          echo "DOCKER_CONTENT_TRUST=0" >> $GITHUB_ENV
+
+  check-failures:
+    name: Check for failures
+    if: always()
+    runs-on: ubuntu-22.04
+    needs: build-docker
+    steps:
+      - name: Check if any job failed
+        if: |
+          github.ref == 'refs/heads/master'
+          || github.ref == 'refs/heads/rc'
+          || github.ref == 'refs/heads/hotfix-rc'
+        env:
+          BUILD_DOCKER_STATUS: ${{ needs.build-docker.result }}
+        run: |
+          if [ "$BUILD_DOCKER_STATUS" = "failure" ]; then
+              exit 1
+          fi
+
+      - name: Login to Azure - Prod Subscription
+        uses: Azure/login@1f63701bf3e6892515f1b7ce2d2bf1708b46beaf
+        if: failure()
+        with:
+          creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
+
+      - name: Retrieve secrets
+        id: retrieve-secrets
+        uses: bitwarden/gh-actions/get-keyvault-secrets@c3b3285993151c5af47cefcb3b9134c28ab479af
+        if: failure()
+        with:
+          keyvault: "bitwarden-prod-kv"
+          secrets: "devops-alerts-slack-webhook-url"
+
+      - name: Notify Slack on failure
+        uses: act10ns/slack@da3191ebe2e67f49b46880b4633f5591a96d1d33
+        if: failure()
+        env:
+          SLACK_WEBHOOK_URL: ${{ steps.retrieve-secrets.outputs.devops-alerts-slack-webhook-url }}
+        with:
+          status: ${{ job.status }}
