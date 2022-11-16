@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.OrganizationFeatures.OrganizationLicenses;
 using Bit.Core.Repositories;
@@ -7,7 +8,6 @@ using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
-using Microsoft.Azure.NotificationHubs.Messaging;
 using NSubstitute;
 using NSubstitute.ReturnsExtensions;
 using Xunit;
@@ -15,6 +15,8 @@ using Xunit;
 namespace Bit.Core.Test.OrganizationFeatures.OrganizationLicenses;
 
 [SubscriptionInfoCustomize]
+[OrganizationLicenseCustomize]
+[SutProviderCustomize]
 public class GetOrganizationLicenseQueryTests
 {
     [Theory]
@@ -31,30 +33,29 @@ public class GetOrganizationLicenseQueryTests
     [Theory]
     [BitAutoData]
     public async Task GetLicenseAsync_DisabledOrganization_Throws(SutProvider<GetOrganizationLicenseQuery> sutProvider,
-        Organization organization, Guid installationId, int version, Installation installation)
+        Organization organization, Guid installationId, Installation installation)
     {
         installation.Enabled = false;
         sutProvider.GetDependency<IInstallationRepository>().GetByIdAsync(installationId).Returns(installation);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            async () => await sutProvider.Sut.GetLicenseAsync(organization, installationId, version));
+            async () => await sutProvider.Sut.GetLicenseAsync(organization, installationId));
         Assert.Contains("Invalid installation id", exception.Message);
     }
 
     [Theory]
     [BitAutoData]
     public async Task GetLicenseAsync_CreatesAndReturns(SutProvider<GetOrganizationLicenseQuery> sutProvider,
-        Organization organization, Guid installationId, int version, Installation installation,
-        SubscriptionInfo subInfo, byte[] licenseSignature)
+        Organization organization, Guid installationId, Installation installation, SubscriptionInfo subInfo,
+        byte[] licenseSignature)
     {
         installation.Enabled = true;
         sutProvider.GetDependency<IInstallationRepository>().GetByIdAsync(installationId).Returns(installation);
         sutProvider.GetDependency<IPaymentService>().GetSubscriptionAsync(organization).Returns(subInfo);
         sutProvider.GetDependency<ILicensingService>().SignLicense(Arg.Any<ILicense>()).Returns(licenseSignature);
 
-        var result = await sutProvider.Sut.GetLicenseAsync(organization, installationId, version);
+        var result = await sutProvider.Sut.GetLicenseAsync(organization, installationId);
 
-        Assert.Equal(version, result.Version);
         Assert.Equal(LicenseType.Organization, result.LicenseType);
         Assert.Equal(organization.Id, result.Id);
         Assert.Equal(installationId, result.InstallationId);
