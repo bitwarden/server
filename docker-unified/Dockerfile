@@ -32,7 +32,7 @@ RUN VERSION=$(cat version.txt) \
 ###############################################
 #                 Build stage                 #
 ###############################################
-FROM mcr.microsoft.com/dotnet/sdk:6.0 AS dotnet-build
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:6.0 AS dotnet-build
 
 # Add packages
 # RUN apk add --update-cache \
@@ -41,6 +41,8 @@ FROM mcr.microsoft.com/dotnet/sdk:6.0 AS dotnet-build
 RUN apt-get update && apt-get install -y \
     npm \
     && rm -rf /var/lib/apt/lists/*
+
+RUN npm install -g gulp
 
 # Copy csproj files as distinct layers
 WORKDIR /source
@@ -64,35 +66,35 @@ COPY Directory.Build.props .
 
 # Restore Admin project dependencies and tools
 WORKDIR /source/src/Admin
-RUN dotnet restore
+RUN dotnet restore --use-current-runtime
 
 # Restore Api project dependencies and tools
 WORKDIR /source/src/Api
-RUN dotnet restore
+RUN dotnet restore --use-current-runtime
 
 # Restore Events project dependencies and tools
 WORKDIR /source/src/Events
-RUN dotnet restore
+RUN dotnet restore --use-current-runtime
 
 # Restore Icons project dependencies and tools
 WORKDIR /source/src/Icons
-RUN dotnet restore
+RUN dotnet restore --use-current-runtime
 
 # Restore Identity project dependencies and tools
 WORKDIR /source/src/Identity
-RUN dotnet restore
+RUN dotnet restore --use-current-runtime
 
 # Restore Notifications project dependencies and tools
 WORKDIR /source/src/Notifications
-RUN dotnet restore
+RUN dotnet restore --use-current-runtime
 
 # Restore Sso project dependencies and tools
 WORKDIR /source/bitwarden_license/src/Sso
-RUN dotnet restore
+RUN dotnet restore --use-current-runtime
 
 # Restore Scim project dependencies and tools
 WORKDIR /source/bitwarden_license/src/Scim
-RUN dotnet restore
+RUN dotnet restore --use-current-runtime
 
 # Copy required project files
 WORKDIR /source
@@ -117,41 +119,39 @@ COPY .git/. ./.git/
 
 # Build Admin app
 WORKDIR /source/src/Admin
-RUN npm install -g gulp
 RUN npm install
 RUN gulp --gulpfile "gulpfile.js" build
-RUN dotnet publish -c release -o /app/Admin --no-restore --no-self-contained
+RUN dotnet publish -c release -o /app/Admin --no-restore --no-self-contained --use-current-runtime
 
 # Build Api app
 WORKDIR /source/src/Api
-RUN dotnet publish -c release -o /app/Api --no-restore --no-self-contained
+RUN dotnet publish -c release -o /app/Api --no-restore --no-self-contained --use-current-runtime
 
 # Build Events app
 WORKDIR /source/src/Events
-RUN dotnet publish -c release -o /app/Events --no-restore --no-self-contained
+RUN dotnet publish -c release -o /app/Events --no-restore --no-self-contained --use-current-runtime
 
 # Build Icons app
 WORKDIR /source/src/Icons
-RUN dotnet publish -c release -o /app/Icons --no-restore --no-self-contained
+RUN dotnet publish -c release -o /app/Icons --no-restore --no-self-contained --use-current-runtime
 
 # Build Identity app
 WORKDIR /source/src/Identity
-RUN dotnet publish -c release -o /app/Identity --no-restore --no-self-contained
+RUN dotnet publish -c release -o /app/Identity --no-restore --no-self-contained --use-current-runtime
 
 # Build Notifications app
 WORKDIR /source/src/Notifications
-RUN dotnet publish -c release -o /app/Notifications --no-restore --no-self-contained
+RUN dotnet publish -c release -o /app/Notifications --no-restore --no-self-contained --use-current-runtime
 
 # Build Sso app
 WORKDIR /source/bitwarden_license/src/Sso
-RUN npm install -g gulp
 RUN npm install
 RUN gulp --gulpfile "gulpfile.js" build
-RUN dotnet publish -c release -o /app/Sso --no-restore --no-self-contained
+RUN dotnet publish -c release -o /app/Sso --no-restore --no-self-contained --use-current-runtime
 
 # Build Scim app
 WORKDIR /source/bitwarden_license/src/Scim
-RUN dotnet publish -c release -o /app/Scim --no-restore --no-self-contained
+RUN dotnet publish -c release -o /app/Scim --no-restore --no-self-contained --use-current-runtime
 
 ###############################################
 #                  App stage                  #
@@ -253,7 +253,7 @@ COPY docker-unified/confd/app-id.conf.tmpl /etc/confd/templates/
 
 # Add confd tool for generating final configurations
 ADD https://github.com/kelseyhightower/confd/releases/download/v0.16.0/confd-0.16.0-linux-amd64 /usr/local/bin/confd
-RUN chmod +x /usr/local/bin/confd
+RUN chmod +rx /usr/local/bin/confd
 
 # Copy entrypoint script and make it executable
 COPY docker-unified/entrypoint.sh /entrypoint.sh
