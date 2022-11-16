@@ -34,7 +34,7 @@ jobs:
       - name: Build Docker image
         env:
           PROJECT_NAME: self-host
-        run: docker buildx build --tag $PROJECT_NAME --platform ${{ matrix.platform }} --file docker-unified/Dockerfile .
+        run: docker buildx build --tag $PROJECT_NAME --platform ${{ matrix.platform }} --load --file docker-unified/Dockerfile .
 
       ########## ACR ##########
       - name: Login to Azure - QA Subscription
