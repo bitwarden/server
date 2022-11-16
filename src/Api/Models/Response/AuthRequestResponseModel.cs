@@ -24,8 +24,9 @@ public class AuthRequestResponseModel : ResponseModel
         Key = authRequest.Key;
         MasterPasswordHash = authRequest.MasterPasswordHash;
         CreationDate = authRequest.CreationDate;
-        RequestApproved = authRequest.Approved ?? false;
+        RequestApproved = authRequest.Approved;
         Origin = new Uri(vaultUri).Host;
+        ResponseDate = authRequest.ResponseDate;
     }
 
     public string Id { get; set; }
@@ -36,6 +37,7 @@ public class AuthRequestResponseModel : ResponseModel
     public string Key { get; set; }
     public string MasterPasswordHash { get; set; }
     public DateTime CreationDate { get; set; }
-    public bool RequestApproved { get; set; }
+    public DateTime? ResponseDate { get; set; }
+    public bool? RequestApproved { get; set; }
     public string Origin { get; set; }
 }
