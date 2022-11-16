@@ -303,7 +303,6 @@ public class OrganizationLicense : ILicense
 
     public bool VerifySignature(X509Certificate2 certificate)
     {
-        return true;
         using (var rsa = certificate.GetRSAPublicKey())
         {
             return rsa.VerifyData(GetDataBytes(), SignatureBytes, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
