@@ -1,7 +1,7 @@
 ###############################################
 #                 Build stage                 #
 ###############################################
-FROM alpine:3.16 AS web-setup
+FROM alpine AS web-setup
 
 # Add packages
 RUN apk add --update-cache \
