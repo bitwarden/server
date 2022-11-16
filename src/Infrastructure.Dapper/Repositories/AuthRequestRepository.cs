@@ -33,7 +33,7 @@ public class AuthRequestRepository : Repository<AuthRequest, Guid>, IAuthRequest
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryAsync<AuthRequest>(
-                "[{Schema}].[AuthRequest_ReadByUserId]",
+                $"[{Schema}].[AuthRequest_ReadByUserId]",
                 new { UserId = userId },
                 commandType: CommandType.StoredProcedure);
 
