@@ -34,9 +34,6 @@ RUN VERSION=$(cat version.txt) \
 ###############################################
 FROM mcr.microsoft.com/dotnet/sdk:6.0-alpine AS dotnet-build
 
-# Dotnet Runtime to build for
-ARG dotnet_runtime=linux-musl-x64
-
 # Add packages
 RUN apk add --update-cache \
     npm \
@@ -64,43 +61,35 @@ COPY Directory.Build.props .
 
 # Restore Admin project dependencies and tools
 WORKDIR /source/src/Admin
-#RUN dotnet restore -r ${dotnet_runtime}
-RUN dotnet restore
+RUN dotnet restore --use-current-runtime
 
 # Restore Api project dependencies and tools
 WORKDIR /source/src/Api
-#RUN dotnet restore -r ${dotnet_runtime}
-RUN dotnet restore
+RUN dotnet restore --use-current-runtime
 
 # Restore Events project dependencies and tools
 WORKDIR /source/src/Events
-#RUN dotnet restore -r ${dotnet_runtime}
-RUN dotnet restore
+RUN dotnet restore --use-current-runtime
 
 # Restore Icons project dependencies and tools
 WORKDIR /source/src/Icons
-#RUN dotnet restore -r ${dotnet_runtime}
-RUN dotnet restore
+RUN dotnet restore --use-current-runtime
 
 # Restore Identity project dependencies and tools
 WORKDIR /source/src/Identity
-#RUN dotnet restore -r ${dotnet_runtime}
-RUN dotnet restore
+RUN dotnet restore --use-current-runtime
 
 # Restore Notifications project dependencies and tools
 WORKDIR /source/src/Notifications
-#RUN dotnet restore -r ${dotnet_runtime}
-RUN dotnet restore
+RUN dotnet restore --use-current-runtime
 
 # Restore Sso project dependencies and tools
 WORKDIR /source/bitwarden_license/src/Sso
-#RUN dotnet restore -r ${dotnet_runtime}
-RUN dotnet restore
+RUN dotnet restore --use-current-runtime
 
 # Restore Scim project dependencies and tools
 WORKDIR /source/bitwarden_license/src/Scim
-#RUN dotnet restore -r ${dotnet_runtime}
-RUN dotnet restore
+RUN dotnet restore --use-current-runtime
 
 # Copy required project files
 WORKDIR /source
@@ -128,46 +117,38 @@ WORKDIR /source/src/Admin
 RUN npm install -g gulp
 RUN npm install
 RUN gulp --gulpfile "gulpfile.js" build
-#RUN dotnet publish -c release -o /app/Admin --no-restore -r ${dotnet_runtime} --no-self-contained
-RUN dotnet publish -c release -o /app/Admin --no-restore --no-self-contained
+RUN dotnet publish -c release -o /app/Admin --no-restore --no-self-contained --use-current-runtime
 
 # Build Api app
 WORKDIR /source/src/Api
-#RUN dotnet publish -c release -o /app/Api --no-restore -r ${dotnet_runtime} --no-self-contained
-RUN dotnet publish -c release -o /app/Api --no-restore --no-self-contained
+RUN dotnet publish -c release -o /app/Api --no-restore --no-self-contained --use-current-runtime
 
 # Build Events app
 WORKDIR /source/src/Events
-#RUN dotnet publish -c release -o /app/Events --no-restore -r ${dotnet_runtime} --no-self-contained
-RUN dotnet publish -c release -o /app/Events --no-restore --no-self-contained
+RUN dotnet publish -c release -o /app/Events --no-restore --no-self-contained --use-current-runtime
 
 # Build Icons app
 WORKDIR /source/src/Icons
-#RUN dotnet publish -c release -o /app/Icons --no-restore -r ${dotnet_runtime} --no-self-contained
-RUN dotnet publish -c release -o /app/Icons --no-restore --no-self-contained
+RUN dotnet publish -c release -o /app/Icons --no-restore --no-self-contained --use-current-runtime
 
 # Build Identity app
 WORKDIR /source/src/Identity
-#RUN dotnet publish -c release -o /app/Identity --no-restore -r ${dotnet_runtime} --no-self-contained
-RUN dotnet publish -c release -o /app/Identity --no-restore --no-self-contained
+RUN dotnet publish -c release -o /app/Identity --no-restore --no-self-contained --use-current-runtime
 
 # Build Notifications app
 WORKDIR /source/src/Notifications
-#RUN dotnet publish -c release -o /app/Notifications --no-restore -r ${dotnet_runtime} --no-self-contained
-RUN dotnet publish -c release -o /app/Notifications --no-restore --no-self-contained
+RUN dotnet publish -c release -o /app/Notifications --no-restore --no-self-contained --use-current-runtime
 
 # Build Sso app
 WORKDIR /source/bitwarden_license/src/Sso
 RUN npm install -g gulp
 RUN npm install
 RUN gulp --gulpfile "gulpfile.js" build
-#RUN dotnet publish -c release -o /app/Sso --no-restore -r ${dotnet_runtime} --no-self-contained
-RUN dotnet publish -c release -o /app/Sso --no-restore --no-self-contained
+RUN dotnet publish -c release -o /app/Sso --no-restore --no-self-contained --use-current-runtime
 
 # Build Scim app
 WORKDIR /source/bitwarden_license/src/Scim
-#RUN dotnet publish -c release -o /app/Scim --no-restore -r ${dotnet_runtime} --no-self-contained
-RUN dotnet publish -c release -o /app/Scim --no-restore --no-self-contained
+RUN dotnet publish -c release -o /app/Scim --no-restore --no-self-contained --use-current-runtime
 
 ###############################################
 #                  App stage                  #
