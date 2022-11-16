@@ -21,6 +21,5 @@ public class OrganizationMapperProfile : Profile
     public OrganizationMapperProfile()
     {
         CreateMap<Core.Entities.Organization, Organization>().ReverseMap();
-        CreateMap<Core.Entities.SelfHostedOrganizationDetails, Organization>().ReverseMap();
     }
 }

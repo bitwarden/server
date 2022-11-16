@@ -8,6 +8,9 @@ using Stripe;
 using Bit.Core.Utilities;
 using IdentityModel;
 using System.Globalization;
+using AutoMapper;
+using Bit.Core.Entities;
+using Bit.Core.OrganizationFeatures.OrganizationLicenses;
 using Microsoft.IdentityModel.Logging;
 using Microsoft.OpenApi.Models;
 using Bit.SharedWeb.Utilities;
@@ -70,6 +73,9 @@ public class Startup
 
         // BitPay
         services.AddSingleton<BitPayClient>();
+        
+        // Automapper
+        services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 
         if (!globalSettings.SelfHosted)
         {
@@ -217,7 +223,7 @@ public class Startup
                 config.OAuthClientSecret("secretKey");
             });
         }
-
+        
         // Log startup
         logger.LogInformation(Constants.BypassFiltersEventId, globalSettings.ProjectName + " started.");
     }

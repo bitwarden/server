@@ -7,6 +7,7 @@ using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
+using AutoMapper;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationLicenses;
 
@@ -15,15 +16,18 @@ public class UpdateOrganizationLicenseCommand : IUpdateOrganizationLicenseComman
     private readonly ILicensingService _licensingService;
     private readonly IGlobalSettings _globalSettings;
     private readonly IOrganizationService _organizationService;
+    private readonly IMapper _mapper;
 
     public UpdateOrganizationLicenseCommand(
         ILicensingService licensingService,
         IGlobalSettings globalSettings,
-        IOrganizationService organizationService)
+        IOrganizationService organizationService,
+        IMapper mapper)
     {
         _licensingService = licensingService;
         _globalSettings = globalSettings;
         _organizationService = organizationService;
+        _mapper = mapper;
     }
 
     public async Task UpdateLicenseAsync(SelfHostedOrganizationDetails selfHostedOrganization,
@@ -44,8 +48,9 @@ public class UpdateOrganizationLicenseCommand : IUpdateOrganizationLicenseComman
         await JsonSerializer.SerializeAsync(fs, license, JsonHelpers.Indented);
     }
 
-    private async Task UpdateOrganizationAsync(SelfHostedOrganizationDetails organization, OrganizationLicense license)
+    private async Task UpdateOrganizationAsync(SelfHostedOrganizationDetails selfHostedOrganizationDetails, OrganizationLicense license)
     {
+        var organization = _mapper.Map<Organization>(selfHostedOrganizationDetails);
         organization.UpdateFromLicense(license);
         await _organizationService.ReplaceAndUpdateCacheAsync(organization);
     }

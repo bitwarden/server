@@ -24,6 +24,15 @@
           "StackExchange.Redis": "2.5.43"
         }
       },
+      "AutoMapper": {
+        "type": "Direct",
+        "requested": "[12.0.0, )",
+        "resolved": "12.0.0",
+        "contentHash": "0Rmg0zI5AFu1O/y//o9VGyhxKjhggWpk9mOA1tp0DEVx40c61bs+lnQv+0jUq8XbniF7FKgIVvI1perqiMtLrA==",
+        "dependencies": {
+          "Microsoft.CSharp": "4.7.0"
+        }
+      },
       "AWSSDK.SimpleEmail": {
         "type": "Direct",
         "requested": "[3.7.0.150, )",

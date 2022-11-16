@@ -1,4 +1,5 @@
-﻿using Bit.Core.Enums;
+﻿using AutoMapper;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.OrganizationConnectionConfigs;
@@ -75,5 +76,12 @@ public class SelfHostedOrganizationDetails : Organization
             throw new BadRequestException("Your new license does not allow the Password Reset feature. "
                 + "Disable your Password Reset policy.");
         }
+    }
+}
+public class SelfHostedOrganizationDetailsMapperProfile : Profile
+{
+    public SelfHostedOrganizationDetailsMapperProfile()
+    {
+        CreateMap<SelfHostedOrganizationDetails, Organization>().ReverseMap();
     }
 }
