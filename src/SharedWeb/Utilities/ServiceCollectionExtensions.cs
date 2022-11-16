@@ -2,7 +2,6 @@
 using System.Security.Claims;
 using System.Security.Cryptography.X509Certificates;
 using AspNetCoreRateLimit;
-using AutoMapper;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.HostedServices;
@@ -38,7 +37,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Org.BouncyCastle.Math.EC;
 using Serilog.Context;
 using StackExchange.Redis;
 using NoopRepos = Bit.Core.Repositories.Noop;

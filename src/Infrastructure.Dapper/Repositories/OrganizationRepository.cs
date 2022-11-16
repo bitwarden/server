@@ -117,8 +117,7 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
                 new { Id = id },
                 commandType: CommandType.StoredProcedure);
 
-            var selfHostOrganization = result.Read<SelfHostedOrganizationDetails>().First();
-
+            var selfHostOrganization = result.Read<SelfHostedOrganizationDetails>().FirstOrDefault();
             if (selfHostOrganization == null)
             {
                 return null;
