@@ -384,7 +384,7 @@ jobs:
 
   upload:
     name: Upload
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs: build-docker
     steps:
       - name: Checkout repo
@@ -463,7 +463,7 @@ jobs:
   check-failures:
     name: Check for failures
     if: always()
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs:
       - cloc
       - lint
