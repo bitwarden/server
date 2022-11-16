@@ -1,27 +1,33 @@
 ###############################################
 #                 Build stage                 #
 ###############################################
-FROM node:16-slim AS node-build
+FROM alpine:3.16 AS web-setup
 
-# TODO: Change default branch name before merge into master
-ARG web_branch=master
+# Add packages
+RUN apk add --update-cache \
+    curl \
+    jq \
+    && rm -rf /var/cache/apk/*
 
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-        ca-certificates \
-        g++ \
-        git \
-        make \
-        python3 \
-    && rm -rf /var/lib/apt/lists/*
+WORKDIR /tmp
 
-RUN git clone --branch $web_branch https://github.com/bitwarden/clients.git /source
+# Download tags from 'clients' repository
+RUN curl https://api.github.com/repos/bitwarden/clients/git/refs/tags --output tags.json
 
-WORKDIR /source
-RUN npm ci
+# Grab last tag/release of the 'web' client
+RUN cat tags.json | jq -r 'last(.[] | select(.ref|test("refs/tags/web-v[0-9]{4}.[0-9]{1,2}.[0-9]+"))) | .ref | split("/")[2]' > tag.txt
 
-WORKDIR /source/apps/web
-RUN npm run dist:bit:selfhost
+# Extract the version of the 'web' client
+RUN cat tag.txt | grep -o -E "[0-9]{4}\.[0-9]{1,2}\.[0-9]+" > version.txt
+
+# Download the built release artifact for the 'web' client
+RUN TAG=$(cat tag.txt) \
+  && VERSION=$(cat version.txt) \
+  && curl -L https://github.com/bitwarden/clients/releases/download/$TAG/web-$VERSION-selfhosted-COMMERCIAL.zip -O
+
+# Unzip the 'web' client to /tmp/build
+RUN VERSION=$(cat version.txt) \
+  && unzip web-$VERSION-selfhosted-COMMERCIAL.zip
 
 ###############################################
 #                 Build stage                 #
@@ -219,8 +225,8 @@ RUN chown -R bitwarden:bitwarden \
 WORKDIR /app
 COPY --chown=bitwarden:bitwarden --from=dotnet-build /app ./
 
-# Copy Web files from node-build stage
-COPY --chown=bitwarden:bitwarden --from=node-build /source/apps/web/build /app/Web
+# Copy Web files from web-setup stage
+COPY --chown=bitwarden:bitwarden --from=web-setup /tmp/build /app/Web
 
 # Set up supervisord
 COPY --chown=bitwarden:bitwarden docker-unified/supervisord/*.ini /etc/supervisor.d/
