@@ -29,8 +29,9 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<string>("AccessCode")
-                        .HasColumnType("text");
-                    
+                        .HasMaxLength(25)
+                        .HasColumnType("character varying(25)");
+
                     b.Property<bool?>("Approved")
                         .HasColumnType("boolean");
 
@@ -50,7 +51,8 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("RequestDeviceIdentifier")
-                        .HasColumnType("text");
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
 
                     b.Property<byte>("RequestDeviceType")
                         .HasColumnType("smallint");
@@ -59,7 +61,8 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("RequestIpAddress")
-                        .HasColumnType("text");
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
 
                     b.Property<DateTime?>("ResponseDate")
                         .HasColumnType("timestamp with time zone");
@@ -706,6 +709,40 @@ namespace Bit.PostgresMigrations.Migrations
                     b.HasIndex("OrganizationId");
 
                     b.ToTable("OrganizationConnection", (string)null);
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.OrganizationDomain", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreationDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DomainName")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<int>("NextRunCount")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("NextRunDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Txt")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("VerifiedDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.ToTable("OrganizationDomain", (string)null);
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.OrganizationSponsorship", b =>
@@ -1480,6 +1517,17 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Navigation("Organization");
                 });
 
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.OrganizationDomain", b =>
+                {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.Organization", "Organization")
+                        .WithMany("Domains")
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Organization");
+                });
+
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.OrganizationSponsorship", b =>
                 {
                     b.HasOne("Bit.Infrastructure.EntityFramework.Models.Organization", "SponsoredOrganization")
@@ -1643,6 +1691,8 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Navigation("Ciphers");
 
                     b.Navigation("Connections");
+
+                    b.Navigation("Domains");
 
                     b.Navigation("Groups");
 
