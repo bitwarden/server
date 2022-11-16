@@ -11,6 +11,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data.Organizations.Policies;
 using Bit.Core.OrganizationFeatures.OrganizationApiKeys.Interfaces;
+using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -37,6 +38,7 @@ public class OrganizationsController : Controller
     private readonly IRotateOrganizationApiKeyCommand _rotateOrganizationApiKeyCommand;
     private readonly ICreateOrganizationApiKeyCommand _createOrganizationApiKeyCommand;
     private readonly IOrganizationApiKeyRepository _organizationApiKeyRepository;
+    private readonly IGetOrganizationLicenseQuery _getOrganizationLicenseQuery;
     private readonly GlobalSettings _globalSettings;
 
     public OrganizationsController(
@@ -53,6 +55,7 @@ public class OrganizationsController : Controller
         IRotateOrganizationApiKeyCommand rotateOrganizationApiKeyCommand,
         ICreateOrganizationApiKeyCommand createOrganizationApiKeyCommand,
         IOrganizationApiKeyRepository organizationApiKeyRepository,
+        IGetOrganizationLicenseQuery getOrganizationLicenseQuery,
         GlobalSettings globalSettings)
     {
         _organizationRepository = organizationRepository;
@@ -68,6 +71,7 @@ public class OrganizationsController : Controller
         _rotateOrganizationApiKeyCommand = rotateOrganizationApiKeyCommand;
         _createOrganizationApiKeyCommand = createOrganizationApiKeyCommand;
         _organizationApiKeyRepository = organizationApiKeyRepository;
+        _getOrganizationLicenseQuery = getOrganizationLicenseQuery;
         _globalSettings = globalSettings;
     }
 
@@ -149,7 +153,8 @@ public class OrganizationsController : Controller
             throw new NotFoundException();
         }
 
-        var license = await _organizationService.GenerateLicenseAsync(orgIdGuid, installationId);
+        var org = await _organizationRepository.GetByIdAsync(new Guid(id));
+        var license = await _getOrganizationLicenseQuery.GetLicenseAsync(org, installationId);
         if (license == null)
         {
             throw new NotFoundException();

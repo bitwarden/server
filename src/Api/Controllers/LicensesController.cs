@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
+using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
@@ -14,26 +15,23 @@ namespace Bit.Api.Controllers;
 [SelfHosted(NotSelfHostedOnly = true)]
 public class LicensesController : Controller
 {
-    private readonly ILicensingService _licensingService;
     private readonly IUserRepository _userRepository;
     private readonly IUserService _userService;
     private readonly IOrganizationRepository _organizationRepository;
-    private readonly IOrganizationService _organizationService;
+    private readonly IGetOrganizationLicenseQuery _getOrganizationLicenseQuery;
     private readonly ICurrentContext _currentContext;
 
     public LicensesController(
-        ILicensingService licensingService,
         IUserRepository userRepository,
         IUserService userService,
         IOrganizationRepository organizationRepository,
-        IOrganizationService organizationService,
+        IGetOrganizationLicenseQuery getOrganizationLicenseQuery,
         ICurrentContext currentContext)
     {
-        _licensingService = licensingService;
         _userRepository = userRepository;
         _userService = userService;
         _organizationRepository = organizationRepository;
-        _organizationService = organizationService;
+        _getOrganizationLicenseQuery = getOrganizationLicenseQuery;
         _currentContext = currentContext;
     }
 
@@ -63,13 +61,14 @@ public class LicensesController : Controller
         {
             return null;
         }
-        else if (!org.LicenseKey.Equals(key))
+
+        if (!org.LicenseKey.Equals(key))
         {
             await Task.Delay(2000);
             throw new BadRequestException("Invalid license key.");
         }
 
-        var license = await _organizationService.GenerateLicenseAsync(org, _currentContext.InstallationId.Value);
+        var license = await _getOrganizationLicenseQuery.GetLicenseAsync(org, _currentContext.InstallationId.Value);
         return license;
     }
 }
