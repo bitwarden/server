@@ -4,7 +4,7 @@ version: "3.8"
 services:
   bitwarden:
     depends_on:
-      - mysql
+      - db
     env_file:
       - global-settings.env
     image: ${REGISTRY:-bitwarden}/self-host:${TAG:-latest}
@@ -16,16 +16,28 @@ services:
       - bitwarden:/etc/bitwarden
       - logs:/var/log/bitwarden
 
-  mysql:
+  # MariaDB Example
+  db:
     environment:
       MARIADB_USER: "bitwarden"
       MARIADB_PASSWORD: "super_strong_password"
       MARIADB_DATABASE: "bitwarden_vault"
       MARIADB_RANDOM_ROOT_PASSWORD: "true"
-    image: mariadb:10.9.3
+    image: mariadb:10
     restart: always
     volumes:
       - data:/var/lib/mysql
+
+  # PostgreSQL Example
+  # db:
+  #   environment:
+  #     POSTGRES_USER: "bitwarden"
+  #     POSTGRES_PASSWORD: "super_strong_password"
+  #     POSTGRES_DB: "bitwarden_vault"
+  #   image: postgres:15
+  #   restart: always
+  #   volumes:
+  #     - data:/var/lib/postgresql/data
 
 volumes:
   bitwarden:
