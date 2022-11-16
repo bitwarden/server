@@ -57,7 +57,7 @@ public class SecretRepository : Repository<Core.Entities.Secret, Secret, Guid>, 
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var secrets = await dbContext.Secret.Where(s => s.Projects.Any(p => p.Id == projectId)).ToListAsync();
+            var secrets = await dbContext.Secret.Where(s => s.Projects.Any(p => p.Id == projectId)).Include("Projects").OrderBy(s => s.RevisionDate).ToListAsync();
 
             return Mapper.Map<List<Core.Entities.Secret>>(secrets);
         }
