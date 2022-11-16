@@ -3162,7 +3162,7 @@
         "dependencies": {
           "AutoFixture.AutoNSubstitute": "[4.17.0, )",
           "AutoFixture.Xunit2": "[4.17.0, )",
-          "Core": "[2022.9.0, )",
+          "Core": "[2022.10.0, )",
           "Kralizek.AutoFixture.Extensions.MockHttp": "[1.2.0, )",
           "Microsoft.NET.Test.Sdk": "[17.1.0, )",
           "NSubstitute": "[4.3.0, )",
@@ -3212,7 +3212,7 @@
       "infrastructure.dapper": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2022.9.0, )",
+          "Core": "[2022.10.0, )",
           "Dapper": "[2.0.123, )",
           "System.Data.SqlClient": "[4.8.3, )"
         }
@@ -3221,7 +3221,7 @@
         "type": "Project",
         "dependencies": {
           "AutoMapper.Extensions.Microsoft.DependencyInjection": "[11.0.0, )",
-          "Core": "[2022.9.0, )",
+          "Core": "[2022.10.0, )",
           "Microsoft.EntityFrameworkCore.Relational": "[6.0.4, )",
           "Npgsql.EntityFrameworkCore.PostgreSQL": "[6.0.4, )",
           "Pomelo.EntityFrameworkCore.MySql": "[6.0.1, )",
@@ -3231,17 +3231,17 @@
       "scim": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2022.9.0, )",
+          "Core": "[2022.10.0, )",
           "Microsoft.VisualStudio.Web.CodeGeneration.Design": "[5.0.2, )",
-          "SharedWeb": "[2022.9.0, )"
+          "SharedWeb": "[2022.10.0, )"
         }
       },
       "sharedweb": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2022.9.0, )",
-          "Infrastructure.Dapper": "[2022.9.0, )",
-          "Infrastructure.EntityFramework": "[2022.9.0, )"
+          "Core": "[2022.10.0, )",
+          "Infrastructure.Dapper": "[2022.10.0, )",
+          "Infrastructure.EntityFramework": "[2022.10.0, )"
         }
       }
     }
