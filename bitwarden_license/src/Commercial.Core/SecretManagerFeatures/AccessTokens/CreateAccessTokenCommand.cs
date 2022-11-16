@@ -7,6 +7,7 @@ namespace Bit.Commercial.Core.SecretManagerFeatures.AccessTokens;
 
 public class CreateAccessTokenCommand : ICreateAccessTokenCommand
 {
+    private readonly int _dbMaxLength = 30;
     private readonly IApiKeyRepository _apiKeyRepository;
 
     public CreateAccessTokenCommand(IApiKeyRepository apiKeyRepository)
@@ -16,7 +17,7 @@ public class CreateAccessTokenCommand : ICreateAccessTokenCommand
 
     public async Task<ApiKey> CreateAsync(ApiKey apiKey)
     {
-        apiKey.ClientSecret = CoreHelpers.SecureRandomString(30);
+        apiKey.ClientSecret = CoreHelpers.SecureRandomString(_dbMaxLength);
         return await _apiKeyRepository.CreateAsync(apiKey);
     }
 }
