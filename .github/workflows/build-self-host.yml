@@ -37,7 +37,7 @@ jobs:
         with:
           context: .
           file: docker-unified/Dockerfile
-          #load: true
+          load: true
           platforms: ${{ matrix.platform }}
           tags: self-host:latest
 
