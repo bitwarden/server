@@ -29,7 +29,19 @@ public class GroupService : IGroupService
         _referenceEventService = referenceEventService;
     }
 
-    public async Task SaveAsync(Group group, IEnumerable<SelectionReadOnly> collections = null)
+    public async Task SaveAsync(Group group,
+        IEnumerable<SelectionReadOnly> collections = null)
+    {
+        await GroupRepositorySaveAsync(group, systemUser: null, collections);
+    }
+
+    public async Task SaveAsync(Group group, EventSystemUser systemUser,
+        IEnumerable<SelectionReadOnly> collections = null)
+    {
+        await GroupRepositorySaveAsync(group, systemUser, collections);
+    }
+
+    private async Task GroupRepositorySaveAsync(Group group, EventSystemUser? systemUser, IEnumerable<SelectionReadOnly> collections = null)
     {
         var org = await _organizationRepository.GetByIdAsync(group.OrganizationId);
         if (org == null)
@@ -55,7 +67,15 @@ public class GroupService : IGroupService
                 await _groupRepository.CreateAsync(group, collections);
             }
 
-            await _eventService.LogGroupEventAsync(group, Enums.EventType.Group_Created);
+            if (systemUser.HasValue)
+            {
+                await _eventService.LogGroupEventAsync(group, Enums.EventType.Group_Created, systemUser.Value);
+            }
+            else
+            {
+                await _eventService.LogGroupEventAsync(group, Enums.EventType.Group_Created);
+            }
+
             await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.GroupCreated, org));
         }
         else
@@ -71,24 +91,53 @@ public class GroupService : IGroupService
                 await _groupRepository.ReplaceAsync(group, collections);
             }
 
-            await _eventService.LogGroupEventAsync(group, Enums.EventType.Group_Updated);
+            if (systemUser.HasValue)
+            {
+                await _eventService.LogGroupEventAsync(group, Enums.EventType.Group_Updated, systemUser.Value);
+            }
+            else
+            {
+                await _eventService.LogGroupEventAsync(group, Enums.EventType.Group_Updated);
+            }
         }
     }
 
+    [Obsolete("IDeleteGroupCommand should be used instead. To be removed by EC-608.")]
     public async Task DeleteAsync(Group group)
     {
         await _groupRepository.DeleteAsync(group);
-        await _eventService.LogGroupEventAsync(group, Enums.EventType.Group_Deleted);
+        await _eventService.LogGroupEventAsync(group, EventType.Group_Deleted);
+    }
+
+    [Obsolete("IDeleteGroupCommand should be used instead. To be removed by EC-608.")]
+    public async Task DeleteAsync(Group group, EventSystemUser systemUser)
+    {
+        await _groupRepository.DeleteAsync(group);
+        await _eventService.LogGroupEventAsync(group, EventType.Group_Deleted, systemUser);
     }
 
     public async Task DeleteUserAsync(Group group, Guid organizationUserId)
+    {
+        var orgUser = await GroupRepositoryDeleteUserAsync(group, organizationUserId, systemUser: null);
+        await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_UpdatedGroups);
+    }
+
+    public async Task DeleteUserAsync(Group group, Guid organizationUserId, EventSystemUser systemUser)
+    {
+        var orgUser = await GroupRepositoryDeleteUserAsync(group, organizationUserId, systemUser);
+        await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_UpdatedGroups, systemUser);
+    }
+
+    private async Task<OrganizationUser> GroupRepositoryDeleteUserAsync(Group group, Guid organizationUserId, EventSystemUser? systemUser)
     {
         var orgUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
         if (orgUser == null || orgUser.OrganizationId != group.OrganizationId)
         {
             throw new NotFoundException();
         }
+
         await _groupRepository.DeleteUserAsync(group.Id, organizationUserId);
-        await _eventService.LogOrganizationUserEventAsync(orgUser, Enums.EventType.OrganizationUser_UpdatedGroups);
+
+        return orgUser;
     }
 }

@@ -30,6 +30,9 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.Property<string>("AccessCode")
                         .HasColumnType("text");
+                    
+                    b.Property<bool?>("Approved")
+                        .HasColumnType("boolean");
 
                     b.Property<DateTime?>("AuthenticationDate")
                         .HasColumnType("timestamp with time zone");
@@ -348,6 +351,9 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.Property<Guid?>("ProviderUserId")
                         .HasColumnType("uuid");
+
+                    b.Property<byte?>("SystemUser")
+                        .HasColumnType("smallint");
 
                     b.Property<int>("Type")
                         .HasColumnType("integer");

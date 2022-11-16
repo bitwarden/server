@@ -1,5 +1,7 @@
 ﻿namespace Bit.Core.Enums;
 
+// If the backing type here changes to a different type you will likely also need to change the value used in
+// EncryptedStringAttribute
 public enum EncryptionType : byte
 {
     AesCbc256_B64 = 0,
