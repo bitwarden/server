@@ -107,7 +107,7 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
             return result.SingleOrDefault();
         }
     }
-    
+
     public async Task<SelfHostedOrganizationDetails> GetSelfHostedOrganizationDetailsById(Guid id)
     {
         using (var connection = new SqlConnection(ConnectionString))
@@ -122,7 +122,7 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
             {
                 return null;
             }
-            
+
             var organizationUsers = result.Read<OrganizationUser>();
             var collectionCount = result.Read<int>();
             var groupCount = result.Read<int>();

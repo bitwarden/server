@@ -1,6 +1,5 @@
-﻿using Bit.Core.Models.Business;
-using Bit.Core.Entities;
-using Bit.Core.Models.Data.Organizations;
+﻿using Bit.Core.Entities;
+using Bit.Core.Models.Business;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
 

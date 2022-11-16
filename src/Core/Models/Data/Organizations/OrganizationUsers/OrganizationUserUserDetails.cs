@@ -1,6 +1,5 @@
 ﻿using Bit.Core.Enums;
 using Bit.Core.Utilities;
-using Bit.Core.Models;
 
 namespace Bit.Core.Models.Data.Organizations.OrganizationUsers;
 

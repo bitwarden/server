@@ -18,7 +18,7 @@ public class SelfHostedOrganizationDetails : Organization
     // TODO: should return an error string or null, rather than throw errors in a model
     public void CanUseLicense(OrganizationLicense license, Organization existingOrganization)
     {
-        
+
         if (existingOrganization != null && existingOrganization.Id != Id)
         {
             throw new BadRequestException("License is already in use by another organization.");
@@ -63,8 +63,8 @@ public class SelfHostedOrganizationDetails : Organization
                 $"Your new license does not allow for the use of Key Connector. Disable your Key Connector.");
         }
 
-        if (!license.UseScim && UseScim && ScimConnections != null && 
-            ScimConnections.Any(c => c.GetConfig<ScimConfig>() is {Enabled: true}))
+        if (!license.UseScim && UseScim && ScimConnections != null &&
+            ScimConnections.Any(c => c.GetConfig<ScimConfig>() is { Enabled: true }))
         {
             throw new BadRequestException("Your new plan does not allow the SCIM feature. " +
                 "Disable your SCIM configuration.");

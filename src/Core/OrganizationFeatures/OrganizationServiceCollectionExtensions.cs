@@ -67,7 +67,7 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IGetOrganizationApiKeyCommand, GetOrganizationApiKeyCommand>();
         services.AddScoped<IRotateOrganizationApiKeyCommand, RotateOrganizationApiKeyCommand>();
     }
-    
+
     private static void AddOrganizationLicenseCommands(this IServiceCollection services)
     {
         services.AddScoped<IUpdateOrganizationLicenseCommand, UpdateOrganizationLicenseCommand>();

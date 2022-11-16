@@ -464,7 +464,7 @@ public class OrganizationsController : Controller
         {
             throw new BadRequestException("Invalid license");
         }
-        
+
         var selfHostedOrganizationDetails = await _organizationRepository.GetSelfHostedOrganizationDetailsById(orgIdGuid);
         if (selfHostedOrganizationDetails == null)
         {

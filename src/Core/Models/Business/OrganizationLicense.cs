@@ -213,13 +213,13 @@ public class OrganizationLicense : ILicense
             throw new BadRequestException("Invalid license. Make sure your license allows for on-premise " +
                 "hosting of organizations and that the installation id matches your current installation.");
         }
-        
+
         if (LicenseType != null && LicenseType != Enums.LicenseType.Organization)
         {
             throw new BadRequestException("Premium licenses cannot be applied to an organization. "
                                           + "Upload this license from your personal account settings page.");
         }
-        
+
         if (!licensingService.VerifyLicense(this))
         {
             throw new BadRequestException("Invalid license.");

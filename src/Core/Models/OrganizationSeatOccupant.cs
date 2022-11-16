@@ -4,8 +4,8 @@ namespace Bit.Core.Models;
 
 public abstract class OrganizationSeatOccupant
 {
-    public OrganizationUserStatusType Status { get; set; } 
-    
+    public OrganizationUserStatusType Status { get; set; }
+
     public bool OccupiesOrganizationSeat
     {
         get

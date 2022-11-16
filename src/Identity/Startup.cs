@@ -4,7 +4,6 @@ using AspNetCoreRateLimit;
 using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Models.Business.Tokenables;
-using Bit.Core.OrganizationFeatures.OrganizationLicenses;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Identity.Utilities;
@@ -138,7 +137,7 @@ public class Startup
         services.AddBaseServices(globalSettings);
         services.AddDefaultServices(globalSettings);
         services.AddCoreLocalizationServices();
-        
+
         // Automapper
         services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 

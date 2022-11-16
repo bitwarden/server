@@ -1,13 +1,13 @@
 ﻿#nullable enable
 
 using System.Text.Json;
+using AutoMapper;
 using Bit.Core.Entities;
 using Bit.Core.Models.Business;
 using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
-using AutoMapper;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationLicenses;
 
@@ -35,7 +35,7 @@ public class UpdateOrganizationLicenseCommand : IUpdateOrganizationLicenseComman
     {
         license.CanUse(_globalSettings, _licensingService);
         selfHostedOrganization.CanUseLicense(license, existingOrganization);
-        
+
         await WriteLicenseFileAsync(selfHostedOrganization, license);
         await UpdateOrganizationAsync(selfHostedOrganization, license);
     }

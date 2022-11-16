@@ -128,7 +128,7 @@ public class OrganizationRepository : Repository<Core.Entities.Organization, Org
             var dbContext = GetDatabaseContext(scope);
             var organization = await GetDbSet(dbContext).FindAsync(id);
             var selfHostOrganization = Mapper.Map<SelfHostedOrganizationDetails>(organization);
-            
+
             selfHostOrganization.CollectionCount = organization.Collections?.Count ?? 0;
             selfHostOrganization.GroupCount = organization?.Groups.Count ?? 0;
             selfHostOrganization.SsoConfig = organization.SsoConfigs.SingleOrDefault();

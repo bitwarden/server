@@ -70,7 +70,7 @@ public class Startup
 
         // BitPay
         services.AddSingleton<BitPayClient>();
-        
+
         // Automapper
         services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 
@@ -220,7 +220,7 @@ public class Startup
                 config.OAuthClientSecret("secretKey");
             });
         }
-        
+
         // Log startup
         logger.LogInformation(Constants.BypassFiltersEventId, globalSettings.ProjectName + " started.");
     }
