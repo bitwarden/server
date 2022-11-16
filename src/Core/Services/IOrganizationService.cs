@@ -56,9 +56,6 @@ public interface IOrganizationService
         IEnumerable<Guid> organizationUserIds, Guid? deletingUserId);
     Task UpdateUserGroupsAsync(OrganizationUser organizationUser, IEnumerable<Guid> groupIds, Guid? loggedInUserId);
     Task UpdateUserResetPasswordEnrollmentAsync(Guid organizationId, Guid userId, string resetPasswordKey, Guid? callingUserId);
-    Task<OrganizationLicense> GenerateLicenseAsync(Guid organizationId, Guid installationId);
-    Task<OrganizationLicense> GenerateLicenseAsync(Organization organization, Guid installationId,
-        int? version = null);
     Task ImportAsync(Guid organizationId, Guid? importingUserId, IEnumerable<ImportedGroup> groups,
         IEnumerable<ImportedOrganizationUser> newUsers, IEnumerable<string> removeUserExternalIds,
         bool overwriteExisting);
