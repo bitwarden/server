@@ -30,6 +30,7 @@ public static class OrganizationServiceCollectionExtensions
         services.AddOrganizationSponsorshipCommands(globalSettings);
         services.AddOrganizationApiKeyCommands();
         services.AddOrganizationLicenseCommands();
+        services.AddOrganizationLicenseQueries();
         services.AddOrganizationUserQueries();
     }
 
@@ -79,6 +80,9 @@ public static class OrganizationServiceCollectionExtensions
     private static void AddOrganizationUserQueries(this IServiceCollection services)
     {
         services.AddScoped<IGetOccupiedSeatCountQuery, GetOccupiedSeatCountQuery>();
+    private static void AddOrganizationLicenseQueries(this IServiceCollection services)
+    {
+        services.AddScoped<IGetOrganizationLicenseQuery, GetOrganizationLicenseQuery>();
     }
 
     private static void AddTokenizers(this IServiceCollection services)

@@ -6,6 +6,7 @@ using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.OrganizationFeatures.OrganizationApiKeys.Interfaces;
+using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -29,6 +30,7 @@ public class OrganizationsControllerTests : IDisposable
     private readonly IGetOrganizationApiKeyCommand _getOrganizationApiKeyCommand;
     private readonly IRotateOrganizationApiKeyCommand _rotateOrganizationApiKeyCommand;
     private readonly IOrganizationApiKeyRepository _organizationApiKeyRepository;
+    private readonly IGetOrganizationLicenseQuery _getOrganizationLicenseQuery;
 
     private readonly OrganizationsController _sut;
 
@@ -47,11 +49,12 @@ public class OrganizationsControllerTests : IDisposable
         _rotateOrganizationApiKeyCommand = Substitute.For<IRotateOrganizationApiKeyCommand>();
         _organizationApiKeyRepository = Substitute.For<IOrganizationApiKeyRepository>();
         _userService = Substitute.For<IUserService>();
+        _getOrganizationLicenseQuery = Substitute.For<IGetOrganizationLicenseQuery>();
 
         _sut = new OrganizationsController(_organizationRepository, _organizationUserRepository,
             _policyRepository, _organizationService, _userService, _paymentService, _currentContext,
             _ssoConfigRepository, _ssoConfigService, _getOrganizationApiKeyCommand, _rotateOrganizationApiKeyCommand,
-            _organizationApiKeyRepository, _globalSettings);
+            _organizationApiKeyRepository, _getOrganizationLicenseQuery, _globalSettings);
     }
 
     public void Dispose()

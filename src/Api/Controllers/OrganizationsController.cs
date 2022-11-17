@@ -38,6 +38,7 @@ public class OrganizationsController : Controller
     private readonly IRotateOrganizationApiKeyCommand _rotateOrganizationApiKeyCommand;
     private readonly IOrganizationApiKeyRepository _organizationApiKeyRepository;
     private readonly IUpdateOrganizationLicenseCommand _updateOrganizationLicenseCommand;
+    private readonly IGetOrganizationLicenseQuery _getOrganizationLicenseQuery;
     private readonly GlobalSettings _globalSettings;
 
     public OrganizationsController(
@@ -54,6 +55,7 @@ public class OrganizationsController : Controller
         IRotateOrganizationApiKeyCommand rotateOrganizationApiKeyCommand,
         IOrganizationApiKeyRepository organizationApiKeyRepository,
         IUpdateOrganizationLicenseCommand updateOrganizationLicenseCommand,
+        IGetOrganizationLicenseQuery getOrganizationLicenseQuery,
         GlobalSettings globalSettings)
     {
         _organizationRepository = organizationRepository;
@@ -69,6 +71,7 @@ public class OrganizationsController : Controller
         _rotateOrganizationApiKeyCommand = rotateOrganizationApiKeyCommand;
         _organizationApiKeyRepository = organizationApiKeyRepository;
         _updateOrganizationLicenseCommand = updateOrganizationLicenseCommand;
+        _getOrganizationLicenseQuery = getOrganizationLicenseQuery;
         _globalSettings = globalSettings;
     }
 
@@ -150,7 +153,8 @@ public class OrganizationsController : Controller
             throw new NotFoundException();
         }
 
-        var license = await _organizationService.GenerateLicenseAsync(orgIdGuid, installationId);
+        var org = await _organizationRepository.GetByIdAsync(new Guid(id));
+        var license = await _getOrganizationLicenseQuery.GetLicenseAsync(org, installationId);
         if (license == null)
         {
             throw new NotFoundException();
