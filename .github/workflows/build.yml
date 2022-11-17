@@ -217,9 +217,6 @@ jobs:
             base_path: ./src
             docker_repos: [bitwarden, bitwardenqa.azurecr.io]
             dotnet: true
-          - project_name: Self-Host
-            base_path: ./docker-unified
-            docker_repos: [bitwardenqa.azurecr.io]
           - project_name: Server
             base_path: ./util
             docker_repos: [bitwarden, bitwardenqa.azurecr.io]
@@ -266,12 +263,7 @@ jobs:
       - name: Build Docker image
         env:
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
-        run: |
-          if [[ "$PROJECT_NAME" == "self-host" ]]; then
-            docker build -t $PROJECT_NAME -f ${{ matrix.base_path }}/Dockerfile .
-          else
-            docker build -t $PROJECT_NAME ${{ matrix.base_path }}/${{ matrix.project_name }}
-          fi
+        run: docker build -t $PROJECT_NAME ${{ matrix.base_path }}/${{ matrix.project_name }}
 
       ########## ACR ##########
       - name: Login to Azure - QA Subscription
