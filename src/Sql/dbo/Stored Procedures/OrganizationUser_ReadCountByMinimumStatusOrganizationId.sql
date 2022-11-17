@@ -1,5 +1,5 @@
 CREATE PROCEDURE [dbo].[OrganizationUser_ReadCountByMinimumStatusOrganizationId]
-    @Id UNIQUEIDENTIFIER
+    @OrganizationId UNIQUEIDENTIFIER,
     @MinimumStatus SMALLINT
 AS
 BEGIN
@@ -10,6 +10,6 @@ BEGIN
     FROM
         [dbo].[OrganizationUserView]
     WHERE
-        OrganizationId = @Id
+        OrganizationId = @OrganizationId
         AND Status >= @MinimumStatus
 END

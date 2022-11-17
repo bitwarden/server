@@ -9,7 +9,7 @@ public class GetOccupiedSeatCountQuery : IGetOccupiedSeatCountQuery
 {
     private readonly IOrganizationUserRepository _organizationUserRepository;
 
-    GetOccupiedSeatCountQuery(IOrganizationUserRepository organizationUserRepository)
+    public GetOccupiedSeatCountQuery(IOrganizationUserRepository organizationUserRepository)
     {
         _organizationUserRepository = organizationUserRepository;
     }

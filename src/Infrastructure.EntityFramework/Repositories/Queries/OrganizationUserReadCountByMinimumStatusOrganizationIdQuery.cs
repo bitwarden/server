@@ -3,7 +3,7 @@ using Bit.Infrastructure.EntityFramework.Models;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories.Queries;
 
-public class OrganizationUserReadCountByMinimumStatusOrganizationIdQuery: IQuery<OrganizationUser>
+public class OrganizationUserReadCountByMinimumStatusOrganizationIdQuery : IQuery<OrganizationUser>
 {
     private readonly Guid _organizationId;
     private readonly OrganizationUserStatusType _minimumStatus;
