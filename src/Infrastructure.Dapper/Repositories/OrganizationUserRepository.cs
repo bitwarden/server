@@ -86,6 +86,20 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         }
     }
 
+    public async Task<int> GetCountByMinimumStatusOrganizationAsync(Guid organizationId,
+        OrganizationUserStatusType minimumStatus)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var result = await connection.ExecuteScalarAsync<int>(
+                "[dbo].[OrganizationUser_ReadCountByMinimumStatusOrganizationId]",
+                new { OrganizationId = organizationId, minimumStatus = minimumStatus },
+                commandType: CommandType.StoredProcedure);
+
+            return result;
+        }
+    }
+
     public async Task<ICollection<string>> SelectKnownEmailsAsync(Guid organizationId, IEnumerable<string> emails,
         bool onlyRegisteredUsers)
     {

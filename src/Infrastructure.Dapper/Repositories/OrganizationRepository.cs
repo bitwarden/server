@@ -117,25 +117,18 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
                 new { Id = id },
                 commandType: CommandType.StoredProcedure);
 
-            var selfHostOrganization = result.Read<SelfHostedOrganizationDetails>().FirstOrDefault();
+            var selfHostOrganization = await result.ReadSingleOrDefaultAsync<SelfHostedOrganizationDetails>();
             if (selfHostOrganization == null)
             {
                 return null;
             }
 
-            var organizationUsers = result.Read<OrganizationUser>();
-            var collectionCount = result.Read<int>();
-            var groupCount = result.Read<int>();
-            var policies = result.Read<Policy>();
-            var ssoConfig = result.Read<SsoConfig>();
-            var scimConnections = result.Read<OrganizationConnection>();
-
-            selfHostOrganization.OrganizationUsers = organizationUsers;
-            selfHostOrganization.CollectionCount = collectionCount.FirstOrDefault();
-            selfHostOrganization.GroupCount = groupCount.FirstOrDefault();
-            selfHostOrganization.Policies = policies;
-            selfHostOrganization.SsoConfig = ssoConfig.FirstOrDefault();
-            selfHostOrganization.ScimConnections = scimConnections;
+            selfHostOrganization.OccupiedSeatCount = await result.ReadSingleAsync<int>();
+            selfHostOrganization.CollectionCount = await result.ReadSingleAsync<int>();
+            selfHostOrganization.GroupCount = await result.ReadSingleAsync<int>();
+            selfHostOrganization.Policies = await result.ReadAsync<Policy>();
+            selfHostOrganization.SsoConfig = await result.ReadFirstOrDefaultAsync<SsoConfig>();
+            selfHostOrganization.ScimConnections = await result.ReadAsync<OrganizationConnection>();
 
             return selfHostOrganization;
         }

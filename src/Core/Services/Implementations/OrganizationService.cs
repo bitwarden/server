@@ -7,6 +7,7 @@ using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.Policies;
 using Bit.Core.Models.OrganizationConnectionConfigs;
+using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
@@ -42,6 +43,7 @@ public class OrganizationService : IOrganizationService
     private readonly IOrganizationConnectionRepository _organizationConnectionRepository;
     private readonly ICurrentContext _currentContext;
     private readonly ILogger<OrganizationService> _logger;
+    private readonly IGetOccupiedSeatCountQuery _getOccupiedSeatCountQuery;
 
     public OrganizationService(
         IOrganizationRepository organizationRepository,
@@ -67,7 +69,8 @@ public class OrganizationService : IOrganizationService
         IOrganizationApiKeyRepository organizationApiKeyRepository,
         IOrganizationConnectionRepository organizationConnectionRepository,
         ICurrentContext currentContext,
-        ILogger<OrganizationService> logger)
+        ILogger<OrganizationService> logger,
+        IGetOccupiedSeatCountQuery getOccupiedSeatCountQuery)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -93,6 +96,7 @@ public class OrganizationService : IOrganizationService
         _organizationConnectionRepository = organizationConnectionRepository;
         _currentContext = currentContext;
         _logger = logger;
+        _getOccupiedSeatCountQuery = getOccupiedSeatCountQuery;
     }
 
     public async Task ReplacePaymentMethodAsync(Guid organizationId, string paymentToken,
@@ -195,7 +199,7 @@ public class OrganizationService : IOrganizationService
             (newPlan.HasAdditionalSeatsOption ? upgrade.AdditionalSeats : 0));
         if (!organization.Seats.HasValue || organization.Seats.Value > newPlanSeats)
         {
-            var occupiedSeats = await GetOccupiedSeatCount(organization);
+            var occupiedSeats = await _getOccupiedSeatCountQuery.GetOccupiedSeatCountAsync(organization);
             if (occupiedSeats > newPlanSeats)
             {
                 throw new BadRequestException($"Your organization currently has {occupiedSeats} seats filled. " +
@@ -490,7 +494,7 @@ public class OrganizationService : IOrganizationService
 
         if (!organization.Seats.HasValue || organization.Seats.Value > newSeatTotal)
         {
-            var occupiedSeats = await GetOccupiedSeatCount(organization);
+            var occupiedSeats = await _getOccupiedSeatCountQuery.GetOccupiedSeatCountAsync(organization);
             if (occupiedSeats > newSeatTotal)
             {
                 throw new BadRequestException($"Your organization currently has {occupiedSeats} seats filled. " +
@@ -986,7 +990,7 @@ public class OrganizationService : IOrganizationService
             organizationId, invites.SelectMany(i => i.invite.Emails), false), StringComparer.InvariantCultureIgnoreCase);
         if (organization.Seats.HasValue)
         {
-            var occupiedSeats = await GetOccupiedSeatCount(organization);
+            var occupiedSeats = await _getOccupiedSeatCountQuery.GetOccupiedSeatCountAsync(organization);
             var availableSeats = organization.Seats.Value - occupiedSeats;
             newSeatsRequired = invites.Sum(i => i.invite.Emails.Count()) - existingEmails.Count() - availableSeats;
         }
@@ -1826,7 +1830,7 @@ public class OrganizationService : IOrganizationService
             var enoughSeatsAvailable = true;
             if (organization.Seats.HasValue)
             {
-                var occupiedSeats = await GetOccupiedSeatCount(organization);
+                var occupiedSeats = await _getOccupiedSeatCountQuery.GetOccupiedSeatCountAsync(organization);
                 seatsAvailable = organization.Seats.Value - occupiedSeats;
                 enoughSeatsAvailable = seatsAvailable >= usersToAdd.Count;
             }
@@ -2226,7 +2230,7 @@ public class OrganizationService : IOrganizationService
         }
 
         var organization = await _organizationRepository.GetByIdAsync(organizationUser.OrganizationId);
-        var occupiedSeats = await GetOccupiedSeatCount(organization);
+        var occupiedSeats = await _getOccupiedSeatCountQuery.GetOccupiedSeatCountAsync(organization);
         var availableSeats = organization.Seats.GetValueOrDefault(0) - occupiedSeats;
         if (availableSeats < 1)
         {
@@ -2254,7 +2258,7 @@ public class OrganizationService : IOrganizationService
         }
 
         var organization = await _organizationRepository.GetByIdAsync(organizationId);
-        var occupiedSeats = await GetOccupiedSeatCount(organization);
+        var occupiedSeats = await _getOccupiedSeatCountQuery.GetOccupiedSeatCountAsync(organization);
         var availableSeats = organization.Seats.GetValueOrDefault(0) - occupiedSeats;
         var newSeatsRequired = organizationUserIds.Count() - availableSeats;
         await AutoAddSeatsAsync(organization, newSeatsRequired, DateTime.UtcNow);
@@ -2368,11 +2372,5 @@ public class OrganizationService : IOrganizationService
         }
 
         return status;
-    }
-
-    public async Task<int> GetOccupiedSeatCount(Organization organization)
-    {
-        var orgUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(organization.Id);
-        return orgUsers.Count(ou => ou.OccupiesOrganizationSeat);
     }
 }

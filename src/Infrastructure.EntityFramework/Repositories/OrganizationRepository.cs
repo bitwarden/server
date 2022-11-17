@@ -129,6 +129,8 @@ public class OrganizationRepository : Repository<Core.Entities.Organization, Org
             var organization = await GetDbSet(dbContext).FindAsync(id);
             var selfHostOrganization = Mapper.Map<SelfHostedOrganizationDetails>(organization);
 
+            selfHostOrganization.OccupiedSeatCount =
+                organization.OrganizationUsers.Count(ou => ou.Status >= OrganizationUserStatusType.Invited);
             selfHostOrganization.CollectionCount = organization.Collections?.Count ?? 0;
             selfHostOrganization.GroupCount = organization?.Groups.Count ?? 0;
             selfHostOrganization.SsoConfig = organization.SsoConfigs.SingleOrDefault();

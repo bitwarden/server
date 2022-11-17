@@ -6,6 +6,7 @@ using Bit.Core.Models;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Business.Tokenables;
 using Bit.Core.Models.Data;
+using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -44,6 +45,7 @@ public class AccountController : Controller
     private readonly IGlobalSettings _globalSettings;
     private readonly Core.Services.IEventService _eventService;
     private readonly IDataProtectorTokenFactory<SsoTokenable> _dataProtector;
+    private readonly IGetOccupiedSeatCountQuery _getOccupiedSeatCountQuery;
 
     public AccountController(
         IAuthenticationSchemeProvider schemeProvider,
@@ -62,7 +64,8 @@ public class AccountController : Controller
         UserManager<User> userManager,
         IGlobalSettings globalSettings,
         Core.Services.IEventService eventService,
-        IDataProtectorTokenFactory<SsoTokenable> dataProtector)
+        IDataProtectorTokenFactory<SsoTokenable> dataProtector,
+        IGetOccupiedSeatCountQuery getOccupiedSeatCountQuery)
     {
         _schemeProvider = schemeProvider;
         _clientStore = clientStore;
@@ -81,6 +84,7 @@ public class AccountController : Controller
         _eventService = eventService;
         _globalSettings = globalSettings;
         _dataProtector = dataProtector;
+        _getOccupiedSeatCountQuery = getOccupiedSeatCountQuery;
     }
 
     [HttpGet]
@@ -483,7 +487,7 @@ public class AccountController : Controller
         // Before any user creation - if Org User doesn't exist at this point - make sure there are enough seats to add one
         if (orgUser == null && organization.Seats.HasValue)
         {
-            var occupiedSeats = await _organizationService.GetOccupiedSeatCount(organization);
+            var occupiedSeats = await _getOccupiedSeatCountQuery.GetOccupiedSeatCountAsync(organization);
             var initialSeatCount = organization.Seats.Value;
             var availableSeats = initialSeatCount - occupiedSeats;
             var prorationDate = DateTime.UtcNow;

@@ -3,7 +3,7 @@ using Bit.Core.Utilities;
 
 namespace Bit.Core.Models.Data.Organizations.OrganizationUsers;
 
-public class OrganizationUserUserDetails : OrganizationSeatOccupant, IExternal, ITwoFactorProvidersUser
+public class OrganizationUserUserDetails : IExternal, ITwoFactorProvidersUser
 {
     private Dictionary<TwoFactorProviderType, TwoFactorProvider> _twoFactorProviders;
 
@@ -14,6 +14,7 @@ public class OrganizationUserUserDetails : OrganizationSeatOccupant, IExternal, 
     public string Email { get; set; }
     public string TwoFactorProviders { get; set; }
     public bool? Premium { get; set; }
+    public OrganizationUserStatusType Status { get; set; }
     public OrganizationUserType Type { get; set; }
     public bool AccessAll { get; set; }
     public string ExternalId { get; set; }
@@ -55,5 +56,4 @@ public class OrganizationUserUserDetails : OrganizationSeatOccupant, IExternal, 
     {
         return Premium.GetValueOrDefault(false);
     }
-
 }

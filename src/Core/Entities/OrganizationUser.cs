@@ -5,7 +5,7 @@ using Bit.Core.Utilities;
 
 namespace Bit.Core.Entities;
 
-public class OrganizationUser : OrganizationSeatOccupant, ITableObject<Guid>, IExternal
+public class OrganizationUser : ITableObject<Guid>, IExternal
 {
     public Guid Id { get; set; }
     public Guid OrganizationId { get; set; }
@@ -14,6 +14,7 @@ public class OrganizationUser : OrganizationSeatOccupant, ITableObject<Guid>, IE
     public string Email { get; set; }
     public string Key { get; set; }
     public string ResetPasswordKey { get; set; }
+    public OrganizationUserStatusType Status { get; set; }
     public OrganizationUserType Type { get; set; }
     public bool AccessAll { get; set; }
     [MaxLength(300)]

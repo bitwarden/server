@@ -8,7 +8,7 @@ namespace Bit.Core.Entities;
 
 public class SelfHostedOrganizationDetails : Organization
 {
-    public IEnumerable<OrganizationUser> OrganizationUsers { get; set; }
+    public int OccupiedSeatCount { get; set; }
     public int CollectionCount { get; set; }
     public int GroupCount { get; set; }
     public IEnumerable<Policy> Policies { get; set; }
@@ -24,10 +24,9 @@ public class SelfHostedOrganizationDetails : Organization
             throw new BadRequestException("License is already in use by another organization.");
         }
 
-        var occupiedSeats = OrganizationUsers.Count(ou => ou.OccupiesOrganizationSeat);
-        if (license.Seats.HasValue && occupiedSeats > license.Seats.Value)
+        if (license.Seats.HasValue && OccupiedSeatCount > license.Seats.Value)
         {
-            throw new BadRequestException($"Your organization currently has {occupiedSeats} seats filled. " +
+            throw new BadRequestException($"Your organization currently has {OccupiedSeatCount} seats filled. " +
                 $"Your new license only has ({license.Seats.Value}) seats. Remove some users.");
         }
 

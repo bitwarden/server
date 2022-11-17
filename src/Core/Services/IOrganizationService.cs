@@ -72,6 +72,5 @@ public interface IOrganizationService
     Task RestoreUserAsync(OrganizationUser organizationUser, EventSystemUser systemUser, IUserService userService);
     Task<List<Tuple<OrganizationUser, string>>> RestoreUsersAsync(Guid organizationId,
         IEnumerable<Guid> organizationUserIds, Guid? restoringUserId, IUserService userService);
-    Task<int> GetOccupiedSeatCount(Organization organization);
     Task ReplaceAndUpdateCacheAsync(Organization org, EventType? orgEvent = null);
 }
