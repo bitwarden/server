@@ -159,6 +159,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IStripeSyncService, StripeSyncService>();
         services.AddSingleton<IMailService, HandlebarsMailService>();
         services.AddSingleton<ILicensingService, LicensingService>();
+        services.AddSingleton<IDnsResolverService, DnsResolverService>();
         services.AddTokenizers();
 
         if (CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ConnectionString) &&

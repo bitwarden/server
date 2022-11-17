@@ -93,6 +93,15 @@
           "System.Xml.XPath.XmlDocument": "4.3.0"
         }
       },
+      "DnsClient": {
+        "type": "Direct",
+        "requested": "[1.7.0, )",
+        "resolved": "1.7.0",
+        "contentHash": "2hrXR83b5g6/ZMJOA36hXp4t56yb7G1mF3Hg6IkrHxvtyaoXRn2WVdgDPN3V8+GugOlUBbTWXgPaka4dXw1QIg==",
+        "dependencies": {
+          "Microsoft.Win32.Registry": "5.0.0"
+        }
+      },
       "Fido2.AspNet": {
         "type": "Direct",
         "requested": "[3.0.0-beta2, )",
