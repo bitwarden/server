@@ -157,6 +157,7 @@ RUN dotnet publish -c release -o /app/Scim --no-restore --no-self-contained --us
 #                  App stage                  #
 ###############################################
 FROM mcr.microsoft.com/dotnet/aspnet:6.0-alpine
+ARG TARGETPLATFORM
 LABEL com.bitwarden.product="bitwarden"
 LABEL com.bitwarden.project="unified"
 ENV ASPNETCORE_ENVIRONMENT=Production
@@ -251,9 +252,13 @@ COPY docker-unified/confd/nginx-config.conf.tmpl /etc/confd/templates/
 COPY docker-unified/confd/app-id.toml /etc/confd/conf.d/
 COPY docker-unified/confd/app-id.conf.tmpl /etc/confd/templates/
 
-# Add confd tool for generating final configurations
-ADD https://github.com/kelseyhightower/confd/releases/download/v0.16.0/confd-0.16.0-linux-amd64 /usr/local/bin/confd
-RUN chmod +rx /usr/local/bin/confd
+# Download confd tool for generating final configurations
+RUN if [ "$TARGETPLATFORM" = "linux/amd64" ] ; then curl -L --output confd.tar.gz https://github.com/abtreece/confd/releases/download/v0.19.1/confd-v0.19.1-linux-amd64.tar.gz; fi
+RUN if [ "$TARGETPLATFORM" = "linux/arm/v7" ] ; then curl -L --output confd.tar.gz https://github.com/abtreece/confd/releases/download/v0.19.1/confd-v0.19.1-linux-arm7.tar.gz; fi
+RUN if [ "$TARGETPLATFORM" = "linux/arm64/v8" ] ; then curl -L --output confd.tar.gz https://github.com/abtreece/confd/releases/download/v0.19.1/confd-v0.19.1-linux-arm64.tar.gz; fi
+
+# Extract confd
+RUN tar -xvzo -C /usr/local/bin -f confd.tar.gz
 
 # Copy entrypoint script and make it executable
 COPY docker-unified/entrypoint.sh /entrypoint.sh
