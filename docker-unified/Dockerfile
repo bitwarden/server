@@ -255,10 +255,10 @@ COPY docker-unified/confd/app-id.conf.tmpl /etc/confd/templates/
 # Download confd tool for generating final configurations
 RUN if [ "$TARGETPLATFORM" = "linux/amd64" ] ; then curl -L --output confd.tar.gz https://github.com/abtreece/confd/releases/download/v0.19.1/confd-v0.19.1-linux-amd64.tar.gz; fi
 RUN if [ "$TARGETPLATFORM" = "linux/arm/v7" ] ; then curl -L --output confd.tar.gz https://github.com/abtreece/confd/releases/download/v0.19.1/confd-v0.19.1-linux-arm7.tar.gz; fi
-RUN if [ "$TARGETPLATFORM" = "linux/arm64/v8" ] ; then curl -L --output confd.tar.gz https://github.com/abtreece/confd/releases/download/v0.19.1/confd-v0.19.1-linux-arm64.tar.gz; fi
+RUN if [ "$TARGETPLATFORM" = "linux/arm64" ] ; then curl -L --output confd.tar.gz https://github.com/abtreece/confd/releases/download/v0.19.1/confd-v0.19.1-linux-arm64.tar.gz; fi
 
 # Extract confd
-RUN tar -xvzo -C /usr/local/bin -f confd.tar.gz
+RUN tar -xvzo -C /usr/local/bin -f confd.tar.gz && rm confd.tar.gz
 
 # Copy entrypoint script and make it executable
 COPY docker-unified/entrypoint.sh /entrypoint.sh
