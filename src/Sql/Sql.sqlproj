@@ -417,6 +417,6 @@
     <Build Include="dbo\Views\UserView.sql" />
     <Build Include="dbo\Stored Procedures\Organization_ReadByLicenseKey.sql" />
     <Build Include="dbo\Stored Procedures\Organization_ReadSelfHostedDetailsById.sql" />
-    <Build Include="dbo\Stored Procedures\OrganizationUser_ReadCountByMinimumStatusOrganizationId.sql" />
+    <Build Include="dbo\Stored Procedures\OrganizationUser_ReadOccupySeatCountByOrganizationId.sql" />
   </ItemGroup>
 </Project>

@@ -5,7 +5,7 @@ BEGIN
     SET NOCOUNT ON
         
     EXEC [dbo].[Organization_ReadById] @Id
-    EXEC [dbo].[OrganizationUser_ReadCountByMinimumStatusOrganizationId] @Id, 0 --Same as GetOccupiedSeatCountQuery
+    EXEC [dbo].[OrganizationUser_ReadOccupySeatCountByOrganizationId] @Id
     EXEC [dbo].[Collection_ReadCountByOrganizationId] @Id
     EXEC [dbo].[Group_ReadCountByOrganizationId] @Id
     EXEC [dbo].[Policy_ReadByOrganizationId] @Id

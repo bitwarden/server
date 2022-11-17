@@ -86,14 +86,13 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         }
     }
 
-    public async Task<int> GetCountByMinimumStatusOrganizationIdAsync(Guid organizationId,
-        OrganizationUserStatusType minimumStatus)
+    public async Task<int> GetOccupySeatCountByOrganizationIdAsync(Guid organizationId)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             var result = await connection.ExecuteScalarAsync<int>(
-                "[dbo].[OrganizationUser_ReadCountByMinimumStatusOrganizationId]",
-                new { OrganizationId = organizationId, minimumStatus = minimumStatus },
+                "[dbo].[OrganizationUser_ReadOccupySeatCountByOrganizationId]",
+                new { OrganizationId = organizationId },
                 commandType: CommandType.StoredProcedure);
 
             return result;
