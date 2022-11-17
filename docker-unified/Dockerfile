@@ -32,7 +32,21 @@ RUN VERSION=$(cat version.txt) \
 ###############################################
 #                 Build stage                 #
 ###############################################
-FROM mcr.microsoft.com/dotnet/sdk:6.0 AS dotnet-build
+FROM --platform=linux/amd64 mcr.microsoft.com/dotnet/sdk:6.0 AS dotnet-build
+
+# Docker buildx supplies the value for this arg
+ARG TARGETPLATFORM
+
+# Determine proper runtime value for .NET
+# We put the value in a file to be read by later layers.
+RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
+      RID=linux-x64 ; \
+    elif [ "$TARGETPLATFORM" = "linux/arm64" ]; then \
+      RID=linux-arm64 ; \
+    elif [ "$TARGETPLATFORM" = "linux/arm/v7" ]; then \
+      RID=linux-arm ; \
+    fi \
+    && echo "RID=$RID" > /tmp/rid.txt
 
 # Add packages
 # RUN apk add --update-cache \
@@ -66,35 +80,35 @@ COPY Directory.Build.props .
 
 # Restore Admin project dependencies and tools
 WORKDIR /source/src/Admin
-RUN dotnet restore --use-current-runtime
+RUN . /tmp/rid.txt && dotnet restore -r $RID
 
 # Restore Api project dependencies and tools
 WORKDIR /source/src/Api
-RUN dotnet restore --use-current-runtime
+RUN . /tmp/rid.txt && dotnet restore -r $RID
 
 # Restore Events project dependencies and tools
 WORKDIR /source/src/Events
-RUN dotnet restore --use-current-runtime
+RUN . /tmp/rid.txt && dotnet restore -r $RID
 
 # Restore Icons project dependencies and tools
 WORKDIR /source/src/Icons
-RUN dotnet restore --use-current-runtime
+RUN . /tmp/rid.txt && dotnet restore -r $RID
 
 # Restore Identity project dependencies and tools
 WORKDIR /source/src/Identity
-RUN dotnet restore --use-current-runtime
+RUN . /tmp/rid.txt && dotnet restore -r $RID
 
 # Restore Notifications project dependencies and tools
 WORKDIR /source/src/Notifications
-RUN dotnet restore --use-current-runtime
+RUN . /tmp/rid.txt && dotnet restore -r $RID
 
 # Restore Sso project dependencies and tools
 WORKDIR /source/bitwarden_license/src/Sso
-RUN dotnet restore --use-current-runtime
+RUN . /tmp/rid.txt && dotnet restore -r $RID
 
 # Restore Scim project dependencies and tools
 WORKDIR /source/bitwarden_license/src/Scim
-RUN dotnet restore --use-current-runtime
+RUN . /tmp/rid.txt && dotnet restore -r $RID
 
 # Copy required project files
 WORKDIR /source
@@ -121,37 +135,37 @@ COPY .git/. ./.git/
 WORKDIR /source/src/Admin
 RUN npm install
 RUN gulp --gulpfile "gulpfile.js" build
-RUN dotnet publish -c release -o /app/Admin --no-restore --no-self-contained --use-current-runtime
+RUN . /tmp/rid.txt && dotnet publish -c release -o /app/Admin --no-restore --no-self-contained -r $RID
 
 # Build Api app
 WORKDIR /source/src/Api
-RUN dotnet publish -c release -o /app/Api --no-restore --no-self-contained --use-current-runtime
+RUN . /tmp/rid.txt && dotnet publish -c release -o /app/Api --no-restore --no-self-contained -r $RID
 
 # Build Events app
 WORKDIR /source/src/Events
-RUN dotnet publish -c release -o /app/Events --no-restore --no-self-contained --use-current-runtime
+RUN . /tmp/rid.txt && dotnet publish -c release -o /app/Events --no-restore --no-self-contained -r $RID
 
 # Build Icons app
 WORKDIR /source/src/Icons
-RUN dotnet publish -c release -o /app/Icons --no-restore --no-self-contained --use-current-runtime
+RUN . /tmp/rid.txt && dotnet publish -c release -o /app/Icons --no-restore --no-self-contained -r $RID
 
 # Build Identity app
 WORKDIR /source/src/Identity
-RUN dotnet publish -c release -o /app/Identity --no-restore --no-self-contained --use-current-runtime
+RUN . /tmp/rid.txt && dotnet publish -c release -o /app/Identity --no-restore --no-self-contained -r $RID
 
 # Build Notifications app
 WORKDIR /source/src/Notifications
-RUN dotnet publish -c release -o /app/Notifications --no-restore --no-self-contained --use-current-runtime
+RUN . /tmp/rid.txt && dotnet publish -c release -o /app/Notifications --no-restore --no-self-contained -r $RID
 
 # Build Sso app
 WORKDIR /source/bitwarden_license/src/Sso
 RUN npm install
 RUN gulp --gulpfile "gulpfile.js" build
-RUN dotnet publish -c release -o /app/Sso --no-restore --no-self-contained --use-current-runtime
+RUN . /tmp/rid.txt && dotnet publish -c release -o /app/Sso --no-restore --no-self-contained -r $RID
 
 # Build Scim app
 WORKDIR /source/bitwarden_license/src/Scim
-RUN dotnet publish -c release -o /app/Scim --no-restore --no-self-contained --use-current-runtime
+RUN . /tmp/rid.txt && dotnet publish -c release -o /app/Scim --no-restore --no-self-contained -r $RID
 
 ###############################################
 #                  App stage                  #
