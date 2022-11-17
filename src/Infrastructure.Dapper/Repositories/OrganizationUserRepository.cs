@@ -86,7 +86,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         }
     }
 
-    public async Task<int> GetCountByMinimumStatusOrganizationAsync(Guid organizationId,
+    public async Task<int> GetCountByMinimumStatusOrganizationIdAsync(Guid organizationId,
         OrganizationUserStatusType minimumStatus)
     {
         using (var connection = new SqlConnection(ConnectionString))

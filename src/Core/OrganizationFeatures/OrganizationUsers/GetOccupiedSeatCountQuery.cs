@@ -16,7 +16,7 @@ public class GetOccupiedSeatCountQuery : IGetOccupiedSeatCountQuery
 
     public async Task<int> GetOccupiedSeatCountAsync(Organization organization)
     {
-        return await _organizationUserRepository.GetCountByMinimumStatusOrganizationAsync(organization.Id,
+        return await _organizationUserRepository.GetCountByMinimumStatusOrganizationIdAsync(organization.Id,
             OrganizationUserStatusType.Invited);
     }
 }

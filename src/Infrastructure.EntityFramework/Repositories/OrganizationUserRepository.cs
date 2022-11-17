@@ -156,6 +156,13 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         var query = new OrganizationUserReadCountByOrganizationIdEmailQuery(organizationId, email, onlyRegisteredUsers);
         return await GetCountFromQuery(query);
     }
+    
+    public async Task<int> GetCountByMinimumStatusOrganizationIdAsync(Guid organizationId,
+    OrganizationUserStatusType minimumStatus)
+    {
+        var query = new OrganizationUserReadCountByMinimumStatusOrganizationIdQuery(organizationId, minimumStatus);
+        return await GetCountFromQuery(query);
+    }
 
     public async Task<int> GetCountByOrganizationIdAsync(Guid organizationId)
     {
