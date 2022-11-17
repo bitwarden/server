@@ -17,9 +17,14 @@ public class ApiKey : ITableObject<Guid>
     public string EncryptedPayload { get; set; }
     // Key for decrypting `EncryptedPayload`. Encrypted using the organization key.
     public string Key { get; set; }
-    public DateTime ExpireAt { get; set; }
+    public DateTime ExpireAt { get; internal set; }
     public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
     public DateTime RevisionDate { get; internal set; } = DateTime.UtcNow;
+
+    public ApiKey(DateTime expireAt)
+    {
+        ExpireAt = expireAt;
+    }
 
     public void SetNewId()
     {

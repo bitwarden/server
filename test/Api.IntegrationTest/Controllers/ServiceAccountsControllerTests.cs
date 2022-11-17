@@ -21,7 +21,7 @@ public class ServiceAccountsControllerTest : IClassFixture<ApiApplicationFactory
     private readonly HttpClient _client;
     private readonly ApiApplicationFactory _factory;
     private readonly IServiceAccountRepository _serviceAccountRepository;
-    private Organization? _organization;
+    private Organization _organization;
 
     public ServiceAccountsControllerTest(ApiApplicationFactory factory)
     {
@@ -47,11 +47,6 @@ public class ServiceAccountsControllerTest : IClassFixture<ApiApplicationFactory
     [Fact]
     public async Task GetServiceAccountsByOrganization()
     {
-        if (_organization == null)
-        {
-            throw new ArgumentNullException(nameof(_organization));
-        }
-
         var serviceAccountsToCreate = 3;
         var serviceAccountIds = new List<Guid>();
         for (var i = 0; i < serviceAccountsToCreate; i++)
@@ -133,11 +128,6 @@ public class ServiceAccountsControllerTest : IClassFixture<ApiApplicationFactory
     [Fact]
     public async Task CreateServiceAccountAccessToken()
     {
-        if (_organization == null)
-        {
-            throw new ArgumentNullException(nameof(_organization));
-        }
-
         var serviceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
         {
             OrganizationId = _organization.Id,

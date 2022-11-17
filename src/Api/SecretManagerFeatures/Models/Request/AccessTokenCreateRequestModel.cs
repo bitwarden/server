@@ -22,14 +22,13 @@ public class AccessTokenCreateRequestModel
 
     public ApiKey ToApiKey(Guid serviceAccountId)
     {
-        return new ApiKey()
+        return new ApiKey(ExpireAt)
         {
             ServiceAccountId = serviceAccountId,
-            Name = this.Name,
-            Key = this.Key,
+            Name = Name,
+            Key = Key,
             Scope = "api.secrets",
-            EncryptedPayload = this.EncryptedPayload,
-            ExpireAt = this.ExpireAt
+            EncryptedPayload = EncryptedPayload,
 
         };
     }
