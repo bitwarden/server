@@ -15,7 +15,7 @@ public class ProjectUpdateRequestModel
         return new Project()
         {
             Id = id,
-            Name = this.Name,
+            Name = Name,
         };
     }
 }
