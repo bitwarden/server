@@ -32,7 +32,7 @@ RUN VERSION=$(cat version.txt) \
 ###############################################
 #                 Build stage                 #
 ###############################################
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:6.0 AS dotnet-build
+FROM mcr.microsoft.com/dotnet/sdk:6.0 AS dotnet-build
 
 # Add packages
 # RUN apk add --update-cache \
