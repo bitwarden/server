@@ -281,14 +281,22 @@ public class OrganizationServiceTests
          InviteeUserType = OrganizationUserType.Custom,
          InvitorUserType = OrganizationUserType.Admin
      ), BitAutoData]
-    public async Task InviteUser_UseCustomPermissionsFalse_Throws(Organization organization, OrganizationUserInvite invite,
+    public async Task InviteUser_CustomType_UseCustomPermissionsFalse_Throws(Organization organization, OrganizationUserInvite invite,
         OrganizationUser invitor, SutProvider<OrganizationService> sutProvider)
     {
+        organization.UseCustomPermissions = false;
+
+        invite.Permissions = null;
+        invitor.Status = OrganizationUserStatusType.Confirmed;
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         var currentContext = sutProvider.GetDependency<ICurrentContext>();
 
         organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
-        currentContext.OrganizationUser(organization.Id).Returns(true);
+        organizationUserRepository.GetManyByOrganizationAsync(organization.Id, OrganizationUserType.Owner)
+            .Returns(new[] { invitor });
+        currentContext.OrganizationOwner(organization.Id).Returns(true);
+        currentContext.ManageUsers(organization.Id).Returns(true);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.InviteUsersAsync(organization.Id, invitor.UserId, new (OrganizationUserInvite, string)[] { (invite, null) }));
@@ -300,11 +308,37 @@ public class OrganizationServiceTests
          InviteeUserType = OrganizationUserType.Custom,
          InvitorUserType = OrganizationUserType.Admin
      ), BitAutoData]
-    public async Task InviteUser_UseCustomPermissionsTrue_Passes(Organization organization, OrganizationUserInvite invite,
+    public async Task InviteUser_CustomType_UseCustomPermissionsTrue_Passes(Organization organization, OrganizationUserInvite invite,
         OrganizationUser invitor, SutProvider<OrganizationService> sutProvider)
     {
         organization.UseCustomPermissions = true;
 
+        invite.Permissions = null;
+        invitor.Status = OrganizationUserStatusType.Confirmed;
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+        var currentContext = sutProvider.GetDependency<ICurrentContext>();
+
+        organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
+        organizationUserRepository.GetManyByOrganizationAsync(organization.Id, OrganizationUserType.Owner)
+            .Returns(new[] { invitor });
+        currentContext.OrganizationOwner(organization.Id).Returns(true);
+        currentContext.ManageUsers(organization.Id).Returns(true);
+
+        await sutProvider.Sut.InviteUsersAsync(organization.Id, invitor.UserId, new (OrganizationUserInvite, string)[] { (invite, null) });
+    }
+
+    [Theory]
+    [BitAutoData(OrganizationUserType.Admin)]
+    [BitAutoData(OrganizationUserType.Manager)]
+    [BitAutoData(OrganizationUserType.Owner)]
+    [BitAutoData(OrganizationUserType.User)]
+    public async Task InviteUser_TypesOtherThanCustom_UseCustomPermissionsFalse_Passes(OrganizationUserType inviteUserType, Organization organization, OrganizationUserInvite invite,
+        OrganizationUser invitor, SutProvider<OrganizationService> sutProvider)
+    {
+        organization.UseCustomPermissions = false;
+
+        invite.Type = inviteUserType;
         invite.Permissions = null;
         invitor.Status = OrganizationUserStatusType.Confirmed;
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
@@ -493,6 +527,98 @@ public class OrganizationServiceTests
         [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser savingUser,
         SutProvider<OrganizationService> sutProvider)
     {
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+        var currentContext = sutProvider.GetDependency<ICurrentContext>();
+
+        organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
+
+        newUserData.Id = oldUserData.Id;
+        newUserData.UserId = oldUserData.UserId;
+        newUserData.OrganizationId = savingUser.OrganizationId = oldUserData.OrganizationId = organization.Id;
+        organizationUserRepository.GetByIdAsync(oldUserData.Id).Returns(oldUserData);
+        organizationUserRepository.GetManyByOrganizationAsync(savingUser.OrganizationId, OrganizationUserType.Owner)
+            .Returns(new List<OrganizationUser> { savingUser });
+        currentContext.OrganizationOwner(savingUser.OrganizationId).Returns(true);
+
+        await sutProvider.Sut.SaveUserAsync(newUserData, savingUser.UserId, collections);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SaveUser_CustomType_UseCustomPermissionsFalse_Throws(
+        Organization organization,
+        OrganizationUser oldUserData,
+        [OrganizationUser(type: OrganizationUserType.Custom)] OrganizationUser newUserData,
+        IEnumerable<SelectionReadOnly> collections,
+        [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser savingUser,
+        SutProvider<OrganizationService> sutProvider)
+    {
+        organization.UseCustomPermissions = false;
+
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+        var currentContext = sutProvider.GetDependency<ICurrentContext>();
+
+        organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
+
+        newUserData.Id = oldUserData.Id;
+        newUserData.UserId = oldUserData.UserId;
+        newUserData.OrganizationId = savingUser.OrganizationId = oldUserData.OrganizationId = organization.Id;
+        organizationUserRepository.GetByIdAsync(oldUserData.Id).Returns(oldUserData);
+        organizationUserRepository.GetManyByOrganizationAsync(savingUser.OrganizationId, OrganizationUserType.Owner)
+            .Returns(new List<OrganizationUser> { savingUser });
+        currentContext.OrganizationOwner(savingUser.OrganizationId).Returns(true);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.SaveUserAsync(newUserData, savingUser.UserId, collections));
+        Assert.Contains("to enable custom permissions", exception.Message.ToLowerInvariant());
+    }
+
+    [Theory]
+    [BitAutoData(OrganizationUserType.Admin)]
+    [BitAutoData(OrganizationUserType.Manager)]
+    [BitAutoData(OrganizationUserType.Owner)]
+    [BitAutoData(OrganizationUserType.User)]
+    public async Task SaveUser_TypesOtherThanCustom_UseCustomPermissionsFalse_Passes(
+        OrganizationUserType newUserType,
+        Organization organization,
+        OrganizationUser oldUserData,
+        OrganizationUser newUserData,
+        IEnumerable<SelectionReadOnly> collections,
+        [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser savingUser,
+        SutProvider<OrganizationService> sutProvider)
+    {
+        organization.UseCustomPermissions = false;
+
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+        var currentContext = sutProvider.GetDependency<ICurrentContext>();
+
+        organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
+
+        newUserData.Id = oldUserData.Id;
+        newUserData.UserId = oldUserData.UserId;
+        newUserData.OrganizationId = savingUser.OrganizationId = oldUserData.OrganizationId = organization.Id;
+        newUserData.Type = newUserType;
+        organizationUserRepository.GetByIdAsync(oldUserData.Id).Returns(oldUserData);
+        organizationUserRepository.GetManyByOrganizationAsync(savingUser.OrganizationId, OrganizationUserType.Owner)
+            .Returns(new List<OrganizationUser> { savingUser });
+        currentContext.OrganizationOwner(savingUser.OrganizationId).Returns(true);
+
+        await sutProvider.Sut.SaveUserAsync(newUserData, savingUser.UserId, collections);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SaveUser_CustomType_UseCustomPermissionsTrue_Passes(
+        Organization organization,
+        OrganizationUser oldUserData,
+        [OrganizationUser(type: OrganizationUserType.Custom)] OrganizationUser newUserData,
+        IEnumerable<SelectionReadOnly> collections,
+        [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser savingUser,
+        SutProvider<OrganizationService> sutProvider)
+    {
+        organization.UseCustomPermissions = true;
+
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         var currentContext = sutProvider.GetDependency<ICurrentContext>();

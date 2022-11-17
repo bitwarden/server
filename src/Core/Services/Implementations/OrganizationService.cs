@@ -1150,6 +1150,7 @@ public class OrganizationService : IOrganizationService
             foreach (var type in inviteTypes)
             {
                 await ValidateOrganizationUserUpdatePermissions(organizationId, type, null);
+                await ValidateOrganizationCustomPermissionsEnabledAsync(organizationId, type);
             }
         }
 
@@ -1675,6 +1676,8 @@ public class OrganizationService : IOrganizationService
         {
             await ValidateOrganizationUserUpdatePermissions(user.OrganizationId, user.Type, originalUser.Type);
         }
+
+        await ValidateOrganizationCustomPermissionsEnabledAsync(user.OrganizationId, user.Type);
 
         if (user.Type != OrganizationUserType.Owner &&
             !await HasConfirmedOwnersExceptAsync(user.OrganizationId, new[] { user.Id }))
@@ -2253,17 +2256,6 @@ public class OrganizationService : IOrganizationService
     private async Task ValidateOrganizationUserUpdatePermissions(Guid organizationId, OrganizationUserType newType,
         OrganizationUserType? oldType)
     {
-        var organization = await _organizationRepository.GetByIdAsync(organizationId);
-        if (organization == null)
-        {
-            throw new NotFoundException();
-        }
-
-        if (newType == OrganizationUserType.Custom && !organization.UseCustomPermissions)
-        {
-            throw new BadRequestException("To enable custom permissions the organization must be on an Enterprise plan.");
-        }
-
         if (await _currentContext.OrganizationOwner(organizationId))
         {
             return;
@@ -2292,6 +2284,23 @@ public class OrganizationService : IOrganizationService
         if (oldType == OrganizationUserType.Admin || newType == OrganizationUserType.Admin)
         {
             throw new BadRequestException("Custom users can not manage Admins or Owners.");
+        }
+    }
+
+    private async Task ValidateOrganizationCustomPermissionsEnabledAsync(Guid organizationId, OrganizationUserType newType)
+    {
+        if (newType != OrganizationUserType.Custom)
+            return;
+
+        var organization = await _organizationRepository.GetByIdAsync(organizationId);
+        if (organization == null)
+        {
+            throw new NotFoundException();
+        }
+
+        if (!organization.UseCustomPermissions)
+        {
+            throw new BadRequestException("To enable custom permissions the organization must be on an Enterprise plan.");
         }
     }
 
