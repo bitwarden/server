@@ -41,6 +41,7 @@ public class DeviceService : IDeviceService
     public async Task DeleteAsync(Device device)
     {
         await _deviceRepository.DeleteAsync(device);
+
         await _pushRegistrationService.DeleteRegistrationAsync(device.Id.ToString());
     }
 }

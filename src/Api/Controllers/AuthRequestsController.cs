@@ -130,7 +130,7 @@ public class AuthRequestsController : Controller
             throw new DuplicateAuthRequestException();
         }
 
-        var device = await _deviceRepository.GetByIdentifierAsync(model.DeviceIdentifier);
+        var device = await _deviceRepository.GetByIdentifierAsync(model.DeviceIdentifier, userId);
         if (device == null)
         {
             throw new BadRequestException("Invalid device.");

@@ -37,7 +37,6 @@ public abstract class BaseRequestValidator<T> where T : class
     private readonly IPolicyRepository _policyRepository;
     private readonly IUserRepository _userRepository;
     private readonly ICaptchaValidationService _captchaValidationService;
-
     public BaseRequestValidator(
         UserManager<User> userManager,
         IDeviceRepository deviceRepository,
@@ -545,19 +544,16 @@ public abstract class BaseRequestValidator<T> where T : class
 
     private async Task<Device> SaveDeviceAsync(User user, ValidatedTokenRequest request)
     {
-        var device = GetDeviceFromRequest(request);
-        if (device != null)
+        var deviceFromRequest = GetDeviceFromRequest(request);
+        if (deviceFromRequest != null)
         {
             var existingDevice = await GetKnownDeviceAsync(user, request);
             if (existingDevice == null)
             {
-                device.UserId = user.Id;
-                await _deviceService.SaveAsync(device);
-
                 var now = DateTime.UtcNow;
                 if (now - user.CreationDate > TimeSpan.FromMinutes(10))
                 {
-                    var deviceType = device.Type.GetType().GetMember(device.Type.ToString())
+                    var deviceType = deviceFromRequest.Type.GetType().GetMember(deviceFromRequest.Type.ToString())
                         .FirstOrDefault()?.GetCustomAttribute<DisplayAttribute>()?.GetName();
                     if (!_globalSettings.DisableEmailNewDevice)
                     {
@@ -565,14 +561,13 @@ public abstract class BaseRequestValidator<T> where T : class
                             _currentContext.IpAddress);
                     }
                 }
-
-                return device;
             }
 
-            return existingDevice;
+            deviceFromRequest.UserId = user.Id;
+            await _deviceService.SaveAsync(deviceFromRequest);
         }
 
-        return null;
+        return deviceFromRequest;
     }
 
     private async Task ResetFailedAuthDetailsAsync(User user)

@@ -234,6 +234,14 @@
         "resolved": "2.0.123",
         "contentHash": "RDFF4rBLLmbpi6pwkY7q/M6UXHRJEOerplDGE5jwEkP/JGJnBauAClYavNKJPW1yOTWRPIyfj4is3EaJxQXILQ=="
       },
+      "DnsClient": {
+        "type": "Transitive",
+        "resolved": "1.7.0",
+        "contentHash": "2hrXR83b5g6/ZMJOA36hXp4t56yb7G1mF3Hg6IkrHxvtyaoXRn2WVdgDPN3V8+GugOlUBbTWXgPaka4dXw1QIg==",
+        "dependencies": {
+          "Microsoft.Win32.Registry": "5.0.0"
+        }
+      },
       "Fare": {
         "type": "Transitive",
         "resolved": "2.1.1",
@@ -3162,7 +3170,7 @@
         "dependencies": {
           "AutoFixture.AutoNSubstitute": "[4.17.0, )",
           "AutoFixture.Xunit2": "[4.17.0, )",
-          "Core": "[2022.9.0, )",
+          "Core": "[2022.10.0, )",
           "Kralizek.AutoFixture.Extensions.MockHttp": "[1.2.0, )",
           "Microsoft.NET.Test.Sdk": "[17.1.0, )",
           "NSubstitute": "[4.3.0, )",
@@ -3181,6 +3189,7 @@
           "Azure.Storage.Queues": "[12.9.0, )",
           "BitPay.Light": "[1.0.1907, )",
           "Braintree": "[5.12.0, )",
+          "DnsClient": "[1.7.0, )",
           "Fido2.AspNet": "[3.0.0-beta2, )",
           "Handlebars.Net": "[2.1.2, )",
           "IdentityServer4": "[4.1.2, )",
@@ -3212,7 +3221,7 @@
       "infrastructure.dapper": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2022.9.0, )",
+          "Core": "[2022.10.0, )",
           "Dapper": "[2.0.123, )",
           "System.Data.SqlClient": "[4.8.3, )"
         }
@@ -3221,7 +3230,7 @@
         "type": "Project",
         "dependencies": {
           "AutoMapper.Extensions.Microsoft.DependencyInjection": "[11.0.0, )",
-          "Core": "[2022.9.0, )",
+          "Core": "[2022.10.0, )",
           "Microsoft.EntityFrameworkCore.Relational": "[6.0.4, )",
           "Npgsql.EntityFrameworkCore.PostgreSQL": "[6.0.4, )",
           "Pomelo.EntityFrameworkCore.MySql": "[6.0.1, )",
@@ -3231,17 +3240,17 @@
       "scim": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2022.9.0, )",
+          "Core": "[2022.10.0, )",
           "Microsoft.VisualStudio.Web.CodeGeneration.Design": "[5.0.2, )",
-          "SharedWeb": "[2022.9.0, )"
+          "SharedWeb": "[2022.10.0, )"
         }
       },
       "sharedweb": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2022.9.0, )",
-          "Infrastructure.Dapper": "[2022.9.0, )",
-          "Infrastructure.EntityFramework": "[2022.9.0, )"
+          "Core": "[2022.10.0, )",
+          "Infrastructure.Dapper": "[2022.10.0, )",
+          "Infrastructure.EntityFramework": "[2022.10.0, )"
         }
       }
     }
