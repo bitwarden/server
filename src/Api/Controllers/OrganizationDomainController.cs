@@ -37,7 +37,7 @@ public class OrganizationDomainController : Controller
         var orgIdGuid = new Guid(orgId);
         var domainIdGuid = new Guid(domainId);
         await ValidateOrganizationAccessAsync(orgIdGuid);
-        
+
         var domain = await _getOrganizationDomainByIdQuery.GetOrganizationDomainById(domainIdGuid);
         return new OrganizationDomainResponseModel(domain);
     }
@@ -50,7 +50,9 @@ public class OrganizationDomainController : Controller
 
         var organizationDomain = new OrganizationDomain
         {
-            OrganizationId = orgIdGuid, Txt = model.Txt, DomainName = model.DomainName
+            OrganizationId = orgIdGuid,
+            Txt = model.Txt,
+            DomainName = model.DomainName
         };
 
         var domain = await _createOrganizationDomainCommand.CreateAsync(organizationDomain);
