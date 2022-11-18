@@ -8,7 +8,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories;
 
 public class OrganizationDomainRepository : Repository<Core.Entities.OrganizationDomain, OrganizationDomain, Guid>, IOrganizationDomainRepository
 {
-    public OrganizationDomainRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper) 
+    public OrganizationDomainRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
         : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.OrganizationDomains)
     {
     }

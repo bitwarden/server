@@ -71,6 +71,7 @@ public static class OrganizationServiceCollectionExtensions
     private static void AddOrganizationDomainCommands(this IServiceCollection services)
     {
         services.AddScoped<ICreateOrganizationDomainCommand, CreateOrganizationDomainCommand>();
+        services.AddScoped<IGetOrganizationDomainByIdQuery, GetOrganizationDomainByIdQuery>();
     }
 
     private static void AddTokenizers(this IServiceCollection services)

@@ -27,7 +27,7 @@ public class CreateOrganizationDomainCommand : ICreateOrganizationDomainCommand
         organizationDomain
             .SetNextRunCount()
             .SetNextRunDate();
-        
+
         return await _organizationDomainRepository.CreateAsync(organizationDomain);
     }
 }

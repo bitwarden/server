@@ -15,33 +15,38 @@ namespace Bit.Api.Controllers;
 public class OrganizationDomainController : Controller
 {
     private readonly ICreateOrganizationDomainCommand _createOrganizationDomainCommand;
+    private readonly IGetOrganizationDomainByIdQuery _getOrganizationDomainByIdQuery;
     private readonly ICurrentContext _currentContext;
     private readonly IOrganizationRepository _organizationRepository;
 
     public OrganizationDomainController(
         ICreateOrganizationDomainCommand createOrganizationDomainCommand,
+        IGetOrganizationDomainByIdQuery getOrganizationDomainByIdQuery,
         ICurrentContext currentContext,
         IOrganizationRepository organizationRepository)
     {
         _createOrganizationDomainCommand = createOrganizationDomainCommand;
+        _getOrganizationDomainByIdQuery = getOrganizationDomainByIdQuery;
         _currentContext = currentContext;
         _organizationRepository = organizationRepository;
     }
-    
+
+    [HttpGet("{domainId}")]
+    public async Task<OrganizationDomainResponseModel> Get(string orgId, string domainId)
+    {
+        var orgIdGuid = new Guid(orgId);
+        var domainIdGuid = new Guid(domainId);
+        await ValidateOrganizationAccessAsync(orgIdGuid);
+        
+        var domain = await _getOrganizationDomainByIdQuery.GetOrganizationDomainById(domainIdGuid);
+        return new OrganizationDomainResponseModel(domain);
+    }
+
     [HttpPost("")]
     public async Task<OrganizationDomainResponseModel> Post(string orgId, [FromBody] OrganizationDomainRequestModel model)
     {
         var orgIdGuid = new Guid(orgId);
-        if (!await _currentContext.OrganizationOwner(orgIdGuid))
-        {
-            throw new UnauthorizedAccessException();
-        }
-        
-        var organization = await _organizationRepository.GetByIdAsync(orgIdGuid);
-        if (organization == null)
-        {
-            throw new NotFoundException();
-        }
+        await ValidateOrganizationAccessAsync(orgIdGuid);
 
         var organizationDomain = new OrganizationDomain
         {
@@ -50,5 +55,19 @@ public class OrganizationDomainController : Controller
 
         var domain = await _createOrganizationDomainCommand.CreateAsync(organizationDomain);
         return new OrganizationDomainResponseModel(domain);
+    }
+
+    private async Task ValidateOrganizationAccessAsync(Guid orgIdGuid)
+    {
+        if (!await _currentContext.OrganizationOwner(orgIdGuid))
+        {
+            throw new UnauthorizedAccessException();
+        }
+
+        var organization = await _organizationRepository.GetByIdAsync(orgIdGuid);
+        if (organization == null)
+        {
+            throw new NotFoundException();
+        }
     }
 }

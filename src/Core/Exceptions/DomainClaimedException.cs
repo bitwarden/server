@@ -2,9 +2,9 @@
 
 public class DomainClaimedException : Exception
 {
-    public DomainClaimedException() 
+    public DomainClaimedException()
         : base("The domain is not available to be claimed.")
     {
-        
+
     }
 }

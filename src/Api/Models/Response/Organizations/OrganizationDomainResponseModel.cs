@@ -5,7 +5,7 @@ namespace Bit.Api.Models.Response.Organizations;
 
 public class OrganizationDomainResponseModel : ResponseModel
 {
-    public OrganizationDomainResponseModel(OrganizationDomain organizationDomain,string obj = "organizationDomain") 
+    public OrganizationDomainResponseModel(OrganizationDomain organizationDomain, string obj = "organizationDomain")
         : base(obj)
     {
         if (organizationDomain == null)
@@ -20,6 +20,7 @@ public class OrganizationDomainResponseModel : ResponseModel
         CreationDate = organizationDomain.CreationDate;
         NextRunDate = organizationDomain.NextRunDate;
         NextRunCount = organizationDomain.NextRunCount;
+        VerifiedDate = organizationDomain.VerifiedDate;
     }
 
     public string Id { get; set; }
@@ -29,4 +30,5 @@ public class OrganizationDomainResponseModel : ResponseModel
     public DateTime CreationDate { get; set; }
     public DateTime NextRunDate { get; set; }
     public int NextRunCount { get; set; }
+    public DateTime? VerifiedDate { get; set; }
 }

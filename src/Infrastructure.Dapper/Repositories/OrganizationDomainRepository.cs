@@ -23,7 +23,7 @@ public class OrganizationDomainRepository : Repository<OrganizationDomain, Guid>
         {
             var results = await connection.QueryAsync<OrganizationDomain>(
                 $"[{Schema}].[OrganizationDomain_ReadByClaimedDomain]",
-                new {DomainName = domainName},
+                new { DomainName = domainName },
                 commandType: CommandType.StoredProcedure);
 
             return results.ToList();
