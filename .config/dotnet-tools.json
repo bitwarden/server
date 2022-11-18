@@ -19,6 +19,12 @@
       "commands": [
         "reportgenerator"
       ]
+    },
+    "dotnet-certificate-tool": {
+      "version": "2.0.7",
+      "commands": [
+        "certificate-tool"
+      ]
     }
   }
 }

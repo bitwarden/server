@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 
-dotnet tool install -g dotnet-certificate-tool
+dotnet tool restore
 
 stty -echo
-printf "Identity Server Dev Password: "
+printf "Identity Server Dev Password (enter for no password):"
 read identity_server_dev_pass
 stty echo
 printf "\n"
@@ -15,10 +15,15 @@ openssl pkcs12 -export -out identity_server_dev.pfx -inkey identity_server_dev.k
 
 identity="$(openssl x509 -in identity_server_dev.crt -outform der | shasum -a 1 | head -c 40 | tr a-z A-Z)"
 
-dotnet certificate-tool add --file ./identity_server_dev.pfx --password $identity_server_dev_pass
+if [ -z "$identity_server_dev_pass"]; 
+then
+    dotnet tool run certificate-tool add --file ./identity_server_dev.pfx
+else
+    dotnet tool run certificate-tool add --file ./identity_server_dev.pfx --password $identity_server_dev_pass
+fi
 
 stty -echo
-printf "Bitwarden Data Protection Dev Password:"
+printf "Bitwarden Data Protection Dev Password (enter for no password):"
 read bitwarden_data_protection_pass
 stty echo
 printf "\n"
@@ -30,7 +35,12 @@ openssl pkcs12 -export -out data_protection_dev.pfx -inkey data_protection_dev.k
 
 data="$(openssl x509 -in data_protection_dev.crt -outform der | shasum -a 1 | head -c 40 | tr a-z A-Z)"
 
-dotnet certificate-tool add --file ./data_protection_dev.pfx --password $bitwarden_data_protection_pass
+if [ -z "$bitwarden_data_protection_pass"]; 
+then
+    dotnet tool run certificate-tool add --file ./data_protection_dev.pfx
+else
+    dotnet tool run certificate-tool add --file ./data_protection_dev.pfx --password $bitwarden_data_protection_pass
+fi
 
 echo "Certificate fingerprints:"
 
