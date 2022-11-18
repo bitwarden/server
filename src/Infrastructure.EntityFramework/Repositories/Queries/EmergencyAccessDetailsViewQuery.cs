@@ -29,7 +29,7 @@ public class EmergencyAccessDetailsViewQuery : IQuery<EmergencyAccessDetails>
             CreationDate = x.ea.CreationDate,
             RevisionDate = x.ea.RevisionDate,
             GranteeName = x.grantee.Name,
-            GranteeEmail = x.grantee.Email,
+            GranteeEmail = x.grantee.Email ?? x.ea.Email,
             GrantorName = x.grantor.Name,
             GrantorEmail = x.grantor.Email,
         });
