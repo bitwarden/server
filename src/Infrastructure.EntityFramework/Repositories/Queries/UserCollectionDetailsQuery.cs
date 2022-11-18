@@ -59,6 +59,5 @@ public class UserCollectionDetailsQuery : IQuery<CollectionDetails>
             HidePasswords = x.ou.AccessAll || x.g.AccessAll ||
                 !((bool?)x.cu.HidePasswords ?? (bool?)x.cg.HidePasswords ?? false) ? false : true,
         });
-#pragma warning restore IDE0075
     }
 }
