@@ -77,7 +77,6 @@ public class HCaptchaValidationService : ICaptchaValidationService
 
         if (!responseMessage.IsSuccessStatusCode)
         {
-            _logger.LogError("Error submitting Captcha token to HCaptcha: {status} - {message}", responseMessage.StatusCode, responseMessage.ReasonPhrase);
             return response;
         }
 
@@ -87,12 +86,6 @@ public class HCaptchaValidationService : ICaptchaValidationService
         response.MaybeBot = score >= _globalSettings.Captcha.MaybeBotScoreThreshold;
         response.IsBot = score >= _globalSettings.Captcha.IsBotScoreThreshold;
         response.Score = score;
-
-        if (!response.Success && hcaptchaResponse.ErrorCodes != null && hcaptchaResponse.ErrorCodes.Any())
-        {
-            _logger.LogError("HCaptcha errors received when validating Captcha for user {email}: {@errors}", user.Email, hcaptchaResponse.ErrorCodes);
-        }
-
         return response;
     }
 
@@ -132,8 +125,6 @@ public class HCaptchaValidationService : ICaptchaValidationService
         public double? Score { get; set; }
         [JsonPropertyName("score_reason")]
         public List<string> ScoreReason { get; set; }
-        [JsonPropertyName("error-codes")]
-        public List<string> ErrorCodes { get; set; }
 
         public void Dispose() { }
     }

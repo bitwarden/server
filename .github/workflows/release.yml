@@ -281,7 +281,8 @@ jobs:
           DOCKER_CONTENT_TRUST: ${{ steps.check-matrix-dct.outputs.dct_enabled }}
           DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ steps.setup-dct.outputs.dct-delegate-repo-passphrase }}
           SERVICE_NAME: ${{ steps.setup.outputs.service_name }}
-        run: docker push bitwarden/$SERVICE_NAME:$_RELEASE_VERSION
+        run: |
+          docker push bitwarden/$SERVICE_NAME:$_RELEASE_VERSION
 
       - name: Log out of Docker and disable Docker Notary
         if: matrix.origin_docker_repo == 'bitwarden'
@@ -327,7 +328,8 @@ jobs:
         env:
           SERVICE_NAME: ${{ steps.setup.outputs.service_name }}
           REGISTRY: bitwardenqa.azurecr.io
-        run: docker push $REGISTRY/$SERVICE_NAME:$_RELEASE_VERSION
+        run: |
+          docker push $REGISTRY/$SERVICE_NAME:$_RELEASE_VERSION
 
       - name: Log out of Docker
         run: docker logout
@@ -361,7 +363,8 @@ jobs:
         env:
           SERVICE_NAME: ${{ steps.setup.outputs.service_name }}
           REGISTRY: bitwardenprod.azurecr.io
-        run: docker push $REGISTRY/$SERVICE_NAME:$_RELEASE_VERSION
+        run: |
+          docker push $REGISTRY/$SERVICE_NAME:$_RELEASE_VERSION
 
       - name: Log out of Docker
         if: matrix.prod_acr == true
