@@ -19,6 +19,7 @@ public class SecretRepository : Repository<Core.Entities.Secret, Secret, Guid>, 
         {
             var dbContext = GetDatabaseContext(scope);
             var secret = await dbContext.Secret
+                                    .Include("Projects")
                                     .Where(c => c.Id == id && c.DeletedDate == null)
                                     .FirstOrDefaultAsync();
             return Mapper.Map<Core.Entities.Secret>(secret);

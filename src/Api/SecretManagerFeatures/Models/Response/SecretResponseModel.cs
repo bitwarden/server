@@ -20,6 +20,7 @@ public class SecretResponseModel : ResponseModel
         Note = secret.Note;
         CreationDate = secret.CreationDate;
         RevisionDate = secret.RevisionDate;
+        ProjectIds = secret.Projects.Select(obj => (Guid)obj.Id).ToArray();
     }
 
     public string Id { get; set; }
@@ -35,5 +36,7 @@ public class SecretResponseModel : ResponseModel
     public DateTime CreationDate { get; set; }
 
     public DateTime RevisionDate { get; set; }
+
+    public Guid[] ProjectIds { get; set; }
 }
 

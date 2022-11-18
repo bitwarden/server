@@ -18,8 +18,18 @@ public class SecretUpdateRequestModel
     [EncryptedString]
     public string Note { get; set; }
 
+    public Guid[] ProjectIds { get; set; }
+
     public Secret ToSecret(Guid id)
     {
+        List<Project> assignedProjects = new List<Project>();
+
+        foreach(Guid projectId in ProjectIds){
+            var project = new Project();
+            project.Id = projectId;
+            assignedProjects.Add(project);
+        }
+
         return new Secret()
         {
             Id = id,
@@ -27,6 +37,7 @@ public class SecretUpdateRequestModel
             Value = this.Value,
             Note = this.Note,
             DeletedDate = null,
+            Projects = assignedProjects
         };
     }
 }
