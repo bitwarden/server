@@ -74,13 +74,13 @@ public class SyncController : Controller
 
         IEnumerable<CollectionDetails> collections = null;
         IDictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphersGroupDict = null;
-        IEnumerable<Policy> policies = null;
+        IEnumerable<Policy> policies = await _policyRepository.GetManyByUserIdAsync(user.Id);
+
         if (hasEnabledOrgs)
         {
             collections = await _collectionRepository.GetManyByUserIdAsync(user.Id);
             var collectionCiphers = await _collectionCipherRepository.GetManyByUserIdAsync(user.Id);
             collectionCiphersGroupDict = collectionCiphers.GroupBy(c => c.CipherId).ToDictionary(s => s.Key);
-            policies = await _policyRepository.GetManyByUserIdAsync(user.Id);
         }
 
         var userTwoFactorEnabled = await _userService.TwoFactorIsEnabledAsync(user);
