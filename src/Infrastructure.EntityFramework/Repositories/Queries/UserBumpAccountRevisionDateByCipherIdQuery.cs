@@ -31,7 +31,7 @@ public class UserBumpAccountRevisionDateByCipherIdQuery : IQuery<User>
 
                     join groupUser in dbContext.GroupUsers
                         on new { CollectionId = (Guid?)cu.CollectionId, ou.AccessAll, OrganizationUserId = ou.Id } equals
-                           new { CollectionId = (Guid?)null, AccessAll = false, groupUser.OrganizationUserId }  into gu_g
+                           new { CollectionId = (Guid?)null, AccessAll = false, groupUser.OrganizationUserId } into gu_g
                     from gu in gu_g.DefaultIfEmpty()
 
                     join grp in dbContext.Groups
