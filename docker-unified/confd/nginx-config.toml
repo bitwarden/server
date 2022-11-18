@@ -1,0 +1,17 @@
+[template]
+src = "nginx-config.conf.tmpl"
+dest = "/etc/nginx/http.d/bitwarden.conf"
+keys = [
+  "BW_ENABLE_SSL_CA",
+  "BW_SSL_CA_CERT",
+  "BW_CSP",
+  "BW_ENABLE_KEY_CONNECTOR",
+  "BW_KEY_CONNECTOR_INTERNAL_URL",
+  "BW_REAL_IPS",
+  "BW_ENABLE_SSL",
+  "BW_SSL_CERT",
+  "BW_SSL_CIPHERS",
+  "BW_SSL_KEY",
+  "BW_SSL_PROTOCOLS",
+  "BW_ICONS_PROXY_TO_CLOUD"
+]
