@@ -20,23 +20,21 @@ public class OrganizationDomain : ITableObject<Guid>
     {
         if (NextRunCount < 1)
         {
-            //throw exception;
+            return this;
         }
 
         NextRunDate = CreationDate.AddHours(NextRunCount * 12);
         return this;
     }
 
-    public OrganizationDomain SetNextRunCount(int nextRunCount)
+    public OrganizationDomain SetNextRunCount()
     {
-        if (nextRunCount == 3)
+        if (NextRunCount == 3)
         {
             return this;
-            //or throw exception
         }
 
-        nextRunCount++;
-        NextRunCount = nextRunCount;
+        NextRunCount++;
         return this;
     }
 }

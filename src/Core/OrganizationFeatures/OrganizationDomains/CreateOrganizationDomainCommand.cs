@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Entities;
+using Bit.Core.Exceptions;
 using Bit.Core.OrganizationFeatures.OrganizationDomains.Interfaces;
 using Bit.Core.Repositories;
 
@@ -15,18 +16,18 @@ public class CreateOrganizationDomainCommand : ICreateOrganizationDomainCommand
 
     public async Task<OrganizationDomain> CreateAsync(OrganizationDomain organizationDomain)
     {
-        //check the domain has not been claimed
+        //Domains claimed and verified by an organization cannot be claimed
         var claimedDomain =
             await _organizationDomainRepository.GetClaimedDomainsByDomainNameAsync(organizationDomain.DomainName);
-        if (claimedDomain is not null)
+        if (claimedDomain.Any())
         {
-            // throw exception
+            throw new DomainClaimedException();
         }
-        //set initial nextRunDate and nextRunCount
-        organizationDomain.SetNextRunCount(organizationDomain.NextRunCount)
-            .SetNextRunDate();
 
-        //create add domain
+        organizationDomain
+            .SetNextRunCount()
+            .SetNextRunDate();
+        
         return await _organizationDomainRepository.CreateAsync(organizationDomain);
     }
 }
