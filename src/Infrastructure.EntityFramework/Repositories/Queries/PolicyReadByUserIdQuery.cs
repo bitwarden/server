@@ -20,8 +20,7 @@ public class PolicyReadByUserIdQuery : IQuery<Policy>
                     join o in dbContext.Organizations
                         on ou.OrganizationId equals o.Id
                     where ou.UserId == _userId &&
-                        ou.Status == OrganizationUserStatusType.Confirmed &&
-                        o.Enabled == true
+                        ou.Status == OrganizationUserStatusType.Confirmed 
                     select p;
 
         return query;
