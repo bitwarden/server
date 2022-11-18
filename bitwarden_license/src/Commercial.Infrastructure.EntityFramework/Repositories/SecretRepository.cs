@@ -63,6 +63,29 @@ public class SecretRepository : Repository<Core.Entities.Secret, Secret, Guid>, 
         }
     }
 
+    public async Task<Core.Entities.Secret> CreateAsync(Core.Entities.Secret secret, Guid? projectId)
+    {
+        if (projectId != null && projectId != Guid.Empty)
+        {
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                secret.SetNewId();
+                var entity = Mapper.Map<Secret>(secret);
+                foreach (var p in entity.Projects)
+                {
+                    dbContext.Attach(p);
+                }
+                await dbContext.AddAsync(entity);
+                await dbContext.SaveChangesAsync();
+                secret.Id = entity.Id;
+                return secret;
+            }
+        }
+
+        return await base.CreateAsync(secret);
+    }
+
     public async Task SoftDeleteManyByIdAsync(IEnumerable<Guid> ids)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
@@ -79,4 +102,5 @@ public class SecretRepository : Repository<Core.Entities.Secret, Secret, Guid>, 
             await dbContext.SaveChangesAsync();
         }
     }
+
 }

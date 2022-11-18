@@ -13,8 +13,18 @@ public class CreateSecretCommand : ICreateSecretCommand
         _secretRepository = secretRepository;
     }
 
-    public async Task<Secret> CreateAsync(Secret secret)
+    public async Task<Secret> CreateAsync(Secret secret, Guid? projectId)
     {
-        return await _secretRepository.CreateAsync(secret);
+        if (projectId.HasValue)
+        {
+            secret.Projects = new List<Project>();
+            var p = new Project
+            {
+                Id = projectId.Value
+            };
+            secret.Projects.Add(p);
+        }
+
+        return await _secretRepository.CreateAsync(secret, projectId);
     }
 }

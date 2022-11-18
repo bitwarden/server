@@ -18,6 +18,8 @@ public class SecretCreateRequestModel
     [EncryptedString]
     public string Note { get; set; }
 
+    public Guid? ProjectId { get; set; }
+
     public Secret ToSecret(Guid organizationId)
     {
         return new Secret()
