@@ -55,11 +55,11 @@ public class UserCollectionDetailsQuery : IQuery<CollectionDetails>
             ExternalId = x.c.ExternalId,
             CreationDate = x.c.CreationDate,
             RevisionDate = x.c.RevisionDate,
-            ReadOnly = x.ou.AccessAll || x.g.AccessAll || ((x.cu != null ? x.cu.ReadOnly : (bool?)null) ?? (x.cg != null ? x.cg.ReadOnly : (bool?)null) ?? false) ? false : true,
-            HidePasswords = x.ou.AccessAll || x.g.AccessAll || ((x.cu != null ? x.cu.HidePasswords : (bool?)null) ?? (x.cg != null ? x.cg.HidePasswords : (bool?)null) ?? false) ? false : true,
+            ReadOnly = x.ou.AccessAll || x.g.AccessAll ||
+                !((bool?)x.cu.ReadOnly ?? (bool?)x.cg.ReadOnly ?? false) ? false : true,
+            HidePasswords = x.ou.AccessAll || x.g.AccessAll ||
+                !((bool?)x.cu.HidePasswords ?? (bool?)x.cg.HidePasswords ?? false) ? false : true,
         });
 #pragma warning restore IDE0075
     }
-
-
 }
