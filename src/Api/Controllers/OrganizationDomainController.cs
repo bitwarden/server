@@ -31,16 +31,19 @@ public class OrganizationDomainController : Controller
         _organizationRepository = organizationRepository;
     }
 
-    [HttpGet("{domainId}")]
-    public async Task<OrganizationDomainResponseModel> Get(string orgId, string domainId)
+    [HttpGet("{id}")]
+    public async Task<OrganizationDomainResponseModel> Get(string orgId, string id)
     {
         var orgIdGuid = new Guid(orgId);
-        var domainIdGuid = new Guid(domainId);
+        var IdGuid = new Guid(id);
         await ValidateOrganizationAccessAsync(orgIdGuid);
 
-        var domain = await _getOrganizationDomainByIdQuery.GetOrganizationDomainById(domainIdGuid);
+        var domain = await _getOrganizationDomainByIdQuery.GetOrganizationDomainById(IdGuid);
         return new OrganizationDomainResponseModel(domain);
     }
+    
+    [HttpGet]
+    
 
     [HttpPost("")]
     public async Task<OrganizationDomainResponseModel> Post(string orgId, [FromBody] OrganizationDomainRequestModel model)
