@@ -1,4 +1,5 @@
 ﻿using Bit.Api.Models.Request;
+using Bit.Api.Models.Response;
 using Bit.Api.Models.Response.Organizations;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -15,20 +16,38 @@ namespace Bit.Api.Controllers;
 public class OrganizationDomainController : Controller
 {
     private readonly ICreateOrganizationDomainCommand _createOrganizationDomainCommand;
+    private readonly IVerifyOrganizationDomainCommand _verifyOrganizationDomainCommand;
     private readonly IGetOrganizationDomainByIdQuery _getOrganizationDomainByIdQuery;
+    private readonly IGetOrganizationDomainByOrganizationIdQuery _getOrganizationDomainByOrganizationIdQuery;
     private readonly ICurrentContext _currentContext;
     private readonly IOrganizationRepository _organizationRepository;
 
     public OrganizationDomainController(
         ICreateOrganizationDomainCommand createOrganizationDomainCommand,
+        IVerifyOrganizationDomainCommand verifyOrganizationDomainCommand,
         IGetOrganizationDomainByIdQuery getOrganizationDomainByIdQuery,
+        IGetOrganizationDomainByOrganizationIdQuery getOrganizationDomainByOrganizationIdQuery,
         ICurrentContext currentContext,
         IOrganizationRepository organizationRepository)
     {
         _createOrganizationDomainCommand = createOrganizationDomainCommand;
+        _verifyOrganizationDomainCommand = verifyOrganizationDomainCommand;
         _getOrganizationDomainByIdQuery = getOrganizationDomainByIdQuery;
+        _getOrganizationDomainByOrganizationIdQuery = getOrganizationDomainByOrganizationIdQuery;
         _currentContext = currentContext;
         _organizationRepository = organizationRepository;
+    }
+    
+    [HttpGet]
+    public async Task<ListResponseModel<OrganizationDomainResponseModel>> Get(string orgId)
+    {
+        var orgIdGuid = new Guid(orgId);
+        await ValidateOrganizationAccessAsync(orgIdGuid);
+
+        var domains = await _getOrganizationDomainByOrganizationIdQuery
+            .GetDomainsByOrganizationId(orgIdGuid);
+        var response = domains.Select(x => new OrganizationDomainResponseModel(x)).ToList();
+        return new ListResponseModel<OrganizationDomainResponseModel>(response);
     }
 
     [HttpGet("{id}")]
@@ -39,11 +58,13 @@ public class OrganizationDomainController : Controller
         await ValidateOrganizationAccessAsync(orgIdGuid);
 
         var domain = await _getOrganizationDomainByIdQuery.GetOrganizationDomainById(IdGuid);
+        if (domain is null)
+        {
+            throw new NotFoundException();
+        }
+        
         return new OrganizationDomainResponseModel(domain);
     }
-    
-    [HttpGet]
-    
 
     [HttpPost("")]
     public async Task<OrganizationDomainResponseModel> Post(string orgId, [FromBody] OrganizationDomainRequestModel model)
@@ -60,6 +81,18 @@ public class OrganizationDomainController : Controller
 
         var domain = await _createOrganizationDomainCommand.CreateAsync(organizationDomain);
         return new OrganizationDomainResponseModel(domain);
+    }
+
+    [HttpPost("{id}/verify")]
+    public async Task<OrganizationDomainResponseModel> Verify(string orgId, string id)
+    {
+        var orgIdGuid = new Guid(orgId);
+        var idGuid = new Guid(id);
+        await ValidateOrganizationAccessAsync(orgIdGuid);
+
+        _ = await _verifyOrganizationDomainCommand.VerifyOrganizationDomain(idGuid);
+        
+        return null;
     }
 
     private async Task ValidateOrganizationAccessAsync(Guid orgIdGuid)

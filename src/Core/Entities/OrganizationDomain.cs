@@ -11,7 +11,7 @@ public class OrganizationDomain : ITableObject<Guid>
     [MaxLength(255)]
     public string DomainName { get; set; }
     public DateTime CreationDate { get; set; } = DateTime.UtcNow;
-    public DateTime? VerifiedDate { get; set; }
+    public DateTime? VerifiedDate { get; private set; }
     public DateTime NextRunDate { get; private set; }
     public int NextRunCount { get; private set; }
     public void SetNewId() => Id = CoreHelpers.GenerateComb();
@@ -33,8 +33,14 @@ public class OrganizationDomain : ITableObject<Guid>
         {
             return this;
         }
-
+    
         NextRunCount++;
+        return this;
+    }
+
+    public OrganizationDomain SetVerifiedDate()
+    {
+        VerifiedDate = DateTime.UtcNow;
         return this;
     }
 }
