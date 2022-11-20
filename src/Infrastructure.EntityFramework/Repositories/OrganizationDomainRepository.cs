@@ -21,7 +21,19 @@ public class OrganizationDomainRepository : Repository<Core.Entities.Organizatio
         var claimedDomains = await dbContext.OrganizationDomains
             .Where(x => x.DomainName == domainName
                         && x.VerifiedDate != null)
+            .AsNoTracking()
             .ToListAsync();
         return Mapper.Map<List<Core.Entities.OrganizationDomain>>(claimedDomains);
+    }
+
+    public async Task<ICollection<Core.Entities.OrganizationDomain>> GetDomainsByOrganizationId(Guid orgId)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        var domains = await dbContext.OrganizationDomains
+            .Where(x => x.OrganizationId == orgId)
+            .AsNoTracking()
+            .ToListAsync();
+        return Mapper.Map<List<Core.Entities.OrganizationDomain>>(domains);
     }
 }

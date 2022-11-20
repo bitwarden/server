@@ -29,4 +29,17 @@ public class OrganizationDomainRepository : Repository<OrganizationDomain, Guid>
             return results.ToList();
         }
     }
+
+    public async Task<ICollection<OrganizationDomain>> GetDomainsByOrganizationId(Guid orgId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<OrganizationDomain>(
+                $"[{Schema}].[OrganizationDomain_ReadByOrganizationId]",
+                new {OrganizationId = orgId},
+                commandType: CommandType.StoredProcedure);
+
+            return results.ToList(); 
+        }
+    }
 }
