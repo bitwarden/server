@@ -31,6 +31,10 @@ public static class EntityFrameworkServiceCollectionExtensions
                 options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString),
                     b => b.MigrationsAssembly("MySqlMigrations"));
             }
+            else if (provider == SupportedDatabaseProviders.Sqlite)
+            {
+                options.UseSqlite(connectionString);
+            }
         });
         services.AddSingleton<ICipherRepository, CipherRepository>();
         services.AddSingleton<ICollectionCipherRepository, CollectionCipherRepository>();
