@@ -562,10 +562,6 @@ public abstract class BaseRequestValidator<T> where T : class
                     }
                 }
             }
-            else
-            {
-                deviceFromRequest.Id = existingDevice.Id;
-            }
 
             deviceFromRequest.UserId = user.Id;
             await _deviceService.SaveAsync(deviceFromRequest);
