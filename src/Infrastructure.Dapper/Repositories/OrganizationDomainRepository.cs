@@ -36,10 +36,10 @@ public class OrganizationDomainRepository : Repository<OrganizationDomain, Guid>
         {
             var results = await connection.QueryAsync<OrganizationDomain>(
                 $"[{Schema}].[OrganizationDomain_ReadByOrganizationId]",
-                new {OrganizationId = orgId},
+                new { OrganizationId = orgId },
                 commandType: CommandType.StoredProcedure);
 
-            return results.ToList(); 
+            return results.ToList();
         }
     }
 }

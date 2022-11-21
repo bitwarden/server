@@ -27,7 +27,7 @@ public static class OrganizationServiceCollectionExtensions
         services.AddOrganizationConnectionCommands();
         services.AddOrganizationSponsorshipCommands(globalSettings);
         services.AddOrganizationApiKeyCommands();
-        services.AddOrganizationDomainCommands();
+        services.AddOrganizationDomainCommandsQueries();
     }
 
     private static void AddOrganizationConnectionCommands(this IServiceCollection services)
@@ -68,11 +68,13 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IRotateOrganizationApiKeyCommand, RotateOrganizationApiKeyCommand>();
     }
 
-    private static void AddOrganizationDomainCommands(this IServiceCollection services)
+    private static void AddOrganizationDomainCommandsQueries(this IServiceCollection services)
     {
         services.AddScoped<ICreateOrganizationDomainCommand, CreateOrganizationDomainCommand>();
+        services.AddScoped<IVerifyOrganizationDomainCommand, VerifyOrganizationDomainCommand>();
         services.AddScoped<IGetOrganizationDomainByIdQuery, GetOrganizationDomainByIdQuery>();
         services.AddScoped<IGetOrganizationDomainByOrganizationIdQuery, GetOrganizationDomainByOrganizationIdQuery>();
+        services.AddScoped<IDeleteOrganizationDomainCommand, DeleteOrganizationDomainCommand>();
     }
 
     private static void AddTokenizers(this IServiceCollection services)

@@ -17,6 +17,7 @@ public class OrganizationDomainController : Controller
 {
     private readonly ICreateOrganizationDomainCommand _createOrganizationDomainCommand;
     private readonly IVerifyOrganizationDomainCommand _verifyOrganizationDomainCommand;
+    private readonly IDeleteOrganizationDomainCommand _deleteOrganizationDomainCommand;
     private readonly IGetOrganizationDomainByIdQuery _getOrganizationDomainByIdQuery;
     private readonly IGetOrganizationDomainByOrganizationIdQuery _getOrganizationDomainByOrganizationIdQuery;
     private readonly ICurrentContext _currentContext;
@@ -25,6 +26,7 @@ public class OrganizationDomainController : Controller
     public OrganizationDomainController(
         ICreateOrganizationDomainCommand createOrganizationDomainCommand,
         IVerifyOrganizationDomainCommand verifyOrganizationDomainCommand,
+        IDeleteOrganizationDomainCommand deleteOrganizationDomainCommand,
         IGetOrganizationDomainByIdQuery getOrganizationDomainByIdQuery,
         IGetOrganizationDomainByOrganizationIdQuery getOrganizationDomainByOrganizationIdQuery,
         ICurrentContext currentContext,
@@ -32,12 +34,13 @@ public class OrganizationDomainController : Controller
     {
         _createOrganizationDomainCommand = createOrganizationDomainCommand;
         _verifyOrganizationDomainCommand = verifyOrganizationDomainCommand;
+        _deleteOrganizationDomainCommand = deleteOrganizationDomainCommand;
         _getOrganizationDomainByIdQuery = getOrganizationDomainByIdQuery;
         _getOrganizationDomainByOrganizationIdQuery = getOrganizationDomainByOrganizationIdQuery;
         _currentContext = currentContext;
         _organizationRepository = organizationRepository;
     }
-    
+
     [HttpGet]
     public async Task<ListResponseModel<OrganizationDomainResponseModel>> Get(string orgId)
     {
@@ -62,7 +65,7 @@ public class OrganizationDomainController : Controller
         {
             throw new NotFoundException();
         }
-        
+
         return new OrganizationDomainResponseModel(domain);
     }
 
@@ -71,6 +74,8 @@ public class OrganizationDomainController : Controller
     {
         var orgIdGuid = new Guid(orgId);
         await ValidateOrganizationAccessAsync(orgIdGuid);
+
+        var uri = new Uri(model.DomainName);
 
         var organizationDomain = new OrganizationDomain
         {
@@ -84,15 +89,24 @@ public class OrganizationDomainController : Controller
     }
 
     [HttpPost("{id}/verify")]
-    public async Task<OrganizationDomainResponseModel> Verify(string orgId, string id)
+    public async Task<bool> Verify(string orgId, string id)
     {
         var orgIdGuid = new Guid(orgId);
         var idGuid = new Guid(id);
         await ValidateOrganizationAccessAsync(orgIdGuid);
 
-        _ = await _verifyOrganizationDomainCommand.VerifyOrganizationDomain(idGuid);
-        
-        return null;
+        return await _verifyOrganizationDomainCommand.VerifyOrganizationDomain(idGuid);
+    }
+
+    [HttpDelete("{id}")]
+    [HttpPost("{id}/remove")]
+    public async Task RemoveDomain(string orgId, string id)
+    {
+        var orgIdGuid = new Guid(orgId);
+        var idGuid = new Guid(id);
+        await ValidateOrganizationAccessAsync(orgIdGuid);
+
+        await _deleteOrganizationDomainCommand.DeleteAsync(idGuid);
     }
 
     private async Task ValidateOrganizationAccessAsync(Guid orgIdGuid)

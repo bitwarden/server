@@ -33,7 +33,7 @@ public class OrganizationDomain : ITableObject<Guid>
         {
             return this;
         }
-    
+
         NextRunCount++;
         return this;
     }

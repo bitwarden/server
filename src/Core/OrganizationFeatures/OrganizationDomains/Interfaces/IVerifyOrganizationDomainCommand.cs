@@ -1,4 +1,4 @@
-namespace Bit.Core.OrganizationFeatures.OrganizationDomains.Interfaces;
+﻿namespace Bit.Core.OrganizationFeatures.OrganizationDomains.Interfaces;
 
 public interface IVerifyOrganizationDomainCommand
 {

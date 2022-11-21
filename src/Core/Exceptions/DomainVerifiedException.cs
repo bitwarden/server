@@ -1,10 +1,10 @@
-namespace Bit.Core.Exceptions;
+﻿namespace Bit.Core.Exceptions;
 
 public class DomainVerifiedException : Exception
 {
-    public DomainVerifiedException() 
+    public DomainVerifiedException()
         : base("Domain has already been verified.")
     {
-        
+
     }
 }

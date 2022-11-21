@@ -1,4 +1,4 @@
-using Bit.Core.Exceptions;
+﻿using Bit.Core.Exceptions;
 using Bit.Core.OrganizationFeatures.OrganizationDomains.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -40,7 +40,7 @@ public class VerifyOrganizationDomainCommand : IVerifyOrganizationDomainCommand
             {
                 domain.SetVerifiedDate();
                 await _organizationDomainRepository.ReplaceAsync(domain);
-                
+
                 return true;
             }
         }
@@ -49,7 +49,7 @@ public class VerifyOrganizationDomainCommand : IVerifyOrganizationDomainCommand
             _logger.LogError("Error verifying Organization domain.", e);
             return false;
         }
-        
+
         return false;
     }
 }
