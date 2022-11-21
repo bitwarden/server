@@ -491,6 +491,7 @@ public class GlobalSettings : IGlobalSettings
     {
         public int CacheLifetimeInSeconds { get; set; } = 60;
         public double SsoTokenLifetimeInSeconds { get; set; } = 5;
+        public bool EnforceSsoPolicyForAllUsers { get; set; }
     }
 
     public class CaptchaSettings
