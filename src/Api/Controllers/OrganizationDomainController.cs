@@ -74,9 +74,7 @@ public class OrganizationDomainController : Controller
     {
         var orgIdGuid = new Guid(orgId);
         await ValidateOrganizationAccessAsync(orgIdGuid);
-
-        var uri = new Uri(model.DomainName);
-
+        
         var organizationDomain = new OrganizationDomain
         {
             OrganizationId = orgIdGuid,
