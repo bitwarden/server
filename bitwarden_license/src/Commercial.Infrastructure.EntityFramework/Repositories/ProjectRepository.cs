@@ -32,7 +32,7 @@ public class ProjectRepository : Repository<Core.Entities.Project, Project, Guid
         var dbContext = GetDatabaseContext(scope);
         var project = await dbContext.Project
             .Where(p => p.OrganizationId == organizationId && p.DeletedDate == null)
-            .Where(UserHasAccessToProject(userId))
+            //.Where(UserHasAccessToProject(userId))
             .OrderBy(p => p.RevisionDate)
             .ToListAsync();
         return Mapper.Map<List<Core.Entities.Project>>(project);
