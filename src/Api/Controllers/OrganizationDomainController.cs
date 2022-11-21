@@ -74,7 +74,7 @@ public class OrganizationDomainController : Controller
     {
         var orgIdGuid = new Guid(orgId);
         await ValidateOrganizationAccessAsync(orgIdGuid);
-        
+
         var organizationDomain = new OrganizationDomain
         {
             OrganizationId = orgIdGuid,
