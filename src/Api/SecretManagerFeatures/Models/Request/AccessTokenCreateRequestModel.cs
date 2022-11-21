@@ -28,7 +28,7 @@ public class AccessTokenCreateRequestModel
             Name = Name,
             Key = Key,
             ExpireAt = ExpireAt,
-            Scope = "api.secrets",
+            Scope = "[\"api.secrets\"]",
             EncryptedPayload = EncryptedPayload,
 
         };

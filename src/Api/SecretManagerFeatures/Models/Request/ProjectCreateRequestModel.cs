@@ -15,7 +15,7 @@ public class ProjectCreateRequestModel
         return new Project()
         {
             OrganizationId = organizationId,
-            Name = this.Name,
+            Name = Name,
         };
     }
 }
