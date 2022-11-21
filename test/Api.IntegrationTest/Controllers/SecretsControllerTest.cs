@@ -85,7 +85,7 @@ public class SecretsControllerTest : IClassFixture<ApiApplicationFactory>, IAsyn
             Key = _mockEncryptedString,
             Value = _mockEncryptedString,
             Note = _mockEncryptedString
-        });
+        }, null);
 
         var request = new SecretUpdateRequestModel()
         {
@@ -130,7 +130,7 @@ public class SecretsControllerTest : IClassFixture<ApiApplicationFactory>, IAsyn
                 Key = _mockEncryptedString,
                 Value = _mockEncryptedString,
                 Note = _mockEncryptedString
-            });
+            }, null);
             secretIds.Add(secret.Id);
         }
 
@@ -162,7 +162,7 @@ public class SecretsControllerTest : IClassFixture<ApiApplicationFactory>, IAsyn
             Key = _mockEncryptedString,
             Value = _mockEncryptedString,
             Note = _mockEncryptedString
-        });
+        }, null);
 
 
         var response = await _client.GetAsync($"/secrets/{createdSecret.Id}");
@@ -189,7 +189,7 @@ public class SecretsControllerTest : IClassFixture<ApiApplicationFactory>, IAsyn
                 Key = _mockEncryptedString,
                 Value = _mockEncryptedString,
                 Note = _mockEncryptedString
-            });
+            }, null);
             secretIds.Add(secret.Id);
         }
 

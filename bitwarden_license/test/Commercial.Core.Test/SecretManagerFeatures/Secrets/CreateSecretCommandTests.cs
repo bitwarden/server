@@ -18,10 +18,10 @@ public class CreateSecretCommandTests
     public async Task CreateAsync_CallsCreate(Secret data,
       SutProvider<CreateSecretCommand> sutProvider)
     {
-        await sutProvider.Sut.CreateAsync(data);
+        await sutProvider.Sut.CreateAsync(data, null);
 
         await sutProvider.GetDependency<ISecretRepository>().Received(1)
-            .CreateAsync(data);
+            .CreateAsync(data, null);
     }
 }
 
