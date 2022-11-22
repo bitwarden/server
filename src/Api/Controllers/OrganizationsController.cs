@@ -40,7 +40,7 @@ public class OrganizationsController : Controller
     private readonly IGetOrganizationLicenseQuery _getOrganizationLicenseQuery;
     private readonly GlobalSettings _globalSettings;
     private readonly IOrganizationConnectionRepository _organizationConnectionRepository;
-    private readonly IGetOrganizationLicenseFromCloudQuery _getOrganizationLicenseFromCloudQuery;
+    private readonly ISelfHostedGetOrganizationLicenseFromCloudQuery _selfHostedGetOrganizationLicenseFromCloudQuery;
 
     public OrganizationsController(
         IOrganizationRepository organizationRepository,
@@ -58,7 +58,7 @@ public class OrganizationsController : Controller
         IGetOrganizationLicenseQuery getOrganizationLicenseQuery,
         GlobalSettings globalSettings,
         IOrganizationConnectionRepository organizationConnectionRepository,
-        IGetOrganizationLicenseFromCloudQuery getOrganizationLicenseFromCloudQuery)
+        ISelfHostedGetOrganizationLicenseFromCloudQuery selfHostedGetOrganizationLicenseFromCloudQuery)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -75,7 +75,7 @@ public class OrganizationsController : Controller
         _getOrganizationLicenseQuery = getOrganizationLicenseQuery;
         _globalSettings = globalSettings;
         _organizationConnectionRepository = organizationConnectionRepository;
-        _getOrganizationLicenseFromCloudQuery = getOrganizationLicenseFromCloudQuery;
+        _selfHostedGetOrganizationLicenseFromCloudQuery = selfHostedGetOrganizationLicenseFromCloudQuery;
     }
 
     [HttpGet("{id}")]
@@ -476,7 +476,7 @@ public class OrganizationsController : Controller
         }
 
         var license =
-            await _getOrganizationLicenseFromCloudQuery.GetLicenseAsync(orgIdGuid, billingSyncConnection);
+            await _selfHostedGetOrganizationLicenseFromCloudQuery.GetLicenseAsync(orgIdGuid, billingSyncConnection);
 
         // TODO: use new command here instead
         await _organizationService.UpdateLicenseAsync(orgIdGuid, license);

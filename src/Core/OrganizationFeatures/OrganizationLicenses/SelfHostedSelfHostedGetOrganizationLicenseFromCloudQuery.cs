@@ -10,11 +10,11 @@ using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationLicenses;
 
-public class GetOrganizationLicenseFromCloudFromCloudQuery : BaseIdentityClientService, IGetOrganizationLicenseFromCloudQuery
+public class SelfHostedSelfHostedGetOrganizationLicenseFromCloudQuery : BaseIdentityClientService, ISelfHostedGetOrganizationLicenseFromCloudQuery
 {
     private readonly IGlobalSettings _globalSettings;
 
-    public GetOrganizationLicenseFromCloudFromCloudQuery(IHttpClientFactory httpFactory, IGlobalSettings globalSettings, ILogger<GetOrganizationLicenseFromCloudFromCloudQuery> logger)
+    public SelfHostedSelfHostedGetOrganizationLicenseFromCloudQuery(IHttpClientFactory httpFactory, IGlobalSettings globalSettings, ILogger<SelfHostedSelfHostedGetOrganizationLicenseFromCloudQuery> logger)
         : base(
             httpFactory,
             globalSettings.Installation.ApiUri,

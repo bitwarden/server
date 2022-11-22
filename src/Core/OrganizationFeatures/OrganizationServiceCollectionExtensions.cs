@@ -75,7 +75,7 @@ public static class OrganizationServiceCollectionExtensions
         // TODO: should only be required for self hosted. This means moving to a separate controller
         // if (globalSettings.SelfHosted)
         // {
-        services.AddScoped<IGetOrganizationLicenseFromCloudQuery, GetOrganizationLicenseFromCloudFromCloudQuery>();
+        services.AddScoped<ISelfHostedGetOrganizationLicenseFromCloudQuery, SelfHostedSelfHostedGetOrganizationLicenseFromCloudQuery>();
         // }
     }
 
