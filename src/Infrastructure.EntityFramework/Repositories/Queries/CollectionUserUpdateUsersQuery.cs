@@ -10,7 +10,7 @@ public class CollectionUserUpdateUsersQuery
     public readonly CollectionUserUpdateUsersUpdateQuery Update;
     public readonly CollectionUserUpdateUsersDeleteQuery Delete;
 
-    public CollectionUserUpdateUsersQuery(Guid collectionId, IEnumerable<SelectionReadOnly> users)
+    public CollectionUserUpdateUsersQuery(Guid collectionId, IEnumerable<CollectionAccessSelection> users)
     {
         Insert = new CollectionUserUpdateUsersInsertQuery(collectionId, users);
         Update = new CollectionUserUpdateUsersUpdateQuery(collectionId, users);
@@ -21,9 +21,9 @@ public class CollectionUserUpdateUsersQuery
 public class CollectionUserUpdateUsersInsertQuery : IQuery<OrganizationUser>
 {
     private readonly Guid _collectionId;
-    private readonly IEnumerable<SelectionReadOnly> _users;
+    private readonly IEnumerable<CollectionAccessSelection> _users;
 
-    public CollectionUserUpdateUsersInsertQuery(Guid collectionId, IEnumerable<SelectionReadOnly> users)
+    public CollectionUserUpdateUsersInsertQuery(Guid collectionId, IEnumerable<CollectionAccessSelection> users)
     {
         _collectionId = collectionId;
         _users = users;
@@ -60,9 +60,9 @@ public class CollectionUserUpdateUsersInsertQuery : IQuery<OrganizationUser>
 public class CollectionUserUpdateUsersUpdateQuery : IQuery<CollectionUser>
 {
     private readonly Guid _collectionId;
-    private readonly IEnumerable<SelectionReadOnly> _users;
+    private readonly IEnumerable<CollectionAccessSelection> _users;
 
-    public CollectionUserUpdateUsersUpdateQuery(Guid collectionId, IEnumerable<SelectionReadOnly> users)
+    public CollectionUserUpdateUsersUpdateQuery(Guid collectionId, IEnumerable<CollectionAccessSelection> users)
     {
         _collectionId = collectionId;
         _users = users;
@@ -96,9 +96,9 @@ public class CollectionUserUpdateUsersUpdateQuery : IQuery<CollectionUser>
 public class CollectionUserUpdateUsersDeleteQuery : IQuery<CollectionUser>
 {
     private readonly Guid _collectionId;
-    private readonly IEnumerable<SelectionReadOnly> _users;
+    private readonly IEnumerable<CollectionAccessSelection> _users;
 
-    public CollectionUserUpdateUsersDeleteQuery(Guid collectionId, IEnumerable<SelectionReadOnly> users)
+    public CollectionUserUpdateUsersDeleteQuery(Guid collectionId, IEnumerable<CollectionAccessSelection> users)
     {
         _collectionId = collectionId;
         _users = users;

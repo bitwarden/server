@@ -34,7 +34,7 @@ public class GroupServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task SaveAsync_DefaultGroupIdAndCollections_CreatesGroupInRepository(Group group, Organization organization, List<SelectionReadOnly> collections, SutProvider<GroupService> sutProvider)
+    public async Task SaveAsync_DefaultGroupIdAndCollections_CreatesGroupInRepository(Group group, Organization organization, List<CollectionAccessSelection> collections, SutProvider<GroupService> sutProvider)
     {
         group.Id = default(Guid);
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
@@ -51,7 +51,7 @@ public class GroupServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task SaveAsync_NonDefaultGroupId_ReplaceGroupInRepository(Group group, Organization organization, List<SelectionReadOnly> collections, SutProvider<GroupService> sutProvider)
+    public async Task SaveAsync_NonDefaultGroupId_ReplaceGroupInRepository(Group group, Organization organization, List<CollectionAccessSelection> collections, SutProvider<GroupService> sutProvider)
     {
         organization.UseGroups = true;
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
