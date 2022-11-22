@@ -71,12 +71,7 @@ public static class OrganizationServiceCollectionExtensions
     private static void AddOrganizationLicenseQueries(this IServiceCollection services, IGlobalSettings globalSettings)
     {
         services.AddScoped<IGetOrganizationLicenseQuery, GetOrganizationLicenseQuery>();
-
-        // TODO: should only be required for self hosted. This means moving to a separate controller
-        // if (globalSettings.SelfHosted)
-        // {
         services.AddScoped<ISelfHostedGetOrganizationLicenseFromCloudQuery, SelfHostedSelfHostedGetOrganizationLicenseFromCloudQuery>();
-        // }
     }
 
     private static void AddTokenizers(this IServiceCollection services)

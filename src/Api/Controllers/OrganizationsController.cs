@@ -39,8 +39,6 @@ public class OrganizationsController : Controller
     private readonly IOrganizationApiKeyRepository _organizationApiKeyRepository;
     private readonly IGetOrganizationLicenseQuery _getOrganizationLicenseQuery;
     private readonly GlobalSettings _globalSettings;
-    private readonly IOrganizationConnectionRepository _organizationConnectionRepository;
-    private readonly ISelfHostedGetOrganizationLicenseFromCloudQuery _selfHostedGetOrganizationLicenseFromCloudQuery;
 
     public OrganizationsController(
         IOrganizationRepository organizationRepository,
@@ -56,9 +54,7 @@ public class OrganizationsController : Controller
         IRotateOrganizationApiKeyCommand rotateOrganizationApiKeyCommand,
         IOrganizationApiKeyRepository organizationApiKeyRepository,
         IGetOrganizationLicenseQuery getOrganizationLicenseQuery,
-        GlobalSettings globalSettings,
-        IOrganizationConnectionRepository organizationConnectionRepository,
-        ISelfHostedGetOrganizationLicenseFromCloudQuery selfHostedGetOrganizationLicenseFromCloudQuery)
+        GlobalSettings globalSettings)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -74,8 +70,6 @@ public class OrganizationsController : Controller
         _organizationApiKeyRepository = organizationApiKeyRepository;
         _getOrganizationLicenseQuery = getOrganizationLicenseQuery;
         _globalSettings = globalSettings;
-        _organizationConnectionRepository = organizationConnectionRepository;
-        _selfHostedGetOrganizationLicenseFromCloudQuery = selfHostedGetOrganizationLicenseFromCloudQuery;
     }
 
     [HttpGet("{id}")]
@@ -223,6 +217,7 @@ public class OrganizationsController : Controller
         return new OrganizationResponseModel(result.Item1);
     }
 
+    // TODO: move to SelfHostedOrganizationLicensesController
     [HttpPost("license")]
     [SelfHosted(SelfHostedOnly = true)]
     public async Task<OrganizationResponseModel> PostLicense(OrganizationCreateLicenseRequestModel model)
@@ -456,32 +451,7 @@ public class OrganizationsController : Controller
         }
     }
 
-    // TODO: extract to new controller? Organised around licenses or selfHosted organizations? but cf. existing LicensesController
-    [HttpPost("{id}/license/sync")]
-    [SelfHosted(SelfHostedOnly = true)]
-    public async Task SyncLicenseAsync(string id)
-    {
-        var orgIdGuid = new Guid(id);
-        if (!await _currentContext.OrganizationOwner(orgIdGuid))
-        {
-            throw new NotFoundException();
-        }
-
-        var billingSyncConnection =
-            (await _organizationConnectionRepository.GetByOrganizationIdTypeAsync(orgIdGuid,
-                OrganizationConnectionType.CloudBillingSync)).FirstOrDefault();
-        if (billingSyncConnection == null)
-        {
-            throw new NotFoundException("Unable to get Cloud Billing Sync connection");
-        }
-
-        var license =
-            await _selfHostedGetOrganizationLicenseFromCloudQuery.GetLicenseAsync(orgIdGuid, billingSyncConnection);
-
-        // TODO: use new command here instead
-        await _organizationService.UpdateLicenseAsync(orgIdGuid, license);
-    }
-
+    // TODO: move to SelfHostedOrganizationLicensesController
     [HttpPost("{id}/license")]
     [SelfHosted(SelfHostedOnly = true)]
     public async Task PostLicense(string id, LicenseRequestModel model)
