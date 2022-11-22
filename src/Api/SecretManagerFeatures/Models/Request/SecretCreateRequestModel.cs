@@ -25,9 +25,9 @@ public class SecretCreateRequestModel
         return new Secret()
         {
             OrganizationId = organizationId,
-            Key = this.Key,
-            Value = this.Value,
-            Note = this.Note,
+            Key = Key,
+            Value = Value,
+            Note = Note,
             DeletedDate = null,
         };
     }

@@ -8,7 +8,7 @@ using Bit.Test.Common.Helpers;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Commercial.Core.Test.SecretManagerFeatures.Secrets;
+namespace Bit.Commercial.Core.Test.SecretManagerFeatures.ServiceAccounts;
 
 [SutProviderCustomize]
 public class UpdateServiceAccountCommandTests

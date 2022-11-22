@@ -15,7 +15,7 @@ public class ServiceAccountCreateRequestModel
         return new ServiceAccount()
         {
             OrganizationId = organizationId,
-            Name = this.Name,
+            Name = Name,
         };
     }
 }
