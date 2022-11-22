@@ -15,7 +15,6 @@ public class VerifyAuthRequestCommand : IVerifyAuthRequestCommand
 
     public async Task<bool> VerifyAuthRequestAsync(Guid authRequestId, string accessCode)
     {
-        
         var authRequest = await _authRequestRepository.GetByIdAsync(authRequestId);
         if (authRequest == null || !CoreHelpers.FixedTimeEquals(authRequest.AccessCode, accessCode))
         {
