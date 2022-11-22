@@ -27,7 +27,7 @@ public static class OrganizationServiceCollectionExtensions
         services.AddOrganizationConnectionCommands();
         services.AddOrganizationSponsorshipCommands(globalSettings);
         services.AddOrganizationApiKeyCommands();
-        services.AddOrganizationLicenseQueries();
+        services.AddOrganizationLicenseQueries(globalSettings);
     }
 
     private static void AddOrganizationConnectionCommands(this IServiceCollection services)
@@ -68,9 +68,15 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IRotateOrganizationApiKeyCommand, RotateOrganizationApiKeyCommand>();
     }
 
-    private static void AddOrganizationLicenseQueries(this IServiceCollection services)
+    private static void AddOrganizationLicenseQueries(this IServiceCollection services, IGlobalSettings globalSettings)
     {
         services.AddScoped<IGetOrganizationLicenseQuery, GetOrganizationLicenseQuery>();
+
+        // TODO: should only be required for self hosted. This means moving to a separate controller
+        // if (globalSettings.SelfHosted)
+        // {
+        services.AddScoped<IGetOrganizationLicenseFromCloudQuery, GetOrganizationLicenseFromCloudFromCloudQuery>();
+        // }
     }
 
     private static void AddTokenizers(this IServiceCollection services)

@@ -39,6 +39,8 @@ public class OrganizationsController : Controller
     private readonly IOrganizationApiKeyRepository _organizationApiKeyRepository;
     private readonly IGetOrganizationLicenseQuery _getOrganizationLicenseQuery;
     private readonly GlobalSettings _globalSettings;
+    private readonly IOrganizationConnectionRepository _organizationConnectionRepository;
+    private readonly IGetOrganizationLicenseFromCloudQuery _getOrganizationLicenseFromCloudQuery;
 
     public OrganizationsController(
         IOrganizationRepository organizationRepository,
@@ -54,7 +56,9 @@ public class OrganizationsController : Controller
         IRotateOrganizationApiKeyCommand rotateOrganizationApiKeyCommand,
         IOrganizationApiKeyRepository organizationApiKeyRepository,
         IGetOrganizationLicenseQuery getOrganizationLicenseQuery,
-        GlobalSettings globalSettings)
+        GlobalSettings globalSettings,
+        IOrganizationConnectionRepository organizationConnectionRepository,
+        IGetOrganizationLicenseFromCloudQuery getOrganizationLicenseFromCloudQuery)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -70,6 +74,8 @@ public class OrganizationsController : Controller
         _organizationApiKeyRepository = organizationApiKeyRepository;
         _getOrganizationLicenseQuery = getOrganizationLicenseQuery;
         _globalSettings = globalSettings;
+        _organizationConnectionRepository = organizationConnectionRepository;
+        _getOrganizationLicenseFromCloudQuery = getOrganizationLicenseFromCloudQuery;
     }
 
     [HttpGet("{id}")]
@@ -448,6 +454,32 @@ public class OrganizationsController : Controller
         {
             await _organizationService.DeleteAsync(organization);
         }
+    }
+
+    // TODO: extract to new controller? Organised around licenses or selfHosted organizations? but cf. existing LicensesController
+    [HttpPost("{id}/license/sync")]
+    [SelfHosted(SelfHostedOnly = true)]
+    public async Task SyncLicenseAsync(string id)
+    {
+        var orgIdGuid = new Guid(id);
+        if (!await _currentContext.OrganizationOwner(orgIdGuid))
+        {
+            throw new NotFoundException();
+        }
+
+        var billingSyncConnection =
+            (await _organizationConnectionRepository.GetByOrganizationIdTypeAsync(orgIdGuid,
+                OrganizationConnectionType.CloudBillingSync)).FirstOrDefault();
+        if (billingSyncConnection == null)
+        {
+            throw new NotFoundException("Unable to get Cloud Billing Sync connection");
+        }
+
+        var license =
+            await _getOrganizationLicenseFromCloudQuery.GetLicenseAsync(orgIdGuid, billingSyncConnection);
+
+        // TODO: use new command here instead
+        await _organizationService.UpdateLicenseAsync(orgIdGuid, license);
     }
 
     [HttpPost("{id}/license")]
