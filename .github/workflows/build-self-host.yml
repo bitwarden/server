@@ -56,6 +56,12 @@ jobs:
           push: true
           tags: bitwardenqa.azurecr.io/self-host:${{ steps.tag.outputs.image_tag }}
 
+      - name: Pull new image
+        env:
+          PROJECT_NAME: self-host
+          IMAGE_TAG: ${{ steps.tag.outputs.image_tag }}
+        run: docker pull bitwardenqa.azurecr.io/${PROJECT_NAME}:${IMAGE_TAG}
+
       - name: TEST STEP
         run: docker image ls
 
@@ -65,8 +71,7 @@ jobs:
       ########## DockerHub ##########
       - name: Login to Azure - Prod Subscription
         if: |
-          false
-          && (github.ref == 'refs/heads/master' ||
+          (github.ref == 'refs/heads/master' ||
             github.ref == 'refs/heads/rc' ||
             github.ref == 'refs/heads/hotfix-rc')
         uses: Azure/login@1f63701bf3e6892515f1b7ce2d2bf1708b46beaf
@@ -75,8 +80,7 @@ jobs:
 
       - name: Retrieve secrets
         if: |
-          false
-          && (github.ref == 'refs/heads/master' ||
+          (github.ref == 'refs/heads/master' ||
             github.ref == 'refs/heads/rc' ||
             github.ref == 'refs/heads/hotfix-rc')
         id: retrieve-secrets
@@ -90,8 +94,7 @@ jobs:
 
       - name: Log into Docker
         if: |
-          false
-          && (github.ref == 'refs/heads/master' ||
+          (github.ref == 'refs/heads/master' ||
             github.ref == 'refs/heads/rc' ||
             github.ref == 'refs/heads/hotfix-rc')
         env:
@@ -115,29 +118,22 @@ jobs:
           echo "DOCKER_CONTENT_TRUST=1" >> $GITHUB_ENV
           echo "DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE=$DCT_REPO_PASSPHRASE" >> $GITHUB_ENV
 
-      - name: Tag and Push RC to Docker Hub
+      - name: Tag and Push image to Docker Hub
         if: |
-          false
-          && (github.ref == 'refs/heads/master' ||
+          (github.ref == 'refs/heads/master' ||
             github.ref == 'refs/heads/rc' ||
             github.ref == 'refs/heads/hotfix-rc')
         env:
           PROJECT_NAME: self-host
-          REGISTRY: bitwarden
+          IMAGE_TAG: ${{ steps.tag.outputs.image_tag }}
         run: |
-          IMAGE_TAG=$(echo "${GITHUB_REF:11}" | sed "s#/#-#g")  # slash safe branch name
-          if [[ "$IMAGE_TAG" == "master" ]]; then
-            IMAGE_TAG=dev
-          fi
-
-          docker tag $PROJECT_NAME \
-            $REGISTRY/$PROJECT_NAME:$IMAGE_TAG
-          docker push $REGISTRY/$PROJECT_NAME:$IMAGE_TAG
+          docker tag bitwardenqa.azurecr.io/${PROJECT_NAME}:${IMAGE_TAG} \
+            bitwarden/${PROJECT_NAME}:${IMAGE_TAG}
+          docker push bitwarden/${PROJECT_NAME}:${IMAGE_TAG}
 
       - name: Log out of Docker and disable Docker Notary
         if: |
-          false
-          && (github.ref == 'refs/heads/master' ||
+          (github.ref == 'refs/heads/master' ||
             github.ref == 'refs/heads/rc' ||
             github.ref == 'refs/heads/hotfix-rc')
         run: |
