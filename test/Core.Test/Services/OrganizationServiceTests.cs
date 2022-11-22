@@ -281,7 +281,7 @@ public class OrganizationServiceTests
          InviteeUserType = OrganizationUserType.Custom,
          InvitorUserType = OrganizationUserType.Admin
      ), BitAutoData]
-    public async Task InviteUser_CustomType_UseCustomPermissionsFalse_Throws(Organization organization, OrganizationUserInvite invite,
+    public async Task InviteUser_WithCustomType_WhenUseCustomPermissionsIsFalse_Throws(Organization organization, OrganizationUserInvite invite,
         OrganizationUser invitor, SutProvider<OrganizationService> sutProvider)
     {
         organization.UseCustomPermissions = false;
@@ -308,7 +308,7 @@ public class OrganizationServiceTests
          InviteeUserType = OrganizationUserType.Custom,
          InvitorUserType = OrganizationUserType.Admin
      ), BitAutoData]
-    public async Task InviteUser_CustomType_UseCustomPermissionsTrue_Passes(Organization organization, OrganizationUserInvite invite,
+    public async Task InviteUser_WithCustomType_WhenUseCustomPermissionsIsTrue_Passes(Organization organization, OrganizationUserInvite invite,
         OrganizationUser invitor, SutProvider<OrganizationService> sutProvider)
     {
         organization.UseCustomPermissions = true;
@@ -333,7 +333,7 @@ public class OrganizationServiceTests
     [BitAutoData(OrganizationUserType.Manager)]
     [BitAutoData(OrganizationUserType.Owner)]
     [BitAutoData(OrganizationUserType.User)]
-    public async Task InviteUser_TypesOtherThanCustom_UseCustomPermissionsFalse_Passes(OrganizationUserType inviteUserType, Organization organization, OrganizationUserInvite invite,
+    public async Task InviteUser_WithNonCustomType_WhenUseCustomPermissionsIsFalse_Passes(OrganizationUserType inviteUserType, Organization organization, OrganizationUserInvite invite,
         OrganizationUser invitor, SutProvider<OrganizationService> sutProvider)
     {
         organization.UseCustomPermissions = false;
@@ -545,7 +545,7 @@ public class OrganizationServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task SaveUser_CustomType_UseCustomPermissionsFalse_Throws(
+    public async Task SaveUser_WithCustomType_WhenUseCustomPermissionsIsFalse_Throws(
         Organization organization,
         OrganizationUser oldUserData,
         [OrganizationUser(type: OrganizationUserType.Custom)] OrganizationUser newUserData,
@@ -579,7 +579,7 @@ public class OrganizationServiceTests
     [BitAutoData(OrganizationUserType.Manager)]
     [BitAutoData(OrganizationUserType.Owner)]
     [BitAutoData(OrganizationUserType.User)]
-    public async Task SaveUser_TypesOtherThanCustom_UseCustomPermissionsFalse_Passes(
+    public async Task SaveUser_WithNonCustomType_WhenUseCustomPermissionsIsFalse_Passes(
         OrganizationUserType newUserType,
         Organization organization,
         OrganizationUser oldUserData,
@@ -609,7 +609,7 @@ public class OrganizationServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task SaveUser_CustomType_UseCustomPermissionsTrue_Passes(
+    public async Task SaveUser_WithCustomType_WhenUseCustomPermissionsIsTrue_Passes(
         Organization organization,
         OrganizationUser oldUserData,
         [OrganizationUser(type: OrganizationUserType.Custom)] OrganizationUser newUserData,
