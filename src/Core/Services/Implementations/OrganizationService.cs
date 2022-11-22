@@ -2290,7 +2290,9 @@ public class OrganizationService : IOrganizationService
     private async Task ValidateOrganizationCustomPermissionsEnabledAsync(Guid organizationId, OrganizationUserType newType)
     {
         if (newType != OrganizationUserType.Custom)
+        {
             return;
+        }
 
         var organization = await _organizationRepository.GetByIdAsync(organizationId);
         if (organization == null)
