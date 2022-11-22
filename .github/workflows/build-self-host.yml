@@ -62,9 +62,6 @@ jobs:
           IMAGE_TAG: ${{ steps.tag.outputs.image_tag }}
         run: docker pull bitwardenqa.azurecr.io/${PROJECT_NAME}:${IMAGE_TAG}
 
-      - name: TEST STEP
-        run: docker image ls
-
       - name: Log out of Docker
         run: docker logout
 
