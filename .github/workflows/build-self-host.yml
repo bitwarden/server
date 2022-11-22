@@ -56,6 +56,9 @@ jobs:
           push: true
           tags: bitwardenqa.azurecr.io/self-host:${{ steps.tag.outputs.image_tag }}
 
+      - name: TEST STEP
+        run: docker image ls
+
       - name: Log out of Docker
         run: docker logout
 
