@@ -115,7 +115,7 @@ jobs:
             linux/arm/v7,
             linux/arm64/v8
           push: true
-          tags: ${{ steps.tag-list.outputs.tags}}
+          tags: ${{ steps.tag-list.outputs.tags }}
 
       - name: Log out of Docker and disable Docker Notary
         if: |
