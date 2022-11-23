@@ -20,7 +20,7 @@ jobs:
 
       - name: Check Branch to Publish
         env:
-          PUBLISH_BRANCHES: "master,rc,hotfix-rc,rc-2022.12,patch/update-self-host-release-branches"
+          PUBLISH_BRANCHES: "master,rc,hotfix-rc,rc-2022.12"
         id: publish-branch-check
         run: |
           IFS="," read -a publish_branches <<< $PUBLISH_BRANCHES
@@ -49,7 +49,7 @@ jobs:
 
       - name: TEST PUBSLISH BRANCH CHECK
         if: ${{ steps.publish-branch-check.outputs.is_publish_branch }} == "true"
-        run: echo "publish branch check works!"
+        run: echo "publish branch check doesn't works!"
 
       - name: Login to Azure - Prod Subscription
         if: |
