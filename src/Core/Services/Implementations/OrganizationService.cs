@@ -1159,7 +1159,7 @@ public class OrganizationService : IOrganizationService
 
 
         var orgUsers = new List<OrganizationUser>();
-        var limitedCollectionOrgUsers = new List<(OrganizationUser, IEnumerable<SelectionReadOnly>)>();
+        var limitedCollectionOrgUsers = new List<(OrganizationUser, IEnumerable<CollectionAccessSelection>)>();
         var orgUserInvitedCount = 0;
         var exceptions = new List<Exception>();
         var events = new List<(OrganizationUser, EventType, DateTime?)>();
@@ -1612,7 +1612,7 @@ public class OrganizationService : IOrganizationService
     }
 
     public async Task SaveUserAsync(OrganizationUser user, Guid? savingUserId,
-        IEnumerable<SelectionReadOnly> collections)
+        IEnumerable<CollectionAccessSelection> collections)
     {
         if (user.Id.Equals(default(Guid)))
         {
@@ -1639,7 +1639,7 @@ public class OrganizationService : IOrganizationService
         if (user.AccessAll)
         {
             // We don't need any collections if we're flagged to have all access.
-            collections = new List<SelectionReadOnly>();
+            collections = new List<CollectionAccessSelection>();
         }
         await _organizationUserRepository.ReplaceAsync(user, collections);
         await _eventService.LogOrganizationUserEventAsync(user, EventType.OrganizationUser_Updated);
@@ -1850,7 +1850,7 @@ public class OrganizationService : IOrganizationService
     }
 
     public async Task<OrganizationUser> InviteUserAsync(Guid organizationId, Guid? invitingUserId, string email,
-        OrganizationUserType type, bool accessAll, string externalId, IEnumerable<SelectionReadOnly> collections)
+        OrganizationUserType type, bool accessAll, string externalId, IEnumerable<CollectionAccessSelection> collections)
     {
         var invite = new OrganizationUserInvite()
         {
@@ -1970,7 +1970,7 @@ public class OrganizationService : IOrganizationService
                         Emails = new List<string> { user.Email },
                         Type = OrganizationUserType.User,
                         AccessAll = false,
-                        Collections = new List<SelectionReadOnly>(),
+                        Collections = new List<CollectionAccessSelection>(),
                     };
                     userInvites.Add((invite, user.ExternalId));
                 }

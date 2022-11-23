@@ -5,6 +5,6 @@ namespace Bit.Core.Services;
 
 public interface IGroupService
 {
-    Task SaveAsync(Group group, IEnumerable<SelectionReadOnly> collections = null, IEnumerable<Guid> userIds = null);
+    Task SaveAsync(Group group, IEnumerable<CollectionAccessSelection> collections = null, IEnumerable<Guid> userIds = null);
     Task DeleteUserAsync(Group group, Guid organizationUserId);
 }

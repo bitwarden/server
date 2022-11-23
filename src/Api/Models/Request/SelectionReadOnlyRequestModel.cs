@@ -10,9 +10,9 @@ public class SelectionReadOnlyRequestModel
     public bool ReadOnly { get; set; }
     public bool HidePasswords { get; set; }
 
-    public SelectionReadOnly ToSelectionReadOnly()
+    public CollectionAccessSelection ToSelectionReadOnly()
     {
-        return new SelectionReadOnly
+        return new CollectionAccessSelection
         {
             Id = new Guid(Id),
             ReadOnly = ReadOnly,

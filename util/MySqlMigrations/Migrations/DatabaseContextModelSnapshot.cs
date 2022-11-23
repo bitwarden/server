@@ -28,6 +28,9 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasMaxLength(25)
                         .HasColumnType("varchar(25)");
 
+                    b.Property<bool?>("Approved")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<DateTime?>("AuthenticationDate")
                         .HasColumnType("datetime(6)");
 

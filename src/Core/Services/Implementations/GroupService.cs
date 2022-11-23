@@ -29,7 +29,7 @@ public class GroupService : IGroupService
         _referenceEventService = referenceEventService;
     }
 
-    public async Task SaveAsync(Group group, IEnumerable<SelectionReadOnly> collections = null, IEnumerable<Guid> userIds = null)
+    public async Task SaveAsync(Group group, IEnumerable<CollectionAccessSelection> collections = null, IEnumerable<Guid> userIds = null)
     {
         var org = await _organizationRepository.GetByIdAsync(group.OrganizationId);
         if (org == null)

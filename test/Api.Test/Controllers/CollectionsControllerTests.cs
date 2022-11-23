@@ -38,7 +38,7 @@ public class CollectionsControllerTests
 
         await sutProvider.GetDependency<ICollectionService>()
             .Received(1)
-            .SaveAsync(Arg.Any<Collection>(), Arg.Any<IEnumerable<SelectionReadOnly>>(), null);
+            .SaveAsync(Arg.Any<Collection>(), Arg.Any<IEnumerable<CollectionAccessSelection>>(), null);
     }
 
     [Theory, BitAutoData]

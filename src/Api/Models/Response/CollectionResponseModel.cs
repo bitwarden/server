@@ -39,13 +39,15 @@ public class CollectionDetailsResponseModel : CollectionResponseModel
     public bool HidePasswords { get; set; }
 }
 
-public class CollectionGroupDetailsResponseModel : CollectionResponseModel
+public class CollectionAccessDetailsResponseModel : CollectionResponseModel
 {
-    public CollectionGroupDetailsResponseModel(Collection collection, IEnumerable<SelectionReadOnly> groups)
-        : base(collection, "collectionGroupDetails")
+    public CollectionAccessDetailsResponseModel(Collection collection, IEnumerable<CollectionAccessSelection> groups, IEnumerable<CollectionAccessSelection> users)
+        : base(collection, "collectionAccessDetails")
     {
         Groups = groups.Select(g => new SelectionReadOnlyResponseModel(g));
+        Users = users.Select(g => new SelectionReadOnlyResponseModel(g));
     }
 
     public IEnumerable<SelectionReadOnlyResponseModel> Groups { get; set; }
+    public IEnumerable<SelectionReadOnlyResponseModel> Users { get; set; }
 }

@@ -117,6 +117,7 @@
     <Build Include="dbo\Stored Procedures\CollectionCipher_UpdateCollections.sql" />
     <Build Include="dbo\Stored Procedures\CollectionCipher_UpdateCollectionsAdmin.sql" />
     <Build Include="dbo\Stored Procedures\CollectionCipher_UpdateCollectionsForCiphers.sql" />
+    <Build Include="dbo\Stored Procedures\CollectionGroup_ReadByCollectionId.sql" />
     <Build Include="dbo\Stored Procedures\CollectionGroup_ReadByOrganizationId.sql" />
     <Build Include="dbo\Stored Procedures\CollectionUser_Delete.sql" />
     <Build Include="dbo\Stored Procedures\CollectionUser_ReadByCollectionId.sql" />
@@ -129,6 +130,8 @@
     <Build Include="dbo\Stored Procedures\Collection_ReadByOrganizationId.sql" />
     <Build Include="dbo\Stored Procedures\Collection_ReadByUserId.sql" />
     <Build Include="dbo\Stored Procedures\Collection_ReadCountByOrganizationId.sql" />
+    <Build Include="dbo\Stored Procedures\Collection_ReadWithGroupsAndUsersById.sql" />
+    <Build Include="dbo\Stored Procedures\Collection_ReadWithGroupsAndUsersByIdUserId.sql" />
     <Build Include="dbo\Stored Procedures\Collection_ReadWithGroupsById.sql" />
     <Build Include="dbo\Stored Procedures\Collection_ReadWithGroupsByIdUserId.sql" />
     <Build Include="dbo\Stored Procedures\Collection_Update.sql" />

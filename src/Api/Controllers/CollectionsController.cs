@@ -44,7 +44,7 @@ public class CollectionsController : Controller
     }
 
     [HttpGet("{id}/details")]
-    public async Task<CollectionGroupDetailsResponseModel> GetDetails(Guid orgId, Guid id)
+    public async Task<CollectionAccessDetailsResponseModel> GetDetails(Guid orgId, Guid id)
     {
         if (!await ViewAtLeastOneCollectionAsync(orgId) && !await _currentContext.ManageUsers(orgId))
         {
@@ -53,22 +53,22 @@ public class CollectionsController : Controller
 
         if (await _currentContext.ViewAllCollections(orgId))
         {
-            var collectionDetails = await _collectionRepository.GetByIdWithGroupsAsync(id);
-            if (collectionDetails?.Item1 == null || collectionDetails.Item1.OrganizationId != orgId)
+            (var collection, var access) = await _collectionRepository.GetByIdWithAccessAsync(id);
+            if (collection == null || collection.OrganizationId != orgId)
             {
                 throw new NotFoundException();
             }
-            return new CollectionGroupDetailsResponseModel(collectionDetails.Item1, collectionDetails.Item2);
+            return new CollectionAccessDetailsResponseModel(collection, access.Groups, access.Users);
         }
         else
         {
-            var collectionDetails = await _collectionRepository.GetByIdWithGroupsAsync(id,
+            (var collection, var access) = await _collectionRepository.GetByIdWithAccessAsync(id,
                 _currentContext.UserId.Value);
-            if (collectionDetails?.Item1 == null || collectionDetails.Item1.OrganizationId != orgId)
+            if (collection == null || collection.OrganizationId != orgId)
             {
                 throw new NotFoundException();
             }
-            return new CollectionGroupDetailsResponseModel(collectionDetails.Item1, collectionDetails.Item2);
+            return new CollectionAccessDetailsResponseModel(collection, access.Groups, access.Users);
         }
     }
 
@@ -110,11 +110,13 @@ public class CollectionsController : Controller
             throw new NotFoundException();
         }
 
+        var groups = model.Groups?.Select(g => g.ToSelectionReadOnly());
+        var users = model.Users?.Select(g => g.ToSelectionReadOnly());
+
         var assignUserToCollection = !(await _currentContext.EditAnyCollection(orgId)) &&
             await _currentContext.EditAssignedCollections(orgId);
 
-        await _collectionService.SaveAsync(collection, model.Groups?.Select(g => g.ToSelectionReadOnly()),
-            assignUserToCollection ? _currentContext.UserId : null);
+        await _collectionService.SaveAsync(collection, groups, users, assignUserToCollection ? _currentContext.UserId : null);
         return new CollectionResponseModel(collection);
     }
 
@@ -128,8 +130,9 @@ public class CollectionsController : Controller
         }
 
         var collection = await GetCollectionAsync(id, orgId);
-        await _collectionService.SaveAsync(model.ToCollection(collection),
-            model.Groups?.Select(g => g.ToSelectionReadOnly()));
+        var groups = model.Groups?.Select(g => g.ToSelectionReadOnly());
+        var users = model.Users?.Select(g => g.ToSelectionReadOnly());
+        await _collectionService.SaveAsync(model.ToCollection(collection), groups, users);
         return new CollectionResponseModel(collection);
     }
 

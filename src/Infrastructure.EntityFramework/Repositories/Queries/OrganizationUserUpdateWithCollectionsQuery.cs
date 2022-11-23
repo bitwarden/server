@@ -11,7 +11,7 @@ public class OrganizationUserUpdateWithCollectionsQuery
     public OrganizationUserUpdateWithCollectionsDeleteQuery Delete { get; set; }
 
     public OrganizationUserUpdateWithCollectionsQuery(OrganizationUser organizationUser,
-            IEnumerable<SelectionReadOnly> collections)
+            IEnumerable<CollectionAccessSelection> collections)
     {
         Insert = new OrganizationUserUpdateWithCollectionsInsertQuery(organizationUser, collections);
         Update = new OrganizationUserUpdateWithCollectionsUpdateQuery(organizationUser, collections);
@@ -22,9 +22,9 @@ public class OrganizationUserUpdateWithCollectionsQuery
 public class OrganizationUserUpdateWithCollectionsInsertQuery : IQuery<CollectionUser>
 {
     private readonly OrganizationUser _organizationUser;
-    private readonly IEnumerable<SelectionReadOnly> _collections;
+    private readonly IEnumerable<CollectionAccessSelection> _collections;
 
-    public OrganizationUserUpdateWithCollectionsInsertQuery(OrganizationUser organizationUser, IEnumerable<SelectionReadOnly> collections)
+    public OrganizationUserUpdateWithCollectionsInsertQuery(OrganizationUser organizationUser, IEnumerable<CollectionAccessSelection> collections)
     {
         _organizationUser = organizationUser;
         _collections = collections;
@@ -55,9 +55,9 @@ public class OrganizationUserUpdateWithCollectionsInsertQuery : IQuery<Collectio
 public class OrganizationUserUpdateWithCollectionsUpdateQuery : IQuery<CollectionUser>
 {
     private readonly OrganizationUser _organizationUser;
-    private readonly IEnumerable<SelectionReadOnly> _collections;
+    private readonly IEnumerable<CollectionAccessSelection> _collections;
 
-    public OrganizationUserUpdateWithCollectionsUpdateQuery(OrganizationUser organizationUser, IEnumerable<SelectionReadOnly> collections)
+    public OrganizationUserUpdateWithCollectionsUpdateQuery(OrganizationUser organizationUser, IEnumerable<CollectionAccessSelection> collections)
     {
         _organizationUser = organizationUser;
         _collections = collections;
@@ -86,9 +86,9 @@ public class OrganizationUserUpdateWithCollectionsUpdateQuery : IQuery<Collectio
 public class OrganizationUserUpdateWithCollectionsDeleteQuery : IQuery<CollectionUser>
 {
     private readonly OrganizationUser _organizationUser;
-    private readonly IEnumerable<SelectionReadOnly> _collections;
+    private readonly IEnumerable<CollectionAccessSelection> _collections;
 
-    public OrganizationUserUpdateWithCollectionsDeleteQuery(OrganizationUser organizationUser, IEnumerable<SelectionReadOnly> collections)
+    public OrganizationUserUpdateWithCollectionsDeleteQuery(OrganizationUser organizationUser, IEnumerable<CollectionAccessSelection> collections)
     {
         _organizationUser = organizationUser;
         _collections = collections;

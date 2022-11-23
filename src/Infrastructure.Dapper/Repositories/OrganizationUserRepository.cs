@@ -142,7 +142,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         }
     }
 
-    public async Task<Tuple<OrganizationUser, ICollection<SelectionReadOnly>>> GetByIdWithCollectionsAsync(Guid id)
+    public async Task<Tuple<OrganizationUser, ICollection<CollectionAccessSelection>>> GetByIdWithCollectionsAsync(Guid id)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
@@ -152,8 +152,8 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
                 commandType: CommandType.StoredProcedure);
 
             var user = (await results.ReadAsync<OrganizationUser>()).SingleOrDefault();
-            var collections = (await results.ReadAsync<SelectionReadOnly>()).ToList();
-            return new Tuple<OrganizationUser, ICollection<SelectionReadOnly>>(user, collections);
+            var collections = (await results.ReadAsync<CollectionAccessSelection>()).ToList();
+            return new Tuple<OrganizationUser, ICollection<CollectionAccessSelection>>(user, collections);
         }
     }
 
@@ -169,7 +169,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
             return results.SingleOrDefault();
         }
     }
-    public async Task<Tuple<OrganizationUserUserDetails, ICollection<SelectionReadOnly>>>
+    public async Task<Tuple<OrganizationUserUserDetails, ICollection<CollectionAccessSelection>>>
         GetDetailsByIdWithCollectionsAsync(Guid id)
     {
         using (var connection = new SqlConnection(ConnectionString))
@@ -180,8 +180,8 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
                 commandType: CommandType.StoredProcedure);
 
             var user = (await results.ReadAsync<OrganizationUserUserDetails>()).SingleOrDefault();
-            var collections = (await results.ReadAsync<SelectionReadOnly>()).ToList();
-            return new Tuple<OrganizationUserUserDetails, ICollection<SelectionReadOnly>>(user, collections);
+            var collections = (await results.ReadAsync<CollectionAccessSelection>()).ToList();
+            return new Tuple<OrganizationUserUserDetails, ICollection<CollectionAccessSelection>>(user, collections);
         }
     }
 
@@ -237,7 +237,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         }
     }
 
-    public async Task<Guid> CreateAsync(OrganizationUser obj, IEnumerable<SelectionReadOnly> collections)
+    public async Task<Guid> CreateAsync(OrganizationUser obj, IEnumerable<CollectionAccessSelection> collections)
     {
         obj.SetNewId();
         var objWithCollections = JsonSerializer.Deserialize<OrganizationUserWithCollections>(
@@ -255,7 +255,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         return obj.Id;
     }
 
-    public async Task ReplaceAsync(OrganizationUser obj, IEnumerable<SelectionReadOnly> collections)
+    public async Task ReplaceAsync(OrganizationUser obj, IEnumerable<CollectionAccessSelection> collections)
     {
         var objWithCollections = JsonSerializer.Deserialize<OrganizationUserWithCollections>(
             JsonSerializer.Serialize(obj));
