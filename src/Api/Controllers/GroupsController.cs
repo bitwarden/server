@@ -2,6 +2,7 @@
 using Bit.Api.Models.Response;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
+using Bit.Core.OrganizationFeatures.Groups;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -15,15 +16,18 @@ public class GroupsController : Controller
 {
     private readonly IGroupRepository _groupRepository;
     private readonly IGroupService _groupService;
+    private readonly IDeleteGroupCommand _deleteGroupCommand;
     private readonly ICurrentContext _currentContext;
 
     public GroupsController(
         IGroupRepository groupRepository,
         IGroupService groupService,
+        IDeleteGroupCommand deleteGroupCommand,
         ICurrentContext currentContext)
     {
         _groupRepository = groupRepository;
         _groupService = groupService;
+        _deleteGroupCommand = deleteGroupCommand;
         _currentContext = currentContext;
     }
 
@@ -52,7 +56,7 @@ public class GroupsController : Controller
     }
 
     [HttpGet("")]
-    public async Task<ListResponseModel<GroupResponseModel>> Get(string orgId)
+    public async Task<ListResponseModel<GroupDetailsResponseModel>> Get(string orgId)
     {
         var orgIdGuid = new Guid(orgId);
         var canAccess = await _currentContext.ManageGroups(orgIdGuid) ||
@@ -65,9 +69,9 @@ public class GroupsController : Controller
             throw new NotFoundException();
         }
 
-        var groups = await _groupRepository.GetManyByOrganizationIdAsync(orgIdGuid);
-        var responses = groups.Select(g => new GroupResponseModel(g));
-        return new ListResponseModel<GroupResponseModel>(responses);
+        var groups = await _groupRepository.GetManyWithCollectionsByOrganizationIdAsync(orgIdGuid);
+        var responses = groups.Select(g => new GroupDetailsResponseModel(g.Item1, g.Item2));
+        return new ListResponseModel<GroupDetailsResponseModel>(responses);
     }
 
     [HttpGet("{id}/users")]
@@ -94,7 +98,7 @@ public class GroupsController : Controller
         }
 
         var group = model.ToGroup(orgIdGuid);
-        await _groupService.SaveAsync(group, model.Collections?.Select(c => c.ToSelectionReadOnly()));
+        await _groupService.SaveAsync(group, model.Collections?.Select(c => c.ToSelectionReadOnly()), model.Users);
         return new GroupResponseModel(group);
     }
 
@@ -108,7 +112,7 @@ public class GroupsController : Controller
             throw new NotFoundException();
         }
 
-        await _groupService.SaveAsync(model.ToGroup(group), model.Collections?.Select(c => c.ToSelectionReadOnly()));
+        await _groupService.SaveAsync(model.ToGroup(group), model.Collections?.Select(c => c.ToSelectionReadOnly()), model.Users);
         return new GroupResponseModel(group);
     }
 
@@ -133,7 +137,24 @@ public class GroupsController : Controller
             throw new NotFoundException();
         }
 
-        await _groupService.DeleteAsync(group);
+        await _deleteGroupCommand.DeleteAsync(group);
+    }
+
+    [HttpDelete("")]
+    [HttpPost("delete")]
+    public async Task BulkDelete([FromBody] GroupBulkRequestModel model)
+    {
+        var groups = await _groupRepository.GetManyByManyIds(model.Ids);
+
+        foreach (var group in groups)
+        {
+            if (!await _currentContext.ManageGroups(group.OrganizationId))
+            {
+                throw new NotFoundException();
+            }
+        }
+
+        await _deleteGroupCommand.DeleteManyAsync(groups);
     }
 
     [HttpDelete("{id}/user/{orgUserId}")]

@@ -31,6 +31,11 @@ public class NoopEventService : IEventService
         return Task.FromResult(0);
     }
 
+    public Task LogGroupEventsAsync(IEnumerable<(Group group, EventType type, DateTime? date)> events)
+    {
+        return Task.FromResult(0);
+    }
+
     public Task LogOrganizationEventAsync(Organization organization, EventType type, DateTime? date = null)
     {
         return Task.FromResult(0);

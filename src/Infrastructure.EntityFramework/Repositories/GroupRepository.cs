@@ -84,6 +84,49 @@ public class GroupRepository : Repository<Core.Entities.Group, Group, Guid>, IGr
         }
     }
 
+    public async Task<ICollection<Tuple<Core.Entities.Group, ICollection<CollectionAccessSelection>>>>
+        GetManyWithCollectionsByOrganizationIdAsync(Guid organizationId)
+    {
+        var groups = await GetManyByOrganizationIdAsync(organizationId);
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var query = await (
+                from cg in dbContext.CollectionGroups
+                where cg.Group.OrganizationId == organizationId
+                select cg).ToListAsync();
+
+            var collections = query.GroupBy(c => c.GroupId).ToList();
+
+            return groups.Select(group =>
+                new Tuple<Core.Entities.Group, ICollection<CollectionAccessSelection>>(
+                    group,
+                    collections
+                        .FirstOrDefault(c => c.Key == group.Id)?
+                        .Select(c => new CollectionAccessSelection
+                        {
+                            Id = c.CollectionId,
+                            HidePasswords = c.HidePasswords,
+                            ReadOnly = c.ReadOnly
+                        }
+                        ).ToList() ?? new List<CollectionAccessSelection>())
+            ).ToList();
+        }
+    }
+
+    public async Task<ICollection<Core.Entities.Group>> GetManyByManyIds(IEnumerable<Guid> groupIds)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var query = from g in dbContext.Groups
+                        where groupIds.Contains(g.Id)
+                        select g;
+            var groups = await query.ToListAsync();
+            return Mapper.Map<List<Core.Entities.Group>>(groups);
+        }
+    }
+
     public async Task<ICollection<Core.Entities.GroupUser>> GetManyGroupUsersByOrganizationIdAsync(Guid organizationId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
@@ -162,6 +205,25 @@ public class GroupRepository : Repository<Core.Entities.Group, Group, Guid>, IGr
             dbContext.RemoveRange(delete);
             await dbContext.SaveChangesAsync();
             await UserBumpAccountRevisionDateByOrganizationId(orgId);
+        }
+    }
+
+    public async Task DeleteManyAsync(IEnumerable<Guid> groupIds)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var entities = await dbContext.Groups
+                .Where(g => groupIds.Contains(g.Id))
+                .ToListAsync();
+
+            dbContext.Groups.RemoveRange(entities);
+            await dbContext.SaveChangesAsync();
+
+            foreach (var group in entities.GroupBy(g => g.Organization.Id))
+            {
+                await UserBumpAccountRevisionDateByOrganizationId(group.Key);
+            }
         }
     }
 }

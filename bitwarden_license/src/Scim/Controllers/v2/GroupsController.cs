@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using Bit.Core.Entities;
+using Bit.Core.OrganizationFeatures.Groups;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Scim.Context;
@@ -18,6 +19,7 @@ public class GroupsController : Controller
     private readonly IGroupRepository _groupRepository;
     private readonly IGroupService _groupService;
     private readonly IScimContext _scimContext;
+    private readonly IDeleteGroupCommand _deleteGroupCommand;
     private readonly ILogger<GroupsController> _logger;
 
     public GroupsController(
@@ -25,12 +27,14 @@ public class GroupsController : Controller
         IGroupService groupService,
         IOptions<ScimSettings> scimSettings,
         IScimContext scimContext,
+        IDeleteGroupCommand deleteGroupCommand,
         ILogger<GroupsController> logger)
     {
         _scimSettings = scimSettings?.Value;
         _groupRepository = groupRepository;
         _groupService = groupService;
         _scimContext = scimContext;
+        _deleteGroupCommand = deleteGroupCommand;
         _logger = logger;
     }
 
@@ -266,7 +270,7 @@ public class GroupsController : Controller
                 Detail = "Group not found."
             });
         }
-        await _groupService.DeleteAsync(group);
+        await _deleteGroupCommand.DeleteAsync(group);
         return new NoContentResult();
     }
 

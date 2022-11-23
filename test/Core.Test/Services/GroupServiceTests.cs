@@ -104,16 +104,6 @@ public class GroupServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task DeleteAsync_ValidData_DeletesGroup(Group group, SutProvider<GroupService> sutProvider)
-    {
-        await sutProvider.Sut.DeleteAsync(group);
-
-        await sutProvider.GetDependency<IGroupRepository>().Received().DeleteAsync(group);
-        await sutProvider.GetDependency<IEventService>().Received()
-            .LogGroupEventAsync(group, EventType.Group_Deleted);
-    }
-
-    [Theory, BitAutoData]
     public async Task DeleteUserAsync_ValidData_DeletesUserInGroupRepository(Group group, Organization organization, OrganizationUser organizationUser, SutProvider<GroupService> sutProvider)
     {
         group.OrganizationId = organization.Id;

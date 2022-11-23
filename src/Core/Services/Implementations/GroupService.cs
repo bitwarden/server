@@ -29,7 +29,7 @@ public class GroupService : IGroupService
         _referenceEventService = referenceEventService;
     }
 
-    public async Task SaveAsync(Group group, IEnumerable<CollectionAccessSelection> collections = null)
+    public async Task SaveAsync(Group group, IEnumerable<CollectionAccessSelection> collections = null, IEnumerable<Guid> userIds = null)
     {
         var org = await _organizationRepository.GetByIdAsync(group.OrganizationId);
         if (org == null)
@@ -55,6 +55,18 @@ public class GroupService : IGroupService
                 await _groupRepository.CreateAsync(group, collections);
             }
 
+            if (userIds != null)
+            {
+                var usersToAddToGroup = userIds as Guid[] ?? userIds.ToArray();
+
+                await _groupRepository.UpdateUsersAsync(group.Id, usersToAddToGroup);
+
+                var users = await _organizationUserRepository.GetManyAsync(usersToAddToGroup);
+                var eventDate = DateTime.UtcNow;
+                await _eventService.LogOrganizationUserEventsAsync(users.Select(u =>
+                    (u, EventType.OrganizationUser_UpdatedGroups, (DateTime?)eventDate)));
+            }
+
             await _eventService.LogGroupEventAsync(group, Enums.EventType.Group_Created);
             await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.GroupCreated, org));
         }
@@ -71,14 +83,27 @@ public class GroupService : IGroupService
                 await _groupRepository.ReplaceAsync(group, collections);
             }
 
+            if (userIds != null)
+            {
+                var newUserIds = userIds as Guid[] ?? userIds.ToArray();
+                var originalUserIds = await _groupRepository.GetManyUserIdsByIdAsync(group.Id);
+
+                await _groupRepository.UpdateUsersAsync(group.Id, newUserIds);
+
+                // We only want to create events OrganizationUserEvents for those that were actually modified.
+                // HashSet.SymmetricExceptWith is a convenient method of finding the difference between lists
+                var changedUserIds = new HashSet<Guid>(originalUserIds);
+                changedUserIds.SymmetricExceptWith(newUserIds);
+
+                // Fetch all changed users for logging the event
+                var users = await _organizationUserRepository.GetManyAsync(changedUserIds);
+                var eventDate = DateTime.UtcNow;
+                await _eventService.LogOrganizationUserEventsAsync(users.Select(u =>
+                    (u, EventType.OrganizationUser_UpdatedGroups, (DateTime?)eventDate)));
+            }
+
             await _eventService.LogGroupEventAsync(group, Enums.EventType.Group_Updated);
         }
-    }
-
-    public async Task DeleteAsync(Group group)
-    {
-        await _groupRepository.DeleteAsync(group);
-        await _eventService.LogGroupEventAsync(group, Enums.EventType.Group_Deleted);
     }
 
     public async Task DeleteUserAsync(Group group, Guid organizationUserId)
