@@ -1,4 +1,4 @@
-using Bit.Core.Entities;
+﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.OrganizationFeatures.OrganizationApiKeys.Interfaces;
 using Bit.Core.Repositories;
@@ -14,7 +14,7 @@ public class CreateOrganizationApiKeyCommand : ICreateOrganizationApiKeyCommand
     {
         _organizationApiKeyRepository = organizationApiKeyRepository;
     }
-    
+
     public async Task<OrganizationApiKey> CreateAsync(Guid organizationId,
         OrganizationApiKeyType organizationApiKeyType)
     {
@@ -25,7 +25,7 @@ public class CreateOrganizationApiKeyCommand : ICreateOrganizationApiKeyCommand
             ApiKey = CoreHelpers.SecureRandomString(30),
             RevisionDate = DateTime.UtcNow,
         };
-        
+
         await _organizationApiKeyRepository.CreateAsync(apiKey);
         return apiKey;
     }

@@ -23,7 +23,7 @@ public class GetOrganizationApiKeyQuery : IGetOrganizationApiKeyQuery
 
         var apiKeys = await _organizationApiKeyRepository
             .GetManyByOrganizationIdTypeAsync(organizationId, organizationApiKeyType);
-        
+
         // NOTE: Currently we only allow one type of api key per organization
         return apiKeys.Single();
     }

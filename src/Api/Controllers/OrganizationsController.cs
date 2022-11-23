@@ -520,7 +520,7 @@ public class OrganizationsController : Controller
         var organizationApiKey = await _getOrganizationApiKeyQuery
                                      .GetOrganizationApiKeyAsync(organization.Id, model.Type) ??
                                  await _createOrganizationApiKeyCommand.CreateAsync(organization.Id, model.Type);
-        
+
         var user = await _userService.GetUserByPrincipalAsync(User);
         if (user == null)
         {
