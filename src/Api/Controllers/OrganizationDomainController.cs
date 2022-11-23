@@ -109,7 +109,7 @@ public class OrganizationDomainController : Controller
 
     private async Task ValidateOrganizationAccessAsync(Guid orgIdGuid)
     {
-        if (!await _currentContext.OrganizationOwner(orgIdGuid))
+        if (!await _currentContext.ManageSso(orgIdGuid))
         {
             throw new UnauthorizedAccessException();
         }
