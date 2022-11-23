@@ -66,7 +66,7 @@ fi
 # Launch a loop to rotate nginx logs on a daily basis
 /bin/sh -c "/logrotate.sh loop >/dev/null 2>&1 &"
 
-/usr/local/bin/confd -onetime -backend env
+/usr/local/bin/hbs
 
 # Enable/Disable services
 sed -i "s/autostart=true/autostart=${BW_ENABLE_ADMIN}/" /etc/supervisor.d/admin.ini
