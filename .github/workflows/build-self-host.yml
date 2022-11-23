@@ -47,10 +47,6 @@ jobs:
       - name: Login to Azure ACR
         run: az acr login -n bitwardenqa
 
-      - name: TEST PUBSLISH BRANCH CHECK
-        if: ${{ env.is_publish_branch == 'true' }}
-        run: echo "publish branch check works!"
-
       - name: Login to Azure - Prod Subscription
         if: ${{ env.is_publish_branch == 'true' }}
         uses: Azure/login@1f63701bf3e6892515f1b7ce2d2bf1708b46beaf
