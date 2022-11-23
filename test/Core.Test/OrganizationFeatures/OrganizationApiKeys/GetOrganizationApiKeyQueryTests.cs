@@ -69,25 +69,6 @@ public class GetOrganizationApiKeyQueryTests
 
     [Theory]
     [BitAutoData]
-    public async Task GetOrganizationApiKey_HasNone_CreatesAndReturns(SutProvider<GetOrganizationApiKeyQuery> sutProvider,
-        Guid organizationId, OrganizationApiKeyType keyType)
-    {
-        sutProvider.GetDependency<IOrganizationApiKeyRepository>()
-            .GetManyByOrganizationIdTypeAsync(organizationId, keyType)
-            .Returns(Enumerable.Empty<OrganizationApiKey>());
-
-        var apiKey = await sutProvider.Sut.GetOrganizationApiKeyAsync(organizationId, keyType);
-
-        Assert.NotNull(apiKey);
-        Assert.Equal(organizationId, apiKey.OrganizationId);
-        Assert.Equal(keyType, apiKey.Type);
-        await sutProvider.GetDependency<IOrganizationApiKeyRepository>()
-            .Received(1)
-            .CreateAsync(Arg.Any<OrganizationApiKey>());
-    }
-
-    [Theory]
-    [BitAutoData]
     public async Task GetOrganizationApiKey_BadType_Throws(SutProvider<GetOrganizationApiKeyQuery> sutProvider,
         Guid organizationId, OrganizationApiKeyType keyType)
     {
