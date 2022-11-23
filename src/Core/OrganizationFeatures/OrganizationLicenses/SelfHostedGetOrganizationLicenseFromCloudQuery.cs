@@ -10,16 +10,16 @@ using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationLicenses;
 
-public class SelfHostedSelfHostedGetOrganizationLicenseFromCloudQuery : BaseIdentityClientService, ISelfHostedGetOrganizationLicenseFromCloudQuery
+public class SelfHostedGetOrganizationLicenseFromCloudQuery : BaseIdentityClientService, ISelfHostedGetOrganizationLicenseFromCloudQuery
 {
     private readonly IGlobalSettings _globalSettings;
 
-    public SelfHostedSelfHostedGetOrganizationLicenseFromCloudQuery(IHttpClientFactory httpFactory, IGlobalSettings globalSettings, ILogger<SelfHostedSelfHostedGetOrganizationLicenseFromCloudQuery> logger)
+    public SelfHostedGetOrganizationLicenseFromCloudQuery(IHttpClientFactory httpFactory, IGlobalSettings globalSettings, ILogger<SelfHostedGetOrganizationLicenseFromCloudQuery> logger)
         : base(
             httpFactory,
             globalSettings.Installation.ApiUri,
             globalSettings.Installation.IdentityUri,
-            "api.installation",
+            "api.licensing",
             $"installation.{globalSettings.Installation.Id}",
             globalSettings.Installation.Key,
             logger)
@@ -61,7 +61,7 @@ public class SelfHostedSelfHostedGetOrganizationLicenseFromCloudQuery : BaseIden
         var cloudOrganizationId = billingSyncConfig.CloudOrganizationId;
 
         var response = await SendAsync<OrganizationLicenseSyncRequestModel, OrganizationLicense>(
-            HttpMethod.Get, $"licenses/organization/sync/{cloudOrganizationId}", new OrganizationLicenseSyncRequestModel()
+            HttpMethod.Get, $"licenses/organization/{cloudOrganizationId}", new OrganizationLicenseSyncRequestModel()
             {
                 BillingSyncKey = billingSyncConfig.BillingSyncKey,
             }, true);
