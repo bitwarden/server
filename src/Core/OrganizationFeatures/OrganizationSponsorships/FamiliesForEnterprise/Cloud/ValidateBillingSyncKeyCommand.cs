@@ -5,6 +5,7 @@ using Bit.Core.Repositories;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud;
 
+// TODO: should be moved to a more general namespace/location
 public class ValidateBillingSyncKeyCommand : IValidateBillingSyncKeyCommand
 {
     private readonly IOrganizationSponsorshipRepository _organizationSponsorshipRepository;

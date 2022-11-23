@@ -5,5 +5,5 @@ namespace Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
 
 public interface ISelfHostedGetOrganizationLicenseFromCloudQuery
 {
-    Task<OrganizationLicense> GetLicenseAsync(Guid organizationId, OrganizationConnection billingSyncConnection);
+    Task<OrganizationLicense> GetLicenseAsync(Organization organization, OrganizationConnection billingSyncConnection);
 }
