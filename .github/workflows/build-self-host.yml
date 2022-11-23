@@ -46,7 +46,7 @@ jobs:
         run: az acr login -n bitwardenqa
 
       - name: TEST PUBSLISH BRANCH CHECK
-        if: (steps.publish-branch-check.outputs.is_publish_branch == "true")
+        if: ${{ steps.publish-branch-check.outputs.is_publish_branch }} == "true"
         run: echo "publish branch check works!"
 
       - name: Login to Azure - Prod Subscription
