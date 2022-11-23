@@ -117,6 +117,7 @@ BEGIN
 
     EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationId] @OrganizationId
 END
+GO
 
 -- Stored Procedure: Collection_UpdateWithGroupsAndUsers
 CREATE OR ALTER PROCEDURE [dbo].[Collection_UpdateWithGroupsAndUsers]
