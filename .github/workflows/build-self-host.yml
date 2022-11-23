@@ -56,30 +56,41 @@ jobs:
           push: true
           tags: bitwardenqa.azurecr.io/self-host:${{ steps.tag.outputs.image_tag }}
 
-      - name: Pull new image
+      - name: Pull new image with all architectures
         env:
           PROJECT_NAME: self-host
           IMAGE_TAG: ${{ steps.tag.outputs.image_tag }}
-        run: docker pull bitwardenqa.azurecr.io/${PROJECT_NAME}:${IMAGE_TAG}
+        run: |
+          docker pull --platform linux/amd64 bitwardenqa.azurecr.io/${PROJECT_NAME}:${IMAGE_TAG}
+          docker tag bitwardenqa.azurecr.io/${PROJECT_NAME}:${IMAGE_TAG} ${PROJECT_NAME}:linux-amd64
+
+          docker pull --platform linux/arm/v7 bitwardenqa.azurecr.io/${PROJECT_NAME}:${IMAGE_TAG}
+          docker tag bitwardenqa.azurecr.io/${PROJECT_NAME}:${IMAGE_TAG} ${PROJECT_NAME}:linux-arm-v7
+
+          docker pull --platform linux/arm64 bitwardenqa.azurecr.io/${PROJECT_NAME}:${IMAGE_TAG}
+          docker tag bitwardenqa.azurecr.io/${PROJECT_NAME}:${IMAGE_TAG} ${PROJECT_NAME}:linux-arm64
+
+      - name: TEST STEP
+        run: docker image ls
 
       - name: Log out of Docker
         run: docker logout
 
       ########## DockerHub ##########
       - name: Login to Azure - Prod Subscription
-        if: |
-          (github.ref == 'refs/heads/master' ||
-            github.ref == 'refs/heads/rc' ||
-            github.ref == 'refs/heads/hotfix-rc')
+        # if: |
+        #   (github.ref == 'refs/heads/master' ||
+        #     github.ref == 'refs/heads/rc' ||
+        #     github.ref == 'refs/heads/hotfix-rc')
         uses: Azure/login@1f63701bf3e6892515f1b7ce2d2bf1708b46beaf
         with:
           creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
 
       - name: Retrieve secrets
-        if: |
-          (github.ref == 'refs/heads/master' ||
-            github.ref == 'refs/heads/rc' ||
-            github.ref == 'refs/heads/hotfix-rc')
+        # if: |
+        #   (github.ref == 'refs/heads/master' ||
+        #     github.ref == 'refs/heads/rc' ||
+        #     github.ref == 'refs/heads/hotfix-rc')
         id: retrieve-secrets
         uses: bitwarden/gh-actions/get-keyvault-secrets@c3b3285993151c5af47cefcb3b9134c28ab479af
         with:
@@ -90,10 +101,10 @@ jobs:
             dct-delegate-2-key"
 
       - name: Log into Docker
-        if: |
-          (github.ref == 'refs/heads/master' ||
-            github.ref == 'refs/heads/rc' ||
-            github.ref == 'refs/heads/hotfix-rc')
+        # if: |
+        #   (github.ref == 'refs/heads/master' ||
+        #     github.ref == 'refs/heads/rc' ||
+        #     github.ref == 'refs/heads/hotfix-rc')
         env:
           DOCKER_USERNAME: ${{ steps.retrieve-secrets.outputs.docker-username }}
           DOCKER_PASSWORD: ${{ steps.retrieve-secrets.outputs.docker-password }}
@@ -116,23 +127,28 @@ jobs:
           echo "DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE=$DCT_REPO_PASSPHRASE" >> $GITHUB_ENV
 
       - name: Tag and Push image to Docker Hub
-        if: |
-          (github.ref == 'refs/heads/master' ||
-            github.ref == 'refs/heads/rc' ||
-            github.ref == 'refs/heads/hotfix-rc')
+        # if: |
+        #   (github.ref == 'refs/heads/master' ||
+        #     github.ref == 'refs/heads/rc' ||
+        #     github.ref == 'refs/heads/hotfix-rc')
         env:
           PROJECT_NAME: self-host
           IMAGE_TAG: ${{ steps.tag.outputs.image_tag }}
         run: |
-          docker tag bitwardenqa.azurecr.io/${PROJECT_NAME}:${IMAGE_TAG} \
-            bitwarden/${PROJECT_NAME}:${IMAGE_TAG}
+          docker tag ${PROJECT_NAME}:linux-amd64 bitwarden/${PROJECT_NAME}:${IMAGE_TAG}
+          docker push bitwarden/${PROJECT_NAME}:${IMAGE_TAG}
+
+          docker tag ${PROJECT_NAME}:linux-arm-v7 bitwarden/${PROJECT_NAME}:${IMAGE_TAG}
+          docker push bitwarden/${PROJECT_NAME}:${IMAGE_TAG}
+
+          docker tag ${PROJECT_NAME}:linux-arm64 bitwarden/${PROJECT_NAME}:${IMAGE_TAG}
           docker push bitwarden/${PROJECT_NAME}:${IMAGE_TAG}
 
       - name: Log out of Docker and disable Docker Notary
-        if: |
-          (github.ref == 'refs/heads/master' ||
-            github.ref == 'refs/heads/rc' ||
-            github.ref == 'refs/heads/hotfix-rc')
+        # if: |
+        #   (github.ref == 'refs/heads/master' ||
+        #     github.ref == 'refs/heads/rc' ||
+        #     github.ref == 'refs/heads/hotfix-rc')
         run: |
           docker logout
           echo "DOCKER_CONTENT_TRUST=0" >> $GITHUB_ENV
