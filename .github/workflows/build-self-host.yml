@@ -22,7 +22,7 @@ jobs:
         env:
           PUBLISH_BRANCHES: "master,rc,hotfix-rc,rc-2022.12,patch/update-self-host-release-branches"
         id: publish-branch-check
-        run:
+        run: |
           IFS="," read -a publish_branches <<< $PUBLISH_BRANCHES
 
           if [[ " ${publish_branches[*]} " =~ " ${GITHUB_REF:11} " ]]; then
