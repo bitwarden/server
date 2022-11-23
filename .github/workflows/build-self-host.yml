@@ -18,6 +18,17 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@a12a3943b4bdde767164f792f33f40b04645d846
 
+      - name: Check Branch to Publish
+        env:
+          PUBLISH_BRANCHES: "master,rc,hotfix-rc,rc-2022.12,patch/update-self-host-release-branches"
+        id: publish-branch-check
+        run:
+          IFS="," read -a publish_branches <<< $PUBLISH_BRANCHES
+
+          if [[ " ${publish_branches_arr[*]} " =~ " ${GITHUB_REF:11} " ]]; then
+            echo "is_publish_branch=true" >> $GITHUB_ENV
+          fi
+
       ########## Set up Docker ##########
       - name: Set up QEMU emulators
         uses: docker/setup-qemu-action@e81a89b1732b9c48d79cd809d8d81d79c4647a18
@@ -34,8 +45,13 @@ jobs:
       - name: Login to Azure ACR
         run: az acr login -n bitwardenqa
 
+      - name: TEST PUBSLISH BRANCH CHECK
+        if: steps.publish-branch-check.outputs.is_publish_branch == "true"
+        run: echo "publish branch check works!"
+
       - name: Login to Azure - Prod Subscription
         if: |
+          false &&
           (github.ref == 'refs/heads/master' ||
             github.ref == 'refs/heads/rc' ||
             github.ref == 'refs/heads/hotfix-rc')
@@ -45,6 +61,7 @@ jobs:
 
       - name: Retrieve secrets
         if: |
+          false &&
           (github.ref == 'refs/heads/master' ||
             github.ref == 'refs/heads/rc' ||
             github.ref == 'refs/heads/hotfix-rc')
@@ -59,6 +76,7 @@ jobs:
 
       - name: Log into Docker
         if: |
+          false &&
           (github.ref == 'refs/heads/master' ||
             github.ref == 'refs/heads/rc' ||
             github.ref == 'refs/heads/hotfix-rc')
@@ -69,8 +87,8 @@ jobs:
 
       - name: Setup Docker Trust
         if: |
-          false
-          && (github.ref == 'refs/heads/master' ||
+          false &&
+          (github.ref == 'refs/heads/master' ||
             github.ref == 'refs/heads/rc' ||
             github.ref == 'refs/heads/hotfix-rc')
         env:
@@ -106,6 +124,7 @@ jobs:
           fi
 
       - name: Build Docker image
+        if: false
         uses: docker/build-push-action@c56af957549030174b10d6867f20e78cfd7debc5
         with:
           context: .
@@ -119,6 +138,7 @@ jobs:
 
       - name: Log out of Docker and disable Docker Notary
         if: |
+          false &&
           (github.ref == 'refs/heads/master' ||
             github.ref == 'refs/heads/rc' ||
             github.ref == 'refs/heads/hotfix-rc')
