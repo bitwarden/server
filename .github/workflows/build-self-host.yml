@@ -25,8 +25,10 @@ jobs:
         run:
           IFS="," read -a publish_branches <<< $PUBLISH_BRANCHES
 
-          if [[ " ${publish_branches_arr[*]} " =~ " ${GITHUB_REF:11} " ]]; then
+          if [[ " ${publish_branches[*]} " =~ " ${GITHUB_REF:11} " ]]; then
             echo "is_publish_branch=true" >> $GITHUB_ENV
+          else
+            echo "is_publish_branch=false" >> $GITHUB_ENV
           fi
 
       ########## Set up Docker ##########
