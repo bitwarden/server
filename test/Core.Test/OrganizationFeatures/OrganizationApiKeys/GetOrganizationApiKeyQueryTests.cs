@@ -10,11 +10,11 @@ using Xunit;
 namespace Bit.Core.Test.OrganizationFeatures.OrganizationApiKeys;
 
 [SutProviderCustomize]
-public class GetOrganizationApiKeyCommandTests
+public class GetOrganizationApiKeyQueryTests
 {
     [Theory]
     [BitAutoData]
-    public async Task GetOrganizationApiKey_HasOne_Returns(SutProvider<GetOrganizationApiKeyCommand> sutProvider,
+    public async Task GetOrganizationApiKey_HasOne_Returns(SutProvider<GetOrganizationApiKeyQuery> sutProvider,
         Guid id, Guid organizationId, OrganizationApiKeyType keyType)
     {
         sutProvider.GetDependency<IOrganizationApiKeyRepository>()
@@ -38,7 +38,7 @@ public class GetOrganizationApiKeyCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task GetOrganizationApiKey_HasTwo_Throws(SutProvider<GetOrganizationApiKeyCommand> sutProvider,
+    public async Task GetOrganizationApiKey_HasTwo_Throws(SutProvider<GetOrganizationApiKeyQuery> sutProvider,
         Guid organizationId, OrganizationApiKeyType keyType)
     {
         sutProvider.GetDependency<IOrganizationApiKeyRepository>()
@@ -69,7 +69,7 @@ public class GetOrganizationApiKeyCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task GetOrganizationApiKey_HasNone_CreatesAndReturns(SutProvider<GetOrganizationApiKeyCommand> sutProvider,
+    public async Task GetOrganizationApiKey_HasNone_CreatesAndReturns(SutProvider<GetOrganizationApiKeyQuery> sutProvider,
         Guid organizationId, OrganizationApiKeyType keyType)
     {
         sutProvider.GetDependency<IOrganizationApiKeyRepository>()
@@ -88,7 +88,7 @@ public class GetOrganizationApiKeyCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task GetOrganizationApiKey_BadType_Throws(SutProvider<GetOrganizationApiKeyCommand> sutProvider,
+    public async Task GetOrganizationApiKey_BadType_Throws(SutProvider<GetOrganizationApiKeyQuery> sutProvider,
         Guid organizationId, OrganizationApiKeyType keyType)
     {
         keyType = (OrganizationApiKeyType)byte.MaxValue;
