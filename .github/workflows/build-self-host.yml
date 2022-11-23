@@ -94,6 +94,17 @@ jobs:
 
           echo "image_tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
 
+      - name: Generate tag list
+        id: tag-list
+        env:
+          IMAGE_TAG: ${{ steps.tag.outputs.image_tag }}
+        run: |
+          if [ "$IMAGE_TAG" = "dev" ]; then
+            echo "tags=bitwardenqa.azurecr.io/self-host:${IMAGE_TAG},bitwarden/self-host:${IMAGE_TAG}" >> $GITHUB_OUTPUT
+          else
+            echo "tags=bitwardenqa.azurecr.io/self-host:${IMAGE_TAG}" >> $GITHUB_OUTPUT
+          fi
+
       - name: Build Docker image
         uses: docker/build-push-action@c56af957549030174b10d6867f20e78cfd7debc5
         with:
@@ -104,9 +115,7 @@ jobs:
             linux/arm/v7,
             linux/arm64/v8
           push: true
-          tags: |
-            bitwardenqa.azurecr.io/self-host:${{ steps.tag.outputs.image_tag }},
-            bitwarden/self-host:${{ steps.tag.outputs.image_tag }}
+          tags: ${{ steps.tag-list.outputs.tags}}
 
       - name: Log out of Docker and disable Docker Notary
         # if: |
