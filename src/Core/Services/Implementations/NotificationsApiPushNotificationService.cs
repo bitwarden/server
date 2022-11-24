@@ -197,7 +197,7 @@ public class NotificationsApiPushNotificationService : BaseIdentityClientService
 
     private string GetContextIdentifier(bool excludeCurrentContext)
     {
-        if (excludeCurrentContext)
+        if (!excludeCurrentContext)
         {
             return null;
         }
