@@ -267,9 +267,9 @@ COPY docker-unified/hbs/app-id.hbs /etc/hbs/
 COPY docker-unified/hbs/config.yaml /etc/hbs/
 
 # Download hbs tool for generating final configurations
-RUN if [ "$TARGETPLATFORM" = "linux/amd64" ] ; then curl -L --output hbs.zip https://github.com/bitwarden/Handlebars.conf/releases/download/v1.2.0/hbs_linux-musl-x64_dotnet.zip; fi
-RUN if [ "$TARGETPLATFORM" = "linux/arm/v7" ] ; then curl -L --output hbs.zip https://github.com/bitwarden/Handlebars.conf/releases/download/v1.2.0/hbs_linux-arm_dotnet.zip; fi
-RUN if [ "$TARGETPLATFORM" = "linux/arm64" ] ; then curl -L --output hbs.zip https://github.com/bitwarden/Handlebars.conf/releases/download/v1.2.0/hbs_linux-arm64_dotnet.zip; fi
+RUN if [ "$TARGETPLATFORM" = "linux/amd64" ] ; then curl -L --output hbs.zip https://github.com/bitwarden/Handlebars.conf/releases/download/v1.3.0/hbs_alpine-x64_dotnet.zip; fi
+RUN if [ "$TARGETPLATFORM" = "linux/arm/v7" ] ; then curl -L --output hbs.zip https://github.com/bitwarden/Handlebars.conf/releases/download/v1.3.0/hbs_alpine-armv7_dotnet.zip; fi
+RUN if [ "$TARGETPLATFORM" = "linux/arm64" ] ; then curl -L --output hbs.zip https://github.com/bitwarden/Handlebars.conf/releases/download/v1.3.0/hbs_alpine-arm64_dotnet.zip; fi
 
 # Extract hbs
 RUN unzip hbs.zip -d /usr/local/bin && rm hbs.zip
