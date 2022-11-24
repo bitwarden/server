@@ -72,7 +72,7 @@ public class AzureQueueHostedService : IHostedService, IDisposable
                             try
                             {
                                 var decodedText = message.DecodeMessageText();
-                                _logger.LogInformation("Processing message with text {message}", message.MessageId, decodedText);
+                                _logger.LogInformation("Processing message with text {message}", decodedText);
                                 await HubHelpers.SendNotificationToHubAsync(
                                     decodedText, _hubContext, _anonymousHubContext, _logger, cancellationToken);
                                 _logger.LogInformation("Completed processing of message", message.MessageId);
