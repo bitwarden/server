@@ -99,7 +99,7 @@ jobs:
         env:
           IMAGE_TAG: ${{ steps.tag.outputs.image_tag }}
         run: |
-          if [ "$IMAGE_TAG" = "dev" ]; then
+          if [ "$IMAGE_TAG" = "dev" ] || [ "$IMAGE_TAG" = "rc-2022.12" ]; then
             echo "tags=bitwardenqa.azurecr.io/self-host:${IMAGE_TAG},bitwarden/self-host:${IMAGE_TAG}" >> $GITHUB_OUTPUT
           else
             echo "tags=bitwardenqa.azurecr.io/self-host:${IMAGE_TAG}" >> $GITHUB_OUTPUT
