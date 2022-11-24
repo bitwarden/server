@@ -21,6 +21,7 @@ public class CreateOrganizationApiKeyCommandTest
         await sutProvider.Sut.CreateAsync(organizationId, keyType);
 
         await sutProvider.GetDependency<IOrganizationApiKeyRepository>().Received(1)
-            .CreateAsync(Arg.Any<OrganizationApiKey>());
+            .CreateAsync(Arg.Is<OrganizationApiKey>(o => o.OrganizationId == organizationId
+                                                         && o.Type == keyType));
     }
 }
