@@ -1,6 +1,4 @@
-﻿using Bit.Core.OrganizationFeatures.Groups;
-using Bit.Core.OrganizationFeatures.Groups.Interfaces;
-using Bit.Core.OrganizationFeatures.OrganizationUsers;
+﻿using Bit.Core.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Scim.Groups;
 using Bit.Scim.Groups.Interfaces;
