@@ -36,4 +36,19 @@ public class OrganizationDomainRepository : Repository<Core.Entities.Organizatio
             .ToListAsync();
         return Mapper.Map<List<Core.Entities.OrganizationDomain>>(domains);
     }
+
+    public async Task<ICollection<Core.Entities.OrganizationDomain>> GetManyByNextRunDateAsync(DateTime date)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        var domains = await dbContext.OrganizationDomains
+            .Where(x => x.VerifiedDate == null
+                        && x.NextRunDate.Year == date.Year
+                        && x.NextRunDate.Month == date.Month
+                        && x.NextRunDate.Day == date.Day
+                        && x.NextRunDate.Hour == date.Hour)
+            .AsNoTracking()
+            .ToListAsync();
+        return Mapper.Map<List<Core.Entities.OrganizationDomain>>(domains);
+    }
 }

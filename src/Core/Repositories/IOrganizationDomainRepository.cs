@@ -6,4 +6,5 @@ public interface IOrganizationDomainRepository : IRepository<OrganizationDomain,
 {
     Task<ICollection<OrganizationDomain>> GetClaimedDomainsByDomainNameAsync(string domainName);
     Task<ICollection<OrganizationDomain>> GetDomainsByOrganizationId(Guid orgId);
+    Task<ICollection<OrganizationDomain>> GetManyByNextRunDateAsync(DateTime date);
 }
