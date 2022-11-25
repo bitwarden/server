@@ -11,6 +11,6 @@ CREATE TABLE `ProjectSecret` (
 CREATE INDEX `IX_ProjectSecret_SecretsId` ON `ProjectSecret` (`SecretsId`);
 
 INSERT INTO `__EFMigrationsHistory` (`MigrationId`, `ProductVersion`)
-VALUES ('20221018133046_projectSecretMapping', '6.0.4');
+VALUES ('20221018133046_ProjectSecret', '6.0.4');
 
 COMMIT;
