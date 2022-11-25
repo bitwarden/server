@@ -1,8 +1,8 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
+using Bit.Core.OrganizationFeatures.Groups.Interfaces;
 using Bit.Core.Repositories;
 
 namespace Bit.Core.Services;
@@ -13,20 +13,23 @@ public class GroupService : IGroupService
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IGroupRepository _groupRepository;
-    private readonly IReferenceEventService _referenceEventService;
+    private readonly ICreateGroupCommand _createGroupCommand;
+    private readonly IUpdateGroupCommand _updateGroupCommand;
 
     public GroupService(
         IEventService eventService,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
         IGroupRepository groupRepository,
-        IReferenceEventService referenceEventService)
+        ICreateGroupCommand createGroupCommand,
+        IUpdateGroupCommand updateGroupCommand)
     {
         _eventService = eventService;
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
         _groupRepository = groupRepository;
-        _referenceEventService = referenceEventService;
+        _createGroupCommand = createGroupCommand;
+        _updateGroupCommand = updateGroupCommand;
     }
 
     public async Task SaveAsync(Group group,
@@ -56,48 +59,24 @@ public class GroupService : IGroupService
 
         if (group.Id == default(Guid))
         {
-            group.CreationDate = group.RevisionDate = DateTime.UtcNow;
-
-            if (collections == null)
-            {
-                await _groupRepository.CreateAsync(group);
-            }
-            else
-            {
-                await _groupRepository.CreateAsync(group, collections);
-            }
-
             if (systemUser.HasValue)
             {
-                await _eventService.LogGroupEventAsync(group, Enums.EventType.Group_Created, systemUser.Value);
+                await _createGroupCommand.CreateGroupAsync(group, org, systemUser.Value, collections);
             }
             else
             {
-                await _eventService.LogGroupEventAsync(group, Enums.EventType.Group_Created);
+                await _createGroupCommand.CreateGroupAsync(group, org, collections);
             }
-
-            await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.GroupCreated, org));
         }
         else
         {
-            group.RevisionDate = DateTime.UtcNow;
-
-            if (collections == null)
-            {
-                await _groupRepository.ReplaceAsync(group);
-            }
-            else
-            {
-                await _groupRepository.ReplaceAsync(group, collections);
-            }
-
             if (systemUser.HasValue)
             {
-                await _eventService.LogGroupEventAsync(group, Enums.EventType.Group_Updated, systemUser.Value);
+                await _updateGroupCommand.UpdateGroupAsync(group, systemUser.Value, collections);
             }
             else
             {
-                await _eventService.LogGroupEventAsync(group, Enums.EventType.Group_Updated);
+                await _updateGroupCommand.UpdateGroupAsync(group, collections);
             }
         }
     }

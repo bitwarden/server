@@ -2,6 +2,7 @@
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
+using Bit.Core.OrganizationFeatures.Groups.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
@@ -22,14 +23,10 @@ public class GroupServiceTests
         group.Id = default(Guid);
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         organization.UseGroups = true;
-        var utcNow = DateTime.UtcNow;
 
         await sutProvider.Sut.SaveAsync(group);
 
-        await sutProvider.GetDependency<IGroupRepository>().Received().CreateAsync(group);
-        await sutProvider.GetDependency<IEventService>().Received().LogGroupEventAsync(group, EventType.Group_Created);
-        Assert.True(group.CreationDate - utcNow < TimeSpan.FromSeconds(1));
-        Assert.True(group.RevisionDate - utcNow < TimeSpan.FromSeconds(1));
+        await sutProvider.GetDependency<ICreateGroupCommand>().Received().CreateGroupAsync(group, organization);
     }
 
     [Theory, BitAutoData]
@@ -38,14 +35,10 @@ public class GroupServiceTests
         group.Id = default(Guid);
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         organization.UseGroups = true;
-        var utcNow = DateTime.UtcNow;
 
         await sutProvider.Sut.SaveAsync(group, eventSystemUser);
 
-        await sutProvider.GetDependency<IGroupRepository>().Received().CreateAsync(group);
-        await sutProvider.GetDependency<IEventService>().Received().LogGroupEventAsync(group, EventType.Group_Created, eventSystemUser);
-        Assert.True(group.CreationDate - utcNow < TimeSpan.FromSeconds(1));
-        Assert.True(group.RevisionDate - utcNow < TimeSpan.FromSeconds(1));
+        await sutProvider.GetDependency<ICreateGroupCommand>().Received().CreateGroupAsync(group, organization, eventSystemUser);
     }
 
     [Theory, BitAutoData]
@@ -54,14 +47,10 @@ public class GroupServiceTests
         group.Id = default(Guid);
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         organization.UseGroups = true;
-        var utcNow = DateTime.UtcNow;
 
         await sutProvider.Sut.SaveAsync(group, collections);
 
-        await sutProvider.GetDependency<IGroupRepository>().Received().CreateAsync(group, collections);
-        await sutProvider.GetDependency<IEventService>().Received().LogGroupEventAsync(group, EventType.Group_Created);
-        Assert.True(group.CreationDate - utcNow < TimeSpan.FromSeconds(1));
-        Assert.True(group.RevisionDate - utcNow < TimeSpan.FromSeconds(1));
+        await sutProvider.GetDependency<ICreateGroupCommand>().Received().CreateGroupAsync(group, organization, collections);
     }
 
     [Theory, BitAutoData]
@@ -72,9 +61,7 @@ public class GroupServiceTests
 
         await sutProvider.Sut.SaveAsync(group, collections);
 
-        await sutProvider.GetDependency<IGroupRepository>().Received().ReplaceAsync(group, collections);
-        await sutProvider.GetDependency<IEventService>().Received().LogGroupEventAsync(group, EventType.Group_Updated);
-        Assert.True(group.RevisionDate - DateTime.UtcNow < TimeSpan.FromSeconds(1));
+        await sutProvider.GetDependency<IUpdateGroupCommand>().Received().UpdateGroupAsync(group, collections);
     }
 
     [Theory, BitAutoData]
@@ -85,9 +72,7 @@ public class GroupServiceTests
 
         await sutProvider.Sut.SaveAsync(group, null);
 
-        await sutProvider.GetDependency<IGroupRepository>().Received().ReplaceAsync(group);
-        await sutProvider.GetDependency<IEventService>().Received().LogGroupEventAsync(group, EventType.Group_Updated);
-        Assert.True(group.RevisionDate - DateTime.UtcNow < TimeSpan.FromSeconds(1));
+        await sutProvider.GetDependency<IUpdateGroupCommand>().Received().UpdateGroupAsync(group);
     }
 
     [Theory, BitAutoData]
