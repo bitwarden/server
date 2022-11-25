@@ -30,7 +30,6 @@ public class AzureQueueHostedService : IHostedService, IDisposable
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Starting service.");
         _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         _executingTask = ExecuteAsync(_cts.Token);
         return _executingTask.IsCompleted ? _executingTask : Task.CompletedTask;
@@ -61,7 +60,7 @@ public class AzureQueueHostedService : IHostedService, IDisposable
                 var messages = await _queueClient.ReceiveMessagesAsync(32);
                 if (messages.Value?.Any() ?? false)
                 {
-                    _logger.LogInformation("Retrieved {count} messages from queue", messages.Value.Count());
+                    _logger.LogInformation("Retreived {count} messages from queue", messages.Value.Count());
                     foreach (var message in messages.Value)
                     {
                         using (_logger.BeginScope(new Dictionary<string, object>
