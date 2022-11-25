@@ -24,9 +24,7 @@ public class CreateOrganizationDomainCommand : ICreateOrganizationDomainCommand
             throw new DomainClaimedException();
         }
 
-        organizationDomain
-            .SetNextRunCount()
-            .SetNextRunDate();
+        organizationDomain.SetNextRunDate();
 
         return await _organizationDomainRepository.CreateAsync(organizationDomain);
     }

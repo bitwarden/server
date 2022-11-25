@@ -18,12 +18,9 @@ public class OrganizationDomain : ITableObject<Guid>
 
     public OrganizationDomain SetNextRunDate()
     {
-        if (NextRunCount < 1)
-        {
-            return this;
-        }
-
-        NextRunDate = CreationDate.AddHours(NextRunCount * 12);
+        var count = NextRunCount == 0 ? NextRunCount++ : NextRunCount;
+        
+        NextRunDate = CreationDate.AddHours(count * 12);
         return this;
     }
 
