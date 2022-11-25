@@ -1,4 +1,4 @@
-CREATE OR ALTER PROCEDURE [dbo].[OrganizationDomain_ReadByDatepart]
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationDomain_ReadByNextRunDate]
     @year int,
     @month int,
     @day int,

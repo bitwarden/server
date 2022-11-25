@@ -419,7 +419,7 @@
   <ItemGroup>
     <Content Include="dbo\Stored Procedures\OrganizationDomain_Create.sql" />
     <Content Include="dbo\Stored Procedures\OrganizationDomain_DeleteById.sql" />
-    <Content Include="dbo\Stored Procedures\OrganizationDomain_ReadByDatepart.sql" />
+    <Content Include="dbo\Stored Procedures\OrganizationDomain_ReadByNextRunDate.sql" />
     <Content Include="dbo\Stored Procedures\OrganizationDomain_ReadById.sql" />
     <Content Include="dbo\Stored Procedures\OrganizationDomain_Update.sql" />
     <Content Include="dbo\Tables\OrganizationDomain.sql" />

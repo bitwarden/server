@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[OrganizationDomain_ReadByDatepart]
+CREATE PROCEDURE [dbo].[OrganizationDomain_ReadByNextRunDate]
     @Year int,
     @Month int,
     @Day int,
