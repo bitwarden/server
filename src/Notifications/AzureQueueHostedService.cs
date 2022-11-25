@@ -7,7 +7,7 @@ namespace Bit.Notifications;
 
 public class AzureQueueHostedService : IHostedService, IDisposable
 {
-    private readonly ILogger<AzureQueueHostedService> _logger;
+    private readonly ILogger _logger;
     private readonly IHubContext<NotificationsHub> _hubContext;
     private readonly IHubContext<AnonymousNotificationsHub> _anonymousHubContext;
     private readonly GlobalSettings _globalSettings;
@@ -60,40 +60,27 @@ public class AzureQueueHostedService : IHostedService, IDisposable
                 var messages = await _queueClient.ReceiveMessagesAsync(32);
                 if (messages.Value?.Any() ?? false)
                 {
-                    _logger.LogInformation("Retreived {count} messages from queue", messages.Value.Count());
                     foreach (var message in messages.Value)
                     {
-                        using (_logger.BeginScope(new Dictionary<string, object>
+                        try
                         {
-                            ["MessageId"] = message.MessageId,
-                            ["DequeueCount"] = message.DequeueCount
-                        }))
+                            await HubHelpers.SendNotificationToHubAsync(
+                                message.DecodeMessageText(), _hubContext, _anonymousHubContext, cancellationToken);
+                            await _queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt);
+                        }
+                        catch (Exception e)
                         {
-                            try
+                            _logger.LogError("Error processing dequeued message: " +
+                                $"{message.MessageId} x{message.DequeueCount}. {e.Message}", e);
+                            if (message.DequeueCount > 2)
                             {
-                                var decodedText = message.DecodeMessageText();
-                                _logger.LogInformation("Processing message with text {message}", decodedText);
-                                await HubHelpers.SendNotificationToHubAsync(
-                                    decodedText, _hubContext, _anonymousHubContext, _logger, cancellationToken);
-                                _logger.LogInformation("Completed processing of message", message.MessageId);
                                 await _queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt);
-                                _logger.LogDebug("Deleted message from the queue");
-                            }
-                            catch (Exception e)
-                            {
-                                _logger.LogError("Error processing dequeued message: " +
-                                    $"{message.MessageId} x{message.DequeueCount}. {e.Message}", e);
-                                if (message.DequeueCount > 2)
-                                {
-                                    await _queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt);
-                                }
                             }
                         }
                     }
                 }
                 else
                 {
-                    _logger.LogInformation("No notifications retrieved.  Waiting 5 seconds");
                     await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
                 }
             }
