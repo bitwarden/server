@@ -13,7 +13,7 @@ public class Program
             {
                 webBuilder.UseStartup<Startup>();
                 webBuilder.ConfigureLogging((hostingContext, logging) =>
-                {
+                { 
                     logging.AddFilter("Microsoft.AspNetCore.SignalR", LogLevel.Debug);
                     logging.AddFilter("Microsoft.AspNetCore.Http.Connections", LogLevel.Debug);
                     logging.AddSerilog(hostingContext, (e, globalSettings) =>
