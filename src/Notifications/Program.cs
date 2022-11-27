@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Utilities;
+using Serilog.Events;
 
 namespace Bit.Notifications;
 
