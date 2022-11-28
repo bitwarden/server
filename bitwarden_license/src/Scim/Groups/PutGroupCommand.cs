@@ -1,8 +1,8 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.OrganizationFeatures.Groups.Interfaces;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Scim.Context;
 using Bit.Scim.Groups.Interfaces;
 using Bit.Scim.Models;
@@ -12,17 +12,17 @@ namespace Bit.Scim.Groups;
 public class PutGroupCommand : IPutGroupCommand
 {
     private readonly IGroupRepository _groupRepository;
-    private readonly IGroupService _groupService;
     private readonly IScimContext _scimContext;
+    private readonly IUpdateGroupCommand _updateGroupCommand;
 
     public PutGroupCommand(
         IGroupRepository groupRepository,
-        IGroupService groupService,
-        IScimContext scimContext)
+        IScimContext scimContext,
+        IUpdateGroupCommand updateGroupCommand)
     {
         _groupRepository = groupRepository;
-        _groupService = groupService;
         _scimContext = scimContext;
+        _updateGroupCommand = updateGroupCommand;
     }
 
     public async Task<Group> PutGroupAsync(Guid organizationId, Guid id, ScimGroupRequestModel model)
@@ -34,7 +34,7 @@ public class PutGroupCommand : IPutGroupCommand
         }
 
         group.Name = model.DisplayName;
-        await _groupService.SaveAsync(group, EventSystemUser.SCIM);
+        await _updateGroupCommand.UpdateGroupAsync(group, EventSystemUser.SCIM);
         await UpdateGroupMembersAsync(group, model);
 
         return group;

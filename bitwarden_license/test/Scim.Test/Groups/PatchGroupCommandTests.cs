@@ -2,6 +2,7 @@
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.OrganizationFeatures.Groups.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Scim.Groups;
@@ -68,7 +69,7 @@ public class PatchGroupCommandTests
 
         await sutProvider.Sut.PatchGroupAsync(group.OrganizationId, group.Id, scimPatchModel);
 
-        await sutProvider.GetDependency<IGroupService>().Received(1).SaveAsync(group, EventSystemUser.SCIM);
+        await sutProvider.GetDependency<IUpdateGroupCommand>().Received(1).UpdateGroupAsync(group, EventSystemUser.SCIM);
         Assert.Equal(displayName, group.Name);
     }
 
@@ -95,7 +96,7 @@ public class PatchGroupCommandTests
 
         await sutProvider.Sut.PatchGroupAsync(group.OrganizationId, group.Id, scimPatchModel);
 
-        await sutProvider.GetDependency<IGroupService>().Received(1).SaveAsync(group, EventSystemUser.SCIM);
+        await sutProvider.GetDependency<IUpdateGroupCommand>().Received(1).UpdateGroupAsync(group, EventSystemUser.SCIM);
         Assert.Equal(displayName, group.Name);
     }
 
@@ -235,7 +236,7 @@ public class PatchGroupCommandTests
 
         await sutProvider.GetDependency<IGroupRepository>().Received(0).UpdateUsersAsync(group.Id, Arg.Any<IEnumerable<Guid>>());
         await sutProvider.GetDependency<IGroupRepository>().Received(0).GetManyUserIdsByIdAsync(group.Id);
-        await sutProvider.GetDependency<IGroupService>().Received(0).SaveAsync(group);
+        await sutProvider.GetDependency<IUpdateGroupCommand>().Received(0).UpdateGroupAsync(group);
         await sutProvider.GetDependency<IGroupService>().Received(0).DeleteUserAsync(group, Arg.Any<Guid>());
     }
 

@@ -1,7 +1,6 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Data;
 using Bit.Core.OrganizationFeatures.Groups.Interfaces;
 using Bit.Core.Repositories;
 
@@ -30,55 +29,6 @@ public class GroupService : IGroupService
         _groupRepository = groupRepository;
         _createGroupCommand = createGroupCommand;
         _updateGroupCommand = updateGroupCommand;
-    }
-
-    public async Task SaveAsync(Group group,
-        IEnumerable<SelectionReadOnly> collections = null)
-    {
-        await GroupRepositorySaveAsync(group, systemUser: null, collections);
-    }
-
-    public async Task SaveAsync(Group group, EventSystemUser systemUser,
-        IEnumerable<SelectionReadOnly> collections = null)
-    {
-        await GroupRepositorySaveAsync(group, systemUser, collections);
-    }
-
-    private async Task GroupRepositorySaveAsync(Group group, EventSystemUser? systemUser, IEnumerable<SelectionReadOnly> collections = null)
-    {
-        var org = await _organizationRepository.GetByIdAsync(group.OrganizationId);
-        if (org == null)
-        {
-            throw new BadRequestException("Organization not found");
-        }
-
-        if (!org.UseGroups)
-        {
-            throw new BadRequestException("This organization cannot use groups.");
-        }
-
-        if (group.Id == default(Guid))
-        {
-            if (systemUser.HasValue)
-            {
-                await _createGroupCommand.CreateGroupAsync(group, org, systemUser.Value, collections);
-            }
-            else
-            {
-                await _createGroupCommand.CreateGroupAsync(group, org, collections);
-            }
-        }
-        else
-        {
-            if (systemUser.HasValue)
-            {
-                await _updateGroupCommand.UpdateGroupAsync(group, systemUser.Value, collections);
-            }
-            else
-            {
-                await _updateGroupCommand.UpdateGroupAsync(group, collections);
-            }
-        }
     }
 
     [Obsolete("IDeleteGroupCommand should be used instead. To be removed by EC-608.")]

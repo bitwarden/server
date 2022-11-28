@@ -1,8 +1,8 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.OrganizationFeatures.Groups.Interfaces;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Scim.Context;
 using Bit.Scim.Groups.Interfaces;
 using Bit.Scim.Models;
@@ -12,17 +12,17 @@ namespace Bit.Scim.Groups;
 public class PostGroupCommand : IPostGroupCommand
 {
     private readonly IGroupRepository _groupRepository;
-    private readonly IGroupService _groupService;
     private readonly IScimContext _scimContext;
+    private readonly ICreateGroupCommand _createGroupCommand;
 
     public PostGroupCommand(
         IGroupRepository groupRepository,
-        IGroupService groupService,
-        IScimContext scimContext)
+        IScimContext scimContext,
+        ICreateGroupCommand createGroupCommand)
     {
         _groupRepository = groupRepository;
-        _groupService = groupService;
         _scimContext = scimContext;
+        _createGroupCommand = createGroupCommand;
     }
 
     public async Task<Group> PostGroupAsync(Guid organizationId, ScimGroupRequestModel model)
@@ -39,7 +39,7 @@ public class PostGroupCommand : IPostGroupCommand
         }
 
         var group = model.ToGroup(organizationId);
-        await _groupService.SaveAsync(group, EventSystemUser.SCIM, null);
+        await _createGroupCommand.CreateGroupAsync(group, EventSystemUser.SCIM, null);
         await UpdateGroupMembersAsync(group, model);
 
         return group;
