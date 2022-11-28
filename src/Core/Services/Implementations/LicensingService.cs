@@ -115,7 +115,7 @@ public class LicensingService : ILicensingService
                     continue;
                 }
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 exceptions.Add(ex);
             }
