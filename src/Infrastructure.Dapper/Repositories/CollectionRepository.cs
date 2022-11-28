@@ -95,7 +95,7 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
         }
     }
 
-    public async Task<ICollection<Tuple<Collection, ICollection<SelectionReadOnly>>>> GetManyWithGroupsByOrganizationIdAsync(Guid organizationId)
+    public async Task<ICollection<Tuple<Collection, ICollection<CollectionAccessSelection>>>> GetManyWithGroupsByOrganizationIdAsync(Guid organizationId)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
@@ -108,11 +108,11 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
             var groups = (await results.ReadAsync<CollectionGroup>()).ToList();
 
             return collections.Select(collection =>
-                new Tuple<Collection, ICollection<SelectionReadOnly>>(
+                new Tuple<Collection, ICollection<CollectionAccessSelection>>(
                     collection,
                     groups
                         .Where(g => g.CollectionId == collection.Id)
-                        .Select(g => new SelectionReadOnly
+                        .Select(g => new CollectionAccessSelection
                         {
                             Id = g.GroupId,
                             HidePasswords = g.HidePasswords,
@@ -123,7 +123,7 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
         }
     }
 
-    public async Task<ICollection<Tuple<Collection, ICollection<SelectionReadOnly>>>> GetManyWithGroupsByUserIdAsync(Guid userId, Guid organizationId)
+    public async Task<ICollection<Tuple<Collection, ICollection<CollectionAccessSelection>>>> GetManyWithGroupsByUserIdAsync(Guid userId, Guid organizationId)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
@@ -136,11 +136,11 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
             var groups = (await results.ReadAsync<CollectionGroup>()).ToList();
 
             return collections.Select(collection =>
-                new Tuple<Collection, ICollection<SelectionReadOnly>>(
+                new Tuple<Collection, ICollection<CollectionAccessSelection>>(
                     collection,
                     groups
                         .Where(g => g.CollectionId == collection.Id)
-                        .Select(g => new SelectionReadOnly
+                        .Select(g => new CollectionAccessSelection
                         {
                             Id = g.GroupId,
                             HidePasswords = g.HidePasswords,

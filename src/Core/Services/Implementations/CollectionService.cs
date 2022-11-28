@@ -117,7 +117,7 @@ public class CollectionService : ICollectionService
         return orgCollections;
     }
 
-    public async Task<IEnumerable<Tuple<Collection, ICollection<SelectionReadOnly>>>> GetOrganizationCollectionsWithGroups(Guid organizationId)
+    public async Task<IEnumerable<Tuple<Collection, ICollection<CollectionAccessSelection>>>> GetOrganizationCollectionsWithGroups(Guid organizationId)
     {
         // Must be at least a manager or custom user with manager permissions to manage collections
         if (!await _currentContext.ViewAssignedCollections(organizationId))
@@ -125,7 +125,7 @@ public class CollectionService : ICollectionService
             throw new NotFoundException();
         }
 
-        IEnumerable<Tuple<Collection, ICollection<SelectionReadOnly>>> orgCollections;
+        IEnumerable<Tuple<Collection, ICollection<CollectionAccessSelection>>> orgCollections;
         if (await _currentContext.OrganizationAdmin(organizationId) || await _currentContext.EditAnyCollection(organizationId) || await _currentContext.DeleteAnyCollection(organizationId))
         {
             // Admins, Owners, Providers and Custom (with Admin collection management permissions) can access all items even if not assigned to them
