@@ -114,12 +114,12 @@ public class AzureQueuePushNotificationService : IPushNotificationService
         await PushUserAsync(userId, PushType.SyncSettings);
     }
 
-    public async Task PushLogOutAsync(Guid userId)
+    public async Task PushLogOutAsync(Guid userId, bool excludeCurrentContext = false)
     {
-        await PushUserAsync(userId, PushType.LogOut);
+        await PushUserAsync(userId, PushType.LogOut, excludeCurrentContext);
     }
 
-    private async Task PushUserAsync(Guid userId, PushType type)
+    private async Task PushUserAsync(Guid userId, PushType type, bool excludeCurrentContext = false)
     {
         var message = new UserPushNotification
         {
@@ -127,7 +127,7 @@ public class AzureQueuePushNotificationService : IPushNotificationService
             Date = DateTime.UtcNow
         };
 
-        await SendMessageAsync(type, message, false);
+        await SendMessageAsync(type, message, excludeCurrentContext);
     }
 
     public async Task PushAuthRequestAsync(AuthRequest authRequest)

@@ -1,0 +1,56 @@
+---
+version: "3.8"
+
+services:
+  bitwarden:
+    depends_on:
+      - db
+    env_file:
+      - settings.env
+    image: ${REGISTRY:-bitwarden}/self-host:${TAG:-latest}
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - bitwarden:/etc/bitwarden
+      - logs:/var/log/bitwarden
+
+  # MariaDB Example
+  db:
+    environment:
+      MARIADB_USER: "bitwarden"
+      MARIADB_PASSWORD: "super_strong_password"
+      MARIADB_DATABASE: "bitwarden_vault"
+      MARIADB_RANDOM_ROOT_PASSWORD: "true"
+    image: mariadb:10
+    restart: always
+    volumes:
+      - data:/var/lib/mysql
+
+  # PostgreSQL Example
+  # db:
+  #   environment:
+  #     POSTGRES_USER: "bitwarden"
+  #     POSTGRES_PASSWORD: "super_strong_password"
+  #     POSTGRES_DB: "bitwarden_vault"
+  #   image: postgres:15
+  #   restart: always
+  #   volumes:
+  #     - data:/var/lib/postgresql/data
+
+  # MS SQL Server Example
+  # Docs: https://learn.microsoft.com/en-us/sql/linux/sql-server-linux-docker-container-deployment
+  # db:
+  #   environment:
+  #     MSSQL_SA_PASSWORD: "super_strong_password"
+  #     ACCEPT_EULA: Y
+  #   image: mcr.microsoft.com/mssql/server:2019-latest
+  #   restart: always
+  #   volumes:
+  #     - data:/var/opt/mssql/data
+
+volumes:
+  bitwarden:
+  logs:
+  data:
