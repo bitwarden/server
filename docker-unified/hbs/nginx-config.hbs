@@ -1,0 +1,149 @@
+server {
+  listen 80 default_server;
+  #listen [::]:80 default_server;
+  server_name {{{String.Coalesce env.BW_DOMAIN "localhost"}}};
+{{#if (String.Equal env.BW_ENABLE_SSL "true")}}
+
+  return 301 https://{{{String.Coalesce env.BW_DOMAIN "localhost"}}}$request_uri;
+}
+
+server {
+  listen 443 ssl http2;
+  #listen [::]:443 ssl http2;
+  server_name {{{String.Coalesce env.BW_DOMAIN "localhost"}}};
+
+  ssl_certificate /etc/bitwarden/{{{String.Coalesce env.BW_SSL_CERT "ssl.crt"}}};
+  ssl_certificate_key /etc/bitwarden/{{{String.Coalesce env.BW_SSL_KEY "ssl.key"}}};
+  ssl_session_timeout 30m;
+  ssl_session_cache shared:SSL:20m;
+  ssl_session_tickets off;
+{{#if (String.Equal env.BW_ENABLE_SSL_DH "true")}}
+
+  # Diffie-Hellman parameter for DHE ciphersuites, recommended 2048 bits
+  ssl_dhparam /etc/bitwarden/{{{String.Coalesce env.BW_SSL_DH_CERT "dh.pem"}}};
+{{/if}}
+
+  ssl_protocols {{{String.Coalesce env.BW_SSL_PROTOCOLS "TLSv1.2"}}};
+  ssl_ciphers "{{{String.Coalesce env.BW_SSL_CIPHERS "ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256"}}}";
+  # Enables server-side protection from BEAST attacks
+  ssl_prefer_server_ciphers on;
+{{#if (String.Equal env.BW_ENABLE_SSL_CA "true")}}
+
+  # OCSP Stapling ---
+  # Fetch OCSP records from URL in ssl_certificate and cache them
+  ssl_stapling on;
+  ssl_stapling_verify on;
+
+  # Verify chain of trust of OCSP response using Root CA and Intermediate certs
+  ssl_trusted_certificate /etc/bitwarden/{{{String.Coalesce env.BW_SSL_CA_CERT "ca.crt"}}};
+  resolver 1.1.1.1 1.0.0.1 9.9.9.9 149.112.112.112 valid=300s;
+{{/if}}
+
+  include /etc/nginx/security-headers-ssl.conf;
+{{/if}}
+  include /etc/nginx/security-headers.conf;
+{{#if (String.IsNotNullOrWhitespace env.BW_REAL_IPS)}}
+
+{{#each (String.Split env.BW_REAL_IPS ",")}}
+  set_real_ip_from {{{String.Trim .}}};
+{{/each}}
+  real_ip_header X-Forwarded-For;
+  real_ip_recursive on;
+{{/if}}
+
+  location / {
+    root /app/Web;
+{{#if (String.Equal env.BW_ENABLE_SSL "true")}}
+    include /etc/nginx/security-headers-ssl.conf;
+{{/if}}
+    include /etc/nginx/security-headers.conf;
+    add_header Content-Security-Policy "{{{String.Coalesce env.BW_CSP "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://haveibeenpwned.com https://www.gravatar.com; child-src 'self' https://*.duosecurity.com https://*.duofederal.com; frame-src 'self' https://*.duosecurity.com https://*.duofederal.com; connect-src 'self' https://api.pwnedpasswords.com https://2fa.directory; object-src 'self' blob:;"}}}";
+    add_header X-Frame-Options SAMEORIGIN;
+    add_header X-Robots-Tag "noindex, nofollow";
+  }
+
+  location /alive {
+    default_type text/plain;
+    return 200 $date_gmt;
+  }
+
+  location = /app-id.json {
+    root /app/Web;
+{{#if (String.Equal env.BW_ENABLE_SSL "true")}}
+    include /etc/nginx/security-headers-ssl.conf;
+{{/if}}
+    include /etc/nginx/security-headers.conf;
+    proxy_hide_header Content-Type;
+    add_header Content-Type $fido_content_type;
+  }
+
+  location /attachments {
+    alias /etc/bitwarden/attachments/;
+  }
+
+  location /api/ {
+    proxy_pass http://localhost:5001/;
+  }
+
+  location /icons/ {
+{{#if (String.Equal env.BW_ICONS_PROXY_TO_CLOUD "true")}}
+    proxy_pass https://icons.bitwarden.net/;
+    proxy_set_header Host icons.bitwarden.net;
+    proxy_set_header X-Forwarded-For $remote_addr;
+    proxy_ssl_server_name on;
+{{else}}
+    proxy_pass http://localhost:5004/;
+{{/if}}
+  }
+
+  location /notifications/ {
+    proxy_pass http://localhost:5006/;
+  }
+
+  location /notifications/hub {
+    proxy_pass http://localhost:5006/hub;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection $http_connection;
+  }
+
+  location /events/ {
+    proxy_pass http://localhost:5003/;
+  }
+
+  location /sso {
+    proxy_pass http://localhost:5007;
+{{#if (String.Equal env.BW_ENABLE_SSL "true")}}
+    include /etc/nginx/security-headers-ssl.conf;
+{{/if}}
+    include /etc/nginx/security-headers.conf;
+    add_header X-Frame-Options SAMEORIGIN;
+  }
+
+  location /identity {
+    proxy_pass http://localhost:5005;
+{{#if (String.Equal env.BW_ENABLE_SSL "true")}}
+    include /etc/nginx/security-headers-ssl.conf;
+{{/if}}
+    include /etc/nginx/security-headers.conf;
+    add_header X-Frame-Options SAMEORIGIN;
+  }
+
+  location /admin {
+    proxy_pass http://localhost:5000;
+{{#if (String.Equal env.BW_ENABLE_SSL "true")}}
+    include /etc/nginx/security-headers-ssl.conf;
+{{/if}}
+    include /etc/nginx/security-headers.conf;
+    add_header X-Frame-Options SAMEORIGIN;
+  }
+
+  location /scim/ {
+    proxy_pass http://localhost:5002/;
+  }
+{{#if (String.Equal env.BW_ENABLE_KEY_CONNECTOR "true")}}
+
+  location /key-connector/ {
+    proxy_pass {{{env.BW_KEY_CONNECTOR_INTERNAL_URL}}}/;
+  }
+{{/if}}
+}
