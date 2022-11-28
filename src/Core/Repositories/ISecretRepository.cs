@@ -8,7 +8,7 @@ public interface ISecretRepository
     Task<IEnumerable<Secret>> GetManyByIds(IEnumerable<Guid> ids);
     Task<IEnumerable<Secret>> GetManyByProjectIdAsync(Guid projectId);
     Task<Secret> GetByIdAsync(Guid id);
-    Task<Core.Entities.Secret> CreateAsync(Secret secret, Guid? projectId);
+    Task<Core.Entities.Secret> CreateAsync(Secret secret);
     Task ReplaceAsync(Secret secret);
     Task SoftDeleteManyByIdAsync(IEnumerable<Guid> ids);
 }

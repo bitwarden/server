@@ -22,7 +22,7 @@ public class SecretCreateRequestModel
 
     public Secret ToSecret(Guid organizationId)
     {
-        return new Secret()
+        var s = new Secret()
         {
             OrganizationId = organizationId,
             Key = Key,
@@ -30,5 +30,17 @@ public class SecretCreateRequestModel
             Note = Note,
             DeletedDate = null,
         };
+
+        if (ProjectId.HasValue)
+        {
+            s.Projects = new List<Project>();
+            var p = new Project
+            {
+                Id = ProjectId.Value
+            };
+            s.Projects.Add(p);
+        }
+
+        return s;
     }
 }

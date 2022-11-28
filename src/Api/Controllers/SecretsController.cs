@@ -58,7 +58,7 @@ public class SecretsController : Controller
     [HttpPost("organizations/{organizationId}/secrets")]
     public async Task<SecretResponseModel> CreateSecretAsync([FromRoute] Guid organizationId, [FromBody] SecretCreateRequestModel createRequest)
     {
-        var result = await _createSecretCommand.CreateAsync(createRequest.ToSecret(organizationId), createRequest.ProjectId);
+        var result = await _createSecretCommand.CreateAsync(createRequest.ToSecret(organizationId));
         return new SecretResponseModel(result);
     }
 

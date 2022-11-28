@@ -63,9 +63,9 @@ public class SecretRepository : Repository<Core.Entities.Secret, Secret, Guid>, 
         }
     }
 
-    public async Task<Core.Entities.Secret> CreateAsync(Core.Entities.Secret secret, Guid? projectId)
+    public async Task<Core.Entities.Secret> CreateAsync(Core.Entities.Secret secret)
     {
-        if (projectId != null && projectId != Guid.Empty)
+        if (secret.Projects?.Count > 0)
         {
             using (var scope = ServiceScopeFactory.CreateScope())
             {
