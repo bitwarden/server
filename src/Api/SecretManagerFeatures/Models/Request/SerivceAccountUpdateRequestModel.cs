@@ -15,7 +15,7 @@ public class ServiceAccountUpdateRequestModel
         return new ServiceAccount()
         {
             Id = id,
-            Name = this.Name,
+            Name = Name,
         };
     }
 }

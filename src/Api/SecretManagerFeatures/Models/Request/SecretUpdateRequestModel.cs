@@ -33,9 +33,9 @@ public class SecretUpdateRequestModel
         return new Secret()
         {
             Id = id,
-            Key = this.Key,
-            Value = this.Value,
-            Note = this.Note,
+            Key = Key,
+            Value = Value,
+            Note = Note,
             DeletedDate = null,
             Projects = assignedProjects
         };
