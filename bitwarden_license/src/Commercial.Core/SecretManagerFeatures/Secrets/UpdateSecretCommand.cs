@@ -14,7 +14,7 @@ public class UpdateSecretCommand : IUpdateSecretCommand
         _secretRepository = secretRepository;
     }
 
-    public async Task<Secret> UpdateAsync(Secret secret)
+    public async Task<Secret> UpdateAsync(Secret secret, Guid[]? projectIds)
     {
         var existingSecret = await _secretRepository.GetByIdAsync(secret.Id);
         if (existingSecret == null)
@@ -26,8 +26,8 @@ public class UpdateSecretCommand : IUpdateSecretCommand
         secret.CreationDate = existingSecret.CreationDate;
         secret.DeletedDate = existingSecret.DeletedDate;
         secret.RevisionDate = DateTime.UtcNow;
-        //test comment
-        await _secretRepository.ReplaceAsync(secret);
+
+        await _secretRepository.UpdateAsync(secret, projectIds);
         return secret;
     }
 }
