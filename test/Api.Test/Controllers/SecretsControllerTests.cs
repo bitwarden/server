@@ -72,7 +72,7 @@ public class SecretsControllerTests
 
         var result = await sutProvider.Sut.CreateSecretAsync(organizationId, data);
         await sutProvider.GetDependency<ICreateSecretCommand>().Received(1)
-                     .CreateAsync(Arg.Any<Secret>(), null);
+                     .CreateAsync(Arg.Any<Secret>(), Arg.Any<Guid>());
     }
 
     [Theory]
