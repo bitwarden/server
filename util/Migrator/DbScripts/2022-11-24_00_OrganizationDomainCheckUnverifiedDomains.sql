@@ -12,6 +12,7 @@ SELECT
 FROM
     [dbo].[OrganizationDomain]
 WHERE [VerifiedDate] IS NULL
+  AND [NextRunCount] != 3
   AND DATEPART(year, [NextRunDate]) = @year
   AND DATEPART(month, [NextRunDate]) = @month
   AND DATEPART(day, [NextRunDate]) = @day
