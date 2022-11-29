@@ -27,7 +27,7 @@ public class OrganizationDomain : ITableObject<Guid>
         //1st job runs after 12hrs, 2nd after 24hrs and 3rd after 36hrs
         NextRunDate = JobRunCount == 0
             ? CreationDate.AddHours(12)
-            : NextRunDate.AddHours((JobRunCount + 1)  * 12);
+            : NextRunDate.AddHours((JobRunCount + 1) * 12);
     }
 
     public void SetNextRunCount()
