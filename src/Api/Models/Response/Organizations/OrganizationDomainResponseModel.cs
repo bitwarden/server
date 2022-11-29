@@ -19,7 +19,7 @@ public class OrganizationDomainResponseModel : ResponseModel
         DomainName = organizationDomain.DomainName;
         CreationDate = organizationDomain.CreationDate;
         NextRunDate = organizationDomain.NextRunDate;
-        NextRunCount = organizationDomain.NextRunCount;
+        JobRunCount = organizationDomain.JobRunCount;
         VerifiedDate = organizationDomain.VerifiedDate;
     }
 
@@ -29,6 +29,6 @@ public class OrganizationDomainResponseModel : ResponseModel
     public string DomainName { get; set; }
     public DateTime CreationDate { get; set; }
     public DateTime NextRunDate { get; set; }
-    public int NextRunCount { get; set; }
+    public int JobRunCount { get; set; }
     public DateTime? VerifiedDate { get; set; }
 }

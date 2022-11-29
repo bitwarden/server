@@ -6,7 +6,7 @@ CREATE TABLE [dbo].[OrganizationDomain] (
     [CreationDate]      DATETIME2(7)     NOT NULL,
     [VerifiedDate]      DATETIME2(7)     NULL,
     [NextRunDate]       DATETIME2(7)     NOT NULL,
-    [NextRunCount]      TINYINT          NOT NULL
+    [JobRunCount]      TINYINT          NOT NULL
     CONSTRAINT [PK_OrganizationDomain] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_OrganzationDomain_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id])
 );
