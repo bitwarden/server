@@ -6,7 +6,7 @@ CREATE PROCEDURE [dbo].[OrganizationDomain_Update]
     @CreationDate   DATETIME2(7),
     @VerifiedDate   DATETIME2(7),
     @NextRunDate    DATETIME2(7),
-    @NextRunCount   TINYINT
+    @JobRunCount   TINYINT
 AS
 BEGIN
     SET NOCOUNT ON
@@ -20,7 +20,7 @@ BEGIN
         [CreationDate] = @CreationDate,
         [VerifiedDate] = @VerifiedDate,
         [NextRunDate] = @NextRunDate,
-        [NextRunCount] = @NextRunCount
+        [JobRunCount] = @JobRunCount
     WHERE
         [Id] = @Id
 END

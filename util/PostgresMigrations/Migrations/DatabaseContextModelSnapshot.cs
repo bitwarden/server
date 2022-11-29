@@ -723,7 +723,7 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
-                    b.Property<int>("NextRunCount")
+                    b.Property<int>("JobRunCount")
                         .HasColumnType("integer");
 
                     b.Property<DateTime>("NextRunDate")

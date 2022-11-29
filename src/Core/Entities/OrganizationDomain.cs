@@ -13,34 +13,35 @@ public class OrganizationDomain : ITableObject<Guid>
     public DateTime CreationDate { get; set; } = DateTime.UtcNow;
     public DateTime? VerifiedDate { get; private set; }
     public DateTime NextRunDate { get; private set; }
-    public int NextRunCount { get; private set; }
+    public int JobRunCount { get; private set; }
     public void SetNewId() => Id = CoreHelpers.GenerateComb();
 
-    public OrganizationDomain SetNextRunDate()
+    public void SetNextRunDate()
     {
-        if (NextRunCount < 1)
+        if (JobRunCount == 3)
         {
-            return this;
+            return;
         }
 
-        NextRunDate = CreationDate.AddHours(NextRunCount * 12);
-        return this;
+        //verification can take up to 72 hours
+        //1st job runs after 12hrs, 2nd after 24hrs and 3rd after 36hrs
+        NextRunDate = JobRunCount == 0
+            ? CreationDate.AddHours(12)
+            : NextRunDate.AddHours((JobRunCount + 1)  * 12);
     }
 
-    public OrganizationDomain SetNextRunCount()
+    public void SetNextRunCount()
     {
-        if (NextRunCount == 3)
+        if (JobRunCount == 3)
         {
-            return this;
+            return;
         }
 
-        NextRunCount++;
-        return this;
+        JobRunCount++;
     }
 
-    public OrganizationDomain SetVerifiedDate()
+    public void SetVerifiedDate()
     {
         VerifiedDate = DateTime.UtcNow;
-        return this;
     }
 }

@@ -15,7 +15,7 @@ CREATE TABLE [dbo].[OrganizationDomain] (
     [CreationDate]      DATETIME2(7)     NOT NULL,
     [VerifiedDate]      DATETIME2(7)     NULL,
     [NextRunDate]       DATETIME2(7)     NOT NULL,
-    [NextRunCount]      TINYINT          NOT NULL
+    [JobRunCount]      TINYINT          NOT NULL
     CONSTRAINT [PK_OrganizationDomain] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_OrganzationDomain_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id])
 )
@@ -41,7 +41,7 @@ CREATE OR ALTER PROCEDURE [dbo].[OrganizationDomain_Create]
     @CreationDate   DATETIME2(7),
     @VerifiedDate   DATETIME2(7),
     @NextRunDate    DATETIME2(7),
-    @NextRunCount   TINYINT
+    @JobRunCount   TINYINT
 AS
 BEGIN
     SET NOCOUNT ON
@@ -55,7 +55,7 @@ BEGIN
         [CreationDate],
         [VerifiedDate],
         [NextRunDate],
-        [NextRunCount]
+        [JobRunCount]
     )
     VALUES
     (
@@ -66,7 +66,7 @@ BEGIN
         @CreationDate,
         @VerifiedDate,
         @NextRunDate,
-        @NextRunCount
+        @JobRunCount
     )
 END
 GO
@@ -80,7 +80,7 @@ CREATE OR ALTER PROCEDURE [dbo].[OrganizationDomain_Update]
     @CreationDate   DATETIME2(7),
     @VerifiedDate   DATETIME2(7),
     @NextRunDate    DATETIME2(7),
-    @NextRunCount   TINYINT
+    @JobRunCount   TINYINT
 AS
 BEGIN
     SET NOCOUNT ON
@@ -94,7 +94,7 @@ SET
     [CreationDate] = @CreationDate,
     [VerifiedDate] = @VerifiedDate,
     [NextRunDate] = @NextRunDate,
-    [NextRunCount] = @NextRunCount
+    [JobRunCount] = @JobRunCount
 WHERE
     [Id] = @Id
 END
