@@ -78,7 +78,6 @@ public class SecretRepository : Repository<Core.Entities.Secret, Secret, Guid>, 
             }
         }
 
-        base.ReplaceAsync(secret);
         return secret;
     }
 
