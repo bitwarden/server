@@ -8,5 +8,7 @@ BEGIN
     EXEC [dbo].[Collection_ReadByOrganizationId] @OrganizationId
 
     EXEC [dbo].[CollectionGroup_ReadByOrganizationId] @OrganizationId
+
+    EXEC [dbo].[CollectionUser_ReadByOrganizationId] @OrganizationId
     
 END

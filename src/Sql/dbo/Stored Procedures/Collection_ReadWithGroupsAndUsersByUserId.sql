@@ -1,6 +1,5 @@
-CREATE PROCEDURE [dbo].[Collection_ReadWithGroupsByUserIdOrganizationId]
-	@UserId UNIQUEIDENTIFIER,
-	@OrganizationId UNIQUEIDENTIFIER
+CREATE PROCEDURE [dbo].[Collection_ReadWithGroupsAndUsersByUserId]
+	@UserId UNIQUEIDENTIFIER
 AS
 BEGIN
 	SET NOCOUNT ON
@@ -13,8 +12,6 @@ BEGIN
 		*
 	FROM
 	 	 @TempUserCollections C
-	WHERE
-		C.[OrganizationId] = @OrganizationId
 	 	 
 	SELECT
 		CG.*
@@ -22,7 +19,13 @@ BEGIN
 	 	[dbo].[CollectionGroup] CG
 	INNER JOIN
 	    @TempUserCollections C ON C.[Id] = CG.[CollectionId]
-	WHERE
-	    C.[OrganizationId] = @OrganizationId
 
+	    
+	SELECT
+		CU.*
+	FROM
+		[dbo].[CollectionUser] CU
+	INNER JOIN
+		@TempUserCollections C ON C.[Id] = CU.[CollectionId]
+		
 END

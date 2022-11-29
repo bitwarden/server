@@ -153,53 +153,88 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         }
     }
 
-    public async Task<ICollection<Tuple<Core.Entities.Collection, ICollection<SelectionReadOnly>>>>
-        GetManyWithGroupsByOrganizationIdAsync(Guid organizationId)
+    public async Task<ICollection<Tuple<Core.Entities.Collection, CollectionAccessDetails>>> GetManyByOrganizationIdWithAccessAsync(Guid organizationId)
     {
         var collections = await GetManyByOrganizationIdAsync(organizationId);
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var query = await (
+            var groups = await (
                 from cg in dbContext.CollectionGroups
                 where cg.Collection.OrganizationId == organizationId
                 select cg).ToListAsync();
+            var users = await (
+                from cu in dbContext.CollectionUsers
+                where cu.Collection.OrganizationId == organizationId
+                select cu).ToListAsync();
 
             return collections.Select(collection =>
-                new Tuple<Core.Entities.Collection, ICollection<SelectionReadOnly>>(
+                new Tuple<Core.Entities.Collection, CollectionAccessDetails>(
                     collection,
-                    query.Select(g => new SelectionReadOnly
+                    new CollectionAccessDetails
                     {
-                        Id = g.GroupId,
-                        ReadOnly = g.ReadOnly,
-                        HidePasswords = g.HidePasswords,
-                    }).ToList()
+                        Groups = groups
+                        .Where(g => g.CollectionId == collection.Id)
+                        .Select(g => new CollectionAccessSelection
+                        {
+                            Id = g.GroupId,
+                            HidePasswords = g.HidePasswords,
+                            ReadOnly = g.ReadOnly
+                        }).ToList(),
+                        Users = users
+                        .Where(c => c.CollectionId == collection.Id)
+                        .Select(c => new CollectionAccessSelection
+                        {
+                            Id = c.OrganizationUserId,
+                            HidePasswords = c.HidePasswords,
+                            ReadOnly = c.ReadOnly
+                        }).ToList()
+                    }
                 )
             ).ToList();
         }
     }
 
-    public async Task<ICollection<Tuple<Core.Entities.Collection, ICollection<SelectionReadOnly>>>> GetManyWithGroupsByUserIdAsync(Guid userId, Guid organizationId)
+    public async Task<ICollection<Tuple<Core.Entities.Collection, CollectionAccessDetails>>> GetManyByUserIdWithAccessAsync(Guid userId, Guid organizationId)
     {
         var collections = (await GetManyByUserIdAsync(userId)).Where(c => c.OrganizationId == organizationId).ToList();
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var query = await (
+            var groups = await (
                 from cg in dbContext.CollectionGroups
                 where cg.Collection.OrganizationId == organizationId
                  && collections.Select(c => c.Id).Contains(cg.Collection.Id)
                 select cg).ToListAsync();
+            var users = await (
+                from cu in dbContext.CollectionUsers
+                where cu.Collection.OrganizationId == organizationId
+                 && collections.Select(c => c.Id).Contains(cu.Collection.Id)
+                select cu).ToListAsync();
+
 
             return collections.Select(collection =>
-                new Tuple<Core.Entities.Collection, ICollection<SelectionReadOnly>>(
+                new Tuple<Core.Entities.Collection, CollectionAccessDetails>(
                     collection,
-                    query.Select(g => new SelectionReadOnly
+                    new CollectionAccessDetails
                     {
-                        Id = g.GroupId,
-                        ReadOnly = g.ReadOnly,
-                        HidePasswords = g.HidePasswords,
-                    }).ToList()
+                        Groups = groups
+                        .Where(g => g.CollectionId == collection.Id)
+                        .Select(g => new CollectionAccessSelection
+                        {
+                            Id = g.GroupId,
+                            HidePasswords = g.HidePasswords,
+                            ReadOnly = g.ReadOnly
+                        }).ToList(),
+                        Users = users
+                        .Where(c => c.CollectionId == collection.Id)
+                        .Select(c => new CollectionAccessSelection
+                        {
+                            Id = c.OrganizationUserId,
+                            HidePasswords = c.HidePasswords,
+                            ReadOnly = c.ReadOnly
+                        }).ToList()
+                    }
                 )
             ).ToList();
         }
