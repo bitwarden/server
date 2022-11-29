@@ -55,7 +55,7 @@ public class SecretsController : Controller
     [HttpPut("secrets/{id}")]
     public async Task<SecretResponseModel> UpdateSecretAsync([FromRoute] Guid id, [FromBody] SecretUpdateRequestModel updateRequest)
     {
-        var result = await _updateSecretCommand.UpdateAsync(updateRequest.ToSecret(id));
+        var result = await _updateSecretCommand.UpdateAsync(updateRequest.ToSecret(id), updateRequest.ProjectIds);
         return new SecretResponseModel(result);
     }
 

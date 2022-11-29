@@ -53,6 +53,35 @@ public class SecretRepository : Repository<Core.Entities.Secret, Secret, Guid>, 
         }
     }
 
+    public async Task<Core.Entities.Secret> UpdateAsync(Core.Entities.Secret secret, Guid[]? projectIds)
+    {
+        if (projectIds != null)
+        {
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var dbContext = GetDatabaseContext(scope);
+                var mappedEntity = Mapper.Map<Secret>(secret);
+                var entity = await GetDbSet(dbContext).FindAsync(secret.Id);
+
+
+                foreach (var p in mappedEntity.Projects)
+                {
+                   //Do I need to load the project?
+                    dbContext.Attach(p);
+                }
+                
+                //TODO we need to remove the projects that aren't in the mappedEntity.Projects list
+                //Then we need to add the one's that aren't in there yet --  If this isn't handled already automatically
+
+                dbContext.Entry(entity).CurrentValues.SetValues(mappedEntity);
+                await dbContext.SaveChangesAsync();
+            }
+        }
+
+        base.ReplaceAsync(secret);
+        return secret;
+    }
+
     public async Task SoftDeleteManyByIdAsync(IEnumerable<Guid> ids)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
