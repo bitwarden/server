@@ -29,41 +29,41 @@ END
 GO
 
 CREATE PROCEDURE [dbo].[Collection_ReadWithGroupsAndUsersByUserId]
-	@UserId UNIQUEIDENTIFIER
+    @UserId UNIQUEIDENTIFIER
 AS
 BEGIN
     SET NOCOUNT ON
-	
+    
     DECLARE @TempUserCollections TABLE(Id UNIQUEIDENTIFIER, OrganizationId UNIQUEIDENTIFIER, Name VARCHAR(MAX), CreationDate DATETIME2(7), RevisionDate DATETIME2(7), ExternalId NVARCHAR(300), ReadOnly BIT, HidePasswords BIT)
 
     INSERT INTO @TempUserCollections EXEC [dbo].[Collection_ReadByUserId] @UserId
-	 
+     
     SELECT
         *
     FROM
         @TempUserCollections C
-	 	 
+          
     SELECT
         CG.*
     FROM
         [dbo].[CollectionGroup] CG
     INNER JOIN
         @TempUserCollections C ON C.[Id] = CG.[CollectionId]
-	    
+        
     SELECT
         CU.*
     FROM
         [dbo].[CollectionUser] CU
     INNER JOIN
         @TempUserCollections C ON C.[Id] = CU.[CollectionId]
-		
+        
 END
 GO
 
 
 -- CollectionUser_ReadByOrganizationId
 CREATE PROCEDURE [dbo].[CollectionUser_ReadByOrganizationId]
-	@OrganizationId UNIQUEIDENTIFIER
+    @OrganizationId UNIQUEIDENTIFIER
 AS
 BEGIN
     SET NOCOUNT ON
@@ -134,15 +134,15 @@ BEGIN
         [OrganizationId]
 
     DECLARE @BatchSize INT = 100
-	
+    
     -- Delete Collection Groups
     WHILE @BatchSize > 0
     BEGIN
         BEGIN TRANSACTION CollectionGroup_DeleteMany
-        	DELETE TOP(@BatchSize) 
-        	FROM
-        		[dbo].[CollectionGroup]
-        	WHERE
+            DELETE TOP(@BatchSize)
+            FROM
+                [dbo].[CollectionGroup]
+            WHERE
                 [CollectionId] IN (SELECT [Id] FROM @Ids)
 
 
