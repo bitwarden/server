@@ -1,10 +1,8 @@
 ﻿using System.Text.Json;
-using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Api.Request.Accounts;
 using Bit.Core.Repositories;
 using Bit.Identity.IdentityServer;
-using Bit.Infrastructure.EntityFramework.Models;
 using Bit.IntegrationTestCommon.Factories;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
