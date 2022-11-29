@@ -353,6 +353,11 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
             dbContext.CollectionGroups.RemoveRange(collectionGroupEntities);
             dbContext.Collections.RemoveRange(collectionEntities);
             await dbContext.SaveChangesAsync();
+
+            foreach (var collection in collectionEntities.GroupBy(g => g.Organization.Id))
+            {
+                await UserBumpAccountRevisionDateByOrganizationId(collection.Key);
+            }
         }
     }
 

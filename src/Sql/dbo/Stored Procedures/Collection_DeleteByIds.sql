@@ -4,6 +4,18 @@ AS
 BEGIN
     SET NOCOUNT ON
 
+    DECLARE @OrgIds AS [dbo].[GuidIdArray]
+
+    INSERT INTO @OrgIds (Id)
+    SELECT
+        [OrganizationId]
+    FROM
+        [dbo].[Collection]
+    WHERE
+        [Id] in (SELECT [Id] FROM @Ids)
+    GROUP BY
+        [OrganizationId]
+
     DECLARE @BatchSize INT = 100
 	
     -- Delete Collection Groups
@@ -37,4 +49,6 @@ BEGIN
             SET @BatchSize = @@ROWCOUNT
         COMMIT TRANSACTION CollectionGroup_DeleteMany
 	END
+
+    EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationIds] @OrgIds
 END
