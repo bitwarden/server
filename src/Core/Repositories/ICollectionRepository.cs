@@ -9,8 +9,8 @@ public interface ICollectionRepository : IRepository<Collection, Guid>
     Task<Tuple<Collection, CollectionAccessDetails>> GetByIdWithAccessAsync(Guid id);
     Task<Tuple<CollectionDetails, CollectionAccessDetails>> GetByIdWithAccessAsync(Guid id, Guid userId);
     Task<ICollection<Collection>> GetManyByOrganizationIdAsync(Guid organizationId);
-    Task<ICollection<Tuple<Collection, ICollection<CollectionAccessSelection>>>> GetManyWithGroupsByOrganizationIdAsync(Guid organizationId);
-    Task<ICollection<Tuple<Collection, ICollection<CollectionAccessSelection>>>> GetManyWithGroupsByUserIdAsync(Guid userId, Guid organizationId);
+    Task<ICollection<Tuple<Collection, CollectionAccessDetails>>> GetManyByOrganizationIdWithAccessAsync(Guid organizationId);
+    Task<ICollection<Tuple<Collection, CollectionAccessDetails>>> GetManyByUserIdWithAccessAsync(Guid userId, Guid organizationId);
     Task<CollectionDetails> GetByIdAsync(Guid id, Guid userId);
     Task<ICollection<Collection>> GetManyByManyIdsAsync(IEnumerable<Guid> collectionIds);
     Task<ICollection<CollectionDetails>> GetManyByUserIdAsync(Guid userId);

@@ -3,6 +3,7 @@ using Bit.Api.Models.Response;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Data;
 using Bit.Core.OrganizationFeatures.OrganizationCollections.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -77,17 +78,28 @@ public class CollectionsController : Controller
     }
 
     [HttpGet("details")]
-    public async Task<ListResponseModel<CollectionGroupDetailsResponseModel>> GetManyWithDetails(Guid orgId)
+    public async Task<ListResponseModel<CollectionAccessDetailsResponseModel>> GetManyWithDetails(Guid orgId)
     {
         if (!await ViewAtLeastOneCollectionAsync(orgId) && !await _currentContext.ManageUsers(orgId))
         {
             throw new NotFoundException();
         }
 
-        var collectionDetails = await _collectionService.GetOrganizationCollectionsWithGroups(orgId);
+        IEnumerable<Tuple<Collection, CollectionAccessDetails>> orgCollections;
+        if (await _currentContext.OrganizationAdmin(orgId) || await _currentContext.EditAnyCollection(orgId) || await _currentContext.DeleteAnyCollection(orgId))
+        {
+            // Admins, Owners, Providers and Custom (with Admin collection management permissions) can access all items even if not assigned to them
+            orgCollections = await _collectionRepository.GetManyByOrganizationIdWithAccessAsync(orgId);
+        }
+        else
+        {
+            // Managers and Custom (with Manager collection management permissions) can only access items assigned to them
+            orgCollections = await _collectionRepository.GetManyByUserIdWithAccessAsync(_currentContext.UserId.Value, orgId);
+        }
 
-        var responses = collectionDetails.Select(d => new CollectionGroupDetailsResponseModel(d.Item1, d.Item2));
-        return new ListResponseModel<CollectionGroupDetailsResponseModel>(responses);
+
+        var responses = orgCollections.Select(d => new CollectionAccessDetailsResponseModel(d.Item1, d.Item2.Groups, d.Item2.Users));
+        return new ListResponseModel<CollectionAccessDetailsResponseModel>(responses);
     }
 
     [HttpGet("")]
