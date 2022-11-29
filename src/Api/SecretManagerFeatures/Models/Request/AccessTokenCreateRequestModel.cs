@@ -17,7 +17,6 @@ public class AccessTokenCreateRequestModel
     [Required]
     [EncryptedString]
     public string Key { get; set; }
-    [Required]
     public DateTime? ExpireAt { get; set; }
 
     public ApiKey ToApiKey(Guid serviceAccountId)
