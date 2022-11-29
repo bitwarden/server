@@ -25,7 +25,7 @@ public class NotificationHubPushNotificationService : IPushNotificationService
         IInstallationDeviceRepository installationDeviceRepository,
         GlobalSettings globalSettings,
         IHttpContextAccessor httpContextAccessor,
-        ILogger<NotificationsApiPushNotificationService> logger)
+        ILogger<NotificationHubPushNotificationService> logger)
     {
         _installationDeviceRepository = installationDeviceRepository;
         _globalSettings = globalSettings;

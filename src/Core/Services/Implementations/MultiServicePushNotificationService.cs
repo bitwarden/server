@@ -48,7 +48,7 @@ public class MultiServicePushNotificationService : IPushNotificationService
             }
             if (CoreHelpers.SettingHasValue(globalSettings.Notifications?.ConnectionString))
             {
-                _services.Add(new AzureQueuePushNotificationService(globalSettings, httpContextAccessor));
+                _services.Add(new AzureQueuePushNotificationService(globalSettings, httpContextAccessor, hubLogger));
             }
         }
 
