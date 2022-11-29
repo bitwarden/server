@@ -72,9 +72,7 @@ jobs:
         run: echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
 
       - name: Setup Docker Trust
-        if: |
-          false &&
-          ${{ env.is_publish_branch == 'true' }}
+        if: ${{ env.is_publish_branch == 'true' }}
         env:
           DCT_DELEGATION_KEY_ID: "c9bde8ec820701516491e5e03d3a6354e7bd66d05fa3df2b0062f68b116dc59c"
           DCT_DELEGATE_KEY: ${{ steps.retrieve-secrets.outputs.dct-delegate-2-key }}
