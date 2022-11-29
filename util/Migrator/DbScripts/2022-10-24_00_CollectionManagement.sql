@@ -1,11 +1,11 @@
--- Collection_ReadWithGroupsByOrganizationId
-IF OBJECT_ID('[dbo].[Collection_ReadWithGroupsByOrganizationId]') IS NOT NULL
+-- Collection_ReadWithGroupsAndUsersByOrganizationId
+IF OBJECT_ID('[dbo].[Collection_ReadWithGroupsAndUsersByOrganizationId]') IS NOT NULL
 BEGIN
-    DROP PROCEDURE [dbo].[Collection_ReadWithGroupsByOrganizationId]
+    DROP PROCEDURE [dbo].[Collection_ReadWithGroupsAndUsersByOrganizationId]
 END
 GO
 
-CREATE PROCEDURE [dbo].[Collection_ReadWithGroupsByOrganizationId]
+CREATE PROCEDURE [dbo].[Collection_ReadWithGroupsAndUsersByOrganizationId]
     @OrganizationId UNIQUEIDENTIFIER
 AS
 BEGIN
@@ -14,20 +14,22 @@ BEGIN
     EXEC [dbo].[Collection_ReadByOrganizationId] @OrganizationId
 
     EXEC [dbo].[CollectionGroup_ReadByOrganizationId] @OrganizationId
+
+    EXEC [dbo].[CollectionUser_ReadByOrganizationId] @OrganizationId
     
 END
 GO
 
--- Collection_ReadWithGroupsByUserIdOrganizationId
-IF OBJECT_ID('[dbo].[Collection_ReadWithGroupsByUserIdOrganizationId]') IS NOT NULL
+
+-- Collection_ReadWithGroupsAndUsersByUserId
+IF OBJECT_ID('[dbo].[Collection_ReadWithGroupsAndUsersByUserId]') IS NOT NULL
 BEGIN
-    DROP PROCEDURE [dbo].[Collection_ReadWithGroupsByUserIdOrganizationId]
+    DROP PROCEDURE [dbo].[Collection_ReadWithGroupsAndUsersByUserId]
 END
 GO
 
-CREATE PROCEDURE [dbo].[Collection_ReadWithGroupsByUserIdOrganizationId]
-	@UserId UNIQUEIDENTIFIER,
-	@OrganizationId UNIQUEIDENTIFIER
+CREATE PROCEDURE [dbo].[Collection_ReadWithGroupsAndUsersByUserId]
+	@UserId UNIQUEIDENTIFIER
 AS
 BEGIN
 	SET NOCOUNT ON
@@ -40,8 +42,6 @@ BEGIN
 		*
 	FROM
 	 	 @TempUserCollections C
-	WHERE
-		C.[OrganizationId] = @OrganizationId
 	 	 
 	SELECT
 		CG.*
@@ -49,11 +49,36 @@ BEGIN
 	 	[dbo].[CollectionGroup] CG
 	INNER JOIN
 	    @TempUserCollections C ON C.[Id] = CG.[CollectionId]
-	WHERE
-	    C.[OrganizationId] = @OrganizationId
 
+	SELECT
+		CU.*
+	FROM
+		[dbo].[CollectionUser] CU
+	INNER JOIN
+		@TempUserCollections C ON C.[Id] = CU.[CollectionId]
+		
 END
 GO
+
+
+-- CollectionUser_ReadByOrganizationId
+CREATE PROCEDURE [dbo].[CollectionUser_ReadByOrganizationId]
+	@OrganizationId UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON
+    
+    SELECT
+        CU.*
+    FROM
+        [dbo].[CollectionUser] CU
+    INNER JOIN
+        [dbo].[OrganizationUser] OU ON OU.[Id] = CU.[OrganizationUserId]
+    WHERE
+        OU.[OrganizationId] = @OrganizationId
+    
+END
+
 
 -- Collection_ReadByIds
 IF OBJECT_ID('[dbo].[Collection_ReadByIds]') IS NOT NULL
@@ -81,6 +106,7 @@ BEGIN
         [Id] IN (SELECT [Id] FROM @Ids)
 END
 GO
+
 
 -- Collection_DeleteByIds
 IF OBJECT_ID('[dbo].[Collection_DeleteByIds]') IS NOT NULL
