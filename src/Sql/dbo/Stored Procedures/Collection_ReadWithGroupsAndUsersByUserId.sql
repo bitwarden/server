@@ -19,7 +19,6 @@ BEGIN
         [dbo].[CollectionGroup] CG
     INNER JOIN
         @TempUserCollections C ON C.[Id] = CG.[CollectionId]
-
 	    
     SELECT
         CU.*
