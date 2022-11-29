@@ -7,6 +7,7 @@ using Bit.Core.Models;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Services;
 
@@ -15,14 +16,17 @@ public class AzureQueuePushNotificationService : IPushNotificationService
     private readonly QueueClient _queueClient;
     private readonly GlobalSettings _globalSettings;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly ILogger<AzureQueuePushNotificationService> _logger;
 
     public AzureQueuePushNotificationService(
         GlobalSettings globalSettings,
-        IHttpContextAccessor httpContextAccessor)
+        IHttpContextAccessor httpContextAccessor,
+        ILogger<AzureQueuePushNotificationService> logger)
     {
         _queueClient = new QueueClient(globalSettings.Notifications.ConnectionString, "notifications");
         _globalSettings = globalSettings;
         _httpContextAccessor = httpContextAccessor;
+        _logger = logger;
     }
 
     public async Task PushSyncCipherCreateAsync(Cipher cipher, IEnumerable<Guid> collectionIds)
@@ -148,6 +152,8 @@ public class AzureQueuePushNotificationService : IPushNotificationService
             UserId = authRequest.UserId
         };
 
+        _logger.LogDebug("Formatted AuthRequest into notification message of {@message}", message);
+
         await SendMessageAsync(type, message, true);
     }
 
@@ -186,7 +192,9 @@ public class AzureQueuePushNotificationService : IPushNotificationService
         var contextId = GetContextIdentifier(excludeCurrentContext);
         var message = JsonSerializer.Serialize(new PushNotificationData<T>(type, payload, contextId),
             JsonHelpers.IgnoreWritingNull);
-        await _queueClient.SendMessageAsync(message);
+        _logger.LogDebug("Enqueuing message of {message}", message);
+        var queueResponse = await _queueClient.SendMessageAsync(message);
+        _logger.LogDebug("Enqueued message with SendReceipt of {@receipt}", queueResponse.Value);
     }
 
     private string GetContextIdentifier(bool excludeCurrentContext)

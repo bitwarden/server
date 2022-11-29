@@ -22,6 +22,7 @@ public class AuthRequestsController : Controller
     private readonly ICurrentContext _currentContext;
     private readonly IPushNotificationService _pushNotificationService;
     private readonly IGlobalSettings _globalSettings;
+    private readonly ILogger<AuthRequestsController> _logger;
 
     public AuthRequestsController(
         IUserRepository userRepository,
@@ -30,7 +31,8 @@ public class AuthRequestsController : Controller
         IAuthRequestRepository authRequestRepository,
         ICurrentContext currentContext,
         IPushNotificationService pushNotificationService,
-        IGlobalSettings globalSettings)
+        IGlobalSettings globalSettings,
+        ILogger<AuthRequestsController> logger)
     {
         _userRepository = userRepository;
         _deviceRepository = deviceRepository;
@@ -39,6 +41,7 @@ public class AuthRequestsController : Controller
         _currentContext = currentContext;
         _pushNotificationService = pushNotificationService;
         _globalSettings = globalSettings;
+        _logger = logger;
     }
 
     [HttpGet("")]
@@ -147,7 +150,12 @@ public class AuthRequestsController : Controller
         // to not leak that it was denied to the originating client if it was originated by a malicious actor.
         if (authRequest.Approved ?? true)
         {
+            _logger.LogDebug("Pushing approval for request {@request}", authRequest);
             await _pushNotificationService.PushAuthRequestResponseAsync(authRequest);
+        }
+        else
+        {
+            _logger.LogDebug("Request {@request} not sent to push notifications as it is not approved.", authRequest);
         }
 
         return new AuthRequestResponseModel(authRequest, _globalSettings.BaseServiceUri.Vault);
