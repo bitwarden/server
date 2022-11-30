@@ -1,4 +1,4 @@
-using Bit.Core;
+﻿using Bit.Core;
 using Bit.Core.Jobs;
 using Bit.Core.Services;
 using Quartz;
@@ -11,7 +11,7 @@ public class ValidateOrganizationDomainJob : BaseJob
 
     public ValidateOrganizationDomainJob(
         IVerificationDomainService verificationDomainService,
-        ILogger<ValidateOrganizationDomainJob> logger) 
+        ILogger<ValidateOrganizationDomainJob> logger)
         : base(logger)
     {
         _verificationDomainService = verificationDomainService;
