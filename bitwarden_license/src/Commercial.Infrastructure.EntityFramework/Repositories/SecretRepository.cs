@@ -65,25 +65,25 @@ public class SecretRepository : Repository<Core.Entities.Secret, Secret, Guid>, 
 
     public override async Task<Core.Entities.Secret> CreateAsync(Core.Entities.Secret secret)
     {
-        if (secret.Projects?.Count > 0)
+        using (var scope = ServiceScopeFactory.CreateScope())
         {
-            using (var scope = ServiceScopeFactory.CreateScope())
+            var dbContext = GetDatabaseContext(scope);
+            secret.SetNewId();
+            var entity = Mapper.Map<Secret>(secret);
+
+            if (secret.Projects?.Count > 0)
             {
-                var dbContext = GetDatabaseContext(scope);
-                secret.SetNewId();
-                var entity = Mapper.Map<Secret>(secret);
                 foreach (var p in entity.Projects)
                 {
                     dbContext.Attach(p);
                 }
-                await dbContext.AddAsync(entity);
-                await dbContext.SaveChangesAsync();
-                secret.Id = entity.Id;
-                return secret;
             }
-        }
 
-        return await base.CreateAsync(secret);
+            await dbContext.AddAsync(entity);
+            await dbContext.SaveChangesAsync();
+            secret.Id = entity.Id;
+            return secret;
+        }
     }
 
     public async Task SoftDeleteManyByIdAsync(IEnumerable<Guid> ids)
