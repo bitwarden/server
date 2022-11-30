@@ -1,7 +1,6 @@
 ﻿using Bit.Core.Services;
 using Bit.Core.Settings;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Xunit;
 
@@ -13,18 +12,15 @@ public class AzureQueuePushNotificationServiceTests
 
     private readonly GlobalSettings _globalSettings;
     private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly ILogger<NotificationsApiPushNotificationService> _logger;
 
     public AzureQueuePushNotificationServiceTests()
     {
         _globalSettings = new GlobalSettings();
         _httpContextAccessor = Substitute.For<IHttpContextAccessor>();
-        _logger = Substitute.For<ILogger<NotificationsApiPushNotificationService>>();
 
         _sut = new AzureQueuePushNotificationService(
             _globalSettings,
-            _httpContextAccessor,
-            _logger
+            _httpContextAccessor
         );
     }
 

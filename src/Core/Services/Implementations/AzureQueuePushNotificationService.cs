@@ -16,12 +16,12 @@ public class AzureQueuePushNotificationService : IPushNotificationService
     private readonly QueueClient _queueClient;
     private readonly GlobalSettings _globalSettings;
     private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly ILogger<NotificationsApiPushNotificationService> _logger;
+    private readonly ILogger<AzureQueuePushNotificationService> _logger;
 
     public AzureQueuePushNotificationService(
         GlobalSettings globalSettings,
         IHttpContextAccessor httpContextAccessor,
-        ILogger<NotificationsApiPushNotificationService> logger)
+        ILogger<AzureQueuePushNotificationService> logger)
     {
         _queueClient = new QueueClient(globalSettings.Notifications.ConnectionString, "notifications");
         _globalSettings = globalSettings;
