@@ -45,12 +45,10 @@ public class OrganizationDomainRepository : Repository<OrganizationDomain, Guid>
 
     public async Task<ICollection<OrganizationDomain>> GetManyByNextRunDateAsync(DateTime date)
     {
-        var dateobj = new { Year = date.Year, Month = date.Month, Day = date.Month, Hour = date.Hour };
-
         using var connection = new SqlConnection(ConnectionString);
         var results = await connection.QueryAsync<OrganizationDomain>(
             $"[{Schema}].[OrganizationDomain_ReadByDatepart]",
-            dateobj, commandType: CommandType.StoredProcedure
+            new {}, commandType: CommandType.StoredProcedure
         );
 
         return results.ToList();

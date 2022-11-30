@@ -1,8 +1,5 @@
 CREATE PROCEDURE [dbo].[OrganizationDomain_ReadByNextRunDate]
-    @Year int,
-    @Month int,
-    @Day int,
-    @Hour int
+    @Date DATETIME2(7)
 AS
 BEGIN
     SET NOCOUNT ON
@@ -12,9 +9,15 @@ BEGIN
     FROM
         [dbo].[OrganizationDomain]
     WHERE [VerifiedDate] IS NULL
-    AND [NextRunCount] != 3
-    AND DATEPART(year, [NextRunDate]) = @Year
-    AND DATEPART(month, [NextRunDate]) = @Month
-    AND DATEPART(day, [NextRunDate]) = @Day
-    AND DATEPART(hour, [NextRunDate]) = @Hour
+    AND [JobRunCount] != 3
+    AND DATEPART(year, [NextRunDate]) = DATEPART(year, @Date)
+    AND DATEPART(month, [NextRunDate]) = DATEPART(month, @Date)
+    AND DATEPART(day, [NextRunDate]) = DATEPART(day, @Date)
+    AND DATEPART(hour, [NextRunDate]) = DATEPART(hour, @Date)
+    UNION
+    SELECT 
+        *
+    FROM
+        [dbo].[OrganizationDomain]
+    WHERE DATEDIFF(hour, [NextRunDate], @Date) > 36
 END
