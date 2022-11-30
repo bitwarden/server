@@ -18,11 +18,6 @@ public class OrganizationDomain : ITableObject<Guid>
 
     public void SetNextRunDate()
     {
-        if (JobRunCount == 3)
-        {
-            return;
-        }
-
         //verification can take up to 72 hours
         //1st job runs after 12hrs, 2nd after 24hrs and 3rd after 36hrs
         NextRunDate = JobRunCount == 0
@@ -30,7 +25,7 @@ public class OrganizationDomain : ITableObject<Guid>
             : NextRunDate.AddHours((JobRunCount + 1) * 12);
     }
 
-    public void SetNextRunCount()
+    public void SetJobRunCount()
     {
         if (JobRunCount == 3)
         {

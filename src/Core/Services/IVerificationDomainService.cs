@@ -2,5 +2,5 @@
 
 public interface IVerificationDomainService
 {
-    Task VerifyOrganizationsDomain();
+    Task ValidateOrganizationsDomainAsync();
 }
