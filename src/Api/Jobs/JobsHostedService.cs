@@ -47,6 +47,12 @@ public class JobsHostedService : BaseJobsHostedService
                 .WithIntervalInHours(24)
                 .RepeatForever())
             .Build();
+        var validateOrganizationTrigger = TriggerBuilder.Create()
+            .WithIdentity("ValidateOrganizationTrigger")
+            .StartNow()
+            .WithCronSchedule("0 0 * * * ?")
+            .Build();
+
 
         var jobs = new List<Tuple<Type, ITrigger>>
         {
@@ -55,7 +61,7 @@ public class JobsHostedService : BaseJobsHostedService
             new Tuple<Type, ITrigger>(typeof(EmergencyAccessTimeoutJob), emergencyAccessTimeoutTrigger),
             new Tuple<Type, ITrigger>(typeof(ValidateUsersJob), everyTopOfTheSixthHourTrigger),
             new Tuple<Type, ITrigger>(typeof(ValidateOrganizationsJob), everyTwelfthHourAndThirtyMinutesTrigger),
-            new Tuple<Type, ITrigger>(typeof(ValidateOrganizationDomainJob), everyTopOfTheHourTrigger),
+            new Tuple<Type, ITrigger>(typeof(ValidateOrganizationDomainJob), validateOrganizationTrigger),
         };
 
         if (_globalSettings.SelfHosted && _globalSettings.EnableCloudCommunication)
