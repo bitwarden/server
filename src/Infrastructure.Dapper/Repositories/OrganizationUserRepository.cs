@@ -86,7 +86,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         }
     }
 
-    public async Task<int> GetOccupySeatCountByOrganizationIdAsync(Guid organizationId)
+    public async Task<int> GetOccupiedSeatCountByOrganizationIdAsync(Guid organizationId)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
