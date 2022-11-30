@@ -39,11 +39,14 @@ public class VerificationDomainService : IVerificationDomainService
                 {
                     _logger.LogInformation(Constants.BypassFiltersEventId, "Successfully validated domain");
                     domain.SetVerifiedDate();
-                    domain.SetJobRunCount();
-                    domain.SetNextRunDate();
 
                     await _domainRepository.ReplaceAsync(domain);
+                    return;
                 }
+                
+                domain.SetJobRunCount();
+                domain.SetNextRunDate();
+                await _domainRepository.ReplaceAsync(domain);
             }
             catch (Exception ex)
             {
