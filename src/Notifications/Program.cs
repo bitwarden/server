@@ -16,7 +16,7 @@ public class Program
                 webBuilder.ConfigureLogging((hostingContext, logging) =>
                     logging.AddSerilog(hostingContext, (e, globalSettings) =>
                     {
-                        var context = e.Properties["SourceContext"]?.ToString();
+                        var context = e.Properties["SourceContext"].ToString();
                         if (context.Contains("IdentityServer4.Validation.TokenValidator") ||
                             context.Contains("IdentityServer4.Validation.TokenRequestValidator"))
                         {

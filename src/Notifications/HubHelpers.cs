@@ -14,14 +14,10 @@ public static class HubHelpers
         string notificationJson,
         IHubContext<NotificationsHub> hubContext,
         IHubContext<AnonymousNotificationsHub> anonymousHubContext,
-        ILogger logger,
         CancellationToken cancellationToken = default(CancellationToken)
     )
     {
         var notification = JsonSerializer.Deserialize<PushNotificationData<object>>(notificationJson);
-
-        logger.LogDebug("Processing deserialized message {@message} of type {type}", notification, notification.Type);
-
         switch (notification.Type)
         {
             case PushType.SyncCipherUpdate:
@@ -76,12 +72,8 @@ public static class HubHelpers
                 var authRequestResponseNotification =
                     JsonSerializer.Deserialize<PushNotificationData<AuthRequestPushNotification>>(
                             notificationJson, _deserializerOptions);
-                logger.LogDebug("Successfully deserialized push notification data as {@data}", authRequestResponseNotification);
-                var groupToNotify = authRequestResponseNotification.Payload.Id.ToString();
-                logger.LogDebug("Sending request to group {id}", groupToNotify);
-                await anonymousHubContext.Clients.Group(groupToNotify)
+                await anonymousHubContext.Clients.Group(authRequestResponseNotification.Payload.Id.ToString())
                     .SendAsync("AuthRequestResponseRecieved", authRequestResponseNotification, cancellationToken);
-                logger.LogDebug("Sent request to group {id}", groupToNotify);
                 break;
             case PushType.AuthRequest:
                 var authRequestNotification =
