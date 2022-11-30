@@ -20,4 +20,6 @@ BEGIN
     FROM
         [dbo].[OrganizationDomain]
     WHERE DATEDIFF(hour, [NextRunDate], @Date) > 36
+    AND [VerifiedDate] IS NULL
+    AND [JobRunCount] != 3
 END

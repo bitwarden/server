@@ -48,7 +48,7 @@ public class OrganizationDomainRepository : Repository<OrganizationDomain, Guid>
         using var connection = new SqlConnection(ConnectionString);
         var results = await connection.QueryAsync<OrganizationDomain>(
             $"[{Schema}].[OrganizationDomain_ReadByDatepart]",
-            new {}, commandType: CommandType.StoredProcedure
+            new { }, commandType: CommandType.StoredProcedure
         );
 
         return results.ToList();
