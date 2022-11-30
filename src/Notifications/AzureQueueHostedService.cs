@@ -58,7 +58,7 @@ public class AzureQueueHostedService : IHostedService, IDisposable
         {
             try
             {
-                var messages = await _queueClient.ReceiveMessagesAsync(32);
+                var messages = await _queueClient.ReceiveMessagesAsync(1);
                 if (messages.Value?.Any() ?? false)
                 {
                     _logger.LogDebug("Retrieved {count} messages from queue", messages.Value.Count());
