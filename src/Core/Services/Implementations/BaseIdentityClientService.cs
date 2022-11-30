@@ -133,7 +133,7 @@ public abstract class BaseIdentityClientService : IDisposable
 
         if (response == null)
         {
-            _logger.LogError("Empty token response from {identity} for client {clientId} with status {code}-{reason}", IdentityClient.BaseAddress, _identityClientId, response.StatusCode, response.ReasonPhrase);
+            _logger.LogError("Empty token response from {identity} for client {clientId}", IdentityClient.BaseAddress, _identityClientId);
             return false;
         }
 
