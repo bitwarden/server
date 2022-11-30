@@ -23,7 +23,7 @@ public class VerificationDomainService : IVerificationDomainService
     {
         //Date should be set 1 hour behind to ensure it selects all domains that should be verified
         var runDate = DateTime.UtcNow.AddHours(-1);
-        
+
         var verifiableDomains = await _domainRepository.GetManyByNextRunDateAsync(runDate);
         _logger.LogInformation(Constants.BypassFiltersEventId, null,
             "Validating domains for {0} organizations.", verifiableDomains.Count);
@@ -44,7 +44,7 @@ public class VerificationDomainService : IVerificationDomainService
                     await _domainRepository.ReplaceAsync(domain);
                     return;
                 }
-                
+
                 domain.SetJobRunCount();
                 domain.SetNextRunDate();
                 await _domainRepository.ReplaceAsync(domain);
