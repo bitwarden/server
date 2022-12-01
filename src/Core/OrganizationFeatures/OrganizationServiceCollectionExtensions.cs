@@ -26,7 +26,7 @@ public static class OrganizationServiceCollectionExtensions
         services.AddTokenizers();
         services.AddOrganizationConnectionCommands();
         services.AddOrganizationSponsorshipCommands(globalSettings);
-        services.AddOrganizationLicenseQueries();
+        services.AddOrganizationLicenseCommandsQueries();
         services.AddOrganizationApiKeyCommandsQueries();
     }
 
@@ -69,13 +69,9 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<ICreateOrganizationApiKeyCommand, CreateOrganizationApiKeyCommand>();
     }
 
-    private static void AddOrganizationLicenseCommands(this IServiceCollection services)
+    private static void AddOrganizationLicenseCommandsQueries(this IServiceCollection services)
     {
         services.AddScoped<IUpdateOrganizationLicenseCommand, UpdateOrganizationLicenseCommand>();
-    }
-
-    private static void AddOrganizationLicenseQueries(this IServiceCollection services)
-    {
         services.AddScoped<IGetOrganizationLicenseQuery, GetOrganizationLicenseQuery>();
     }
 
