@@ -3,6 +3,7 @@ using System.Text.Json;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
 using Bit.Api.SecretManagerFeatures.Models.Request;
+using Bit.Api.SecretManagerFeatures.Models.Response;
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Bit.Test.Common.Helpers;
@@ -74,6 +75,42 @@ public class SecretsControllerTest : IClassFixture<ApiApplicationFactory>, IAsyn
         AssertHelper.AssertRecent(createdSecret.RevisionDate);
         AssertHelper.AssertRecent(createdSecret.CreationDate);
         Assert.Null(createdSecret.DeletedDate);
+    }
+
+    [Fact]
+    public async Task CreateSecretWithProject()
+    {
+        // --- Make the project ---
+        var projectRequest = new ProjectCreateRequestModel()
+        {
+            Name = _mockEncryptedString
+        };
+
+        var projectResponse = await _client.PostAsJsonAsync($"/organizations/{_organization.Id}/projects", projectRequest);
+        projectResponse.EnsureSuccessStatusCode();
+        var projectResult = await projectResponse.Content.ReadFromJsonAsync<Project>();
+
+        // --- Make the secret ---
+        var secretRequest = new SecretCreateRequestModel()
+        {
+            Key = _mockEncryptedString,
+            Value = _mockEncryptedString,
+            Note = _mockEncryptedString,
+            ProjectId = projectResult.Id,
+        };
+
+        var secretResponse = await _client.PostAsJsonAsync($"/organizations/{_organization.Id}/secrets", secretRequest);
+        secretResponse.EnsureSuccessStatusCode();
+        var secretResult = await secretResponse.Content.ReadFromJsonAsync<Secret>();
+
+        // --- Get secrets by project id ---
+        var secretListResponse = await _client.GetAsync($"/projects/{projectResult.Id}/secrets");
+        secretListResponse.EnsureSuccessStatusCode();
+        var secretListResult = await secretListResponse.Content.ReadFromJsonAsync<SecretWithProjectsListResponseModel>();
+
+        // --- Verify the secret is in the project ---
+        var projectsList = secretListResult.Projects.Select(p => p.Id);
+        Assert.Contains(projectResult.Id, projectsList);
     }
 
     [Fact]
