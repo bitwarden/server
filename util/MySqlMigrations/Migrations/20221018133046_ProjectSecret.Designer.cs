@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.MySqlMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20221018133046_projectSecretMapping")]
-    partial class projectSecretMapping
+    [Migration("20221018133046_ProjectSecret")]
+    partial class ProjectSecret
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {

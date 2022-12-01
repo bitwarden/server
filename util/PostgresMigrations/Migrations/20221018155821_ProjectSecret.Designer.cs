@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Bit.PostgresMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20221018155821_ProjectSecretsTable")]
-    partial class ProjectSecretsTable
+    [Migration("20221018155821_ProjectSecret")]
+    partial class ProjectSecret
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
