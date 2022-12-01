@@ -155,4 +155,32 @@ public class ServiceAccountsControllerTest : IClassFixture<ApiApplicationFactory
         AssertHelper.AssertRecent(result.CreationDate);
     }
 
+    [Fact]
+    public async Task CreateServiceAccountAccessTokenExpireAtNullAsync()
+    {
+        var serviceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
+        {
+            OrganizationId = _organization.Id,
+            Name = _mockEncryptedString,
+        });
+
+        var request = new AccessTokenCreateRequestModel()
+        {
+            Name = _mockEncryptedString,
+            EncryptedPayload = _mockEncryptedString,
+            Key = _mockEncryptedString,
+            ExpireAt = null
+        };
+
+        var response = await _client.PostAsJsonAsync($"/service-accounts/{serviceAccount.Id}/access-tokens", request);
+        response.EnsureSuccessStatusCode();
+        var result = await response.Content.ReadFromJsonAsync<ApiKey>();
+
+        Assert.NotNull(result);
+        Assert.Equal(request.Name, result.Name);
+        Assert.NotNull(result.ClientSecret);
+        Assert.Null(result.ExpireAt);
+        AssertHelper.AssertRecent(result.RevisionDate);
+        AssertHelper.AssertRecent(result.CreationDate);
+    }
 }
