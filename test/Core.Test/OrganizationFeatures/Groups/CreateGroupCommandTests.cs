@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
 using Bit.Core.OrganizationFeatures.Groups;
 using Bit.Core.Repositories;
@@ -28,6 +29,7 @@ public class CreateGroupCommandTests
         await sutProvider.GetDependency<IEventService>().Received(1).LogGroupEventAsync(group, Enums.EventType.Group_Created);
         Assert.True(group.CreationDate - utcNow < TimeSpan.FromSeconds(1));
         Assert.True(group.RevisionDate - utcNow < TimeSpan.FromSeconds(1));
+        await sutProvider.GetDependency<IReferenceEventService>().Received(1).RaiseEventAsync(Arg.Is<ReferenceEvent>(r => r.Type == ReferenceEventType.GroupCreated && r.Id == organization.Id && r.Source == ReferenceEventSource.Organization));
     }
 
     [Theory, OrganizationCustomize(UseGroups = true), BitAutoData]
@@ -42,6 +44,7 @@ public class CreateGroupCommandTests
         await sutProvider.GetDependency<IEventService>().Received(1).LogGroupEventAsync(group, Enums.EventType.Group_Created);
         Assert.True(group.CreationDate - utcNow < TimeSpan.FromSeconds(1));
         Assert.True(group.RevisionDate - utcNow < TimeSpan.FromSeconds(1));
+        await sutProvider.GetDependency<IReferenceEventService>().Received(1).RaiseEventAsync(Arg.Is<ReferenceEvent>(r => r.Type == ReferenceEventType.GroupCreated && r.Id == organization.Id && r.Source == ReferenceEventSource.Organization));
     }
 
     [Theory, OrganizationCustomize(UseGroups = true), BitAutoData]
@@ -56,6 +59,7 @@ public class CreateGroupCommandTests
         await sutProvider.GetDependency<IEventService>().Received(1).LogGroupEventAsync(group, Enums.EventType.Group_Created, eventSystemUser);
         Assert.True(group.CreationDate - utcNow < TimeSpan.FromSeconds(1));
         Assert.True(group.RevisionDate - utcNow < TimeSpan.FromSeconds(1));
+        await sutProvider.GetDependency<IReferenceEventService>().Received(1).RaiseEventAsync(Arg.Is<ReferenceEvent>(r => r.Type == ReferenceEventType.GroupCreated && r.Id == organization.Id && r.Source == ReferenceEventSource.Organization));
     }
 
     [Theory, BitAutoData]
@@ -66,6 +70,7 @@ public class CreateGroupCommandTests
         Assert.Contains("Organization not found", exception.Message);
         await sutProvider.GetDependency<IGroupRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default);
         await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogGroupEventAsync(default, default, default);
+        await sutProvider.GetDependency<IReferenceEventService>().DidNotReceiveWithAnyArgs().RaiseEventAsync(default);
     }
 
     [Theory, OrganizationCustomize(UseGroups = false), BitAutoData]
@@ -79,5 +84,6 @@ public class CreateGroupCommandTests
         Assert.Contains("This organization cannot use groups", exception.Message);
         await sutProvider.GetDependency<IGroupRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default);
         await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogGroupEventAsync(default, default, default);
+        await sutProvider.GetDependency<IReferenceEventService>().DidNotReceiveWithAnyArgs().RaiseEventAsync(default);
     }
 }
