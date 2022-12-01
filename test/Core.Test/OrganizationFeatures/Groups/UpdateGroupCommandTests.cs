@@ -8,6 +8,7 @@ using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Bit.Test.Common.Helpers;
 using NSubstitute;
 using Xunit;
 
@@ -25,7 +26,7 @@ public class UpdateGroupCommandTests
 
         await sutProvider.GetDependency<IGroupRepository>().Received(1).ReplaceAsync(group);
         await sutProvider.GetDependency<IEventService>().Received(1).LogGroupEventAsync(group, Enums.EventType.Group_Updated);
-        Assert.True(group.RevisionDate - DateTime.UtcNow < TimeSpan.FromSeconds(1));
+        AssertHelper.AssertRecent(group.RevisionDate);
     }
 
     [Theory, OrganizationCustomize(UseGroups = true), BitAutoData]
@@ -37,7 +38,7 @@ public class UpdateGroupCommandTests
 
         await sutProvider.GetDependency<IGroupRepository>().Received(1).ReplaceAsync(group, collections);
         await sutProvider.GetDependency<IEventService>().Received(1).LogGroupEventAsync(group, Enums.EventType.Group_Updated);
-        Assert.True(group.RevisionDate - DateTime.UtcNow < TimeSpan.FromSeconds(1));
+        AssertHelper.AssertRecent(group.RevisionDate);
     }
 
     [Theory, OrganizationCustomize(UseGroups = true), BitAutoData]
@@ -49,7 +50,7 @@ public class UpdateGroupCommandTests
 
         await sutProvider.GetDependency<IGroupRepository>().Received(1).ReplaceAsync(group);
         await sutProvider.GetDependency<IEventService>().Received(1).LogGroupEventAsync(group, Enums.EventType.Group_Updated, eventSystemUser);
-        Assert.True(group.RevisionDate - DateTime.UtcNow < TimeSpan.FromSeconds(1));
+        AssertHelper.AssertRecent(group.RevisionDate);
     }
 
     [Theory, BitAutoData]
