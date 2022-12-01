@@ -1,6 +1,5 @@
 ﻿using AutoMapper;
 using Bit.Core.Enums;
-using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.OrganizationConnectionConfigs;
 

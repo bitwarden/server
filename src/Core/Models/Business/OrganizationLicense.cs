@@ -3,11 +3,11 @@ using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json.Serialization;
+using AutoMapper;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using AutoMapper;
 
 namespace Bit.Core.Models.Business;
 
@@ -339,7 +339,7 @@ public class OrganizationLicenseMapperProfile : Profile
         // The same Org will have different Ids between Cloud and Selfhosted
         ShouldMapField = fieldInfo => false;
         ShouldMapProperty = propertyInfo => propertyInfo.Name != "Id";
-        
+
         CreateMap<OrganizationLicense, Organization>();
     }
 }

@@ -197,7 +197,7 @@ public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorabl
 
         return providers[provider];
     }
-    
+
     public void UpdateFromLicense(OrganizationLicense license, IMapper mapper)
     {
         mapper.Map(license, this);

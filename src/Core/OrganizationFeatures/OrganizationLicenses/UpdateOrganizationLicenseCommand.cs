@@ -34,14 +34,14 @@ public class UpdateOrganizationLicenseCommand : IUpdateOrganizationLicenseComman
     public async Task UpdateLicenseAsync(SelfHostedOrganizationDetails selfHostedOrganization,
         OrganizationLicense license, Organization? existingOrganization)
     {
-        var canUse = license.CanUse(_globalSettings, _licensingService, out var exception) && 
+        var canUse = license.CanUse(_globalSettings, _licensingService, out var exception) &&
             selfHostedOrganization.CanUseLicense(license, existingOrganization, out exception);
 
         if (!canUse)
         {
             throw new BadRequestException(exception);
         }
-        
+
         await WriteLicenseFileAsync(selfHostedOrganization, license);
         await UpdateOrganizationAsync(selfHostedOrganization, license);
     }
@@ -58,7 +58,7 @@ public class UpdateOrganizationLicenseCommand : IUpdateOrganizationLicenseComman
     {
         var organization = _mapper.Map<Organization>(selfHostedOrganizationDetails);
         organization.UpdateFromLicense(license, _mapper);
-        
+
         await _organizationService.ReplaceAndUpdateCacheAsync(organization);
     }
 }
