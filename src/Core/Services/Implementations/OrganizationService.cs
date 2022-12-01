@@ -673,7 +673,11 @@ public class OrganizationService : IOrganizationService
         OrganizationLicense license, User owner, string ownerKey, string collectionName, string publicKey,
         string privateKey)
     {
-        license.CanUse(_globalSettings, _licensingService);
+        var canUse = license.CanUse(_globalSettings, _licensingService, out var exception);
+        if (!canUse)
+        {
+            throw new BadRequestException(exception);
+        }
 
         if (license.PlanType != PlanType.Custom &&
             StaticStore.Plans.FirstOrDefault(p => p.Type == license.PlanType && !p.Disabled) == null)

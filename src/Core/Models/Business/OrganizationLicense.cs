@@ -196,34 +196,42 @@ public class OrganizationLicense : ILicense
         }
     }
 
-    public void CanUse(IGlobalSettings globalSettings, ILicensingService licensingService)
+    public bool CanUse(IGlobalSettings globalSettings, ILicensingService licensingService, out string exception)
     {
         if (!Enabled || Issued > DateTime.UtcNow || Expires < DateTime.UtcNow)
         {
-            throw new BadRequestException("Invalid license. Your organization is disabled or the license has expired.");
+            exception = "Invalid license. Your organization is disabled or the license has expired.";
+            return false;
         }
 
         if (!ValidLicenseVersion)
         {
-            throw new NotSupportedException($"Version {Version} is not supported.");
+            exception = $"Version {Version} is not supported.";
+            return false;
         }
 
         if (InstallationId != globalSettings.Installation.Id || !SelfHost)
         {
-            throw new BadRequestException("Invalid license. Make sure your license allows for on-premise " +
-                "hosting of organizations and that the installation id matches your current installation.");
+            exception = "Invalid license. Make sure your license allows for on-premise " +
+                "hosting of organizations and that the installation id matches your current installation.";
+            return false;
         }
 
         if (LicenseType != null && LicenseType != Enums.LicenseType.Organization)
         {
-            throw new BadRequestException("Premium licenses cannot be applied to an organization. "
-                                          + "Upload this license from your personal account settings page.");
+            exception = "Premium licenses cannot be applied to an organization. "
+                                          + "Upload this license from your personal account settings page.";
+            return false;
         }
 
         if (!licensingService.VerifyLicense(this))
         {
-            throw new BadRequestException("Invalid license.");
+            exception = "Invalid license.";
+            return false;
         }
+
+        exception = "";
+        return true;
     }
 
     public bool VerifyData(Organization organization, IGlobalSettings globalSettings)

@@ -3,6 +3,7 @@
 using System.Text.Json;
 using AutoMapper;
 using Bit.Core.Entities;
+using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
 using Bit.Core.Services;
@@ -33,9 +34,14 @@ public class UpdateOrganizationLicenseCommand : IUpdateOrganizationLicenseComman
     public async Task UpdateLicenseAsync(SelfHostedOrganizationDetails selfHostedOrganization,
         OrganizationLicense license, Organization? existingOrganization)
     {
-        license.CanUse(_globalSettings, _licensingService);
-        selfHostedOrganization.CanUseLicense(license, existingOrganization);
+        var canUse = license.CanUse(_globalSettings, _licensingService, out var exception) && 
+            selfHostedOrganization.CanUseLicense(license, existingOrganization, out exception);
 
+        if (!canUse)
+        {
+            throw new BadRequestException(exception);
+        }
+        
         await WriteLicenseFileAsync(selfHostedOrganization, license);
         await UpdateOrganizationAsync(selfHostedOrganization, license);
     }
