@@ -18,6 +18,8 @@ public class SecretCreateRequestModel
     [EncryptedString]
     public string Note { get; set; }
 
+    public Guid? ProjectId { get; set; }
+
     public Secret ToSecret(Guid organizationId)
     {
         return new Secret()
@@ -27,6 +29,7 @@ public class SecretCreateRequestModel
             Value = Value,
             Note = Note,
             DeletedDate = null,
+            Projects = ProjectId.HasValue ? new List<Project>() { new() { Id = ProjectId.Value } } : null,
         };
     }
 }

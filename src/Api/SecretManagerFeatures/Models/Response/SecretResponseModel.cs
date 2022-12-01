@@ -36,4 +36,3 @@ public class SecretResponseModel : ResponseModel
 
     public DateTime RevisionDate { get; set; }
 }
-
