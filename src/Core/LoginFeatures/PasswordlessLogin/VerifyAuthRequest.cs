@@ -1,5 +1,6 @@
 ﻿using Bit.Core.LoginFeatures.PasswordlessLogin.Interfaces;
 using Bit.Core.Repositories;
+using Bit.Core.Utilities;
 
 namespace Bit.Core.LoginFeatures.PasswordlessLogin;
 
@@ -15,7 +16,7 @@ public class VerifyAuthRequestCommand : IVerifyAuthRequestCommand
     public async Task<bool> VerifyAuthRequestAsync(Guid authRequestId, string accessCode)
     {
         var authRequest = await _authRequestRepository.GetByIdAsync(authRequestId);
-        if (authRequest == null || authRequest.AccessCode != accessCode)
+        if (authRequest == null || !CoreHelpers.FixedTimeEquals(authRequest.AccessCode, accessCode))
         {
             return false;
         }

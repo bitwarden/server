@@ -23,31 +23,39 @@ public class CipherUpdateCollectionsQuery : IQuery<CollectionCipher>
         }
 
         var availibleCollections = !_cipher.UserId.HasValue ?
+
             from c in dbContext.Collections
             where c.OrganizationId == _cipher.OrganizationId
             select c.Id :
+
             from c in dbContext.Collections
+
             join o in dbContext.Organizations
                 on c.OrganizationId equals o.Id
+
             join ou in dbContext.OrganizationUsers
-                on o.Id equals ou.OrganizationId
-            where ou.UserId == _cipher.UserId
+                on new { OrganizationId = o.Id, _cipher.UserId } equals new { ou.OrganizationId, ou.UserId }
+
             join cu in dbContext.CollectionUsers
-                on c.Id equals cu.CollectionId into cu_g
+                on new { ou.AccessAll, CollectionId = c.Id, OrganizationUserId = ou.Id } equals
+                   new { AccessAll = false, cu.CollectionId, cu.OrganizationUserId } into cu_g
             from cu in cu_g.DefaultIfEmpty()
-            where !ou.AccessAll && cu.OrganizationUserId == ou.Id
+
             join gu in dbContext.GroupUsers
-                on ou.Id equals gu.OrganizationUserId into gu_g
+                on new { CollectionId = (Guid?)cu.CollectionId, ou.AccessAll, OrganizationUserId = ou.Id } equals
+                   new { CollectionId = (Guid?)null, AccessAll = false, gu.OrganizationUserId } into gu_g
             from gu in gu_g.DefaultIfEmpty()
-            where cu.CollectionId == null && !ou.AccessAll
+
             join g in dbContext.Groups
                 on gu.GroupId equals g.Id into g_g
             from g in g_g.DefaultIfEmpty()
+
             join cg in dbContext.CollectionGroups
-                on c.Id equals cg.CollectionId into cg_g
+                on new { g.AccessAll, CollectionId = c.Id, gu.GroupId } equals
+                   new { AccessAll = false, cg.CollectionId, cg.GroupId } into cg_g
             from cg in cg_g.DefaultIfEmpty()
-            where !g.AccessAll && gu.GroupId == cg.GroupId &&
-                o.Id == _cipher.OrganizationId &&
+
+            where o.Id == _cipher.OrganizationId &&
                 o.Enabled &&
                 ou.Status == OrganizationUserStatusType.Confirmed &&
                 (ou.AccessAll || !cu.ReadOnly || g.AccessAll || !cg.ReadOnly)

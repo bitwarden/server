@@ -700,7 +700,7 @@ public class OrganizationService : IOrganizationService
         }
 
         var enabledOrgs = await _organizationRepository.GetManyByEnabledAsync();
-        if (enabledOrgs.Any(o => o.LicenseKey.Equals(license.LicenseKey)))
+        if (enabledOrgs.Any(o => string.Equals(o.LicenseKey, license.LicenseKey)))
         {
             throw new BadRequestException("License is already in use by another organization.");
         }
@@ -852,7 +852,7 @@ public class OrganizationService : IOrganizationService
         }
 
         var enabledOrgs = await _organizationRepository.GetManyByEnabledAsync();
-        if (enabledOrgs.Any(o => o.LicenseKey.Equals(license.LicenseKey) && o.Id != organizationId))
+        if (enabledOrgs.Any(o => string.Equals(o.LicenseKey, license.LicenseKey) && o.Id != organizationId))
         {
             throw new BadRequestException("License is already in use by another organization.");
         }

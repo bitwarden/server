@@ -81,35 +81,49 @@ public class LicensingService : ILicensingService
 
         var enabledOrgs = await _organizationRepository.GetManyByEnabledAsync();
         _logger.LogInformation(Constants.BypassFiltersEventId, null,
-            "Validating licenses for {0} organizations.", enabledOrgs.Count);
+            "Validating licenses for {NumberOfOrganizations} organizations.", enabledOrgs.Count);
+
+        var exceptions = new List<Exception>();
 
         foreach (var org in enabledOrgs)
         {
-            var license = await ReadOrganizationLicenseAsync(org);
-            if (license == null)
+            try
             {
-                await DisableOrganizationAsync(org, null, "No license file.");
-                continue;
-            }
+                var license = await ReadOrganizationLicenseAsync(org);
+                if (license == null)
+                {
+                    await DisableOrganizationAsync(org, null, "No license file.");
+                    continue;
+                }
 
-            var totalLicensedOrgs = enabledOrgs.Count(o => o.LicenseKey.Equals(license.LicenseKey));
-            if (totalLicensedOrgs > 1)
-            {
-                await DisableOrganizationAsync(org, license, "Multiple organizations.");
-                continue;
-            }
+                var totalLicensedOrgs = enabledOrgs.Count(o => string.Equals(o.LicenseKey, license.LicenseKey));
+                if (totalLicensedOrgs > 1)
+                {
+                    await DisableOrganizationAsync(org, license, "Multiple organizations.");
+                    continue;
+                }
 
-            if (!license.VerifyData(org, _globalSettings))
-            {
-                await DisableOrganizationAsync(org, license, "Invalid data.");
-                continue;
-            }
+                if (!license.VerifyData(org, _globalSettings))
+                {
+                    await DisableOrganizationAsync(org, license, "Invalid data.");
+                    continue;
+                }
 
-            if (!license.VerifySignature(_certificate))
-            {
-                await DisableOrganizationAsync(org, license, "Invalid signature.");
-                continue;
+                if (!license.VerifySignature(_certificate))
+                {
+                    await DisableOrganizationAsync(org, license, "Invalid signature.");
+                    continue;
+                }
             }
+            catch (Exception ex)
+            {
+                exceptions.Add(ex);
+            }
+        }
+
+        if (exceptions.Any())
+        {
+            throw new AggregateException("There were one or more exceptions while validating organizations.", exceptions);
         }
     }
 
