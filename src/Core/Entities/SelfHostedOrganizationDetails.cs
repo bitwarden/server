@@ -91,6 +91,6 @@ public class SelfHostedOrganizationDetailsMapperProfile : Profile
 {
     public SelfHostedOrganizationDetailsMapperProfile()
     {
-        CreateMap<SelfHostedOrganizationDetails, Organization>().ReverseMap();
+        CreateMap<SelfHostedOrganizationDetails, Organization>();
     }
 }

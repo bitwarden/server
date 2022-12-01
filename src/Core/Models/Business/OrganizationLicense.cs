@@ -5,9 +5,9 @@ using System.Text;
 using System.Text.Json.Serialization;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using AutoMapper;
 
 namespace Bit.Core.Models.Business;
 
@@ -328,5 +328,18 @@ public class OrganizationLicense : ILicense
         {
             return rsa.SignData(GetDataBytes(), HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
         }
+    }
+}
+
+public class OrganizationLicenseMapperProfile : Profile
+{
+    public OrganizationLicenseMapperProfile()
+    {
+        // Do not update Organization.Id from the license
+        // The same Org will have different Ids between Cloud and Selfhosted
+        ShouldMapField = fieldInfo => false;
+        ShouldMapProperty = propertyInfo => propertyInfo.Name != "Id";
+        
+        CreateMap<OrganizationLicense, Organization>();
     }
 }

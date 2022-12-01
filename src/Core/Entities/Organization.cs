@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
+using AutoMapper;
 using Bit.Core.Enums;
 using Bit.Core.Models;
 using Bit.Core.Models.Business;
@@ -196,32 +197,10 @@ public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorabl
 
         return providers[provider];
     }
-
-    public void UpdateFromLicense(OrganizationLicense license)
+    
+    public void UpdateFromLicense(OrganizationLicense license, IMapper mapper)
     {
-        Name = license.Name;
-        BusinessName = license.BusinessName;
-        BillingEmail = license.BillingEmail;
-        PlanType = license.PlanType;
-        Seats = license.Seats;
-        MaxCollections = license.MaxCollections;
-        UseGroups = license.UseGroups;
-        UseDirectory = license.UseDirectory;
-        UseEvents = license.UseEvents;
-        UseTotp = license.UseTotp;
-        Use2fa = license.Use2fa;
-        UseApi = license.UseApi;
-        UsePolicies = license.UsePolicies;
-        UseSso = license.UseSso;
-        UseKeyConnector = license.UseKeyConnector;
-        UseScim = license.UseScim;
-        UseResetPassword = license.UseResetPassword;
-        SelfHost = license.SelfHost;
-        UsersGetPremium = license.UsersGetPremium;
-        Plan = license.Plan;
-        Enabled = license.Enabled;
-        ExpirationDate = license.Expires;
-        LicenseKey = license.LicenseKey;
+        mapper.Map(license, this);
         RevisionDate = DateTime.UtcNow;
     }
 }
