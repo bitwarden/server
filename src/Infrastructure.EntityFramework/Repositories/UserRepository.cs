@@ -142,4 +142,40 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
             return await users.ToListAsync();
         }
     }
+
+    public override async Task DeleteAsync(Core.Entities.User user)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+
+            var transaction = await dbContext.Database.BeginTransactionAsync();
+            
+            dbContext.Ciphers.RemoveRange(dbContext.Ciphers.Where(c => c.UserId == user.Id));
+            dbContext.Folders.RemoveRange(dbContext.Folders.Where(f => f.UserId == user.Id));
+            dbContext.Devices.RemoveRange(dbContext.Devices.Where(d => d.UserId == user.Id));
+            var collectionUsers = from cu in dbContext.CollectionUsers
+                                  join ou in dbContext.OrganizationUsers on cu.OrganizationUserId equals ou.Id
+                                  where ou.UserId == user.Id
+                                  select cu;
+            dbContext.CollectionUsers.RemoveRange(collectionUsers);
+            var groupUsers = from gu in dbContext.GroupUsers
+                             join ou in dbContext.OrganizationUsers on gu.OrganizationUserId equals ou.Id
+                             where ou.UserId == user.Id
+                             select gu;
+            dbContext.GroupUsers.RemoveRange(groupUsers);
+            dbContext.OrganizationUsers.RemoveRange(dbContext.OrganizationUsers.Where(ou => ou.UserId == user.Id));
+            dbContext.ProviderUsers.RemoveRange(dbContext.ProviderUsers.Where(pu => pu.UserId == user.Id));
+            dbContext.SsoUsers.RemoveRange(dbContext.SsoUsers.Where(su => su.UserId == user.Id));
+            dbContext.EmergencyAccesses.RemoveRange(
+                dbContext.EmergencyAccesses.Where(ea => ea.GrantorId == user.Id || ea.GranteeId == user.Id));
+            dbContext.Sends.RemoveRange(dbContext.Sends.Where(s => s.UserId == user.Id));
+
+            var mappedUser = Mapper.Map<User>(user);
+            dbContext.Users.Remove(mappedUser);
+
+            await transaction.CommitAsync();
+            await dbContext.SaveChangesAsync();
+        }
+    }
 }

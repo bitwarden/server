@@ -179,8 +179,16 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
 
     public async Task<int> GetCountByOnlyOwnerAsync(Guid userId)
     {
-        var query = new OrganizationUserReadCountByOnlyOwnerQuery(userId);
-        return await GetCountFromQuery(query);
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            return await dbContext.OrganizationUsers
+                .Where(ou => ou.Type == OrganizationUserType.Owner && ou.Status == OrganizationUserStatusType.Confirmed)
+                .GroupBy(ou => ou.UserId)
+                .Select(g => new { UserId = g.Key, ConfirmedOwnerCount = g.Count() } )
+                .Where(oc => oc.UserId == userId && oc.ConfirmedOwnerCount == 1)
+                .CountAsync();
+        }
     }
 
     public async Task<int> GetCountByOrganizationAsync(Guid organizationId, string email, bool onlyRegisteredUsers)
