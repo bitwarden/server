@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using Bit.Core.Repositories;
+using Bit.Infrastructure.EntityFramework;
 using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;
@@ -55,28 +56,23 @@ public class SecretRepository : Repository<Core.Entities.Secret, Secret, Guid>, 
 
     public async Task<Core.Entities.Secret> UpdateAsync(Core.Entities.Secret secret)
     {
-       
-            using (var scope = ServiceScopeFactory.CreateScope())
+
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var mappedEntity = Mapper.Map<Secret>(secret);
+            var entity = await dbContext.Secret
+                .Include("Projects")
+                .FirstAsync(s => s.Id == secret.Id);
+
+            // Attach new relationships to the current context
+            foreach (var project in mappedEntity.Projects)
             {
-                var dbContext = GetDatabaseContext(scope);
-                var mappedEntity = Mapper.Map<Secret>(secret);
-                var entity = await GetDbSet(dbContext).FindAsync(secret.Id);
+                dbContext.AttachToOrGet<Project>(_ => _.Id == project.Id, () => project);
+            }
 
-                //remove all entity projects so we can start with a clean slate
-                entity.Projects?.Clear();
-
-                entity.Projects = new List<Project>();
-                foreach (var p in mappedEntity.Projects)
-                {
-                    dbContext.Project.Attach(p);
-                    entity.Projects.Add(p);
-                }
-                
-                //TODO we need to remove the projects that aren't in the mappedEntity.Projects list
-                //Then we need to add the one's that aren't in there yet --  If this isn't handled already automatically
-                dbContext.Entry(entity).CurrentValues.SetValues(mappedEntity);
-                await dbContext.SaveChangesAsync();
-            
+            dbContext.Entry(entity).CurrentValues.SetValues(mappedEntity);
+            await dbContext.SaveChangesAsync();
         }
 
         return secret;
