@@ -185,7 +185,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
             return await dbContext.OrganizationUsers
                 .Where(ou => ou.Type == OrganizationUserType.Owner && ou.Status == OrganizationUserStatusType.Confirmed)
                 .GroupBy(ou => ou.UserId)
-                .Select(g => new { UserId = g.Key, ConfirmedOwnerCount = g.Count() } )
+                .Select(g => new { UserId = g.Key, ConfirmedOwnerCount = g.Count() })
                 .Where(oc => oc.UserId == userId && oc.ConfirmedOwnerCount == 1)
                 .CountAsync();
         }

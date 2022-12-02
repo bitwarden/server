@@ -150,7 +150,7 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
             var dbContext = GetDatabaseContext(scope);
 
             var transaction = await dbContext.Database.BeginTransactionAsync();
-            
+
             dbContext.Ciphers.RemoveRange(dbContext.Ciphers.Where(c => c.UserId == user.Id));
             dbContext.Folders.RemoveRange(dbContext.Folders.Where(f => f.UserId == user.Id));
             dbContext.Devices.RemoveRange(dbContext.Devices.Where(d => d.UserId == user.Id));
