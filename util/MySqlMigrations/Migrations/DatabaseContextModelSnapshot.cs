@@ -682,6 +682,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<bool>("UseScim")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<bool>("UseSecretsManager")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<bool>("UseSso")
                         .HasColumnType("tinyint(1)");
 
@@ -1422,7 +1425,7 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.ToTable("ProjectSecret");
                 });
-                
+
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.ApiKey", b =>
                 {
                     b.HasOne("Bit.Infrastructure.EntityFramework.Models.ServiceAccount", "ServiceAccount")
