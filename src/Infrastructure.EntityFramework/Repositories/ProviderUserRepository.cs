@@ -16,6 +16,17 @@ public class ProviderUserRepository :
         : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.ProviderUsers)
     { }
 
+    public override async Task DeleteAsync(ProviderUser providerUser)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            await dbContext.UserBumpAccountRevisionDateByProviderUserIdAsync(providerUser.Id);
+            await dbContext.SaveChangesAsync();
+        }
+        await base.DeleteAsync(providerUser);
+    }
+
     public async Task<int> GetCountByProviderAsync(Guid providerId, string email, bool onlyRegisteredUsers)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
@@ -59,7 +70,10 @@ public class ProviderUserRepository :
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            await UserBumpAccountRevisionDateByProviderUserIds(providerUserIds.ToArray());
+            foreach (var providerUserId in providerUserIds)
+            {
+                await dbContext.UserBumpAccountRevisionDateByProviderUserIdAsync(providerUserId);
+            }
             var entities = dbContext.ProviderUsers.Where(pu => providerUserIds.Contains(pu.Id));
             dbContext.ProviderUsers.RemoveRange(entities);
             await dbContext.SaveChangesAsync();

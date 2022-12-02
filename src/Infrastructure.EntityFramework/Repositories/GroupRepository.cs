@@ -46,6 +46,7 @@ public class GroupRepository : Repository<Core.Entities.Group, Group, Guid>, IGr
                             gu.OrganizationUserId == organizationUserId
                         select gu;
             dbContext.RemoveRange(await query.ToListAsync());
+            await dbContext.UserBumpAccountRevisionDateByOrganizationUserIdAsync(organizationUserId);
             await dbContext.SaveChangesAsync();
         }
     }
@@ -134,7 +135,8 @@ public class GroupRepository : Repository<Core.Entities.Group, Group, Guid>, IGr
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            await UserBumpAccountRevisionDateByOrganizationId(obj.OrganizationId);
+            await dbContext.UserBumpAccountRevisionDateByOrganizationIdAsync(obj.OrganizationId);
+            await dbContext.SaveChangesAsync();
         }
     }
 
@@ -161,7 +163,8 @@ public class GroupRepository : Repository<Core.Entities.Group, Group, Guid>, IGr
                          select gu;
             dbContext.RemoveRange(delete);
             await dbContext.SaveChangesAsync();
-            await UserBumpAccountRevisionDateByOrganizationId(orgId);
+            await dbContext.UserBumpAccountRevisionDateByOrganizationIdAsync(orgId);
+            await dbContext.SaveChangesAsync();
         }
     }
 }

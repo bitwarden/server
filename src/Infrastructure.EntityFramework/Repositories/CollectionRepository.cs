@@ -14,16 +14,43 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.Collections)
     { }
 
-    public override async Task<Core.Entities.Collection> CreateAsync(Core.Entities.Collection obj)
+    public override async Task<Core.Entities.Collection> CreateAsync(Core.Entities.Collection collection)
     {
-        await base.CreateAsync(obj);
-        await UserBumpAccountRevisionDateByCollectionId(obj.Id, obj.OrganizationId);
-        return obj;
+        await base.CreateAsync(collection);
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            await dbContext.UserBumpAccountRevisionDateByCollectionIdAsync(collection.Id, collection.OrganizationId);
+            await dbContext.SaveChangesAsync();
+        }
+        return collection;
+    }
+
+    public override async Task DeleteAsync(Core.Entities.Collection collection)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            await dbContext.UserBumpAccountRevisionDateByCollectionIdAsync(collection.Id, collection.OrganizationId);
+            await dbContext.SaveChangesAsync();
+        }
+        await base.DeleteAsync(collection);
+    }
+
+    public override async Task UpsertAsync(Core.Entities.Collection collection)
+    {
+        await base.UpsertAsync(collection);
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            await dbContext.UserBumpAccountRevisionDateByCollectionIdAsync(collection.Id, collection.OrganizationId);
+            await dbContext.SaveChangesAsync();
+        }
     }
 
     public async Task CreateAsync(Core.Entities.Collection obj, IEnumerable<SelectionReadOnly> groups)
     {
-        await base.CreateAsync(obj);
+        await CreateAsync(obj);
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
@@ -40,8 +67,8 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                     HidePasswords = g.HidePasswords,
                 });
             await dbContext.AddRangeAsync(collectionGroups);
+            await dbContext.UserBumpAccountRevisionDateByOrganizationIdAsync(obj.OrganizationId);
             await dbContext.SaveChangesAsync();
-            await UserBumpAccountRevisionDateByOrganizationId(obj.OrganizationId);
         }
     }
 
@@ -55,8 +82,8 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                             cu.OrganizationUserId == organizationUserId
                         select cu;
             dbContext.RemoveRange(await query.ToListAsync());
+            await dbContext.UserBumpAccountRevisionDateByOrganizationUserIdAsync(organizationUserId);
             await dbContext.SaveChangesAsync();
-            await UserBumpAccountRevisionDateByOrganizationUserId(organizationUserId);
         }
     }
 
@@ -167,7 +194,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
 
     public async Task ReplaceAsync(Core.Entities.Collection collection, IEnumerable<SelectionReadOnly> groups)
     {
-        await base.ReplaceAsync(collection);
+        await UpsertAsync(collection);
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
@@ -228,8 +255,8 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
             await dbContext.AddRangeAsync(insert);
             dbContext.UpdateRange(update);
             dbContext.RemoveRange(delete);
+            await dbContext.UserBumpAccountRevisionDateByCollectionIdAsync(collection.Id, collection.OrganizationId);
             await dbContext.SaveChangesAsync();
-            await UserBumpAccountRevisionDateByCollectionId(collection.Id, collection.OrganizationId);
         }
     }
 
@@ -273,7 +300,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
             // Remove all existing ones that are no longer requested
             var requestedUserIds = requestedUsers.Select(u => u.Id);
             dbContext.CollectionUsers.RemoveRange(existingCollectionUsers.Where(cu => !requestedUserIds.Contains(cu.OrganizationUserId)));
-            await UserBumpAccountRevisionDateByCollectionId(id, organizationId);
+            await dbContext.UserBumpAccountRevisionDateByCollectionIdAsync(id, organizationId);
             await dbContext.SaveChangesAsync();
         }
     }
