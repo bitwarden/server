@@ -25,7 +25,8 @@ public class CollectionCipherRepository : BaseEntityFrameworkRepository, ICollec
             var organizationId = (await dbContext.Ciphers.FirstOrDefaultAsync(c => c.Id.Equals(obj.CipherId))).OrganizationId;
             if (organizationId.HasValue)
             {
-                await UserBumpAccountRevisionDateByCollectionId(obj.CollectionId, organizationId.Value);
+                await dbContext.UserBumpAccountRevisionDateByCollectionIdAsync(obj.CollectionId, organizationId.Value);
+                await dbContext.SaveChangesAsync();
             }
             return obj;
         }
@@ -132,12 +133,12 @@ public class CollectionCipherRepository : BaseEntityFrameworkRepository, ICollec
                 });
             await dbContext.AddRangeAsync(insert);
             dbContext.RemoveRange(delete);
-            await dbContext.SaveChangesAsync();
 
             if (organizationId.HasValue)
             {
-                await UserBumpAccountRevisionDateByOrganizationId(organizationId.Value);
+                await dbContext.UserBumpAccountRevisionDateByOrganizationIdAsync(organizationId.Value);
             }
+            await dbContext.SaveChangesAsync();
         }
     }
 
@@ -182,8 +183,8 @@ public class CollectionCipherRepository : BaseEntityFrameworkRepository, ICollec
                 });
             await dbContext.AddRangeAsync(insert);
             dbContext.RemoveRange(delete);
+            await dbContext.UserBumpAccountRevisionDateByOrganizationIdAsync(organizationId);
             await dbContext.SaveChangesAsync();
-            await UserBumpAccountRevisionDateByOrganizationId(organizationId);
         }
     }
 
@@ -231,7 +232,8 @@ public class CollectionCipherRepository : BaseEntityFrameworkRepository, ICollec
                                  CipherId = cipherId,
                              };
             await dbContext.AddRangeAsync(insertData);
-            await UserBumpAccountRevisionDateByOrganizationId(organizationId);
+            await dbContext.UserBumpAccountRevisionDateByOrganizationIdAsync(organizationId);
+            await dbContext.SaveChangesAsync();
         }
     }
 }
