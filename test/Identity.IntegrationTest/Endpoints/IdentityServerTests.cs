@@ -178,11 +178,14 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
         AssertHelper.AssertJsonProperty(root, "error_description", JsonValueKind.String);
     }
 
-    [Fact]
-    public async Task TokenEndpoint_GrantTypePassword_WithSsoPolicyEnabled_WithEnforceSsoPolicyForAllUsersTrue_Throw()
+    [Theory]
+    [BitAutoData(OrganizationUserType.Owner)]
+    [BitAutoData(OrganizationUserType.Admin)]
+    public async Task TokenEndpoint_GrantTypePassword_WithOwnerOrAdmin_WithSsoPolicyEnabled_WithEnforceSsoPolicyForAllUsersTrue_Throw(OrganizationUserType organizationUserType, int generatedUsername)
     {
+        var organizationId = new Guid("5e77c2cd-f84b-4a27-affa-12c08d1adbda");
         var deviceId = "92b9d953-b9b6-4eaf-9d3e-11d57144dfeb";
-        var username = "test+tokenpassword@email.com";
+        var username = $"{generatedUsername}@example.com";
 
         var server = _factory.WithWebHostBuilder(builder =>
         {
@@ -195,7 +198,7 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
             MasterPasswordHash = "master_password_hash"
         }));
 
-        await CreateOrganizationWithSsoPolicy(username, ssoPolicyEnabled: true);
+        await CreateOrganizationWithSsoPolicy(organizationId, username, organizationUserType, ssoPolicyEnabled: true);
 
         var context = await server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
         {
@@ -220,11 +223,14 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
         Assert.StartsWith("sso authentication", errorDescription.ToLowerInvariant());
     }
 
-    [Fact]
-    public async Task TokenEndpoint_GrantTypePassword_WithSsoPolicyEnabled_WithEnforceSsoPolicyForAllUsersFalse_Success()
+    [Theory]
+    [BitAutoData(OrganizationUserType.Owner)]
+    [BitAutoData(OrganizationUserType.Admin)]
+    public async Task TokenEndpoint_GrantTypePassword_WithOwnerOrAdmin_WithSsoPolicyEnabled_WithEnforceSsoPolicyForAllUsersFalse_Success(OrganizationUserType organizationUserType, int generatedUsername)
     {
+        var organizationId = new Guid("5e77c2cd-f84b-4a27-affa-12c08d1adbda");
         var deviceId = "92b9d953-b9b6-4eaf-9d3e-11d57144dfeb";
-        var username = "test+tokenpassword@email.com";
+        var username = $"{generatedUsername}@example.com";
 
         await _factory.Server.PostAsync("/accounts/register", JsonContent.Create(new RegisterRequestModel
         {
@@ -232,7 +238,7 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
             MasterPasswordHash = "master_password_hash"
         }));
 
-        await CreateOrganizationWithSsoPolicy(username, ssoPolicyEnabled: true);
+        await CreateOrganizationWithSsoPolicy(organizationId, username, organizationUserType, ssoPolicyEnabled: true);
 
         var context = await _factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
         {
@@ -249,11 +255,14 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
         Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
     }
 
-    [Fact]
-    public async Task TokenEndpoint_GrantTypePassword_WithSsoPolicyDisabled_WithEnforceSsoPolicyForAllUsersTrue_Success()
+    [Theory]
+    [BitAutoData(OrganizationUserType.Owner)]
+    [BitAutoData(OrganizationUserType.Admin)]
+    public async Task TokenEndpoint_GrantTypePassword_WithOwnerOrAdmin_WithSsoPolicyDisabled_WithEnforceSsoPolicyForAllUsersTrue_Success(OrganizationUserType organizationUserType, int generatedUsername)
     {
+        var organizationId = new Guid("5e77c2cd-f84b-4a27-affa-12c08d1adbda");
         var deviceId = "92b9d953-b9b6-4eaf-9d3e-11d57144dfeb";
-        var username = "test+tokenpassword@email.com";
+        var username = $"{generatedUsername}@example.com";
 
         var server = _factory.WithWebHostBuilder(builder =>
         {
@@ -266,7 +275,7 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
             MasterPasswordHash = "master_password_hash"
         }));
 
-        await CreateOrganizationWithSsoPolicy(username, ssoPolicyEnabled: false);
+        await CreateOrganizationWithSsoPolicy(organizationId, username, organizationUserType, ssoPolicyEnabled: false);
 
         var context = await server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
         {
@@ -281,6 +290,131 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
         }), context => context.SetAuthEmail(username));
 
         Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
+    }
+
+    [Theory]
+    [BitAutoData(OrganizationUserType.User)]
+    [BitAutoData(OrganizationUserType.Manager)]
+    [BitAutoData(OrganizationUserType.Custom)]
+    public async Task TokenEndpoint_GrantTypePassword_WithNonOwnerOrAdmin_WithSsoPolicyDisabled_WithEnforceSsoPolicyForAllUsersFalse_Success(OrganizationUserType organizationUserType, int generatedUsername)
+    {
+        var organizationId = new Guid("5e77c2cd-f84b-4a27-affa-12c08d1adbda");
+        var deviceId = "92b9d953-b9b6-4eaf-9d3e-11d57144dfeb";
+        var username = $"{generatedUsername}@example.com";
+
+        await _factory.Server.PostAsync("/accounts/register", JsonContent.Create(new RegisterRequestModel
+        {
+            Email = username,
+            MasterPasswordHash = "master_password_hash"
+        }));
+
+        await CreateOrganizationWithSsoPolicy(organizationId, username, organizationUserType, ssoPolicyEnabled: false);
+
+        var context = await _factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            { "scope", "api offline_access" },
+            { "client_id", "web" },
+            { "deviceType", DeviceTypeAsString(DeviceType.FirefoxBrowser) },
+            { "deviceIdentifier", deviceId },
+            { "deviceName", "firefox" },
+            { "grant_type", "password" },
+            { "username", username },
+            { "password", "master_password_hash" },
+        }), context => context.SetAuthEmail(username));
+
+        Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
+    }
+
+    [Theory]
+    [BitAutoData(OrganizationUserType.User)]
+    [BitAutoData(OrganizationUserType.Manager)]
+    [BitAutoData(OrganizationUserType.Custom)]
+    public async Task TokenEndpoint_GrantTypePassword_WithNonOwnerOrAdmin_WithSsoPolicyEnabled_WithEnforceSsoPolicyForAllUsersFalse_Throws(OrganizationUserType organizationUserType, int generatedUsername)
+    {
+        var organizationId = new Guid("28651fb3-dadb-4c7c-a843-84ffb311a43a");
+        var deviceId = "92b9d953-b9b6-4eaf-9d3e-11d57144dfeb";
+        var username = $"{generatedUsername}@example.com";
+
+        var server = _factory.WithWebHostBuilder(builder =>
+        {
+            builder.UseSetting("globalSettings:sso:enforceSsoPolicyForAllUsers", "false");
+        }).Server;
+
+        await server.PostAsync("/accounts/register", JsonContent.Create(new RegisterRequestModel
+        {
+            Email = username,
+            MasterPasswordHash = "master_password_hash"
+        }));
+
+        await CreateOrganizationWithSsoPolicy(organizationId, username, organizationUserType, ssoPolicyEnabled: true);
+
+        var context = await server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            { "scope", "api offline_access" },
+            { "client_id", "web" },
+            { "deviceType", DeviceTypeAsString(DeviceType.FirefoxBrowser) },
+            { "deviceIdentifier", deviceId },
+            { "deviceName", "firefox" },
+            { "grant_type", "password" },
+            { "username", username },
+            { "password", "master_password_hash" },
+        }), context => context.SetAuthEmail(username));
+
+        Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
+
+        var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
+        var root = body.RootElement;
+
+        var error = AssertHelper.AssertJsonProperty(root, "error", JsonValueKind.String).GetString();
+        Assert.Equal("invalid_grant", error);
+        var errorDescription = AssertHelper.AssertJsonProperty(root, "error_description", JsonValueKind.String).GetString();
+        Assert.StartsWith("sso authentication", errorDescription.ToLowerInvariant());
+    }
+
+    [Theory]
+    [BitAutoData(OrganizationUserType.User)]
+    [BitAutoData(OrganizationUserType.Manager)]
+    [BitAutoData(OrganizationUserType.Custom)]
+    public async Task TokenEndpoint_GrantTypePassword_WithNonOwnerOrAdmin_WithSsoPolicyEnabled_WithEnforceSsoPolicyForAllUsersTrue_Throws(OrganizationUserType organizationUserType, int generatedUsername)
+    {
+        var organizationId = new Guid("5e77c2cd-f84b-4a27-affa-12c08d1adbda");
+        var deviceId = "92b9d953-b9b6-4eaf-9d3e-11d57144dfeb";
+        var username = $"{generatedUsername}@example.com";
+
+        var server = _factory.WithWebHostBuilder(builder =>
+        {
+            builder.UseSetting("globalSettings:sso:enforceSsoPolicyForAllUsers", "true");
+        }).Server;
+
+        await server.PostAsync("/accounts/register", JsonContent.Create(new RegisterRequestModel
+        {
+            Email = username,
+            MasterPasswordHash = "master_password_hash"
+        }));
+
+        await CreateOrganizationWithSsoPolicy(organizationId, username, organizationUserType, ssoPolicyEnabled: true);
+
+        var context = await server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            { "scope", "api offline_access" },
+            { "client_id", "web" },
+            { "deviceType", DeviceTypeAsString(DeviceType.FirefoxBrowser) },
+            { "deviceIdentifier", deviceId },
+            { "deviceName", "firefox" },
+            { "grant_type", "password" },
+            { "username", username },
+            { "password", "master_password_hash" },
+        }), context => context.SetAuthEmail(username));
+
+        Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
+
+        var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
+        var root = body.RootElement;
+
+        var error = AssertHelper.AssertJsonProperty(root, "error", JsonValueKind.String).GetString();
+        Assert.Equal("invalid_grant", error);
+        var errorDescription = AssertHelper.AssertJsonProperty(root, "error_description", JsonValueKind.String).GetString();
+        Assert.StartsWith("sso authentication", errorDescription.ToLowerInvariant());
     }
 
     [Fact]
@@ -546,27 +680,55 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
         }
     }
 
-    private async Task CreateOrganizationWithSsoPolicy(string username, bool ssoPolicyEnabled)
+    private async Task CreateOrganizationWithSsoPolicy(Guid organizationId, string username, OrganizationUserType organizationUserType, bool ssoPolicyEnabled)
     {
         var userRepository = _factory.Services.GetService<IUserRepository>();
         var organizationRepository = _factory.Services.GetService<IOrganizationRepository>();
         var organizationUserRepository = _factory.Services.GetService<IOrganizationUserRepository>();
         var policyRepository = _factory.Services.GetService<IPolicyRepository>();
 
-        var organization = new Bit.Core.Entities.Organization { UseSso = true };
-        await organizationRepository.CreateAsync(organization);
+        var organization = await organizationRepository.GetByIdAsync(organizationId);
+        if (organization == null)
+        {
+            organization = new Bit.Core.Entities.Organization { Id = organizationId, Enabled = true, UseSso = ssoPolicyEnabled };
+            await organizationRepository.CreateAsync(organization);
+        }
+        else
+        {
+            organization.UseSso = ssoPolicyEnabled;
+            await organizationRepository.ReplaceAsync(organization);
+        }
 
         var user = await userRepository.GetByEmailAsync(username);
-        var organizationUser = new Bit.Core.Entities.OrganizationUser
+        var organizationUser = await organizationUserRepository.GetByOrganizationEmailAsync(organization.Id, username);
+        if (organizationUser == null)
         {
-            OrganizationId = organization.Id,
-            UserId = user.Id,
-            Status = OrganizationUserStatusType.Confirmed
-        };
-        await organizationUserRepository.CreateAsync(organizationUser);
+            organizationUser = new Bit.Core.Entities.OrganizationUser
+            {
+                OrganizationId = organization.Id,
+                UserId = user.Id,
+                Status = OrganizationUserStatusType.Confirmed,
+                Type = organizationUserType
+            };
+            await organizationUserRepository.CreateAsync(organizationUser);
+        }
+        else
+        {
+            organizationUser.Type = organizationUserType;
+            await organizationUserRepository.ReplaceAsync(organizationUser);
+        }
 
-        var ssoPolicy = new Bit.Core.Entities.Policy { OrganizationId = organization.Id, Type = PolicyType.RequireSso, Enabled = ssoPolicyEnabled };
-        await policyRepository.CreateAsync(ssoPolicy);
+        var ssoPolicy = await policyRepository.GetByOrganizationIdTypeAsync(organization.Id, PolicyType.RequireSso);
+        if (ssoPolicy == null)
+        {
+            ssoPolicy = new Bit.Core.Entities.Policy { OrganizationId = organization.Id, Type = PolicyType.RequireSso, Enabled = ssoPolicyEnabled };
+            await policyRepository.CreateAsync(ssoPolicy);
+        }
+        else
+        {
+            ssoPolicy.Enabled = ssoPolicyEnabled;
+            await policyRepository.ReplaceAsync(ssoPolicy);
+        }
     }
 
     private static string DeviceTypeAsString(DeviceType deviceType)
