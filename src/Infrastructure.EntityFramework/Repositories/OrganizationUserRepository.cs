@@ -343,7 +343,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
 
     public async override Task ReplaceAsync(Core.Entities.OrganizationUser organizationUser)
     {
-        base.ReplaceAsync(organizationUser);
+        await base.ReplaceAsync(organizationUser);
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
