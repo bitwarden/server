@@ -15,13 +15,15 @@ namespace Bit.Api.Controllers;
 public class SecretsController : Controller
 {
     private readonly ISecretRepository _secretRepository;
+    private readonly IProjectRepository _projectRepository;
     private readonly ICreateSecretCommand _createSecretCommand;
     private readonly IUpdateSecretCommand _updateSecretCommand;
     private readonly IDeleteSecretCommand _deleteSecretCommand;
 
-    public SecretsController(ISecretRepository secretRepository, ICreateSecretCommand createSecretCommand, IUpdateSecretCommand updateSecretCommand, IDeleteSecretCommand deleteSecretCommand)
+    public SecretsController(ISecretRepository secretRepository, IProjectRepository projectRepository, ICreateSecretCommand createSecretCommand, IUpdateSecretCommand updateSecretCommand, IDeleteSecretCommand deleteSecretCommand)
     {
         _secretRepository = secretRepository;
+        _projectRepository = projectRepository;
         _createSecretCommand = createSecretCommand;
         _updateSecretCommand = updateSecretCommand;
         _deleteSecretCommand = deleteSecretCommand;
@@ -43,6 +45,14 @@ public class SecretsController : Controller
             throw new NotFoundException();
         }
         return new SecretResponseModel(secret);
+    }
+
+    [HttpGet("projects/{projectId}/secrets")]
+    public async Task<SecretWithProjectsListResponseModel> GetSecretsByProjectAsync([FromRoute] Guid projectId)
+    {
+        var secrets = await _secretRepository.GetManyByProjectIdAsync(projectId);
+        var responses = secrets.Select(s => new SecretResponseModel(s));
+        return new SecretWithProjectsListResponseModel(secrets);
     }
 
     [HttpPost("organizations/{organizationId}/secrets")]

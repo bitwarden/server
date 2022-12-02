@@ -18,15 +18,18 @@ public class SecretCreateRequestModel
     [EncryptedString]
     public string Note { get; set; }
 
+    public Guid? ProjectId { get; set; }
+
     public Secret ToSecret(Guid organizationId)
     {
         return new Secret()
         {
             OrganizationId = organizationId,
-            Key = this.Key,
-            Value = this.Value,
-            Note = this.Note,
+            Key = Key,
+            Value = Value,
+            Note = Note,
             DeletedDate = null,
+            Projects = ProjectId.HasValue ? new List<Project>() { new() { Id = ProjectId.Value } } : null,
         };
     }
 }

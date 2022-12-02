@@ -21,7 +21,7 @@ public class ServiceAccountsControllerTest : IClassFixture<ApiApplicationFactory
     private readonly HttpClient _client;
     private readonly ApiApplicationFactory _factory;
     private readonly IServiceAccountRepository _serviceAccountRepository;
-    private Organization? _organization;
+    private Organization _organization;
 
     public ServiceAccountsControllerTest(ApiApplicationFactory factory)
     {
@@ -47,11 +47,6 @@ public class ServiceAccountsControllerTest : IClassFixture<ApiApplicationFactory
     [Fact]
     public async Task GetServiceAccountsByOrganization()
     {
-        if (_organization == null)
-        {
-            throw new ArgumentNullException(nameof(_organization));
-        }
-
         var serviceAccountsToCreate = 3;
         var serviceAccountIds = new List<Guid>();
         for (var i = 0; i < serviceAccountsToCreate; i++)
@@ -130,4 +125,62 @@ public class ServiceAccountsControllerTest : IClassFixture<ApiApplicationFactory
         Assert.NotEqual(initialServiceAccount.RevisionDate, updatedServiceAccount.RevisionDate);
     }
 
+    [Fact]
+    public async Task CreateServiceAccountAccessToken()
+    {
+        var serviceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
+        {
+            OrganizationId = _organization.Id,
+            Name = _mockEncryptedString,
+        });
+
+        var mockExpiresAt = DateTime.UtcNow.AddDays(30);
+        var request = new AccessTokenCreateRequestModel()
+        {
+            Name = _mockEncryptedString,
+            EncryptedPayload = _mockEncryptedString,
+            Key = _mockEncryptedString,
+            ExpireAt = mockExpiresAt
+        };
+
+        var response = await _client.PostAsJsonAsync($"/service-accounts/{serviceAccount.Id}/access-tokens", request);
+        response.EnsureSuccessStatusCode();
+        var result = await response.Content.ReadFromJsonAsync<ApiKey>();
+
+        Assert.NotNull(result);
+        Assert.Equal(request.Name, result.Name);
+        Assert.NotNull(result.ClientSecret);
+        Assert.Equal(mockExpiresAt, result.ExpireAt);
+        AssertHelper.AssertRecent(result.RevisionDate);
+        AssertHelper.AssertRecent(result.CreationDate);
+    }
+
+    [Fact]
+    public async Task CreateServiceAccountAccessTokenExpireAtNullAsync()
+    {
+        var serviceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
+        {
+            OrganizationId = _organization.Id,
+            Name = _mockEncryptedString,
+        });
+
+        var request = new AccessTokenCreateRequestModel()
+        {
+            Name = _mockEncryptedString,
+            EncryptedPayload = _mockEncryptedString,
+            Key = _mockEncryptedString,
+            ExpireAt = null
+        };
+
+        var response = await _client.PostAsJsonAsync($"/service-accounts/{serviceAccount.Id}/access-tokens", request);
+        response.EnsureSuccessStatusCode();
+        var result = await response.Content.ReadFromJsonAsync<ApiKey>();
+
+        Assert.NotNull(result);
+        Assert.Equal(request.Name, result.Name);
+        Assert.NotNull(result.ClientSecret);
+        Assert.Null(result.ExpireAt);
+        AssertHelper.AssertRecent(result.RevisionDate);
+        AssertHelper.AssertRecent(result.CreationDate);
+    }
 }

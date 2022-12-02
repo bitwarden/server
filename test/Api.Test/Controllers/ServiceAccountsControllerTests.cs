@@ -2,6 +2,7 @@
 using Bit.Api.SecretManagerFeatures.Models.Request;
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
+using Bit.Core.SecretManagerFeatures.AccessTokens.Interfaces;
 using Bit.Core.SecretManagerFeatures.ServiceAccounts.Interfaces;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -56,13 +57,26 @@ public class ServiceAccountsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void UpdateSecret_Success(SutProvider<ServiceAccountsController> sutProvider, ServiceAccountUpdateRequestModel data, Guid secretId)
+    public async void UpdateServiceAccount_Success(SutProvider<ServiceAccountsController> sutProvider, ServiceAccountUpdateRequestModel data, Guid serviceAccountId)
     {
-        var resultServiceAccount = data.ToServiceAccount(secretId);
+        var resultServiceAccount = data.ToServiceAccount(serviceAccountId);
         sutProvider.GetDependency<IUpdateServiceAccountCommand>().UpdateAsync(default).ReturnsForAnyArgs(resultServiceAccount);
 
-        var result = await sutProvider.Sut.UpdateServiceAccountAsync(secretId, data);
+        var result = await sutProvider.Sut.UpdateServiceAccountAsync(serviceAccountId, data);
         await sutProvider.GetDependency<IUpdateServiceAccountCommand>().Received(1)
                      .UpdateAsync(Arg.Any<ServiceAccount>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async void CreateAccessToken_Success(SutProvider<ServiceAccountsController> sutProvider, AccessTokenCreateRequestModel data, Guid serviceAccountId)
+    {
+        var resultAccessToken = data.ToApiKey(serviceAccountId);
+
+        sutProvider.GetDependency<ICreateAccessTokenCommand>().CreateAsync(default).ReturnsForAnyArgs(resultAccessToken);
+
+        var result = await sutProvider.Sut.CreateAccessTokenAsync(serviceAccountId, data);
+        await sutProvider.GetDependency<ICreateAccessTokenCommand>().Received(1)
+            .CreateAsync(Arg.Any<ApiKey>());
     }
 }

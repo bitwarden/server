@@ -28,7 +28,8 @@
     "orgcustom",
     "providerprovideradmin",
     "providerserviceuser",
-    "sub"
+    "sub",
+    "organization"
   ],
   "grant_types_supported": [
     "authorization_code",

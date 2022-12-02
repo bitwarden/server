@@ -4,6 +4,7 @@ using Bit.Api.SecretManagerFeatures.Models.Request;
 using Bit.Api.SecretManagerFeatures.Models.Response;
 using Bit.Api.Utilities;
 using Bit.Core.Repositories;
+using Bit.Core.SecretManagerFeatures.AccessTokens.Interfaces;
 using Bit.Core.SecretManagerFeatures.ServiceAccounts.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
@@ -16,10 +17,12 @@ public class ServiceAccountsController : Controller
     private readonly IServiceAccountRepository _serviceAccountRepository;
     private readonly IApiKeyRepository _apiKeyRepository;
     private readonly ICreateServiceAccountCommand _createServiceAccountCommand;
+    private readonly ICreateAccessTokenCommand _createAccessTokenCommand;
     private readonly IUpdateServiceAccountCommand _updateServiceAccountCommand;
 
     public ServiceAccountsController(
         IServiceAccountRepository serviceAccountRepository,
+        ICreateAccessTokenCommand createAccessTokenCommand,
         IApiKeyRepository apiKeyRepository, ICreateServiceAccountCommand createServiceAccountCommand,
         IUpdateServiceAccountCommand updateServiceAccountCommand)
     {
@@ -27,6 +30,7 @@ public class ServiceAccountsController : Controller
         _apiKeyRepository = apiKeyRepository;
         _createServiceAccountCommand = createServiceAccountCommand;
         _updateServiceAccountCommand = updateServiceAccountCommand;
+        _createAccessTokenCommand = createAccessTokenCommand;
     }
 
     [HttpGet("/organizations/{organizationId}/service-accounts")]
@@ -57,5 +61,12 @@ public class ServiceAccountsController : Controller
         var accessTokens = await _apiKeyRepository.GetManyByServiceAccountIdAsync(id);
         var responses = accessTokens.Select(token => new AccessTokenResponseModel(token));
         return new ListResponseModel<AccessTokenResponseModel>(responses);
+    }
+
+    [HttpPost("{id}/access-tokens")]
+    public async Task<AccessTokenCreationResponseModel> CreateAccessTokenAsync([FromRoute] Guid id, [FromBody] AccessTokenCreateRequestModel request)
+    {
+        var result = await _createAccessTokenCommand.CreateAsync(request.ToApiKey(id));
+        return new AccessTokenCreationResponseModel(result);
     }
 }

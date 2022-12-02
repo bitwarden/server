@@ -73,8 +73,10 @@
     <Build Include="dbo\Functions\PolicyApplicableToUser.sql" />
     <Build Include="dbo\Functions\UserCipherDetails.sql" />
     <Build Include="dbo\Functions\UserCollectionDetails.sql" />
+    <Build Include="dbo\Stored Procedures\ApiKey\ApiKeyDetails_ReadById.sql" />
     <Build Include="dbo\Stored Procedures\ApiKey\ApiKey_ReadById.sql" />
     <Build Include="dbo\Stored Procedures\ApiKey\ApiKey_ReadByServiceAccountId.sql" />
+    <Build Include="dbo\Stored Procedures\ApiKey\ApiKey_Create.sql" />
     <Build Include="dbo\Stored Procedures\AuthRequest_Create.sql" />
     <Build Include="dbo\Stored Procedures\AuthRequest_DeleteById.sql" />
     <Build Include="dbo\Stored Procedures\AuthRequest_DeleteIfExpired.sql" />
@@ -393,6 +395,7 @@
     <Build Include="dbo\User Defined Types\OrganizationUserType.sql" />
     <Build Include="dbo\User Defined Types\SelectionReadOnlyArray.sql" />
     <Build Include="dbo\User Defined Types\TwoGuidIdArray.sql" />
+    <Build Include="dbo\Views\ApiKeyDetailsView.sql" />
     <Build Include="dbo\Views\ApiKeyView.sql" />
     <Build Include="dbo\Views\AuthRequestView.sql" />
     <Build Include="dbo\Views\CipherView.sql" />

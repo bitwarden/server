@@ -68,7 +68,7 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasMaxLength(4000)
                         .HasColumnType("character varying(4000)");
 
-                    b.Property<DateTime>("ExpireAt")
+                    b.Property<DateTime?>("ExpireAt")
                         .HasColumnType("timestamp without time zone");
 
                     b.Property<string>("Key")
