@@ -86,6 +86,13 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
             services.Remove(eventRepositoryService);
             services.AddSingleton<IEventRepository, EventRepository>();
 
+            // Remove scheduled background jobs to prevent errors in parallel test execution
+            var jobService = services.FirstOrDefault(sd => sd.ServiceType == typeof(Microsoft.Extensions.Hosting.IHostedService) && sd.ImplementationType == typeof(Bit.Api.Jobs.JobsHostedService));
+            if (jobService != null)
+            {
+                services.Remove(jobService);
+            }
+
             // Our Rate limiter works so well that it begins to fail tests unless we carve out
             // one whitelisted ip. We should still test the rate limiter though and they should change the Ip
             // to something that is NOT whitelisted
