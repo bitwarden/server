@@ -104,7 +104,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MicroBenchmarks", "perf\Mic
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Scim.Test", "bitwarden_license\test\Scim.Test\Scim.Test.csproj", "{B1595DA3-4C60-41AA-8BF0-499A5F75A885}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Infrastrucute.IntegrationTest", "test\Infrastrucute.IntegrationTest\Infrastrucute.IntegrationTest.csproj", "{7E9A7DD5-EB78-4AC5-BFD5-64573FD2533B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Infrastructure.IntegrationTest", "test\Infrastructure.IntegrationTest\Infrastructure.IntegrationTest.csproj", "{7E9A7DD5-EB78-4AC5-BFD5-64573FD2533B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

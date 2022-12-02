@@ -21,7 +21,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Infrastructure.EFIntegratio
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Api.IntegrationTest", "Api.IntegrationTest\Api.IntegrationTest.csproj", "{6ED94433-3423-498C-96C9-F24756357D95}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Infrastrucute.IntegrationTest", "Infrastrucute.IntegrationTest\Infrastrucute.IntegrationTest.csproj", "{5827E256-D1C5-4BBE-BB74-ED28A83578FA}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Infrastructure.IntegrationTest", "Infrastrutcure.IntegrationTest\Infrastructure.IntegrationTest.csproj", "{5827E256-D1C5-4BBE-BB74-ED28A83578FA}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
