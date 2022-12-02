@@ -1,6 +1,5 @@
 ﻿using System.Text.Json;
 using AutoMapper;
-using Bit.Core.Enums.Provider;
 using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Infrastructure.EntityFramework.Repositories.Queries;
 using LinqToDB.Data;

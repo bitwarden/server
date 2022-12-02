@@ -1,4 +1,4 @@
-using Bit.Core.Entities;
+﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Enums.Provider;
 using Bit.Infrastructure.EntityFramework.Repositories.Queries;
@@ -56,18 +56,18 @@ public static class DatabaseContextExtensions
                     join ou in context.OrganizationUsers
                         on u.Id equals ou.UserId
                     join cu in context.CollectionUsers
-                        on new { ou.AccessAll, OrganizationUserId = ou.Id, CollectionId = collectionId } equals 
+                        on new { ou.AccessAll, OrganizationUserId = ou.Id, CollectionId = collectionId } equals
                         new { AccessAll = false, cu.OrganizationUserId, cu.CollectionId } into cu_g
                     from cu in cu_g.DefaultIfEmpty()
                     join gu in context.GroupUsers
-                        on new { CollectionId = (Guid?)cu.CollectionId, ou.AccessAll, OrganizationUserId = ou.Id } equals 
+                        on new { CollectionId = (Guid?)cu.CollectionId, ou.AccessAll, OrganizationUserId = ou.Id } equals
                         new { CollectionId = (Guid?)null, AccessAll = false, gu.OrganizationUserId } into gu_g
                     from gu in gu_g.DefaultIfEmpty()
                     join g in context.Groups
                         on gu.GroupId equals g.Id into g_g
                     from g in g_g.DefaultIfEmpty()
                     join cg in context.CollectionGroups
-                        on new { g.AccessAll, gu.GroupId, CollectionId = collectionId } equals 
+                        on new { g.AccessAll, gu.GroupId, CollectionId = collectionId } equals
                         new { AccessAll = false, cg.GroupId, cg.CollectionId } into cg_g
                     from cg in cg_g.DefaultIfEmpty()
                     where ou.OrganizationId == organizationId &&
@@ -119,7 +119,7 @@ public static class DatabaseContextExtensions
                     join pu in context.ProviderUsers on u.Id equals pu.UserId
                     where pu.ProviderId == providerId && pu.Status == ProviderUserStatusType.Confirmed
                     select u;
-        
+
         var users = await query.ToListAsync();
         UpdateUserRevisionDate(users);
     }

@@ -1,12 +1,12 @@
-using System.Reflection;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Bit.Infrastructure.Dapper;
-using Bit.Infrastructure.EntityFramework;
-using Xunit.Sdk;
+﻿using System.Reflection;
 using Bit.Core.Enums;
 using Bit.Core.Settings;
+using Bit.Infrastructure.Dapper;
+using Bit.Infrastructure.EntityFramework;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Xunit.Sdk;
 
 namespace Bit.Infrastructure.IntegrationTest;
 

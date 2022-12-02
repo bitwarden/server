@@ -96,7 +96,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
             var orgSponsorships = await dbContext.OrganizationSponsorships
                 .Where(os => os.SponsoringOrganizationUserId == organizationUserId)
                 .ToListAsync();
-            
+
             foreach (var orgSponsorship in orgSponsorships)
             {
                 orgSponsorship.ToDelete = true;

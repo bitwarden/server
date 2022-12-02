@@ -1,4 +1,4 @@
-using Bit.Infrastructure.EntityFramework.Repositories;
+﻿using Bit.Infrastructure.EntityFramework.Repositories;
 
 namespace Bit.Infrastructure.IntegrationTest;
 

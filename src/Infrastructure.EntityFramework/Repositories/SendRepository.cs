@@ -25,7 +25,7 @@ public class SendRepository : Repository<Core.Entities.Send, Send, Guid>, ISendR
                 await dbContext.SaveChangesAsync();
             }
         }
-        
+
         return send;
     }
 

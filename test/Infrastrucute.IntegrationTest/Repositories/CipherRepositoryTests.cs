@@ -1,4 +1,4 @@
-using Bit.Core.Entities;
+﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Core.Models.Data;
@@ -10,7 +10,7 @@ public class CipherRepositoryTests
 {
     [DatabaseTheory, DatabaseData]
     public async Task DeleteAsync_UpdatesUserRevisionDate(
-        IUserRepository userRepository, 
+        IUserRepository userRepository,
         ICipherRepository cipherRepository,
         ITestDatabaseHelper helper)
     {
