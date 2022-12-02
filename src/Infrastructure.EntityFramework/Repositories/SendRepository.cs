@@ -15,11 +15,17 @@ public class SendRepository : Repository<Core.Entities.Send, Send, Guid>, ISendR
     public override async Task<Core.Entities.Send> CreateAsync(Core.Entities.Send send)
     {
         send = await base.CreateAsync(send);
-        if (send.UserId.HasValue)
+        using (var scope = ServiceScopeFactory.CreateScope())
         {
-            await UserUpdateStorage(send.UserId.Value);
-            await UserBumpAccountRevisionDate(send.UserId.Value);
+            var dbContext = GetDatabaseContext(scope);
+            if (send.UserId.HasValue)
+            {
+                await UserUpdateStorage(send.UserId.Value);
+                await dbContext.UserBumpAccountRevisionDateAsync(send.UserId.Value);
+                await dbContext.SaveChangesAsync();
+            }
         }
+        
         return send;
     }
 

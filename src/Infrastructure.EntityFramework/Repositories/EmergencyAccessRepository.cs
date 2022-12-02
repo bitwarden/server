@@ -21,6 +21,17 @@ public class EmergencyAccessRepository : Repository<Core.Entities.EmergencyAcces
         return await GetCountFromQuery(query);
     }
 
+    public override async Task DeleteAsync(Core.Entities.EmergencyAccess emergencyAccess)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            await dbContext.UserBumpAccountRevisionDateByEmergencyAccessGranteeIdAsync(emergencyAccess.Id);
+            await dbContext.SaveChangesAsync();
+        }
+        await base.DeleteAsync(emergencyAccess);
+    }
+
     public async Task<EmergencyAccessDetails> GetDetailsByIdGrantorIdAsync(Guid id, Guid grantorId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
