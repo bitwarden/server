@@ -484,7 +484,7 @@ public class CipherRepository : Repository<Core.Entities.Cipher, Cipher, Guid>, 
                                         join o in context.Organizations
                                             on c.OrganizationId equals o.Id
                                         join ou in context.OrganizationUsers
-                                            on new { OrganizationId = o.Id, UserId = (Guid?)userId.Value } equals
+                                            on new { OrganizationId = o.Id, UserId = userId } equals
                                             new { ou.OrganizationId, ou.UserId }
                                         join cu in context.CollectionUsers
                                             on new { ou.AccessAll, CollectionId = c.Id, OrganizationUserId = ou.Id } equals
@@ -499,7 +499,8 @@ public class CipherRepository : Repository<Core.Entities.Cipher, Cipher, Guid>, 
                                         from g in g_g.DefaultIfEmpty()
                                         join cg in context.CollectionGroups
                                             on new { g.AccessAll, CollectionId = c.Id, gu.GroupId } equals
-                                            new { AccessAll = false, cg.CollectionId, cg.GroupId }
+                                            new { AccessAll = false, cg.CollectionId, cg.GroupId } into cg_g
+                                        from cg in cg_g.DefaultIfEmpty()
                                         where o.Id == organizationId &&
                                             o.Enabled &&
                                             ou.Status == OrganizationUserStatusType.Confirmed &&
