@@ -141,8 +141,8 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                               CreationDate = collectionGroup.Key.CreationDate,
                               RevisionDate = collectionGroup.Key.RevisionDate,
                               ExternalId = collectionGroup.Key.ExternalId,
-                              ReadOnly = collectionGroup.Min(c => c.ReadOnly),
-                              HidePasswords = collectionGroup.Min(c => c.HidePasswords),
+                              ReadOnly = Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.ReadOnly))),
+                              HidePasswords = Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.HidePasswords))),
                           }).ToListAsync();
         }
     }
