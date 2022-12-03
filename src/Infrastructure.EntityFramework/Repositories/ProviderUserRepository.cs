@@ -167,7 +167,15 @@ public class ProviderUserRepository :
 
     public async Task<int> GetCountByOnlyOwnerAsync(Guid userId)
     {
-        var query = new ProviderUserReadCountByOnlyOwnerQuery(userId);
-        return await GetCountFromQuery(query);
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            return await dbContext.ProviderUsers
+                .Where(pu => pu.Type == ProviderUserType.ProviderAdmin && pu.Status == ProviderUserStatusType.Confirmed)
+                .GroupBy(pu => pu.UserId)
+                .Select(g => new { UserId = g.Key, ConfirmedOwnerCount = g.Count() })
+                .Where(oc => oc.UserId == userId && oc.ConfirmedOwnerCount == 1)
+                .CountAsync();
+        }
     }
 }
