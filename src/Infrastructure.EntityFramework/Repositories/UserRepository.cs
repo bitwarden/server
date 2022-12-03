@@ -47,7 +47,7 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
             {
                 users = await GetDbSet(dbContext)
                     .Where(e => e.Email == null ||
-                        EF.Functions.ILike(EF.Functions.Collate(e.Email, "default"), "a%"))
+                        EF.Functions.ILike(EF.Functions.Collate(e.Email, "default"), $"{email}%"))
                     .OrderBy(e => e.Email)
                     .Skip(skip).Take(take)
                     .ToListAsync();
