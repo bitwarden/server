@@ -7,14 +7,11 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
 
 public class ValidateBillingSyncKeyCommand : IValidateBillingSyncKeyCommand
 {
-    private readonly IOrganizationSponsorshipRepository _organizationSponsorshipRepository;
     private readonly IOrganizationApiKeyRepository _apiKeyRepository;
 
     public ValidateBillingSyncKeyCommand(
-        IOrganizationSponsorshipRepository organizationSponsorshipRepository,
         IOrganizationApiKeyRepository organizationApiKeyRepository)
     {
-        _organizationSponsorshipRepository = organizationSponsorshipRepository;
         _apiKeyRepository = organizationApiKeyRepository;
     }
 
