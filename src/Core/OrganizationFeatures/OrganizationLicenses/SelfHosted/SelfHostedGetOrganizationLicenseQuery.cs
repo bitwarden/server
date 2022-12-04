@@ -40,25 +40,12 @@ public class SelfHostedGetOrganizationLicenseQuery : BaseIdentityClientService, 
             throw new BadRequestException("Cloud communication is disabled in global settings");
         }
 
-        // TODO: reduce duplication with self-host sync command
-        // TODO: extract to validation method on the object
-        if (!billingSyncConnection.Enabled)
+        if (!billingSyncConnection.CanUse(out var exception))
         {
-            throw new BadRequestException($"Billing Sync Key disabled for organization {organization.Id}");
-        }
-        if (string.IsNullOrWhiteSpace(billingSyncConnection.Config))
-        {
-            throw new BadRequestException($"No Billing Sync Key known for organization {organization.Id}");
+            throw new BadRequestException(exception);
         }
 
-        // TODO: extract to validation method on the object
         var billingSyncConfig = billingSyncConnection.GetConfig<BillingSyncConfig>();
-        if (billingSyncConfig == null || string.IsNullOrWhiteSpace(billingSyncConfig.BillingSyncKey))
-        {
-            throw new BadRequestException($"Failed to get Billing Sync Key for organization {organization.Id}");
-        }
-
-        // Send the request to cloud
         var cloudOrganizationId = billingSyncConfig.CloudOrganizationId;
 
         var response = await SendAsync<SelfHostedOrganizationLicenseRequestModel, OrganizationLicense>(
