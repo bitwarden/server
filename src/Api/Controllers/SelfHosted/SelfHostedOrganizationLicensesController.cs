@@ -1,12 +1,12 @@
 ﻿using Bit.Core.Context;
 using Bit.Core.Enums;
+using Bit.Core.Exceptions;
 using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Bit.Core.Utilities;
-using Bit.Core.Exceptions;
 
 namespace Bit.Api.Controllers.SelfHosted;
 
@@ -20,7 +20,7 @@ public class SelfHostedOrganizationLicensesController
     private readonly IOrganizationConnectionRepository _organizationConnectionRepository;
     private readonly IOrganizationService _organizationService;
     private readonly IOrganizationRepository _organizationRepository;
-        
+
     public SelfHostedOrganizationLicensesController(
         ICurrentContext currentContext,
         ISelfHostedGetOrganizationLicenseFromCloudQuery selfHostedGetOrganizationLicenseFromCloudQuery,
@@ -34,7 +34,7 @@ public class SelfHostedOrganizationLicensesController
         _organizationService = organizationService;
         _organizationRepository = organizationRepository;
     }
-    
+
     [HttpPost("sync/{id}")]
     public async Task SyncLicenseAsync(string id)
     {
@@ -43,7 +43,7 @@ public class SelfHostedOrganizationLicensesController
         {
             throw new NotFoundException();
         }
-        
+
         if (!await _currentContext.OrganizationOwner(organization.Id))
         {
             throw new NotFoundException();

@@ -1,5 +1,4 @@
 ﻿using Bit.Core.Context;
-using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Api.OrganizationLicenses;
 using Bit.Core.Models.Business;
