@@ -60,7 +60,6 @@ public class SelfHostedOrganizationLicensesController
         var license =
             await _selfHostedGetOrganizationLicenseFromCloudQuery.GetLicenseAsync(organization, billingSyncConnection);
 
-        // TODO: use new command here instead
         await _organizationService.UpdateLicenseAsync(organization.Id, license);
     }
 }
