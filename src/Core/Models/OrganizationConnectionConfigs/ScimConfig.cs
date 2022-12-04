@@ -11,7 +11,13 @@ public class ScimConfig : IConnectionConfig
 
     public bool CanUse(out string exception)
     {
-        // TODO
-        throw new NotImplementedException();
+        if (!Enabled)
+        {
+            exception = "Scim Config is disabled";
+            return false;
+        }
+
+        exception = "";
+        return true;
     }
 }
