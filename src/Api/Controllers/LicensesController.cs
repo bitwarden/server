@@ -2,8 +2,8 @@
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Api.OrganizationLicenses;
 using Bit.Core.Models.Business;
-using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationConnections.Interfaces;
+using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
