@@ -19,7 +19,7 @@ public class ToolsController : Controller
 {
     private readonly GlobalSettings _globalSettings;
     private readonly IOrganizationRepository _organizationRepository;
-    private readonly IGetOrganizationLicenseQuery _getOrganizationLicenseQuery;
+    private readonly ICloudGetOrganizationLicenseQuery _cloudGetOrganizationLicenseQuery;
     private readonly IUserService _userService;
     private readonly ITransactionRepository _transactionRepository;
     private readonly IInstallationRepository _installationRepository;
@@ -31,7 +31,7 @@ public class ToolsController : Controller
     public ToolsController(
         GlobalSettings globalSettings,
         IOrganizationRepository organizationRepository,
-        IGetOrganizationLicenseQuery getOrganizationLicenseQuery,
+        ICloudGetOrganizationLicenseQuery cloudGetOrganizationLicenseQuery,
         IUserService userService,
         ITransactionRepository transactionRepository,
         IInstallationRepository installationRepository,
@@ -42,7 +42,7 @@ public class ToolsController : Controller
     {
         _globalSettings = globalSettings;
         _organizationRepository = organizationRepository;
-        _getOrganizationLicenseQuery = getOrganizationLicenseQuery;
+        _cloudGetOrganizationLicenseQuery = cloudGetOrganizationLicenseQuery;
         _userService = userService;
         _transactionRepository = transactionRepository;
         _installationRepository = installationRepository;
@@ -260,7 +260,7 @@ public class ToolsController : Controller
 
         if (organization != null)
         {
-            var license = await _getOrganizationLicenseQuery.GetLicenseAsync(organization,
+            var license = await _cloudGetOrganizationLicenseQuery.GetLicenseAsync(organization,
                 model.InstallationId.Value, model.Version);
             var ms = new MemoryStream();
             await JsonSerializer.SerializeAsync(ms, license, JsonHelpers.Indented);

@@ -20,7 +20,7 @@ public class LicensesController : Controller
     private readonly IUserRepository _userRepository;
     private readonly IUserService _userService;
     private readonly IOrganizationRepository _organizationRepository;
-    private readonly IGetOrganizationLicenseQuery _getOrganizationLicenseQuery;
+    private readonly ICloudGetOrganizationLicenseQuery _cloudGetOrganizationLicenseQuery;
     private readonly IValidateBillingSyncKeyCommand _validateBillingSyncKeyCommand;
     private readonly IOrganizationConnectionRepository _organizationConnectionRepository;
     private readonly ICurrentContext _currentContext;
@@ -29,7 +29,7 @@ public class LicensesController : Controller
         IUserRepository userRepository,
         IUserService userService,
         IOrganizationRepository organizationRepository,
-        IGetOrganizationLicenseQuery getOrganizationLicenseQuery,
+        ICloudGetOrganizationLicenseQuery cloudGetOrganizationLicenseQuery,
         IValidateBillingSyncKeyCommand validateBillingSyncKeyCommand,
         ICurrentContext currentContext,
         IOrganizationConnectionRepository organizationConnectionRepository)
@@ -37,7 +37,7 @@ public class LicensesController : Controller
         _userRepository = userRepository;
         _userService = userService;
         _organizationRepository = organizationRepository;
-        _getOrganizationLicenseQuery = getOrganizationLicenseQuery;
+        _cloudGetOrganizationLicenseQuery = cloudGetOrganizationLicenseQuery;
         _validateBillingSyncKeyCommand = validateBillingSyncKeyCommand;
         _currentContext = currentContext;
         _organizationConnectionRepository = organizationConnectionRepository;
@@ -84,7 +84,7 @@ public class LicensesController : Controller
             throw new BadRequestException("Invalid Billing Sync Key");
         }
 
-        var license = await _getOrganizationLicenseQuery.GetLicenseAsync(organization, _currentContext.InstallationId.Value);
+        var license = await _cloudGetOrganizationLicenseQuery.GetLicenseAsync(organization, _currentContext.InstallationId.Value);
         return license;
     }
 }

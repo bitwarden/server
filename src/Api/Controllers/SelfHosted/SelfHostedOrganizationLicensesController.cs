@@ -16,20 +16,20 @@ namespace Bit.Api.Controllers.SelfHosted;
 public class SelfHostedOrganizationLicensesController
 {
     private readonly ICurrentContext _currentContext;
-    private readonly ISelfHostedGetOrganizationLicenseFromCloudQuery _selfHostedGetOrganizationLicenseFromCloudQuery;
+    private readonly ISelfHostedGetOrganizationLicenseQuery _selfHostedGetOrganizationLicenseQuery;
     private readonly IOrganizationConnectionRepository _organizationConnectionRepository;
     private readonly IOrganizationService _organizationService;
     private readonly IOrganizationRepository _organizationRepository;
 
     public SelfHostedOrganizationLicensesController(
         ICurrentContext currentContext,
-        ISelfHostedGetOrganizationLicenseFromCloudQuery selfHostedGetOrganizationLicenseFromCloudQuery,
+        ISelfHostedGetOrganizationLicenseQuery selfHostedGetOrganizationLicenseQuery,
         IOrganizationConnectionRepository organizationConnectionRepository,
         IOrganizationService organizationService,
         IOrganizationRepository organizationRepository)
     {
         _currentContext = currentContext;
-        _selfHostedGetOrganizationLicenseFromCloudQuery = selfHostedGetOrganizationLicenseFromCloudQuery;
+        _selfHostedGetOrganizationLicenseQuery = selfHostedGetOrganizationLicenseQuery;
         _organizationConnectionRepository = organizationConnectionRepository;
         _organizationService = organizationService;
         _organizationRepository = organizationRepository;
@@ -58,7 +58,7 @@ public class SelfHostedOrganizationLicensesController
         }
 
         var license =
-            await _selfHostedGetOrganizationLicenseFromCloudQuery.GetLicenseAsync(organization, billingSyncConnection);
+            await _selfHostedGetOrganizationLicenseQuery.GetLicenseAsync(organization, billingSyncConnection);
 
         await _organizationService.UpdateLicenseAsync(organization.Id, license);
     }

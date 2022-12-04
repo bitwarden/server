@@ -11,12 +11,11 @@ using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationLicenses;
 
-public class SelfHostedGetOrganizationLicenseFromCloudQuery : BaseIdentityClientService, ISelfHostedGetOrganizationLicenseFromCloudQuery
+public class SelfHostedGetOrganizationLicenseQuery : BaseIdentityClientService, ISelfHostedGetOrganizationLicenseQuery
 {
     private readonly IGlobalSettings _globalSettings;
-    private readonly ICurrentContext _currentContext;
 
-    public SelfHostedGetOrganizationLicenseFromCloudQuery(IHttpClientFactory httpFactory, IGlobalSettings globalSettings, ILogger<SelfHostedGetOrganizationLicenseFromCloudQuery> logger, ICurrentContext currentContext)
+    public SelfHostedGetOrganizationLicenseQuery(IHttpClientFactory httpFactory, IGlobalSettings globalSettings, ILogger<SelfHostedGetOrganizationLicenseQuery> logger, ICurrentContext currentContext)
         : base(
             httpFactory,
             globalSettings.Installation.ApiUri,
@@ -27,7 +26,6 @@ public class SelfHostedGetOrganizationLicenseFromCloudQuery : BaseIdentityClient
             logger)
     {
         _globalSettings = globalSettings;
-        _currentContext = currentContext;
     }
 
     public async Task<OrganizationLicense> GetLicenseAsync(Organization organization, OrganizationConnection billingSyncConnection)
@@ -39,7 +37,7 @@ public class SelfHostedGetOrganizationLicenseFromCloudQuery : BaseIdentityClient
 
         if (!_globalSettings.EnableCloudCommunication)
         {
-            throw new BadRequestException("Failed to sync instance with cloud - Cloud communication is disabled in global settings");
+            throw new BadRequestException("Cloud communication is disabled in global settings");
         }
 
         // TODO: reduce duplication with self-host sync command
