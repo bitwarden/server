@@ -1,6 +1,6 @@
 ﻿using Bit.Core.Entities;
 
-namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
+namespace Bit.Core.OrganizationFeatures.OrganizationConnections.Interfaces;
 
 public interface IValidateBillingSyncKeyCommand
 {

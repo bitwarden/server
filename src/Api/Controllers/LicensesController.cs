@@ -3,7 +3,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Api.OrganizationLicenses;
 using Bit.Core.Models.Business;
 using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
-using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
+using Bit.Core.OrganizationFeatures.OrganizationConnections.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
@@ -22,7 +22,6 @@ public class LicensesController : Controller
     private readonly IOrganizationRepository _organizationRepository;
     private readonly ICloudGetOrganizationLicenseQuery _cloudGetOrganizationLicenseQuery;
     private readonly IValidateBillingSyncKeyCommand _validateBillingSyncKeyCommand;
-    private readonly IOrganizationConnectionRepository _organizationConnectionRepository;
     private readonly ICurrentContext _currentContext;
 
     public LicensesController(
@@ -31,8 +30,7 @@ public class LicensesController : Controller
         IOrganizationRepository organizationRepository,
         ICloudGetOrganizationLicenseQuery cloudGetOrganizationLicenseQuery,
         IValidateBillingSyncKeyCommand validateBillingSyncKeyCommand,
-        ICurrentContext currentContext,
-        IOrganizationConnectionRepository organizationConnectionRepository)
+        ICurrentContext currentContext)
     {
         _userRepository = userRepository;
         _userService = userService;
@@ -40,7 +38,6 @@ public class LicensesController : Controller
         _cloudGetOrganizationLicenseQuery = cloudGetOrganizationLicenseQuery;
         _validateBillingSyncKeyCommand = validateBillingSyncKeyCommand;
         _currentContext = currentContext;
-        _organizationConnectionRepository = organizationConnectionRepository;
     }
 
     [HttpGet("user/{id}")]
