@@ -23,6 +23,7 @@ on:
       - 'util/PostgresMigrations/**' # Changes to Postgres
       - 'src/Infrastructure.Dapper/**' # Changes to SQL Server Dapper Repository Layer
       - 'src/Infrastructure.EntityFramework/**' # Changes to Entity Framework Repository Layer
+      - 'test/Infrastructure.IntegrationTest' # Any changes to the tests
   workflow_dispatch:
     inputs: {}
 
