@@ -1,6 +1,5 @@
 ﻿using AutoMapper;
 using Bit.Core.Repositories;
-using Bit.Core.Utilities;
 using Bit.Infrastructure.EntityFramework;
 using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Infrastructure.EntityFramework.Repositories;
@@ -76,7 +75,7 @@ public class SecretRepository : Repository<Core.Entities.Secret, Secret, Guid>, 
             foreach (var project in mappedEntity.Projects.Where(p => entity.Projects.All(ep => ep.Id != p.Id)))
             {
                 var p = dbContext.AttachToOrGet<Project>(_ => _.Id == project.Id, () => project);
-                entity.Projects.AddIfNotExists(p);
+                entity.Projects.Add(p);
             }
 
             dbContext.Entry(entity).CurrentValues.SetValues(mappedEntity);
