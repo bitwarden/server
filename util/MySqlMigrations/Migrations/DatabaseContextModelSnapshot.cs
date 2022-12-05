@@ -35,7 +35,7 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasMaxLength(4000)
                         .HasColumnType("varchar(4000)");
 
-                    b.Property<DateTime>("ExpireAt")
+                    b.Property<DateTime?>("ExpireAt")
                         .HasColumnType("datetime(6)");
 
                     b.Property<string>("Key")
@@ -1422,7 +1422,7 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.ToTable("ProjectSecret");
                 });
-                
+
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.ApiKey", b =>
                 {
                     b.HasOne("Bit.Infrastructure.EntityFramework.Models.ServiceAccount", "ServiceAccount")
