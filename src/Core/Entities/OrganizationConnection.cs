@@ -44,7 +44,7 @@ public class OrganizationConnection : ITableObject<Guid>
         Config = JsonSerializer.Serialize(config);
     }
 
-    public bool CanUse(out string exception)
+    public bool CanUse<T>(out string exception) where T : IConnectionConfig
     {
         if (!Enabled)
         {
@@ -58,7 +58,7 @@ public class OrganizationConnection : ITableObject<Guid>
             return false;
         }
 
-        var config = GetConfig<IConnectionConfig>();
+        var config = GetConfig<T>();
         if (config == null)
         {
             exception = $"Error parsing Connection config for organization {OrganizationId}";

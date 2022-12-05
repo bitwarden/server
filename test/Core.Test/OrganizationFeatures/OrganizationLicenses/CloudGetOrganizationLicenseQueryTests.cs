@@ -17,7 +17,7 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationLicenses;
 [SubscriptionInfoCustomize]
 [OrganizationLicenseCustomize]
 [SutProviderCustomize]
-public class GetOrganizationLicenseQueryTests
+public class CloudGetOrganizationLicenseQueryTests
 {
     [Theory]
     [BitAutoData]
