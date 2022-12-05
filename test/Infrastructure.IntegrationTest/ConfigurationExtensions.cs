@@ -15,6 +15,3 @@ public static class ConfigurationExtensions
         return true;
     }
 }
-
-
-// A change

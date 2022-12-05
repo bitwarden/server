@@ -12,6 +12,7 @@ on:
       - 'util/PostgresMigrations/**' # Changes to Postgres
       - 'src/Infrastructure.Dapper/**' # Changes to SQL Server Dapper Repository Layer
       - 'src/Infrastructure.EntityFramework/**' # Changes to Entity Framework Repository Layer
+      - 'test/Infrastructure.IntegrationTest/**' # Any changes to the tests
   push:
     branches:
       - 'master'
@@ -23,7 +24,7 @@ on:
       - 'util/PostgresMigrations/**' # Changes to Postgres
       - 'src/Infrastructure.Dapper/**' # Changes to SQL Server Dapper Repository Layer
       - 'src/Infrastructure.EntityFramework/**' # Changes to Entity Framework Repository Layer
-      - 'test/Infrastructure.IntegrationTest' # Any changes to the tests
+      - 'test/Infrastructure.IntegrationTest/**' # Any changes to the tests
   workflow_dispatch:
     inputs: {}
 
@@ -35,6 +36,14 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@e2f20e631ae6d7dd3b768f56a5d2af784dd54791
 
+      - name: Set up dotnet
+        uses: actions/setup-dotnet@9211491ffb35dd6a6657ca4f45d43dfe6e97c829
+        with:
+          dotnet-version: '6.0.x'
+
+      - name: Restore Tools
+        run: dotnet tool restore
+
       - name: Compose Databases
         working-directory: 'dev'
         # We could think about not using profiles and pulling images directly to cover multiple versions
@@ -43,17 +52,25 @@ jobs:
           docker compose --profile mssql postgres mysql up -d
         shell: pwsh
       
-      - name: Migrate Databases
+      - name: Migrate SQL Server
         working-directory: 'dev'
-        run: pwsh migrate.ps1 -all
+        run: "pwsh migrate.ps1 -mssql"
         shell: pwsh
+
+      - name: Migrate MySQL
+        working-directory: 'util/MySqlMigrations'
+        run: 'dotnet ef database update --connection "server=localhost;uid=root;pwd=SET_A_PASSWORD_HERE_123;database=vault_dev"'
+
+      - name: Migrate Postgres
+        working-directory: 'util/PostgresMigrations'
+        run: 'dotnet ef database update --connection "Host=localhost;Username=postgres;Password=SET_A_PASSWORD_HERE_123;Database=vault_dev"'
         
       - name: Run Tests
         working-directory: 'test/Infrastructure.IntegrationTest'
         env:
           BW_TEST_DAPPER__SQLSERVER: "Server=localhost;Database=vault_dev;User Id=SA;Password=SET_A_PASSWORD_HERE_123;Encrypt=True;TrustServerCertificate=True;"
-          BW_TEST_EF__POSTGRES: "Host=localhost;Username=postgres;Password=SET_A_PASSWORD_HERE_123;Database=vault_dev"
           BW_TEST_EF__MYSQL: "server=localhost;uid=root;pwd=SET_A_PASSWORD_HERE_123;database=vault_dev"
+          BW_TEST_EF__POSTGRES: "Host=localhost;Username=postgres;Password=SET_A_PASSWORD_HERE_123;Database=vault_dev"
         run: dotnet test
         shell: pwsh
       
