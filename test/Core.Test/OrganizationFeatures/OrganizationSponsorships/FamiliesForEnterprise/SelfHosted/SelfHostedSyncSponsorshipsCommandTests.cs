@@ -73,7 +73,7 @@ public class SelfHostedSyncSponsorshipsCommandTests : FamiliesForEnterpriseTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.SyncOrganization(billingSyncConnection.OrganizationId, cloudOrganizationId, billingSyncConnection));
 
-        Assert.Contains($"Billing Sync Key disabled", exception.Message);
+        Assert.Contains($"Connection disabled", exception.Message);
 
         await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
             .DidNotReceiveWithAnyArgs()
@@ -85,7 +85,7 @@ public class SelfHostedSyncSponsorshipsCommandTests : FamiliesForEnterpriseTests
 
     [Theory]
     [BitAutoData]
-    public async Task SyncOrganization_BillingSyncKeyEmpty_ThrowsBadRequest(
+    public async Task SyncOrganization_BillingSyncConfigEmpty_ThrowsBadRequest(
         Guid cloudOrganizationId, OrganizationConnection billingSyncConnection)
     {
         var sutProvider = GetSutProvider();
@@ -94,7 +94,7 @@ public class SelfHostedSyncSponsorshipsCommandTests : FamiliesForEnterpriseTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.SyncOrganization(billingSyncConnection.OrganizationId, cloudOrganizationId, billingSyncConnection));
 
-        Assert.Contains($"No Billing Sync Key known", exception.Message);
+        Assert.Contains($"No saved Connection config", exception.Message);
 
         await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
             .DidNotReceiveWithAnyArgs()
