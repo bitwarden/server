@@ -232,7 +232,12 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
         var deviceId = "92b9d953-b9b6-4eaf-9d3e-11d57144dfeb";
         var username = $"{generatedUsername}@example.com";
 
-        await _factory.Server.PostAsync("/accounts/register", JsonContent.Create(new RegisterRequestModel
+        var server = _factory.WithWebHostBuilder(builder =>
+        {
+            builder.UseSetting("globalSettings:sso:enforceSsoPolicyForAllUsers", "false");
+        }).Server;
+
+        await server.PostAsync("/accounts/register", JsonContent.Create(new RegisterRequestModel
         {
             Email = username,
             MasterPasswordHash = "master_password_hash"
@@ -240,7 +245,7 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
 
         await CreateOrganizationWithSsoPolicy(organizationId, username, organizationUserType, ssoPolicyEnabled: true);
 
-        var context = await _factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
+        var context = await server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
         {
             { "scope", "api offline_access" },
             { "client_id", "web" },
@@ -302,7 +307,12 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
         var deviceId = "92b9d953-b9b6-4eaf-9d3e-11d57144dfeb";
         var username = $"{generatedUsername}@example.com";
 
-        await _factory.Server.PostAsync("/accounts/register", JsonContent.Create(new RegisterRequestModel
+        var server = _factory.WithWebHostBuilder(builder =>
+        {
+            builder.UseSetting("globalSettings:sso:enforceSsoPolicyForAllUsers", "false");
+        }).Server;
+
+        await server.PostAsync("/accounts/register", JsonContent.Create(new RegisterRequestModel
         {
             Email = username,
             MasterPasswordHash = "master_password_hash"
@@ -310,7 +320,7 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
 
         await CreateOrganizationWithSsoPolicy(organizationId, username, organizationUserType, ssoPolicyEnabled: false);
 
-        var context = await _factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
+        var context = await server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
         {
             { "scope", "api offline_access" },
             { "client_id", "web" },
