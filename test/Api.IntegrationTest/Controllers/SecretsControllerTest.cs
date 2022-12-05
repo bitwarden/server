@@ -106,11 +106,19 @@ public class SecretsControllerTest : IClassFixture<ApiApplicationFactory>, IAsyn
         // --- Get secrets by project id ---
         var secretListResponse = await _client.GetAsync($"/projects/{projectResult.Id}/secrets");
         secretListResponse.EnsureSuccessStatusCode();
-        var secretListResult = await secretListResponse.Content.ReadFromJsonAsync<SecretWithProjectsListResponseModel>();
+        var secretListResult = await secretListResponse.Content.ReadAsStringAsync();
 
-        // --- Verify the secret is in the project ---
-        var projectsList = secretListResult.Projects.Select(p => p.Id);
-        Assert.Contains(projectResult.Id, projectsList);
+        // --- Validate Secret is Valid and in Project ---
+        Assert.NotEmpty(secretListResult);
+
+        var jsonResult = JsonDocument.Parse(secretListResult);
+        var secretJsonResult = jsonResult.RootElement.GetProperty("secrets").EnumerateArray().First();
+        var projectJsonResult = jsonResult.RootElement.GetProperty("projects").EnumerateArray().First();
+
+        Assert.Equal(secretResult?.Id.ToString(), secretJsonResult.GetProperty("id").ToString());
+        Assert.Equal(secretResult?.OrganizationId.ToString(), secretJsonResult.GetProperty("organizationId").ToString());
+        Assert.Equal(secretRequest.ProjectId.ToString(), secretJsonResult.GetProperty("projects").EnumerateArray().First().ToString());
+        Assert.Equal(secretRequest.ProjectId.ToString(), projectJsonResult.GetProperty("id").ToString());
     }
 
     [Fact]
