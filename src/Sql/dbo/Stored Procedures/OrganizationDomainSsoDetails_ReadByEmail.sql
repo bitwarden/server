@@ -14,7 +14,9 @@ BEGIN
         O.UseSso AS SsoAvailable,
         P.Enabled AS SsoRequired,
         O.Identifier AS OrganizationIdentifier,
-        OD.VerifiedDate
+        OD.VerifiedDate,
+        P.[Type] AS PolicyType,
+        OD.DomainName
     FROM
         [dbo].[OrganizationView] O
     INNER JOIN [dbo].[OrganizationDomainView] OD
@@ -24,7 +26,4 @@ BEGIN
     WHERE OD.DomainName = @Domain
     AND O.Enabled = 1
     AND P.[Type] = 4 -- SSO Type
-END
-
-    
-    
+END    

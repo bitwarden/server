@@ -182,7 +182,9 @@ SELECT
     O.UseSso AS SsoAvailable,
     P.Enabled AS SsoRequired,
     O.Identifier AS OrganizationIdentifier,
-    OD.VerifiedDate
+    OD.VerifiedDate,
+    P.[Type] AS PolicyType,
+    OD.DomainName
 FROM
     [dbo].[OrganizationView] O
     INNER JOIN [dbo].[OrganizationDomainView] OD
