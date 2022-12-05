@@ -38,7 +38,6 @@ public class GroupServiceTests
     {
         group.OrganizationId = organization.Id;
         organization.UseGroups = true;
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         organizationUser.OrganizationId = organization.Id;
         sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(organizationUser.Id)
             .Returns(organizationUser);
@@ -55,7 +54,6 @@ public class GroupServiceTests
     {
         group.OrganizationId = organization.Id;
         organization.UseGroups = true;
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         organizationUser.OrganizationId = organization.Id;
         sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(organizationUser.Id)
             .Returns(organizationUser);
@@ -72,7 +70,6 @@ public class GroupServiceTests
     {
         group.OrganizationId = organization.Id;
         organization.UseGroups = true;
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         // organizationUser.OrganizationId = organization.Id;
         sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(organizationUser.Id)
             .Returns(organizationUser);

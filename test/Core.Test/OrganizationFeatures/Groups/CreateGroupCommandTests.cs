@@ -21,9 +21,7 @@ public class CreateGroupCommandTests
     [Theory, OrganizationCustomize(UseGroups = true), BitAutoData]
     public async Task CreateGroup_Success(SutProvider<CreateGroupCommand> sutProvider, Organization organization, Group group)
     {
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(group.OrganizationId).Returns(organization);
-
-        await sutProvider.Sut.CreateGroupAsync(group);
+        await sutProvider.Sut.CreateGroupAsync(group, organization);
 
         await sutProvider.GetDependency<IGroupRepository>().Received(1).CreateAsync(group);
         await sutProvider.GetDependency<IEventService>().Received(1).LogGroupEventAsync(group, Enums.EventType.Group_Created);
@@ -35,9 +33,7 @@ public class CreateGroupCommandTests
     [Theory, OrganizationCustomize(UseGroups = true), BitAutoData]
     public async Task CreateGroup_WithCollections_Success(SutProvider<CreateGroupCommand> sutProvider, Organization organization, Group group, List<SelectionReadOnly> collections)
     {
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(group.OrganizationId).Returns(organization);
-
-        await sutProvider.Sut.CreateGroupAsync(group, collections);
+        await sutProvider.Sut.CreateGroupAsync(group, organization, collections);
 
         await sutProvider.GetDependency<IGroupRepository>().Received(1).CreateAsync(group, collections);
         await sutProvider.GetDependency<IEventService>().Received(1).LogGroupEventAsync(group, Enums.EventType.Group_Created);
@@ -49,9 +45,7 @@ public class CreateGroupCommandTests
     [Theory, OrganizationCustomize(UseGroups = true), BitAutoData]
     public async Task CreateGroup_WithEventSystemUser_Success(SutProvider<CreateGroupCommand> sutProvider, Organization organization, Group group, EventSystemUser eventSystemUser)
     {
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(group.OrganizationId).Returns(organization);
-
-        await sutProvider.Sut.CreateGroupAsync(group, eventSystemUser);
+        await sutProvider.Sut.CreateGroupAsync(group, organization, eventSystemUser);
 
         await sutProvider.GetDependency<IGroupRepository>().Received(1).CreateAsync(group);
         await sutProvider.GetDependency<IEventService>().Received(1).LogGroupEventAsync(group, Enums.EventType.Group_Created, eventSystemUser);
@@ -60,28 +54,19 @@ public class CreateGroupCommandTests
         AssertHelper.AssertRecent(group.RevisionDate);
     }
 
-    [Theory, BitAutoData]
-    public async Task CreateGroup_NonExistingOrganizationId_ThrowsBadRequest(SutProvider<CreateGroupCommand> sutProvider, Group group)
+    [Theory, OrganizationCustomize(UseGroups = false), BitAutoData]
+    public void Validate_WithNullOrganization_ThrowsBadRequest(SutProvider<CreateGroupCommand> sutProvider)
     {
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.CreateGroupAsync(group));
+        var exception = Assert.Throws<BadRequestException>(() => sutProvider.Sut.Validate(null));
+
         Assert.Contains("Organization not found", exception.Message);
-        await sutProvider.GetDependency<IGroupRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default);
-        await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogGroupEventAsync(default, default, default);
-        await sutProvider.GetDependency<IReferenceEventService>().DidNotReceiveWithAnyArgs().RaiseEventAsync(default);
     }
 
     [Theory, OrganizationCustomize(UseGroups = false), BitAutoData]
-    public async Task CreateGroup_OrganizationDoesNotUseGroups_ThrowsBadRequest(SutProvider<CreateGroupCommand> sutProvider, Organization organization, Group group)
+    public void Validate_WithUseGroupsAsFalse_ThrowsBadRequest(SutProvider<CreateGroupCommand> sutProvider, Organization organization)
     {
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.CreateGroupAsync(group));
+        var exception = Assert.Throws<BadRequestException>(() => sutProvider.Sut.Validate(organization));
 
         Assert.Contains("This organization cannot use groups", exception.Message);
-        await sutProvider.GetDependency<IGroupRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default);
-        await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogGroupEventAsync(default, default, default);
-        await sutProvider.GetDependency<IReferenceEventService>().DidNotReceiveWithAnyArgs().RaiseEventAsync(default);
     }
 }

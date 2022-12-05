@@ -16,6 +16,7 @@ public class GroupsController : Controller
 {
     private readonly IGroupRepository _groupRepository;
     private readonly IGroupService _groupService;
+    private readonly IOrganizationRepository _organizationRepository;
     private readonly ICurrentContext _currentContext;
     private readonly ICreateGroupCommand _createGroupCommand;
     private readonly IUpdateGroupCommand _updateGroupCommand;
@@ -23,12 +24,14 @@ public class GroupsController : Controller
     public GroupsController(
         IGroupRepository groupRepository,
         IGroupService groupService,
+        IOrganizationRepository organizationRepository,
         ICurrentContext currentContext,
         ICreateGroupCommand createGroupCommand,
         IUpdateGroupCommand updateGroupCommand)
     {
         _groupRepository = groupRepository;
         _groupService = groupService;
+        _organizationRepository = organizationRepository;
         _currentContext = currentContext;
         _createGroupCommand = createGroupCommand;
         _updateGroupCommand = updateGroupCommand;
@@ -100,8 +103,12 @@ public class GroupsController : Controller
             throw new NotFoundException();
         }
 
+        var organization = await _organizationRepository.GetByIdAsync(orgIdGuid);
+        _createGroupCommand.Validate(organization);
+
         var group = model.ToGroup(orgIdGuid);
-        await _createGroupCommand.CreateGroupAsync(group, model.Collections?.Select(c => c.ToSelectionReadOnly()));
+        await _createGroupCommand.CreateGroupAsync(group, organization, model.Collections?.Select(c => c.ToSelectionReadOnly()));
+
         return new GroupResponseModel(group);
     }
 
@@ -115,6 +122,10 @@ public class GroupsController : Controller
             throw new NotFoundException();
         }
 
+        var orgIdGuid = new Guid(orgId);
+        var organization = await _organizationRepository.GetByIdAsync(orgIdGuid);
+
+        _updateGroupCommand.Validate(organization);
         await _updateGroupCommand.UpdateGroupAsync(model.ToGroup(group), model.Collections?.Select(c => c.ToSelectionReadOnly()));
         return new GroupResponseModel(group);
     }

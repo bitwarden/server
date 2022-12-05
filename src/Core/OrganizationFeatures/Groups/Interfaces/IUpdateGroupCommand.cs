@@ -11,4 +11,6 @@ public interface IUpdateGroupCommand
 
     Task UpdateGroupAsync(Group group, EventSystemUser systemUser,
         IEnumerable<SelectionReadOnly> collections = null);
+
+    void Validate(Organization organization);
 }

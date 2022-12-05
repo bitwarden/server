@@ -18,10 +18,8 @@ namespace Bit.Core.Test.OrganizationFeatures.Groups;
 public class UpdateGroupCommandTests
 {
     [Theory, OrganizationCustomize(UseGroups = true), BitAutoData]
-    public async Task UpdateGroup_Success(SutProvider<UpdateGroupCommand> sutProvider, Organization organization, Group group)
+    public async Task UpdateGroup_Success(SutProvider<UpdateGroupCommand> sutProvider, Group group)
     {
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(group.OrganizationId).Returns(organization);
-
         await sutProvider.Sut.UpdateGroupAsync(group);
 
         await sutProvider.GetDependency<IGroupRepository>().Received(1).ReplaceAsync(group);
@@ -30,10 +28,8 @@ public class UpdateGroupCommandTests
     }
 
     [Theory, OrganizationCustomize(UseGroups = true), BitAutoData]
-    public async Task UpdateGroup_WithCollections_Success(SutProvider<UpdateGroupCommand> sutProvider, Organization organization, Group group, List<SelectionReadOnly> collections)
+    public async Task UpdateGroup_WithCollections_Success(SutProvider<UpdateGroupCommand> sutProvider, Group group, List<SelectionReadOnly> collections)
     {
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(group.OrganizationId).Returns(organization);
-
         await sutProvider.Sut.UpdateGroupAsync(group, collections);
 
         await sutProvider.GetDependency<IGroupRepository>().Received(1).ReplaceAsync(group, collections);
@@ -42,10 +38,8 @@ public class UpdateGroupCommandTests
     }
 
     [Theory, OrganizationCustomize(UseGroups = true), BitAutoData]
-    public async Task UpdateGroup_WithEventSystemUser_Success(SutProvider<UpdateGroupCommand> sutProvider, Organization organization, Group group, EventSystemUser eventSystemUser)
+    public async Task UpdateGroup_WithEventSystemUser_Success(SutProvider<UpdateGroupCommand> sutProvider, Group group, EventSystemUser eventSystemUser)
     {
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(group.OrganizationId).Returns(organization);
-
         await sutProvider.Sut.UpdateGroupAsync(group, eventSystemUser);
 
         await sutProvider.GetDependency<IGroupRepository>().Received(1).ReplaceAsync(group);
@@ -53,26 +47,19 @@ public class UpdateGroupCommandTests
         AssertHelper.AssertRecent(group.RevisionDate);
     }
 
-    [Theory, BitAutoData]
-    public async Task UpdateGroup_NonExistingOrganizationId_ThrowsBadRequest(SutProvider<UpdateGroupCommand> sutProvider, Group group)
+    [Theory, OrganizationCustomize(UseGroups = false), BitAutoData]
+    public void Validate_WithNullOrganization_ThrowsBadRequest(SutProvider<UpdateGroupCommand> sutProvider)
     {
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.UpdateGroupAsync(group));
+        var exception = Assert.Throws<BadRequestException>(() => sutProvider.Sut.Validate(null));
+
         Assert.Contains("Organization not found", exception.Message);
-        await sutProvider.GetDependency<IGroupRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default);
-        await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogGroupEventAsync(default, default, default);
     }
 
     [Theory, OrganizationCustomize(UseGroups = false), BitAutoData]
-    public async Task UpdateGroup_OrganizationDoesNotUseGroups_ThrowsBadRequest(SutProvider<UpdateGroupCommand> sutProvider, Organization organization, Group group)
+    public void Validate_WithUseGroupsAsFalse_ThrowsBadRequest(SutProvider<UpdateGroupCommand> sutProvider, Organization organization)
     {
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.UpdateGroupAsync(group));
+        var exception = Assert.Throws<BadRequestException>(() => sutProvider.Sut.Validate(organization));
 
         Assert.Contains("This organization cannot use groups", exception.Message);
-        await sutProvider.GetDependency<IGroupRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default);
-        await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogGroupEventAsync(default, default, default);
     }
 }

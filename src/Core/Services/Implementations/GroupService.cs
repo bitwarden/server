@@ -1,7 +1,6 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.OrganizationFeatures.Groups.Interfaces;
 using Bit.Core.Repositories;
 
 namespace Bit.Core.Services;
@@ -9,26 +8,17 @@ namespace Bit.Core.Services;
 public class GroupService : IGroupService
 {
     private readonly IEventService _eventService;
-    private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IGroupRepository _groupRepository;
-    private readonly ICreateGroupCommand _createGroupCommand;
-    private readonly IUpdateGroupCommand _updateGroupCommand;
 
     public GroupService(
         IEventService eventService,
-        IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
-        IGroupRepository groupRepository,
-        ICreateGroupCommand createGroupCommand,
-        IUpdateGroupCommand updateGroupCommand)
+        IGroupRepository groupRepository)
     {
         _eventService = eventService;
-        _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
         _groupRepository = groupRepository;
-        _createGroupCommand = createGroupCommand;
-        _updateGroupCommand = updateGroupCommand;
     }
 
     [Obsolete("IDeleteGroupCommand should be used instead. To be removed by EC-608.")]

@@ -25,10 +25,12 @@ public class PutGroupCommand : IPutGroupCommand
         _updateGroupCommand = updateGroupCommand;
     }
 
-    public async Task<Group> PutGroupAsync(Guid organizationId, Guid id, ScimGroupRequestModel model)
+    public async Task<Group> PutGroupAsync(Organization organization, Guid id, ScimGroupRequestModel model)
     {
+        _updateGroupCommand.Validate(organization);
+
         var group = await _groupRepository.GetByIdAsync(id);
-        if (group == null || group.OrganizationId != organizationId)
+        if (group == null || group.OrganizationId != organization.Id)
         {
             throw new NotFoundException("Group not found.");
         }

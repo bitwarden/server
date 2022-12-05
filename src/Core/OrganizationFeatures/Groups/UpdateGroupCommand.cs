@@ -12,16 +12,13 @@ public class UpdateGroupCommand : IUpdateGroupCommand
 {
     private readonly IEventService _eventService;
     private readonly IGroupRepository _groupRepository;
-    private readonly IOrganizationRepository _organizationRepository;
 
     public UpdateGroupCommand(
         IEventService eventService,
-        IGroupRepository groupRepository,
-        IOrganizationRepository organizationRepository)
+        IGroupRepository groupRepository)
     {
         _eventService = eventService;
         _groupRepository = groupRepository;
-        _organizationRepository = organizationRepository;
     }
 
     public async Task UpdateGroupAsync(Group group,
@@ -38,9 +35,8 @@ public class UpdateGroupCommand : IUpdateGroupCommand
         await _eventService.LogGroupEventAsync(group, Enums.EventType.Group_Updated, systemUser);
     }
 
-    private async Task GroupRepositoryUpdateGroupAsync(Group group, IEnumerable<SelectionReadOnly> collections = null)
+    public void Validate(Organization organization)
     {
-        var organization = await _organizationRepository.GetByIdAsync(group.OrganizationId);
         if (organization == null)
         {
             throw new BadRequestException("Organization not found");
@@ -50,7 +46,10 @@ public class UpdateGroupCommand : IUpdateGroupCommand
         {
             throw new BadRequestException("This organization cannot use groups.");
         }
+    }
 
+    private async Task GroupRepositoryUpdateGroupAsync(Group group, IEnumerable<SelectionReadOnly> collections = null)
+    {
         group.RevisionDate = DateTime.UtcNow;
 
         if (collections == null)
