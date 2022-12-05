@@ -24,12 +24,12 @@ public class OrganizationConnectionTests
         Assert.True(connection.CanUse<ScimConfig>(out var exception));
         Assert.True(string.IsNullOrEmpty(exception));
     }
-    
+
     [Theory]
     [BitAutoData]
     public void OrganizationConnection_CanUse_WhenDisabled_ReturnsFalse(Guid connectionId, Guid organizationId)
     {
-        
+
         var connection = new OrganizationConnection<ScimConfig>()
         {
             Id = connectionId,
@@ -42,7 +42,7 @@ public class OrganizationConnectionTests
         Assert.False(connection.CanUse<ScimConfig>(out var exception));
         Assert.Contains("Connection disabled", exception);
     }
-    
+
     [Theory]
     [BitAutoData]
     public void OrganizationConnection_CanUse_WhenNoConfig_ReturnsFalse(Guid connectionId, Guid organizationId)
@@ -58,7 +58,7 @@ public class OrganizationConnectionTests
         Assert.False(connection.CanUse<ScimConfig>(out var exception));
         Assert.Contains("No saved Connection config", exception);
     }
-    
+
     [Theory]
     [BitAutoData]
     public void OrganizationConnection_CanUse_WhenConfigInvalid_ReturnsFalse(Guid connectionId, Guid organizationId)

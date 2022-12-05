@@ -6,22 +6,22 @@ namespace Bit.Core.Test.Models.OrganizationConnectionConfigs;
 
 public class BillingSyncConfigTests
 {
-    [Theory] 
+    [Theory]
     [BitAutoData]
     public void BillingSyncConfig_CanUse_Success(string billingSyncKey)
     {
-       var config = new BillingSyncConfig() { BillingSyncKey = billingSyncKey};
-       
-       Assert.True(config.CanUse(out var exception));
-       Assert.True(string.IsNullOrEmpty(exception));
+        var config = new BillingSyncConfig() { BillingSyncKey = billingSyncKey };
+
+        Assert.True(config.CanUse(out var exception));
+        Assert.True(string.IsNullOrEmpty(exception));
     }
-    
-    [Fact] 
+
+    [Fact]
     public void BillingSyncConfig_CanUse_WhenNoKey_ReturnsFalse()
     {
-       var config = new BillingSyncConfig();
-       
-       Assert.False(config.CanUse(out var exception));
-       Assert.Contains("Failed to get Billing Sync Key", exception);
+        var config = new BillingSyncConfig();
+
+        Assert.False(config.CanUse(out var exception));
+        Assert.Contains("Failed to get Billing Sync Key", exception);
     }
 }
