@@ -104,9 +104,9 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
                 new { OrganizationId = organizationId },
                 commandType: CommandType.StoredProcedure);
 
-            var collections = (await results.ReadAsync<Collection>()).ToList();
-            var groups = (await results.ReadAsync<CollectionGroup>()).ToList();
-            var users = (await results.ReadAsync<CollectionUser>()).ToList();
+            var collections = (await results.ReadAsync<Collection>());
+            var groups = (await results.ReadAsync<CollectionGroup>());
+            var users = (await results.ReadAsync<CollectionUser>());
 
             return collections.Select(collection =>
                 new Tuple<Collection, CollectionAccessDetails>(
@@ -144,9 +144,9 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
                 new { UserId = userId },
                 commandType: CommandType.StoredProcedure);
 
-            var collections = (await results.ReadAsync<Collection>()).Where(c => c.OrganizationId == organizationId).ToList();
-            var groups = (await results.ReadAsync<CollectionGroup>()).ToList();
-            var users = (await results.ReadAsync<CollectionUser>()).ToList();
+            var collections = (await results.ReadAsync<Collection>()).Where(c => c.OrganizationId == organizationId);
+            var groups = (await results.ReadAsync<CollectionGroup>());
+            var users = (await results.ReadAsync<CollectionUser>());
 
             return collections.Select(collection =>
                 new Tuple<Collection, CollectionAccessDetails>(
