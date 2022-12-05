@@ -55,9 +55,9 @@ jobs:
         id: version-changed
         run: |
           if [ -n "$(git status --porcelain)" ]; then
-            echo "::set-output name=changes_to_commit::TRUE"
+            echo "changes_to_commit=TRUE" >> $GITHUB_OUTPUT
           else
-            echo "::set-output name=changes_to_commit::FALSE"
+            echo "changes_to_commit=FALSE" >> $GITHUB_OUTPUT
             echo "No changes to commit!";
           fi
 
