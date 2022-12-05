@@ -37,8 +37,7 @@ jobs:
           git_commit_gpgsign: true
 
       - name: Create Version Branch
-        run: |
-          git switch -c version_bump_${{ github.event.inputs.version_number }}
+        run: git switch -c version_bump_${{ github.event.inputs.version_number }}
 
       - name: Bump Version - Props
         uses: bitwarden/gh-actions/version-bump@6a42772f8849107fd457cf47cd9c7e224be44e55
@@ -63,8 +62,7 @@ jobs:
 
       - name: Commit files
         if: ${{ steps.version-changed.outputs.changes_to_commit == 'TRUE' }}
-        run: |
-          git commit -m "Bumped version to ${{ github.event.inputs.version_number }}" -a
+        run: git commit -m "Bumped version to ${{ github.event.inputs.version_number }}" -a
 
       - name: Push changes
         if: ${{ steps.version-changed.outputs.changes_to_commit == 'TRUE' }}
