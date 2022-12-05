@@ -1,5 +1,5 @@
-﻿using Bit.Core.Services;
-using AutoFixture;
+﻿using AutoFixture;
+using Bit.Core.Services;
 using Bit.Core.Settings;
 using NSubstitute;
 using RichardSzalay.MockHttp;

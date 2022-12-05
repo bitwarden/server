@@ -23,7 +23,7 @@ public class SelfHostedGetOrganizationLicenseQueryTests
             .ConfigureBaseIdentityClientService($"licenses/organization/{config.CloudOrganizationId}",
                 HttpMethod.Get, apiResponse: apiResponse);
     }
-    
+
     [Theory]
     [BitAutoData]
     [OrganizationLicenseCustomize]

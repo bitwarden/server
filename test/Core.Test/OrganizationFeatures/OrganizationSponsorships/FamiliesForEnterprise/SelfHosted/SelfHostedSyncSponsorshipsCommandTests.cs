@@ -104,7 +104,7 @@ public class SelfHostedSyncSponsorshipsCommandTests : FamiliesForEnterpriseTests
             }));
 
         var sutProvider = GetSutProvider(syncJsonResponse);
-        
+
         billingSyncConnection.SetConfig(new BillingSyncConfig
         {
             BillingSyncKey = "okslkcslkjf"
