@@ -41,7 +41,7 @@ public class VerificationDomainService : IVerificationDomainService
                     _logger.LogInformation(Constants.BypassFiltersEventId, "Successfully validated domain");
                     domain.SetVerifiedDate();
                     domain.SetJobRunCount();
-                    
+
                     await _domainRepository.ReplaceAsync(domain);
                     return;
                 }
