@@ -72,9 +72,7 @@ jobs:
         run: echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
 
       - name: Setup Docker Trust
-        if: |
-          false &&
-          ${{ env.is_publish_branch == 'true' }}
+        if: ${{ env.is_publish_branch == 'true' }}
         env:
           DCT_DELEGATION_KEY_ID: "c9bde8ec820701516491e5e03d3a6354e7bd66d05fa3df2b0062f68b116dc59c"
           DCT_DELEGATE_KEY: ${{ steps.retrieve-secrets.outputs.dct-delegate-2-key }}
@@ -92,6 +90,8 @@ jobs:
           IMAGE_TAG=$(echo "${GITHUB_REF:11}" | sed "s#/#-#g")  # slash safe branch name
           if [[ "$IMAGE_TAG" == "master" ]]; then
             IMAGE_TAG=dev
+          elif [[ "$IMAGE_TAG" == "rc-2022.12" ]]; then
+            IMAGE_TAG=beta
           fi
 
           echo "image_tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
@@ -101,7 +101,7 @@ jobs:
         env:
           IMAGE_TAG: ${{ steps.tag.outputs.image_tag }}
         run: |
-          if [ "$IMAGE_TAG" = "dev" ] || [ "$IMAGE_TAG" = "rc-2022.12" ]; then
+          if [ "$IMAGE_TAG" = "dev" ] || [ "$IMAGE_TAG" = "beta" ]; then
             echo "tags=bitwardenqa.azurecr.io/self-host:${IMAGE_TAG},bitwarden/self-host:${IMAGE_TAG}" >> $GITHUB_OUTPUT
           else
             echo "tags=bitwardenqa.azurecr.io/self-host:${IMAGE_TAG}" >> $GITHUB_OUTPUT
