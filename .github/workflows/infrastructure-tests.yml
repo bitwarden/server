@@ -1,0 +1,65 @@
+---
+name: Run Database Infrastructure Tests
+on:
+  pull_request:
+    branches-ignore:
+      - 'l10n_master'
+      - 'gh-pages'
+    paths:
+      - 'src/Sql/**' # SQL Server Database Changes
+      - 'util/Migrator/**' # New SQL Server Migrations
+      - 'util/MySqlMigrations/**' # Changes to MySQL
+      - 'util/PostgresMigrations/**' # Changes to Postgres
+      - 'src/Infrastructure.Dapper/**' # Changes to SQL Server Dapper Repository Layer
+      - 'src/Infrastructure.EntityFramework/**' # Changes to Entity Framework Repository Layer
+  push:
+    branches:
+      - 'master'
+      - 'rc'
+    paths:
+      - 'src/Sql/**' # SQL Server Database Changes
+      - 'util/Migrator/**' # New SQL Server Migrations
+      - 'util/MySqlMigrations/**' # Changes to MySQL
+      - 'util/PostgresMigrations/**' # Changes to Postgres
+      - 'src/Infrastructure.Dapper/**' # Changes to SQL Server Dapper Repository Layer
+      - 'src/Infrastructure.EntityFramework/**' # Changes to Entity Framework Repository Layer
+  workflow_dispatch:
+    inputs: {}
+
+jobs:
+  test:
+    name: 'Run Infrastructure.IntegrationTest'
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@a12a3943b4bdde767164f792f33f40b04645d846
+
+      - name: Compose Databases
+        working-directory: 'dev'
+        # We could think about not using profiles and pulling images directly to cover multiple versions
+        run: |
+          cp .env.example .env
+          docker compose --profile mssql postgres mysql up -d
+        shell: pwsh
+      
+      - name: Migrate Databases
+        working-directory: 'dev'
+        run: |
+          pwsh migrate.ps1 -all
+        shell: pwsh
+        
+      - name: Run Tests
+        working-directory: 'test/Infrastructure.IntegrationTest'
+        env:
+          BW_TEST_DAPPER__SQLSERVER: "Server=localhost;Database=vault_dev;User Id=SA;Password=SET_A_PASSWORD_HERE_123;Encrypt=True;TrustServerCertificate=True;"
+          BW_TEST_EF__POSTGRES: "Host=localhost;Username=postgres;Password=SET_A_PASSWORD_HERE_123;Database=vault_dev"
+          BW_TEST_EF__MYSQL: "server=localhost;uid=root;pwd=SET_A_PASSWORD_HERE_123;database=vault_dev"
+        run: |
+          dotnet test
+        shell: pwsh
+      
+      - name: Docker compose down
+        if: ${{ always() }}
+        working-directory: "dev"
+        run: docker compose down
+        shell: pwsh
