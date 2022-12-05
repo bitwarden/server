@@ -687,6 +687,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<bool>("UseScim")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("UseSecretsManager")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("UseSso")
                         .HasColumnType("boolean");
 

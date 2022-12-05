@@ -43,6 +43,7 @@ public class OrganizationResponseModel : ResponseModel
         Use2fa = organization.Use2fa;
         UseApi = organization.UseApi;
         UseResetPassword = organization.UseResetPassword;
+        UseSecretsManager = organization.UseSecretsManager;
         UsersGetPremium = organization.UsersGetPremium;
         SelfHost = organization.SelfHost;
         HasPublicAndPrivateKeys = organization.PublicKey != null && organization.PrivateKey != null;
@@ -74,6 +75,7 @@ public class OrganizationResponseModel : ResponseModel
     public bool UseTotp { get; set; }
     public bool Use2fa { get; set; }
     public bool UseApi { get; set; }
+    public bool UseSecretsManager { get; set; }
     public bool UseResetPassword { get; set; }
     public bool UsersGetPremium { get; set; }
     public bool SelfHost { get; set; }
