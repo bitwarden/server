@@ -104,5 +104,4 @@ public class SecretRepository : Repository<Core.Entities.Secret, Secret, Guid>, 
             await dbContext.SaveChangesAsync();
         }
     }
-
 }
