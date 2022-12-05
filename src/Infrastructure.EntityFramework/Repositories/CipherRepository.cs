@@ -139,7 +139,7 @@ public class CipherRepository : Repository<Core.Entities.Cipher, Cipher, Guid>, 
             await dbContext.BulkCopyAsync(base.DefaultBulkCopyOptions, folderEntities);
             var cipherEntities = Mapper.Map<List<Cipher>>(ciphers);
             await dbContext.BulkCopyAsync(base.DefaultBulkCopyOptions, cipherEntities);
-            await dbContext.UserBumpAccountRevisionDateByCipherIdAsync(ciphers);
+            await dbContext.UserBumpAccountRevisionDateAsync(ciphers.First().UserId.GetValueOrDefault());
             await dbContext.SaveChangesAsync();
         }
     }
