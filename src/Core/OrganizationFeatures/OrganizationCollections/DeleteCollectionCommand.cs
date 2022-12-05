@@ -21,7 +21,7 @@ public class DeleteCollectionCommand : IDeleteCollectionCommand
     public async Task DeleteAsync(Collection collection)
     {
         await _collectionRepository.DeleteAsync(collection);
-        await _eventService.LogCollectionEventAsync(collection, Enums.EventType.Collection_Deleted);
+        await _eventService.LogCollectionEventAsync(collection, Enums.EventType.Collection_Deleted, DateTime.UtcNow);
     }
 
     public async Task DeleteManyAsync(IEnumerable<Guid> collectionIds)
