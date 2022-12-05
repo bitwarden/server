@@ -152,8 +152,8 @@ public class CollectionCipherRepository : BaseEntityFrameworkRepository, ICollec
                                               select c).ToListAsync();
 
             var currentCollectionCiphers = await (from cc in dbContext.CollectionCiphers
-                                                 where cc.CipherId == cipherId
-                                                 select cc).ToListAsync();
+                                                  where cc.CipherId == cipherId
+                                                  select cc).ToListAsync();
 
             foreach (var requestedCollectionId in collectionIds)
             {
