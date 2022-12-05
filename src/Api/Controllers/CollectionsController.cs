@@ -86,14 +86,14 @@ public class CollectionsController : Controller
         }
 
         IEnumerable<Tuple<Collection, CollectionAccessDetails>> orgCollections;
-        if (await _currentContext.OrganizationAdmin(orgId) || await _currentContext.EditAnyCollection(orgId) || await _currentContext.DeleteAnyCollection(orgId))
+        if (await _currentContext.OrganizationAdmin(orgId) || await _currentContext.EditAnyCollection(orgId) || await _currentContext.DeleteAnyCollection(orgId) || await _currentContext.CreateNewCollections(orgId))
         {
-            // Admins, Owners, Providers and Custom (with Admin collection management permissions) can access all items even if not assigned to them
+            // Admins, Owners, Providers and Custom (with Admin collection management permissions) can access all collections even if not assigned to them
             orgCollections = await _collectionRepository.GetManyByOrganizationIdWithAccessAsync(orgId);
         }
         else
         {
-            // Managers and Custom (with Manager collection management permissions) can only access items assigned to them
+            // Managers and Custom (with Manager collection management permissions) can only access collections assigned to them
             orgCollections = await _collectionRepository.GetManyByUserIdWithAccessAsync(_currentContext.UserId.Value, orgId);
         }
 
