@@ -9,7 +9,7 @@ namespace Bit.Test.Common.AutoFixture;
 public static class SutProviderExtensions
 {
     public static SutProvider<T> ConfigureBaseIdentityClientService<T>(this SutProvider<T> sutProvider,
-        string requestUrlFragment, string identityResponse = null, string apiResponse = null)
+        string requestUrlFragment, HttpMethod requestHttpMethod, string identityResponse = null, string apiResponse = null)
         where T : BaseIdentityClientService
     {
         var fixture = new Fixture().WithAutoNSubstitutionsAutoPopulatedProperties();
@@ -29,7 +29,7 @@ public static class SutProviderExtensions
         var syncUri = string.Concat(apiUri, requestUrlFragment);
         var tokenUri = string.Concat(identityUri, "connect/token");
 
-        apiHandler.When(HttpMethod.Get, syncUri)
+        apiHandler.When(requestHttpMethod, syncUri)
             .Respond("application/json", apiResponse);
         identityHandler.When(HttpMethod.Post, tokenUri)
             .Respond("application/json", identityResponse ?? "{\"access_token\":\"string\",\"expires_in\":3600,\"token_type\":\"Bearer\",\"scope\":\"string\"}");

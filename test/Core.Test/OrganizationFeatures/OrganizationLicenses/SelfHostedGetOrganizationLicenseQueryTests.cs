@@ -16,16 +16,21 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationLicenses;
 [SutProviderCustomize]
 public class SelfHostedGetOrganizationLicenseQueryTests
 {
+    private static SutProvider<SelfHostedGetOrganizationLicenseQuery> GetSutProvider(BillingSyncConfig config,
+        string apiResponse = null)
+    {
+        return new SutProvider<SelfHostedGetOrganizationLicenseQuery>()
+            .ConfigureBaseIdentityClientService($"licenses/organization/{config.CloudOrganizationId}",
+                HttpMethod.Get, apiResponse: apiResponse);
+    }
+    
     [Theory]
     [BitAutoData]
     [OrganizationLicenseCustomize]
     public async void GetLicenseAsync_Success(Organization organization,
         OrganizationConnection<BillingSyncConfig> billingSyncConnection, BillingSyncConfig config, OrganizationLicense license)
     {
-        var sutProvider = new SutProvider<SelfHostedGetOrganizationLicenseQuery>()
-            .ConfigureBaseIdentityClientService($"licenses/organization/{config.CloudOrganizationId}",
-                apiResponse: JsonSerializer.Serialize(license));
-            
+        var sutProvider = GetSutProvider(config, JsonSerializer.Serialize(license));
         billingSyncConnection.Enabled = true;
         billingSyncConnection.Config = config;
 
@@ -38,8 +43,7 @@ public class SelfHostedGetOrganizationLicenseQueryTests
     public async void GetLicenseAsync_WhenNotSelfHosted_Throws(Organization organization,
         OrganizationConnection billingSyncConnection, BillingSyncConfig config)
     {
-        var sutProvider = new SutProvider<SelfHostedGetOrganizationLicenseQuery>()
-            .ConfigureBaseIdentityClientService($"licenses/organization/{config.CloudOrganizationId}");
+        var sutProvider = GetSutProvider(config);
         sutProvider.GetDependency<IGlobalSettings>().SelfHosted = false;
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
@@ -52,8 +56,7 @@ public class SelfHostedGetOrganizationLicenseQueryTests
     public async void GetLicenseAsync_WhenCloudCommunicationDisabled_Throws(Organization organization,
         OrganizationConnection billingSyncConnection, BillingSyncConfig config)
     {
-        var sutProvider = new SutProvider<SelfHostedGetOrganizationLicenseQuery>()
-            .ConfigureBaseIdentityClientService($"licenses/organization/{config.CloudOrganizationId}");
+        var sutProvider = GetSutProvider(config);
         sutProvider.GetDependency<IGlobalSettings>().EnableCloudCommunication = false;
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
@@ -66,8 +69,7 @@ public class SelfHostedGetOrganizationLicenseQueryTests
     public async void GetLicenseAsync_WhenCantUseConnection_Throws(Organization organization,
         OrganizationConnection<BillingSyncConfig> billingSyncConnection, BillingSyncConfig config)
     {
-        var sutProvider = new SutProvider<SelfHostedGetOrganizationLicenseQuery>()
-            .ConfigureBaseIdentityClientService($"licenses/organization/{config.CloudOrganizationId}");
+        var sutProvider = GetSutProvider(config);
         billingSyncConnection.Enabled = false;
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
@@ -80,8 +82,7 @@ public class SelfHostedGetOrganizationLicenseQueryTests
     public async void GetLicenseAsync_WhenNullResponse_Throws(Organization organization,
         OrganizationConnection<BillingSyncConfig> billingSyncConnection, BillingSyncConfig config)
     {
-        var sutProvider = new SutProvider<SelfHostedGetOrganizationLicenseQuery>()
-            .ConfigureBaseIdentityClientService($"licenses/organization/{config.CloudOrganizationId}");
+        var sutProvider = GetSutProvider(config);
         billingSyncConnection.Enabled = true;
         billingSyncConnection.Config = config;
 
