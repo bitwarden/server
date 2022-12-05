@@ -345,6 +345,7 @@ public class CipherRepository : Repository<Core.Entities.Cipher, Cipher, Guid>, 
                                         Favorite = c.Favorite,
                                         FolderId = c.FolderId,
                                         Edit = true,
+                                        Reprompt = c.Reprompt,
                                         ViewPassword = true,
                                         OrganizationUseTotp = false,
                                     };
