@@ -209,6 +209,8 @@ jobs:
           - project_name: Scim
             origin_docker_repo: bitwarden
             skip_dct: true
+          - project_name: Billing
+            origin_docker_repo: bitwardenqa.azurecr.io
     steps:
       - name: Print environment
         env:
