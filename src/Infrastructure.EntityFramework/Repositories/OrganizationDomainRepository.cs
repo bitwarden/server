@@ -1,5 +1,5 @@
+﻿using System.Net.Mail;
 using AutoMapper;
-using System.Net.Mail;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
@@ -79,7 +79,7 @@ public class OrganizationDomainRepository : Repository<Core.Entities.Organizatio
 
         return Mapper.Map<List<Core.Entities.OrganizationDomain>>(results);
     }
-    
+
     public async Task<OrganizationDomainSsoDetailsData> GetOrganizationDomainSsoDetails(string email)
     {
         var domainName = new MailAddress(email).Host;

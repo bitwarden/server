@@ -54,7 +54,7 @@ public class OrganizationDomainRepository : Repository<OrganizationDomain, Guid>
 
         return results.ToList();
     }
-    
+
     public async Task<OrganizationDomainSsoDetailsData> GetOrganizationDomainSsoDetails(string email)
     {
         using (var connection = new SqlConnection(ConnectionString))
