@@ -35,6 +35,7 @@ public static class DapperServiceCollectionExtensions
         services.AddSingleton<IOrganizationApiKeyRepository, OrganizationApiKeyRepository>();
         services.AddSingleton<IOrganizationConnectionRepository, OrganizationConnectionRepository>();
         services.AddSingleton<IAuthRequestRepository, AuthRequestRepository>();
+        services.AddSingleton<IOrganizationDomainRepository, OrganizationDomainRepository>();
 
         if (selfHosted)
         {

@@ -36,6 +36,7 @@ public class OrganizationsController : Controller
     private readonly IGetOrganizationApiKeyCommand _getOrganizationApiKeyCommand;
     private readonly IRotateOrganizationApiKeyCommand _rotateOrganizationApiKeyCommand;
     private readonly IOrganizationApiKeyRepository _organizationApiKeyRepository;
+    private readonly IOrganizationDomainRepository _organizationDomainRepository;
     private readonly GlobalSettings _globalSettings;
 
     public OrganizationsController(
@@ -51,6 +52,7 @@ public class OrganizationsController : Controller
         IGetOrganizationApiKeyCommand getOrganizationApiKeyCommand,
         IRotateOrganizationApiKeyCommand rotateOrganizationApiKeyCommand,
         IOrganizationApiKeyRepository organizationApiKeyRepository,
+        IOrganizationDomainRepository organizationDomainRepository,
         GlobalSettings globalSettings)
     {
         _organizationRepository = organizationRepository;
@@ -65,6 +67,7 @@ public class OrganizationsController : Controller
         _getOrganizationApiKeyCommand = getOrganizationApiKeyCommand;
         _rotateOrganizationApiKeyCommand = rotateOrganizationApiKeyCommand;
         _organizationApiKeyRepository = organizationApiKeyRepository;
+        _organizationDomainRepository = organizationDomainRepository;
         _globalSettings = globalSettings;
     }
 
@@ -712,5 +715,18 @@ public class OrganizationsController : Controller
         await _organizationService.UpdateAsync(organization);
 
         return new OrganizationSsoResponseModel(organization, _globalSettings, ssoConfig);
+    }
+
+    [AllowAnonymous]
+    [HttpPost("sso/details")]
+    public async Task<OrganizationDomainSsoDetailsResponseModel> GetSso([FromBody] OrganisationSsoDomainDetailsRequestModel model)
+    {
+        var ssoResult = await _organizationDomainRepository.GetOrganizationDomainSsoDetails(model.Email);
+        if (ssoResult is null)
+        {
+            throw new NotFoundException();
+        }
+
+        return new OrganizationDomainSsoDetailsResponseModel(ssoResult);
     }
 }

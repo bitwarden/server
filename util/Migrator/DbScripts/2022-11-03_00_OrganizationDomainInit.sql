@@ -15,7 +15,7 @@ CREATE TABLE [dbo].[OrganizationDomain] (
     [CreationDate]      DATETIME2(7)     NOT NULL,
     [VerifiedDate]      DATETIME2(7)     NULL,
     [NextRunDate]       DATETIME2(7)     NOT NULL,
-    [NextRunCount]      TINYINT          NOT NULL
+    [JobRunCount]      TINYINT          NOT NULL
     CONSTRAINT [PK_OrganizationDomain] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_OrganzationDomain_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id])
 )
@@ -41,7 +41,7 @@ CREATE OR ALTER PROCEDURE [dbo].[OrganizationDomain_Create]
     @CreationDate   DATETIME2(7),
     @VerifiedDate   DATETIME2(7),
     @NextRunDate    DATETIME2(7),
-    @NextRunCount   TINYINT
+    @JobRunCount   TINYINT
 AS
 BEGIN
     SET NOCOUNT ON
@@ -55,7 +55,7 @@ BEGIN
         [CreationDate],
         [VerifiedDate],
         [NextRunDate],
-        [NextRunCount]
+        [JobRunCount]
     )
     VALUES
     (
@@ -66,7 +66,7 @@ BEGIN
         @CreationDate,
         @VerifiedDate,
         @NextRunDate,
-        @NextRunCount
+        @JobRunCount
     )
 END
 GO
@@ -74,9 +74,13 @@ GO
 --Update
 CREATE OR ALTER PROCEDURE [dbo].[OrganizationDomain_Update]
     @Id UNIQUEIDENTIFIER OUTPUT,
+    @OrganizationId UNIQUEIDENTIFIER,
+    @Txt VARCHAR(MAX),
+    @DomainName NVARCHAR(255),
+    @CreationDate   DATETIME2(7),
     @VerifiedDate   DATETIME2(7),
     @NextRunDate    DATETIME2(7),
-    @NextRunCount   TINYINT
+    @JobRunCount   TINYINT
 AS
 BEGIN
     SET NOCOUNT ON
@@ -84,9 +88,13 @@ BEGIN
 UPDATE
     [dbo].[OrganizationDomain]
 SET
+    [OrganizationId] = @OrganizationId,
+    [Txt] = @Txt,
+    [DomainName] = @DomainName,
+    [CreationDate] = @CreationDate,
     [VerifiedDate] = @VerifiedDate,
     [NextRunDate] = @NextRunDate,
-    [NextRunCount] = @NextRunCount
+    [JobRunCount] = @JobRunCount
 WHERE
     [Id] = @Id
 END
@@ -120,5 +128,71 @@ FROM
     [dbo].[OrganizationDomain]
 WHERE
     [Id] = @Id
+END
+GO
+
+-- SP to get claimed domain by domain name
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationDomain_ReadByClaimedDomain]
+    @DomainName NVARCHAR(255)
+AS
+BEGIN
+    SET NOCOUNT ON
+
+SELECT
+    *
+FROM
+    [dbo].[OrganizationDomain]
+WHERE
+    [DomainName] = @DomainName
+  AND
+    [VerifiedDate] IS NOT NULL
+END
+GO
+
+-- SP to get domains by OrganizationId
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationDomain_ReadByOrganizationId]
+    @OrganizationId UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON
+
+SELECT
+    *
+FROM
+    [dbo].[OrganizationDomain]
+WHERE
+    [OrganizationId] = @OrganizationId
+END
+GO
+
+-- SP to get Organization SSO Provider details by Email
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationDomainSsoDetails_ReadByEmail]
+    @Email NVARCHAR(256)
+AS
+BEGIN
+    SET NOCOUNT ON
+        
+    DECLARE @Domain NVARCHAR(256)
+
+SELECT @Domain = SUBSTRING(@Email, CHARINDEX( '@', @Email) + 1, LEN(@Email))
+
+SELECT
+    O.Id AS OrganizationId,
+    O.[Name] AS OrganizationName,
+    O.UseSso AS SsoAvailable,
+    P.Enabled AS SsoRequired,
+    O.Identifier AS OrganizationIdentifier,
+    OD.VerifiedDate,
+    P.[Type] AS PolicyType,
+    OD.DomainName
+FROM
+    [dbo].[OrganizationView] O
+    INNER JOIN [dbo].[OrganizationDomainView] OD
+ON O.Id = OD.OrganizationId
+    INNER JOIN [dbo].[PolicyView] P
+    ON O.Id = P.OrganizationId
+WHERE OD.DomainName = @Domain
+  AND O.Enabled = 1
+  AND P.[Type] = 4 -- SSO Type
 END
 GO
