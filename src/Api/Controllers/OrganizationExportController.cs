@@ -41,7 +41,7 @@ public class OrganizationExportController : Controller
         IEnumerable<Collection> orgCollections = await _collectionService.GetOrganizationCollections(organizationId);
         (IEnumerable<CipherOrganizationDetails> orgCiphers, Dictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphersGroupDict) = await _cipherService.GetOrganizationCiphers(userId, organizationId);
 
-        if (_currentContext.ClientVersion == null || _currentContext.ClientVersion >= new Version("2023.01.0"))
+        if (_currentContext.ClientVersion == null || _currentContext.ClientVersion >= new Version("2023.1.0"))
         {
             var organizationExportResponseModel = new OrganizationExportResponseModel
             {
@@ -52,7 +52,7 @@ public class OrganizationExportController : Controller
             return Ok(organizationExportResponseModel);
         }
 
-        // Backward compatibility with versions before 2023.01.0 that use ListResponseModel
+        // Backward compatibility with versions before 2023.1.0 that use ListResponseModel
         var organizationExportListResponseModel = new OrganizationExportListResponseModel
         {
             Collections = GetOrganizationCollectionsResponse(orgCollections),
