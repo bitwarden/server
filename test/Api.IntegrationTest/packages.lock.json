@@ -3196,7 +3196,6 @@
       "integrationtestcommon": {
         "type": "Project",
         "dependencies": {
-          "Api": "[2022.9.4, )",
           "Common": "[2022.9.4, )",
           "Identity": "[2022.9.4, )",
           "Microsoft.AspNetCore.Mvc.Testing": "[6.0.5, )",

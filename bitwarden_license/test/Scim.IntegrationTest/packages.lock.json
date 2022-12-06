@@ -143,8 +143,8 @@
       },
       "Azure.Core": {
         "type": "Transitive",
-        "resolved": "1.24.0",
-        "contentHash": "+/qI1j2oU1S4/nvxb2k/wDsol00iGf1AyJX5g3epV7eOpQEP/2xcgh/cxgKMeFgn3U2fmgSiBnQZdkV+l5y0Uw==",
+        "resolved": "1.22.0",
+        "contentHash": "ze/xRCHSSDe5TIk5vBDbVrauW1EN7UIbnBvIBfMH8KSt/I9+/7yPAjTBDgNBk0IwG6WBV+BBHp4IUtS/PGAQwQ==",
         "dependencies": {
           "Microsoft.Bcl.AsyncInterfaces": "1.1.1",
           "System.Diagnostics.DiagnosticSource": "4.6.0",
@@ -177,16 +177,6 @@
           "System.Security.Cryptography.ProtectedData": "4.5.0",
           "System.Text.Json": "4.6.0",
           "System.Threading.Tasks.Extensions": "4.5.2"
-        }
-      },
-      "Azure.Messaging.EventGrid": {
-        "type": "Transitive",
-        "resolved": "4.10.0",
-        "contentHash": "X3dh3Cek/7wFPUrBJ2KbnkJteGjWvKBoSBmD/uQm8reMIavCFTKhnl95F937eLn/2cSsm5l3oPHtYPFtDerA7Q==",
-        "dependencies": {
-          "Azure.Core": "1.24.0",
-          "System.Memory.Data": "1.0.2",
-          "System.Text.Json": "4.7.2"
         }
       },
       "Azure.Storage.Blobs": {
@@ -764,11 +754,6 @@
           "Microsoft.Data.SqlClient": "2.1.4",
           "Microsoft.EntityFrameworkCore.Relational": "6.0.4"
         }
-      },
-      "Microsoft.Extensions.ApiDescription.Server": {
-        "type": "Transitive",
-        "resolved": "3.0.0",
-        "contentHash": "LH4OE/76F6sOCslif7+Xh3fS/wUUrE5ryeXAMcoCnuwOQGT5Smw0p57IgDh/pHgHaGz/e+AmEQb7pRgb++wt0w=="
       },
       "Microsoft.Extensions.Caching.Abstractions": {
         "type": "Transitive",
@@ -1791,17 +1776,6 @@
           "System.Configuration.ConfigurationManager": "6.0.0"
         }
       },
-      "Swashbuckle.AspNetCore": {
-        "type": "Transitive",
-        "resolved": "6.3.1",
-        "contentHash": "JFk0+HHUPdjYuPhkpGBMLi2JtnEuWkE2pp0yXQp64DmeMe+Fb0hZyVNq/ENJ2vQNso7Zg+C758WmR/xyAl36bA==",
-        "dependencies": {
-          "Microsoft.Extensions.ApiDescription.Server": "3.0.0",
-          "Swashbuckle.AspNetCore.Swagger": "6.3.1",
-          "Swashbuckle.AspNetCore.SwaggerGen": "6.3.1",
-          "Swashbuckle.AspNetCore.SwaggerUI": "6.3.1"
-        }
-      },
       "Swashbuckle.AspNetCore.Swagger": {
         "type": "Transitive",
         "resolved": "6.3.1",
@@ -1817,11 +1791,6 @@
         "dependencies": {
           "Swashbuckle.AspNetCore.Swagger": "6.3.1"
         }
-      },
-      "Swashbuckle.AspNetCore.SwaggerUI": {
-        "type": "Transitive",
-        "resolved": "6.3.1",
-        "contentHash": "JLm9hN67jh7RHsX3H30+tb432Li8xm/qV5lRyMMkyHYMfWitIuKAAdrpo2ILcHOIeH7CLMuOO2hp/iLBmE+Bkw=="
       },
       "System.AppContext": {
         "type": "Transitive",
@@ -3356,32 +3325,6 @@
           "NETStandard.Library": "1.6.1"
         }
       },
-      "api": {
-        "type": "Project",
-        "dependencies": {
-          "Azure.Messaging.EventGrid": "[4.10.0, )",
-          "Commercial.Core": "[2022.9.4, )",
-          "Commercial.Infrastructure.EntityFramework": "[2022.9.4, )",
-          "Core": "[2022.9.4, )",
-          "SharedWeb": "[2022.9.4, )",
-          "Swashbuckle.AspNetCore": "[6.3.1, )"
-        }
-      },
-      "commercial.core": {
-        "type": "Project",
-        "dependencies": {
-          "Core": "[2022.9.4, )"
-        }
-      },
-      "commercial.infrastructure.entityframework": {
-        "type": "Project",
-        "dependencies": {
-          "AutoMapper.Extensions.Microsoft.DependencyInjection": "[11.0.0, )",
-          "Core": "[2022.9.4, )",
-          "Infrastructure.EntityFramework": "[2022.9.4, )",
-          "Microsoft.EntityFrameworkCore": "[6.0.4, )"
-        }
-      },
       "common": {
         "type": "Project",
         "dependencies": {
@@ -3465,7 +3408,6 @@
       "integrationtestcommon": {
         "type": "Project",
         "dependencies": {
-          "Api": "[2022.9.4, )",
           "Common": "[2022.9.4, )",
           "Identity": "[2022.9.4, )",
           "Microsoft.AspNetCore.Mvc.Testing": "[6.0.5, )",
