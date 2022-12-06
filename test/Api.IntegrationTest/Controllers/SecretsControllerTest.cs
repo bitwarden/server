@@ -99,16 +99,16 @@ public class SecretsControllerTest : IClassFixture<ApiApplicationFactory>, IAsyn
         secretResponse.EnsureSuccessStatusCode();
         var secretResult = await secretResponse.Content.ReadFromJsonAsync<Secret>();
 
-        List<Secret> secrets = (await _secretRepository.GetManyByProjectIdAsync(project.Id)).ToList();
+        var secret = (await _secretRepository.GetManyByProjectIdAsync(project.Id)).First();
 
         Assert.NotNull(secretResult);
-        Assert.Equal(secrets.First().Id, secretResult.Id);
-        Assert.Equal(secrets.First().OrganizationId, secretResult.OrganizationId);
-        Assert.Equal(secrets.First().Key, secretResult.Key);
-        Assert.Equal(secrets.First().Value, secretResult.Value);
-        Assert.Equal(secrets.First().Note, secretResult.Note);
-        Assert.Equal(secrets.First().CreationDate, secretResult.CreationDate);
-        Assert.Equal(secrets.First().RevisionDate, secretResult.RevisionDate);
+        Assert.Equal(secret.Id, secretResult.Id);
+        Assert.Equal(secret.OrganizationId, secretResult.OrganizationId);
+        Assert.Equal(secret.Key, secretResult.Key);
+        Assert.Equal(secret.Value, secretResult.Value);
+        Assert.Equal(secret.Note, secretResult.Note);
+        Assert.Equal(secret.CreationDate, secretResult.CreationDate);
+        Assert.Equal(secret.RevisionDate, secretResult.RevisionDate);
     }
 
     [Fact]
