@@ -7,7 +7,7 @@ services:
       - db
     env_file:
       - settings.env
-    image: ${REGISTRY:-bitwarden}/self-host:${TAG:-latest}
+    image: ${REGISTRY:-bitwarden}/self-host:${TAG:-beta}
     restart: always
     ports:
       - "80:80"
