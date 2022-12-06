@@ -21,6 +21,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Infrastructure.EFIntegratio
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Api.IntegrationTest", "Api.IntegrationTest\Api.IntegrationTest.csproj", "{6ED94433-3423-498C-96C9-F24756357D95}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Infrastructure.IntegrationTest", "Infrastructure.IntegrationTest\Infrastructure.IntegrationTest.csproj", "{5827E256-D1C5-4BBE-BB74-ED28A83578FA}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -142,5 +144,17 @@ Global
 		{6ED94433-3423-498C-96C9-F24756357D95}.Release|x64.Build.0 = Release|Any CPU
 		{6ED94433-3423-498C-96C9-F24756357D95}.Release|x86.ActiveCfg = Release|Any CPU
 		{6ED94433-3423-498C-96C9-F24756357D95}.Release|x86.Build.0 = Release|Any CPU
+		{5827E256-D1C5-4BBE-BB74-ED28A83578FA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5827E256-D1C5-4BBE-BB74-ED28A83578FA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5827E256-D1C5-4BBE-BB74-ED28A83578FA}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{5827E256-D1C5-4BBE-BB74-ED28A83578FA}.Debug|x64.Build.0 = Debug|Any CPU
+		{5827E256-D1C5-4BBE-BB74-ED28A83578FA}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{5827E256-D1C5-4BBE-BB74-ED28A83578FA}.Debug|x86.Build.0 = Debug|Any CPU
+		{5827E256-D1C5-4BBE-BB74-ED28A83578FA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5827E256-D1C5-4BBE-BB74-ED28A83578FA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5827E256-D1C5-4BBE-BB74-ED28A83578FA}.Release|x64.ActiveCfg = Release|Any CPU
+		{5827E256-D1C5-4BBE-BB74-ED28A83578FA}.Release|x64.Build.0 = Release|Any CPU
+		{5827E256-D1C5-4BBE-BB74-ED28A83578FA}.Release|x86.ActiveCfg = Release|Any CPU
+		{5827E256-D1C5-4BBE-BB74-ED28A83578FA}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

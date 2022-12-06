@@ -244,7 +244,7 @@ jobs:
           PROJECT_NAME=$(echo "${{ matrix.project_name }}" | awk '{print tolower($0)}')
           echo "Matrix name: ${{ matrix.project_name }}"
           echo "PROJECT_NAME: $PROJECT_NAME"
-          echo "::set-output name=project_name::$PROJECT_NAME"
+          echo "project_name=$PROJECT_NAME" >> $GITHUB_OUTPUT
 
       - name: Get build artifact
         if: ${{ matrix.dotnet }}
