@@ -85,7 +85,7 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
             var eventRepositoryService = services.First(sd => sd.ServiceType == typeof(IEventRepository));
             services.Remove(eventRepositoryService);
             services.AddSingleton<IEventRepository, EventRepository>();
-            
+
             // Our Rate limiter works so well that it begins to fail tests unless we carve out
             // one whitelisted ip. We should still test the rate limiter though and they should change the Ip
             // to something that is NOT whitelisted
