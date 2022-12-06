@@ -21,6 +21,7 @@ public class SecretsControllerTest : IClassFixture<ApiApplicationFactory>, IAsyn
     private readonly HttpClient _client;
     private readonly ApiApplicationFactory _factory;
     private readonly ISecretRepository _secretRepository;
+    private readonly IProjectRepository _projectRepository;
     private Organization? _organization;
 
     public SecretsControllerTest(ApiApplicationFactory factory)
@@ -28,6 +29,7 @@ public class SecretsControllerTest : IClassFixture<ApiApplicationFactory>, IAsyn
         _factory = factory;
         _client = _factory.CreateClient();
         _secretRepository = _factory.GetService<ISecretRepository>();
+        _projectRepository = _factory.GetService<IProjectRepository>();
     }
 
     public async Task InitializeAsync()
@@ -79,45 +81,34 @@ public class SecretsControllerTest : IClassFixture<ApiApplicationFactory>, IAsyn
     [Fact]
     public async Task CreateSecretWithProject()
     {
-        // --- Make the project ---
-        var projectRequest = new ProjectCreateRequestModel()
+        var project = await _projectRepository.CreateAsync(new Project()
         {
+            Id = new Guid(),
+            OrganizationId = _organization.Id,
             Name = _mockEncryptedString
-        };
+        });
 
-        var projectResponse = await _client.PostAsJsonAsync($"/organizations/{_organization.Id}/projects", projectRequest);
-        projectResponse.EnsureSuccessStatusCode();
-        var projectResult = await projectResponse.Content.ReadFromJsonAsync<Project>();
-
-        // --- Make the secret ---
         var secretRequest = new SecretCreateRequestModel()
         {
             Key = _mockEncryptedString,
             Value = _mockEncryptedString,
             Note = _mockEncryptedString,
-            ProjectId = projectResult.Id,
+            ProjectId = project.Id,
         };
-
         var secretResponse = await _client.PostAsJsonAsync($"/organizations/{_organization.Id}/secrets", secretRequest);
         secretResponse.EnsureSuccessStatusCode();
         var secretResult = await secretResponse.Content.ReadFromJsonAsync<Secret>();
 
-        // --- Get secrets by project id ---
-        var secretListResponse = await _client.GetAsync($"/projects/{projectResult.Id}/secrets");
-        secretListResponse.EnsureSuccessStatusCode();
-        var secretListResult = await secretListResponse.Content.ReadAsStringAsync();
+        List<Secret> secrets = (await _secretRepository.GetManyByProjectIdAsync(project.Id)).ToList();
 
-        // --- Validate Secret is Valid and in Project ---
-        Assert.NotEmpty(secretListResult);
-
-        var jsonResult = JsonDocument.Parse(secretListResult);
-        var secretJsonResult = jsonResult.RootElement.GetProperty("secrets").EnumerateArray().First();
-        var projectJsonResult = jsonResult.RootElement.GetProperty("projects").EnumerateArray().First();
-
-        Assert.Equal(secretResult?.Id.ToString(), secretJsonResult.GetProperty("id").ToString());
-        Assert.Equal(secretResult?.OrganizationId.ToString(), secretJsonResult.GetProperty("organizationId").ToString());
-        Assert.Equal(secretRequest.ProjectId.ToString(), secretJsonResult.GetProperty("projects").EnumerateArray().First().ToString());
-        Assert.Equal(secretRequest.ProjectId.ToString(), projectJsonResult.GetProperty("id").ToString());
+        Assert.NotNull(secretResult);
+        Assert.Equal(secrets.First().Id, secretResult.Id);
+        Assert.Equal(secrets.First().OrganizationId, secretResult.OrganizationId);
+        Assert.Equal(secrets.First().Key, secretResult.Key);
+        Assert.Equal(secrets.First().Value, secretResult.Value);
+        Assert.Equal(secrets.First().Note, secretResult.Note);
+        Assert.Equal(secrets.First().CreationDate, secretResult.CreationDate);
+        Assert.Equal(secrets.First().RevisionDate, secretResult.RevisionDate);
     }
 
     [Fact]
