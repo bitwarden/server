@@ -208,7 +208,6 @@ jobs:
             origin_docker_repo: bitwarden
           - project_name: Scim
             origin_docker_repo: bitwarden
-            skip_dct: true
     steps:
       - name: Print environment
         env:
@@ -240,16 +239,6 @@ jobs:
           azure-creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
           azure-keyvault-name: "bitwarden-prod-kv"
 
-      - name: Check for DCT value
-        id: check-matrix-dct
-        if: matrix.origin_docker_repo == 'bitwarden'
-        run: |
-          if [[ "${{ matrix.skip_dct }}" == "true" ]]; then
-            echo "dct_enabled=0" >> $GITHUB_OUTPUT
-          else
-            echo "dct_enabled=1" >> $GITHUB_OUTPUT
-          fi
-
       - name: Pull latest project image
         if: matrix.origin_docker_repo == 'bitwarden'
         env:
@@ -275,7 +264,7 @@ jobs:
       - name: Push version and latest image
         if: ${{ github.event.inputs.release_type != 'Dry Run' && matrix.origin_docker_repo == 'bitwarden' }}
         env:
-          DOCKER_CONTENT_TRUST: ${{ steps.check-matrix-dct.outputs.dct_enabled }}
+          DOCKER_CONTENT_TRUST: 1
           DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ steps.setup-dct.outputs.dct-delegate-repo-passphrase }}
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
         run: docker push bitwarden/$PROJECT_NAME:$_RELEASE_VERSION
