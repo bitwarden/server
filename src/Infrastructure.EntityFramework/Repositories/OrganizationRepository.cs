@@ -85,6 +85,7 @@ public class OrganizationRepository : Repository<Core.Entities.Organization, Org
                 UseKeyConnector = e.UseKeyConnector,
                 UseResetPassword = e.UseResetPassword,
                 UseScim = e.UseScim,
+                UseCustomPermissions = e.UseCustomPermissions
             }).ToListAsync();
         }
     }
