@@ -1,6 +1,7 @@
 ﻿using System.Data;
 using System.Data.SqlClient;
 using Bit.Core.Entities;
+using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Dapper;
@@ -52,5 +53,19 @@ public class OrganizationDomainRepository : Repository<OrganizationDomain, Guid>
         );
 
         return results.ToList();
+    }
+    
+    public async Task<OrganizationDomainSsoDetailsData> GetOrganizationDomainSsoDetails(string email)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection
+                .QueryAsync<OrganizationDomainSsoDetailsData>(
+                    $"[{Schema}].[OrganizationDomainSsoDetails_ReadByEmail]",
+                    new { Email = email },
+                    commandType: CommandType.StoredProcedure);
+
+            return results.SingleOrDefault();
+        }
     }
 }
