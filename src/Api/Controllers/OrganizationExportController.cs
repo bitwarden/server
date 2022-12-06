@@ -41,25 +41,25 @@ public class OrganizationExportController : Controller
         IEnumerable<Collection> orgCollections = await _collectionService.GetOrganizationCollections(organizationId);
         (IEnumerable<CipherOrganizationDetails> orgCiphers, Dictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphersGroupDict) = await _cipherService.GetOrganizationCiphers(userId, organizationId);
 
-        // Backward compatibility with versions before 2022.11.0 that use ListResponseModel
-        if (_currentContext.ClientVersion < new Version("2022.11.0"))
+        if (_currentContext.ClientVersion == null || _currentContext.ClientVersion >= new Version("2023.1.0"))
         {
-            var organizationExportListResponseModel = new OrganizationExportListResponseModel
+            var organizationExportResponseModel = new OrganizationExportResponseModel
             {
-                Collections = GetOrganizationCollectionsResponse(orgCollections),
-                Ciphers = GetOrganizationCiphersResponse(orgCiphers, collectionCiphersGroupDict)
+                Collections = orgCollections.Select(c => new CollectionResponseModel(c)),
+                Ciphers = orgCiphers.Select(c => new CipherMiniDetailsResponseModel(c, _globalSettings, collectionCiphersGroupDict, c.OrganizationUseTotp))
             };
 
-            return Ok(organizationExportListResponseModel);
+            return Ok(organizationExportResponseModel);
         }
 
-        var organizationExportResponseModel = new OrganizationExportResponseModel
+        // Backward compatibility with versions before 2023.1.0 that use ListResponseModel
+        var organizationExportListResponseModel = new OrganizationExportListResponseModel
         {
-            Collections = orgCollections.Select(c => new CollectionResponseModel(c)),
-            Ciphers = orgCiphers.Select(c => new CipherMiniDetailsResponseModel(c, _globalSettings, collectionCiphersGroupDict, c.OrganizationUseTotp))
+            Collections = GetOrganizationCollectionsResponse(orgCollections),
+            Ciphers = GetOrganizationCiphersResponse(orgCiphers, collectionCiphersGroupDict)
         };
 
-        return Ok(organizationExportResponseModel);
+        return Ok(organizationExportListResponseModel);
     }
 
     private ListResponseModel<CollectionResponseModel> GetOrganizationCollectionsResponse(IEnumerable<Collection> orgCollections)
