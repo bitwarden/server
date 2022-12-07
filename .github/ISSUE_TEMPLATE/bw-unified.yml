@@ -62,22 +62,15 @@ body:
         - Environment: [e.g. Docker, EKS, ECS, K8S]
         - Hardware: [e.g. Intel 6-core, 8GB RAM]
   - type: textarea
-    id: docker-compose-details
+    id: database-image
     attributes:
-      label: Docker Compose Details
-      description: Please include the details from your server/docker-unified/docker-compose.yml
+      label: Database Image
+      description: Please include the image and version of your database
       placeholder: |
         # MariaDB Example
-          db:
-            environment:
-              MARIADB_USER: "bitwarden"
-              MARIADB_PASSWORD: *REDACTED*
-              MARIADB_DATABASE: "bitwarden_vault"
-              MARIADB_RANDOM_ROOT_PASSWORD: "true"
-          image: mariadb:10
-          restart: always
-          volumes:
-            - data:/var/lib/mysql
+        mariadb:10
+        # Postgres Example
+        postgres:14
   - type: textarea
     id: epic-label
     attributes:
