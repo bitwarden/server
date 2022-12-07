@@ -159,14 +159,16 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var groups = await (
+            var groups =
                 from cg in dbContext.CollectionGroups
                 where cg.Collection.OrganizationId == organizationId
-                select cg).ToListAsync();
-            var users = await (
+                group cg by cg.CollectionId into g
+                select g;
+            var users =
                 from cu in dbContext.CollectionUsers
                 where cu.Collection.OrganizationId == organizationId
-                select cu).ToListAsync();
+                group cu by cu.CollectionId into u
+                select u;
 
             return collections.Select(collection =>
                 new Tuple<Core.Entities.Collection, CollectionAccessDetails>(
@@ -174,21 +176,21 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                     new CollectionAccessDetails
                     {
                         Groups = groups
-                        .Where(g => g.CollectionId == collection.Id)
-                        .Select(g => new CollectionAccessSelection
-                        {
-                            Id = g.GroupId,
-                            HidePasswords = g.HidePasswords,
-                            ReadOnly = g.ReadOnly
-                        }).ToList(),
+                            .FirstOrDefault(g => g.Key == collection.Id)
+                            .Select(g => new CollectionAccessSelection
+                            {
+                                Id = g.GroupId,
+                                HidePasswords = g.HidePasswords,
+                                ReadOnly = g.ReadOnly
+                            }).ToList(),
                         Users = users
-                        .Where(c => c.CollectionId == collection.Id)
-                        .Select(c => new CollectionAccessSelection
-                        {
-                            Id = c.OrganizationUserId,
-                            HidePasswords = c.HidePasswords,
-                            ReadOnly = c.ReadOnly
-                        }).ToList()
+                            .FirstOrDefault(u => u.Key == collection.Id)
+                            .Select(c => new CollectionAccessSelection
+                            {
+                                Id = c.OrganizationUserId,
+                                HidePasswords = c.HidePasswords,
+                                ReadOnly = c.ReadOnly
+                            }).ToList()
                     }
                 )
             ).ToList();
@@ -201,16 +203,18 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var groups = await (
+            var groups =
                 from cg in dbContext.CollectionGroups
                 where cg.Collection.OrganizationId == organizationId
                  && collections.Select(c => c.Id).Contains(cg.Collection.Id)
-                select cg).ToListAsync();
-            var users = await (
+                group cg by cg.CollectionId into g
+                select g;
+            var users =
                 from cu in dbContext.CollectionUsers
                 where cu.Collection.OrganizationId == organizationId
                  && collections.Select(c => c.Id).Contains(cu.Collection.Id)
-                select cu).ToListAsync();
+                group cu by cu.CollectionId into u
+                select u;
 
 
             return collections.Select(collection =>
@@ -219,21 +223,21 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                     new CollectionAccessDetails
                     {
                         Groups = groups
-                        .Where(g => g.CollectionId == collection.Id)
-                        .Select(g => new CollectionAccessSelection
-                        {
-                            Id = g.GroupId,
-                            HidePasswords = g.HidePasswords,
-                            ReadOnly = g.ReadOnly
-                        }).ToList(),
+                            .FirstOrDefault(g => g.Key == collection.Id)
+                            .Select(g => new CollectionAccessSelection
+                            {
+                                Id = g.GroupId,
+                                HidePasswords = g.HidePasswords,
+                                ReadOnly = g.ReadOnly
+                            }).ToList(),
                         Users = users
-                        .Where(c => c.CollectionId == collection.Id)
-                        .Select(c => new CollectionAccessSelection
-                        {
-                            Id = c.OrganizationUserId,
-                            HidePasswords = c.HidePasswords,
-                            ReadOnly = c.ReadOnly
-                        }).ToList()
+                            .FirstOrDefault(u => u.Key == collection.Id)
+                            .Select(c => new CollectionAccessSelection
+                            {
+                                Id = c.OrganizationUserId,
+                                HidePasswords = c.HidePasswords,
+                                ReadOnly = c.ReadOnly
+                            }).ToList()
                     }
                 )
             ).ToList();
