@@ -34,6 +34,7 @@ public class OrganizationCompare : IEqualityComparer<Organization>
                x.UseApi.Equals(y.UseApi) &&
                x.SelfHost.Equals(y.SelfHost) &&
                x.UsersGetPremium.Equals(y.UsersGetPremium) &&
+               x.UseCustomPermissions.Equals(y.UseCustomPermissions) &&
                x.Storage.Equals(y.Storage) &&
                x.MaxStorageGb.Equals(y.MaxStorageGb) &&
                x.Gateway.Equals(y.Gateway) &&

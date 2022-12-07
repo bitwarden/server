@@ -29,7 +29,21 @@ public class GroupService : IGroupService
         _referenceEventService = referenceEventService;
     }
 
-    public async Task SaveAsync(Group group, IEnumerable<CollectionAccessSelection> collections = null, IEnumerable<Guid> userIds = null)
+    public async Task SaveAsync(Group group,
+        IEnumerable<CollectionAccessSelection> collections = null, 
+        IEnumerable<Guid> userIds = null)
+    {
+        await GroupRepositorySaveAsync(group, systemUser: null, collections, userIds);
+    }
+
+    public async Task SaveAsync(Group group, EventSystemUser systemUser,
+        IEnumerable<CollectionAccessSelection> collections = null,
+        IEnumerable<Guid> userIds = null)
+    {
+        await GroupRepositorySaveAsync(group, systemUser, collections, userIds);
+    }
+
+    private async Task GroupRepositorySaveAsync(Group group, EventSystemUser? systemUser, IEnumerable<CollectionAccessSelection> collections = null, IEnumerable<Guid> userIds = null)
     {
         var org = await _organizationRepository.GetByIdAsync(group.OrganizationId);
         if (org == null)
@@ -63,11 +77,27 @@ public class GroupService : IGroupService
 
                 var users = await _organizationUserRepository.GetManyAsync(usersToAddToGroup);
                 var eventDate = DateTime.UtcNow;
-                await _eventService.LogOrganizationUserEventsAsync(users.Select(u =>
-                    (u, EventType.OrganizationUser_UpdatedGroups, (DateTime?)eventDate)));
+                if (systemUser.HasValue)
+                {
+                    await _eventService.LogOrganizationUserEventsAsync(users.Select(u =>
+                        (u, EventType.OrganizationUser_UpdatedGroups, systemUser.Value, (DateTime?)eventDate)));
+                }
+                else
+                {
+                    await _eventService.LogOrganizationUserEventsAsync(users.Select(u =>
+                        (u, EventType.OrganizationUser_UpdatedGroups, (DateTime?)eventDate)));
+                }
+            }
+            
+            if (systemUser.HasValue)
+            {
+                await _eventService.LogGroupEventAsync(group, Enums.EventType.Group_Created, systemUser.Value);
+            }
+            else
+            {
+                await _eventService.LogGroupEventAsync(group, Enums.EventType.Group_Created);
             }
 
-            await _eventService.LogGroupEventAsync(group, Enums.EventType.Group_Created);
             await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.GroupCreated, org));
         }
         else
@@ -98,22 +128,65 @@ public class GroupService : IGroupService
                 // Fetch all changed users for logging the event
                 var users = await _organizationUserRepository.GetManyAsync(changedUserIds);
                 var eventDate = DateTime.UtcNow;
-                await _eventService.LogOrganizationUserEventsAsync(users.Select(u =>
-                    (u, EventType.OrganizationUser_UpdatedGroups, (DateTime?)eventDate)));
+                if (systemUser.HasValue)
+                {
+                    await _eventService.LogOrganizationUserEventsAsync(users.Select(u =>
+                        (u, EventType.OrganizationUser_UpdatedGroups, systemUser.Value, (DateTime?)eventDate)));
+                }
+                else
+                {
+                    await _eventService.LogOrganizationUserEventsAsync(users.Select(u =>
+                        (u, EventType.OrganizationUser_UpdatedGroups, (DateTime?)eventDate)));
+                }
             }
-
-            await _eventService.LogGroupEventAsync(group, Enums.EventType.Group_Updated);
+            
+            if (systemUser.HasValue)
+            {
+                await _eventService.LogGroupEventAsync(group, Enums.EventType.Group_Updated, systemUser.Value);
+            }
+            else
+            {
+                await _eventService.LogGroupEventAsync(group, Enums.EventType.Group_Updated);
+            }
         }
     }
 
+    [Obsolete("IDeleteGroupCommand should be used instead. To be removed by EC-608.")]
+    public async Task DeleteAsync(Group group)
+    {
+        await _groupRepository.DeleteAsync(group);
+        await _eventService.LogGroupEventAsync(group, EventType.Group_Deleted);
+    }
+
+    [Obsolete("IDeleteGroupCommand should be used instead. To be removed by EC-608.")]
+    public async Task DeleteAsync(Group group, EventSystemUser systemUser)
+    {
+        await _groupRepository.DeleteAsync(group);
+        await _eventService.LogGroupEventAsync(group, EventType.Group_Deleted, systemUser);
+    }
+
     public async Task DeleteUserAsync(Group group, Guid organizationUserId)
+    {
+        var orgUser = await GroupRepositoryDeleteUserAsync(group, organizationUserId, systemUser: null);
+        await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_UpdatedGroups);
+    }
+
+    public async Task DeleteUserAsync(Group group, Guid organizationUserId, EventSystemUser systemUser)
+    {
+        var orgUser = await GroupRepositoryDeleteUserAsync(group, organizationUserId, systemUser);
+        await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_UpdatedGroups, systemUser);
+    }
+
+    private async Task<OrganizationUser> GroupRepositoryDeleteUserAsync(Group group, Guid organizationUserId, EventSystemUser? systemUser)
     {
         var orgUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
         if (orgUser == null || orgUser.OrganizationId != group.OrganizationId)
         {
             throw new NotFoundException();
         }
+
         await _groupRepository.DeleteUserAsync(group.Id, organizationUserId);
-        await _eventService.LogOrganizationUserEventAsync(orgUser, Enums.EventType.OrganizationUser_UpdatedGroups);
+
+        return orgUser;
     }
 }

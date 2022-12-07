@@ -27,8 +27,23 @@ public class GroupServiceTests
         await sutProvider.Sut.SaveAsync(group);
 
         await sutProvider.GetDependency<IGroupRepository>().Received().CreateAsync(group);
-        await sutProvider.GetDependency<IEventService>().Received()
-            .LogGroupEventAsync(group, EventType.Group_Created);
+        await sutProvider.GetDependency<IEventService>().Received().LogGroupEventAsync(group, EventType.Group_Created);
+        Assert.True(group.CreationDate - utcNow < TimeSpan.FromSeconds(1));
+        Assert.True(group.RevisionDate - utcNow < TimeSpan.FromSeconds(1));
+    }
+
+    [Theory, BitAutoData]
+    public async Task SaveAsync_DefaultGroupId_WithEventSystemUser_CreatesGroupInRepository(Group group, Organization organization, EventSystemUser eventSystemUser, SutProvider<GroupService> sutProvider)
+    {
+        group.Id = default(Guid);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        organization.UseGroups = true;
+        var utcNow = DateTime.UtcNow;
+
+        await sutProvider.Sut.SaveAsync(group, eventSystemUser);
+
+        await sutProvider.GetDependency<IGroupRepository>().Received().CreateAsync(group);
+        await sutProvider.GetDependency<IEventService>().Received().LogGroupEventAsync(group, EventType.Group_Created, eventSystemUser);
         Assert.True(group.CreationDate - utcNow < TimeSpan.FromSeconds(1));
         Assert.True(group.RevisionDate - utcNow < TimeSpan.FromSeconds(1));
     }
@@ -44,8 +59,7 @@ public class GroupServiceTests
         await sutProvider.Sut.SaveAsync(group, collections);
 
         await sutProvider.GetDependency<IGroupRepository>().Received().CreateAsync(group, collections);
-        await sutProvider.GetDependency<IEventService>().Received()
-            .LogGroupEventAsync(group, EventType.Group_Created);
+        await sutProvider.GetDependency<IEventService>().Received().LogGroupEventAsync(group, EventType.Group_Created);
         Assert.True(group.CreationDate - utcNow < TimeSpan.FromSeconds(1));
         Assert.True(group.RevisionDate - utcNow < TimeSpan.FromSeconds(1));
     }
@@ -59,8 +73,7 @@ public class GroupServiceTests
         await sutProvider.Sut.SaveAsync(group, collections);
 
         await sutProvider.GetDependency<IGroupRepository>().Received().ReplaceAsync(group, collections);
-        await sutProvider.GetDependency<IEventService>().Received()
-            .LogGroupEventAsync(group, EventType.Group_Updated);
+        await sutProvider.GetDependency<IEventService>().Received().LogGroupEventAsync(group, EventType.Group_Updated);
         Assert.True(group.RevisionDate - DateTime.UtcNow < TimeSpan.FromSeconds(1));
     }
 
@@ -73,8 +86,7 @@ public class GroupServiceTests
         await sutProvider.Sut.SaveAsync(group, null);
 
         await sutProvider.GetDependency<IGroupRepository>().Received().ReplaceAsync(group);
-        await sutProvider.GetDependency<IEventService>().Received()
-            .LogGroupEventAsync(group, EventType.Group_Updated);
+        await sutProvider.GetDependency<IEventService>().Received().LogGroupEventAsync(group, EventType.Group_Updated);
         Assert.True(group.RevisionDate - DateTime.UtcNow < TimeSpan.FromSeconds(1));
     }
 
@@ -104,6 +116,24 @@ public class GroupServiceTests
     }
 
     [Theory, BitAutoData]
+    public async Task DeleteAsync_ValidData_DeletesGroup(Group group, SutProvider<GroupService> sutProvider)
+    {
+        await sutProvider.Sut.DeleteAsync(group);
+
+        await sutProvider.GetDependency<IGroupRepository>().Received().DeleteAsync(group);
+        await sutProvider.GetDependency<IEventService>().Received().LogGroupEventAsync(group, EventType.Group_Deleted);
+    }
+
+    [Theory, BitAutoData]
+    public async Task DeleteAsync_ValidData_WithEventSystemUser_DeletesGroup(Group group, EventSystemUser eventSystemUser, SutProvider<GroupService> sutProvider)
+    {
+        await sutProvider.Sut.DeleteAsync(group, eventSystemUser);
+
+        await sutProvider.GetDependency<IGroupRepository>().Received().DeleteAsync(group);
+        await sutProvider.GetDependency<IEventService>().Received().LogGroupEventAsync(group, EventType.Group_Deleted, eventSystemUser);
+    }
+
+    [Theory, BitAutoData]
     public async Task DeleteUserAsync_ValidData_DeletesUserInGroupRepository(Group group, Organization organization, OrganizationUser organizationUser, SutProvider<GroupService> sutProvider)
     {
         group.OrganizationId = organization.Id;
@@ -118,6 +148,23 @@ public class GroupServiceTests
         await sutProvider.GetDependency<IGroupRepository>().Received().DeleteUserAsync(group.Id, organizationUser.Id);
         await sutProvider.GetDependency<IEventService>().Received()
             .LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_UpdatedGroups);
+    }
+
+    [Theory, BitAutoData]
+    public async Task DeleteUserAsync_ValidData_WithEventSystemUser_DeletesUserInGroupRepository(Group group, Organization organization, OrganizationUser organizationUser, EventSystemUser eventSystemUser, SutProvider<GroupService> sutProvider)
+    {
+        group.OrganizationId = organization.Id;
+        organization.UseGroups = true;
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        organizationUser.OrganizationId = organization.Id;
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(organizationUser.Id)
+            .Returns(organizationUser);
+
+        await sutProvider.Sut.DeleteUserAsync(group, organizationUser.Id, eventSystemUser);
+
+        await sutProvider.GetDependency<IGroupRepository>().Received().DeleteUserAsync(group.Id, organizationUser.Id);
+        await sutProvider.GetDependency<IEventService>().Received()
+            .LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_UpdatedGroups, eventSystemUser);
     }
 
     [Theory, BitAutoData]

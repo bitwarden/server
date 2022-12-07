@@ -154,15 +154,18 @@ public class EventService : IEventService
         };
         await _eventWriteService.CreateAsync(e);
     }
-
+    
     public async Task LogGroupEventAsync(Group group, EventType type, DateTime? date = null) =>
-        await LogGroupEventsAsync(new[] { (group, type, date) });
+        await LogGroupEventsAsync(new[] { (group, type, (EventSystemUser?)null, date) });
+    
+    public async Task LogGroupEventAsync(Group group, EventType type, EventSystemUser systemUser, DateTime? date = null) =>
+        await LogGroupEventsAsync(new[] { (group, type, (EventSystemUser?)systemUser, date) });
 
-    public async Task LogGroupEventsAsync(IEnumerable<(Group group, EventType type, DateTime? date)> events)
+    public async Task LogGroupEventsAsync(IEnumerable<(Group group, EventType type, EventSystemUser? systemUser, DateTime? date)> events)
     {
         var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
         var eventMessages = new List<IEvent>();
-        foreach (var (group, type, date) in events)
+        foreach (var (group, type, systemUser, date) in events)
         {
             if (!CanUseEvents(orgAbilities, group.OrganizationId))
             {
@@ -176,10 +179,10 @@ public class EventService : IEventService
                 Type = type,
                 ActingUserId = _currentContext?.UserId,
                 ProviderId = await GetProviderIdAsync(group.OrganizationId),
+                SystemUser = systemUser,
                 Date = date.GetValueOrDefault(DateTime.UtcNow)
             });
         }
-
         await _eventWriteService.CreateManyAsync(eventMessages);
     }
 
@@ -206,13 +209,29 @@ public class EventService : IEventService
 
     public async Task LogOrganizationUserEventAsync(OrganizationUser organizationUser, EventType type,
         DateTime? date = null) =>
-        await LogOrganizationUserEventsAsync(new[] { (organizationUser, type, date) });
+        await CreateLogOrganizationUserEventsAsync(new (OrganizationUser, EventType, EventSystemUser?, DateTime?)[] { (organizationUser, type, null, date) });
 
-    public async Task LogOrganizationUserEventsAsync(IEnumerable<(OrganizationUser, EventType, DateTime?)> events)
+    public async Task LogOrganizationUserEventAsync(OrganizationUser organizationUser, EventType type,
+        EventSystemUser systemUser, DateTime? date = null) =>
+        await CreateLogOrganizationUserEventsAsync(new (OrganizationUser, EventType, EventSystemUser?, DateTime?)[] { (organizationUser, type, systemUser, date) });
+
+    public async Task LogOrganizationUserEventsAsync(
+        IEnumerable<(OrganizationUser, EventType, DateTime?)> events)
+    {
+        await CreateLogOrganizationUserEventsAsync(events.Select(e => (e.Item1, e.Item2, (EventSystemUser?)null, e.Item3)));
+    }
+
+    public async Task LogOrganizationUserEventsAsync(
+        IEnumerable<(OrganizationUser, EventType, EventSystemUser, DateTime?)> events)
+    {
+        await CreateLogOrganizationUserEventsAsync(events.Select(e => (e.Item1, e.Item2, (EventSystemUser?)e.Item3, e.Item4)));
+    }
+
+    private async Task CreateLogOrganizationUserEventsAsync(IEnumerable<(OrganizationUser, EventType, EventSystemUser?, DateTime?)> events)
     {
         var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
         var eventMessages = new List<IEvent>();
-        foreach (var (organizationUser, type, date) in events)
+        foreach (var (organizationUser, type, systemUser, date) in events)
         {
             if (!CanUseEvents(orgAbilities, organizationUser.OrganizationId))
             {
@@ -227,7 +246,8 @@ public class EventService : IEventService
                 ProviderId = await GetProviderIdAsync(organizationUser.OrganizationId),
                 Type = type,
                 ActingUserId = _currentContext?.UserId,
-                Date = date.GetValueOrDefault(DateTime.UtcNow)
+                Date = date.GetValueOrDefault(DateTime.UtcNow),
+                SystemUser = systemUser
             });
         }
 

@@ -190,7 +190,7 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.HasIndex("GroupId");
 
-                    b.ToTable("CollectionGroups");
+                    b.ToTable("CollectionGroups", (string)null);
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.CollectionUser", b =>
@@ -216,7 +216,7 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("CollectionUsers");
+                    b.ToTable("CollectionUsers", (string)null);
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Device", b =>
@@ -351,6 +351,9 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.Property<Guid?>("ProviderUserId")
                         .HasColumnType("uuid");
+
+                    b.Property<byte?>("SystemUser")
+                        .HasColumnType("smallint");
 
                     b.Property<int>("Type")
                         .HasColumnType("integer");
@@ -619,6 +622,9 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasColumnType("boolean");
 
                     b.Property<bool>("UseApi")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("UseCustomPermissions")
                         .HasColumnType("boolean");
 
                     b.Property<bool>("UseDirectory")

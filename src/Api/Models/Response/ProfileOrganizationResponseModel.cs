@@ -26,6 +26,7 @@ public class ProfileOrganizationResponseModel : ResponseModel
         UseApi = organization.UseApi;
         UseResetPassword = organization.UseResetPassword;
         UsersGetPremium = organization.UsersGetPremium;
+        UseCustomPermissions = organization.UseCustomPermissions;
         SelfHost = organization.SelfHost;
         Seats = organization.Seats;
         MaxCollections = organization.MaxCollections;
@@ -73,6 +74,7 @@ public class ProfileOrganizationResponseModel : ResponseModel
     public bool UseApi { get; set; }
     public bool UseResetPassword { get; set; }
     public bool UsersGetPremium { get; set; }
+    public bool UseCustomPermissions { get; set; }
     public bool SelfHost { get; set; }
     public int? Seats { get; set; }
     public short? MaxCollections { get; set; }

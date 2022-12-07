@@ -15,7 +15,7 @@ public interface IPushNotificationService
     Task PushSyncVaultAsync(Guid userId);
     Task PushSyncOrgKeysAsync(Guid userId);
     Task PushSyncSettingsAsync(Guid userId);
-    Task PushLogOutAsync(Guid userId);
+    Task PushLogOutAsync(Guid userId, bool excludeCurrentContextFromPush = false);
     Task PushSyncSendCreateAsync(Send send);
     Task PushSyncSendUpdateAsync(Send send);
     Task PushSyncSendDeleteAsync(Send send);

@@ -22,10 +22,6 @@ docker_build() {
 
   echo "Building docker image: bitwarden/$project_name_lower:$docker_tag"
   echo "=============================="
-  if [ "$project_name_lower" == "k8s-proxy" ]; then
-    docker build -f $project_dir/Dockerfile-k8s -t bitwarden/$project_name_lower:$docker_tag $project_dir
-  fi
-
   docker build -t bitwarden/$project_name_lower:$docker_tag $project_dir
 
   if [ "$docker_push" == "1" ]; then
@@ -59,35 +55,34 @@ done
 
 
 case "$PROJECT" in
-  "api" | "Api") docker_build Api $PWD/src/Api $TAG $PUSH ;;
   "admin" | "Admin") docker_build Admin $PWD/src/Admin $TAG $PUSH ;;
-  "identity" | "Identity") docker_build Identity $PWD/src/Identity $TAG $PUSH ;;
-  "events" | "Events") docker_build Events $PWD/src/Events $TAG $PUSH ;;
-  #"billing" | "Billing") docker_build Billing $PWD/src/Billing $TAG $PUSH ;;
-  "sso" | "Sso") docker_build Sso $PWD/bitwarden_license/src/Sso $TAG $PUSH ;;
-  "server" | "Server") docker_build Server $PWD/util/Server $TAG $PUSH ;;
-  "nginx" | "Nginx") docker_build Nginx $PWD/util/Nginx $TAG $PUSH ;;
-  "k8s-proxy" | "K8s-Proxy") docker_build K8s-Proxy $PWD/util/Nginx $TAG $PUSH ;;
+  "api" | "Api") docker_build Api $PWD/src/Api $TAG $PUSH ;;
   "attachments" | "Attachments") docker_build Attachments $PWD/util/Attachments $TAG $PUSH ;;
-  "icons" | "Icons") docker_build Icons $PWD/src/Icons $TAG $PUSH ;;
-  "notifications" | "Notifications") docker_build Notifications $PWD/src/Notifications $TAG $PUSH ;;
-  "mssql" | "MsSql" | "Mssql") docker_build MsSql $PWD/util/MsSql $TAG $PUSH ;;
-  "setup" | "Setup") docker_build Setup $PWD/util/Setup $TAG $PUSH ;;
+  #"billing" | "Billing") docker_build Billing $PWD/src/Billing $TAG $PUSH ;;
+  "events" | "Events") docker_build Events $PWD/src/Events $TAG $PUSH ;;
   "eventsprocessor" | "EventsProcessor") docker_build EventsProcessor $PWD/src/EventsProcessor $TAG $PUSH ;;
+  "icons" | "Icons") docker_build Icons $PWD/src/Icons $TAG $PUSH ;;
+  "identity" | "Identity") docker_build Identity $PWD/src/Identity $TAG $PUSH ;;
+  "mssql" | "MsSql" | "Mssql") docker_build MsSql $PWD/util/MsSql $TAG $PUSH ;;
+  "nginx" | "Nginx") docker_build Nginx $PWD/util/Nginx $TAG $PUSH ;;
+  "notifications" | "Notifications") docker_build Notifications $PWD/src/Notifications $TAG $PUSH ;;
+  "server" | "Server") docker_build Server $PWD/util/Server $TAG $PUSH ;;
+  "setup" | "Setup") docker_build Setup $PWD/util/Setup $TAG $PUSH ;;
+  "sso" | "Sso") docker_build Sso $PWD/bitwarden_license/src/Sso $TAG $PUSH ;;
   "")
-    docker_build Api $PWD/src/Api $TAG $PUSH
     docker_build Admin $PWD/src/Admin $TAG $PUSH
-    docker_build Identity $PWD/src/Identity $TAG $PUSH
-    docker_build Events $PWD/src/Events $TAG $PUSH
-    #docker_build Billing $PWD/src/Billing $TAG $PUSH
-    docker_build Sso $PWD/bitwarden_license/src/Sso $TAG $PUSH
-    docker_build Server $PWD/util/Server $TAG $PUSH
-    docker_build Nginx $PWD/util/Nginx $TAG $PUSH
+    docker_build Api $PWD/src/Api $TAG $PUSH
     docker_build Attachments $PWD/util/Attachments $TAG $PUSH
-    docker_build Icons $PWD/src/Icons $TAG $PUSH
-    docker_build Notifications $PWD/src/Notifications $TAG $PUSH
-    docker_build MsSql $PWD/util/MsSql $TAG $PUSH
-    docker_build Setup $PWD/util/Setup $TAG $PUSH
+    #docker_build Billing $PWD/src/Billing $TAG $PUSH
+    docker_build Events $PWD/src/Events $TAG $PUSH
     docker_build EventsProcessor $PWD/src/EventsProcessor $TAG $PUSH
+    docker_build Icons $PWD/src/Icons $TAG $PUSH
+    docker_build Identity $PWD/src/Identity $TAG $PUSH
+    docker_build MsSql $PWD/util/MsSql $TAG $PUSH
+    docker_build Nginx $PWD/util/Nginx $TAG $PUSH
+    docker_build Notifications $PWD/src/Notifications $TAG $PUSH
+    docker_build Server $PWD/util/Server $TAG $PUSH
+    docker_build Setup $PWD/util/Setup $TAG $PUSH
+    docker_build Sso $PWD/bitwarden_license/src/Sso $TAG $PUSH
   ;;
 esac

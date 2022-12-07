@@ -14,16 +14,43 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.Collections)
     { }
 
-    public override async Task<Core.Entities.Collection> CreateAsync(Core.Entities.Collection obj)
+    public override async Task<Core.Entities.Collection> CreateAsync(Core.Entities.Collection collection)
     {
-        await base.CreateAsync(obj);
-        await UserBumpAccountRevisionDateByCollectionId(obj.Id, obj.OrganizationId);
-        return obj;
+        await base.CreateAsync(collection);
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            await dbContext.UserBumpAccountRevisionDateByCollectionIdAsync(collection.Id, collection.OrganizationId);
+            await dbContext.SaveChangesAsync();
+        }
+        return collection;
+    }
+
+    public override async Task DeleteAsync(Core.Entities.Collection collection)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            await dbContext.UserBumpAccountRevisionDateByCollectionIdAsync(collection.Id, collection.OrganizationId);
+            await dbContext.SaveChangesAsync();
+        }
+        await base.DeleteAsync(collection);
+    }
+
+    public override async Task UpsertAsync(Core.Entities.Collection collection)
+    {
+        await base.UpsertAsync(collection);
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            await dbContext.UserBumpAccountRevisionDateByCollectionIdAsync(collection.Id, collection.OrganizationId);
+            await dbContext.SaveChangesAsync();
+        }
     }
 
     public async Task CreateAsync(Core.Entities.Collection obj, IEnumerable<CollectionAccessSelection> groups, IEnumerable<CollectionAccessSelection> users)
     {
-        await base.CreateAsync(obj);
+        await CreateAsync(obj);
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
@@ -61,9 +88,9 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                     });
                 await dbContext.AddRangeAsync(collectionUsers);
             }
-
+            
+            await dbContext.UserBumpAccountRevisionDateByOrganizationIdAsync(obj.OrganizationId);
             await dbContext.SaveChangesAsync();
-            await UserBumpAccountRevisionDateByOrganizationId(obj.OrganizationId);
         }
     }
 
@@ -77,8 +104,8 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                             cu.OrganizationUserId == organizationUserId
                         select cu;
             dbContext.RemoveRange(await query.ToListAsync());
+            await dbContext.UserBumpAccountRevisionDateByOrganizationUserIdAsync(organizationUserId);
             await dbContext.SaveChangesAsync();
-            await UserBumpAccountRevisionDateByOrganizationUserId(organizationUserId);
         }
     }
 
@@ -177,19 +204,19 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            return (await new UserCollectionDetailsQuery(userId).Run(dbContext).ToListAsync())
-                .GroupBy(c => c.Id)
-                .Select(g => new CollectionDetails
-                {
-                    Id = g.Key,
-                    OrganizationId = g.FirstOrDefault().OrganizationId,
-                    Name = g.FirstOrDefault().Name,
-                    ExternalId = g.FirstOrDefault().ExternalId,
-                    CreationDate = g.FirstOrDefault().CreationDate,
-                    RevisionDate = g.FirstOrDefault().RevisionDate,
-                    ReadOnly = g.Min(c => c.ReadOnly),
-                    HidePasswords = g.Min(c => c.HidePasswords)
-                }).ToList();
+            return await (from c in new UserCollectionDetailsQuery(userId).Run(dbContext)
+                          group c by new { c.Id, c.OrganizationId, c.Name, c.CreationDate, c.RevisionDate, c.ExternalId } into collectionGroup
+                          select new CollectionDetails
+                          {
+                              Id = collectionGroup.Key.Id,
+                              OrganizationId = collectionGroup.Key.OrganizationId,
+                              Name = collectionGroup.Key.Name,
+                              CreationDate = collectionGroup.Key.CreationDate,
+                              RevisionDate = collectionGroup.Key.RevisionDate,
+                              ExternalId = collectionGroup.Key.ExternalId,
+                              ReadOnly = Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.ReadOnly))),
+                              HidePasswords = Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.HidePasswords))),
+                          }).ToListAsync();
         }
     }
 
@@ -214,33 +241,63 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
     public async Task ReplaceAsync(Core.Entities.Collection collection, IEnumerable<CollectionAccessSelection> groups,
         IEnumerable<CollectionAccessSelection> users)
     {
-        await base.ReplaceAsync(collection);
+        await UpsertAsync(collection);
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
             await ReplaceCollectionGroupsAsync(dbContext, collection, groups);
             await ReplaceCollectionUsersAsync(dbContext, collection, users);
-            await UserBumpAccountRevisionDateByCollectionId(collection.Id, collection.OrganizationId);
+            await dbContext.UserBumpAccountRevisionDateByCollectionIdAsync(collection.Id, collection.OrganizationId);
         }
     }
 
-    public async Task UpdateUsersAsync(Guid id, IEnumerable<CollectionAccessSelection> users)
+    public async Task UpdateUsersAsync(Guid id, IEnumerable<CollectionAccessSelection> requestedUsers)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var procedure = new CollectionUserUpdateUsersQuery(id, users);
-            var updateData = await procedure.Update.BuildInMemory(dbContext);
-            dbContext.UpdateRange(updateData);
-            var insertData = await procedure.Insert.BuildInMemory(dbContext);
-            await dbContext.AddRangeAsync(insertData);
-            dbContext.RemoveRange(await procedure.Delete.Run(dbContext).ToListAsync());
+
+            var organizationId = await dbContext.Collections
+                .Where(c => c.Id == id)
+                .Select(c => c.OrganizationId)
+                .FirstOrDefaultAsync();
+
+            var existingCollectionUsers = await dbContext.CollectionUsers
+                .Where(cu => cu.CollectionId == id)
+                .ToListAsync();
+
+            foreach (var requestedUser in requestedUsers)
+            {
+                var existingCollectionUser = existingCollectionUsers.FirstOrDefault(cu => cu.OrganizationUserId == requestedUser.Id);
+                if (existingCollectionUser == null)
+                {
+                    // This is a brand new entry
+                    dbContext.CollectionUsers.Add(new CollectionUser
+                    {
+                        CollectionId = id,
+                        OrganizationUserId = requestedUser.Id,
+                        HidePasswords = requestedUser.HidePasswords,
+                        ReadOnly = requestedUser.ReadOnly,
+                    });
+                    continue;
+                }
+
+                // It already exists, update it
+                existingCollectionUser.HidePasswords = requestedUser.HidePasswords;
+                existingCollectionUser.ReadOnly = requestedUser.ReadOnly;
+                dbContext.CollectionUsers.Update(existingCollectionUser);
+            }
+
+            // Remove all existing ones that are no longer requested
+            var requestedUserIds = requestedUsers.Select(u => u.Id);
+            dbContext.CollectionUsers.RemoveRange(existingCollectionUsers.Where(cu => !requestedUserIds.Contains(cu.OrganizationUserId)));
+            await dbContext.UserBumpAccountRevisionDateByCollectionIdAsync(id, organizationId);
+            await dbContext.SaveChangesAsync();
         }
     }
 
     private async Task ReplaceCollectionGroupsAsync(DatabaseContext dbContext, Core.Entities.Collection collection, IEnumerable<CollectionAccessSelection> groups)
     {
-
         var groupsInOrg = dbContext.Groups.Where(g => g.OrganizationId == collection.OrganizationId);
         var modifiedGroupEntities = dbContext.Groups.Where(x => groups.Select(x => x.Id).Contains(x.Id));
         var target = (from cg in dbContext.CollectionGroups
@@ -303,23 +360,18 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
 
     private async Task ReplaceCollectionUsersAsync(DatabaseContext dbContext, Core.Entities.Collection collection, IEnumerable<CollectionAccessSelection> users)
     {
-
         var usersInOrg = dbContext.OrganizationUsers.Where(u => u.OrganizationId == collection.OrganizationId);
-        var testUsersInOrg = usersInOrg.ToList();
         var modifiedUserEntities = dbContext.OrganizationUsers.Where(x => users.Select(x => x.Id).Contains(x.Id));
-        var testmodifiedUserEntities = modifiedUserEntities.ToList();
         var target = (from cu in dbContext.CollectionUsers
                       join u in modifiedUserEntities
                           on cu.CollectionId equals collection.Id into s_g
                       from u in s_g.DefaultIfEmpty()
                       where u == null || cu.OrganizationUserId == u.Id
                       select new { cu, u }).AsNoTracking();
-        var testtarget = target.ToList();
         var source = (from u in modifiedUserEntities
                       from cu in dbContext.CollectionUsers
                           .Where(cu => cu.CollectionId == collection.Id && cu.OrganizationUserId == u.Id).DefaultIfEmpty()
                       select new { cu, u }).AsNoTracking();
-        var testsource = source.ToList();
         var union = await target
             .Union(source)
             .Where(x =>
@@ -328,7 +380,6 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                 (x.cu.CollectionId == collection.Id)))
             .AsNoTracking()
             .ToListAsync();
-        var testunion = union.ToList();
         var insert = union.Where(x => x.u == null && usersInOrg.Any(c => x.u.Id == c.Id))
             .Select(x => new CollectionUser
             {
@@ -337,7 +388,6 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                 ReadOnly = users.FirstOrDefault(u => u.Id == x.u.Id).ReadOnly,
                 HidePasswords = users.FirstOrDefault(u => u.Id == x.u.Id).HidePasswords,
             }).ToList();
-        var testinsert = insert.ToList();
         var update = union
             .Where(
                 x => x.u != null &&
@@ -352,7 +402,6 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                 ReadOnly = users.FirstOrDefault(u => u.Id == x.u.Id).ReadOnly,
                 HidePasswords = users.FirstOrDefault(u => u.Id == x.u.Id).HidePasswords,
             });
-        var testupdate = update.ToList();
         var delete = union
             .Where(
                 x => x.u == null &&
@@ -364,7 +413,6 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                 OrganizationUserId = x.cu.OrganizationUserId,
             })
             .ToList();
-        var testdelete = delete.ToList();
 
         await dbContext.AddRangeAsync(insert);
         dbContext.UpdateRange(update);
