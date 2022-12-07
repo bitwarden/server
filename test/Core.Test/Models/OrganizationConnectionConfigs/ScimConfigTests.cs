@@ -9,7 +9,7 @@ public class ScimConfigTests
     public void ScimConfig_CanUse_Success()
     {
         var config = new ScimConfig() { Enabled = true };
-        Assert.True(config.CanUse(out var exception));
+        Assert.True(config.Validate(out var exception));
         Assert.True(string.IsNullOrEmpty(exception));
     }
 
@@ -17,7 +17,7 @@ public class ScimConfigTests
     public void ScimConfig_CanUse_WhenDisabled_ReturnsFalse()
     {
         var config = new ScimConfig() { Enabled = false };
-        Assert.False(config.CanUse(out var exception));
+        Assert.False(config.Validate(out var exception));
         Assert.Contains("Config is disabled", exception);
     }
 }

@@ -48,7 +48,7 @@ public class SelfHostedSyncSponsorshipsCommand : BaseIdentityClientService, ISel
             throw new BadRequestException("Failed to sync instance with cloud - Cloud communication is disabled in global settings");
         }
 
-        if (!billingSyncConnection.CanUse<BillingSyncConfig>(out var exception))
+        if (!billingSyncConnection.Validate<BillingSyncConfig>(out var exception))
         {
             throw new BadRequestException(exception);
         }

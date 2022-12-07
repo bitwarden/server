@@ -12,7 +12,7 @@ public class BillingSyncConfigTests
     {
         var config = new BillingSyncConfig() { BillingSyncKey = billingSyncKey };
 
-        Assert.True(config.CanUse(out var exception));
+        Assert.True(config.Validate(out var exception));
         Assert.True(string.IsNullOrEmpty(exception));
     }
 
@@ -21,7 +21,7 @@ public class BillingSyncConfigTests
     {
         var config = new BillingSyncConfig();
 
-        Assert.False(config.CanUse(out var exception));
+        Assert.False(config.Validate(out var exception));
         Assert.Contains("Failed to get Billing Sync Key", exception);
     }
 }

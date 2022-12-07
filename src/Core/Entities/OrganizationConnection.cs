@@ -44,7 +44,7 @@ public class OrganizationConnection : ITableObject<Guid>
         Config = JsonSerializer.Serialize(config);
     }
 
-    public bool CanUse<T>(out string exception) where T : IConnectionConfig
+    public bool Validate<T>(out string exception) where T : IConnectionConfig
     {
         if (!Enabled)
         {
@@ -65,6 +65,6 @@ public class OrganizationConnection : ITableObject<Guid>
             return false;
         }
 
-        return config.CanUse(out exception);
+        return config.Validate(out exception);
     }
 }

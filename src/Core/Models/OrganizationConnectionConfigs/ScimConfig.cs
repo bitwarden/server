@@ -9,7 +9,7 @@ public class ScimConfig : IConnectionConfig
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public ScimProviderType? ScimProvider { get; set; }
 
-    public bool CanUse(out string exception)
+    public bool Validate(out string exception)
     {
         if (!Enabled)
         {

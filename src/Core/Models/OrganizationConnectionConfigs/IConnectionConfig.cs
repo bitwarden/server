@@ -2,5 +2,5 @@
 
 public interface IConnectionConfig
 {
-    bool CanUse(out string exception);
+    bool Validate(out string exception);
 }

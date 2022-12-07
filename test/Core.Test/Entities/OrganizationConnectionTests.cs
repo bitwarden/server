@@ -21,7 +21,7 @@ public class OrganizationConnectionTests
             Config = new ScimConfig() { Enabled = true }
         };
 
-        Assert.True(connection.CanUse<ScimConfig>(out var exception));
+        Assert.True(connection.Validate<ScimConfig>(out var exception));
         Assert.True(string.IsNullOrEmpty(exception));
     }
 
@@ -39,7 +39,7 @@ public class OrganizationConnectionTests
             Config = new ScimConfig() { Enabled = true }
         };
 
-        Assert.False(connection.CanUse<ScimConfig>(out var exception));
+        Assert.False(connection.Validate<ScimConfig>(out var exception));
         Assert.Contains("Connection disabled", exception);
     }
 
@@ -55,7 +55,7 @@ public class OrganizationConnectionTests
             Type = OrganizationConnectionType.Scim,
         };
 
-        Assert.False(connection.CanUse<ScimConfig>(out var exception));
+        Assert.False(connection.Validate<ScimConfig>(out var exception));
         Assert.Contains("No saved Connection config", exception);
     }
 
@@ -72,7 +72,7 @@ public class OrganizationConnectionTests
             Config = new ScimConfig() { Enabled = false }
         };
 
-        Assert.False(connection.CanUse<ScimConfig>(out var exception));
+        Assert.False(connection.Validate<ScimConfig>(out var exception));
         Assert.Contains("Scim Config is disabled", exception);
     }
 }

@@ -40,7 +40,7 @@ public class SelfHostedGetOrganizationLicenseQuery : BaseIdentityClientService, 
             throw new BadRequestException("Cloud communication is disabled in global settings");
         }
 
-        if (!billingSyncConnection.CanUse<BillingSyncConfig>(out var exception))
+        if (!billingSyncConnection.Validate<BillingSyncConfig>(out var exception))
         {
             throw new BadRequestException(exception);
         }
