@@ -104,6 +104,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MicroBenchmarks", "perf\Mic
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Scim.Test", "bitwarden_license\test\Scim.Test\Scim.Test.csproj", "{B1595DA3-4C60-41AA-8BF0-499A5F75A885}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Infrastructure.IntegrationTest", "test\Infrastructure.IntegrationTest\Infrastructure.IntegrationTest.csproj", "{7E9A7DD5-EB78-4AC5-BFD5-64573FD2533B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -252,6 +254,10 @@ Global
 		{B1595DA3-4C60-41AA-8BF0-499A5F75A885}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B1595DA3-4C60-41AA-8BF0-499A5F75A885}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B1595DA3-4C60-41AA-8BF0-499A5F75A885}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7E9A7DD5-EB78-4AC5-BFD5-64573FD2533B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7E9A7DD5-EB78-4AC5-BFD5-64573FD2533B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7E9A7DD5-EB78-4AC5-BFD5-64573FD2533B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7E9A7DD5-EB78-4AC5-BFD5-64573FD2533B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -292,6 +298,7 @@ Global
 		{FE998849-5FC8-41A2-B7C9-9227901471A0} = {287CFF34-BBDB-4BC4-AF88-1E19A5A4679B}
 		{9C8F8255-5F74-4085-AB9C-9075CF6DDC61} = {EC2D422A-6060-48E2-AAD2-37220D759F03}
 		{B1595DA3-4C60-41AA-8BF0-499A5F75A885} = {287CFF34-BBDB-4BC4-AF88-1E19A5A4679B}
+		{7E9A7DD5-EB78-4AC5-BFD5-64573FD2533B} = {DD5BD056-4AAE-43EF-BBD2-0B569B8DA84F}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {E01CBF68-2E20-425F-9EDB-E0A6510CA92F}

@@ -42,6 +42,7 @@ public class OrganizationEditModel : OrganizationViewModel
         UseResetPassword = org.UseResetPassword;
         SelfHost = org.SelfHost;
         UsersGetPremium = org.UsersGetPremium;
+        UseCustomPermissions = org.UseCustomPermissions;
         MaxStorageGb = org.MaxStorageGb;
         Gateway = org.Gateway;
         GatewayCustomerId = org.GatewayCustomerId;
@@ -101,6 +102,8 @@ public class OrganizationEditModel : OrganizationViewModel
     public bool SelfHost { get; set; }
     [Display(Name = "Users Get Premium")]
     public bool UsersGetPremium { get; set; }
+    [Display(Name = "Custom Permissions")]
+    public bool UseCustomPermissions { get; set; }
     [Display(Name = "Max. Storage GB")]
     public short? MaxStorageGb { get; set; }
     [Display(Name = "Gateway")]
@@ -139,6 +142,7 @@ public class OrganizationEditModel : OrganizationViewModel
         existingOrganization.UseResetPassword = UseResetPassword;
         existingOrganization.SelfHost = SelfHost;
         existingOrganization.UsersGetPremium = UsersGetPremium;
+        existingOrganization.UseCustomPermissions = UseCustomPermissions;
         existingOrganization.MaxStorageGb = MaxStorageGb;
         existingOrganization.Gateway = Gateway;
         existingOrganization.GatewayCustomerId = GatewayCustomerId;

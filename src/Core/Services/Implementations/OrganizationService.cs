@@ -280,6 +280,18 @@ public class OrganizationService : IOrganizationService
             }
         }
 
+        if (!newPlan.HasCustomPermissions && organization.UseCustomPermissions)
+        {
+            var organizationCustomUsers =
+                await _organizationUserRepository.GetManyByOrganizationAsync(organization.Id,
+                    OrganizationUserType.Custom);
+            if (organizationCustomUsers.Any())
+            {
+                throw new BadRequestException("Your new plan does not allow the Custom Permissions feature. " +
+                                              "Disable your Custom Permissions configuration.");
+            }
+        }
+
         // TODO: Check storage?
 
         string paymentIntentClientSecret = null;
@@ -322,6 +334,7 @@ public class OrganizationService : IOrganizationService
         organization.UseResetPassword = newPlan.HasResetPassword;
         organization.SelfHost = newPlan.HasSelfHost;
         organization.UsersGetPremium = newPlan.UsersGetPremium || upgrade.PremiumAccessAddon;
+        organization.UseCustomPermissions = newPlan.HasCustomPermissions;
         organization.Plan = newPlan.Name;
         organization.Enabled = success;
         organization.PublicKey = upgrade.PublicKey;
@@ -621,6 +634,7 @@ public class OrganizationService : IOrganizationService
             UseResetPassword = plan.HasResetPassword,
             SelfHost = plan.HasSelfHost,
             UsersGetPremium = plan.UsersGetPremium || signup.PremiumAccessAddon,
+            UseCustomPermissions = plan.HasCustomPermissions,
             UseScim = plan.HasScim,
             Plan = plan.Name,
             Gateway = null,
@@ -700,7 +714,7 @@ public class OrganizationService : IOrganizationService
         }
 
         var enabledOrgs = await _organizationRepository.GetManyByEnabledAsync();
-        if (enabledOrgs.Any(o => o.LicenseKey.Equals(license.LicenseKey)))
+        if (enabledOrgs.Any(o => string.Equals(o.LicenseKey, license.LicenseKey)))
         {
             throw new BadRequestException("License is already in use by another organization.");
         }
@@ -730,6 +744,7 @@ public class OrganizationService : IOrganizationService
             Plan = license.Plan,
             SelfHost = license.SelfHost,
             UsersGetPremium = license.UsersGetPremium,
+            UseCustomPermissions = license.UseCustomPermissions,
             Gateway = null,
             GatewayCustomerId = null,
             GatewaySubscriptionId = null,
@@ -852,7 +867,7 @@ public class OrganizationService : IOrganizationService
         }
 
         var enabledOrgs = await _organizationRepository.GetManyByEnabledAsync();
-        if (enabledOrgs.Any(o => o.LicenseKey.Equals(license.LicenseKey) && o.Id != organizationId))
+        if (enabledOrgs.Any(o => string.Equals(o.LicenseKey, license.LicenseKey) && o.Id != organizationId))
         {
             throw new BadRequestException("License is already in use by another organization.");
         }
@@ -931,6 +946,18 @@ public class OrganizationService : IOrganizationService
             }
         }
 
+        if (!license.UseCustomPermissions && organization.UseCustomPermissions)
+        {
+            var organizationCustomUsers =
+                await _organizationUserRepository.GetManyByOrganizationAsync(organization.Id,
+                    OrganizationUserType.Custom);
+            if (organizationCustomUsers.Any())
+            {
+                throw new BadRequestException("Your new plan does not allow the Custom Permissions feature. " +
+                                              "Disable your Custom Permissions configuration.");
+            }
+        }
+
         if (!license.UseResetPassword && organization.UseResetPassword)
         {
             var resetPasswordPolicy =
@@ -966,6 +993,7 @@ public class OrganizationService : IOrganizationService
         organization.UseResetPassword = license.UseResetPassword;
         organization.SelfHost = license.SelfHost;
         organization.UsersGetPremium = license.UsersGetPremium;
+        organization.UseCustomPermissions = license.UseCustomPermissions;
         organization.Plan = license.Plan;
         organization.Enabled = license.Enabled;
         organization.ExpirationDate = license.Expires;
@@ -1122,6 +1150,7 @@ public class OrganizationService : IOrganizationService
             foreach (var type in inviteTypes)
             {
                 await ValidateOrganizationUserUpdatePermissions(organizationId, type, null);
+                await ValidateOrganizationCustomPermissionsEnabledAsync(organizationId, type);
             }
         }
 
@@ -1647,6 +1676,8 @@ public class OrganizationService : IOrganizationService
         {
             await ValidateOrganizationUserUpdatePermissions(user.OrganizationId, user.Type, originalUser.Type);
         }
+
+        await ValidateOrganizationCustomPermissionsEnabledAsync(user.OrganizationId, user.Type);
 
         if (user.Type != OrganizationUserType.Owner &&
             !await HasConfirmedOwnersExceptAsync(user.OrganizationId, new[] { user.Id }))
@@ -2253,6 +2284,25 @@ public class OrganizationService : IOrganizationService
         if (oldType == OrganizationUserType.Admin || newType == OrganizationUserType.Admin)
         {
             throw new BadRequestException("Custom users can not manage Admins or Owners.");
+        }
+    }
+
+    private async Task ValidateOrganizationCustomPermissionsEnabledAsync(Guid organizationId, OrganizationUserType newType)
+    {
+        if (newType != OrganizationUserType.Custom)
+        {
+            return;
+        }
+
+        var organization = await _organizationRepository.GetByIdAsync(organizationId);
+        if (organization == null)
+        {
+            throw new NotFoundException();
+        }
+
+        if (!organization.UseCustomPermissions)
+        {
+            throw new BadRequestException("To enable custom permissions the organization must be on an Enterprise plan.");
         }
     }
 

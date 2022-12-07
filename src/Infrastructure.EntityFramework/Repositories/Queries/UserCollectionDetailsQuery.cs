@@ -10,6 +10,7 @@ public class UserCollectionDetailsQuery : IQuery<CollectionDetails>
     {
         _userId = userId;
     }
+
     public virtual IQueryable<CollectionDetails> Run(DatabaseContext dbContext)
     {
         var query = from c in dbContext.Collections
@@ -44,6 +45,7 @@ public class UserCollectionDetailsQuery : IQuery<CollectionDetails>
                         o.Enabled &&
                         (ou.AccessAll || cu.CollectionId != null || g.AccessAll || cg.CollectionId != null)
                     select new { c, ou, o, cu, gu, g, cg };
+
         return query.Select(x => new CollectionDetails
         {
             Id = x.c.Id,
@@ -52,8 +54,10 @@ public class UserCollectionDetailsQuery : IQuery<CollectionDetails>
             ExternalId = x.c.ExternalId,
             CreationDate = x.c.CreationDate,
             RevisionDate = x.c.RevisionDate,
-            ReadOnly = !x.ou.AccessAll || !x.g.AccessAll || (x.cu.ReadOnly || x.cg.ReadOnly),
-            HidePasswords = !x.ou.AccessAll || !x.g.AccessAll || (x.cu.HidePasswords || x.cg.HidePasswords),
+            ReadOnly = x.ou.AccessAll || x.g.AccessAll ||
+                !((bool?)x.cu.ReadOnly ?? (bool?)x.cg.ReadOnly ?? false) ? false : true,
+            HidePasswords = x.ou.AccessAll || x.g.AccessAll ||
+                !((bool?)x.cu.HidePasswords ?? (bool?)x.cg.HidePasswords ?? false) ? false : true,
         });
     }
 }

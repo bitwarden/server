@@ -25,7 +25,8 @@ public class CollectionCipherRepository : BaseEntityFrameworkRepository, ICollec
             var organizationId = (await dbContext.Ciphers.FirstOrDefaultAsync(c => c.Id.Equals(obj.CipherId))).OrganizationId;
             if (organizationId.HasValue)
             {
-                await UserBumpAccountRevisionDateByCollectionId(obj.CollectionId, organizationId.Value);
+                await dbContext.UserBumpAccountRevisionDateByCollectionIdAsync(obj.CollectionId, organizationId.Value);
+                await dbContext.SaveChangesAsync();
             }
             return obj;
         }
@@ -74,70 +75,70 @@ public class CollectionCipherRepository : BaseEntityFrameworkRepository, ICollec
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var organizationId = (await dbContext.Ciphers.FindAsync(cipherId)).OrganizationId;
-            var availableCollectionsCte = from c in dbContext.Collections
-                                          join o in dbContext.Organizations
-                                              on c.OrganizationId equals o.Id
-                                          join ou in dbContext.OrganizationUsers
-                                              on o.Id equals ou.OrganizationId
-                                          where ou.UserId == userId
-                                          join cu in dbContext.CollectionUsers
-                                              on ou.Id equals cu.OrganizationUserId into cu_g
-                                          from cu in cu_g.DefaultIfEmpty()
-                                          where !ou.AccessAll && cu.CollectionId == c.Id
-                                          join gu in dbContext.GroupUsers
-                                              on ou.Id equals gu.OrganizationUserId into gu_g
-                                          from gu in gu_g.DefaultIfEmpty()
-                                          where cu.CollectionId == null && !ou.AccessAll
-                                          join g in dbContext.Groups
-                                              on gu.GroupId equals g.Id into g_g
-                                          from g in g_g.DefaultIfEmpty()
-                                          join cg in dbContext.CollectionGroups
-                                              on gu.GroupId equals cg.GroupId into cg_g
-                                          from cg in cg_g.DefaultIfEmpty()
-                                          where !g.AccessAll && cg.CollectionId == c.Id &&
-                                          (o.Id == organizationId && o.Enabled && ou.Status == OrganizationUserStatusType.Confirmed && (
-                                          ou.AccessAll || !cu.ReadOnly || g.AccessAll || !cg.ReadOnly))
-                                          select new { c, o, cu, gu, g, cg };
-            var target = from cc in dbContext.CollectionCiphers
-                         where cc.CipherId == cipherId
-                         select new { cc.CollectionId, cc.CipherId };
-            var source = collectionIds.Select(x => new { CollectionId = x, CipherId = cipherId });
-            var merge1 = from t in target
-                         join s in source
-                             on t.CollectionId equals s.CollectionId into s_g
-                         from s in s_g.DefaultIfEmpty()
-                         where t.CipherId == s.CipherId
-                         select new { t, s };
-            var merge2 = from s in source
-                         join t in target
-                             on s.CollectionId equals t.CollectionId into t_g
-                         from t in t_g.DefaultIfEmpty()
-                         where t.CipherId == s.CipherId
-                         select new { t, s };
-            var union = merge1.Union(merge2).Distinct();
-            var insert = union
-                .Where(x => x.t == null && collectionIds.Contains(x.s.CollectionId))
-                .Select(x => new Models.CollectionCipher
+
+            var organizationId = await dbContext.Ciphers
+                .Where(c => c.Id == cipherId)
+                .Select(c => c.OrganizationId)
+                .FirstAsync();
+
+            var availableCollections = await (from c in dbContext.Collections
+                                              join o in dbContext.Organizations on c.OrganizationId equals o.Id
+                                              join ou in dbContext.OrganizationUsers
+                                                 on new { OrganizationId = o.Id, UserId = (Guid?)userId } equals
+                                                 new { ou.OrganizationId, ou.UserId }
+                                              join cu in dbContext.CollectionUsers
+                                                 on new { ou.AccessAll, CollectionId = c.Id, OrganizationUserId = ou.Id } equals
+                                                 new { AccessAll = false, cu.CollectionId, cu.OrganizationUserId } into cu_g
+                                              from cu in cu_g.DefaultIfEmpty()
+                                              join gu in dbContext.GroupUsers
+                                                 on new { CollectionId = (Guid?)cu.CollectionId, ou.AccessAll, OrganizationUserId = ou.Id } equals
+                                                 new { CollectionId = (Guid?)null, AccessAll = false, gu.OrganizationUserId } into gu_g
+                                              from gu in gu_g.DefaultIfEmpty()
+                                              join g in dbContext.Groups on gu.GroupId equals g.Id into g_g
+                                              from g in g_g.DefaultIfEmpty()
+                                              join cg in dbContext.CollectionGroups
+                                                 on new { g.AccessAll, CollectionId = c.Id, gu.GroupId } equals
+                                                 new { AccessAll = false, cg.CollectionId, cg.GroupId } into cg_g
+                                              from cg in cg_g.DefaultIfEmpty()
+                                              where o.Id == organizationId && o.Enabled && ou.Status == OrganizationUserStatusType.Confirmed
+                                                 && (ou.AccessAll || !cu.ReadOnly || g.AccessAll || !cg.ReadOnly)
+                                              select c.Id).ToListAsync();
+
+            var collectionCiphers = await (from cc in dbContext.CollectionCiphers
+                                           where cc.CipherId == cipherId
+                                           select cc).ToListAsync();
+
+            foreach (var requestedCollectionId in collectionIds)
+            {
+                // I don't totally agree with t.CipherId = cipherId here because that should have been guarenteed by
+                // the WHERE above but the SQL Server CTE has it
+                var existingCollectionCipher = collectionCiphers
+                    .FirstOrDefault(t => t.CollectionId == requestedCollectionId && t.CipherId == cipherId);
+                // requestedCollectionId = SOURCE
+                // existingCollectionCipher = TARGET
+
+                // They have to want it selected and it has to exist
+                if (existingCollectionCipher == null && availableCollections.Contains(requestedCollectionId))
                 {
-                    CollectionId = x.s.CollectionId,
-                    CipherId = x.s.CipherId,
-                });
-            var delete = union
-                .Where(x => x.s == null && x.t.CipherId == cipherId && collectionIds.Contains(x.t.CollectionId))
-                .Select(x => new Models.CollectionCipher
-                {
-                    CollectionId = x.t.CollectionId,
-                    CipherId = x.t.CipherId,
-                });
-            await dbContext.AddRangeAsync(insert);
-            dbContext.RemoveRange(delete);
-            await dbContext.SaveChangesAsync();
+                    // WHEN NOT MATCHED BY TARGET AND ...
+                    dbContext.CollectionCiphers.Add(new Models.CollectionCipher
+                    {
+                        CollectionId = requestedCollectionId,
+                        CipherId = cipherId,
+                    });
+                }
+
+                // If it has fallen to here it's requested but not actually available to don't add anything
+            }
+
+            // Now we need to remove collection ciphers that are no longer requested
+            dbContext.CollectionCiphers.RemoveRange(collectionCiphers.Where(cc => !collectionIds.Contains(cc.CollectionId) && cc.CipherId == cipherId));
 
             if (organizationId.HasValue)
             {
-                await UserBumpAccountRevisionDateByOrganizationId(organizationId.Value);
+                await dbContext.UserBumpAccountRevisionDateByOrganizationIdAsync(organizationId.Value);
             }
+            await dbContext.SaveChangesAsync();
         }
     }
 
@@ -146,44 +147,32 @@ public class CollectionCipherRepository : BaseEntityFrameworkRepository, ICollec
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var availableCollectionsCte = from c in dbContext.Collections
-                                          where c.OrganizationId == organizationId
-                                          select c;
-            var target = from cc in dbContext.CollectionCiphers
-                         where cc.CipherId == cipherId
-                         select new { cc.CollectionId, cc.CipherId };
-            var source = collectionIds.Select(x => new { CollectionId = x, CipherId = cipherId });
-            var merge1 = from t in target
-                         join s in source
-                             on t.CollectionId equals s.CollectionId into s_g
-                         from s in s_g.DefaultIfEmpty()
-                         where t.CipherId == s.CipherId
-                         select new { t, s };
-            var merge2 = from s in source
-                         join t in target
-                             on s.CollectionId equals t.CollectionId into t_g
-                         from t in t_g.DefaultIfEmpty()
-                         where t.CipherId == s.CipherId
-                         select new { t, s };
-            var union = merge1.Union(merge2).Distinct();
-            var insert = union
-                .Where(x => x.t == null && collectionIds.Contains(x.s.CollectionId))
-                .Select(x => new Models.CollectionCipher
+            var availableCollections = await (from c in dbContext.Collections
+                                              where c.OrganizationId == organizationId
+                                              select c).ToListAsync();
+
+            var currentCollectionCiphers = await (from cc in dbContext.CollectionCiphers
+                                                  where cc.CipherId == cipherId
+                                                  select cc).ToListAsync();
+
+            foreach (var requestedCollectionId in collectionIds)
+            {
+                var requestedCollectionCipher = currentCollectionCiphers
+                    .FirstOrDefault(cc => cc.CollectionId == requestedCollectionId);
+
+                if (requestedCollectionCipher == null)
                 {
-                    CollectionId = x.s.CollectionId,
-                    CipherId = x.s.CipherId,
-                });
-            var delete = union
-                .Where(x => x.s == null && x.t.CipherId == cipherId)
-                .Select(x => new Models.CollectionCipher
-                {
-                    CollectionId = x.t.CollectionId,
-                    CipherId = x.t.CipherId,
-                });
-            await dbContext.AddRangeAsync(insert);
-            dbContext.RemoveRange(delete);
+                    dbContext.CollectionCiphers.Add(new Models.CollectionCipher
+                    {
+                        CipherId = cipherId,
+                        CollectionId = requestedCollectionId,
+                    });
+                }
+            }
+
+            dbContext.RemoveRange(currentCollectionCiphers.Where(cc => !collectionIds.Contains(cc.CollectionId)));
+            await dbContext.UserBumpAccountRevisionDateByOrganizationIdAsync(organizationId);
             await dbContext.SaveChangesAsync();
-            await UserBumpAccountRevisionDateByOrganizationId(organizationId);
         }
     }
 
@@ -231,7 +220,8 @@ public class CollectionCipherRepository : BaseEntityFrameworkRepository, ICollec
                                  CipherId = cipherId,
                              };
             await dbContext.AddRangeAsync(insertData);
-            await UserBumpAccountRevisionDateByOrganizationId(organizationId);
+            await dbContext.UserBumpAccountRevisionDateByOrganizationIdAsync(organizationId);
+            await dbContext.SaveChangesAsync();
         }
     }
 }

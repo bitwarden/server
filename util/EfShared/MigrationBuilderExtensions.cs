@@ -1,13 +1,11 @@
-﻿
-
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 using Bit.Core.Utilities;
 using Microsoft.EntityFrameworkCore.Migrations;
 
-namespace Bit;
+namespace Bit.EfShared;
 
 // This file is a manual addition to a project that it helps, a project that chooses to compile it
-// should have a projet reference to Core.csproj and a package reference to Microsoft.EntityFrameworkCore.Design
+// should have a project reference to Core.csproj and a package reference to Microsoft.EntityFrameworkCore.Design
 // The reason for this is that if it belonged to it's own library you would have to add manual references to the above
 // and manage the version for the EntityFrameworkCore package. This way it also doesn't create another dll
 // To include this you can view examples in the MySqlMigrations and PostgresMigrations .csproj files. 

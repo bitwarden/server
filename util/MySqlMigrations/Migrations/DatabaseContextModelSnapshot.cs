@@ -622,6 +622,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<bool>("UseApi")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<bool>("UseCustomPermissions")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<bool>("UseDirectory")
                         .HasColumnType("tinyint(1)");
 
