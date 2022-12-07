@@ -62,7 +62,7 @@ public class LicensesController : Controller
     /// Used by self-hosted installations to get an updated license file
     /// </summary>
     [HttpGet("organization/{id}")]
-    public async Task<OrganizationLicense> GetOrganization(string id, [FromBody] SelfHostedOrganizationLicenseRequestModel model)
+    public async Task<OrganizationLicense> OrganizationSync(string id, [FromBody] SelfHostedOrganizationLicenseRequestModel model)
     {
         var organization = await _organizationRepository.GetByIdAsync(new Guid(id));
         if (organization == null)
