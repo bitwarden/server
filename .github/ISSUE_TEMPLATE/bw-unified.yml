@@ -77,7 +77,7 @@ body:
       label: Issue-Link
       description: Link to our pinned issue, tracking all Bitwarden Unified
       value: |
-        TODO: Include link to our pinned issue
+        https://github.com/bitwarden/server/issues/2480
     validations:
       required: true
   - type: checkboxes
