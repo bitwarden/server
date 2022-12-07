@@ -1,25 +1,19 @@
 ﻿using System.Data.SqlClient;
-using Bit.Core.Jobs;
-using Bit.Core.Settings;
-using Bit.Migrator;
+using Bit.Core.Utilities;
 
 namespace Bit.Admin.HostedServices;
 
 public class DatabaseMigrationHostedService : IHostedService, IDisposable
 {
-    private readonly GlobalSettings _globalSettings;
     private readonly ILogger<DatabaseMigrationHostedService> _logger;
-    private readonly DbMigrator _dbMigrator;
+    private readonly IDbMigrator _dbMigrator;
 
     public DatabaseMigrationHostedService(
-        GlobalSettings globalSettings,
-        ILogger<DatabaseMigrationHostedService> logger,
-        ILogger<DbMigrator> migratorLogger,
-        ILogger<JobListener> listenerLogger)
+        IDbMigrator dbMigrator,
+        ILogger<DatabaseMigrationHostedService> logger)
     {
-        _globalSettings = globalSettings;
         _logger = logger;
-        _dbMigrator = new DbMigrator(globalSettings.SqlServer.ConnectionString, migratorLogger);
+        _dbMigrator = dbMigrator;
     }
 
     public virtual async Task StartAsync(CancellationToken cancellationToken)
@@ -32,7 +26,7 @@ public class DatabaseMigrationHostedService : IHostedService, IDisposable
         {
             try
             {
-                _dbMigrator.MigrateMsSqlDatabase(true, cancellationToken);
+                _dbMigrator.MigrateDatabase(true, cancellationToken);
                 // TODO: Maybe flip a flag somewhere to indicate migration is complete??
                 break;
             }

@@ -3290,6 +3290,20 @@
           "dbup-sqlserver": "[4.5.0, )"
         }
       },
+      "mysqlmigrations": {
+        "type": "Project",
+        "dependencies": {
+          "Core": "[2022.10.0, )",
+          "Infrastructure.EntityFramework": "[2022.10.0, )"
+        }
+      },
+      "postgresmigrations": {
+        "type": "Project",
+        "dependencies": {
+          "Core": "[2022.10.0, )",
+          "Infrastructure.EntityFramework": "[2022.10.0, )"
+        }
+      },
       "sharedweb": {
         "type": "Project",
         "dependencies": {
