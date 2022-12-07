@@ -116,21 +116,21 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
                     new CollectionAccessDetails
                     {
                         Groups = groups
-                            .FirstOrDefault(g => g.Key == collection.Id)
+                            .FirstOrDefault(g => g.Key == collection.Id)?
                             .Select(g => new CollectionAccessSelection
                             {
                                 Id = g.GroupId,
                                 HidePasswords = g.HidePasswords,
                                 ReadOnly = g.ReadOnly
-                            }).ToList(),
+                            }).ToList() ?? new List<CollectionAccessSelection>(),
                         Users = users
-                            .FirstOrDefault(u => u.Key == collection.Id)
+                            .FirstOrDefault(u => u.Key == collection.Id)?
                             .Select(c => new CollectionAccessSelection
                             {
                                 Id = c.OrganizationUserId,
                                 HidePasswords = c.HidePasswords,
                                 ReadOnly = c.ReadOnly
-                            }).ToList()
+                            }).ToList() ?? new List<CollectionAccessSelection>()
                     }
                 )
             ).ToList();
@@ -158,21 +158,21 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
                     new CollectionAccessDetails
                     {
                         Groups = groups
-                            .FirstOrDefault(g => g.Key == collection.Id)
+                            .FirstOrDefault(g => g.Key == collection.Id)?
                             .Select(g => new CollectionAccessSelection
                             {
                                 Id = g.GroupId,
                                 HidePasswords = g.HidePasswords,
                                 ReadOnly = g.ReadOnly
-                            }).ToList(),
+                            }).ToList() ?? new List<CollectionAccessSelection>(),
                         Users = users
-                            .FirstOrDefault(u => u.Key == collection.Id)
+                            .FirstOrDefault(u => u.Key == collection.Id)?
                             .Select(c => new CollectionAccessSelection
                             {
                                 Id = c.OrganizationUserId,
                                 HidePasswords = c.HidePasswords,
                                 ReadOnly = c.ReadOnly
-                            }).ToList()
+                            }).ToList() ?? new List<CollectionAccessSelection>()
                     }
                 )
             ).ToList();
