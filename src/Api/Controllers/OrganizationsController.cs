@@ -220,7 +220,7 @@ public class OrganizationsController : Controller
         return new OrganizationResponseModel(result.Item1);
     }
 
-    // TODO: move to SelfHostedOrganizationLicensesController
+    [Obsolete("2022-12-7 Moved to SelfHostedOrganizationLicensesController, to be removed in EC-815")]
     [HttpPost("license")]
     [SelfHosted(SelfHostedOnly = true)]
     public async Task<OrganizationResponseModel> PostLicense(OrganizationCreateLicenseRequestModel model)
@@ -454,7 +454,7 @@ public class OrganizationsController : Controller
         }
     }
 
-    // TODO: move to SelfHostedOrganizationLicensesController
+    [Obsolete("2022-12-7 Moved to SelfHostedOrganizationLicensesController, to be removed in EC-815")]
     [HttpPost("{id}/license")]
     [SelfHosted(SelfHostedOnly = true)]
     public async Task PostLicense(string id, LicenseRequestModel model)
