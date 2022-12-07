@@ -21,7 +21,7 @@ The server project is written in C# using .NET Core with ASP.NET Core. The datab
 
 ## Developer Documentation
 
-Please refer to the [Server Setup Guide](https://contributing.bitwarden.com/server/guide/) in the [Contributing Documentation](https://contributing.bitwarden.com/) for build instructions, recommended tooling, code style tips, and lots of other great information to get you started.
+Please refer to the [Server Setup Guide](https://contributing.bitwarden.com/getting-started/server/guide) in the [Contributing Documentation](https://contributing.bitwarden.com/) for build instructions, recommended tooling, code style tips, and lots of other great information to get you started.
 
 ## Deploy
 
