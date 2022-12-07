@@ -162,6 +162,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IMailService, HandlebarsMailService>();
         services.AddSingleton<ILicensingService, LicensingService>();
         services.AddSingleton<IDnsResolverService, DnsResolverService>();
+        services.AddSingleton<IVerificationDomainService, VerificationDomainService>();
         services.AddTokenizers();
 
         if (CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ConnectionString) &&

@@ -40,6 +40,46 @@ public class OrganizationDomainRepository : Repository<Core.Entities.Organizatio
         return Mapper.Map<List<Core.Entities.OrganizationDomain>>(domains);
     }
 
+    public async Task<ICollection<Core.Entities.OrganizationDomain>> GetManyByNextRunDateAsync(DateTime date)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        List<OrganizationDomain> pastDomains;
+
+        var domains = await dbContext.OrganizationDomains
+            .Where(x => x.VerifiedDate == null
+                        && x.JobRunCount != 3
+                        && x.NextRunDate.Year == date.Year
+                        && x.NextRunDate.Month == date.Month
+                        && x.NextRunDate.Day == date.Day
+                        && x.NextRunDate.Hour == date.Hour)
+            .AsNoTracking()
+            .ToListAsync();
+
+        //Get records that have ignored/failed by the background service
+        if (dbContext.Database.IsNpgsql())
+        {
+            pastDomains = dbContext.OrganizationDomains
+                .AsEnumerable()
+                .Where(x => (date - x.NextRunDate).TotalHours > 36
+                && x.VerifiedDate == null
+                && x.JobRunCount != 3)
+                .ToList();
+        }
+        else
+        {
+            pastDomains = await dbContext.OrganizationDomains
+                .Where(x => EF.Functions.DateDiffHour(x.NextRunDate, date) > 36
+                    && x.VerifiedDate == null
+                    && x.JobRunCount != 3)
+                .ToListAsync();
+        }
+
+        var results = domains.Union(pastDomains);
+
+        return Mapper.Map<List<Core.Entities.OrganizationDomain>>(results);
+    }
+
     public async Task<OrganizationDomainSsoDetailsData> GetOrganizationDomainSsoDetails(string email)
     {
         var domainName = new MailAddress(email).Host;
