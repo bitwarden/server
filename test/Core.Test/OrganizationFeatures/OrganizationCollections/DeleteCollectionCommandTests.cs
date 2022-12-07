@@ -25,7 +25,7 @@ public class DeleteCollectionCommandTests
 
         // Assert
         await sutProvider.GetDependency<ICollectionRepository>().Received().DeleteAsync(collection);
-        await sutProvider.GetDependency<IEventService>().Received().LogCollectionEventAsync(collection, EventType.Collection_Deleted);
+        await sutProvider.GetDependency<IEventService>().Received().LogCollectionEventAsync(collection, EventType.Collection_Deleted, Arg.Any<DateTime>());
     }
 
     [Theory, BitAutoData]
@@ -46,8 +46,9 @@ public class DeleteCollectionCommandTests
         await sutProvider.GetDependency<ICollectionRepository>().Received()
             .DeleteManyAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(collectionIds)));
 
-        await sutProvider.GetDependency<IEventService>().Received().LogCollectionEventAsync(collection, EventType.Collection_Deleted, Arg.Any<DateTime>());
-        await sutProvider.GetDependency<IEventService>().Received().LogCollectionEventAsync(collection2, EventType.Collection_Deleted, Arg.Any<DateTime>());
+        await sutProvider.GetDependency<IEventService>().Received().LogCollectionEventsAsync(
+            Arg.Is<IEnumerable<(Collection, EventType, DateTime?)>>(a =>
+            a.All(c => collectionIds.Contains(c.Item1.Id) && c.Item2 == EventType.Collection_Deleted)));
     }
 
 
