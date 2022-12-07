@@ -4,7 +4,15 @@ AS
 BEGIN
     SET NOCOUNT ON
 	
-    DECLARE @TempUserCollections TABLE(Id UNIQUEIDENTIFIER, OrganizationId UNIQUEIDENTIFIER, Name VARCHAR(MAX), CreationDate DATETIME2(7), RevisionDate DATETIME2(7), ExternalId NVARCHAR(300), ReadOnly BIT, HidePasswords BIT)
+    DECLARE @TempUserCollections TABLE(
+        Id UNIQUEIDENTIFIER, 
+        OrganizationId UNIQUEIDENTIFIER, 
+        Name VARCHAR(MAX), 
+        CreationDate DATETIME2(7), 
+        RevisionDate DATETIME2(7), 
+        ExternalId NVARCHAR(300), 
+        ReadOnly BIT, 
+        HidePasswords BIT)
 
     INSERT INTO @TempUserCollections EXEC [dbo].[Collection_ReadByUserId] @UserId
 	 
