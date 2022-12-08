@@ -42,9 +42,9 @@ jobs:
           for file in $MODIFIED_FILES
           do
             if [[ $file == *"${{ matrix.path }}"* ]]; then
-              echo "::set-output name=changes_detected::true"
+              echo "changes_detected=true" >> $GITHUB_OUTPUT
               break
-            else echo "::set-output name=changes_detected::false"
+            else echo "changes_detected=false" >> $GITHUB_OUTPUT
             fi
           done
 

@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Models.Business.Tokenables;
 using Bit.Core.OrganizationFeatures.Groups;
+using Bit.Core.OrganizationFeatures.Groups.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationApiKeys;
 using Bit.Core.OrganizationFeatures.OrganizationApiKeys.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationCollections;
@@ -27,7 +28,7 @@ public static class OrganizationServiceCollectionExtensions
         services.AddTokenizers();
         services.AddOrganizationConnectionCommands();
         services.AddOrganizationSponsorshipCommands(globalSettings);
-        services.AddOrganizationApiKeyCommands();
+        services.AddOrganizationApiKeyCommandsQueries();
         services.AddOrganizationCollectionCommands();
         services.AddOrganizationGroupCommands();
     }
@@ -65,10 +66,11 @@ public static class OrganizationServiceCollectionExtensions
         }
     }
 
-    private static void AddOrganizationApiKeyCommands(this IServiceCollection services)
+    private static void AddOrganizationApiKeyCommandsQueries(this IServiceCollection services)
     {
-        services.AddScoped<IGetOrganizationApiKeyCommand, GetOrganizationApiKeyCommand>();
+        services.AddScoped<IGetOrganizationApiKeyQuery, GetOrganizationApiKeyQuery>();
         services.AddScoped<IRotateOrganizationApiKeyCommand, RotateOrganizationApiKeyCommand>();
+        services.AddScoped<ICreateOrganizationApiKeyCommand, CreateOrganizationApiKeyCommand>();
     }
 
     public static void AddOrganizationCollectionCommands(this IServiceCollection services)

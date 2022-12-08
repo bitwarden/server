@@ -24,6 +24,7 @@ public class GlobalSettings : IGlobalSettings
         get => BuildDirectory(_logDirectory, "/logs");
         set => _logDirectory = value;
     }
+    public virtual bool LogDirectoryByProject { get; set; } = true;
     public virtual long? LogRollBySizeLimit { get; set; }
     public virtual bool EnableDevLogging { get; set; } = false;
     public virtual string LicenseDirectory

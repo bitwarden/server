@@ -5,6 +5,8 @@
   </PropertyGroup>
   
   <ItemGroup>
+    <ProjectReference Include="..\..\util\MySqlMigrations\MySqlMigrations.csproj" />
+    <ProjectReference Include="..\..\util\PostgresMigrations\PostgresMigrations.csproj" />
     <ProjectReference Include="..\SharedWeb\SharedWeb.csproj" />
     <ProjectReference Include="..\..\util\Migrator\Migrator.csproj" />
     <ProjectReference Include="..\Core\Core.csproj" />

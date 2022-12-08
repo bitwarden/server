@@ -31,7 +31,11 @@ public interface IOrganizationService
     Task DisableTwoFactorProviderAsync(Organization organization, TwoFactorProviderType type);
     Task<List<OrganizationUser>> InviteUsersAsync(Guid organizationId, Guid? invitingUserId,
         IEnumerable<(OrganizationUserInvite invite, string externalId)> invites);
+    Task<List<OrganizationUser>> InviteUsersAsync(Guid organizationId, EventSystemUser systemUser,
+        IEnumerable<(OrganizationUserInvite invite, string externalId)> invites);
     Task<OrganizationUser> InviteUserAsync(Guid organizationId, Guid? invitingUserId, string email,
+        OrganizationUserType type, bool accessAll, string externalId, IEnumerable<CollectionAccessSelection> collections);
+    Task<OrganizationUser> InviteUserAsync(Guid organizationId, EventSystemUser systemUser, string email,
         OrganizationUserType type, bool accessAll, string externalId, IEnumerable<CollectionAccessSelection> collections);
     Task<IEnumerable<Tuple<OrganizationUser, string>>> ResendInvitesAsync(Guid organizationId, Guid? invitingUserId, IEnumerable<Guid> organizationUsersId);
     Task ResendInviteAsync(Guid organizationId, Guid? invitingUserId, Guid organizationUserId);
@@ -43,7 +47,10 @@ public interface IOrganizationService
     Task<List<Tuple<OrganizationUser, string>>> ConfirmUsersAsync(Guid organizationId, Dictionary<Guid, string> keys,
         Guid confirmingUserId, IUserService userService);
     Task SaveUserAsync(OrganizationUser user, Guid? savingUserId, IEnumerable<CollectionAccessSelection> collections);
+    [Obsolete("IDeleteOrganizationUserCommand should be used instead. To be removed by EC-607.")]
     Task DeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid? deletingUserId);
+    [Obsolete("IDeleteOrganizationUserCommand should be used instead. To be removed by EC-607.")]
+    Task DeleteUserAsync(Guid organizationId, Guid organizationUserId, EventSystemUser systemUser);
     Task DeleteUserAsync(Guid organizationId, Guid userId);
     Task<List<Tuple<OrganizationUser, string>>> DeleteUsersAsync(Guid organizationId,
         IEnumerable<Guid> organizationUserIds, Guid? deletingUserId);
@@ -59,9 +66,11 @@ public interface IOrganizationService
     Task<Organization> UpdateOrganizationKeysAsync(Guid orgId, string publicKey, string privateKey);
     Task<bool> HasConfirmedOwnersExceptAsync(Guid organizationId, IEnumerable<Guid> organizationUsersId, bool includeProvider = true);
     Task RevokeUserAsync(OrganizationUser organizationUser, Guid? revokingUserId);
+    Task RevokeUserAsync(OrganizationUser organizationUser, EventSystemUser systemUser);
     Task<List<Tuple<OrganizationUser, string>>> RevokeUsersAsync(Guid organizationId,
         IEnumerable<Guid> organizationUserIds, Guid? revokingUserId);
     Task RestoreUserAsync(OrganizationUser organizationUser, Guid? restoringUserId, IUserService userService);
+    Task RestoreUserAsync(OrganizationUser organizationUser, EventSystemUser systemUser, IUserService userService);
     Task<List<Tuple<OrganizationUser, string>>> RestoreUsersAsync(Guid organizationId,
         IEnumerable<Guid> organizationUserIds, Guid? restoringUserId, IUserService userService);
     Task<int> GetOccupiedSeatCount(Organization organization);

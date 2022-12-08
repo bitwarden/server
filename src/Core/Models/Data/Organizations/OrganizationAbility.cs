@@ -19,6 +19,7 @@ public class OrganizationAbility
         UseKeyConnector = organization.UseKeyConnector;
         UseScim = organization.UseScim;
         UseResetPassword = organization.UseResetPassword;
+        UseCustomPermissions = organization.UseCustomPermissions;
     }
 
     public Guid Id { get; set; }
@@ -31,4 +32,5 @@ public class OrganizationAbility
     public bool UseKeyConnector { get; set; }
     public bool UseScim { get; set; }
     public bool UseResetPassword { get; set; }
+    public bool UseCustomPermissions { get; set; }
 }

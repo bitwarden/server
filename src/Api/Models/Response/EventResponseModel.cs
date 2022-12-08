@@ -30,6 +30,7 @@ public class EventResponseModel : ResponseModel
         DeviceType = ev.DeviceType;
         IpAddress = ev.IpAddress;
         InstallationId = ev.InstallationId;
+        SystemUser = ev.SystemUser;
     }
 
     public EventType Type { get; set; }
@@ -48,4 +49,5 @@ public class EventResponseModel : ResponseModel
     public DateTime Date { get; set; }
     public DeviceType? DeviceType { get; set; }
     public string IpAddress { get; set; }
+    public EventSystemUser? SystemUser { get; set; }
 }

@@ -12,10 +12,13 @@ public interface IEventService
     Task LogCollectionEventAsync(Collection collection, EventType type, DateTime? date = null);
     Task LogCollectionEventsAsync(IEnumerable<(Collection collection, EventType type, DateTime? date)> events);
     Task LogGroupEventAsync(Group group, EventType type, DateTime? date = null);
-    Task LogGroupEventsAsync(IEnumerable<(Group group, EventType type, DateTime? date)> events);
+    Task LogGroupEventAsync(Group group, EventType type, EventSystemUser systemUser, DateTime? date = null);
+    Task LogGroupEventsAsync(IEnumerable<(Group group, EventType type, EventSystemUser? systemUser, DateTime? date)> events);
     Task LogPolicyEventAsync(Policy policy, EventType type, DateTime? date = null);
     Task LogOrganizationUserEventAsync(OrganizationUser organizationUser, EventType type, DateTime? date = null);
+    Task LogOrganizationUserEventAsync(OrganizationUser organizationUser, EventType type, EventSystemUser systemUser, DateTime? date = null);
     Task LogOrganizationUserEventsAsync(IEnumerable<(OrganizationUser, EventType, DateTime?)> events);
+    Task LogOrganizationUserEventsAsync(IEnumerable<(OrganizationUser, EventType, EventSystemUser, DateTime?)> events);
     Task LogOrganizationEventAsync(Organization organization, EventType type, DateTime? date = null);
     Task LogProviderUserEventAsync(ProviderUser providerUser, EventType type, DateTime? date = null);
     Task LogProviderUsersEventAsync(IEnumerable<(ProviderUser, EventType, DateTime?)> events);

@@ -52,6 +52,7 @@ public class CollectController : Controller
                 case EventType.Cipher_ClientCopiedHiddenField:
                 case EventType.Cipher_ClientCopiedPassword:
                 case EventType.Cipher_ClientCopiedCardCode:
+                case EventType.Cipher_ClientToggledCardNumberVisible:
                 case EventType.Cipher_ClientToggledCardCodeVisible:
                 case EventType.Cipher_ClientToggledHiddenFieldVisible:
                 case EventType.Cipher_ClientToggledPasswordVisible:
