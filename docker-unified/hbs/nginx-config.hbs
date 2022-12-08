@@ -80,10 +80,13 @@ server {
   location /attachments {
     alias /etc/bitwarden/attachments/;
   }
+{{#if (String.Equal env.BW_ENABLE_API "true")}}
 
   location /api/ {
     proxy_pass http://localhost:5001/;
   }
+{{/if}}
+{{#if (String.Equal env.BW_ENABLE_ICONS "true")}}
 
   location /icons/ {
 {{#if (String.Equal env.BW_ICONS_PROXY_TO_CLOUD "true")}}
@@ -95,6 +98,8 @@ server {
     proxy_pass http://localhost:5004/;
 {{/if}}
   }
+{{/if}}
+{{#if (String.Equal env.BW_ENABLE_NOTIFICATIONS "true")}}
 
   location /notifications/ {
     proxy_pass http://localhost:5006/;
@@ -105,10 +110,14 @@ server {
     proxy_set_header Upgrade $http_upgrade;
     proxy_set_header Connection $http_connection;
   }
+{{/if}}
+{{#if (String.Equal env.BW_ENABLE_EVENTS "true")}}
 
   location /events/ {
     proxy_pass http://localhost:5003/;
   }
+{{/if}}
+{{#if (String.Equal env.BW_ENABLE_SSO "true")}}
 
   location /sso {
     proxy_pass http://localhost:5007;
@@ -118,6 +127,8 @@ server {
     include /etc/nginx/security-headers.conf;
     add_header X-Frame-Options SAMEORIGIN;
   }
+{{/if}}
+{{#if (String.Equal env.BW_ENABLE_IDENTITY "true")}}
 
   location /identity {
     proxy_pass http://localhost:5005;
@@ -127,6 +138,8 @@ server {
     include /etc/nginx/security-headers.conf;
     add_header X-Frame-Options SAMEORIGIN;
   }
+{{/if}}
+{{#if (String.Equal env.BW_ENABLE_ADMIN "true")}}
 
   location /admin {
     proxy_pass http://localhost:5000;
@@ -136,10 +149,13 @@ server {
     include /etc/nginx/security-headers.conf;
     add_header X-Frame-Options SAMEORIGIN;
   }
+{{/if}}
+{{#if (String.Equal env.BW_ENABLE_SCIM "true")}}
 
   location /scim/ {
     proxy_pass http://localhost:5002/;
   }
+{{/if}}
 {{#if (String.Equal env.BW_ENABLE_KEY_CONNECTOR "true")}}
 
   location /key-connector/ {

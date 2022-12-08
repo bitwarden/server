@@ -6,11 +6,19 @@ namespace Bit.Infrastructure.EntityFramework.Repositories.Queries;
 
 public class UserBumpAccountRevisionDateByCipherIdQuery : IQuery<User>
 {
-    private readonly Cipher _cipher;
+    private readonly Guid _cipherId;
+    private readonly Guid? _organizationId;
 
     public UserBumpAccountRevisionDateByCipherIdQuery(Cipher cipher)
     {
-        _cipher = cipher;
+        _cipherId = cipher.Id;
+        _organizationId = cipher.OrganizationId;
+    }
+
+    public UserBumpAccountRevisionDateByCipherIdQuery(Guid cipherId, Guid? organizationId)
+    {
+        _cipherId = cipherId;
+        _organizationId = organizationId;
     }
 
     public IQueryable<User> Run(DatabaseContext dbContext)
@@ -21,7 +29,7 @@ public class UserBumpAccountRevisionDateByCipherIdQuery : IQuery<User>
                         on u.Id equals ou.UserId
 
                     join collectionCipher in dbContext.CollectionCiphers
-                        on _cipher.Id equals collectionCipher.CipherId into cc_g
+                        on _cipherId equals collectionCipher.CipherId into cc_g
                     from cc in cc_g.DefaultIfEmpty()
 
                     join collectionUser in dbContext.CollectionUsers
@@ -43,7 +51,7 @@ public class UserBumpAccountRevisionDateByCipherIdQuery : IQuery<User>
                            new { AccessAll = false, collectionGroup.GroupId, collectionGroup.CollectionId } into cg_g
                     from cg in cg_g.DefaultIfEmpty()
 
-                    where ou.OrganizationId == _cipher.OrganizationId &&
+                    where ou.OrganizationId == _organizationId &&
                             ou.Status == OrganizationUserStatusType.Confirmed &&
                             (cu.CollectionId != null ||
                             cg.CollectionId != null ||

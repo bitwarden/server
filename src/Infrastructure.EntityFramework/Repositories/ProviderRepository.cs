@@ -14,6 +14,17 @@ public class ProviderRepository : Repository<Provider, Models.Provider, Guid>, I
         : base(serviceScopeFactory, mapper, context => context.Providers)
     { }
 
+    public override async Task DeleteAsync(Provider provider)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            await dbContext.UserBumpAccountRevisionDateByProviderIdAsync(provider.Id);
+            await dbContext.SaveChangesAsync();
+        }
+        await base.DeleteAsync(provider);
+    }
+
     public async Task<ICollection<Provider>> SearchAsync(string name, string userEmail, int skip, int take)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
