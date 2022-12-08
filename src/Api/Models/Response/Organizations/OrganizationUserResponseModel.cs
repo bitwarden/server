@@ -81,6 +81,8 @@ public class OrganizationUserUserDetailsResponseModel : OrganizationUserResponse
         Email = organizationUser.Email;
         TwoFactorEnabled = twoFactorEnabled;
         SsoBound = !string.IsNullOrWhiteSpace(organizationUser.SsoExternalId);
+        Collections = organizationUser.Collections.Select(c => new SelectionReadOnlyResponseModel(c));
+        Groups = organizationUser.Groups;
         // Prevent reset password when using key connector.
         ResetPasswordEnrolled = ResetPasswordEnrolled && !organizationUser.UsesKeyConnector;
     }
@@ -89,6 +91,8 @@ public class OrganizationUserUserDetailsResponseModel : OrganizationUserResponse
     public string Email { get; set; }
     public bool TwoFactorEnabled { get; set; }
     public bool SsoBound { get; set; }
+    public IEnumerable<SelectionReadOnlyResponseModel> Collections { get; set; }
+    public IEnumerable<Guid> Groups { get; set; }
 }
 
 public class OrganizationUserResetPasswordDetailsResponseModel : ResponseModel
