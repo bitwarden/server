@@ -202,8 +202,6 @@ ENV globalSettings__send__baseDirectory="/etc/bitwarden/attachments/send"
 ENV globalSettings__licenseDirectory="/etc/bitwarden/licenses"
 ENV globalSettings__logDirectoryByProject="false"
 ENV globalSettings__logRollBySizeLimit="1073741824"
-EXPOSE 80
-EXPOSE 443
 
 # Add packages
 RUN apk add --update-cache \
@@ -288,5 +286,4 @@ VOLUME ["/etc/bitwarden"]
 
 WORKDIR /app
 USER bitwarden:bitwarden
-HEALTHCHECK CMD curl --insecure -Lfs https://localhost/alive || curl -Lfs http://localhost/alive || exit 1
 ENTRYPOINT ["/entrypoint.sh"]
