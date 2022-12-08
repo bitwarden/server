@@ -82,9 +82,9 @@ public class CurrentContext : ICurrentContext
             MaybeBot = httpContext.Request.Headers["X-Cf-Maybe-Bot"] == "1";
         }
 
-        if (httpContext.Request.Headers.ContainsKey("Bitwarden-Client-Version"))
+        if (httpContext.Request.Headers.ContainsKey("Bitwarden-Client-Version") && Version.TryParse(httpContext.Request.Headers["Bitwarden-Client-Version"], out var cVersion))
         {
-            ClientVersion = new Version(httpContext.Request.Headers["Bitwarden-Client-Version"]);
+            ClientVersion = cVersion;
         }
     }
 

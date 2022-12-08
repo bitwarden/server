@@ -87,6 +87,7 @@ public class OrganizationRepository : Repository<Core.Entities.Organization, Org
                 UseKeyConnector = e.UseKeyConnector,
                 UseResetPassword = e.UseResetPassword,
                 UseScim = e.UseScim,
+                UseCustomPermissions = e.UseCustomPermissions
             }).ToListAsync();
         }
     }
@@ -101,9 +102,42 @@ public class OrganizationRepository : Repository<Core.Entities.Organization, Org
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var orgEntity = await dbContext.FindAsync<Organization>(organization.Id);
+            await dbContext.UserBumpAccountRevisionDateByOrganizationIdAsync(organization.Id);
+            var deleteCiphersTransaction = await dbContext.Database.BeginTransactionAsync();
+            dbContext.Ciphers.RemoveRange(
+                dbContext.Ciphers.Where(c => c.UserId == null && c.OrganizationId == organization.Id));
+            await deleteCiphersTransaction.CommitAsync();
+            var organizationDeleteTransaction = await dbContext.Database.BeginTransactionAsync();
+            dbContext.SsoUsers.RemoveRange(dbContext.SsoUsers.Where(su => su.OrganizationId == organization.Id));
+            dbContext.SsoConfigs.RemoveRange(dbContext.SsoConfigs.Where(sc => sc.OrganizationId == organization.Id));
+            var collectionUsers = from cu in dbContext.CollectionUsers
+                                  join ou in dbContext.OrganizationUsers on cu.OrganizationUserId equals ou.Id
+                                  where ou.OrganizationId == organization.Id
+                                  select cu;
+            dbContext.CollectionUsers.RemoveRange(collectionUsers);
+            dbContext.OrganizationUsers.RemoveRange(
+                dbContext.OrganizationUsers.Where(ou => ou.OrganizationId == organization.Id));
+            dbContext.ProviderOrganizations.RemoveRange(
+                dbContext.ProviderOrganizations.Where(po => po.OrganizationId == organization.Id));
 
+            // The below section are 3 SPROCS in SQL Server but are only called by here
+            dbContext.OrganizationApiKeys.RemoveRange(
+                dbContext.OrganizationApiKeys.Where(oa => oa.OrganizationId == organization.Id));
+            dbContext.OrganizationConnections.RemoveRange(
+                dbContext.OrganizationConnections.Where(oc => oc.OrganizationId == organization.Id));
+            var sponsoringOrgs = await dbContext.OrganizationSponsorships
+                .Where(os => os.SponsoringOrganizationId == organization.Id)
+                .ToListAsync();
+            sponsoringOrgs.ForEach(os => os.SponsoringOrganizationId = null);
+            var sponsoredOrgs = await dbContext.OrganizationSponsorships
+                .Where(os => os.SponsoredOrganizationId == organization.Id)
+                .ToListAsync();
+            sponsoredOrgs.ForEach(os => os.SponsoredOrganizationId = null);
+
+            var orgEntity = await dbContext.FindAsync<Organization>(organization.Id);
             dbContext.Remove(orgEntity);
+
+            await organizationDeleteTransaction.CommitAsync();
             await dbContext.SaveChangesAsync();
         }
     }
