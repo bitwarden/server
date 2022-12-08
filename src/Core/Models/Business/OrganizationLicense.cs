@@ -6,6 +6,7 @@ using System.Text.Json.Serialization;
 using AutoMapper;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Models.OrganizationConnectionConfigs;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 
@@ -200,7 +201,7 @@ public class OrganizationLicense : ILicense
         }
     }
 
-    public bool CanUse(IGlobalSettings globalSettings, ILicensingService licensingService, out string exception)
+    public bool ValidateForInstallation(IGlobalSettings globalSettings, ILicensingService licensingService, out string exception)
     {
         if (!Enabled || Issued > DateTime.UtcNow || Expires < DateTime.UtcNow)
         {
@@ -231,6 +232,82 @@ public class OrganizationLicense : ILicense
         if (!licensingService.VerifyLicense(this))
         {
             exception = "Invalid license.";
+            return false;
+        }
+
+        exception = "";
+        return true;
+    }
+
+    public bool ValidateForOrganization(SelfHostedOrganizationDetails organization, Organization existingOrganization, out string exception)
+    {
+        if (Seats.HasValue && organization.OccupiedSeatCount > Seats.Value)
+        {
+            exception = $"Your organization currently has {organization.OccupiedSeatCount} seats filled. " +
+                $"Your new license only has ({Seats.Value}) seats. Remove some users.";
+            return false;
+        }
+
+        if (MaxCollections.HasValue && organization.CollectionCount > MaxCollections.Value)
+        {
+            exception = $"Your organization currently has {organization.CollectionCount} collections. " +
+                $"Your new license allows for a maximum of ({MaxCollections.Value}) collections. " +
+                "Remove some collections.";
+            return false;
+        }
+
+        if (!UseGroups && UseGroups && organization.GroupCount > 1)
+        {
+            exception = $"Your organization currently has {organization.GroupCount} groups. " +
+                $"Your new license does not allow for the use of groups. Remove all groups.";
+            return false;
+        }
+
+        var enabledPolicyCount = organization.Policies.Count(p => p.Enabled);
+        if (!UsePolicies && organization.UsePolicies && enabledPolicyCount > 0)
+        {
+            exception = $"Your organization currently has {enabledPolicyCount} enabled " +
+                $"policies. Your new license does not allow for the use of policies. Disable all policies.";
+            return false;
+        }
+
+        if (!UseSso && organization.UseSso && organization.SsoConfig is { Enabled: true })
+        {
+            exception = $"Your organization currently has a SSO configuration. " +
+                $"Your new license does not allow for the use of SSO. Disable your SSO configuration.";
+            return false;
+        }
+
+        if (!UseKeyConnector && organization.UseKeyConnector && organization.SsoConfig != null && organization.SsoConfig.GetData().KeyConnectorEnabled)
+        {
+            exception = $"Your organization currently has Key Connector enabled. " +
+                $"Your new license does not allow for the use of Key Connector. Disable your Key Connector.";
+            return false;
+        }
+
+        if (!UseScim && organization.UseScim && organization.ScimConnections != null &&
+            organization.ScimConnections.Any(c => c.GetConfig<ScimConfig>() is { Enabled: true }))
+        {
+            exception = "Your new plan does not allow the SCIM feature. " +
+                "Disable your SCIM configuration.";
+            return false;
+        }
+
+        if (!UseCustomPermissions && organization.UseCustomPermissions)
+        {
+            if (organization.OrganizationUsers.Any(ou => ou.Type == OrganizationUserType.Custom))
+            {
+                exception = "Your new plan does not allow the Custom Permissions feature. " +
+                    "Disable your Custom Permissions configuration.";
+                return false;
+            }
+        }
+
+        if (!UseResetPassword && organization.UseResetPassword &&
+            organization.Policies.Any(p => p.Type == PolicyType.ResetPassword && p.Enabled))
+        {
+            exception = "Your new license does not allow the Password Reset feature. "
+                + "Disable your Password Reset policy.";
             return false;
         }
 

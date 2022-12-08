@@ -32,10 +32,15 @@ public class UpdateOrganizationLicenseCommand : IUpdateOrganizationLicenseComman
     }
 
     public async Task UpdateLicenseAsync(SelfHostedOrganizationDetails selfHostedOrganization,
-        OrganizationLicense license, Organization? existingOrganization)
+        OrganizationLicense license, Organization? currentOrganizationUsingLicenseKey)
     {
-        var canUse = license.CanUse(_globalSettings, _licensingService, out var exception) &&
-            selfHostedOrganization.CanUseLicense(license, existingOrganization, out exception);
+        if (currentOrganizationUsingLicenseKey != null && currentOrganizationUsingLicenseKey.Id != selfHostedOrganization.Id)
+        {
+            throw new BadRequestException("License is already in use by another organization.");
+        }
+
+        var canUse = license.ValidateForInstallation(_globalSettings, _licensingService, out var exception) &&
+            license.ValidateForOrganization(selfHostedOrganization, currentOrganizationUsingLicenseKey, out exception);
 
         if (!canUse)
         {
