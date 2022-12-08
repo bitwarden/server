@@ -24,13 +24,14 @@
           "StackExchange.Redis": "2.5.43"
         }
       },
-      "AutoMapper": {
+      "AutoMapper.Extensions.Microsoft.DependencyInjection": {
         "type": "Direct",
         "requested": "[12.0.0, )",
         "resolved": "12.0.0",
-        "contentHash": "0Rmg0zI5AFu1O/y//o9VGyhxKjhggWpk9mOA1tp0DEVx40c61bs+lnQv+0jUq8XbniF7FKgIVvI1perqiMtLrA==",
+        "contentHash": "XCJ4E3oKrbRl1qY9Mr+7uyC0xZj1+bqQjmQRWTiTKiVuuXTny+7YFWHi20tPjwkMukLbicN6yGlDy5PZ4wyi1w==",
         "dependencies": {
-          "Microsoft.CSharp": "4.7.0"
+          "AutoMapper": "12.0.0",
+          "Microsoft.Extensions.Options": "6.0.0"
         }
       },
       "AWSSDK.SimpleEmail": {
@@ -389,6 +390,14 @@
         "contentHash": "uP5F3Ko1gqZi3lwS2R/jAAwhBxXs/6PKDpS6FdQjsBA5qmF0hQmbtfxM6QHTXOMoWbUtfetG7+LtgmG8T5zDIg==",
         "dependencies": {
           "NETStandard.Library": "1.6.1"
+        }
+      },
+      "AutoMapper": {
+        "type": "Transitive",
+        "resolved": "12.0.0",
+        "contentHash": "0Rmg0zI5AFu1O/y//o9VGyhxKjhggWpk9mOA1tp0DEVx40c61bs+lnQv+0jUq8XbniF7FKgIVvI1perqiMtLrA==",
+        "dependencies": {
+          "Microsoft.CSharp": "4.7.0"
         }
       },
       "AWSSDK.Core": {

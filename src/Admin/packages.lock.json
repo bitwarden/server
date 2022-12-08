@@ -64,10 +64,10 @@
       },
       "AutoMapper.Extensions.Microsoft.DependencyInjection": {
         "type": "Transitive",
-        "resolved": "11.0.0",
-        "contentHash": "0asw5WxdCFh2OTi9Gv+oKyH9SzxwYQSnO8TV5Dd0GggovILzJW4UimP26JAcxc3yB5NnC5urooZ1BBs8ElpiBw==",
+        "resolved": "12.0.0",
+        "contentHash": "XCJ4E3oKrbRl1qY9Mr+7uyC0xZj1+bqQjmQRWTiTKiVuuXTny+7YFWHi20tPjwkMukLbicN6yGlDy5PZ4wyi1w==",
         "dependencies": {
-          "AutoMapper": "11.0.0",
+          "AutoMapper": "12.0.0",
           "Microsoft.Extensions.Options": "6.0.0"
         }
       },
@@ -3211,7 +3211,7 @@
       "commercial.core": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2022.10.0, )"
+          "Core": "[2022.11.0, )"
         }
       },
       "core": {
@@ -3221,7 +3221,7 @@
           "AWSSDK.SimpleEmail": "[3.7.0.150, )",
           "AspNetCoreRateLimit": "[4.0.2, )",
           "AspNetCoreRateLimit.Redis": "[1.0.1, )",
-          "AutoMapper": "[12.0.0, )",
+          "AutoMapper.Extensions.Microsoft.DependencyInjection": "[12.0.0, )",
           "Azure.Extensions.AspNetCore.DataProtection.Blobs": "[1.2.1, )",
           "Azure.Storage.Blobs": "[12.11.0, )",
           "Azure.Storage.Queues": "[12.9.0, )",
@@ -3258,7 +3258,7 @@
       "infrastructure.dapper": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2022.10.0, )",
+          "Core": "[2022.11.0, )",
           "Dapper": "[2.0.123, )",
           "System.Data.SqlClient": "[4.8.3, )"
         }
@@ -3267,7 +3267,7 @@
         "type": "Project",
         "dependencies": {
           "AutoMapper.Extensions.Microsoft.DependencyInjection": "[11.0.0, )",
-          "Core": "[2022.10.0, )",
+          "Core": "[2022.11.0, )",
           "Microsoft.EntityFrameworkCore.Relational": "[6.0.4, )",
           "Npgsql.EntityFrameworkCore.PostgreSQL": "[6.0.4, )",
           "Pomelo.EntityFrameworkCore.MySql": "[6.0.1, )",
@@ -3277,7 +3277,7 @@
       "migrator": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2022.10.0, )",
+          "Core": "[2022.11.0, )",
           "Microsoft.Extensions.Logging": "[6.0.0, )",
           "dbup-sqlserver": "[4.5.0, )"
         }
@@ -3285,23 +3285,23 @@
       "mysqlmigrations": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2022.10.0, )",
-          "Infrastructure.EntityFramework": "[2022.10.0, )"
+          "Core": "[2022.11.0, )",
+          "Infrastructure.EntityFramework": "[2022.11.0, )"
         }
       },
       "postgresmigrations": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2022.10.0, )",
-          "Infrastructure.EntityFramework": "[2022.10.0, )"
+          "Core": "[2022.11.0, )",
+          "Infrastructure.EntityFramework": "[2022.11.0, )"
         }
       },
       "sharedweb": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2022.10.0, )",
-          "Infrastructure.Dapper": "[2022.10.0, )",
-          "Infrastructure.EntityFramework": "[2022.10.0, )"
+          "Core": "[2022.11.0, )",
+          "Infrastructure.Dapper": "[2022.11.0, )",
+          "Infrastructure.EntityFramework": "[2022.11.0, )"
         }
       }
     }

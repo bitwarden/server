@@ -21,7 +21,7 @@
 
   <ItemGroup>
     <PackageReference Include="AspNetCoreRateLimit.Redis" Version="1.0.1" />
-    <PackageReference Include="AutoMapper" Version="12.0.0" />
+    <PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="12.0.0" />
     <PackageReference Include="AWSSDK.SimpleEmail" Version="3.7.0.150" />
     <PackageReference Include="AWSSDK.SQS" Version="3.7.2.47" />
     <PackageReference Include="Azure.Extensions.AspNetCore.DataProtection.Blobs" Version="1.2.1" />
