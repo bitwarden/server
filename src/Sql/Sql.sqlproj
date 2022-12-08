@@ -121,6 +121,7 @@
     <Build Include="dbo\Stored Procedures\CollectionGroup_ReadByOrganizationId.sql" />
     <Build Include="dbo\Stored Procedures\CollectionUser_Delete.sql" />
     <Build Include="dbo\Stored Procedures\CollectionUser_ReadByCollectionId.sql" />
+    <Build Include="dbo\Stored Procedures\CollectionUser_ReadByOrganizationUserIds.sql" />
     <Build Include="dbo\Stored Procedures\CollectionUser_UpdateUsers.sql" />
     <Build Include="dbo\Stored Procedures\Collection_Create.sql" />
     <Build Include="dbo\Stored Procedures\Collection_CreateWithGroups.sql" />
@@ -175,6 +176,7 @@
     <Build Include="dbo\Stored Procedures\Grant_Save.sql" />
     <Build Include="dbo\Stored Procedures\GroupUser_Delete.sql" />
     <Build Include="dbo\Stored Procedures\GroupUser_ReadByOrganizationId.sql" />
+    <Build Include="dbo\Stored Procedures\GroupUser_ReadByOrganizationUserIds.sql" />
     <Build Include="dbo\Stored Procedures\GroupUser_ReadGroupIdsByOrganizationUserId.sql" />
     <Build Include="dbo\Stored Procedures\GroupUser_ReadOrganizationUserIdsByGroupId.sql" />
     <Build Include="dbo\Stored Procedures\GroupUser_UpdateGroups.sql" />
