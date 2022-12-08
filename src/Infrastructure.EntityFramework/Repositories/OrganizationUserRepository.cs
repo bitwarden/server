@@ -306,9 +306,9 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
             var dbContext = GetDatabaseContext(scope);
             var view = new OrganizationUserUserDetailsViewQuery();
             var users = await (from ou in view.Run(dbContext)
-                        where ou.OrganizationId == organizationId
-                        select ou).ToListAsync();
-            
+                               where ou.OrganizationId == organizationId
+                               select ou).ToListAsync();
+
             if (!includeCollections && !includeGroups)
             {
                 return users;
@@ -318,21 +318,21 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
             List<IGrouping<Guid, CollectionUser>> collections = null;
             var userIds = users.Select(u => u.Id);
             var userIdEntities = dbContext.OrganizationUsers.Where(x => userIds.Contains(x.Id));
-            
+
             // Query groups/collections separately to avoid cartesian explosion 
             if (includeGroups)
             {
-                groups = (await (from gu in dbContext.GroupUsers 
-                        join ou in userIdEntities on gu.OrganizationUserId equals ou.Id
-                        select gu).ToListAsync())
+                groups = (await (from gu in dbContext.GroupUsers
+                                 join ou in userIdEntities on gu.OrganizationUserId equals ou.Id
+                                 select gu).ToListAsync())
                     .GroupBy(g => g.OrganizationUserId).ToList();
             }
 
             if (includeCollections)
             {
                 collections = (await (from cu in dbContext.CollectionUsers
-                        join ou in userIdEntities on cu.OrganizationUserId equals ou.Id
-                        select cu).ToListAsync())
+                                      join ou in userIdEntities on cu.OrganizationUserId equals ou.Id
+                                      select cu).ToListAsync())
                     .GroupBy(c => c.OrganizationUserId).ToList();
             }
 
@@ -352,13 +352,13 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                         .FirstOrDefault(c => c.Key == user.Id)?
                         .Select(cu => new CollectionAccessSelection
                         {
-                            Id = cu.CollectionId, 
+                            Id = cu.CollectionId,
                             ReadOnly = cu.ReadOnly,
                             HidePasswords = cu.HidePasswords
                         }).ToList() ?? new List<CollectionAccessSelection>();
                 }
             }
-            
+
             return users;
         }
     }

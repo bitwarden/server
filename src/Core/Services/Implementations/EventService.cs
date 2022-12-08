@@ -154,10 +154,10 @@ public class EventService : IEventService
         };
         await _eventWriteService.CreateAsync(e);
     }
-    
+
     public async Task LogGroupEventAsync(Group group, EventType type, DateTime? date = null) =>
         await LogGroupEventsAsync(new[] { (group, type, (EventSystemUser?)null, date) });
-    
+
     public async Task LogGroupEventAsync(Group group, EventType type, EventSystemUser systemUser, DateTime? date = null) =>
         await LogGroupEventsAsync(new[] { (group, type, (EventSystemUser?)systemUser, date) });
 

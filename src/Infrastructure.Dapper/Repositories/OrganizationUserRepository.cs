@@ -196,16 +196,16 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
 
             List<IGrouping<Guid, GroupUser>> userGroups = null;
             List<IGrouping<Guid, CollectionUser>> userCollections = null;
-            
+
             var users = results.ToList();
-            
+
             if (!includeCollections && !includeGroups)
             {
                 return users;
             }
-            
+
             var orgUserIds = users.Select(u => u.Id).ToGuidIdArrayTVP();
-            
+
             if (includeGroups)
             {
                 userGroups = (await connection.QueryAsync<GroupUser>(
@@ -221,7 +221,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
                     new { OrganizationUserIds = orgUserIds },
                     commandType: CommandType.StoredProcedure)).GroupBy(u => u.OrganizationUserId).ToList();
             }
-            
+
             // Map any queried collections and groups to their respective users
             foreach (var user in users)
             {
@@ -238,9 +238,9 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
                         .FirstOrDefault(u => u.Key == user.Id)?
                         .Select(uc => new CollectionAccessSelection
                         {
-                            Id = uc.CollectionId, 
+                            Id = uc.CollectionId,
                             ReadOnly = uc.ReadOnly,
-                            HidePasswords = uc.HidePasswords 
+                            HidePasswords = uc.HidePasswords
                         }).ToList() ?? new List<CollectionAccessSelection>();
                 }
             }
