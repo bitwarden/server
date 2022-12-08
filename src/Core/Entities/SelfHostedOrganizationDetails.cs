@@ -10,6 +10,7 @@ public class SelfHostedOrganizationDetails : Organization
     public int OccupiedSeatCount { get; set; }
     public int CollectionCount { get; set; }
     public int GroupCount { get; set; }
+    public IEnumerable<OrganizationUser> OrganizationUsers { get; set; }
     public IEnumerable<Policy> Policies { get; set; }
     public SsoConfig SsoConfig { get; set; }
     public IEnumerable<OrganizationConnection> ScimConnections { get; set; }
@@ -72,6 +73,16 @@ public class SelfHostedOrganizationDetails : Organization
             exception = "Your new plan does not allow the SCIM feature. " +
                 "Disable your SCIM configuration.";
             return false;
+        }
+
+        if (!license.UseCustomPermissions && UseCustomPermissions)
+        {
+            if (OrganizationUsers.Any(ou => ou.Type == OrganizationUserType.Custom))
+            {
+                exception = "Your new plan does not allow the Custom Permissions feature. " +
+                    "Disable your Custom Permissions configuration.";
+                return false;
+            }
         }
 
         if (!license.UseResetPassword && UseResetPassword &&
