@@ -1,5 +1,11 @@
 #!/bin/sh
 
+UID="${UID:-1000}"
+GID="${GID:-1000}"
+
+adduser -s /bin/false -D -u $UID bitwarden
+addgroup -g $GID bitwarden
+
 # Translate environment variables for application settings
 VAULT_SERVICE_URI=https://$BW_DOMAIN
 MYSQL_CONNECTION_STRING="server=$BW_DB_SERVER;database=$BW_DB_DATABASE;user=$BW_DB_USERNAME;password=$BW_DB_PASSWORD"
@@ -78,4 +84,14 @@ sed -i "s/autostart=true/autostart=${BW_ENABLE_NOTIFICATIONS}/" /etc/supervisor.
 sed -i "s/autostart=true/autostart=${BW_ENABLE_SCIM}/" /etc/supervisor.d/scim.ini
 sed -i "s/autostart=true/autostart=${BW_ENABLE_SSO}/" /etc/supervisor.d/sso.ini
 
-exec /usr/bin/supervisord
+#chown -R $UID:$GID \
+    #/app \
+    #/etc/bitwarden \
+    #/etc/nginx/http.d \
+    #/etc/supervisor \
+    #/etc/supervisor.d \
+    #/var/lib/nginx \
+    #/var/log \
+    #/run
+
+su-exec $UID:$GID /usr/bin/supervisord
