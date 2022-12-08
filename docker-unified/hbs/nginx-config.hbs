@@ -1,15 +1,15 @@
 server {
-  listen 8080 default_server;
-  #listen [::]:8080 default_server;
+  listen {{{String.Coalesce env.BW_PORT_HTTP "8080"}}} default_server;
+  #listen [::]:{{{String.Coalesce env.BW_PORT_HTTP "8080"}}} default_server;
   server_name {{{String.Coalesce env.BW_DOMAIN "localhost"}}};
 {{#if (String.Equal env.BW_ENABLE_SSL "true")}}
 
-  return 301 https://{{{String.Coalesce env.BW_DOMAIN "localhost"}}}$request_uri;
+  return 301 https://{{{String.Coalesce env.BW_DOMAIN "localhost"}}}:{{{String.Coalesce env.BW_PORT_HTTPS "8443"}}}$request_uri;
 }
 
 server {
-  listen 8443 ssl http2;
-  #listen [::]:8443 ssl http2;
+  listen {{{String.Coalesce env.BW_PORT_HTTPS "8443"}}} ssl http2;
+  #listen [::]:{{{String.Coalesce env.BW_PORT_HTTPS "8443"}}} ssl http2;
   server_name {{{String.Coalesce env.BW_DOMAIN "localhost"}}};
 
   ssl_certificate /etc/bitwarden/{{{String.Coalesce env.BW_SSL_CERT "ssl.crt"}}};
