@@ -36,7 +36,7 @@ public class GroupUserUpdateGroupsInsertQuery : IQuery<GroupUser>
                         on g.OrganizationId equals ou.OrganizationId
                     join gie in groupIdEntities
                         on g.Id equals gie.Id
-                    where !dbContext.GroupUsers.Any(gu => _groupIds.Contains(gu.GroupId) && gu.OrganizationUserId == _organizationUserId)
+                    where !dbContext.GroupUsers.Any(gu => gu.GroupId == gie.Id && gu.OrganizationUserId == _organizationUserId)
                     select g;
         return query.Select(x => new GroupUser
         {
