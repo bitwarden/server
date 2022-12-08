@@ -299,16 +299,67 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         }
     }
 
-    public async Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationAsync(Guid organizationId)
+    public async Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationAsync(Guid organizationId, bool includeGroups, bool includeCollections)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
             var view = new OrganizationUserUserDetailsViewQuery();
-            var query = from ou in view.Run(dbContext)
+            var users = await (from ou in view.Run(dbContext)
                         where ou.OrganizationId == organizationId
-                        select ou;
-            return await query.ToListAsync();
+                        select ou).ToListAsync();
+            
+            if (!includeCollections && !includeGroups)
+            {
+                return users;
+            }
+
+            List<IGrouping<Guid, GroupUser>> groups = null;
+            List<IGrouping<Guid, CollectionUser>> collections = null;
+            var userIds = users.Select(u => u.Id);
+            var userIdEntities = dbContext.OrganizationUsers.Where(x => userIds.Contains(x.Id));
+            
+            // Query groups/collections separately to avoid cartesian explosion 
+            if (includeGroups)
+            {
+                groups = (await (from gu in dbContext.GroupUsers 
+                        join ou in userIdEntities on gu.OrganizationUserId equals ou.Id
+                        select gu).ToListAsync())
+                    .GroupBy(g => g.OrganizationUserId).ToList();
+            }
+
+            if (includeCollections)
+            {
+                collections = (await (from cu in dbContext.CollectionUsers
+                        join ou in userIdEntities on cu.OrganizationUserId equals ou.Id
+                        select cu).ToListAsync())
+                    .GroupBy(c => c.OrganizationUserId).ToList();
+            }
+
+            // Map any queried collections and groups to their respective users
+            foreach (var user in users)
+            {
+                if (groups != null)
+                {
+                    user.Groups = groups
+                        .FirstOrDefault(g => g.Key == user.Id)?
+                        .Select(g => g.GroupId).ToList() ?? new List<Guid>();
+                }
+
+                if (collections != null)
+                {
+                    user.Collections = collections
+                        .FirstOrDefault(c => c.Key == user.Id)?
+                        .Select(cu => new CollectionAccessSelection
+                        {
+                            Id = cu.CollectionId, 
+                            ReadOnly = cu.ReadOnly,
+                            HidePasswords = cu.HidePasswords
+                        }).ToList() ?? new List<CollectionAccessSelection>();
+                }
+            }
+            
+            return users;
         }
     }
 

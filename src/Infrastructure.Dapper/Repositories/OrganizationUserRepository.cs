@@ -185,7 +185,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         }
     }
 
-    public async Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationAsync(Guid organizationId)
+    public async Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationAsync(Guid organizationId, bool includeGroups, bool includeCollections)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
@@ -194,7 +194,83 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
                 new { OrganizationId = organizationId },
                 commandType: CommandType.StoredProcedure);
 
-            return results.ToList();
+            List<IGrouping<Guid, GroupUser>> userGroups = null;
+            List<IGrouping<Guid, CollectionUser>> userCollections = null;
+            
+            var users = results.ToList();
+            
+            if (!includeCollections && !includeGroups)
+            {
+                return users;
+            }
+            
+            var orgUserIds = users.Select(u => u.Id).ToGuidIdArrayTVP();
+            
+            if (includeGroups)
+            {
+                userGroups = (await connection.QueryAsync<GroupUser>(
+                    "[dbo].[GroupUser_ReadByOrganizationUserIds]",
+                    new { OrganizationUserIds = orgUserIds },
+                    commandType: CommandType.StoredProcedure)).GroupBy(u => u.OrganizationUserId).ToList();
+            }
+
+            if (includeCollections)
+            {
+                userCollections = (await connection.QueryAsync<CollectionUser>(
+                    "[dbo].[CollectionUser_ReadByOrganizationUserIds]",
+                    new { OrganizationUserIds = orgUserIds },
+                    commandType: CommandType.StoredProcedure)).GroupBy(u => u.OrganizationUserId).ToList();
+            }
+            
+            // Map any queried collections and groups to their respective users
+            foreach (var user in users)
+            {
+                if (userGroups != null)
+                {
+                    user.Groups = userGroups
+                        .FirstOrDefault(u => u.Key == user.Id)?
+                        .Select(ug => ug.GroupId).ToList() ?? new List<Guid>();
+                }
+
+                if (userCollections != null)
+                {
+                    user.Collections = userCollections
+                        .FirstOrDefault(u => u.Key == user.Id)?
+                        .Select(uc => new CollectionAccessSelection
+                        {
+                            Id = uc.CollectionId, 
+                            ReadOnly = uc.ReadOnly,
+                            HidePasswords = uc.HidePasswords 
+                        }).ToList() ?? new List<CollectionAccessSelection>();
+                }
+            }
+
+            return users;
+        }
+    }
+
+    public async Task<ICollection<Tuple<OrganizationUserUserDetails, ICollection<GroupUser>>>>
+        GetManyDetailsByOrganizationWithGroupsAsync(Guid organizationId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryMultipleAsync(
+                "[dbo].[OrganizationUserUserDetails_ReadWithGroupsByOrganizationId]",
+                new { OrganizationId = organizationId },
+                commandType: CommandType.StoredProcedure
+            );
+
+            var usersDetails = (await results.ReadAsync<OrganizationUserUserDetails>())
+                .ToList();
+            var groups = (await results.ReadAsync<GroupUser>())
+                .GroupBy(c => c.OrganizationUserId).ToList();
+
+            return usersDetails.Select(u =>
+                new Tuple<OrganizationUserUserDetails, ICollection<GroupUser>>(
+                    u,
+                    groups.FirstOrDefault(g => g.Key == u.OrganizationId)?
+                        .ToList() ?? new List<GroupUser>())
+            ).ToList();
         }
     }
 
