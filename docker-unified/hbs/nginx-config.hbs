@@ -1,6 +1,6 @@
 server {
-  listen 80 default_server;
-  #listen [::]:80 default_server;
+  listen 8080 default_server;
+  #listen [::]:8080 default_server;
   server_name {{{String.Coalesce env.BW_DOMAIN "localhost"}}};
 {{#if (String.Equal env.BW_ENABLE_SSL "true")}}
 
@@ -8,8 +8,8 @@ server {
 }
 
 server {
-  listen 443 ssl http2;
-  #listen [::]:443 ssl http2;
+  listen 8443 ssl http2;
+  #listen [::]:8443 ssl http2;
   server_name {{{String.Coalesce env.BW_DOMAIN "localhost"}}};
 
   ssl_certificate /etc/bitwarden/{{{String.Coalesce env.BW_SSL_CERT "ssl.crt"}}};

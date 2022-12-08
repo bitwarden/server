@@ -288,5 +288,5 @@ VOLUME ["/etc/bitwarden"]
 
 WORKDIR /app
 USER bitwarden:bitwarden
-HEALTHCHECK CMD curl --insecure -Lfs https://localhost/alive || curl -Lfs http://localhost/alive || exit 1
+HEALTHCHECK CMD curl --insecure -Lfs https://localhost:8443/alive || curl -Lfs http://localhost:8080/alive || exit 1
 ENTRYPOINT ["/entrypoint.sh"]
