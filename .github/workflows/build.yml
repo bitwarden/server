@@ -233,7 +233,6 @@ jobs:
             base_path: ./bitwarden_license/src
             docker_repos: [bitwarden, bitwardenqa.azurecr.io]
             dotnet: true
-            skip_dct: true
     steps:
       - name: Checkout repo
         uses: actions/checkout@a12a3943b4bdde767164f792f33f40b04645d846
@@ -245,7 +244,7 @@ jobs:
           PROJECT_NAME=$(echo "${{ matrix.project_name }}" | awk '{print tolower($0)}')
           echo "Matrix name: ${{ matrix.project_name }}"
           echo "PROJECT_NAME: $PROJECT_NAME"
-          echo "::set-output name=project_name::$PROJECT_NAME"
+          echo "project_name=$PROJECT_NAME" >> $GITHUB_OUTPUT
 
       - name: Get build artifact
         if: ${{ matrix.dotnet }}
@@ -334,7 +333,6 @@ jobs:
           && (github.ref == 'refs/heads/master' ||
             github.ref == 'refs/heads/rc' ||
             github.ref == 'refs/heads/hotfix-rc')
-          && (!matrix.skip_dct)
         env:
           DCT_DELEGATION_KEY_ID: "c9bde8ec820701516491e5e03d3a6354e7bd66d05fa3df2b0062f68b116dc59c"
           DCT_DELEGATE_KEY: ${{ steps.retrieve-secrets.outputs.dct-delegate-2-key }}

@@ -20,7 +20,7 @@ jobs:
 
       - name: Check Branch to Publish
         env:
-          PUBLISH_BRANCHES: "master,rc,hotfix-rc,rc-2022.12"
+          PUBLISH_BRANCHES: "master,rc,hotfix-rc"
         id: publish-branch-check
         run: |
           IFS="," read -a publish_branches <<< $PUBLISH_BRANCHES
@@ -90,6 +90,8 @@ jobs:
           IMAGE_TAG=$(echo "${GITHUB_REF:11}" | sed "s#/#-#g")  # slash safe branch name
           if [[ "$IMAGE_TAG" == "master" ]]; then
             IMAGE_TAG=dev
+          elif [[ "$IMAGE_TAG" == "rc" ]] || [[ "$IMAGE_TAG" == "hotfix-rc" ]]; then
+            IMAGE_TAG=beta
           fi
 
           echo "image_tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
@@ -99,7 +101,7 @@ jobs:
         env:
           IMAGE_TAG: ${{ steps.tag.outputs.image_tag }}
         run: |
-          if [ "$IMAGE_TAG" = "dev" ] || [ "$IMAGE_TAG" = "rc-2022.12" ]; then
+          if [ "$IMAGE_TAG" = "dev" ] || [ "$IMAGE_TAG" = "beta" ]; then
             echo "tags=bitwardenqa.azurecr.io/self-host:${IMAGE_TAG},bitwarden/self-host:${IMAGE_TAG}" >> $GITHUB_OUTPUT
           else
             echo "tags=bitwardenqa.azurecr.io/self-host:${IMAGE_TAG}" >> $GITHUB_OUTPUT
