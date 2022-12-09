@@ -46,6 +46,7 @@ public class EventTableEntity : TableEntity, IEvent
     public string IpAddress { get; set; }
     public Guid? ActingUserId { get; set; }
     public EventSystemUser? SystemUser { get; set; }
+    public string DomainName { get; set; }
 
     public override IDictionary<string, EntityProperty> WriteEntity(OperationContext operationContext)
     {

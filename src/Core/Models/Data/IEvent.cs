@@ -21,4 +21,5 @@ public interface IEvent
     string IpAddress { get; set; }
     DateTime Date { get; set; }
     EventSystemUser? SystemUser { get; set; }
+    string DomainName { get; set; }
 }
