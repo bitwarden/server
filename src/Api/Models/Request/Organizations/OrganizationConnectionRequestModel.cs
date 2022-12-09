@@ -2,6 +2,7 @@
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations.OrganizationConnections;
+using Bit.Core.Models.OrganizationConnectionConfigs;
 using Bit.Core.Utilities;
 
 namespace Bit.Api.Models.Request.Organizations;
@@ -17,7 +18,7 @@ public class OrganizationConnectionRequestModel
 }
 
 
-public class OrganizationConnectionRequestModel<T> : OrganizationConnectionRequestModel where T : new()
+public class OrganizationConnectionRequestModel<T> : OrganizationConnectionRequestModel where T : IConnectionConfig
 {
     public T ParsedConfig { get; private set; }
 

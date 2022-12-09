@@ -366,7 +366,7 @@ public class OrganizationConnectionsControllerTests
     }
 
     private static OrganizationConnectionRequestModel<T> RequestModelFromEntity<T>(OrganizationConnection entity)
-        where T : new()
+        where T : IConnectionConfig
     {
         return new(new OrganizationConnectionRequestModel()
         {

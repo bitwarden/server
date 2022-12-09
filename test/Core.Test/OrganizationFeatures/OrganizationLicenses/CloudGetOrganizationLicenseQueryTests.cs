@@ -17,11 +17,11 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationLicenses;
 [SubscriptionInfoCustomize]
 [OrganizationLicenseCustomize]
 [SutProviderCustomize]
-public class GetOrganizationLicenseQueryTests
+public class CloudGetOrganizationLicenseQueryTests
 {
     [Theory]
     [BitAutoData]
-    public async Task GetLicenseAsync_InvalidInstallationId_Throws(SutProvider<GetOrganizationLicenseQuery> sutProvider,
+    public async Task GetLicenseAsync_InvalidInstallationId_Throws(SutProvider<CloudGetOrganizationLicenseQuery> sutProvider,
         Organization organization, Guid installationId, int version)
     {
         sutProvider.GetDependency<IInstallationRepository>().GetByIdAsync(installationId).ReturnsNull();
@@ -32,7 +32,7 @@ public class GetOrganizationLicenseQueryTests
 
     [Theory]
     [BitAutoData]
-    public async Task GetLicenseAsync_DisabledOrganization_Throws(SutProvider<GetOrganizationLicenseQuery> sutProvider,
+    public async Task GetLicenseAsync_DisabledOrganization_Throws(SutProvider<CloudGetOrganizationLicenseQuery> sutProvider,
         Organization organization, Guid installationId, Installation installation)
     {
         installation.Enabled = false;
@@ -45,7 +45,7 @@ public class GetOrganizationLicenseQueryTests
 
     [Theory]
     [BitAutoData]
-    public async Task GetLicenseAsync_CreatesAndReturns(SutProvider<GetOrganizationLicenseQuery> sutProvider,
+    public async Task GetLicenseAsync_CreatesAndReturns(SutProvider<CloudGetOrganizationLicenseQuery> sutProvider,
         Organization organization, Guid installationId, Installation installation, SubscriptionInfo subInfo,
         byte[] licenseSignature)
     {

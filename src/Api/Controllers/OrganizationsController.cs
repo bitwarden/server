@@ -38,7 +38,7 @@ public class OrganizationsController : Controller
     private readonly IRotateOrganizationApiKeyCommand _rotateOrganizationApiKeyCommand;
     private readonly ICreateOrganizationApiKeyCommand _createOrganizationApiKeyCommand;
     private readonly IOrganizationApiKeyRepository _organizationApiKeyRepository;
-    private readonly IGetOrganizationLicenseQuery _getOrganizationLicenseQuery;
+    private readonly ICloudGetOrganizationLicenseQuery _cloudGetOrganizationLicenseQuery;
     private readonly GlobalSettings _globalSettings;
 
     public OrganizationsController(
@@ -55,7 +55,7 @@ public class OrganizationsController : Controller
         IRotateOrganizationApiKeyCommand rotateOrganizationApiKeyCommand,
         ICreateOrganizationApiKeyCommand createOrganizationApiKeyCommand,
         IOrganizationApiKeyRepository organizationApiKeyRepository,
-        IGetOrganizationLicenseQuery getOrganizationLicenseQuery,
+        ICloudGetOrganizationLicenseQuery cloudGetOrganizationLicenseQuery,
         GlobalSettings globalSettings)
     {
         _organizationRepository = organizationRepository;
@@ -71,7 +71,7 @@ public class OrganizationsController : Controller
         _rotateOrganizationApiKeyCommand = rotateOrganizationApiKeyCommand;
         _createOrganizationApiKeyCommand = createOrganizationApiKeyCommand;
         _organizationApiKeyRepository = organizationApiKeyRepository;
-        _getOrganizationLicenseQuery = getOrganizationLicenseQuery;
+        _cloudGetOrganizationLicenseQuery = cloudGetOrganizationLicenseQuery;
         _globalSettings = globalSettings;
     }
 
@@ -154,7 +154,7 @@ public class OrganizationsController : Controller
         }
 
         var org = await _organizationRepository.GetByIdAsync(new Guid(id));
-        var license = await _getOrganizationLicenseQuery.GetLicenseAsync(org, installationId);
+        var license = await _cloudGetOrganizationLicenseQuery.GetLicenseAsync(org, installationId);
         if (license == null)
         {
             throw new NotFoundException();
@@ -220,6 +220,7 @@ public class OrganizationsController : Controller
         return new OrganizationResponseModel(result.Item1);
     }
 
+    [Obsolete("2022-12-7 Moved to SelfHostedOrganizationLicensesController, to be removed in EC-815")]
     [HttpPost("license")]
     [SelfHosted(SelfHostedOnly = true)]
     public async Task<OrganizationResponseModel> PostLicense(OrganizationCreateLicenseRequestModel model)
@@ -453,6 +454,7 @@ public class OrganizationsController : Controller
         }
     }
 
+    [Obsolete("2022-12-7 Moved to SelfHostedOrganizationLicensesController, to be removed in EC-815")]
     [HttpPost("{id}/license")]
     [SelfHosted(SelfHostedOnly = true)]
     public async Task PostLicense(string id, LicenseRequestModel model)
