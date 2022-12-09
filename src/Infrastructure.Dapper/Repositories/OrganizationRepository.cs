@@ -126,6 +126,7 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
             selfHostOrganization.OccupiedSeatCount = await result.ReadSingleAsync<int>();
             selfHostOrganization.CollectionCount = await result.ReadSingleAsync<int>();
             selfHostOrganization.GroupCount = await result.ReadSingleAsync<int>();
+            selfHostOrganization.OrganizationUsers = await result.ReadAsync<OrganizationUser>();
             selfHostOrganization.Policies = await result.ReadAsync<Policy>();
             selfHostOrganization.SsoConfig = await result.ReadFirstOrDefaultAsync<SsoConfig>();
             selfHostOrganization.ScimConnections = await result.ReadAsync<OrganizationConnection>();

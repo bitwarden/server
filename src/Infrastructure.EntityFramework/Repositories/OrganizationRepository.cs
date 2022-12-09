@@ -161,6 +161,11 @@ public class OrganizationRepository : Repository<Core.Entities.Organization, Org
         {
             var dbContext = GetDatabaseContext(scope);
             var organization = await GetDbSet(dbContext).FindAsync(id);
+            if (organization == null)
+            {
+                return null;
+            }
+            
             var selfHostOrganization = Mapper.Map<SelfHostedOrganizationDetails>(organization);
 
             selfHostOrganization.OccupiedSeatCount =
