@@ -419,11 +419,16 @@ public class OrganizationLicenseMapperProfile : Profile
 {
     public OrganizationLicenseMapperProfile()
     {
-        // Do not update Organization.Id from the license
-        // The same Org will have different Ids between Cloud and Selfhosted
+        // Used to update an Organization from a license file
+        
+        // Excluded props:
+        // Id - it's different between cloud and self-hosted
+        // MaxStorageGb - it's not enforced for self-hosted
+        string[] excludedProps = {"Id", "MaxStorageGb"};
+        
         ShouldMapField = fieldInfo => false;
-        ShouldMapProperty = propertyInfo => propertyInfo.Name != "Id";
-
+        ShouldMapProperty = propertyInfo => !excludedProps.Contains(propertyInfo.Name);
+        
         CreateMap<OrganizationLicense, Organization>();
     }
 }
