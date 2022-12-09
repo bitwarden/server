@@ -1,4 +1,29 @@
-﻿CREATE PROCEDURE [dbo].[Event_Create]
+--Add column DomainName to Event table
+IF COL_LENGTH('[dbo].[Event]', 'DomainName') IS NULL
+    BEGIN
+        ALTER TABLE
+            [dbo].[Event]
+        ADD
+            [DomainName] VARCHAR(256) NULL;
+    END
+GO
+
+-- Recreate EventView 
+IF OBJECT_ID('[dbo].[EventView]') IS NOT NULL
+BEGIN
+    DROP VIEW [dbo].[EventView]
+END
+GO
+
+CREATE VIEW [dbo].[EventView]
+AS
+SELECT
+    *
+FROM
+    [dbo].[Event]
+GO
+
+CREATE OR ALTER PROCEDURE [dbo].[Event_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
     @Type INT,
     @UserId UNIQUEIDENTIFIER,
@@ -67,3 +92,4 @@ BEGIN
         @DomainName
     )
 END
+GO
