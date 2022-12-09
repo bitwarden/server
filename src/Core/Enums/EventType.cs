@@ -75,7 +75,7 @@ public enum EventType : int
     ProviderOrganization_Added = 1901,
     ProviderOrganization_Removed = 1902,
     ProviderOrganization_VaultAccessed = 1903,
-    
+
     OrganizationDomain_Added = 1904,
     OrganizationDomain_Removed = 1905,
     OrganizationDomain_Verified = 1906,
