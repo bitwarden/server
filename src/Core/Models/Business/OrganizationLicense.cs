@@ -239,7 +239,7 @@ public class OrganizationLicense : ILicense
         return true;
     }
 
-    public bool ValidateForOrganization(SelfHostedOrganizationDetails organization, Organization existingOrganization, out string exception)
+    public bool ValidateForOrganization(SelfHostedOrganizationDetails organization, out string exception)
     {
         if (Seats.HasValue && organization.OccupiedSeatCount > Seats.Value)
         {
@@ -256,7 +256,7 @@ public class OrganizationLicense : ILicense
             return false;
         }
 
-        if (!UseGroups && UseGroups && organization.GroupCount > 1)
+        if (!UseGroups && organization.UseGroups && organization.GroupCount > 1)
         {
             exception = $"Your organization currently has {organization.GroupCount} groups. " +
                 $"Your new license does not allow for the use of groups. Remove all groups.";
@@ -293,14 +293,12 @@ public class OrganizationLicense : ILicense
             return false;
         }
 
-        if (!UseCustomPermissions && organization.UseCustomPermissions)
+        if (!UseCustomPermissions && organization.UseCustomPermissions &&
+            organization.OrganizationUsers.Any(ou => ou.Type == OrganizationUserType.Custom))
         {
-            if (organization.OrganizationUsers.Any(ou => ou.Type == OrganizationUserType.Custom))
-            {
-                exception = "Your new plan does not allow the Custom Permissions feature. " +
-                    "Disable your Custom Permissions configuration.";
-                return false;
-            }
+            exception = "Your new plan does not allow the Custom Permissions feature. " +
+                "Disable your Custom Permissions configuration.";
+            return false;
         }
 
         if (!UseResetPassword && organization.UseResetPassword &&

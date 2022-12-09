@@ -40,7 +40,7 @@ public class UpdateOrganizationLicenseCommand : IUpdateOrganizationLicenseComman
         }
 
         var canUse = license.ValidateForInstallation(_globalSettings, _licensingService, out var exception) &&
-            license.ValidateForOrganization(selfHostedOrganization, currentOrganizationUsingLicenseKey, out exception);
+            license.ValidateForOrganization(selfHostedOrganization, out exception);
 
         if (!canUse)
         {
