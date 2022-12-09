@@ -11,6 +11,4 @@ public interface ICreateGroupCommand
 
     Task CreateGroupAsync(Group group, Organization organization, EventSystemUser systemUser,
         IEnumerable<SelectionReadOnly> collections = null);
-
-    void Validate(Organization organization);
 }

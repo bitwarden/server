@@ -48,9 +48,8 @@ public class PutGroupCommandTests
         AssertHelper.AssertPropertyEqual(expectedResult, result, "CreationDate", "RevisionDate");
         Assert.Equal(displayName, group.Name);
 
-        sutProvider.GetDependency<IUpdateGroupCommand>().Received(1).Validate(organization);
-        await sutProvider.GetDependency<IUpdateGroupCommand>().Received(1).UpdateGroupAsync(group, EventSystemUser.SCIM);
-        await sutProvider.GetDependency<IGroupRepository>().Received(0).UpdateUsersAsync(group.Id, Arg.Any<IEnumerable<Guid>>());
+        await sutProvider.GetDependency<IUpdateGroupCommand>().Received(1).UpdateGroupAsync(group, organization, EventSystemUser.SCIM);
+        await sutProvider.GetDependency<IGroupRepository>().DidNotReceiveWithAnyArgs().UpdateUsersAsync(default, default);
     }
 
     [Theory]
@@ -88,8 +87,7 @@ public class PutGroupCommandTests
         AssertHelper.AssertPropertyEqual(expectedResult, result, "CreationDate", "RevisionDate");
         Assert.Equal(displayName, group.Name);
 
-        sutProvider.GetDependency<IUpdateGroupCommand>().Received(1).Validate(organization);
-        await sutProvider.GetDependency<IUpdateGroupCommand>().Received(1).UpdateGroupAsync(group, EventSystemUser.SCIM);
+        await sutProvider.GetDependency<IUpdateGroupCommand>().Received(1).UpdateGroupAsync(group, organization, EventSystemUser.SCIM);
         await sutProvider.GetDependency<IGroupRepository>().Received(1).UpdateUsersAsync(group.Id, Arg.Is<IEnumerable<Guid>>(arg => arg.All(id => membersUserIds.Contains(id))));
     }
 

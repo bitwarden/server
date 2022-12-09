@@ -108,11 +108,9 @@ public class GroupsController : Controller
     [ProducesResponseType(typeof(ErrorResponseModel), (int)HttpStatusCode.BadRequest)]
     public async Task<IActionResult> Post([FromBody] GroupCreateUpdateRequestModel model)
     {
-        var organization = await _organizationRepository.GetByIdAsync(_currentContext.OrganizationId.Value);
-
-        _createGroupCommand.Validate(organization);
         var group = model.ToGroup(_currentContext.OrganizationId.Value);
         var associations = model.Collections?.Select(c => c.ToSelectionReadOnly());
+        var organization = await _organizationRepository.GetByIdAsync(_currentContext.OrganizationId.Value);
         await _createGroupCommand.CreateGroupAsync(group, organization, associations);
         var response = new GroupResponseModel(group, associations);
         return new JsonResult(response);
@@ -133,19 +131,16 @@ public class GroupsController : Controller
     [ProducesResponseType((int)HttpStatusCode.NotFound)]
     public async Task<IActionResult> Put(Guid id, [FromBody] GroupCreateUpdateRequestModel model)
     {
-        var organization = await _organizationRepository.GetByIdAsync(_currentContext.OrganizationId.Value);
-
         var existingGroup = await _groupRepository.GetByIdAsync(id);
         if (existingGroup == null || existingGroup.OrganizationId != _currentContext.OrganizationId)
         {
             return new NotFoundResult();
         }
 
-        _updateGroupCommand.Validate(organization);
-
         var updatedGroup = model.ToGroup(existingGroup);
         var associations = model.Collections?.Select(c => c.ToSelectionReadOnly());
-        await _updateGroupCommand.UpdateGroupAsync(updatedGroup, associations);
+        var organization = await _organizationRepository.GetByIdAsync(_currentContext.OrganizationId.Value);
+        await _updateGroupCommand.UpdateGroupAsync(updatedGroup, organization, associations);
         var response = new GroupResponseModel(updatedGroup, associations);
         return new JsonResult(response);
     }

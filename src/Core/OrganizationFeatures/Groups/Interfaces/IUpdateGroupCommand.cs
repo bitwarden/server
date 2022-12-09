@@ -6,11 +6,9 @@ namespace Bit.Core.OrganizationFeatures.Groups.Interfaces;
 
 public interface IUpdateGroupCommand
 {
-    Task UpdateGroupAsync(Group group,
+    Task UpdateGroupAsync(Group group, Organization organization,
         IEnumerable<SelectionReadOnly> collections = null);
 
-    Task UpdateGroupAsync(Group group, EventSystemUser systemUser,
+    Task UpdateGroupAsync(Group group, Organization organization, EventSystemUser systemUser,
         IEnumerable<SelectionReadOnly> collections = null);
-
-    void Validate(Organization organization);
 }

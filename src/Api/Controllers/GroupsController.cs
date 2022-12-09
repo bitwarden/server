@@ -104,8 +104,6 @@ public class GroupsController : Controller
         }
 
         var organization = await _organizationRepository.GetByIdAsync(orgIdGuid);
-        _createGroupCommand.Validate(organization);
-
         var group = model.ToGroup(orgIdGuid);
         await _createGroupCommand.CreateGroupAsync(group, organization, model.Collections?.Select(c => c.ToSelectionReadOnly()));
 
@@ -125,8 +123,7 @@ public class GroupsController : Controller
         var orgIdGuid = new Guid(orgId);
         var organization = await _organizationRepository.GetByIdAsync(orgIdGuid);
 
-        _updateGroupCommand.Validate(organization);
-        await _updateGroupCommand.UpdateGroupAsync(model.ToGroup(group), model.Collections?.Select(c => c.ToSelectionReadOnly()));
+        await _updateGroupCommand.UpdateGroupAsync(model.ToGroup(group), organization, model.Collections?.Select(c => c.ToSelectionReadOnly()));
         return new GroupResponseModel(group);
     }
 

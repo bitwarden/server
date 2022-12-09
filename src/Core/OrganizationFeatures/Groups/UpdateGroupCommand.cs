@@ -21,31 +21,20 @@ public class UpdateGroupCommand : IUpdateGroupCommand
         _groupRepository = groupRepository;
     }
 
-    public async Task UpdateGroupAsync(Group group,
+    public async Task UpdateGroupAsync(Group group, Organization organization,
         IEnumerable<SelectionReadOnly> collections = null)
     {
+        Validate(organization);
         await GroupRepositoryUpdateGroupAsync(group, collections);
         await _eventService.LogGroupEventAsync(group, Enums.EventType.Group_Updated);
     }
 
-    public async Task UpdateGroupAsync(Group group, EventSystemUser systemUser,
+    public async Task UpdateGroupAsync(Group group, Organization organization, EventSystemUser systemUser,
         IEnumerable<SelectionReadOnly> collections = null)
     {
+        Validate(organization);
         await GroupRepositoryUpdateGroupAsync(group, collections);
         await _eventService.LogGroupEventAsync(group, Enums.EventType.Group_Updated, systemUser);
-    }
-
-    public void Validate(Organization organization)
-    {
-        if (organization == null)
-        {
-            throw new BadRequestException("Organization not found");
-        }
-
-        if (!organization.UseGroups)
-        {
-            throw new BadRequestException("This organization cannot use groups.");
-        }
     }
 
     private async Task GroupRepositoryUpdateGroupAsync(Group group, IEnumerable<SelectionReadOnly> collections = null)
@@ -59,6 +48,19 @@ public class UpdateGroupCommand : IUpdateGroupCommand
         else
         {
             await _groupRepository.ReplaceAsync(group, collections);
+        }
+    }
+
+    private static void Validate(Organization organization)
+    {
+        if (organization == null)
+        {
+            throw new BadRequestException("Organization not found");
+        }
+
+        if (!organization.UseGroups)
+        {
+            throw new BadRequestException("This organization cannot use groups.");
         }
     }
 }

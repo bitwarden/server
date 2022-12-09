@@ -95,7 +95,8 @@ public class GroupsController : Controller
     [HttpPatch("{id}")]
     public async Task<IActionResult> Patch(Guid organizationId, Guid id, [FromBody] ScimPatchModel model)
     {
-        await _patchGroupCommand.PatchGroupAsync(organizationId, id, model);
+        var organization = await _organizationRepository.GetByIdAsync(organizationId);
+        await _patchGroupCommand.PatchGroupAsync(organization, id, model);
         return new NoContentResult();
     }
 

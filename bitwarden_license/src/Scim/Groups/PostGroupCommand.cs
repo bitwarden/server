@@ -28,8 +28,6 @@ public class PostGroupCommand : IPostGroupCommand
 
     public async Task<Group> PostGroupAsync(Organization organization, ScimGroupRequestModel model)
     {
-        _createGroupCommand.Validate(organization);
-
         if (string.IsNullOrWhiteSpace(model.DisplayName))
         {
             throw new BadRequestException();

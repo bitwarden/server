@@ -28,6 +28,7 @@ public class CreateGroupCommand : ICreateGroupCommand
     public async Task CreateGroupAsync(Group group, Organization organization,
         IEnumerable<SelectionReadOnly> collections = null)
     {
+        Validate(organization);
         await GroupRepositoryCreateGroupAsync(group, organization, collections);
         await _eventService.LogGroupEventAsync(group, Enums.EventType.Group_Created);
     }
@@ -35,21 +36,9 @@ public class CreateGroupCommand : ICreateGroupCommand
     public async Task CreateGroupAsync(Group group, Organization organization, EventSystemUser systemUser,
         IEnumerable<SelectionReadOnly> collections = null)
     {
+        Validate(organization);
         await GroupRepositoryCreateGroupAsync(group, organization, collections);
         await _eventService.LogGroupEventAsync(group, Enums.EventType.Group_Created, systemUser);
-    }
-
-    public void Validate(Organization organization)
-    {
-        if (organization == null)
-        {
-            throw new BadRequestException("Organization not found");
-        }
-
-        if (!organization.UseGroups)
-        {
-            throw new BadRequestException("This organization cannot use groups.");
-        }
     }
 
     private async Task GroupRepositoryCreateGroupAsync(Group group, Organization organization, IEnumerable<SelectionReadOnly> collections = null)
@@ -66,5 +55,18 @@ public class CreateGroupCommand : ICreateGroupCommand
         }
 
         await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.GroupCreated, organization));
+    }
+
+    private static void Validate(Organization organization)
+    {
+        if (organization == null)
+        {
+            throw new BadRequestException("Organization not found");
+        }
+
+        if (!organization.UseGroups)
+        {
+            throw new BadRequestException("This organization cannot use groups.");
+        }
     }
 }

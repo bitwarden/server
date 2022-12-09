@@ -54,19 +54,27 @@ public class CreateGroupCommandTests
         AssertHelper.AssertRecent(group.RevisionDate);
     }
 
-    [Theory, OrganizationCustomize(UseGroups = false), BitAutoData]
-    public void Validate_WithNullOrganization_ThrowsBadRequest(SutProvider<CreateGroupCommand> sutProvider)
+    [Theory, OrganizationCustomize(UseGroups = true), BitAutoData]
+    public async Task CreateGroup_WithNullOrganization_Throws(SutProvider<CreateGroupCommand> sutProvider, Group group, EventSystemUser eventSystemUser)
     {
-        var exception = Assert.Throws<BadRequestException>(() => sutProvider.Sut.Validate(null));
+        var exception = await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.CreateGroupAsync(group, null, eventSystemUser));
 
         Assert.Contains("Organization not found", exception.Message);
+
+        await sutProvider.GetDependency<IGroupRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default);
+        await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogGroupEventAsync(default, default, default);
+        await sutProvider.GetDependency<IReferenceEventService>().DidNotReceiveWithAnyArgs().RaiseEventAsync(default);
     }
 
     [Theory, OrganizationCustomize(UseGroups = false), BitAutoData]
-    public void Validate_WithUseGroupsAsFalse_ThrowsBadRequest(SutProvider<CreateGroupCommand> sutProvider, Organization organization)
+    public async Task CreateGroup_WithUseGroupsAsFalse_Throws(SutProvider<CreateGroupCommand> sutProvider, Organization organization, Group group, EventSystemUser eventSystemUser)
     {
-        var exception = Assert.Throws<BadRequestException>(() => sutProvider.Sut.Validate(organization));
+        var exception = await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.CreateGroupAsync(group, organization, eventSystemUser));
 
         Assert.Contains("This organization cannot use groups", exception.Message);
+
+        await sutProvider.GetDependency<IGroupRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default);
+        await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogGroupEventAsync(default, default, default);
+        await sutProvider.GetDependency<IReferenceEventService>().DidNotReceiveWithAnyArgs().RaiseEventAsync(default);
     }
 }

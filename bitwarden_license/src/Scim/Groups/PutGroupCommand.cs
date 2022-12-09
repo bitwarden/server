@@ -27,8 +27,6 @@ public class PutGroupCommand : IPutGroupCommand
 
     public async Task<Group> PutGroupAsync(Organization organization, Guid id, ScimGroupRequestModel model)
     {
-        _updateGroupCommand.Validate(organization);
-
         var group = await _groupRepository.GetByIdAsync(id);
         if (group == null || group.OrganizationId != organization.Id)
         {
@@ -36,7 +34,7 @@ public class PutGroupCommand : IPutGroupCommand
         }
 
         group.Name = model.DisplayName;
-        await _updateGroupCommand.UpdateGroupAsync(group, EventSystemUser.SCIM);
+        await _updateGroupCommand.UpdateGroupAsync(group, organization, EventSystemUser.SCIM);
         await UpdateGroupMembersAsync(group, model);
 
         return group;
