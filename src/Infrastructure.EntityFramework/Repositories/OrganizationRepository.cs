@@ -165,7 +165,7 @@ public class OrganizationRepository : Repository<Core.Entities.Organization, Org
             {
                 return null;
             }
-            
+
             var selfHostOrganization = Mapper.Map<SelfHostedOrganizationDetails>(organization);
 
             selfHostOrganization.OccupiedSeatCount =
