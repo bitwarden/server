@@ -84,14 +84,14 @@ sed -i "s/autostart=true/autostart=${BW_ENABLE_NOTIFICATIONS}/" /etc/supervisor.
 sed -i "s/autostart=true/autostart=${BW_ENABLE_SCIM}/" /etc/supervisor.d/scim.ini
 sed -i "s/autostart=true/autostart=${BW_ENABLE_SSO}/" /etc/supervisor.d/sso.ini
 
-#chown -R $UID:$GID \
-    #/app \
-    #/etc/bitwarden \
+chown -R $UID:$GID \
+    /app \
+    /etc/bitwarden \
     #/etc/nginx/http.d \
     #/etc/supervisor \
     #/etc/supervisor.d \
     #/var/lib/nginx \
-    #/var/log \
-    #/run
+    /var/log \
+    /run
 
 su-exec $UID:$GID /usr/bin/supervisord

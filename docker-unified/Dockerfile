@@ -228,29 +228,16 @@ RUN mkdir -p /etc/supervisor.d
 RUN mkdir -p /var/log/bitwarden
 RUN mkdir -p /var/log/nginx/logs
 RUN mkdir -p /app
-#RUN chown -R bitwarden:bitwarden \
-#    /app \
-#    /etc/bitwarden \
-#    /etc/nginx/http.d \
-#    /etc/supervisor \
-#    /etc/supervisor.d \
-#    /var/lib/nginx \
-#    /var/log \
-#    /run
 
 # Copy all apps from dotnet-build stage
 WORKDIR /app
-#COPY --chown=bitwarden:bitwarden --from=dotnet-build /app ./
 COPY --from=dotnet-build /app ./
 
 # Copy Web files from web-setup stage
-#COPY --chown=bitwarden:bitwarden --from=web-setup /tmp/build /app/Web
 COPY --from=web-setup /tmp/build /app/Web
 
 # Set up supervisord
-#COPY --chown=bitwarden:bitwarden docker-unified/supervisord/*.ini /etc/supervisor.d/
 COPY docker-unified/supervisord/*.ini /etc/supervisor.d/
-#COPY --chown=bitwarden:bitwarden docker-unified/supervisord/supervisord.conf /etc/supervisor/supervisord.conf
 COPY docker-unified/supervisord/supervisord.conf /etc/supervisor/supervisord.conf
 RUN rm -f /etc/supervisord.conf
 
@@ -289,5 +276,4 @@ RUN apk add --update-cache \
 VOLUME ["/etc/bitwarden"]
 
 WORKDIR /app
-#USER bitwarden:bitwarden
 ENTRYPOINT ["/entrypoint.sh"]
