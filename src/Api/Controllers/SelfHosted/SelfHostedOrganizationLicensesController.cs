@@ -26,6 +26,7 @@ public class SelfHostedOrganizationLicensesController : Controller
     private readonly IOrganizationService _organizationService;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IUserService _userService;
+    private readonly IUpdateOrganizationLicenseCommand _updateOrganizationLicenseCommand;
 
     public SelfHostedOrganizationLicensesController(
         ICurrentContext currentContext,
@@ -33,7 +34,8 @@ public class SelfHostedOrganizationLicensesController : Controller
         IOrganizationConnectionRepository organizationConnectionRepository,
         IOrganizationService organizationService,
         IOrganizationRepository organizationRepository,
-        IUserService userService)
+        IUserService userService,
+        IUpdateOrganizationLicenseCommand updateOrganizationLicenseCommand)
     {
         _currentContext = currentContext;
         _selfHostedGetOrganizationLicenseQuery = selfHostedGetOrganizationLicenseQuery;
@@ -41,6 +43,7 @@ public class SelfHostedOrganizationLicensesController : Controller
         _organizationService = organizationService;
         _organizationRepository = organizationRepository;
         _userService = userService;
+        _updateOrganizationLicenseCommand = updateOrganizationLicenseCommand;
     }
 
     [HttpPost("")]
@@ -78,25 +81,33 @@ public class SelfHostedOrganizationLicensesController : Controller
             throw new BadRequestException("Invalid license");
         }
 
-        await _organizationService.UpdateLicenseAsync(new Guid(id), license);
+        var selfHostedOrganizationDetails = await _organizationRepository.GetSelfHostedOrganizationDetailsById(orgIdGuid);
+        if (selfHostedOrganizationDetails == null)
+        {
+            throw new NotFoundException();
+        }
+
+        var currentOrganization = await _organizationRepository.GetByLicenseKeyAsync(license.LicenseKey);
+
+        await _updateOrganizationLicenseCommand.UpdateLicenseAsync(selfHostedOrganizationDetails, license, currentOrganization);
     }
 
     [HttpPost("{id}/sync")]
     public async Task SyncLicenseAsync(string id)
     {
-        var organization = await _organizationRepository.GetByIdAsync(new Guid(id));
-        if (organization == null)
+        var selfHostedOrganizationDetails = await _organizationRepository.GetSelfHostedOrganizationDetailsById(new Guid(id));
+        if (selfHostedOrganizationDetails == null)
         {
             throw new NotFoundException();
         }
 
-        if (!await _currentContext.OrganizationOwner(organization.Id))
+        if (!await _currentContext.OrganizationOwner(selfHostedOrganizationDetails.Id))
         {
             throw new NotFoundException();
         }
 
         var billingSyncConnection =
-            (await _organizationConnectionRepository.GetByOrganizationIdTypeAsync(organization.Id,
+            (await _organizationConnectionRepository.GetByOrganizationIdTypeAsync(selfHostedOrganizationDetails.Id,
                 OrganizationConnectionType.CloudBillingSync)).FirstOrDefault();
         if (billingSyncConnection == null)
         {
@@ -104,8 +115,9 @@ public class SelfHostedOrganizationLicensesController : Controller
         }
 
         var license =
-            await _selfHostedGetOrganizationLicenseQuery.GetLicenseAsync(organization, billingSyncConnection);
+            await _selfHostedGetOrganizationLicenseQuery.GetLicenseAsync(selfHostedOrganizationDetails, billingSyncConnection);
+        var currentOrganization = await _organizationRepository.GetByLicenseKeyAsync(license.LicenseKey);
 
-        await _organizationService.UpdateLicenseAsync(organization.Id, license);
+        await _updateOrganizationLicenseCommand.UpdateLicenseAsync(selfHostedOrganizationDetails, license, currentOrganization);
     }
 }
