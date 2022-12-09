@@ -20,11 +20,11 @@ public class OrganizationLicenseTests
         var (orgDetails, orgLicense) = GetOrganizationAndLicense(orgUsers, policies, ssoConfig, scimConnections, license);
 
         var result = orgLicense.ValidateForOrganization(orgDetails, out var exception);
-        
+
         Assert.True(result);
         Assert.True(string.IsNullOrEmpty(exception));
     }
-    
+
     [Theory]
     [BitAutoData]
     [OrganizationLicenseCustomize]
@@ -35,11 +35,11 @@ public class OrganizationLicenseTests
         orgLicense.Seats = 1;
 
         var result = orgLicense.ValidateForOrganization(orgDetails, out var exception);
-        
+
         Assert.False(result);
         Assert.Contains("Remove some users", exception);
     }
-    
+
     [Theory]
     [BitAutoData]
     [OrganizationLicenseCustomize]
@@ -50,11 +50,11 @@ public class OrganizationLicenseTests
         orgLicense.MaxCollections = 1;
 
         var result = orgLicense.ValidateForOrganization(orgDetails, out var exception);
-        
+
         Assert.False(result);
         Assert.Contains("Remove some collections", exception);
     }
-    
+
     [Theory]
     [BitAutoData]
     [OrganizationLicenseCustomize]
@@ -65,11 +65,11 @@ public class OrganizationLicenseTests
         orgLicense.UseGroups = false;
 
         var result = orgLicense.ValidateForOrganization(orgDetails, out var exception);
-        
+
         Assert.False(result);
         Assert.Contains("Your new license does not allow for the use of groups", exception);
     }
-    
+
     [Theory]
     [BitAutoData]
     [OrganizationLicenseCustomize]
@@ -80,11 +80,11 @@ public class OrganizationLicenseTests
         orgLicense.UsePolicies = false;
 
         var result = orgLicense.ValidateForOrganization(orgDetails, out var exception);
-        
+
         Assert.False(result);
         Assert.Contains("Your new license does not allow for the use of policies", exception);
     }
-    
+
     [Theory]
     [BitAutoData]
     [OrganizationLicenseCustomize]
@@ -96,7 +96,7 @@ public class OrganizationLicenseTests
         ((List<Policy>)orgDetails.Policies).ForEach(p => p.Enabled = false);
 
         var result = orgLicense.ValidateForOrganization(orgDetails, out var exception);
-        
+
         Assert.True(result);
         Assert.True(string.IsNullOrEmpty(exception));
     }
@@ -111,11 +111,11 @@ public class OrganizationLicenseTests
         orgLicense.UseSso = false;
 
         var result = orgLicense.ValidateForOrganization(orgDetails, out var exception);
-        
+
         Assert.False(result);
         Assert.Contains("Your new license does not allow for the use of SSO", exception);
     }
-    
+
     [Theory]
     [BitAutoData]
     [OrganizationLicenseCustomize]
@@ -125,13 +125,13 @@ public class OrganizationLicenseTests
         var (orgDetails, orgLicense) = GetOrganizationAndLicense(orgUsers, policies, ssoConfig, scimConnections, license);
         orgLicense.UseSso = false;
         orgDetails.SsoConfig.Enabled = false;
-        
+
         var result = orgLicense.ValidateForOrganization(orgDetails, out var exception);
-        
+
         Assert.True(result);
         Assert.True(string.IsNullOrEmpty(exception));
     }
-    
+
     [Theory]
     [BitAutoData]
     [OrganizationLicenseCustomize]
@@ -141,13 +141,13 @@ public class OrganizationLicenseTests
         var (orgDetails, orgLicense) = GetOrganizationAndLicense(orgUsers, policies, ssoConfig, scimConnections, license);
         orgLicense.UseSso = false;
         orgDetails.SsoConfig = null;
-        
+
         var result = orgLicense.ValidateForOrganization(orgDetails, out var exception);
-        
+
         Assert.True(result);
         Assert.True(string.IsNullOrEmpty(exception));
     }
-    
+
     [Theory]
     [BitAutoData]
     [OrganizationLicenseCustomize]
@@ -158,11 +158,11 @@ public class OrganizationLicenseTests
         orgLicense.UseKeyConnector = false;
 
         var result = orgLicense.ValidateForOrganization(orgDetails, out var exception);
-        
+
         Assert.False(result);
         Assert.Contains("Your new license does not allow for the use of Key Connector", exception);
     }
-    
+
     [Theory]
     [BitAutoData]
     [OrganizationLicenseCustomize]
@@ -171,14 +171,14 @@ public class OrganizationLicenseTests
     {
         var (orgDetails, orgLicense) = GetOrganizationAndLicense(orgUsers, policies, ssoConfig, scimConnections, license);
         orgLicense.UseKeyConnector = false;
-        orgDetails.SsoConfig.SetData(new SsoConfigurationData() { KeyConnectorEnabled = false});
-        
+        orgDetails.SsoConfig.SetData(new SsoConfigurationData() { KeyConnectorEnabled = false });
+
         var result = orgLicense.ValidateForOrganization(orgDetails, out var exception);
-        
+
         Assert.True(result);
         Assert.True(string.IsNullOrEmpty(exception));
     }
-    
+
     [Theory]
     [BitAutoData]
     [OrganizationLicenseCustomize]
@@ -188,13 +188,13 @@ public class OrganizationLicenseTests
         var (orgDetails, orgLicense) = GetOrganizationAndLicense(orgUsers, policies, ssoConfig, scimConnections, license);
         orgLicense.UseKeyConnector = false;
         orgDetails.SsoConfig = null;
-        
+
         var result = orgLicense.ValidateForOrganization(orgDetails, out var exception);
-        
+
         Assert.True(result);
         Assert.True(string.IsNullOrEmpty(exception));
     }
-    
+
     [Theory]
     [BitAutoData]
     [OrganizationLicenseCustomize]
@@ -205,11 +205,11 @@ public class OrganizationLicenseTests
         orgLicense.UseScim = false;
 
         var result = orgLicense.ValidateForOrganization(orgDetails, out var exception);
-        
+
         Assert.False(result);
         Assert.Contains("Your new plan does not allow the SCIM feature", exception);
     }
-    
+
     [Theory]
     [BitAutoData]
     [OrganizationLicenseCustomize]
@@ -218,15 +218,15 @@ public class OrganizationLicenseTests
     {
         var (orgDetails, orgLicense) = GetOrganizationAndLicense(orgUsers, policies, ssoConfig, scimConnections, license);
         orgLicense.UseScim = false;
-        ((List<OrganizationConnection<ScimConfig>>) orgDetails.ScimConnections)
-            .ForEach(c => c.SetConfig(new ScimConfig(){ Enabled = false}));
-        
+        ((List<OrganizationConnection<ScimConfig>>)orgDetails.ScimConnections)
+            .ForEach(c => c.SetConfig(new ScimConfig() { Enabled = false }));
+
         var result = orgLicense.ValidateForOrganization(orgDetails, out var exception);
-        
+
         Assert.True(result);
         Assert.True(string.IsNullOrEmpty(exception));
     }
-    
+
     [Theory]
     [BitAutoData]
     [OrganizationLicenseCustomize]
@@ -236,13 +236,13 @@ public class OrganizationLicenseTests
         var (orgDetails, orgLicense) = GetOrganizationAndLicense(orgUsers, policies, ssoConfig, scimConnections, license);
         orgLicense.UseScim = false;
         orgDetails.ScimConnections = null;
-        
+
         var result = orgLicense.ValidateForOrganization(orgDetails, out var exception);
-        
+
         Assert.True(result);
         Assert.True(string.IsNullOrEmpty(exception));
     }
-    
+
     [Theory]
     [BitAutoData]
     [OrganizationLicenseCustomize]
@@ -253,11 +253,11 @@ public class OrganizationLicenseTests
         orgLicense.UseCustomPermissions = false;
 
         var result = orgLicense.ValidateForOrganization(orgDetails, out var exception);
-        
+
         Assert.False(result);
         Assert.Contains("Your new plan does not allow the Custom Permissions feature", exception);
     }
-    
+
     [Theory]
     [BitAutoData]
     [OrganizationLicenseCustomize]
@@ -269,11 +269,11 @@ public class OrganizationLicenseTests
         ((List<OrganizationUser>)orgDetails.OrganizationUsers).ForEach(ou => ou.Type = OrganizationUserType.User);
 
         var result = orgLicense.ValidateForOrganization(orgDetails, out var exception);
-        
+
         Assert.True(result);
         Assert.True(string.IsNullOrEmpty(exception));
     }
-    
+
     [Theory]
     [BitAutoData]
     [OrganizationLicenseCustomize]
@@ -284,11 +284,11 @@ public class OrganizationLicenseTests
         orgLicense.UseResetPassword = false;
 
         var result = orgLicense.ValidateForOrganization(orgDetails, out var exception);
-        
+
         Assert.False(result);
         Assert.Contains("Your new license does not allow the Password Reset feature", exception);
     }
-    
+
     [Theory]
     [BitAutoData]
     [OrganizationLicenseCustomize]
@@ -300,11 +300,11 @@ public class OrganizationLicenseTests
         ((List<Policy>)orgDetails.Policies).ForEach(p => p.Enabled = false);
 
         var result = orgLicense.ValidateForOrganization(orgDetails, out var exception);
-        
+
         Assert.True(result);
         Assert.True(string.IsNullOrEmpty(exception));
     }
-    
+
     private (SelfHostedOrganizationDetails organization, OrganizationLicense license) GetOrganizationAndLicense(List<OrganizationUser> orgUsers,
         List<Policy> policies, SsoConfig ssoConfig, List<OrganizationConnection<ScimConfig>> scimConnections, OrganizationLicense license)
     {
@@ -312,17 +312,18 @@ public class OrganizationLicenseTests
         // Each test then toggles on/off as necessary
         policies.ForEach(p => p.Enabled = true);
         policies.First().Type = PolicyType.ResetPassword;
-        
+
         ssoConfig.Enabled = true;
-        ssoConfig.SetData(new SsoConfigurationData(){
+        ssoConfig.SetData(new SsoConfigurationData()
+        {
             KeyConnectorEnabled = true
         });
-        
+
         var enabledScimConfig = new ScimConfig() { Enabled = true };
         scimConnections.ForEach(c => c.Config = enabledScimConfig);
-        
+
         orgUsers.First().Type = OrganizationUserType.Custom;
-        
+
         var organization = new SelfHostedOrganizationDetails()
         {
             OccupiedSeatCount = 10,
@@ -332,7 +333,7 @@ public class OrganizationLicenseTests
             Policies = policies,
             SsoConfig = ssoConfig,
             ScimConnections = scimConnections,
-            
+
             UsePolicies = true,
             UseSso = true,
             UseKeyConnector = true,
