@@ -323,6 +323,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<byte?>("DeviceType")
                         .HasColumnType("tinyint unsigned");
 
+                    b.Property<string>("DomainName")
+                        .HasColumnType("longtext");
+
                     b.Property<Guid?>("GroupId")
                         .HasColumnType("char(36)");
 
