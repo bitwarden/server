@@ -1,4 +1,5 @@
-﻿using AutoMapper;
+﻿using System.Linq.Expressions;
+using AutoMapper;
 using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Infrastructure.EntityFramework.Repositories;
@@ -25,18 +26,22 @@ public class ProjectRepository : Repository<Core.Entities.Project, Project, Guid
         }
     }
 
-    public async Task<IEnumerable<Core.Entities.Project>> GetManyByOrganizationIdAsync(Guid organizationId)
+    public async Task<IEnumerable<Core.Entities.Project>> GetManyByOrganizationIdAsync(Guid organizationId, Guid userId)
     {
-        using (var scope = ServiceScopeFactory.CreateScope())
-        {
-            var dbContext = GetDatabaseContext(scope);
-            var project = await dbContext.Project
-                                    .Where(c => c.OrganizationId == organizationId && c.DeletedDate == null)
-                                    .OrderBy(c => c.RevisionDate)
-                                    .ToListAsync();
-            return Mapper.Map<List<Core.Entities.Project>>(project);
-        }
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        var project = await dbContext.Project
+            .Where(p => p.OrganizationId == organizationId && p.DeletedDate == null)
+            // TODO: Enable this + Handle Admins
+            //.Where(UserHasAccessToProject(userId))
+            .OrderBy(p => p.RevisionDate)
+            .ToListAsync();
+        return Mapper.Map<List<Core.Entities.Project>>(project);
     }
+
+    private static Expression<Func<Project, bool>> UserHasAccessToProject(Guid userId) => p =>
+        p.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == userId && ap.Read) ||
+        p.GroupAccessPolicies.Any(ap => ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Read));
 
     public async Task DeleteManyByIdAsync(IEnumerable<Guid> ids)
     {
