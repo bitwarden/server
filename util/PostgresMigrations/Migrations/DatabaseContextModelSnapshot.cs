@@ -732,6 +732,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<int>("JobRunCount")
                         .HasColumnType("integer");
 
+                    b.Property<DateTime?>("LastCheckedDate")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<DateTime>("NextRunDate")
                         .HasColumnType("timestamp with time zone");
 

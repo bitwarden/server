@@ -5,6 +5,7 @@ CREATE PROCEDURE [dbo].[OrganizationDomain_Update]
     @DomainName NVARCHAR(255),
     @CreationDate   DATETIME2(7),
     @VerifiedDate   DATETIME2(7),
+    @LastCheckedDate DATETIME2(7),
     @NextRunDate    DATETIME2(7),
     @JobRunCount   TINYINT
 AS
@@ -19,6 +20,7 @@ BEGIN
         [DomainName] = @DomainName,
         [CreationDate] = @CreationDate,
         [VerifiedDate] = @VerifiedDate,
+        [LastCheckedDate] = @LastCheckedDate
         [NextRunDate] = @NextRunDate,
         [JobRunCount] = @JobRunCount
     WHERE

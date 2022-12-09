@@ -5,6 +5,7 @@ CREATE TABLE [dbo].[OrganizationDomain] (
     [DomainName]        NVARCHAR(255)    NOT NULL,
     [CreationDate]      DATETIME2(7)     NOT NULL,
     [VerifiedDate]      DATETIME2(7)     NULL,
+    [LastCheckedDate]   DATETIME2(7)     NULL,
     [NextRunDate]       DATETIME2(7)     NOT NULL,
     [JobRunCount]      TINYINT          NOT NULL
     CONSTRAINT [PK_OrganizationDomain] PRIMARY KEY CLUSTERED ([Id] ASC),
