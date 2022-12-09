@@ -1,4 +1,5 @@
-﻿using Bit.Core.Repositories;
+﻿using Bit.Core.Enums;
+using Bit.Core.Repositories;
 using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Services;
@@ -7,15 +8,18 @@ public class VerificationDomainService : IVerificationDomainService
 {
     private readonly IOrganizationDomainRepository _domainRepository;
     private readonly IDnsResolverService _dnsResolverService;
+    private readonly IEventService _eventService;
     private readonly ILogger<VerificationDomainService> _logger;
 
     public VerificationDomainService(
         IOrganizationDomainRepository domainRepository,
         IDnsResolverService dnsResolverService,
+        IEventService eventService,
         ILogger<VerificationDomainService> logger)
     {
         _domainRepository = domainRepository;
         _dnsResolverService = dnsResolverService;
+        _eventService = eventService;
         _logger = logger;
     }
 
@@ -43,12 +47,16 @@ public class VerificationDomainService : IVerificationDomainService
                     domain.SetJobRunCount();
 
                     await _domainRepository.ReplaceAsync(domain);
+                    await _eventService.LogOrganizationDomainEventAsync(domain, EventType.OrganizationDomain_Verified,
+                        EventSystemUser.SSO);
                     return;
                 }
 
                 domain.SetJobRunCount();
                 domain.SetNextRunDate();
                 await _domainRepository.ReplaceAsync(domain);
+                await _eventService.LogOrganizationDomainEventAsync(domain, EventType.OrganizationDomain_NotVerified,
+                    EventSystemUser.SSO);
             }
             catch (Exception ex)
             {

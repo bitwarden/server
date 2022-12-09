@@ -1,17 +1,22 @@
 ﻿using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.OrganizationFeatures.OrganizationDomains.Interfaces;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationDomains;
 
 public class CreateOrganizationDomainCommand : ICreateOrganizationDomainCommand
 {
     private readonly IOrganizationDomainRepository _organizationDomainRepository;
+    private readonly IEventService _eventService;
 
-    public CreateOrganizationDomainCommand(IOrganizationDomainRepository organizationDomainRepository)
+    public CreateOrganizationDomainCommand(IOrganizationDomainRepository organizationDomainRepository,
+        IEventService eventService)
     {
         _organizationDomainRepository = organizationDomainRepository;
+        _eventService = eventService;
     }
 
     public async Task<OrganizationDomain> CreateAsync(OrganizationDomain organizationDomain)
@@ -25,7 +30,9 @@ public class CreateOrganizationDomainCommand : ICreateOrganizationDomainCommand
         }
 
         organizationDomain.SetNextRunDate();
-
-        return await _organizationDomainRepository.CreateAsync(organizationDomain);
+        
+        var orgDomain = await _organizationDomainRepository.CreateAsync(organizationDomain);
+        await _eventService.LogOrganizationDomainEventAsync(orgDomain, EventType.OrganizationDomain_Added);
+        return orgDomain;
     }
 }
