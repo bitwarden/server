@@ -1,4 +1,4 @@
-name: Bug Report
+name: Server Bug Report
 description: File a bug report
 labels: [bug]
 body:
@@ -6,7 +6,7 @@ body:
     attributes:
       value: |
         Thanks for taking the time to fill out this bug report!
-        
+
         Please do not submit feature requests. The [Community Forums](https://community.bitwarden.com) has a section for submitting, voting for, and discussing product feature requests.
   - type: textarea
     id: reproduce
@@ -77,5 +77,5 @@ body:
       label: Issue Tracking Info
       description: |
         Issue tracking information
-      options: 
+      options:
         - label: I understand that work is tracked outside of Github. A PR will be linked to this issue should one be opened to address it, but Bitwarden doesn't use fields like "assigned", "milestone", or "project" to track progress.

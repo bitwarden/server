@@ -1,0 +1,8 @@
+START TRANSACTION;
+
+ALTER TABLE "Organization" ADD "UseCustomPermissions" boolean NOT NULL DEFAULT FALSE;
+
+INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+VALUES ('20221116102326_UseCustomPermissionsFlag', '6.0.4');
+
+COMMIT;

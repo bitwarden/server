@@ -6,6 +6,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -68,7 +69,7 @@ public class AuthRequestsController : Controller
     public async Task<AuthRequestResponseModel> GetResponse(string id, [FromQuery] string code)
     {
         var authRequest = await _authRequestRepository.GetByIdAsync(new Guid(id));
-        if (authRequest == null || code != authRequest.AccessCode || authRequest.GetExpirationDate() < DateTime.UtcNow)
+        if (authRequest == null || !CoreHelpers.FixedTimeEquals(authRequest.AccessCode, code) || authRequest.GetExpirationDate() < DateTime.UtcNow)
         {
             throw new NotFoundException();
         }
