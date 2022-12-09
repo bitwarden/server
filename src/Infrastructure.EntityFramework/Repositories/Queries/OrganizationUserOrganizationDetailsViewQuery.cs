@@ -39,6 +39,7 @@ public class OrganizationUserOrganizationDetailsViewQuery : IQuery<OrganizationU
                         UseResetPassword = o.UseResetPassword,
                         SelfHost = o.SelfHost,
                         UsersGetPremium = o.UsersGetPremium,
+                        UseCustomPermissions = o.UseCustomPermissions,
                         Seats = o.Seats,
                         MaxCollections = o.MaxCollections,
                         MaxStorageGb = o.MaxStorageGb,
