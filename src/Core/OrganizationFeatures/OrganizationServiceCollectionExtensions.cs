@@ -72,7 +72,8 @@ public static class OrganizationServiceCollectionExtensions
     private static void AddOrganizationLicenseCommandsQueries(this IServiceCollection services)
     {
         services.AddScoped<IUpdateOrganizationLicenseCommand, UpdateOrganizationLicenseCommand>();
-        services.AddScoped<IGetOrganizationLicenseQuery, GetOrganizationLicenseQuery>();
+        services.AddScoped<ICloudGetOrganizationLicenseQuery, CloudGetOrganizationLicenseQuery>();
+        services.AddScoped<ISelfHostedGetOrganizationLicenseQuery, SelfHostedGetOrganizationLicenseQuery>();
     }
 
     private static void AddTokenizers(this IServiceCollection services)

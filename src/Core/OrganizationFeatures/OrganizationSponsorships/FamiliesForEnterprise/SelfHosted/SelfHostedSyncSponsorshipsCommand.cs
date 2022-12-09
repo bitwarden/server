@@ -47,20 +47,13 @@ public class SelfHostedSyncSponsorshipsCommand : BaseIdentityClientService, ISel
         {
             throw new BadRequestException("Failed to sync instance with cloud - Cloud communication is disabled in global settings");
         }
-        if (!billingSyncConnection.Enabled)
+
+        if (!billingSyncConnection.Validate<BillingSyncConfig>(out var exception))
         {
-            throw new BadRequestException($"Billing Sync Key disabled for organization {organizationId}");
-        }
-        if (string.IsNullOrWhiteSpace(billingSyncConnection.Config))
-        {
-            throw new BadRequestException($"No Billing Sync Key known for organization {organizationId}");
-        }
-        var billingSyncConfig = billingSyncConnection.GetConfig<BillingSyncConfig>();
-        if (billingSyncConfig == null || string.IsNullOrWhiteSpace(billingSyncConfig.BillingSyncKey))
-        {
-            throw new BadRequestException($"Failed to get Billing Sync Key for organization {organizationId}");
+            throw new BadRequestException(exception);
         }
 
+        var billingSyncConfig = billingSyncConnection.GetConfig<BillingSyncConfig>();
         var organizationSponsorshipsDict = (await _organizationSponsorshipRepository.GetManyBySponsoringOrganizationAsync(organizationId))
             .ToDictionary(i => i.SponsoringOrganizationUserId);
         if (!organizationSponsorshipsDict.Any())

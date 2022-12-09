@@ -7,13 +7,13 @@ using Bit.Core.Services;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationLicenses;
 
-public class GetOrganizationLicenseQuery : IGetOrganizationLicenseQuery
+public class CloudGetOrganizationLicenseQuery : ICloudGetOrganizationLicenseQuery
 {
     private readonly IInstallationRepository _installationRepository;
     private readonly IPaymentService _paymentService;
     private readonly ILicensingService _licensingService;
 
-    public GetOrganizationLicenseQuery(
+    public CloudGetOrganizationLicenseQuery(
         IInstallationRepository installationRepository,
         IPaymentService paymentService,
         ILicensingService licensingService)
