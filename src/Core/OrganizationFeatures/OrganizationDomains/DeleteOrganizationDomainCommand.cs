@@ -11,7 +11,7 @@ public class DeleteOrganizationDomainCommand : IDeleteOrganizationDomainCommand
     private readonly IOrganizationDomainRepository _organizationDomainRepository;
     private readonly IEventService _eventService;
 
-    public DeleteOrganizationDomainCommand(IOrganizationDomainRepository organizationDomainRepository, 
+    public DeleteOrganizationDomainCommand(IOrganizationDomainRepository organizationDomainRepository,
         IEventService eventService)
     {
         _organizationDomainRepository = organizationDomainRepository;

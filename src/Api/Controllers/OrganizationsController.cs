@@ -726,7 +726,7 @@ public class OrganizationsController : Controller
     [HttpPost("sso/details")]
     public async Task<OrganizationDomainSsoDetailsResponseModel> GetSso([FromBody] OrganisationSsoDomainDetailsRequestModel model)
     {
-        var ssoResult = await _organizationDomainRepository.GetOrganizationDomainSsoDetails(model.Email);
+        var ssoResult = await _organizationDomainRepository.GetOrganizationDomainSsoDetailsAsync(model.Email);
         if (ssoResult is null)
         {
             throw new NotFoundException();

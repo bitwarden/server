@@ -43,6 +43,7 @@ public class VerifyOrganizationDomainCommand : IVerifyOrganizationDomainCommand
             if (await _dnsResolverService.ResolveAsync(domain.DomainName, domain.Txt))
             {
                 domain.SetVerifiedDate();
+                domain.SetLastCheckedDate();
                 await _organizationDomainRepository.ReplaceAsync(domain);
                 await _eventService.LogOrganizationDomainEventAsync(domain, EventType.OrganizationDomain_Verified);
                 return true;
@@ -52,7 +53,7 @@ public class VerifyOrganizationDomainCommand : IVerifyOrganizationDomainCommand
         {
             _logger.LogError("Error verifying Organization domain.", e);
         }
-        
+
         await _eventService.LogOrganizationDomainEventAsync(domain, EventType.OrganizationDomain_NotVerified);
         return false;
     }
