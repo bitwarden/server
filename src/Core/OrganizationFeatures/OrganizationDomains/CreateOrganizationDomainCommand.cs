@@ -29,7 +29,6 @@ public class CreateOrganizationDomainCommand : ICreateOrganizationDomainCommand
 
     public async Task<OrganizationDomain> CreateAsync(OrganizationDomain organizationDomain)
     {
-        var verifiedStatus = false;
         //Domains claimed and verified by an organization cannot be claimed
         var claimedDomain =
             await _organizationDomainRepository.GetClaimedDomainsByDomainNameAsync(organizationDomain.DomainName);
@@ -52,7 +51,6 @@ public class CreateOrganizationDomainCommand : ICreateOrganizationDomainCommand
             if (await _dnsResolverService.ResolveAsync(organizationDomain.DomainName, organizationDomain.Txt))
             {
                 organizationDomain.SetVerifiedDate();
-                verifiedStatus = true;
             }
         }
         catch (Exception e)
@@ -67,7 +65,7 @@ public class CreateOrganizationDomainCommand : ICreateOrganizationDomainCommand
 
         await _eventService.LogOrganizationDomainEventAsync(orgDomain, EventType.OrganizationDomain_Added);
         await _eventService.LogOrganizationDomainEventAsync(orgDomain,
-            verifiedStatus ? EventType.OrganizationDomain_Verified : EventType.OrganizationDomain_NotVerified);
+            orgDomain.VerifiedDate != null ? EventType.OrganizationDomain_Verified : EventType.OrganizationDomain_NotVerified);
 
         return orgDomain;
     }
