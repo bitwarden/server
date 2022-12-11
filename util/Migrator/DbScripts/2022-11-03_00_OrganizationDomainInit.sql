@@ -170,6 +170,25 @@ WHERE
     [OrganizationId] = @OrganizationId
 END
 GO
+    
+--SP to get domain by organizationId and domainName
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationDomain_ReadDomainByOrganizationId]
+    @OrganizationId UNIQUEIDENTIFIER,
+    @DomainName NVARCHAR(255)
+AS
+BEGIN
+    SET NOCOUNT ON
+
+SELECT
+    *
+FROM
+    [dbo].[OrganizationDomain]
+WHERE
+    [OrganizationId] = @OrganizationId
+  AND
+    [DomainName] = @DomainName
+END
+GO
 
 -- SP to get Organization SSO Provider details by Email
 CREATE OR ALTER PROCEDURE [dbo].[OrganizationDomainSsoDetails_ReadByEmail]
