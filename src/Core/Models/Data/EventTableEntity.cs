@@ -27,6 +27,7 @@ public class EventTableEntity : TableEntity, IEvent
         IpAddress = e.IpAddress;
         ActingUserId = e.ActingUserId;
         SystemUser = e.SystemUser;
+        DomainName = e.DomainName;
     }
 
     public DateTime Date { get; set; }
