@@ -88,7 +88,6 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                     });
                 await dbContext.AddRangeAsync(collectionUsers);
             }
-            
             await dbContext.UserBumpAccountRevisionDateByOrganizationIdAsync(obj.OrganizationId);
             await dbContext.SaveChangesAsync();
         }
@@ -418,7 +417,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
 
             foreach (var collection in collectionEntities.GroupBy(g => g.Organization.Id))
             {
-                await UserBumpAccountRevisionDateByOrganizationId(collection.Key);
+                await dbContext.UserBumpAccountRevisionDateByOrganizationIdAsync(collection.Key);
             }
         }
     }
