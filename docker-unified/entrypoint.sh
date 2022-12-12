@@ -7,7 +7,7 @@ GROUP_NAME=$(cat /etc/group | grep $GID | cut -d ':' -f 1)
 
 # Set up user
 UID="${UID:-1000}"
-adduser -s /bin/false -D -u $UID -g $GROUP_NAME bitwarden
+adduser -s /bin/false -D -u $UID -G $GROUP_NAME bitwarden
 
 # Translate environment variables for application settings
 VAULT_SERVICE_URI=https://$BW_DOMAIN
