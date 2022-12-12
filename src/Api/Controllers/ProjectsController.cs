@@ -5,6 +5,7 @@ using Bit.Api.Utilities;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.SecretManagerFeatures.Projects.Interfaces;
+using Bit.Core.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.Controllers;
@@ -12,17 +13,20 @@ namespace Bit.Api.Controllers;
 [SecretsManager]
 public class ProjectsController : Controller
 {
+    private readonly IUserService _userService;
     private readonly IProjectRepository _projectRepository;
     private readonly ICreateProjectCommand _createProjectCommand;
     private readonly IUpdateProjectCommand _updateProjectCommand;
     private readonly IDeleteProjectCommand _deleteProjectCommand;
 
     public ProjectsController(
+        IUserService userService,
         IProjectRepository projectRepository,
         ICreateProjectCommand createProjectCommand,
         IUpdateProjectCommand updateProjectCommand,
         IDeleteProjectCommand deleteProjectCommand)
     {
+        _userService = userService;
         _projectRepository = projectRepository;
         _createProjectCommand = createProjectCommand;
         _updateProjectCommand = updateProjectCommand;
@@ -46,7 +50,8 @@ public class ProjectsController : Controller
     [HttpGet("organizations/{organizationId}/projects")]
     public async Task<ListResponseModel<ProjectResponseModel>> GetProjectsByOrganizationAsync([FromRoute] Guid organizationId)
     {
-        var projects = await _projectRepository.GetManyByOrganizationIdAsync(organizationId);
+        var userId = _userService.GetProperUserId(User).Value;
+        var projects = await _projectRepository.GetManyByOrganizationIdAsync(organizationId, userId);
         var responses = projects.Select(project => new ProjectResponseModel(project));
         return new ListResponseModel<ProjectResponseModel>(responses);
     }

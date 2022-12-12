@@ -12,6 +12,7 @@ public class DatabaseContext : DbContext
         : base(options)
     { }
 
+    public DbSet<AccessPolicy> AccessPolicies { get; set; }
     public DbSet<ApiKey> ApiKeys { get; set; }
     public DbSet<Cipher> Ciphers { get; set; }
     public DbSet<Collection> Collections { get; set; }
