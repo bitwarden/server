@@ -54,6 +54,31 @@ public class SecretRepository : Repository<Core.Entities.Secret, Secret, Guid>, 
         }
     }
 
+    public async Task<Core.Entities.Secret> CreateAsync(Core.Entities.Secret secret)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            secret.SetNewId();
+            
+            var projectsToAttach = secret.Projects;
+            secret.Projects = null;
+
+            var mappedEntity = Mapper.Map<Secret>(secret);
+
+            await dbContext.AddAsync(mappedEntity);
+            await dbContext.SaveChangesAsync();
+
+            if(projectsToAttach != null){
+                secret.Projects = projectsToAttach;
+                UpdateAsync(secret);
+            }
+
+            secret.Id = mappedEntity.Id;
+            return secret;
+        }
+    }
+
     public async Task<Core.Entities.Secret> UpdateAsync(Core.Entities.Secret secret)
     {
 
@@ -65,14 +90,13 @@ public class SecretRepository : Repository<Core.Entities.Secret, Secret, Guid>, 
                 .Include("Projects")
                 .FirstAsync(s => s.Id == secret.Id);
 
-            // Remove old relationships
-            foreach (var p in entity.Projects.Where(p => mappedEntity.Projects.All(mp => mp.Id != p.Id)))
+            foreach (var p in entity.Projects?.Where(p => mappedEntity.Projects.All(mp => mp.Id != p.Id)))
             {
                 entity.Projects.Remove(p);
             }
 
             // Add new relationships
-            foreach (var project in mappedEntity.Projects.Where(p => entity.Projects.All(ep => ep.Id != p.Id)))
+            foreach (var project in mappedEntity.Projects?.Where(p => entity.Projects.All(ep => ep.Id != p.Id)))
             {
                 var p = dbContext.AttachToOrGet<Project>(_ => _.Id == project.Id, () => project);
                 entity.Projects.Add(p);

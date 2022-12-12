@@ -35,7 +35,7 @@ public class SecretWithProjectsListResponseModel : ResponseModel
             Key = secret.Key;
             CreationDate = secret.CreationDate;
             RevisionDate = secret.RevisionDate;
-            Projects = secret.Projects.Select(p => p.Id);
+            Projects = secret.Projects?.Select(p => new InnerProject(p));
         }
 
         public string Id { get; set; }
@@ -48,7 +48,7 @@ public class SecretWithProjectsListResponseModel : ResponseModel
 
         public DateTime RevisionDate { get; set; }
 
-        public IEnumerable<Guid> Projects { get; set; }
+        public IEnumerable<InnerProject> Projects { get; set; } 
     }
 }
 
