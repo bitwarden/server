@@ -71,10 +71,11 @@ public class SecretRepository : Repository<Core.Entities.Secret, Secret, Guid>, 
 
             if(projectsToAttach != null){
                 secret.Projects = projectsToAttach;
-                UpdateAsync(secret);
+                await UpdateAsync(secret);
             }
 
             secret.Id = mappedEntity.Id;
+
             return secret;
         }
     }
