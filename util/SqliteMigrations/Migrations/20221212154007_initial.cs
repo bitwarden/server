@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace Bit.SqliteMigrations.Migrations
 {
-    public partial class Initial : Migration
+    public partial class initial : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)
         {
@@ -103,6 +103,7 @@ namespace Bit.SqliteMigrations.Migrations
                     UseResetPassword = table.Column<bool>(type: "INTEGER", nullable: false),
                     SelfHost = table.Column<bool>(type: "INTEGER", nullable: false),
                     UsersGetPremium = table.Column<bool>(type: "INTEGER", nullable: false),
+                    UseCustomPermissions = table.Column<bool>(type: "INTEGER", nullable: false),
                     Storage = table.Column<long>(type: "INTEGER", nullable: true),
                     MaxStorageGb = table.Column<short>(type: "INTEGER", nullable: true),
                     Gateway = table.Column<byte>(type: "INTEGER", nullable: true),

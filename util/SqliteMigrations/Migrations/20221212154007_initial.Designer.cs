@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.SqliteMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20221121223935_Initial")]
-    partial class Initial
+    [Migration("20221212154007_initial")]
+    partial class initial
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
@@ -620,6 +620,9 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<bool>("UseApi")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("UseCustomPermissions")
                         .HasColumnType("INTEGER");
 
                     b.Property<bool>("UseDirectory")

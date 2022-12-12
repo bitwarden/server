@@ -620,6 +620,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<bool>("UseApi")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("UseCustomPermissions")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("UseDirectory")
                         .HasColumnType("INTEGER");
 
