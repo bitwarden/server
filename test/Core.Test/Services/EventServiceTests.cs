@@ -36,7 +36,7 @@ public class EventServiceTests
         sutProvider.GetDependency<ICurrentContext>().ProviderIdForOrg(Arg.Any<Guid>()).Returns(providerId);
 
         await sutProvider.Sut.LogGroupEventAsync(group, eventType, date);
-        
+
         var expected = new List<IEvent>() {
             new EventMessage()
             {
@@ -70,7 +70,7 @@ public class EventServiceTests
         sutProvider.GetDependency<ICurrentContext>().ProviderIdForOrg(Arg.Any<Guid>()).Returns(providerId);
 
         await sutProvider.Sut.LogGroupEventAsync(group, eventType, eventSystemUser, date);
-        
+
         var expected = new List<IEvent>() {
             new EventMessage()
             {

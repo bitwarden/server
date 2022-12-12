@@ -30,7 +30,7 @@ public class GroupService : IGroupService
     }
 
     public async Task SaveAsync(Group group,
-        IEnumerable<CollectionAccessSelection> collections = null, 
+        IEnumerable<CollectionAccessSelection> collections = null,
         IEnumerable<Guid> userIds = null)
     {
         await GroupRepositorySaveAsync(group, systemUser: null, collections, userIds);
@@ -88,7 +88,7 @@ public class GroupService : IGroupService
                         (u, EventType.OrganizationUser_UpdatedGroups, (DateTime?)eventDate)));
                 }
             }
-            
+
             if (systemUser.HasValue)
             {
                 await _eventService.LogGroupEventAsync(group, Enums.EventType.Group_Created, systemUser.Value);
@@ -139,7 +139,7 @@ public class GroupService : IGroupService
                         (u, EventType.OrganizationUser_UpdatedGroups, (DateTime?)eventDate)));
                 }
             }
-            
+
             if (systemUser.HasValue)
             {
                 await _eventService.LogGroupEventAsync(group, Enums.EventType.Group_Updated, systemUser.Value);
