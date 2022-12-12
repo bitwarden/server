@@ -33,7 +33,7 @@ public static class EntityFrameworkServiceCollectionExtensions
             }
             else if (provider == SupportedDatabaseProviders.Sqlite)
             {
-                options.UseSqlite(connectionString);
+                options.UseSqlite(connectionString, b => b.MigrationsAssembly("SqliteMigrations"));
             }
         });
         services.AddSingleton<ICipherRepository, CipherRepository>();
