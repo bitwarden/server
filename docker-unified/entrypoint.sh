@@ -3,7 +3,7 @@
 # Set up user group
 GID="${GID:-1000}"
 addgroup -g $GID bitwarden
-GROUP_NAME=$(cat /etc/group | grep $GID | cut -d ':' -f 1)
+GROUP_NAME=$(cat /etc/group | grep ":$GID:" | cut -d ':' -f 1)
 
 # Set up user
 UID="${UID:-1000}"
