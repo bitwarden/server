@@ -215,9 +215,6 @@ RUN apk add --update-cache \
     unzip \
     && rm -rf /var/cache/apk/*
 
-# Create non-root user to run app
-RUN adduser -s /bin/false -D bitwarden
-
 # Create required directories
 RUN mkdir -p /etc/bitwarden/attachments/send
 RUN mkdir -p /etc/bitwarden/data-protection

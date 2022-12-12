@@ -1,10 +1,13 @@
 #!/bin/sh
 
-UID="${UID:-1000}"
+# Set up user group
 GID="${GID:-1000}"
-
-adduser -s /bin/false -D -u $UID bitwarden
 addgroup -g $GID bitwarden
+GROUP_NAME=$(cat /etc/group | grep $GID | cut -d ':' -f 1)
+
+# Set up user
+UID="${UID:-1000}"
+adduser -s /bin/false -D -u $UID -g $GROUP_NAME bitwarden
 
 # Translate environment variables for application settings
 VAULT_SERVICE_URI=https://$BW_DOMAIN
@@ -87,10 +90,10 @@ sed -i "s/autostart=true/autostart=${BW_ENABLE_SSO}/" /etc/supervisor.d/sso.ini
 chown -R $UID:$GID \
     /app \
     /etc/bitwarden \
-    #/etc/nginx/http.d \
-    #/etc/supervisor \
-    #/etc/supervisor.d \
-    #/var/lib/nginx \
+    /etc/nginx/http.d \
+    /etc/supervisor \
+    /etc/supervisor.d \
+    /var/lib/nginx \
     /var/log \
     /run
 
