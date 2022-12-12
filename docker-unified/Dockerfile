@@ -202,8 +202,6 @@ ENV globalSettings__send__baseDirectory="/etc/bitwarden/attachments/send"
 ENV globalSettings__licenseDirectory="/etc/bitwarden/licenses"
 ENV globalSettings__logDirectoryByProject="false"
 ENV globalSettings__logRollBySizeLimit="1073741824"
-EXPOSE 80
-EXPOSE 443
 
 # Add packages
 RUN apk add --update-cache \
@@ -214,6 +212,7 @@ RUN apk add --update-cache \
     su-exec \
     supervisor \
     tzdata \
+    unzip \
     && rm -rf /var/cache/apk/*
 
 # Create non-root user to run app
@@ -261,18 +260,18 @@ COPY docker-unified/nginx/logrotate.sh /
 RUN chmod +x /logrotate.sh
 
 # Copy configuration templates
-COPY docker-unified/confd/nginx-config.toml /etc/confd/conf.d/
-COPY docker-unified/confd/nginx-config.conf.tmpl /etc/confd/templates/
-COPY docker-unified/confd/app-id.toml /etc/confd/conf.d/
-COPY docker-unified/confd/app-id.conf.tmpl /etc/confd/templates/
+COPY docker-unified/hbs/nginx-config.hbs /etc/hbs/
+COPY docker-unified/hbs/app-id.hbs /etc/hbs/
+COPY docker-unified/hbs/config.yaml /etc/hbs/
 
-# Download confd tool for generating final configurations
-RUN if [ "$TARGETPLATFORM" = "linux/amd64" ] ; then curl -L --output confd.tar.gz https://github.com/abtreece/confd/releases/download/v0.19.1/confd-v0.19.1-linux-amd64.tar.gz; fi
-RUN if [ "$TARGETPLATFORM" = "linux/arm/v7" ] ; then curl -L --output confd.tar.gz https://github.com/abtreece/confd/releases/download/v0.19.1/confd-v0.19.1-linux-arm7.tar.gz; fi
-RUN if [ "$TARGETPLATFORM" = "linux/arm64" ] ; then curl -L --output confd.tar.gz https://github.com/abtreece/confd/releases/download/v0.19.1/confd-v0.19.1-linux-arm64.tar.gz; fi
+# Download hbs tool for generating final configurations
+RUN if [ "$TARGETPLATFORM" = "linux/amd64" ] ; then curl -L --output hbs.zip https://github.com/bitwarden/Handlebars.conf/releases/download/v1.3.0/hbs_alpine-x64_dotnet.zip; fi
+RUN if [ "$TARGETPLATFORM" = "linux/arm/v7" ] ; then curl -L --output hbs.zip https://github.com/bitwarden/Handlebars.conf/releases/download/v1.3.0/hbs_alpine-armv7_dotnet.zip; fi
+RUN if [ "$TARGETPLATFORM" = "linux/arm64" ] ; then curl -L --output hbs.zip https://github.com/bitwarden/Handlebars.conf/releases/download/v1.3.0/hbs_alpine-arm64_dotnet.zip; fi
 
-# Extract confd
-RUN tar -xvzo -C /usr/local/bin -f confd.tar.gz && rm confd.tar.gz
+# Extract hbs
+RUN unzip hbs.zip -d /usr/local/bin && rm hbs.zip
+RUN chmod +x /usr/local/bin/hbs
 
 # Copy entrypoint script and make it executable
 COPY docker-unified/entrypoint.sh /entrypoint.sh
@@ -287,5 +286,4 @@ VOLUME ["/etc/bitwarden"]
 
 WORKDIR /app
 USER bitwarden:bitwarden
-HEALTHCHECK CMD curl --insecure -Lfs https://localhost/alive || curl -Lfs http://localhost/alive || exit 1
 ENTRYPOINT ["/entrypoint.sh"]

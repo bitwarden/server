@@ -7,11 +7,11 @@ services:
       - db
     env_file:
       - settings.env
-    image: ${REGISTRY:-bitwarden}/self-host:${TAG:-latest}
+    image: ${REGISTRY:-bitwarden}/self-host:${TAG:-beta}
     restart: always
     ports:
-      - "80:80"
-      - "443:443"
+      - "80:8080"
+      - "443:8443"
     volumes:
       - bitwarden:/etc/bitwarden
       - logs:/var/log/bitwarden
@@ -34,7 +34,7 @@ services:
   #     POSTGRES_USER: "bitwarden"
   #     POSTGRES_PASSWORD: "super_strong_password"
   #     POSTGRES_DB: "bitwarden_vault"
-  #   image: postgres:15
+  #   image: postgres:14
   #   restart: always
   #   volumes:
   #     - data:/var/lib/postgresql/data
@@ -48,7 +48,7 @@ services:
   #   image: mcr.microsoft.com/mssql/server:2019-latest
   #   restart: always
   #   volumes:
-  #     - data:/var/opt/mssql/data
+  #     - data:/var/opt/mssql
 
 volumes:
   bitwarden:

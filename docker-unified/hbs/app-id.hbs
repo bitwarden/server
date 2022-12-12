@@ -6,7 +6,7 @@
         "minor": 0
       },
       "ids": [
-        "{{ getenv "globalSettings__baseServiceUri__vault" "https://localhost" }}",
+        "{{{String.Coalesce env.globalSettings__baseServiceUri__vault "https://localhost"}}}",
         "ios:bundle-id:com.8bit.bitwarden",
         "android:apk-key-hash:dUGFzUzf3lmHSLBDBIv+WaFyZMI"
       ]

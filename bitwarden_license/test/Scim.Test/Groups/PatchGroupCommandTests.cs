@@ -2,6 +2,7 @@
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.OrganizationFeatures.Groups.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Scim.Groups;
@@ -19,8 +20,10 @@ public class PatchGroupCommandTests
 {
     [Theory]
     [BitAutoData]
-    public async Task PatchGroup_ReplaceListMembers_Success(SutProvider<PatchGroupCommand> sutProvider, Group group, IEnumerable<Guid> userIds)
+    public async Task PatchGroup_ReplaceListMembers_Success(SutProvider<PatchGroupCommand> sutProvider, Organization organization, Group group, IEnumerable<Guid> userIds)
     {
+        group.OrganizationId = organization.Id;
+
         sutProvider.GetDependency<IGroupRepository>()
             .GetByIdAsync(group.Id)
             .Returns(group);
@@ -39,15 +42,17 @@ public class PatchGroupCommandTests
             Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
         };
 
-        await sutProvider.Sut.PatchGroupAsync(group.OrganizationId, group.Id, scimPatchModel);
+        await sutProvider.Sut.PatchGroupAsync(organization, group.Id, scimPatchModel);
 
         await sutProvider.GetDependency<IGroupRepository>().Received(1).UpdateUsersAsync(group.Id, Arg.Is<IEnumerable<Guid>>(arg => arg.All(id => userIds.Contains(id))));
     }
 
     [Theory]
     [BitAutoData]
-    public async Task PatchGroup_ReplaceDisplayNameFromPath_Success(SutProvider<PatchGroupCommand> sutProvider, Group group, string displayName)
+    public async Task PatchGroup_ReplaceDisplayNameFromPath_Success(SutProvider<PatchGroupCommand> sutProvider, Organization organization, Group group, string displayName)
     {
+        group.OrganizationId = organization.Id;
+
         sutProvider.GetDependency<IGroupRepository>()
             .GetByIdAsync(group.Id)
             .Returns(group);
@@ -66,16 +71,18 @@ public class PatchGroupCommandTests
             Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
         };
 
-        await sutProvider.Sut.PatchGroupAsync(group.OrganizationId, group.Id, scimPatchModel);
+        await sutProvider.Sut.PatchGroupAsync(organization, group.Id, scimPatchModel);
 
-        await sutProvider.GetDependency<IGroupService>().Received(1).SaveAsync(group, EventSystemUser.SCIM);
+        await sutProvider.GetDependency<IUpdateGroupCommand>().Received(1).UpdateGroupAsync(group, organization, EventSystemUser.SCIM);
         Assert.Equal(displayName, group.Name);
     }
 
     [Theory]
     [BitAutoData]
-    public async Task PatchGroup_ReplaceDisplayNameFromValueObject_Success(SutProvider<PatchGroupCommand> sutProvider, Group group, string displayName)
+    public async Task PatchGroup_ReplaceDisplayNameFromValueObject_Success(SutProvider<PatchGroupCommand> sutProvider, Organization organization, Group group, string displayName)
     {
+        group.OrganizationId = organization.Id;
+
         sutProvider.GetDependency<IGroupRepository>()
             .GetByIdAsync(group.Id)
             .Returns(group);
@@ -93,16 +100,18 @@ public class PatchGroupCommandTests
             Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
         };
 
-        await sutProvider.Sut.PatchGroupAsync(group.OrganizationId, group.Id, scimPatchModel);
+        await sutProvider.Sut.PatchGroupAsync(organization, group.Id, scimPatchModel);
 
-        await sutProvider.GetDependency<IGroupService>().Received(1).SaveAsync(group, EventSystemUser.SCIM);
+        await sutProvider.GetDependency<IUpdateGroupCommand>().Received(1).UpdateGroupAsync(group, organization, EventSystemUser.SCIM);
         Assert.Equal(displayName, group.Name);
     }
 
     [Theory]
     [BitAutoData]
-    public async Task PatchGroup_AddSingleMember_Success(SutProvider<PatchGroupCommand> sutProvider, Group group, ICollection<Guid> existingMembers, Guid userId)
+    public async Task PatchGroup_AddSingleMember_Success(SutProvider<PatchGroupCommand> sutProvider, Organization organization, Group group, ICollection<Guid> existingMembers, Guid userId)
     {
+        group.OrganizationId = organization.Id;
+
         sutProvider.GetDependency<IGroupRepository>()
             .GetByIdAsync(group.Id)
             .Returns(group);
@@ -124,15 +133,17 @@ public class PatchGroupCommandTests
             Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
         };
 
-        await sutProvider.Sut.PatchGroupAsync(group.OrganizationId, group.Id, scimPatchModel);
+        await sutProvider.Sut.PatchGroupAsync(organization, group.Id, scimPatchModel);
 
         await sutProvider.GetDependency<IGroupRepository>().Received(1).UpdateUsersAsync(group.Id, Arg.Is<IEnumerable<Guid>>(arg => arg.All(id => existingMembers.Append(userId).Contains(id))));
     }
 
     [Theory]
     [BitAutoData]
-    public async Task PatchGroup_AddListMembers_Success(SutProvider<PatchGroupCommand> sutProvider, Group group, ICollection<Guid> existingMembers, ICollection<Guid> userIds)
+    public async Task PatchGroup_AddListMembers_Success(SutProvider<PatchGroupCommand> sutProvider, Organization organization, Group group, ICollection<Guid> existingMembers, ICollection<Guid> userIds)
     {
+        group.OrganizationId = organization.Id;
+
         sutProvider.GetDependency<IGroupRepository>()
             .GetByIdAsync(group.Id)
             .Returns(group);
@@ -155,15 +166,17 @@ public class PatchGroupCommandTests
             Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
         };
 
-        await sutProvider.Sut.PatchGroupAsync(group.OrganizationId, group.Id, scimPatchModel);
+        await sutProvider.Sut.PatchGroupAsync(organization, group.Id, scimPatchModel);
 
         await sutProvider.GetDependency<IGroupRepository>().Received(1).UpdateUsersAsync(group.Id, Arg.Is<IEnumerable<Guid>>(arg => arg.All(id => existingMembers.Concat(userIds).Contains(id))));
     }
 
     [Theory]
     [BitAutoData]
-    public async Task PatchGroup_RemoveSingleMember_Success(SutProvider<PatchGroupCommand> sutProvider, Group group, Guid userId)
+    public async Task PatchGroup_RemoveSingleMember_Success(SutProvider<PatchGroupCommand> sutProvider, Organization organization, Group group, Guid userId)
     {
+        group.OrganizationId = organization.Id;
+
         sutProvider.GetDependency<IGroupRepository>()
             .GetByIdAsync(group.Id)
             .Returns(group);
@@ -181,15 +194,17 @@ public class PatchGroupCommandTests
             Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
         };
 
-        await sutProvider.Sut.PatchGroupAsync(group.OrganizationId, group.Id, scimPatchModel);
+        await sutProvider.Sut.PatchGroupAsync(organization, group.Id, scimPatchModel);
 
         await sutProvider.GetDependency<IGroupService>().Received(1).DeleteUserAsync(group, userId, EventSystemUser.SCIM);
     }
 
     [Theory]
     [BitAutoData]
-    public async Task PatchGroup_RemoveListMembers_Success(SutProvider<PatchGroupCommand> sutProvider, Group group, ICollection<Guid> existingMembers)
+    public async Task PatchGroup_RemoveListMembers_Success(SutProvider<PatchGroupCommand> sutProvider, Organization organization, Group group, ICollection<Guid> existingMembers)
     {
+        group.OrganizationId = organization.Id;
+
         sutProvider.GetDependency<IGroupRepository>()
             .GetByIdAsync(group.Id)
             .Returns(group);
@@ -212,15 +227,17 @@ public class PatchGroupCommandTests
             Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
         };
 
-        await sutProvider.Sut.PatchGroupAsync(group.OrganizationId, group.Id, scimPatchModel);
+        await sutProvider.Sut.PatchGroupAsync(organization, group.Id, scimPatchModel);
 
         await sutProvider.GetDependency<IGroupRepository>().Received(1).UpdateUsersAsync(group.Id, Arg.Is<IEnumerable<Guid>>(arg => arg.All(id => existingMembers.Contains(id))));
     }
 
     [Theory]
     [BitAutoData]
-    public async Task PatchGroup_NoAction_Success(SutProvider<PatchGroupCommand> sutProvider, Group group)
+    public async Task PatchGroup_NoAction_Success(SutProvider<PatchGroupCommand> sutProvider, Organization organization, Group group)
     {
+        group.OrganizationId = organization.Id;
+
         sutProvider.GetDependency<IGroupRepository>()
             .GetByIdAsync(group.Id)
             .Returns(group);
@@ -231,17 +248,17 @@ public class PatchGroupCommandTests
             Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
         };
 
-        await sutProvider.Sut.PatchGroupAsync(group.OrganizationId, group.Id, scimPatchModel);
+        await sutProvider.Sut.PatchGroupAsync(organization, group.Id, scimPatchModel);
 
-        await sutProvider.GetDependency<IGroupRepository>().Received(0).UpdateUsersAsync(group.Id, Arg.Any<IEnumerable<Guid>>());
-        await sutProvider.GetDependency<IGroupRepository>().Received(0).GetManyUserIdsByIdAsync(group.Id);
-        await sutProvider.GetDependency<IGroupService>().Received(0).SaveAsync(group);
-        await sutProvider.GetDependency<IGroupService>().Received(0).DeleteUserAsync(group, Arg.Any<Guid>());
+        await sutProvider.GetDependency<IGroupRepository>().DidNotReceiveWithAnyArgs().UpdateUsersAsync(default, default);
+        await sutProvider.GetDependency<IGroupRepository>().DidNotReceiveWithAnyArgs().GetManyUserIdsByIdAsync(default);
+        await sutProvider.GetDependency<IUpdateGroupCommand>().DidNotReceiveWithAnyArgs().UpdateGroupAsync(default, default);
+        await sutProvider.GetDependency<IGroupService>().DidNotReceiveWithAnyArgs().DeleteUserAsync(default, default);
     }
 
     [Theory]
     [BitAutoData]
-    public async Task PatchGroup_NotFound_Throws(SutProvider<PatchGroupCommand> sutProvider, Guid organizationId, Guid groupId)
+    public async Task PatchGroup_NotFound_Throws(SutProvider<PatchGroupCommand> sutProvider, Organization organization, Guid groupId)
     {
         var scimPatchModel = new Models.ScimPatchModel
         {
@@ -249,12 +266,12 @@ public class PatchGroupCommandTests
             Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
         };
 
-        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.PatchGroupAsync(organizationId, groupId, scimPatchModel));
+        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.PatchGroupAsync(organization, groupId, scimPatchModel));
     }
 
     [Theory]
     [BitAutoData]
-    public async Task PatchGroup_MismatchingOrganizationId_Throws(SutProvider<PatchGroupCommand> sutProvider, Guid organizationId, Guid groupId)
+    public async Task PatchGroup_MismatchingOrganizationId_Throws(SutProvider<PatchGroupCommand> sutProvider, Organization organization, Guid groupId)
     {
         var scimPatchModel = new Models.ScimPatchModel
         {
@@ -270,6 +287,6 @@ public class PatchGroupCommandTests
                 OrganizationId = Guid.NewGuid()
             });
 
-        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.PatchGroupAsync(organizationId, groupId, scimPatchModel));
+        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.PatchGroupAsync(organization, groupId, scimPatchModel));
     }
 }
