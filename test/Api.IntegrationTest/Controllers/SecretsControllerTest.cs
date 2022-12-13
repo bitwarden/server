@@ -18,6 +18,7 @@ public class SecretsControllerTest : IClassFixture<ApiApplicationFactory>, IAsyn
     private readonly HttpClient _client;
     private readonly ApiApplicationFactory _factory;
     private readonly ISecretRepository _secretRepository;
+    private readonly IProjectRepository _projectRepository;
     private Organization? _organization;
 
     public SecretsControllerTest(ApiApplicationFactory factory)
@@ -25,6 +26,7 @@ public class SecretsControllerTest : IClassFixture<ApiApplicationFactory>, IAsyn
         _factory = factory;
         _client = _factory.CreateClient();
         _secretRepository = _factory.GetService<ISecretRepository>();
+        _projectRepository = _factory.GetService<IProjectRepository>();
     }
 
     public async Task InitializeAsync()
@@ -71,6 +73,39 @@ public class SecretsControllerTest : IClassFixture<ApiApplicationFactory>, IAsyn
         AssertHelper.AssertRecent(createdSecret.RevisionDate);
         AssertHelper.AssertRecent(createdSecret.CreationDate);
         Assert.Null(createdSecret.DeletedDate);
+    }
+
+    [Fact]
+    public async Task CreateSecretWithProject()
+    {
+        var project = await _projectRepository.CreateAsync(new Project()
+        {
+            Id = new Guid(),
+            OrganizationId = _organization.Id,
+            Name = _mockEncryptedString
+        });
+
+        var secretRequest = new SecretCreateRequestModel()
+        {
+            Key = _mockEncryptedString,
+            Value = _mockEncryptedString,
+            Note = _mockEncryptedString,
+            ProjectId = project.Id,
+        };
+        var secretResponse = await _client.PostAsJsonAsync($"/organizations/{_organization.Id}/secrets", secretRequest);
+        secretResponse.EnsureSuccessStatusCode();
+        var secretResult = await secretResponse.Content.ReadFromJsonAsync<Secret>();
+
+        var secret = (await _secretRepository.GetManyByProjectIdAsync(project.Id)).First();
+
+        Assert.NotNull(secretResult);
+        Assert.Equal(secret.Id, secretResult.Id);
+        Assert.Equal(secret.OrganizationId, secretResult.OrganizationId);
+        Assert.Equal(secret.Key, secretResult.Key);
+        Assert.Equal(secret.Value, secretResult.Value);
+        Assert.Equal(secret.Note, secretResult.Note);
+        Assert.Equal(secret.CreationDate, secretResult.CreationDate);
+        Assert.Equal(secret.RevisionDate, secretResult.RevisionDate);
     }
 
     [Fact]
