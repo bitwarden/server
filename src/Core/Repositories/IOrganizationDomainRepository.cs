@@ -9,5 +9,5 @@ public interface IOrganizationDomainRepository : IRepository<OrganizationDomain,
     Task<ICollection<OrganizationDomain>> GetDomainsByOrganizationIdAsync(Guid orgId);
     Task<ICollection<OrganizationDomain>> GetManyByNextRunDateAsync(DateTime date);
     Task<OrganizationDomainSsoDetailsData> GetOrganizationDomainSsoDetailsAsync(string email);
-    Task<OrganizationDomain> GetDomainByOrganizationIdAsync(Guid orgId, string domainName);
+    Task<OrganizationDomain> GetDomainByOrgIdAndDomainNameAsync(Guid orgId, string domainName);
 }

@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[OrganizationDomain_ReadDomainByOrganizationId]
+CREATE PROCEDURE [dbo].[OrganizationDomain_ReadDomainByOrgIdAndDomainName]
     @OrganizationId UNIQUEIDENTIFIER,
     @DomainName NVARCHAR(255)
 AS

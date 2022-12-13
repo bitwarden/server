@@ -69,13 +69,13 @@ public class OrganizationDomainRepository : Repository<OrganizationDomain, Guid>
         }
     }
 
-    public async Task<OrganizationDomain> GetDomainByOrganizationIdAsync(Guid orgId, string domainName)
+    public async Task<OrganizationDomain> GetDomainByOrgIdAndDomainNameAsync(Guid orgId, string domainName)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection
                 .QueryAsync<OrganizationDomain>(
-                    $"[{Schema}].[OrganizationDomain_ReadDomainByOrganizationId]",
+                    $"[{Schema}].[OrganizationDomain_ReadDomainByOrgIdAndDomainName]",
                     new { OrganizationId = orgId, DomainName = domainName },
                     commandType: CommandType.StoredProcedure);
 

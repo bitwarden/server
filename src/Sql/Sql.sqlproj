@@ -423,7 +423,7 @@
     <Content Include="dbo\Stored Procedures\OrganizationDomain_ReadByNextRunDate.sql" />
     <Content Include="dbo\Stored Procedures\OrganizationDomain_ReadById.sql" />
     <Content Include="dbo\Stored Procedures\OrganizationDomain_ReadByOrganizationId.sql" />
-    <Content Include="dbo\Stored Procedures\OrganizationDomain_ReadDomainByOrganizationId.sql" />
+    <Content Include="dbo\Stored Procedures\OrganizationDomain_ReadDomainByOrgIdAndDomainName.sql" />
     <Content Include="dbo\Stored Procedures\OrganizationDomain_Update.sql" />
     <Content Include="dbo\Stored Procedures\OrganizationDomainSsoDetails_ReadByEmail.sql" />
     <Content Include="dbo\Tables\OrganizationDomain.sql" />

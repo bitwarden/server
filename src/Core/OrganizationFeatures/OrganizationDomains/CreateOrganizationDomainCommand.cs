@@ -39,7 +39,7 @@ public class CreateOrganizationDomainCommand : ICreateOrganizationDomainCommand
 
         //check for duplicate domain entry for an organization
         var duplicateOrgDomain =
-            await _organizationDomainRepository.GetDomainByOrganizationIdAsync(organizationDomain.OrganizationId,
+            await _organizationDomainRepository.GetDomainByOrgIdAndDomainNameAsync(organizationDomain.OrganizationId,
                 organizationDomain.DomainName);
         if (duplicateOrgDomain is not null)
         {

@@ -4,18 +4,18 @@ using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Services;
 
-public class VerificationDomainService : IVerificationDomainService
+public class OrganizationDomainVerificationService : IOrganizationDomainVerificationService
 {
     private readonly IOrganizationDomainRepository _domainRepository;
     private readonly IDnsResolverService _dnsResolverService;
     private readonly IEventService _eventService;
-    private readonly ILogger<VerificationDomainService> _logger;
+    private readonly ILogger<OrganizationDomainVerificationService> _logger;
 
-    public VerificationDomainService(
+    public OrganizationDomainVerificationService(
         IOrganizationDomainRepository domainRepository,
         IDnsResolverService dnsResolverService,
         IEventService eventService,
-        ILogger<VerificationDomainService> logger)
+        ILogger<OrganizationDomainVerificationService> logger)
     {
         _domainRepository = domainRepository;
         _dnsResolverService = dnsResolverService;

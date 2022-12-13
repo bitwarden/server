@@ -22,7 +22,7 @@ public class ValidateOrganizationDomainJob : BaseJob
         using (var serviceScope = _serviceProvider.CreateScope())
         {
             var verificationDomainService =
-                serviceScope.ServiceProvider.GetRequiredService<IVerificationDomainService>();
+                serviceScope.ServiceProvider.GetRequiredService<IOrganizationDomainVerificationService>();
             await verificationDomainService.ValidateOrganizationsDomainAsync();
         }
         _logger.LogInformation(Constants.BypassFiltersEventId, "Execute job task: ValidateOrganizationDomainJob: End");

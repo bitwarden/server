@@ -1,4 +1,5 @@
-﻿using Bit.Core.Enums;
+﻿using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.OrganizationFeatures.OrganizationDomains.Interfaces;
 using Bit.Core.Repositories;
@@ -26,7 +27,7 @@ public class VerifyOrganizationDomainCommand : IVerifyOrganizationDomainCommand
         _logger = logger;
     }
 
-    public async Task<bool> VerifyOrganizationDomain(Guid id)
+    public async Task<OrganizationDomain> VerifyOrganizationDomain(Guid id)
     {
         var domain = await _organizationDomainRepository.GetByIdAsync(id);
         if (domain is null)
@@ -46,7 +47,6 @@ public class VerifyOrganizationDomainCommand : IVerifyOrganizationDomainCommand
                 domain.SetLastCheckedDate();
                 await _organizationDomainRepository.ReplaceAsync(domain);
                 await _eventService.LogOrganizationDomainEventAsync(domain, EventType.OrganizationDomain_Verified);
-                return true;
             }
         }
         catch (Exception e)
@@ -55,6 +55,6 @@ public class VerifyOrganizationDomainCommand : IVerifyOrganizationDomainCommand
         }
 
         await _eventService.LogOrganizationDomainEventAsync(domain, EventType.OrganizationDomain_NotVerified);
-        return false;
+        return domain;
     }
 }

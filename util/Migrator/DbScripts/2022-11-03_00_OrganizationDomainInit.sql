@@ -172,7 +172,7 @@ END
 GO
     
 --SP to get domain by organizationId and domainName
-CREATE OR ALTER PROCEDURE [dbo].[OrganizationDomain_ReadDomainByOrganizationId]
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationDomain_ReadDomainByOrgIdAndDomainName]
     @OrganizationId UNIQUEIDENTIFIER,
     @DomainName NVARCHAR(255)
 AS
