@@ -26,14 +26,24 @@ public class ProjectRepository : Repository<Core.Entities.Project, Project, Guid
         }
     }
 
+    public async Task<IEnumerable<Core.Entities.Project>> GetAllByOrganizationIdAsync(Guid organizationId)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        var project = await dbContext.Project
+            .Where(p => p.OrganizationId == organizationId && p.DeletedDate == null)
+            .OrderBy(p => p.RevisionDate)
+            .ToListAsync();
+        return Mapper.Map<List<Core.Entities.Project>>(project);
+    }
+
     public async Task<IEnumerable<Core.Entities.Project>> GetManyByOrganizationIdAsync(Guid organizationId, Guid userId)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
         var project = await dbContext.Project
             .Where(p => p.OrganizationId == organizationId && p.DeletedDate == null)
-            // TODO: Enable this + Handle Admins
-            //.Where(UserHasAccessToProject(userId))
+            .Where(UserHasAccessToProject(userId))
             .OrderBy(p => p.RevisionDate)
             .ToListAsync();
         return Mapper.Map<List<Core.Entities.Project>>(project);
