@@ -16,6 +16,8 @@ public class OrganizationSsoRequestModel
 {
     [Required]
     public bool Enabled { get; set; }
+    [StringLength(50)]
+    public string Identifier { get; set; }
     [Required]
     public SsoConfigurationDataRequest Data { get; set; }
 

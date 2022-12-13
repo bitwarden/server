@@ -11,6 +11,7 @@
     @PublicKey VARCHAR(MAX),
     @Key VARCHAR(MAX),
     @MasterPasswordHash VARCHAR(MAX),
+    @Approved BIT,
     @CreationDate DATETIME2(7),
     @ResponseDate DATETIME2(7),
     @AuthenticationDate DATETIME2(7)
@@ -32,6 +33,7 @@ BEGIN
         [PublicKey],
         [Key],
         [MasterPasswordHash],
+        [Approved],
         [CreationDate],
         [ResponseDate],
         [AuthenticationDate]
@@ -50,6 +52,7 @@ BEGIN
         @PublicKey,
         @Key,
         @MasterPasswordHash,
+        @Approved,
         @CreationDate,
         @ResponseDate,
         @AuthenticationDate

@@ -10,7 +10,7 @@ public class KdfRequestModel : PasswordRequestModel, IValidatableObject
     [Required]
     public int? KdfIterations { get; set; }
 
-    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         if (Kdf.HasValue && KdfIterations.HasValue)
         {

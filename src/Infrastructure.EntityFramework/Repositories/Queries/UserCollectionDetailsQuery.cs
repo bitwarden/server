@@ -10,33 +10,42 @@ public class UserCollectionDetailsQuery : IQuery<CollectionDetails>
     {
         _userId = userId;
     }
+
     public virtual IQueryable<CollectionDetails> Run(DatabaseContext dbContext)
     {
         var query = from c in dbContext.Collections
+
                     join ou in dbContext.OrganizationUsers
                         on c.OrganizationId equals ou.OrganizationId
+
                     join o in dbContext.Organizations
                         on c.OrganizationId equals o.Id
+
                     join cu in dbContext.CollectionUsers
-                        on c.Id equals cu.CollectionId into cu_g
+                        on new { ou.AccessAll, CollectionId = c.Id, OrganizationUserId = ou.Id } equals
+                           new { AccessAll = false, cu.CollectionId, cu.OrganizationUserId } into cu_g
                     from cu in cu_g.DefaultIfEmpty()
-                    where ou.AccessAll && cu.OrganizationUserId == ou.Id
+
                     join gu in dbContext.GroupUsers
-                        on ou.Id equals gu.OrganizationUserId into gu_g
+                        on new { CollectionId = (Guid?)cu.CollectionId, ou.AccessAll, OrganizationUserId = ou.Id } equals
+                           new { CollectionId = (Guid?)null, AccessAll = false, gu.OrganizationUserId } into gu_g
                     from gu in gu_g.DefaultIfEmpty()
-                    where cu.CollectionId == null && !ou.AccessAll
+
                     join g in dbContext.Groups
                         on gu.GroupId equals g.Id into g_g
                     from g in g_g.DefaultIfEmpty()
+
                     join cg in dbContext.CollectionGroups
-                        on gu.GroupId equals cg.GroupId into cg_g
+                        on new { g.AccessAll, CollectionId = c.Id, gu.GroupId } equals
+                           new { AccessAll = false, cg.CollectionId, cg.GroupId } into cg_g
                     from cg in cg_g.DefaultIfEmpty()
-                    where !g.AccessAll && cg.CollectionId == c.Id &&
-                        ou.UserId == _userId &&
+
+                    where ou.UserId == _userId &&
                         ou.Status == OrganizationUserStatusType.Confirmed &&
                         o.Enabled &&
                         (ou.AccessAll || cu.CollectionId != null || g.AccessAll || cg.CollectionId != null)
                     select new { c, ou, o, cu, gu, g, cg };
+
         return query.Select(x => new CollectionDetails
         {
             Id = x.c.Id,
@@ -45,8 +54,10 @@ public class UserCollectionDetailsQuery : IQuery<CollectionDetails>
             ExternalId = x.c.ExternalId,
             CreationDate = x.c.CreationDate,
             RevisionDate = x.c.RevisionDate,
-            ReadOnly = !x.ou.AccessAll || !x.g.AccessAll || (x.cu.ReadOnly || x.cg.ReadOnly),
-            HidePasswords = !x.ou.AccessAll || !x.g.AccessAll || (x.cu.HidePasswords || x.cg.HidePasswords),
+            ReadOnly = x.ou.AccessAll || x.g.AccessAll ||
+                !((bool?)x.cu.ReadOnly ?? (bool?)x.cg.ReadOnly ?? false) ? false : true,
+            HidePasswords = x.ou.AccessAll || x.g.AccessAll ||
+                !((bool?)x.cu.HidePasswords ?? (bool?)x.cg.HidePasswords ?? false) ? false : true,
         });
     }
 }

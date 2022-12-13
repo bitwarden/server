@@ -24,6 +24,7 @@ public class GlobalSettings : IGlobalSettings
         get => BuildDirectory(_logDirectory, "/logs");
         set => _logDirectory = value;
     }
+    public virtual bool LogDirectoryByProject { get; set; } = true;
     public virtual long? LogRollBySizeLimit { get; set; }
     public virtual bool EnableDevLogging { get; set; } = false;
     public virtual string LicenseDirectory
@@ -412,6 +413,12 @@ public class GlobalSettings : IGlobalSettings
             set => _connectionString = value.Trim('"');
         }
         public string HubName { get; set; }
+
+        /// <summary>
+        /// Enables TestSend on the Azure Notification Hub, which allows tracing of the request through the hub and to the platform-specific push notification service (PNS).
+        /// Enabling this will result in delayed responses because the Hub must wait on delivery to the PNS.  This should ONLY be enabled in a non-production environment, as results are throttled.
+        /// </summary>
+        public bool EnableSendTracing { get; set; } = false;
     }
 
     public class YubicoSettings

@@ -27,6 +27,7 @@ public class Event : ITableObject<Guid>, IEvent
         DeviceType = e.DeviceType;
         IpAddress = e.IpAddress;
         ActingUserId = e.ActingUserId;
+        SystemUser = e.SystemUser;
     }
 
     public Guid Id { get; set; }
@@ -47,6 +48,7 @@ public class Event : ITableObject<Guid>, IEvent
     [MaxLength(50)]
     public string IpAddress { get; set; }
     public Guid? ActingUserId { get; set; }
+    public EventSystemUser? SystemUser { get; set; }
 
     public void SetNewId()
     {

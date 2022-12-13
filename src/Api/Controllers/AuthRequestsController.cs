@@ -6,6 +6,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -68,7 +69,7 @@ public class AuthRequestsController : Controller
     public async Task<AuthRequestResponseModel> GetResponse(string id, [FromQuery] string code)
     {
         var authRequest = await _authRequestRepository.GetByIdAsync(new Guid(id));
-        if (authRequest == null || code != authRequest.AccessCode || authRequest.GetExpirationDate() < DateTime.UtcNow)
+        if (authRequest == null || !CoreHelpers.FixedTimeEquals(authRequest.AccessCode, code) || authRequest.GetExpirationDate() < DateTime.UtcNow)
         {
             throw new NotFoundException();
         }
@@ -125,19 +126,28 @@ public class AuthRequestsController : Controller
             throw new NotFoundException();
         }
 
-        var device = await _deviceRepository.GetByIdentifierAsync(model.DeviceIdentifier);
+        if (authRequest.Approved is not null)
+        {
+            throw new DuplicateAuthRequestException();
+        }
+
+        var device = await _deviceRepository.GetByIdentifierAsync(model.DeviceIdentifier, userId);
         if (device == null)
         {
             throw new BadRequestException("Invalid device.");
         }
 
-        if (model.RequestApproved)
+        authRequest.Key = model.Key;
+        authRequest.MasterPasswordHash = model.MasterPasswordHash;
+        authRequest.ResponseDeviceId = device.Id;
+        authRequest.ResponseDate = DateTime.UtcNow;
+        authRequest.Approved = model.RequestApproved;
+        await _authRequestRepository.ReplaceAsync(authRequest);
+
+        // We only want to send an approval notification if the request is approved (or null), 
+        // to not leak that it was denied to the originating client if it was originated by a malicious actor.
+        if (authRequest.Approved ?? true)
         {
-            authRequest.Key = model.Key;
-            authRequest.MasterPasswordHash = model.MasterPasswordHash;
-            authRequest.ResponseDeviceId = device.Id;
-            authRequest.ResponseDate = DateTime.UtcNow;
-            await _authRequestRepository.ReplaceAsync(authRequest);
             await _pushNotificationService.PushAuthRequestResponseAsync(authRequest);
         }
 

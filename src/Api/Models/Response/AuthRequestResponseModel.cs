@@ -1,7 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Reflection;
 using Bit.Core.Entities;
-using Bit.Core.Enums;
 using Bit.Core.Models.Api;
 
 namespace Bit.Api.Models.Response;
@@ -25,9 +24,9 @@ public class AuthRequestResponseModel : ResponseModel
         Key = authRequest.Key;
         MasterPasswordHash = authRequest.MasterPasswordHash;
         CreationDate = authRequest.CreationDate;
-        RequestApproved = !string.IsNullOrWhiteSpace(Key) &&
-            (authRequest.Type == AuthRequestType.Unlock || !string.IsNullOrWhiteSpace(MasterPasswordHash));
+        RequestApproved = authRequest.Approved ?? false;
         Origin = new Uri(vaultUri).Host;
+        ResponseDate = authRequest.ResponseDate;
     }
 
     public string Id { get; set; }
@@ -38,6 +37,7 @@ public class AuthRequestResponseModel : ResponseModel
     public string Key { get; set; }
     public string MasterPasswordHash { get; set; }
     public DateTime CreationDate { get; set; }
+    public DateTime? ResponseDate { get; set; }
     public bool RequestApproved { get; set; }
     public string Origin { get; set; }
 }

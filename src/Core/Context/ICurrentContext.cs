@@ -22,6 +22,7 @@ public interface ICurrentContext
     bool MaybeBot { get; set; }
     int? BotScore { get; set; }
     string ClientId { get; set; }
+    Version ClientVersion { get; set; }
     Task BuildAsync(HttpContext httpContext, GlobalSettings globalSettings);
     Task BuildAsync(ClaimsPrincipal user, GlobalSettings globalSettings);
 
