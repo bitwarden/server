@@ -7,7 +7,7 @@ namespace Bit.Commercial.Core.SecretManagerFeatures.Projects;
 public class CreateProjectCommand : ICreateProjectCommand
 {
     private readonly IProjectRepository _projectRepository;
-    
+
     public CreateProjectCommand(IProjectRepository projectRepository)
     {
         _projectRepository = projectRepository;

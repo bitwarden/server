@@ -1,6 +1,5 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Models.Api;
-using Bit.Core.Models;
 
 namespace Bit.Api.SecretManagerFeatures.Models.Response;
 
