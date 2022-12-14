@@ -24,10 +24,18 @@ public static class OrganizationServiceCollectionExtensions
     {
         services.AddScoped<IOrganizationService, OrganizationService>();
         services.AddTokenizers();
+        services.AddOrganizationGroupCommands();
         services.AddOrganizationConnectionCommands();
         services.AddOrganizationSponsorshipCommands(globalSettings);
         services.AddOrganizationApiKeyCommandsQueries();
         services.AddOrganizationGroupCommands();
+    }
+
+    private static void AddOrganizationGroupCommands(this IServiceCollection services)
+    {
+        services.AddScoped<ICreateGroupCommand, CreateGroupCommand>();
+        services.AddScoped<IDeleteGroupCommand, DeleteGroupCommand>();
+        services.AddScoped<IUpdateGroupCommand, UpdateGroupCommand>();
     }
 
     private static void AddOrganizationConnectionCommands(this IServiceCollection services)
@@ -67,11 +75,6 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IGetOrganizationApiKeyQuery, GetOrganizationApiKeyQuery>();
         services.AddScoped<IRotateOrganizationApiKeyCommand, RotateOrganizationApiKeyCommand>();
         services.AddScoped<ICreateOrganizationApiKeyCommand, CreateOrganizationApiKeyCommand>();
-    }
-
-    private static void AddOrganizationGroupCommands(this IServiceCollection services)
-    {
-        services.AddScoped<IDeleteGroupCommand, DeleteGroupCommand>();
     }
 
     private static void AddTokenizers(this IServiceCollection services)
