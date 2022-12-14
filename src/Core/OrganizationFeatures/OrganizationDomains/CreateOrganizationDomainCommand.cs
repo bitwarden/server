@@ -34,7 +34,7 @@ public class CreateOrganizationDomainCommand : ICreateOrganizationDomainCommand
             await _organizationDomainRepository.GetClaimedDomainsByDomainNameAsync(organizationDomain.DomainName);
         if (claimedDomain.Any())
         {
-            throw new DomainClaimedException();
+            throw new ConflictException("The domain is not available to be claimed.");
         }
 
         //check for duplicate domain entry for an organization
@@ -43,7 +43,7 @@ public class CreateOrganizationDomainCommand : ICreateOrganizationDomainCommand
                 organizationDomain.DomainName);
         if (duplicateOrgDomain is not null)
         {
-            throw new DuplicateDomainException();
+            throw new ConflictException("A domain already exists for this organization.");
         }
 
         try
