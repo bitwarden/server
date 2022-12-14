@@ -1,8 +1,8 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.OrganizationFeatures.Groups.Interfaces;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Scim.Context;
 using Bit.Scim.Groups;
 using Bit.Scim.Models;
@@ -20,8 +20,10 @@ public class PutGroupCommandTests
 {
     [Theory]
     [BitAutoData]
-    public async Task PutGroup_Success(SutProvider<PutGroupCommand> sutProvider, Group group, string displayName)
+    public async Task PutGroup_Success(SutProvider<PutGroupCommand> sutProvider, Organization organization, Group group, string displayName)
     {
+        group.OrganizationId = organization.Id;
+
         sutProvider.GetDependency<IGroupRepository>()
             .GetByIdAsync(group.Id)
             .Returns(group);
@@ -41,19 +43,21 @@ public class PutGroupCommandTests
             OrganizationId = group.OrganizationId
         };
 
-        var result = await sutProvider.Sut.PutGroupAsync(group.OrganizationId, group.Id, inputModel);
+        var result = await sutProvider.Sut.PutGroupAsync(organization, group.Id, inputModel);
 
         AssertHelper.AssertPropertyEqual(expectedResult, result, "CreationDate", "RevisionDate");
         Assert.Equal(displayName, group.Name);
 
-        await sutProvider.GetDependency<IGroupService>().Received(1).SaveAsync(group, EventSystemUser.SCIM);
-        await sutProvider.GetDependency<IGroupRepository>().Received(0).UpdateUsersAsync(group.Id, Arg.Any<IEnumerable<Guid>>());
+        await sutProvider.GetDependency<IUpdateGroupCommand>().Received(1).UpdateGroupAsync(group, organization, EventSystemUser.SCIM);
+        await sutProvider.GetDependency<IGroupRepository>().DidNotReceiveWithAnyArgs().UpdateUsersAsync(default, default);
     }
 
     [Theory]
     [BitAutoData]
-    public async Task PutGroup_ChangeMembers_Success(SutProvider<PutGroupCommand> sutProvider, Group group, string displayName, IEnumerable<Guid> membersUserIds)
+    public async Task PutGroup_ChangeMembers_Success(SutProvider<PutGroupCommand> sutProvider, Organization organization, Group group, string displayName, IEnumerable<Guid> membersUserIds)
     {
+        group.OrganizationId = organization.Id;
+
         sutProvider.GetDependency<IGroupRepository>()
             .GetByIdAsync(group.Id)
             .Returns(group);
@@ -78,18 +82,18 @@ public class PutGroupCommandTests
             OrganizationId = group.OrganizationId
         };
 
-        var result = await sutProvider.Sut.PutGroupAsync(group.OrganizationId, group.Id, inputModel);
+        var result = await sutProvider.Sut.PutGroupAsync(organization, group.Id, inputModel);
 
         AssertHelper.AssertPropertyEqual(expectedResult, result, "CreationDate", "RevisionDate");
         Assert.Equal(displayName, group.Name);
 
-        await sutProvider.GetDependency<IGroupService>().Received(1).SaveAsync(group, EventSystemUser.SCIM);
+        await sutProvider.GetDependency<IUpdateGroupCommand>().Received(1).UpdateGroupAsync(group, organization, EventSystemUser.SCIM);
         await sutProvider.GetDependency<IGroupRepository>().Received(1).UpdateUsersAsync(group.Id, Arg.Is<IEnumerable<Guid>>(arg => arg.All(id => membersUserIds.Contains(id))));
     }
 
     [Theory]
     [BitAutoData]
-    public async Task PutGroup_NotFound_Throws(SutProvider<PutGroupCommand> sutProvider, Guid organizationId, Guid groupId, string displayName)
+    public async Task PutGroup_NotFound_Throws(SutProvider<PutGroupCommand> sutProvider, Organization organization, Guid groupId, string displayName)
     {
         var scimGroupRequestModel = new ScimGroupRequestModel
         {
@@ -97,12 +101,12 @@ public class PutGroupCommandTests
             Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
         };
 
-        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.PutGroupAsync(organizationId, groupId, scimGroupRequestModel));
+        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.PutGroupAsync(organization, groupId, scimGroupRequestModel));
     }
 
     [Theory]
     [BitAutoData]
-    public async Task PutGroup_MismatchingOrganizationId_Throws(SutProvider<PutGroupCommand> sutProvider, Guid organizationId, Guid groupId, string displayName)
+    public async Task PutGroup_MismatchingOrganizationId_Throws(SutProvider<PutGroupCommand> sutProvider, Organization organization, Guid groupId, string displayName)
     {
         var scimGroupRequestModel = new ScimGroupRequestModel
         {
@@ -118,6 +122,6 @@ public class PutGroupCommandTests
                 OrganizationId = Guid.NewGuid()
             });
 
-        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.PutGroupAsync(organizationId, groupId, scimGroupRequestModel));
+        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.PutGroupAsync(organization, groupId, scimGroupRequestModel));
     }
 }

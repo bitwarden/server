@@ -1,6 +1,7 @@
-name: Server Bug Report
+name: Bitwarden Unified Bug Report
+name: Bitwarden Unified Deployment Bug Report
 description: File a bug report
-labels: [bug]
+labels: [bug, bw-unified-deploy]
 body:
   - type: markdown
     attributes:
@@ -47,19 +48,8 @@ body:
   - type: input
     id: version
     attributes:
-      label: Build Version
-      description: What version of our software are you running?
-    validations:
-      required: true
-  - type: dropdown
-    id: environment
-    attributes:
-      label: Environment
-      description: Which environment (Cloud / Self-Hosted) are you using?
-      multiple: true
-      options:
-        - Cloud (bitwarden.com)
-        - Self-Hosted
+      label: Githash Version
+      description: Please go to https://{your-bitwarden-domain}/api/config and copy the gitHash version
     validations:
       required: true
   - type: textarea
@@ -71,6 +61,25 @@ body:
         - Operating system: [e.g. Windows 10, Mac OS Catalina]
         - Environment: [e.g. Docker, EKS, ECS, K8S]
         - Hardware: [e.g. Intel 6-core, 8GB RAM]
+  - type: textarea
+    id: database-image
+    attributes:
+      label: Database Image
+      description: Please include the image and version of your database
+      placeholder: |
+        # MariaDB Example
+        mariadb:10
+        # Postgres Example
+        postgres:14
+  - type: textarea
+    id: epic-label
+    attributes:
+      label: Issue-Link
+      description: Link to our pinned issue, tracking all Bitwarden Unified
+      value: |
+        https://github.com/bitwarden/server/issues/2480
+    validations:
+      required: true
   - type: checkboxes
     id: issue-tracking-info
     attributes:

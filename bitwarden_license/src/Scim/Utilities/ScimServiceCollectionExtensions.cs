@@ -1,6 +1,4 @@
-﻿using Bit.Core.OrganizationFeatures.Groups;
-using Bit.Core.OrganizationFeatures.Groups.Interfaces;
-using Bit.Core.OrganizationFeatures.OrganizationUsers;
+﻿using Bit.Core.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Scim.Groups;
 using Bit.Scim.Groups.Interfaces;
@@ -13,7 +11,6 @@ public static class ScimServiceCollectionExtensions
 {
     public static void AddScimGroupCommands(this IServiceCollection services)
     {
-        services.AddScoped<IDeleteGroupCommand, DeleteGroupCommand>();
         services.AddScoped<IPatchGroupCommand, PatchGroupCommand>();
         services.AddScoped<IPostGroupCommand, PostGroupCommand>();
         services.AddScoped<IPutGroupCommand, PutGroupCommand>();
