@@ -30,12 +30,12 @@ public class UpdateGroupCommand : IUpdateGroupCommand
     {
         Validate(organization);
         await GroupRepositoryUpdateGroupAsync(group, collections);
-        
+
         if (userIds != null)
         {
             await GroupRepositoryUpdateUsersAsync(group, userIds);
         }
-        
+
         await _eventService.LogGroupEventAsync(group, Enums.EventType.Group_Updated);
     }
 
@@ -50,7 +50,7 @@ public class UpdateGroupCommand : IUpdateGroupCommand
         {
             await GroupRepositoryUpdateUsersAsync(group, userIds, systemUser);
         }
-        
+
         await _eventService.LogGroupEventAsync(group, Enums.EventType.Group_Updated, systemUser);
     }
 
@@ -83,7 +83,7 @@ public class UpdateGroupCommand : IUpdateGroupCommand
         // Fetch all changed users for logging the event
         var users = await _organizationUserRepository.GetManyAsync(changedUserIds);
         var eventDate = DateTime.UtcNow;
-        
+
         if (systemUser.HasValue)
         {
             await _eventService.LogOrganizationUserEventsAsync(users.Select(u =>
