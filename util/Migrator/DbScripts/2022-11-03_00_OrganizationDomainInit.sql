@@ -14,6 +14,7 @@ CREATE TABLE [dbo].[OrganizationDomain] (
     [DomainName]        NVARCHAR(255)    NOT NULL,
     [CreationDate]      DATETIME2(7)     NOT NULL,
     [VerifiedDate]      DATETIME2(7)     NULL,
+    [LastCheckedDate]   DATETIME2(7)     NULL,
     [NextRunDate]       DATETIME2(7)     NOT NULL,
     [JobRunCount]      TINYINT          NOT NULL
     CONSTRAINT [PK_OrganizationDomain] PRIMARY KEY CLUSTERED ([Id] ASC),
@@ -40,6 +41,7 @@ CREATE OR ALTER PROCEDURE [dbo].[OrganizationDomain_Create]
     @DomainName NVARCHAR(255),
     @CreationDate   DATETIME2(7),
     @VerifiedDate   DATETIME2(7),
+    @LastCheckedDate DATETIME2(7),
     @NextRunDate    DATETIME2(7),
     @JobRunCount   TINYINT
 AS
@@ -54,6 +56,7 @@ BEGIN
         [DomainName],
         [CreationDate],
         [VerifiedDate],
+        [LastCheckedDate],
         [NextRunDate],
         [JobRunCount]
     )
@@ -65,6 +68,7 @@ BEGIN
         @DomainName,
         @CreationDate,
         @VerifiedDate,
+        @LastCheckedDate,
         @NextRunDate,
         @JobRunCount
     )
@@ -79,6 +83,7 @@ CREATE OR ALTER PROCEDURE [dbo].[OrganizationDomain_Update]
     @DomainName NVARCHAR(255),
     @CreationDate   DATETIME2(7),
     @VerifiedDate   DATETIME2(7),
+    @LastCheckedDate DATETIME2(7),
     @NextRunDate    DATETIME2(7),
     @JobRunCount   TINYINT
 AS
@@ -93,6 +98,7 @@ SET
     [DomainName] = @DomainName,
     [CreationDate] = @CreationDate,
     [VerifiedDate] = @VerifiedDate,
+    [LastCheckedDate] = @LastCheckedDate,
     [NextRunDate] = @NextRunDate,
     [JobRunCount] = @JobRunCount
 WHERE
@@ -162,6 +168,25 @@ FROM
     [dbo].[OrganizationDomain]
 WHERE
     [OrganizationId] = @OrganizationId
+END
+GO
+    
+--SP to get domain by organizationId and domainName
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationDomain_ReadDomainByOrgIdAndDomainName]
+    @OrganizationId UNIQUEIDENTIFIER,
+    @DomainName NVARCHAR(255)
+AS
+BEGIN
+    SET NOCOUNT ON
+
+SELECT
+    *
+FROM
+    [dbo].[OrganizationDomain]
+WHERE
+    [OrganizationId] = @OrganizationId
+  AND
+    [DomainName] = @DomainName
 END
 GO
 

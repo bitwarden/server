@@ -14,5 +14,5 @@ public class GetOrganizationDomainByOrganizationIdQuery : IGetOrganizationDomain
     }
 
     public async Task<ICollection<OrganizationDomain>> GetDomainsByOrganizationId(Guid orgId)
-        => await _organizationDomainRepository.GetDomainsByOrganizationId(orgId);
+        => await _organizationDomainRepository.GetDomainsByOrganizationIdAsync(orgId);
 }

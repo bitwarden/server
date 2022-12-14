@@ -79,7 +79,7 @@ public class OrganizationDomainController : Controller
         {
             OrganizationId = orgIdGuid,
             Txt = model.Txt,
-            DomainName = model.DomainName
+            DomainName = model.DomainName.ToLower()
         };
 
         var domain = await _createOrganizationDomainCommand.CreateAsync(organizationDomain);
@@ -87,13 +87,14 @@ public class OrganizationDomainController : Controller
     }
 
     [HttpPost("{id}/verify")]
-    public async Task<bool> Verify(string orgId, string id)
+    public async Task<OrganizationDomainResponseModel> Verify(string orgId, string id)
     {
         var orgIdGuid = new Guid(orgId);
         var idGuid = new Guid(id);
         await ValidateOrganizationAccessAsync(orgIdGuid);
 
-        return await _verifyOrganizationDomainCommand.VerifyOrganizationDomain(idGuid);
+        var domain = await _verifyOrganizationDomainCommand.VerifyOrganizationDomain(idGuid);
+        return new OrganizationDomainResponseModel(domain);
     }
 
     [HttpDelete("{id}")]

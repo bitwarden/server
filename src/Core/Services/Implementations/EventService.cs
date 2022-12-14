@@ -323,6 +323,48 @@ public class EventService : IEventService
         await _eventWriteService.CreateAsync(e);
     }
 
+    public async Task LogOrganizationDomainEventAsync(OrganizationDomain organizationDomain, EventType type,
+        DateTime? date = null)
+    {
+        var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+        if (!CanUseEvents(orgAbilities, organizationDomain.OrganizationId))
+        {
+            return;
+        }
+
+        var e = new EventMessage(_currentContext)
+        {
+            OrganizationId = organizationDomain.OrganizationId,
+            Type = type,
+            ActingUserId = _currentContext?.UserId,
+            DomainName = organizationDomain.DomainName,
+            Date = date.GetValueOrDefault(DateTime.UtcNow)
+        };
+        await _eventWriteService.CreateAsync(e);
+    }
+
+    public async Task LogOrganizationDomainEventAsync(OrganizationDomain organizationDomain, EventType type,
+        EventSystemUser systemUser,
+        DateTime? date = null)
+    {
+        var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+        if (!CanUseEvents(orgAbilities, organizationDomain.OrganizationId))
+        {
+            return;
+        }
+
+        var e = new EventMessage(_currentContext)
+        {
+            OrganizationId = organizationDomain.OrganizationId,
+            Type = type,
+            ActingUserId = _currentContext?.UserId,
+            DomainName = organizationDomain.DomainName,
+            SystemUser = systemUser,
+            Date = date.GetValueOrDefault(DateTime.UtcNow)
+        };
+        await _eventWriteService.CreateAsync(e);
+    }
+
     private async Task<Guid?> GetProviderIdAsync(Guid? orgId)
     {
         if (_currentContext == null || !orgId.HasValue)

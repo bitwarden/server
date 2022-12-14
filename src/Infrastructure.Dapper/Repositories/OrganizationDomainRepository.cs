@@ -31,7 +31,7 @@ public class OrganizationDomainRepository : Repository<OrganizationDomain, Guid>
         }
     }
 
-    public async Task<ICollection<OrganizationDomain>> GetDomainsByOrganizationId(Guid orgId)
+    public async Task<ICollection<OrganizationDomain>> GetDomainsByOrganizationIdAsync(Guid orgId)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
@@ -55,7 +55,7 @@ public class OrganizationDomainRepository : Repository<OrganizationDomain, Guid>
         return results.ToList();
     }
 
-    public async Task<OrganizationDomainSsoDetailsData> GetOrganizationDomainSsoDetails(string email)
+    public async Task<OrganizationDomainSsoDetailsData> GetOrganizationDomainSsoDetailsAsync(string email)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
@@ -63,6 +63,20 @@ public class OrganizationDomainRepository : Repository<OrganizationDomain, Guid>
                 .QueryAsync<OrganizationDomainSsoDetailsData>(
                     $"[{Schema}].[OrganizationDomainSsoDetails_ReadByEmail]",
                     new { Email = email },
+                    commandType: CommandType.StoredProcedure);
+
+            return results.SingleOrDefault();
+        }
+    }
+
+    public async Task<OrganizationDomain> GetDomainByOrgIdAndDomainNameAsync(Guid orgId, string domainName)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection
+                .QueryAsync<OrganizationDomain>(
+                    $"[{Schema}].[OrganizationDomain_ReadDomainByOrgIdAndDomainName]",
+                    new { OrganizationId = orgId, DomainName = domainName },
                     commandType: CommandType.StoredProcedure);
 
             return results.SingleOrDefault();

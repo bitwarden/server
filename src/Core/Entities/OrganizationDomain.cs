@@ -13,6 +13,7 @@ public class OrganizationDomain : ITableObject<Guid>
     public DateTime CreationDate { get; set; } = DateTime.UtcNow;
     public DateTime? VerifiedDate { get; private set; }
     public DateTime NextRunDate { get; private set; }
+    public DateTime? LastCheckedDate { get; private set; }
     public int JobRunCount { get; private set; }
     public void SetNewId() => Id = CoreHelpers.GenerateComb();
 
@@ -38,5 +39,10 @@ public class OrganizationDomain : ITableObject<Guid>
     public void SetVerifiedDate()
     {
         VerifiedDate = DateTime.UtcNow;
+    }
+
+    public void SetLastCheckedDate()
+    {
+        LastCheckedDate = DateTime.UtcNow;
     }
 }

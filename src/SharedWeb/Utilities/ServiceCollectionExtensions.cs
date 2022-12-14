@@ -112,6 +112,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ISsoConfigService, SsoConfigService>();
         services.AddScoped<ISendService, SendService>();
         services.AddLoginServices();
+        services.AddScoped<IOrganizationDomainVerificationService, OrganizationDomainVerificationService>();
     }
 
     public static void AddTokenizers(this IServiceCollection services)
@@ -162,7 +163,6 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IMailService, HandlebarsMailService>();
         services.AddSingleton<ILicensingService, LicensingService>();
         services.AddSingleton<IDnsResolverService, DnsResolverService>();
-        services.AddSingleton<IVerificationDomainService, VerificationDomainService>();
         services.AddTokenizers();
 
         if (CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ConnectionString) &&

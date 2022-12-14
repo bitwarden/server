@@ -1,6 +1,8 @@
-﻿namespace Bit.Core.OrganizationFeatures.OrganizationDomains.Interfaces;
+﻿using Bit.Core.Entities;
+
+namespace Bit.Core.OrganizationFeatures.OrganizationDomains.Interfaces;
 
 public interface IVerifyOrganizationDomainCommand
 {
-    Task<bool> VerifyOrganizationDomain(Guid id);
+    Task<OrganizationDomain> VerifyOrganizationDomain(Guid id);
 }

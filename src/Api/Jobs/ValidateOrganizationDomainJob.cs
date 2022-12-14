@@ -7,20 +7,24 @@ namespace Bit.Api.Jobs;
 
 public class ValidateOrganizationDomainJob : BaseJob
 {
-    private readonly IVerificationDomainService _verificationDomainService;
-
+    private readonly IServiceProvider _serviceProvider;
     public ValidateOrganizationDomainJob(
-        IVerificationDomainService verificationDomainService,
+        IServiceProvider serviceProvider,
         ILogger<ValidateOrganizationDomainJob> logger)
         : base(logger)
     {
-        _verificationDomainService = verificationDomainService;
+        _serviceProvider = serviceProvider;
     }
 
     protected override async Task ExecuteJobAsync(IJobExecutionContext context)
     {
         _logger.LogInformation(Constants.BypassFiltersEventId, "Execute job task: ValidateOrganizationDomainJob: Start");
-        await _verificationDomainService.ValidateOrganizationsDomainAsync();
+        using (var serviceScope = _serviceProvider.CreateScope())
+        {
+            var verificationDomainService =
+                serviceScope.ServiceProvider.GetRequiredService<IOrganizationDomainVerificationService>();
+            await verificationDomainService.ValidateOrganizationsDomainAsync();
+        }
         _logger.LogInformation(Constants.BypassFiltersEventId, "Execute job task: ValidateOrganizationDomainJob: End");
     }
 }

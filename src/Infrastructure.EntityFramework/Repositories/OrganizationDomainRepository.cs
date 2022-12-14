@@ -29,7 +29,7 @@ public class OrganizationDomainRepository : Repository<Core.Entities.Organizatio
         return Mapper.Map<List<Core.Entities.OrganizationDomain>>(claimedDomains);
     }
 
-    public async Task<ICollection<Core.Entities.OrganizationDomain>> GetDomainsByOrganizationId(Guid orgId)
+    public async Task<ICollection<Core.Entities.OrganizationDomain>> GetDomainsByOrganizationIdAsync(Guid orgId)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
@@ -80,7 +80,7 @@ public class OrganizationDomainRepository : Repository<Core.Entities.Organizatio
         return Mapper.Map<List<Core.Entities.OrganizationDomain>>(results);
     }
 
-    public async Task<OrganizationDomainSsoDetailsData> GetOrganizationDomainSsoDetails(string email)
+    public async Task<OrganizationDomainSsoDetailsData> GetOrganizationDomainSsoDetailsAsync(string email)
     {
         var domainName = new MailAddress(email).Host;
 
@@ -116,5 +116,17 @@ public class OrganizationDomainRepository : Repository<Core.Entities.Organizatio
             .SingleOrDefaultAsync();
 
         return ssoDetails;
+    }
+
+    public async Task<Core.Entities.OrganizationDomain> GetDomainByOrgIdAndDomainNameAsync(Guid orgId, string domainName)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        var domain = await dbContext.OrganizationDomains
+            .Where(x => x.OrganizationId == orgId && x.DomainName == domainName)
+            .AsNoTracking()
+            .FirstOrDefaultAsync();
+
+        return Mapper.Map<Core.Entities.OrganizationDomain>(domain);
     }
 }
