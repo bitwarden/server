@@ -21,6 +21,7 @@ public class OrganizationDomainResponseModel : ResponseModel
         NextRunDate = organizationDomain.NextRunDate;
         JobRunCount = organizationDomain.JobRunCount;
         VerifiedDate = organizationDomain.VerifiedDate;
+        LastCheckedDate = organizationDomain.LastCheckedDate;
     }
 
     public string Id { get; set; }
@@ -31,4 +32,5 @@ public class OrganizationDomainResponseModel : ResponseModel
     public DateTime NextRunDate { get; set; }
     public int JobRunCount { get; set; }
     public DateTime? VerifiedDate { get; set; }
+    public DateTime? LastCheckedDate { get; set; }
 }
