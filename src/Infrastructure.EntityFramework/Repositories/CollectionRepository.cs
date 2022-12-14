@@ -88,7 +88,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                     });
                 await dbContext.AddRangeAsync(collectionUsers);
             }
-            
+
             await dbContext.UserBumpAccountRevisionDateByOrganizationIdAsync(obj.OrganizationId);
             await dbContext.SaveChangesAsync();
         }

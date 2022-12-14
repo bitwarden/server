@@ -17,7 +17,7 @@ public class DeleteGroupCommand : IDeleteGroupCommand
         _groupRepository = groupRepository;
         _eventService = eventService;
     }
-    
+
     public async Task DeleteGroupAsync(Guid organizationId, Guid id)
     {
         var group = await GroupRepositoryDeleteGroupAsync(organizationId, id);
@@ -47,7 +47,7 @@ public class DeleteGroupCommand : IDeleteGroupCommand
             groups.Select(g => g.Id)
             );
     }
-    
+
     private async Task<Group> GroupRepositoryDeleteGroupAsync(Guid organizationId, Guid id)
     {
         var group = await _groupRepository.GetByIdAsync(id);

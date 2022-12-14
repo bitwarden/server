@@ -34,12 +34,12 @@ public class CreateGroupCommand : ICreateGroupCommand
     {
         Validate(organization);
         await GroupRepositoryCreateGroupAsync(group, organization, collections);
-        
+
         if (users != null)
         {
             await GroupRepositoryUpdateUsersAsync(group, users);
         }
-        
+
         await _eventService.LogGroupEventAsync(group, Enums.EventType.Group_Created);
     }
 
@@ -54,7 +54,7 @@ public class CreateGroupCommand : ICreateGroupCommand
         {
             await GroupRepositoryUpdateUsersAsync(group, users, systemUser);
         }
-        
+
         await _eventService.LogGroupEventAsync(group, Enums.EventType.Group_Created, systemUser);
     }
 
@@ -83,7 +83,7 @@ public class CreateGroupCommand : ICreateGroupCommand
 
         var users = await _organizationUserRepository.GetManyAsync(usersToAddToGroup);
         var eventDate = DateTime.UtcNow;
-        
+
         if (systemUser.HasValue)
         {
             await _eventService.LogOrganizationUserEventsAsync(users.Select(u =>
