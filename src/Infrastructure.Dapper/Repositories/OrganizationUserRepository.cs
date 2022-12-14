@@ -249,31 +249,6 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         }
     }
 
-    public async Task<ICollection<Tuple<OrganizationUserUserDetails, ICollection<GroupUser>>>>
-        GetManyDetailsByOrganizationWithGroupsAsync(Guid organizationId)
-    {
-        using (var connection = new SqlConnection(ConnectionString))
-        {
-            var results = await connection.QueryMultipleAsync(
-                "[dbo].[OrganizationUserUserDetails_ReadWithGroupsByOrganizationId]",
-                new { OrganizationId = organizationId },
-                commandType: CommandType.StoredProcedure
-            );
-
-            var usersDetails = (await results.ReadAsync<OrganizationUserUserDetails>())
-                .ToList();
-            var groups = (await results.ReadAsync<GroupUser>())
-                .GroupBy(c => c.OrganizationUserId).ToList();
-
-            return usersDetails.Select(u =>
-                new Tuple<OrganizationUserUserDetails, ICollection<GroupUser>>(
-                    u,
-                    groups.FirstOrDefault(g => g.Key == u.OrganizationId)?
-                        .ToList() ?? new List<GroupUser>())
-            ).ToList();
-        }
-    }
-
     public async Task<ICollection<OrganizationUserOrganizationDetails>> GetManyDetailsByUserAsync(Guid userId,
         OrganizationUserStatusType? status = null)
     {
