@@ -66,6 +66,10 @@ public static class ServiceCollectionExtensions
                     provider = SupportedDatabaseProviders.MySql;
                     connectionString = globalSettings.MySql.ConnectionString;
                     break;
+                case "sqlite":
+                    provider = SupportedDatabaseProviders.Sqlite;
+                    connectionString = globalSettings.Sqlite.ConnectionString;
+                    break;
                 default:
                     break;
             }
