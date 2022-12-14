@@ -38,7 +38,7 @@ public class SecretResponseModel : ResponseModel
 
     public DateTime RevisionDate { get; set; }
 
-    public IEnumerable<InnerProject> Projects { get; set; }
+    public IEnumerable<InnerProject>? Projects { get; set; }
 
     public class InnerProject
     {

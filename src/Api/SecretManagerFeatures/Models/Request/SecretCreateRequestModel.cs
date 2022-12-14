@@ -18,7 +18,7 @@ public class SecretCreateRequestModel
     [EncryptedString]
     public string Note { get; set; }
 
-    public Guid[] ProjectIds { get; set; }
+    public Guid[]? ProjectIds { get; set; }
 
     public Secret ToSecret(Guid organizationId)
     {
