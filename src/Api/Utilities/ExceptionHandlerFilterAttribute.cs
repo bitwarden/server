@@ -94,7 +94,7 @@ public class ExceptionHandlerFilterAttribute : ExceptionFilterAttribute
         }
         else if (exception is ConflictException)
         {
-            errorMessage = "Conflict.";
+            errorMessage = exception.Message;
             context.HttpContext.Response.StatusCode = 409;
         }
         else
