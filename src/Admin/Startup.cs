@@ -54,6 +54,9 @@ public class Startup
             case Core.Enums.SupportedDatabaseProviders.Postgres:
                 services.AddSingleton<IDbMigrator, PostgresMigrations.PostgresDbMigrator>();
                 break;
+            case Core.Enums.SupportedDatabaseProviders.Sqlite:
+                services.AddSingleton<IDbMigrator, SqliteMigrations.SqliteDbMigrator>();
+                break;
             default:
                 break;
         }
