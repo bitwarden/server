@@ -24,7 +24,7 @@ public class SecretCreateRequestModel
     {
         List<Project> assignedProjects = new List<Project>();
 
-        foreach(Guid projectId in ProjectIds)
+        foreach (Guid projectId in ProjectIds)
         {
             var project = new Project();
             project.Id = projectId;
