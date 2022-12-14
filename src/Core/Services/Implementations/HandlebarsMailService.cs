@@ -881,6 +881,15 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
+    public async Task SendUnverifiedOrganizationDomainEmailAsync(IEnumerable<string> adminEmails, string domainName)
+    {
+        var message = CreateDefaultMessage("Domain not verified",  adminEmails);
+        var model = new OrganizationDomainUnverifiedViewModel {Url = "", DomainName = domainName};
+        await AddMessageContentAsync(message, "OrganizationDomainUnverified", model);
+        message.Category = "UnverifiedOrganizationDomain";
+        await _mailDeliveryService.SendEmailAsync(message);
+    }
+
     private static string GetUserIdentifier(string email, string userName)
     {
         return string.IsNullOrEmpty(userName) ? email : CoreHelpers.SanitizeForEmail(userName, false);
