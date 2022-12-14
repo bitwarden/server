@@ -21,7 +21,7 @@ public class AccessTokenResponseModel : ResponseModel
     public string Name { get; }
     public ICollection<string> Scopes { get; }
 
-    public DateTime ExpireAt { get; }
+    public DateTime? ExpireAt { get; }
     public DateTime CreationDate { get; }
     public DateTime RevisionDate { get; }
 }

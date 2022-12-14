@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Bit.PostgresMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20221018155821_ProjectSecretsTable")]
-    partial class ProjectSecretsTable
+    [Migration("20221202103309_SecretsManagerFlag")]
+    partial class SecretsManagerFlag
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
@@ -687,6 +687,9 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasColumnType("boolean");
 
                     b.Property<bool>("UseScim")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("UseSecretsManager")
                         .HasColumnType("boolean");
 
                     b.Property<bool>("UseSso")

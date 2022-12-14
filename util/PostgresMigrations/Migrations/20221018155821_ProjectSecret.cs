@@ -2,9 +2,9 @@
 
 #nullable disable
 
-namespace Bit.MySqlMigrations.Migrations;
+namespace Bit.PostgresMigrations.Migrations;
 
-public partial class projectSecretMapping : Migration
+public partial class ProjectSecret : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)
     {
@@ -12,8 +12,8 @@ public partial class projectSecretMapping : Migration
             name: "ProjectSecret",
             columns: table => new
             {
-                ProjectsId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                SecretsId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci")
+                ProjectsId = table.Column<Guid>(type: "uuid", nullable: false),
+                SecretsId = table.Column<Guid>(type: "uuid", nullable: false)
             },
             constraints: table =>
             {
@@ -30,8 +30,7 @@ public partial class projectSecretMapping : Migration
                     principalTable: "Secret",
                     principalColumn: "Id",
                     onDelete: ReferentialAction.Cascade);
-            })
-            .Annotation("MySql:CharSet", "utf8mb4");
+            });
 
         migrationBuilder.CreateIndex(
             name: "IX_ProjectSecret_SecretsId",

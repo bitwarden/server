@@ -354,6 +354,7 @@
     <Build Include="dbo\Stored Procedures\User_UpdateKeys.sql" />
     <Build Include="dbo\Stored Procedures\User_UpdateRenewalReminderDate.sql" />
     <Build Include="dbo\Stored Procedures\User_UpdateStorage.sql" />
+    <Build Include="dbo\Tables\AccessPolicy.sql" />
     <Build Include="dbo\Tables\ApiKey.sql" />
     <Build Include="dbo\Tables\AuthRequest.sql" />
     <Build Include="dbo\Tables\Cipher.sql" />

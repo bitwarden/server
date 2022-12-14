@@ -57,6 +57,18 @@ public class ServiceAccountsControllerTests
 
     [Theory]
     [BitAutoData]
+    public async void UpdateServiceAccount_Success(SutProvider<ServiceAccountsController> sutProvider, ServiceAccountUpdateRequestModel data, Guid serviceAccountId)
+    {
+        var resultServiceAccount = data.ToServiceAccount(serviceAccountId);
+        sutProvider.GetDependency<IUpdateServiceAccountCommand>().UpdateAsync(default).ReturnsForAnyArgs(resultServiceAccount);
+
+        var result = await sutProvider.Sut.UpdateServiceAccountAsync(serviceAccountId, data);
+        await sutProvider.GetDependency<IUpdateServiceAccountCommand>().Received(1)
+                     .UpdateAsync(Arg.Any<ServiceAccount>());
+    }
+
+    [Theory]
+    [BitAutoData]
     public async void CreateAccessToken_Success(SutProvider<ServiceAccountsController> sutProvider, AccessTokenCreateRequestModel data, Guid serviceAccountId)
     {
         var resultAccessToken = data.ToApiKey(serviceAccountId);
@@ -65,18 +77,6 @@ public class ServiceAccountsControllerTests
 
         var result = await sutProvider.Sut.CreateAccessTokenAsync(serviceAccountId, data);
         await sutProvider.GetDependency<ICreateAccessTokenCommand>().Received(1)
-                     .CreateAsync(Arg.Any<ApiKey>());
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async void UpdateSecret_Success(SutProvider<ServiceAccountsController> sutProvider, ServiceAccountUpdateRequestModel data, Guid secretId)
-    {
-        var resultServiceAccount = data.ToServiceAccount(secretId);
-        sutProvider.GetDependency<IUpdateServiceAccountCommand>().UpdateAsync(default).ReturnsForAnyArgs(resultServiceAccount);
-
-        var result = await sutProvider.Sut.UpdateServiceAccountAsync(secretId, data);
-        await sutProvider.GetDependency<IUpdateServiceAccountCommand>().Received(1)
-                     .UpdateAsync(Arg.Any<ServiceAccount>());
+            .CreateAsync(Arg.Any<ApiKey>());
     }
 }

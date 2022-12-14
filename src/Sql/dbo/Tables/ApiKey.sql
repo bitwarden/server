@@ -6,7 +6,7 @@
     [Scope]            NVARCHAR (4000) NOT NULL,
     [EncryptedPayload] NVARCHAR (4000) NOT NULL,
     [Key]              VARCHAR (MAX) NOT NULL,
-    [ExpireAt]         DATETIME2(7) NOT NULL,
+    [ExpireAt]         DATETIME2(7) NULL,
     [CreationDate]     DATETIME2(7) NOT NULL,
     [RevisionDate]     DATETIME2(7) NOT NULL,
     CONSTRAINT [PK_ApiKey] PRIMARY KEY CLUSTERED ([Id] ASC),

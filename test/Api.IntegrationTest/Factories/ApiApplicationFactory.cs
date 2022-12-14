@@ -21,6 +21,10 @@ public class ApiApplicationFactory : WebApplicationFactoryBase<Startup>
 
         builder.ConfigureTestServices(services =>
         {
+            // Remove scheduled background jobs to prevent errors in parallel test execution
+            var jobService = services.First(sd => sd.ServiceType == typeof(Microsoft.Extensions.Hosting.IHostedService) && sd.ImplementationType == typeof(Bit.Api.Jobs.JobsHostedService));
+            services.Remove(jobService);
+
             services.PostConfigure<IdentityServerAuthenticationOptions>(IdentityServerAuthenticationDefaults.AuthenticationScheme, options =>
             {
                 options.JwtBackChannelHandler = _identityApplicationFactory.Server.CreateHandler();

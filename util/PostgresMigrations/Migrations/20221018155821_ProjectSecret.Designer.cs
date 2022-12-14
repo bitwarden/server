@@ -3,6 +3,7 @@ using System;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,10 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Bit.PostgresMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    partial class DatabaseContextModelSnapshot : ModelSnapshot
+    [Migration("20221018155821_ProjectSecret")]
+    partial class ProjectSecret
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -22,35 +24,6 @@ namespace Bit.PostgresMigrations.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
-
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.AccessPolicy", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreationDate")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<string>("Discriminator")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<bool>("Read")
-                        .HasColumnType("boolean");
-
-                    b.Property<DateTime>("RevisionDate")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<bool>("Write")
-                        .HasColumnType("boolean");
-
-                    b.HasKey("Id")
-                        .HasAnnotation("SqlServer:Clustered", true);
-
-                    b.ToTable("AccessPolicy", (string)null);
-
-                    b.HasDiscriminator<string>("Discriminator").HasValue("AccessPolicy");
-                });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.ApiKey", b =>
                 {
@@ -68,7 +41,7 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasMaxLength(4000)
                         .HasColumnType("character varying(4000)");
 
-                    b.Property<DateTime?>("ExpireAt")
+                    b.Property<DateTime>("ExpireAt")
                         .HasColumnType("timestamp without time zone");
 
                     b.Property<string>("Key")
@@ -714,9 +687,6 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasColumnType("boolean");
 
                     b.Property<bool>("UseScim")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("UseSecretsManager")
                         .HasColumnType("boolean");
 
                     b.Property<bool>("UseSso")
@@ -1466,110 +1436,6 @@ namespace Bit.PostgresMigrations.Migrations
                     b.ToTable("ProjectSecret");
                 });
 
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.GroupProjectAccessPolicy", b =>
-                {
-                    b.HasBaseType("Bit.Infrastructure.EntityFramework.Models.AccessPolicy");
-
-                    b.Property<Guid?>("GrantedProjectId")
-                        .ValueGeneratedOnUpdateSometimes()
-                        .HasColumnType("uuid")
-                        .HasColumnName("GrantedProjectId");
-
-                    b.Property<Guid?>("GroupId")
-                        .ValueGeneratedOnUpdateSometimes()
-                        .HasColumnType("uuid")
-                        .HasColumnName("GroupId");
-
-                    b.HasIndex("GrantedProjectId");
-
-                    b.HasIndex("GroupId");
-
-                    b.HasDiscriminator().HasValue("group_project");
-                });
-
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.GroupServiceAccountAccessPolicy", b =>
-                {
-                    b.HasBaseType("Bit.Infrastructure.EntityFramework.Models.AccessPolicy");
-
-                    b.Property<Guid?>("GrantedServiceAccountId")
-                        .ValueGeneratedOnUpdateSometimes()
-                        .HasColumnType("uuid")
-                        .HasColumnName("GrantedServiceAccountId");
-
-                    b.Property<Guid?>("GroupId")
-                        .ValueGeneratedOnUpdateSometimes()
-                        .HasColumnType("uuid")
-                        .HasColumnName("GroupId");
-
-                    b.HasIndex("GrantedServiceAccountId");
-
-                    b.HasIndex("GroupId");
-
-                    b.HasDiscriminator().HasValue("group_service_account");
-                });
-
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.ServiceAccountProjectAccessPolicy", b =>
-                {
-                    b.HasBaseType("Bit.Infrastructure.EntityFramework.Models.AccessPolicy");
-
-                    b.Property<Guid?>("GrantedProjectId")
-                        .ValueGeneratedOnUpdateSometimes()
-                        .HasColumnType("uuid")
-                        .HasColumnName("GrantedProjectId");
-
-                    b.Property<Guid?>("ServiceAccountId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("ServiceAccountId");
-
-                    b.HasIndex("GrantedProjectId");
-
-                    b.HasIndex("ServiceAccountId");
-
-                    b.HasDiscriminator().HasValue("service_account_project");
-                });
-
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.UserProjectAccessPolicy", b =>
-                {
-                    b.HasBaseType("Bit.Infrastructure.EntityFramework.Models.AccessPolicy");
-
-                    b.Property<Guid?>("GrantedProjectId")
-                        .ValueGeneratedOnUpdateSometimes()
-                        .HasColumnType("uuid")
-                        .HasColumnName("GrantedProjectId");
-
-                    b.Property<Guid?>("OrganizationUserId")
-                        .ValueGeneratedOnUpdateSometimes()
-                        .HasColumnType("uuid")
-                        .HasColumnName("OrganizationUserId");
-
-                    b.HasIndex("GrantedProjectId");
-
-                    b.HasIndex("OrganizationUserId");
-
-                    b.HasDiscriminator().HasValue("user_project");
-                });
-
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.UserServiceAccountAccessPolicy", b =>
-                {
-                    b.HasBaseType("Bit.Infrastructure.EntityFramework.Models.AccessPolicy");
-
-                    b.Property<Guid?>("GrantedServiceAccountId")
-                        .ValueGeneratedOnUpdateSometimes()
-                        .HasColumnType("uuid")
-                        .HasColumnName("GrantedServiceAccountId");
-
-                    b.Property<Guid?>("OrganizationUserId")
-                        .ValueGeneratedOnUpdateSometimes()
-                        .HasColumnType("uuid")
-                        .HasColumnName("OrganizationUserId");
-
-                    b.HasIndex("GrantedServiceAccountId");
-
-                    b.HasIndex("OrganizationUserId");
-
-                    b.HasDiscriminator().HasValue("user_service_account");
-                });
-
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.ApiKey", b =>
                 {
                     b.HasOne("Bit.Infrastructure.EntityFramework.Models.ServiceAccount", "ServiceAccount")
@@ -1963,81 +1829,6 @@ namespace Bit.PostgresMigrations.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.GroupProjectAccessPolicy", b =>
-                {
-                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.Project", "GrantedProject")
-                        .WithMany("GroupAccessPolicies")
-                        .HasForeignKey("GrantedProjectId");
-
-                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.Group", "Group")
-                        .WithMany()
-                        .HasForeignKey("GroupId");
-
-                    b.Navigation("GrantedProject");
-
-                    b.Navigation("Group");
-                });
-
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.GroupServiceAccountAccessPolicy", b =>
-                {
-                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.ServiceAccount", "GrantedServiceAccount")
-                        .WithMany()
-                        .HasForeignKey("GrantedServiceAccountId");
-
-                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.Group", "Group")
-                        .WithMany()
-                        .HasForeignKey("GroupId");
-
-                    b.Navigation("GrantedServiceAccount");
-
-                    b.Navigation("Group");
-                });
-
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.ServiceAccountProjectAccessPolicy", b =>
-                {
-                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.Project", "GrantedProject")
-                        .WithMany("ServiceAccountAccessPolicies")
-                        .HasForeignKey("GrantedProjectId");
-
-                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.ServiceAccount", "ServiceAccount")
-                        .WithMany()
-                        .HasForeignKey("ServiceAccountId");
-
-                    b.Navigation("GrantedProject");
-
-                    b.Navigation("ServiceAccount");
-                });
-
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.UserProjectAccessPolicy", b =>
-                {
-                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.Project", "GrantedProject")
-                        .WithMany("UserAccessPolicies")
-                        .HasForeignKey("GrantedProjectId");
-
-                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.OrganizationUser", "OrganizationUser")
-                        .WithMany()
-                        .HasForeignKey("OrganizationUserId");
-
-                    b.Navigation("GrantedProject");
-
-                    b.Navigation("OrganizationUser");
-                });
-
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.UserServiceAccountAccessPolicy", b =>
-                {
-                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.ServiceAccount", "GrantedServiceAccount")
-                        .WithMany()
-                        .HasForeignKey("GrantedServiceAccountId");
-
-                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.OrganizationUser", "OrganizationUser")
-                        .WithMany()
-                        .HasForeignKey("OrganizationUserId");
-
-                    b.Navigation("GrantedServiceAccount");
-
-                    b.Navigation("OrganizationUser");
-                });
-
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Cipher", b =>
                 {
                     b.Navigation("CollectionCiphers");
@@ -2081,15 +1872,6 @@ namespace Bit.PostgresMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.OrganizationUser", b =>
                 {
                     b.Navigation("CollectionUsers");
-                });
-
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Project", b =>
-                {
-                    b.Navigation("GroupAccessPolicies");
-
-                    b.Navigation("ServiceAccountAccessPolicies");
-
-                    b.Navigation("UserAccessPolicies");
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.User", b =>
