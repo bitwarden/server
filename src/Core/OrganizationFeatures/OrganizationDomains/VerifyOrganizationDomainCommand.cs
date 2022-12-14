@@ -36,7 +36,7 @@ public class VerifyOrganizationDomainCommand : IVerifyOrganizationDomainCommand
         }
         if (domain.VerifiedDate is not null)
         {
-            throw new ConflictException();
+            throw new ConflictException("Domain has already been verified.");
         }
 
         try
