@@ -15,7 +15,7 @@ SELECT
 FROM
     [dbo].[OrganizationUser] OU
     INNER JOIN
-    [dbo].[CollectionUser] CU ON OU.[AccessAll] = 0 AND CU.[OrganizationUserId] = [OU].[Id]
+    [dbo].[CollectionUser] CU ON OU.[AccessAll] = 0 AND CU.[OrganizationUserId] = OU.[Id]
     INNER JOIN
     @OrganizationUserIds OUI ON OUI.[Id] = OU.[Id]
 END
