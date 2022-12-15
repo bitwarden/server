@@ -1,6 +1,0 @@
-[template]
-src = "app-id.conf.tmpl"
-dest = "/app/Web/app-id.json"
-keys = [
-  "globalSettings__baseServiceUri__vault"
-]

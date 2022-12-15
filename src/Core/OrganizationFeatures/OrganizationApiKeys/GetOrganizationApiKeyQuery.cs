@@ -2,15 +2,14 @@
 using Bit.Core.Enums;
 using Bit.Core.OrganizationFeatures.OrganizationApiKeys.Interfaces;
 using Bit.Core.Repositories;
-using Bit.Core.Utilities;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationApiKeys;
 
-public class GetOrganizationApiKeyCommand : IGetOrganizationApiKeyCommand
+public class GetOrganizationApiKeyQuery : IGetOrganizationApiKeyQuery
 {
     private readonly IOrganizationApiKeyRepository _organizationApiKeyRepository;
 
-    public GetOrganizationApiKeyCommand(IOrganizationApiKeyRepository organizationApiKeyRepository)
+    public GetOrganizationApiKeyQuery(IOrganizationApiKeyRepository organizationApiKeyRepository)
     {
         _organizationApiKeyRepository = organizationApiKeyRepository;
     }
@@ -25,21 +24,7 @@ public class GetOrganizationApiKeyCommand : IGetOrganizationApiKeyCommand
         var apiKeys = await _organizationApiKeyRepository
             .GetManyByOrganizationIdTypeAsync(organizationId, organizationApiKeyType);
 
-        if (apiKeys == null || !apiKeys.Any())
-        {
-            var apiKey = new OrganizationApiKey
-            {
-                OrganizationId = organizationId,
-                Type = organizationApiKeyType,
-                ApiKey = CoreHelpers.SecureRandomString(30),
-                RevisionDate = DateTime.UtcNow,
-            };
-
-            await _organizationApiKeyRepository.CreateAsync(apiKey);
-            return apiKey;
-        }
-
         // NOTE: Currently we only allow one type of api key per organization
-        return apiKeys.Single();
+        return apiKeys.SingleOrDefault();
     }
 }

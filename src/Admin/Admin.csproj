@@ -10,6 +10,7 @@
     <ProjectReference Include="..\SharedWeb\SharedWeb.csproj" />
     <ProjectReference Include="..\..\util\Migrator\Migrator.csproj" />
     <ProjectReference Include="..\Core\Core.csproj" />
+    <ProjectReference Include="..\..\util\SqliteMigrations\SqliteMigrations.csproj" />
   </ItemGroup>
 
   <Choose>

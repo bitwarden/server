@@ -2,6 +2,7 @@
 using Bit.Api.Models.Response;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
+using Bit.Core.OrganizationFeatures.Groups.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -15,16 +16,25 @@ public class GroupsController : Controller
 {
     private readonly IGroupRepository _groupRepository;
     private readonly IGroupService _groupService;
+    private readonly IOrganizationRepository _organizationRepository;
     private readonly ICurrentContext _currentContext;
+    private readonly ICreateGroupCommand _createGroupCommand;
+    private readonly IUpdateGroupCommand _updateGroupCommand;
 
     public GroupsController(
         IGroupRepository groupRepository,
         IGroupService groupService,
-        ICurrentContext currentContext)
+        IOrganizationRepository organizationRepository,
+        ICurrentContext currentContext,
+        ICreateGroupCommand createGroupCommand,
+        IUpdateGroupCommand updateGroupCommand)
     {
         _groupRepository = groupRepository;
         _groupService = groupService;
+        _organizationRepository = organizationRepository;
         _currentContext = currentContext;
+        _createGroupCommand = createGroupCommand;
+        _updateGroupCommand = updateGroupCommand;
     }
 
     [HttpGet("{id}")]
@@ -93,8 +103,10 @@ public class GroupsController : Controller
             throw new NotFoundException();
         }
 
+        var organization = await _organizationRepository.GetByIdAsync(orgIdGuid);
         var group = model.ToGroup(orgIdGuid);
-        await _groupService.SaveAsync(group, model.Collections?.Select(c => c.ToSelectionReadOnly()));
+        await _createGroupCommand.CreateGroupAsync(group, organization, model.Collections?.Select(c => c.ToSelectionReadOnly()));
+
         return new GroupResponseModel(group);
     }
 
@@ -108,7 +120,10 @@ public class GroupsController : Controller
             throw new NotFoundException();
         }
 
-        await _groupService.SaveAsync(model.ToGroup(group), model.Collections?.Select(c => c.ToSelectionReadOnly()));
+        var orgIdGuid = new Guid(orgId);
+        var organization = await _organizationRepository.GetByIdAsync(orgIdGuid);
+
+        await _updateGroupCommand.UpdateGroupAsync(model.ToGroup(group), organization, model.Collections?.Select(c => c.ToSelectionReadOnly()));
         return new GroupResponseModel(group);
     }
 
