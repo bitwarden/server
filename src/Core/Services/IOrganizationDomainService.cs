@@ -1,6 +1,6 @@
 ﻿namespace Bit.Core.Services;
 
-public interface IOrganizationDomainVerificationService
+public interface IOrganizationDomainService
 {
     Task ValidateOrganizationsDomainAsync();
 }
