@@ -139,7 +139,7 @@ public class OrganizationDomainRepository : Repository<Core.Entities.Organizatio
                         && x.VerifiedDate == null)
             .AsNoTracking()
             .ToListAsync();
-        
+
         return Mapper.Map<List<Core.Entities.OrganizationDomain>>(domains);
     }
 
