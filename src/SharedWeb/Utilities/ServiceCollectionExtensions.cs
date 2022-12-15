@@ -112,7 +112,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ISsoConfigService, SsoConfigService>();
         services.AddScoped<ISendService, SendService>();
         services.AddLoginServices();
-        services.AddScoped<IOrganizationDomainVerificationService, OrganizationDomainVerificationService>();
+        services.AddScoped<IOrganizationDomainService, OrganizationDomainService>();
     }
 
     public static void AddTokenizers(this IServiceCollection services)

@@ -3,4 +3,5 @@
 public interface IOrganizationDomainService
 {
     Task ValidateOrganizationsDomainAsync();
+    Task OrganizationDomainMaintenanceAsync();
 }

@@ -4,18 +4,18 @@ using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Services;
 
-public class OrganizationDomainVerificationService : IOrganizationDomainVerificationService
+public class OrganizationDomainService : IOrganizationDomainService
 {
     private readonly IOrganizationDomainRepository _domainRepository;
     private readonly IDnsResolverService _dnsResolverService;
     private readonly IEventService _eventService;
-    private readonly ILogger<OrganizationDomainVerificationService> _logger;
+    private readonly ILogger<OrganizationDomainService> _logger;
 
-    public OrganizationDomainVerificationService(
+    public OrganizationDomainService(
         IOrganizationDomainRepository domainRepository,
         IDnsResolverService dnsResolverService,
         IEventService eventService,
-        ILogger<OrganizationDomainVerificationService> logger)
+        ILogger<OrganizationDomainService> logger)
     {
         _domainRepository = domainRepository;
         _dnsResolverService = dnsResolverService;
@@ -63,5 +63,17 @@ public class OrganizationDomainVerificationService : IOrganizationDomainVerifica
                 _logger.LogError(ex, "Verification for organization {OrgId} with domain {Domain} failed", domain.OrganizationId, domain.DomainName);
             }
         }
+    }
+
+    public async Task OrganizationDomainMaintenanceAsync()
+    {
+        //Get domains that have not been verified within 72 hours
+        //Send email to administrators
+        //Update table with email sent
+
+        //check domains that have not been verified within 7 days 
+        //delete domains
+
+        //end
     }
 }
