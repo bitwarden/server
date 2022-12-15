@@ -129,4 +129,28 @@ public class OrganizationDomainRepository : Repository<Core.Entities.Organizatio
 
         return Mapper.Map<Core.Entities.OrganizationDomain>(domain);
     }
+
+    public async Task<ICollection<Core.Entities.OrganizationDomain>> GetExpiredOrganizationDomainsAsync()
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        var domains = await dbContext.OrganizationDomains
+            .Where(x => x.CreationDate < DateTime.UtcNow.AddHours(-72)
+                        && x.VerifiedDate == null)
+            .AsNoTracking()
+            .ToListAsync();
+        
+        return Mapper.Map<List<Core.Entities.OrganizationDomain>>(domains);
+    }
+
+    public async Task<bool> DeleteExpiredAsync()
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        var expiredDomains = await dbContext.OrganizationDomains
+            .Where(x => x.CreationDate < DateTime.UtcNow.AddDays(-7))
+            .ToListAsync();
+        dbContext.OrganizationDomains.RemoveRange(expiredDomains);
+        return await dbContext.SaveChangesAsync() > 0;
+    }
 }

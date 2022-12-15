@@ -82,4 +82,29 @@ public class OrganizationDomainRepository : Repository<OrganizationDomain, Guid>
             return results.SingleOrDefault();
         }
     }
+
+    public async Task<ICollection<OrganizationDomain>> GetExpiredOrganizationDomainsAsync()
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection
+                .QueryAsync<OrganizationDomain>(
+                    $"[{Schema}].[OrganizationDomain_ReadIfExpired]",
+                    null,
+                    commandType: CommandType.StoredProcedure);
+
+            return results.ToList();
+        }
+    }
+
+    public async Task<bool> DeleteExpiredAsync()
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            return await connection.ExecuteAsync(
+                $"[{Schema}].[OrganizationDomain_DeleteIfExpired]",
+                null,
+                commandType: CommandType.StoredProcedure) > 0;
+        }
+    }
 }
