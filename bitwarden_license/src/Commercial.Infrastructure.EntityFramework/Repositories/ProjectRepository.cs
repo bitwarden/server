@@ -26,27 +26,17 @@ public class ProjectRepository : Repository<Core.Entities.Project, Project, Guid
         }
     }
 
-    public async Task<IEnumerable<Core.Entities.Project>> GetAllByOrganizationIdAsync(Guid organizationId)
+    public async Task<IEnumerable<Core.Entities.Project>> GetManyByOrganizationIdAsync(Guid organizationId, Guid userId, bool checkAccess = true)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
-        var project = await dbContext.Project
-            .Where(p => p.OrganizationId == organizationId && p.DeletedDate == null)
-            .OrderBy(p => p.RevisionDate)
-            .ToListAsync();
-        return Mapper.Map<List<Core.Entities.Project>>(project);
-    }
-
-    public async Task<IEnumerable<Core.Entities.Project>> GetManyByOrganizationIdAsync(Guid organizationId, Guid userId)
-    {
-        using var scope = ServiceScopeFactory.CreateScope();
-        var dbContext = GetDatabaseContext(scope);
-        var project = await dbContext.Project
-            .Where(p => p.OrganizationId == organizationId && p.DeletedDate == null)
-            .Where(UserHasAccessToProject(userId))
-            .OrderBy(p => p.RevisionDate)
-            .ToListAsync();
-        return Mapper.Map<List<Core.Entities.Project>>(project);
+        var query = dbContext.Project.Where(p => p.OrganizationId == organizationId && p.DeletedDate == null);
+        if (checkAccess)
+        {
+            query = query.Where(UserHasAccessToProject(userId));
+        }
+        var projects = await query.OrderBy(p => p.RevisionDate).ToListAsync();
+        return Mapper.Map<List<Core.Entities.Project>>(projects);
     }
 
     private static Expression<Func<Project, bool>> UserHasAccessToProject(Guid userId) => p =>
