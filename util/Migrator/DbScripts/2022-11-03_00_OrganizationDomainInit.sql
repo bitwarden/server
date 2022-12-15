@@ -189,6 +189,63 @@ WHERE
     [DomainName] = @DomainName
 END
 GO
+    
+--SP Read by nextRunDate
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationDomain_ReadByNextRunDate]
+    @Date DATETIME2(7)
+AS
+BEGIN
+    SET NOCOUNT ON
+
+SELECT
+    *
+FROM
+    [dbo].[OrganizationDomain]
+WHERE [VerifiedDate] IS NULL
+  AND [JobRunCount] != 3
+  AND DATEPART(year, [NextRunDate]) = DATEPART(year, @Date)
+  AND DATEPART(month, [NextRunDate]) = DATEPART(month, @Date)
+  AND DATEPART(day, [NextRunDate]) = DATEPART(day, @Date)
+  AND DATEPART(hour, [NextRunDate]) = DATEPART(hour, @Date)
+UNION
+SELECT
+    *
+FROM
+    [dbo].[OrganizationDomain]
+WHERE DATEDIFF(hour, [NextRunDate], @Date) > 36
+  AND [VerifiedDate] IS NULL
+  AND [JobRunCount] != 3
+END
+GO
+    
+-- SP to get all domains that have not been verified within 72 hours
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationDomain_ReadIfExpired]
+AS
+BEGIN
+    SET NOCOUNT OFF
+
+SELECT
+    *
+FROM
+    [dbo].[OrganizationDomain]
+WHERE
+    [CreationDate] < DATEADD(hour, -72, GETUTCDATE()) --Using 72 hours to determine expired period
+  AND
+    [VerifiedDate] IS NULL
+END
+GO
+
+-- SP to delete domains that have been left unverified for 7 days
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationDomain_DeleteIfExpired]
+AS
+BEGIN
+    SET NOCOUNT OFF
+
+DELETE FROM [dbo].[OrganizationDomain]
+WHERE [CreationDate] < DATEADD(day, -7, GETUTCDATE())
+  AND [VerifiedDate] IS NULL
+END
+GO
 
 -- SP to get Organization SSO Provider details by Email
 CREATE OR ALTER PROCEDURE [dbo].[OrganizationDomainSsoDetails_ReadByEmail]
