@@ -11,7 +11,7 @@ public class DeleteUnverifiedOrganizationDomainsJob : BaseJob
 
     public DeleteUnverifiedOrganizationDomainsJob(
         IServiceProvider serviceProvider,
-        ILogger<DeleteUnverifiedOrganizationDomainsJob> logger) 
+        ILogger<DeleteUnverifiedOrganizationDomainsJob> logger)
         : base(logger)
     {
         _serviceProvider = serviceProvider;

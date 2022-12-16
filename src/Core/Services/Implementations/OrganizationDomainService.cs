@@ -77,16 +77,16 @@ public class OrganizationDomainService : IOrganizationDomainService
         {
             //Get domains that have not been verified within 72 hours
             var expiredDomains = await _domainRepository.GetExpiredOrganizationDomainsAsync();
-            
+
             _logger.LogInformation(Constants.BypassFiltersEventId, null,
                 "Attempting email reminder for {0} organizations.", expiredDomains.Count);
-            
+
             foreach (var domain in expiredDomains)
             {
                 //get admin emails of organization
                 var admins = await _organizationUserRepository.GetManyByMinimumRoleAsync(domain.OrganizationId, OrganizationUserType.Admin);
                 var adminEmails = admins.Select(a => a.Email).Distinct().ToList();
-            
+
                 //Send email to administrators
                 if (adminEmails.Count > 0)
                 {

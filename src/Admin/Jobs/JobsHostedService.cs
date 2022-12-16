@@ -69,7 +69,7 @@ public class JobsHostedService : BaseJobsHostedService
             .StartNow()
             .WithCronSchedule("0 2 * * *")
             .Build();
-            
+
         var jobs = new List<Tuple<Type, ITrigger>>
         {
             new Tuple<Type, ITrigger>(typeof(DeleteSendsJob), everyFiveMinutesTrigger),
