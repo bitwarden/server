@@ -1,4 +1,4 @@
-using Bit.Infrastructure.EntityFramework.Models;
+﻿using Bit.Infrastructure.EntityFramework.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
@@ -8,7 +8,7 @@ public class DatabaseContext : DbContext
 {
     public const string postgresIndetermanisticCollation = "postgresIndetermanisticCollation";
 
-    public DatabaseContext(DbContextOptions<DatabaseContext> options)
+    public DatabaseContext(DbContextOptions options)
         : base(options)
     { }
 
@@ -157,6 +157,9 @@ public class DatabaseContext : DbContext
             {
                 if (property.ClrType == typeof(DateTime) || property.ClrType == typeof(DateTime?))
                 {
+                    property.SetValueConverter(
+                        new ValueConverter<DateTime, DateTime>(
+                            v => v,
                             v => new DateTime(v.Ticks, DateTimeKind.Utc)));
                 }
             }
