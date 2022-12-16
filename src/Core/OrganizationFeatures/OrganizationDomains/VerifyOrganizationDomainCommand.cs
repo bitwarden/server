@@ -39,6 +39,13 @@ public class VerifyOrganizationDomainCommand : IVerifyOrganizationDomainCommand
             throw new ConflictException("Domain has already been verified.");
         }
 
+        var claimedDomain =
+            await _organizationDomainRepository.GetClaimedDomainsByDomainNameAsync(domain.DomainName);
+        if (claimedDomain.Any())
+        {
+            throw new ConflictException("The domain has been verified by another organization.");
+        }
+
         try
         {
             if (await _dnsResolverService.ResolveAsync(domain.DomainName, domain.Txt))
