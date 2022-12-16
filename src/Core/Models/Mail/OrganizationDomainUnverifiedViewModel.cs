@@ -1,4 +1,4 @@
-namespace Bit.Core.Models.Mail;
+﻿namespace Bit.Core.Models.Mail;
 
 public class OrganizationDomainUnverifiedViewModel
 {
