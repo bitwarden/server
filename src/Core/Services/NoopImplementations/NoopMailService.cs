@@ -238,7 +238,7 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
 
-    public Task SendUnverifiedOrganizationDomainEmailAsync(IEnumerable<string> adminEmails, string domainName)
+    public Task SendUnverifiedOrganizationDomainEmailAsync(IEnumerable<string> adminEmails, string organizationId, string domainName)
     {
         return Task.FromResult(0);
     }
