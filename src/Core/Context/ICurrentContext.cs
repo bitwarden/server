@@ -58,6 +58,7 @@ public interface ICurrentContext
     bool ProviderAccessEventLogs(Guid providerId);
     bool AccessProviderOrganizations(Guid providerId);
     bool ManageProviderOrganizations(Guid providerId);
+    bool ServiceAccount();
 
     Task<ICollection<CurrentContentOrganization>> OrganizationMembershipAsync(
         IOrganizationUserRepository organizationUserRepository, Guid userId);

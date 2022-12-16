@@ -109,6 +109,7 @@ public class ClientStore : IClientStore
             },
             Claims = new List<ClientClaim>
             {
+                new(Claims.Type, ClientType.ServiceAccount.ToString()),
                 new(JwtClaimTypes.Subject, apiKey.ServiceAccountId.ToString()),
             },
         };
