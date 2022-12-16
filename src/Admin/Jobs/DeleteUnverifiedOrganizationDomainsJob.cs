@@ -3,14 +3,15 @@ using Bit.Core.Jobs;
 using Bit.Core.Services;
 using Quartz;
 
-namespace Bit.Api.Jobs;
+namespace Bit.Admin.Jobs;
 
-public class ValidateOrganizationDomainJob : BaseJob
+public class DeleteUnverifiedOrganizationDomainsJob : BaseJob
 {
     private readonly IServiceProvider _serviceProvider;
-    public ValidateOrganizationDomainJob(
+
+    public DeleteUnverifiedOrganizationDomainsJob(
         IServiceProvider serviceProvider,
-        ILogger<ValidateOrganizationDomainJob> logger)
+        ILogger<DeleteUnverifiedOrganizationDomainsJob> logger)
         : base(logger)
     {
         _serviceProvider = serviceProvider;
@@ -18,13 +19,13 @@ public class ValidateOrganizationDomainJob : BaseJob
 
     protected override async Task ExecuteJobAsync(IJobExecutionContext context)
     {
-        _logger.LogInformation(Constants.BypassFiltersEventId, "Execute job task: ValidateOrganizationDomainJob: Start");
+        _logger.LogInformation(Constants.BypassFiltersEventId, "Execute job task: DeleteUnverifiedOrganizationDomainsJob: Start");
         using (var serviceScope = _serviceProvider.CreateScope())
         {
             var organizationDomainService =
                 serviceScope.ServiceProvider.GetRequiredService<IOrganizationDomainService>();
-            await organizationDomainService.ValidateOrganizationsDomainAsync();
+            await organizationDomainService.OrganizationDomainMaintenanceAsync();
         }
-        _logger.LogInformation(Constants.BypassFiltersEventId, "Execute job task: ValidateOrganizationDomainJob: End");
+        _logger.LogInformation(Constants.BypassFiltersEventId, "Execute job task: DeleteUnverifiedOrganizationDomainsJob: End");
     }
 }

@@ -4,22 +4,28 @@ using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Services;
 
-public class OrganizationDomainVerificationService : IOrganizationDomainVerificationService
+public class OrganizationDomainService : IOrganizationDomainService
 {
     private readonly IOrganizationDomainRepository _domainRepository;
+    private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IDnsResolverService _dnsResolverService;
     private readonly IEventService _eventService;
-    private readonly ILogger<OrganizationDomainVerificationService> _logger;
+    private readonly IMailService _mailService;
+    private readonly ILogger<OrganizationDomainService> _logger;
 
-    public OrganizationDomainVerificationService(
+    public OrganizationDomainService(
         IOrganizationDomainRepository domainRepository,
+        IOrganizationUserRepository organizationUserRepository,
         IDnsResolverService dnsResolverService,
         IEventService eventService,
-        ILogger<OrganizationDomainVerificationService> logger)
+        IMailService mailService,
+        ILogger<OrganizationDomainService> logger)
     {
         _domainRepository = domainRepository;
+        _organizationUserRepository = organizationUserRepository;
         _dnsResolverService = dnsResolverService;
         _eventService = eventService;
+        _mailService = mailService;
         _logger = logger;
     }
 
@@ -62,6 +68,40 @@ public class OrganizationDomainVerificationService : IOrganizationDomainVerifica
             {
                 _logger.LogError(ex, "Verification for organization {OrgId} with domain {Domain} failed", domain.OrganizationId, domain.DomainName);
             }
+        }
+    }
+
+    public async Task OrganizationDomainMaintenanceAsync()
+    {
+        try
+        {
+            //Get domains that have not been verified within 72 hours
+            var expiredDomains = await _domainRepository.GetExpiredOrganizationDomainsAsync();
+
+            _logger.LogInformation(Constants.BypassFiltersEventId, null,
+                "Attempting email reminder for {0} organizations.", expiredDomains.Count);
+
+            foreach (var domain in expiredDomains)
+            {
+                //get admin emails of organization
+                var admins = await _organizationUserRepository.GetManyByMinimumRoleAsync(domain.OrganizationId, OrganizationUserType.Admin);
+                var adminEmails = admins.Select(a => a.Email).Distinct().ToList();
+
+                //Send email to administrators
+                if (adminEmails.Count > 0)
+                {
+                    await _mailService.SendUnverifiedOrganizationDomainEmailAsync(adminEmails,
+                        domain.OrganizationId.ToString(), domain.DomainName);
+                }
+            }
+            //delete domains that have not been verified within 7 days 
+            var status = await _domainRepository.DeleteExpiredAsync();
+            _logger.LogInformation(Constants.BypassFiltersEventId, null,
+                "Delete status {0}", status);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Organization domain maintenance failed");
         }
     }
 }

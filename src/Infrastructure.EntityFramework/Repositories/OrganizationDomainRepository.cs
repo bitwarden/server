@@ -129,4 +129,42 @@ public class OrganizationDomainRepository : Repository<Core.Entities.Organizatio
 
         return Mapper.Map<Core.Entities.OrganizationDomain>(domain);
     }
+
+    public async Task<ICollection<Core.Entities.OrganizationDomain>> GetExpiredOrganizationDomainsAsync()
+    {
+        List<OrganizationDomain> domains;
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        if (dbContext.Database.IsNpgsql())
+        {
+            //Get domains that have not been verified after 72 hours
+            domains = dbContext.OrganizationDomains
+                .AsEnumerable()
+                .Where(x => (DateTime.UtcNow - x.CreationDate).Days == 4
+                            && x.VerifiedDate == null)
+                .ToList();
+        }
+        else
+        {
+            //Get domains that have not been verified after 72 hours
+            domains = await dbContext.OrganizationDomains
+                .Where(x => EF.Functions.DateDiffDay(x.CreationDate, DateTime.UtcNow) == 4
+                            && x.VerifiedDate == null)
+                .ToListAsync();
+        }
+
+        return Mapper.Map<List<Core.Entities.OrganizationDomain>>(domains);
+    }
+
+    public async Task<bool> DeleteExpiredAsync()
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        var expiredDomains = await dbContext.OrganizationDomains
+            .Where(x => x.CreationDate < DateTime.UtcNow.AddDays(-7))
+            .ToListAsync();
+        dbContext.OrganizationDomains.RemoveRange(expiredDomains);
+        return await dbContext.SaveChangesAsync() > 0;
+    }
 }
