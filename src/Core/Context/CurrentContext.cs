@@ -33,6 +33,7 @@ public class CurrentContext : ICurrentContext
     public virtual bool MaybeBot { get; set; }
     public virtual int? BotScore { get; set; }
     public virtual string ClientId { get; set; }
+    public virtual ClientType ClientType { get; set; }
 
     public CurrentContext(IProviderUserRepository providerUserRepository)
     {
@@ -130,6 +131,13 @@ public class CurrentContext : ICurrentContext
                     orgApi = true;
                 }
             }
+        }
+
+        var clientType = GetClaimValue(claimsDict, Claims.Type);
+        if (clientType != null)
+        {
+            Enum.TryParse(clientType, out ClientType c);
+            ClientType = c;
         }
 
         DeviceIdentifier = GetClaimValue(claimsDict, Claims.Device);
@@ -442,6 +450,11 @@ public class CurrentContext : ICurrentContext
                 .Select(ou => new CurrentContentProvider(ou)).ToList();
         }
         return Providers;
+    }
+
+    public bool ServiceAccount()
+    {
+        return ClientType == ClientType.ServiceAccount;
     }
 
     private string GetClaimValue(Dictionary<string, IEnumerable<Claim>> claims, string type)
