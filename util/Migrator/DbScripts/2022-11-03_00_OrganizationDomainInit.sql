@@ -229,7 +229,7 @@ SELECT
 FROM
     [dbo].[OrganizationDomain]
 WHERE
-    [CreationDate] < DATEADD(hour, -72, GETUTCDATE()) --Using 72 hours to determine expired period
+    DATEDIFF(DAY, [CreationDate], GETUTCDATE()) = 4 --Get domains that have not been verified after 3 days (72 hours)
   AND
     [VerifiedDate] IS NULL
 END

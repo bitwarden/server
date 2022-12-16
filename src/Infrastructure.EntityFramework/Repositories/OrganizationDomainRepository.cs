@@ -132,13 +132,25 @@ public class OrganizationDomainRepository : Repository<Core.Entities.Organizatio
 
     public async Task<ICollection<Core.Entities.OrganizationDomain>> GetExpiredOrganizationDomainsAsync()
     {
+        List<OrganizationDomain> domains;
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
-        var domains = await dbContext.OrganizationDomains
-            .Where(x => x.CreationDate < DateTime.UtcNow.AddHours(-72)
-                        && x.VerifiedDate == null)
-            .AsNoTracking()
-            .ToListAsync();
+
+        if (dbContext.Database.IsNpgsql())
+        {
+            domains = dbContext.OrganizationDomains
+                .AsEnumerable()
+                .Where(x => (DateTime.UtcNow - x.CreationDate).Days == 4
+                            && x.VerifiedDate == null)
+                .ToList();
+        }
+        else
+        {
+            domains = await dbContext.OrganizationDomains
+                .Where(x => EF.Functions.DateDiffDay(x.CreationDate, DateTime.UtcNow) == 4
+                            && x.VerifiedDate == null)
+                .ToListAsync();
+        }
 
         return Mapper.Map<List<Core.Entities.OrganizationDomain>>(domains);
     }
