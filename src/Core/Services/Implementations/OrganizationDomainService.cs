@@ -7,19 +7,25 @@ namespace Bit.Core.Services;
 public class OrganizationDomainService : IOrganizationDomainService
 {
     private readonly IOrganizationDomainRepository _domainRepository;
+    private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IDnsResolverService _dnsResolverService;
     private readonly IEventService _eventService;
+    private readonly IMailService _mailService;
     private readonly ILogger<OrganizationDomainService> _logger;
 
     public OrganizationDomainService(
         IOrganizationDomainRepository domainRepository,
+        IOrganizationUserRepository organizationUserRepository,
         IDnsResolverService dnsResolverService,
         IEventService eventService,
+        IMailService mailService,
         ILogger<OrganizationDomainService> logger)
     {
         _domainRepository = domainRepository;
+        _organizationUserRepository = organizationUserRepository;
         _dnsResolverService = dnsResolverService;
         _eventService = eventService;
+        _mailService = mailService;
         _logger = logger;
     }
 
@@ -67,13 +73,34 @@ public class OrganizationDomainService : IOrganizationDomainService
 
     public async Task OrganizationDomainMaintenanceAsync()
     {
-        //Get domains that have not been verified within 72 hours
-        //Send email to administrators
-        //Update table with email sent
-
-        //check domains that have not been verified within 7 days 
-        //delete domains
-
-        //end
+        try
+        {
+            //Get domains that have not been verified within 72 hours
+            var expiredDomains = await _domainRepository.GetExpiredOrganizationDomainsAsync();
+            
+            _logger.LogInformation(Constants.BypassFiltersEventId, null,
+                "Attempting email reminder for {0} organizations.", expiredDomains.Count);
+            
+            foreach (var domain in expiredDomains)
+            {
+                //get admin emails of organization
+                var admins = await _organizationUserRepository.GetManyByMinimumRoleAsync(domain.OrganizationId, OrganizationUserType.Admin);
+                var adminEmails = admins.Select(a => a.Email).Distinct().ToList();
+            
+                //Send email to administrators
+                if (adminEmails.Count > 0)
+                {
+                    await _mailService.SendUnverifiedOrganizationDomainEmailAsync(adminEmails, domain.DomainName);
+                }
+            }
+            //delete domains that have not been verified within 7 days 
+            var status = await _domainRepository.DeleteExpiredAsync();
+            _logger.LogInformation(Constants.BypassFiltersEventId, null,
+                "Delete status {0}", status);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Organization domain maintenance failed");
+        }
     }
 }
