@@ -90,7 +90,8 @@ public class OrganizationDomainService : IOrganizationDomainService
                 //Send email to administrators
                 if (adminEmails.Count > 0)
                 {
-                    await _mailService.SendUnverifiedOrganizationDomainEmailAsync(adminEmails, domain.DomainName);
+                    await _mailService.SendUnverifiedOrganizationDomainEmailAsync(adminEmails,
+                        domain.OrganizationId.ToString(), domain.DomainName);
                 }
             }
             //delete domains that have not been verified within 7 days 
