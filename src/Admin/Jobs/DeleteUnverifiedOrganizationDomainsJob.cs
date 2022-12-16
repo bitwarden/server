@@ -1,23 +1,31 @@
+﻿using Bit.Core;
 using Bit.Core.Jobs;
+using Bit.Core.Services;
 using Quartz;
 
 namespace Bit.Admin.Jobs;
 
 public class DeleteUnverifiedOrganizationDomainsJob : BaseJob
 {
-    public DeleteUnverifiedOrganizationDomainsJob(ILogger logger) : base(logger)
+    private readonly IServiceProvider _serviceProvider;
+
+    public DeleteUnverifiedOrganizationDomainsJob(
+        IServiceProvider serviceProvider,
+        ILogger<DeleteUnverifiedOrganizationDomainsJob> logger) 
+        : base(logger)
     {
+        _serviceProvider = serviceProvider;
     }
 
     protected override async Task ExecuteJobAsync(IJobExecutionContext context)
     {
-        //Get domains that have not been verified within 72 hours
-        //Send email to administrators
-        //Update table with email sent
-
-        //check domains that have not been verified within 7 days 
-        //delete domains
-        
-        //end
+        _logger.LogInformation(Constants.BypassFiltersEventId, "Execute job task: DeleteUnverifiedOrganizationDomainsJob: Start");
+        using (var serviceScope = _serviceProvider.CreateScope())
+        {
+            var organizationDomainService =
+                serviceScope.ServiceProvider.GetRequiredService<IOrganizationDomainService>();
+            await organizationDomainService.OrganizationDomainMaintenanceAsync();
+        }
+        _logger.LogInformation(Constants.BypassFiltersEventId, "Execute job task: DeleteUnverifiedOrganizationDomainsJob: End");
     }
 }
