@@ -43,7 +43,7 @@ public class VerifyOrganizationDomainCommand : IVerifyOrganizationDomainCommand
             await _organizationDomainRepository.GetClaimedDomainsByDomainNameAsync(domain.DomainName);
         if (claimedDomain.Any())
         {
-            throw new ConflictException("The domain has been verified by another organization.");
+            throw new ConflictException("The domain is not available to be claimed.");
         }
 
         try
