@@ -21,9 +21,9 @@ public class ValidateOrganizationDomainJob : BaseJob
         _logger.LogInformation(Constants.BypassFiltersEventId, "Execute job task: ValidateOrganizationDomainJob: Start");
         using (var serviceScope = _serviceProvider.CreateScope())
         {
-            var verificationDomainService =
-                serviceScope.ServiceProvider.GetRequiredService<IOrganizationDomainVerificationService>();
-            await verificationDomainService.ValidateOrganizationsDomainAsync();
+            var organizationDomainService =
+                serviceScope.ServiceProvider.GetRequiredService<IOrganizationDomainService>();
+            await organizationDomainService.ValidateOrganizationsDomainAsync();
         }
         _logger.LogInformation(Constants.BypassFiltersEventId, "Execute job task: ValidateOrganizationDomainJob: End");
     }
