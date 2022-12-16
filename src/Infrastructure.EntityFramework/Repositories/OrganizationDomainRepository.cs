@@ -138,6 +138,7 @@ public class OrganizationDomainRepository : Repository<Core.Entities.Organizatio
 
         if (dbContext.Database.IsNpgsql())
         {
+            //Get domains that have not been verified after 72 hours
             domains = dbContext.OrganizationDomains
                 .AsEnumerable()
                 .Where(x => (DateTime.UtcNow - x.CreationDate).Days == 4
@@ -146,6 +147,7 @@ public class OrganizationDomainRepository : Repository<Core.Entities.Organizatio
         }
         else
         {
+            //Get domains that have not been verified after 72 hours
             domains = await dbContext.OrganizationDomains
                 .Where(x => EF.Functions.DateDiffDay(x.CreationDate, DateTime.UtcNow) == 4
                             && x.VerifiedDate == null)
