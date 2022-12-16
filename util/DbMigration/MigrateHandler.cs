@@ -1,7 +1,7 @@
+﻿using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Infrastructure.EntityFramework.Repositories;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
-using Bit.Infrastructure.EntityFramework.Models;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.DbMigration;
 

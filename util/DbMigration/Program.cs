@@ -3,22 +3,22 @@ using System.CommandLine;
 using Bit.DbMigration;
 
 var fromProviderOption = new Option<ProviderOption>(
-  new [] { "--from-provider", "-fp" },
+  new[] { "--from-provider", "-fp" },
   description: "The provider you would like to migrate data from."
 );
 
 var fromConnectionStringOption = new Option<string>(
-  new [] { "--from-connection", "-fc" },
+  new[] { "--from-connection", "-fc" },
   description: "The connection string that should be used to get data from."
 );
 
 var toProviderOption = new Option<ToProviderOption>(
-  new [] { "--to-provider", "-tp" },
+  new[] { "--to-provider", "-tp" },
   description: "The provider you would like to migrate data to."
 );
 
 var toConnectionStringOption = new Option<string>(
-  new [] { "--to-connection", "-tc" },
+  new[] { "--to-connection", "-tc" },
   description: "The connection string that should be used to move data to."
 );
 
@@ -31,12 +31,12 @@ migrateCommand.AddOption(toConnectionStringOption);
 migrateCommand.SetHandler(MigrateHandler.RunAsync, fromProviderOption, fromConnectionStringOption, toProviderOption, toConnectionStringOption);
 
 var providerOption = new Option<ProviderOption>(
-  new [] { "--provider", "-p" },
+  new[] { "--provider", "-p" },
   description: "The provider to clean"
 );
 
 var connectionStringOption = new Option<string>(
-  new [] { "--connection", "-c" },
+  new[] { "--connection", "-c" },
   description: "The connection string of the database to clean"
 );
 
