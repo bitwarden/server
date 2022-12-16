@@ -1,4 +1,4 @@
-﻿using Bit.Infrastructure.EntityFramework.Models;
+using Bit.Infrastructure.EntityFramework.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
@@ -157,20 +157,7 @@ public class DatabaseContext : DbContext
             {
                 if (property.ClrType == typeof(DateTime) || property.ClrType == typeof(DateTime?))
                 {
-                    if (Database.IsNpgsql())
-                    {
-                        property.SetValueConverter(
-                            new ValueConverter<DateTime, DateTime>(
-                                v => v,
-                                v => v.ToUniversalTime()));
-                    }
-                    else
-                    {
-                        property.SetValueConverter(
-                            new ValueConverter<DateTime, DateTime>(
-                                v => v,
-                                v => new DateTime(v.Ticks, DateTimeKind.Utc)));
-                    }
+                            v => new DateTime(v.Ticks, DateTimeKind.Utc)));
                 }
             }
         }

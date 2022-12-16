@@ -23,8 +23,6 @@ public static class EntityFrameworkServiceCollectionExtensions
             if (provider == SupportedDatabaseProviders.Postgres)
             {
                 options.UseNpgsql(connectionString, b => b.MigrationsAssembly("PostgresMigrations"));
-                // Handle NpgSql Legacy Support for `timestamp without timezone` issue
-                AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
             }
             else if (provider == SupportedDatabaseProviders.MySql)
             {
