@@ -184,4 +184,5 @@ public class CollectionServiceTest
         await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs()
             .LogOrganizationUserEventAsync(default, default);
     }
+
 }

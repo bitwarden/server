@@ -135,24 +135,33 @@ public class EventService : IEventService
         };
     }
 
-    public async Task LogCollectionEventAsync(Collection collection, EventType type, DateTime? date = null)
+    public async Task LogCollectionEventAsync(Collection collection, EventType type, DateTime? date = null) =>
+        await LogCollectionEventsAsync(new[] { (collection, type, date) });
+
+
+    public async Task LogCollectionEventsAsync(IEnumerable<(Collection collection, EventType type, DateTime? date)> events)
     {
         var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
-        if (!CanUseEvents(orgAbilities, collection.OrganizationId))
+        var eventMessages = new List<IEvent>();
+        foreach (var (collection, type, date) in events)
         {
-            return;
+            if (!CanUseEvents(orgAbilities, collection.OrganizationId))
+            {
+                continue;
+            }
+
+            eventMessages.Add(new EventMessage(_currentContext)
+            {
+                OrganizationId = collection.OrganizationId,
+                CollectionId = collection.Id,
+                Type = type,
+                ActingUserId = _currentContext?.UserId,
+                ProviderId = await GetProviderIdAsync(collection.OrganizationId),
+                Date = date.GetValueOrDefault(DateTime.UtcNow)
+            });
         }
 
-        var e = new EventMessage(_currentContext)
-        {
-            OrganizationId = collection.OrganizationId,
-            CollectionId = collection.Id,
-            Type = type,
-            ActingUserId = _currentContext?.UserId,
-            ProviderId = await GetProviderIdAsync(collection.OrganizationId),
-            Date = date.GetValueOrDefault(DateTime.UtcNow)
-        };
-        await _eventWriteService.CreateAsync(e);
+        await _eventWriteService.CreateManyAsync(eventMessages);
     }
 
     public async Task LogGroupEventAsync(Group group, EventType type, DateTime? date = null) =>
