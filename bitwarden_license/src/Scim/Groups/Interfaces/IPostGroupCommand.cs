@@ -5,5 +5,5 @@ namespace Bit.Scim.Groups.Interfaces;
 
 public interface IPostGroupCommand
 {
-    Task<Group> PostGroupAsync(Guid organizationId, ScimGroupRequestModel model);
+    Task<Group> PostGroupAsync(Organization organization, ScimGroupRequestModel model);
 }

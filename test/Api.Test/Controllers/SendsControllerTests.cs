@@ -6,6 +6,7 @@ using Bit.Api.Models.Response;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -19,7 +20,6 @@ namespace Bit.Api.Test.Controllers;
 
 public class SendsControllerTests : IDisposable
 {
-
     private readonly SendsController _sut;
     private readonly GlobalSettings _globalSettings;
     private readonly IUserService _userService;
@@ -75,5 +75,31 @@ public class SendsControllerTests : IDisposable
 
         Assert.NotNull(response);
         Assert.Null(response.CreatorIdentifier);
+    }
+
+    [Fact]
+    public async Task Post_DeletionDateIsMoreThan31DaysFromNow_ThrowsBadRequest()
+    {
+        var now = DateTime.UtcNow;
+        var expected = "You cannot have a Send with a deletion date that far " +
+                    "into the future. Adjust the Deletion Date to a value less than 31 days from now " +
+                    "and try again.";
+        var request = new SendRequestModel() { DeletionDate = now.AddDays(32) };
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Post(request));
+        Assert.Equal(expected, exception.Message);
+    }
+
+    [Fact]
+    public async Task PostFile_DeletionDateIsMoreThan31DaysFromNow_ThrowsBadRequest()
+    {
+        var now = DateTime.UtcNow;
+        var expected = "You cannot have a Send with a deletion date that far " +
+                    "into the future. Adjust the Deletion Date to a value less than 31 days from now " +
+                    "and try again.";
+        var request = new SendRequestModel() { Type = SendType.File, FileLength = 1024L, DeletionDate = now.AddDays(32) };
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.PostFile(request));
+        Assert.Equal(expected, exception.Message);
     }
 }
