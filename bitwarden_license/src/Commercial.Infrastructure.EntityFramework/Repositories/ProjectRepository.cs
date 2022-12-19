@@ -1,5 +1,6 @@
 ﻿using System.Linq.Expressions;
 using AutoMapper;
+using Bit.Core.Identity;
 using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Infrastructure.EntityFramework.Repositories;
@@ -26,21 +27,17 @@ public class ProjectRepository : Repository<Core.Entities.Project, Project, Guid
         }
     }
 
-    public async Task<IEnumerable<Core.Entities.Project>> GetManyByOrganizationIdAsync(Guid organizationId, Guid? userId, Guid? serviceAccountId)
+    public async Task<IEnumerable<Core.Entities.Project>> GetManyByOrganizationIdAsync(Guid organizationId, Guid userId, ClientType clientType, bool checkAccess = true)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
         var query = dbContext.Project.Where(p => p.OrganizationId == organizationId && p.DeletedDate == null);
-        if (userId.HasValue)
+
+        if (checkAccess)
         {
-            query = query.Where(UserHasAccessToProject(userId.Value));
+            query = query.Where(clientType == ClientType.ServiceAccount ? ServiceAccountHasAccessToProject(userId) : UserHasAccessToProject(userId));
         }
 
-        if (serviceAccountId.HasValue)
-        {
-            query = query.Where(ServiceAccountHasAccessToProject(serviceAccountId.Value));
-
-        }
         var projects = await query.OrderBy(p => p.RevisionDate).ToListAsync();
         return Mapper.Map<List<Core.Entities.Project>>(projects);
     }
