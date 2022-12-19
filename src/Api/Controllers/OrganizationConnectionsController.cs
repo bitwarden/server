@@ -4,6 +4,7 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Business;
 using Bit.Core.Models.OrganizationConnectionConfigs;
 using Bit.Core.OrganizationFeatures.OrganizationConnections.Interfaces;
 using Bit.Core.Repositories;
@@ -179,11 +180,7 @@ public class OrganizationConnectionsController : Controller
         {
             throw new BadRequestException($"Cannot create a {typedModel.Type} connection outside of a self-hosted instance.");
         }
-        var license = await _licensingService.ReadOrganizationLicenseAsync(typedModel.OrganizationId);
-        if (!_licensingService.VerifyLicense(license))
-        {
-            throw new BadRequestException("Cannot verify license file.");
-        }
+        var license = await VerifyLicense(typedModel.OrganizationId);
         typedModel.ParsedConfig.CloudOrganizationId = license.Id;
     }
 
@@ -203,11 +200,7 @@ public class OrganizationConnectionsController : Controller
         var billingSyncKey = data.Config as BillingSyncConfig;
         if(billingSyncKey != null && organizationConnectionId.HasValue)
         {
-            var license = await _licensingService.ReadOrganizationLicenseAsync(model.OrganizationId);
-            if (!_licensingService.VerifyLicense(license))
-            {
-                throw new BadRequestException("Cannot verify license file.");
-            }
+            var license = await VerifyLicense(model.OrganizationId);
 
             billingSyncKey.CloudOrganizationId = license.Id;
         }  
@@ -217,5 +210,16 @@ public class OrganizationConnectionsController : Controller
             : await _createOrganizationConnectionCommand.CreateAsync(data);
 
         return new OrganizationConnectionResponseModel(connection, typeof(T));
+    }
+
+    private async Task<OrganizationLicense> VerifyLicense(Guid OrganizationId)
+    {
+        var license = await _licensingService.ReadOrganizationLicenseAsync(OrganizationId);
+        if (!_licensingService.VerifyLicense(license))
+        {
+            throw new BadRequestException("Cannot verify license file.");
+        }
+
+        return license;
     }
 }
