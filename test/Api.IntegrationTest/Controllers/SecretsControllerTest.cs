@@ -90,7 +90,7 @@ public class SecretsControllerTest : IClassFixture<ApiApplicationFactory>, IAsyn
             Key = _mockEncryptedString,
             Value = _mockEncryptedString,
             Note = _mockEncryptedString,
-            ProjectId = project.Id,
+            ProjectIds = new List<Guid>{ project.Id },
         };
         var secretResponse = await _client.PostAsJsonAsync($"/organizations/{_organization.Id}/secrets", secretRequest);
         secretResponse.EnsureSuccessStatusCode();
