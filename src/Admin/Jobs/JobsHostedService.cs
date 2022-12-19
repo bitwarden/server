@@ -67,7 +67,7 @@ public class JobsHostedService : BaseJobsHostedService
         var everyDayAtTwoAmUtcTrigger = TriggerBuilder.Create()
             .WithIdentity("EveryDayAtTwoAmUtcTrigger")
             .StartNow()
-            .WithCronSchedule("0 2 * * *")
+            .WithCronSchedule("0 0 2 ? * * *")
             .Build();
 
         var jobs = new List<Tuple<Type, ITrigger>>
