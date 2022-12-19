@@ -705,6 +705,14 @@
         "resolved": "4.0.0",
         "contentHash": "wtLlRwQX7YoBUYm25xBjJ3UsuLgycme1xXqDn8t3S5kPCWiZrx8uOkyZHLKzH4kkCiQ9m2/J5JeCKNRbZNn3Qg=="
       },
+      "Microsoft.Data.Sqlite.Core": {
+        "type": "Transitive",
+        "resolved": "6.0.4",
+        "contentHash": "3TZX7R2aX1TX5m4A5Kj+SY633NJDeHDP6JiDRCwUnJGKC3IrHgnO8p+oT2hRZpN168qx4Ixe4T9C+xZdZc26gw==",
+        "dependencies": {
+          "SQLitePCLRaw.core": "2.0.6"
+        }
+      },
       "Microsoft.EntityFrameworkCore": {
         "type": "Transitive",
         "resolved": "6.0.5",
@@ -744,6 +752,25 @@
         "dependencies": {
           "Microsoft.EntityFrameworkCore": "6.0.4",
           "Microsoft.Extensions.Configuration.Abstractions": "6.0.0"
+        }
+      },
+      "Microsoft.EntityFrameworkCore.Sqlite": {
+        "type": "Transitive",
+        "resolved": "6.0.4",
+        "contentHash": "nn3UB4PxqnECcEWJPcIKrcuGnevf/lPd/LqFgLVYgqYe8teVqpI/yCKSDOPkEkrAbjWAB0Sgx+q59XpT5YphKQ==",
+        "dependencies": {
+          "Microsoft.EntityFrameworkCore.Sqlite.Core": "6.0.4",
+          "SQLitePCLRaw.bundle_e_sqlite3": "2.0.6"
+        }
+      },
+      "Microsoft.EntityFrameworkCore.Sqlite.Core": {
+        "type": "Transitive",
+        "resolved": "6.0.4",
+        "contentHash": "yO6XZA8FQkBLiTtClesWClL3Z1QEqT9vRoDDf/IOPkmsjzjedg2GzkNCauRGk/XnsZZ1qcz55TuJBO+1jNDIaA==",
+        "dependencies": {
+          "Microsoft.Data.Sqlite.Core": "6.0.4",
+          "Microsoft.EntityFrameworkCore.Relational": "6.0.4",
+          "Microsoft.Extensions.DependencyModel": "6.0.0"
         }
       },
       "Microsoft.Extensions.Caching.Abstractions": {
@@ -1742,6 +1769,37 @@
         "dependencies": {
           "Serilog": "2.5.0",
           "Serilog.Sinks.PeriodicBatching": "2.3.0"
+        }
+      },
+      "SQLitePCLRaw.bundle_e_sqlite3": {
+        "type": "Transitive",
+        "resolved": "2.0.6",
+        "contentHash": "zssYqiaucyGArZfg74rJuzK0ewgZiidsRVrZTmP7JLNvK806gXg6PGA46XzoJGpNPPA5uRcumwvVp6YTYxtQ5w==",
+        "dependencies": {
+          "SQLitePCLRaw.core": "2.0.6",
+          "SQLitePCLRaw.lib.e_sqlite3": "2.0.6",
+          "SQLitePCLRaw.provider.e_sqlite3": "2.0.6"
+        }
+      },
+      "SQLitePCLRaw.core": {
+        "type": "Transitive",
+        "resolved": "2.0.6",
+        "contentHash": "Vh8n0dTvwXkCGur2WqQTITvk4BUO8i8h9ucSx3wwuaej3s2S6ZC0R7vqCTf9TfS/I4QkXO6g3W2YQIRFkOcijA==",
+        "dependencies": {
+          "System.Memory": "4.5.3"
+        }
+      },
+      "SQLitePCLRaw.lib.e_sqlite3": {
+        "type": "Transitive",
+        "resolved": "2.0.6",
+        "contentHash": "xlstskMKalKQl0H2uLNe0viBM6fvAGLWqKZUQ3twX5y1tSOZKe0+EbXopQKYdbjJytNGI6y5WSKjpI+kVr2Ckg=="
+      },
+      "SQLitePCLRaw.provider.e_sqlite3": {
+        "type": "Transitive",
+        "resolved": "2.0.6",
+        "contentHash": "peXLJbhU+0clVBIPirihM1NoTBqw8ouBpcUsVMlcZ4k6fcL2hwgkctVB2Nt5VsbnOJcPspQL5xQK7QvLpxkMgg==",
+        "dependencies": {
+          "SQLitePCLRaw.core": "2.0.6"
         }
       },
       "StackExchange.Redis": {
@@ -3321,7 +3379,7 @@
         "dependencies": {
           "AutoFixture.AutoNSubstitute": "[4.17.0, )",
           "AutoFixture.Xunit2": "[4.17.0, )",
-          "Core": "[2022.11.0, )",
+          "Core": "[2022.11.1, )",
           "Kralizek.AutoFixture.Extensions.MockHttp": "[1.2.0, )",
           "Microsoft.NET.Test.Sdk": "[17.1.0, )",
           "NSubstitute": "[4.3.0, )",
@@ -3372,15 +3430,15 @@
       "identity": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2022.11.0, )",
-          "SharedWeb": "[2022.11.0, )",
+          "Core": "[2022.11.1, )",
+          "SharedWeb": "[2022.11.1, )",
           "Swashbuckle.AspNetCore.SwaggerGen": "[6.3.1, )"
         }
       },
       "infrastructure.dapper": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2022.11.0, )",
+          "Core": "[2022.11.1, )",
           "Dapper": "[2.0.123, )",
           "System.Data.SqlClient": "[4.8.3, )"
         }
@@ -3389,8 +3447,9 @@
         "type": "Project",
         "dependencies": {
           "AutoMapper.Extensions.Microsoft.DependencyInjection": "[11.0.0, )",
-          "Core": "[2022.11.0, )",
+          "Core": "[2022.11.1, )",
           "Microsoft.EntityFrameworkCore.Relational": "[6.0.4, )",
+          "Microsoft.EntityFrameworkCore.Sqlite": "[6.0.4, )",
           "Npgsql.EntityFrameworkCore.PostgreSQL": "[6.0.4, )",
           "Pomelo.EntityFrameworkCore.MySql": "[6.0.1, )",
           "linq2db.EntityFrameworkCore": "[6.7.1, )"
@@ -3399,8 +3458,8 @@
       "integrationtestcommon": {
         "type": "Project",
         "dependencies": {
-          "Common": "[2022.11.0, )",
-          "Identity": "[2022.11.0, )",
+          "Common": "[2022.11.1, )",
+          "Identity": "[2022.11.1, )",
           "Microsoft.AspNetCore.Mvc.Testing": "[6.0.5, )",
           "Microsoft.EntityFrameworkCore.InMemory": "[6.0.5, )",
           "Microsoft.Extensions.Configuration": "[6.0.1, )"
@@ -3409,17 +3468,17 @@
       "scim": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2022.11.0, )",
+          "Core": "[2022.11.1, )",
           "Microsoft.VisualStudio.Web.CodeGeneration.Design": "[5.0.2, )",
-          "SharedWeb": "[2022.11.0, )"
+          "SharedWeb": "[2022.11.1, )"
         }
       },
       "sharedweb": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2022.11.0, )",
-          "Infrastructure.Dapper": "[2022.11.0, )",
-          "Infrastructure.EntityFramework": "[2022.11.0, )"
+          "Core": "[2022.11.1, )",
+          "Infrastructure.Dapper": "[2022.11.1, )",
+          "Infrastructure.EntityFramework": "[2022.11.1, )"
         }
       }
     }

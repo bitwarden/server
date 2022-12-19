@@ -17,6 +17,7 @@ public class DevicesController : Controller
     private readonly IDeviceService _deviceService;
     private readonly IUserService _userService;
     private readonly IUserRepository _userRepository;
+
     public DevicesController(
         IDeviceRepository deviceRepository,
         IDeviceService deviceService,
@@ -100,7 +101,6 @@ public class DevicesController : Controller
         }
 
         await _deviceService.SaveAsync(model.ToDevice(device));
-
     }
 
     [AllowAnonymous]
