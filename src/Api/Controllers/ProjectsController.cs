@@ -3,7 +3,6 @@ using Bit.Api.SecretManagerFeatures.Models.Request;
 using Bit.Api.SecretManagerFeatures.Models.Response;
 using Bit.Api.Utilities;
 using Bit.Core.Context;
-using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.SecretManagerFeatures.Projects.Interfaces;
@@ -57,20 +56,10 @@ public class ProjectsController : Controller
         [FromRoute] Guid organizationId)
     {
         var userId = _userService.GetProperUserId(User).Value;
+        var clientType = _currentContext.ClientType;
+        var checkAccess = !await _currentContext.OrganizationAdmin(organizationId);
 
-        IEnumerable<Project> projects;
-        if (await _currentContext.OrganizationAdmin(organizationId))
-        {
-            projects = await _projectRepository.GetManyByOrganizationIdAsync(organizationId, null, null);
-        }
-        else if (_currentContext.ServiceAccount())
-        {
-            projects = await _projectRepository.GetManyByOrganizationIdAsync(organizationId, null, userId);
-        }
-        else
-        {
-            projects = await _projectRepository.GetManyByOrganizationIdAsync(organizationId, userId, null);
-        }
+        var projects = await _projectRepository.GetManyByOrganizationIdAsync(organizationId, userId, clientType, checkAccess);
 
         var responses = projects.Select(project => new ProjectResponseModel(project));
         return new ListResponseModel<ProjectResponseModel>(responses);
