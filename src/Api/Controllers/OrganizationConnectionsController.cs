@@ -198,13 +198,13 @@ public class OrganizationConnectionsController : Controller
 
         var data = typedModel.ToData(organizationConnectionId);
         var billingSyncKey = data.Config as BillingSyncConfig;
-        if(billingSyncKey != null && organizationConnectionId.HasValue)
+        if (billingSyncKey != null && organizationConnectionId.HasValue)
         {
             var license = await VerifyLicense(model.OrganizationId);
 
             billingSyncKey.CloudOrganizationId = license.Id;
-        }  
-        
+        }
+
         var connection = organizationConnectionId.HasValue
             ? await _updateOrganizationConnectionCommand.UpdateAsync(data)
             : await _createOrganizationConnectionCommand.CreateAsync(data);
