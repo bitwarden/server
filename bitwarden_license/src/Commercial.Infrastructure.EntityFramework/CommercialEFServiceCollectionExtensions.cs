@@ -1,4 +1,5 @@
 ﻿using Bit.Commercial.Infrastructure.EntityFramework.Repositories;
+using Bit.Commercial.Infrastructure.EntityFramework.Repositories.ProjectAccessRepositories;
 using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.Extensions.DependencyInjection;
@@ -10,6 +11,9 @@ public static class CommercialEFServiceCollectionExtensions
     public static void AddCommercialEFRepositories(this IServiceCollection services)
     {
         services.AddSingleton<IAccessPolicyRepository, AccessPolicyRepository>();
+        services.AddSingleton<IUserProjectAccessPolicyRepository, UserProjectAccessPolicyRepository>();
+        services.AddSingleton<IGroupProjectAccessPolicyRepository, GroupProjectAccessPolicyRepository>();
+        services.AddSingleton<IServiceAccountProjectAccessPolicyRepository, ServiceAccountProjectAccessPolicyRepository>();
         services.AddSingleton<ISecretRepository, SecretRepository>();
         services.AddSingleton<IProjectRepository, ProjectRepository>();
         services.AddSingleton<IServiceAccountRepository, ServiceAccountRepository>();

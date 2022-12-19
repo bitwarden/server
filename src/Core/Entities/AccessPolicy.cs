@@ -36,8 +36,8 @@ public abstract class BaseAccessPolicy
     public bool Read { get; set; }
     public bool Write { get; set; }
 
-    public DateTime CreationDate { get; set; }
-    public DateTime RevisionDate { get; set; }
+    public DateTime CreationDate { get; set; } = DateTime.UtcNow;
+    public DateTime RevisionDate { get; set; } = DateTime.UtcNow;
 
     public void SetNewId()
     {
@@ -45,7 +45,7 @@ public abstract class BaseAccessPolicy
     }
 }
 
-public class UserProjectAccessPolicy : BaseAccessPolicy
+public class UserProjectAccessPolicy : BaseAccessPolicy, ITableObject<Guid>
 {
     public Guid? OrganizationUserId { get; set; }
     public Guid? GrantedProjectId { get; set; }
@@ -57,7 +57,7 @@ public class UserServiceAccountAccessPolicy : BaseAccessPolicy
     public Guid? GrantedServiceAccountId { get; set; }
 }
 
-public class GroupProjectAccessPolicy : BaseAccessPolicy
+public class GroupProjectAccessPolicy : BaseAccessPolicy, ITableObject<Guid>
 {
     public Guid? GroupId { get; set; }
     public Guid? GrantedProjectId { get; set; }
@@ -69,7 +69,7 @@ public class GroupServiceAccountAccessPolicy : BaseAccessPolicy
     public Guid? GrantedServiceAccountId { get; set; }
 }
 
-public class ServiceAccountProjectAccessPolicy : BaseAccessPolicy
+public class ServiceAccountProjectAccessPolicy : BaseAccessPolicy, ITableObject<Guid>
 {
     public Guid? ServiceAccountId { get; set; }
     public Guid? GrantedProjectId { get; set; }

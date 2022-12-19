@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Bit.Core.Entities;
 
 namespace Bit.Infrastructure.EntityFramework.Models;
 
@@ -12,6 +13,9 @@ public class AccessPolicyMapperProfile : Profile
     public AccessPolicyMapperProfile()
     {
         CreateMap<Core.Entities.AccessPolicy, AccessPolicy>().ReverseMap();
+        CreateMap<Core.Entities.UserProjectAccessPolicy, UserProjectAccessPolicy>().ReverseMap();
+        CreateMap<Core.Entities.GroupProjectAccessPolicy, GroupProjectAccessPolicy>().ReverseMap();
+        CreateMap<Core.Entities.ServiceAccountProjectAccessPolicy, ServiceAccountProjectAccessPolicy>().ReverseMap();
     }
 }
 
@@ -19,7 +23,7 @@ public class AccessPolicy : BaseAccessPolicy
 {
 }
 
-public class UserProjectAccessPolicy : AccessPolicy
+public class UserProjectAccessPolicy : AccessPolicy, ITableObject<Guid>
 {
     public Guid? OrganizationUserId { get; set; }
     public virtual OrganizationUser OrganizationUser { get; set; }
@@ -35,7 +39,7 @@ public class UserServiceAccountAccessPolicy : AccessPolicy
     public virtual ServiceAccount GrantedServiceAccount { get; set; }
 }
 
-public class GroupProjectAccessPolicy : AccessPolicy
+public class GroupProjectAccessPolicy : AccessPolicy, ITableObject<Guid>
 {
     public Guid? GroupId { get; set; }
     public virtual Group Group { get; set; }
@@ -51,7 +55,7 @@ public class GroupServiceAccountAccessPolicy : AccessPolicy
     public virtual ServiceAccount GrantedServiceAccount { get; set; }
 }
 
-public class ServiceAccountProjectAccessPolicy : AccessPolicy
+public class ServiceAccountProjectAccessPolicy : AccessPolicy, ITableObject<Guid>
 {
     public Guid? ServiceAccountId { get; set; }
     public virtual ServiceAccount ServiceAccount { get; set; }
