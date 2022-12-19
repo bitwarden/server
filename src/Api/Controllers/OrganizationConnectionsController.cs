@@ -200,6 +200,18 @@ public class OrganizationConnectionsController : Controller
         }
 
         var data = typedModel.ToData(organizationConnectionId);
+        var billingSyncKey = data.Config as BillingSyncConfig;
+        if(billingSyncKey != null && organizationConnectionId.HasValue)
+        {
+            var license = await _licensingService.ReadOrganizationLicenseAsync(model.OrganizationId);
+            if (!_licensingService.VerifyLicense(license))
+            {
+                throw new BadRequestException("Cannot verify license file.");
+            }
+
+            billingSyncKey.CloudOrganizationId = license.Id;
+        }  
+        
         var connection = organizationConnectionId.HasValue
             ? await _updateOrganizationConnectionCommand.UpdateAsync(data)
             : await _createOrganizationConnectionCommand.CreateAsync(data);
