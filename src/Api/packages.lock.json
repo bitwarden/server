@@ -2785,7 +2785,7 @@
       "commercial.core": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2022.10.0, )"
+          "Core": "[2022.12.0, )"
         }
       },
       "core": {
@@ -2795,6 +2795,8 @@
           "AWSSDK.SimpleEmail": "[3.7.0.150, )",
           "AspNetCoreRateLimit": "[4.0.2, )",
           "AspNetCoreRateLimit.Redis": "[1.0.1, )",
+          "AutoMapper": "[11.0.0, )",
+          "AutoMapper.Extensions.Microsoft.DependencyInjection": "[11.0.0, )",
           "Azure.Extensions.AspNetCore.DataProtection.Blobs": "[1.2.1, )",
           "Azure.Storage.Blobs": "[12.11.0, )",
           "Azure.Storage.Queues": "[12.9.0, )",
@@ -2831,7 +2833,7 @@
       "infrastructure.dapper": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2022.10.0, )",
+          "Core": "[2022.12.0, )",
           "Dapper": "[2.0.123, )",
           "System.Data.SqlClient": "[4.8.3, )"
         }
@@ -2840,7 +2842,7 @@
         "type": "Project",
         "dependencies": {
           "AutoMapper.Extensions.Microsoft.DependencyInjection": "[11.0.0, )",
-          "Core": "[2022.10.0, )",
+          "Core": "[2022.12.0, )",
           "Microsoft.EntityFrameworkCore.Relational": "[6.0.4, )",
           "Microsoft.EntityFrameworkCore.Sqlite": "[6.0.4, )",
           "Npgsql.EntityFrameworkCore.PostgreSQL": "[6.0.4, )",
@@ -2851,9 +2853,9 @@
       "sharedweb": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2022.10.0, )",
-          "Infrastructure.Dapper": "[2022.10.0, )",
-          "Infrastructure.EntityFramework": "[2022.10.0, )"
+          "Core": "[2022.12.0, )",
+          "Infrastructure.Dapper": "[2022.12.0, )",
+          "Infrastructure.EntityFramework": "[2022.12.0, )"
         }
       }
     }

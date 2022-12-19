@@ -24,6 +24,15 @@
           "StackExchange.Redis": "2.5.43"
         }
       },
+      "AutoMapper": {
+        "type": "Direct",
+        "requested": "[11.0.0, )",
+        "resolved": "11.0.0",
+        "contentHash": "+596AnKykYCk9RxXCEF4GYuapSebQtFVvIA1oVG1rrRkCLAC7AkWehJ0brCfYUbdDW3v1H/p0W3hob7JoXGjMw==",
+        "dependencies": {
+          "Microsoft.CSharp": "4.7.0"
+        }
+      },
       "AutoMapper.Extensions.Microsoft.DependencyInjection": {
         "type": "Direct",
         "requested": "[11.0.0, )",
@@ -390,14 +399,6 @@
         "contentHash": "uP5F3Ko1gqZi3lwS2R/jAAwhBxXs/6PKDpS6FdQjsBA5qmF0hQmbtfxM6QHTXOMoWbUtfetG7+LtgmG8T5zDIg==",
         "dependencies": {
           "NETStandard.Library": "1.6.1"
-        }
-      },
-      "AutoMapper": {
-        "type": "Transitive",
-        "resolved": "11.0.0",
-        "contentHash": "+596AnKykYCk9RxXCEF4GYuapSebQtFVvIA1oVG1rrRkCLAC7AkWehJ0brCfYUbdDW3v1H/p0W3hob7JoXGjMw==",
-        "dependencies": {
-          "Microsoft.CSharp": "4.7.0"
         }
       },
       "AWSSDK.Core": {
