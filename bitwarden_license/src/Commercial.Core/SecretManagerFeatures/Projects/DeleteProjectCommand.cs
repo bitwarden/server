@@ -10,9 +10,9 @@ namespace Bit.Commercial.Core.SecretManagerFeatures.Projects;
 public class DeleteProjectCommand : IDeleteProjectCommand
 {
     private readonly IProjectRepository _projectRepository;
-    private readonly CurrentContext _currentContext;
+    private readonly ICurrentContext _currentContext;
 
-    public DeleteProjectCommand(IProjectRepository projectRepository, CurrentContext currentContext)
+    public DeleteProjectCommand(IProjectRepository projectRepository, ICurrentContext currentContext)
     {
         _projectRepository = projectRepository;
         _currentContext = currentContext;
