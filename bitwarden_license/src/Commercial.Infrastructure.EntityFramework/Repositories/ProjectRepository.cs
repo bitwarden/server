@@ -1,6 +1,6 @@
 ﻿using System.Linq.Expressions;
 using AutoMapper;
-using Bit.Core.Identity;
+using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Infrastructure.EntityFramework.Repositories;
@@ -27,18 +27,19 @@ public class ProjectRepository : Repository<Core.Entities.Project, Project, Guid
         }
     }
 
-    public async Task<IEnumerable<Core.Entities.Project>> GetManyByOrganizationIdAsync(Guid organizationId, Guid userId, ClientType clientType, bool checkAccess = true)
+    public async Task<IEnumerable<Core.Entities.Project>> GetManyByOrganizationIdAsync(Guid organizationId, Guid userId, AccessClientType accessType)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
         var query = dbContext.Project.Where(p => p.OrganizationId == organizationId && p.DeletedDate == null);
 
-        if (checkAccess)
+        query = accessType switch
         {
-            query = query.Where(clientType == ClientType.ServiceAccount
-                ? ServiceAccountHasAccessToProject(userId)
-                : UserHasAccessToProject(userId));
-        }
+            AccessClientType.Admin => query,
+            AccessClientType.User => query.Where(UserHasAccessToProject(userId)),
+            AccessClientType.ServiceAccount => query.Where(ServiceAccountHasAccessToProject(userId)),
+            _ => throw new ArgumentOutOfRangeException(nameof(accessType), accessType, null),
+        };
 
         var projects = await query.OrderBy(p => p.RevisionDate).ToListAsync();
         return Mapper.Map<List<Core.Entities.Project>>(projects);

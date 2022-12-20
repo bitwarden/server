@@ -1,11 +1,11 @@
 ﻿using Bit.Core.Entities;
-using Bit.Core.Identity;
+using Bit.Core.Enums;
 
 namespace Bit.Core.Repositories;
 
 public interface IProjectRepository
 {
-    Task<IEnumerable<Project>> GetManyByOrganizationIdAsync(Guid organizationId, Guid userId, ClientType clientType, bool checkAccess = true);
+    Task<IEnumerable<Project>> GetManyByOrganizationIdAsync(Guid organizationId, Guid userId, AccessClientType accessType);
     Task<IEnumerable<Project>> GetManyByIds(IEnumerable<Guid> ids);
     Task<Project> GetByIdAsync(Guid id);
     Task<Project> CreateAsync(Project project);
