@@ -61,7 +61,6 @@ public class ProjectRepository : Repository<Core.Entities.Project, Project, Guid
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var utcNow = DateTime.UtcNow;
             var projects = dbContext.Project.Where(c => ids.Contains(c.Id));
             await projects.ForEachAsync(project =>
             {
