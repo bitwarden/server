@@ -23,6 +23,7 @@ public static class AccessClientHelper
         {
             ClientType.User => AccessClientType.User,
             ClientType.Organization => AccessClientType.Organization,
+            ClientType.ServiceAccount => AccessClientType.ServiceAccount,
         };
     }
 }

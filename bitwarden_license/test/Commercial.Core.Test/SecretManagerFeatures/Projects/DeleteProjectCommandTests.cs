@@ -19,7 +19,7 @@ public class DeleteProjectCommandTests
     {
         sutProvider.GetDependency<IProjectRepository>().GetManyByIds(data).Returns(new List<Project>());
 
-        var exception = await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.DeleteProjects(data));
+        var exception = await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.DeleteProjects(data, default));
 
         await sutProvider.GetDependency<IProjectRepository>().DidNotReceiveWithAnyArgs().DeleteManyByIdAsync(default);
     }
@@ -35,7 +35,7 @@ public class DeleteProjectCommandTests
         };
         sutProvider.GetDependency<IProjectRepository>().GetManyByIds(data).Returns(new List<Project>() { project });
 
-        var exception = await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.DeleteProjects(data));
+        var exception = await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.DeleteProjects(data, default));
 
         await sutProvider.GetDependency<IProjectRepository>().DidNotReceiveWithAnyArgs().DeleteManyByIdAsync(default);
     }
@@ -57,7 +57,7 @@ public class DeleteProjectCommandTests
 
         sutProvider.GetDependency<IProjectRepository>().GetManyByIds(data).Returns(projects);
 
-        var results = await sutProvider.Sut.DeleteProjects(data);
+        var results = await sutProvider.Sut.DeleteProjects(data, default);
 
         await sutProvider.GetDependency<IProjectRepository>().Received(1).DeleteManyByIdAsync(Arg.Is(data));
         foreach (var result in results)
