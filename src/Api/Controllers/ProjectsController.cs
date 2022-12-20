@@ -90,7 +90,6 @@ public class ProjectsController : Controller
         {
             AccessClientType.NoAccessCheck => true,
             AccessClientType.User => await _projectRepository.UserHasReadAccessToProject(id, userId),
-            AccessClientType.ServiceAccount => await _projectRepository.ServiceAccountHasReadAccessToProject(id, userId),
             _ => false,
         };
 

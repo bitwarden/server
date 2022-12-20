@@ -12,7 +12,5 @@ public interface IProjectRepository
     Task ReplaceAsync(Project project);
     Task DeleteManyByIdAsync(IEnumerable<Guid> ids);
     Task<bool> UserHasReadAccessToProject(Guid id, Guid userId);
-    Task<bool> ServiceAccountHasReadAccessToProject(Guid id, Guid serviceAccountId);
     Task<bool> UserHasWriteAccessToProject(Guid id, Guid userId);
-    Task<bool> ServiceAccountHasWriteAccessToProject(Guid id, Guid serviceAccountId);
 }

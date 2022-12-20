@@ -46,7 +46,6 @@ public class DeleteProjectCommand : IDeleteProjectCommand
             {
                 AccessClientType.NoAccessCheck => true,
                 AccessClientType.User => await _projectRepository.UserHasWriteAccessToProject(project.Id, userId),
-                AccessClientType.ServiceAccount => await _projectRepository.ServiceAccountHasWriteAccessToProject(project.Id, userId),
                 _ => false,
             };
 
