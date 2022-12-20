@@ -117,6 +117,10 @@ csharp_new_line_before_members_in_anonymous_types = true
 # Namespace settings
 csharp_style_namespace_declarations = file_scoped:warning
 
+# Switch expression
+dotnet_diagnostic.CS8509.severity = error # missing switch case for named enum value
+dotnet_diagnostic.CS8524.severity = none # missing switch case for unnamed enum value
+
 # All files
 [*]
 guidelines = 120
