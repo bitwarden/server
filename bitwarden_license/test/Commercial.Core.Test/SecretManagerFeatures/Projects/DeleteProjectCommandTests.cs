@@ -1,4 +1,5 @@
 ﻿using Bit.Commercial.Core.SecretManagerFeatures.Projects;
+using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
@@ -19,7 +20,7 @@ public class DeleteProjectCommandTests
     {
         sutProvider.GetDependency<IProjectRepository>().GetManyByIds(data).Returns(new List<Project>());
 
-        var exception = await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.DeleteProjects(data, default));
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.DeleteProjects(data, default));
 
         await sutProvider.GetDependency<IProjectRepository>().DidNotReceiveWithAnyArgs().DeleteManyByIdAsync(default);
     }
@@ -29,41 +30,31 @@ public class DeleteProjectCommandTests
     public async Task DeleteSecrets_OneIdNotFound_Throws_NotFoundException(List<Guid> data,
       SutProvider<DeleteProjectCommand> sutProvider)
     {
-        var project = new Project()
-        {
-            Id = Guid.NewGuid()
-        };
-        sutProvider.GetDependency<IProjectRepository>().GetManyByIds(data).Returns(new List<Project>() { project });
+        sutProvider.GetDependency<IProjectRepository>().GetManyByIds(data).Returns(new List<Project>());
 
-        var exception = await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.DeleteProjects(data, default));
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.DeleteProjects(data, default));
 
         await sutProvider.GetDependency<IProjectRepository>().DidNotReceiveWithAnyArgs().DeleteManyByIdAsync(default);
     }
 
+    // FIXME: Add tests covering regular user deleting!
+
     [Theory]
     [BitAutoData]
-    public async Task DeleteSecrets_Success(List<Guid> data,
+    public async Task DeleteSecrets_OrganizationAdmin_Success(List<Guid> data, Guid userId, Guid organizationId,
       SutProvider<DeleteProjectCommand> sutProvider)
     {
-        var projects = new List<Project>();
-        foreach (Guid id in data)
-        {
-            var project = new Project()
-            {
-                Id = id
-            };
-            projects.Add(project);
-        }
+        var projects = data.Select(id => new Project { Id = id, OrganizationId = organizationId }).ToList();
 
+        sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(organizationId).Returns(true);
         sutProvider.GetDependency<IProjectRepository>().GetManyByIds(data).Returns(projects);
 
-        var results = await sutProvider.Sut.DeleteProjects(data, default);
+        var results = await sutProvider.Sut.DeleteProjects(data, userId);
 
-        await sutProvider.GetDependency<IProjectRepository>().Received(1).DeleteManyByIdAsync(Arg.Is(data));
+        await sutProvider.GetDependency<IProjectRepository>().Received(1).DeleteManyByIdAsync(Arg.Is<List<Guid>>(d => d.SequenceEqual(data)));
         foreach (var result in results)
         {
             Assert.Equal("", result.Item2);
         }
     }
 }
-
