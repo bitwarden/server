@@ -53,7 +53,9 @@ public class ProjectsController : Controller
     [HttpPut("projects/{id}")]
     public async Task<ProjectResponseModel> UpdateProjectAsync([FromRoute] Guid id, [FromBody] ProjectUpdateRequestModel updateRequest)
     {
-        var result = await _updateProjectCommand.UpdateAsync(updateRequest.ToProject(id));
+        var userId = _userService.GetProperUserId(User).Value;
+
+        var result = await _updateProjectCommand.UpdateAsync(updateRequest.ToProject(id), userId);
         return new ProjectResponseModel(result);
     }
 

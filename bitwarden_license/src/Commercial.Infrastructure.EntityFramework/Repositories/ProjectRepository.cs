@@ -36,8 +36,8 @@ public class ProjectRepository : Repository<Core.Entities.Project, Project, Guid
         query = accessType switch
         {
             AccessClientType.Admin => query,
-            AccessClientType.User => query.Where(UserHasAccessToProject(userId)),
-            AccessClientType.ServiceAccount => query.Where(ServiceAccountHasAccessToProject(userId)),
+            AccessClientType.User => query.Where(UserHasReadAccessToProject(userId)),
+            AccessClientType.ServiceAccount => query.Where(ServiceAccountHasReadAccessToProject(userId)),
             _ => throw new ArgumentOutOfRangeException(nameof(accessType), accessType, null),
         };
 
@@ -45,12 +45,19 @@ public class ProjectRepository : Repository<Core.Entities.Project, Project, Guid
         return Mapper.Map<List<Core.Entities.Project>>(projects);
     }
 
-    private static Expression<Func<Project, bool>> UserHasAccessToProject(Guid userId) => p =>
+    private static Expression<Func<Project, bool>> UserHasReadAccessToProject(Guid userId) => p =>
         p.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == userId && ap.Read) ||
         p.GroupAccessPolicies.Any(ap => ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Read));
 
-    private static Expression<Func<Project, bool>> ServiceAccountHasAccessToProject(Guid serviceAccountId) => p =>
+    private static Expression<Func<Project, bool>> UserHasWriteAccessToProject(Guid userId) => p =>
+        p.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == userId && ap.Write) ||
+        p.GroupAccessPolicies.Any(ap => ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Write));
+
+    private static Expression<Func<Project, bool>> ServiceAccountHasReadAccessToProject(Guid serviceAccountId) => p =>
         p.ServiceAccountAccessPolicies.Any(ap => ap.ServiceAccount.Id == serviceAccountId && ap.Read);
+
+    private static Expression<Func<Project, bool>> ServiceAccountHasWriteAccessToProject(Guid serviceAccountId) => p =>
+        p.ServiceAccountAccessPolicies.Any(ap => ap.ServiceAccount.Id == serviceAccountId && ap.Write);
 
     public async Task DeleteManyByIdAsync(IEnumerable<Guid> ids)
     {
@@ -77,6 +84,27 @@ public class ProjectRepository : Repository<Core.Entities.Project, Project, Guid
                                     .ToListAsync();
             return Mapper.Map<List<Core.Entities.Project>>(projects);
         }
+    }
 
+    public async Task<bool> UserHasWriteAccessToProject(Guid id, Guid userId)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        var query = dbContext.Project
+            .Where(p => p.Id == id)
+            .Where(UserHasWriteAccessToProject(userId));
+
+        return await query.AnyAsync();
+    }
+
+    public async Task<bool> ServiceAccountHasAccessToProject(Guid id, Guid serviceAccountId)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        var query = dbContext.Project
+            .Where(p => p.Id == id)
+            .Where(ServiceAccountHasWriteAccessToProject(serviceAccountId));
+
+        return await query.AnyAsync();
     }
 }
