@@ -3,6 +3,7 @@ using Bit.Api.SecretManagerFeatures.Models.Request;
 using Bit.Api.SecretManagerFeatures.Models.Response;
 using Bit.Api.Utilities;
 using Bit.Core.Context;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.SecretManagerFeatures.Projects.Interfaces;
@@ -40,6 +41,11 @@ public class ProjectsController : Controller
     [HttpPost("organizations/{organizationId}/projects")]
     public async Task<ProjectResponseModel> CreateAsync([FromRoute] Guid organizationId, [FromBody] ProjectCreateRequestModel createRequest)
     {
+        if (!await _currentContext.OrganizationUser(organizationId))
+        {
+            throw new NotFoundException();
+        }
+
         var result = await _createProjectCommand.CreateAsync(createRequest.ToProject(organizationId));
         return new ProjectResponseModel(result);
     }
@@ -56,10 +62,9 @@ public class ProjectsController : Controller
         [FromRoute] Guid organizationId)
     {
         var userId = _userService.GetProperUserId(User).Value;
-        var clientType = _currentContext.ClientType;
-        var checkAccess = !await _currentContext.OrganizationAdmin(organizationId);
 
-        var projects = await _projectRepository.GetManyByOrganizationIdAsync(organizationId, userId, clientType, checkAccess);
+        var accessClient = await AccessClientHelper.ToAccessClient(_currentContext, organizationId);
+        var projects = await _projectRepository.GetManyByOrganizationIdAsync(organizationId, userId, accessClient);
 
         var responses = projects.Select(project => new ProjectResponseModel(project));
         return new ListResponseModel<ProjectResponseModel>(responses);
