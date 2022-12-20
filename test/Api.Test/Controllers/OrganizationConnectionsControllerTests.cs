@@ -252,6 +252,55 @@ public class OrganizationConnectionsControllerTests
 
     [Theory]
     [BitAutoData]
+    public async Task UpdateConnection_BillingSyncType_InvalidLicense_Throws(OrganizationConnection existing, BillingSyncConfig config,
+        OrganizationConnection updated,
+        SutProvider<OrganizationConnectionsController> sutProvider)
+    {
+        existing.SetConfig(new BillingSyncConfig
+        {
+            CloudOrganizationId = config.CloudOrganizationId,
+        });
+        updated.Config = JsonSerializer.Serialize(config);
+        updated.Id = existing.Id;
+        updated.Type = OrganizationConnectionType.CloudBillingSync;
+        var model = RequestModelFromEntity<BillingSyncConfig>(updated);
+
+        sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(model.OrganizationId).Returns(true);
+        sutProvider.GetDependency<IOrganizationConnectionRepository>()
+            .GetByOrganizationIdTypeAsync(model.OrganizationId, model.Type)
+            .Returns(new[] { existing });
+        sutProvider.GetDependency<IUpdateOrganizationConnectionCommand>()
+            .UpdateAsync<BillingSyncConfig>(default)
+            .ReturnsForAnyArgs(updated);
+        sutProvider.GetDependency<IOrganizationConnectionRepository>()
+            .GetByIdAsync(existing.Id)
+            .Returns(existing);
+
+        OrganizationLicense organizationLicense = new OrganizationLicense();
+        var now = DateTime.UtcNow;
+        organizationLicense.Issued = now.AddDays(-10);
+        organizationLicense.Expires = now.AddDays(10);
+        organizationLicense.Version = 1;
+        organizationLicense.UsersGetPremium = true;
+        organizationLicense.Id = config.CloudOrganizationId;
+        organizationLicense.Trial = true;
+
+        sutProvider.GetDependency<ILicensingService>()
+                    .VerifyLicense(organizationLicense)
+                    .Returns(false);
+
+        var licensev = sutProvider.GetDependency<ILicensingService>()
+            .ReadOrganizationLicenseAsync(model.OrganizationId)
+            .Returns(organizationLicense);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.UpdateConnection(existing.Id, model));
+
+        Assert.Contains("Cannot verify license file.", exception.Message);
+
+    }
+
+    [Theory]
+    [BitAutoData]
     public async Task UpdateConnection_DoesNotExist_ThrowsNotFound(SutProvider<OrganizationConnectionsController> sutProvider)
     {
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.UpdateConnection(Guid.NewGuid(), null));
