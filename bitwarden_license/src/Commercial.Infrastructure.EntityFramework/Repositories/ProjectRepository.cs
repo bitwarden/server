@@ -86,6 +86,28 @@ public class ProjectRepository : Repository<Core.Entities.Project, Project, Guid
         }
     }
 
+    public async Task<bool> UserHasReadAccessToProject(Guid id, Guid userId)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        var query = dbContext.Project
+            .Where(p => p.Id == id)
+            .Where(UserHasReadAccessToProject(userId));
+
+        return await query.AnyAsync();
+    }
+
+    public async Task<bool> ServiceAccountHasReadAccessToProject(Guid id, Guid serviceAccountId)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        var query = dbContext.Project
+            .Where(p => p.Id == id)
+            .Where(ServiceAccountHasReadAccessToProject(serviceAccountId));
+
+        return await query.AnyAsync();
+    }
+
     public async Task<bool> UserHasWriteAccessToProject(Guid id, Guid userId)
     {
         using var scope = ServiceScopeFactory.CreateScope();
@@ -97,7 +119,7 @@ public class ProjectRepository : Repository<Core.Entities.Project, Project, Guid
         return await query.AnyAsync();
     }
 
-    public async Task<bool> ServiceAccountHasAccessToProject(Guid id, Guid serviceAccountId)
+    public async Task<bool> ServiceAccountHasWriteAccessToProject(Guid id, Guid serviceAccountId)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
