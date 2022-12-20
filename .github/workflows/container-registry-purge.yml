@@ -16,7 +16,7 @@ jobs:
       matrix:
         include:
           - name: bitwardenqa
-          - name: bitwardenprod
+          # - name: bitwardenprod
     steps:
       - name: Login to Azure
         if: matrix.name == 'bitwardenprod'
