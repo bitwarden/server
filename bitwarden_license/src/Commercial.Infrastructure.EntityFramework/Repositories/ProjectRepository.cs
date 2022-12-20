@@ -35,7 +35,7 @@ public class ProjectRepository : Repository<Core.Entities.Project, Project, Guid
 
         query = accessType switch
         {
-            AccessClientType.Admin => query,
+            AccessClientType.NoAccessCheck => query,
             AccessClientType.User => query.Where(UserHasReadAccessToProject(userId)),
             AccessClientType.ServiceAccount => query.Where(ServiceAccountHasReadAccessToProject(userId)),
             _ => throw new ArgumentOutOfRangeException(nameof(accessType), accessType, null),

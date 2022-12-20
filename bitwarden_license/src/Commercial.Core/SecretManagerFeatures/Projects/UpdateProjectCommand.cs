@@ -26,11 +26,12 @@ public class UpdateProjectCommand : IUpdateProjectCommand
             throw new NotFoundException();
         }
 
-        var accessClient = await AccessClientHelper.ToAccessClient(_currentContext, project.OrganizationId);
+        var orgAdmin = await _currentContext.OrganizationAdmin(project.OrganizationId);
+        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
 
         var hasAccess = accessClient switch
         {
-            AccessClientType.Admin => true,
+            AccessClientType.NoAccessCheck => true,
             AccessClientType.User => await _projectRepository.UserHasWriteAccessToProject(updatedProject.Id, userId),
             _ => false,
         };
