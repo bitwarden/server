@@ -137,11 +137,16 @@ public class AuthRequestsController : Controller
             throw new BadRequestException("Invalid device.");
         }
 
-        authRequest.Key = model.Key;
-        authRequest.MasterPasswordHash = model.MasterPasswordHash;
         authRequest.ResponseDeviceId = device.Id;
         authRequest.ResponseDate = DateTime.UtcNow;
         authRequest.Approved = model.RequestApproved;
+
+        if (model.RequestApproved)
+        {
+            authRequest.Key = model.Key;
+            authRequest.MasterPasswordHash = model.MasterPasswordHash;
+        }
+
         await _authRequestRepository.ReplaceAsync(authRequest);
 
         // We only want to send an approval notification if the request is approved (or null), 

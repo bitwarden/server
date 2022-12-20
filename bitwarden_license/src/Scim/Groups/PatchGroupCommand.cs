@@ -1,6 +1,8 @@
 ﻿using System.Text.Json;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.OrganizationFeatures.Groups.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Scim.Groups.Interfaces;
@@ -12,22 +14,25 @@ public class PatchGroupCommand : IPatchGroupCommand
 {
     private readonly IGroupRepository _groupRepository;
     private readonly IGroupService _groupService;
+    private readonly IUpdateGroupCommand _updateGroupCommand;
     private readonly ILogger<PatchGroupCommand> _logger;
 
     public PatchGroupCommand(
         IGroupRepository groupRepository,
         IGroupService groupService,
+        IUpdateGroupCommand updateGroupCommand,
         ILogger<PatchGroupCommand> logger)
     {
         _groupRepository = groupRepository;
         _groupService = groupService;
+        _updateGroupCommand = updateGroupCommand;
         _logger = logger;
     }
 
-    public async Task PatchGroupAsync(Guid organizationId, Guid id, ScimPatchModel model)
+    public async Task PatchGroupAsync(Organization organization, Guid id, ScimPatchModel model)
     {
         var group = await _groupRepository.GetByIdAsync(id);
-        if (group == null || group.OrganizationId != organizationId)
+        if (group == null || group.OrganizationId != organization.Id)
         {
             throw new NotFoundException("Group not found.");
         }
@@ -49,7 +54,7 @@ public class PatchGroupCommand : IPatchGroupCommand
                 else if (operation.Path?.ToLowerInvariant() == "displayname")
                 {
                     group.Name = operation.Value.GetString();
-                    await _groupService.SaveAsync(group, EventSystemUser.SCIM);
+                    await _updateGroupCommand.UpdateGroupAsync(group, organization, EventSystemUser.SCIM);
                     operationHandled = true;
                 }
                 // Replace group name from value object
@@ -57,7 +62,7 @@ public class PatchGroupCommand : IPatchGroupCommand
                     operation.Value.TryGetProperty("displayName", out var displayNameProperty))
                 {
                     group.Name = displayNameProperty.GetString();
-                    await _groupService.SaveAsync(group, EventSystemUser.SCIM);
+                    await _updateGroupCommand.UpdateGroupAsync(group, organization, EventSystemUser.SCIM);
                     operationHandled = true;
                 }
             }
