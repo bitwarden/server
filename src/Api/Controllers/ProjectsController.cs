@@ -64,9 +64,9 @@ public class ProjectsController : Controller
         [FromRoute] Guid organizationId)
     {
         var userId = _userService.GetProperUserId(User).Value;
-
         var orgAdmin = await _currentContext.OrganizationAdmin(organizationId);
         var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
+
         var projects = await _projectRepository.GetManyByOrganizationIdAsync(organizationId, userId, accessClient);
 
         var responses = projects.Select(project => new ProjectResponseModel(project));
@@ -81,6 +81,24 @@ public class ProjectsController : Controller
         {
             throw new NotFoundException();
         }
+
+        var userId = _userService.GetProperUserId(User).Value;
+        var orgAdmin = await _currentContext.OrganizationAdmin(project.OrganizationId);
+        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
+
+        var hasAccess = accessClient switch
+        {
+            AccessClientType.NoAccessCheck => true,
+            AccessClientType.User => await _projectRepository.UserHasReadAccessToProject(id, userId),
+            AccessClientType.ServiceAccount => await _projectRepository.ServiceAccountHasReadAccessToProject(id, userId),
+            _ => false,
+        };
+
+        if (!hasAccess)
+        {
+            throw new NotFoundException();
+        }
+
         return new ProjectResponseModel(project);
     }
 
