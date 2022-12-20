@@ -35,7 +35,9 @@ public class ProjectRepository : Repository<Core.Entities.Project, Project, Guid
 
         if (checkAccess)
         {
-            query = query.Where(clientType == ClientType.ServiceAccount ? ServiceAccountHasAccessToProject(userId) : UserHasAccessToProject(userId));
+            query = query.Where(clientType == ClientType.ServiceAccount
+                ? ServiceAccountHasAccessToProject(userId)
+                : UserHasAccessToProject(userId));
         }
 
         var projects = await query.OrderBy(p => p.RevisionDate).ToListAsync();
