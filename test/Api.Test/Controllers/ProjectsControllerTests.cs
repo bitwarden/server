@@ -25,11 +25,11 @@ public class ProjectsControllerTests
         {
             mockResult.Add(new Tuple<Project, string>(project, ""));
         }
-        sutProvider.GetDependency<IDeleteProjectCommand>().DeleteProjects(ids).ReturnsForAnyArgs(mockResult);
+        sutProvider.GetDependency<IDeleteProjectCommand>().DeleteProjects(ids, default).ReturnsForAnyArgs(mockResult);
 
         var results = await sutProvider.Sut.BulkDeleteProjectsAsync(ids);
         await sutProvider.GetDependency<IDeleteProjectCommand>().Received(1)
-                     .DeleteProjects(Arg.Is(ids));
+                     .DeleteProjects(Arg.Is(ids), Arg.Any<Guid>());
         Assert.Equal(data.Count, results.Data.Count());
     }
 
