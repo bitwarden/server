@@ -225,6 +225,23 @@ public class OrganizationConnectionsControllerTests
             .GetByIdAsync(existing.Id)
             .Returns(existing);
 
+         OrganizationLicense organizationLicense = new OrganizationLicense();
+        var now = DateTime.UtcNow;
+        organizationLicense.Issued = now.AddDays(-10);
+        organizationLicense.Expires = now.AddDays(10);
+        organizationLicense.Version = 1;
+        organizationLicense.UsersGetPremium = true;
+        organizationLicense.Id = config.CloudOrganizationId;
+        organizationLicense.Trial = true;
+
+        sutProvider.GetDependency<ILicensingService>()
+                    .VerifyLicense(organizationLicense)
+                    .Returns(true);
+
+        var licensev = sutProvider.GetDependency<ILicensingService>()
+            .ReadOrganizationLicenseAsync(model.OrganizationId)
+            .Returns(organizationLicense);
+
         var expected = new OrganizationConnectionResponseModel(updated, typeof(BillingSyncConfig));
         var result = await sutProvider.Sut.UpdateConnection(existing.Id, model);
 
