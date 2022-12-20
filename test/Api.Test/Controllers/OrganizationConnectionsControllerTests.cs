@@ -225,7 +225,7 @@ public class OrganizationConnectionsControllerTests
             .GetByIdAsync(existing.Id)
             .Returns(existing);
 
-         OrganizationLicense organizationLicense = new OrganizationLicense();
+        OrganizationLicense organizationLicense = new OrganizationLicense();
         var now = DateTime.UtcNow;
         organizationLicense.Issued = now.AddDays(-10);
         organizationLicense.Expires = now.AddDays(10);
