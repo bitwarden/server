@@ -1,11 +1,10 @@
-﻿using Bit.Core.Context;
-using Bit.Core.Identity;
+﻿using Bit.Core.Identity;
 
 namespace Bit.Core.Enums;
 
 public enum AccessClientType
 {
-    Admin = -1,
+    NoAccessCheck = -1,
     User = 0,
     Organization = 1,
     ServiceAccount = 2,
@@ -13,18 +12,17 @@ public enum AccessClientType
 
 public static class AccessClientHelper
 {
-    public static async Task<AccessClientType> ToAccessClient(ICurrentContext currentContext, Guid organizationId)
+    public static AccessClientType ToAccessClient(ClientType clientType, bool bypassAccessCheck = false)
     {
-        if (await currentContext.OrganizationAdmin(organizationId))
+        if (bypassAccessCheck)
         {
-            return AccessClientType.Admin;
+            return AccessClientType.NoAccessCheck;
         }
 
-        return currentContext.ClientType switch
+        return clientType switch
         {
             ClientType.User => AccessClientType.User,
             ClientType.Organization => AccessClientType.Organization,
-            ClientType.ServiceAccount => AccessClientType.ServiceAccount,
         };
     }
 }

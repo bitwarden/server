@@ -65,7 +65,8 @@ public class ProjectsController : Controller
     {
         var userId = _userService.GetProperUserId(User).Value;
 
-        var accessClient = await AccessClientHelper.ToAccessClient(_currentContext, organizationId);
+        var orgAdmin = await _currentContext.OrganizationAdmin(organizationId);
+        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
         var projects = await _projectRepository.GetManyByOrganizationIdAsync(organizationId, userId, accessClient);
 
         var responses = projects.Select(project => new ProjectResponseModel(project));
