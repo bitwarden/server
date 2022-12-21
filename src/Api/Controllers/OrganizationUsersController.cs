@@ -49,15 +49,22 @@ public class OrganizationUsersController : Controller
     }
 
     [HttpGet("{id}")]
-    public async Task<OrganizationUserDetailsResponseModel> Get(string orgId, string id)
+    public async Task<OrganizationUserDetailsResponseModel> Get(string id, bool includeGroups = false)
     {
         var organizationUser = await _organizationUserRepository.GetByIdWithCollectionsAsync(new Guid(id));
         if (organizationUser == null || !await _currentContext.ManageUsers(organizationUser.Item1.OrganizationId))
         {
             throw new NotFoundException();
         }
+        
+        var response = new OrganizationUserDetailsResponseModel(organizationUser.Item1, organizationUser.Item2);
 
-        return new OrganizationUserDetailsResponseModel(organizationUser.Item1, organizationUser.Item2);
+        if (includeGroups)
+        {
+            response.Groups = await _groupRepository.GetManyIdsByUserIdAsync(organizationUser.Item1.Id);
+        }
+
+        return response;
     }
 
     [HttpGet("")]
