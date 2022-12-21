@@ -28,7 +28,7 @@ public class CipherDetailsQuery : IQuery<CipherDetails>
                         DeletedDate = c.DeletedDate,
                         Reprompt = c.Reprompt,
                         Favorite = _userId.HasValue && c.Favorites != null && c.Favorites.Contains($"\"{_userId}\":true"),
-                        FolderId = (_ignoreFolders || !_userId.HasValue || c.Folders == null || !c.Folders.Contains(_userId.Value.ToString())) ?
+                        FolderId = (_ignoreFolders || !_userId.HasValue || c.Folders == null || !c.Folders.ToLowerInvariant().Contains(_userId.Value.ToString())) ?
                             null :
                             CoreHelpers.LoadClassFromJsonData<Dictionary<Guid, Guid>>(c.Folders)[_userId.Value],
                     };
