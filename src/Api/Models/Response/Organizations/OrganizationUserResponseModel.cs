@@ -1,4 +1,5 @@
-﻿using Bit.Core.Entities;
+﻿using System.Text.Json.Serialization;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Data;
@@ -64,6 +65,9 @@ public class OrganizationUserDetailsResponseModel : OrganizationUserResponseMode
     }
 
     public IEnumerable<SelectionReadOnlyResponseModel> Collections { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IEnumerable<Guid> Groups { get; set; }
 }
 
 public class OrganizationUserUserDetailsResponseModel : OrganizationUserResponseModel

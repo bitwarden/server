@@ -499,22 +499,22 @@ public class OrganizationServiceTests
 
     [Theory, BitAutoData]
     public async Task SaveUser_NoUserId_Throws(OrganizationUser user, Guid? savingUserId,
-        IEnumerable<CollectionAccessSelection> collections, SutProvider<OrganizationService> sutProvider)
+        IEnumerable<CollectionAccessSelection> collections, IEnumerable<Guid> groups, SutProvider<OrganizationService> sutProvider)
     {
         user.Id = default(Guid);
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.SaveUserAsync(user, savingUserId, collections));
+            () => sutProvider.Sut.SaveUserAsync(user, savingUserId, collections, groups));
         Assert.Contains("invite the user first", exception.Message.ToLowerInvariant());
     }
 
     [Theory, BitAutoData]
     public async Task SaveUser_NoChangeToData_Throws(OrganizationUser user, Guid? savingUserId,
-        IEnumerable<CollectionAccessSelection> collections, SutProvider<OrganizationService> sutProvider)
+        IEnumerable<CollectionAccessSelection> collections, IEnumerable<Guid> groups, SutProvider<OrganizationService> sutProvider)
     {
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         organizationUserRepository.GetByIdAsync(user.Id).Returns(user);
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.SaveUserAsync(user, savingUserId, collections));
+            () => sutProvider.Sut.SaveUserAsync(user, savingUserId, collections, groups));
         Assert.Contains("make changes before saving", exception.Message.ToLowerInvariant());
     }
 
@@ -524,6 +524,7 @@ public class OrganizationServiceTests
         OrganizationUser oldUserData,
         OrganizationUser newUserData,
         IEnumerable<CollectionAccessSelection> collections,
+        IEnumerable<Guid> groups,
         [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser savingUser,
         SutProvider<OrganizationService> sutProvider)
     {
@@ -541,7 +542,7 @@ public class OrganizationServiceTests
             .Returns(new List<OrganizationUser> { savingUser });
         currentContext.OrganizationOwner(savingUser.OrganizationId).Returns(true);
 
-        await sutProvider.Sut.SaveUserAsync(newUserData, savingUser.UserId, collections);
+        await sutProvider.Sut.SaveUserAsync(newUserData, savingUser.UserId, collections, groups);
     }
 
     [Theory, BitAutoData]
@@ -550,6 +551,7 @@ public class OrganizationServiceTests
         OrganizationUser oldUserData,
         [OrganizationUser(type: OrganizationUserType.Custom)] OrganizationUser newUserData,
         IEnumerable<CollectionAccessSelection> collections,
+        IEnumerable<Guid> groups,
         [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser savingUser,
         SutProvider<OrganizationService> sutProvider)
     {
@@ -570,7 +572,7 @@ public class OrganizationServiceTests
         currentContext.OrganizationOwner(savingUser.OrganizationId).Returns(true);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.SaveUserAsync(newUserData, savingUser.UserId, collections));
+            () => sutProvider.Sut.SaveUserAsync(newUserData, savingUser.UserId, collections, groups));
         Assert.Contains("to enable custom permissions", exception.Message.ToLowerInvariant());
     }
 
@@ -585,6 +587,7 @@ public class OrganizationServiceTests
         OrganizationUser oldUserData,
         OrganizationUser newUserData,
         IEnumerable<CollectionAccessSelection> collections,
+        IEnumerable<Guid> groups,
         [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser savingUser,
         SutProvider<OrganizationService> sutProvider)
     {
@@ -605,7 +608,7 @@ public class OrganizationServiceTests
             .Returns(new List<OrganizationUser> { savingUser });
         currentContext.OrganizationOwner(savingUser.OrganizationId).Returns(true);
 
-        await sutProvider.Sut.SaveUserAsync(newUserData, savingUser.UserId, collections);
+        await sutProvider.Sut.SaveUserAsync(newUserData, savingUser.UserId, collections, groups);
     }
 
     [Theory, BitAutoData]
@@ -614,6 +617,7 @@ public class OrganizationServiceTests
         OrganizationUser oldUserData,
         [OrganizationUser(type: OrganizationUserType.Custom)] OrganizationUser newUserData,
         IEnumerable<CollectionAccessSelection> collections,
+        IEnumerable<Guid> groups,
         [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser savingUser,
         SutProvider<OrganizationService> sutProvider)
     {
@@ -633,7 +637,7 @@ public class OrganizationServiceTests
             .Returns(new List<OrganizationUser> { savingUser });
         currentContext.OrganizationOwner(savingUser.OrganizationId).Returns(true);
 
-        await sutProvider.Sut.SaveUserAsync(newUserData, savingUser.UserId, collections);
+        await sutProvider.Sut.SaveUserAsync(newUserData, savingUser.UserId, collections, groups);
     }
 
     [Theory, BitAutoData]

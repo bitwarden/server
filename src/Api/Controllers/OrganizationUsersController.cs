@@ -49,7 +49,7 @@ public class OrganizationUsersController : Controller
     }
 
     [HttpGet("{id}")]
-    public async Task<OrganizationUserDetailsResponseModel> Get(string orgId, string id)
+    public async Task<OrganizationUserDetailsResponseModel> Get(string id, bool includeGroups = false)
     {
         var organizationUser = await _organizationUserRepository.GetByIdWithCollectionsAsync(new Guid(id));
         if (organizationUser == null || !await _currentContext.ManageUsers(organizationUser.Item1.OrganizationId))
@@ -57,7 +57,14 @@ public class OrganizationUsersController : Controller
             throw new NotFoundException();
         }
 
-        return new OrganizationUserDetailsResponseModel(organizationUser.Item1, organizationUser.Item2);
+        var response = new OrganizationUserDetailsResponseModel(organizationUser.Item1, organizationUser.Item2);
+
+        if (includeGroups)
+        {
+            response.Groups = await _groupRepository.GetManyIdsByUserIdAsync(organizationUser.Item1.Id);
+        }
+
+        return response;
     }
 
     [HttpGet("")]
@@ -262,7 +269,7 @@ public class OrganizationUsersController : Controller
 
         var userId = _userService.GetProperUserId(User);
         await _organizationService.SaveUserAsync(model.ToOrganizationUser(organizationUser), userId.Value,
-            model.Collections?.Select(c => c.ToSelectionReadOnly()));
+            model.Collections?.Select(c => c.ToSelectionReadOnly()), model.Groups);
     }
 
     [HttpPut("{id}/groups")]
