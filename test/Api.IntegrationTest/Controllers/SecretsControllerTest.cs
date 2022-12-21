@@ -86,7 +86,7 @@ public class SecretsControllerTest : IClassFixture<ApiApplicationFactory>, IAsyn
         });
 
         var projectIds = new List<Guid>();
-        projectIds.Add(project.Id)
+        projectIds.Add(project.Id);
 
         var secretRequest = new SecretCreateRequestModel()
         {
