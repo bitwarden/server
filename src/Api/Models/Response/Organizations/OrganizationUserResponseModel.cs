@@ -65,7 +65,7 @@ public class OrganizationUserDetailsResponseModel : OrganizationUserResponseMode
     }
 
     public IEnumerable<SelectionReadOnlyResponseModel> Collections { get; set; }
-    
+
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public IEnumerable<Guid> Groups { get; set; }
 }

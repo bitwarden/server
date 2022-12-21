@@ -56,7 +56,7 @@ public class OrganizationUsersController : Controller
         {
             throw new NotFoundException();
         }
-        
+
         var response = new OrganizationUserDetailsResponseModel(organizationUser.Item1, organizationUser.Item2);
 
         if (includeGroups)
