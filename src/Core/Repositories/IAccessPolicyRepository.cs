@@ -2,6 +2,8 @@
 
 namespace Bit.Core.Repositories;
 
-public interface IAccessPolicyRepository : IRepository<AccessPolicy, Guid>
+public interface IAccessPolicyRepository
 {
+    Task<List<BaseAccessPolicy>> CreateManyAsync(List<BaseAccessPolicy> baseAccessPolicies);
+    Task<bool> AccessPolicyExists(BaseAccessPolicy baseAccessPolicy);
 }
