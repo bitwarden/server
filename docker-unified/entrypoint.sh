@@ -1,13 +1,12 @@
-#!/bin/sh
+#!/bin/bash
 
 # Set up user group
-GID="${GID:-1000}"
-addgroup -g $GID bitwarden
-GROUP_NAME=$(cat /etc/group | grep ":$GID:" | cut -d ':' -f 1)
+PGID="${PGID:-1000}"
+addgroup --gid $PGID bitwarden
 
 # Set up user
-UID="${UID:-1000}"
-adduser -s /bin/false -D -u $UID -G $GROUP_NAME bitwarden
+PUID="${PUID:-1000}"
+adduser --no-create-home --shell /bin/bash --disabled-password --uid $PUID --gid $PGID --gecos "" bitwarden
 
 # Translate environment variables for application settings
 VAULT_SERVICE_URI=https://$BW_DOMAIN
@@ -57,7 +56,7 @@ cp /etc/bitwarden/identity.pfx /app/Identity/identity.pfx
 cp /etc/bitwarden/identity.pfx /app/Sso/identity.pfx
 
 # Generate SSL certificates
-if [ "$BW_ENABLE_SSL" == "true" -a ! -f /etc/bitwarden/${BW_SSL_KEY:-ssl.key} ]; then
+if [ "$BW_ENABLE_SSL" = "true" -a ! -f /etc/bitwarden/${BW_SSL_KEY:-ssl.key} ]; then
   openssl req \
   -x509 \
   -newkey rsa:4096 \
@@ -68,7 +67,7 @@ if [ "$BW_ENABLE_SSL" == "true" -a ! -f /etc/bitwarden/${BW_SSL_KEY:-ssl.key} ];
   -out /etc/bitwarden/${BW_SSL_CERT:-ssl.crt} \
   -reqexts SAN \
   -extensions SAN \
-  -config <(cat /etc/ssl/openssl.cnf <(printf "[SAN]\nsubjectAltName=DNS:${BW_DOMAIN:-localhost}\nbasicConstraints=CA:true")) \
+  -config <(cat /usr/lib/ssl/openssl.cnf <(printf "[SAN]\nsubjectAltName=DNS:${BW_DOMAIN:-localhost}\nbasicConstraints=CA:true")) \
   -subj "/C=US/ST=California/L=Santa Barbara/O=Bitwarden Inc./OU=Bitwarden/CN=${BW_DOMAIN:-localhost}"
 fi
 
@@ -87,7 +86,7 @@ sed -i "s/autostart=true/autostart=${BW_ENABLE_NOTIFICATIONS}/" /etc/supervisor.
 sed -i "s/autostart=true/autostart=${BW_ENABLE_SCIM}/" /etc/supervisor.d/scim.ini
 sed -i "s/autostart=true/autostart=${BW_ENABLE_SSO}/" /etc/supervisor.d/sso.ini
 
-chown -R $UID:$GID \
+chown -R bitwarden:bitwarden \
     /app \
     /etc/bitwarden \
     /etc/nginx/http.d \
@@ -95,6 +94,7 @@ chown -R $UID:$GID \
     /etc/supervisor.d \
     /var/lib/nginx \
     /var/log \
+    /var/run/nginx \
     /run
 
-su-exec $UID:$GID /usr/bin/supervisord
+sudo -E -u bitwarden /usr/bin/supervisord
