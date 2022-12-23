@@ -29,6 +29,7 @@ export globalSettings__databaseProvider=$BW_DB_PROVIDER
 export globalSettings__mysql__connectionString=${globalSettings__mysql__connectionString:-$MYSQL_CONNECTION_STRING}
 export globalSettings__postgreSql__connectionString=${globalSettings__postgreSql__connectionString:-$POSTGRESQL_CONNECTION_STRING}
 export globalSettings__sqlServer__connectionString=${globalSettings__sqlServer__connectionString:-$SQLSERVER_CONNECTION_STRING}
+export globalSettings__sqlite__connectionString=${globalSettings__sqlite__connectionString:-$SQLITE_CONNECTION_STRING}
 
 # Generate Identity certificate
 if [ ! -f /etc/bitwarden/identity.pfx ]; then
