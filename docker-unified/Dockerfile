@@ -183,6 +183,7 @@ ENV BW_ENABLE_IDENTITY=true
 ENV BW_ENABLE_NOTIFICATIONS=true
 ENV BW_ENABLE_SCIM=false
 ENV BW_ENABLE_SSO=false
+ENV BW_DB_FILE="/etc/bitwarden/vault.db"
 ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false
 ENV globalSettings__selfHosted="true"
 ENV globalSettings__pushRelayBaseUri="https://push.bitwarden.com"
