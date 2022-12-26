@@ -11,5 +11,5 @@ public interface IOrganizationDomainRepository : IRepository<OrganizationDomain,
     Task<OrganizationDomainSsoDetailsData> GetOrganizationDomainSsoDetailsAsync(string email);
     Task<OrganizationDomain> GetDomainByOrgIdAndDomainNameAsync(Guid orgId, string domainName);
     Task<ICollection<OrganizationDomain>> GetExpiredOrganizationDomainsAsync();
-    Task<bool> DeleteExpiredAsync();
+    Task<bool> DeleteExpiredAsync(int expirationPeriod);
 }

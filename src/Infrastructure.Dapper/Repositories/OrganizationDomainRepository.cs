@@ -97,13 +97,13 @@ public class OrganizationDomainRepository : Repository<OrganizationDomain, Guid>
         }
     }
 
-    public async Task<bool> DeleteExpiredAsync()
+    public async Task<bool> DeleteExpiredAsync(int expirationPeriod)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             return await connection.ExecuteAsync(
                 $"[{Schema}].[OrganizationDomain_DeleteIfExpired]",
-                null,
+                new { ExpirationPeriod = expirationPeriod },
                 commandType: CommandType.StoredProcedure) > 0;
         }
     }
