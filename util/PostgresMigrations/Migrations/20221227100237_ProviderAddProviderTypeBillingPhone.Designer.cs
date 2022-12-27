@@ -3,6 +3,7 @@ using System;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,10 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Bit.PostgresMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    partial class DatabaseContextModelSnapshot : ModelSnapshot
+    [Migration("20221227100237_ProviderAddProviderTypeBillingPhone")]
+    partial class ProviderAddProviderTypeBillingPhone
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -29,8 +31,9 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<string>("AccessCode")
-                        .HasColumnType("text");
-                    
+                        .HasMaxLength(25)
+                        .HasColumnType("character varying(25)");
+
                     b.Property<bool?>("Approved")
                         .HasColumnType("boolean");
 
@@ -50,7 +53,8 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("RequestDeviceIdentifier")
-                        .HasColumnType("text");
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
 
                     b.Property<byte>("RequestDeviceType")
                         .HasColumnType("smallint");
@@ -59,7 +63,8 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("RequestIpAddress")
-                        .HasColumnType("text");
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
 
                     b.Property<DateTime?>("ResponseDate")
                         .HasColumnType("timestamp with time zone");
@@ -190,7 +195,7 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.HasIndex("GroupId");
 
-                    b.ToTable("CollectionGroups", (string)null);
+                    b.ToTable("CollectionGroups");
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.CollectionUser", b =>
@@ -216,7 +221,7 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("CollectionUsers", (string)null);
+                    b.ToTable("CollectionUsers");
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Device", b =>
