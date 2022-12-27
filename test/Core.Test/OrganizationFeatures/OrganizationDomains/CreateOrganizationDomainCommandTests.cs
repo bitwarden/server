@@ -33,10 +33,10 @@ public class CreateOrganizationDomainCommandTests
 
         var result = await sutProvider.Sut.CreateAsync(orgDomain);
 
-        Assert.Equal(result.Id, orgDomain.Id);
-        Assert.Equal(result.OrganizationId, orgDomain.OrganizationId);
+        Assert.Equal(orgDomain.Id, result.Id);
+        Assert.Equal(orgDomain.OrganizationId, result.OrganizationId);
         Assert.NotNull(result.LastCheckedDate);
-        Assert.Equal(result.NextRunDate, nextRunDate);
+        Assert.Equal(nextRunDate, result.NextRunDate);
         await sutProvider.GetDependency<IEventService>().Received(1)
             .LogOrganizationDomainEventAsync(Arg.Any<OrganizationDomain>(), EventType.OrganizationDomain_Added);
         await sutProvider.GetDependency<IEventService>().Received(1)
