@@ -157,12 +157,13 @@ public class OrganizationDomainRepository : Repository<Core.Entities.Organizatio
         return Mapper.Map<List<Core.Entities.OrganizationDomain>>(domains);
     }
 
-    public async Task<bool> DeleteExpiredAsync()
+    public async Task<bool> DeleteExpiredAsync(int expirationPeriod)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
+
         var expiredDomains = await dbContext.OrganizationDomains
-            .Where(x => x.CreationDate < DateTime.UtcNow.AddDays(-7))
+            .Where(x => x.LastCheckedDate < DateTime.UtcNow.AddDays(-expirationPeriod))
             .ToListAsync();
         dbContext.OrganizationDomains.RemoveRange(expiredDomains);
         return await dbContext.SaveChangesAsync() > 0;
