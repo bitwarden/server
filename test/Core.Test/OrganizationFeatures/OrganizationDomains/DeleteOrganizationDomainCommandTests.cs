@@ -1,4 +1,4 @@
-using Bit.Core.Entities;
+﻿using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.OrganizationFeatures.OrganizationDomains;
 using Bit.Core.Repositories;
@@ -29,7 +29,10 @@ public class DeleteOrganizationDomainCommandTests
     {
         var expected = new OrganizationDomain
         {
-            Id = id, OrganizationId = Guid.NewGuid(), DomainName = "Test Domain", Txt = "btw+test18383838383"
+            Id = id,
+            OrganizationId = Guid.NewGuid(),
+            DomainName = "Test Domain",
+            Txt = "btw+test18383838383"
         };
         sutProvider.GetDependency<IOrganizationDomainRepository>().GetByIdAsync(id).Returns(expected);
 

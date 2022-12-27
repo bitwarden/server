@@ -1,4 +1,4 @@
-using Bit.Core.OrganizationFeatures.OrganizationDomains;
+﻿using Bit.Core.OrganizationFeatures.OrganizationDomains;
 using Bit.Core.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;

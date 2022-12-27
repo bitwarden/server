@@ -1,6 +1,6 @@
-namespace Bit.Api.Test.Controllers;
+﻿namespace Bit.Api.Test.Controllers;
 
 public class OrganizationDomainControllerTests
 {
-    
+
 }
