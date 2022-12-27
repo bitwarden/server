@@ -1,7 +1,9 @@
 ﻿using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.OrganizationFeatures.OrganizationDomains;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -39,5 +41,7 @@ public class DeleteOrganizationDomainCommandTests
         await sutProvider.Sut.DeleteAsync(id);
 
         await sutProvider.GetDependency<IOrganizationDomainRepository>().Received(1).DeleteAsync(expected);
+        await sutProvider.GetDependency<IEventService>().Received(1)
+            .LogOrganizationDomainEventAsync(Arg.Any<OrganizationDomain>(), EventType.OrganizationDomain_Removed);
     }
 }
