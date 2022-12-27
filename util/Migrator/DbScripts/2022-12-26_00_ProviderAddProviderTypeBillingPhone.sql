@@ -4,8 +4,18 @@ BEGIN
     ALTER TABLE
         [dbo].[Provider]
     ADD
-        [Type] TINYINT NOT NULL CONSTRAINT [DF_Provider_Type] DEFAULT (0);
+        [Type] TINYINT NULL
 END
+GO
+
+-- Setting existing Providers Type = 0 (MSP)
+UPDATE [dbo].[Provider]
+SET [Type] = 0
+WHERE [Type] is NULL
+GO
+
+-- Changing 'Type' column to not null
+ALTER TABLE [dbo].[Provider] ALTER COLUMN [Type] TINYINT NOT NULL
 GO
 
 -- Add column 'BillingPhone' to 'Provider' table
