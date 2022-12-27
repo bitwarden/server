@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Enums;
 using Bit.Core.Repositories;
+using Bit.Core.Settings;
 using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Services;
@@ -12,6 +13,7 @@ public class OrganizationDomainService : IOrganizationDomainService
     private readonly IEventService _eventService;
     private readonly IMailService _mailService;
     private readonly ILogger<OrganizationDomainService> _logger;
+    private readonly IGlobalSettings _globalSettings;
 
     public OrganizationDomainService(
         IOrganizationDomainRepository domainRepository,
@@ -19,7 +21,8 @@ public class OrganizationDomainService : IOrganizationDomainService
         IDnsResolverService dnsResolverService,
         IEventService eventService,
         IMailService mailService,
-        ILogger<OrganizationDomainService> logger)
+        ILogger<OrganizationDomainService> logger,
+        IGlobalSettings globalSettings)
     {
         _domainRepository = domainRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -27,6 +30,7 @@ public class OrganizationDomainService : IOrganizationDomainService
         _eventService = eventService;
         _mailService = mailService;
         _logger = logger;
+        _globalSettings = globalSettings;
     }
 
     public async Task ValidateOrganizationsDomainAsync()
@@ -59,7 +63,7 @@ public class OrganizationDomainService : IOrganizationDomainService
                 }
 
                 domain.SetJobRunCount();
-                domain.SetNextRunDate();
+                domain.SetNextRunDate(_globalSettings.DomainVerification.VerificationInterval);
                 await _domainRepository.ReplaceAsync(domain);
                 await _eventService.LogOrganizationDomainEventAsync(domain, EventType.OrganizationDomain_NotVerified,
                     EventSystemUser.SSO);
@@ -95,7 +99,7 @@ public class OrganizationDomainService : IOrganizationDomainService
                 }
             }
             //delete domains that have not been verified within 7 days 
-            var status = await _domainRepository.DeleteExpiredAsync();
+            var status = await _domainRepository.DeleteExpiredAsync(_globalSettings.DomainVerification.ExpirationPeriod);
             _logger.LogInformation(Constants.BypassFiltersEventId, null,
                 "Delete status {0}", status);
         }

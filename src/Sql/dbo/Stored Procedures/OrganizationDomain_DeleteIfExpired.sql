@@ -1,9 +1,10 @@
 CREATE PROCEDURE [dbo].[OrganizationDomain_DeleteIfExpired]
+    @ExpirationPeriod TINYINT
 AS
 BEGIN
     SET NOCOUNT OFF
         
     DELETE FROM [dbo].[OrganizationDomain]
-    WHERE [CreationDate] < DATEADD(day, -7, GETUTCDATE())
+    WHERE DATEDIFF(DAY, [LastCheckedDate], GETUTCDATE()) >= @ExpirationPeriod
     AND [VerifiedDate] IS NULL
 END

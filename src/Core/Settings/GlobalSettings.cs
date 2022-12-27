@@ -77,6 +77,7 @@ public class GlobalSettings : IGlobalSettings
     public virtual DistributedIpRateLimitingSettings DistributedIpRateLimiting { get; set; } =
         new DistributedIpRateLimitingSettings();
     public virtual IPasswordlessAuthSettings PasswordlessAuth { get; set; } = new PasswordlessAuthSettings();
+    public virtual IDomainVerificationSettings DomainVerification { get; set; } = new DomainVerificationSettings();
 
     public string BuildExternalUri(string explicitValue, string name)
     {
@@ -535,5 +536,11 @@ public class GlobalSettings : IGlobalSettings
     public class PasswordlessAuthSettings : IPasswordlessAuthSettings
     {
         public bool KnownDevicesOnly { get; set; } = true;
+    }
+
+    public class DomainVerificationSettings : IDomainVerificationSettings
+    {
+        public int VerificationInterval { get; set; } = 12;
+        public int ExpirationPeriod { get; set; } = 7;
     }
 }

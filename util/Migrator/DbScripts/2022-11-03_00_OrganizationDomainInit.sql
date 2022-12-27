@@ -237,12 +237,13 @@ GO
 
 -- SP to delete domains that have been left unverified for 7 days
 CREATE OR ALTER PROCEDURE [dbo].[OrganizationDomain_DeleteIfExpired]
+     @ExpirationPeriod TINYINT
 AS
 BEGIN
     SET NOCOUNT OFF
 
 DELETE FROM [dbo].[OrganizationDomain]
-WHERE [CreationDate] < DATEADD(day, -7, GETUTCDATE())
+WHERE DATEDIFF(DAY, [LastCheckedDate], GETUTCDATE()) >= @ExpirationPeriod
   AND [VerifiedDate] IS NULL
 END
 GO
