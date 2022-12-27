@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.OrganizationFeatures.OrganizationDomains;
 using Bit.Core.Repositories;
@@ -16,7 +17,7 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationDomains;
 public class CreateOrganizationDomainCommandTests
 {
     [Theory, BitAutoData]
-    public async Task CreateAsync_ShouldCreateOrganizationDomain_WhenDetailsAreValid(OrganizationDomain orgDomain, SutProvider<CreateOrganizationDomainCommand> sutProvider)
+    public async Task CreateAsync_ShouldCreateOrganizationDomainAndLogEvent_WhenDetailsAreValid(OrganizationDomain orgDomain, SutProvider<CreateOrganizationDomainCommand> sutProvider)
     {
         var nextRunDate = orgDomain.CreationDate.AddHours(12);
         sutProvider.GetDependency<IOrganizationDomainRepository>()
@@ -36,6 +37,10 @@ public class CreateOrganizationDomainCommandTests
         Assert.Equal(result.OrganizationId, orgDomain.OrganizationId);
         Assert.NotNull(result.LastCheckedDate);
         Assert.Equal(result.NextRunDate, nextRunDate);
+        await sutProvider.GetDependency<IEventService>().Received(1)
+            .LogOrganizationDomainEventAsync(Arg.Any<OrganizationDomain>(), EventType.OrganizationDomain_Added);
+        await sutProvider.GetDependency<IEventService>().Received(1)
+            .LogOrganizationDomainEventAsync(Arg.Any<OrganizationDomain>(), Arg.Is<EventType>(x => x == EventType.OrganizationDomain_NotVerified));
     }
 
     [Theory, BitAutoData]
@@ -95,7 +100,7 @@ public class CreateOrganizationDomainCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task CreateAsync_ShouldSetVerifiedDate_WhenDomainIsResolved(OrganizationDomain orgDomain,
+    public async Task CreateAsync_ShouldSetVerifiedDateAndLogEvent_WhenDomainIsResolved(OrganizationDomain orgDomain,
         SutProvider<CreateOrganizationDomainCommand> sutProvider)
     {
         sutProvider.GetDependency<IOrganizationDomainRepository>()
@@ -114,5 +119,9 @@ public class CreateOrganizationDomainCommandTests
         var result = await sutProvider.Sut.CreateAsync(orgDomain);
 
         Assert.NotNull(result.VerifiedDate);
+        await sutProvider.GetDependency<IEventService>().Received(1)
+            .LogOrganizationDomainEventAsync(Arg.Any<OrganizationDomain>(), EventType.OrganizationDomain_Added);
+        await sutProvider.GetDependency<IEventService>().Received(1)
+            .LogOrganizationDomainEventAsync(Arg.Any<OrganizationDomain>(), Arg.Is<EventType>(x => x == EventType.OrganizationDomain_Verified));
     }
 }
