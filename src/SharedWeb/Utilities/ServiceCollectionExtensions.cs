@@ -47,7 +47,7 @@ namespace Bit.SharedWeb.Utilities;
 
 public static class ServiceCollectionExtensions
 {
-    public static void AddSqlServerRepositories(this IServiceCollection services, GlobalSettings globalSettings)
+    public static SupportedDatabaseProviders AddDatabaseRepositories(this IServiceCollection services, GlobalSettings globalSettings)
     {
         var selectedDatabaseProvider = globalSettings.DatabaseProvider;
         var provider = SupportedDatabaseProviders.SqlServer;
@@ -65,6 +65,10 @@ public static class ServiceCollectionExtensions
                 case "mariadb":
                     provider = SupportedDatabaseProviders.MySql;
                     connectionString = globalSettings.MySql.ConnectionString;
+                    break;
+                case "sqlite":
+                    provider = SupportedDatabaseProviders.Sqlite;
+                    connectionString = globalSettings.Sqlite.ConnectionString;
                     break;
                 default:
                     break;
@@ -93,6 +97,8 @@ public static class ServiceCollectionExtensions
             services.AddSingleton<IInstallationDeviceRepository, TableStorageRepos.InstallationDeviceRepository>();
             services.AddSingleton<IMetaDataRepository, TableStorageRepos.MetaDataRepository>();
         }
+
+        return provider;
     }
 
     public static void AddBaseServices(this IServiceCollection services, IGlobalSettings globalSettings)

@@ -24,6 +24,7 @@ public class GlobalSettings : IGlobalSettings
         get => BuildDirectory(_logDirectory, "/logs");
         set => _logDirectory = value;
     }
+    public virtual bool LogDirectoryByProject { get; set; } = true;
     public virtual long? LogRollBySizeLimit { get; set; }
     public virtual bool EnableDevLogging { get; set; } = false;
     public virtual string LicenseDirectory
@@ -48,7 +49,7 @@ public class GlobalSettings : IGlobalSettings
     public virtual SqlSettings SqlServer { get; set; } = new SqlSettings();
     public virtual SqlSettings PostgreSql { get; set; } = new SqlSettings();
     public virtual SqlSettings MySql { get; set; } = new SqlSettings();
-    public virtual SqlSettings Sqlite { get; set; } = new SqlSettings();
+    public virtual SqlSettings Sqlite { get; set; } = new SqlSettings() { ConnectionString = "Data Source=:memory:" };
     public virtual MailSettings Mail { get; set; } = new MailSettings();
     public virtual IConnectionStringSettings Storage { get; set; } = new ConnectionStringSettings();
     public virtual ConnectionStringSettings Events { get; set; } = new ConnectionStringSettings();
@@ -490,6 +491,7 @@ public class GlobalSettings : IGlobalSettings
     {
         public int CacheLifetimeInSeconds { get; set; } = 60;
         public double SsoTokenLifetimeInSeconds { get; set; } = 5;
+        public bool EnforceSsoPolicyForAllUsers { get; set; }
     }
 
     public class CaptchaSettings
