@@ -22,15 +22,6 @@ public class SecretUpdateRequestModel
 
     public Secret ToSecret(Guid id)
     {
-        List<Project> assignedProjects = new List<Project>();
-
-        foreach (Guid projectId in ProjectIds)
-        {
-            var project = new Project();
-            project.Id = projectId;
-            assignedProjects.Add(project);
-        }
-
         return new Secret()
         {
             Id = id,
@@ -38,7 +29,7 @@ public class SecretUpdateRequestModel
             Value = Value,
             Note = Note,
             DeletedDate = null,
-            Projects = assignedProjects
+            Projects = ProjectIds != null && ProjectIds?.Any() ? ProjectIds.Select(x => new Project() { Id = x }).ToList() : null,
         };
     }
 }

@@ -29,7 +29,7 @@ public class SecretCreateRequestModel
             Value = Value,
             Note = Note,
             DeletedDate = null,
-            Projects = ProjectIds != null && ProjectIds.Any() ? ProjectIds.Select(x => new Project() { Id = x }).ToList() : null,
+            Projects = ProjectIds != null && ProjectIds?.Any() ? ProjectIds.Select(x => new Project() { Id = x }).ToList() : null,
         };
     }
 }

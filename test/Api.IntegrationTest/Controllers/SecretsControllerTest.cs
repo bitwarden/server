@@ -86,7 +86,6 @@ public class SecretsControllerTest : IClassFixture<ApiApplicationFactory>, IAsyn
         });
         
         var projectIds = new Guid[] { project.Id };
-        
         var secretRequest = new SecretCreateRequestModel()
         {
             Key = _mockEncryptedString,
