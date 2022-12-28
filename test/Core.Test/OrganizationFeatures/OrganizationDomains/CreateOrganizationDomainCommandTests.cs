@@ -19,13 +19,16 @@ public class CreateOrganizationDomainCommandTests
     [Theory, BitAutoData]
     public async Task CreateAsync_ShouldCreateOrganizationDomainAndLogEvent_WhenDetailsAreValid(OrganizationDomain orgDomain, SutProvider<CreateOrganizationDomainCommand> sutProvider)
     {
-        var nextRunDate = orgDomain.CreationDate.AddHours(12);
         sutProvider.GetDependency<IOrganizationDomainRepository>()
             .GetClaimedDomainsByDomainNameAsync(orgDomain.DomainName)
             .Returns(new List<OrganizationDomain>());
         sutProvider.GetDependency<IOrganizationDomainRepository>()
             .GetDomainByOrgIdAndDomainNameAsync(orgDomain.OrganizationId, orgDomain.DomainName)
             .ReturnsNull();
+        sutProvider.GetDependency<IDnsResolverService>()
+            .ResolveAsync(orgDomain.DomainName, orgDomain.Txt)
+            .Returns(false);
+        orgDomain.SetNextRunDate(12);
         sutProvider.GetDependency<IOrganizationDomainRepository>()
             .CreateAsync(orgDomain)
             .Returns(orgDomain);
@@ -36,7 +39,7 @@ public class CreateOrganizationDomainCommandTests
         Assert.Equal(orgDomain.Id, result.Id);
         Assert.Equal(orgDomain.OrganizationId, result.OrganizationId);
         Assert.NotNull(result.LastCheckedDate);
-        Assert.Equal(nextRunDate, result.NextRunDate);
+        Assert.Equal(orgDomain.NextRunDate, result.NextRunDate);
         await sutProvider.GetDependency<IEventService>().Received(1)
             .LogOrganizationDomainEventAsync(Arg.Any<OrganizationDomain>(), EventType.OrganizationDomain_Added);
         await sutProvider.GetDependency<IEventService>().Received(1)
